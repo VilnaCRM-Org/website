@@ -34,6 +34,7 @@ module.exports = {
         'plugin:testing-library/react',
         'plugin:jest-dom/recommended',
         'plugin:@next/next/recommended',
+        'plugin:storybook/recommended',
         'airbnb',
         'airbnb/hooks',
         'airbnb-typescript',
