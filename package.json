@@ -10,21 +10,26 @@
     "prepare": "husky install",
     "storybook": "start-storybook -p 6006",
     "build-storybook": "build-storybook",
-    "cypress:open": "cypress open",
-    "jest:test": "jest --verbose ./src/test/unit",
-    "test": "jest"
+    "test:e2e": "cypress run --headless --browser chrome",
+    "test:e2e:local": "cypress open",
+    "test:unit": "jest --verbose ./src/test/unit"
   },
   "dependencies": {
     "@emotion/react": "^11.10.4",
     "@emotion/styled": "^11.10.4",
     "@mui/material": "^5.10.9",
+    "eslint-plugin-import": "^2.26.0",
+    "eslint-plugin-jsx-a11y": "^6.6.1",
+    "eslint-plugin-react": "^7.31.10",
+    "eslint-plugin-react-hooks": "^4.6.0",
     "jest": "^29.2.1",
     "msw": "^0.47.4",
     "next": "12.3.1",
-    "prettier": "^2.7.1",
     "react": "18.2.0",
     "react-dom": "18.2.0",
-    "storybook": "^6.5.12"
+    "require-from-string": "^2.0.2",
+    "storybook": "^6.5.12",
+    "webpack": "^5.74.0"
   },
   "devDependencies": {
     "@babel/core": "^7.19.6",
@@ -39,6 +44,7 @@
     "@storybook/manager-webpack5": "^6.5.12",
     "@storybook/react": "^6.5.12",
     "@storybook/testing-library": "0.0.13",
+    "@types/jest": "^29.2.0",
     "@types/node": "18.11.0",
     "@types/react": "18.0.21",
     "@types/react-dom": "^18.0.6",
