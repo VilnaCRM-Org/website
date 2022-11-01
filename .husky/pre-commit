@@ -1,4 +1,4 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
-pnpm next lint && git diff --name-only main
+pnpm lint && git diff --name-only main | grep -E "(.js$|.ts$|.tsx$)"
