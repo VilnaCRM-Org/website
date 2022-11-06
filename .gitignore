@@ -41,3 +41,5 @@ next-env.d.ts
 ./src/test/e2e/screenshots
 ./src/test/e2e/videos
 
+.lighthouseci
+
