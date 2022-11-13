@@ -37,9 +37,9 @@ next-env.d.ts
 
 .idea
 
-./src/test/e2e/downloads
-./src/test/e2e/screenshots
-./src/test/e2e/videos
+./src/test/e2e/downloads/
+./src/test/e2e/screenshots/
+./src/test/e2e/videos/
 
-.lighthouseci
+.lighthouseci/
 

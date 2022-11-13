@@ -1,4 +1,4 @@
-name: website-action
+name: lighthouse
 on: [push]
 jobs:
   lint:
