@@ -1,4 +1,4 @@
-name: "SAST security"
+name: security testing
 
 on: [push]
 

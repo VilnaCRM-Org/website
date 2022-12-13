@@ -20,7 +20,7 @@
     "noEmit": true,
     "jsx": "preserve",
     "baseUrl": ".",
-    "types": ["cypress"],
+    "types": ["jest"],
     "paths": {
       "@/*": [
         "./src/*"
@@ -32,6 +32,7 @@
     "src"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "src/test/e2e"
   ]
 }

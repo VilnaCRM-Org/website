@@ -1,4 +1,4 @@
-name: lint
+name: static testing
 on: [push]
 jobs:
   lint:
@@ -11,4 +11,5 @@ jobs:
 
       - run: npm install -g pnpm
       - run: pnpm i --frozen-lockfile
-      - run: pnpm run lint
+      - run: pnpm run lint:next
+      - run: pnpm run lint:tsc
