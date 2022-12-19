@@ -11,4 +11,5 @@ export default defineConfig({
   screenshotsFolder: './cypress/screenshots',
   videosFolder: './cypress/videos',
   supportFolder: './cypress/support',
+  video: false,
 });

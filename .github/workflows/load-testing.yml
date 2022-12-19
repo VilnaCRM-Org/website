@@ -9,9 +9,7 @@ jobs:
         with:
           node-version: 19.0.1
 
-      - run: npm install -g pnpm
-      - run: pnpm i --frozen-lockfile
-      - run: pnpm add artillery
+      - run: npm install -g artillery@latest
       - run: artillery dino
 
       # need add load tests when web page will be available
