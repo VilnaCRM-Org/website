@@ -20,19 +20,14 @@
     "noEmit": true,
     "jsx": "preserve",
     "baseUrl": ".",
-    "types": ["jest"],
-    "paths": {
-      "@/*": [
-        "./src/*"
-      ]
-    },
     "incremental": true
   },
   "include": [
-    "src"
+    "./src",
+    "./pages",
   ],
   "exclude": [
     "node_modules",
-    "src/test/e2e"
-  ]
+  ],
+  "extends": "./tsconfig.paths.json"
 }
