@@ -41,6 +41,7 @@ jobs:
           BUCKET_NAME=frontend-sandbox-${GITHUB_SHA::8}
           aws s3 mb s3://$BUCKET_NAME
           aws s3 website s3://$BUCKET_NAME --index-document index.html
+          echo "BUCKET_NAME=$BUCKET_NAME" >> $GITHUB_ENV
 
       - name: Upload to S3
         run: aws s3 sync ./out s3://$BUCKET_NAME --acl public-read
@@ -72,6 +73,7 @@ jobs:
                 }
               }]
             }'
+          echo "SUBDOMAIN=$SUBDOMAIN" >> $GITHUB_ENV
       - name: Comment PR with Subdomain URL
         if: github.event_name == 'pull_request'
         uses: actions/github-script@v5
