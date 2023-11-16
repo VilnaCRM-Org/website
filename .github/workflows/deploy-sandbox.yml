@@ -54,6 +54,7 @@ jobs:
           echo "CloudFront Distribution ID: $DISTRIBUTION_ID"
 
       - name: Create Route 53 Record
+        id: route53
         run: |
           DOMAIN_NAME="vilnacrm.com"
           SUBDOMAIN="${GITHUB_SHA::8}.vilnacrm.com"
@@ -73,7 +74,8 @@ jobs:
                 }
               }]
           }'
-          echo "SUBDOMAIN=$SUBDOMAIN" >> $GITHUB_ENV
+          echo "::set-output name=subdomain::$SUBDOMAIN"
+          echo "Subdomain for new sandbox: $SUBDOMAIN"
 
       - name: Comment PR with Subdomain URL
         if: github.event_name == 'pull_request'
@@ -81,7 +83,7 @@ jobs:
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}
           script: |
-            const url = `https://${SUBDOMAIN}`; // Construct the subdomain URL
+            const url = `https://${{ steps.route53.outputs.subdomain }}`;
             const message = `🚀 Deployed frontend is available at: ${url}`;
             github.rest.issues.createComment({
               issue_number: context.issue.number,
