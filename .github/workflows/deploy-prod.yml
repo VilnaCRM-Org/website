@@ -1,7 +1,7 @@
-name: deploy to the sandbox
+name: deploy to prod
 
 on:
-  pull_request:
+  push:
     branches: [ "main" ]
 
 jobs:
