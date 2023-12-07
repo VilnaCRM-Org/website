@@ -10,11 +10,11 @@ export default function Home() {
       console.log('done');
     }, 2000);
   };
-  
+
   return (
     <h1>
       {/* eslint-disable-next-line react/button-has-type */}
-      { t('coming-soon') }
+      <button onClick={click}>{t('coming-soon')}</button>
     </h1>
   );
 }
