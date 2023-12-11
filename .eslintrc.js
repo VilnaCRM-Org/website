@@ -9,7 +9,6 @@ module.exports = {
   ignorePatterns: ['node_modules/*', 'docker-compose.yml', 'pnpm-lock.yaml'],
   extends: [
     'eslint:recommended',
-    'next',
     'plugin:storybook/recommended',
     'airbnb',
     'airbnb/hooks',
