@@ -30,7 +30,7 @@
     "@mui/material": "^5.14.20",
     "@sentry/node": "^7.86.0",
     "@sentry/react": "^7.86.0",
-    "cypress": "^11.2.0",
+    "cypress": "^13.0.0",
     "dotenv": "^16.3.1",
     "graphql": "^16.8.1",
     "i18next": "^22.5.1",
@@ -44,7 +44,7 @@
     "reflect-metadata": "^0.1.14",
     "require-from-string": "^2.0.2",
     "semver": "^7.5.4",
-    "storybook": "^6.5.16",
+    "storybook": "^7.1.0",
     "tsyringe": "^4.8.0",
     "web-vitals": "^3.5.0",
     "webpack": "^5.89.0"
