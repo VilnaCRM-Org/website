@@ -18,8 +18,10 @@
     "test:e2e-local": "cypress open",
     "test:unit": "jest --verbose",
     "test:memory-leak": "memlab run -v --scenario ./memlab/memoryLeakTest.js",
-    "lighthouse:desktop": "next build && lhci autorun --config=lighthouserc.desktop.js",
-    "lighthouse:mobile": "next build && lhci autorun --config=lighthouserc.mobile.js"
+    "lighthouse:desktop": "next build && next export && lhci autorun --config=lighthouserc.desktop.js",
+    "lighthouse:mobile": "next build && next export && lhci autorun --config=lighthouserc.mobile.js",
+    "check-node-version": "node checkNodeVersion.js",
+    "preinstall": "pnpm run check-node-version"
   },
   "dependencies": {
     "@apollo/client": "^3.8.8",
@@ -87,7 +89,7 @@
     "prettier": "^3.1.1",
     "ts-jest": "^29.1.1",
     "typescript": "^4.9.5",
-    "memlab": "^1.1.38",
+    "memlab": "^1.1.42",
     "semver": "^7.6.0"
   },
   "engines": {
