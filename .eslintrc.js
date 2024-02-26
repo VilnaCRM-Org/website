@@ -16,12 +16,7 @@ module.exports = {
   ],
   overrides: [
     {
-      files: [
-        '**/*.ts',
-        '**/*.tsx',
-        '**/*.spec.js',
-        '**/*.spec.jsx',
-      ],
+      files: ['**/*.ts', '**/*.tsx', '**/*.spec.js', '**/*.spec.jsx'],
       parser: '@typescript-eslint/parser',
       settings: {
         react: { version: 'detect' },
