@@ -1,5 +1,7 @@
+const wesiteUrl = 'http://localhost:3000';
+
 function url() {
-  return process.env.NEXT_PUBLIC_WEBSITE_URL;
+  return wesiteUrl;
 }
 
-export default { url };
+module.exports = { url };
