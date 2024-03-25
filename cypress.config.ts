@@ -7,7 +7,7 @@ export default defineConfig({
     specPattern: './cypress/spec/*.spec.{ts, tsx}',
   },
   env: {
-    WEBSITE_URL: process.env.WEBSITE_URL,
+    WEBSITE_URL: process.env.NEXT_PUBLIC_WEBSITE_URL,
   },
   downloadsFolder: './cypress/downloads',
   fileServerFolder: './cypress/fileServer',
