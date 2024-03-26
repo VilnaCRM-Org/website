@@ -1,7 +1,7 @@
-const wesiteUrl = 'http://localhost:3000';
+require('dotenv').config();
 
 function url() {
-  return wesiteUrl;
+  return process.env.WEBSITE_URL;
 }
 
 module.exports = { url };
