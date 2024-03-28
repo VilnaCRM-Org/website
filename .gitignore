@@ -38,16 +38,16 @@ next-env.d.ts
 /.idea
 .vsco
 
-./cypress/downloads/
-./cypress/screenshots/
-./cypress/videos/
 
 .lighthouseci/
 
 ./tsconfig.tsbuildinfo
 
-.vscode/
-./.vscode/
+.vscode
+
 
 ./storybook-static
-storybook-static
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/

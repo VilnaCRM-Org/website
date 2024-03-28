@@ -1,10 +1,9 @@
-require('dotenv').config();
+const { loadEnvConfig } = require('@next/env');
 
+const projectDir = process.cwd();
+loadEnvConfig(projectDir);
 function url() {
-  return process.env.WEBSITE_URL;
+  return process.env.MEMLAB_WEBSITE_URL;
 }
-async function action() {}
 
-async function back() {}
-
-module.exports = { action, back, url };
+module.exports = { url };
