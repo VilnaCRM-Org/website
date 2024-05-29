@@ -1,44 +1,40 @@
 import { Box, Container } from '@mui/material';
+import { Metadata } from 'next';
 import dynamic from 'next/dynamic';
 import Head from 'next/head';
-import { ComponentClass } from 'react';
-import { useTranslation } from 'react-i18next';
 
-// import { UiFooter } from '../../../../components/UiFooter';
-// import { AboutUs } from '../AboutUs';
-// import { AuthSection } from '../AuthSection';
-// import { BackgroundImages } from '../BackgroundImages';
-// import { ForWhoSection } from '../ForWhoSection';
-// import { Header } from '../Header';
-// import { Possibilities } from '../Possibilities';
-// import { WhyUs } from '../WhyUs';
+import iphoneTouchUrl from '../../assets/img/about-vilna/touch.png';
+import logoUrl from '../../assets/svg/logo/Logo.svg';
 
-// @ts-expect-error asdf  af sf asfa
-const DynamicBackgroundImages: ComponentClass = dynamic(() => import('../BackgroundImages'));
-// @ts-expect-error asdf  af sf asfa
-const DynamicAboutUs: ComponentClass = dynamic(() => import('../AboutUs'));
-// @ts-expect-error asdf  af sf asfa
-const DynamicUiFooter: ComponentClass = dynamic(() => import('../../../../components/UiFooter'));
-// @ts-expect-error asdf  af sf asfa
-const DynamicForWhoSection: ComponentClass = dynamic(() => import('../ForWhoSection'));
-// @ts-expect-error asdf  af sf asfa
-const DynamicHeader: ComponentClass = dynamic(() => import('../Header'));
-// @ts-expect-error asdf  af sf asfa
-const DynamicPossibilities: ComponentClass = dynamic(() => import('../Possibilities'));
-// @ts-expect-error asdf  af sf asfa
-const DynamicWhyUs: ComponentClass = dynamic(() => import('../WhyUs'));
-// @ts-expect-error asdf  af sf asfa
-const DynamicAuthSection: ComponentClass = dynamic(() => import('../AuthSection'));
+import constructMetadata from './metadata';
+
+const DynamicBackgroundImages: React.ComponentType = dynamic(
+  () => import('../BackgroundImages/BackgroundImages')
+);
+const DynamicAboutUs: React.ComponentType = dynamic(() => import('../AboutUs'));
+const DynamicUiFooter: React.ComponentType = dynamic(
+  () => import('../../../../components/UiFooter')
+);
+const DynamicForWhoSection: React.ComponentType = dynamic(() => import('../ForWhoSection'));
+const DynamicHeader: React.ComponentType = dynamic(() => import('../Header'));
+const DynamicPossibilities: React.ComponentType = dynamic(() => import('../Possibilities'));
+const DynamicWhyUs: React.ComponentType = dynamic(() => import('../WhyUs'));
+const DynamicAuthSection: React.ComponentType = dynamic(() => import('../AuthSection'));
+
+const metadata: Metadata = constructMetadata();
 
 function Landing(): React.ReactElement {
-  const { t } = useTranslation();
-
   return (
     <>
       <Head>
-        <title>{t('VilnaCRM')}</title>
-        <meta name={t('description')} content={t('The first Ukrainian open source CRM')} />
-        <link rel="apple-touch-icon" href="../../assets/img/about-vilna/touch.png" />
+        <title>{(metadata.title || '').toString()}</title>
+        <meta property="og:title" content={(metadata.openGraph?.title || '').toString()} />
+        <meta name="description" content={metadata.description || ''} />
+        <meta property="og:description" content={metadata.openGraph?.description || ''} />
+        <meta property="image" content={logoUrl.src} />
+        <meta property="og:image" content={logoUrl.src} />
+        <link rel="icon" href={logoUrl.src} />
+        <link rel="apple-touch-icon" href={iphoneTouchUrl.src} />
       </Head>
       <DynamicHeader />
       <Box sx={{ position: 'relative' }}>

@@ -1,6 +1,3 @@
-export interface UiLinkProps {
-  children: React.ReactNode;
-  href: string;
-  target?: string;
+export interface UiLinkProps extends React.AnchorHTMLAttributes<HTMLAnchorElement> {
   sx?: React.CSSProperties;
 }
