@@ -1,11 +1,11 @@
 import { MetadataRoute } from 'next';
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl: string | undefined = process.env.NEXT_PUBLIC_WEBSITE_URL;
-
-  if (baseUrl === undefined) {
+  if (process.env.NEXT_PUBLIC_WEBSITE_URL === undefined) {
     throw new Error('baseUrl is not defined');
   }
+
+  const baseUrl: string | undefined = process.env.NEXT_PUBLIC_WEBSITE_URL;
 
   return [
     {

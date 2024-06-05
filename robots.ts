@@ -7,7 +7,22 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: '*',
       allow: '/',
-      disallow: ['/api', '/cgi-bin/', '/tmp/', '/junk/', '/private/', '/hidden/'],
+      disallow: [
+        '/api',
+        '/cgi-bin/',
+        '/tmp/',
+        '/junk/',
+        '/private/',
+        '/hidden/',
+        '/admin/',
+        '/login/',
+        '/register/',
+        '/user-data/',
+        '/config/',
+        '/*.pdf$',
+        '/*.zip$',
+        '/*.exe$',
+      ],
     },
     sitemap: `${baseUrl}/sitemap.xml`,
   };

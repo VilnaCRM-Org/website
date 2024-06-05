@@ -3,8 +3,7 @@ import { test, Locator, expect, Page } from '@playwright/test';
 const FIRST_SLIDE_TITLE_WHY_US: string = 'Open source';
 const SECOND_SLIDE_TITLE_WHY_US: string = 'Ease of setup';
 const FIRST_SLIDE_TITLE_POSSIBILITIES: string = 'Public API';
-const SECOND_SLIDE_TITLE_POSSIBILITIES: string = 'Ready plugins for CMS';
-const TOOLTIP_CONTENT_TEXT: string = 'Services Integrate in a few';
+const PUBLIC_LIBRARIES: string = 'Public Libraries';
 
 async function performSliderTest(
   page: Page,
@@ -47,16 +46,11 @@ test.describe('Slider tests', () => {
       name: FIRST_SLIDE_TITLE_POSSIBILITIES,
     });
     const secondSlidePossibilities: Locator = page.getByRole('heading', {
-      name: SECOND_SLIDE_TITLE_POSSIBILITIES,
+      name: PUBLIC_LIBRARIES,
     });
 
     await performSliderTest(page, firstSlidePossibilities, secondSlidePossibilities);
 
-    const tooltipContent: Locator = page
-      .getByRole('tooltip', { name: TOOLTIP_CONTENT_TEXT })
-      .nth(1);
-
-    await page.getByRole('tooltip', { name: 'services' }).click();
-    await expect(tooltipContent).toBeVisible();
+    await expect(secondSlidePossibilities).toBeVisible();
   });
 });

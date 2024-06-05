@@ -1,26 +1,24 @@
 const ScenarioBuilder = require('../utils/ScenarioBuilder');
+const swipeSlider = require('../utils/swipeSlider');
 
 const scenarioBuilder = new ScenarioBuilder();
 
 const mobileViewport = { width: 400, height: 812 };
 
-const menuIconSelector = 'img[alt="Bars Icon"]';
-const closeIconSelector = 'img[alt="Exit Icon"]';
+const sliderSelector = '.swiper-wrapper';
+
+const iterations = 6;
 
 async function setup(page) {
   await page.setViewport(mobileViewport);
 }
 
 async function action(page) {
-  await page.click(menuIconSelector);
-
-  await page.waitForSelector(closeIconSelector, { visible: true });
+  await swipeSlider(page, sliderSelector, iterations, 'left');
 }
 
 async function back(page) {
-  await page.click(closeIconSelector);
-
-  await page.waitForSelector(closeIconSelector, { hidden: true });
+  await swipeSlider(page, sliderSelector, iterations, 'right');
 }
 
 module.exports = scenarioBuilder.createScenario({ setup, action, back });
