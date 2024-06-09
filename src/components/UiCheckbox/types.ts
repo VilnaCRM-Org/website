@@ -1,7 +1,5 @@
-export interface UiCheckboxProps {
-  onChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+export interface UiCheckboxProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label: string | React.ReactNode;
-  disabled?: boolean;
   sx?: React.CSSProperties;
   error?: boolean;
 }
