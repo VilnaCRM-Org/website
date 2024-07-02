@@ -18,9 +18,20 @@
     "baseUrl": ".",
     "incremental": true,
     "experimentalDecorators": true,
-    "emitDecoratorMetadata": true,
+    "emitDecoratorMetadata": true
   },
-  "include": ["./src", "./pages", "./scripts"],
+  "include": [
+    "./src",
+    "./pages",
+    "./scripts",
+    "next-env.d.ts",
+    "/*.ts",
+    "/.tsx",
+    ".next/types/**/.ts",
+    "playwrite",
+    "src/components/UiFooter/.stories.tsx",
+    "memoryLeak"
+  ],
   "exclude": ["node_modules"],
-  "extends": "./tsconfig.paths.json",
+  "extends": "./tsconfig.paths.json"
 }

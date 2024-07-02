@@ -34,20 +34,31 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+./tsconfig.tsbuildinfo
 
 /.idea
 .vsco
 
-./cypress/downloads/
-./cypress/screenshots/
-./cypress/videos/
-
+#lighthouse
 .lighthouseci/
+/lhci-reports-desktop
+/lhci-reports-mobile
 
-./tsconfig.tsbuildinfo
-
-.vscode/
-./.vscode/
+.vscode
 
 ./storybook-static
-storybook-static
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
+# stryker temp files
+.stryker-tmp
+/reports/
+
+# k6 config
+/src/test/load/config.json
+/src/test/load/results
+
+# memlab
+/src/test/memory-leak/results
