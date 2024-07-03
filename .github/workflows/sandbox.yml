@@ -5,6 +5,7 @@ on: push
 env:
   AWS_REGION: ${{ vars.AWS_REGION }}
   BRANCH_NAME: ${{ github.head_ref || github.ref_name }} 
+  PR_NUMBER: ${{ github.event.number }}
 
 permissions:
   id-token: write # This is required for requesting the JWT
@@ -25,4 +26,4 @@ jobs:
 
       - name: Start Pipeline Execution
         run: |
-          aws codepipeline start-pipeline-execution --name ${{ secrets.AWS_SANDBOX_CODEPIPELINE_NAME }} --variables name=BRANCH_NAME,value=$BRANCH_NAME 
+          aws codepipeline start-pipeline-execution --name ${{ secrets.AWS_SANDBOX_CODEPIPELINE_NAME }} --variables name=BRANCH_NAME,value=$BRANCH_NAME,name=PR_NUMBER,value=$PR_NUMBER
