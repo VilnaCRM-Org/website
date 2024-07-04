@@ -7,7 +7,7 @@ WORKDIR /app
 
 COPY . .
 
-RUN pnpm install
+RUN make install
 
 EXPOSE 3000
 

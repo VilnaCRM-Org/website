@@ -8,6 +8,6 @@ WORKDIR /app
 
 COPY . .
 
-RUN pnpm install
+RUN make install
 
 CMD ["pnpm", "run", "dev"]
