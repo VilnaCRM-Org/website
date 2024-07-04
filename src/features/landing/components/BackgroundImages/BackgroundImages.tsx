@@ -12,6 +12,7 @@ function BackgroundImages(): React.ReactElement {
   const imageOptimizedProps: ImageProps = getOptimizedImageProps({
     src: VectorIcon,
   }).props;
+
   return (
     <Box
       sx={Object.assign(styles.vector, { backgroundImage: `url(${imageOptimizedProps.src})` })}

@@ -4,24 +4,20 @@ import '@testing-library/jest-dom';
 
 import BackgroundImages from '../../features/landing/components/BackgroundImages/BackgroundImages';
 
-const testStyle: string = `
-background-color: red;
-width: 100px;
-height: 100px;
-`;
+jest.mock('../../features/landing/assets/svg/about-vilna/Vector.svg', () => 'test-image.jpg');
 
-jest.mock('../../features/landing/components/BackgroundImages/styles', () => ({
-  vector: {
-    backgroundColor: 'red',
-    width: '100px',
-    height: '100px',
-  },
+jest.mock('next-export-optimize-images/image', () => ({
+  getOptimizedImageProps: jest.fn(({ src }) => ({
+    props: {
+      src,
+    },
+  })),
 }));
 
 describe('BackgroundImages Component', () => {
   it('renders with correct styles', () => {
     const { container } = render(<BackgroundImages />);
 
-    expect(container.firstChild).toHaveStyle(testStyle);
+    expect(container.firstChild).toHaveStyle({ backgroundImage: 'url(test-image.jpg)' });
   });
 });
