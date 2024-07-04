@@ -6,6 +6,7 @@ on:
 
 env:
   AWS_REGION: ${{ vars.AWS_REGION }}
+  PR_NUMBER: ${{ github.event.number }}
   BRANCH_NAME: ${{ github.head_ref || github.ref_name }} 
 
 permissions:
@@ -27,4 +28,4 @@ jobs:
 
       - name: Start Pipeline Execution
         run: |
-          aws codepipeline start-pipeline-execution --name ${{ secrets.AWS_SANDBOX_CODEPIPELINE_NAME }} --variables name=BRANCH_NAME,value=$BRANCH_NAME name=PR_NUMBER,value=$(echo $GITHUB_REF | awk 'BEGIN { FS = "/" } ; { print $3 }') name=IS_PULL_REQUEST,value=1
+          aws codepipeline start-pipeline-execution --name ${{ secrets.AWS_SANDBOX_CODEPIPELINE_NAME }} --variables name=BRANCH_NAME,value=$BRANCH_NAME name=PR_NUMBER,value=$PR_NUMBER name=IS_PULL_REQUEST,value=1
