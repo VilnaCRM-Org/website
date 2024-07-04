@@ -105,7 +105,7 @@ lighthouse-mobile: ## This command executes Lighthouse tests for mobile.
 	$(PNPM_EXEC) $(LHCI_MOBILE)
 
 install: ## Install node modules according to the current pnpm-lock.yaml file
-	$(PNPM_EXEC) install --frozen-lockfile
+	$(PNPM_BIN) install --frozen-lockfile
 
 update: ## Update node modules according to the current package.json file
 	$(PNPM_EXEC) update
