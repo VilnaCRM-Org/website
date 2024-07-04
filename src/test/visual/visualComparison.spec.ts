@@ -10,14 +10,16 @@ test.describe('Visual Tests', () => {
       await page.waitForLoadState('networkidle');
       await page.evaluateHandle('document.fonts.ready');
 
+      await page.waitForTimeout(4000);
+
       const scrollHeight: number = await page.evaluate(() => document.documentElement.scrollHeight);
       await page.setViewportSize({ width: screen.width, height: scrollHeight });
 
-      await page.waitForTimeout(3000);
+      await page.waitForTimeout(4000);
 
       await page.setViewportSize({ width: screen.width, height: screen.height });
 
-      await page.waitForTimeout(3000);
+      await page.waitForTimeout(4000);
 
       await expect(page).toHaveScreenshot(`${screen.name}.png`, {
         fullPage: true,
