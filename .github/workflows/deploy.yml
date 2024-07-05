@@ -1,0 +1,42 @@
+name: Deploy To The Production
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+
+permissions:
+  id-token: write # This is required for requesting the JWT
+  contents: read # This is required for actions/checkout
+jobs:
+  AssumeRoleAndStartExecution:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Extract branch name
+        run: |
+          echo "branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_OUTPUT
+        id: extract_branch
+
+      - name: Get latest commit SHA on branch
+        id: get_latest_commit
+        run: |
+          echo "::set-output name=latest_commit::$(git rev-parse origin/${{steps.extract_branch.outputs.branch}})"
+
+      - name: configure aws credentials
+        if: steps.get_latest_commit.outputs.latest_commit == github.sha
+        uses: aws-actions/configure-aws-credentials@v1.7.0
+        with:
+          role-to-assume: ${{ secrets.PROD_AWS_CODEPIPELINE_ROLE_ARN }}
+          role-session-name: GitHub_to_AWS_via_FederatedOIDC
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Start Pipeline Execution
+        if: steps.get_latest_commit.outputs.latest_commit == github.sha
+        run: |
+          aws codepipeline start-pipeline-execution --name ${{ secrets.PROD_AWS_WEBSITE_CODEPIPELINE_NAME }}

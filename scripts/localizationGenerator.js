@@ -54,11 +54,13 @@ class LocalizationGenerator {
   }
 
   getFeatureFolders() {
-    const featureDirectories = fs.readdirSync(this.featurePath, { withFileTypes: true });
+    const featureDirectories = fs.readdirSync(this.featurePath, {
+      withFileTypes: true,
+    });
 
     return featureDirectories
-      .filter((directory) => directory.isDirectory())
-      .map((directory) => directory.name);
+      .filter(directory => directory.isDirectory())
+      .map(directory => directory.name);
   }
 
   getLocalizationFromFolder(folder) {
@@ -90,7 +92,7 @@ class LocalizationGenerator {
 
   // eslint-disable-next-line class-methods-use-this
   writeLocalizationFile(fileContent, filePath) {
-    fs.writeFile(filePath, fileContent, (err) => {
+    fs.writeFile(filePath, fileContent, err => {
       if (err) {
         throw new Error(err);
       }

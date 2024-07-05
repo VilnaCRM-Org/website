@@ -1,14 +1,13 @@
 FROM node:20-alpine3.17
 
-RUN npm install -g pnpm
+RUN apk add --no-cache python3 make g++  \
+    && npm install -g pnpm
 
 WORKDIR /app
 
-COPY package*.json ./
-
-RUN pnpm install
-
 COPY . .
+
+RUN make install
 
 EXPOSE 3000
 
