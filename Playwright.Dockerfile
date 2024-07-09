@@ -6,6 +6,8 @@ RUN apt-get update && apt-get install -y python3 make g++ \
 
 WORKDIR /app
 
+ENV NEXT_PUBLIC_MAIN_LANGUAGE=en
+
 COPY . .
 
 RUN make install
