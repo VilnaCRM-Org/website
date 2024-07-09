@@ -18,14 +18,23 @@ jobs:
         with:
           node-version: ${{ vars.NODE_VERSION }}
 
+      - name: Cache pnpm dependencies
+        id: cache-pnpm-dependencies
+        uses: actions/cache@v3
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-dependencies-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-dependencies-    
+
       - name: Install pnpm
         run: npm install -g pnpm
 
-      - name: Install memlab
-        run: npm install -g memlab
-
       - name: Install dependencies
-        run: pnpm i --frozen-lockfile
+        run: make install
+        if: |
+          steps.cache-pnpm-dependencies.outputs.cache-hit != 'true' ||
+          steps.cache-pnpm-packages.outputs.cache-hit != 'true'
 
       - name: Run dev and memory leak testing
         run: |
