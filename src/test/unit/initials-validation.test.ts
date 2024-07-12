@@ -1,12 +1,16 @@
 import { faker } from '@faker-js/faker';
 
+import { createTranslation, TranslationFunctionType } from '@/test/translate';
+
 import { validateFullName } from '../../features/landing/components/AuthSection/Validations';
 import { isValidFullName } from '../../features/landing/components/AuthSection/Validations/initials';
+
+const t: TranslationFunctionType = createTranslation('pages/i18n');
 
 const testFullName: string = faker.person.fullName();
 const testFirstName: string = faker.person.firstName();
 const testSecondName: string = faker.person.lastName();
-const errorText: string = 'Invalid full name format';
+const errorText: string = t('sign_up.form.name_input.error_text');
 
 describe('initials Tests', () => {
   describe('isValidFullName', () => {

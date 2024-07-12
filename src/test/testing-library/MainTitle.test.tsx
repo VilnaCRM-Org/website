@@ -1,12 +1,16 @@
 import { render } from '@testing-library/react';
 import React from 'react';
 
+import { createTranslation, TranslationFunctionType } from '@/test/translate';
+
 import MainTitle from '../../features/landing/components/ForWhoSection/MainTitle/MainTitle';
 
-const forWhoTitle: string = 'For who';
-const forWhoText: RegExp = /We created Vilna,/;
-const forWhoLabel: string = 'Link to registration';
-const forWhoButton: string = 'Try it out';
+const t: TranslationFunctionType = createTranslation('pages/i18n');
+
+const forWhoTitle: string = t('for_who.heading_main');
+const forWhoText: string = t('for_who.text_main');
+const forWhoLabel: string = t('for_who.aria_label');
+const forWhoButton: string = t('for_who.button_text');
 
 describe('MainTitle component', () => {
   it('renders main title correctly', () => {

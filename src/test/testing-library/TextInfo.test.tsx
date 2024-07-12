@@ -1,10 +1,14 @@
 import { render } from '@testing-library/react';
 
+import { createTranslation, TranslationFunctionType } from '@/test/translate';
+
 import TextInfo from '../../features/landing/components/AboutUs/TextInfo/TextInfo';
 
-const aboutTitle: string = 'The first Ukrainian open source CRM';
-const aboutUsText: RegExp = /Our goal/;
-const aboutUsButtonText: string = 'Try it out';
+const t: TranslationFunctionType = createTranslation('pages/i18n');
+
+const aboutTitle: RegExp = new RegExp(t('about_vilna.heading_first_main'));
+const aboutUsText: string = t('about_vilna.text_main');
+const aboutUsButtonText: string = t('about_vilna.button_main');
 const buttonSelector: string = 'a[href="#signUp"]';
 
 describe('code snippet', () => {

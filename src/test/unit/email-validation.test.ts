@@ -1,10 +1,14 @@
 import { faker } from '@faker-js/faker';
 
+import { createTranslation, TranslationFunctionType } from '@/test/translate';
+
 import { validateEmail } from '../../features/landing/components/AuthSection/Validations';
 import { isValidEmailFormat } from '../../features/landing/components/AuthSection/Validations/email';
 
-const emailStepError: string = "Must contain the characters '@' and '.'";
-const emailInvalidError: string = 'Invalid email address';
+const t: TranslationFunctionType = createTranslation('pages/i18n');
+
+const emailStepError: string = t('sign_up.form.email_input.step_error_message');
+const emailInvalidError: string = t('sign_up.form.email_input.invalid_message');
 const invalidTestEmailWithoutDot: string = 'test@example';
 const invalidTestEmailWithDot: string = 'test@example.';
 const correctEmail: string = faker.internet.email();
