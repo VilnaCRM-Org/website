@@ -1,9 +1,19 @@
 import { test, Locator, expect, Page } from '@playwright/test';
+import { t } from 'i18next';
 
-const FIRST_SLIDE_TITLE_WHY_US: string = 'Open source';
-const SECOND_SLIDE_TITLE_WHY_US: string = 'Ease of setup';
-const FIRST_SLIDE_TITLE_POSSIBILITIES: string = 'Public API';
-const PUBLIC_LIBRARIES: string = 'Public Libraries';
+import '../../../i18n';
+
+const FIRST_SLIDE_TITLE_WHY_US: string = t('why_us.headers.header_open_source');
+const SECOND_SLIDE_TITLE_WHY_US: string = t('why_us.headers.header_ease_of_setup').replace(
+  '<br /> ',
+  ''
+);
+const FIRST_SLIDE_TITLE_POSSIBILITIES: string = t(
+  'unlimited_possibilities.cards_headings.heading_public_api'
+);
+const PUBLIC_LIBRARIES: RegExp = new RegExp(
+  t('unlimited_possibilities.cards_headings.heading_libraries').split(' <br />').join('')
+);
 
 async function performSliderTest(
   page: Page,

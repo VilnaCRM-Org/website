@@ -152,7 +152,7 @@ function AuthForm(): React.ReactElement {
                       <UiLink href="https://github.com/VilnaCRM-Org" target="_blank">
                         Privacy Policy
                       </UiLink>
-                      та
+                      and the
                       <UiLink href="https://github.com/VilnaCRM-Org" target="_blank">
                         Use Policy
                       </UiLink>

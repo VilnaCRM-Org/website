@@ -1,7 +1,13 @@
 import { test, expect, Page } from '@playwright/test';
+import { t } from 'i18next';
+
+import '../../../i18n';
 
 const vilnaCRMPrivacyPolicyURL: string = process.env
   .NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL as string;
+const privacyPolicyText: RegExp = new RegExp(t('footer.privacy'));
+const usePolicyText: RegExp = new RegExp(t('footer.usage_policy'));
+const companyNameText: RegExp = new RegExp(t('sign_up.vilna_text'));
 
 async function navigateToPrivacyPolicy(
   page: Page,
@@ -29,16 +35,16 @@ test.describe('Checking if the links to privacy policy are working', () => {
   });
 
   test('Links to privacy policy', async ({ page }) => {
-    await navigateToPrivacyPolicy(page, 'Privacy policy', /VilnaCRM/);
+    await navigateToPrivacyPolicy(page, privacyPolicyText, companyNameText);
   });
   test('Links to usage policy', async ({ page }) => {
-    await navigateToPrivacyPolicy(page, 'Usage policy', /VilnaCRM/);
+    await navigateToPrivacyPolicy(page, privacyPolicyText, companyNameText);
   });
 
   test('Links to privacy policy in form', async ({ page }) => {
-    await navigateToPrivacyPolicy(page, /Privacy Policy/, /VilnaCRM/);
+    await navigateToPrivacyPolicy(page, privacyPolicyText, companyNameText);
   });
   test('Links to usage policy in form', async ({ page }) => {
-    await navigateToPrivacyPolicy(page, /Use Policy/, /VilnaCRM/);
+    await navigateToPrivacyPolicy(page, usePolicyText, companyNameText);
   });
 });

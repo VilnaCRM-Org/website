@@ -1,12 +1,15 @@
 import { Locator, Page, test } from '@playwright/test';
+import { t } from 'i18next';
 
-const aboutVilnaCRM: RegExp = /The first Ukrainian/;
-const forWho: RegExp = /For who/;
-const whyWe: RegExp = /Why we/;
+import '../../../i18n';
 
-const openDrawerLabel: string = 'Button to open the drawer';
+const aboutVilnaCRM: RegExp = new RegExp(t('about_vilna.heading_first_main'));
+const forWho: RegExp = new RegExp(t('for_who.heading_main'));
+const whyWe: RegExp = new RegExp(t('why_us.heading'));
 
-const nameOption: { name: RegExp } = { name: /Try it out/ };
+const openDrawerLabel: string = t('header.drawer.button_aria_labels.bars');
+
+const nameOption: { name: RegExp } = { name: new RegExp(t('header.actions.try_it_out')) };
 
 const clickTryItNowButtonByFilteredSection: (
   page: Page,

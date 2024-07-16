@@ -4,7 +4,6 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "dev:en": "NEXT_PUBLIC_MAIN_LANGUAGE=en next dev",
     "build": "next build && next-export-optimize-images",
     "build:analyze": "ANALYZE=true pnpm run build",
     "start": "next build && next-export-optimize-images && npx serve@latest out",

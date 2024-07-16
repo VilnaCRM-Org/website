@@ -1,4 +1,7 @@
 import { test, expect, Page } from '@playwright/test';
+import { t } from 'i18next';
+
+import '../../../i18n';
 
 const links: Record<string, string> = {
   advantages: `${process.env.NEXT_PUBLIC_WEBSITE_URL}/#Advantages`,
@@ -8,10 +11,11 @@ const links: Record<string, string> = {
 };
 
 const drawerTestId: string = 'drawer';
-const advantagesNavLink: string = 'Advantages';
-const forWhoNavLink: string = 'For who';
-const integrationNavLink: string = 'Integration';
-const contactsNavLink: string = 'Contacts';
+const advantagesNavLink: string = t('header.advantages');
+const forWhoNavLink: string = t('header.for_who');
+const integrationNavLink: string = t('header.integration');
+const contactsNavLink: string = t('header.contacts');
+const labelButtonToOpenDrawer: string = t('header.drawer.button_aria_labels.bars');
 
 async function navigateAndExpect(
   page: Page,
@@ -27,7 +31,7 @@ async function openDrawerAndNavigate(
   linkName: string,
   expectedURL: string | RegExp
 ): Promise<void> {
-  await page.getByLabel('Button to open the drawer').click();
+  await page.getByLabel(labelButtonToOpenDrawer).click();
   await page.getByRole('link', { name: linkName }).click();
   await expect(page.getByTestId(drawerTestId)).toBeHidden();
   await expect(page).toHaveURL(expectedURL);

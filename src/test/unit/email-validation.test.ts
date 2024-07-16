@@ -1,11 +1,8 @@
 import { faker } from '@faker-js/faker';
-
-import { createTranslation, TranslationFunctionType } from '@/test/translate';
+import { t } from 'i18next';
 
 import { validateEmail } from '../../features/landing/components/AuthSection/Validations';
 import { isValidEmailFormat } from '../../features/landing/components/AuthSection/Validations/email';
-
-const t: TranslationFunctionType = createTranslation('pages/i18n');
 
 const emailStepError: string = t('sign_up.form.email_input.step_error_message');
 const emailInvalidError: string = t('sign_up.form.email_input.invalid_message');

@@ -1,12 +1,19 @@
 import { faker } from '@faker-js/faker';
+import { t } from 'i18next';
+
+import '../../../../i18n';
 
 import { ExpectationEmail, ExpectationsPassword, User } from './types';
 
-export const placeholderInitials: string = 'Mykhailo Svitskyi';
-export const placeholderEmail: string = 'vilnaCRM@gmail.com';
-export const placeholderPassword: string = 'Create a password';
-export const policyText: string = 'I have read and accept the';
-export const signUpButton: string = 'Sign-Up';
+export const placeholderInitials: string = t('sign_up.form.name_input.placeholder');
+export const placeholderEmail: string = t('sign_up.form.email_input.placeholder');
+export const placeholderPassword: string = t('sign_up.form.password_input.placeholder');
+export const policyText: string = t('sign_up.form.confidential_text.fullText')
+  .replaceAll('<1>', '')
+  .replaceAll('</1>', '');
+export const signUpButton: string = t('sign_up.form.button_text');
+
+export const fullNameFormatError: string = t('sign_up.form.name_input.error_text');
 
 export const graphqlEndpoint: string = process.env.NEXT_PUBLIC_GRAPHQL_API_URL as string;
 
@@ -35,22 +42,24 @@ const InvalidEmail: string = 'test@test.';
 
 export const expectationsEmail: ExpectationEmail[] = [
   {
-    errorText: "Must contain the characters '@' and '.'",
+    errorText: t('sign_up.form.email_input.step_error_message'),
     email: emailWithoutDot,
   },
-  { errorText: 'Invalid email address', email: InvalidEmail },
+  { errorText: t('sign_up.form.email_input.invalid_message'), email: InvalidEmail },
 ];
 
 export const expectationsPassword: ExpectationsPassword[] = [
-  { errorText: 'Requires 8 to 64 characters', password: textShortText },
+  { errorText: t('sign_up.form.password_input.error_length'), password: textShortText },
   {
-    errorText: 'At least one number is required',
+    errorText: t('sign_up.form.password_input.error_numbers'),
     password: textNoNumbers,
   },
   {
-    errorText: 'At least one uppercase letter',
+    errorText: t('sign_up.form.password_input.error_uppercase'),
     password: textNoUppercaseLetter,
   },
 ];
 
-export const expectationsRequired: { text: string }[] = [{ text: 'This field is required' }];
+export const expectationsRequired: { text: string }[] = [
+  { text: t('sign_up.form.name_input.required') },
+];
