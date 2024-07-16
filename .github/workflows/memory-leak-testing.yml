@@ -25,7 +25,7 @@ jobs:
           path: node_modules
           key: ${{ runner.os }}-dependencies-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
-            ${{ runner.os }}-dependencies-    
+            ${{ runner.os }}-dependencies-
 
       - name: Install pnpm
         run: npm install -g pnpm
