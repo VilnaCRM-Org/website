@@ -1,10 +1,7 @@
 import { render } from '@testing-library/react';
-
-import { createTranslation, TranslationFunctionType } from '@/test/translate';
+import { t } from 'i18next';
 
 import TextInfo from '../../features/landing/components/AboutUs/TextInfo/TextInfo';
-
-const t: TranslationFunctionType = createTranslation('pages/i18n');
 
 const aboutTitle: RegExp = new RegExp(t('about_vilna.heading_first_main'));
 const aboutUsText: string = t('about_vilna.text_main');

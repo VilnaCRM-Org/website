@@ -1,11 +1,8 @@
 import { render } from '@testing-library/react';
+import { t } from 'i18next';
 import React from 'react';
 
-import { createTranslation, TranslationFunctionType } from '@/test/translate';
-
 import MainTitle from '../../features/landing/components/ForWhoSection/MainTitle/MainTitle';
-
-const t: TranslationFunctionType = createTranslation('pages/i18n');
 
 const forWhoTitle: string = t('for_who.heading_main');
 const forWhoText: string = t('for_who.text_main');

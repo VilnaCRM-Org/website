@@ -1,12 +1,9 @@
 import '@testing-library/jest-dom';
 import { render, fireEvent, waitFor } from '@testing-library/react';
+import { t } from 'i18next';
 import React from 'react';
 
-import { createTranslation, TranslationFunctionType } from '@/test/translate';
-
 import Drawer from '../../features/landing/components/Header/Drawer/Drawer';
-
-const t: TranslationFunctionType = createTranslation('pages/i18n');
 
 const buttonText: string = t('header.actions.try_it_out');
 const buttonToOpenDrawer: string = t('header.drawer.button_aria_labels.bars');

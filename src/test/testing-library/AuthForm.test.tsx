@@ -1,16 +1,13 @@
 import { MockedProvider, MockedResponse } from '@apollo/client/testing';
 import { render, fireEvent, waitFor, screen } from '@testing-library/react';
 import userEvent, { UserEvent } from '@testing-library/user-event';
+import { t } from 'i18next';
 import React from 'react';
-
-import { createTranslation, TranslationFunctionType } from '@/test/translate';
 
 import { SIGNUP_MUTATION } from '../../features/landing/api/service/userService';
 import AuthForm from '../../features/landing/components/AuthSection/AuthForm/AuthForm';
 
 import { testInitials, testEmail, testPassword } from './constants';
-
-const t: TranslationFunctionType = createTranslation('pages/i18n');
 
 const fullNamePlaceholder: string = t('sign_up.form.name_input.placeholder');
 const emailPlaceholder: string = t('sign_up.form.email_input.placeholder');

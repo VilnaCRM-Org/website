@@ -1,11 +1,8 @@
 import { faker } from '@faker-js/faker';
-
-import { createTranslation, TranslationFunctionType } from '@/test/translate';
+import { t } from 'i18next';
 
 import { validateFullName } from '../../features/landing/components/AuthSection/Validations';
 import { isValidFullName } from '../../features/landing/components/AuthSection/Validations/initials';
-
-const t: TranslationFunctionType = createTranslation('pages/i18n');
 
 const testFullName: string = faker.person.fullName();
 const testFirstName: string = faker.person.firstName();

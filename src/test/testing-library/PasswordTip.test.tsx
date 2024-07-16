@@ -1,10 +1,7 @@
 import { render } from '@testing-library/react';
-
-import { createTranslation, TranslationFunctionType } from '@/test/translate';
+import { t } from 'i18next';
 
 import PasswordTip from '../../features/landing/components/AuthSection/PasswordTip/PasswordTip';
-
-const t: TranslationFunctionType = createTranslation('pages/i18n');
 
 const recommendationText: string = t('sign_up.form.password_tip.recommendation_text');
 const firstOptionText: string = t('sign_up.form.password_tip.options.option_1');

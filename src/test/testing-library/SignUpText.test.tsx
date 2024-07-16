@@ -1,10 +1,7 @@
 import { render } from '@testing-library/react';
-
-import { createTranslation, TranslationFunctionType } from '@/test/translate';
+import { t } from 'i18next';
 
 import SignUpText from '../../features/landing/components/AuthSection/SignUpText/SignUpText';
-
-const t: TranslationFunctionType = createTranslation('pages/i18n');
 
 const socialTitle: string = t('sign_up.main_heading');
 const vilnaText: string = t('sign_up.vilna_text');

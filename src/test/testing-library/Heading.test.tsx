@@ -1,10 +1,7 @@
 import { render } from '@testing-library/react';
-
-import { createTranslation, TranslationFunctionType } from '@/test/translate';
+import { t } from 'i18next';
 
 import Heading from '../../features/landing/components/WhyUs/Heading/Heading';
-
-const t: TranslationFunctionType = createTranslation('pages/i18n');
 
 const subtitleText: RegExp = new RegExp(t('why_us.business_subtitle'));
 

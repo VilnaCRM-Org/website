@@ -1,10 +1,8 @@
 import { render } from '@testing-library/react';
+import { t } from 'i18next';
 import React from 'react';
 
 import { PrivacyPolicy } from '@/components/UiFooter/PrivacyPolicy';
-import { createTranslation, TranslationFunctionType } from '@/test/translate';
-
-const t: TranslationFunctionType = createTranslation('pages/i18n');
 
 const privacyPolicyText: string = t('footer.privacy');
 const usagePolicyText: string = t('footer.usage_policy');

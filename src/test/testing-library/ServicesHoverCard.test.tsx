@@ -1,11 +1,8 @@
 import { render } from '@testing-library/react';
+import { t } from 'i18next';
 import React from 'react';
 
-import { createTranslation, TranslationFunctionType } from '@/test/translate';
-
 import ServicesHoverCard from '../../features/landing/components/Possibilities/ServicesHoverCard/ServicesHoverCard';
-
-const t: TranslationFunctionType = createTranslation('pages/i18n');
 
 const hoverCardTitle: string = t('unlimited_possibilities.service_text.title');
 const hoverCardText: string = t('unlimited_possibilities.service_text.text');

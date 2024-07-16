@@ -1,12 +1,10 @@
 import { render } from '@testing-library/react';
+import { t } from 'i18next';
 import React from 'react';
 
 import { DefaultFooter } from '@/components/UiFooter/DefaultFooter';
-import { createTranslation, TranslationFunctionType } from '@/test/translate';
 
 import { mockedSocialLinks } from './constants';
-
-const t: TranslationFunctionType = createTranslation('pages/i18n');
 
 const mockedDate: number = new Date().getFullYear();
 const defaultFooterClass: string = '.MuiStack-root';

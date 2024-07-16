@@ -1,11 +1,8 @@
 import { render } from '@testing-library/react';
+import { t } from 'i18next';
 import React from 'react';
 
-import { createTranslation, TranslationFunctionType } from '@/test/translate';
-
 import WhyUs from '../../features/landing/components/WhyUs';
-
-const t: TranslationFunctionType = createTranslation('pages/i18n');
 
 jest.mock('../../components/UiCardList/CardSwiper', () => jest.fn());
 

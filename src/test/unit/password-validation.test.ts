@@ -1,10 +1,7 @@
 import { faker } from '@faker-js/faker';
-
-import { createTranslation, TranslationFunctionType } from '@/test/translate';
+import { t } from 'i18next';
 
 import { validatePassword } from '../../features/landing/components/AuthSection/Validations';
-
-const t: TranslationFunctionType = createTranslation('pages/i18n');
 
 const textShortText: string = faker.internet.password({
   length: 7,

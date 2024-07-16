@@ -1,10 +1,7 @@
 import { render } from '@testing-library/react';
-
-import { createTranslation, TranslationFunctionType } from '@/test/translate';
+import { t } from 'i18next';
 
 import AuthButtons from '../../features/landing/components/Header/AuthButtons/AuthButtons';
-
-const t: TranslationFunctionType = createTranslation('pages/i18n');
 
 const buttonLogInTestId: string = t('header.actions.log_in');
 const buttonSignUpTestId: string = t('header.actions.try_it_out');
