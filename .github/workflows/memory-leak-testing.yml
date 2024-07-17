@@ -38,7 +38,7 @@ jobs:
 
       - name: Run dev and memory leak testing
         run: |
-          pnpm run dev:en &
+          pnpm run dev &
           npx wait-on http://localhost:3000
           node ./src/test/memory-leak/runMemlabTests.js
         env:

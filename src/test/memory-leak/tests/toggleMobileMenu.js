@@ -1,11 +1,16 @@
+const { t } = require('i18next');
+
 const ScenarioBuilder = require('../utils/ScenarioBuilder');
 
 const scenarioBuilder = new ScenarioBuilder();
 
 const mobileViewport = { width: 400, height: 812 };
 
-const menuIconSelector = 'img[alt="Bars Icon"]';
-const closeIconSelector = 'img[alt="Exit Icon"]';
+const barsIconAlt = t('header.drawer.image_alt.bars');
+const exitIconAlt = t('header.drawer.image_alt.exit');
+
+const menuIconSelector = `img[alt="${barsIconAlt}"]`;
+const closeIconSelector = `img[alt="${exitIconAlt}"]`;
 
 async function setup(page) {
   await page.setViewport(mobileViewport);
