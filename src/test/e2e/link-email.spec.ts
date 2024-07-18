@@ -1,10 +1,8 @@
 import { test, expect, Locator, Page } from '@playwright/test';
-import { t } from 'i18next';
 
-import '../../../i18n';
+import t from './utils/initializeLocalization';
 
 const labelButtonToOpenDrawer: string = t('header.drawer.button_aria_labels.bars');
-
 const vilnaCRMEmail: string = t('footer.vilna_email');
 
 async function verifyEmailLink(page: Page, linkName: string): Promise<void> {

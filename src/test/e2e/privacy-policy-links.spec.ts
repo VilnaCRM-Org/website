@@ -1,7 +1,6 @@
 import { test, expect, Page } from '@playwright/test';
-import { t } from 'i18next';
 
-import '../../../i18n';
+import t from './utils/initializeLocalization';
 
 const vilnaCRMPrivacyPolicyURL: string = process.env
   .NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL as string;

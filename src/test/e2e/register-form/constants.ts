@@ -1,7 +1,6 @@
 import { faker } from '@faker-js/faker';
-import { t } from 'i18next';
 
-import '../../../../i18n';
+import t from '../utils/initializeLocalization';
 
 import { ExpectationEmail, ExpectationsPassword, User } from './types';
 

@@ -1,7 +1,6 @@
 import { test, expect, Locator, Page } from '@playwright/test';
-import { t } from 'i18next';
 
-import '../../../i18n';
+import t from './utils/initializeLocalization';
 
 const servicesOpenButtonSelector: string = 'span[data-mui-internal-clone-element="true"]';
 const possibilitiesPluginsCard: string = t(
