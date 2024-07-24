@@ -1,3 +1,5 @@
+require('./utils/initializeLocalization');
+
 const fs = require('node:fs');
 
 const { run, analyze } = require('@memlab/api');

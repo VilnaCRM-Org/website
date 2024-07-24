@@ -30,11 +30,8 @@ jobs:
       - name: Install pnpm
         run: npm install -g pnpm
 
-      - name: Install memlab
-        run: npm install -g memlab
-
       - name: Install dependencies
-        run: pnpm i --frozen-lockfile
+        run: make install
         if: |
           steps.cache-pnpm-dependencies.outputs.cache-hit != 'true' ||
           steps.cache-pnpm-packages.outputs.cache-hit != 'true'

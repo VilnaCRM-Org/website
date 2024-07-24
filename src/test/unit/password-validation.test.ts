@@ -1,4 +1,5 @@
 import { faker } from '@faker-js/faker';
+import { t } from 'i18next';
 
 import { validatePassword } from '../../features/landing/components/AuthSection/Validations';
 
@@ -21,11 +22,9 @@ const correctPassword: string = faker.internet.password({
   prefix: 'Q9',
 });
 
-const passwordLengthError: string = 'Requires 8 to 64 characters';
-
-const passwordNumbersError: string = 'At least one number is required';
-
-const passwordUppercaseError: string = 'At least one uppercase letter';
+const passwordLengthError: string = t('sign_up.form.password_input.error_length');
+const passwordNumbersError: string = t('sign_up.form.password_input.error_numbers');
+const passwordUppercaseError: string = t('sign_up.form.password_input.error_uppercase');
 
 describe('code snippet', () => {
   it('should return true when password is valid', () => {

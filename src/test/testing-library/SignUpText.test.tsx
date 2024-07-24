@@ -1,10 +1,11 @@
 import { render } from '@testing-library/react';
+import { t } from 'i18next';
 
 import SignUpText from '../../features/landing/components/AuthSection/SignUpText/SignUpText';
 
-const socialTitle: string = 'Sign up now and free up your time to grow your business';
-const vilnaText: string = 'VilnaCRM';
-const socialsText: string = 'Log in with a convenient social network:';
+const socialTitle: string = t('sign_up.main_heading');
+const vilnaText: string = t('sign_up.vilna_text');
+const socialsText: string = t('sign_up.socials_main_heading');
 
 describe('SignUpText Component', () => {
   it('should display title', () => {

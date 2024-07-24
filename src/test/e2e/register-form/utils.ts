@@ -8,6 +8,7 @@ import {
   placeholderPassword,
   signUpButton,
   graphqlEndpoint,
+  fullNameFormatError,
 } from './constants';
 import { User } from './types';
 
@@ -15,9 +16,10 @@ export async function fillInitialsInput(page: Page, user: User): Promise<void> {
   const initialsInput: Locator = page.getByPlaceholder(placeholderInitials);
   await page.getByRole('button', { name: signUpButton }).click();
   await initialsInput.fill(' ');
-  await expect(page.getByText('Invalid full name format')).toBeVisible();
+  await expect(page.getByText(fullNameFormatError)).toBeVisible();
   await initialsInput.fill(user.fullName);
 }
+
 export async function fillEmailInput(page: Page, user: User): Promise<void> {
   const emailInput: Locator = page.getByPlaceholder(placeholderEmail);
   await page.getByRole('button', { name: signUpButton }).click();
@@ -39,6 +41,7 @@ export async function fillPasswordInput(page: Page, user: User): Promise<void> {
 
   await passwordInput.fill(user.password);
 }
+
 export function responseFilter(resp: Response): boolean {
   return resp.url().includes(graphqlEndpoint) && resp.status() === 200;
 }

@@ -1,14 +1,15 @@
 import { render } from '@testing-library/react';
+import { t } from 'i18next';
 import React from 'react';
 
 import Cards from '../../features/landing/components/ForWhoSection/Cards/Cards';
 
-const cardTitle: RegExp = /A private entrepreneur/;
-const cardText: string = 'Our CRM is ideal if you:';
-const cardBusinessText: RegExp = /Medium-scale local project/;
-const cardButton: string = 'Try it out';
-const forWhoImage: string = 'Vector';
-const forWhoAriaLabel: string = 'Link to registration';
+const cardTitle: string = t('for_who.card_text_title');
+const cardText: string = t('for_who.heading_secondary');
+const cardBusinessText: string = t('for_who.card_text_business');
+const cardButton: string = t('for_who.button_text');
+const forWhoImage: string = t('for_who.vector_alt');
+const forWhoAriaLabel: string = t('for_who.aria_label');
 
 describe('Cards component', () => {
   it('renders secondary title correctly', () => {

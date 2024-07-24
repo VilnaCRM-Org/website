@@ -34,13 +34,15 @@
     }
   },
   "about_vilna": {
-    "heading_main": "The first Ukrainian <br/ > open source CRM",
+    "heading_first_main": "The first Ukrainian",
+    "heading_second_main": "open source CRM",
     "text_main": "Our goal is to support Ukrainian entrepreneurs. That's why we created Vilna, a convenient and free CRM system - so you can do business, not spend time on settings",
     "button_main": "Try it out"
   },
   "why_us": {
     "heading": "Why we",
-    "subtitle": "Unlimited customization options or ease of use - <br/ > we've made it easy for any business to manage sales",
+    "unlimited_subtitle": "Unlimited customization options or ease of use -",
+    "business_subtitle": "we've made it easy for any business to manage sales",
     "button_text": "Try it out",
     "aria_label": "Link to registration",
     "headers": {
