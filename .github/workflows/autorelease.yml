@@ -23,7 +23,7 @@ jobs:
 
       - name: Conventional Changelog Action
         id: changelog
-        uses: TriPSs/conventional-changelog-action@v4
+        uses: TriPSs/conventional-changelog-action@v5
         with:
           github-token: ${{ secrets.REPO_GITHUB_TOKEN }}
           output-file: 'CHANGELOG.md'
