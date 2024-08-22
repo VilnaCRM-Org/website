@@ -12,16 +12,9 @@ const coordinateY = 0;
 
 async function action(page) {
   await page.click(advantagesLinkSelector);
-  await page.waitForTimeout(1500);
-
   await page.click(forWhoSectionLinkSelector);
-  await page.waitForTimeout(1500);
-
   await page.click(integrationLinkSelector);
-  await page.waitForTimeout(1500);
-
   await page.click(contactsLinkSelector);
-  await page.waitForTimeout(2000);
 }
 
 async function back(page) {
@@ -32,7 +25,6 @@ async function back(page) {
     coordinateX,
     coordinateY
   );
-  await page.waitForTimeout(2000);
 }
 
 module.exports = scenarioBuilder.createScenario({ action, back });
