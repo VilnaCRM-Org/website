@@ -9,8 +9,6 @@ const coordinateY = 0;
 
 async function action(page) {
   await page.click(signUpButtonSelector);
-
-  await page.waitForTimeout(2000);
 }
 
 async function back(page) {
@@ -21,8 +19,6 @@ async function back(page) {
     coordinateX,
     coordinateY
   );
-
-  await page.waitForTimeout(2000);
 }
 
 module.exports = scenarioBuilder.createScenario({ action, back });
