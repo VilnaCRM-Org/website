@@ -1,6 +1,6 @@
 {
-  "name": "website",
-  "version": "0.1.0",
+  "name": "frontend-ssr-template",
+  "version": "v1.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
