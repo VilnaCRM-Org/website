@@ -1,0 +1,55 @@
+@import "../../../../SwaggerVariables/variables";
+@import "../../../../SwaggerTheme/theme";
+
+%sectionHeader {
+  .opblock-section-header {
+    box-shadow: none;
+    padding: 0.375rem 1.25rem 0.375rem 1.5rem;
+    @media screen and (max-width: $lg) {
+      padding: 0.75rem 1.5rem 0.75rem 1.5rem;
+    }
+    @media screen and (max-width: $sm) {
+      padding: 0.5rem 1rem 0.5rem 0.75rem;
+    }
+    .tab-header {
+      .opblock-title {
+        @include medium15($grey200);
+        @media screen and (max-width: $lg) {
+          @include demi18($grey200);
+        }
+        @media screen and (max-width: $sm) {
+          @include medium15($grey200);
+        }
+      }
+      .tab-item {
+        padding: 0;
+        span {
+          @include medium15($grey200);
+          @media screen and (max-width: $lg) {
+            @include demi18($grey200);
+          }
+          @media screen and (max-width: $sm) {
+            @include medium15($grey200);
+          }
+          &::after {
+            display: none;
+          }
+        }
+      }
+    }
+    .try-out {
+      .try-out__btn {
+        @include uiButton(transparent, 1px solid $grey300, 0.75rem 1.5rem);
+        @include medium15($darkSecondary);
+        @media screen and (max-width: $sm) {
+          @include uiButton(transparent, 1px solid $grey300, 0.5rem 1rem);
+        }
+        &.cancel {
+          border: 1px solid #DF7878;
+          background-color: #DC39391A;
+          color: $error;
+        }
+      }
+    }
+  }
+}

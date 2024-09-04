@@ -14,13 +14,7 @@
       }
     }
     .opblock-body {
-      .opblock-section-header {
-        border-bottom: 1px solid #38B386;
-      }
-      & > .opblock-description-wrapper {
-        border-bottom: 1px solid #38B386;
-      }
-      .parameters-container {
+      .opblock-section-header, .opblock-section-request-body, & > .opblock-description-wrapper, .parameters-container {
         border-bottom: 1px solid #38B386;
       }
     }
@@ -37,13 +31,7 @@
       }
     }
     .opblock-body {
-      .opblock-section-header {
-        border-bottom: 1px solid #FFC01E;
-      }
-      & > .opblock-description-wrapper {
-        border-bottom: 1px solid #FFC01E;
-      }
-      .parameters-container {
+      .opblock-section-header, .opblock-section-request-body, & > .opblock-description-wrapper, .parameters-container {
         border-bottom: 1px solid #FFC01E;
       }
     }
@@ -60,13 +48,7 @@
       }
     }
     .opblock-body {
-      .opblock-section-header {
-        border-bottom: 1px solid #1EAEFF;
-      }
-      & > .opblock-description-wrapper {
-        border-bottom: 1px solid #1EAEFF;
-      }
-      .parameters-container {
+      .opblock-section-header, .opblock-section-request-body, & > .opblock-description-wrapper, .parameters-container {
         border-bottom: 1px solid #1EAEFF;
       }
     }
@@ -83,13 +65,7 @@
       }
     }
     .opblock-body {
-      .opblock-section-header {
-        border-bottom: 1px solid #DC3939;
-      }
-      & > .opblock-description-wrapper {
-        border-bottom: 1px solid #DC3939;
-      }
-      .parameters-container {
+      .opblock-section-header, .opblock-section-request-body, & > .opblock-description-wrapper, .parameters-container {
         border-bottom: 1px solid #DC3939;
       }
     }
@@ -106,13 +82,7 @@
       }
     }
     .opblock-body {
-      .opblock-section-header {
-        border-bottom: 1px solid #9B59B6;
-      }
-      & > .opblock-description-wrapper {
-        border-bottom: 1px solid #9B59B6;
-      }
-      .parameters-container {
+      .opblock-section-header, .opblock-section-request-body, & > .opblock-description-wrapper, .parameters-container {
         border-bottom: 1px solid #9B59B6;
       }
     }

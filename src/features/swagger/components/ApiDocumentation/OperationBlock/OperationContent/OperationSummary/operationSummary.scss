@@ -3,10 +3,11 @@
 
 %operationSummary {
   .opblock-summary {
+    box-sizing: border-box;
     padding: 0.313rem 0.875rem 0.313rem 0.313rem;
     border-radius: 0.44rem 0.44rem 0.45rem 0.45rem;
     border: none;
-    min-height: 3.25rem;
+    min-height: 2.625rem;
     @media screen and (max-width: $lg) {
       padding-right: 1.5rem;
     }
