@@ -1,7 +1,8 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import i18nConfig from './sharedI18nConfig';
+
+import i18nConfig from '../../../../sharedI18nConfig';
 
 i18n.use(initReactI18next).init(i18nConfig);
 
-export default i18n;
+export default i18n.t;

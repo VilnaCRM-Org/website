@@ -12,19 +12,26 @@ import { testInitials, testEmail, testPassword } from './constants';
 const fullNamePlaceholder: string = t('sign_up.form.name_input.placeholder');
 const emailPlaceholder: string = t('sign_up.form.email_input.placeholder');
 const passwordPlaceholder: string = t('sign_up.form.password_input.placeholder');
+
 const submitButtonText: string = t('sign_up.form.button_text');
+
 const formTitleText: string = t('sign_up.form.heading_main');
 const nameInputText: string = t('sign_up.form.name_input.label');
 const emailInputText: string = t('sign_up.form.email_input.label');
 const passwordInputText: string = t('sign_up.form.password_input.label');
+
 const requiredText: string = t('sign_up.form.name_input.required');
 const passwordTipAltText: string = t('sign_up.form.password_tip.alt');
-const authFormSelector: string = '.MuiBox-root';
+
 const statusRole: string = 'status';
 const checkboxRole: string = 'checkbox';
 const alertRole: string = 'alert';
 const buttonRole: string = 'button';
+
 const emptyValue: string = '';
+
+const authFormSelector: string = '.MuiBox-root';
+
 const borderStyle: string = 'border: 1px solid #DC3939';
 
 const fulfilledMockResponse: MockedResponse = {
