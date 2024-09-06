@@ -14,8 +14,8 @@ const emailPlaceholder: string = t('sign_up.form.email_input.placeholder');
 const passwordPlaceholder: string = t('sign_up.form.password_input.placeholder');
 
 const submitButtonText: string = t('sign_up.form.button_text');
-
 const formTitleText: string = t('sign_up.form.heading_main');
+
 const nameInputText: string = t('sign_up.form.name_input.label');
 const emailInputText: string = t('sign_up.form.email_input.label');
 const passwordInputText: string = t('sign_up.form.password_input.label');

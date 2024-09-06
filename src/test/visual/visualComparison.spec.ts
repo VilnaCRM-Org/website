@@ -24,7 +24,7 @@ test.describe('Visual Tests', () => {
 
       await page.waitForTimeout(timeoutDuration);
 
-      await expect(page).toHaveScreenshot(`${screen.name}-${currentLanguage}.png`, {
+      await expect(page).toHaveScreenshot(`${currentLanguage}_${screen.name}.png`, {
         fullPage: true,
       });
     });
