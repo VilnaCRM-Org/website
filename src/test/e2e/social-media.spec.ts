@@ -16,11 +16,13 @@ const linkToFacebookRole: string = t('header.drawer.aria_labels_social_images.fa
 const linkToLinkedinRole: string = t('header.drawer.aria_labels_social_images.linkedin');
 const buttonToOpenDrawerLabel: string = t('header.drawer.button_aria_labels.bars');
 
+const mockedPageBodyContent: string = 'Mocked Page';
+
 async function mockSocialLinkUrlRoute(page: Page, url: string): Promise<void> {
   await page.route(url, route => {
     route.fulfill({
       status: 200,
-      body: 'Instagram Page',
+      body: mockedPageBodyContent,
       headers: {
         'Content-Type': 'text/html',
       },
