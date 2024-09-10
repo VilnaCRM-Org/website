@@ -5,4 +5,6 @@ import i18nConfig from '../../../../sharedI18nConfig';
 
 i18n.use(initReactI18next).init(i18nConfig);
 
+export const { t } = i18n;
+
 export default i18n.t;

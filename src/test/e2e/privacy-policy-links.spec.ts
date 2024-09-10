@@ -1,12 +1,14 @@
 import { test, expect, Page } from '@playwright/test';
 
-import t from './utils/initializeLocalization';
+import { t } from './utils/initializeLocalization';
 
 const vilnaCRMPrivacyPolicyURL: string = process.env
   .NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL as string;
 const privacyPolicyText: RegExp = new RegExp(t('footer.privacy'));
 const usePolicyText: RegExp = new RegExp(t('footer.usage_policy'));
 const companyNameText: RegExp = new RegExp(t('sign_up.vilna_text'));
+
+const mockedPage: string = 'Mocked Page';
 
 async function navigateToPrivacyPolicy(
   page: Page,
@@ -16,7 +18,7 @@ async function navigateToPrivacyPolicy(
   await page.route(vilnaCRMPrivacyPolicyURL, route => {
     route.fulfill({
       status: 200,
-      body: 'Github Page',
+      body: mockedPage,
       headers: {
         'Content-Type': 'text/html',
       },
@@ -36,13 +38,7 @@ test.describe('Checking if the links to privacy policy are working', () => {
   test('Links to privacy policy', async ({ page }) => {
     await navigateToPrivacyPolicy(page, privacyPolicyText, companyNameText);
   });
-  test('Links to usage policy', async ({ page }) => {
-    await navigateToPrivacyPolicy(page, privacyPolicyText, companyNameText);
-  });
 
-  test('Links to privacy policy in form', async ({ page }) => {
-    await navigateToPrivacyPolicy(page, privacyPolicyText, companyNameText);
-  });
   test('Links to usage policy in form', async ({ page }) => {
     await navigateToPrivacyPolicy(page, usePolicyText, companyNameText);
   });

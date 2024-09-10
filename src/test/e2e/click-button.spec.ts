@@ -1,6 +1,6 @@
 import { Locator, Page, test } from '@playwright/test';
 
-import t from './utils/initializeLocalization';
+import { t } from './utils/initializeLocalization';
 
 const aboutVilnaCRM: RegExp = new RegExp(t('about_vilna.heading_first_main'));
 const forWho: RegExp = new RegExp(t('for_who.heading_main'));

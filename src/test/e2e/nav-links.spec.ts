@@ -1,6 +1,6 @@
 import { test, expect, Page } from '@playwright/test';
 
-import t from './utils/initializeLocalization';
+import { t } from './utils/initializeLocalization';
 
 const links: Record<string, string> = {
   advantages: `${process.env.NEXT_PUBLIC_WEBSITE_URL}/#Advantages`,

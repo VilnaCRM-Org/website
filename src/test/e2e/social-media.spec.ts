@@ -1,6 +1,6 @@
 import { test, expect, Page } from '@playwright/test';
 
-import t from './utils/initializeLocalization';
+import { t } from './utils/initializeLocalization';
 
 const socialLinks: { url: string }[] = [
   // TODO: correct the url to our social networks

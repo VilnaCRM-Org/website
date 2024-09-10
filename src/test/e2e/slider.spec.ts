@@ -1,6 +1,6 @@
 import { test, Locator, expect, Page } from '@playwright/test';
 
-import t from './utils/initializeLocalization';
+import { t } from './utils/initializeLocalization';
 
 const FIRST_SLIDE_TITLE_WHY_US: string = t('why_us.headers.header_open_source');
 const SECOND_SLIDE_TITLE_WHY_US: string = t('why_us.headers.header_ease_of_setup').replace(

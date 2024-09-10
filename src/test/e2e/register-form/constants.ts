@@ -1,15 +1,16 @@
 import { faker } from '@faker-js/faker';
 
-import t from '../utils/initializeLocalization';
+import { t } from '../utils/initializeLocalization';
 
 import { ExpectationEmail, ExpectationsPassword, User } from './types';
 
 export const placeholderInitials: string = t('sign_up.form.name_input.placeholder');
 export const placeholderEmail: string = t('sign_up.form.email_input.placeholder');
 export const placeholderPassword: string = t('sign_up.form.password_input.placeholder');
-export const policyText: string = t('sign_up.form.confidential_text.fullText')
-  .replaceAll('<1>', '')
-  .replaceAll('</1>', '');
+export const policyText: string = t('sign_up.form.confidential_text.fullText').replaceAll(
+  /<\/?1>/g,
+  ''
+);
 export const signUpButton: string = t('sign_up.form.button_text');
 
 export const fullNameFormatError: string = t('sign_up.form.name_input.error_text');
@@ -39,26 +40,33 @@ const textNoUppercaseLetter: string = faker.internet.password({
 const emailWithoutDot: string = 'test@test';
 const InvalidEmail: string = 'test@test.';
 
+const emailErrorKeys: { stepError: string; invalid: string } = {
+  stepError: t('sign_up.form.email_input.step_error_message'),
+  invalid: t('sign_up.form.email_input.invalid_message'),
+};
+
+const passwordErrorKeys: { length: string; numbers: string; uppercase: string } = {
+  length: t('sign_up.form.password_input.error_length'),
+  numbers: t('sign_up.form.password_input.error_numbers'),
+  uppercase: t('sign_up.form.password_input.error_uppercase'),
+};
+
 export const expectationsEmail: ExpectationEmail[] = [
   {
-    errorText: t('sign_up.form.email_input.step_error_message'),
+    errorText: emailErrorKeys.stepError,
     email: emailWithoutDot,
   },
-  { errorText: t('sign_up.form.email_input.invalid_message'), email: InvalidEmail },
+  { errorText: emailErrorKeys.invalid, email: InvalidEmail },
 ];
 
 export const expectationsPassword: ExpectationsPassword[] = [
-  { errorText: t('sign_up.form.password_input.error_length'), password: textShortText },
+  { errorText: passwordErrorKeys.length, password: textShortText },
   {
-    errorText: t('sign_up.form.password_input.error_numbers'),
+    errorText: passwordErrorKeys.numbers,
     password: textNoNumbers,
   },
   {
-    errorText: t('sign_up.form.password_input.error_uppercase'),
+    errorText: passwordErrorKeys.uppercase,
     password: textNoUppercaseLetter,
   },
-];
-
-export const expectationsRequired: { text: string }[] = [
-  { text: t('sign_up.form.name_input.required') },
 ];
