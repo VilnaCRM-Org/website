@@ -5,7 +5,7 @@ const { loadEnvConfig } = require('@next/env');
 const projectDir = process.cwd();
 loadEnvConfig(projectDir);
 
-const i18nConfig = require('../../../../sharedI18nConfig');
+const i18nConfig = require('../../../config/i18nConfig');
 
 i18n.use(initReactI18next).init(i18nConfig);
 

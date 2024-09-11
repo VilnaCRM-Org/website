@@ -5,13 +5,15 @@ const ScenarioBuilder = require('../utils/ScenarioBuilder');
 
 const scenarioBuilder = new ScenarioBuilder();
 
+const createInputSelector = placeholder => `input[placeholder="${placeholder}"]`;
+
 const fullNamePlaceholder = t('sign_up.form.name_input.placeholder');
 const emailPlaceholder = t('sign_up.form.email_input.placeholder');
 const passwordPlaceholder = t('sign_up.form.password_input.placeholder');
 
-const fullNameInputSelector = `input[placeholder="${fullNamePlaceholder}"]`;
-const emailInputSelector = `input[placeholder="${emailPlaceholder}"]`;
-const passwordInputSelector = `input[placeholder="${passwordPlaceholder}"]`;
+const fullNameInputSelector = createInputSelector(fullNamePlaceholder);
+const emailInputSelector = createInputSelector(emailPlaceholder);
+const passwordInputSelector = createInputSelector(passwordPlaceholder);
 const privacyCheckboxSelector = 'input[type="checkbox"]';
 
 const fakeFullName = faker.person.fullName();
