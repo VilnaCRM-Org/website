@@ -20,19 +20,23 @@ Speed: Automation speeds up the process of releasing and deploying software, whi
 ### Step-by-Step Guide
 #### 1) The GitHub App configuration
 
-Let's start by creating and configuring a GitHub App. Go to Settings > Developer Settings > GitHub Apps (Developer Settings is at the bottom of the Settings page). Click on New GitHub App.
+Let's start by creating and configuring a GitHub App:
 
-Once you are creating a new GitHub app, make sure to configure the following:
+1. Go to Settings > Developer Settings > GitHub Apps (Developer Settings is at the bottom of the Settings page).
+2. Click on New GitHub App.
+3. When configuring the new GitHub app, ensure the following:
+   a. Complete the necessary details for the application.
+   b. Uncheck the active webhook.
+   c. Set the following Repository Permissions:
+    - Administration: Read and Write (needed for managing repository settings)
+    - Contents: Read and Write (needed for accessing and modifying repository contents)
+    - Issues: Read and Write (needed for creating and managing issues)
+    - Metadata: Read Only (needed for accessing repository metadata)
+    - Pull Requests: Read and Write (needed for creating and managing pull requests)
+      d. Check "Install Only on this account".
 
-    Complete the necessary details for the application.
-    Uncheck the active webhook.
-    From the Repository Permissions, set the following:
-        Administration to Read and Write.
-        Contents to Read and Write.
-        Issues to Read and Write.
-        Metadata to Read Only.
-        Pull Requests to Read and Write.
-    Check Install Only on this account.
+These settings ensure that the GitHub App has the necessary permissions to automate the release process effectively.
+
 Once you have created the app, you need to install it on the repository you want to use it. Follow GitHub's guide on installing your apps to repositories you own.
 One more thing you need to do from the app's settings. Go to the app's settings and generate a new private key. Copy that private key to a safe place and then copy the app ID. You will need both values as repository secrets.
 You can easily find ID here(Settings > Application > configure your github APP > app settings > you can see app id). Generate a new private key and copy the app ID. These will be used to authenticate the GitHub Actions workflow with the necessary permissions to perform auto-releases.
