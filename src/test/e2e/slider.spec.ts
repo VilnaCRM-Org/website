@@ -7,7 +7,7 @@ const SECOND_SLIDE_TITLE_WHY_US: string = t('why_us.headers.header_ease_of_setup
   '<br /> ',
   ''
 );
-const firstSlideTittlePossibilities: string = t(
+const firstSlideTitlePossibilities: string = t(
   'unlimited_possibilities.cards_headings.heading_public_api'
 );
 const PUBLIC_LIBRARIES: RegExp = new RegExp(
@@ -52,7 +52,7 @@ test.describe('Slider tests', () => {
 
   test('Slider test in the possibilities section', async ({ page }) => {
     const firstSlidePossibilities: Locator = page.getByRole('heading', {
-      name: firstSlideTittlePossibilities,
+      name: firstSlideTitlePossibilities,
     });
     const secondSlidePossibilities: Locator = page.getByRole('heading', {
       name: PUBLIC_LIBRARIES,
