@@ -15,9 +15,9 @@ const getResources = () => {
 };
 
 module.exports = {
-  lng: process.env.NEXT_PUBLIC_MAIN_LANGUAGE,
+  lng: mainLanguage,
   resources: getResources(),
-  fallbackLng: process.env.NEXT_PUBLIC_FALLBACK_LANGUAGE,
+  fallbackLng: fallbackLanguage,
   interpolation: {
     escapeValue: false,
   },
