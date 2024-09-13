@@ -1,14 +1,18 @@
 import { Locator, Page, test } from '@playwright/test';
 
+import { createLocalizedRegExp } from '@/test/e2e/utils/createLocalizedRegExp';
+
 import { t } from './utils/initializeLocalization';
 
-const aboutVilnaCRM: RegExp = new RegExp(t('about_vilna.heading_first_main'));
-const forWho: RegExp = new RegExp(t('for_who.heading_main'));
-const whyWe: RegExp = new RegExp(t('why_us.heading'));
+const aboutVilnaCRM: RegExp = createLocalizedRegExp('about_vilna.heading_first_main');
+const forWho: RegExp = createLocalizedRegExp('for_who.heading_main');
+const whyWe: RegExp = createLocalizedRegExp('why_us.heading');
 
 const openDrawerLabel: string = t('header.drawer.button_aria_labels.bars');
 
-const nameOption: { name: RegExp } = { name: new RegExp(t('header.actions.try_it_out')) };
+const nameOption: { name: RegExp } = {
+  name: createLocalizedRegExp('header.actions.try_it_out'),
+};
 
 const clickTryItNowButtonByFilteredSection: (
   page: Page,

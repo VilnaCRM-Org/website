@@ -3,7 +3,9 @@ import { t } from 'i18next';
 
 import Heading from '../../features/landing/components/WhyUs/Heading/Heading';
 
-const subtitleText: RegExp = new RegExp(t('why_us.business_subtitle'));
+import { createLocalizedRegExp } from './utils';
+
+const subtitleText: RegExp = createLocalizedRegExp('why_us.business_subtitle');
 
 const headingText: string = t('why_us.heading');
 

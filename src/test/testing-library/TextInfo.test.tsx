@@ -2,8 +2,9 @@ import { render } from '@testing-library/react';
 import { t } from 'i18next';
 
 import TextInfo from '../../features/landing/components/AboutUs/TextInfo/TextInfo';
+import { createLocalizedRegExp } from './utils';
 
-const aboutTitle: RegExp = new RegExp(t('about_vilna.heading_first_main'));
+const aboutTitle: RegExp = createLocalizedRegExp('about_vilna.heading_first_main');
 const aboutUsText: string = t('about_vilna.text_main');
 const aboutUsButtonText: string = t('about_vilna.button_main');
 const buttonSelector: string = 'a[href="#signUp"]';

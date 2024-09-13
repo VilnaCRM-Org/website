@@ -1,12 +1,12 @@
 import { test, expect, Page } from '@playwright/test';
 
-import { t } from './utils/initializeLocalization';
+import { createLocalizedRegExp } from '@/test/e2e/utils/createLocalizedRegExp';
 
 const vilnaCRMPrivacyPolicyURL: string = process.env
   .NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL as string;
-const privacyPolicyText: RegExp = new RegExp(t('footer.privacy'));
-const usePolicyText: RegExp = new RegExp(t('footer.usage_policy'));
-const companyNameText: RegExp = new RegExp(t('sign_up.vilna_text'));
+const privacyPolicyText: RegExp = createLocalizedRegExp('footer.privacy');
+const usePolicyText: RegExp = createLocalizedRegExp('footer.usage_policy');
+const companyNameText: RegExp = createLocalizedRegExp('sign_up.vilna_text');
 
 const mockedPage: string = 'Mocked Page';
 

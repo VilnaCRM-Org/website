@@ -1,5 +1,7 @@
 import { test, Locator, expect, Page } from '@playwright/test';
 
+import { createLocalizedRegExp } from '@/test/e2e/utils/createLocalizedRegExp';
+
 import { t } from './utils/initializeLocalization';
 
 const FIRST_SLIDE_TITLE_WHY_US: string = t('why_us.headers.header_open_source');
@@ -10,7 +12,7 @@ const SECOND_SLIDE_TITLE_WHY_US: string = t('why_us.headers.header_ease_of_setup
 const firstSlideTitlePossibilities: string = t(
   'unlimited_possibilities.cards_headings.heading_public_api'
 );
-const PUBLIC_LIBRARIES: RegExp = new RegExp(
+const publicLibraries: RegExp = createLocalizedRegExp(
   t('unlimited_possibilities.cards_headings.heading_libraries').split(' <br />').join('')
 );
 
@@ -55,7 +57,7 @@ test.describe('Slider tests', () => {
       name: firstSlideTitlePossibilities,
     });
     const secondSlidePossibilities: Locator = page.getByRole('heading', {
-      name: PUBLIC_LIBRARIES,
+      name: publicLibraries,
     });
 
     await performSliderTest(page, firstSlidePossibilities, secondSlidePossibilities);
