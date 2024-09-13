@@ -139,5 +139,23 @@ module.exports = {
         '@typescript-eslint/no-var-requires': ['off'],
       },
     },
+    {
+      files: ['src/test/load/**/*.js', 'src/test/memory-leak/**/*.js'],
+      rules: {
+        'no-console': 'error',
+        'import/extensions': ['off', 'never', { js: 'never', jsx: 'never' }],
+        'prefer-template': 'off',
+        'no-restricted-syntax': 'off',
+        'import/no-unresolved': 'off',
+        'class-methods-use-this': 'off',
+        'no-restricted-globals': 'off',
+        'no-undef': 'off',
+        'no-use-before-define': 'off',
+        'import/no-extraneous-dependencies': 'off',
+        'import/no-dynamic-require': 'off',
+        'global-require': 'off',
+        'no-await-in-loop': 'off',
+      },
+    },
   ],
 };

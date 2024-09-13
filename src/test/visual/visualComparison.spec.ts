@@ -10,6 +10,8 @@ test.describe('Visual Tests', () => {
       await page.waitForLoadState('networkidle');
       await page.evaluateHandle('document.fonts.ready');
 
+      await page.waitForTimeout(3000);
+
       const scrollHeight: number = await page.evaluate(() => document.documentElement.scrollHeight);
       await page.setViewportSize({ width: screen.width, height: scrollHeight });
 

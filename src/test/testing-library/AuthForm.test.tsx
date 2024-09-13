@@ -1,146 +1,169 @@
 import { MockedProvider, MockedResponse } from '@apollo/client/testing';
-import { render, fireEvent, waitFor } from '@testing-library/react';
+import { render, fireEvent, waitFor, screen } from '@testing-library/react';
 import userEvent, { UserEvent } from '@testing-library/user-event';
 import React from 'react';
 
 import { SIGNUP_MUTATION } from '../../features/landing/api/service/userService';
 import AuthForm from '../../features/landing/components/AuthSection/AuthForm/AuthForm';
-import {
-  fullNamePlaceholder,
-  emailPlaceholder,
-  passwordPlaceholder,
-  submitButtonText,
-  authFormSelector,
-  mockErrors,
-  formTitleText,
-  nameInputText,
-  emailInputText,
-  passwordInputText,
-  requiredText,
-  statusRole,
-  checkboxRole,
-  alertRole,
-  emptyValue,
-  passwordTipAltText,
-  buttonRole,
-  borderStyle,
-} from '../../features/landing/components/AuthSection/AuthForm/constants';
 
 import { testInitials, testEmail, testPassword } from './constants';
 
+const fullNamePlaceholder: RegExp = /Mykhailo Svitskyi/;
+const emailPlaceholder: string = 'vilnaCRM@gmail.com';
+const passwordPlaceholder: string = 'Create a password';
+const submitButtonText: string = 'Sign-Up';
+const authFormSelector: string = '.MuiBox-root';
+const formTitleText: string = 'Or register on the website:';
+const nameInputText: string = 'Your name and surname';
+const emailInputText: string = 'Email';
+const passwordInputText: string = 'Password';
+const requiredText: string = 'This field is required';
+const passwordTipAltText: string = 'Password tip mark';
+const statusRole: string = 'status';
+const checkboxRole: string = 'checkbox';
+const alertRole: string = 'alert';
+const buttonRole: string = 'button';
+const emptyValue: string = '';
+const borderStyle: string = 'border: 1px solid #DC3939';
+
+const fulfilledMockResponse: MockedResponse = {
+  request: {
+    query: SIGNUP_MUTATION,
+  },
+  variableMatcher: () => true,
+  result: variables => {
+    const { input } = variables;
+    const { initials, email, password, clientMutationId } = input;
+
+    expect(input).not.toBeUndefined();
+    expect(initials).toBe(testInitials);
+    expect(email).toBe(testEmail);
+    expect(password).toBe(testPassword);
+    expect(clientMutationId).toBe('132');
+
+    return {
+      data: {
+        createUser: {
+          user: {
+            email,
+            initials,
+            id: 0,
+            confirmed: true,
+          },
+          clientMutationId: '132',
+        },
+      },
+    };
+  },
+};
+const rejectedMockResponse: MockedResponse = {
+  request: {
+    query: SIGNUP_MUTATION,
+    variables: {
+      input: {},
+    },
+  },
+  error: { name: 'MockError', message: 'Server Error' },
+};
+
+const selectFormElements: () => {
+  fullNameInput: HTMLInputElement;
+  emailInput: HTMLInputElement;
+  passwordInput: HTMLInputElement;
+  privacyCheckbox: HTMLInputElement;
+  signUpButton: HTMLElement;
+} = () => {
+  const fullNameInput: HTMLInputElement = screen.getByPlaceholderText(fullNamePlaceholder);
+  const emailInput: HTMLInputElement = screen.getByPlaceholderText(emailPlaceholder);
+  const passwordInput: HTMLInputElement = screen.getByPlaceholderText(passwordPlaceholder);
+  const privacyCheckbox: HTMLInputElement = screen.getByRole(checkboxRole);
+  const signUpButton: HTMLElement = screen.getByRole(buttonRole, {
+    name: submitButtonText,
+  });
+
+  return { fullNameInput, emailInput, passwordInput, privacyCheckbox, signUpButton };
+};
+
+const fillForm: (
+  fullNameValue?: string,
+  emailValue?: string,
+  passwordValue?: string,
+  isChecked?: boolean
+) => {
+  fullNameInput: HTMLInputElement;
+  emailInput: HTMLInputElement;
+  passwordInput: HTMLInputElement;
+  privacyCheckbox: HTMLInputElement;
+} = (fullNameValue = '', emailValue = '', passwordValue = '', isChecked = false) => {
+  const { fullNameInput, emailInput, passwordInput, privacyCheckbox, signUpButton } =
+    selectFormElements();
+
+  fireEvent.change(fullNameInput, { target: { value: fullNameValue } });
+  fireEvent.change(emailInput, { target: { value: emailValue } });
+  fireEvent.change(passwordInput, { target: { value: passwordValue } });
+
+  if (isChecked) fireEvent.click(privacyCheckbox);
+
+  fireEvent.click(signUpButton);
+
+  return { fullNameInput, emailInput, passwordInput, privacyCheckbox };
+};
+
+const checkElementsInDocument: (...elements: (HTMLElement | null)[]) => void = (...elements) => {
+  elements.forEach(element => expect(element).toBeInTheDocument());
+};
+
 describe('AuthForm', () => {
   it('renders AuthForm component', () => {
-    const { container, queryByRole, getByPlaceholderText, getByAltText, getByText, getByRole } =
-      render(
-        <MockedProvider>
-          <AuthForm />
-        </MockedProvider>
-      );
+    const { container, queryByRole, getByAltText, getByText } = render(
+      <MockedProvider>
+        <AuthForm />
+      </MockedProvider>
+    );
 
-    const authForm: HTMLElement | null = container.querySelector(authFormSelector);
+    const authForm: HTMLElement = container.querySelector(authFormSelector) as HTMLElement;
     const formTitle: HTMLElement = getByText(formTitleText);
     const nameInputLabel: HTMLElement = getByText(nameInputText);
     const emailInputLabel: HTMLElement = getByText(emailInputText);
     const passwordInputLabel: HTMLElement = getByText(passwordInputText);
     const passwordTipImage: HTMLElement = getByAltText(passwordTipAltText);
 
-    const fullNameInput: HTMLInputElement = getByPlaceholderText(
-      fullNamePlaceholder
-    ) as HTMLInputElement;
-    const emailInput: HTMLInputElement = getByPlaceholderText(emailPlaceholder) as HTMLInputElement;
-    const passwordInput: HTMLInputElement = getByPlaceholderText(
-      passwordPlaceholder
-    ) as HTMLInputElement;
-    const privacyCheckbox: HTMLInputElement = getByRole(checkboxRole) as HTMLInputElement;
-
     const serverErrorMessage: HTMLElement | null = queryByRole(alertRole);
     const loader: HTMLElement | null = queryByRole(statusRole);
 
-    expect(fullNameInput.value).toBe(emptyValue);
-    expect(emailInput.value).toBe(emptyValue);
-    expect(passwordInput.value).toBe(emptyValue);
-    expect(privacyCheckbox).not.toBeChecked();
+    checkElementsInDocument(
+      authForm,
+      formTitle,
+      nameInputLabel,
+      emailInputLabel,
+      passwordInputLabel,
+      passwordTipImage
+    );
 
-    expect(authForm).toBeInTheDocument();
-    expect(formTitle).toBeInTheDocument();
-    expect(nameInputLabel).toBeInTheDocument();
-    expect(emailInputLabel).toBeInTheDocument();
-    expect(passwordInputLabel).toBeInTheDocument();
-    expect(passwordTipImage).toBeInTheDocument();
     expect(loader).not.toBeInTheDocument();
     expect(serverErrorMessage).not.toBeInTheDocument();
-
-    fireEvent.click(privacyCheckbox);
-
-    expect(privacyCheckbox).toBeChecked();
   });
 
   it('renders input fields', () => {
-    const { getByPlaceholderText } = render(
+    render(
       <MockedProvider>
         <AuthForm />
       </MockedProvider>
     );
 
-    const fullNameInput: HTMLElement = getByPlaceholderText(fullNamePlaceholder);
-    const emailInput: HTMLElement = getByPlaceholderText(emailPlaceholder);
-    const passwordInput: HTMLElement = getByPlaceholderText(passwordPlaceholder);
+    const { fullNameInput, emailInput, passwordInput } = selectFormElements();
 
-    expect(fullNameInput).toBeInTheDocument();
-    expect(emailInput).toBeInTheDocument();
-    expect(passwordInput).toBeInTheDocument();
+    checkElementsInDocument(fullNameInput, emailInput, passwordInput);
   });
 
   it('successful registration', async () => {
-    const mock: MockedResponse = {
-      request: {
-        query: SIGNUP_MUTATION,
-      },
-      variableMatcher: () => true,
-      result: variables => {
-        const { input } = variables;
-        const { initials, email, password, clientMutationId } = input;
-
-        expect(input).not.toBeUndefined();
-        expect(initials).toBe(testInitials);
-        expect(email).toBe(testEmail);
-        expect(password).toBe(testPassword);
-        expect(clientMutationId).toBe('132');
-
-        return {
-          data: {
-            createUser: {
-              user: {
-                email,
-                initials,
-                id: 0,
-                confirmed: true,
-              },
-              clientMutationId: '132',
-            },
-          },
-        };
-      },
-    };
-    const { getByRole, getByPlaceholderText, queryByRole } = render(
-      <MockedProvider mocks={[mock]} addTypename={false}>
+    const { getByRole, queryByRole } = render(
+      <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
         <AuthForm />
       </MockedProvider>
     );
 
-    const fullNameInput: HTMLElement = getByPlaceholderText(fullNamePlaceholder);
-    const emailInput: HTMLElement = getByPlaceholderText(emailPlaceholder);
-    const passwordInput: HTMLElement = getByPlaceholderText(passwordPlaceholder);
-    const privacyCheckbox: HTMLElement = getByRole(checkboxRole);
-    const signUpButton: HTMLElement = getByRole(buttonRole, {
-      name: submitButtonText,
-    });
-
-    fireEvent.change(fullNameInput, { target: { value: testInitials } });
-    fireEvent.change(emailInput, { target: { value: testEmail } });
-    fireEvent.change(passwordInput, { target: { value: testPassword } });
-    fireEvent.click(privacyCheckbox);
-    fireEvent.click(signUpButton);
+    fillForm(testInitials, testEmail, testPassword, true);
 
     await waitFor(() => {
       const loader: HTMLElement = getByRole(statusRole);
@@ -152,60 +175,31 @@ describe('AuthForm', () => {
   });
 
   it('registration with server error', async () => {
-    const mock: MockedResponse = {
-      request: {
-        query: SIGNUP_MUTATION,
-        variables: {
-          input: {},
-        },
-      },
-      error: { name: 'MockError', message: 'Server Error' },
-    };
-
-    const { getByRole, getByPlaceholderText, findByRole } = render(
-      <MockedProvider mocks={[mock]} addTypename={false}>
+    const { findByRole } = render(
+      <MockedProvider mocks={[rejectedMockResponse]} addTypename={false}>
         <AuthForm />
       </MockedProvider>
     );
 
-    const fullNameInput: HTMLElement = getByPlaceholderText(fullNamePlaceholder);
-    const emailInput: HTMLElement = getByPlaceholderText(emailPlaceholder);
-    const passwordInput: HTMLElement = getByPlaceholderText(passwordPlaceholder);
-    const privacyCheckbox: HTMLElement = getByRole(checkboxRole);
-    const signUpButton: HTMLElement = getByRole(buttonRole, {
-      name: submitButtonText,
-    });
-
-    fireEvent.change(emailInput, { target: { value: testEmail } });
-    fireEvent.change(passwordInput, { target: { value: testPassword } });
-    fireEvent.change(fullNameInput, { target: { value: testInitials } });
-    fireEvent.click(privacyCheckbox);
-    fireEvent.click(signUpButton);
+    fillForm(testInitials, testEmail, testPassword, true);
 
     const serverErrorMessage: HTMLElement = await findByRole(alertRole);
     expect(serverErrorMessage).toBeInTheDocument();
   });
 
   it('correct linkage between inputs and values', async () => {
-    const { getByPlaceholderText, getByRole } = render(
+    render(
       <MockedProvider addTypename={false}>
         <AuthForm />
       </MockedProvider>
     );
 
-    const fullNameInput: HTMLInputElement = getByPlaceholderText(
-      fullNamePlaceholder
-    ) as HTMLInputElement;
-    const emailInput: HTMLInputElement = getByPlaceholderText(emailPlaceholder) as HTMLInputElement;
-    const passwordInput: HTMLInputElement = getByPlaceholderText(
-      passwordPlaceholder
-    ) as HTMLInputElement;
-    const privacyCheckbox: HTMLInputElement = getByRole(checkboxRole) as HTMLInputElement;
-
-    fireEvent.change(emailInput, { target: { value: testEmail } });
-    fireEvent.change(passwordInput, { target: { value: testPassword } });
-    fireEvent.change(fullNameInput, { target: { value: testInitials } });
-    fireEvent.click(privacyCheckbox);
+    const { fullNameInput, emailInput, passwordInput, privacyCheckbox } = fillForm(
+      testInitials,
+      testEmail,
+      testPassword,
+      true
+    );
 
     await waitFor(() => {
       expect(emailInput.value).toBe(testEmail);
@@ -216,65 +210,46 @@ describe('AuthForm', () => {
   });
 
   it('correct linkage between inputs and values with no data', async () => {
-    const { getByPlaceholderText, getByRole, getAllByText, queryByRole } = render(
+    const { getAllByText, queryByRole } = render(
       <MockedProvider addTypename={false}>
         <AuthForm />
       </MockedProvider>
     );
 
-    const fullNameInput: HTMLInputElement = getByPlaceholderText(
-      fullNamePlaceholder
-    ) as HTMLInputElement;
-    const emailInput: HTMLInputElement = getByPlaceholderText(emailPlaceholder) as HTMLInputElement;
-    const passwordInput: HTMLInputElement = getByPlaceholderText(
-      passwordPlaceholder
-    ) as HTMLInputElement;
-    let privacyCheckbox: HTMLInputElement = getByRole(checkboxRole) as HTMLInputElement;
-    const signUpButton: HTMLElement = getByRole(buttonRole, {
-      name: submitButtonText,
-    });
-
-    fireEvent.change(emailInput, { target: { value: emptyValue } });
-    fireEvent.change(passwordInput, { target: { value: emptyValue } });
-    fireEvent.change(fullNameInput, { target: { value: emptyValue } });
-    fireEvent.click(signUpButton);
+    const { fullNameInput, emailInput, passwordInput, privacyCheckbox } = fillForm();
 
     await waitFor(() => {
       const requiredError: HTMLElement[] = getAllByText(requiredText);
       const serverErrorMessage: HTMLElement | null = queryByRole(alertRole);
-      privacyCheckbox = getByRole(checkboxRole) as HTMLInputElement;
 
+      expect(fullNameInput.value).toBe(emptyValue);
       expect(emailInput.value).toBe(emptyValue);
       expect(passwordInput.value).toBe(emptyValue);
-      expect(fullNameInput.value).toBe(emptyValue);
       expect(privacyCheckbox).not.toBeChecked();
+
       expect(privacyCheckbox).toHaveStyle(borderStyle);
 
       expect(requiredError.length).toBe(3);
       expect(serverErrorMessage).not.toBeInTheDocument();
-
-      expect(mockErrors[0].error).toBeDefined();
     });
   });
 
   it('Check onTouched mode', async () => {
     const user: UserEvent = userEvent.setup();
-    const { getByPlaceholderText, getByText } = render(
+    const { getByText } = render(
       <MockedProvider addTypename={false}>
         <AuthForm />
       </MockedProvider>
     );
 
-    const fullNameInput: HTMLInputElement = getByPlaceholderText(
-      fullNamePlaceholder
-    ) as HTMLInputElement;
-    const emailInput: HTMLInputElement = getByPlaceholderText(emailPlaceholder) as HTMLInputElement;
+    const { fullNameInput, emailInput } = selectFormElements();
 
     await user.click(fullNameInput);
     await user.click(emailInput);
 
     await waitFor(() => {
-      expect(getByText('This field is required')).toBeInTheDocument();
+      const requiredError: HTMLElement = getByText(requiredText);
+      expect(requiredError).toBeInTheDocument();
     });
   });
 });

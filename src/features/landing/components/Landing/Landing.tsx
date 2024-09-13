@@ -4,14 +4,22 @@ import Head from 'next/head';
 import { ComponentType } from 'react';
 import { useTranslation } from 'react-i18next';
 
-const DynamicBackgroundImages: ComponentType = dynamic(() => import('../BackgroundImages'));
-const DynamicAboutUs: ComponentType = dynamic(() => import('../AboutUs'));
-const DynamicUiFooter: ComponentType = dynamic(() => import('../../../../components/UiFooter'));
-const DynamicForWhoSection: ComponentType = dynamic(() => import('../ForWhoSection'));
-const DynamicHeader: ComponentType = dynamic(() => import('../Header'));
-const DynamicPossibilities: ComponentType = dynamic(() => import('../Possibilities'));
-const DynamicWhyUs: ComponentType = dynamic(() => import('../WhyUs'));
-const DynamicAuthSection: ComponentType = dynamic(() => import('../AuthSection'));
+const DynamicBackgroundImages: ComponentType = dynamic(() => import('../BackgroundImages'), {
+  ssr: false,
+});
+const DynamicAboutUs: ComponentType = dynamic(() => import('../AboutUs'), { ssr: false });
+const DynamicUiFooter: ComponentType = dynamic(() => import('../../../../components/UiFooter'), {
+  ssr: false,
+});
+const DynamicForWhoSection: ComponentType = dynamic(() => import('../ForWhoSection'), {
+  ssr: false,
+});
+const DynamicHeader: ComponentType = dynamic(() => import('../Header'), { ssr: false });
+const DynamicPossibilities: ComponentType = dynamic(() => import('../Possibilities'), {
+  ssr: false,
+});
+const DynamicWhyUs: ComponentType = dynamic(() => import('../WhyUs'), { ssr: false });
+const DynamicAuthSection: ComponentType = dynamic(() => import('../AuthSection'), { ssr: false });
 
 function Landing(): React.ReactElement {
   const { t } = useTranslation();
