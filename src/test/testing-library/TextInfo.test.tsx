@@ -2,6 +2,7 @@ import { render } from '@testing-library/react';
 import { t } from 'i18next';
 
 import TextInfo from '../../features/landing/components/AboutUs/TextInfo/TextInfo';
+
 import { createLocalizedRegExp } from './utils';
 
 const aboutTitle: RegExp = createLocalizedRegExp('about_vilna.heading_first_main');
