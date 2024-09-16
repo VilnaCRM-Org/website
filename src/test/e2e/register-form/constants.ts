@@ -1,16 +1,14 @@
 import { faker } from '@faker-js/faker';
 
 import { t } from '../utils/initializeLocalization';
+import { removeHtmlTags } from '../utils/removeHtmlTags';
 
 import { ExpectationEmail, ExpectationsPassword, User } from './types';
 
 export const placeholderInitials: string = t('sign_up.form.name_input.placeholder');
 export const placeholderEmail: string = t('sign_up.form.email_input.placeholder');
 export const placeholderPassword: string = t('sign_up.form.password_input.placeholder');
-export const policyText: string = t('sign_up.form.confidential_text.fullText').replaceAll(
-  /<\/?1>/g,
-  ''
-);
+export const policyText: string = removeHtmlTags('sign_up.form.confidential_text.fullText');
 export const signUpButton: string = t('sign_up.form.button_text');
 
 export const fullNameFormatError: string = t('sign_up.form.name_input.error_text');

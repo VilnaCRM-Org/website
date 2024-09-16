@@ -3,18 +3,17 @@ import { test, Locator, expect, Page } from '@playwright/test';
 import { createLocalizedRegExp } from '@/test/e2e/utils/createLocalizedRegExp';
 
 import { t } from './utils/initializeLocalization';
+import { removeHtmlTags } from './utils/removeHtmlTags';
 
-const FIRST_SLIDE_TITLE_WHY_US: string = t('why_us.headers.header_open_source');
-const SECOND_SLIDE_TITLE_WHY_US: string = t('why_us.headers.header_ease_of_setup').replace(
-  '<br /> ',
-  ''
-);
+const firstSlideTitleWhyUs: string = t('why_us.headers.header_open_source');
+const secondSlideTitleWhyUs: string = removeHtmlTags('why_us.headers.header_ease_of_setup');
 const firstSlideTitlePossibilities: string = t(
   'unlimited_possibilities.cards_headings.heading_public_api'
 );
-const publicLibraries: RegExp = createLocalizedRegExp(
-  t('unlimited_possibilities.cards_headings.heading_libraries').split(' <br />').join('')
+const publicLibrariesTextWithoutTags: string = removeHtmlTags(
+  'unlimited_possibilities.cards_headings.heading_libraries'
 );
+const publicLibraries: RegExp = createLocalizedRegExp(publicLibrariesTextWithoutTags);
 
 async function performSliderTest(
   page: Page,
@@ -42,11 +41,11 @@ async function performSliderTest(
 test.describe('Slider tests', () => {
   test('Slider test in the whyus section', async ({ page }) => {
     const firstSlideWhyUs: Locator = page.getByRole('heading', {
-      name: FIRST_SLIDE_TITLE_WHY_US,
+      name: firstSlideTitleWhyUs,
       exact: true,
     });
     const secondSlideWhyUs: Locator = page.getByRole('heading', {
-      name: SECOND_SLIDE_TITLE_WHY_US,
+      name: secondSlideTitleWhyUs,
     });
 
     await performSliderTest(page, firstSlideWhyUs, secondSlideWhyUs);
