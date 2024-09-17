@@ -3,7 +3,8 @@ import i18next from 'i18next';
 
 import Header from '../../features/landing/components/Header/Header';
 
-const logoAlt: string = i18next.t('header.logo_alt');
+const logoAltKey: string = 'header.logo_alt';
+const logoAlt: string = i18next.t(logoAltKey);
 
 describe('Header component', () => {
   let spy: jest.SpyInstance;
@@ -18,7 +19,7 @@ describe('Header component', () => {
     spy = jest.spyOn(i18next, 't');
     render(<Header />);
     expect(spy).toHaveBeenCalled();
-    expect(spy.mock.calls[0][0]).toBe('header.logo_alt');
+    expect(spy.mock.calls).toContainEqual([logoAltKey, expect.anything()]);
   });
 
   it('renders logo', () => {
