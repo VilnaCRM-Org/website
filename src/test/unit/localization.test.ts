@@ -21,6 +21,10 @@ describe('i18n translation function', () => {
     expect(i18n.t(contactsKey)).toBe(contactsEnglishText);
     expect(i18n.t(advantagesKey)).toBe(advantagesEnglishText);
     expect(i18n.t(forWhoKey)).toBe(forWhoEnglishText);
+
+    expect(i18n.t(contactsKey)).not.toBe(contactsUkrainianText);
+    expect(i18n.t(advantagesKey)).not.toBe(advantagesUkrainianText);
+    expect(i18n.t(forWhoKey)).not.toBe(forWhoUkrainianText);
   });
 
   it('should return correct Ukrainian translation', () => {
@@ -29,6 +33,10 @@ describe('i18n translation function', () => {
     expect(i18n.t(contactsKey)).toBe(contactsUkrainianText);
     expect(i18n.t(advantagesKey)).toBe(advantagesUkrainianText);
     expect(i18n.t(forWhoKey)).toBe(forWhoUkrainianText);
+
+    expect(i18n.t(contactsKey)).not.toBe(contactsEnglishText);
+    expect(i18n.t(advantagesKey)).not.toBe(advantagesEnglishText);
+    expect(i18n.t(forWhoKey)).not.toBe(forWhoEnglishText);
   });
 
   it('should return key if translation is missing', () => {
