@@ -1,15 +1,17 @@
 import '@testing-library/jest-dom';
 import { render, fireEvent, waitFor } from '@testing-library/react';
+import { t } from 'i18next';
 import React from 'react';
 
 import Drawer from '../../features/landing/components/Header/Drawer/Drawer';
 
-const buttonToOpenDrawer: string = 'Button to open the drawer';
-const buttonToCloseDrawer: string = 'Button to exit the drawer';
-const logInButtonText: string = 'Log in';
-const drawerImageAlt: string = 'Bars Icon';
-const exitImageAlt: string = 'Exit Icon';
-const logoAlt: string = 'Vilna logo';
+const buttonText: string = t('header.actions.try_it_out');
+const buttonToOpenDrawer: string = t('header.drawer.button_aria_labels.bars');
+const buttonToCloseDrawer: string = t('header.drawer.button_aria_labels.exit');
+const logInButtonText: string = t('header.actions.log_in');
+const drawerImageAlt: string = t('header.drawer.image_alt.bars');
+const exitImageAlt: string = t('header.drawer.image_alt.exit');
+const logoAlt: string = t('header.logo_alt');
 const drawerContentRole: string = 'menu';
 const listItem: string = 'listitem';
 
@@ -75,7 +77,7 @@ describe('Drawer', () => {
     const drawerButton: HTMLElement = getByLabelText(buttonToOpenDrawer);
     fireEvent.click(drawerButton);
     const tryItOutButton: HTMLElement = getByRole('button', {
-      name: /Try it out/,
+      name: buttonText,
     });
 
     fireEvent.click(tryItOutButton);

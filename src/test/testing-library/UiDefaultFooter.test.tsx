@@ -1,14 +1,16 @@
 import { render } from '@testing-library/react';
+import { t } from 'i18next';
 import React from 'react';
 
 import { DefaultFooter } from '@/components/UiFooter/DefaultFooter';
 
 import { mockedSocialLinks } from './constants';
+import { createLocalizedRegExp } from './utils';
 
 const mockedDate: number = new Date().getFullYear();
 const defaultFooterClass: string = '.MuiStack-root';
-const logoAlt: string = 'Vilna logo';
-const copyright: RegExp = /Copyright/;
+const logoAlt: string = t('footer.logo_alt');
+const copyright: RegExp = createLocalizedRegExp('footer.copyright');
 
 describe('DefaultFooter', () => {
   it('should render the component correctly', () => {

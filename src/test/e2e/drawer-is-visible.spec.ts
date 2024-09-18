@@ -1,7 +1,9 @@
 import { test, expect, Page } from '@playwright/test';
 
-const labelButtonToOpenDrawer: string = 'Button to open the drawer';
-const labelButtonToExitDrawer: string = 'Button to exit the drawer';
+import { t } from './utils/initializeLocalization';
+
+const labelButtonToOpenDrawer: string = t('header.drawer.button_aria_labels.bars');
+const labelButtonToExitDrawer: string = t('header.drawer.button_aria_labels.exit');
 
 async function openDrawer(page: Page): Promise<void> {
   await page.getByLabel(labelButtonToOpenDrawer).click();

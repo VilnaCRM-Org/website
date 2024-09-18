@@ -30,13 +30,15 @@
         }
       },
       "about_vilna": {
-        "heading_main": "The first Ukrainian <br/ > open source CRM",
+        "heading_first_main": "The first Ukrainian",
+        "heading_second_main": "open source CRM",
         "text_main": "Our goal is to support Ukrainian entrepreneurs. That's why we created Vilna, a convenient and free CRM system - so you can do business, not spend time on settings",
         "button_main": "Try it out"
       },
       "why_us": {
         "heading": "Why we",
-        "subtitle": "Unlimited customization options or ease of use - <br/ > we've made it easy for any business to manage sales",
+        "unlimited_subtitle": "Unlimited customization options or ease of use -",
+        "business_subtitle": "we've made it easy for any business to manage sales",
         "button_text": "Try it out",
         "aria_label": "Link to registration",
         "headers": {
@@ -153,7 +155,7 @@
         "copyright": "Copyright © ТОВ “Vilna CRM”",
         "privacy": "Privacy policy",
         "usage_policy": "Usage policy",
-        "vilna_email": "info@vilnacrm.com",
+        "vilna_email": "info@vilnacrm.privacycom",
         "aria_labels": {
           "instagram": "Link to Instagram",
           "github": "Link to GitHub",
@@ -200,13 +202,15 @@
         }
       },
       "about_vilna": {
-        "heading_main": "Перша українська CRM <br/ > з відкритим кодом",
+        "heading_first_main": "Перша українська CRM",
+        "heading_second_main": "з відкритим кодом",
         "text_main": "Наша мета — підтримати українських підприємців. Саме тому ми створили Vilna, зручну та безкоштовну CRM-систему — аби ви могли займатися бізнесом, а не витрачати час на налаштування",
         "button_main": "Спробувати"
       },
       "why_us": {
         "heading": "Чому ми",
-        "subtitle": "Безмежні можливості кастомізації чи простота у використанні  — <br/ > ми подбали, щоб керувати продажами було зручно будь-якому бізнесу",
+        "unlimited_subtitle": "Безмежні можливості кастомізації чи простота у використанні  —",
+        "business_subtitle": "ми подбали, щоб керувати продажами було зручно будь-якому бізнесу",
         "button_text": "Спробувати",
         "aria_label": "Посилання на реєстрацію",
         "headers": {

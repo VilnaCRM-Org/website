@@ -1,4 +1,5 @@
 import { faker } from '@faker-js/faker';
+import { t } from 'i18next';
 
 import { validateFullName } from '../../features/landing/components/AuthSection/Validations';
 import { isValidFullName } from '../../features/landing/components/AuthSection/Validations/initials';
@@ -6,7 +7,7 @@ import { isValidFullName } from '../../features/landing/components/AuthSection/V
 const testFullName: string = faker.person.fullName();
 const testFirstName: string = faker.person.firstName();
 const testSecondName: string = faker.person.lastName();
-const errorText: string = 'Invalid full name format';
+const errorText: string = t('sign_up.form.name_input.error_text');
 
 describe('initials Tests', () => {
   describe('isValidFullName', () => {

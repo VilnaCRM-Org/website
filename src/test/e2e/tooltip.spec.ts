@@ -1,6 +1,20 @@
 import { test, expect, Locator, Page } from '@playwright/test';
 
+import { t } from './utils/initializeLocalization';
+
 const servicesOpenButtonSelector: string = 'span[data-mui-internal-clone-element="true"]';
+const possibilitiesPluginsCard: string = t(
+  'unlimited_possibilities.cards_headings.heading_ready_plugins'
+);
+
+const registerOnWebsiteText: string = t('sign_up.form.heading_main');
+const servicesTooltipFullText: string = `${t('unlimited_possibilities.service_text.title')} ${t('unlimited_possibilities.service_text.text')}`;
+const servicesTooltipTitleText: string = t(
+  'unlimited_possibilities.service_text.title'
+).toLowerCase();
+
+const passwordTipAlt: string = t('sign_up.form.password_tip.alt');
+const passwordTipText: string = t('sign_up.form.password_tip.recommendation_text');
 
 async function handleTooltip(
   page: Page,
@@ -20,21 +34,21 @@ async function handleTooltip(
 test.describe('Checking if the tooltips are working', () => {
   test('Tooltip services test', async ({ page }) => {
     await handleTooltip(page, {
-      name: 'Ready plugins for CMS',
+      name: possibilitiesPluginsCard,
       element: page
         .locator(servicesOpenButtonSelector, {
-          hasText: 'services',
+          hasText: servicesTooltipTitleText,
         })
         .nth(0),
-      tooltip: page.getByRole('tooltip', { name: 'Services Integrate in a few' }),
+      tooltip: page.getByRole('tooltip', { name: servicesTooltipFullText }),
     });
   });
 
   test('Tooltip password test', async ({ page }) => {
     await handleTooltip(page, {
-      name: 'Or register on the website:',
-      element: page.getByRole('img', { name: 'Password tip mark' }),
-      tooltip: page.locator('div').filter({ hasText: 'We recommend using:lowercase' }).nth(1),
+      name: registerOnWebsiteText,
+      element: page.getByRole('img', { name: passwordTipAlt }),
+      tooltip: page.locator('div').filter({ hasText: passwordTipText }).nth(1),
     });
   });
 });
