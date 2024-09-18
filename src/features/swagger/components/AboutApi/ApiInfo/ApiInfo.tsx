@@ -3,8 +3,6 @@ import React from 'react';
 
 import { UiTypography } from '@/components';
 
-// import { ApiDot } from '../ApiDot';
-
 import styles from './styles';
 
 function ApiInfo(): React.ReactElement {
