@@ -1,4 +1,4 @@
-import { Stack } from '@mui/material';
+import { Box, Stack } from '@mui/material';
 import React from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
@@ -15,7 +15,9 @@ function Heading(): React.ReactElement {
         {t('why_us.heading')}
       </UiTypography>
       <UiTypography variant="bodyText18" sx={styles.text}>
-        <Trans i18nKey="why_us.subtitle" />
+        <Trans i18nKey="why_us.unlimited_subtitle" />
+        <Box component="br" />
+        <Trans i18nKey="why_us.business_subtitle" />
       </UiTypography>
     </Stack>
   );

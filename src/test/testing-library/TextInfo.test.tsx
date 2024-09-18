@@ -1,10 +1,13 @@
 import { render } from '@testing-library/react';
+import { t } from 'i18next';
 
 import TextInfo from '../../features/landing/components/AboutUs/TextInfo/TextInfo';
 
-const aboutTitle: string = 'The first Ukrainian open source CRM';
-const aboutUsText: RegExp = /Our goal/;
-const aboutUsButtonText: string = 'Try it out';
+import { createLocalizedRegExp } from './utils';
+
+const aboutTitle: RegExp = createLocalizedRegExp('about_vilna.heading_first_main');
+const aboutUsText: string = t('about_vilna.text_main');
+const aboutUsButtonText: string = t('about_vilna.button_main');
 const buttonSelector: string = 'a[href="#signUp"]';
 
 describe('code snippet', () => {

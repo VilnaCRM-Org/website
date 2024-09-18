@@ -1,12 +1,19 @@
+const { t } = require('i18next');
 const { faker } = require('@faker-js/faker');
 
 const ScenarioBuilder = require('../utils/ScenarioBuilder');
 
 const scenarioBuilder = new ScenarioBuilder();
 
-const fullNameInputSelector = 'input[placeholder="Mykhailo Svitskyi"]';
-const emailInputSelector = 'input[placeholder="vilnaCRM@gmail.com"]';
-const passwordInputSelector = 'input[placeholder="Create a password"]';
+const createInputSelector = placeholder => `input[placeholder="${placeholder}"]`;
+
+const fullNamePlaceholder = t('sign_up.form.name_input.placeholder');
+const emailPlaceholder = t('sign_up.form.email_input.placeholder');
+const passwordPlaceholder = t('sign_up.form.password_input.placeholder');
+
+const fullNameInputSelector = createInputSelector(fullNamePlaceholder);
+const emailInputSelector = createInputSelector(emailPlaceholder);
+const passwordInputSelector = createInputSelector(passwordPlaceholder);
 const privacyCheckboxSelector = 'input[type="checkbox"]';
 
 const fakeFullName = faker.person.fullName();

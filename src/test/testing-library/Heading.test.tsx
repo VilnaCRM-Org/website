@@ -1,9 +1,13 @@
 import { render } from '@testing-library/react';
+import { t } from 'i18next';
 
 import Heading from '../../features/landing/components/WhyUs/Heading/Heading';
 
-const subtitleText: RegExp = /Unlimited customization/;
-const headingText: string = 'Why we';
+import { createLocalizedRegExp } from './utils';
+
+const subtitleText: RegExp = createLocalizedRegExp('why_us.business_subtitle');
+
+const headingText: string = t('why_us.heading');
 
 describe('Heading component', () => {
   it('renders heading and subtitle correctly', () => {

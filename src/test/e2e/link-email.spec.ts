@@ -1,6 +1,9 @@
 import { test, expect, Locator, Page } from '@playwright/test';
 
-const vilnaCRMEmail: string = 'info@vilnacrm.com';
+import { t } from './utils/initializeLocalization';
+
+const labelButtonToOpenDrawer: string = t('header.drawer.button_aria_labels.bars');
+const vilnaCRMEmail: string = t('footer.vilna_email');
 
 async function verifyEmailLink(page: Page, linkName: string): Promise<void> {
   const linkSelector: Locator = page.getByRole('link', { name: linkName });
@@ -19,7 +22,7 @@ test.describe('Verify email', () => {
   test('Drawer email', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
 
-    await page.getByLabel('Button to open the drawer').click();
+    await page.getByLabel(labelButtonToOpenDrawer).click();
     await verifyEmailLink(page, vilnaCRMEmail);
   });
 });

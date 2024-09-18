@@ -1,4 +1,5 @@
 import { render } from '@testing-library/react';
+import { t } from 'i18next';
 import React from 'react';
 
 import WhyUs from '../../features/landing/components/WhyUs';
@@ -6,8 +7,8 @@ import WhyUs from '../../features/landing/components/WhyUs';
 jest.mock('../../components/UiCardList/CardSwiper', () => jest.fn());
 
 const WrapperId: string = '#Advantages';
-const signUpLinkLabelText: string = 'Link to registration';
-const signUpButtonText: string = 'Try it out';
+const signUpLinkLabelText: string = t('why_us.aria_label');
+const signUpButtonText: string = t('why_us.button_text');
 
 describe('SocialMediaItem', () => {
   it('render WhyUs component correctly', () => {
