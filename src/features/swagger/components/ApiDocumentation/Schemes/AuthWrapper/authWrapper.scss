@@ -33,14 +33,14 @@
       }
       .backdrop-ux {
         top: 4rem;
-        background: #364F5D0D;
+        background: $backdropBackground;
         backdrop-filter: blur(0.125rem);
       }
       .modal-ux {
         border-radius: 1rem;
         background-color: $white;
         border: 1px solid $grey500;
-        box-shadow: 0px 15px 40px 0px #33374714;
+        box-shadow: 0px 15px 40px 0px $shadowDarkGrayOpacity;
         width: 38.375rem;
         height: min-content;
         top: 53%;

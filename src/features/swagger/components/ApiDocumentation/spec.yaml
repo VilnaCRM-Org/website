@@ -4,8 +4,7 @@ info:
   description: 'This API provides endpoints to manage user data within a VilnaCRM.'
   version: 1.0.0
 servers:
-  -
-    url: 'https://localhost'
+  - url: 'https://localhost'
     description: ''
 paths:
   /api/oauth/authorize:
@@ -55,7 +54,7 @@ paths:
                 error_description: 'The authorization grant type is not supported by the authorization server.'
                 hint: 'Check that all required parameters have been provided'
                 message: 'The authorization grant type is not supported by the authorization server.'
-          headers: {  }
+          headers: {}
         '401':
           description: 'Invalid client credentials'
           content:
@@ -74,7 +73,7 @@ paths:
                 error: invalid_client
                 error_description: 'Client authentication failed'
                 message: 'Client authentication failed'
-          headers: {  }
+          headers: {}
         '500':
           description: 'Internal server error'
           content:
@@ -96,10 +95,9 @@ paths:
                 title: 'An error occurred'
                 detail: 'Something went wrong'
                 status: 500
-          headers: {  }
+          headers: {}
       parameters:
-        -
-          name: response_type
+        - name: response_type
           in: query
           description: 'Response type'
           required: true
@@ -111,8 +109,7 @@ paths:
           explode: false
           allowReserved: false
           example: code
-        -
-          name: client_id
+        - name: client_id
           in: query
           description: 'Client ID'
           required: true
@@ -124,8 +121,7 @@ paths:
           explode: false
           allowReserved: false
           example: dc0bc6323f16fecd4224a3860ca894c5
-        -
-          name: redirect_uri
+        - name: redirect_uri
           in: query
           description: 'Redirect uri'
           required: true
@@ -137,8 +133,7 @@ paths:
           explode: false
           allowReserved: false
           example: 'https://example.com/oauth/callback'
-        -
-          name: scope
+        - name: scope
           in: query
           description: Scope
           required: false
@@ -150,8 +145,7 @@ paths:
           explode: false
           allowReserved: false
           example: 'profile email'
-        -
-          name: state
+        - name: state
           in: query
           description: State
           required: false
@@ -191,7 +185,7 @@ paths:
                 expires_in: 3600
                 access_token: eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdW
                 refresh_token: df9b4ae7ce2e1e8f2a3c1b4d
-          headers: {  }
+          headers: {}
         '400':
           description: 'Unsupported grant type'
           content:
@@ -213,7 +207,7 @@ paths:
                 error_description: 'The authorization grant type is not supported by the authorization server.'
                 hint: 'Check that all required parameters have been provided'
                 message: 'The authorization grant type is not supported by the authorization server.'
-          headers: {  }
+          headers: {}
         '401':
           description: 'Invalid client credentials'
           content:
@@ -232,7 +226,7 @@ paths:
                 error: invalid_client
                 error_description: 'Client authentication failed'
                 message: 'Client authentication failed'
-          headers: {  }
+          headers: {}
         '500':
           description: 'Internal server error'
           content:
@@ -254,7 +248,7 @@ paths:
                 title: 'An error occurred'
                 detail: 'Something went wrong'
                 status: 500
-          headers: {  }
+          headers: {}
       requestBody:
         description: ''
         content:
@@ -328,7 +322,7 @@ paths:
                 title: 'An error occurred'
                 detail: 'The input data is misformatted.'
                 status: 400
-          headers: {  }
+          headers: {}
         '200':
           description: 'Users returned'
           content:
@@ -336,19 +330,24 @@ paths:
               schema:
                 type: array
                 items:
-                  properties: { confirmed: { type: boolean, maxLength: null, format: null }, email: { type: string, maxLength: null, format: null }, initials: { type: string, maxLength: null, format: null }, id: { type: string, maxLength: null, format: null } }
+                  properties:
+                    {
+                      confirmed: { type: boolean, maxLength: null, format: null },
+                      email: { type: string, maxLength: null, format: null },
+                      initials: { type: string, maxLength: null, format: null },
+                      id: { type: string, maxLength: null, format: null },
+                    }
                 required:
                   - confirmed
                   - email
                   - initials
                   - id
               example:
-                -
-                  confirmed: false
+                - confirmed: false
                   email: user@example.com
                   initials: 'Name Surname'
                   id: 018dd6ba-e901-7a8c-b27d-65d122caca6b
-          headers: {  }
+          headers: {}
         '500':
           description: 'Internal server error'
           content:
@@ -370,12 +369,11 @@ paths:
                 title: 'An error occurred'
                 detail: 'Something went wrong'
                 status: 500
-          headers: {  }
+          headers: {}
       summary: 'Retrieves the collection of User resources.'
       description: 'Retrieves the collection of User resources.'
       parameters:
-        -
-          name: page
+        - name: page
           in: query
           description: 'The collection page number'
           required: false
@@ -387,8 +385,7 @@ paths:
           style: form
           explode: false
           allowReserved: false
-        -
-          name: itemsPerPage
+        - name: itemsPerPage
           in: query
           description: 'The number of items per page'
           required: false
@@ -428,7 +425,7 @@ paths:
                 email: user@example.com
                 initials: 'Name Surname'
                 id: 018dd6ba-e901-7a8c-b27d-65d122caca6b
-          headers: {  }
+          headers: {}
         '400':
           description: 'Bad request'
           content:
@@ -450,7 +447,7 @@ paths:
                 title: 'An error occurred'
                 detail: 'The input data is misformatted.'
                 status: 400
-          headers: {  }
+          headers: {}
         '422':
           description: 'Validation error'
           content:
@@ -478,7 +475,7 @@ paths:
                   message: 'This value should not be blank.'
                   code: c1051bb4-d103-4f74-8988-acbcafc7fdc3
                 status: 422
-          headers: {  }
+          headers: {}
         '500':
           description: 'Internal server error'
           content:
@@ -500,7 +497,7 @@ paths:
                 title: 'An error occurred'
                 detail: 'Something went wrong'
                 status: 500
-          headers: {  }
+          headers: {}
       summary: 'Creates a User resource.'
       description: 'Creates a User resource.'
       parameters: []
@@ -546,19 +543,24 @@ paths:
               schema:
                 type: array
                 items:
-                  properties: { confirmed: { type: boolean, maxLength: null, format: null }, email: { type: string, maxLength: null, format: null }, initials: { type: string, maxLength: null, format: null }, id: { type: string, maxLength: null, format: null } }
+                  properties:
+                    {
+                      confirmed: { type: boolean, maxLength: null, format: null },
+                      email: { type: string, maxLength: null, format: null },
+                      initials: { type: string, maxLength: null, format: null },
+                      id: { type: string, maxLength: null, format: null },
+                    }
                 required:
                   - confirmed
                   - email
                   - initials
                   - id
               example:
-                -
-                  confirmed: false
+                - confirmed: false
                   email: user@example.com
                   initials: 'Name Surname'
                   id: 018dd6ba-e901-7a8c-b27d-65d122caca6b
-          headers: {  }
+          headers: {}
         '422':
           description: 'Validation error'
           content:
@@ -586,7 +588,7 @@ paths:
                   message: 'This value should not be blank.'
                   code: c1051bb4-d103-4f74-8988-acbcafc7fdc3
                 status: 422
-          headers: {  }
+          headers: {}
         '500':
           description: 'Internal server error'
           content:
@@ -608,7 +610,7 @@ paths:
                 title: 'An error occurred'
                 detail: 'Something went wrong'
                 status: 500
-          headers: {  }
+          headers: {}
       summary: 'Creates a User resource.'
       description: 'Creates a User resource.'
       parameters: []
@@ -627,8 +629,7 @@ paths:
                 - users
             example:
               users:
-                -
-                  email: user@example.com
+                - email: user@example.com
                   initials: 'Name Surname'
                   password: passWORD1
         required: true
@@ -644,13 +645,13 @@ paths:
           content:
             application/json:
               example: ''
-          headers: {  }
+          headers: {}
         '404':
           description: 'Token not found or expired'
           content:
             application/json:
               example: ''
-          headers: {  }
+          headers: {}
         '500':
           description: 'Internal server error'
           content:
@@ -672,7 +673,7 @@ paths:
                 title: 'An error occurred'
                 detail: 'Something went wrong'
                 status: 500
-          headers: {  }
+          headers: {}
       summary: 'Confirms the User'
       description: 'Confirms the User'
       parameters: []
@@ -720,7 +721,7 @@ paths:
                 title: 'An error occurred'
                 detail: 'User not found'
                 status: 404
-          headers: {  }
+          headers: {}
         '200':
           description: 'User returned'
           content:
@@ -742,7 +743,7 @@ paths:
                 email: user@example.com
                 initials: 'Name Surname'
                 id: 018dd6ba-e901-7a8c-b27d-65d122caca6b
-          headers: {  }
+          headers: {}
         '500':
           description: 'Internal server error'
           content:
@@ -764,12 +765,11 @@ paths:
                 title: 'An error occurred'
                 detail: 'Something went wrong'
                 status: 500
-          headers: {  }
+          headers: {}
       summary: 'Retrieves a User resource.'
       description: 'Retrieves a User resource.'
       parameters:
-        -
-          name: id
+        - name: id
           in: path
           description: 'User identifier'
           required: true
@@ -808,7 +808,7 @@ paths:
                 email: user@example.com
                 initials: 'Name Surname'
                 id: 018dd6ba-e901-7a8c-b27d-65d122caca6b
-          headers: {  }
+          headers: {}
         '400':
           description: 'Bad request'
           content:
@@ -830,7 +830,7 @@ paths:
                 title: 'An error occurred'
                 detail: 'The input data is misformatted.'
                 status: 400
-          headers: {  }
+          headers: {}
         '404':
           description: 'User not found'
           content:
@@ -852,7 +852,7 @@ paths:
                 title: 'An error occurred'
                 detail: 'User not found'
                 status: 404
-          headers: {  }
+          headers: {}
         '422':
           description: 'Validation error'
           content:
@@ -880,7 +880,7 @@ paths:
                   message: 'This value should not be blank.'
                   code: c1051bb4-d103-4f74-8988-acbcafc7fdc3
                 status: 422
-          headers: {  }
+          headers: {}
         '500':
           description: 'Internal server error'
           content:
@@ -902,12 +902,11 @@ paths:
                 title: 'An error occurred'
                 detail: 'Something went wrong'
                 status: 500
-          headers: {  }
+          headers: {}
       summary: 'Replaces the User resource.'
       description: 'Replaces the User resource.'
       parameters:
-        -
-          name: id
+        - name: id
           in: path
           description: 'User identifier'
           required: true
@@ -964,7 +963,7 @@ paths:
           content:
             application/json:
               example: ''
-          headers: {  }
+          headers: {}
         '404':
           description: 'User not found'
           content:
@@ -986,7 +985,7 @@ paths:
                 title: 'An error occurred'
                 detail: 'User not found'
                 status: 404
-          headers: {  }
+          headers: {}
         '500':
           description: 'Internal server error'
           content:
@@ -1008,12 +1007,11 @@ paths:
                 title: 'An error occurred'
                 detail: 'Something went wrong'
                 status: 500
-          headers: {  }
+          headers: {}
       summary: 'Removes the User resource.'
       description: 'Removes the User resource.'
       parameters:
-        -
-          name: id
+        - name: id
           in: path
           description: 'User identifier'
           required: true
@@ -1052,7 +1050,7 @@ paths:
                 email: user@example.com
                 initials: 'Name Surname'
                 id: 018dd6ba-e901-7a8c-b27d-65d122caca6b
-          headers: {  }
+          headers: {}
         '400':
           description: 'Bad request'
           content:
@@ -1074,7 +1072,7 @@ paths:
                 title: 'An error occurred'
                 detail: 'The input data is misformatted.'
                 status: 400
-          headers: {  }
+          headers: {}
         '404':
           description: 'User not found'
           content:
@@ -1096,7 +1094,7 @@ paths:
                 title: 'An error occurred'
                 detail: 'User not found'
                 status: 404
-          headers: {  }
+          headers: {}
         '422':
           description: 'Validation error'
           content:
@@ -1124,7 +1122,7 @@ paths:
                   message: 'This value should not be blank.'
                   code: c1051bb4-d103-4f74-8988-acbcafc7fdc3
                 status: 422
-          headers: {  }
+          headers: {}
         '500':
           description: 'Internal server error'
           content:
@@ -1146,12 +1144,11 @@ paths:
                 title: 'An error occurred'
                 detail: 'Something went wrong'
                 status: 500
-          headers: {  }
+          headers: {}
       summary: 'Updates the User resource.'
       description: 'Updates the User resource.'
       parameters:
-        -
-          name: id
+        - name: id
           in: path
           description: 'User identifier'
           required: true
@@ -1206,7 +1203,7 @@ paths:
           content:
             application/json:
               example: ''
-          headers: {  }
+          headers: {}
         '404':
           description: 'User not found'
           content:
@@ -1228,7 +1225,7 @@ paths:
                 title: 'An error occurred'
                 detail: 'User not found'
                 status: 404
-          headers: {  }
+          headers: {}
         '429':
           description: 'Too many requests'
           content:
@@ -1250,7 +1247,7 @@ paths:
                 title: 'An error occurred'
                 detail: 'Cannot send new email till 2024-01-24T12:43:01+00:00'
                 status: 429
-          headers: {  }
+          headers: {}
         '500':
           description: 'Internal server error'
           content:
@@ -1272,12 +1269,11 @@ paths:
                 title: 'An error occurred'
                 detail: 'Something went wrong'
                 status: 500
-          headers: {  }
+          headers: {}
       summary: 'Resends confirmation email'
       description: 'Resends confirmation email'
       parameters:
-        -
-          name: id
+        - name: id
           in: path
           description: 'User identifier'
           required: true
@@ -1295,7 +1291,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties: {  }
+              properties: {}
         required: false
       deprecated: false
 components:
@@ -1321,13 +1317,9 @@ components:
             'write:pets': 'modify pets in your account'
             'read:pets': 'read your pets'
 security:
-  -
-    ApiKeyAuth: []
-  -
-    BasicAuth: []
-  -
-    BearerAuth: []
-  -
-    OAuth2: []
+  - ApiKeyAuth: []
+  - BasicAuth: []
+  - BearerAuth: []
+  - OAuth2: []
 tags: []
-webhooks: {  }
+webhooks: {}
