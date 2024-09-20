@@ -18,8 +18,8 @@ function Swagger(): React.ReactElement {
     <>
       <Head>
         <title>{t('VilnaCRM API')}</title>
-        <meta name={t('description')} content={t('The first Ukrainian open source CRM')} />
-        <link rel="apple-touch-icon" href="../../assets/img/about-vilna/touch.png" />
+        <meta name="description" content={t('The first Ukrainian open source CRM')} />
+        <link rel="apple-touch-icon" href="@/assets/img/touch.png" />
       </Head>
       <Header />
       <Box sx={styles.wrapper}>

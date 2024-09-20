@@ -280,7 +280,7 @@
                             width: min-content;
                             display: inline-block;
                           }
-                          @media screen and (max-width: $lg) {
+                          @media screen and (max-width: $sm) {
                             width: auto;
                             display: block;
                           }
@@ -304,7 +304,7 @@
                               .text {
                                 padding-top: 0.125rem;
                                 p {
-                                  text-wrap: nowrap;
+                                  white-space: nowrap;
                                   font-style: normal;
                                   @include regular16($grey200);
                                 }
@@ -318,7 +318,7 @@
                             margin-bottom: 0;
                             margin-right: 4.25rem;
                           }
-                          @media screen and (max-width: $lg) {
+                          @media screen and (max-width: $sm) {
                             margin-bottom: 1rem;
                             margin-right: 0;
                           }
@@ -333,7 +333,7 @@
                         @media screen and (max-width: $lg) {
                           justify-content: space-between;
                         }
-                        @media screen and (max-width: $lg) {
+                        @media screen and (max-width: $sm) {
                           gap: 0.25rem;
                         }
                         button.authorize {
@@ -341,7 +341,7 @@
                             justify-content: center;
                             width: 20.375rem;
                           }
-                          @media screen and (max-width: $lg) {
+                          @media screen and (max-width: $sm) {
                             width: 100%;
                           }
                         }

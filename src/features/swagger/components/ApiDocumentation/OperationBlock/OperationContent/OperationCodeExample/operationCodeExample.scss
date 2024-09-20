@@ -42,7 +42,7 @@
         @media screen and (max-width: $lg) {
           @include medium16($grey300);
         }
-        @media screen and (max-width: $lg) {
+        @media screen and (max-width: $sm) {
           @include medium14($grey300);
         }
         &::before {
@@ -67,7 +67,7 @@
           @media screen and (max-width: $lg) {
             padding: 1rem!important;
           }
-          @media screen and (max-width: $lg) {
+          @media screen and (max-width: $sm) {
             padding: 0.75rem!important;
           }
           code {
@@ -134,7 +134,7 @@
           @media screen and (max-width: $lg) {
             padding-bottom: 0.875rem;
           }
-          @media screen and (max-width: $lg) {
+          @media screen and (max-width: $sm) {
             padding-bottom: 0.938rem;
           }
           button {

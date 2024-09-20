@@ -61,17 +61,17 @@
       }
     }
     .opblock-control-arrow {
-      @include uiIconButton('../../../assets/svg/swagger/arrow-down-dark.svg');
+      @include uiIconButton($arrowDownDark);
       @media screen and (max-width: $sm) {
-        @include uiIconButton('../../../assets/svg/swagger/arrow-down-dark-small.svg', 1.25rem, 1.25rem);
+        @include uiIconButton($arrowDownDarkSmall, 1.25rem, 1.25rem);
       }
     }
     .authorization__btn {
-      @include uiIconButton('../../../assets/svg/swagger/lock.svg');
+      @include uiIconButton($lock);
       padding-right: 0.625rem;
       padding-left: 0;
       @media screen and (max-width: $sm) {
-        @include uiIconButton('../../../assets/svg/swagger/lock-small.svg', 1.25rem, 1.25rem);
+        @include uiIconButton($lockSmall, 1.25rem, 1.25rem);
       }
       svg {
         opacity: 1;

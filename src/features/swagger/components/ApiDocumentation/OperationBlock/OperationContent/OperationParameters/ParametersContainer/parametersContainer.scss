@@ -1,6 +1,9 @@
 @import "../../../../SwaggerVariables/variables";
 @import "../../../../SwaggerTheme/theme";
 
+$selectFileText: 'Select file';
+$chooseFileText: 'Choose file';
+
 %parametersContainer {
   .parameters-container {
     .opblock-description-wrapper {
@@ -126,7 +129,7 @@
                 @media screen and (max-width: $lg) {
                   @include medium14($grey200);
                 }
-                @media screen and (max-width: $lg) {
+                @media screen and (max-width: $sm) {
                   @include medium12($grey200);
                 }
                 i {
@@ -190,7 +193,7 @@
                   height: 5.125rem;
                 }
                 &::before {
-                  content: 'Select file';
+                  content: $selectFileText;
                   position: absolute;
                   left: 1.75rem;
                   @include medium14($darkPrimary);
@@ -204,7 +207,7 @@
                   }
                 }
                 &::after {
-                  content: 'Choose file';
+                  content: $chooseFileText;
                   padding: 0.5rem 1.5rem;
                   position: absolute;
                   right: 0.5rem;
