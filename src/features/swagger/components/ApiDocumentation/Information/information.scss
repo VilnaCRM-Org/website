@@ -1,5 +1,121 @@
-.swagger-ui {
+@import "../SwaggerVariables/variables";
+@import "../SwaggerTheme/theme";
+
+%informationContainer {
   .information-container {
-    display: none;
+    margin-bottom: 1.063rem;
+    @media screen and (max-width: $lg) {
+      margin-bottom: 1.5rem;
+    }
+    @media screen and (max-width: $sm) {
+      margin-bottom: 0.75rem;
+    }
+    .info {
+      margin: 0;
+      .main {
+        margin-bottom: 0.75rem;
+        @media screen and (max-width: $lg) {
+          margin-bottom: 1.5rem;
+        }
+        @media screen and (max-width: $sm) {
+          margin-bottom: 0.75rem;
+        }
+        .title {
+          display: flex;
+          align-items: center;
+          gap: 1.5rem;
+          margin-bottom: 0.625rem;
+          @include h2Text();
+          @media screen and (max-width: $lg) {
+            margin-bottom: 0.75rem;
+          }
+          @media screen and (max-width: $sm) {
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+            @include h2MobileText();
+          }
+          span {
+            display: flex;
+            gap: 0.625rem;
+            .version-stamp {
+              @media screen and (max-width: $sm) {
+                display: none;
+              }
+            }
+            small {
+              max-height: 2.125rem;
+              position: static;
+              display: block;
+              border-radius: 0.5rem;
+              margin: 0;
+              padding: 0.5rem 0.75rem;
+              background-color: #1EAEFF1A;
+              @media screen and (max-width: $sm) {
+                padding: 0.375rem 0.3rem;
+                @include medium14($primary);
+              }
+              pre {
+                @include regular18($primary);
+                @media screen and (max-width: $sm) {
+                  @include medium14($primary);
+                }
+              }
+            }
+          }
+        }
+        .base-url {
+          display: inline-block;
+          font-weight: 500!important;
+          @include medium15;
+          @media screen and (max-width: $lg) {
+            font-weight: 600!important;
+            @include demi18($grey250);
+          }
+          @media screen and (max-width: 52.5rem) {
+            display: block;
+            margin-bottom: 0.625rem;
+          }
+          @media screen and (max-width: $sm) {
+            @include demiBold14($grey250);
+          }
+          &::after {
+            content: '';
+            display: inline-block;
+            width: 0.25rem;
+            height: 0.25rem;
+            background-color: $darkPrimary;
+            border-radius: 50%;
+            vertical-align: middle;
+            margin: 0 0.625rem;
+            @media screen and (max-width: 52.5rem) {
+              display: none;
+            }
+          }
+        }
+        .link {
+          display: inline-block;
+          @include medium15($primary);
+          @media screen and (max-width: $lg) {
+            @include demi18($primary);
+          }
+          @media screen and (max-width: 52.5rem) {
+            display: block;
+          }
+          @media screen and (max-width: $sm) {
+            @include demiBold14($primary);
+          }
+        }
+      }
+      .description {
+        margin: 0;
+        .markdown {
+          max-width: 43.5rem;
+          p, a, code {
+            margin: 0;
+            @include bodyText18($grey250);
+          }
+        }
+      }
+    }
   }
 }

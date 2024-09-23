@@ -8,6 +8,7 @@
 
 .swagger-ui {
   font-family: $golos;
+  @extend %informationContainer;
   @extend %scheme;
   .wrapper {
     padding: 0;

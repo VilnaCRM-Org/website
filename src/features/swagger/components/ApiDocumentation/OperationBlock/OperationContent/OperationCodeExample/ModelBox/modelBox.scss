@@ -128,19 +128,17 @@
         }
       }
     }
-    &:focus-within {
+    &:focus-within, &:hover {
       background-color: $backgroundGrey200;
       border: 1px solid $grey400;
+    }
+    &:focus-within {
       @media screen and (max-width: $sm) {
         z-index: 1000;
         position: absolute;
         left: 2rem;
         right: 2rem;
       }
-    }
-    &:hover {
-      background-color: $backgroundGrey200;
-      border: 1px solid $grey400;
     }
   }
 }

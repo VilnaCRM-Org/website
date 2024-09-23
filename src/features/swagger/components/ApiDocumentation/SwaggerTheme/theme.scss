@@ -70,6 +70,10 @@
   @include typography($color, 1rem, 500, 1.125rem);
 }
 
+@mixin regular18($color: $grey300) {
+  @include typography($color, 1.125rem, 400, 1.125rem, normal, $inter);
+}
+
 @mixin bodyText16($color: $darkPrimary) {
   @include typography($color, 1rem, 400, 1.625rem);
 }
@@ -108,6 +112,14 @@
 
 @mixin link16($color: $primary) {
   @include typography($color, 1.125rem, 700, 1.125rem);
+}
+
+@mixin h2MobileText($color: $darkPrimary) {
+  @include typography($color, 1.75rem, 700, 2.1rem);
+}
+
+@mixin h2Text($color: $darkPrimary) {
+  @include typography($color, 2.875rem, 700, 3.45rem);
 }
 
 @mixin h3Text($color: $darkPrimary) {
