@@ -5,7 +5,6 @@ import { useTranslation } from 'react-i18next';
 import UiFooter from '@/components/UiFooter';
 
 import Header from '../../../landing/components/Header';
-import AboutApi from '../AboutApi';
 import ApiDocumentation from '../ApiDocumentation/ApiDocumentation';
 import Navigation from '../Navigation/Navigation';
 
@@ -25,7 +24,6 @@ function Swagger(): React.ReactElement {
       <Box sx={styles.wrapper}>
         <Container maxWidth="xl">
           <Navigation />
-          <AboutApi />
           <ApiDocumentation />
         </Container>
       </Box>
