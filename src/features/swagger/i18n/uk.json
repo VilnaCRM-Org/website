@@ -1,5 +1,58 @@
 {
+  "header": {
+    "advantages": "Переваги",
+    "for_who": "Для кого",
+    "integration": "Інтеграція",
+    "contacts": "Контакти",
+    "logo_alt": "Vilna логотип",
+    "actions": {
+      "try_it_out": "Спробувати",
+      "log_in": "Увійдіть"
+    },
+    "drawer": {
+      "button_aria_labels": {
+        "bars": "Кнопка для відкривання drawer",
+        "exit": "Кнопка для закриття drawer"
+      },
+      "image_alt": {
+        "bars": "Меню Іконка",
+        "exit": "Значок виходу"
+      },
+      "aria_labels_social_images": {
+        "instagram": "Посилання на Instagram",
+        "github": "Посилання на GitHub",
+        "facebook": "Посилання на Facebook",
+        "linkedin": "Посилання на Linkedin"
+      },
+      "vilna_email": "info@vilnacrm.com",
+      "alt_social_images": {
+        "instagram": "Instagram Іконка",
+        "github": "GitHub Іконка",
+        "facebook": "Facebook Іконка",
+        "linkedin": "Linkedin Іконка"
+      }
+    }
+  },
   "navigation": {
     "navigate_to_home_page": "На головну сторінку"
+  },
+  "footer": {
+    "logo_alt": "Vilna логотип",
+    "copyright": "Copyright © ТОВ “Вільна СРМ”",
+    "privacy": "Політика конфіденційності",
+    "usage_policy": "Політика використовування",
+    "vilna_email": "info@vilnacrm.com",
+    "aria_labels": {
+      "instagram": "Посилання на Instagram",
+      "github": "Посилання на GitHub",
+      "facebook": "Посилання на Facebook",
+      "linkedin": "Посилання на Linkedin"
+    },
+    "alt_images": {
+      "instagram": "Instagram Іконка",
+      "github": "GitHub Іконка",
+      "facebook": "Facebook Іконка",
+      "linkedin": "Linkedin Іконка"
+    }
   }
 }
