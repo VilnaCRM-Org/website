@@ -1,9 +1,6 @@
 @import "../../../../SwaggerVariables/variables";
 @import "../../../../SwaggerTheme/theme";
 
-$selectFileText: 'Select file';
-$chooseFileText: 'Choose file';
-
 %parametersContainer {
   .parameters-container {
     .opblock-description-wrapper {
@@ -150,84 +147,27 @@ $chooseFileText: 'Choose file';
               }
             }
             input {
-              margin: 0;
-              padding: 0.875rem 1.75rem;
-              height: 2.875rem;
-              min-width: 19rem;
-              width: min-content;
-              border-radius: 0.5rem;
-              background-color: $white;
-              border-color: $grey400;
-              outline: none;
-              @include medium14($darkPrimary);
-              @media screen and (max-width: $lg) {
-                @include medium16($darkPrimary);
-              }
-              @media screen and (max-width: $sm) {
-                min-width: auto;
-                width: 100%;
-                padding: 0 0 0 0.5rem;
-                height: 2.5rem;
-                max-width: 14rem;
+              @include uiInput(2.875rem, 19rem, 1.75rem) {
                 @include medium14($darkPrimary);
-              }
-              &:hover {
-                border-color: $grey300;
-              }
-              &:focus {
-                border-color: $grey300;
-              }
-              &::placeholder {
-                @include medium14($grey300);
                 @media screen and (max-width: $lg) {
-                  @include medium16($grey300);
+                  @include medium16($darkPrimary);
                 }
                 @media screen and (max-width: $sm) {
-                  @include medium14($grey300);
-                }
-              }
-              &[type="file"] {
-                position: relative;
-                color: transparent;
-                @media screen and (max-width: $sm) {
-                  height: 5.125rem;
-                }
-                &::before {
-                  content: $selectFileText;
-                  position: absolute;
-                  left: 1.75rem;
+                  min-width: auto;
+                  width: 100%;
+                  padding-left: 1rem;
+                  height: 2.5rem;
+                  max-width: 14rem;
                   @include medium14($darkPrimary);
+                }
+                &::placeholder {
+                  @include medium14($grey300);
                   @media screen and (max-width: $lg) {
-                    @include medium16($darkPrimary);
+                    @include medium16($grey300);
                   }
-                  @media screen and (max-width: $sm) {
-                    left: 0.6rem;
-                    top: 0.625rem;
-                    @include medium14($darkPrimary);
+                  @media screen and (max-width: $lg) {
+                    @include medium14($grey300);
                   }
-                }
-                &::after {
-                  content: $chooseFileText;
-                  padding: 0.5rem 1.5rem;
-                  position: absolute;
-                  right: 0.5rem;
-                  top: 50%;
-                  transform: translateY(-50%);
-                  background-color: $primary;
-                  border-radius: 3.5rem;
-                  @include medium15($white);
-                  @media screen and (max-width: $sm) {
-                    left: 0.6rem;
-                    top: 2.25rem;
-                    transform: none;
-                    width: min-content;
-                  }
-                }
-                &::-webkit-file-upload-button {
-                  display: none;
-                }
-                &::file-selector-button {
-                  display: none;
                 }
               }
             }

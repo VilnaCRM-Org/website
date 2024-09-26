@@ -1,5 +1,8 @@
 @import "../SwaggerVariables/variables";
 
+$selectFileText: 'Select file';
+$chooseFileText: 'Choose file';
+
 @mixin uiIconButton($path, $width: 1.5rem, $height: 1.5rem) {
   line-height: 0;
   svg {
@@ -11,6 +14,90 @@
     background-repeat: no-repeat;
     background-size: auto;
   }
+}
+
+@mixin uiInput($height, $min-width, $padding-left) {
+  margin: 0;
+  height: $height;
+  width: $min-width;
+  padding:  0 0 0 $padding-left;
+  border-radius: 0.5rem;
+  background-color: $white;
+  border: 1px solid $grey400;
+  outline: none;
+  &:hover, &:focus {
+    border-color: $grey300;
+  }
+  &:disabled {
+    background-color: $brandGray;
+    border-color: $brandGray;
+  }
+  &[type="file"] {
+    cursor: pointer;
+    position: relative;
+    color: transparent;
+    @media screen and (max-width: $sm) {
+      height: 5.125rem;
+    }
+    &::after, &::before {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      @media screen and (max-width: $sm) {
+        transform: none;
+      }
+    }
+    &::before {
+      content: $selectFileText;
+      position: absolute;
+      left: 1.75rem;
+      @include medium14($darkPrimary);
+      @media screen and (max-width: $lg) {
+        @include medium16($darkPrimary);
+      }
+      @media screen and (max-width: $sm) {
+        left: 1rem;
+        top: 0.625rem;
+        @include medium14($darkPrimary);
+      }
+    }
+    &:disabled {
+      cursor: not-allowed;
+    }
+    &:disabled::before {
+      color: $grey300;
+    }
+    &::after {
+      content: $chooseFileText;
+      padding: 0.5rem 1.5rem;
+      right: 0.5rem;
+      background-color: $primary;
+      border-radius: 3.5rem;
+      @include medium15($white);
+      @media screen and (max-width: $sm) {
+        left: 1rem;
+        top: 2.25rem;
+        width: min-content;
+      }
+    }
+    &:hover::after {
+      background-color: $containedButtonHover;
+    }
+    &:disabled::after {
+      color: $grey300;
+      background: $grey400;
+    }
+    &:focus::after {
+      background-color: $containedButtonActive;
+    }
+    &::-webkit-file-upload-button {
+      display: none;
+    }
+    &::file-selector-button {
+      display: none;
+    }
+  }
+  @content;
 }
 
 @mixin uiLabel {
@@ -31,6 +118,23 @@
   border-radius: 0.5rem;
   box-shadow: 0px 8px 27px 0px #313b4324;
   min-width: auto;
+}
+
+@mixin uiSelectTest($height, $padding-right: 5.5rem) {
+  outline: none;
+  height: $height;
+  padding: 0 $padding-right 0rem 0.75rem;
+  border: 1px solid $brandGray;
+  background-color: $white;
+  background-image: url('../../../../../../public/selectArrow.svg');
+  border-radius: 0.5rem;
+  box-shadow: 0px 8px 27px 0px #313b4324;
+  min-width: auto;
+  &:hover {
+    cursor: pointer;
+    border-color: $grey400;
+  }
+  @content;
 }
 
 @mixin uiButton($backgroundColor, $border, $padding: 1rem 1.5rem) {

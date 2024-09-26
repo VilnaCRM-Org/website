@@ -18,12 +18,15 @@
         }
       }
       #schemes {
-        @include uiSelect(9.813rem);
-        @media screen and (max-width: $lg) {
-          padding: 1rem 0 1rem 1.25rem;
-          background-position: right 1.25rem center;
-          width: 11.25rem;
-          line-height: 1.25rem;
+        @include uiSelectTest(2.625rem) {
+          @include typography($darkPrimary, 1rem, 600, 1.625rem);
+          @media screen and (max-width: $lg) {
+            padding-right: 6rem;
+            padding-left: 1.25rem;
+            height: 3.375rem;
+            background-position: right 1.25rem center;
+            @include buttonText($darkPrimary);
+          }
         }
       }
     }

@@ -125,20 +125,20 @@
                 }
               }
               input {
-                margin: 0;
-                padding: 1.125rem 0 1.125rem 1.75rem;
-                outline: none;
-                border: 1px solid $grey400;
-                border-radius: 0.5rem;
-                min-width: 21.5rem;
-                &::placeholder {
-                  @include regular16($grey250);
-                }
-                &:focus {
-                  border: 1px solid $grey300;
-                }
-                @media screen and (max-width: $sm) {
-                  min-width: 100%;
+                @include uiInput(3.563rem, 21.5rem, 1.75rem) {
+                  @include regular16($darkPrimary);
+                  @media screen and (max-width: $lg) {
+                    @include regular18($darkPrimary);
+                  }
+                  @media screen and (max-width: $sm) {
+                    min-width: 100%;
+                  }
+                  &::placeholder {
+                    @include regular16($grey250);
+                    @media screen and (max-width: $lg) {
+                      @include regular18($grey250);
+                    }
+                  }
                 }
               }
               .auth-container {
