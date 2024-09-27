@@ -3,19 +3,15 @@
 
 %operationSelect {
   select {
-    @include uiSelect(14.375rem);
-    @media screen and (max-width: $sm) {
-      width: 100%;
-      max-width: 21.25rem;
-      padding: 0.75rem 0 0.65rem 1rem;
-    }
-  }
-  select#patch_api_users_confirm_requests_select, select#patch_api_users__id__requests_select {
-    @include uiSelect(18.75rem);
-    @media screen and (max-width: $sm) {
-      width: 100%;
-      max-width: 21.25rem;
-      padding: 0.75rem 0 0.65rem 1rem;
+    @include uiSelect(2.625rem) {
+      @include typography($darkPrimary, 1rem, 600, 1.625rem);
+      @media screen and (max-width: $sm) {
+        height: 3.125rem;
+        width: 100%;
+        max-width: 21.25rem;
+        padding-left: 1rem;
+        padding-right: 36px;
+      }
     }
   }
 }

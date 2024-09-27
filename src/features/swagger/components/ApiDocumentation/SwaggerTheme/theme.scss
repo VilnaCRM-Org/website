@@ -107,20 +107,8 @@ $chooseFileText: 'Choose file';
   margin: 0;
 }
 
-@mixin uiSelect($width) {
-  @include typography($darkPrimary, 1rem, 600, 1.625rem);
-  outline: none;
-  width: $width;
-  padding: 0.5rem 0 0.5rem 0.75rem;
-  border: 1px solid $brandGray;
-  background-color: $white;
-  background-image: url('../../../../../../public/selectArrow.svg');
-  border-radius: 0.5rem;
-  box-shadow: 0px 8px 27px 0px #313b4324;
-  min-width: auto;
-}
-
-@mixin uiSelectTest($height, $padding-right: 5.5rem) {
+@mixin uiSelect($height, $padding-right: 5.5rem) {
+  cursor: pointer;
   outline: none;
   height: $height;
   padding: 0 $padding-right 0rem 0.75rem;
@@ -130,8 +118,7 @@ $chooseFileText: 'Choose file';
   border-radius: 0.5rem;
   box-shadow: 0px 8px 27px 0px #313b4324;
   min-width: auto;
-  &:hover {
-    cursor: pointer;
+  &:hover, &:active {
     border-color: $grey400;
   }
   @content;

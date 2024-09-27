@@ -17,7 +17,7 @@
       margin: 0;
       @extend %main;
       @extend %description;
-      [class^="info_"] {
+      [class^="info_"]:not(.description) {
         display: none;
       }
     }
