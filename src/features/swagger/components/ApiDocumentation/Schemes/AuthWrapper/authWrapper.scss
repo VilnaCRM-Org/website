@@ -4,27 +4,22 @@
 %authWrapper {
   .auth-wrapper {
     .authorize {
-      @include uiButton($primary, none);
-      @media screen and (max-width: $lg) {
-        padding: 1.25rem 2.75rem;
-      }
-      @media screen and (max-width: $sm) {
-        padding: 1rem 1.5rem;
-        width: 8.5rem;
-        height: 3.375rem;
-        text-align: center;
-        justify-content: center;
-        align-items: center;
-      }
-      span {
+      @include uiButton('primary') {
         @include medium15($white);
-        padding: 0;
         @media screen and (max-width: $lg) {
+          padding: 1.25rem 2.75rem;
           @include buttonText;
         }
         @media screen and (max-width: $sm) {
+          width: 9.813rem;
+          height: 3.375rem;
+          justify-content: center;
+          align-items: center;
           @include medium15($white);
         }
+      }
+      span {
+        padding: 0;
       }
     }
     .dialog-ux {
@@ -40,7 +35,7 @@
         border-radius: 1rem;
         background-color: $white;
         border: 1px solid $grey500;
-        box-shadow: 0px 15px 40px 0px $shadowDarkGrayOpacity;
+        box-shadow: 0 15px 40px 0 $shadowDarkGrayOpacity;
         width: 38.375rem;
         height: min-content;
         top: 53%;
@@ -96,31 +91,37 @@
                   align-self: normal;
                 }
                 button.authorize {
-                  @include uiButton($primary, 1px solid $primary, 1.125rem 1.5rem);
-                  @include medium15($white);
+                  @include uiButton('primary', 1.125rem 1.5rem) {
+                    @include medium15($white);
+                  }
                   @media screen and (max-width: $lg) {
-                    @include uiButton($primary, 1px solid $primary, 1rem 1.4rem);
-                    @include buttonText($white);
+                    @include uiButton('primary', 1rem 1.4rem) {
+                      @include buttonText($white);
+                    }
                   }
                   @media screen and (max-width: $sm) {
-                    @include uiButton($primary, 1px solid $primary, 0.938rem 0);
-                    @include medium15($white);
                     width: 100%;
                     height: auto;
+                    @include uiButton('primary', 0.938rem 0) {
+                      @include medium15($white);
+                    }
                   }
                 }
                 button.btn-done {
                   margin: 0;
-                  @include uiButton(transparent, 1px solid $grey300);
-                  @include medium15($darkPrimary);
+                  @include uiButton('secondary') {
+                    @include medium15($darkPrimary);
+                  }
                   @media screen and (max-width: $lg) {
-                    @include uiButton(transparent, 1px solid $grey300, 1rem 1.4rem);
-                    @include buttonText($darkPrimary);
+                    @include uiButton('secondary', 1rem 1.4rem) {
+                      @include buttonText($darkPrimary);
+                    }
                   }
                   @media screen and (max-width: $sm) {
-                    @include uiButton(transparent, 1px solid $grey300, 0.938rem 0);
-                    @include medium15($darkPrimary);
                     width: 100%;
+                    @include uiButton('secondary', 0.938rem 0) {
+                      @include medium15($darkPrimary);
+                    }
                   }
                 }
               }

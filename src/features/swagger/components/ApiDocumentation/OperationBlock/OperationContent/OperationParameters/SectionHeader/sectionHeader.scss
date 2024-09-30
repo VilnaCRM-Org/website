@@ -41,15 +41,20 @@
       .try-out__btn {
         margin: 0;
         max-height: 2.625rem;
-        @include uiButton(transparent, 1px solid $grey300, 0.75rem 1.5rem);
-        @include medium15($darkSecondary);
-        @media screen and (max-width: $sm) {
-          @include uiButton(transparent, 1px solid $grey300, 0.5rem 1rem);
+        @include uiButton('secondary', 0.75rem 1.5rem) {
+          line-height: normal;
+          @include medium15($darkSecondary);
+          @media screen and (max-width: $sm) {
+            padding: 0.5rem 1rem;
+          }
         }
         &.cancel {
-          border: 1px solid #DF7878;
-          background-color: #DC39391A;
-          color: $error;
+          @include uiButton('error', 0.75rem 1.5rem) {
+            @include medium15($error);
+            @media screen and (max-width: $sm) {
+              padding: 0.5rem 1rem;
+            }
+          }
         }
       }
     }

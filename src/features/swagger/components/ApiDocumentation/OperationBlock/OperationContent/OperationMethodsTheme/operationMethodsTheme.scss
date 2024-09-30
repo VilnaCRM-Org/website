@@ -24,8 +24,13 @@ $deprecatedBackgroundColor: #F4F5F6;
       }
     }
     .opblock-body {
-      .opblock-section-header, .opblock-section-request-body, & > .opblock-description-wrapper, .parameters-container {
+      .opblock-section-header, .opblock-section-request-body, & > .opblock-description-wrapper {
         border-bottom: 1px solid $color;
+      }
+      .responses-wrapper {
+        .opblock-section-header {
+          border-top: 1px solid $color;
+        }
       }
     }
   }

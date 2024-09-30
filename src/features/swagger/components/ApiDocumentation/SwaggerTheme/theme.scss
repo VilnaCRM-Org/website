@@ -111,12 +111,11 @@ $chooseFileText: 'Choose file';
   cursor: pointer;
   outline: none;
   height: $height;
-  padding: 0 $padding-right 0rem 0.75rem;
+  padding: 0 $padding-right 0 0.75rem;
   border: 1px solid $brandGray;
-  background-color: $white;
-  background-image: url('../../../../../../public/selectArrow.svg');
+  background: $white url('../../../../../../public/selectArrow.svg') right 0.625rem center no-repeat;
   border-radius: 0.5rem;
-  box-shadow: 0px 8px 27px 0px #313b4324;
+  box-shadow: 0 0.5rem 1.688rem 0 $selectShadow;
   min-width: auto;
   &:hover, &:active {
     border-color: $grey400;
@@ -124,12 +123,37 @@ $chooseFileText: 'Choose file';
   @content;
 }
 
-@mixin uiButton($backgroundColor, $border, $padding: 1rem 1.5rem) {
+@mixin buttonColor($backgroundColor, $backgroundHoverColor, $backgroundActiveColor, $textColor, $borderColor: none, $borderHoverColor: none, $borderActiveColor: none) {
   background-color: $backgroundColor;
-  border: $border;
-  font-family: $golos;
+  @if $borderColor == none {
+    border: none;
+  } @else {
+    border: 1px solid $borderColor;
+  }
+  &:hover {
+    color: $textColor;
+    background-color: $backgroundHoverColor;
+    border-color: $borderHoverColor;
+  }
+  &:active {
+    color: $textColor;
+    background-color: $backgroundActiveColor;
+    border-color: $borderActiveColor;
+  }
+}
+
+@mixin uiButton($color, $padding: 1rem 1.5rem) {
+  box-shadow: none;
   padding: $padding;
   border-radius: 3.563rem;
+  @if $color == 'primary' {
+    @include buttonColor($primary, $containedButtonHover, $containedButtonActive, $white);
+  } @else if $color == 'secondary' {
+    @include buttonColor($white, $grey500, $white, $darkPrimary, $grey300, $grey500, $grey500);
+  } @else if $color == 'error' {
+    @include buttonColor($errorBackground, $error, $errorBorder, $white, $errorBorder, $error, $errorBorder);
+  }
+  @content;
 }
 
 @mixin typography($color, $fontSize, $fontWeight, $lineHeight, $letterSpacing: normal, $fontFamily: $golos) {

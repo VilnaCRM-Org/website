@@ -214,8 +214,8 @@
             position: absolute;
             content: "Copy";
             cursor: pointer;
+            @include uiButton('secondary', 0.938rem 1.438rem);
             @include medium15($darkSecondary);
-            @include uiButton($white, 1px solid $grey300, 0.938rem 1.438rem);
           }
           button {
             position: relative;

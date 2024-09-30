@@ -17,6 +17,7 @@
       margin-bottom: 0.875rem;
     }
     .schemes {
+      gap: normal;
       @media screen and (max-width: $lg) {
         align-items: center;
       }
