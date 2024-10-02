@@ -1,0 +1,20 @@
+@use "OperationHeader/operationHeader" as header;
+@use "OperationContent/operationContent" as content;
+
+%operationBlock {
+  .opblock-tag-section {
+    @extend header.%operationHeader;
+    @extend content.%operationContent;
+    &.is-open {
+      h3:first-child {
+        background-color: transparent;
+        @media screen and (max-width: $sm) {
+          border: 1px solid transparent;
+        }
+        button {
+          transform: rotate(180deg);
+        }
+      }
+    }
+  }
+}

@@ -12,12 +12,6 @@ const nextConfig = withExportImages({
   webpack: config => {
     const localizationGenerator = new LocalizationGenerator();
     localizationGenerator.generateLocalizationFile();
-
-    config.module.rules.push({
-      test: /\.ya?ml$/,
-      use: 'yaml-loader',
-    });
-
     return config;
   },
 });

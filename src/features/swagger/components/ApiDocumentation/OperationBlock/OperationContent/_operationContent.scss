@@ -1,12 +1,9 @@
-@import "../../SwaggerVariables/variables";
-@import "../../SwaggerTheme/theme";
-
-@import "OperationSummary/operationSummary";
-@import 'OperationMethodsTheme/operationMethodsTheme';
-@import 'OperationSelect/operationSelect';
-@import 'OperationCodeExample/operationCodeExample';
-@import 'OperationParameters/operationParameters';
-@import 'OperationBody/operationBody';
+@use "OperationSummary/operationSummary" as *;
+@use 'OperationMethodsTheme/operationMethodsTheme' as *;
+@use 'OperationSelect/operationSelect' as *;
+@use 'OperationCodeExample/operationCodeExample' as *;
+@use 'OperationParameters/operationParameters' as *;
+@use 'OperationBody/operationBody' as *;
 
 %operationContent {
   .no-margin {

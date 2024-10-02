@@ -1,8 +1,5 @@
-@import "../SwaggerVariables/variables";
-@import "../SwaggerTheme/theme";
-
-@import "ServerContainer/serverContainer";
-@import "AuthWrapper/authWrapper";
+@use "ServerContainer/serverContainer" as *;
+@use "AuthWrapper/authWrapper" as *;
 
 %scheme {
   .scheme-container {

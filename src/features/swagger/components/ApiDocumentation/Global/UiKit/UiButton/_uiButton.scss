@@ -1,0 +1,52 @@
+@use "../../Variables/variables" as *;
+
+$button-styles: (
+  'primary': (
+    background-color: $primary,
+    hover-color: $containedButtonHover,
+    active-color: $containedButtonActive,
+    text-color: $white,
+    border-color: $primary,
+    border-hover-color: $containedButtonHover,
+    border-active-color: $containedButtonActive,
+  ),
+  'secondary': (
+    background-color: $white,
+    hover-color: $grey500,
+    active-color: $white,
+    text-color: $darkPrimary,
+    border-color: $grey300,
+    border-hover-color: $grey500,
+    border-active-color: $grey500,
+  ),
+  'error': (
+    background-color: $errorBackground,
+    hover-color: $error,
+    active-color: $errorBorder,
+    text-color: $white,
+    border-color: $errorBorder,
+    border-hover-color: $error,
+    border-active-color: $errorBorder,
+  ),
+);
+
+@mixin uiButton($color, $padding: 1rem 1.5rem) {
+  $styles: map-get($button-styles, $color);
+
+  box-shadow: none;
+  padding: $padding;
+  border-radius: 3.563rem;
+  background-color: map-get($styles, 'background-color');
+  border: 1px solid map-get($styles, 'border-color');
+  &:hover {
+    background-color: map-get($styles, 'hover-color');
+    border-color: map-get($styles, 'border-hover-color');
+    color: map-get($styles, 'text-color');
+  }
+  &:active {
+    background-color: map-get($styles, 'active-color');
+    border-color: map-get($styles, 'border-active-color');
+    color: map-get($styles, 'text-color');
+  }
+  @content;
+}

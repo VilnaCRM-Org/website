@@ -1,9 +1,9 @@
-@import "SwaggerVariables/variables";
-@import "SwaggerTheme/theme";
+@use "Information/information" as *;
+@use "Scheme/scheme" as *;
+@use "OperationBlock/operationBlock" as *;
 
-@import "Information/information";
-@import "Schemes/schemes";
-@import "OperationBlock/operationBlock";
+@import "Global/global";
+
 @import "OperationModels/operationModels";
 
 .swagger-ui {

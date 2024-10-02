@@ -1,6 +1,3 @@
-@import "../../SwaggerVariables/variables";
-@import "../../SwaggerTheme/theme";
-
 %operationHeader {
   .opblock-tag {
     margin-bottom: 0.438rem;
@@ -48,7 +45,7 @@
       }
     }
     button {
-      @include uiIconButton('../../../assets/svg/swagger/arrow-down.svg');
+      @include uiIcon($arrowDown);
       @media screen and (max-width: $sm) {
         grid-column: 2;
         grid-row: 1 / span 2;

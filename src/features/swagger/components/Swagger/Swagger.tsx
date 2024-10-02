@@ -2,6 +2,7 @@ import { Box, Container } from '@mui/material';
 import Head from 'next/head';
 import { useTranslation } from 'react-i18next';
 
+import touchIcon from '@/assets/img/touch.png';
 import UiFooter from '@/components/UiFooter';
 
 import Header from '../../../landing/components/Header';
@@ -18,7 +19,7 @@ function Swagger(): React.ReactElement {
       <Head>
         <title>{t('VilnaCRM API')}</title>
         <meta name="description" content={t('The first Ukrainian open source CRM')} />
-        <link rel="apple-touch-icon" href="@/assets/img/touch.png" />
+        <link rel="apple-touch-icon" href={touchIcon.src} />
       </Head>
       <Header />
       <Box sx={styles.wrapper}>

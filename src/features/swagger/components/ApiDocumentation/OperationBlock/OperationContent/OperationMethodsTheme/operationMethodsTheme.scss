@@ -1,15 +1,20 @@
-@import "../../../SwaggerVariables/variables";
-@import "../../../SwaggerTheme/theme";
+$postColorTheme: #38b386;
+$putColorTheme: #ffc01e;
+$getColorTheme: #1eaeff;
+$deleteColorTheme: #dc3939;
+$patchColorTheme: #9b59b6;
 
-$postColorTheme: #38B386;
-$putColorTheme: #FFC01E;
-$getColorTheme: #1EAEFF;
-$deleteColorTheme: #DC3939;
-$patchColorTheme: #9B59B6;
+$deprecatedTextColor: #969b9d;
+$deprecatedBorderColor: #e1e7ea;
+$deprecatedBackgroundColor: #f4f5f6;
 
-$deprecatedTextColor: #969B9D;
-$deprecatedBorderColor: #E1E7EA;
-$deprecatedBackgroundColor: #F4F5F6;
+$methodColors: (
+  'post': $postColorTheme,
+  'put': $putColorTheme,
+  'get': $getColorTheme,
+  'delete': $deleteColorTheme,
+  'patch': $patchColorTheme,
+);
 
 @mixin opblockMethod($method, $color) {
   &.opblock-#{$method} {
@@ -24,7 +29,9 @@ $deprecatedBackgroundColor: #F4F5F6;
       }
     }
     .opblock-body {
-      .opblock-section-header, .opblock-section-request-body, & > .opblock-description-wrapper {
+      .opblock-section-header,
+      .opblock-section-request-body,
+      & > .opblock-description-wrapper {
         border-bottom: 1px solid $color;
       }
       .responses-wrapper {
@@ -37,11 +44,9 @@ $deprecatedBackgroundColor: #F4F5F6;
 }
 
 %operationMethodsTheme {
-  @include opblockMethod('post', $postColorTheme);
-  @include opblockMethod('put', $putColorTheme);
-  @include opblockMethod('get', $getColorTheme);
-  @include opblockMethod('delete', $deleteColorTheme);
-  @include opblockMethod('patch', $patchColorTheme);
+  @each $method, $color in $methodColors {
+    @include opblockMethod($method, $color);
+  }
 
   &.opblock-deprecated {
     opacity: 1;

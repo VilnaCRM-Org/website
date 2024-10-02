@@ -1,0 +1,91 @@
+@use "../../Variables/variables" as *;
+@use "../UiTypography/uiTypography" as *;
+
+$selectFileText: 'Select file';
+$chooseFileText: 'Choose file';
+
+@mixin uiInput($height, $min-width, $padding-left) {
+  margin: 0;
+  height: $height;
+  width: $min-width;
+  padding: 0 0 0 $padding-left;
+  border-radius: 0.5rem;
+  background-color: $white;
+  border: 1px solid $grey400;
+  outline: none;
+  &:hover,
+  &:focus {
+    border-color: $grey300;
+  }
+  &:disabled {
+    background-color: $brandGray;
+    border-color: $brandGray;
+  }
+  &[type='file'] {
+    cursor: pointer;
+    position: relative;
+    color: transparent;
+    @media screen and (max-width: $sm) {
+      height: 5.125rem;
+    }
+    &::after,
+    &::before {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      @media screen and (max-width: $sm) {
+        transform: none;
+      }
+    }
+    &::before {
+      content: $selectFileText;
+      position: absolute;
+      left: 1.75rem;
+      @include medium14($darkPrimary);
+      @media screen and (max-width: $lg) {
+        @include medium16($darkPrimary);
+      }
+      @media screen and (max-width: $sm) {
+        left: 1rem;
+        top: 0.625rem;
+        @include medium14($darkPrimary);
+      }
+    }
+    &:disabled {
+      cursor: not-allowed;
+    }
+    &:disabled::before {
+      color: $grey300;
+    }
+    &::after {
+      content: $chooseFileText;
+      padding: 0.5rem 1.5rem;
+      right: 0.5rem;
+      background-color: $primary;
+      border-radius: 3.5rem;
+      @include medium15($white);
+      @media screen and (max-width: $sm) {
+        left: 1rem;
+        top: 2.25rem;
+        width: min-content;
+      }
+    }
+    &:hover::after {
+      background-color: $containedButtonHover;
+    }
+    &:disabled::after {
+      color: $grey300;
+      background: $grey400;
+    }
+    &:focus::after {
+      background-color: $containedButtonActive;
+    }
+    &::-webkit-file-upload-button {
+      display: none;
+    }
+    &::file-selector-button {
+      display: none;
+    }
+  }
+  @content;
+}

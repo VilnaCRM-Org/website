@@ -1,7 +1,37 @@
-@import "../SwaggerVariables/variables";
+@import '../SwaggerVariables/variables';
 
 $selectFileText: 'Select file';
 $chooseFileText: 'Choose file';
+
+$button-styles: (
+  'primary': (
+    background-color: $primary,
+    hover-color: $containedButtonHover,
+    active-color: $containedButtonActive,
+    text-color: $white,
+    border-color: $primary,
+    border-hover-color: $containedButtonHover,
+    border-active-color: $containedButtonActive,
+  ),
+  'secondary': (
+    background-color: $white,
+    hover-color: $grey500,
+    active-color: $white,
+    text-color: $darkPrimary,
+    border-color: $grey300,
+    border-hover-color: $grey500,
+    border-active-color: $grey500,
+  ),
+  'error': (
+    background-color: $errorBackground,
+    hover-color: $error,
+    active-color: $errorBorder,
+    text-color: $white,
+    border-color: $errorBorder,
+    border-hover-color: $error,
+    border-active-color: $errorBorder,
+  ),
+);
 
 @mixin uiIconButton($path, $width: 1.5rem, $height: 1.5rem) {
   line-height: 0;
@@ -20,26 +50,28 @@ $chooseFileText: 'Choose file';
   margin: 0;
   height: $height;
   width: $min-width;
-  padding:  0 0 0 $padding-left;
+  padding: 0 0 0 $padding-left;
   border-radius: 0.5rem;
   background-color: $white;
   border: 1px solid $grey400;
   outline: none;
-  &:hover, &:focus {
+  &:hover,
+  &:focus {
     border-color: $grey300;
   }
   &:disabled {
     background-color: $brandGray;
     border-color: $brandGray;
   }
-  &[type="file"] {
+  &[type='file'] {
     cursor: pointer;
     position: relative;
     color: transparent;
     @media screen and (max-width: $sm) {
       height: 5.125rem;
     }
-    &::after, &::before {
+    &::after,
+    &::before {
       position: absolute;
       top: 50%;
       transform: translateY(-50%);
@@ -100,63 +132,52 @@ $chooseFileText: 'Choose file';
   @content;
 }
 
-@mixin uiLabel {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  margin: 0;
-}
-
 @mixin uiSelect($height, $padding-right: 5.5rem) {
   cursor: pointer;
   outline: none;
   height: $height;
   padding: 0 $padding-right 0 0.75rem;
   border: 1px solid $brandGray;
-  background: $white url('../../../../../../public/selectArrow.svg') right 0.625rem center no-repeat;
+  background: $white url('../../../assets/svg/swagger/select-arrow.svg') right 0.625rem center no-repeat;
   border-radius: 0.5rem;
   box-shadow: 0 0.5rem 1.688rem 0 $selectShadow;
   min-width: auto;
-  &:hover, &:active {
+  &:hover,
+  &:active {
     border-color: $grey400;
   }
   @content;
 }
 
-@mixin buttonColor($backgroundColor, $backgroundHoverColor, $backgroundActiveColor, $textColor, $borderColor: none, $borderHoverColor: none, $borderActiveColor: none) {
-  background-color: $backgroundColor;
-  @if $borderColor == none {
-    border: none;
-  } @else {
-    border: 1px solid $borderColor;
-  }
-  &:hover {
-    color: $textColor;
-    background-color: $backgroundHoverColor;
-    border-color: $borderHoverColor;
-  }
-  &:active {
-    color: $textColor;
-    background-color: $backgroundActiveColor;
-    border-color: $borderActiveColor;
-  }
-}
-
 @mixin uiButton($color, $padding: 1rem 1.5rem) {
+  $styles: map-get($button-styles, $color);
+
   box-shadow: none;
   padding: $padding;
   border-radius: 3.563rem;
-  @if $color == 'primary' {
-    @include buttonColor($primary, $containedButtonHover, $containedButtonActive, $white);
-  } @else if $color == 'secondary' {
-    @include buttonColor($white, $grey500, $white, $darkPrimary, $grey300, $grey500, $grey500);
-  } @else if $color == 'error' {
-    @include buttonColor($errorBackground, $error, $errorBorder, $white, $errorBorder, $error, $errorBorder);
+  background-color: map-get($styles, 'background-color');
+  border: 1px solid map-get($styles, 'border-color');
+  &:hover {
+    background-color: map-get($styles, 'hover-color');
+    border-color: map-get($styles, 'border-hover-color');
+    color: map-get($styles, 'text-color');
+  }
+  &:active {
+    background-color: map-get($styles, 'active-color');
+    border-color: map-get($styles, 'border-active-color');
+    color: map-get($styles, 'text-color');
   }
   @content;
 }
 
-@mixin typography($color, $fontSize, $fontWeight, $lineHeight, $letterSpacing: normal, $fontFamily: $golos) {
+@mixin typography(
+  $color,
+  $fontSize,
+  $fontWeight,
+  $lineHeight,
+  $letterSpacing: normal,
+  $fontFamily: $golos
+) {
   color: $color;
   font-size: $fontSize;
   font-weight: $fontWeight;

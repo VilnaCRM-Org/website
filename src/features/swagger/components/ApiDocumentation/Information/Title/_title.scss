@@ -1,7 +1,4 @@
-@import "../../SwaggerVariables/variables";
-@import "../../SwaggerTheme/theme";
-
-%main {
+%title {
   .main {
     margin-bottom: 0.75rem;
     @media screen and (max-width: $lg) {

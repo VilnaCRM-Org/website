@@ -111,8 +111,7 @@
     "ts-node": "^10.9.2",
     "typescript": "^5.5.4",
     "web-vitals": "^3.5.2",
-    "webpack": "^5.93.0",
-    "yaml-loader": "^0.8.1"
+    "webpack": "^5.93.0"
   },
   "engines": {
     "node": ">=20.0.0"

@@ -1,8 +1,5 @@
-@import "../SwaggerVariables/variables";
-@import "../SwaggerTheme/theme";
-
-@import "Main/mian";
-@import "Description/description";
+@use "Title/title";
+@use "Description/description";
 
 %informationContainer {
   .information-container {
@@ -15,8 +12,8 @@
     }
     .info {
       margin: 0;
-      @extend %main;
-      @extend %description;
+      @extend title.%title;
+      @extend description.%description;
       [class^="info_"]:not(.description) {
         display: none;
       }
