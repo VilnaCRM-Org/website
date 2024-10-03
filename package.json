@@ -44,7 +44,7 @@
     "terser-webpack-plugin": "^5.3.10"
   },
   "devDependencies": {
-    "@commitlint/cli": "^18.6.1",
+    "@commitlint/cli": "^19.5.0",
     "@commitlint/config-conventional": "^18.6.3",
     "@faker-js/faker": "^8.4.1",
     "@lhci/cli": "^0.13.0",
