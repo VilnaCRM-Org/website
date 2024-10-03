@@ -1,14 +1,7 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import resources from './pages/i18n/localization.json';
+import i18nConfig from './src/config/i18nConfig';
 
-i18n.use(initReactI18next).init({
-  lng: 'uk',
-  resources,
-  fallbackLng: process.env.NEXT_PUBLIC_FALLBACK_LANGUAGE,
-  interpolation: {
-    escapeValue: false,
-  },
-});
+i18n.use(initReactI18next).init(i18nConfig);
 
 export default i18n;
