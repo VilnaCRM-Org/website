@@ -1,4 +1,6 @@
-@import "ModelBox/modelBox";
+@use "../../../Global/global" as *;
+
+@use "ModelBox/modelBox";
 
 %operationCodeExample {
   .model-example {

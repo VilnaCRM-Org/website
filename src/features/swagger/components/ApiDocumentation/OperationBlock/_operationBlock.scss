@@ -1,10 +1,12 @@
-@use "OperationHeader/operationHeader" as header;
-@use "OperationContent/operationContent" as content;
+@use "../Global/global" as *;
+
+@use "OperationHeader/operationHeader";
+@use "OperationContent/operationContent";
 
 %operationBlock {
   .opblock-tag-section {
-    @extend header.%operationHeader;
-    @extend content.%operationContent;
+    @extend %operationHeader;
+    @extend %operationContent;
     &.is-open {
       h3:first-child {
         background-color: transparent;

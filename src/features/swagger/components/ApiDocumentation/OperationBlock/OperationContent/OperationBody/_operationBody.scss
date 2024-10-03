@@ -1,4 +1,7 @@
-@import "Responses/responses";
+@use "../../../Global/global" as *;
+
+@use "OperationParameters/operationParameters";
+@use "Responses/responses";
 
 %operationBody {
   .opblock-body {

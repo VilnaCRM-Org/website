@@ -1,6 +1,8 @@
-@import "SectionHeader/sectionHeader";
-@import "SectionRequestBody/sectionRequestBody";
-@import "ParametersContainer/parametersContainer";
+@use "../../../../Global/global" as *;
+
+@use "SectionHeader/sectionHeader";
+@use "SectionRequestBody/sectionRequestBody";
+@use "ParametersContainer/parametersContainer";
 
 %operationParameters {
   .opblock-section {

@@ -1,3 +1,7 @@
+@use "../Global/global" as *;
+
+$ModelArrowRightLight: url('../../../assets/svg/swagger/arrow-right-light.svg');
+
 %operationModels {
   .models {
     margin-top: 1.5rem;
@@ -33,7 +37,7 @@
             @include bold22($darkPrimary);
           }
         }
-        @include uiIconButton('../../../assets/svg/swagger/arrow-down.svg');
+        @include uiIcon($arrowDown);
       }
     }
     .no-margin {
@@ -63,7 +67,7 @@
             margin: 0;
             top: 0.313rem;
             &::after {
-              background-image: url("../../../assets/svg/swagger/arrow-right-light.svg");
+              background-image: $ModelArrowRightLight;
               vertical-align: top;
             }
           }

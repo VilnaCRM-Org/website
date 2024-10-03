@@ -1,3 +1,5 @@
+@use "../../../Global/global" as *;
+
 %operationSummary {
   .opblock-summary {
     box-sizing: border-box;
@@ -58,17 +60,17 @@
       }
     }
     .opblock-control-arrow {
-      @include uiIconButton($arrowDownDark);
+      @include uiIcon($arrowDownDark);
       @media screen and (max-width: $sm) {
-        @include uiIconButton($arrowDownDarkSmall, 1.25rem, 1.25rem);
+        @include uiIcon($arrowDownDarkSmall, 1.25rem, 1.25rem);
       }
     }
     .authorization__btn {
-      @include uiIconButton($lock);
+      @include uiIcon($lock);
       padding-right: 0.625rem;
       padding-left: 0;
       @media screen and (max-width: $sm) {
-        @include uiIconButton($lockSmall, 1.25rem, 1.25rem);
+        @include uiIcon($lockSmall, 1.25rem, 1.25rem);
       }
       svg {
         opacity: 1;

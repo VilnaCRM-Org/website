@@ -1,3 +1,5 @@
+@use "../Global/global" as *;
+
 @use "Title/title";
 @use "Description/description";
 
@@ -12,8 +14,8 @@
     }
     .info {
       margin: 0;
-      @extend title.%title;
-      @extend description.%description;
+      @extend %title;
+      @extend %description;
       [class^="info_"]:not(.description) {
         display: none;
       }

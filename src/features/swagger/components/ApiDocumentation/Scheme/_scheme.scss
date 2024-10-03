@@ -1,5 +1,7 @@
-@use "ServerContainer/serverContainer" as *;
-@use "AuthWrapper/authWrapper" as *;
+@use "../Global/global" as *;
+
+@use "ServerContainer/serverContainer";
+@use "AuthWrapper/authWrapper";
 
 %scheme {
   .scheme-container {

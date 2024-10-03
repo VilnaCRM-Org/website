@@ -1,3 +1,7 @@
+@use "../../../../Global/global" as *;
+
+$modelArrowRightUrl: url('../../../../../../assets/svg/swagger/arrow-right.svg');
+
 %modelBox {
   .model-box {
     padding: 0.625rem 1rem 0.625rem 0.8rem;
@@ -9,7 +13,7 @@
         align-items: center;
         button.json-schema-2020-12-accordion {
           span {
-            @include uiIconButton("../../../assets/svg/swagger/arrow-right.svg", 1.2rem, 1.2rem);
+            @include uiIcon($arrowRight, 1.2rem, 1.2rem);
           }
         }
         button.json-schema-2020-12-expand-deep-button {
@@ -61,7 +65,7 @@
             margin: 0;
             top: 5px;
             &::after {
-              background-image: url($arrowRight);
+              background-image: $modelArrowRightUrl;
             }
           }
         }
@@ -106,7 +110,7 @@
                     top: 0;
                     margin: 0;
                     &::after {
-                      background-image: url($arrowRight);
+                      background-image: $modelArrowRightUrl;
                     }
                   }
                   span:nth-child(2) {

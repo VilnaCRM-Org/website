@@ -1,9 +1,11 @@
-@use "OperationSummary/operationSummary" as *;
-@use 'OperationMethodsTheme/operationMethodsTheme' as *;
-@use 'OperationSelect/operationSelect' as *;
-@use 'OperationCodeExample/operationCodeExample' as *;
-@use 'OperationParameters/operationParameters' as *;
-@use 'OperationBody/operationBody' as *;
+@use "../../Global/global" as *;
+
+@use "OperationSummary/operationSummary";
+@use 'OperationMethodsTheme/operationMethodsTheme';
+@use 'OperationSelect/operationSelect';
+@use 'OperationCodeExample/operationCodeExample';
+@use 'OperationBody/OperationParameters/operationParameters';
+@use 'OperationBody/operationBody';
 
 %operationContent {
   .no-margin {

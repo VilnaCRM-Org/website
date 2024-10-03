@@ -1,8 +1,8 @@
-@use "Information/information" as *;
-@use "Scheme/scheme" as *;
+@use "Information/information";
+@use "Scheme/scheme";
 @use "OperationBlock/operationBlock" as *;
 
-@import "Global/global";
+@use "Global/global" as *;
 
 @import "OperationModels/operationModels";
 
