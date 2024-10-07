@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/playwright:v1.47.2-jammy
+FROM mcr.microsoft.com/playwright:v1.46.1-jammy
 
 RUN apt-get update && apt-get install -y python3 make g++ \
     && npm install -g pnpm \
