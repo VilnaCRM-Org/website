@@ -155,7 +155,7 @@
         "copyright": "Copyright © ТОВ “Vilna CRM”",
         "privacy": "Privacy policy",
         "usage_policy": "Usage policy",
-        "vilna_email": "info@vilnacrm.privacycom",
+        "vilna_email": "info@vilnacrm.com",
         "aria_labels": {
           "instagram": "Link to Instagram",
           "github": "Link to GitHub",
@@ -209,7 +209,7 @@
       },
       "why_us": {
         "heading": "Чому ми",
-        "unlimited_subtitle": "Безмежні можливості кастомізації чи простота у використанні  —",
+        "unlimited_subtitle": "Безмежні можливості кастомізації чи простота у використанні —",
         "business_subtitle": "ми подбали, щоб керувати продажами було зручно будь-якому бізнесу",
         "button_text": "Спробувати",
         "aria_label": "Посилання на реєстрацію",
