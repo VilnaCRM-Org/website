@@ -4,7 +4,7 @@
 @use "SectionRequestBody/sectionRequestBody";
 @use "ParametersContainer/parametersContainer";
 
-%operationParameters {
+%parameters {
   .opblock-section {
     @extend %sectionHeader;
     @extend %sectionRequestBody;
