@@ -143,11 +143,7 @@ $ModelArrowRightLight: url('../../../assets/svg/swagger/arrow-right-light.svg');
             }
           }
         }
-        &:hover {
-          background-color: $white;
-          border: 1px solid $brandGray;
-        }
-        &:focus-within {
+        &:hover, &:focus-within {
           background-color: $white;
           border: 1px solid $brandGray;
         }

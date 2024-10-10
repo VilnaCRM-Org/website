@@ -1,11 +1,12 @@
 @use "../../Global/global" as *;
 
-@use "OperationSummary/operationSummary";
+@use 'OperationSummary/operationSummary';
 @use 'OperationMethodsTheme/operationMethodsTheme';
 @use 'OperationSelect/operationSelect';
 @use 'OperationCodeExample/operationCodeExample';
 @use 'OperationBody/OperationParameters/operationParameters';
 @use 'OperationBody/operationBody';
+@use 'OperationResponseCode/operationResponseCode';
 
 %operationContent {
   .no-margin {
@@ -34,6 +35,7 @@
         @extend %operationCodeExample;
         @extend %operationSelect;
         @extend %operationBody;
+        @extend %operationResponseCode;
         &.is-open {
           .opblock-summary {
             .opblock-control-arrow {

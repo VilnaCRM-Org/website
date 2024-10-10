@@ -58,30 +58,6 @@
     }
     div {
       outline: none;
-      .highlight-code {
-        .microlight {
-          padding: 0.75rem 1rem!important;
-          background-color: $darkSecondary!important;
-          border-radius: 0.5rem;
-          @media screen and (max-width: $lg) {
-            padding: 1rem!important;
-          }
-          @media screen and (max-width: $sm) {
-            padding: 0.75rem!important;
-          }
-          code {
-            @include demiBold14($white);
-            @media screen and (max-width: $lg) {
-              @include demi18($white);
-              line-height: 1.32rem;
-            }
-            @media screen and (max-width: $sm) {
-              @include medium15($white);
-              line-height: 1.125rem;
-            }
-          }
-        }
-      }
       textarea.body-param__text {
         padding: 1rem;
         margin: 0;

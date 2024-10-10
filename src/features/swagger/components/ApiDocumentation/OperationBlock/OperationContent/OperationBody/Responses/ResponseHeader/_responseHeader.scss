@@ -17,11 +17,8 @@
     }
     h4 {
       @include medium15($grey200);
-      @media screen and (max-width: $lg) {
+      @media screen and (min-width: $sm) and (max-width: $lg) {
         @include demi18($grey200);
-      }
-      @media screen and (max-width: $sm) {
-        @include medium15($grey200);
       }
     }
     label {
@@ -34,9 +31,6 @@
       span {
         padding-right: 0.75rem;
         @include bodyText16($grey250);
-        @media screen and (max-width: $lg) {
-          @include bodyText16($grey250);
-        }
         @media screen and (max-width: $sm) {
           @include bodyTextMobile($grey250);
         }
