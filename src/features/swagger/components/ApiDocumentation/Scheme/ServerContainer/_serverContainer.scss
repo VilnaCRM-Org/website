@@ -1,0 +1,63 @@
+@use "../../Global/global" as *;
+
+%serverContainer {
+  .schemes-server-container {
+    #schemes, #servers {
+      @include uiSelect(2.625rem) {
+        @include typography($darkPrimary, 1rem, 600, 1.625rem);
+        @media screen and (max-width: $lg) {
+          padding-right: 6rem;
+          padding-left: 1.25rem;
+          height: 3.375rem;
+          background-position: right 1.25rem center;
+          @include buttonText($darkPrimary);
+        }
+      }
+    }
+    #servers {
+      @media screen and (max-width: $sm) {
+        padding-right: 2.125rem;
+        padding-left: 0.5rem;
+        background-position: right 0.75rem center;
+        @include demi16($darkPrimary);
+      }
+    }
+    label {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      margin: 0;
+      gap: 0.938rem;
+      @media screen and (max-width: $sm) {
+        gap: 0.25rem;
+        flex-direction: column;
+        align-items: normal;
+      }
+      .schemes-title {
+        @include bodyText16($grey250);
+        @media screen and (max-width: $lg) {
+          @include bodyText18($grey250);
+        }
+      }
+    }
+    & > div {
+      display: flex;
+      align-items: center;
+      gap: 0.938rem;
+      @media screen and (max-width: $lg) {
+        gap: 1rem;
+      }
+      @media screen and (max-width: $sm) {
+        flex-direction: column;
+        align-items: normal;
+        gap: 0.25rem;
+      }
+      .servers-title {
+        @include bodyText16($grey250);
+        @media screen and (max-width: $lg) {
+          @include bodyText18($grey250);
+        }
+      }
+    }
+  }
+}

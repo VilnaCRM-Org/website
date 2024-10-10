@@ -1,0 +1,49 @@
+@use "../../Global/global" as *;
+
+@use 'OperationSummary/operationSummary';
+@use 'OperationMethodsTheme/operationMethodsTheme';
+@use 'OperationSelect/operationSelect';
+@use 'OperationCodeExample/operationCodeExample';
+@use 'OperationBody/OperationParameters/operationParameters';
+@use 'OperationBody/operationBody';
+@use 'OperationResponseCode/operationResponseCode';
+
+%operationContent {
+  .no-margin {
+    .operation-tag-content {
+      padding: 0 1.25rem;
+      @media screen and (max-width: $lg) {
+        padding: 0 1.5rem;
+      }
+      @media screen and (max-width: $sm) {
+        padding: 0;
+      }
+      .opblock {
+        overflow: hidden;
+        margin-bottom: 0.5rem;
+        border-radius: 0.5rem;
+        background: $white;
+        box-shadow: none;
+        @media screen and (max-width: $lg) {
+          margin-bottom: 1rem;
+        }
+        @media screen and (max-width: $sm) {
+          margin-bottom: 0.5rem;
+        }
+        @extend %operationSummary;
+        @extend %operationMethodsTheme;
+        @extend %operationCodeExample;
+        @extend %operationSelect;
+        @extend %operationBody;
+        @extend %operationResponseCode;
+        &.is-open {
+          .opblock-summary {
+            .opblock-control-arrow {
+              transform: rotate(180deg);
+            }
+          }
+        }
+      }
+    }
+  }
+}

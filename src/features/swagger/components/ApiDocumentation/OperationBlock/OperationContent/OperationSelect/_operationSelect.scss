@@ -1,0 +1,16 @@
+@use "../../../Global/global" as *;
+
+%operationSelect {
+  select {
+    @include uiSelect(2.625rem) {
+      @include typography($darkPrimary, 1rem, 600, 1.625rem);
+      @media screen and (max-width: $sm) {
+        height: 3.125rem;
+        width: 100%;
+        max-width: 21.25rem;
+        padding-left: 1rem;
+        padding-right: 2.25rem;
+      }
+    }
+  }
+}
