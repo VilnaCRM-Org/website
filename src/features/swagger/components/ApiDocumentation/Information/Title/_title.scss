@@ -1,5 +1,7 @@
 @use "../../Global/global" as *;
 
+$linksBreakPoint: 52.5rem;
+
 %title {
   .main {
     margin-bottom: 0.75rem;
@@ -60,7 +62,7 @@
         font-weight: 600!important;
         @include demi18($grey250);
       }
-      @media screen and (max-width: 52.5rem) {
+      @media screen and (max-width: $linksBreakPoint) {
         display: block;
         margin-bottom: 0.625rem;
       }
@@ -76,7 +78,7 @@
         border-radius: 50%;
         vertical-align: middle;
         margin: 0 0.625rem;
-        @media screen and (max-width: 52.5rem) {
+        @media screen and (max-width: $linksBreakPoint) {
           display: none;
         }
       }
@@ -87,7 +89,7 @@
       @media screen and (max-width: $lg) {
         @include demi18($primary);
       }
-      @media screen and (max-width: 52.5rem) {
+      @media screen and (max-width: $linksBreakPoint) {
         display: block;
       }
       @media screen and (max-width: $sm) {

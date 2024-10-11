@@ -58,24 +58,6 @@
     }
     div {
       outline: none;
-      textarea.body-param__text {
-        padding: 1rem;
-        margin: 0;
-        border-radius: 0.5rem;
-        min-height: 16.875rem;
-        scrollbar-width: none;
-        background-color: $white;
-        border: none;
-        outline: none;
-        resize: none;
-        @include medium14();
-        @media screen and (max-width: $lg) {
-          @include regular16($darkPrimary);
-        }
-        @media screen and (max-width: $sm) {
-          @include medium12($darkPrimary);
-        }
-      }
       .body-param-options {
         margin-top: 0.75rem;
         @media screen and (max-width: $lg) {

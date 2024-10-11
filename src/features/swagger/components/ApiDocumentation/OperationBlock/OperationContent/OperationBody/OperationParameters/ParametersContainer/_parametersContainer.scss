@@ -149,11 +149,8 @@
                 }
                 &::placeholder {
                   @include medium14($grey300);
-                  @media screen and (max-width: $lg) {
+                  @media screen and (min-width: $sm) and (max-width: $lg) {
                     @include medium16($grey300);
-                  }
-                  @media screen and (max-width: $lg) {
-                    @include medium14($grey300);
                   }
                 }
               }

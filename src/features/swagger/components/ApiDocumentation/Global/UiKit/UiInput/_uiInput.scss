@@ -4,10 +4,10 @@
 $selectFileText: 'Select file';
 $chooseFileText: 'Choose file';
 
-@mixin uiInput($height, $min-width, $padding-left) {
+@mixin uiInput($height, $width, $padding-left) {
   margin: 0;
   height: $height;
-  width: $min-width;
+  width: $width;
   padding: 0 0 0 $padding-left;
   border-radius: 0.5rem;
   background-color: $white;

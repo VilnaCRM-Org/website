@@ -16,16 +16,16 @@
       margin-bottom: 0.875rem;
     }
     .schemes {
+      @extend %serverContainer;
+      @extend %authWrapper;
       gap: normal;
       @media screen and (max-width: $lg) {
         align-items: center;
       }
       @media screen and (max-width: $sm) {
-        align-items: end;
+        align-items: flex-end;
         flex-wrap: nowrap;
       }
-      @extend %serverContainer;
-      @extend %authWrapper;
     }
   }
 }

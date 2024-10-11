@@ -82,7 +82,7 @@ $ModelArrowRightLight: url('../../../assets/svg/swagger/arrow-right-light.svg');
               }
               td:first-child {
                 height: 1.488rem;
-                width: min-content;
+                //width: min-content;
                 min-width: 7.938rem;
                 @include medium14($grey200);
                 @media screen and (max-width: $sm) {

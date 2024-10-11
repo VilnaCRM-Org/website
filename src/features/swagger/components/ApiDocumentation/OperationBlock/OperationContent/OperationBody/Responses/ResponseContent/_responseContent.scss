@@ -1,5 +1,7 @@
 @use "../../../../../Global/global" as *;
 
+$acceptTextColor: #38B386;
+
 %responseContent {
   .responses-inner {
     padding: 0.75rem 0.5rem 0.5rem;
@@ -107,14 +109,14 @@
               }
             }
             small.response-control-media-type__accept-message {
-              @include medium12(#38B386);
+              @include medium12($acceptTextColor);
               @media screen and (max-width: $sm) {
-                @include medium14(#38B386);
+                @include medium14($acceptTextColor);
               }
               code {
-                @include medium12(#38B386);
+                @include medium12($acceptTextColor);
                 @media screen and (max-width: $sm) {
-                  @include medium14(#38B386);
+                  @include medium14($acceptTextColor);
                 }
               }
             }
@@ -137,25 +139,6 @@
           @media screen and (max-width: $sm) {
             padding-bottom: 0.375rem;
           }
-          //div:first-child {
-          //  h5 {
-          //    margin-top: 0;
-          //    margin-bottom: 0.5rem;
-          //    @include medium14($grey200);
-          //  }
-          //  .highlight-code {
-          //    .download-contents {
-          //      display: none;
-          //    }
-          //  }
-          //}
-          //div:nth-child(2) {
-          //  h5 {
-          //    margin-top: 1rem;
-          //    margin-bottom: 0.5rem;
-          //    @include medium15($grey200);
-          //  }
-          //}
         }
       }
     }

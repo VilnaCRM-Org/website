@@ -22,11 +22,8 @@
         border: 1px solid $brandGray;
         background: $backgroundGrey200;
         @include medium15($primary);
-        @media screen and (max-width: $lg) {
+        @media screen and (min-width: $sm) and (max-width: $lg) {
           @include demi18($primary);
-        }
-        @media screen and (max-width: $sm) {
-          @include medium15($primary);
         }
       }
     }
