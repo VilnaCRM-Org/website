@@ -82,7 +82,6 @@ $ModelArrowRightLight: url('../../../assets/svg/swagger/arrow-right-light.svg');
               }
               td:first-child {
                 height: 1.488rem;
-                //width: min-content;
                 min-width: 7.938rem;
                 @include medium14($grey200);
                 @media screen and (max-width: $sm) {
@@ -145,7 +144,7 @@ $ModelArrowRightLight: url('../../../assets/svg/swagger/arrow-right-light.svg');
         }
         &:hover, &:focus-within {
           background-color: $white;
-          border: 1px solid $brandGray;
+          border: 1px solid $brandGrey;
         }
       }
       .model-container:not(:last-child) {

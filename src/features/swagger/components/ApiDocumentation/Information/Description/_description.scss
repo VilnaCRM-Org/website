@@ -19,7 +19,7 @@
       code {
         padding: 0.25rem 0.75rem;
         border-radius: 0.5rem;
-        border: 1px solid $brandGray;
+        border: 1px solid $brandGrey;
         background: $backgroundGrey200;
         @include medium15($primary);
         @media screen and (min-width: $sm) and (max-width: $lg) {

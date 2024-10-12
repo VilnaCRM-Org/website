@@ -22,7 +22,7 @@
         border-radius: 0.5rem;
         padding: 0.5rem 1.25rem 0.5rem 1.25rem;
         text-shadow: none;
-        min-width: 72px;
+        min-width: 4.5rem;
         @include typography($darkPrimary, 1rem, 600, 1.625rem);
         @media screen and (max-width: $sm) {
           padding: 0;

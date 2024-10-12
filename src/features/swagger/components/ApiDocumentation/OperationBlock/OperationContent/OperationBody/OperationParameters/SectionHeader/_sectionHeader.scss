@@ -1,5 +1,15 @@
 @use "../../../../../Global/global" as *;
 
+@mixin responsiveFontSize() {
+  @include medium15($grey200);
+  @media screen and (max-width: $lg) {
+    @include demi18($grey200);
+  }
+  @media screen and (max-width: $sm) {
+    @include medium15($grey200);
+  }
+}
+
 %sectionHeader {
   .opblock-section-header {
     box-shadow: none;
@@ -12,24 +22,12 @@
     }
     .tab-header {
       .opblock-title {
-        @include medium15($grey200);
-        @media screen and (max-width: $lg) {
-          @include demi18($grey200);
-        }
-        @media screen and (max-width: $sm) {
-          @include medium15($grey200);
-        }
+        @include responsiveFontSize;
       }
       .tab-item {
         padding: 0;
         span {
-          @include medium15($grey200);
-          @media screen and (max-width: $lg) {
-            @include demi18($grey200);
-          }
-          @media screen and (max-width: $sm) {
-            @include medium15($grey200);
-          }
+          @include responsiveFontSize;
           &::after {
             display: none;
           }

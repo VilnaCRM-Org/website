@@ -1,5 +1,7 @@
 @use "../../../../../Global/global" as *;
 
+$requiredLabelText: '*required';
+
 %parametersContainer {
   .parameters-container {
     .opblock-description-wrapper {
@@ -83,7 +85,7 @@
                   display: none;
                 }
                 &::after {
-                  content: '*required';
+                  content: $requiredLabelText;
                   position: static;
                   background-color: $errorBackground;
                   border-radius: 0.25rem;

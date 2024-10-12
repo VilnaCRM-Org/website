@@ -18,8 +18,8 @@ $chooseFileText: 'Choose file';
     border-color: $grey300;
   }
   &:disabled {
-    background-color: $brandGray;
-    border-color: $brandGray;
+    background-color: $brandGrey;
+    border-color: $brandGrey;
   }
   &[type='file'] {
     cursor: pointer;
