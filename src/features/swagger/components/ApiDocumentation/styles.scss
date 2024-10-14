@@ -1,10 +1,9 @@
+@use "@swagger/global" as *;
+
 @use "Information/information";
 @use "Scheme/scheme";
-@use "OperationBlock/operationBlock" as *;
-
-@use "Global/global" as *;
-
-@import "OperationModels/operationModels";
+@use "OperationBlock/operationBlock";
+@use "OperationModels/operationModels";
 
 .swagger-ui {
   font-family: $golos;
