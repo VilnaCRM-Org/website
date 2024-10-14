@@ -241,8 +241,8 @@ importers:
         specifier: ^5.6.2
         version: 5.6.2
       web-vitals:
-        specifier: ^3.5.2
-        version: 3.5.2
+        specifier: ^4.2.3
+        version: 4.2.3
       webpack:
         specifier: ^5.95.0
         version: 5.95.0(esbuild@0.23.1)
@@ -7056,8 +7056,8 @@ packages:
   weapon-regex@1.3.2:
     resolution: {integrity: sha512-jtFTAr0F3gmiX10J6+BYgPrZ/yjXhpcxK/j/Lm1fWRLATxfecPgnkd3DqSUkD0AC2wVVyAkMtsgeuiIuELlW3w==}
 
-  web-vitals@3.5.2:
-    resolution: {integrity: sha512-c0rhqNcHXRkY/ogGDJQxZ9Im9D19hDihbzSQJrsioex+KnFgmMzBiy57Z1EjkhX/+OjyBpclDCzz2ITtjokFmg==}
+  web-vitals@4.2.3:
+    resolution: {integrity: sha512-/CFAm1mNxSmOj6i0Co+iGFJ58OS4NRGVP+AWS/l509uIK5a1bSoIVaHz/ZumpHTfHSZBpgrJ+wjfpAOrTHok5Q==}
 
   webidl-conversions@3.0.1:
     resolution: {integrity: sha512-2JAn3z8AR6rjK8Sm8orRC0h/bcl/DqL7tRPdGZ4I1CjdF+EaMLmYxBHyXuKL849eucPFhvBoxMsflfOb8kxaeQ==}
@@ -15777,7 +15777,7 @@ snapshots:
 
   weapon-regex@1.3.2: {}
 
-  web-vitals@3.5.2: {}
+  web-vitals@4.2.3: {}
 
   webidl-conversions@3.0.1: {}
 
