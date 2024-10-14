@@ -54,7 +54,7 @@
     "@next/eslint-plugin-next": "^14.2.14",
     "@next/third-parties": "^14.2.14",
     "@playwright/test": "^1.46.1",
-    "@sentry/node": "^7.119.1",
+    "@sentry/node": "^8.34.0",
     "@sentry/react": "^7.119.1",
     "@storybook/addon-actions": "^8.3.5",
     "@storybook/addon-essentials": "^8.3.5",
