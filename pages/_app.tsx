@@ -14,14 +14,10 @@ import client from '../src/features/landing/api/graphql/apollo';
 
 Sentry.init({
   dsn: process.env.SENTRY_DSN_KEY,
-  integrations: [
-    new Sentry.BrowserTracing({
-      tracePropagationTargets: [
-        process.env.NEXT_PUBLIC_LOCALHOST || '',
-        process.env.NEXT_PUBLIC_API_URL || '',
-      ],
-    }),
-    new Sentry.Replay(),
+  integrations: [Sentry.browserTracingIntegration(), Sentry.replayIntegration()],
+  tracePropagationTargets: [
+    process.env.NEXT_PUBLIC_LOCALHOST || '',
+    process.env.NEXT_PUBLIC_API_URL || '',
   ],
   tracesSampleRate: 1.0,
   replaysSessionSampleRate: 0.1,
