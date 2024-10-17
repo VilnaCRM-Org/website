@@ -5,28 +5,28 @@
 %operationCodeExample {
   .model-example {
     margin-top: 0.75rem;
-    @media screen and (max-width: $lg) {
+    @include for-large-screens {
       margin-top: 0.875rem;
     }
-    @media screen and (max-width: $sm) {
+    @include for-small-screens {
       margin-top: 0.25rem;
     }
     .tab {
       margin-bottom: 1rem;
-      @media screen and (max-width: $lg) {
+      @include for-large-screens {
         margin-bottom: 1.125rem;
       }
-      @media screen and (max-width: $sm) {
+      @include for-small-screens {
         margin-bottom: 0.5rem;
       }
       li:first-child {
         position: relative;
         padding-right: 0;
         @include medium12($darkPrimary);
-        @media screen and (max-width: $lg) {
+        @include for-large-screens {
           @include medium16($darkPrimary);
         }
-        @media screen and (max-width: $sm) {
+        @include for-small-screens {
           @include medium14($darkPrimary);
         }
         &::after {
@@ -38,10 +38,10 @@
         padding-left: 0.75rem;
         margin-left: 0.75rem;
         @include medium12($grey300);
-        @media screen and (max-width: $lg) {
+        @include for-large-screens {
           @include medium16($grey300);
         }
-        @media screen and (max-width: $sm) {
+        @include for-small-screens {
           @include medium14($grey300);
         }
         &::before {
@@ -60,10 +60,10 @@
       outline: none;
       .body-param-options {
         margin-top: 0.75rem;
-        @media screen and (max-width: $lg) {
+        @include for-large-screens {
           margin-top: 0.813rem;
         }
-        @media screen and (max-width: $sm) {
+        @include for-small-screens {
           margin-top: 0.563rem;
         }
         label {
@@ -71,13 +71,13 @@
           padding: 0;
           span {
             @include medium14($grey200);
-            @media screen and (max-width: $sm) {
+            @include for-small-screens {
               @include bodyTextMobile($grey200);
             }
           }
           div {
             margin-top: 0.5rem;
-            @media screen and (max-width: $sm) {
+            @include for-small-screens {
               margin-top: 0.25rem;
             }
             select {
@@ -88,21 +88,21 @@
         .body-param-edit {
           padding-top: 0;
           padding-bottom: 1rem;
-          @media screen and (max-width: $lg) {
+          @include for-large-screens {
             padding-bottom: 0.875rem;
           }
-          @media screen and (max-width: $sm) {
+          @include for-small-screens {
             padding-bottom: 0.938rem;
           }
           button {
             @include uiButton('error', 0.75rem 1.5rem) {
               @include medium15($error);
             }
-            @media screen and (max-width: $lg) {
+            @include for-large-screens {
               padding: 1rem 3.438rem;
               @include buttonText($error);
             }
-            @media screen and (max-width: $sm) {
+            @include for-small-screens {
               width: 100%;
               padding: 0.813rem 3.438rem;
               @include medium15($error);
@@ -114,7 +114,7 @@
     @extend %modelBox;
   }
   div.headers-wrapper {
-    @media screen and (max-width: $sm) {
+    @include for-small-screens {
       display: none;
     }
     .headers__title {
@@ -148,13 +148,13 @@
             padding-top: 0.5rem;
             padding-bottom: 0;
             @include medium14($grey200);
-            @media screen and (max-width: $lg) {
+            @include for-large-screens {
               @include medium12($grey200);
             }
             .header-example {
               font-style: normal;
               @include medium14($grey300);
-              @media screen and (max-width: $lg) {
+              @include for-large-screens {
                 @include medium12($grey300);
               }
             }

@@ -76,7 +76,7 @@ $methodColors: (
             span {
               text-decoration: none;
               @include buttonText($grey300);
-              @media screen and (max-width: $sm) {
+              @include for-small-screens {
                 @include medium16($grey300);
               }
             }
@@ -84,7 +84,7 @@ $methodColors: (
         }
         .opblock-summary-description {
           @include medium15($grey400);
-          @media screen and (max-width: $sm) {
+          @include for-small-screens {
             @include medium12($grey400);
           }
         }

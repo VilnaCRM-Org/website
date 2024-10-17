@@ -10,7 +10,7 @@
     &.is-open {
       h3:first-child {
         background-color: transparent;
-        @media screen and (max-width: $sm) {
+        @include for-small-screens {
           border: 1px solid transparent;
         }
         button {

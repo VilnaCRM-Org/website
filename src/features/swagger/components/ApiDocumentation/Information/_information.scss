@@ -6,10 +6,10 @@
 %informationContainer {
   .information-container {
     margin-bottom: 1.063rem;
-    @media screen and (max-width: $lg) {
+    @include for-large-screens {
       margin-bottom: 1.5rem;
     }
-    @media screen and (max-width: $sm) {
+    @include for-small-screens {
       margin-bottom: 0.75rem;
     }
     .info {

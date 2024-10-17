@@ -4,7 +4,7 @@
   & > .opblock-description-wrapper {
     margin: 0;
     padding: 1.219rem 1.5rem;
-    @media screen and (max-width: $sm) {
+    @include for-small-screens {
       padding: 1rem 1rem 1rem 0.75rem;
     }
     .opblock-description {
@@ -12,10 +12,10 @@
         p {
           margin: 0;
           @include medium14($grey200);
-          @media screen and (max-width: $lg) {
+          @include for-large-screens {
             @include demiBold14($grey200);
           }
-          @media screen and (max-width: $sm) {
+          @include for-small-screens {
             @include medium12($grey200);
           }
         }

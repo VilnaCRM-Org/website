@@ -134,7 +134,7 @@ $modelArrowRightUrl: url('../../../../../../assets/svg/swagger/arrow-right.svg')
       border: 1px solid $grey400;
     }
     &:focus-within {
-      @media screen and (max-width: $sm) {
+      @include for-small-screens {
         z-index: 1000;
         position: absolute;
         left: 2rem;

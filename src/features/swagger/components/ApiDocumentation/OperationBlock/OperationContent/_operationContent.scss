@@ -12,10 +12,10 @@
   .no-margin {
     .operation-tag-content {
       padding: 0 1.25rem;
-      @media screen and (max-width: $lg) {
+      @include for-large-screens {
         padding: 0 1.5rem;
       }
-      @media screen and (max-width: $sm) {
+      @include for-small-screens {
         padding: 0;
       }
       .opblock {
@@ -24,10 +24,10 @@
         border-radius: 0.5rem;
         background: $white;
         box-shadow: none;
-        @media screen and (max-width: $lg) {
+        @include for-large-screens {
           margin-bottom: 1rem;
         }
-        @media screen and (max-width: $sm) {
+        @include for-small-screens {
           margin-bottom: 0.5rem;
         }
         @extend %operationSummary;

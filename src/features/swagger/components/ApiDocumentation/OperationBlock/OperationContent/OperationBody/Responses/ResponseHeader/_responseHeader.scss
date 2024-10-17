@@ -4,10 +4,10 @@
   .opblock-section-header {
     padding: 0.625rem 1.5rem;
     box-shadow: none;
-    @media screen and (max-width: $lg) {
+    @include for-large-screens {
       padding: 0.75rem 1.5rem;
     }
-    @media screen and (max-width: $sm) {
+    @include for-small-screens {
       flex-direction: column;
       align-items: normal;
       gap: 0.438rem;
@@ -17,12 +17,12 @@
     }
     h4 {
       @include medium15($grey200);
-      @media screen and (min-width: $sm) and (max-width: $lg) {
+      @include from-small-to-large-screens {
         @include demi18($grey200);
       }
     }
     label {
-      @media screen and (max-width: $sm) {
+      @include for-small-screens {
         flex-direction: column;
         align-items: normal;
         gap: 0.25rem;
@@ -31,7 +31,7 @@
       span {
         padding-right: 0.75rem;
         @include bodyText16($grey250);
-        @media screen and (max-width: $sm) {
+        @include for-small-screens {
           @include bodyTextMobile($grey250);
         }
       }

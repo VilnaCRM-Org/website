@@ -9,20 +9,20 @@
     background: transparent;
     box-shadow: none;
     margin-bottom: 1rem;
-    @media screen and (max-width: $lg) {
+    @include for-large-screens {
       margin-bottom: 1.438rem;
     }
-    @media screen and (max-width: $sm) {
+    @include for-small-screens {
       margin-bottom: 0.875rem;
     }
     .schemes {
       @extend %serverContainer;
       @extend %authWrapper;
       gap: normal;
-      @media screen and (max-width: $lg) {
+      @include for-large-screens {
         align-items: center;
       }
-      @media screen and (max-width: $sm) {
+      @include for-small-screens {
         align-items: flex-end;
         flex-wrap: nowrap;
       }

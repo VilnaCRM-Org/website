@@ -25,7 +25,7 @@ $chooseFileText: 'Choose file';
     cursor: pointer;
     position: relative;
     color: transparent;
-    @media screen and (max-width: $sm) {
+    @include for-small-screens {
       height: 5.125rem;
     }
     &::after,
@@ -33,7 +33,7 @@ $chooseFileText: 'Choose file';
       position: absolute;
       top: 50%;
       transform: translateY(-50%);
-      @media screen and (max-width: $sm) {
+      @include for-small-screens {
         transform: none;
       }
     }
@@ -42,10 +42,10 @@ $chooseFileText: 'Choose file';
       position: absolute;
       left: 1.75rem;
       @include medium14($darkPrimary);
-      @media screen and (max-width: $lg) {
+      @include for-large-screens {
         @include medium16($darkPrimary);
       }
-      @media screen and (max-width: $sm) {
+      @include for-small-screens {
         left: 1rem;
         top: 0.625rem;
         @include medium14($darkPrimary);
@@ -64,7 +64,7 @@ $chooseFileText: 'Choose file';
       background-color: $primary;
       border-radius: 3.5rem;
       @include medium15($white);
-      @media screen and (max-width: $sm) {
+      @include for-small-screens {
         left: 1rem;
         top: 2.25rem;
         width: min-content;

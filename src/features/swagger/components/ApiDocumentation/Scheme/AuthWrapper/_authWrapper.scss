@@ -5,11 +5,11 @@
     .authorize {
       @include uiButton('primary') {
         @include medium15($white);
-        @media screen and (max-width: $lg) {
+        @include for-large-screens {
           padding: 1.25rem 2.75rem;
           @include buttonText;
         }
-        @media screen and (max-width: $sm) {
+        @include for-small-screens {
           width: 9.813rem;
           height: 3.375rem;
           justify-content: center;
@@ -22,7 +22,7 @@
       }
     }
     .dialog-ux {
-      @media screen and (max-width: $sm) {
+      @include for-small-screens {
         position: absolute;
       }
       .backdrop-ux {
@@ -38,10 +38,10 @@
         width: 38.375rem;
         height: min-content;
         top: 53%;
-        @media screen and (max-width: $lg) {
+        @include for-large-screens {
           width: 39.75rem;
         }
-        @media screen and (max-width: $sm) {
+        @include for-small-screens {
           top: 65%;
           width: 22.625rem;
         }
@@ -53,13 +53,13 @@
               padding: 1.5rem 1.5rem 1rem;
               border-bottom: 1px solid $grey500;
               margin-bottom: 1rem;
-              @media screen and (max-width: $sm) {
+              @include for-small-screens {
                 padding: 1.25rem 1.25rem 1rem;
               }
               h3 {
                 padding: 0;
                 @include h4Text;
-                @media screen and (max-width: $sm) {
+                @include for-small-screens {
                   @include bold22($darkPrimary);
                 }
               }
@@ -83,7 +83,7 @@
                 height: 3.5rem;
                 align-self: flex-end;
                 justify-content: space-between;
-                @media screen and (max-width: $sm) {
+                @include for-small-screens {
                   flex-direction: column;
                   gap: 0.25rem;
                   height: min-content;
@@ -93,12 +93,12 @@
                   @include uiButton('primary', 1.125rem 1.5rem) {
                     @include medium15($white);
                   }
-                  @media screen and (max-width: $lg) {
+                  @include for-large-screens {
                     @include uiButton('primary', 1rem 1.4rem) {
                       @include buttonText($white);
                     }
                   }
-                  @media screen and (max-width: $sm) {
+                  @include for-small-screens {
                     width: 100%;
                     height: auto;
                     @include uiButton('primary', 0.938rem 0) {
@@ -111,12 +111,12 @@
                   @include uiButton('secondary') {
                     @include medium15($darkPrimary);
                   }
-                  @media screen and (max-width: $lg) {
+                  @include for-large-screens {
                     @include uiButton('secondary', 1rem 1.4rem) {
                       @include buttonText($darkPrimary);
                     }
                   }
-                  @media screen and (max-width: $sm) {
+                  @include for-small-screens {
                     width: 100%;
                     @include uiButton('secondary', 0.938rem 0) {
                       @include medium15($darkPrimary);
@@ -127,15 +127,15 @@
               input {
                 @include uiInput(3.563rem, 21.5rem, 1.75rem) {
                   @include regular16($darkPrimary);
-                  @media screen and (max-width: $lg) {
+                  @include for-large-screens {
                     @include regular18($darkPrimary);
                   }
-                  @media screen and (max-width: $sm) {
+                  @include for-small-screens {
                     min-width: 100%;
                   }
                   &::placeholder {
                     @include regular16($grey250);
-                    @media screen and (max-width: $lg) {
+                    @include for-large-screens {
                       @include regular18($grey250);
                     }
                   }
@@ -149,7 +149,7 @@
                   padding-bottom: 1.25rem;
                   gap: 0.625rem;
                   position: relative;
-                  @media screen and (max-width: $sm) {
+                  @include for-small-screens {
                     padding-bottom: 1rem;
                     flex-direction: column;
                     gap: 0.5rem;
@@ -173,7 +173,7 @@
                       margin-bottom: 0.5rem;
                       @include regular16($grey200);
                       font-weight: 400;
-                      @media screen and (max-width: $sm) {
+                      @include for-small-screens {
                         word-break: break-all;
                       }
                       code {
@@ -185,7 +185,7 @@
                       margin-top: 0.5rem;
                       margin-bottom: 0.25rem;
                       @include medium14($grey200);
-                      @media screen and (max-width: $lg) {
+                      @include for-large-screens {
                         @include medium16($grey200);
                       }
                     }
@@ -208,7 +208,7 @@
                       }
                       p {
                         margin-bottom: 0.5rem;
-                        @media screen and (max-width: $sm) {
+                        @include for-small-screens {
                           display: flex;
                           white-space: nowrap;
                           gap: 0.5rem;
@@ -218,7 +218,7 @@
                           display: inline-block;
                           margin-left: 0.3rem;
                           @include medium16($darkPrimary);
-                          @media screen and (max-width: $sm) {
+                          @include for-small-screens {
                             white-space: normal;
                             word-break: break-all;
                             word-wrap: break-word;
@@ -227,7 +227,7 @@
                       }
                       .flow {
                         margin-bottom: 1rem;
-                        @media screen and (max-width: $lg) {
+                        @include for-large-screens {
                           margin-bottom: 0.75rem;
                         }
                       }
@@ -237,7 +237,7 @@
                           display: inline-block;
                           margin-bottom: 0.25rem;
                           @include medium14($grey200);
-                          @media screen and (max-width: $lg) {
+                          @include for-large-screens {
                             @include medium16($grey200);
                           }
                         }
@@ -252,35 +252,35 @@
                         h2 {
                           margin-bottom: 1rem;
                           @include medium14($grey200);
-                          @media screen and (max-width: $lg) {
+                          @include for-large-screens {
                             @include medium16($grey200);
                           }
                           a:first-child {
                             padding-left: 0.75rem;
-                            @media screen and (max-width: $lg) {
+                            @include for-large-screens {
                               padding-left: 0.875rem;
                             }
                           }
                           a:nth-child(2) {
                             padding-left: 0.5rem;
-                            @media screen and (max-width: $lg) {
+                            @include for-large-screens {
                               padding-left: 1.375rem;
                             }
                           }
                           a {
                             text-decoration: underline;
                             @include link14;
-                            @media screen and (max-width: $lg) {
+                            @include for-large-screens {
                               @include link16;
                             }
                           }
                         }
                         & > .wrapper {
-                          @media screen and (max-width: $lg) {
+                          @include for-large-screens {
                             width: min-content;
                             display: inline-block;
                           }
-                          @media screen and (max-width: $sm) {
+                          @include for-small-screens {
                             width: auto;
                             display: block;
                           }
@@ -314,11 +314,11 @@
                         }
                         & > .wrapper:not(:last-child) {
                           margin-bottom: 0.75rem;
-                          @media screen and (max-width: $lg) {
+                          @include for-large-screens {
                             margin-bottom: 0;
                             margin-right: 4.25rem;
                           }
-                          @media screen and (max-width: $sm) {
+                          @include for-small-screens {
                             margin-bottom: 1rem;
                             margin-right: 0;
                           }
@@ -330,26 +330,26 @@
                       .auth-btn-wrapper {
                         justify-content: flex-start;
                         gap: 0.5rem;
-                        @media screen and (max-width: $lg) {
+                        @include for-large-screens {
                           justify-content: space-between;
                         }
-                        @media screen and (max-width: $sm) {
+                        @include for-small-screens {
                           gap: 0.25rem;
                         }
                         button.authorize {
-                          @media screen and (max-width: $lg) {
+                          @include for-large-screens {
                             justify-content: center;
                             width: 20.375rem;
                           }
-                          @media screen and (max-width: $sm) {
+                          @include for-small-screens {
                             width: 100%;
                           }
                         }
                         button.btn-done {
-                          @media screen and (max-width: $lg) {
+                          @include for-large-screens {
                             width: 15.625rem;
                           }
-                          @media screen and (max-width: $sm) {
+                          @include for-small-screens {
                             width: 100%;
                           }
                         }
