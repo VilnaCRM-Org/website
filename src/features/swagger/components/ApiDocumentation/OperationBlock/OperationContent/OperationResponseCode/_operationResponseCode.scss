@@ -1,0 +1,74 @@
+@use "@swagger/global" as *;
+
+%operationResponseCode {
+  pre {
+    padding: 1rem 1rem!important;
+    background-color: $darkSecondary!important;
+    border-radius: 0.5rem;
+    max-height: none;
+    min-height: auto;
+    @include for-large-screens {
+      padding: 1rem!important;
+    }
+    @include for-small-screens {
+      padding: 0.75rem!important;
+    }
+    code {
+      @include demiBold14($white);
+      @include for-large-screens {
+        @include demi18($white);
+        line-height: 1.32rem;
+      }
+      @include for-small-screens {
+        @include medium15($white);
+        line-height: 1.125rem;
+      }
+    }
+  }
+  textarea.body-param__text {
+    padding: 1rem;
+    margin: 0;
+    border-radius: 0.5rem;
+    min-height: 16.875rem;
+    background-color: $white;
+    border: 1px solid $brandGrey;
+    outline: none;
+    resize: vertical;
+    @include medium14();
+    @include for-large-screens {
+      @include regular16($darkPrimary);
+    }
+    @include for-small-screens {
+      @include medium12($darkPrimary);
+    }
+  }
+  .copy-to-clipboard {
+    bottom: 0.75rem;
+    right: 0.75rem;
+    height: 3.125rem;
+    width: 5.313rem;
+    background-color: transparent;
+    @include for-small-screens {
+      height: 2.125rem;
+      left: 0.75rem;
+      width: auto;
+    }
+    button {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      height: 100%;
+      @include uiButton('secondary', 0 0) {
+        background-image: none;
+        @include medium15($darkPrimary);
+      }
+      &::after {
+        content: 'Copy';
+      }
+    }
+  }
+  .download-contents {
+
+  }
+}

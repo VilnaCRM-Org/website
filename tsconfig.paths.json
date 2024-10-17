@@ -2,7 +2,8 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@swagger/global": ["src/features/swagger/components/ApiDocumentation/Global/_global.scss"]
     }
   }
 }

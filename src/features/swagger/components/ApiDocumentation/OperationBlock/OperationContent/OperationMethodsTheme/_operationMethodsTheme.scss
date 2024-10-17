@@ -1,0 +1,103 @@
+@use "@swagger/global" as *;
+
+$postColorTheme: #38b386;
+$putColorTheme: #ffc01e;
+$getColorTheme: #1eaeff;
+$deleteColorTheme: #dc3939;
+$patchColorTheme: #9b59b6;
+
+$deprecatedTextColor: #969b9d;
+$deprecatedBorderColor: #e1e7ea;
+$deprecatedBackgroundColor: #f4f5f6;
+
+$methodColors: (
+  'post': $postColorTheme,
+  'put': $putColorTheme,
+  'get': $getColorTheme,
+  'delete': $deleteColorTheme,
+  'patch': $patchColorTheme,
+);
+
+@mixin opblockMethod($method, $color) {
+  &.opblock-#{$method} {
+    border-color: $color;
+    .opblock-summary-#{$method} {
+      outline: 1px solid $color;
+      background-color: rgba($color, 0.1);
+      .opblock-summary-control {
+        .opblock-summary-method {
+          color: $color;
+        }
+      }
+    }
+    .opblock-body {
+      .opblock-section-header,
+      .opblock-section-request-body,
+      & > .opblock-description-wrapper {
+        border-bottom: 1px solid $color;
+      }
+      .responses-wrapper {
+        .opblock-section-header {
+          border-top: 1px solid $color;
+        }
+      }
+    }
+  }
+}
+
+%operationMethodsTheme {
+  @each $method, $color in $methodColors {
+    @include opblockMethod($method, $color);
+  }
+
+  &.opblock-deprecated {
+    opacity: 1;
+    .opblock-summary {
+      outline: 1px solid $deprecatedBorderColor;
+      background-color: $deprecatedBackgroundColor;
+    }
+    .opblock-summary-control {
+      .opblock-summary-method {
+        color: $deprecatedTextColor;
+      }
+      .opblock-summary-path__deprecated {
+        text-decoration: none;
+        a {
+          span {
+            @include buttonText($grey300);
+            text-decoration: none;
+          }
+        }
+      }
+      .opblock-summary-path-description-wrapper {
+        .opblock-summary-path__deprecated {
+          text-decoration: none;
+          a {
+            span {
+              text-decoration: none;
+              @include buttonText($grey300);
+              @include for-small-screens {
+                @include medium16($grey300);
+              }
+            }
+          }
+        }
+        .opblock-summary-description {
+          @include medium15($grey400);
+          @include for-small-screens {
+            @include medium12($grey400);
+          }
+        }
+      }
+    }
+    .opblock-body {
+      .opblock-section-header {
+        border-bottom: 1px solid $deprecatedBorderColor;
+        box-shadow: none;
+      }
+      .parameters-container {
+        border-bottom: 1px solid $deprecatedBorderColor;
+      }
+    }
+  }
+}
