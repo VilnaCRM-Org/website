@@ -12,7 +12,6 @@ const nextConfig = withExportImages({
   webpack: config => {
     const localizationGenerator = new LocalizationGenerator();
     localizationGenerator.generateLocalizationFile();
-
     return config;
   },
 });
