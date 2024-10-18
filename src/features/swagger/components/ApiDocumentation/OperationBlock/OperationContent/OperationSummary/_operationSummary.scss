@@ -22,7 +22,7 @@
         min-width: auto;
         background-color: $white;
         border-radius: 0.5rem;
-        padding: 0.5rem 1.25rem 0.5rem 1.25rem;
+        padding: 0.5rem 1.25rem;
         text-shadow: none;
         @include typography($darkPrimary, 1rem, 600, 1.625rem);
         @include for-small-screens {

@@ -5,7 +5,7 @@
     .opblock-section-header {
       .opblock-title {
         @include medium15($grey200);
-        @media (min-width: $sm) and (max-width: $lg) {
+        @include from-small-to-large-screens {
           @include demi18($grey200);
         }
         &.required {
