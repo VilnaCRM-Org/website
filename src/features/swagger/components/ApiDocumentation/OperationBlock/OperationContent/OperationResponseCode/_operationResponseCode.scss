@@ -69,6 +69,20 @@
     }
   }
   .download-contents {
-
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    bottom: 0.75rem;
+    right: 6.563rem;
+    @include uiButton('primary') {
+      height: 3.125rem;
+      @include medium15($white);
+    }
+    @include for-small-screens {
+      right: 0.75rem;
+      left: 0.75rem;
+      bottom: 3.125rem;
+      height: 2.125rem;
+    }
   }
 }
