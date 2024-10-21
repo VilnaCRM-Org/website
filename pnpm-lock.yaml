@@ -55,8 +55,8 @@ importers:
         specifier: ^19.5.0
         version: 19.5.0(@types/node@18.19.54)(typescript@5.6.2)
       '@commitlint/config-conventional':
-        specifier: ^18.6.3
-        version: 18.6.3
+        specifier: ^19.5.0
+        version: 19.5.0
       '@faker-js/faker':
         specifier: ^9.0.3
         version: 9.0.3
@@ -115,8 +115,8 @@ importers:
         specifier: ^8.3.5
         version: 8.3.5(storybook@8.3.5)
       '@storybook/testing-library':
-        specifier: 0.0.13
-        version: 0.0.13(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        specifier: 0.2.2
+        version: 0.2.2
       '@stryker-mutator/core':
         specifier: ^8.6.0
         version: 8.6.0
@@ -134,7 +134,7 @@ importers:
         version: 14.3.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@testing-library/user-event':
         specifier: ^14.5.2
-        version: 14.5.2(@testing-library/dom@8.20.1)
+        version: 14.5.2(@testing-library/dom@9.3.4)
       '@types/jest':
         specifier: ^29.5.13
         version: 29.5.13
@@ -166,8 +166,8 @@ importers:
         specifier: ^17.1.0
         version: 17.1.0(@typescript-eslint/eslint-plugin@6.21.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.6.2))(eslint@8.57.1)(typescript@5.6.2))(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.6.2))(eslint-plugin-import@2.31.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.6.2))(eslint@8.57.1))(eslint@8.57.1)
       eslint-config-next:
-        specifier: ^13.5.7
-        version: 13.5.7(eslint@8.57.1)(typescript@5.6.2)
+        specifier: ^14.2.15
+        version: 14.2.15(eslint@8.57.1)(typescript@5.6.2)
       eslint-config-prettier:
         specifier: ^9.1.0
         version: 9.1.0(eslint@8.57.1)
@@ -179,7 +179,7 @@ importers:
         version: 2.31.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.6.2))(eslint-import-resolver-typescript@3.6.3)(eslint@8.57.1)
       eslint-plugin-jest-dom:
         specifier: ^5.4.0
-        version: 5.4.0(@testing-library/dom@8.20.1)(eslint@8.57.1)
+        version: 5.4.0(@testing-library/dom@9.3.4)(eslint@8.57.1)
       eslint-plugin-jsx-a11y:
         specifier: ^6.10.0
         version: 6.10.0(eslint@8.57.1)
@@ -193,8 +193,8 @@ importers:
         specifier: ^0.9.0
         version: 0.9.0(eslint@8.57.1)(typescript@5.6.2)
       eslint-plugin-testing-library:
-        specifier: ^6.3.0
-        version: 6.3.0(eslint@8.57.1)(typescript@5.6.2)
+        specifier: ^6.4.0
+        version: 6.4.0(eslint@8.57.1)(typescript@5.6.2)
       husky:
         specifier: ^9.1.6
         version: 9.1.6
@@ -949,8 +949,8 @@ packages:
     engines: {node: '>=v18'}
     hasBin: true
 
-  '@commitlint/config-conventional@18.6.3':
-    resolution: {integrity: sha512-8ZrRHqF6je+TRaFoJVwszwnOXb/VeYrPmTwPhf0WxpzpGTcYy1p0SPyZ2eRn/sRi/obnWAcobtDAq6+gJQQNhQ==}
+  '@commitlint/config-conventional@19.5.0':
+    resolution: {integrity: sha512-OBhdtJyHNPryZKg0fFpZNOBM1ZDbntMvqMuSmpfyP86XSfwzGw4CaoYRG4RutUPg0BTK07VMRIkNJT6wi2zthg==}
     engines: {node: '>=v18'}
 
   '@commitlint/config-validator@19.5.0':
@@ -1007,10 +1007,6 @@ packages:
 
   '@commitlint/top-level@19.5.0':
     resolution: {integrity: sha512-IP1YLmGAk0yWrImPRRc578I3dDUI5A2UBJx9FbSOjxe9sTlzFiwVJ+zeMLgAtHMtGZsC8LUnzmW1qRemkFU4ng==}
-    engines: {node: '>=v18'}
-
-  '@commitlint/types@18.6.1':
-    resolution: {integrity: sha512-gwRLBLra/Dozj2OywopeuHj2ac26gjGkz2cZ+86cTJOdtWfiRRr4+e77ZDAGc6MDWxaWheI+mAV5TLWWRwqrFg==}
     engines: {node: '>=v18'}
 
   '@commitlint/types@19.5.0':
@@ -1674,11 +1670,11 @@ packages:
   '@next/env@14.2.14':
     resolution: {integrity: sha512-/0hWQfiaD5//LvGNgc8PjvyqV50vGK0cADYzaoOOGN8fxzBn3iAiaq3S0tCRnFBldq0LVveLcxCTi41ZoYgAgg==}
 
-  '@next/eslint-plugin-next@13.5.7':
-    resolution: {integrity: sha512-c4vuEOOXeib4js5gDq+zFqAAdRGXX6T0d+zFETiQkRwy7vyj5lBov1dW0Z09nDst2lvxo7VEcKrQMUBH5Vgx7Q==}
-
   '@next/eslint-plugin-next@14.2.14':
     resolution: {integrity: sha512-kV+OsZ56xhj0rnTn6HegyTGkoa16Mxjrpk7pjWumyB2P8JVQb8S9qtkjy/ye0GnTr4JWtWG4x/2qN40lKZ3iVQ==}
+
+  '@next/eslint-plugin-next@14.2.15':
+    resolution: {integrity: sha512-pKU0iqKRBlFB/ocOI1Ip2CkKePZpYpnw5bEItEkuZ/Nr9FQP1+p7VDWr4VfOdff4i9bFmrOaeaU1bFEyAcxiMQ==}
 
   '@next/swc-darwin-arm64@14.2.14':
     resolution: {integrity: sha512-bsxbSAUodM1cjYeA4o6y7sp9wslvwjSkWw57t8DtC8Zig8aG8V6r+Yc05/9mDzLKcybb6EN85k1rJDnMKBd9Gw==}
@@ -2197,18 +2193,6 @@ packages:
     peerDependencies:
       storybook: ^8.3.5
 
-  '@storybook/addons@6.5.16':
-    resolution: {integrity: sha512-p3DqQi+8QRL5k7jXhXmJZLsE/GqHqyY6PcoA1oNTJr0try48uhTGUOYkgzmqtDaa/qPFO5LP+xCPzZXckGtquQ==}
-    peerDependencies:
-      react: ^16.8.0 || ^17.0.0 || ^18.0.0
-      react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0
-
-  '@storybook/api@6.5.16':
-    resolution: {integrity: sha512-HOsuT8iomqeTMQJrRx5U8nsC7lJTwRr1DhdD0SzlqL4c80S/7uuCy4IZvOt4sYQjOzW5fOo/kamcoBXyLproTA==}
-    peerDependencies:
-      react: ^16.8.0 || ^17.0.0 || ^18.0.0
-      react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0
-
   '@storybook/blocks@8.3.5':
     resolution: {integrity: sha512-8cHTdTywolTHlgwN8I7YH7saWAIjGzV617AwjhJ95AKlC0VtpO1gAFcAgCqr4DU9eMc+LZuvbnaU/RSvA5eCCQ==}
     peerDependencies:
@@ -2230,19 +2214,10 @@ packages:
       typescript:
         optional: true
 
-  '@storybook/channels@6.5.16':
-    resolution: {integrity: sha512-VylzaWQZaMozEwZPJdyJoz+0jpDa8GRyaqu9TGG6QGv+KU5POoZaGLDkRE7TzWkyyP0KQLo80K99MssZCpgSeg==}
-
-  '@storybook/client-logger@6.5.16':
-    resolution: {integrity: sha512-pxcNaCj3ItDdicPTXTtmYJE3YC1SjxFrBmHcyrN+nffeNyiMuViJdOOZzzzucTUG0wcOOX8jaSyak+nnHg5H1Q==}
-
   '@storybook/components@8.3.5':
     resolution: {integrity: sha512-Rq28YogakD3FO4F8KwAtGpo1g3t4V/gfCLqTQ8B6oQUFoxLqegkWk/DlwCzvoJndXuQJfdSyM6+r1JcA4Nql5A==}
     peerDependencies:
       storybook: ^8.3.5
-
-  '@storybook/core-events@6.5.16':
-    resolution: {integrity: sha512-qMZQwmvzpH5F2uwNUllTPg6eZXr2OaYZQRRN8VZJiuorZzDNdAFmiVWMWdkThwmyLEJuQKXxqCL8lMj/7PPM+g==}
 
   '@storybook/core-webpack@8.3.5':
     resolution: {integrity: sha512-mN8BHNc6lSGUf/nKgDr6XoTt1cX+Tap9RnKMUiROCDzfVlJPeJBrG4qrTOok7AwObzeDl9DNFyun6+pVgXJe7A==}
@@ -2260,9 +2235,6 @@ packages:
   '@storybook/csf@0.0.1':
     resolution: {integrity: sha512-USTLkZze5gkel8MYCujSRBVIrUQ3YPBrLOx7GNk/0wttvVtlzWXAq9eLbQ4p/NicGxP+3T7KPEMVV//g+yubpw==}
 
-  '@storybook/csf@0.0.2--canary.4566f4d.1':
-    resolution: {integrity: sha512-9OVvMVh3t9znYZwb0Svf/YQoxX2gVOeQTGe2bses2yj+a3+OJnCrUF3/hGv6Em7KujtOdL2LL+JnG49oMVGFgQ==}
-
   '@storybook/csf@0.1.11':
     resolution: {integrity: sha512-dHYFQH3mA+EtnCkHXzicbLgsvzYjcDJ1JWsogbItZogkPHgSJM/Wr71uMkcvw8v9mmCyP4NpXJuu6bPoVsOnzg==}
 
@@ -2275,9 +2247,6 @@ packages:
     peerDependencies:
       react: ^16.8.0 || ^17.0.0 || ^18.0.0
       react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0
-
-  '@storybook/instrumenter@6.5.16':
-    resolution: {integrity: sha512-q8/GaBk8PA/cL7m5OW+ec5t63+Zja9YvYSPGXrYtW17koSv7OnNPmk6RvI7tIHHO0mODBYnaHjF4zQfEGoyR5Q==}
 
   '@storybook/instrumenter@8.3.5':
     resolution: {integrity: sha512-NLDXai5y2t1ITgHVK9chyL0rMFZbICCOGcnTbyWhkLbiEWZKPJ8FuB8+g+Ba6zwtCve1A1Cnb4O2LOWy7TgWQw==}
@@ -2350,30 +2319,14 @@ packages:
       typescript:
         optional: true
 
-  '@storybook/router@6.5.16':
-    resolution: {integrity: sha512-ZgeP8a5YV/iuKbv31V8DjPxlV4AzorRiR8OuSt/KqaiYXNXlOoQDz/qMmiNcrshrfLpmkzoq7fSo4T8lWo2UwQ==}
-    peerDependencies:
-      react: ^16.8.0 || ^17.0.0 || ^18.0.0
-      react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0
-
-  '@storybook/semver@7.3.2':
-    resolution: {integrity: sha512-SWeszlsiPsMI0Ps0jVNtH64cI5c0UF3f7KgjVKJoNP30crQ6wUSddY2hsdeczZXEKVJGEn50Q60flcGsQGIcrg==}
-    engines: {node: '>=10'}
-    hasBin: true
-
   '@storybook/test@8.3.5':
     resolution: {integrity: sha512-1BXWsUGWk9FiKKelZZ55FDJdeoL8uRBHbjTYBRM2xJLhdNSvGzI4Tb3bkmxPpGn72Ua6AyldhlTxr2BpUFKOHA==}
     peerDependencies:
       storybook: ^8.3.5
 
-  '@storybook/testing-library@0.0.13':
-    resolution: {integrity: sha512-vRMeIGer4EjJkTgI8sQyK9W431ekPWYCWL//OmSDJ64IT3h7FnW7Xg6p+eqM3oII98/O5pcya5049GxnjaPtxw==}
-
-  '@storybook/theming@6.5.16':
-    resolution: {integrity: sha512-hNLctkjaYLRdk1+xYTkC1mg4dYz2wSv6SqbLpcKMbkPHTE0ElhddGPHQqB362md/w9emYXNkt1LSMD8Xk9JzVQ==}
-    peerDependencies:
-      react: ^16.8.0 || ^17.0.0 || ^18.0.0
-      react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0
+  '@storybook/testing-library@0.2.2':
+    resolution: {integrity: sha512-L8sXFJUHmrlyU2BsWWZGuAjv39Jl1uAqUHdxmN42JY15M4+XCMjGlArdCCjDe1wpTSW6USYISA9axjZojgtvnw==}
+    deprecated: In Storybook 8, this package functionality has been integrated to a new package called @storybook/test, which uses Vitest APIs for an improved experience. When upgrading to Storybook 8 with 'npx storybook@latest upgrade', you will get prompted and will get an automigration for the new package. Please migrate when you can.
 
   '@storybook/theming@8.3.5':
     resolution: {integrity: sha512-9HmDDyC691oqfg4RziIM9ElsS2HITaxmH7n/yeUPtuirkPdAQzqOzhvH/Sa0qOhifzs8VjR+Gd/a/ZQ+S38r7w==}
@@ -2416,10 +2369,6 @@ packages:
     resolution: {integrity: sha512-pemlzrSESWbdAloYml3bAJMEfNh1Z7EduzqPKprCH5S341frlpYnUEW0H72dLxa6IsYr+mPno20GiSm+h9dEdQ==}
     engines: {node: '>=18'}
 
-  '@testing-library/dom@8.20.1':
-    resolution: {integrity: sha512-/DiOQ5xBxgdYRC8LNk7U+RWat0S3qRLeIw3ZIkMQ9kkVlRmwD/Eg8k8CqIpD6GW7u20JIUOfMKbxtiLutpjQ4g==}
-    engines: {node: '>=12'}
-
   '@testing-library/dom@9.3.4':
     resolution: {integrity: sha512-FlS4ZWlp97iiNWig0Muq8p+3rVDjRiYE+YKGbAqXOu9nwJFFOdL00kFpz42M+4huzYi86vAK1sOOfyOG45muIQ==}
     engines: {node: '>=14'}
@@ -2434,12 +2383,6 @@ packages:
     peerDependencies:
       react: ^18.0.0
       react-dom: ^18.0.0
-
-  '@testing-library/user-event@13.5.0':
-    resolution: {integrity: sha512-5Kwtbo3Y/NowpkbRuSepbyMFkZmHgD+vPzYB/RJ4oxt5Gj/avFFBYjhw27cqSVPVw/3a67NK1PbiIr9k4Gwmdg==}
-    engines: {node: '>=10', npm: '>=6'}
-    peerDependencies:
-      '@testing-library/dom': '>=7.21.4'
 
   '@testing-library/user-event@14.5.2':
     resolution: {integrity: sha512-YAh82Wh4TIrxYLmfGcixwD18oIjyC1pFQC2Y01F2lzV2HTMiYrI0nze0FD0ocB//CKS/7jIUgae+adPqxK5yCQ==}
@@ -2528,9 +2471,6 @@ packages:
 
   '@types/http-errors@2.0.4':
     resolution: {integrity: sha512-D0CFMMtydbJAegzOyHjtiKPLlvnm3iTZyZRSZoLq2mRhDdmLfIWOCYPfQJ4cu2erKghU++QvjcUjp/5h7hESpA==}
-
-  '@types/is-function@1.0.3':
-    resolution: {integrity: sha512-/CLhCW79JUeLKznI6mbVieGbl4QU5Hfn+6udw1YHZoofASjbQ5zaP5LzAUZYDpRYEjS4/P+DhEgyJ/PQmGGTWw==}
 
   '@types/istanbul-lib-coverage@2.0.6':
     resolution: {integrity: sha512-2QF/t/auWm0lsy8XtKVPG19v3sSOQlJe/YHZgfjb/KBBHOGSV+J2q/S671rcq9uTBrLAXmZpqJiaQbMT+zNU1w==}
@@ -2642,9 +2582,6 @@ packages:
 
   '@types/uuid@9.0.8':
     resolution: {integrity: sha512-jg+97EGIcY9AGHJJRaaPVgetKDsrTgbRjQ5Msgjh/DQKEFl0DtyRr/VCOyD1T2R1MNeWPK/u7JoGhlDZnKBAfA==}
-
-  '@types/webpack-env@1.18.5':
-    resolution: {integrity: sha512-wz7kjjRRj8/Lty4B+Kr0LN6Ypc/3SymeCCGSbaXp2leH0ZVg/PriNiOwNj4bD4uphI7A8NXS4b6Gl373sfO5mA==}
 
   '@types/wrap-ansi@3.0.0':
     resolution: {integrity: sha512-ltIpx+kM7g/MLRZfkbL7EsCEjfzCcScLpkg37eXEtx5kmrAKBkTJwd1GIAjDSL8wTpM6Hzn5YO4pSb91BEwu1g==}
@@ -3564,9 +3501,6 @@ packages:
   core-js-pure@3.38.1:
     resolution: {integrity: sha512-BY8Etc1FZqdw1glX0XNOq2FDwfrg/VGqoZOZCdaL+UmdaqDwQwYXkMJT4t6In+zfEfOJDcM9T0KdbBeJg8KKCQ==}
 
-  core-js@3.38.1:
-    resolution: {integrity: sha512-OP35aUorbU3Zvlx7pjsFdu1rGNnD4pgw/CWoYzRY3t2EzoVT7shKHY1dlAy3f41cGIO7ZDPQimhGFTlEYkG/Hw==}
-
   core-util-is@1.0.3:
     resolution: {integrity: sha512-ZQBvi1DcpJ4GDqanjucZ2Hj3wEO5pZDS89BWbkcrvdxksJorwUDDZamX9ldFkp9aw2lmBDLgkObEA4DWNJ9FYQ==}
 
@@ -3845,9 +3779,6 @@ packages:
   dom-serializer@1.4.1:
     resolution: {integrity: sha512-VHwB3KfrcOOkelEG2ZOfxqLZdfkil8PtJi4P8N2MMXucZq2yLp75ClViUlOVwyoHEDjYU433Aq+5zWP61+RGag==}
 
-  dom-walk@0.1.2:
-    resolution: {integrity: sha512-6QvTW9mrGeIegrFXdtQi9pk7O/nSK6lSdXW2eqUspN5LWD7UTji2Fqw5V2YLjBpHEoU9Xl/eUWNpDeZvoyOv2w==}
-
   domain-browser@4.23.0:
     resolution: {integrity: sha512-ArzcM/II1wCCujdCNyQjXrAFwS4mrLh4C7DZWlaI8mdh7h3BfKdNd3bKXITfl2PT9FtfQqaGvhi1vPRQPimjGA==}
     engines: {node: '>=10'}
@@ -4053,8 +3984,8 @@ packages:
       eslint-plugin-react: ^7.28.0
       eslint-plugin-react-hooks: ^4.3.0
 
-  eslint-config-next@13.5.7:
-    resolution: {integrity: sha512-pdeUuL9KZ8qFzzKqCbxk6FXwG9dNEnot/3+qSFJqxdSGgkFUH8cgZus/meyCi2S0cTAsDbBEE030E6zvL9pUYQ==}
+  eslint-config-next@14.2.15:
+    resolution: {integrity: sha512-mKg+NC/8a4JKLZRIOBplxXNdStgxy7lzWuedUaCc8tev+Al9mwDUTujQH6W6qXDH9kycWiVo28tADWGvpBsZcQ==}
     peerDependencies:
       eslint: ^7.23.0 || ^8.0.0
       typescript: '>=3.3.1'
@@ -4155,11 +4086,11 @@ packages:
     peerDependencies:
       eslint: '>=6'
 
-  eslint-plugin-testing-library@6.3.0:
-    resolution: {integrity: sha512-GYcEErTt6EGwE0bPDY+4aehfEBpB2gDBFKohir8jlATSUvzStEyzCx8QWB/14xeKc/AwyXkzScSzMHnFojkWrA==}
+  eslint-plugin-testing-library@6.4.0:
+    resolution: {integrity: sha512-yeWF+YgCgvNyPNI9UKnG0FjeE2sk93N/3lsKqcmR8dSfeXJwFT5irnWo7NjLf152HkRzfoFjh3LsBUrhvFz4eA==}
     engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0, npm: '>=6'}
     peerDependencies:
-      eslint: ^7.5.0 || ^8.0.0
+      eslint: ^7.5.0 || ^8.0.0 || ^9.0.0
 
   eslint-scope@5.1.1:
     resolution: {integrity: sha512-2NxwbF/hZ0KpepYN0cNbo+FN6XoK7GaHlQhgx/hIZl6Va0bF45RQOOwhLIy8lQDbuCiadSLCBnH2CFYquit5bw==}
@@ -4501,10 +4432,6 @@ packages:
     engines: {node: '>=16 || 14 >=14.18'}
     hasBin: true
 
-  glob@7.1.7:
-    resolution: {integrity: sha512-OvD9ENzPLbegENnYP5UUfJIirTg4+XwMWGaQfQTY0JenxNvvIKP3U3/tAQSPIu/lHxXYSZmpXlUHeqAIdKzBLQ==}
-    deprecated: Glob versions prior to v9 are no longer supported
-
   glob@7.2.3:
     resolution: {integrity: sha512-nFR0zLpU2YCaRxwoCJvL6UvCH2JFyFVIvwTLsIf21AuHlMskA1hhTdk+LlYJtOlYt9v6dvszD2BGRqBL+iQK9Q==}
     deprecated: Glob versions prior to v9 are no longer supported
@@ -4512,9 +4439,6 @@ packages:
   global-directory@4.0.1:
     resolution: {integrity: sha512-wHTUcDUoZ1H5/0iVqEudYW4/kAlN5cZ3j/bXn0Dpbizl9iaUVeWSHqiOjsgk6OW2bkLclbBjzewBz6weQ1zA2Q==}
     engines: {node: '>=18'}
-
-  global@4.4.0:
-    resolution: {integrity: sha512-wv/LAoHdRE3BeTGz53FAamhGlPLhlssK45usmGFThIi4XqnBmjKQ16u+RNbP7WvigRZDxUsM0J3gcQ5yicaL0w==}
 
   globals@11.12.0:
     resolution: {integrity: sha512-WOBp/EEGUiIsJSp7wcv/y6MO+lV9UoncWqxuFfm8eBwzWNgyfBd6Gz+IeKQ9jCmyhoH99g15M3T+QaVHFjizVA==}
@@ -4857,9 +4781,6 @@ packages:
     resolution: {integrity: sha512-zymm5+u+sCsSWyD9qNaejV3DFvhCKclKdizYaJUuHA83RLjb7nSuGnddCHGv0hk+KY7BMAlsWeK4Ueg6EV6XQg==}
     engines: {node: '>=8'}
 
-  is-function@1.0.2:
-    resolution: {integrity: sha512-lw7DUp0aWXYg+CBCN+JKkcE0Q2RayZnSvnZBlwgxHBQhqt5pZNVy4Ri7H9GmmXkdu7LUthszM+Tor1u/2iBcpQ==}
-
   is-generator-fn@2.1.0:
     resolution: {integrity: sha512-cTIB4yPYL/Grw0EaSzASzg6bBy9gqCofvWN8okThAYIxKJZC+udlRAmGbM0XLeniEJSs8uEgHPGuHSe1XsOLSQ==}
     engines: {node: '>=6'}
@@ -4977,10 +4898,6 @@ packages:
 
   isexe@2.0.0:
     resolution: {integrity: sha512-RHxMLp9lnKHGHRng9QFhRCMbYAcVpn69smSGcq3f36xjgVVWThj4qqLbTLlq7Ssj8B+fIQ1EuCEGI2lKsyQeIw==}
-
-  isobject@4.0.0:
-    resolution: {integrity: sha512-S/2fF5wH8SJA/kmwr6HYhK/RI/OkhD84k8ntalo0iJjZikgq1XFvR5M8NPT1x5F7fBwCG3qHfnzeP/Vh/ZxCUA==}
-    engines: {node: '>=0.10.0'}
 
   isomorphic-fetch@3.0.0:
     resolution: {integrity: sha512-qvUtwJ3j6qwsF3jLxkZ72qCgjMysPzDfeV240JHiGZsANBYd+EEuu35v7dfrJ9Up0Ak07D7GGSkGhCHTqg/5wA==}
@@ -5549,9 +5466,6 @@ packages:
   mimic-fn@2.1.0:
     resolution: {integrity: sha512-OqbOk5oEQeAZ8WXWydlu9HJjz9WVdEIvamMCcXmuqUYjTknH/sqsWvhQ3vgwKFRR1HpjvNBKQ37nbJgYzGqGcg==}
     engines: {node: '>=6'}
-
-  min-document@2.19.0:
-    resolution: {integrity: sha512-9Wy1B3m3f66bPPmU5hdA4DR4PB2OfDU/+GS3yAB7IQozE3tqXaVv2zOjgla7MEGSRv95+ILmOuvhLkOK6wJtCQ==}
 
   min-indent@1.0.1:
     resolution: {integrity: sha512-I9jwMn07Sy/IwOj3zVkVik2JTvgpaykDZEigL6Rx6N9LbMywwUSMtxET+7lVoDLLd3O3IXwJwvuuns8UB/HeAg==}
@@ -6284,9 +6198,6 @@ packages:
   regenerate@1.4.2:
     resolution: {integrity: sha512-zrceR/XhGYU/d/opr2EKO7aRHUeiBI8qjtfHqADTwZd6Szfy16la6kqD0MIUs5z5hx6AaKa+PixpPrR289+I0A==}
 
-  regenerator-runtime@0.13.11:
-    resolution: {integrity: sha512-kY1AZVr2Ra+t+piVaJ4gxaFaReZVH40AKNo7UCX6W+dEwBo/2oZJzqfuN1qLq1oL45o56cPaTXELwrTh8Fpggg==}
-
   regenerator-runtime@0.14.1:
     resolution: {integrity: sha512-dYnhHh0nJoMfnkZs6GmmhFknAGRrLznOu5nc9ML+EJxGvrx6H7teuevqVqCuPcPK//3eDrrjQhehXVx9cnkGdw==}
 
@@ -6652,9 +6563,6 @@ packages:
     resolution: {integrity: sha512-iCGQj+0l0HOdZ2AEeBADlsRC+vsnDsZsbdSiH1yNSjcfKM7fdpCMfqAL/dwF5BLiw/XhRft/Wax6zQbhq2BcjQ==}
     engines: {node: '>= 0.4'}
 
-  store2@2.14.3:
-    resolution: {integrity: sha512-4QcZ+yx7nzEFiV4BMLnr/pRa5HYzNITX2ri0Zh6sT9EyQHbBHacC6YigllUPU9X3D0f/22QCgfokpKs52YRrUg==}
-
   storybook@8.3.5:
     resolution: {integrity: sha512-hYQVtP2l+3kO8oKDn4fjXXQYxgTRsj/LaV6lUMJH0zt+OhVmDXKJLxmdUP4ieTm0T8wEbSYosFavgPcQZlxRfw==}
     hasBin: true
@@ -6838,9 +6746,6 @@ packages:
 
   tar-stream@3.1.7:
     resolution: {integrity: sha512-qJj60CXt7IU1Ffyc3NJMjh6EkuCFej46zUqJ4J7pqYlThyd9bO0XBTmcOIhSzZJVWfsLks0+nle/j538YAW9RQ==}
-
-  telejson@6.0.8:
-    resolution: {integrity: sha512-nerNXi+j8NK1QEfBHtZUN/aLdDcyupA//9kAboYLrtzZlPLpUfqbVGWb9zz91f/mIjRbAYhbgtnJHY8I1b5MBg==}
 
   telejson@7.2.0:
     resolution: {integrity: sha512-1QTEcJkJEhc8OnStBx/ILRu5J2p0GjvWsBx56bmZRqnrkdBMUe+nX92jxV+p3dB4CP6PZCdJMQJwCggkNBMzkQ==}
@@ -8423,9 +8328,9 @@ snapshots:
       - '@types/node'
       - typescript
 
-  '@commitlint/config-conventional@18.6.3':
+  '@commitlint/config-conventional@19.5.0':
     dependencies:
-      '@commitlint/types': 18.6.1
+      '@commitlint/types': 19.5.0
       conventional-changelog-conventionalcommits: 7.0.2
 
   '@commitlint/config-validator@19.5.0':
@@ -8514,10 +8419,6 @@ snapshots:
   '@commitlint/top-level@19.5.0':
     dependencies:
       find-up: 7.0.0
-
-  '@commitlint/types@18.6.1':
-    dependencies:
-      chalk: 4.1.2
 
   '@commitlint/types@19.5.0':
     dependencies:
@@ -9404,11 +9305,11 @@ snapshots:
 
   '@next/env@14.2.14': {}
 
-  '@next/eslint-plugin-next@13.5.7':
-    dependencies:
-      glob: 7.1.7
-
   '@next/eslint-plugin-next@14.2.14':
+    dependencies:
+      glob: 10.3.10
+
+  '@next/eslint-plugin-next@14.2.15':
     dependencies:
       glob: 10.3.10
 
@@ -10077,44 +9978,6 @@ snapshots:
       memoizerific: 1.11.3
       storybook: 8.3.5
 
-  '@storybook/addons@6.5.16(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
-    dependencies:
-      '@storybook/api': 6.5.16(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      '@storybook/channels': 6.5.16
-      '@storybook/client-logger': 6.5.16
-      '@storybook/core-events': 6.5.16
-      '@storybook/csf': 0.0.2--canary.4566f4d.1
-      '@storybook/router': 6.5.16(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      '@storybook/theming': 6.5.16(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      '@types/webpack-env': 1.18.5
-      core-js: 3.38.1
-      global: 4.4.0
-      react: 18.3.1
-      react-dom: 18.3.1(react@18.3.1)
-      regenerator-runtime: 0.13.11
-
-  '@storybook/api@6.5.16(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
-    dependencies:
-      '@storybook/channels': 6.5.16
-      '@storybook/client-logger': 6.5.16
-      '@storybook/core-events': 6.5.16
-      '@storybook/csf': 0.0.2--canary.4566f4d.1
-      '@storybook/router': 6.5.16(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      '@storybook/semver': 7.3.2
-      '@storybook/theming': 6.5.16(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      core-js: 3.38.1
-      fast-deep-equal: 3.1.3
-      global: 4.4.0
-      lodash: 4.17.21
-      memoizerific: 1.11.3
-      react: 18.3.1
-      react-dom: 18.3.1(react@18.3.1)
-      regenerator-runtime: 0.13.11
-      store2: 2.14.3
-      telejson: 6.0.8
-      ts-dedent: 2.2.0
-      util-deprecate: 1.0.2
-
   '@storybook/blocks@8.3.5(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@8.3.5)':
     dependencies:
       '@storybook/csf': 0.1.11
@@ -10176,24 +10039,9 @@ snapshots:
       - uglify-js
       - webpack-cli
 
-  '@storybook/channels@6.5.16':
-    dependencies:
-      core-js: 3.38.1
-      ts-dedent: 2.2.0
-      util-deprecate: 1.0.2
-
-  '@storybook/client-logger@6.5.16':
-    dependencies:
-      core-js: 3.38.1
-      global: 4.4.0
-
   '@storybook/components@8.3.5(storybook@8.3.5)':
     dependencies:
       storybook: 8.3.5
-
-  '@storybook/core-events@6.5.16':
-    dependencies:
-      core-js: 3.38.1
 
   '@storybook/core-webpack@8.3.5(storybook@8.3.5)':
     dependencies:
@@ -10232,10 +10080,6 @@ snapshots:
     dependencies:
       lodash: 4.17.21
 
-  '@storybook/csf@0.0.2--canary.4566f4d.1':
-    dependencies:
-      lodash: 4.17.21
-
   '@storybook/csf@0.1.11':
     dependencies:
       type-fest: 2.19.0
@@ -10246,17 +10090,6 @@ snapshots:
     dependencies:
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
-
-  '@storybook/instrumenter@6.5.16(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
-    dependencies:
-      '@storybook/addons': 6.5.16(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      '@storybook/client-logger': 6.5.16
-      '@storybook/core-events': 6.5.16
-      core-js: 3.38.1
-      global: 4.4.0
-    transitivePeerDependencies:
-      - react
-      - react-dom
 
   '@storybook/instrumenter@8.3.5(storybook@8.3.5)':
     dependencies:
@@ -10418,21 +10251,6 @@ snapshots:
       '@storybook/test': 8.3.5(storybook@8.3.5)
       typescript: 5.6.2
 
-  '@storybook/router@6.5.16(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
-    dependencies:
-      '@storybook/client-logger': 6.5.16
-      core-js: 3.38.1
-      memoizerific: 1.11.3
-      qs: 6.13.0
-      react: 18.3.1
-      react-dom: 18.3.1(react@18.3.1)
-      regenerator-runtime: 0.13.11
-
-  '@storybook/semver@7.3.2':
-    dependencies:
-      core-js: 3.38.1
-      find-up: 4.1.0
-
   '@storybook/test@8.3.5(storybook@8.3.5)':
     dependencies:
       '@storybook/csf': 0.1.11
@@ -10446,25 +10264,11 @@ snapshots:
       storybook: 8.3.5
       util: 0.12.5
 
-  '@storybook/testing-library@0.0.13(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
+  '@storybook/testing-library@0.2.2':
     dependencies:
-      '@storybook/client-logger': 6.5.16
-      '@storybook/instrumenter': 6.5.16(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      '@testing-library/dom': 8.20.1
-      '@testing-library/user-event': 13.5.0(@testing-library/dom@8.20.1)
+      '@testing-library/dom': 9.3.4
+      '@testing-library/user-event': 14.5.2(@testing-library/dom@9.3.4)
       ts-dedent: 2.2.0
-    transitivePeerDependencies:
-      - react
-      - react-dom
-
-  '@storybook/theming@6.5.16(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
-    dependencies:
-      '@storybook/client-logger': 6.5.16
-      core-js: 3.38.1
-      memoizerific: 1.11.3
-      react: 18.3.1
-      react-dom: 18.3.1(react@18.3.1)
-      regenerator-runtime: 0.13.11
 
   '@storybook/theming@8.3.5(storybook@8.3.5)':
     dependencies:
@@ -10555,17 +10359,6 @@ snapshots:
       lz-string: 1.5.0
       pretty-format: 27.5.1
 
-  '@testing-library/dom@8.20.1':
-    dependencies:
-      '@babel/code-frame': 7.25.7
-      '@babel/runtime': 7.25.7
-      '@types/aria-query': 5.0.4
-      aria-query: 5.1.3
-      chalk: 4.1.2
-      dom-accessibility-api: 0.5.16
-      lz-string: 1.5.0
-      pretty-format: 27.5.1
-
   '@testing-library/dom@9.3.4':
     dependencies:
       '@babel/code-frame': 7.25.7
@@ -10595,18 +10388,13 @@ snapshots:
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
 
-  '@testing-library/user-event@13.5.0(@testing-library/dom@8.20.1)':
-    dependencies:
-      '@babel/runtime': 7.25.7
-      '@testing-library/dom': 8.20.1
-
   '@testing-library/user-event@14.5.2(@testing-library/dom@10.4.0)':
     dependencies:
       '@testing-library/dom': 10.4.0
 
-  '@testing-library/user-event@14.5.2(@testing-library/dom@8.20.1)':
+  '@testing-library/user-event@14.5.2(@testing-library/dom@9.3.4)':
     dependencies:
-      '@testing-library/dom': 8.20.1
+      '@testing-library/dom': 9.3.4
 
   '@tootallnate/once@2.0.0': {}
 
@@ -10700,8 +10488,6 @@ snapshots:
   '@types/html-minifier-terser@6.1.0': {}
 
   '@types/http-errors@2.0.4': {}
-
-  '@types/is-function@1.0.3': {}
 
   '@types/istanbul-lib-coverage@2.0.6': {}
 
@@ -10824,8 +10610,6 @@ snapshots:
   '@types/unist@3.0.3': {}
 
   '@types/uuid@9.0.8': {}
-
-  '@types/webpack-env@1.18.5': {}
 
   '@types/wrap-ansi@3.0.0': {}
 
@@ -11922,8 +11706,6 @@ snapshots:
 
   core-js-pure@3.38.1: {}
 
-  core-js@3.38.1: {}
-
   core-util-is@1.0.3: {}
 
   cosmiconfig-typescript-loader@5.0.0(@types/node@18.19.54)(cosmiconfig@9.0.0(typescript@5.6.2))(typescript@5.6.2):
@@ -12217,8 +11999,6 @@ snapshots:
       domhandler: 4.3.1
       entities: 2.2.0
 
-  dom-walk@0.1.2: {}
-
   domain-browser@4.23.0: {}
 
   domelementtype@2.3.0: {}
@@ -12506,10 +12286,11 @@ snapshots:
       object.assign: 4.1.5
       object.entries: 1.1.8
 
-  eslint-config-next@13.5.7(eslint@8.57.1)(typescript@5.6.2):
+  eslint-config-next@14.2.15(eslint@8.57.1)(typescript@5.6.2):
     dependencies:
-      '@next/eslint-plugin-next': 13.5.7
+      '@next/eslint-plugin-next': 14.2.15
       '@rushstack/eslint-patch': 1.10.4
+      '@typescript-eslint/eslint-plugin': 6.21.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.6.2))(eslint@8.57.1)(typescript@5.6.2)
       '@typescript-eslint/parser': 6.21.0(eslint@8.57.1)(typescript@5.6.2)
       eslint: 8.57.1
       eslint-import-resolver-node: 0.3.9
@@ -12602,13 +12383,13 @@ snapshots:
       - eslint-import-resolver-webpack
       - supports-color
 
-  eslint-plugin-jest-dom@5.4.0(@testing-library/dom@8.20.1)(eslint@8.57.1):
+  eslint-plugin-jest-dom@5.4.0(@testing-library/dom@9.3.4)(eslint@8.57.1):
     dependencies:
       '@babel/runtime': 7.25.7
       eslint: 8.57.1
       requireindex: 1.2.0
     optionalDependencies:
-      '@testing-library/dom': 8.20.1
+      '@testing-library/dom': 9.3.4
 
   eslint-plugin-jsx-a11y@6.10.0(eslint@8.57.1):
     dependencies:
@@ -12667,7 +12448,7 @@ snapshots:
       - supports-color
       - typescript
 
-  eslint-plugin-testing-library@6.3.0(eslint@8.57.1)(typescript@5.6.2):
+  eslint-plugin-testing-library@6.4.0(eslint@8.57.1)(typescript@5.6.2):
     dependencies:
       '@typescript-eslint/utils': 5.62.0(eslint@8.57.1)(typescript@5.6.2)
       eslint: 8.57.1
@@ -13137,15 +12918,6 @@ snapshots:
       minipass: 7.1.2
       path-scurry: 1.11.1
 
-  glob@7.1.7:
-    dependencies:
-      fs.realpath: 1.0.0
-      inflight: 1.0.6
-      inherits: 2.0.4
-      minimatch: 3.1.2
-      once: 1.4.0
-      path-is-absolute: 1.0.1
-
   glob@7.2.3:
     dependencies:
       fs.realpath: 1.0.0
@@ -13158,11 +12930,6 @@ snapshots:
   global-directory@4.0.1:
     dependencies:
       ini: 4.1.1
-
-  global@4.4.0:
-    dependencies:
-      min-document: 2.19.0
-      process: 0.11.10
 
   globals@11.12.0: {}
 
@@ -13514,8 +13281,6 @@ snapshots:
 
   is-fullwidth-code-point@3.0.0: {}
 
-  is-function@1.0.2: {}
-
   is-generator-fn@2.1.0: {}
 
   is-generator-function@1.0.10:
@@ -13606,8 +13371,6 @@ snapshots:
   isarray@2.0.5: {}
 
   isexe@2.0.0: {}
-
-  isobject@4.0.0: {}
 
   isomorphic-fetch@3.0.0:
     dependencies:
@@ -14450,10 +14213,6 @@ snapshots:
 
   mimic-fn@2.1.0: {}
 
-  min-document@2.19.0:
-    dependencies:
-      dom-walk: 0.1.2
-
   min-indent@1.0.1: {}
 
   minimalistic-assert@1.0.1: {}
@@ -15244,8 +15003,6 @@ snapshots:
 
   regenerate@1.4.2: {}
 
-  regenerator-runtime@0.13.11: {}
-
   regenerator-runtime@0.14.1: {}
 
   regenerator-transform@0.15.2:
@@ -15645,8 +15402,6 @@ snapshots:
     dependencies:
       internal-slot: 1.0.7
 
-  store2@2.14.3: {}
-
   storybook@8.3.5:
     dependencies:
       '@storybook/core': 8.3.5
@@ -15852,17 +15607,6 @@ snapshots:
       b4a: 1.6.7
       fast-fifo: 1.3.2
       streamx: 2.20.1
-
-  telejson@6.0.8:
-    dependencies:
-      '@types/is-function': 1.0.3
-      global: 4.4.0
-      is-function: 1.0.2
-      is-regex: 1.1.4
-      is-symbol: 1.0.4
-      isobject: 4.0.0
-      lodash: 4.17.21
-      memoizerific: 1.11.3
 
   telejson@7.2.0:
     dependencies:
