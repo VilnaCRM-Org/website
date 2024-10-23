@@ -11,9 +11,18 @@
       position: absolute;
     }
     .backdrop-ux {
+      position: fixed;
       top: 4rem;
-      background: $backdropBackground;
-      backdrop-filter: blur(0.125rem);
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: $backdropBackgroundWithBlur;
+      @supports (backdrop-filter: blur(0.125rem)) {
+        backdrop-filter: blur(0.125rem);
+      }
+      @supports not (backdrop-filter: blur(0.125rem)) {
+        background: $backdropBackgroundWithoutBlur;
+      }
     }
     .modal-ux {
       position: absolute;

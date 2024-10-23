@@ -5,8 +5,8 @@ import { useTranslation } from 'react-i18next';
 import touchIcon from '@/assets/img/touch.png';
 import UiFooter from '@/components/UiFooter';
 
-import Header from '../../../landing/components/Header';
 import ApiDocumentation from '../ApiDocumentation/ApiDocumentation';
+import Header from '../Header/Header';
 import Navigation from '../Navigation/Navigation';
 
 import styles from './styles';
