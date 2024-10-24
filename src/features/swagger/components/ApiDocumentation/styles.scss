@@ -1,0 +1,17 @@
+@use "@swagger/global" as *;
+
+@use "Information/information";
+@use "Scheme/scheme";
+@use "OperationBlock/operationBlock";
+@use "OperationModels/operationModels";
+
+.swagger-ui {
+  font-family: $golos;
+  @extend %informationContainer;
+  @extend %scheme;
+  .wrapper {
+    padding: 0;
+    @extend %operationBlock;
+    @extend %operationModels;
+  }
+}

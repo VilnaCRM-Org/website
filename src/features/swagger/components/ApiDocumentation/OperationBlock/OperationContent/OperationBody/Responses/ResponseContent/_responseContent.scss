@@ -1,0 +1,21 @@
+@use "@swagger/global" as *;
+
+@use "ResponseAfterExecute/responseAfterExecute";
+@use "ResponseTable/responseTable";
+
+%responseContent {
+  .responses-inner {
+    padding: 0.75rem 0.5rem 0.5rem;
+    @include for-large-screens {
+      padding-top: 1rem;
+    }
+    @include for-small-screens {
+      padding: 0 0.375rem 0.375rem;
+    }
+    @extend %responseTable;
+    @extend %responseAfterExecute;
+    .response-col_links {
+      display: none;
+    }
+  }
+}
