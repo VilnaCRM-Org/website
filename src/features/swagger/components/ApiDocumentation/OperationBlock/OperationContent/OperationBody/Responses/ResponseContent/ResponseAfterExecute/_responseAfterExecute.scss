@@ -1,0 +1,90 @@
+@use "@swagger/global" as *;
+
+%responseAfterExecute {
+  & > div {
+    margin-bottom: 0.75rem;
+    @include for-large-screens {
+      margin-bottom: 1rem;
+    }
+    @include for-small-screens {
+      margin-bottom: 0.75rem;
+    }
+    & > h4, div .curl-command, div .request-url, div h4 {
+      max-width: 59.25rem;
+      margin-left: 1rem;
+      @include for-large-screens {
+        max-width: none;
+        margin-right: 1rem;
+      }
+      @include for-small-screens {
+        margin-left: 0.625rem;
+        margin-right: 0.625rem;
+      }
+    }
+    div {
+      .curl-command {
+        margin-bottom: 0.75rem;
+        @include from-small-to-large-screens {
+          margin-bottom: 1rem;
+        }
+        h4 {
+          padding: 0;
+          margin-left: 0;
+          margin-top: 0;
+          margin-bottom: 0.75rem;
+          @include medium15($grey200);
+          @include for-small-screens {
+            @include medium12($grey200);
+          }
+        }
+      }
+      div {
+        .request-url {
+          margin-bottom: 0.75rem;
+          @include for-large-screens {
+            margin-bottom: 1.438rem;
+          }
+          @include for-small-screens {
+            margin-bottom: 1rem;
+          }
+          h4 {
+            margin: 0 0 0.75rem;
+            @include medium15($grey200);
+            @include for-large-screens {
+              @include demi18($grey200);
+            }
+            @include for-small-screens {
+              @include medium12($grey200);
+            }
+          }
+        }
+      }
+      h4 {
+        margin-top: 0;
+        margin-bottom: 0.75rem;
+        @include medium15($grey200);
+        @include for-large-screens {
+          margin-bottom: 1rem;
+          @include demi18($grey200);
+        }
+        @include for-small-screens {
+          margin-bottom: 0.75rem;
+        }
+      }
+    }
+    & > h4 {
+      margin-top: 0.75rem;
+      margin-bottom: 0.75rem;
+      @include medium15($grey200);
+      @include for-large-screens {
+        margin-top: 1.438rem;
+        margin-bottom: 1rem;
+        @include demi18($grey200);
+      }
+      @include for-small-screens {
+        margin-top: 1rem;
+        margin-bottom: 0.75rem;
+      }
+    }
+  }
+}
