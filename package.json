@@ -30,7 +30,7 @@
   "dependencies": {
     "@apollo/client": "^3.11.8",
     "@emotion/styled": "^11.13.0",
-    "@mui/material": "^5.16.7",
+    "@mui/material": "^6.1.6",
     "@mui/system": "^5.16.7",
     "@next/bundle-analyzer": "^14.2.14",
     "@next/env": "^14.2.14",
