@@ -32,7 +32,7 @@
     "@emotion/styled": "^11.13.0",
     "@mui/material": "^5.16.7",
     "@mui/system": "^5.16.7",
-    "@next/bundle-analyzer": "^14.2.14",
+    "@next/bundle-analyzer": "^15.0.2",
     "@next/env": "^14.2.14",
     "dotenv": "^16.4.5",
     "graphql": "^16.9.0",
