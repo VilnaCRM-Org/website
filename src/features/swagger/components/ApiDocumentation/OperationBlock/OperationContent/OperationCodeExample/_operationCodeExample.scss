@@ -1,6 +1,7 @@
 @use "@swagger/global" as *;
 
 @use "ModelBox/modelBox";
+@use "Tablist/tablist";
 
 %operationCodeExample {
   .model-example {
@@ -10,51 +11,6 @@
     }
     @include for-small-screens {
       margin-top: 0.25rem;
-    }
-    .tab {
-      margin-bottom: 1rem;
-      @include for-large-screens {
-        margin-bottom: 1.125rem;
-      }
-      @include for-small-screens {
-        margin-bottom: 0.5rem;
-      }
-      li:first-child {
-        position: relative;
-        padding-right: 0;
-        @include medium12($darkPrimary);
-        @include for-large-screens {
-          @include medium16($darkPrimary);
-        }
-        @include for-small-screens {
-          @include medium14($darkPrimary);
-        }
-        &::after {
-          display: none;
-        }
-      }
-      li:nth-child(2) {
-        position: relative;
-        padding-left: 0.75rem;
-        margin-left: 0.75rem;
-        @include medium12($grey300);
-        @include for-large-screens {
-          @include medium16($grey300);
-        }
-        @include for-small-screens {
-          @include medium14($grey300);
-        }
-        &::before {
-          content: '';
-          position: absolute;
-          left: 0;
-          transform: translateY(-50%);
-          top: 50%;
-          height: 1rem;
-          width: 1px;
-          background-color: $grey300;
-        }
-      }
     }
     div {
       outline: none;
@@ -111,9 +67,10 @@
         }
       }
     }
+    @extend %tablist;
     @extend %modelBox;
   }
-  div.headers-wrapper {
+  .headers-wrapper {
     @include for-small-screens {
       display: none;
     }

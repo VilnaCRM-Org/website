@@ -11,8 +11,8 @@ function AuthButtons(): React.ReactElement {
   const router: NextRouter = useRouter();
   const { t } = useTranslation();
 
-  const navigateToSignUp: () => void = () => {
-    router.push('/#signUp');
+  const navigateToSignUp: () => void = async () => {
+    await router.push({ pathname: '/', hash: '#signUp' });
   };
 
   return (

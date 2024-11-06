@@ -213,7 +213,7 @@
                 .checkbox {
                   padding: 0;
                   input[type="checkbox"]:checked + label > .item {
-                    background-image: url("../../../../../../assets/svg/swagger/check-icon.svg");
+                    background-image: $checkIcon;
                     background-color: $primary;
                     border-color: $primary;
                   }

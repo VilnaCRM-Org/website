@@ -1,65 +1,8 @@
-import { faker } from '@faker-js/faker';
-
 import FacebookDrawerIcon from '../../assets/svg/social-icons/facebook.svg';
 import GitHubDrawerIcon from '../../assets/svg/social-icons/github.svg';
 import InstagramDrawerIcon from '../../assets/svg/social-icons/instagram.svg';
 import LinkedinDrawerIcon from '../../assets/svg/social-icons/linked-in.svg';
-import { NavItemProps } from '../../types/header/navigation';
 import { SocialMedia } from '../../types/social-media';
-
-export const headerNavList: NavItemProps[] = [
-  {
-    id: 'advantages',
-    title: 'header.advantages',
-    link: '#Advantages',
-    type: 'header',
-  },
-  {
-    id: 'for-who',
-    title: 'header.for_who',
-    link: '#forWhoSection',
-    type: 'header',
-  },
-  {
-    id: 'integration',
-    title: 'header.integration',
-    link: '#Integration',
-    type: 'header',
-  },
-  {
-    id: 'contacts',
-    title: 'header.contacts',
-    link: '#Contacts',
-    type: 'header',
-  },
-];
-
-export const drawerNavList: NavItemProps[] = [
-  {
-    id: 'advantages',
-    title: 'header.advantages',
-    link: '#Advantages',
-    type: 'drawer',
-  },
-  {
-    id: 'for-who',
-    title: 'header.for_who',
-    link: '#forWhoSection',
-    type: 'drawer',
-  },
-  {
-    id: 'integration',
-    title: 'header.integration',
-    link: '#Integration',
-    type: 'drawer',
-  },
-  {
-    id: 'contacts',
-    title: 'header.contacts',
-    link: '#Contacts',
-    type: 'drawer',
-  },
-];
 
 export const socialMedia: SocialMedia[] = [
   {
@@ -95,16 +38,3 @@ export const socialMedia: SocialMedia[] = [
     type: 'drawer',
   },
 ];
-
-export const testDrawerItem: NavItemProps = {
-  id: faker.string.uuid(),
-  title: faker.lorem.words(),
-  link: faker.internet.url(),
-  type: 'drawer',
-};
-export const testHeaderItem: NavItemProps = {
-  id: faker.string.uuid(),
-  title: faker.lorem.words(),
-  link: faker.internet.url(),
-  type: 'header',
-};

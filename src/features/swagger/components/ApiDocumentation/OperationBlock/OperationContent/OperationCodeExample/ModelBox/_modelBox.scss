@@ -1,7 +1,5 @@
 @use "@swagger/global" as *;
 
-$modelArrowRightUrl: url('../../../../../../assets/svg/swagger/arrow-right.svg');
-
 %modelBox {
   .model-box {
     padding: 0.625rem 1rem 0.625rem 0.8rem;
@@ -68,7 +66,7 @@ $modelArrowRightUrl: url('../../../../../../assets/svg/swagger/arrow-right.svg')
             margin: 0;
             top: 0;
             &::after {
-              background-image: $modelArrowRightUrl;
+              background-image: $arrowRight;
             }
           }
         }
@@ -113,7 +111,7 @@ $modelArrowRightUrl: url('../../../../../../assets/svg/swagger/arrow-right.svg')
                     top: 0;
                     margin: 0;
                     &::after {
-                      background-image: $modelArrowRightUrl;
+                      background-image: $arrowRight;
                     }
                   }
                   span:nth-child(2) {

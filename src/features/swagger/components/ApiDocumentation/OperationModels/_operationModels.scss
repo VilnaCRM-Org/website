@@ -1,7 +1,5 @@
 @use "@swagger/global" as *;
 
-$ModelArrowRightLight: url('../../../assets/svg/swagger/arrow-right-light.svg');
-
 %operationModels {
   .models {
     margin-top: 1.5rem;
@@ -67,7 +65,7 @@ $ModelArrowRightLight: url('../../../assets/svg/swagger/arrow-right-light.svg');
             margin: 0;
             top: 0.313rem;
             &::after {
-              background-image: $ModelArrowRightLight;
+              background-image: $arrowRightLight;
               vertical-align: top;
             }
           }
