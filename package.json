@@ -102,7 +102,7 @@
     "next-export-optimize-images": "^4.5.1",
     "prettier": "^3.3.3",
     "semver": "^7.6.3",
-    "storybook": "^8.3.5",
+    "storybook": "^8.4.2",
     "swiper": "^11.1.14",
     "ts-jest": "^29.2.5",
     "ts-node": "^10.9.2",
