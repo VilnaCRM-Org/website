@@ -20,8 +20,8 @@ function CustomDrawer(): React.ReactElement {
   const { t } = useTranslation();
   const [isDrawerOpen, setIsDrawerOpen] = React.useState(false);
 
-  const navigateToSignUp: () => void = () => {
-    router.push('/#signUp');
+  const navigateToSignUp: () => void = async () => {
+    await router.push({ pathname: '/', hash: '#signUp' });
   };
 
   const handleCloseDrawer: () => void = () => setIsDrawerOpen(false);
@@ -31,6 +31,8 @@ function CustomDrawer(): React.ReactElement {
     <Box sx={styles.wrapper}>
       <Button
         aria-label={t('header.drawer.button_aria_labels.bars')}
+        aria-haspopup="true"
+        aria-expanded={isDrawerOpen}
         sx={styles.button}
         onClick={handleOpenDrawer}
       >

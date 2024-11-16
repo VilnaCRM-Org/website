@@ -1,0 +1,41 @@
+@use "@swagger/global" as *;
+
+%descriptionColumn {
+  .parameters-col_description {
+    .renderedMarkdown, .markdown {
+      p {
+        margin-bottom: 0.25rem;
+        @include medium12($grey200);
+        @include from-small-to-large-screens {
+          @include medium14($grey200);
+        }
+        i {
+          font-style: normal;
+        }
+      }
+    }
+    input {
+      @include uiInput(2.875rem, 100%, 1.2rem) {
+        max-width: 19rem;
+        @include medium14($darkPrimary);
+        @include for-large-screens {
+          @include medium16($darkPrimary);
+        }
+        @include for-small-screens {
+          min-width: auto;
+          width: 100%;
+          padding-left: 1rem;
+          height: 2.5rem;
+          max-width: 14rem;
+          @include medium14($darkPrimary);
+        }
+        &::placeholder {
+          @include medium14($grey300);
+          @include from-small-to-large-screens {
+            @include medium16($grey300);
+          }
+        }
+      }
+    }
+  }
+}

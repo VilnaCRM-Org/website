@@ -1,0 +1,73 @@
+@use "@swagger/global" as *;
+
+@use "ModelBox/modelBox";
+@use "Tablist/tablist";
+
+%modelExample {
+  .model-example {
+    margin-top: 0.75rem;
+    @include for-large-screens {
+      margin-top: 0.875rem;
+    }
+    @include for-small-screens {
+      margin-top: 0.25rem;
+    }
+    div {
+      outline: none;
+      .body-param-options {
+        margin-top: 0.75rem;
+        @include for-large-screens {
+          margin-top: 0.813rem;
+        }
+        @include for-small-screens {
+          margin-top: 0.563rem;
+        }
+        label {
+          margin: 0;
+          padding: 0;
+          span {
+            @include medium14($grey200);
+            @include for-small-screens {
+              @include bodyTextMobile($grey200);
+            }
+          }
+          div {
+            margin-top: 0.5rem;
+            @include for-small-screens {
+              margin-top: 0.25rem;
+            }
+            select {
+              margin: 0;
+            }
+          }
+        }
+        .body-param-edit {
+          padding-top: 0;
+          padding-bottom: 1rem;
+          @include for-large-screens {
+            padding-bottom: 0.875rem;
+          }
+          @include for-small-screens {
+            padding-bottom: 0.938rem;
+          }
+          button {
+            @include uiButton('error', 0.75rem 1.5rem) {
+              @include medium15($error);
+            }
+            @include for-large-screens {
+              padding: 1rem 3.438rem;
+              @include buttonText($error);
+            }
+            @include for-small-screens {
+              width: 100%;
+              padding: 0.813rem 3.438rem;
+              @include medium15($error);
+            }
+          }
+        }
+      }
+    }
+    @extend %tablist;
+    @extend %modelBox;
+  }
+}
