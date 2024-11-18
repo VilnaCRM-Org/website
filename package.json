@@ -58,7 +58,7 @@
     "@sentry/react": "^8.37.1",
     "@storybook/addon-actions": "^8.3.5",
     "@storybook/addon-essentials": "^8.3.5",
-    "@storybook/addon-interactions": "^8.3.5",
+    "@storybook/addon-interactions": "^8.4.2",
     "@storybook/addon-links": "^8.3.5",
     "@storybook/addon-onboarding": "^8.3.5",
     "@storybook/blocks": "^8.3.5",
