@@ -15,8 +15,9 @@
       }
     }
     input {
-      @include uiInput(2.875rem, 100%, 1.2rem) {
+      @include uiInput(2.875rem, 100%, 1rem) {
         max-width: 19rem;
+        padding-right: 0.5rem;
         @include medium14($darkPrimary);
         @include for-large-screens {
           @include medium16($darkPrimary);

@@ -133,16 +133,17 @@
               @include demi18($darkPrimary);
             }
             p {
+              display: flex;
+              gap: 0.5rem;
               margin-bottom: 0.5rem;
-              @include for-small-screens {
-                display: flex;
-                white-space: nowrap;
-                gap: 0.5rem;
-              }
               @include regular16($grey200);
+              @include for-small-screens {
+                gap: 0.2rem;
+                flex-direction: column;
+                white-space: nowrap;
+              }
               code {
                 display: inline-block;
-                margin-left: 0.3rem;
                 @include medium16($darkPrimary);
                 @include for-small-screens {
                   white-space: normal;
