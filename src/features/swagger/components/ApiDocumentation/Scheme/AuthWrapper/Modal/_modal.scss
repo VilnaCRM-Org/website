@@ -1,5 +1,7 @@
 @use "@swagger/global" as *;
 
+@use "Backdrop/backdrop";
+
 @use "ModalHeader/modalHeader";
 @use "ModalContent/modalContent";
 
@@ -10,23 +12,7 @@
     @include for-small-screens {
       position: absolute;
     }
-    .backdrop-ux {
-      position: fixed;
-      top: 4rem;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: $backdropBackgroundWithBlur;
-      @supports (backdrop-filter: blur(0.125rem)) {
-        backdrop-filter: blur(0.125rem);
-      }
-      @supports not (backdrop-filter: blur(0.125rem)) {
-        background: $backdropBackgroundWithoutBlur;
-      }
-      @include for-small-screens {
-        top: 3.5rem;
-      }
-    }
+    @extend %backdrop;
     .modal-ux {
       position: absolute;
       left: 50%;
