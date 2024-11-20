@@ -14,7 +14,7 @@ jobs:
       - name: Trigger AWS CodePipeline
         uses: aws-actions/aws-codepipeline-action@v1
         with:
-          pipeline-name: sandbox-deletion
+          pipeline-name: sandbox-test-deletion
           access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           region: eu-central-1
