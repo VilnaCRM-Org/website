@@ -1,0 +1,41 @@
+name: Trigger Sandbox Deletion
+
+on:
+  pull_request:
+    types:
+      - closed
+
+jobs:
+  trigger-pipeline:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Check if PR was merged
+        id: check-merge
+        run: |
+          if [ "${{ github.event.pull_request.merged }}" = "true" ]; then
+            echo "merged=true" >> $GITHUB_ENV
+          else
+            echo "merged=false" >> $GITHUB_ENV
+          fi
+
+      - name: Trigger AWS CodePipeline for PR Merge
+        if: env.merged == 'true'
+        uses: aws-actions/aws-codepipeline-action@v1
+        with:
+          pipeline-name: sandbox-deletion
+          access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          region: eu-central-1
+
+      - name: Trigger AWS CodePipeline for PR Closure (non-merge)
+        if: env.merged == 'false'
+        uses: aws-actions/aws-codepipeline-action@v1
+        with:
+          pipeline-name: sandbox-deletion
+          access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          region: eu-central-1
