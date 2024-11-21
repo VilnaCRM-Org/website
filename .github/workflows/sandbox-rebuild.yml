@@ -14,10 +14,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: configure aws credentials
-        uses: aws-actions/configure-aws-credentials@v1.7.0
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_CODEPIPELINE_ROLE_ARN }}
           role-session-name: GitHub_to_AWS_via_FederatedOIDC
