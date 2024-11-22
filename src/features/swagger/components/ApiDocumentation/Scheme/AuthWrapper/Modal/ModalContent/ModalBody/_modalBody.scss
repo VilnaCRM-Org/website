@@ -1,5 +1,29 @@
 @use "@swagger/global" as *;
 
+@mixin modal-h4() {
+  margin-top: 0 !important;
+  margin-bottom: 0.75rem !important;
+  @include demi18($darkPrimary);
+}
+
+@mixin modal-button($variant, $text-color) {
+  @include uiButton($variant) {
+    display: block;
+    margin: 0;
+    @include medium15($text-color);
+    @include for-large-screens {
+      padding: 1rem 1.4rem;
+      @include buttonText($text-color);
+    }
+    @include for-small-screens {
+      width: 100%;
+      height: auto;
+      padding: 0.938rem 0;
+      @include medium15($text-color);
+    }
+  }
+}
+
 %modalBody {
   .modal-ux-content {
     scrollbar-width: none;
@@ -20,34 +44,10 @@
         align-self: normal;
       }
       button.authorize {
-        @include uiButton('primary', 1.125rem 1.5rem) {
-          @include medium15($white);
-          @include for-large-screens {
-            padding: 1rem 1.4rem;
-            @include buttonText($white);
-          }
-          @include for-small-screens {
-            width: 100%;
-            height: auto;
-            padding: 0.938rem 0;
-            @include medium15($white);
-          }
-        }
+        @include modal-button('primary', $white);
       }
       button.btn-done {
-        margin: 0;
-        @include uiButton('secondary') {
-          @include medium15($darkPrimary);
-          @include for-large-screens {
-            padding: 1rem 1.4rem;
-            @include buttonText($darkPrimary);
-          }
-          @include for-small-screens {
-            width: 100%;
-            padding: 0.938rem 0;
-            @include medium15($darkPrimary);
-          }
-        }
+        @include modal-button('secondary', $darkPrimary);
       }
     }
     input {
@@ -90,9 +90,7 @@
           background-color: $grey500;
         }
         h4 {
-          margin-top: 0!important;
-          margin-bottom: 0.75rem!important;
-          @include demi18($darkPrimary);
+          @include modal-h4;
         }
         .wrapper {
           p {
@@ -128,9 +126,7 @@
         & > div {
           & > div {
             h4 {
-              margin-top: 0!important;
-              margin-bottom: 0.75rem!important;
-              @include demi18($darkPrimary);
+              @include modal-h4;
             }
             p {
               display: flex;
@@ -281,7 +277,6 @@
               }
               button.authorize {
                 @include for-large-screens {
-                  justify-content: center;
                   width: 20.375rem;
                 }
                 @include for-small-screens {

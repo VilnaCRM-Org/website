@@ -6,14 +6,14 @@ export default {
     py: '1.125rem',
     borderRadius: '0.5rem',
     mt: '0.375rem',
-    maxHeight: '64px',
+    maxHeight: '4REM',
     mb: '1rem',
   },
 
   at: {
     fontWeight: 600,
-    fontSize: '22px',
-    mb: '2px',
+    fontSize: '1.375rem',
+    mb: '0.125rem',
   },
 
   emailText: {

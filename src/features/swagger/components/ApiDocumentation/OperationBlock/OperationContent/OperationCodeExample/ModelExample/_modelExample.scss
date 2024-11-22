@@ -5,6 +5,8 @@
 
 %modelExample {
   .model-example {
+    @extend %tablist;
+    @extend %modelBox;
     margin-top: 0.75rem;
     @include for-large-screens {
       margin-top: 0.875rem;
@@ -67,7 +69,5 @@
         }
       }
     }
-    @extend %tablist;
-    @extend %modelBox;
   }
 }

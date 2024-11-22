@@ -14,7 +14,7 @@ export const socialMedia: SocialMedia[] = [
     type: 'drawer',
   },
   {
-    id: 'gitHub-link',
+    id: 'github-link',
     icon: GitHubDrawerIcon,
     alt: 'header.drawer.alt_social_images.github',
     ariaLabel: 'header.drawer.aria_labels_social_images.github',

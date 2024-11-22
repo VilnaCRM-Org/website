@@ -1,5 +1,7 @@
 @use "@swagger/global" as *;
 
+@use "ResponseControls/responseControls";
+
 $acceptTextColor: #38B386;
 
 %responseTable {
@@ -73,42 +75,13 @@ $acceptTextColor: #38B386;
         @include for-small-screens {
           padding-right: 0.625rem;
         }
+        @extend %responseControls;
         div.response-col_description__inner {
           div.renderedMarkdown {
             p {
               @include medium14($grey200);
               @include for-small-screens {
                 @include medium12($grey200);
-              }
-            }
-          }
-        }
-        section.response-controls {
-          display: block;
-          padding-top: 0.688rem;
-          @include for-small-screens {
-            padding-top: 0.813rem;
-          }
-          div.response-control-media-type {
-            margin-right: 0;
-          }
-          small.response-control-media-type__title {
-            margin-bottom: 0.5rem;
-            @include medium14($grey200);
-            @include for-small-screens {
-              margin-bottom: 0.25rem;
-              @include bodyTextMobile($grey200);
-            }
-          }
-          small.response-control-media-type__accept-message {
-            @include medium12($acceptTextColor);
-            @include for-small-screens {
-              @include medium14($acceptTextColor);
-            }
-            code {
-              @include medium12($acceptTextColor);
-              @include for-small-screens {
-                @include medium14($acceptTextColor);
               }
             }
           }
