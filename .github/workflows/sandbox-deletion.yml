@@ -5,7 +5,7 @@ on:
     types:
       - closed
     branches:
-      - main  
+      - main
 
 env:
   AWS_REGION: ${{ vars.AWS_REGION }}
@@ -13,8 +13,14 @@ env:
 jobs:
   trigger-pipeline:
     runs-on: ubuntu-latest
-
     steps:
+      - name: Validate environment variables
+        run: |
+          if [ -z "${{ vars.AWS_REGION }}" ]; then
+            echo "::error::AWS_REGION variable is not set"
+            exit 1
+          fi
+
       - name: Checkout code
         uses: actions/checkout@v3
 
