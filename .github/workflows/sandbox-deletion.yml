@@ -4,6 +4,11 @@ on:
   pull_request:
     types:
       - closed
+    branches:
+      - main  
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
 
 jobs:
   trigger-pipeline:
@@ -19,4 +24,4 @@ jobs:
           pipeline-name: sandbox-deletion
           access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          region: eu-central-1
+          region: ${{ env.AWS_REGION }}
