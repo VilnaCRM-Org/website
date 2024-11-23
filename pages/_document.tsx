@@ -6,7 +6,7 @@ export default function Document(): React.ReactElement {
   return (
     <Html lang={mainLanguage}>
       <Head>
-        <link rel="icon" href="/favicon.png" />
+        <link rel="icon" href="/favicon.svg" />
       </Head>
       <body>
         <Main />
