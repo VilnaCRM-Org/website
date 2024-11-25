@@ -4,6 +4,10 @@
 
 %authWrapper {
   .auth-wrapper {
+    @include for-small-screens {
+      flex-shrink: 1;
+      flex-basis: 9.813rem;
+    }
     @extend %modal;
     .authorize {
       @include uiButton('primary') {
@@ -13,10 +17,11 @@
           @include buttonText;
         }
         @include for-small-screens {
-          width: 9.813rem;
           height: 3.375rem;
           justify-content: center;
           align-items: center;
+          padding: 0;
+          width: 100%;
           @include medium15($white);
         }
       }

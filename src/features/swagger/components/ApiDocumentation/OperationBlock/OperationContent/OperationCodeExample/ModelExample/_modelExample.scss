@@ -8,6 +8,7 @@
     @extend %tablist;
     @extend %modelBox;
     margin-top: 0.75rem;
+    min-height: 4.25rem;
     @include for-large-screens {
       margin-top: 0.875rem;
     }

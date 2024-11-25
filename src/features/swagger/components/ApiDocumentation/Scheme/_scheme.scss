@@ -25,6 +25,7 @@
       @include for-small-screens {
         align-items: flex-end;
         flex-wrap: nowrap;
+        gap: 0.4rem;
       }
     }
   }

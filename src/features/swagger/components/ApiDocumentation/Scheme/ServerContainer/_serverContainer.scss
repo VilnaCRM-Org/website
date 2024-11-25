@@ -2,6 +2,7 @@
 
 %serverContainer {
   .schemes-server-container {
+    flex-shrink: 0;
     #schemes, #servers {
       @include uiSelect(2.625rem) {
         @include typography($darkPrimary, 1rem, 600, 1.625rem);
@@ -16,6 +17,7 @@
     }
     #servers {
       @include for-small-screens {
+        flex-shrink: 0;
         padding-right: 2.125rem;
         padding-left: 0.5rem;
         background-position: right 0.75rem center;
