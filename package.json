@@ -45,7 +45,7 @@
   },
   "devDependencies": {
     "@commitlint/cli": "^19.5.0",
-    "@commitlint/config-conventional": "^19.5.0",
+    "@commitlint/config-conventional": "^19.6.0",
     "@faker-js/faker": "^9.0.3",
     "@lhci/cli": "^0.14.0",
     "@memlab/api": "^1.0.37",
