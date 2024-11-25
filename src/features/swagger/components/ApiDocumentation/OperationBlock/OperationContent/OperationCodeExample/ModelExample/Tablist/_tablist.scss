@@ -12,6 +12,7 @@
       margin-bottom: 0.5rem;
     }
     li {
+      cursor: pointer;
       min-width: auto;
       @include medium12($grey300);
       @include for-large-screens {

@@ -1,6 +1,11 @@
 @use "@swagger/global" as *;
 
-$acceptTextColor: #38B386;
+@mixin acceptMessage() {
+  @include medium12($accept);
+  @include for-small-screens {
+    @include medium14($accept);
+  }
+}
 
 %responseControls {
   section.response-controls {
@@ -21,15 +26,9 @@ $acceptTextColor: #38B386;
       }
     }
     small.response-control-media-type__accept-message {
-      @include medium12($acceptTextColor);
-      @include for-small-screens {
-        @include medium14($acceptTextColor);
-      }
+      @include acceptMessage;
       code {
-        @include medium12($acceptTextColor);
-        @include for-small-screens {
-          @include medium14($acceptTextColor);
-        }
+        @include acceptMessage;
       }
     }
   }
