@@ -1,30 +1,65 @@
-name: SandBox Creation
+name: Sandbox Creation and Rebuild
 
 on:
   pull_request:
     types: [opened]
+  push:
+    branches-ignore: [main]
 
 env:
   AWS_REGION: ${{ vars.AWS_REGION }}
-  BRANCH_NAME: ${{ github.head_ref || github.ref_name }} 
+  BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
 
 permissions:
-  id-token: write # This is required for requesting the JWT
-  contents: read # This is required for actions/checkout
+  id-token: write
+  contents: read
+
 jobs:
-  AssumeRoleAndStartExecution:
+  SandboxPipelineExecution:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
-      - name: configure aws credentials
-        uses: aws-actions/configure-aws-credentials@v1.7.0
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_CODEPIPELINE_ROLE_ARN }}
           role-session-name: GitHub_to_AWS_via_FederatedOIDC
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Validate Branch and Secrets
+        run: |
+          # Validate required secrets
+          missing_secrets=()
+          [ -z "${{ secrets.AWS_SANDBOX_CODEPIPELINE_NAME }}" ] && missing_secrets+=("AWS_SANDBOX_CODEPIPELINE_NAME")
+          [ -z "${{ secrets.AWS_CODEPIPELINE_ROLE_ARN }}" ] && missing_secrets+=("AWS_CODEPIPELINE_ROLE_ARN")
+          if [ ${#missing_secrets[@]} -ne 0 ]; then
+            echo "::error::Missing required secrets: ${missing_secrets[*]}"
+            exit 1
+          fi
+
       - name: Start Pipeline Execution
         run: |
-          aws codepipeline start-pipeline-execution --name ${{ secrets.AWS_SANDBOX_CODEPIPELINE_NAME }} --variables name=BRANCH_NAME,value=$BRANCH_NAME name=PR_NUMBER,value=$(echo $GITHUB_REF | awk 'BEGIN { FS = "/" } ; { print $3 }')
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            # For pull_request event
+            PR_NUMBER="${{ github.event.number }}"
+            if ! aws codepipeline start-pipeline-execution \
+              --name "${{ secrets.AWS_SANDBOX_CODEPIPELINE_NAME }}" \
+              --variables \
+                "name=BRANCH_NAME,value=${BRANCH_NAME}" \
+                "name=PR_NUMBER,value=${PR_NUMBER}"; then
+              echo "::error::Failed to start pipeline execution for pull request"
+              exit 1
+            fi
+          else
+            # For push event
+            if ! aws codepipeline start-pipeline-execution \
+              --name "${{ secrets.AWS_SANDBOX_CODEPIPELINE_NAME }}" \
+              --variables \
+                "name=BRANCH_NAME,value=${BRANCH_NAME}" \
+                "name=IS_PULL_REQUEST,value=0"; then
+              echo "::error::Failed to start pipeline execution for push"
+              exit 1
+            fi
+          fi
