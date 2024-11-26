@@ -1,0 +1,16 @@
+@use "@swagger/global" as *;
+
+@use "Backdrop/backdrop";
+@use "ModalContent/modalContent";
+
+%modal {
+  .dialog-ux {
+    position: fixed;
+    top: 4rem;
+    @include for-small-screens {
+      position: absolute;
+    }
+    @extend %backdrop;
+    @extend %modalContent;
+  }
+}

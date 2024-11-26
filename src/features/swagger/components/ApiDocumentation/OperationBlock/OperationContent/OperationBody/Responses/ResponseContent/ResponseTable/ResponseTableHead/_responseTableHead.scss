@@ -1,0 +1,27 @@
+@use "@swagger/global" as *;
+
+%responseTableHead {
+  thead {
+    td {
+      padding-top: 0;
+      padding-bottom: 0.75rem;
+      border: none;
+      @include medium15($grey200);
+      @include for-large-screens {
+        padding-bottom: 0.5rem;
+        @include medium12($grey200);
+      }
+    }
+    td:first-child {
+      min-width: 9.75rem;
+      padding-left: 1rem;
+      @include for-large-screens {
+        max-width: 10.625rem;
+      }
+      @include for-small-screens {
+        padding-left: 0.625rem;
+        min-width: 3.75rem;
+      }
+    }
+  }
+}

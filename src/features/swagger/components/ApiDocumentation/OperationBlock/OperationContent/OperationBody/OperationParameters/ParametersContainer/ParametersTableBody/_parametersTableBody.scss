@@ -1,0 +1,37 @@
+@use "@swagger/global" as *;
+
+@use "NameColumn/nameColumn";
+@use "DescriptionColumn/descriptionColumn";
+
+%parametersTableBody {
+  tbody {
+    tr:nth-child(odd) {
+      .parameters-col_name, .parameters-col_description {
+        background: $backgroundGrey200;
+      }
+    }
+    tr {
+      td:first-child {
+        padding: 0.563rem 2.813rem 0.563rem 1.063rem;
+        border-bottom-left-radius: 0.25rem;
+        border-top-left-radius: 0.25rem;
+        @include for-small-screens {
+          padding: 0.438rem 0.875rem 1.125rem 0.625rem;
+        }
+      }
+      td:nth-child(2) {
+        padding: 0.563rem 0.875rem 0.563rem 0;
+        border-bottom-right-radius: 0.25rem;
+        border-top-right-radius: 0.25rem;
+        @include for-large-screens {
+          padding: 0.563rem 1.5rem 0.563rem 0;
+        }
+        @include for-small-screens {
+          padding: 0.563rem 0.5rem 0.563rem 0;
+        }
+      }
+      @extend %nameColumn;
+      @extend %descriptionColumn;
+    }
+  }
+}
