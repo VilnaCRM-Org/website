@@ -4,18 +4,18 @@ This documentation provides an overview of two GitHub Actions workflows used for
 
 ## Table of Contents
 
-    [Introduction](#introduction)
-    [Prerequisites](#prerequisites)
-    [Workflow 1: Sandbox Creation](#workflow-1-sandbox-creation)
-        [Overview](#overview)
-        [Required Secrets](#required-secrets)
-        [Setting Up Secrets](#setting-up-secrets)
-    [Workflow 2: Trigger Sandbox Deletion](#workflow-2-trigger-sandbox-deletion)
-        [Overview](#overview)
-        [Required Secrets](#required-secrets)
-        [Setting Up Secrets](#setting-up-secrets)
-    [AWS IAM Role Configuration](#aws-iam-role-configuration)
-    [Additional Notes](#additional-notes)
+ [Introduction](#introduction)
+ [Prerequisites](#prerequisites)
+ [Workflow 1: Sandbox Creation](#workflow-1-sandbox-creation)
+   - [Creation Overview](#creation-overview)
+   - [Creation Required Secrets](#creation-required-secrets)
+   - [Creation Secrets Setup](#creation-secrets-setup)
+ [Workflow 2: Trigger Sandbox Deletion](#workflow-2-trigger-sandbox-deletion)
+   - [Deletion Overview](#deletion-overview)
+   - [Deletion Required Secrets](#deletion-required-secrets)
+   - [Deletion Secrets Setup](#deletion-secrets-setup)
+ [AWS IAM Role Configuration](#aws-iam-role-configuration)
+ [Additional Notes](#additional-notes)
 
 ## Introduction
 
@@ -32,9 +32,9 @@ The two GitHub Actions workflows automate the process of triggering AWS CodePipe
     GitHub Secrets: Ability to add secrets to the repository.
 
 ## Workflow 1: Sandbox Creation
-### Overview
+### Creation Overview
 
-Filename: .github/workflows/sandbox-management.yml
+Filename: .github/workflows/sandbox-creation.yml
 
 This workflow triggers the AWS CodePipeline responsible for creating or updating sandbox environments. It responds to two GitHub events:
 
@@ -47,13 +47,13 @@ Key Features:
     Uses OIDC for secure authentication with AWS.
     Validates required secrets before execution.
 
-### Required Secrets
+### Creation Required Secrets
 
     AWS_CODEPIPELINE_ROLE_ARN: The Amazon Resource Name (ARN) of the AWS IAM role that GitHub Actions will assume to interact with AWS services.
 
     AWS_SANDBOX_CODEPIPELINE_NAME: The name of the AWS CodePipeline that manages sandbox environments.
 
-### Setting Up Secrets
+### Creation Secrets Setup
 1. Add AWS_CODEPIPELINE_ROLE_ARN
 
     Description: This secret stores the ARN of the IAM role that GitHub Actions will assume via OIDC.
@@ -74,7 +74,7 @@ Key Features:
         Click Add secret.
 
 ## Workflow 2: Trigger Sandbox Deletion
-### Overview
+### Deletion Overview
 
 Filename: .github/workflows/sandbox-deletion.yml
 
@@ -86,13 +86,13 @@ Key Features:
     Utilizes OIDC for secure authentication with AWS.
     Validates the presence of required secrets and environment variables.
 
-### Required Secrets
+### Deletion Required Secrets
 
     AWS_CODEPIPELINE_ROLE_ARN: The ARN of the AWS IAM role that GitHub Actions will assume.
 
     AWS_SANDBOX_DELETION_PIPELINE_NAME: The name of the AWS CodePipeline that handles sandbox deletion.
 
-### Setting Up Secrets
+### Deletion Secrets Setup
 1. Ensure AWS_CODEPIPELINE_ROLE_ARN is Set
 
     Note: If you have already set this secret for the Sandbox Creation workflow, you do not need to add it again.
