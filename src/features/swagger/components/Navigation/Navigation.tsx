@@ -1,5 +1,4 @@
 import { Box, Stack } from '@mui/material';
-import { NextRouter, useRouter } from 'next/router';
 import Image from 'next-export-optimize-images/image';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -11,11 +10,10 @@ import Svg from '../../assets/svg/navigation/arrow.svg';
 import styles from './styles';
 
 function Navigation(): React.ReactElement {
-  const router: NextRouter = useRouter();
   const { t } = useTranslation();
 
   const navigateHome: () => void = () => {
-    router.push('/');
+    window.location.assign('/');
   };
 
   return (

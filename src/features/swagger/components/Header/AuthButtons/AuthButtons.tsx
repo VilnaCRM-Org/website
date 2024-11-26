@@ -1,5 +1,4 @@
 import { Stack, Link } from '@mui/material';
-import { NextRouter, useRouter } from 'next/router';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -8,11 +7,10 @@ import { UiButton } from '@/components';
 import styles from './styles';
 
 function AuthButtons(): React.ReactElement {
-  const router: NextRouter = useRouter();
   const { t } = useTranslation();
 
   const navigateToSignUp: () => void = async () => {
-    await router.push({ pathname: '/', hash: '#signUp' });
+    window.location.assign('/#signUp');
   };
 
   return (

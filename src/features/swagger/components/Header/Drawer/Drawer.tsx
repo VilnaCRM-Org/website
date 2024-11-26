@@ -1,5 +1,4 @@
 import { Drawer, Box, Stack, Button, Link } from '@mui/material';
-import { NextRouter, useRouter } from 'next/router';
 import Image from 'next-export-optimize-images/image';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -16,12 +15,11 @@ import styles from './styles';
 import { VilnaCRMEmail } from './VilnaCRMEmail';
 
 function CustomDrawer(): React.ReactElement {
-  const router: NextRouter = useRouter();
   const { t } = useTranslation();
   const [isDrawerOpen, setIsDrawerOpen] = React.useState(false);
 
   const navigateToSignUp: () => void = async () => {
-    await router.push({ pathname: '/', hash: '#signUp' });
+    window.location.assign('/#signUp');
   };
 
   const handleCloseDrawer: () => void = () => setIsDrawerOpen(false);
