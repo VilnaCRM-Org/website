@@ -44,8 +44,8 @@
     "terser-webpack-plugin": "^5.3.10"
   },
   "devDependencies": {
-    "@commitlint/cli": "^19.5.0",
-    "@commitlint/config-conventional": "^19.5.0",
+    "@commitlint/cli": "^19.6.0",
+    "@commitlint/config-conventional": "^19.6.0",
     "@faker-js/faker": "^9.0.3",
     "@lhci/cli": "^0.14.0",
     "@memlab/api": "^1.0.37",
@@ -74,7 +74,7 @@
     "@testing-library/user-event": "^14.5.2",
     "@types/jest": "^29.5.13",
     "@types/material-ui": "^0.21.17",
-    "@types/node": "^18.19.54",
+    "@types/node": "^22.9.3",
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.0",
     "@typescript-eslint/eslint-plugin": "^6.21.0",
@@ -98,7 +98,7 @@
     "jsdoc": "^4.0.3",
     "markdownlint-cli": "^0.39.0",
     "memlab": "^1.1.55",
-    "next": "^14.2.14",
+    "next": "^15.0.3",
     "next-export-optimize-images": "^4.5.1",
     "prettier": "^3.3.3",
     "semver": "^7.6.3",
