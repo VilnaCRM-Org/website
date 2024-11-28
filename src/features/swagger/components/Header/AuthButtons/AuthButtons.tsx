@@ -9,7 +9,7 @@ import styles from './styles';
 function AuthButtons(): React.ReactElement {
   const { t } = useTranslation();
 
-  const navigateToSignUp: () => void = async () => {
+  const navigateToSignUp: () => void = () => {
     window.location.assign('/#signUp');
   };
 

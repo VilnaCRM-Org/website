@@ -1,29 +1,11 @@
 @use "@swagger/global" as *;
 
+@use "ServerSelect/serverSelect";
+
 %serverContainer {
   .schemes-server-container {
     flex-shrink: 0;
-    #schemes, #servers {
-      @include uiSelect(2.625rem) {
-        @include typography($darkPrimary, 1rem, 600, 1.625rem);
-        @include for-large-screens {
-          padding-right: 6rem;
-          padding-left: 1.25rem;
-          height: 3.375rem;
-          background-position: right 1.25rem center;
-          @include buttonText($darkPrimary);
-        }
-      }
-    }
-    #servers {
-      @include for-small-screens {
-        flex-shrink: 0;
-        padding-right: 2.125rem;
-        padding-left: 0.5rem;
-        background-position: right 0.75rem center;
-        @include demi16($darkPrimary);
-      }
-    }
+    @extend %serverSelect;
     label {
       display: flex;
       flex-direction: row;

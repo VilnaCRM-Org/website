@@ -168,6 +168,10 @@
           "facebook": "Facebook Icon",
           "linkedin": "Linkedin Icon"
         }
+      },
+      "navigation": {
+        "navigate_to_home_page": "To the main page",
+        "back_arrow_description": "Back arrow icon"
       }
     }
   },
@@ -342,6 +346,10 @@
           "facebook": "Facebook Іконка",
           "linkedin": "Linkedin Іконка"
         }
+      },
+      "navigation": {
+        "navigate_to_home_page": "На головну сторінку",
+        "back_arrow_description": "На головну сторінку Іконка"
       }
     }
   }

@@ -34,7 +34,8 @@
     }
   },
   "navigation": {
-    "navigate_to_home_page": "To the main page"
+    "navigate_to_home_page": "To the main page",
+    "back_arrow_description": "Back arrow icon"
   },
   "footer": {
     "logo_alt": "Vilna logo",

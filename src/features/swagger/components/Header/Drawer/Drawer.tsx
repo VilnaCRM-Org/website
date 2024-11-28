@@ -18,7 +18,7 @@ function CustomDrawer(): React.ReactElement {
   const { t } = useTranslation();
   const [isDrawerOpen, setIsDrawerOpen] = React.useState(false);
 
-  const navigateToSignUp: () => void = async () => {
+  const navigateToSignUp: () => void = () => {
     window.location.assign('/#signUp');
   };
 
