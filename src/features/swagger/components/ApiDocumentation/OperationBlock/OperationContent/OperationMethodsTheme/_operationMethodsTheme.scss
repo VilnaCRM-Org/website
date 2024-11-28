@@ -29,12 +29,17 @@ $methodColors: (
           color: $color;
         }
       }
+      &:after {
+        border-color: $color;
+      }
     }
     .opblock-body {
       .opblock-section-header,
-      .opblock-section-request-body,
       & > .opblock-description-wrapper {
         border-bottom: 1px solid $color;
+      }
+      .opblock-section-request-body {
+        border-top: 1px solid $color;
       }
       .responses-wrapper {
         .opblock-section-header {

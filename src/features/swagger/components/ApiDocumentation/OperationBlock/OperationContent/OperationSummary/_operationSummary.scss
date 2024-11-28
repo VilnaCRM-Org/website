@@ -1,73 +1,26 @@
 @use "@swagger/global" as *;
 
+@use "SummaryControl/summaryControl";
+@use "ControlArrow/controlArrow";
+
 %operationSummary {
   .opblock-summary {
+    position: relative;
     box-sizing: border-box;
-    padding: 0.313rem 0.875rem 0.313rem 0.313rem;
-    border-radius: 0.44rem 0.44rem 0.45rem 0.45rem;
+    padding: 0.25rem 0.875rem 0.25rem 0.313rem;
+    border-radius: 0.45rem;
     border: none;
-    min-height: 2.625rem;
     @include for-large-screens {
       padding-right: 1.5rem;
     }
     @include for-small-screens {
       padding: 0.438rem 1rem 0.438rem 0.75rem;
     }
-    .opblock-summary-control {
-      display: flex;
-      gap: 1rem;
-      outline: none;
-      background-color: transparent;
-      .opblock-summary-method {
-        min-width: auto;
-        background-color: $white;
-        border-radius: 0.5rem;
-        padding: 0.5rem 1.25rem;
-        text-shadow: none;
-        @include typography($darkPrimary, 1rem, 600, 1.625rem);
-        @include for-small-screens {
-          padding: 0;
-          min-width: auto;
-          background: transparent;
-          @include demiBold14;
-        }
-      }
-      .opblock-summary-path-description-wrapper {
-        padding: 0;
-        gap: 0.3rem 1rem;
-        @include for-small-screens {
-          flex-direction: column;
-          align-items: stretch;
-          gap: 0.125rem;
-        }
-        .opblock-summary-path {
-          a {
-            span {
-              text-decoration: none;
-              @include buttonText($darkPrimary);
-              @include for-small-screens {
-                @include medium16($darkPrimary);
-              }
-            }
-          }
-        }
-        .opblock-summary-description {
-          @include medium15($grey200);
-          @include for-small-screens {
-            @include medium12($grey200);
-          }
-        }
-      }
-    }
-    .opblock-control-arrow {
-      @include uiIcon($arrowDownDark);
-      @include for-small-screens {
-        @include uiIcon($arrowDownDarkSmall, 1.25rem, 1.25rem);
-      }
-    }
+    @extend %summaryControl;
+    @extend %controlArrow;
     .authorization__btn {
       @include uiIcon($lock);
-      padding-right: 0.625rem;
+      margin-right: 0.625rem;
       padding-left: 0;
       @include for-small-screens {
         @include uiIcon($lockSmall, 1.25rem, 1.25rem);

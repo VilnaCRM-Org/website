@@ -36,6 +36,9 @@
         @extend %operationSelect;
         @extend %operationBody;
         @extend %operationResponseCode;
+        .no-margin {
+          margin-top: 1px;
+        }
         &.is-open {
           .opblock-summary {
             .opblock-control-arrow {
