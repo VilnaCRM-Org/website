@@ -2,21 +2,25 @@
 
 @use "ServerSelect/serverSelect";
 
+@mixin flex-container {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.938rem;
+  @include for-small-screens {
+    flex-direction: column;
+    align-items: normal;
+    gap: 0.25rem;
+  }
+}
+
 %serverContainer {
   .schemes-server-container {
     flex-shrink: 0;
     @extend %serverSelect;
     label {
-      display: flex;
-      flex-direction: row;
-      align-items: center;
       margin: 0;
-      gap: 0.938rem;
-      @include for-small-screens {
-        gap: 0.25rem;
-        flex-direction: column;
-        align-items: normal;
-      }
+      @include flex-container;
       .schemes-title {
         @include bodyText16($grey250);
         @include for-large-screens {
@@ -25,17 +29,10 @@
       }
     }
     & > div {
-      display: flex;
-      align-items: center;
-      gap: 0.938rem;
       @include for-large-screens {
         gap: 1rem;
       }
-      @include for-small-screens {
-        flex-direction: column;
-        align-items: normal;
-        gap: 0.25rem;
-      }
+      @include flex-container;
       .servers-title {
         @include bodyText16($grey250);
         @include for-large-screens {

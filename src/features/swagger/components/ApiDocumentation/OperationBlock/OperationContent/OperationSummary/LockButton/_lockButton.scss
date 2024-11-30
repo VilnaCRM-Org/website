@@ -1,0 +1,15 @@
+@use "@swagger/global" as *;
+
+%lockButton {
+  .authorization__btn {
+    @include uiIcon($lock);
+    margin-right: 0.625rem;
+    padding-left: 0;
+    @include for-small-screens {
+      @include uiIcon($lockSmall, 1.25rem, 1.25rem);
+    }
+    svg {
+      opacity: 1;
+    }
+  }
+}

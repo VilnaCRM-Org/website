@@ -8,6 +8,7 @@ function ApiDocumentation(): React.ReactElement | null {
   const { yamlContent } = useSwagger(specUrl);
 
   return yamlContent ? <SwaggerUI spec={yamlContent} /> : null;
+  // return <SwaggerUI url="https://petstore.swagger.io/v2/swagger.json" />;
 }
 
 export default ApiDocumentation;

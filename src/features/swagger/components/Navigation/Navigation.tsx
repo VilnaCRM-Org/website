@@ -17,7 +17,7 @@ function Navigation(): React.ReactElement {
   };
 
   return (
-    <Box sx={styles.navigationWrapper} onClick={navigateHome} role="navigation">
+    <Box sx={styles.navigationWrapper} onClick={navigateHome}>
       <Stack direction="row" role="navigation" sx={styles.navigationButton}>
         <Image src={Svg} alt={t('navigation.back_arrow_description')} />
         <UiTypography variant="medium16" sx={styles.navigationText}>
