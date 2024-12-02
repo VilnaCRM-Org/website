@@ -1,5 +1,6 @@
 # Documentation for GitHub Actions Pipelines: Sandbox Creation, Sandbox Deletion and Website Deploy
 
+This documentation provides an overview of three GitHub Actions workflows used for managing AWS CodePipeline executions: Sandbox Creation, Sandbox Deletion, and Website Deploy. It includes instructions on the required secrets and how to add them to your GitHub repository.
 This documentation provides an overview of two GitHub Actions workflows used for managing AWS CodePipeline executions: Sandbox Creation and Sandbox Deletion. It includes instructions on the required secrets and how to add them to your GitHub repository.
 
 ## Table of Contents
@@ -14,6 +15,10 @@ This documentation provides an overview of two GitHub Actions workflows used for
    - [Deletion Overview](#deletion-overview)
    - [Deletion Required Secrets](#deletion-required-secrets)
    - [Deletion Secrets Setup](#deletion-secrets-setup)
+- [Workflow 3: Website Deploy](#workflow-3-deploy-website)
+   - [Deploy Website Overview](#deploy-website-overview)
+   - [Deploy Website Required Secrets](#deploy-website-required-secrets)
+   - [Deploy Website Secrets Setup](#deploy-website-secrets-setup)
 - [AWS IAM Role Configuration](#aws-iam-role-configuration)
 - [Additional Notes](#additional-notes)
 
