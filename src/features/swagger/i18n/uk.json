@@ -33,10 +33,6 @@
       }
     }
   },
-  "navigation": {
-    "navigate_to_home_page": "На головну сторінку",
-    "back_arrow_description": "Стрілка назад Іконка"
-  },
   "footer": {
     "logo_alt": "Vilna логотип",
     "copyright": "Copyright © ТОВ “Вільна СРМ”",

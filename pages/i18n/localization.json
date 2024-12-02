@@ -346,10 +346,6 @@
           "facebook": "Facebook Іконка",
           "linkedin": "Linkedin Іконка"
         }
-      },
-      "navigation": {
-        "navigate_to_home_page": "На головну сторінку",
-        "back_arrow_description": "Стрілка назад Іконка"
       }
     }
   }

@@ -1,0 +1,10 @@
+@use "@swagger/global" as *;
+
+%copyButton {
+  .view-line-link {
+    @include uiIcon($copy);
+    path {
+      fill: transparent;
+    }
+  }
+}

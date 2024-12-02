@@ -40,6 +40,9 @@
     }
     .try-out {
       .try-out__btn {
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
         margin: 0;
         max-height: 2.625rem;
         @include uiButton('secondary', 0.75rem 1.5rem) {

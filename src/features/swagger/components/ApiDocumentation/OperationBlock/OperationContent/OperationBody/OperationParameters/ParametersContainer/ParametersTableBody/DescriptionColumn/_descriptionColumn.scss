@@ -1,5 +1,7 @@
 @use "@swagger/global" as *;
 
+@use "DescriptionCheckbox/descriptionCheckbox";
+
 %descriptionColumn {
   .parameters-col_description {
     .renderedMarkdown, .markdown {
@@ -14,7 +16,7 @@
         }
       }
     }
-    input {
+    input[type='text'] {
       @include uiInput(2.875rem, 100%, 1rem) {
         max-width: 19rem;
         padding-right: 0.5rem;
@@ -37,6 +39,22 @@
           }
         }
       }
+    }
+    label.parameter__empty_value_toggle {
+      display: inline-flex;
+      gap: 0.625rem;
+      cursor: pointer;
+      align-items: center;
+      opacity: 1;
+      pointer-events: none;
+      padding-top: 0.5rem;
+      padding-bottom: 0;
+      @include medium14($grey200);
+      @include for-small-screens {
+        gap: 0.375rem;
+        @include medium12($grey200);
+      }
+      @extend %descriptionCheckbox;
     }
   }
 }

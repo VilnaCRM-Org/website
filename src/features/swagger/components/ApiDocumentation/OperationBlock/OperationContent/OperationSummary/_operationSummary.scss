@@ -3,13 +3,11 @@
 @use "SummaryControl/summaryControl";
 @use "ControlArrow/controlArrow";
 @use "LockButton/lockButton";
+@use "CopyButton/copyButton";
 
 %operationSummary {
   .opblock-summary {
-    box-sizing: border-box;
     padding: 0.25rem 0.875rem 0.25rem 0.313rem;
-    border-radius: 0.45rem;
-    border: none;
     @include for-large-screens {
       padding-right: 1.5rem;
     }
@@ -19,8 +17,6 @@
     @extend %summaryControl;
     @extend %controlArrow;
     @extend %lockButton;
-    .view-line-link {
-      display: none;
-    }
+    @extend %copyButton;
   }
 }

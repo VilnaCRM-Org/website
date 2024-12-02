@@ -36,11 +36,10 @@
         @extend %operationSelect;
         @extend %operationBody;
         @extend %operationResponseCode;
-        .no-margin {
-          margin-top: 1px;
-        }
         &.is-open {
           .opblock-summary {
+            border-bottom-style: solid;
+            border-bottom-width: 1px;
             .opblock-control-arrow {
               transform: rotate(180deg);
             }
