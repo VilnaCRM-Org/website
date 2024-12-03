@@ -1,33 +1,33 @@
 # Documentation for GitHub Actions Pipelines: Sandbox Creation, Sandbox Deletion and Website Deploy
 
 This documentation provides an overview of three GitHub Actions workflows used for managing AWS CodePipeline executions: Sandbox Creation, Sandbox Deletion, and Website Deploy. It includes instructions on the required secrets and how to add them to your GitHub repository.
-This documentation provides an overview of two GitHub Actions workflows used for managing AWS CodePipeline executions: Sandbox Creation and Sandbox Deletion. It includes instructions on the required secrets and how to add them to your GitHub repository.
 
 ## Table of Contents
 
 - [Introduction](#introduction)
 - [Prerequisites](#prerequisites)
 - [Workflow 1: Sandbox Creation](#workflow-1-sandbox-creation)
-   - [Creation Overview](#creation-overview)
-   - [Creation Required Secrets](#creation-required-secrets)
-   - [Creation Secrets Setup](#creation-secrets-setup)
+  - [Creation Overview](#creation-overview)
+  - [Creation Required Secrets](#creation-required-secrets)
+  - [Creation Secrets Setup](#creation-secrets-setup)
 - [Workflow 2: Trigger Sandbox Deletion](#workflow-2-trigger-sandbox-deletion)
-   - [Deletion Overview](#deletion-overview)
-   - [Deletion Required Secrets](#deletion-required-secrets)
-   - [Deletion Secrets Setup](#deletion-secrets-setup)
+  - [Deletion Overview](#deletion-overview)
+  - [Deletion Required Secrets](#deletion-required-secrets)
+  - [Deletion Secrets Setup](#deletion-secrets-setup)
 - [Workflow 3: Website Deploy](#workflow-3-deploy-website)
-   - [Deploy Website Overview](#deploy-website-overview)
-   - [Deploy Website Required Secrets](#deploy-website-required-secrets)
-   - [Deploy Website Secrets Setup](#deploy-website-secrets-setup)
+  - [Deploy Website Overview](#deploy-website-overview)
+  - [Deploy Website Required Secrets](#deploy-website-required-secrets)
+  - [Deploy Website Secrets Setup](#deploy-website-secrets-setup)
 - [AWS IAM Role Configuration](#aws-iam-role-configuration)
 - [Additional Notes](#additional-notes)
 
 ## Introduction
 
-The two GitHub Actions workflows automate the process of triggering AWS CodePipeline executions in response to GitHub events. They utilize GitHub's OpenID Connect (OIDC) feature for secure authentication with AWS, eliminating the need for long-lived AWS credentials.
+The three GitHub Actions workflows automate the process of triggering AWS CodePipeline executions in response to GitHub events. They utilize GitHub's OpenID Connect (OIDC) feature for secure authentication with AWS, eliminating the need for long-lived AWS credentials.
 
    Sandbox Management: Handles the creation and updating of sandbox environments when pull requests are opened or when code is pushed (excluding the main branch).
    Trigger Sandbox Deletion: Initiates the deletion of sandbox environments when a pull request is closed on the main branch.
+   Website Deploy: Manages the deployment of the production website when code is pushed to the main branch.
 
 ## Prerequisites
 
