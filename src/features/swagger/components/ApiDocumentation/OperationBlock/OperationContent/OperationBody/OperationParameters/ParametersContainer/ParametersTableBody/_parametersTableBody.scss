@@ -5,11 +5,6 @@
 
 %parametersTableBody {
   tbody {
-    tr:nth-child(odd) {
-      .parameters-col_name, .parameters-col_description {
-        background: $backgroundGrey200;
-      }
-    }
     tr {
       td:first-child {
         padding: 0.563rem 2.813rem 0.563rem 1.063rem;

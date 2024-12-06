@@ -4,6 +4,7 @@
 @use "Responses/responses";
 @use "ExecuteButtons/executeButtons";
 @use "Description/description";
+@use "SectionRequestBody/sectionRequestBody";
 
 %operationBody {
   .opblock-body {
@@ -11,5 +12,6 @@
     @extend %parameters;
     @extend %responses;
     @extend %executeButtons;
+    @extend %sectionRequestBody
   }
 }

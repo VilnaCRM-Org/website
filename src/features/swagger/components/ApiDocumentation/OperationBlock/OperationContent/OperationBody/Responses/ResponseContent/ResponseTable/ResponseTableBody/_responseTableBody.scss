@@ -27,15 +27,14 @@
         border-bottom-right-radius: 0.25rem;
       }
     }
-    @extend %statusColumn;
-    @extend %descriptionColumn;
     td.response-col_status, td.response-col_description {
       padding-top: 0;
-      background-color: $backgroundGrey200;
       padding-bottom: 1rem;
       @include for-small-screens {
         padding-bottom: 0.375rem;
       }
     }
+    @extend %statusColumn;
+    @extend %descriptionColumn;
   }
 }

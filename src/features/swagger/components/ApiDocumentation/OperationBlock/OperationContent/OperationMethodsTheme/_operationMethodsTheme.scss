@@ -23,9 +23,6 @@ $methodColors: (
     border-color: $color;
     background-color: rgba($color, 0.1);
     .opblock-summary-#{$method} {
-      //outline: 1px solid $color;
-      //background-color: rgba($color, 0.1);
-      //border-bottom: 1px solid $color;
       border-color: $color;
       background-color: transparent;
       .opblock-summary-control {
@@ -35,8 +32,10 @@ $methodColors: (
       }
     }
     .opblock-body {
-      & > .opblock-description-wrapper {
-        //background-color: rgba($color, 0.1);
+      .opblock-section, .responses-wrapper {
+        .opblock-section-header {
+          background: $white;
+        }
       }
       .opblock-section-header,
       & > .opblock-description-wrapper {
