@@ -2,6 +2,8 @@
 
 %statusColumn {
   td.response-col_status {
+    min-width: 5rem;
+    padding-right: 1rem;
     padding-left: 1rem;
     @include buttonText($darkPrimary);
     @include for-small-screens {
@@ -9,7 +11,7 @@
       @include medium15($darkPrimary);
     }
     .response-undocumented {
-      margin-top: 0.375rem;
+      margin-top: 0;
       @include for-small-screens {
         margin-top: 0.125rem;
       }

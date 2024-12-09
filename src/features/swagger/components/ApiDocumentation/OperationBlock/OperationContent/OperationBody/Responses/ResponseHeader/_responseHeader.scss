@@ -11,9 +11,8 @@
       flex-direction: column;
       align-items: normal;
       gap: 0.438rem;
-      padding: 1rem 0.75rem 0.75rem;
-      border-bottom: none;
-      box-shadow: none;
+      padding: 1rem 0.75rem;
+      margin-bottom: 0.75rem;
     }
     h4 {
       @include medium15($grey200);

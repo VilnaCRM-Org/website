@@ -3,15 +3,17 @@
 %copyButton {
   .view-line-link {
     margin-right: 0.625rem;
+    margin-left: 0.625rem;
     transition: none;
     height: auto;
     width: auto;
-    @include uiIcon($copy);
+    @include uiIcon($copy, 0);
     @include for-small-screens {
-      @include uiIcon($copySmall, 1.25rem, 1.25rem);
+      @include uiIcon($copySmall, 0, 1.25rem);
     }
     svg {
       position: static;
+      transition: 0.5s all ease;
     }
     path {
       fill: transparent;

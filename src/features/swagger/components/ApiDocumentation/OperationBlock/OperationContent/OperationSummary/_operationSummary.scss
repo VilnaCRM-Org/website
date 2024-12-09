@@ -18,5 +18,21 @@
     @extend %controlArrow;
     @extend %lockButton;
     @extend %copyButton;
+    @media (hover: hover) {
+      &:hover .view-line-link svg {
+        width: 1.5rem;
+        @include for-small-screens {
+          width: 1.25rem;
+        }
+      }
+    }
+    @media (hover: none) {
+      &:focus-within .view-line-link svg {
+        width: 1.5rem;
+        @include for-small-screens {
+          width: 1.25rem;
+        }
+      }
+    }
   }
 }

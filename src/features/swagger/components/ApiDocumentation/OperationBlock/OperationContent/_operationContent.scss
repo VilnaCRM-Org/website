@@ -31,10 +31,10 @@
           margin-bottom: 0.5rem;
         }
         @extend %operationSummary;
+        @extend %operationBody;
         @extend %operationMethodsTheme;
         @extend %operationCodeExample;
         @extend %operationSelect;
-        @extend %operationBody;
         @extend %operationResponseCode;
         &.is-open {
           .opblock-summary {
