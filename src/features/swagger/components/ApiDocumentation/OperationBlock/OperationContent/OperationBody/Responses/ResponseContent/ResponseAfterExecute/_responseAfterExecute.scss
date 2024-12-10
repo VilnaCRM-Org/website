@@ -1,5 +1,7 @@
 @use "@swagger/global" as *;
 
+@use "InnerContent/innerContent";
+
 %responseAfterExecute {
   & > div {
     margin-bottom: 0.75rem;
@@ -21,57 +23,7 @@
         margin-right: 0.625rem;
       }
     }
-    div {
-      .curl-command {
-        margin-bottom: 0.75rem;
-        @include from-small-to-large-screens {
-          margin-bottom: 1rem;
-        }
-        h4 {
-          padding: 0;
-          margin-left: 0;
-          margin-top: 0;
-          margin-bottom: 0.75rem;
-          @include medium15($grey200);
-          @include for-small-screens {
-            @include medium12($grey200);
-          }
-        }
-      }
-      div {
-        .request-url {
-          margin-bottom: 0.75rem;
-          @include for-large-screens {
-            margin-bottom: 1.438rem;
-          }
-          @include for-small-screens {
-            margin-bottom: 1rem;
-          }
-          h4 {
-            margin: 0 0 0.75rem;
-            @include medium15($grey200);
-            @include for-large-screens {
-              @include demi18($grey200);
-            }
-            @include for-small-screens {
-              @include medium12($grey200);
-            }
-          }
-        }
-      }
-      h4 {
-        margin-top: 0;
-        margin-bottom: 0.75rem;
-        @include medium15($grey200);
-        @include for-large-screens {
-          margin-bottom: 1rem;
-          @include demi18($grey200);
-        }
-        @include for-small-screens {
-          margin-bottom: 0.75rem;
-        }
-      }
-    }
+    @extend %innerContent;
     & > h4 {
       margin-top: 0.75rem;
       margin-bottom: 0.75rem;

@@ -2,6 +2,13 @@
 
 @use "ResponseControls/responseControls";
 
+@mixin responseMarkdown() {
+  @include medium14($grey200);
+  @include for-small-screens {
+    @include medium12($grey200);
+  }
+}
+
 %descriptionColumn {
   td.response-col_description {
     padding-right: 1rem;
@@ -12,10 +19,7 @@
     div.response-col_description__inner {
       div.renderedMarkdown {
         p {
-          @include medium14($grey200);
-          @include for-small-screens {
-            @include medium12($grey200);
-          }
+          @include responseMarkdown;
         }
       }
     }
@@ -33,19 +37,16 @@
       & > p {
         margin-bottom: 0.625rem;
         strong {
-          @include medium15($grey200);
-          @include for-large-screens {
-            @include medium12($grey200);
+          @include medium16($grey200);
+          @include for-small-screens {
+            @include medium14($grey200);
           }
         }
       }
       ul {
         list-style: none;
         li {
-          @include medium14($grey200);
-          @include for-small-screens {
-            @include medium12($grey200);
-          }
+          @include responseMarkdown;
         }
       }
     }

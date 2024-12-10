@@ -12,20 +12,6 @@
           padding-top: 0.438rem;
         }
       }
-      td.response-col_status {
-        border-top-left-radius: 0.25rem;
-      }
-      td.response-col_description {
-        border-top-right-radius: 0.25rem;
-      }
-    }
-    tr.response:last-child {
-      td.response-col_status {
-        border-bottom-left-radius: 0.25rem;
-      }
-      td.response-col_description {
-        border-bottom-right-radius: 0.25rem;
-      }
     }
     td.response-col_status, td.response-col_description {
       padding-top: 0;

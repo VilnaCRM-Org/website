@@ -1,5 +1,7 @@
 @use "@swagger/global" as *;
 
+@use "TryOutButton/tryOutButton";
+
 @mixin responsiveFontSize() {
   @include medium15($grey200);
   @include for-large-screens {
@@ -38,29 +40,6 @@
         }
       }
     }
-    .try-out {
-      .try-out__btn {
-        display: inline-flex;
-        justify-content: center;
-        align-items: center;
-        margin: 0;
-        max-height: 2.625rem;
-        @include uiButton('secondary', 0.75rem 1.5rem) {
-          line-height: normal;
-          @include medium15($darkSecondary);
-          @include for-small-screens {
-            padding: 0.5rem 1rem;
-          }
-        }
-        &.cancel {
-          @include uiButton('error', 0.75rem 1.5rem) {
-            @include medium15($error);
-            @include for-small-screens {
-              padding: 0.5rem 1rem;
-            }
-          }
-        }
-      }
-    }
+    @extend %tryOutButton;
   }
 }

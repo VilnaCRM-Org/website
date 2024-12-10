@@ -1,0 +1,27 @@
+@use "@swagger/global" as *;
+
+@mixin responsiveButton($type, $color) {
+  @include uiButton($type, 0.75rem 1.5rem) {
+    @include medium15($color);
+    @include for-small-screens {
+      padding: 0.5rem 1rem;
+    }
+  }
+}
+
+%tryOutButton {
+  .try-out {
+    .try-out__btn {
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      margin: 0;
+      max-height: 2.625rem;
+      line-height: normal;
+      @include responsiveButton('secondary', $darkSecondary);
+      &.cancel {
+        @include responsiveButton('error', $error);
+      }
+    }
+  }
+}
