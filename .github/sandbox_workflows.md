@@ -44,26 +44,26 @@ Filename: .github/workflows/sandbox-creation.yml (previously named differently, 
 
 Triggers:
 
-    pull_request: When a pull request is opened, trigger the sandbox creation/update pipeline, passing along the PR number.
-    push: When code is pushed to any branch except main, trigger the sandbox pipeline without a PR number.
+  pull_request: When a pull request is opened, trigger the sandbox creation/update pipeline, passing along the PR number.
+  push: When code is pushed to any branch except main, trigger the sandbox pipeline without a PR number.
 
 New Feature: Before starting the pipeline execution, the workflow checks if secrets managed in AWS Secrets Manager need rotation. If rotation is required, it triggers custom GitHub repository dispatch events (rotate_token_test, rotate_token_prod) that can be handled by another workflow to rotate the secrets accordingly.
 
 Key Points:
 
-    Uses OIDC for secure authentication with AWS.
-    Validates required secrets.
-    Checks secret rotation timing against a defined maximum age (in seconds), triggering rotation if needed.
-    Starts AWS CodePipeline execution for sandbox creation or update after handling secret rotation needs.
+  Uses OIDC for secure authentication with AWS.
+  Validates required secrets.
+  Checks secret rotation timing against a defined maximum age (in seconds), triggering rotation if needed.
+  Starts AWS CodePipeline execution for sandbox creation or update after handling secret rotation needs.
 
 ### Creation Required Secrets
 
-    AWS_CODEPIPELINE_ROLE_ARN: The ARN of the AWS IAM role that GitHub Actions will assume to interact with AWS services.
-    AWS_SANDBOX_CODEPIPELINE_NAME: The name of the AWS CodePipeline that manages sandbox creation and updates.
-    GITHUB_TOKEN_ROTATION_ROLE_TO_ASSUME_TEST: The IAM role ARN used for checking and rotating test secrets.
-    GITHUB_TOKEN_ROTATION_ROLE_TO_ASSUME_PROD: The IAM role ARN used for checking and rotating production secrets.
-    GITHUB_TOKEN_SECRET_NAME: The name of the secret in AWS Secrets Manager that holds the timestamp (and possibly other details) of the last rotation.
-    PAT_WITH_REPO_PERMISSIONS: A Personal Access Token with repo permissions, used to dispatch custom GitHub events to initiate secret rotation workflows.
+  AWS_CODEPIPELINE_ROLE_ARN: The ARN of the AWS IAM role that GitHub Actions will assume to interact with AWS services.
+  AWS_SANDBOX_CODEPIPELINE_NAME: The name of the AWS CodePipeline that manages sandbox creation and updates.
+  GITHUB_TOKEN_ROTATION_ROLE_TO_ASSUME_TEST: The IAM role ARN used for checking and rotating test secrets.
+  GITHUB_TOKEN_ROTATION_ROLE_TO_ASSUME_PROD: The IAM role ARN used for checking and rotating production secrets.
+  GITHUB_TOKEN_SECRET_NAME: The name of the secret in AWS Secrets Manager that holds the timestamp (and possibly other details) of the last rotation.
+  PAT_WITH_REPO_PERMISSIONS: A Personal Access Token with repo permissions, used to dispatch custom GitHub events to initiate secret rotation workflows.
 
 Additionally, you need to ensure that an AWS_REGION variable is set either at the repository or organization level.
 
@@ -71,8 +71,8 @@ Additionally, you need to ensure that an AWS_REGION variable is set either at th
 1. AWS_CODEPIPELINE_ROLE_ARN
 Stores the IAM Role ARN for assuming AWS credentials via OIDC for the sandbox pipeline execution.
 
-  Name: AWS_CODEPIPELINE_ROLE_ARN
-  Value: arn:aws:iam::123456789012:role/GitHubActionsRole
+Name: AWS_CODEPIPELINE_ROLE_ARN
+Value: arn:aws:iam::123456789012:role/GitHubActionsRole
 
 2. AWS_SANDBOX_CODEPIPELINE_NAME
 The CodePipeline name for sandbox creation and updates.
@@ -262,8 +262,8 @@ Attach Policies to the Role:
 
 For the updated workflow, ensure that the roles for test and production secret checks (GITHUB_TOKEN_ROTATION_ROLE_TO_ASSUME_TEST and GITHUB_TOKEN_ROTATION_ROLE_TO_ASSUME_PROD) are configured with appropriate policies to:
 
-    Access the specified secret in AWS Secrets Manager.
-    No additional CodePipeline permissions are needed for these roles unless required by other parts of your process.
+  Access the specified secret in AWS Secrets Manager.
+  No additional CodePipeline permissions are needed for these roles unless required by other parts of your process.
 
 ## Additional Notes
 
