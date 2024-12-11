@@ -1,0 +1,25 @@
+@use "@swagger/global" as *;
+
+%authInput {
+  input {
+    @include uiInput(3.563rem, 21.5rem, 1.75rem) {
+      @include regular16($darkPrimary);
+      @include for-large-screens {
+        @include regular18($darkPrimary);
+      }
+      @include for-medium-screens {
+        max-width: none;
+      }
+      @include for-small-screens {
+        width: 100%;
+        min-width: 100%;
+      }
+      &::placeholder {
+        @include regular16($grey250);
+        @include for-large-screens {
+          @include regular18($grey250);
+        }
+      }
+    }
+  }
+}

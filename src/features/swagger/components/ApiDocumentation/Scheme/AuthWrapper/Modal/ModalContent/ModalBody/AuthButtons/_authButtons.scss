@@ -1,0 +1,41 @@
+@use "@swagger/global" as *;
+
+@mixin modal-button($variant, $text-color) {
+  @include uiButton($variant) {
+    display: block;
+    margin: 0;
+    @include medium15($text-color);
+    @include for-large-screens {
+      padding: 1rem 1.4rem;
+      @include buttonText($text-color);
+    }
+    @include for-small-screens {
+      width: 100%;
+      height: auto;
+      padding: 0.938rem 0;
+      @include medium15($text-color);
+    }
+  }
+}
+
+%authButtons {
+  .auth-btn-wrapper {
+    flex: 1;
+    padding: 0;
+    height: 3.5rem;
+    align-self: flex-end;
+    justify-content: space-between;
+    @include for-small-screens {
+      flex-direction: column;
+      gap: 0.25rem;
+      height: min-content;
+      align-self: normal;
+    }
+    button.authorize {
+      @include modal-button('primary', $white);
+    }
+    button.btn-done {
+      @include modal-button('secondary', $darkPrimary);
+    }
+  }
+}

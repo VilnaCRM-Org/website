@@ -6,6 +6,12 @@
   }
 }
 
+@mixin for-medium-screens {
+  @media screen and (max-width: breakpoints.$md) {
+    @content;
+  }
+}
+
 @mixin for-small-screens {
   @media screen and (max-width: breakpoints.$sm) {
     @content;

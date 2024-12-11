@@ -17,6 +17,9 @@
 %serverContainer {
   .schemes-server-container {
     flex-shrink: 0;
+    @media screen and (max-width: 374px) {
+      flex-shrink: 0.5;
+    }
     @extend %serverSelect;
     label {
       margin: 0;

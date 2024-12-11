@@ -1,5 +1,8 @@
 @use "@swagger/global" as *;
 
+@use "AuthButtons/authButtons";
+@use "AuthInput/authInput";
+
 @mixin modal-h4() {
   margin-top: 0 !important;
   margin-bottom: 0.75rem !important;
@@ -30,43 +33,9 @@
     max-height: none;
     max-width: none;
     overflow-y: auto;
-    padding: 1rem 1.25rem 0 1.5rem;
-    .auth-btn-wrapper {
-      flex: 1;
-      padding: 0;
-      height: 3.5rem;
-      align-self: flex-end;
-      justify-content: space-between;
-      @include for-small-screens {
-        flex-direction: column;
-        gap: 0.25rem;
-        height: min-content;
-        align-self: normal;
-      }
-      button.authorize {
-        @include modal-button('primary', $white);
-      }
-      button.btn-done {
-        @include modal-button('secondary', $darkPrimary);
-      }
-    }
-    input {
-      @include uiInput(3.563rem, 21.5rem, 1.75rem) {
-        @include regular16($darkPrimary);
-        @include for-large-screens {
-          @include regular18($darkPrimary);
-        }
-        @include for-small-screens {
-          min-width: 100%;
-        }
-        &::placeholder {
-          @include regular16($grey250);
-          @include for-large-screens {
-            @include regular18($grey250);
-          }
-        }
-      }
-    }
+    padding: 1rem 1.25rem 0.125rem 1.5rem;
+    @extend %authButtons;
+    @extend %authInput;
     .auth-container {
       padding: 0;
       border-bottom: none;
@@ -88,6 +57,9 @@
           left: -1.5rem;
           right: -1.25rem;
           background-color: $grey500;
+        }
+        & > div {
+          flex-shrink: 0;
         }
         h4 {
           @include modal-h4;
