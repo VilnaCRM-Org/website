@@ -40,8 +40,8 @@ jobs:
               return 0
             fi
 
-            if ! secret_value=$(aws secretsmanager get-secret-value --secret-id "$secret_name" --region "$AWS_REGION" --query SecretString --output text 2>&1); then
-              echo "Failed to retrieve $env_name secret: $secret_value"
+            if ! secret_value=$(aws secretsmanager get-secret-value --secret-id "${secret_name}" --region "${AWS_REGION}" --query SecretString --output text 2>&1); then
+              echo "Failed to retrieve ${env_name} secret: ${secret_value}"
               echo "${output_var}=true" >> $GITHUB_OUTPUT
               return 0
             fi
@@ -62,7 +62,7 @@ jobs:
             max_age="${{ vars.TOKEN_MAX_AGE_SECONDS }}"
             [ -z "$max_age" ] && max_age=601200
             age=$((now - last_rotated_unix))
-            if [ $age -ge $max_age ]; then
+            if [ "${age}" -ge "${max_age}" ]; then
               echo "${output_var}=true" >> $GITHUB_OUTPUT
             else
               echo "${output_var}=false" >> $GITHUB_OUTPUT
