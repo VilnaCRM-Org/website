@@ -109,8 +109,8 @@ Note: All these secrets should be added under: Settings > Secrets and variables 
 AWS_REGION:
 This should be set as a variable (not a secret) under Settings > Secrets and variables > Actions > Variables.
 
-    Name: AWS_REGION
-    Value: us-east-1 (or your preferred AWS region)
+  Name: AWS_REGION
+  Value: us-east-1 (or your preferred AWS region)
 
 ## Workflow 2: Trigger Sandbox Deletion
 ### Deletion Overview
