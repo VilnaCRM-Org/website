@@ -27,41 +27,52 @@ jobs:
           role-to-assume: ${{ secrets.GITHUB_TOKEN_ROTATION_ROLE_TO_ASSUME_TEST }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Setup Token Rotation Check Function
+        id: setup_rotation_check
+        run: |
+          check_token_rotation() {
+            local env_name="$1"
+            local secret_name="$2"
+            local output_var="$3"
+
+            if [ -z "$secret_name" ]; then
+              echo "${output_var}=true" >> $GITHUB_OUTPUT
+              return 0
+            fi
+
+            if ! secret_value=$(aws secretsmanager get-secret-value --secret-id "$secret_name" --region "$AWS_REGION" --query SecretString --output text 2>&1); then
+              echo "Failed to retrieve $env_name secret: $secret_value"
+              echo "${output_var}=true" >> $GITHUB_OUTPUT
+              return 0
+            fi
+
+            timestamp=$(echo "$secret_value" | jq -r '.timestamp // empty')
+            if [ -z "$timestamp" ]; then
+              echo "${output_var}=true" >> $GITHUB_OUTPUT
+              return 0
+            fi
+
+            now=$(date +%s)
+            last_rotated_unix=$(date -d "$timestamp" +%s 2>/dev/null)
+            if [ -z "$last_rotated_unix" ]; then
+              echo "${output_var}=true" >> $GITHUB_OUTPUT
+              return 0
+            fi
+
+            max_age="${{ vars.TOKEN_MAX_AGE_SECONDS }}"
+            [ -z "$max_age" ] && max_age=601200
+            age=$((now - last_rotated_unix))
+            if [ $age -ge $max_age ]; then
+              echo "${output_var}=true" >> $GITHUB_OUTPUT
+            else
+              echo "${output_var}=false" >> $GITHUB_OUTPUT
+            fi
+          }
+
       - name: Determine Test Rotation
         id: determine_test_rotation
         run: |
-          TEST_SECRET_NAME="${{ secrets.GITHUB_TOKEN_SECRET_NAME }}"
-          if [ -z "$TEST_SECRET_NAME" ]; then
-            echo "rotate_test_needed=true" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
-          TEST_SECRET_VALUE=$(aws secretsmanager get-secret-value --secret-id "$TEST_SECRET_NAME" --region ${{ env.AWS_REGION }} --query SecretString --output text 2>/dev/null)
-          if [ $? -ne 0 ] || [ -z "$TEST_SECRET_VALUE" ]; then
-            echo "rotate_test_needed=true" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
-          TEST_TIMESTAMP=$(echo "$TEST_SECRET_VALUE" | jq -r '.timestamp // empty')
-          if [ -z "$TEST_TIMESTAMP" ]; then
-            echo "rotate_test_needed=true" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
-          NOW=$(date +%s)
-          LAST_ROTATED_UNIX=$(date -d "$TEST_TIMESTAMP" +%s 2>/dev/null)
-          if [ -z "$LAST_ROTATED_UNIX" ]; then
-            echo "rotate_test_needed=true" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
-          MAX_AGE=601200
-          AGE=$((NOW - LAST_ROTATED_UNIX))
-          if [ $AGE -ge $MAX_AGE ]; then
-            echo "rotate_test_needed=true" >> $GITHUB_OUTPUT
-          else
-            echo "rotate_test_needed=false" >> $GITHUB_OUTPUT
-          fi
+          check_token_rotation "test" "${{ secrets.GITHUB_TOKEN_SECRET_NAME }}" "rotate_test_needed"
 
       - name: Configure AWS Credentials (Prod)
         uses: aws-actions/configure-aws-credentials@v4
@@ -72,38 +83,7 @@ jobs:
       - name: Determine Prod Rotation
         id: determine_prod_rotation
         run: |
-          PROD_SECRET_NAME="${{ secrets.GITHUB_TOKEN_SECRET_NAME }}"
-          if [ -z "$PROD_SECRET_NAME" ]; then
-            echo "rotate_prod_needed=true" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
-          PROD_SECRET_VALUE=$(aws secretsmanager get-secret-value --secret-id "$PROD_SECRET_NAME" --region ${{ env.AWS_REGION }} --query SecretString --output text 2>/dev/null)
-          if [ $? -ne 0 ] || [ -z "$PROD_SECRET_VALUE" ]; then
-            echo "rotate_prod_needed=true" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
-          PROD_TIMESTAMP=$(echo "$PROD_SECRET_VALUE" | jq -r '.timestamp // empty')
-          if [ -z "$PROD_TIMESTAMP" ]; then
-            echo "rotate_prod_needed=true" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
-          NOW=$(date +%s)
-          LAST_ROTATED_UNIX=$(date -d "$PROD_TIMESTAMP" +%s 2>/dev/null)
-          if [ -z "$LAST_ROTATED_UNIX" ]; then
-            echo "rotate_prod_needed=true" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
-          MAX_AGE=601200
-          AGE=$((NOW - LAST_ROTATED_UNIX))
-          if [ $AGE -ge $MAX_AGE ]; then
-            echo "rotate_prod_needed=true" >> $GITHUB_OUTPUT
-          else
-            echo "rotate_prod_needed=false" >> $GITHUB_OUTPUT
-          fi
+          check_token_rotation "prod" "${{ secrets.GITHUB_TOKEN_SECRET_NAME }}" "rotate_prod_needed"
 
   TriggerRotation:
     runs-on: ubuntu-latest
@@ -148,7 +128,6 @@ jobs:
 
       - name: Validate Branch and Secrets
         run: |
-          # Validate required secrets
           missing_secrets=()
           [ -z "${{ secrets.AWS_SANDBOX_CODEPIPELINE_NAME }}" ] && missing_secrets+=("AWS_SANDBOX_CODEPIPELINE_NAME")
           [ -z "${{ secrets.AWS_CODEPIPELINE_ROLE_ARN }}" ] && missing_secrets+=("AWS_CODEPIPELINE_ROLE_ARN")
@@ -160,7 +139,6 @@ jobs:
       - name: Start Pipeline Execution
         run: |
           if [ "${{ github.event_name }}" == "pull_request" ]; then
-            # For pull_request event
             PR_NUMBER="${{ github.event.number }}"
             if ! aws codepipeline start-pipeline-execution \
               --name "${{ secrets.AWS_SANDBOX_CODEPIPELINE_NAME }}" \
@@ -171,7 +149,6 @@ jobs:
               exit 1
             fi
           else
-            # For push event
             if ! aws codepipeline start-pipeline-execution \
               --name "${{ secrets.AWS_SANDBOX_CODEPIPELINE_NAME }}" \
               --variables \
