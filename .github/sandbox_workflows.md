@@ -7,7 +7,7 @@ This documentation provides an overview of three GitHub Actions workflows used f
 - [Introduction](#introduction)
 - [Prerequisites](#prerequisites)
 - [Workflow 1: Sandbox Creation](#workflow-1-sandbox-creation)
-  - [Creation and Rebuild Overview](#creation-overview)
+  - [Creation and Rebuild Overview](#creation-and-rebuild-overview)
   - [Creation Required Secrets](#creation-required-secrets)
   - [Creation Secrets Setup](#creation-secrets-setup)
 - [Workflow 2: Trigger Sandbox Deletion](#workflow-2-trigger-sandbox-deletion)
