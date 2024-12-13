@@ -7,7 +7,7 @@
       padding-bottom: 0.75rem;
       border: none;
       @include medium15($grey200);
-      @include for-large-screens {
+      @include for-small-screens {
         padding-bottom: 0.5rem;
         @include medium12($grey200);
       }
