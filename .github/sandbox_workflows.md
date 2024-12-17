@@ -25,17 +25,17 @@ This documentation provides an overview of three GitHub Actions workflows used f
 
 The three GitHub Actions workflows automate the process of triggering AWS CodePipeline executions in response to various GitHub events. They leverage GitHub's OpenID Connect (OIDC) feature for secure authentication with AWS and manage both sandbox and production environments.
 
-   Sandbox Management: Handles the creation and updating of sandbox environments when pull requests are opened or when code is pushed (excluding the main branch).
-   Trigger Sandbox Deletion: Initiates the deletion of sandbox environments when a pull request is closed on the main branch.
+  Sandbox Management: Handles the creation and updating of sandbox environments when pull requests are opened or when code is pushed (excluding the main branch).
+  Trigger Sandbox Deletion: Initiates the deletion of sandbox environments when a pull request is closed on the main branch.
    Website Deploy: Manages the deployment of the production website when code is pushed to the main branch.
 
 ## Prerequisites
 
-    GitHub Repository: Access to the repository where the workflows will be used.
-    AWS Account: Permissions to create and manage AWS IAM roles, policies, and AWS CodePipeline pipelines.
-    AWS Secrets Manager: Storing and retrieving secrets that might need periodic rotation.
-    AWS CodePipeline: Existing pipelines for sandbox creation and deletion, as well as production website deployment.
-    GitHub Secrets and Variables: Ability to add and manage repository or organization-level secrets and variables.
+  GitHub Repository: Access to the repository where the workflows will be used.
+  AWS Account: Permissions to create and manage AWS IAM roles, policies, and AWS CodePipeline pipelines.
+  AWS Secrets Manager: Storing and retrieving secrets that might need periodic rotation.
+  AWS CodePipeline: Existing pipelines for sandbox creation and deletion, as well as production website deployment.
+  GitHub Secrets and Variables: Ability to add and manage repository or organization-level secrets and variables.
 
 ## Workflow 1: Sandbox Creation
 ### Creation and Rebuild Overview
@@ -98,6 +98,8 @@ The name of the secret in AWS Secrets Manager storing rotation info.
   Name: GITHUB_TOKEN_SECRET_NAME
   Value: my-github-token-secret
 
+  Note: The github-token value is an example. Replace it with the actual name of the secret as configured in your AWS Secrets Manager or environment.
+
 6. PAT_WITH_REPO_PERMISSIONS
 A PAT with repo level permissions for dispatching repository events.
 
@@ -111,6 +113,15 @@ This should be set as a variable (not a secret) under Settings > Secrets and var
 
   Name: AWS_REGION
   Value: us-east-1 (or your preferred AWS region)
+
+TOKEN_MAX_AGE_SECONDS:
+This should be set as a variable (not a secret) under Settings > Secrets and variables > Actions > Variables.
+  The variable specifies the maximum allowed age of a token in seconds, after which the token is considered expired and requires rotation.
+  Optional:
+    If not provided, the default value of 601200 seconds (approximately 7 days) will be used.
+
+  Name: TOKEN_MAX_AGE_SECONDS
+  Value: 601200
 
 ## Workflow 2: Trigger Sandbox Deletion
 ### Deletion Overview
