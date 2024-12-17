@@ -144,7 +144,8 @@ jobs:
               --name "${{ secrets.AWS_SANDBOX_CODEPIPELINE_NAME }}" \
               --variables \
                 "name=BRANCH_NAME,value=${BRANCH_NAME}" \
-                "name=PR_NUMBER,value=${PR_NUMBER}"; then
+                "name=PR_NUMBER,value=${PR_NUMBER}" \
+                "name=IS_PULL_REQUEST,value=1"; then
               echo "::error::Failed to start pipeline execution for pull request"
               exit 1
             fi
@@ -153,6 +154,7 @@ jobs:
               --name "${{ secrets.AWS_SANDBOX_CODEPIPELINE_NAME }}" \
               --variables \
                 "name=BRANCH_NAME,value=${BRANCH_NAME}" \
+                "name=PR_NUMBER,value=${PR_NUMBER}" \
                 "name=IS_PULL_REQUEST,value=0"; then
               echo "::error::Failed to start pipeline execution for push"
               exit 1
