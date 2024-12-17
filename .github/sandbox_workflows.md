@@ -40,7 +40,7 @@ The three GitHub Actions workflows automate the process of triggering AWS CodePi
 ## Workflow 1: Sandbox Creation
 ### Creation and Rebuild Overview
 
-Filename: .github/workflows/sandbox-creation.yml (previously named differently, now updated to Sandbox Creation and Rebuild)
+Filename: .github/workflows/sandbox-creation.yml
 
 Triggers:
 
