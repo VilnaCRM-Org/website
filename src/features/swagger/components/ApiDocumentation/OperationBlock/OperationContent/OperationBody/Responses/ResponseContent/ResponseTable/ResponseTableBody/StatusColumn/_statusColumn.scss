@@ -7,6 +7,7 @@
     padding-left: 1rem;
     @include medium15($darkPrimary);
     @include for-small-screens {
+      @include medium12($darkPrimary);
       padding-left: 0.625rem;
     }
     .response-undocumented {

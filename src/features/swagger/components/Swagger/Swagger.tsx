@@ -1,5 +1,6 @@
 import { Box, Container } from '@mui/material';
 import Head from 'next/head';
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import touchIcon from '@/assets/img/touch.png';
@@ -12,7 +13,11 @@ import Navigation from '../Navigation/Navigation';
 import styles from './styles';
 
 function Swagger(): React.ReactElement {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+
+  useEffect(() => {
+    i18n.changeLanguage('en');
+  }, [i18n]);
 
   return (
     <>
