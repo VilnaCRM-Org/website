@@ -18,13 +18,14 @@
     .schemes {
       @extend %serverContainer;
       @extend %authWrapper;
+      flex-wrap: nowrap;
       gap: normal;
       @include for-large-screens {
+        gap: 1rem;
         align-items: center;
       }
       @include for-small-screens {
         align-items: flex-end;
-        flex-wrap: nowrap;
         gap: 0.4rem;
       }
     }

@@ -8,10 +8,10 @@
     .headers__title {
       margin-top: 0.875rem;
       margin-bottom: 0;
-      @include medium14($darkPrimary);
+      @include medium15($darkPrimary);
     }
     table.headers {
-      margin-top: 0.375rem;
+      margin-top: 0.75rem;
       thead {
         tr.header-row {
           th:not(:first-child) {
@@ -19,8 +19,8 @@
           }
           th {
             padding-top: 0;
-            padding-bottom: 0;
-            border-bottom: none;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid $grey250;
             @include medium15($grey200);
           }
         }
@@ -32,8 +32,8 @@
           }
           td {
             min-width: min-content;
-            vertical-align: text-top;
-            padding-top: 0.5rem;
+            vertical-align: middle;
+            padding-top: 0.75rem;
             padding-bottom: 0;
             @include medium14($grey200);
             @include for-large-screens {

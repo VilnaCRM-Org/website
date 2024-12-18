@@ -11,10 +11,14 @@
 
 %tryOutButton {
   .try-out {
+    padding: 0;
+    flex-direction: row;
+    flex: initial;
     .try-out__btn {
       display: inline-flex;
       justify-content: center;
       align-items: center;
+      flex: initial;
       margin: 0;
       max-height: 2.625rem;
       line-height: normal;

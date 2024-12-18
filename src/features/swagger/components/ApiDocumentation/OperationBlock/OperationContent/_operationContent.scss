@@ -11,13 +11,7 @@
 %operationContent {
   .no-margin {
     .operation-tag-content {
-      padding: 0 1.25rem;
-      @include for-large-screens {
-        padding: 0 1.5rem;
-      }
-      @include for-small-screens {
-        padding: 0;
-      }
+      padding: 0;
       .opblock {
         overflow: hidden;
         margin-bottom: 0.5rem;

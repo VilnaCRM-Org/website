@@ -10,14 +10,10 @@
     justify-content: center;
     min-height: 2.625rem;
     padding: 0.688rem 0.938rem 0.625rem 0.938rem;
-    background-color: $grey400;
+    background-color: $backgroundGrey200;
     border: 1px solid $grey400;
     @extend %userSchema;
     @extend %nestedSchema;
-    &:focus-within, &:hover {
-      background-color: $backgroundGrey200;
-      border: 1px solid $grey400;
-    }
     &:focus-within {
       @media screen and (max-width: $xs-sm) {
         justify-content: flex-start;

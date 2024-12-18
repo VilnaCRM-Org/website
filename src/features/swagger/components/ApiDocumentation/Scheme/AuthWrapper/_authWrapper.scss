@@ -4,8 +4,11 @@
 
 %authWrapper {
   .auth-wrapper {
-    @include for-small-screens {
+    @include for-large-screens {
       flex-shrink: 1;
+      flex-basis: 10.75rem;
+    }
+    @include for-small-screens {
       flex-basis: 9.813rem;
     }
     @extend %modal;
@@ -13,15 +16,15 @@
       @include uiButton('primary') {
         @include medium15($white);
         @include for-large-screens {
-          padding: 1.25rem 2.75rem;
+          height: 3.875rem;
+          width: 100%;
+          padding: 0;
+          justify-content: center;
+          align-items: center;
           @include buttonText;
         }
         @include for-small-screens {
           height: 3.375rem;
-          justify-content: center;
-          align-items: center;
-          padding: 0;
-          width: 100%;
           @include medium15($white);
         }
       }
