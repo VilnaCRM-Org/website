@@ -19,10 +19,13 @@
     width: unset;
     transform: translate(-50%, -50%);
     @include for-small-screens {
-      max-width: 22.625rem;
       width: 100%;
       top: 1.5rem;
       transform: translate(-50%, 0);
+    }
+    @media screen and (max-width: $xs-sm) {
+      top: 0;
+      max-width: 22.625rem;
     }
     .modal-dialog-ux {
       width: 100%;

@@ -87,5 +87,12 @@ $chooseFileText: 'Choose file';
       display: none;
     }
   }
+  &.invalid {
+    border-color: $errorBorder;
+  }
+  &::selection {
+    background: rgba(0, 0, 0, 0.1);
+    color: inherit;
+  }
   @content;
 }

@@ -2,8 +2,12 @@
 
 @mixin modal-button($variant, $text-color) {
   @include uiButton($variant) {
-    display: block;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     margin: 0;
+    height: auto;
+    width: auto;
     @include medium15($text-color);
     @include for-large-screens {
       padding: 1rem 1.4rem;
