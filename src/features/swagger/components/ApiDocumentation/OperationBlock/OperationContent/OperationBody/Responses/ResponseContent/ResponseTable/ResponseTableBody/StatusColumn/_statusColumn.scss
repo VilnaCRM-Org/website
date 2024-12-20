@@ -4,11 +4,9 @@
   td.response-col_status {
     min-width: 5rem;
     padding-right: 1rem;
-    padding-left: 1rem;
     @include medium15($darkPrimary);
     @include for-small-screens {
       @include medium12($darkPrimary);
-      padding-left: 0.625rem;
     }
     .response-undocumented {
       margin-top: 0;

@@ -7,26 +7,21 @@
   tbody {
     tr {
       td:first-child {
-        padding: 0.563rem 2.813rem 0.563rem 1.063rem;
-        border-bottom-left-radius: 0.25rem;
-        border-top-left-radius: 0.25rem;
+        padding: 0.563rem 2.813rem 0.563rem 0;
         @include for-small-screens {
-          padding: 0.438rem 0.875rem 1.125rem 0.625rem;
+          padding: 0.438rem 0.875rem 1.125rem 0;
         }
       }
       td:nth-child(2) {
-        padding: 0.563rem 0.875rem 0.563rem 0;
-        border-bottom-right-radius: 0.25rem;
-        border-top-right-radius: 0.25rem;
-        @include for-large-screens {
-          padding: 0.563rem 1.5rem 0.563rem 0;
-        }
-        @include for-small-screens {
-          padding: 0.563rem 0.5rem 0.563rem 0;
-        }
+        padding: 0.563rem 0 0.563rem 0;
       }
       @extend %nameColumn;
       @extend %descriptionColumn;
+    }
+    tr:last-child {
+      td {
+        padding-bottom: 0;
+      }
     }
   }
 }

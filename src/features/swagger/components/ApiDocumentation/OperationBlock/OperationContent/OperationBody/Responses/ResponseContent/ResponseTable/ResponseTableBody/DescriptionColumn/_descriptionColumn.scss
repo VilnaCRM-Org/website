@@ -3,7 +3,7 @@
 @use "ResponseControls/responseControls";
 
 @mixin responseMarkdown() {
-  @include medium14($grey200);
+  @include medium16($grey200);
   @include for-small-screens {
     @include medium12($grey200);
   }
@@ -11,10 +11,6 @@
 
 %descriptionColumn {
   td.response-col_description {
-    padding-right: 1rem;
-    @include for-small-screens {
-      padding-right: 0.625rem;
-    }
     @extend %responseControls;
     div.response-col_description__inner {
       div.renderedMarkdown {

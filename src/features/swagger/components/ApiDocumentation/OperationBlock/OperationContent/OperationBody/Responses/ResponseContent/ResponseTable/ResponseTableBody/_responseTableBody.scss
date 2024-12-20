@@ -13,6 +13,11 @@
         }
       }
     }
+    tr:last-child {
+      td {
+        padding-bottom: 0;
+      }
+    }
     td.response-col_status, td.response-col_description {
       padding-top: 0;
       padding-bottom: 1rem;

@@ -13,8 +13,8 @@
         margin-top: 0;
         margin-bottom: 0.75rem;
         @include medium15($grey200);
-        @include for-small-screens {
-          @include medium12($grey200);
+        @include for-large-screens {
+          @include demi18($grey200);
         }
       }
     }
@@ -32,9 +32,6 @@
           @include medium15($grey200);
           @include for-large-screens {
             @include demi18($grey200);
-          }
-          @include for-small-screens {
-            @include medium12($grey200);
           }
         }
       }

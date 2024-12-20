@@ -1,27 +1,40 @@
 @use "@swagger/global" as *;
 
+@mixin btn-group($variant, $text-color) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-height: 2.625rem;
+  flex: 0;
+  @include uiButton($variant, 0.75rem 1.5rem) {
+    @include medium15($text-color);
+    @include from-small-to-large-screens {
+      @include buttonText($text-color);
+    }
+    @include for-small-screens {
+      max-height: 2.25rem;
+    }
+  }
+}
+
 %executeButtons {
   .execute-wrapper {
     padding: 0;
     text-align: left;
     @include for-small-screens {
+      display: flex;
+      justify-content: center;
       text-align: center;
     }
     button {
       width: auto;
       margin: 0.438rem 1.563rem 1.188rem;
-      @include uiButton('primary', 1rem 3.5rem) {
-        @include medium15($white);
-      }
+      @include btn-group('primary', $white);
       @include for-large-screens {
         margin: 0.25rem 1.5rem 1rem;
       }
-      @include from-small-to-large-screens {
-        padding: 1rem 3.5rem;
-        @include buttonText($white);
-      }
       @include for-small-screens {
-        width: 93.5%;
+        flex-basis: 96%;
         margin: 0 0 0.75rem;
       }
     }
@@ -42,25 +55,10 @@
       }
     }
     .execute {
-      flex: 0;
-      @include uiButton('primary', 1rem 3.5rem) {
-        @include medium15($white);
-        @include from-small-to-large-screens {
-          @include buttonText($white);
-        }
-      }
+      @include btn-group('primary', $white);
     }
     .btn-clear {
-      flex: 0;
-      @include uiButton('secondary', 1rem 3.5rem) {
-        @include medium15($darkPrimary);
-        @include from-small-to-large-screens {
-          @include buttonText($darkPrimary);
-        }
-        @include for-small-screens {
-          padding: 0.938rem 3.5rem;
-        }
-      }
+      @include btn-group('secondary', $darkSecondary);
     }
   }
 }

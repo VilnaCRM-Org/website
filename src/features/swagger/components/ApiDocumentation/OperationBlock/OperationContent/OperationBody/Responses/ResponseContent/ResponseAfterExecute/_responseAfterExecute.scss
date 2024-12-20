@@ -11,18 +11,6 @@
     @include for-small-screens {
       margin-bottom: 0.75rem;
     }
-    & > h4, div .curl-command, div .request-url, div h4 {
-      max-width: 59.25rem;
-      margin-left: 1rem;
-      @include for-large-screens {
-        max-width: none;
-        margin-right: 1rem;
-      }
-      @include for-small-screens {
-        margin-left: 0.625rem;
-        margin-right: 0.625rem;
-      }
-    }
     @extend %innerContent;
     & > h4 {
       margin-top: 0.75rem;

@@ -5,12 +5,12 @@
 
 %responseContent {
   .responses-inner {
-    padding: 0.75rem 0.5rem 0.5rem;
+    padding: 0.75rem 1.563rem 0.5rem;
     @include for-large-screens {
-      padding-top: 1rem;
+      padding: 1rem 1.5rem 0.5rem;
     }
     @include for-small-screens {
-      padding: 0 0.375rem 0.375rem;
+      padding: 0 1rem 0.375rem;
     }
     @extend %responseTable;
     @extend %responseAfterExecute;

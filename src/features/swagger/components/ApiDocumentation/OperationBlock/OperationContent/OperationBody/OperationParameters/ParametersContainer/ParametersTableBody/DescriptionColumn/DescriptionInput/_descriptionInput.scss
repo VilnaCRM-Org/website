@@ -9,12 +9,14 @@
       @include for-large-screens {
         @include medium16($darkPrimary);
       }
-      @include for-small-screens {
+      @include for-medium-screens{
         min-width: auto;
+        max-width: none;
         width: 100%;
+      }
+      @include for-small-screens {
         padding-left: 1rem;
         height: 2.5rem;
-        max-width: 14rem;
         @include medium14($darkPrimary);
       }
       &::placeholder {
