@@ -1,0 +1,17 @@
+@use "@swagger/global" as *;
+
+%error {
+  .validation-errors {
+    border-radius: 0.5rem;
+    border: 1px solid $errorBorder;
+    background: $errorBackground;
+    @include medium15($error);
+    ul {
+      margin-top: 0.75rem;
+      list-style: none;
+      li:not(:last-child) {
+        margin-bottom: 0.375rem;
+      }
+    }
+  }
+}

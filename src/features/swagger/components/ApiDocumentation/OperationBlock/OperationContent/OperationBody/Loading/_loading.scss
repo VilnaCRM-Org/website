@@ -1,0 +1,21 @@
+@use "@swagger/global" as *;
+
+%loading {
+  .loading-container {
+    margin: 0;
+    padding: 2rem;
+    .loading {
+      &::before {
+        position: static;
+        margin: 0;
+        border-width: 3px;
+        border-top-color: $darkPrimary;
+        height: 1.625rem;
+        width: 1.625rem;
+      }
+      &::after {
+        display: none;
+      }
+    }
+  }
+}
