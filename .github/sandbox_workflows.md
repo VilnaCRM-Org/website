@@ -62,7 +62,6 @@ Key Points:
   AWS_SANDBOX_CODEPIPELINE_NAME: The name of the AWS CodePipeline that manages sandbox creation and updates.
   GITHUB_TOKEN_ROTATION_ROLE_TO_ASSUME_TEST: The IAM role ARN used for checking and rotating test secrets.
   GITHUB_TOKEN_ROTATION_ROLE_TO_ASSUME_PROD: The IAM role ARN used for checking and rotating production secrets.
-  GITHUB_TOKEN_SECRET_NAME: The name of the secret in AWS Secrets Manager that holds the timestamp (and possibly other details) of the last rotation.
   PAT_WITH_REPO_PERMISSIONS: A Personal Access Token with repo permissions, used to dispatch custom GitHub events to initiate secret rotation workflows.
 
 Additionally, you need to ensure that an AWS_REGION variable is set either at the repository or organization level.
@@ -92,15 +91,7 @@ IAM role ARN for production secret verification and rotation.
   Name: GITHUB_TOKEN_ROTATION_ROLE_TO_ASSUME_PROD
   Value: arn:aws:iam::123456789012:role/ProdSecretRotationRole
 
-5. GITHUB_TOKEN_SECRET_NAME
-The name of the secret in AWS Secrets Manager storing rotation info.
-
-  Name: GITHUB_TOKEN_SECRET_NAME
-  Value: my-github-token-secret
-
-  Note: The github-token value is an example. Replace it with the actual name of the secret as configured in your AWS Secrets Manager or environment.
-
-6. PAT_WITH_REPO_PERMISSIONS
+5. PAT_WITH_REPO_PERMISSIONS
 A PAT with repo level permissions for dispatching repository events.
 
   Name: PAT_WITH_REPO_PERMISSIONS
