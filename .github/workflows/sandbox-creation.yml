@@ -27,52 +27,39 @@ jobs:
           role-to-assume: ${{ secrets.GITHUB_TOKEN_ROTATION_ROLE_TO_ASSUME_TEST }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Setup Token Rotation Check Function
-        id: setup_rotation_check
-        run: |
-          check_token_rotation() {
-            local env_name="$1"
-            local secret_name="$2"
-            local output_var="$3"
-
-            if [ -z "$secret_name" ]; then
-              echo "${output_var}=true" >> $GITHUB_OUTPUT
-              return 0
-            fi
-
-            if ! secret_value=$(aws secretsmanager get-secret-value --secret-id "${secret_name}" --region "${AWS_REGION}" --query SecretString --output text 2>&1); then
-              echo "Failed to retrieve ${env_name} secret: ${secret_value}"
-              echo "${output_var}=true" >> $GITHUB_OUTPUT
-              return 0
-            fi
-
-            timestamp=$(echo "$secret_value" | jq -r '.timestamp // empty')
-            if [ -z "$timestamp" ]; then
-              echo "${output_var}=true" >> $GITHUB_OUTPUT
-              return 0
-            fi
-
-            now=$(date +%s)
-            last_rotated_unix=$(date -d "$timestamp" +%s 2>/dev/null)
-            if [ -z "$last_rotated_unix" ]; then
-              echo "${output_var}=true" >> $GITHUB_OUTPUT
-              return 0
-            fi
-
-            max_age="${{ vars.TOKEN_MAX_AGE_SECONDS }}"
-            [ -z "$max_age" ] && max_age=601200
-            age=$((now - last_rotated_unix))
-            if [ "${age}" -ge "${max_age}" ]; then
-              echo "${output_var}=true" >> $GITHUB_OUTPUT
-            else
-              echo "${output_var}=false" >> $GITHUB_OUTPUT
-            fi
-          }
-
       - name: Determine Test Rotation
         id: determine_test_rotation
         run: |
-          check_token_rotation "test" "${{ secrets.GITHUB_TOKEN_SECRET_NAME }}" "rotate_test_needed"
+          SECRET_ID=$(aws secretsmanager list-secrets \
+            --region "${AWS_REGION}" \
+            --query "SecretList[?starts_with(Name, 'github-token-') && DeletionDate==null].Name | [0]" \
+            --output text)
+
+          if [ -z "$SECRET_ID" ] || [ "$SECRET_ID" = "None" ]; then
+            echo "rotate_test_needed=true" >> $GITHUB_OUTPUT
+          else
+            SECRET_VALUE=$(aws secretsmanager get-secret-value \
+              --secret-id "${SECRET_ID}" \
+              --region "${AWS_REGION}" \
+              --query SecretString \
+              --output text)
+
+            TIMESTAMP=$(echo "$SECRET_VALUE" | jq -r '.timestamp // empty')
+            if [ -z "$TIMESTAMP" ]; then
+              echo "rotate_test_needed=true" >> $GITHUB_OUTPUT
+            else
+              NOW=$(date +%s)
+              LAST_ROTATED=$(date -d "$TIMESTAMP" +%s 2>/dev/null)
+              MAX_AGE="${{ vars.TOKEN_MAX_AGE_SECONDS }}"
+              [ -z "$MAX_AGE" ] && MAX_AGE=601200
+              AGE=$((NOW - LAST_ROTATED))
+              if [ "$AGE" -ge "$MAX_AGE" ]; then
+                echo "rotate_test_needed=true" >> $GITHUB_OUTPUT
+              else
+                echo "rotate_test_needed=false" >> $GITHUB_OUTPUT
+              fi
+            fi
+          fi
 
       - name: Configure AWS Credentials (Prod)
         uses: aws-actions/configure-aws-credentials@v4
@@ -83,7 +70,36 @@ jobs:
       - name: Determine Prod Rotation
         id: determine_prod_rotation
         run: |
-          check_token_rotation "prod" "${{ secrets.GITHUB_TOKEN_SECRET_NAME }}" "rotate_prod_needed"
+          SECRET_ID=$(aws secretsmanager list-secrets \
+            --region "${AWS_REGION}" \
+            --query "SecretList[?starts_with(Name, 'github-token-') && DeletionDate==null].Name | [0]" \
+            --output text)
+
+          if [ -z "$SECRET_ID" ] || [ "$SECRET_ID" = "None" ]; then
+            echo "rotate_prod_needed=true" >> $GITHUB_OUTPUT
+          else
+            SECRET_VALUE=$(aws secretsmanager get-secret-value \
+              --secret-id "${SECRET_ID}" \
+              --region "${AWS_REGION}" \
+              --query SecretString \
+              --output text)
+
+            TIMESTAMP=$(echo "$SECRET_VALUE" | jq -r '.timestamp // empty')
+            if [ -z "$TIMESTAMP" ]; then
+              echo "rotate_prod_needed=true" >> $GITHUB_OUTPUT
+            else
+              NOW=$(date +%s)
+              LAST_ROTATED=$(date -d "$TIMESTAMP" +%s 2>/dev/null)
+              MAX_AGE="${{ vars.TOKEN_MAX_AGE_SECONDS }}"
+              [ -z "$MAX_AGE" ] && MAX_AGE=601200
+              AGE=$((NOW - LAST_ROTATED))
+              if [ "$AGE" -ge "$MAX_AGE" ]; then
+                echo "rotate_prod_needed=true" >> $GITHUB_OUTPUT
+              else
+                echo "rotate_prod_needed=false" >> $GITHUB_OUTPUT
+              fi
+            fi
+          fi
 
   TriggerRotation:
     runs-on: ubuntu-latest
@@ -155,7 +171,7 @@ jobs:
               --variables \
                 "name=BRANCH_NAME,value=${BRANCH_NAME}" \
                 "name=PR_NUMBER,value=${PR_NUMBER}" \
-                "name=IS_PULL_REQUEST,value=0"; then
+                "name=IS_PULL_REQUEST,value=1"; then
               echo "::error::Failed to start pipeline execution for push"
               exit 1
             fi
