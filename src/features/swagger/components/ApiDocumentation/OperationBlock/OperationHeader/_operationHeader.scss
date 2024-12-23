@@ -2,13 +2,13 @@
 
 %operationHeader {
   .opblock-tag {
-    margin-bottom: 0.438rem;
+    margin-bottom: 0.5rem;
     border-bottom: none;
     border-radius: 0.5rem;
     background-color: $backgroundGrey200;
     padding: 0.75rem 1rem 0.75rem 1.5rem;
     @include for-large-screens {
-      margin-bottom: 0.75rem;
+      margin-bottom: 1rem;
     }
     @include for-small-screens {
       display: grid;
@@ -17,7 +17,7 @@
       row-gap: 0.25rem;
       border: 1px solid $brandGrey;
       padding: 0.688rem 1rem;
-      margin-bottom: 0.25rem;
+      margin-bottom: 0.5rem;
     }
     a:first-child {
       @include h5Text;

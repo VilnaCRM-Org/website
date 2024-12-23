@@ -1,0 +1,190 @@
+@use "@swagger/global" as *;
+
+@mixin modal-h4() {
+  margin-top: 0 !important;
+  margin-bottom: 0.75rem !important;
+  @include demi18($darkPrimary);
+}
+
+%authInfo {
+  div {
+    .scope-def {
+      padding-bottom: 1rem;
+      p {
+        margin: 0;
+        @include medium12($darkPrimary);
+      }
+    }
+    & > div {
+      & > div {
+        h4 {
+          @include modal-h4;
+        }
+        p {
+          display: flex;
+          gap: 0.5rem;
+          margin-bottom: 0.5rem;
+          @include medium12($darkPrimary);
+          @include for-small-screens {
+            gap: 0.2rem;
+            flex-direction: column;
+            white-space: nowrap;
+          }
+          code {
+            display: inline-block;
+            @include medium12($darkPrimary);
+            @include for-small-screens {
+              white-space: normal;
+              word-break: break-all;
+              word-wrap: break-word;
+            }
+          }
+        }
+        .flow {
+          margin-bottom: 1rem;
+          @include for-large-screens {
+            margin-bottom: 0.75rem;
+          }
+        }
+        & > .wrapper {
+          margin-bottom: 1rem;
+          label {
+            display: inline-block;
+            margin-bottom: 0.25rem;
+            @include medium14($grey200);
+            @include for-large-screens {
+              @include medium16($grey200);
+            }
+          }
+          section {
+            input {
+              width: 100%;
+            }
+          }
+        }
+        & > .scopes {
+          margin-bottom: 1.25rem;
+          h2 {
+            margin-bottom: 1.375rem;
+            @include medium14($grey200);
+            @include for-large-screens {
+              @include medium16($grey200);
+            }
+            a:first-child {
+              margin-left: 0.75rem;
+              @include for-large-screens {
+                margin-left: 0.875rem;
+              }
+            }
+            a:nth-child(2) {
+              margin-left: 0.5rem;
+              @include for-large-screens {
+                margin-left: 1.375rem;
+              }
+            }
+            a {
+              padding: 0;
+              text-decoration: underline;
+              @include link14;
+              @include for-large-screens {
+                @include link16;
+              }
+            }
+          }
+          & > .wrapper {
+            @include for-large-screens {
+              width: min-content;
+              display: inline-block;
+            }
+            @include for-small-screens {
+              width: auto;
+              display: block;
+            }
+            .checkbox {
+              padding: 0;
+              input {
+                appearance: none;
+              }
+              input[type="checkbox"]:checked + label > .item {
+                background-image: $checkIcon;
+                background-color: $primary;
+                background-repeat: no-repeat;
+                background-position: center;
+                border-color: $primary;
+              }
+              label {
+                display: flex;
+                gap: 0.75rem;
+                .item {
+                  all: unset;
+                  -webkit-tap-highlight-color: transparent;
+                  position: static;
+                  -webkit-appearance: none;
+                  appearance: none;
+                  width: 1.375rem;
+                  height: 1.375rem;
+                  margin: 0;
+                  background-color: transparent;
+                  border: 1px solid $grey400;
+                  box-shadow: none;
+                  border-radius: 0.5rem;
+                  cursor: pointer;
+                  &:active {
+                    transform: unset;
+                  }
+                }
+                .text {
+                  p {
+                    white-space: nowrap;
+                    font-style: normal;
+                    @include regular16($grey200);
+                  }
+                }
+              }
+            }
+          }
+          & > .wrapper:not(:last-child) {
+            margin-bottom: 0.75rem;
+            @include for-large-screens {
+              margin-bottom: 0;
+              margin-right: 4.25rem;
+            }
+            @include for-small-screens {
+              margin-bottom: 1rem;
+              margin-right: 0;
+            }
+          }
+          & > .wrapper:last-child {
+            margin-bottom: 0;
+          }
+        }
+        .auth-btn-wrapper {
+          justify-content: flex-start;
+          gap: 0.5rem;
+          @include for-large-screens {
+            justify-content: space-between;
+          }
+          @include for-small-screens {
+            gap: 0.25rem;
+          }
+          button.authorize {
+            @include for-large-screens {
+              width: 20.375rem;
+            }
+            @include for-small-screens {
+              width: 100%;
+            }
+          }
+          button.btn-done {
+            @include for-large-screens {
+              width: 15.625rem;
+            }
+            @include for-small-screens {
+              width: 100%;
+            }
+          }
+        }
+      }
+    }
+  }
+}

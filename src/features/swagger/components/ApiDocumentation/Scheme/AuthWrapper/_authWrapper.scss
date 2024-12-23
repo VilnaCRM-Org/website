@@ -11,6 +11,9 @@
     @include for-small-screens {
       flex-basis: 9.813rem;
     }
+    @media screen and (max-width: 374px) {
+      flex-basis: unset;
+    }
     @extend %modal;
     .authorize {
       @include uiButton('primary') {

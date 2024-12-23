@@ -16,6 +16,7 @@
 
 %serverContainer {
   .schemes-server-container {
+    display: block;
     flex-shrink: 0;
     @media screen and (max-width: 374px) {
       flex-shrink: 0.5;

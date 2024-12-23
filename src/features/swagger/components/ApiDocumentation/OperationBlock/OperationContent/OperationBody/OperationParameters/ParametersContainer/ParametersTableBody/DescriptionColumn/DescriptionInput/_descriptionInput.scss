@@ -7,6 +7,7 @@
       padding-right: 0.5rem;
       @include medium14($darkPrimary);
       @include for-large-screens {
+        max-width: 21.5rem;
         @include medium16($darkPrimary);
       }
       @include for-medium-screens{

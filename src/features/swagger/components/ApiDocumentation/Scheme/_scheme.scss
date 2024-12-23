@@ -28,6 +28,10 @@
         align-items: flex-end;
         gap: 0.4rem;
       }
+      @media screen and (max-width: 374px) {
+        flex-direction: column;
+        align-items: initial;
+      }
     }
   }
 }
