@@ -51,10 +51,7 @@
           label {
             display: inline-block;
             margin-bottom: 0.25rem;
-            @include medium14($grey200);
-            @include for-large-screens {
-              @include medium16($grey200);
-            }
+            @include medium12($grey200);
           }
           section {
             input {
@@ -67,9 +64,6 @@
           h2 {
             margin-bottom: 1.375rem;
             @include medium14($grey200);
-            @include for-large-screens {
-              @include medium16($grey200);
-            }
             a:first-child {
               margin-left: 0.75rem;
               @include for-large-screens {
@@ -86,9 +80,6 @@
               padding: 0;
               text-decoration: underline;
               @include link14;
-              @include for-large-screens {
-                @include link16;
-              }
             }
           }
           & > .wrapper {
@@ -137,7 +128,7 @@
                   p {
                     white-space: nowrap;
                     font-style: normal;
-                    @include regular16($grey200);
+                    @include medium12($grey200);
                   }
                 }
               }
@@ -160,29 +151,6 @@
         }
         .auth-btn-wrapper {
           justify-content: flex-start;
-          gap: 0.5rem;
-          @include for-large-screens {
-            justify-content: space-between;
-          }
-          @include for-small-screens {
-            gap: 0.25rem;
-          }
-          button.authorize {
-            @include for-large-screens {
-              width: 20.375rem;
-            }
-            @include for-small-screens {
-              width: 100%;
-            }
-          }
-          button.btn-done {
-            @include for-large-screens {
-              width: 15.625rem;
-            }
-            @include for-small-screens {
-              width: 100%;
-            }
-          }
         }
       }
     }

@@ -10,6 +10,7 @@
   form {
     display: flex;
     padding-bottom: 1.25rem;
+    justify-content: space-between;
     gap: 0.625rem;
     position: relative;
     @include for-small-screens {
@@ -35,23 +36,20 @@
     .wrapper {
       p {
         margin-bottom: 0.5rem;
-        @include regular16($grey200);
+        @include medium12($grey200);
         font-weight: 400;
         @include for-small-screens {
           word-break: break-all;
         }
         code {
-          @include medium16($darkPrimary);
+          @include medium12($darkPrimary);
         }
       }
       label {
         display: inline-block;
         margin-top: 0.5rem;
         margin-bottom: 0.25rem;
-        @include medium14($grey200);
-        @include for-large-screens {
-          @include medium16($grey200);
-        }
+        @include medium12($grey200);
       }
     }
   }

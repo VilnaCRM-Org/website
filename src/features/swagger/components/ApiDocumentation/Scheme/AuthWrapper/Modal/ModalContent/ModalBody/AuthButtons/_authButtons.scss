@@ -1,34 +1,30 @@
 @use "@swagger/global" as *;
 
 @mixin modal-button($variant, $text-color) {
-  @include uiButton($variant) {
+  @include uiButton($variant, 0 1.5rem) {
     display: flex;
     align-items: center;
     justify-content: center;
     margin: 0;
     height: auto;
     width: auto;
-    @include medium15($text-color);
+    @include medium14($text-color);
     @include for-large-screens {
-      padding: 1rem 1.4rem;
-      @include buttonText($text-color);
+      padding: 0 1.4rem;
     }
     @include for-small-screens {
       width: 100%;
-      height: auto;
-      padding: 0.938rem 0;
-      @include medium15($text-color);
+      height: 2.5rem;;
     }
   }
 }
 
 %authButtons {
   .auth-btn-wrapper {
-    flex: 1;
     padding: 0;
-    height: 3.5rem;
+    height: 2.5rem;
     align-self: flex-end;
-    justify-content: space-between;
+    gap: 0.5rem;
     @include for-small-screens {
       flex-direction: column;
       gap: 0.25rem;

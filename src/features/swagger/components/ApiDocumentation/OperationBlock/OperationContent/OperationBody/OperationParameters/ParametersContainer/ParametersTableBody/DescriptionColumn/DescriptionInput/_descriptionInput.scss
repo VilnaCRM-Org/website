@@ -16,7 +16,7 @@
         width: 100%;
       }
       @include for-small-screens {
-        padding-left: 1rem;
+        padding-left: 0.625rem;
         height: 2.5rem;
         @include medium14($darkPrimary);
       }

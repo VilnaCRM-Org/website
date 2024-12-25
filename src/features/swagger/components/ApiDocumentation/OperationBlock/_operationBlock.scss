@@ -19,4 +19,13 @@
       }
     }
   }
+  .opblock-tag-section:not(:last-child) {
+    margin-bottom: 0.5rem;
+    @include for-large-screens {
+      margin-bottom: 1rem;
+    }
+    @include for-small-screens {
+      margin-bottom: 0.5rem;
+    }
+  }
 }

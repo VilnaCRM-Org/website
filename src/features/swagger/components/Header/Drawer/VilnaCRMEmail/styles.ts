@@ -13,7 +13,6 @@ export default {
   at: {
     fontWeight: 600,
     fontSize: '1.375rem',
-    mb: '0.125rem',
   },
 
   emailText: {
