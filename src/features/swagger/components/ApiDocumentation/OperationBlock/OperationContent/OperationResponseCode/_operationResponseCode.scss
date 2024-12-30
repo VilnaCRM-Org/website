@@ -1,70 +1,13 @@
 @use "@swagger/global" as *;
 
+@use 'PreformattedText/preformattedText';
 @use 'CopyButton/copyButton';
+@use 'DownloadButton/downloadButton';
+@use 'Textarea/textarea';
 
 %operationResponseCode {
-  pre {
-    padding: 1rem 1rem!important;
-    background-color: $darkSecondary!important;
-    border-radius: 0.5rem;
-    max-height: none;
-    min-height: auto;
-    @include demiBold14($white);
-    @include for-large-screens {
-      padding: 1rem!important;
-      @include demi18($white);
-      line-height: 1.32rem;
-    }
-    @include for-small-screens {
-      padding: 0.75rem!important;
-      @include medium15($white);
-      line-height: 1.125rem;
-    }
-    code {
-      @include demiBold14($white);
-      @include for-large-screens {
-        @include demi18($white);
-        line-height: 1.32rem;
-      }
-      @include for-small-screens {
-        @include medium15($white);
-        line-height: 1.125rem;
-      }
-    }
-  }
-  textarea.body-param__text {
-    padding: 1rem;
-    margin: 0;
-    border-radius: 0.5rem;
-    min-height: 16.875rem;
-    background-color: $white;
-    border: 1px solid $brandGrey;
-    outline: none;
-    resize: vertical;
-    @include medium14();
-    @include for-large-screens {
-      @include regular16($darkPrimary);
-    }
-    &.invalid {
-      border-color: $errorBorder;
-    }
-  }
+  @extend %preformattedText;
+  @extend %textarea;
   @extend %copyButton;
-  .download-contents {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    bottom: 0.75rem;
-    right: 6.563rem;
-    @include uiButton('primary') {
-      height: 3.125rem;
-      @include medium15($white);
-    }
-    @include for-small-screens {
-      right: 0.75rem;
-      left: 0.75rem;
-      bottom: 3.125rem;
-      height: 2.125rem;
-    }
-  }
+  @extend %downloadButton;
 }
