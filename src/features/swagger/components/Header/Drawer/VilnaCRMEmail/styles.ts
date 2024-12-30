@@ -1,5 +1,4 @@
 import colorTheme from '@/components/UiColorTheme';
-import { inter } from '@/config/Fonts/inter';
 
 export default {
   emailWrapper: {
@@ -9,11 +8,6 @@ export default {
     mt: '0.375rem',
     maxHeight: '4rem',
     mb: '1rem',
-  },
-
-  at: {
-    fontSize: '1.375rem',
-    fontFamily: inter.style.fontFamily,
   },
 
   emailText: {

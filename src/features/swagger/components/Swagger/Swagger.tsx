@@ -3,9 +3,9 @@ import Head from 'next/head';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import touchIcon from '@/assets/img/touch.png';
 import UiFooter from '@/components/UiFooter';
 
+import touchIcon from '../../assets/img/about-vilna/touch.png';
 import ApiDocumentation from '../ApiDocumentation/ApiDocumentation';
 import Header from '../Header/Header';
 import Navigation from '../Navigation/Navigation';

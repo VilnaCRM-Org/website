@@ -45,9 +45,6 @@
     @include for-large-screens {
       @include regular16($darkPrimary);
     }
-    @include for-small-screens {
-      @include medium12($darkPrimary);
-    }
     &.invalid {
       border-color: $errorBorder;
     }
