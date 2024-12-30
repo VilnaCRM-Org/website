@@ -5,7 +5,6 @@ import { useTranslation } from 'react-i18next';
 
 import UiFooter from '@/components/UiFooter';
 
-import touchIcon from '../../assets/img/about-vilna/touch.png';
 import ApiDocumentation from '../ApiDocumentation/ApiDocumentation';
 import Header from '../Header/Header';
 import Navigation from '../Navigation/Navigation';
@@ -24,7 +23,7 @@ function Swagger(): React.ReactElement {
       <Head>
         <title>{t('VilnaCRM API')}</title>
         <meta name="description" content={t('The first Ukrainian open source CRM')} />
-        <link rel="apple-touch-icon" href={touchIcon.src} />
+        <link rel="apple-touch-icon" href="../../assets/img/about-vilna/touch.png" />
       </Head>
       <Header />
       <Box sx={styles.wrapper}>
