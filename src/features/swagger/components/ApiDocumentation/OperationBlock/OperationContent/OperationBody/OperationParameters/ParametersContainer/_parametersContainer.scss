@@ -1,23 +1,12 @@
 @use "@swagger/global" as *;
 
+@use "ParametersDescription/parametersDescription";
 @use "ParametersTableHead/parametersTableHead";
 @use "ParametersTableBody/parametersTableBody";
 
 %parametersContainer {
   .parameters-container {
-    .opblock-description-wrapper {
-      padding: 1.188rem 1.5rem;
-      margin-bottom: 0;
-      @include for-small-screens {
-        padding: 1.063rem 0.75rem;
-      }
-      p {
-        @include medium15($grey200);
-        @include from-small-to-large-screens {
-          @include demi18($grey200);
-        }
-      }
-    }
+    @extend %parametersDescription;
     .table-container {
       padding: 0.75rem 1.563rem;
       @include for-large-screens {
