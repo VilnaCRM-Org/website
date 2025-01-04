@@ -24,7 +24,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Cache CodeQL databases
-        uses: actions/cache@v3
+        uses: actions/cache@v3.4.0
         with:
           path: ${{ runner.workspace }}/codeql_databases
           key: ${{ runner.os }}-codeql-${{ hashFiles('**/pnpm-lock.yaml') }}

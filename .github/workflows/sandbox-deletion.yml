@@ -1,0 +1,47 @@
+name: Trigger Sandbox Deletion
+
+on:
+  pull_request:
+    types:
+      - closed
+    branches:
+      - main
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  trigger-pipeline:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate environment variables
+        run: |
+          if [ -z "${{ env.AWS_REGION }}" ]; then
+            echo "::error::AWS_REGION variable is not set"
+            exit 1
+          fi
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_CODEPIPELINE_ROLE_ARN }}
+          role-session-name: GitHub_to_AWS_via_FederatedOIDC
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Validate Required Secrets
+        run: |
+          if [ -z "${{ secrets.AWS_SANDBOX_DELETION_PIPELINE_NAME }}" ]; then
+            echo "::error::AWS_SANDBOX_DELETION_PIPELINE_NAME secret is not set"
+            exit 1
+          fi
+
+      - name: Trigger AWS CodePipeline
+        run: |
+          aws codepipeline start-pipeline-execution --name "${{ secrets.AWS_SANDBOX_DELETION_PIPELINE_NAME }}"
