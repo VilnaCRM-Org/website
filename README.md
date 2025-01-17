@@ -39,7 +39,7 @@ Use pnpm install for installing all dependencies and pnpm run dev for running ap
 
 ## Using
 
-The list of possibilities
+The list of possibilities if project installed locally
 
 ```bash
 pnpm run dev - starts application
