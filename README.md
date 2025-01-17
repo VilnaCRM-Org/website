@@ -39,10 +39,9 @@ Use pnpm install for installing all dependencies and pnpm run dev for running ap
 
 ## Usage
 
-
-We recommend to install 
-[docker](https://docs.docker.com/engine/install/) and 
-[docker compose](https://docs.docker.com/compose/install/) 
+We recommend to install
+[docker](https://docs.docker.com/engine/install/) and
+[docker compose](https://docs.docker.com/compose/install/)
 to have the same setup across dev, sandbox and production environments
 
 To see the list of possible commands throught the make command
