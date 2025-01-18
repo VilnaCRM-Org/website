@@ -34,7 +34,7 @@
     "@mui/material": "^6.1.7",
     "@mui/system": "^6.1.7",
     "@next/bundle-analyzer": "^15.0.2",
-    "@next/env": "^14.2.14",
+    "@next/env": "^15.1.5",
     "dotenv": "^16.4.5",
     "graphql": "^16.9.0",
     "i18next": "^23.16.4",
