@@ -112,7 +112,7 @@ jobs:
           curl -X POST \
             -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer $GITHUB_TOKEN" \
-            https://api.github.com/repos/<your_org>/website-infrastructure/dispatches \
+            https://api.github.com/repos/VilnaCRM-Org/website-infrastructure/dispatches \
             -d '{"event_type":"rotate_token_test"}'
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_WITH_REPO_PERMISSIONS }}
@@ -123,7 +123,7 @@ jobs:
           curl -X POST \
             -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer $GITHUB_TOKEN" \
-            https://api.github.com/repos/<your_org>/website-infrastructure/dispatches \
+            https://api.github.com/repos/VilnaCRM-Org/website-infrastructure/dispatches \
             -d '{"event_type":"rotate_token_prod"}'
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_WITH_REPO_PERMISSIONS }}
@@ -138,7 +138,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_CODEPIPELINE_ROLE_ARN }}
+          role-to-assume: ${{ secrets.AWS_SANDBOX_CODEPIPELINE_ROLE_ARN }}
           role-session-name: GitHub_to_AWS_via_FederatedOIDC
           aws-region: ${{ env.AWS_REGION }}
 
@@ -146,7 +146,7 @@ jobs:
         run: |
           missing_secrets=()
           [ -z "${{ secrets.AWS_SANDBOX_CODEPIPELINE_NAME }}" ] && missing_secrets+=("AWS_SANDBOX_CODEPIPELINE_NAME")
-          [ -z "${{ secrets.AWS_CODEPIPELINE_ROLE_ARN }}" ] && missing_secrets+=("AWS_CODEPIPELINE_ROLE_ARN")
+          [ -z "${{ secrets.AWS_SANDBOX_CODEPIPELINE_ROLE_ARN }}" ] && missing_secrets+=("AWS_SANDBOX_CODEPIPELINE_ROLE_ARN")
           if [ ${#missing_secrets[@]} -ne 0 ]; then
             echo "::error::Missing required secrets: ${missing_secrets[*]}"
             exit 1
