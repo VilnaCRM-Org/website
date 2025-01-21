@@ -1,6 +1,5 @@
 import { Box } from '@mui/material';
 import { ImageProps } from 'next/image';
-// @ts-expect-error no types
 import { getOptimizedImageProps } from 'next-export-optimize-images/image';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -18,12 +17,15 @@ function MainImage(): React.ReactElement {
 
   const mobileProps: ImageProps = getOptimizedImageProps({
     src: PhoneMainImage,
+    alt: 'mobile picture',
   }).props;
   const tabletProps: ImageProps = getOptimizedImageProps({
     src: TabletMainImage,
+    alt: 'tablet picture',
   }).props;
   const desktopProps: ImageProps = getOptimizedImageProps({
     src: MainImageSrc,
+    alt: 'desktop picture',
   }).props;
 
   return (

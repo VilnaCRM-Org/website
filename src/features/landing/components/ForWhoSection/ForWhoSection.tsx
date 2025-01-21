@@ -1,6 +1,5 @@
 import { Box, Container } from '@mui/material';
 import { ImageProps } from 'next/image';
-// @ts-expect-error no types
 import { getOptimizedImageProps } from 'next-export-optimize-images/image';
 import React from 'react';
 
@@ -14,9 +13,11 @@ import styles from './styles';
 function ForWhoSection(): React.ReactElement {
   const tabletProps: ImageProps = getOptimizedImageProps({
     src: TabletVectorIcon,
+    alt: 'tablet icon',
   }).props;
   const desktopProps: ImageProps = getOptimizedImageProps({
     src: DesktopVectorIcon,
+    alt: 'desktop icon',
   }).props;
 
   return (
