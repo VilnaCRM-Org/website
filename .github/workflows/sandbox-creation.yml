@@ -61,50 +61,10 @@ jobs:
             fi
           fi
 
-      - name: Configure AWS Credentials (Prod)
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_GITHUB_TOKEN_ROTATION_ROLE_TO_ASSUME_PROD }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Determine Prod Rotation
-        id: determine_prod_rotation
-        run: |
-          SECRET_ID=$(aws secretsmanager list-secrets \
-            --region "${AWS_REGION}" \
-            --query "SecretList[?starts_with(Name, 'github-token-') && DeletionDate==null].Name | [0]" \
-            --output text)
-
-          if [ -z "$SECRET_ID" ] || [ "$SECRET_ID" = "None" ]; then
-            echo "rotate_prod_needed=true" >> $GITHUB_OUTPUT
-          else
-            SECRET_VALUE=$(aws secretsmanager get-secret-value \
-              --secret-id "${SECRET_ID}" \
-              --region "${AWS_REGION}" \
-              --query SecretString \
-              --output text)
-
-            TIMESTAMP=$(echo "$SECRET_VALUE" | jq -r '.timestamp // empty')
-            if [ -z "$TIMESTAMP" ]; then
-              echo "rotate_prod_needed=true" >> $GITHUB_OUTPUT
-            else
-              NOW=$(date +%s)
-              LAST_ROTATED=$(date -d "$TIMESTAMP" +%s 2>/dev/null)
-              MAX_AGE="${{ vars.TOKEN_MAX_AGE_SECONDS }}"
-              [ -z "$MAX_AGE" ] && MAX_AGE=601200
-              AGE=$((NOW - LAST_ROTATED))
-              if [ "$AGE" -ge "$MAX_AGE" ]; then
-                echo "rotate_prod_needed=true" >> $GITHUB_OUTPUT
-              else
-                echo "rotate_prod_needed=false" >> $GITHUB_OUTPUT
-              fi
-            fi
-          fi
-
   TriggerRotation:
     runs-on: ubuntu-latest
     needs: [CheckTokenInSecretsManager]
-    if: needs.CheckTokenInSecretsManager.outputs.rotate_test_needed == 'true' || needs.CheckTokenInSecretsManager.outputs.rotate_prod_needed == 'true'
+    if: needs.CheckTokenInSecretsManager.outputs.rotate_test_needed == 'true'
     steps:
       - name: Trigger Test Rotation
         if: needs.CheckTokenInSecretsManager.outputs.rotate_test_needed == 'true'
@@ -114,17 +74,6 @@ jobs:
             -H "Authorization: Bearer $GITHUB_TOKEN" \
             https://api.github.com/repos/VilnaCRM-Org/website-infrastructure/dispatches \
             -d '{"event_type":"rotate_token_test"}'
-        env:
-          GITHUB_TOKEN: ${{ secrets.PAT_WITH_REPO_PERMISSIONS }}
-
-      - name: Trigger Prod Rotation
-        if: needs.CheckTokenInSecretsManager.outputs.rotate_prod_needed == 'true'
-        run: |
-          curl -X POST \
-            -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer $GITHUB_TOKEN" \
-            https://api.github.com/repos/VilnaCRM-Org/website-infrastructure/dispatches \
-            -d '{"event_type":"rotate_token_prod"}'
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_WITH_REPO_PERMISSIONS }}
 
