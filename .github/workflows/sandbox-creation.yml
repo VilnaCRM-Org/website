@@ -19,7 +19,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       rotate_test_needed: ${{ steps.determine_test_rotation.outputs.rotate_test_needed }}
-      rotate_prod_needed: ${{ steps.determine_prod_rotation.outputs.rotate_prod_needed }}
     steps:
       - name: Configure AWS Credentials (Test)
         uses: aws-actions/configure-aws-credentials@v4
