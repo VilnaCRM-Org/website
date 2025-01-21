@@ -15,7 +15,7 @@ import styles from './styles';
 function MainImage(): React.ReactElement {
   const { t } = useTranslation();
 
-  const imgAltText: string ='Main image';
+  const imgAltText: string = 'Main image';
 
   const mobileProps: ImageProps = getOptimizedImageProps({
     src: PhoneMainImage,
@@ -51,7 +51,6 @@ function MainImage(): React.ReactElement {
           height={desktopProps.height}
           alt={t(`${desktopProps.alt}`)}
         />
-
       </picture>
     </Box>
   );

@@ -13,7 +13,6 @@ describe('DeviceImage component', () => {
   it('renders MainImage component', () => {
     const { getByAltText } = render(<DeviceImage />);
     expect(getByAltText(mainImageAltText)).toBeInTheDocument();
-
   });
 
   it('renders Notch component', () => {

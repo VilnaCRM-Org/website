@@ -11,7 +11,7 @@ describe('ForWhoSection component', () => {
     const { getAllByLabelText } = render(<ForWhoSection />);
 
     expect(getAllByLabelText(forWhoLabel)[0]).toBeInTheDocument();
-   });
+  });
 
   it('should have a proper alt tag', () => {
     const { getAllByAltText } = render(<ForWhoSection />);

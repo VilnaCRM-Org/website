@@ -11,7 +11,7 @@ import MainTitle from './MainTitle/MainTitle';
 import styles from './styles';
 
 function ForWhoSection(): React.ReactElement {
-  const iconAltText:string= 'Vector';
+  const iconAltText: string = 'Vector';
 
   const tabletProps: ImageProps = getOptimizedImageProps({
     src: TabletVectorIcon,
