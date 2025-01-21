@@ -11,13 +11,15 @@ import MainTitle from './MainTitle/MainTitle';
 import styles from './styles';
 
 function ForWhoSection(): React.ReactElement {
+  const iconAltText:string= 'Vector';
+
   const tabletProps: ImageProps = getOptimizedImageProps({
     src: TabletVectorIcon,
-    alt: 'tablet icon',
+    alt: iconAltText,
   }).props;
   const desktopProps: ImageProps = getOptimizedImageProps({
     src: DesktopVectorIcon,
-    alt: 'desktop icon',
+    alt: iconAltText,
   }).props;
 
   return (
@@ -41,7 +43,7 @@ function ForWhoSection(): React.ReactElement {
                 src={desktopProps.src as string}
                 width={desktopProps.width}
                 height={desktopProps.height}
-                alt="vector"
+                alt={desktopProps.alt}
                 loading="lazy"
               />
             </picture>

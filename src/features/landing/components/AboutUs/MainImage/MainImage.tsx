@@ -15,17 +15,19 @@ import styles from './styles';
 function MainImage(): React.ReactElement {
   const { t } = useTranslation();
 
+  const imgAltText: string ='Main image';
+
   const mobileProps: ImageProps = getOptimizedImageProps({
     src: PhoneMainImage,
-    alt: 'mobile picture',
+    alt: imgAltText,
   }).props;
   const tabletProps: ImageProps = getOptimizedImageProps({
     src: TabletMainImage,
-    alt: 'tablet picture',
+    alt: imgAltText,
   }).props;
   const desktopProps: ImageProps = getOptimizedImageProps({
     src: MainImageSrc,
-    alt: 'desktop picture',
+    alt: imgAltText,
   }).props;
 
   return (
@@ -47,8 +49,9 @@ function MainImage(): React.ReactElement {
           src={desktopProps.src as string}
           width={desktopProps.width}
           height={desktopProps.height}
-          alt={t('Main image')}
+          alt={t(`${desktopProps.alt}`)}
         />
+
       </picture>
     </Box>
   );

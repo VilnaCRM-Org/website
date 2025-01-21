@@ -10,7 +10,7 @@ import styles from './styles';
 function BackgroundImages(): React.ReactElement {
   const imageOptimizedProps: ImageProps = getOptimizedImageProps({
     src: VectorIcon,
-    alt: 'background image',
+    alt: 'Wave',
   }).props;
 
   return (
