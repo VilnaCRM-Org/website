@@ -79,7 +79,7 @@ jobs:
 
   SandboxPipelineExecution:
     runs-on: ubuntu-latest
-    needs: [CheckTokenInSecretsManager, TriggerRotation]
+    needs: [CheckTokenInSecretsManager]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
