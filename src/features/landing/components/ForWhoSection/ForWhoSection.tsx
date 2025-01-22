@@ -1,6 +1,5 @@
 import { Box, Container } from '@mui/material';
 import { ImageProps } from 'next/image';
-// @ts-expect-error no types
 import { getOptimizedImageProps } from 'next-export-optimize-images/image';
 import React from 'react';
 
@@ -12,11 +11,15 @@ import MainTitle from './MainTitle/MainTitle';
 import styles from './styles';
 
 function ForWhoSection(): React.ReactElement {
+  const iconAltText: string = 'Vector';
+
   const tabletProps: ImageProps = getOptimizedImageProps({
     src: TabletVectorIcon,
+    alt: iconAltText,
   }).props;
   const desktopProps: ImageProps = getOptimizedImageProps({
     src: DesktopVectorIcon,
+    alt: iconAltText,
   }).props;
 
   return (
@@ -40,7 +43,7 @@ function ForWhoSection(): React.ReactElement {
                 src={desktopProps.src as string}
                 width={desktopProps.width}
                 height={desktopProps.height}
-                alt="vector"
+                alt={desktopProps.alt}
                 loading="lazy"
               />
             </picture>
