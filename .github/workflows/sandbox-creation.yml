@@ -60,7 +60,6 @@ jobs:
             fi
           fi
 
-
   TriggerRotation:
     runs-on: ubuntu-latest
     needs: [CheckTokenInSecretsManager]
@@ -91,15 +90,28 @@ jobs:
           role-session-name: GitHub_to_AWS_via_FederatedOIDC
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Get PR Number
+        id: get_pr_number
+        run: |
+          PR_NUMBER=$(gh pr list --head "${{ github.repository }}:${{ github.ref_name }}" --json number --jq '.[0].number')
+          echo "PR_NUMBER=$PR_NUMBER"
+          if [ -z "$PR_NUMBER" ]; then
+            echo "PR_NUMBER not found for branch ${BRANCH_NAME}"
+            exit 1
+          fi
+          echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_ENV
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_WITH_REPO_PERMISSIONS }}
+
       - name: Start Pipeline Execution
         run: |
-            PR_NUMBER="${{ github.event.number }}"
-            if ! aws codepipeline start-pipeline-execution \
-              --name "sandbox-creation" \
-              --variables \
-                "name=BRANCH_NAME,value=${BRANCH_NAME}" \
-                "name=PR_NUMBER,value=${PR_NUMBER}" \
-                "name=IS_PULL_REQUEST,value=1"; then
-              echo "::error::Failed to start pipeline execution"
-              exit 1
-            fi
+          PR_NUMBER="${{ env.PR_NUMBER }}"
+          if ! aws codepipeline start-pipeline-execution \
+            --name "sandbox-creation" \
+            --variables \
+              "name=BRANCH_NAME,value=${BRANCH_NAME}" \
+              "name=PR_NUMBER,value=${PR_NUMBER}" \
+              "name=IS_PULL_REQUEST,value=1"; then
+            echo "::error::Failed to start pipeline execution"
+            exit 1
+          fi
