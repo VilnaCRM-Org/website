@@ -12,12 +12,10 @@ This documentation provides an overview of three GitHub Actions workflows used f
   - [Creation Secrets Setup](#creation-secrets-setup)
 - [Workflow 2: Trigger Sandbox Deletion](#workflow-2-trigger-sandbox-deletion)
   - [Deletion Overview](#deletion-overview)
-  - [Deletion Required Secrets](#deletion-required-secrets)
-  - [Deletion Secrets Setup](#deletion-secrets-setup)
+  - [Deletion Required Variables](#deletion-required-variables)
 - [Workflow 3: Website Deploy](#workflow-3-deploy-website)
   - [Deploy Website Overview](#deploy-website-overview)
-  - [Deploy Website Required Secrets](#deploy-website-required-secrets)
-  - [Deploy Website Secrets Setup](#deploy-website-secrets-setup)
+  - [Deploy Website Required Variables](#deploy-website-required-variables)
 - [AWS IAM Role Configuration](#aws-iam-role-configuration)
 - [Additional Notes](#additional-notes)
 
@@ -58,8 +56,6 @@ Key Points:
 
 ### Creation Required Secrets
 
-  AWS_CODEPIPELINE_ROLE_ARN: The ARN of the AWS IAM role that GitHub Actions will assume to interact with AWS services.
-  AWS_SANDBOX_CODEPIPELINE_NAME: The name of the AWS CodePipeline that manages sandbox creation and updates.
   GITHUB_TOKEN_ROTATION_ROLE_TO_ASSUME_TEST: The IAM role ARN used for checking and rotating test secrets.
   GITHUB_TOKEN_ROTATION_ROLE_TO_ASSUME_PROD: The IAM role ARN used for checking and rotating production secrets.
   PAT_WITH_REPO_PERMISSIONS: A Personal Access Token with repo permissions, used to dispatch custom GitHub events to initiate secret rotation workflows.
@@ -67,35 +63,28 @@ Key Points:
 Additionally, you need to ensure that an AWS_REGION variable is set either at the repository or organization level.
 
 ### Creation Secrets Setup
-1. AWS_CODEPIPELINE_ROLE_ARN
-Stores the IAM Role ARN for assuming AWS credentials via OIDC for the sandbox pipeline execution.
 
-Name: AWS_CODEPIPELINE_ROLE_ARN
-Value: arn:aws:iam::123456789012:role/GitHubActionsRole
-
-2. AWS_SANDBOX_CODEPIPELINE_NAME
-The CodePipeline name for sandbox creation and updates.
-
-  Name: AWS_SANDBOX_CODEPIPELINE_NAME
-  Value: sandbox-creation
-
-3. GITHUB_TOKEN_ROTATION_ROLE_TO_ASSUME_TEST
+1. GITHUB_TOKEN_ROTATION_ROLE_TO_ASSUME_TEST
 IAM role ARN for test secret verification and rotation.
 
   Name: GITHUB_TOKEN_ROTATION_ROLE_TO_ASSUME_TEST
   Value: arn:aws:iam::123456789012:role/TestSecretRotationRole
 
-4. GITHUB_TOKEN_ROTATION_ROLE_TO_ASSUME_PROD
+2. GITHUB_TOKEN_ROTATION_ROLE_TO_ASSUME_PROD
 IAM role ARN for production secret verification and rotation.
 
   Name: GITHUB_TOKEN_ROTATION_ROLE_TO_ASSUME_PROD
   Value: arn:aws:iam::123456789012:role/ProdSecretRotationRole
 
-5. PAT_WITH_REPO_PERMISSIONS
+3. PAT_WITH_REPO_PERMISSIONS
 A PAT with repo level permissions for dispatching repository events.
 
   Name: PAT_WITH_REPO_PERMISSIONS
   Value: Your Personal Access Token string
+
+**Required Scopes for the Token**:
+- **`repo`**: Full access to the repository, including reading and writing to all aspects of the repository.
+- **`workflow`**: Permission to trigger workflows in another repository.
 
 Note: All these secrets should be added under: Settings > Secrets and variables > Actions > New repository secret.
 
@@ -127,25 +116,12 @@ Key Features:
    Utilizes OIDC for secure authentication with AWS.
    Validates the presence of required secrets and environment variables.
 
-### Deletion Required Secrets
+### Deletion Required Variables
 
-   AWS_CODEPIPELINE_ROLE_ARN: The ARN of the AWS IAM role that GitHub Actions will assume.
+   TEST_AWS_ACCOUNT_ID: ID of test the account.
 
-   AWS_SANDBOX_DELETION_PIPELINE_NAME: The name of the AWS CodePipeline that handles sandbox deletion.
+   PROD_AWS_ACCOUNT_ID: ID of the prod account.
 
-### Deletion Secrets Setup
-1. Ensure AWS_CODEPIPELINE_ROLE_ARN is Set
-
-    Note: If you have already set this secret for the Sandbox Creation workflow, you do not need to add it again.
-
-2. Add AWS_SANDBOX_DELETION_PIPELINE_NAME
-
-    Description: This secret holds the name of the CodePipeline used for sandbox deletion.
-    Steps:
-        In your repository's Secrets section, click New repository secret.
-        Set the Name to AWS_SANDBOX_DELETION_PIPELINE_NAME.
-        Set the Value to the name of your deletion pipeline (e.g., sandbox-deletion).
-        Click Add secret.
 
 ## Workflow 3: Deploy Website
 ### Deploy Website Overview
@@ -160,36 +136,12 @@ Key Features:
   Uses OIDC for secure authentication with AWS.
   Validates required secrets and environment variables before execution.
 
-### Deploy Website Required Secrets
+### Deploy Website Required Variables
 
-  AWS_WEBSITE_ROLE_ARN
-  Description: The Amazon Resource Name (ARN) of the AWS IAM role that GitHub Actions will assume to interact with AWS services.
+   TEST_AWS_ACCOUNT_ID: ID of test the account.
 
-  AWS_WEBSITE_CODEPIPELINE_NAME
-  Description: The name of the AWS CodePipeline used for deploying the website.
+   PROD_AWS_ACCOUNT_ID: ID of the prod account.
 
-### Deploy Website Secrets Setup
-
-  1. Add AWS_WEBSITE_ROLE_ARN
-    Description:
-    This secret stores the ARN of the IAM role that GitHub Actions will assume via OIDC.
-
-  Steps:
-      Navigate to your GitHub repository: Settings > Secrets and variables > Actions > Secrets.
-      Click New repository secret.
-      Set the Name to AWS_WEBSITE_ROLE_ARN.
-      Set the Value to the ARN of your IAM role (e.g., arn:aws:iam::123456789012:role/WebsiteDeployRole).
-      Click Add secret.
-
-  2. Add AWS_WEBSITE_CODEPIPELINE_NAME
-    Description:
-    This secret stores the name of the AWS CodePipeline used for deploying the production website.
-
-  Steps:
-      In the same Secrets section, click New repository secret.
-      Set the Name to AWS_WEBSITE_CODEPIPELINE_NAME.
-      Set the Value to the name of your CodePipeline (e.g., ci-cd-website-prod-pipeline).
-      Click Add secret.
 
 ## AWS IAM Role Configuration
 
