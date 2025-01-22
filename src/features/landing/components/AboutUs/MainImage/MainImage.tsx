@@ -1,6 +1,5 @@
 import { Box } from '@mui/material';
 import { ImageProps } from 'next/image';
-// @ts-expect-error no types
 import { getOptimizedImageProps } from 'next-export-optimize-images/image';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -16,14 +15,19 @@ import styles from './styles';
 function MainImage(): React.ReactElement {
   const { t } = useTranslation();
 
+  const imgAltText: string = 'Main image';
+
   const mobileProps: ImageProps = getOptimizedImageProps({
     src: PhoneMainImage,
+    alt: imgAltText,
   }).props;
   const tabletProps: ImageProps = getOptimizedImageProps({
     src: TabletMainImage,
+    alt: imgAltText,
   }).props;
   const desktopProps: ImageProps = getOptimizedImageProps({
     src: MainImageSrc,
+    alt: imgAltText,
   }).props;
 
   return (
@@ -45,7 +49,7 @@ function MainImage(): React.ReactElement {
           src={desktopProps.src as string}
           width={desktopProps.width}
           height={desktopProps.height}
-          alt={t('Main image')}
+          alt={t(`${desktopProps.alt}`)}
         />
       </picture>
     </Box>
