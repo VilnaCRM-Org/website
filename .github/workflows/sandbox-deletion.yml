@@ -1,9 +1,6 @@
 name: Trigger Sandbox Deletion
 
 on:
-  push:
-    branches:
-      - 82-implement-sandbox-workflows
   pull_request:
     types:
       - closed
@@ -48,7 +45,7 @@ jobs:
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/pulls?head=${GITHUB_REPOSITORY_OWNER}:${GITHUB_REF_NAME}" | jq -r '.[0].number')
           echo "PR_NUMBER=$PR_NUMBER"
           if [ -z "$PR_NUMBER" ]; then
-            echo "PR_NUMBER no found for branch ${BRANCH_NAME}"
+            echo "PR_NUMBER not found for branch ${BRANCH_NAME}"
             exit 1
           fi
           echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_ENV
