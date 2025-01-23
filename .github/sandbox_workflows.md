@@ -85,6 +85,8 @@ A PAT with repo level permissions for dispatching repository events.
 **Required Scopes for the Token**:
 - **`repo`**: Full access to the repository, including reading and writing to all aspects of the repository.
 - **`workflow`**: Permission to trigger workflows in another repository.
+- **`contents: read`**: Grants read-only access to the repository's content.
+- **`pull-requests: read`**: Grants read-only access to pull requests.
 
 Note: All these secrets should be added under: Settings > Secrets and variables > Actions > New repository secret.
 
