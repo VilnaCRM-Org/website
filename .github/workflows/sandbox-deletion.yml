@@ -1,6 +1,9 @@
 name: Trigger Sandbox Deletion
 
 on:
+  push:
+    branches:
+      - 82-implement-sandbox-workflows
   pull_request:
     types:
       - closed
@@ -9,6 +12,7 @@ on:
 
 env:
   AWS_REGION: ${{ vars.AWS_REGION }}
+  BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
 
 permissions:
   id-token: write
@@ -31,17 +35,10 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_SANDBOX_DELETION_CODEPIPELINE_ROLE_ARN }}
+          role-to-assume: arn:aws:iam::${{vars.TEST_AWS_ACCOUNT_ID}}:role/sandbox-deletion-trigger-role
           role-session-name: GitHub_to_AWS_via_FederatedOIDC
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Validate Required Secrets
-        run: |
-          if [ -z "${{ secrets.AWS_SANDBOX_DELETION_PIPELINE_NAME }}" ]; then
-            echo "::error::AWS_SANDBOX_DELETION_PIPELINE_NAME secret is not set"
-            exit 1
-          fi
-
       - name: Trigger AWS CodePipeline
         run: |
-          aws codepipeline start-pipeline-execution --name "${{ secrets.AWS_SANDBOX_DELETION_PIPELINE_NAME }}"
+          aws codepipeline start-pipeline-execution --name "sandbox-deletion" --variables '{"name": "BRANCH_NAME", "value": "${BRANCH_NAME}"}'
