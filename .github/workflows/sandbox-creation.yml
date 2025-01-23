@@ -81,8 +81,7 @@ jobs:
             SECRET_VALUE=$(aws secretsmanager get-secret-value \
               --secret-id "${SECRET_ID}" \
               --region "${AWS_REGION}" \
-              --query SecretString \
-              --output text)
+              --output text | jq -r '.SecretString')
 
             TIMESTAMP=$(echo "$SECRET_VALUE" | jq -r '.timestamp // empty')
             if [ -z "$TIMESTAMP" ]; then
