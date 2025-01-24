@@ -25,7 +25,24 @@ jobs:
         run: make install
 
       - name: Start application
-        run: make start
+        run: |
+          make start & 
+          sleep 10
+
+      - name: Wait for server to be ready
+        run: |
+          echo "Waiting for the server to be available..."
+          n=0
+          until nc -z localhost 3000; do
+            if [ $n -ge 10 ]; then
+              echo "Server did not start in time"
+              exit 1
+            fi
+            n=$((n+1))
+            sleep 5
+          done
+          echo "Server is ready on port 3000"
+        
 
       - name: Run visual tests
         run: make test-visual
