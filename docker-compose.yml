@@ -6,6 +6,8 @@ services:
       - .:/app
     ports:
       - '3000:3000'
+    networks:
+      - app-network
 
   playwright:
     build:
@@ -16,3 +18,11 @@ services:
       - .:/app
     ports:
       - '9323:9323'
+    networks:
+      - app-network # Shared network between services
+    depends_on:
+      - nodejs
+
+networks:
+  app-network:
+    driver: bridge

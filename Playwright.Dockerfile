@@ -10,4 +10,4 @@ COPY . .
 
 RUN make install
 
-CMD ["pnpm", "run", "dev"]
+CMD ["pnpm", "run", "start"]

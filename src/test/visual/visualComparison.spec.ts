@@ -26,7 +26,6 @@ test.describe('Visual Tests', () => {
 
       await expect(page).toHaveScreenshot(`${currentLanguage}_${screen.name}.png`, {
         fullPage: true,
-        maxDiffPixelRatio: 0.01,
       });
     });
   }
