@@ -4,8 +4,6 @@ on:
   pull_request:
     types:
       - closed
-    branches:
-      - main
 
 env:
   AWS_REGION: ${{ vars.AWS_REGION }}
@@ -17,7 +15,7 @@ permissions:
   pull-requests: read
 
 jobs:
-  trigger-pipeline:
+  trigger-sandbox-deletion-pipeline:
     runs-on: ubuntu-latest
     steps:
       - name: Validate environment variables
@@ -52,7 +50,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_WITH_REPO_PERMISSIONS }}
 
-      - name: Trigger AWS CodePipeline
+      - name: trigger sandbox deletion pipeline
         run: |
           PR_NUMBER="${{ env.PR_NUMBER }}"
           if ! aws codepipeline start-pipeline-execution \
