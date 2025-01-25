@@ -13,6 +13,7 @@ This documentation provides an overview of three GitHub Actions workflows used f
 - [Workflow 2: Trigger Sandbox Deletion](#workflow-2-trigger-sandbox-deletion)
   - [Deletion Overview](#deletion-overview)
   - [Deletion Required Variables](#deletion-required-variables)
+  - [Deletion Required Secrets](#deletion-required-secrets)
 - [Workflow 3: Website Deploy](#workflow-3-deploy-website)
   - [Deploy Website Overview](#deploy-website-overview)
   - [Deploy Website Required Variables](#deploy-website-required-variables)
@@ -85,8 +86,6 @@ A PAT with repo level permissions for dispatching repository events.
 **Required Scopes for the Token**:
 - **`repo`**: Full access to the repository, including reading and writing to all aspects of the repository.
 - **`workflow`**: Permission to trigger workflows in another repository.
-- **`contents: read`**: Grants read-only access to the repository's content.
-- **`pull-requests: read`**: Grants read-only access to pull requests.
 
 Note: All these secrets should be added under: Settings > Secrets and variables > Actions > New repository secret.
 
@@ -96,8 +95,7 @@ This should be set as a variable (not a secret) under Settings > Secrets and var
   Name: AWS_REGION
   Value: us-east-1 (or your preferred AWS region)
 
-TOKEN_MAX_AGE_SECONDS:
-This should be set as a variable (not a secret) under Settings > Secrets and variables > Actions > Variables.
+MAX_AGE:
   The variable specifies the maximum allowed age of a token in seconds, after which the token is considered expired and requires rotation.
   Optional:
     If not provided, the default value of 601200 seconds (approximately 7 days) will be used.
@@ -124,6 +122,13 @@ Key Features:
 
    PROD_AWS_ACCOUNT_ID: ID of the prod account.
 
+### Deletion Required Secrets
+
+PAT_WITH_REPO_PERMISSIONS
+A PAT with repo level permissions for dispatching repository events.
+
+  Name: PAT_WITH_REPO_PERMISSIONS
+  Value: Your Personal Access Token string
 
 ## Workflow 3: Deploy Website
 ### Deploy Website Overview
@@ -232,6 +237,7 @@ For the updated workflow, ensure that the roles for test and production secret c
   OIDC Authentication:
     By using OIDC, you enhance security by avoiding long-lived AWS credentials.
     Ensure that the IAM role's trust policy is correctly configured to allow GitHub Actions to assume the role.
+    Subject claim conditions (token.actions.githubusercontent.com:sub) should be as specific as possible
 
   Workflow File Placement:
     Place the workflow files in the .github/workflows/ directory of your repository.
