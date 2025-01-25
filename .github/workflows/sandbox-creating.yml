@@ -1,4 +1,4 @@
-name: Sandbox Creation and Rebuild
+name: sandbox pipeline automation
 
 on:
   pull_request:
@@ -15,7 +15,7 @@ permissions:
   contents: read
 
 jobs:
-  CheckTokenInSecretsManager:
+  validate-secrets-rotation:
     runs-on: ubuntu-latest
     outputs:
       rotate_test_needed: ${{ steps.determine_test_rotation.outputs.rotate_test_needed }}
@@ -105,10 +105,10 @@ jobs:
             fi
           fi
 
-  TriggerRotation:
+  trigger-secrets-rotation:
     runs-on: ubuntu-latest
-    needs: [CheckTokenInSecretsManager]
-    if: needs.CheckTokenInSecretsManager.outputs.rotate_test_needed == 'true' || needs.CheckTokenInSecretsManager.outputs.rotate_prod_needed == 'true'
+    needs: [validate-secrets-rotation]
+    if: needs.validate-secrets-rotation.outputs.rotate_test_needed == 'true' || needs.validate-secrets-rotation.outputs.rotate_prod_needed == 'true'
     steps:
       - name: Trigger Test Rotation
         run: |
@@ -130,9 +130,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_WITH_REPO_PERMISSIONS }}
 
-  SandboxPipelineExecution:
+  sandbox-pipeline-execution:
     runs-on: ubuntu-latest
-    needs: [CheckTokenInSecretsManager]
+    needs: [validate-secrets-rotation]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
