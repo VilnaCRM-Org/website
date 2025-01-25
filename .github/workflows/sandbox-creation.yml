@@ -70,10 +70,14 @@ jobs:
       - name: Determine Prod Rotation
         id: determine_prod_rotation
         run: |
-          SECRET_ID=$(aws secretsmanager list-secrets \
+          if ! SECRET_ID=$(aws secretsmanager list-secrets \
             --region "${AWS_REGION}" \
             --query "SecretList[?starts_with(Name, 'github-token-') && DeletionDate==null].Name | [0]" \
-            --output text)
+            --output text); then
+            echo "::error::Failed to list secrets: ${SECRET_ID}"
+            exit 1
+          fi
+
 
           if [ -z "$SECRET_ID" ] || [ "$SECRET_ID" = "None" ]; then
             echo "rotate_prod_needed=true" >> $GITHUB_OUTPUT
@@ -107,7 +111,6 @@ jobs:
     if: needs.CheckTokenInSecretsManager.outputs.rotate_test_needed == 'true' || needs.CheckTokenInSecretsManager.outputs.rotate_prod_needed == 'true'
     steps:
       - name: Trigger Test Rotation
-        if: needs.CheckTokenInSecretsManager.outputs.rotate_test_needed == 'true'
         run: |
           curl -X POST \
             -H "Accept: application/vnd.github+json" \
@@ -118,7 +121,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.PAT_WITH_REPO_PERMISSIONS }}
 
       - name: Trigger Prod Rotation
-        if: needs.CheckTokenInSecretsManager.outputs.rotate_prod_needed == 'true'
         run: |
           curl -X POST \
             -H "Accept: application/vnd.github+json" \
@@ -142,12 +144,22 @@ jobs:
           role-session-name: GitHub_to_AWS_via_FederatedOIDC
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Validate AWS Region
+        run: |
+          if [ -z "${{ vars.AWS_REGION }}" ]; then
+            echo "::error::AWS_REGION is not set"
+            exit 1
+          fi
+
       - name: Get PR Number
         id: get_pr_number
         run: |
-          PR_NUMBER=$(curl -H "Authorization: Bearer $GITHUB_TOKEN" \
+          if ! PR_NUMBER=$(curl -H "Authorization: Bearer $GITHUB_TOKEN" \
             -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/pulls?head=${GITHUB_REPOSITORY_OWNER}:${GITHUB_REF_NAME}" | jq -r '.[0].number')
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/pulls?head=${GITHUB_REPOSITORY_OWNER}:${GITHUB_REF_NAME}" | jq -r '.[0].number'); then
+            echo "::error::Failed to retrieve PR number: ${PR_NUMBER}"
+            exit 1
+          fi
           echo "PR_NUMBER=$PR_NUMBER"
           if [ -z "$PR_NUMBER" ]; then
             echo "PR_NUMBER not found for branch ${BRANCH_NAME}"
