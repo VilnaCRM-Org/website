@@ -38,6 +38,14 @@ jobs:
       - name: Get PR Number
         id: get_pr_number
         run: |
+          RATE_LIMIT=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/rate_limit")
+          REMAINING=$(echo "$RATE_LIMIT" | jq .rate.remaining)
+          if [ "$REMAINING" -lt 10 ]; then
+            echo "::warning::GitHub API rate limit is low: $REMAINING requests remaining"
+          fi
+
           PR_NUMBER=$(curl -H "Authorization: Bearer $GITHUB_TOKEN" \
             -H "Accept: application/vnd.github+json" \
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/pulls?head=${GITHUB_REPOSITORY_OWNER}:${GITHUB_REF_NAME}" | jq -r '.[0].number')
