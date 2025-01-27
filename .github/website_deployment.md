@@ -46,7 +46,7 @@ Here is an example IAM policy:
                 "codepipeline:GetPipelineState"
             ],
             "Effect": "Allow",
-            "Resource": "arn:aws:codepipeline:eu-central-1:123456789012:ci-cd-website-prod-pipeline"
+            "Resource": "arn:aws:codepipeline:${AWS_REGION}:${PROD_AWS_ACCOUNT_ID}:ci-cd-website-prod-pipeline"
         }
     ],
     "Version": "2012-10-17"
