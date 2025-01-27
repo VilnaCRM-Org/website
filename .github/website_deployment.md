@@ -31,6 +31,28 @@ The workflow defines the following permissions:
     id-token: write: This permission allows the workflow to write an ID token, which is necessary for federated authentication with AWS.
     contents: read: This permission enables the workflow to read the repository's contents, such as source code and configuration files.
 
+## IAM Policy for AWS CodePipeline Trigger
+
+To allow the workflow to trigger the CodePipeline execution, an IAM policy needs to be created and attached to the IAM role being assumed. The policy should grant permission for the codepipeline:StartPipelineExecution and codepipeline:GetPipelineState actions for the specific CodePipeline resource.
+
+Here is an example IAM policy:
+
+```json
+{
+    "Statement": [
+        {
+            "Action": [
+                "codepipeline:StartPipelineExecution",
+                "codepipeline:GetPipelineState"
+            ],
+            "Effect": "Allow",
+            "Resource": "arn:aws:codepipeline:eu-central-1:123456789012:ci-cd-website-prod-pipeline"
+        }
+    ],
+    "Version": "2012-10-17"
+}
+```
+
 ## Jobs
 
 1. Deploy Job
@@ -40,6 +62,7 @@ Steps
 
 Checkout Code
 This step checks out the repository's code to the GitHub runner so that subsequent steps can access it.
+
 ```yaml
 - name: Checkout code
   uses: actions/checkout@v4
@@ -67,6 +90,36 @@ This step triggers the execution of the AWS CodePipeline named ci-cd-website-pro
   run: |
     aws codepipeline start-pipeline-execution --name ci-cd-website-prod-pipeline
 ```
+
+## Security Best Practices for Managing Repository
+
+1. Use Least Privilege for IAM Roles
+
+When creating IAM roles for workflows, always apply the principle of least privilege. Only grant the permissions necessary for the task. For example, only grant codepipeline:StartPipelineExecution and codepipeline:GetPipelineState permissions for triggering the pipeline, instead of full access to CodePipeline.
+
+Refer to the example IAM policy provided earlier to restrict access to only the required CodePipeline resource.
+
+2. Monitor Secrets Usage
+
+Regularly review who has access to the repository and what secrets are being used. GitHub provides audit logs that help track which workflows access your secrets, ensuring you can monitor for unauthorized use.
+
+## Monitoring and Logging Recommendations
+
+1. GitHub Actions Logs
+
+GitHub Actions automatically generates detailed logs for each step of a workflow run. These logs include important information about the status of each action, any errors that occurred, and debugging information.
+
+- Accessing Logs: To view logs for a workflow run, navigate to the Actions tab in your GitHub repository, select the workflow run, and view the logs for each step.
+- Log Level: Ensure that the logging level is appropriate for your needs. You may choose to log detailed output for debugging during development  and more limited output for production.
+- Redacting Secrets: GitHub Actions automatically redacts secrets from logs to prevent accidental exposure of sensitive data, but ensure that no sensitive data is printed manually.
+
+2. AWS CodePipeline Logs
+
+AWS CodePipeline integrates with Amazon CloudWatch for logging, providing detailed logs for each stage of the pipeline. These logs are valuable for monitoring and debugging pipeline executions.
+
+- Enable CloudWatch Logs: Ensure that CloudWatch logging is enabled for each pipeline stage in your AWS CodePipeline. This allows you to view logs for actions like CodeBuild, Lambda functions, and other AWS services.
+- Viewing Logs: You can view the logs in the CloudWatch console by navigating to Logs > Log Groups > /aws/codepipeline/ followed by the name of your pipeline.
+- CodeBuild Logs: If you're using AWS CodeBuild for build stages, ensure that the buildspec file includes commands to log important output, especially error messages and status updates.
 
 ## Notes
 
