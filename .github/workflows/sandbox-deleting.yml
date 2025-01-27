@@ -24,6 +24,10 @@ jobs:
             echo "::error::AWS_REGION variable is not set"
             exit 1
           fi
+          if [ -z "${{ vars.PROD_AWS_ACCOUNT_ID }}" ]; then
+            echo "::error::PROD_AWS_ACCOUNT_ID variable is not set"
+            exit 1
+          fi
 
       - name: Checkout code
         uses: actions/checkout@v4
