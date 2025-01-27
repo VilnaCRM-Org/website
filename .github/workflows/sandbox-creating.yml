@@ -30,10 +30,13 @@ jobs:
       - name: Determine Test Rotation
         id: determine_test_rotation
         run: |
-          SECRET_ID=$(aws secretsmanager list-secrets \
+          if ! SECRET_ID=$(aws secretsmanager list-secrets \
             --region "${AWS_REGION}" \
             --query "SecretList[?starts_with(Name, 'github-token-') && DeletionDate==null].Name | [0]" \
-            --output text)
+            --output text); then
+            echo "::error::Failed to list secrets: ${SECRET_ID}"
+            exit 1
+          fi
 
           if [ -z "$SECRET_ID" ] || [ "$SECRET_ID" = "None" ]; then
             echo "rotate_test_needed=true" >> $GITHUB_OUTPUT
@@ -154,10 +157,16 @@ jobs:
       - name: Get PR Number
         id: get_pr_number
         run: |
-          if ! PR_NUMBER=$(curl -H "Authorization: Bearer $GITHUB_TOKEN" \
+          RESPONSE=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" \
             -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/pulls?head=${GITHUB_REPOSITORY_OWNER}:${GITHUB_REF_NAME}" | jq -r '.[0].number'); then
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/pulls?head=${GITHUB_REPOSITORY_OWNER}:${GITHUB_REF_NAME}")
+          if [ $? -ne 0 ]; then
             echo "::error::Failed to retrieve PR number: ${PR_NUMBER}"
+            exit 1
+          fi
+          PR_NUMBER=$(echo "$RESPONSE" | jq -r '.[0].number')
+          if [ $? -ne 0 ]; then
+            echo "::error::Failed to parse PR number from response"
             exit 1
           fi
           echo "PR_NUMBER=$PR_NUMBER"
@@ -172,6 +181,12 @@ jobs:
       - name: Start Pipeline Execution
         run: |
           PR_NUMBER="${{ env.PR_NUMBER }}"
+
+          if [ -z "${BRANCH_NAME}" ]; then
+            echo "::error::BRANCH_NAME is empty"
+            exit 1
+          fi
+
           if ! aws codepipeline start-pipeline-execution \
             --name "sandbox-creation" \
             --variables \
