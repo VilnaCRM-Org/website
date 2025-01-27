@@ -9,5 +9,3 @@ WORKDIR /app
 COPY . .
 
 RUN make install
-
-CMD ["pnpm", "run", "start"]

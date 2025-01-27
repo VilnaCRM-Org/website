@@ -136,7 +136,7 @@ importers:
         version: 14.3.1(@types/react@18.3.18)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@testing-library/user-event':
         specifier: ^14.6.1
-        version: 14.6.1(@testing-library/dom@10.4.0)
+        version: 14.6.1(@testing-library/dom@9.3.4)
       '@types/jest':
         specifier: ^29.5.14
         version: 29.5.14
@@ -181,7 +181,7 @@ importers:
         version: 2.31.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.7.3))(eslint-import-resolver-typescript@3.7.0)(eslint@8.57.1)
       eslint-plugin-jest-dom:
         specifier: ^5.5.0
-        version: 5.5.0(@testing-library/dom@10.4.0)(eslint@8.57.1)
+        version: 5.5.0(@testing-library/dom@9.3.4)(eslint@8.57.1)
       eslint-plugin-jsx-a11y:
         specifier: ^6.10.2
         version: 6.10.2(eslint@8.57.1)
@@ -15506,10 +15506,6 @@ snapshots:
     dependencies:
       '@testing-library/dom': 10.4.0
 
-  '@testing-library/user-event@14.6.1(@testing-library/dom@10.4.0)':
-    dependencies:
-      '@testing-library/dom': 10.4.0
-
   '@testing-library/user-event@14.6.1(@testing-library/dom@9.3.4)':
     dependencies:
       '@testing-library/dom': 9.3.4
@@ -17552,13 +17548,13 @@ snapshots:
       - eslint-import-resolver-webpack
       - supports-color
 
-  eslint-plugin-jest-dom@5.5.0(@testing-library/dom@10.4.0)(eslint@8.57.1):
+  eslint-plugin-jest-dom@5.5.0(@testing-library/dom@9.3.4)(eslint@8.57.1):
     dependencies:
       '@babel/runtime': 7.26.0
       eslint: 8.57.1
       requireindex: 1.2.0
     optionalDependencies:
-      '@testing-library/dom': 10.4.0
+      '@testing-library/dom': 9.3.4
 
   eslint-plugin-jsx-a11y@6.10.2(eslint@8.57.1):
     dependencies:

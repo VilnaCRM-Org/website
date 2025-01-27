@@ -1,12 +1,12 @@
 services:
-  dev:
+  prod:
     build: .
-    command: pnpm run dev
+    command: pnpm run start
     restart: unless-stopped
     volumes:
       - .:/app
     ports:
-      - '3000:3000'
+      - '3001:3001'
 
   playwright:
     build:

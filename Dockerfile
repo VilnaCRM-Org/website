@@ -10,5 +10,3 @@ COPY . .
 RUN make install
 
 EXPOSE 3000
-
-CMD ["pnpm", "run", "start"]

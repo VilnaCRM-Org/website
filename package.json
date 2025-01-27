@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build && next-export-optimize-images",
     "build:analyze": "ANALYZE=true pnpm run build",
-    "start": "next build && next-export-optimize-images && npx serve@latest -l 3000 out",
+    "start": "next build && next-export-optimize-images && npx serve@latest out",
     "git-hooks-install": "husky install",
     "storybook-start": "storybook dev -p 6006",
     "storybook-build": "storybook build",
