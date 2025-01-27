@@ -1,6 +1,6 @@
-# Documentation for GitHub Actions Pipelines: Sandbox Creation, Sandbox Deletion and Website Deploy
+# Documentation for GitHub Actions Pipelines: Sandbox Creation and Sandbox Deletion
 
-This documentation provides an overview of three GitHub Actions workflows used for managing AWS CodePipeline executions: Sandbox Creation, Sandbox Deletion, and Website Deploy. It includes instructions on the required secrets and how to add them to your GitHub repository.
+This documentation provides an overview of three GitHub Actions workflows used for managing AWS CodePipeline executions: Sandbox Creation and Sandbox Deletion. It includes instructions on the required secrets and how to add them to your GitHub repository.
 
 ## Table of Contents
 
@@ -14,19 +14,15 @@ This documentation provides an overview of three GitHub Actions workflows used f
   - [Deletion Overview](#deletion-overview)
   - [Deletion Required Variables](#deletion-required-variables)
   - [Deletion Required Secrets](#deletion-required-secrets)
-- [Workflow 3: Website Deploy](#workflow-3-deploy-website)
-  - [Deploy Website Overview](#deploy-website-overview)
-  - [Deploy Website Required Variables](#deploy-website-required-variables)
 - [AWS IAM Role Configuration](#aws-iam-role-configuration)
 - [Additional Notes](#additional-notes)
 
 ## Introduction
 
-The three GitHub Actions workflows automate the process of triggering AWS CodePipeline executions in response to various GitHub events. They leverage GitHub's OpenID Connect (OIDC) feature for secure authentication with AWS and manage both sandbox and production environments.
+The two GitHub Actions workflows automate the process of triggering AWS CodePipeline executions in response to various GitHub events. They leverage GitHub's OpenID Connect (OIDC) feature for secure authentication with AWS and manage both sandbox and production environments.
 
   Sandbox Management: Handles the creation and updating of sandbox environments when pull requests are opened or when code is pushed (excluding the main branch).
   Trigger Sandbox Deletion: Initiates the deletion of sandbox environments when a pull request is closed on the main branch.
-   Website Deploy: Manages the deployment of the production website when code is pushed to the main branch.
 
 ## Prerequisites
 
@@ -39,7 +35,7 @@ The three GitHub Actions workflows automate the process of triggering AWS CodePi
 ## Workflow 1: Sandbox Creation
 ### Creation and Rebuild Overview
 
-Filename: .github/workflows/sandbox-creation.yml
+Filename: .github/workflows/sandbox-creating.yml
 
 Triggers:
 
@@ -106,7 +102,7 @@ MAX_AGE:
 ## Workflow 2: Trigger Sandbox Deletion
 ### Deletion Overview
 
-Filename: .github/workflows/sandbox-deletion.yml
+Filename: .github/workflows/sandbox-deleting.yml
 
 This workflow triggers the AWS CodePipeline responsible for deleting sandbox environments when a pull request is closed on the main branch.
 
@@ -129,26 +125,6 @@ A PAT with repo level permissions for dispatching repository events.
 
   Name: PAT_WITH_REPO_PERMISSIONS
   Value: Your Personal Access Token string
-
-## Workflow 3: Deploy Website
-### Deploy Website Overview
-
-Filename: .github/workflows/deploy-website.yml
-
-This workflow triggers the AWS CodePipeline responsible for deploying the production website. It responds to code pushes on the main branch.
-
-Key Features:
-
-  Triggers on main branch pushes.
-  Uses OIDC for secure authentication with AWS.
-  Validates required secrets and environment variables before execution.
-
-### Deploy Website Required Variables
-
-   TEST_AWS_ACCOUNT_ID: ID of test the account.
-
-   PROD_AWS_ACCOUNT_ID: ID of the prod account.
-
 
 ## AWS IAM Role Configuration
 
@@ -241,8 +217,8 @@ For the updated workflow, ensure that the roles for test and production secret c
 
   Workflow File Placement:
     Place the workflow files in the .github/workflows/ directory of your repository.
-        sandbox-creation.yml for the Sandbox Creation workflow.
-        sandbox-deletion.yml for the Trigger Sandbox Deletion workflow.
+        sandbox-creating.yml for the Sandbox Creation workflow.
+        sandbox-deleting.yml for the Trigger Sandbox Deletion workflow.
 
   Testing:
     After setting up, test the workflows by opening and closing pull requests to verify that the pipelines are triggered correctly.
