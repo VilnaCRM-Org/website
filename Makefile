@@ -86,7 +86,6 @@ playwright-visual: ## This command executes Playwright visual tests.
 	$(PLAYWRIGHT_EXEC) test:visual
 
 test-visual: start-prod ## Start production and execute Playwright visual tests.
-	npx wait-on http://localhost:3001
 	$(MAKE) playwright-visual
 
 test-unit: ## This command executes unit tests using Jest library.
