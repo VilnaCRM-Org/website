@@ -37,9 +37,20 @@ Install [node.js](https://nodejs.org/en/) 20 version or higher and [pnpm](https:
 
 Use pnpm install for installing all dependencies and pnpm run dev for running application
 
-## Using
+## Usage
 
-The list of possibilities
+We recommend to install
+[docker](https://docs.docker.com/engine/install/) and
+[docker compose](https://docs.docker.com/compose/install/)
+to have the same setup across dev, sandbox and production environments
+
+To see the list of possible commands throught the make command
+
+```bash
+make help
+```
+
+The list of possibilities if project installed locally
 
 ```bash
 pnpm run dev - starts application

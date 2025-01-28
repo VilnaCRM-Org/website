@@ -1,6 +1,5 @@
 import { Box } from '@mui/material';
 import { ImageProps } from 'next/image';
-// @ts-expect-error no types
 import { getOptimizedImageProps } from 'next-export-optimize-images/image';
 import React from 'react';
 
@@ -11,6 +10,7 @@ import styles from './styles';
 function BackgroundImages(): React.ReactElement {
   const imageOptimizedProps: ImageProps = getOptimizedImageProps({
     src: VectorIcon,
+    alt: 'Wave',
   }).props;
 
   return (
