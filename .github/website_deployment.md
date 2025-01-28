@@ -53,6 +53,29 @@ Here is an example IAM policy:
 }
 ```
 
+Here is an example Trust relationships:
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "Federated": "arn:aws:iam::123456789012:oidc-provider/token.actions.githubusercontent.com"
+            },
+            "Action": "sts:AssumeRoleWithWebIdentity",
+            "Condition": {
+                "StringLike": {
+                    "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
+                    "token.actions.githubusercontent.com:sub": "repo:YOUR_GITHUB_ORG/YOUR_REPO:*"
+                }
+            }
+        }
+    ]
+}
+```
+
 ## Jobs
 
 1. Deploy Job
@@ -99,9 +122,9 @@ When creating IAM roles for workflows, always apply the principle of least privi
 
 Refer to the example IAM policy provided earlier to restrict access to only the required CodePipeline resource.
 
-2. Monitor Secrets Usage
+2. Monitor Variable Usage
 
-Regularly review who has access to the repository and what secrets are being used. GitHub provides audit logs that help track which workflows access your secrets, ensuring you can monitor for unauthorized use.
+Regularly review repository access and the usage of variables. GitHub provides detailed audit logs to track which workflows interact with your variables, helping you detect and prevent unauthorized access.
 
 ## Monitoring and Logging Recommendations
 
