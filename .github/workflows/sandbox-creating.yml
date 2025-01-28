@@ -108,7 +108,7 @@ jobs:
             fi
           fi
 
-  trigger-secrets-rotation:
+  rotate-tokens:
     runs-on: ubuntu-latest
     needs: [check-tokens]
     if: needs.check-tokens.outputs.rotate_test_needed == 'true' || needs.check-tokens.outputs.rotate_prod_needed == 'true'
