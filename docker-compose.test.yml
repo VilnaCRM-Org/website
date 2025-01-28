@@ -7,6 +7,8 @@ services:
       - .:/app
     ports:
       - '3001:3001'
+    networks:
+      - testing
 
   playwright:
     build:
@@ -17,3 +19,11 @@ services:
       - .:/app
     ports:
       - '9323:9323'
+    networks:
+      - testing
+
+networks:
+  testing:
+    driver: bridge
+
+

@@ -52,9 +52,6 @@ help:
 build: ## A tool build the project
 	$(PNPM_EXEC) build
 
-start-prod: ##  Build image and start container in production mode
-	$(DOCKER_COMPOSE) -f docker-compose.test.yml up -d
-
 format: ## This command executes Prettier Formating
 	$(PNPM_EXEC) format
 
@@ -82,11 +79,18 @@ generate-ts-doc: ## This command generates documentation from the typescript fil
 test-e2e: ## This command executes PlayWright E2E tests.
 	$(PLAYWRIGHT_EXEC) test:e2e
 
+start-prod: ##  Build image and start container in production mode
+	$(DOCKER_COMPOSE) -f docker-compose.test.yml up -d
+
 playwright-visual: ## This command executes Playwright visual tests.
 	$(PLAYWRIGHT_EXEC) test:visual
 
-test-visual: start-prod ## Start production and execute Playwright visual tests.
-	$(MAKE) playwright-visual
+test-visual: start-prod playwright-visual  ## Start production, wait for it to be ready, and run Playwright visual tests.
+
+wait-for-prod: ## Wait for the prod service to be ready on port 3001.
+	@echo "Waiting for prod service to be ready on port 3001..."
+	npx wait-on http://localhost:3001
+	@echo "Prod service is up and running!"
 
 test-unit: ## This command executes unit tests using Jest library.
 	$(PNPM_EXEC) test:unit
