@@ -1,29 +1,21 @@
 services:
   prod:
     build: .
-    command: pnpm run start
     restart: unless-stopped
     volumes:
       - .:/app
     ports:
       - '3001:3001'
-    networks:
-      - testing
 
   playwright:
     build:
       context: .
       dockerfile: Playwright.Dockerfile
+    command: [ "pnpm", "run", "${TEST_TYPE:-test:e2e}" ]
     restart: unless-stopped
     volumes:
       - .:/app
     ports:
       - '9323:9323'
-    networks:
-      - testing
-
-networks:
-  testing:
-    driver: bridge
-
-
+    environment:
+      - TEST_TYPE

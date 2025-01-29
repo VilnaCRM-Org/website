@@ -24,8 +24,29 @@ jobs:
       - name: Install dependencies
         run: make install
 
+      - name: Verify required files
+        run: |
+          if [ ! -f "playwright.config.ts" ]; then
+            echo "Error: playwright.config.ts is missing"
+            exit 1
+          fi
+          if [ ! -f "Playwright.Dockerfile" ]; then
+            echo "Error: Playwright.Dockerfile is missing"
+            exit 1
+          fi
+
       - name: Start application
-        run: make start
+        run: make start-prod
+
+      - name: Wait for services
+        run: make wait-for-prod
 
       - name: Run visual tests
-        run: make test-visual
+        run: docker-compose -f docker-compose.test.yml exec playwright pnpm run test:visual
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 30
