@@ -81,15 +81,13 @@ test-e2e: start-prod wait-for-prod  ## Start production and run E2E tests
 
 start-prod: ## Build image and start container in production mode
 	$(DOCKER_COMPOSE) -f docker-compose.test.yml up -d
-	@echo "Verifying container health..."
-	@timeout 60 sh -c 'until $(DOCKER_COMPOSE) -f docker-compose.test.yml ps | grep -q "healthy"; do sleep 1; done'
 
 test-visual: start-prod wait-for-prod  ## Start production and run visual tests
 	$(DOCKER_COMPOSE) -f docker-compose.test.yml exec playwright pnpm run test:visual
 
 wait-for-prod: ## Wait for the prod service to be ready on port 3001.
 	@echo "Waiting for prod service to be ready on port 3001..."
-	npx wait-on http://localhost:3001 --timeout 120000
+	npx wait-on http://localhost:3001
 	@echo "Prod service is up and running!"
 
 test-unit: ## This command executes unit tests using Jest library.

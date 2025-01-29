@@ -9,3 +9,5 @@ WORKDIR /app
 COPY . .
 
 RUN make install
+
+CMD ["tail", "-f", "/dev/null"]

@@ -1,18 +1,10 @@
 services:
   prod:
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:3001/api/health" ]
-      interval: 10s
-      timeout: 10s
-      retries: 5
-      start_period: 30s
     build: .
     command: pnpm run start
     restart: unless-stopped
     volumes:
       - .:/app
-      - /app/.next
-      - /app/out  # Preserve build artifacts
     ports:
       - '3001:3001'
 
@@ -20,7 +12,6 @@ services:
     build:
       context: .
       dockerfile: Playwright.Dockerfile
-    command: [ "pnpm", "run", "${TEST_TYPE:-test:e2e}" ]
     restart: unless-stopped
     volumes:
       - .:/app
