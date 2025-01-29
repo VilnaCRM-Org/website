@@ -89,7 +89,7 @@ test-visual: start-prod wait-for-prod  ## Start production and run visual tests
 
 wait-for-prod: ## Wait for the prod service to be ready on port 3001.
 	@echo "Waiting for prod service to be ready on port 3001..."
-	npx wait-on http://localhost:3001 --timeout 60000
+	npx wait-on http://localhost:3001 --timeout 120000
 	@echo "Prod service is up and running!"
 
 test-unit: ## This command executes unit tests using Jest library.
