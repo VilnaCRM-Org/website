@@ -79,8 +79,10 @@ generate-ts-doc: ## This command generates documentation from the typescript fil
 test-e2e: start-prod wait-for-prod  ## Start production and run E2E tests
 	$(DOCKER_COMPOSE) -f docker-compose.test.yml exec playwright pnpm run test:e2e
 
-start-prod: ##  Build image and start container in production mode
+start-prod: ## Build image and start container in production mode
 	$(DOCKER_COMPOSE) -f docker-compose.test.yml up -d
+	@echo "Verifying container health..."
+	@timeout 60 sh -c 'until $(DOCKER_COMPOSE) -f docker-compose.test.yml ps | grep -q "healthy"; do sleep 1; done'
 
 test-visual: start-prod wait-for-prod  ## Start production and run visual tests
 	$(DOCKER_COMPOSE) -f docker-compose.test.yml exec playwright pnpm run test:visual

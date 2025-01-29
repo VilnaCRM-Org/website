@@ -42,7 +42,7 @@ jobs:
         run: make wait-for-prod
 
       - name: Run visual tests
-        run: docker-compose -f docker-compose.test.yml exec playwright pnpm run test:visual
+        run: make test-visual
 
       - uses: actions/upload-artifact@v4
         if: always()
