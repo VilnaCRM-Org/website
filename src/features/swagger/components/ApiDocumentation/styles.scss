@@ -19,3 +19,6 @@
     @extend %operationModels;
   }
 }
+.swagger-ui *{
+  font-family: 'golos', 'golos Fallback', sans-serif !important;
+}
