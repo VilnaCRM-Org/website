@@ -1,0 +1,22 @@
+services:
+  prod:
+    build: .
+    command: pnpm run start
+    restart: unless-stopped
+    volumes:
+      - .:/app
+    ports:
+      - '3001:3001'
+
+  playwright:
+    build:
+      context: .
+      dockerfile: Playwright.Dockerfile
+    restart: unless-stopped
+    volumes:
+      - .:/app
+    ports:
+      - '9323:9323'
+    environment:
+      - TEST_TYPE
+      - NEXT_PUBLIC_WEBSITE_URL=http://prod:3001
