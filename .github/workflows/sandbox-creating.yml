@@ -47,16 +47,13 @@ jobs:
               --query SecretString \
               --output text)
 
-            TIMESTAMP=$(echo "$SECRET_VALUE" | jq -r '.timestamp // empty')
-            if [ -z "$TIMESTAMP" ]; then
+            EXPIRES_AT=$(echo "$SECRET_VALUE" | jq -r '.expires_at // empty')
+            if [ -z "$EXPIRES_AT" ]; then
               echo "rotate_test_needed=true" >> $GITHUB_OUTPUT
             else
-              NOW=$(date +%s)
-              LAST_ROTATED=$(date -d "$TIMESTAMP" +%s 2>/dev/null)
-              MAX_AGE=601200
-              [ -z "$MAX_AGE" ] && MAX_AGE=601200
-              AGE=$((NOW - LAST_ROTATED))
-              if [ "$AGE" -ge "$MAX_AGE" ]; then
+              NOW=$(date -u +%s)
+              EXPIRATION_TIME=$(date -d "$EXPIRES_AT" +%s 2>/dev/null)
+              if [ "$NOW" -ge "$EXPIRATION_TIME" ]; then
                 echo "rotate_test_needed=true" >> $GITHUB_OUTPUT
               else
                 echo "rotate_test_needed=false" >> $GITHUB_OUTPUT
@@ -81,7 +78,6 @@ jobs:
             exit 1
           fi
 
-
           if [ -z "$SECRET_ID" ] || [ "$SECRET_ID" = "None" ]; then
             echo "rotate_prod_needed=true" >> $GITHUB_OUTPUT
           else
@@ -91,16 +87,13 @@ jobs:
               --query SecretString \
               --output text)
 
-            TIMESTAMP=$(echo "$SECRET_VALUE" | jq -r '.timestamp // empty')
-            if [ -z "$TIMESTAMP" ]; then
+            EXPIRES_AT=$(echo "$SECRET_VALUE" | jq -r '.expires_at // empty')
+            if [ -z "$EXPIRES_AT" ]; then
               echo "rotate_prod_needed=true" >> $GITHUB_OUTPUT
             else
-              NOW=$(date +%s)
-              LAST_ROTATED=$(date -d "$TIMESTAMP" +%s 2>/dev/null)
-              MAX_AGE=601200
-              [ -z "$MAX_AGE" ] && MAX_AGE=601200
-              AGE=$((NOW - LAST_ROTATED))
-              if [ "$AGE" -ge "$MAX_AGE" ]; then
+              NOW=$(date -u +%s)
+              EXPIRATION_TIME=$(date -d "$EXPIRES_AT" +%s 2>/dev/null)
+              if [ "$NOW" -ge "$EXPIRATION_TIME" ]; then
                 echo "rotate_prod_needed=true" >> $GITHUB_OUTPUT
               else
                 echo "rotate_prod_needed=false" >> $GITHUB_OUTPUT
