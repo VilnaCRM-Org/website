@@ -35,11 +35,9 @@ const resolvers: { Mutation: Mutation } = {
 
 const server:ApolloServer = new ApolloServer({ typeDefs, resolvers });
 
-// Start the server with standalone server configuration
 async function startServer():Promise<void> {
-  const { url } = await startStandaloneServer(server, {
-    listen: { port: 4000, path: '/graphql' },
-  });
+  const { url } = await startStandaloneServer(server, { listen: { port: 4000 }}
+  );
 
   console.log(`🚀 Server ready at ${url}`);
 }

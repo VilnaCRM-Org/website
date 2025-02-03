@@ -1,0 +1,8 @@
+services:
+  apollo:
+    build:
+      context: .
+      dockerfile: Apollo.Dockerfile
+    ports:
+      - "4000:4000"
+    restart: unless-stopped

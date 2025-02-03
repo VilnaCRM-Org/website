@@ -79,8 +79,14 @@ generate-ts-doc: ## This command generates documentation from the typescript fil
 mockoon:
 	$(DOCKER_COMPOSE) -f mockoon/docker-compose.mockoon.yml up -d
 
-mockoon-down:
+stop-mockoon:
 	$(DOCKER_COMPOSE) -f mockoon/docker-compose.mockoon.yml down
+
+apollo: # The target to run Apollo
+	$(DOCKER_COMPOSE) -f apollo-server/docker-compose.apollo.yml up -d
+
+stop-apollo: # The target to stop Apollo
+	$(DOCKER_COMPOSE) -f apollo-server/docker-compose.apollo.yml down
 
 test-e2e: start-prod wait-for-prod  ## Start production and run E2E tests
 	$(DOCKER_COMPOSE) -f docker-compose.test.yml exec playwright pnpm run test:e2e
