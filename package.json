@@ -46,6 +46,7 @@
     "terser-webpack-plugin": "^5.3.11"
   },
   "devDependencies": {
+    "@apollo/server": "^4.11.3",
     "@commitlint/cli": "^19.6.1",
     "@commitlint/config-conventional": "^19.6.0",
     "@faker-js/faker": "^9.4.0",

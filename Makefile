@@ -76,6 +76,12 @@ storybook-build: ## Build Storybook UI. Storybook is a frontend workshop for bui
 generate-ts-doc: ## This command generates documentation from the typescript files.
 	$(PNPM_EXEC) doc
 
+mockoon:
+	$(DOCKER_COMPOSE) -f mockoon/docker-compose.mockoon.yml up -d
+
+mockoon-down:
+	$(DOCKER_COMPOSE) -f mockoon/docker-compose.mockoon.yml down
+
 test-e2e: start-prod wait-for-prod  ## Start production and run E2E tests
 	$(DOCKER_COMPOSE) -f docker-compose.test.yml exec playwright pnpm run test:e2e
 
@@ -85,7 +91,7 @@ start-prod: ## Build image and start container in production mode
 test-visual: start-prod wait-for-prod  ## Start production and run visual tests
 	$(DOCKER_COMPOSE) -f docker-compose.test.yml exec playwright pnpm run test:visual
 
-wait-for-prod: ## Wait for the prod service to be ready on port 3001.
+wait-for-prod: ## Wait for the prod service to be ready on p ort 3001.
 	@echo "Waiting for prod service to be ready on port 3001..."
 	npx wait-on http://localhost:3001
 	@echo "Prod service is up and running!"
