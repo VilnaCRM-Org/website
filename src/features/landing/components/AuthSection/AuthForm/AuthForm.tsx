@@ -56,10 +56,6 @@ function AuthForm(): React.ReactElement {
     }
   };
 
-  const handleFormSubmit: (data: RegisterItem) => void = (data: RegisterItem) => {
-    onSubmit(data);
-  };
-
   return (
     <Box sx={styles.formWrapper}>
       {loading && (
@@ -70,7 +66,7 @@ function AuthForm(): React.ReactElement {
       <Box sx={styles.backgroundImage} />
       <Box sx={styles.backgroundBlock} />
       <Box sx={styles.formContent}>
-        <form onSubmit={handleSubmit(handleFormSubmit)}>
+        <form onSubmit={handleSubmit(onSubmit)}>
           <UiTypography variant="h4" component="h4" sx={styles.formTitle}>
             {t('sign_up.form.heading_main')}
           </UiTypography>

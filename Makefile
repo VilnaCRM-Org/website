@@ -82,11 +82,11 @@ mockoon:
 stop-mockoon:
 	$(DOCKER_COMPOSE) -f mockoon/docker-compose.mockoon.yml down
 
-apollo: # The target to run Apollo
-	$(DOCKER_COMPOSE) -f apollo-server/docker-compose.apollo.yml up -d
+start-apollo: # The target to run Apollo
+	$(DOCKER_COMPOSE) -f docker-compose.apollo.yml up -d
 
 stop-apollo: # The target to stop Apollo
-	$(DOCKER_COMPOSE) -f apollo-server/docker-compose.apollo.yml down
+	$(DOCKER_COMPOSE) -f docker-compose.apollo.yml down
 
 test-e2e: start-prod wait-for-prod  ## Start production and run E2E tests
 	$(DOCKER_COMPOSE) -f docker-compose.test.yml exec playwright pnpm run test:e2e

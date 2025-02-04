@@ -1,40 +1,54 @@
 /* eslint-disable */
 import { ApolloServer } from '@apollo/server';
 import { startStandaloneServer } from '@apollo/server/standalone';
+require('dotenv').config();
 
-const typeDefs = `#graphql
-   type User {
-    id: ID!
-    fullName: String!
-    email: String!
-    password: String!
+async function getRemoteSchema(){
+  const response = await fetch(`${process.env.NEXT_PUBLIC_GRAPHQL_SCHEMA_ROW}` );
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch schema: ${response.statusText}`);
   }
-`;
+
+  return await response.text();
+}
 
 const resolvers = {
-  Query: {
-    signUp: async (_: any, { fullName }: { fullName: string }): Promise<string> => {
+  Mutation: {
+    createUser: async (_: any, { input }: { input: any }) => {
       try {
-        return `You registered successfully! Welcome ${fullName}`;
+        const newUser = {
+          id: "1",
+          confirmed: true,
+          email: input.email,
+          initials: input.initials,
+        };
+
+        return {
+          user: newUser,
+          clientMutationId: input.clientMutationId,
+        };
       } catch (error) {
-        throw new Error(`Failed to register user: ${error}`);
+        throw new Error(`Failed to create user: ${error}`);
       }
     },
   },
 };
-const server= new ApolloServer({
-  typeDefs,
-  resolvers,
-});
+
+
 async function startServer():Promise<void> {
+
   try {
-    const { url } = await startStandaloneServer(server, { listen: { port: 4000 } });
+    const typeDefs:string = await getRemoteSchema();
+    const server = new ApolloServer({ typeDefs, resolvers });
+
+    const { url } = await startStandaloneServer(server, { listen: { port: 4000, path:'/graphql' } });
     console.log(`🚀 Server ready at ${url}`);
-  } catch (error: unknown) {
-    // @ts-ignore
-    console.log(error.message);
+  }catch (error:unknown) {
+    console.log((error as Error).message);
     process.exit(1);
   }
+
 }
 
 startServer();
