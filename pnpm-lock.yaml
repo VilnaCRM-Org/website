@@ -9,16 +9,16 @@ importers:
   .:
     dependencies:
       '@apollo/client':
-        specifier: ^3.12.7
+        specifier: ^3.12.9
         version: 3.12.9(@types/react@18.3.18)(graphql@16.10.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@emotion/styled':
         specifier: ^11.14.0
         version: 11.14.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react@18.3.1)
       '@mui/material':
-        specifier: ^6.4.1
+        specifier: ^6.4.2
         version: 6.4.2(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@emotion/styled@11.14.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@mui/system':
-        specifier: ^6.4.1
+        specifier: ^6.4.2
         version: 6.4.2(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@emotion/styled@11.14.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react@18.3.1)
       '@next/bundle-analyzer':
         specifier: ^15.1.6
@@ -58,10 +58,10 @@ importers:
         specifier: ^4.11.3
         version: 4.11.3(graphql@16.10.0)
       '@commitlint/cli':
-        specifier: ^19.6.1
+        specifier: ^19.7.1
         version: 19.7.1(@types/node@22.13.1)(typescript@5.7.3)
       '@commitlint/config-conventional':
-        specifier: ^19.6.0
+        specifier: ^19.7.1
         version: 19.7.1
       '@faker-js/faker':
         specifier: ^9.4.0
@@ -76,7 +76,7 @@ importers:
         specifier: ^1.0.36
         version: 1.0.36(typescript@5.7.3)
       '@microsoft/api-extractor':
-        specifier: ^7.49.1
+        specifier: ^7.49.2
         version: 7.49.2(@types/node@22.13.1)
       '@next/eslint-plugin-next':
         specifier: ^15.1.6
@@ -85,40 +85,40 @@ importers:
         specifier: ^15.1.6
         version: 15.1.6(next@15.1.6(@babel/core@7.26.7)(@opentelemetry/api@1.9.0)(@playwright/test@1.50.1)(babel-plugin-macros@3.1.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)
       '@playwright/test':
-        specifier: ^1.50.0
+        specifier: ^1.50.1
         version: 1.50.1
       '@sentry/node':
-        specifier: ^8.51.0
+        specifier: ^8.54.0
         version: 8.54.0
       '@sentry/react':
-        specifier: ^8.51.0
+        specifier: ^8.54.0
         version: 8.54.0(react@18.3.1)
       '@storybook/addon-actions':
-        specifier: ^8.5.1
+        specifier: ^8.5.3
         version: 8.5.3(storybook@8.5.3(prettier@3.4.2))
       '@storybook/addon-essentials':
-        specifier: ^8.5.1
+        specifier: ^8.5.3
         version: 8.5.3(@types/react@18.3.18)(storybook@8.5.3(prettier@3.4.2))
       '@storybook/addon-interactions':
-        specifier: ^8.5.1
+        specifier: ^8.5.3
         version: 8.5.3(storybook@8.5.3(prettier@3.4.2))
       '@storybook/addon-links':
-        specifier: ^8.5.1
+        specifier: ^8.5.3
         version: 8.5.3(react@18.3.1)(storybook@8.5.3(prettier@3.4.2))
       '@storybook/addon-onboarding':
-        specifier: ^8.5.1
+        specifier: ^8.5.3
         version: 8.5.3(storybook@8.5.3(prettier@3.4.2))
       '@storybook/blocks':
-        specifier: ^8.5.1
+        specifier: ^8.5.3
         version: 8.5.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@8.5.3(prettier@3.4.2))
       '@storybook/nextjs':
-        specifier: ^8.5.1
+        specifier: ^8.5.3
         version: 8.5.3(babel-plugin-macros@3.1.0)(esbuild@0.24.2)(next@15.1.6(@babel/core@7.26.7)(@opentelemetry/api@1.9.0)(@playwright/test@1.50.1)(babel-plugin-macros@3.1.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@8.5.3(prettier@3.4.2))(type-fest@2.19.0)(typescript@5.7.3)(webpack-hot-middleware@2.26.1)(webpack@5.97.1(esbuild@0.24.2))
       '@storybook/react':
-        specifier: ^8.5.1
+        specifier: ^8.5.3
         version: 8.5.3(@storybook/test@8.5.3(storybook@8.5.3(prettier@3.4.2)))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@8.5.3(prettier@3.4.2))(typescript@5.7.3)
       '@storybook/test':
-        specifier: ^8.5.1
+        specifier: ^8.5.3
         version: 8.5.3(storybook@8.5.3(prettier@3.4.2))
       '@storybook/testing-library':
         specifier: 0.2.2
@@ -148,7 +148,7 @@ importers:
         specifier: ^0.21.18
         version: 0.21.18
       '@types/node':
-        specifier: ^22.10.10
+        specifier: ^22.13.1
         version: 22.13.1
       '@types/react':
         specifier: ^18.3.18
@@ -226,7 +226,7 @@ importers:
         specifier: ^4.6.1
         version: 4.6.1(next@15.1.6(@babel/core@7.26.7)(@opentelemetry/api@1.9.0)(@playwright/test@1.50.1)(babel-plugin-macros@3.1.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       playwright:
-        specifier: ^1.50.0
+        specifier: ^1.50.1
         version: 1.50.1
       prettier:
         specifier: ^3.4.2
@@ -235,13 +235,13 @@ importers:
         specifier: ^24.1.1
         version: 24.1.1(typescript@5.7.3)
       semver:
-        specifier: ^7.6.3
+        specifier: ^7.7.1
         version: 7.7.1
       storybook:
-        specifier: ^8.5.1
+        specifier: ^8.5.3
         version: 8.5.3(prettier@3.4.2)
       swiper:
-        specifier: ^11.2.1
+        specifier: ^11.2.2
         version: 11.2.2
       ts-jest:
         specifier: ^29.2.5
@@ -4137,8 +4137,8 @@ packages:
   endent@2.1.0:
     resolution: {integrity: sha512-r8VyPX7XL8U01Xgnb1CjZ3XV+z90cXIJ9JPE/R9SEC9vpw2P6CfsRPJmp20DppC5N7ZAMCmjYkJIa744Iyg96w==}
 
-  enhanced-resolve@5.18.0:
-    resolution: {integrity: sha512-0/r0MySGYG8YqlayBZ6MuCfECmHFdJ5qyPh8s8wa5Hnm6SaFLSK1VYCbj+NKp090Nm1caZhD+QTnmxO7esYGyQ==}
+  enhanced-resolve@5.18.1:
+    resolution: {integrity: sha512-ZSW3ma5GkcQBIpwZTSRAI8N71Uuwgs93IezB7mf7R60tC8ZbJideoDNKjHn2O9KIlx6rkGTTEk1xUCK2E1Y2Yg==}
     engines: {node: '>=10.13.0'}
 
   enquirer@2.4.1:
@@ -12715,7 +12715,7 @@ snapshots:
       fast-json-parse: 1.0.3
       objectorarray: 1.0.5
 
-  enhanced-resolve@5.18.0:
+  enhanced-resolve@5.18.1:
     dependencies:
       graceful-fs: 4.2.11
       tapable: 2.2.1
@@ -12970,7 +12970,7 @@ snapshots:
     dependencies:
       '@nolyfill/is-core-module': 1.0.39
       debug: 4.4.0
-      enhanced-resolve: 5.18.0
+      enhanced-resolve: 5.18.1
       eslint: 8.57.1
       fast-glob: 3.3.3
       get-tsconfig: 4.10.0
@@ -16498,7 +16498,7 @@ snapshots:
   tsconfig-paths-webpack-plugin@4.2.0:
     dependencies:
       chalk: 4.1.2
-      enhanced-resolve: 5.18.0
+      enhanced-resolve: 5.18.1
       tapable: 2.2.1
       tsconfig-paths: 4.2.0
 
@@ -16806,7 +16806,7 @@ snapshots:
       acorn: 8.14.0
       browserslist: 4.24.4
       chrome-trace-event: 1.0.4
-      enhanced-resolve: 5.18.0
+      enhanced-resolve: 5.18.1
       es-module-lexer: 1.6.0
       eslint-scope: 5.1.1
       events: 3.3.0
