@@ -26,7 +26,8 @@
     "lighthouse:desktop-autorun": "lhci autorun --config=lighthouserc.desktop.js",
     "lighthouse:mobile-autorun": "lhci autorun --config=lighthouserc.mobile.js",
     "check-node-version": "node checkNodeVersion.js",
-    "preinstall": "pnpm run check-node-version"
+    "preinstall": "pnpm run check-node-version",
+    "compile-apollo": "tsc --project tsconfig.docker.json"
   },
   "dependencies": {
     "@apollo/client": "^3.12.7",

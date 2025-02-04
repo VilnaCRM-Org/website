@@ -2599,9 +2599,6 @@ packages:
   '@types/connect@3.4.36':
     resolution: {integrity: sha512-P63Zd/JUGq+PdrM1lv0Wv5SBYeA2+CORvbrXbngriYY0jzLUWfQMQQxOhjONEz/wlHOAxOdY7CY65rgQdTjq2w==}
 
-  '@types/connect@3.4.38':
-    resolution: {integrity: sha512-K6uROf1LD88uDQqJCktA4yzL1YYAK6NgfsI0v/mTgyPKWsX1CnJ0XPSDhViejru1GcRkLWb8RlzFYJRqGUbaug==}
-
   '@types/conventional-commits-parser@5.0.1':
     resolution: {integrity: sha512-7uz5EHdzz2TqoMfV7ee61Egf5y6NkcO4FB/1iCCQnbeiI1F3xzv3vK5dBCXUCLQgGYS+mUeigK1iKQzvED+QnQ==}
 
@@ -10910,14 +10907,10 @@ snapshots:
 
   '@types/body-parser@1.19.5':
     dependencies:
-      '@types/connect': 3.4.38
+      '@types/connect': 3.4.36
       '@types/node': 22.13.0
 
   '@types/connect@3.4.36':
-    dependencies:
-      '@types/node': 22.13.0
-
-  '@types/connect@3.4.38':
     dependencies:
       '@types/node': 22.13.0
 
