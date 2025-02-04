@@ -1,21 +1,25 @@
 import { Box, Container } from '@mui/material';
 import React from 'react';
+import { ImageProps } from 'next/image';
+import { getOptimizedImageProps } from 'next-export-optimize-images/image';
+
+import smallScreen from '../../assets/img/about-vilna/mobile2Screen.png';
+import bigScreen from '../../assets/img/about-vilna/mobileScreen.png';
+import circle from '../../assets/svg/for-who/circle.svg';
+import hexagon from '../../assets/svg/for-who/hexagon.svg';
+import point10 from '../../assets/svg/for-who/point10.svg';
+import point6 from '../../assets/svg/for-who/point6.svg';
+import point8 from '../../assets/svg/for-who/point8.svg';
+import rhombus from '../../assets/svg/for-who/romb.svg';
+import triangle from '../../assets/svg/for-who/triangle.svg';
+import waves from '../../assets/svg/for-who/waves.svg';
 
 import { Cards } from './Cards';
 import MainTitle from './MainTitle/MainTitle';
 import styles from './styles';
-import bigScreen from '../../assets/img/about-vilna/mobileScreen.png';
-import smallScreen from '../../assets/img/about-vilna/mobile2Screen.png';
-import waves from '../../assets/svg/for-who/waves.svg';
-import point6 from '../../assets/svg/for-who/point6.svg';
-import point8 from '../../assets/svg/for-who/point8.svg';
-import point10 from '../../assets/svg/for-who/point10.svg';
-import circle from '../../assets/svg/for-who/circle.svg';
-import romb from '../../assets/svg/for-who/romb.svg';
-import hexagon from '../../assets/svg/for-who/hexagon.svg';
-import triangle from '../../assets/svg/for-who/triangle.svg';
 
 function ForWhoSection(): React.ReactElement {
+  const getImageProps = (src: string, alt: string) => getOptimizedImageProps({ src, alt }).props;
 
   return (
     <Box id="forWhoSection" component="section" sx={styles.wrapper}>
@@ -25,23 +29,23 @@ function ForWhoSection(): React.ReactElement {
           <Box sx={styles.lgCardsWrapper}>
             <Cards />
           </Box>
-          <div className='container'>
-            <div className='svg-container'>
-            <img src={circle} alt="circle" className="circle" />
-            <img src={romb} alt="romb" className="romb" />
-              <div className="point-container">
-            <img src={point6} alt="point6" className="point6" />
-            <img src={point8} alt="point8" className="point8" />
-            <img src={point10} alt="point10" className="point10" />
+          <div style={styles.container}>
+            <div style={styles.svg_container}>
+              <img {...getImageProps(circle, 'circle')} style={styles.circle} />
+              <img {...getImageProps(rhombus, 'rhombus')} style={styles.rhombus} />
+              <div style={styles.point_container}>
+                <img {...getImageProps(point6, 'point6')} style={styles.point6} />
+                <img {...getImageProps(point8, 'point8')} style={styles.point8} />
+                <img {...getImageProps(point10, 'point10')} style={styles.point10} />
               </div>
             </div>
-           <div className='square'>
-            <img src={bigScreen} alt="bigScreen" className="bigScreen" />
-            <img src={smallScreen} alt="smallScreen" className="smallScreen" />
-            <img src={waves} alt="waves" className="waves" />
-            <img src={hexagon} alt="hexagon" className="hexagon" />
-           </div>
-           <img src={triangle} alt="triangle" className="triangle" />
+            <div style={styles.square}>
+              <img {...getImageProps(bigScreen, 'bigScreen')} style={styles.bigScreen} />
+              <img {...getImageProps(smallScreen, 'smallScreen')} style={styles.smallScreen} />
+              <img {...getImageProps(waves, 'waves')} style={styles.waves} />
+              <img {...getImageProps(hexagon, 'hexagon')} style={styles.hexagon} />
+            </div>
+            <img {...getImageProps(triangle, 'triangle')} style={styles.triangle} />
           </div>
         </Box>
       </Container>
