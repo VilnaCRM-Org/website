@@ -1,6 +1,5 @@
 import breakpointsTheme from '@/components/UiBreakpoints';
 import colorTheme from '@/components/UiColorTheme';
-import { zIndex } from 'material-ui/styles';
 
 export default {
   wrapper: {

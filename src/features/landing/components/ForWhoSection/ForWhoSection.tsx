@@ -1,7 +1,6 @@
 import { Box, Container } from '@mui/material';
-import React from 'react';
-import { ImageProps } from 'next/image';
 import { getOptimizedImageProps } from 'next-export-optimize-images/image';
+import React from 'react';
 
 import smallScreen from '../../assets/img/about-vilna/mobile2Screen.png';
 import bigScreen from '../../assets/img/about-vilna/mobileScreen.png';
@@ -19,7 +18,8 @@ import MainTitle from './MainTitle/MainTitle';
 import styles from './styles';
 
 function ForWhoSection(): React.ReactElement {
-  const getImageProps = (src: string, alt: string) => getOptimizedImageProps({ src, alt }).props;
+  const getImageProps: (src: string, alt: string) => React.ImgHTMLAttributes<HTMLImageElement> = (src, alt) => 
+    getOptimizedImageProps({ src, alt }).props;
 
   return (
     <Box id="forWhoSection" component="section" sx={styles.wrapper}>
@@ -31,21 +31,21 @@ function ForWhoSection(): React.ReactElement {
           </Box>
           <div style={styles.container}>
             <div style={styles.svg_container}>
-              <img {...getImageProps(circle, 'circle')} style={styles.circle} />
-              <img {...getImageProps(rhombus, 'rhombus')} style={styles.rhombus} />
+              <img {...getImageProps(circle, 'circle')} alt='circle' style={styles.circle} />
+              <img {...getImageProps(rhombus, 'rhombus')} alt='rhombus' style={styles.rhombus} />
               <div style={styles.point_container}>
-                <img {...getImageProps(point6, 'point6')} style={styles.point6} />
-                <img {...getImageProps(point8, 'point8')} style={styles.point8} />
-                <img {...getImageProps(point10, 'point10')} style={styles.point10} />
+                <img {...getImageProps(point6, 'point6')} alt='point6' style={styles.point6} />
+                <img {...getImageProps(point8, 'point8')} alt='point8' style={styles.point8} />
+                <img {...getImageProps(point10, 'point10')} alt='point10' style={styles.point10} />
               </div>
             </div>
             <div style={styles.square}>
-              <img {...getImageProps(bigScreen, 'bigScreen')} style={styles.bigScreen} />
-              <img {...getImageProps(smallScreen, 'smallScreen')} style={styles.smallScreen} />
-              <img {...getImageProps(waves, 'waves')} style={styles.waves} />
-              <img {...getImageProps(hexagon, 'hexagon')} style={styles.hexagon} />
+              <img {...getImageProps(bigScreen, 'bigScreen')} alt='bigScreen' style={styles.bigScreen} />
+              <img {...getImageProps(smallScreen, 'smallScreen')} alt='smallScreen' style={styles.smallScreen} />
+              <img {...getImageProps(waves, 'waves')} alt='waves' style={styles.waves} />
+              <img {...getImageProps(hexagon, 'hexagon')} alt='hexagon' style={styles.hexagon} />
             </div>
-            <img {...getImageProps(triangle, 'triangle')} style={styles.triangle} />
+            <img {...getImageProps(triangle, 'triangle')} alt='triangle' style={styles.triangle} />
           </div>
         </Box>
       </Container>
