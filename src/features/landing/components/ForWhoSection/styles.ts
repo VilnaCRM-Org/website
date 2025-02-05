@@ -99,53 +99,63 @@ export default {
   },
 
   container: {
-    marginTop: '1rem',
+    marginTop: '1.5rem',
+    marginBottom: '-6rem',
     display: 'flex',
   },
 
   svg_container: {},
 
   circle: {
-    width: '0.6rem',
-    height: '0.6rem',
-    marginTop: '4rem',
+    width: '0.5rem',
+    height: '0.5rem',
+    marginTop: '3.5rem',
     marginLeft: '1rem',
   },
 
   rhombus: {
     width: '1.5rem',
     height: '1.5rem',
-    marginTop: '9rem',
+    marginTop: '9.5rem',
     marginLeft: '0.7rem',
   },
 
-  point_container: {},
+  point_container: {
+    display: 'flex',
+    marginTop: '0.5rem',
+  },
 
-  point6: {},
+  point6: {
+    marginLeft: '1rem',
+  },
 
-  point8: {},
+  point8: {
+    marginLeft: '0.2rem',
+  },
 
-  point10: {},
+  point10: {
+    marginLeft: '0.2rem',
+  },
 
   square: {
     width: '20rem',
     height: '20rem',
     marginTop: '5rem',
-    marginLeft: '1rem',
+    marginLeft: '0.5rem',
     backgroundColor: '#1EAEFF',
-    borderRadius: '4%',
+    borderRadius: '6%',
   },
 
   bigScreen: {
-    marginTop: '-8.5rem',
+    marginTop: '-9.2rem',
     marginLeft: '-7rem',
     transform: 'scale(0.6)',
     zIndex: 0,
   },
 
   smallScreen: {
-    marginTop: '-18.5rem',
-    marginLeft: '7rem',
+    marginTop: '-18.6rem',
+    marginLeft: '6.5rem',
     transform: 'scale(0.6)',
     zIndex: 100,
   },

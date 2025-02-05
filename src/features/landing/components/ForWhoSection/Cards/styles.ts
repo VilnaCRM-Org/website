@@ -6,7 +6,7 @@ export default {
     [`@media (max-width: 968px)`]: {
       position: 'relative',
       zIndex: '5',
-      marginTop: '20.125rem',
+      // marginTop: '20.125rem',
       padding: '2rem 1.5rem 0.263rem 1.5rem',
       borderRadius: '1.5rem 1.5rem 0 0',
       background: colorTheme.palette.white.main,
