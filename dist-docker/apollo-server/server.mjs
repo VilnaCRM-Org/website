@@ -10,56 +10,70 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 /* eslint-disable */
 import { ApolloServer } from '@apollo/server';
 import { startStandaloneServer } from '@apollo/server/standalone';
-// A schema is a collection of type definitions (hence "typeDefs")
-// that together define the "shape" of queries that are executed against
-// your data.
-const typeDefs = `#graphql
-  # Comments in GraphQL strings (such as this one) start with the hash (#) symbol.
-
-  # This "Book" type defines the queryable fields for every book in our data source.
-  type Book {
-    title: String
-    author: String
-  }
-
-  # The "Query" type is special: it lists all of the available queries that
-  # clients can execute, along with the return type for each. In this
-  # case, the "books" query returns an array of zero or more Books (defined above).
-  type Query {
-    books: [Book]
-  }
-`;
-const books = [
-    {
-        title: 'The Awakening',
-        author: 'Kate Chopin',
-    },
-    {
-        title: 'City of Glass',
-        author: 'Paul Auster',
-    },
-];
-// Resolvers define how to fetch the types defined in your schema.
-// This resolver retrieves books from the "books" array above.
+const SCHEMA_URL = process.env.SHEMA_URL || 'https://raw.githubusercontent.com/VilnaCRM-Org/user-service/main/.github/graphql-spec/spec';
+function getRemoteSchema() {
+    return __awaiter(this, void 0, void 0, function* () {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        try {
+            const response = yield fetch(`${SCHEMA_URL}`, {
+                signal: controller.signal
+            }).finally(() => clearTimeout(timeoutId));
+            if (!response.ok) {
+                throw new Error(`Failed to fetch schema: ${response.statusText}`);
+            }
+            return yield response.text();
+        }
+        catch (error) {
+            if (error.name === 'AbortError') {
+                throw new Error('Schema fetch timeout after 5 seconds');
+            }
+            throw new Error(`Schema fetch failed: ${error.message}`);
+        }
+    });
+}
 const resolvers = {
-    Query: {
-        books: () => books,
+    Mutation: {
+        createUser: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { input }) {
+            try {
+                const newUser = {
+                    id: "1",
+                    confirmed: true,
+                    email: input.email,
+                    initials: input.initials,
+                };
+                return {
+                    user: newUser,
+                    clientMutationId: input.clientMutationId,
+                };
+            }
+            catch (error) {
+                throw new Error(`Failed to create user: ${error}`);
+            }
+        }),
     },
 };
-// The ApolloServer constructor requires two parameters: your schema
-// definition and your set of resolvers.
-const server = new ApolloServer({
-    typeDefs,
-    resolvers,
-});
 function startServer() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            const { url } = yield startStandaloneServer(server, { listen: { port: 4000 } });
+            const typeDefs = yield getRemoteSchema();
+            const server = new ApolloServer({
+                typeDefs,
+                resolvers,
+                formatError: (error) => {
+                    var _a;
+                    console.error('GraphQL Error:', error);
+                    return {
+                        message: error.message,
+                        code: ((_a = error.extensions) === null || _a === void 0 ? void 0 : _a.code) || 'INTERNAL_SERVER_ERROR'
+                    };
+                }
+            });
+            const { url } = yield startStandaloneServer(server, { listen: { port: 4000, path: '/graphql' } });
             console.log(`🚀 Server ready at ${url}`);
         }
         catch (error) {
-            // console.error(`Failed to start Apollo server: ${error}`);
+            console.log(error.message);
             process.exit(1);
         }
     });
