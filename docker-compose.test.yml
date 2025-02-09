@@ -1,6 +1,8 @@
 services:
   prod:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     command: pnpm run start
     restart: unless-stopped
     volumes:

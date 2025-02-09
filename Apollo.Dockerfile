@@ -9,7 +9,6 @@ COPY apollo-server ./apollo-server
 COPY tsconfig.docker.json ./
 
 RUN pnpm install
-#COPY . .
 
 RUN pnpm run compile-apollo
 

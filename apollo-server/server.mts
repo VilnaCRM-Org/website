@@ -2,7 +2,10 @@
 import { ApolloServer } from '@apollo/server';
 import { startStandaloneServer } from '@apollo/server/standalone';
 import dotenv from 'dotenv';
-const SCHEMA_URL = process.env.SHEMA_URL ||'https://raw.githubusercontent.com/VilnaCRM-Org/user-service/main/.github/graphql-spec/spec'
+const defaultUrlSchema ='https://raw.githubusercontent.com/VilnaCRM-Org/user-service/main/.github/graphql-spec/spec';
+const SCHEMA_URL = process.env.SHEMA_URL || defaultUrlSchema;
+
+
 
 async function getRemoteSchema(){
   const controller = new AbortController();
@@ -34,9 +37,9 @@ interface CreateUserInput {
 }
 interface User {
   id: string;
-   confirmed: boolean;
-   email: string;
-   initials: string;
+  confirmed: boolean;
+  email: string;
+  initials: string;
 }
 
 const resolvers = {
@@ -49,7 +52,6 @@ const resolvers = {
           email: input.email,
           initials: input.initials,
         };
-
         return {
           user: newUser,
           clientMutationId: input.clientMutationId,
@@ -69,7 +71,8 @@ async function startServer():Promise<void> {
     const server = new ApolloServer({
       typeDefs,
       resolvers,
-      csrfPrevention: true, // Enable CSRF protection
+      // csrfPrevention: true, // Enable CSRF protection
+
       formatError: (error) => {
         console.error('GraphQL Error:', {
           message: error.message,
