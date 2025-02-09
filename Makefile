@@ -88,7 +88,7 @@ start-apollo: # The target to run Apollo
 stop-apollo: # The target to stop Apollo
 	$(DOCKER_COMPOSE) -f docker-compose.apollo.yml down
 
-test-e2e: start-prod wait-for-prod start-apollo  ## Start production and run E2E tests
+test-e2e: start-apollo start-prod wait-for-prod  ## Start production and run E2E tests
 	$(DOCKER_COMPOSE) -f docker-compose.test.yml exec playwright pnpm run test:e2e
 
 start-prod: ## Build image and start container in production mode
