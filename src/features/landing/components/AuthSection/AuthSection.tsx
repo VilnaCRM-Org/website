@@ -9,7 +9,7 @@ import { SignUpText } from './SignUpText';
 import styles from './styles';
 
 function AuthSection(): React.ReactElement {
-  const [isAuthenticated, setIsAuthenticated] = React.useState(true);
+  const [isAuthenticated, setIsAuthenticated] = React.useState(false);
   return (
     <Box sx={styles.wrapper} component="section">
       <Container>

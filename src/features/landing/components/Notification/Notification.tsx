@@ -1,13 +1,11 @@
 import { Box } from '@mui/material';
 import React from 'react';
-import { useTranslation } from 'react-i18next';
 
 import NotificationSuccess from './NotificationSuccess';
 import styles from './styles';
 import { NotificationProps, NotificationType } from './types';
 
 function Notification({ type }: NotificationProps): React.ReactElement {
-  const { t } = useTranslation();
 
   const notificationComponents: Record<NotificationType, React.FC> = {
     success: NotificationSuccess,
