@@ -8,3 +8,5 @@ WORKDIR /app
 COPY . .
 
 RUN make install
+
+EXPOSE 3001
