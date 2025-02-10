@@ -21,12 +21,13 @@ import { PasswordTip } from '../PasswordTip';
 import { validateFullName, validatePassword, validateEmail } from '../Validations';
 
 import styles from './styles';
+import { AuthFormProps } from './types';
 
 interface ErrorData {
   message: string;
 }
 
-function AuthForm(): React.ReactElement {
+function AuthForm({ setIsAuthenticated }: AuthFormProps): React.ReactElement {
   const [serverError, setServerError] = React.useState('');
   const [signupMutation, { loading }] = useMutation(SIGNUP_MUTATION);
   const {
@@ -51,6 +52,7 @@ function AuthForm(): React.ReactElement {
           },
         },
       });
+      setIsAuthenticated(true);
     } catch (errorData) {
       setServerError((errorData as ErrorData).message);
     }

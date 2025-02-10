@@ -2,8 +2,7 @@ import { test, expect, Locator, Page } from '@playwright/test';
 
 import { t } from './utils/initializeLocalization';
 
-
-const  servicesOpenButtonSelector:string = `${t('unlimited_possibilities.service_text.title')}`;
+const servicesOpenButtonSelector: string = `${t('unlimited_possibilities.service_text.title')}`;
 const possibilitiesPluginsCard: string = t(
   'unlimited_possibilities.cards_headings.heading_ready_plugins'
 );
