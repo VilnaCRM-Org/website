@@ -5,7 +5,6 @@ import { golos } from '@/config/Fonts/golos';
 export default {
   notificationSection: {
     display: 'flex',
-    flexWrap: 'wrap',
     paddingTop: '4.063rem',
 
     [`@media (max-width: 1130px)`]: {
@@ -16,6 +15,23 @@ export default {
       paddingTop: '2.125rem',
     },
   },
+
+  isVisible: {
+    opacity: 1,
+    transform: 'scale(1)',
+    transition:
+      'opacity 400ms cubic-bezier(.17,.67,.83,.67), transform 400ms cubic-bezier(0.4, 0, 0.2, 1)',
+  },
+
+  isHidden: {
+    opacity: 0,
+    position: 'absolute',
+    pointerEvents: 'none',
+    transform: 'scale(0.3)',
+    transition:
+      'opacity 400ms cubic-bezier(.17,.67,.83,.67), transform 400ms cubic-bezier(0.4, 0, 0.2, 1)',
+  },
+
   notificationWrapper: {
     minWidth: '21.57rem',
     width: '100%',
@@ -28,8 +44,9 @@ export default {
     [`@media (max-width: ${breakpointsTheme.breakpoints.values.md}px)`]: {
       paddingBottom: '1.67rem',
     },
-    [`@media (min-width: ${breakpointsTheme.breakpoints.values.md}px)`]: {
+    [`@media (min-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
       minWidth: '39.8rem',
+      minHeight: '40.438rem',
       paddingBottom: '1.5rem',
     },
     [`@media (max-width: ${breakpointsTheme.breakpoints.values.md}px)`]: {
@@ -37,11 +54,12 @@ export default {
     },
 
     [`@media (min-width: ${breakpointsTheme.breakpoints.values.lg}px)`]: {
-      minWidth: '38.3rem',
+      minWidth: '31.375rem',
+      minHeight: '40.438rem',
     },
   },
 
-  // success
+  // success box
   successBox: {
     position: 'relative',
     display: 'flex',
@@ -59,7 +77,7 @@ export default {
     },
   },
 
-  successImg: {
+  successImgBox: {
     position: 'absolute',
 
     // mobile
@@ -67,12 +85,32 @@ export default {
     left: '-8.5rem',
     scale: 0.91,
 
-    // tablet
-    [`@media (min-width: ${breakpointsTheme.breakpoints.values.md}px)`]: {
-      minWidth: '636px',
+    [`@media (min-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
+      minWidth: '29rem',
       top: '0.25rem',
       left: '0.6rem',
-      scale: ' 1.04',
+      scale: '1.04',
+    },
+  },
+  bottomImgBox: {
+    display: 'none',
+    rotate: '-180deg',
+
+    [`@media (min-width: ${breakpointsTheme.breakpoints.values.sm}px) and (max-width: ${breakpointsTheme.breakpoints.values.lg}px)`]:
+      {
+        display: 'block',
+        minWidth: '29rem',
+        top: '25rem',
+        left: '0.6rem',
+
+        transform: 'scaleX(1.14)',
+      },
+
+    [`@media (min-width: ${breakpointsTheme.breakpoints.values.lg}px)`]: {
+      display: 'block',
+      top: '26.6rem',
+      left: '-2.4rem',
+      scale: 0.98,
     },
   },
 

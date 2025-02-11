@@ -157,6 +157,13 @@
       "error_text": "There was an error. Please check again"
     }
   },
+  "notifications": {
+    "success": {
+      "title": "Congratulations!",
+      "description": "You have successfully registered",
+      "button": "To the registration form"
+    }
+  },
   "footer": {
     "logo_alt": "Vilna logo",
     "copyright": "Copyright © ТОВ “Vilna CRM”",

@@ -1,21 +1,26 @@
 import { Box } from '@mui/material';
 import Image from 'next-export-optimize-images/image';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { UiButton } from '@/components';
 
 import UiTypography from '../../../../components/UiTypography';
 import Confetti from '../../assets/svg/notification/confetti.svg';
 import Settings from '../../assets/svg/notification/settings.svg';
+import { AuthFormProps } from '../AuthSection/AuthForm/types';
 
 import styles from './styles';
 
-function NotificationSuccess(): React.ReactElement {
-  const handleClick: () => void = (): void => {};
+function NotificationSuccess({
+  setIsAuthenticated,
+}: Omit<AuthFormProps, 'isAuthenticated'>): React.ReactElement {
+  const { t } = useTranslation();
+  const handleClick: () => void = (): void => setIsAuthenticated(false);
 
   return (
     <Box sx={styles.successBox}>
-      <Box sx={styles.successImg}>
+      <Box sx={styles.successImgBox}>
         <Image src={Confetti} alt="confetti" />
       </Box>
 
@@ -25,10 +30,11 @@ function NotificationSuccess(): React.ReactElement {
 
       <Box sx={styles.messageContainer}>
         <UiTypography component="h4" sx={styles.messageTitle}>
-          Вітаємо!
+          {t('notifications.success.title')}
         </UiTypography>
+
         <UiTypography component="span" sx={styles.messageDescription}>
-          Ви успішно налаштували проєкт
+          {t('notifications.success.description')}
         </UiTypography>
 
         <UiButton
@@ -39,8 +45,12 @@ function NotificationSuccess(): React.ReactElement {
           fullWidth
           onClick={handleClick}
         >
-          На головну проєкту
+          {t('notifications.success.button')}
         </UiButton>
+
+        <Box sx={{ ...styles.successImgBox, ...styles.bottomImgBox }}>
+          <Image src={Confetti} alt="confetti" />
+        </Box>
       </Box>
     </Box>
   );

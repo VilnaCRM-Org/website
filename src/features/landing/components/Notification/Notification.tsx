@@ -1,21 +1,38 @@
 import { Box } from '@mui/material';
 import React from 'react';
 
+import { AuthFormProps } from '../AuthSection/AuthForm/types';
+
 import NotificationSuccess from './NotificationSuccess';
 import styles from './styles';
 import { NotificationProps, NotificationType } from './types';
 
-function Notification({ type }: NotificationProps): React.ReactElement {
+const notificationComponents: Record<
+  NotificationType,
+  React.FC<Omit<AuthFormProps, 'isAuthenticated'>>
+> = {
+  success: ({ setIsAuthenticated }: Omit<AuthFormProps, 'isAuthenticated'>) => (
+    <NotificationSuccess setIsAuthenticated={setIsAuthenticated} />
+  ),
+};
 
-  const notificationComponents: Record<NotificationType, React.FC> = {
-    success: NotificationSuccess,
-  };
+function Notification({
+  type,
+  setIsAuthenticated,
+  isAuthenticated,
+}: NotificationProps & AuthFormProps): React.ReactElement {
+  const Component: React.FC<Omit<AuthFormProps, 'isAuthenticated'>> =
+    notificationComponents[type] || NotificationSuccess;
 
-  const Component: React.FC = notificationComponents[type] || NotificationSuccess;
   return (
-    <Box sx={styles.notificationSection}>
+    <Box
+      sx={{
+        ...styles.notificationSection,
+        ...(isAuthenticated ? styles.isVisible : styles.isHidden),
+      }}
+    >
       <Box sx={styles.notificationWrapper}>
-        <Component />
+        <Component setIsAuthenticated={setIsAuthenticated} />
       </Box>
     </Box>
   );

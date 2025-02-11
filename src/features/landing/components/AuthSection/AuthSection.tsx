@@ -15,11 +15,15 @@ function AuthSection(): React.ReactElement {
       <Container>
         <Stack justifyContent="space-between" sx={styles.content}>
           <SignUpText socialLinks={socialLinks} />
-          {isAuthenticated ? (
-            <Notification type="success" />
-          ) : (
-            <AuthForm setIsAuthenticated={setIsAuthenticated} />
-          )}
+
+          <Box sx={styles.formContainer}>
+            <Notification
+              type="success"
+              setIsAuthenticated={setIsAuthenticated}
+              isAuthenticated={isAuthenticated}
+            />
+            <AuthForm setIsAuthenticated={setIsAuthenticated} isAuthenticated={isAuthenticated} />
+          </Box>
         </Stack>
       </Container>
     </Box>

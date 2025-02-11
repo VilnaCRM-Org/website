@@ -27,7 +27,7 @@ interface ErrorData {
   message: string;
 }
 
-function AuthForm({ setIsAuthenticated }: AuthFormProps): React.ReactElement {
+function AuthForm({ setIsAuthenticated, isAuthenticated }: AuthFormProps): React.ReactElement {
   const [serverError, setServerError] = React.useState('');
   const [signupMutation, { loading }] = useMutation(SIGNUP_MUTATION);
   const {
@@ -59,7 +59,7 @@ function AuthForm({ setIsAuthenticated }: AuthFormProps): React.ReactElement {
   };
 
   return (
-    <Box sx={styles.formWrapper}>
+    <Box sx={{ ...styles.formWrapper, ...(!isAuthenticated ? styles.isVisible : styles.isHidden) }}>
       {loading && (
         <Box sx={styles.loader} role="status">
           <CircularProgress color="primary" size={70} />

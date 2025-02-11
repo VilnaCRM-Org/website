@@ -121,11 +121,16 @@ const checkElementsInDocument: (...elements: (HTMLElement | null)[]) => void = (
   elements.forEach(element => expect(element).toBeInTheDocument());
 };
 
+const mockSetIsAuthenticated: jest.Mock<(isAuthenticated: boolean) => void> = jest.fn();
 describe('AuthForm', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
   it('renders AuthForm component', () => {
     const { container, queryByRole, getByAltText, getByText } = render(
       <MockedProvider>
-        <AuthForm />
+        <AuthForm setIsAuthenticated={mockSetIsAuthenticated} isAuthenticated={false} />
       </MockedProvider>
     );
 
@@ -155,7 +160,7 @@ describe('AuthForm', () => {
   it('renders input fields', () => {
     render(
       <MockedProvider>
-        <AuthForm />
+        <AuthForm setIsAuthenticated={mockSetIsAuthenticated} isAuthenticated={false} />
       </MockedProvider>
     );
 
@@ -167,7 +172,7 @@ describe('AuthForm', () => {
   it('successful registration', async () => {
     const { getByRole, queryByRole } = render(
       <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
-        <AuthForm />
+        <AuthForm setIsAuthenticated={mockSetIsAuthenticated} isAuthenticated={false} />
       </MockedProvider>
     );
 
@@ -185,7 +190,7 @@ describe('AuthForm', () => {
   it('registration with server error', async () => {
     const { findByRole } = render(
       <MockedProvider mocks={[rejectedMockResponse]} addTypename={false}>
-        <AuthForm />
+        <AuthForm setIsAuthenticated={mockSetIsAuthenticated} isAuthenticated={false} />
       </MockedProvider>
     );
 
@@ -198,7 +203,7 @@ describe('AuthForm', () => {
   it('correct linkage between inputs and values', async () => {
     render(
       <MockedProvider addTypename={false}>
-        <AuthForm />
+        <AuthForm setIsAuthenticated={mockSetIsAuthenticated} isAuthenticated={false} />
       </MockedProvider>
     );
 
@@ -220,7 +225,7 @@ describe('AuthForm', () => {
   it('correct linkage between inputs and values with no data', async () => {
     const { getAllByText, queryByRole } = render(
       <MockedProvider addTypename={false}>
-        <AuthForm />
+        <AuthForm setIsAuthenticated={mockSetIsAuthenticated} isAuthenticated={false} />
       </MockedProvider>
     );
 
@@ -246,7 +251,7 @@ describe('AuthForm', () => {
     const user: UserEvent = userEvent.setup();
     const { getByText } = render(
       <MockedProvider addTypename={false}>
-        <AuthForm />
+        <AuthForm setIsAuthenticated={mockSetIsAuthenticated} isAuthenticated={false} />
       </MockedProvider>
     );
 

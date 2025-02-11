@@ -161,6 +161,13 @@
       "error_text": "Виникла помилка. Перевірте ще раз"
     }
   },
+  "notifications": {
+    "success": {
+      "title": "Вітаємо!",
+      "description": "Ви успішно зареєструвались",
+      "button": "До реєстраційної форми"
+    }
+  },
   "footer": {
     "logo_alt": "Vilna логотип",
     "copyright": "Copyright © ТОВ “Вільна СРМ”",
