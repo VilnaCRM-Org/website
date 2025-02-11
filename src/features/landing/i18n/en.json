@@ -161,7 +161,11 @@
     "success": {
       "title": "Congratulations!",
       "description": "You have successfully registered",
-      "button": "To the registration form"
+      "button": "To the registration form",
+      "images": {
+        "confetti": "Cheerful and colorful confetti",
+        "gears": "Cheerful and colorful confetti"
+      }
     }
   },
   "footer": {

@@ -15,7 +15,6 @@ function AuthSection(): React.ReactElement {
       <Container>
         <Stack justifyContent="space-between" sx={styles.content}>
           <SignUpText socialLinks={socialLinks} />
-
           <Box sx={styles.formContainer}>
             <Notification
               type="success"

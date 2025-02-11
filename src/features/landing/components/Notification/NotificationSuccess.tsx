@@ -21,11 +21,20 @@ function NotificationSuccess({
   return (
     <Box sx={styles.successBox}>
       <Box sx={styles.successImgBox}>
-        <Image src={Confetti} alt="confetti" />
+        <Image
+          src={Confetti}
+          data-testid="confetti"
+          alt={t('notifications.success.images.confetti')}
+        />
       </Box>
 
       <Box sx={styles.imgWrapper}>
-        <Image src={Settings} alt="settings" width={164} height={164} />
+        <Image
+          src={Settings}
+          alt={t('notifications.success.images.gears')}
+          width={164}
+          height={164}
+        />
       </Box>
 
       <Box sx={styles.messageContainer}>
@@ -49,7 +58,7 @@ function NotificationSuccess({
         </UiButton>
 
         <Box sx={{ ...styles.successImgBox, ...styles.bottomImgBox }}>
-          <Image src={Confetti} alt="confetti" />
+          <Image src={Confetti} alt={t('notifications.success.images.confetti')} />
         </Box>
       </Box>
     </Box>
