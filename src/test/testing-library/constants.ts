@@ -1,8 +1,10 @@
 import { faker } from '@faker-js/faker';
+import { t } from 'i18next';
 
 import { CardItem } from '@/components/UiCardList/types';
 
 import { SocialMedia } from '../../features/landing/types/social-media';
+
 
 export const testId: string = faker.string.uuid();
 export const testTitle: string = faker.lorem.word(6);
@@ -17,6 +19,14 @@ export const testPassword: string = faker.internet.password({
 export const testPlaceholder: string = faker.lorem.word(8);
 export const testUrl: string = faker.internet.url();
 export const mockEmail: string = 'info@vilnacrm.com';
+
+
+export const fullNamePlaceholder: string = t('sign_up.form.name_input.placeholder');
+export const emailPlaceholder: string = t('sign_up.form.email_input.placeholder');
+export const passwordPlaceholder: string = t('sign_up.form.password_input.placeholder');
+export const submitButtonText: string = t('sign_up.form.button_text');
+export const checkboxRole: string = 'checkbox';
+export const buttonRole: string = 'button';
 
 export const typeOfCard: string = 'smallCard';
 

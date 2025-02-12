@@ -27,6 +27,7 @@ export default {
     opacity: 0,
     position: 'absolute',
     pointerEvents: 'none',
+    visibility: 'hidden',
     transform: 'scale(0.3)',
     transition:
       'opacity 400ms cubic-bezier(.17,.67,.83,.67), transform 400ms cubic-bezier(0.4, 0, 0.2, 1)',

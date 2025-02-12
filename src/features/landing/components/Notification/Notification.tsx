@@ -30,6 +30,7 @@ function Notification({
         ...styles.notificationSection,
         ...(isAuthenticated ? styles.isVisible : styles.isHidden),
       }}
+      data-testid='notification'
     >
       <Box sx={styles.notificationWrapper}>
         <Component setIsAuthenticated={setIsAuthenticated} />

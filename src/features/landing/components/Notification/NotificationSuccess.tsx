@@ -19,7 +19,7 @@ function NotificationSuccess({
   const handleClick: () => void = (): void => setIsAuthenticated(false);
 
   return (
-    <Box sx={styles.successBox}>
+    <Box sx={styles.successBox} data-testid='success-box'>
       <Box sx={styles.successImgBox}>
         <Image
           src={Confetti}

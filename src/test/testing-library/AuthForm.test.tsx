@@ -1,19 +1,20 @@
 import { MockedProvider, MockedResponse } from '@apollo/client/testing';
-import { render, fireEvent, waitFor, screen } from '@testing-library/react';
+import { render,  waitFor,  } from '@testing-library/react';
 import userEvent, { UserEvent } from '@testing-library/user-event';
 import { t } from 'i18next';
 import React from 'react';
+
+import {
+  checkElementsInDocument,
+  fillForm,
+  selectFormElements,
+} from '@/test/testing-library/utils';
 
 import { SIGNUP_MUTATION } from '../../features/landing/api/service/userService';
 import AuthForm from '../../features/landing/components/AuthSection/AuthForm/AuthForm';
 
 import { testInitials, testEmail, testPassword } from './constants';
 
-const fullNamePlaceholder: string = t('sign_up.form.name_input.placeholder');
-const emailPlaceholder: string = t('sign_up.form.email_input.placeholder');
-const passwordPlaceholder: string = t('sign_up.form.password_input.placeholder');
-
-const submitButtonText: string = t('sign_up.form.button_text');
 const formTitleText: string = t('sign_up.form.heading_main');
 
 const nameInputText: string = t('sign_up.form.name_input.label');
@@ -24,9 +25,7 @@ const requiredText: string = t('sign_up.form.name_input.required');
 const passwordTipAltText: string = t('sign_up.form.password_tip.alt');
 
 const statusRole: string = 'status';
-const checkboxRole: string = 'checkbox';
 const alertRole: string = 'alert';
-const buttonRole: string = 'button';
 
 const emptyValue: string = '';
 
@@ -74,52 +73,6 @@ const rejectedMockResponse: MockedResponse = {
   error: { name: 'MockError', message: 'Server Error' },
 };
 
-const selectFormElements: () => {
-  fullNameInput: HTMLInputElement;
-  emailInput: HTMLInputElement;
-  passwordInput: HTMLInputElement;
-  privacyCheckbox: HTMLInputElement;
-  signUpButton: HTMLElement;
-} = () => {
-  const fullNameInput: HTMLInputElement = screen.getByPlaceholderText(fullNamePlaceholder);
-  const emailInput: HTMLInputElement = screen.getByPlaceholderText(emailPlaceholder);
-  const passwordInput: HTMLInputElement = screen.getByPlaceholderText(passwordPlaceholder);
-  const privacyCheckbox: HTMLInputElement = screen.getByRole(checkboxRole);
-  const signUpButton: HTMLElement = screen.getByRole(buttonRole, {
-    name: submitButtonText,
-  });
-
-  return { fullNameInput, emailInput, passwordInput, privacyCheckbox, signUpButton };
-};
-
-const fillForm: (
-  fullNameValue?: string,
-  emailValue?: string,
-  passwordValue?: string,
-  isChecked?: boolean
-) => {
-  fullNameInput: HTMLInputElement;
-  emailInput: HTMLInputElement;
-  passwordInput: HTMLInputElement;
-  privacyCheckbox: HTMLInputElement;
-} = (fullNameValue = '', emailValue = '', passwordValue = '', isChecked = false) => {
-  const { fullNameInput, emailInput, passwordInput, privacyCheckbox, signUpButton } =
-    selectFormElements();
-
-  fireEvent.change(fullNameInput, { target: { value: fullNameValue } });
-  fireEvent.change(emailInput, { target: { value: emailValue } });
-  fireEvent.change(passwordInput, { target: { value: passwordValue } });
-
-  if (isChecked) fireEvent.click(privacyCheckbox);
-
-  fireEvent.click(signUpButton);
-
-  return { fullNameInput, emailInput, passwordInput, privacyCheckbox };
-};
-
-const checkElementsInDocument: (...elements: (HTMLElement | null)[]) => void = (...elements) => {
-  elements.forEach(element => expect(element).toBeInTheDocument());
-};
 
 const mockSetIsAuthenticated: jest.Mock<(isAuthenticated: boolean) => void> = jest.fn();
 describe('AuthForm', () => {
