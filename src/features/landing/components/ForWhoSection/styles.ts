@@ -34,55 +34,6 @@ export default {
     },
   },
 
-  // mainImage: {
-  //   img: {
-  //     width: '100dvw',
-  //     maxWidth: '51.4rem',
-  //     height: '42.5rem',
-  //     zIndex: '1',
-  //     position: 'absolute',
-  //     top: '7%',
-  //     right: '-6%',
-  //     '@media (max-width: 1130.98px)': {
-  //       width: '100dvw',
-  //       maxWidth: '43rem',
-  //       height: '39.8rem',
-  //       top: '5%',
-  //       right: '-2.9%',
-  //     },
-  //     [`@media (max-width: 968px)`]: {
-  //       maxWidth: '43.75rem',
-  //       height: '39rem',
-  //       top: '47%',
-  //       right: '8%',
-  //     },
-  //     [`@media (max-width: ${breakpointsTheme.breakpoints.values.md}px)`]: {
-  //       right: '-10%',
-  //     },
-  //     [`@media (max-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
-  //       height: '28rem',
-  //       top: '86.5%',
-  //       width: '29.5rem',
-  //     },
-  //     '@media (max-width: 475.98px)': {
-  //       height: '24.688rem',
-  //       right: '-18%',
-  //       width: '26.5rem',
-  //       top: '110%',
-  //     },
-  //     '@media (max-width: 425.98px)': {
-  //       height: '24.688rem',
-  //       right: '-14%',
-  //       width: '27.5rem',
-  //       top: '100%',
-  //     },
-  //     [`@media (max-width: ${breakpointsTheme.breakpoints.values.xs}px)`]: {
-  //       right: '-32.5%',
-  //       top: '110%',
-  //     },
-  //   },
-  // },
-
   line: {
     position: 'relative',
     background: colorTheme.palette.white.main,
@@ -104,25 +55,28 @@ export default {
     display: 'flex',
   },
 
-  svg_container: {},
+  svgContainer: {
+    // TODO: Will be displayed in future iteration
+  },
 
   circle: {
     width: '0.5rem',
     height: '0.5rem',
     marginTop: '3.5rem',
-    marginLeft: '1rem',
+    marginLeft: '1.6rem',
   },
 
   rhombus: {
     width: '1.5rem',
     height: '1.5rem',
     marginTop: '9.5rem',
-    marginLeft: '0.7rem',
+    marginLeft: '1.3rem',
   },
 
-  point_container: {
+  pointContainer: {
     display: 'flex',
     marginTop: '0.5rem',
+    marginLeft: '0.6rem'
   },
 
   point6: {
@@ -141,34 +95,41 @@ export default {
     width: '20rem',
     height: '20rem',
     marginTop: '5rem',
-    marginLeft: '0.5rem',
+    marginLeft: '0.9rem',
     backgroundColor: '#1EAEFF',
     borderRadius: '6%',
   },
 
   bigScreen: {
-    marginTop: '-9.2rem',
-    marginLeft: '-7rem',
-    transform: 'scale(0.6)',
+    width: '18.5rem',
+    height: 'auto',
+    marginTop: '-3.2rem',
+    marginLeft: '1.7rem',
     zIndex: 0,
+    borderRadius: '0.6rem',
   },
 
   smallScreen: {
-    marginTop: '-18.6rem',
-    marginLeft: '6.5rem',
-    transform: 'scale(0.6)',
+    width: '9.3rem',
+    height: 'auto',
+    marginTop: '-6rem',
+    marginLeft: '11.5rem',
     zIndex: 100,
+    borderRadius: '0.6rem',
   },
 
   waves: {
+    // TODO: Will be displayed in future iteration
     display: 'none',
   },
 
   hexagon: {
+    // TODO: Will be displayed in future iteration
     display: 'none',
   },
 
   triangle: {
+    // TODO: Will be displayed in future iteration
     display: 'none',
   },
 };
