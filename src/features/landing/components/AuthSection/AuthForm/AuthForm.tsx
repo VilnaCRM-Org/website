@@ -21,12 +21,13 @@ import { PasswordTip } from '../PasswordTip';
 import { validateFullName, validatePassword, validateEmail } from '../Validations';
 
 import styles from './styles';
+import { AuthFormProps } from './types';
 
 interface ErrorData {
   message: string;
 }
 
-function AuthForm(): React.ReactElement {
+function AuthForm({ setIsAuthenticated, isAuthenticated }: AuthFormProps): React.ReactElement {
   const [serverError, setServerError] = React.useState('');
   const [signupMutation, { loading }] = useMutation(SIGNUP_MUTATION);
   const {
@@ -51,17 +52,14 @@ function AuthForm(): React.ReactElement {
           },
         },
       });
+      setIsAuthenticated(true);
     } catch (errorData) {
       setServerError((errorData as ErrorData).message);
     }
   };
 
-  const handleFormSubmit: (data: RegisterItem) => void = (data: RegisterItem) => {
-    onSubmit(data);
-  };
-
   return (
-    <Box sx={styles.formWrapper}>
+    <Box sx={{ ...styles.formWrapper, ...(!isAuthenticated ? styles.isVisible : styles.isHidden) }}>
       {loading && (
         <Box sx={styles.loader} role="status">
           <CircularProgress color="primary" size={70} />
@@ -70,7 +68,7 @@ function AuthForm(): React.ReactElement {
       <Box sx={styles.backgroundImage} />
       <Box sx={styles.backgroundBlock} />
       <Box sx={styles.formContent}>
-        <form onSubmit={handleSubmit(handleFormSubmit)}>
+        <form onSubmit={handleSubmit(onSubmit)}>
           <UiTypography variant="h4" component="h4" sx={styles.formTitle}>
             {t('sign_up.form.heading_main')}
           </UiTypography>

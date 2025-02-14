@@ -1,4 +1,6 @@
-import { render } from '@testing-library/react';
+
+
+import {  render, screen } from '@testing-library/react';
 import React from 'react';
 
 import AuthSection from '../../features/landing/components/AuthSection/AuthSection';
@@ -13,14 +15,13 @@ jest.mock('@apollo/client', () => ({
   ),
 }));
 
-jest.mock('../../features/landing/components/AuthSection/AuthForm', () => ({
-  AuthForm: (): React.ReactNode => <div data-testid={mockAuthForm}>Mock AuthForm</div>,
-}));
-
 jest.mock('../../features/landing/components/AuthSection/SignUpText', () => ({
   SignUpText: (): React.ReactNode => <div data-testid={mockAuthText}>Mock SignUpText</div>,
 }));
 
+jest.mock('../../features/landing/components/AuthSection/AuthForm', () => ({
+  AuthForm: (): React.ReactNode => <div data-testid={mockAuthForm}>Mock AuthForm</div>,
+}));
 describe('AuthSection', () => {
   test('renders without crashing', () => {
     const { container } = render(<AuthSection />);
@@ -38,5 +39,12 @@ describe('AuthSection', () => {
     const { getByTestId } = render(<AuthSection />);
     const authForm: HTMLElement = getByTestId(mockAuthForm);
     expect(authForm).toBeInTheDocument();
+  });
+
+  test('renders AuthForm, and don`t render Notification component', () => {
+    render(<AuthSection />);
+
+    expect(screen.getByTestId(mockAuthForm)).toBeVisible();
+    expect(screen.getByTestId('notification')).not.toBeVisible();
   });
 });

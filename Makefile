@@ -76,11 +76,31 @@ storybook-build: ## Build Storybook UI. Storybook is a frontend workshop for bui
 generate-ts-doc: ## This command generates documentation from the typescript files.
 	$(PNPM_EXEC) doc
 
-test-e2e: ## This command executes PlayWright E2E tests.
-	$(PLAYWRIGHT_EXEC) test:e2e
+mockoon:
+	$(DOCKER_COMPOSE) -f mockoon/docker-compose.mockoon.yml up -d
 
-test-visual: ## This command executes PlayWright Visual tests.
-	$(PLAYWRIGHT_EXEC) test:visual
+stop-mockoon:
+	$(DOCKER_COMPOSE) -f mockoon/docker-compose.mockoon.yml down
+
+start-apollo: # The target to run Apollo
+	$(DOCKER_COMPOSE) -f docker-compose.apollo.yml up -d
+
+stop-apollo: # The target to stop Apollo
+	$(DOCKER_COMPOSE) -f docker-compose.apollo.yml down
+
+test-e2e: start-prod wait-for-prod  ## Start production and run E2E tests
+	$(DOCKER_COMPOSE) -f docker-compose.test.yml exec playwright pnpm run test:e2e
+
+start-prod: ## Build image and start container in production mode
+	$(DOCKER_COMPOSE) -f docker-compose.test.yml up -d
+
+test-visual: start-prod wait-for-prod  ## Start production and run visual tests
+	$(DOCKER_COMPOSE) -f docker-compose.test.yml exec playwright pnpm run test:visual
+
+wait-for-prod: ## Wait for the prod service to be ready on p ort 3001.
+	@echo "Waiting for prod service to be ready on port 3001..."
+	npx wait-on http://localhost:3001
+	@echo "Prod service is up and running!"
 
 test-unit: ## This command executes unit tests using Jest library.
 	$(PNPM_EXEC) test:unit

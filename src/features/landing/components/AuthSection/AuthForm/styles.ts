@@ -15,6 +15,21 @@ export default {
       mt: '2.125rem',
     },
   },
+  isVisible: {
+    opacity: 1,
+    transform: 'translateY(0)',
+    transition:
+      'opacity 400ms cubic-bezier(0.4, 0, 0.2, 1), transform 400ms cubic-bezier(.13,.93,.64,.84)',
+  },
+
+  isHidden: {
+    opacity: 0,
+    position: 'absolute',
+    pointerEvents: 'none',
+    transform: 'translateY(-100%)',
+    transition:
+      'opacity 400ms cubic-bezier(0.4, 0, 0.2, 1), transform 400ms cubic-bezier(.13,.93,.64,.84)',
+  },
 
   backgroundBlock: {
     position: 'absolute',
@@ -71,7 +86,7 @@ export default {
     zIndex: '5',
     padding: '2.25rem 2.5rem 2.5rem 2.5rem',
     borderRadius: '2rem 2rem 0 0',
-    border: '1px solid  primary.main',
+    border: `1px solid  ${colorTheme.palette.brandGray.main}`,
     background: colorTheme.palette.white.main,
     minHeight: ' 40.438rem',
     maxWidth: '31.375rem',

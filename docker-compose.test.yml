@@ -1,0 +1,33 @@
+services:
+  prod:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: pnpm run start
+    restart: unless-stopped
+    volumes:
+      - .:/app
+    ports:
+      - '3001:3001'
+
+  playwright:
+    build:
+      context: .
+      dockerfile: Playwright.Dockerfile
+    restart: unless-stopped
+    volumes:
+      - .:/app
+    ports:
+      - '9323:9323'
+    environment:
+      - TEST_TYPE
+      - NEXT_PUBLIC_WEBSITE_URL=http://prod:3001
+
+  apollo:
+    build:
+      context: .
+      dockerfile: Apollo.Dockerfile
+    volumes:
+      - .:/app
+    ports:
+      - '4000:4000'

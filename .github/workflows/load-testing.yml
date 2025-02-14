@@ -25,7 +25,7 @@ jobs:
         run: make install
 
       - name: Start application
-        run: make start
+        run: make start-prod
 
       - name: Run load tests
         run: make load-tests
