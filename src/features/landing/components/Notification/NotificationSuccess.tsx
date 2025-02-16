@@ -8,18 +8,18 @@ import { UiButton } from '@/components';
 import UiTypography from '../../../../components/UiTypography';
 import Confetti from '../../assets/svg/notification/confetti.svg';
 import Settings from '../../assets/svg/notification/settings.svg';
-import { AuthFormProps } from '../AuthSection/AuthForm/types';
+import { AuthenticationProps } from '../AuthSection/AuthFormComponent/types';
 
 import styles from './styles';
 
 function NotificationSuccess({
   setIsAuthenticated,
-}: Omit<AuthFormProps, 'isAuthenticated'>): React.ReactElement {
+}: Omit<AuthenticationProps, 'isAuthenticated'>): React.ReactElement {
   const { t } = useTranslation();
   const handleClick: () => void = (): void => setIsAuthenticated(false);
 
   return (
-    <Box sx={styles.successBox} data-testid='success-box'>
+    <Box sx={styles.successBox} data-testid="success-box">
       <Box sx={styles.successImgBox}>
         <Image
           src={Confetti}

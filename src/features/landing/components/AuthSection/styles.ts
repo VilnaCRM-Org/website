@@ -17,10 +17,4 @@ export default {
       alignItems: 'center',
     },
   },
-
-  formContainer: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-  },
 };

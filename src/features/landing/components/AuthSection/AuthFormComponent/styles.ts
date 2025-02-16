@@ -6,6 +6,10 @@ import Images from '../../../assets/svg/auth-section/image.svg';
 
 export default {
   formWrapper: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+
     position: 'relative',
     mt: '4.063rem',
     [`@media (max-width: 1130px)`]: {
@@ -14,21 +18,6 @@ export default {
     [`@media (max-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
       mt: '2.125rem',
     },
-  },
-  isVisible: {
-    opacity: 1,
-    transform: 'translateY(0)',
-    transition:
-      'opacity 400ms cubic-bezier(0.4, 0, 0.2, 1), transform 400ms cubic-bezier(.13,.93,.64,.84)',
-  },
-
-  isHidden: {
-    opacity: 0,
-    position: 'absolute',
-    pointerEvents: 'none',
-    transform: 'translateY(-100%)',
-    transition:
-      'opacity 400ms cubic-bezier(0.4, 0, 0.2, 1), transform 400ms cubic-bezier(.13,.93,.64,.84)',
   },
 
   backgroundBlock: {

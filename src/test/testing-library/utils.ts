@@ -3,11 +3,14 @@ import { t } from 'i18next';
 
 import {
   fullNamePlaceholder,
-  emailPlaceholder, passwordPlaceholder, submitButtonText, checkboxRole, buttonRole,
+  emailPlaceholder,
+  passwordPlaceholder,
+  submitButtonText,
+  checkboxRole,
+  buttonRole,
 } from './constants';
 
 export const createLocalizedRegExp: (key: string) => RegExp = key => new RegExp(t(key));
-
 
 export const selectFormElements: () => {
   fullNameInput: HTMLInputElement;
@@ -26,7 +29,6 @@ export const selectFormElements: () => {
 
   return { fullNameInput, emailInput, passwordInput, privacyCheckbox, signUpButton };
 };
-
 
 export const fillForm: (
   fullNameValue?: string,
@@ -53,6 +55,8 @@ export const fillForm: (
   return { fullNameInput, emailInput, passwordInput, privacyCheckbox };
 };
 
-export const checkElementsInDocument: (...elements: (HTMLElement | null)[]) => void = (...elements) => {
+export const checkElementsInDocument: (...elements: (HTMLElement | null)[]) => void = (
+  ...elements
+) => {
   elements.forEach(element => expect(element).toBeInTheDocument());
 };

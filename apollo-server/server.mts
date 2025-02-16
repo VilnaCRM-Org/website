@@ -40,7 +40,7 @@ interface User {
   initials: string;
 }
 
-const resolvers = {
+export const resolvers = {
   Mutation: {
     createUser: async (_: unknown, { input }: { input: CreateUserInput }) => {
       try {

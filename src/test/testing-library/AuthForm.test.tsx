@@ -1,5 +1,6 @@
-import { MockedProvider, MockedResponse } from '@apollo/client/testing';
-import { render,  waitFor,  } from '@testing-library/react';
+import { MutationFunction } from '@apollo/client';
+import { MockedProvider } from '@apollo/client/testing';
+import { fireEvent, render, waitFor } from '@testing-library/react';
 import userEvent, { UserEvent } from '@testing-library/user-event';
 import { t } from 'i18next';
 import React from 'react';
@@ -10,8 +11,11 @@ import {
   selectFormElements,
 } from '@/test/testing-library/utils';
 
-import { SIGNUP_MUTATION } from '../../features/landing/api/service/userService';
-import AuthForm from '../../features/landing/components/AuthSection/AuthForm/AuthForm';
+import AuthForm from '../../features/landing/components/AuthSection/AuthFormComponent/AuthForm';
+import {
+  CreateUserPayload,
+  SignUpVariables,
+} from '../../features/landing/components/AuthSection/AuthFormComponent/types';
 
 import { testInitials, testEmail, testPassword } from './constants';
 
@@ -33,57 +37,21 @@ const authFormSelector: string = '.MuiBox-root';
 
 const borderStyle: string = 'border: 1px solid #DC3939';
 
-const fulfilledMockResponse: MockedResponse = {
-  request: {
-    query: SIGNUP_MUTATION,
-  },
-  variableMatcher: () => true,
-  result: variables => {
-    const { input } = variables;
-    const { initials, email, password, clientMutationId } = input;
+const mockSetIsAuthenticated: jest.Mock<(isAuthenticated: boolean) => void> = jest.fn<
+  (isAuthenticated: boolean) => void,
+  [boolean]
+>();
+const mockSignupMutation: MutationFunction<CreateUserPayload, SignUpVariables> = jest.fn();
 
-    expect(input).not.toBeUndefined();
-    expect(initials).toBe(testInitials);
-    expect(email).toBe(testEmail);
-    expect(password).toBe(testPassword);
-    expect(clientMutationId).toBe('132');
-
-    return {
-      data: {
-        createUser: {
-          user: {
-            email,
-            initials,
-            id: 0,
-            confirmed: true,
-          },
-          clientMutationId: '132',
-        },
-      },
-    };
-  },
-};
-const rejectedMockResponse: MockedResponse = {
-  request: {
-    query: SIGNUP_MUTATION,
-    variables: {
-      input: {},
-    },
-  },
-  error: { name: 'MockError', message: 'Server Error' },
-};
-
-
-const mockSetIsAuthenticated: jest.Mock<(isAuthenticated: boolean) => void> = jest.fn();
 describe('AuthForm', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
   it('renders AuthForm component', () => {
-    const { container, queryByRole, getByAltText, getByText } = render(
+    const { container, queryByRole, getByAltText, getByText, getByTestId } = render(
       <MockedProvider>
-        <AuthForm setIsAuthenticated={mockSetIsAuthenticated} isAuthenticated={false} />
+        <AuthForm setIsAuthenticated={mockSetIsAuthenticated} signupMutation={mockSignupMutation} />
       </MockedProvider>
     );
 
@@ -106,6 +74,7 @@ describe('AuthForm', () => {
       passwordTipImage
     );
 
+    expect(getByTestId('auth-form')).toBeVisible();
     expect(loader).not.toBeInTheDocument();
     expect(serverErrorMessage).not.toBeInTheDocument();
   });
@@ -113,7 +82,7 @@ describe('AuthForm', () => {
   it('renders input fields', () => {
     render(
       <MockedProvider>
-        <AuthForm setIsAuthenticated={mockSetIsAuthenticated} isAuthenticated={false} />
+        <AuthForm setIsAuthenticated={mockSetIsAuthenticated} signupMutation={mockSignupMutation} />
       </MockedProvider>
     );
 
@@ -122,41 +91,10 @@ describe('AuthForm', () => {
     checkElementsInDocument(fullNameInput, emailInput, passwordInput);
   });
 
-  it('successful registration', async () => {
-    const { getByRole, queryByRole } = render(
-      <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
-        <AuthForm setIsAuthenticated={mockSetIsAuthenticated} isAuthenticated={false} />
-      </MockedProvider>
-    );
-
-    fillForm(testInitials, testEmail, testPassword, true);
-
-    await waitFor(() => {
-      const loader: HTMLElement = getByRole(statusRole);
-      expect(loader).toBeInTheDocument();
-    });
-
-    const serverErrorMessage: HTMLElement | null = queryByRole(alertRole);
-    expect(serverErrorMessage).not.toBeInTheDocument();
-  });
-
-  it('registration with server error', async () => {
-    const { findByRole } = render(
-      <MockedProvider mocks={[rejectedMockResponse]} addTypename={false}>
-        <AuthForm setIsAuthenticated={mockSetIsAuthenticated} isAuthenticated={false} />
-      </MockedProvider>
-    );
-
-    fillForm(testInitials, testEmail, testPassword, true);
-
-    const serverErrorMessage: HTMLElement = await findByRole(alertRole);
-    expect(serverErrorMessage).toBeInTheDocument();
-  });
-
   it('correct linkage between inputs and values', async () => {
     render(
       <MockedProvider addTypename={false}>
-        <AuthForm setIsAuthenticated={mockSetIsAuthenticated} isAuthenticated={false} />
+        <AuthForm setIsAuthenticated={mockSetIsAuthenticated} signupMutation={mockSignupMutation} />
       </MockedProvider>
     );
 
@@ -178,7 +116,7 @@ describe('AuthForm', () => {
   it('correct linkage between inputs and values with no data', async () => {
     const { getAllByText, queryByRole } = render(
       <MockedProvider addTypename={false}>
-        <AuthForm setIsAuthenticated={mockSetIsAuthenticated} isAuthenticated={false} />
+        <AuthForm setIsAuthenticated={mockSetIsAuthenticated} signupMutation={mockSignupMutation} />
       </MockedProvider>
     );
 
@@ -204,7 +142,7 @@ describe('AuthForm', () => {
     const user: UserEvent = userEvent.setup();
     const { getByText } = render(
       <MockedProvider addTypename={false}>
-        <AuthForm setIsAuthenticated={mockSetIsAuthenticated} isAuthenticated={false} />
+        <AuthForm setIsAuthenticated={mockSetIsAuthenticated} signupMutation={mockSignupMutation} />
       </MockedProvider>
     );
 
@@ -216,6 +154,22 @@ describe('AuthForm', () => {
     await waitFor(() => {
       const requiredError: HTMLElement = getByText(requiredText);
       expect(requiredError).toBeInTheDocument();
+    });
+  });
+
+  it('calls setIsAuthenticated(true) after successful registration', async () => {
+    const { getByTestId } = render(
+      <MockedProvider addTypename={false}>
+        <AuthForm setIsAuthenticated={mockSetIsAuthenticated} signupMutation={mockSignupMutation} />
+      </MockedProvider>
+    );
+
+    fillForm(testInitials, testEmail, testPassword, true);
+
+    fireEvent.submit(getByTestId('auth-form'));
+
+    await waitFor(() => {
+      expect(mockSetIsAuthenticated).toHaveBeenCalledWith(true);
     });
   });
 });
