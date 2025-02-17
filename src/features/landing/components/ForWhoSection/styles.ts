@@ -56,35 +56,37 @@ export default {
   },
 
   svgContainer: {
-    // TODO: Will be displayed in future iteration
+    // Hidden in mobile-first approach. Will be displayed in tablet and desktop layouts.
   },
 
   circle: {
     width: '0.5rem',
     height: '0.5rem',
-    marginTop: '3.5rem',
-    marginLeft: '1.6rem',
+    marginTop: '5.1rem',
+    marginLeft: '1.5rem',
   },
 
   rhombus: {
     width: '1.5rem',
     height: '1.5rem',
-    marginTop: '9.5rem',
-    marginLeft: '1.3rem',
+    marginTop: '9.1rem',
+    marginLeft: '1.1rem',
   },
 
   pointContainer: {
     display: 'flex',
     marginTop: '0.5rem',
-    marginLeft: '0.6rem'
+    marginLeft: '0.5rem'
   },
 
   point6: {
-    marginLeft: '1rem',
+    marginLeft: '0.9rem',
+    marginTop: '0.9rem'
   },
 
   point8: {
     marginLeft: '0.2rem',
+    marginTop: '0.4rem'
   },
 
   point10: {
@@ -94,8 +96,8 @@ export default {
   square: {
     width: '20rem',
     height: '20rem',
-    marginTop: '5rem',
-    marginLeft: '0.9rem',
+    marginTop: '6.6rem',
+    marginLeft: '0.6rem',
     backgroundColor: '#1EAEFF',
     borderRadius: '6%',
   },
@@ -103,8 +105,8 @@ export default {
   bigScreen: {
     width: '18.5rem',
     height: 'auto',
-    marginTop: '-3.2rem',
-    marginLeft: '1.7rem',
+    marginTop: '-2.8rem',
+    marginLeft: '1.2rem',
     zIndex: 0,
     borderRadius: '0.6rem',
   },
@@ -119,17 +121,17 @@ export default {
   },
 
   waves: {
-    // TODO: Will be displayed in future iteration
+    // Hidden in mobile-first approach. Will be displayed in tablet and desktop layouts.
     display: 'none',
   },
 
   hexagon: {
-    // TODO: Will be displayed in future iteration
+    // Hidden in mobile-first approach. Will be displayed in tablet and desktop layouts.
     display: 'none',
   },
 
   triangle: {
-    // TODO: Will be displayed in future iteration
+    // Hidden in mobile-first approach. Will be displayed in tablet and desktop layouts.
     display: 'none',
   },
 };
