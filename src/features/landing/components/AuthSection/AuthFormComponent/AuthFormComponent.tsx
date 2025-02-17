@@ -10,7 +10,6 @@ import AuthForm from './AuthForm';
 import styles from './styles';
 import { CreateUserPayload, SignUpVariables } from './types';
 
-
 function AuthFormComponent(): React.ReactElement {
   const [isAuthenticated, setIsAuthenticated] = React.useState(false);
   const [signupMutation, { loading }] = useMutation<CreateUserPayload, SignUpVariables>(

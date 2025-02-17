@@ -1,7 +1,7 @@
 /* eslint-disable */
-import { ApolloServer } from '@apollo/server';
+import { ApolloServer, BaseContext } from '@apollo/server';
 import { startStandaloneServer } from '@apollo/server/standalone';
-import dotenv from 'dotenv';
+
 const defaultUrlSchema =
   'https://raw.githubusercontent.com/VilnaCRM-Org/user-service/main/.github/graphql-spec/spec';
 const SCHEMA_URL = process.env.SHEMA_URL || defaultUrlSchema;
@@ -27,7 +27,6 @@ async function getRemoteSchema() {
     throw new Error(`Schema fetch failed: ${(error as Error).message}`);
   }
 }
-
 interface CreateUserInput {
   email: string;
   initials: string;
@@ -60,16 +59,25 @@ export const resolvers = {
     },
   },
 };
-
 async function startServer(): Promise<void> {
   try {
     const typeDefs: string = await getRemoteSchema();
 
-    const server = new ApolloServer({
+    if (!typeDefs) {
+      throw new Error('Failed to load remote schema.');
+    }
+    if (!resolvers || Object.keys(resolvers).length === 0) {
+      throw new Error('Resolvers are missing or not defined properly.');
+    }
+    const server = new ApolloServer<BaseContext>({
       typeDefs,
       resolvers,
-      // csrfPrevention: true, // Enable CSRF protection
-
+      csrfPrevention: {
+        requestHeaders: [
+          'Apollo-Require-Preflight', // For web clients
+          'X-Apollo-Operation-Name', // For mobile clients
+        ],
+      },
       formatError: error => {
         console.error('GraphQL Error:', {
           message: error.message,
@@ -86,16 +94,9 @@ async function startServer(): Promise<void> {
       },
     });
 
-    const cleanup = () => {
-      console.log('Shutting down gracefully...');
-      server.stop().then(() => process.exit(0));
-    };
-
-    process.on('SIGTERM', cleanup);
-    process.on('SIGINT', cleanup);
-
     const { url } = await startStandaloneServer(server, {
-      listen: { port: 4000, path: '/graphql' },
+      listen: { port: 4000 },
+
       context: async ({ req }) => {
         if (!req.headers['content-type'] || req.headers['content-type'].includes('text/plain')) {
           throw new Error('Invalid content-type header for CSRF prevention.');
@@ -103,12 +104,14 @@ async function startServer(): Promise<void> {
         return {};
       },
     });
+
     console.log(`🚀 Server ready at ${url}`);
-  } catch (error: unknown) {
-    console.log((error as Error).message);
+  } catch (error) {
+    console.error('Failed to start server:', error);
     process.exit(1);
   }
 }
+
 process.on('unhandledRejection', error => {
   console.error('Unhandled Promise Rejection:', error);
   process.exit(1);

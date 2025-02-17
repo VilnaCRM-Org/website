@@ -19,7 +19,7 @@
     "test:mutation": "npx stryker run",
     "test:visual:update": "npx playwright test ./src/test/visual --update-snapshots",
     "test:visual": "pnpm exec playwright test ./src/test/visual",
-    "test:unit": "jest --verbose",
+    "test:unit": "TEST_ENV=client jest --verbose",
     "test:memory-leak": "node ./src/test/memory-leak/runMemlabTests",
     "lighthouse:desktop": "next build && next-export-optimize-images && lhci autorun --config=lighthouserc.desktop.js --collect.startServerCommand=\"npx serve@latest out\"",
     "lighthouse:mobile": "next build && next-export-optimize-images && lhci autorun --config=lighthouserc.mobile.js --collect.startServerCommand=\"npx serve@latest out\"",
@@ -27,7 +27,8 @@
     "lighthouse:mobile-autorun": "lhci autorun --config=lighthouserc.mobile.js",
     "check-node-version": "node checkNodeVersion.js",
     "preinstall": "pnpm run check-node-version",
-    "compile-apollo": "tsc --project tsconfig.docker.json"
+    "compile-apollo": "tsc --project tsconfig.docker.json",
+    "test:server": "TEST_ENV=server jest ./src/test/apollo-server"
   },
   "dependencies": {
     "@apollo/client": "^3.12.9",

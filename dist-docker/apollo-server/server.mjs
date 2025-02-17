@@ -32,9 +32,9 @@ var __awaiter =
 /* eslint-disable */
 import { ApolloServer } from '@apollo/server';
 import { startStandaloneServer } from '@apollo/server/standalone';
-const SCHEMA_URL =
-  process.env.SHEMA_URL ||
+const defaultUrlSchema =
   'https://raw.githubusercontent.com/VilnaCRM-Org/user-service/main/.github/graphql-spec/spec';
+const SCHEMA_URL = process.env.SHEMA_URL || defaultUrlSchema;
 function getRemoteSchema() {
   return __awaiter(this, void 0, void 0, function* () {
     const controller = new AbortController();
@@ -55,7 +55,7 @@ function getRemoteSchema() {
     }
   });
 }
-const resolvers = {
+export const resolvers = {
   Mutation: {
     createUser: (_1, _a) =>
       __awaiter(void 0, [_1, _a], void 0, function* (_, { input }) {
@@ -80,28 +80,64 @@ function startServer() {
   return __awaiter(this, void 0, void 0, function* () {
     try {
       const typeDefs = yield getRemoteSchema();
+      if (!typeDefs) {
+        throw new Error('Failed to load remote schema.');
+      }
+      if (!resolvers || Object.keys(resolvers).length === 0) {
+        throw new Error('Resolvers are missing or not defined properly.');
+      }
       const server = new ApolloServer({
         typeDefs,
         resolvers,
+        // csrfPrevention: true,
+        csrfPrevention: {
+          requestHeaders: [
+            'Apollo-Require-Preflight', // For web clients
+            'X-Apollo-Operation-Name', // For mobile clients
+          ],
+        },
         formatError: error => {
-          var _a;
-          console.error('GraphQL Error:', error);
-          return {
+          var _a, _b;
+          console.error('GraphQL Error:', {
             message: error.message,
+            locations: error.locations,
+            path: error.path,
             code:
               ((_a = error.extensions) === null || _a === void 0 ? void 0 : _a.code) ||
               'INTERNAL_SERVER_ERROR',
+          });
+          return {
+            message: error.message,
+            code:
+              ((_b = error.extensions) === null || _b === void 0 ? void 0 : _b.code) ||
+              'INTERNAL_SERVER_ERROR',
+            locations: error.locations,
+            path: error.path,
           };
         },
       });
       const { url } = yield startStandaloneServer(server, {
-        listen: { port: 4000, path: '/graphql' },
+        listen: { port: 4000 },
+        context: _a =>
+          __awaiter(this, [_a], void 0, function* ({ req }) {
+            if (
+              !req.headers['content-type'] ||
+              req.headers['content-type'].includes('text/plain')
+            ) {
+              throw new Error('Invalid content-type header for CSRF prevention.');
+            }
+            return {};
+          }),
       });
       console.log(`🚀 Server ready at ${url}`);
     } catch (error) {
-      console.log(error.message);
+      console.error('Failed to start server:', error);
       process.exit(1);
     }
   });
 }
+process.on('unhandledRejection', error => {
+  console.error('Unhandled Promise Rejection:', error);
+  process.exit(1);
+});
 startServer();

@@ -32,6 +32,10 @@ export default {
       minHeight: '42.9rem',
     },
     [`@media (min-width: ${breakpointsTheme.breakpoints.values.lg}px)`]: {
+      minWidth: '39.7rem',
+      minHeight: '42.8rem',
+    },
+    [`@media (min-width: 1131px)`]: {
       minWidth: '31.4rem',
       minHeight: '40.45rem',
     },

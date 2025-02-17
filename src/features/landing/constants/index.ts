@@ -1,1 +1,1 @@
-export const animationTimeout:number  = 300;
+export const animationTimeout: number = 300;
