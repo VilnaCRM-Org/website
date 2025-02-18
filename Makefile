@@ -114,7 +114,7 @@ test-mutation:
 build-k6-docker: ## This command build K6 image
 	$(DOCKER) build -t k6 -f ./src/test/load/Dockerfile .
 
-load-tests: ## This command executes load tests using K6 library.
+load-tests: start-prod wait-for-prod ## This command executes load tests using K6 library.
 	$(BUILD_K6_DOCKER)
 	$(LOAD_TESTS_RUN)
 

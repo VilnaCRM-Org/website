@@ -35,6 +35,9 @@ jobs:
         if: |
           steps.cache-pnpm-store.outputs.cache-hit != 'true'
 
+      - name: Install Puppeteer browsers
+        run: npx puppeteer install
+
       - name: Run dev and memory leak testing
         run: |
           pnpm run dev &
