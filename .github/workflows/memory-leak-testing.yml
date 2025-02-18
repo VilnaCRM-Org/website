@@ -36,7 +36,7 @@ jobs:
           steps.cache-pnpm-store.outputs.cache-hit != 'true'
 
       - name: Install Puppeteer browsers
-        run: pnpm dlx puppeteer browsers install chrome
+        run: npx puppeteer browsers install chrome
 
       - name: Run dev and memory leak testing
         run: |
