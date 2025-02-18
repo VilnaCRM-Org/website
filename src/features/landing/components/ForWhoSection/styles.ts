@@ -53,10 +53,18 @@ export default {
     marginTop: '1.5rem',
     marginBottom: '-6rem',
     display: 'flex',
+    [`@media (min-width: 380px)`]: {
+      marginTop: '-30rem',
+      marginLeft: '20rem',
+    },
   },
 
   svgContainer: {
     // Hidden in mobile-first approach. Will be displayed in tablet and desktop layouts.
+    [`@media (min-width: 380px)`]: {
+      marginTop: '-15rem',
+
+    },
   },
 
   circle: {
@@ -64,6 +72,11 @@ export default {
     height: '0.5rem',
     marginTop: '5.1rem',
     marginLeft: '1.5rem',
+    [`@media (min-width: 380px)`]: {
+     width: '0.8rem',
+     height: '0.8rem',
+     marginTop: '2.1rem',
+    },
   },
 
   rhombus: {
@@ -71,6 +84,11 @@ export default {
     height: '1.5rem',
     marginTop: '9.1rem',
     marginLeft: '1.1rem',
+    [`@media (min-width: 380px)`]: {
+      width: '2.5rem',
+      height: '2.5rem',
+      marginTop: '16rem',
+     },
   },
 
   pointContainer: {
@@ -100,7 +118,13 @@ export default {
     marginLeft: '0.6rem',
     backgroundColor: '#1EAEFF',
     borderRadius: '6%',
+    [`@media (min-width: 380px)`]: {
+     width: '38rem',
+     height: '48rem',
+     marginTop: '-10.6rem',
+     marginLeft: '-2.5rem'
   },
+},
 
   bigScreen: {
     width: '18.5rem',
@@ -109,6 +133,11 @@ export default {
     marginLeft: '1.2rem',
     zIndex: 0,
     borderRadius: '0.6rem',
+    [`@media (min-width: 380px)`]: {
+    width: '33rem',
+    height: 'auto'
+
+   },
   },
 
   smallScreen: {

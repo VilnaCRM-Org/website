@@ -31,70 +31,80 @@ function ForWhoSection(): React.ReactElement {
           </Box>
           <Box sx={styles.container}>
             <Box sx={styles.svgContainer}>
-              <img 
+              <Box
+              component="img" 
               {...getImageProps(circle, 'circle')} 
               alt='Small circular element' 
-              style={styles.circle}
+              sx={styles.circle}
               loading='lazy'
                />
 
-              <img
+              <Box
+              component="img" 
               {...getImageProps(rhombus, 'rhombus')} 
               alt='Rhombus-shaped figure' 
-              style={styles.rhombus}
+              sx={styles.rhombus}
               loading='lazy' 
               />
               <Box sx={styles.pointContainer}>
-                <img
+              <Box
+                 component="img" 
                  {...getImageProps(point6, 'point6')} 
                  alt='Decorative dot' 
-                 style={styles.point6}
+                 sx={styles.point6}
                  loading='lazy' 
                  />
-                <img 
+                <Box
+                component="img"  
                 {...getImageProps(point8, 'point8')} 
                 alt='Decorative dot' 
-                style={styles.point8}
+                sx={styles.point8}
                 loading='lazy' 
                 />
-                <img 
+                <Box
+                component="img"   
                 {...getImageProps(point10, 'point10')}
                 alt='Decorative dot' 
-                style={styles.point10} 
+                sx={styles.point10} 
                 loading='lazy'
                 />
               </Box>
             </Box>
             <Box sx={styles.square}>
-              <img 
+            <Box
+              component="img"  
               {...getImageProps(bigScreen, 'bigScreen')} 
               alt='Large digital screen with a blue background' 
-              style={styles.bigScreen} 
+              sx={styles.bigScreen} 
               loading='lazy'
               />
-              <img
+              <Box
+              component="img" 
               {...getImageProps(smallScreen, 'smallScreen')} 
               alt='Small digital screen displaying minimal content' 
-              style={styles.smallScreen} 
+              sx={styles.smallScreen} 
               loading='lazy'
               />
-              <img 
+              <Box
+              component="img"  
               {...getImageProps(waves, 'waves')} 
               alt='Abstract waves' 
-              style={styles.waves}
+              sx={styles.waves}
               loading='lazy' 
               />
-              <img 
+              <Box
+              component="img"  
               {...getImageProps(hexagon, 'hexagon')} 
               alt='Hexagon shape' 
-              style={styles.hexagon}
+              sx={styles.hexagon}
               loading='lazy' 
               />
             </Box>
-            <img 
+            <Box
+            component="img"  
             {...getImageProps(triangle, 'triangle')} 
             alt='Triangle shape' 
-            style={styles.triangle} 
+            sx={styles.triangle} 
             loading='lazy'
             />
           </Box>
