@@ -1,4 +1,4 @@
-FROM node:20-alpine3.17
+FROM node:20-alpine3.21
 
 RUN apk add --no-cache python3 make g++  \
     && npm install -g pnpm
