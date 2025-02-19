@@ -6,7 +6,7 @@ module.exports = {
       url: `${process.env.NEXT_PUBLIC_WEBSITE_URL}`,
       psiStrategy: 'mobile',
       settings: {
-        chromeFlags: '--no-sandbox',
+        chromeFlags: '--no-sandbox --disable-setuid-sandbox --headless --disable-gpu',
         extraHeaders: JSON.stringify({
           [`aws-cf-cd-${process.env.NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_NAME}`]:
             process.env.NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_VALUE,
