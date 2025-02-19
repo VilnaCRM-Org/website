@@ -1,3 +1,12 @@
+## [1.2.1](https://github.com/VilnaCRM-Org/website/compare/v1.2.0...v1.2.1) (2025-02-14)
+
+
+### Bug Fixes
+
+* **#121:** change token rotation logic ([#122](https://github.com/VilnaCRM-Org/website/issues/122)) ([81ba0b0](https://github.com/VilnaCRM-Org/website/commit/81ba0b03684f043dc9c3f090243d32e3f364f6f6)), closes [#121](https://github.com/VilnaCRM-Org/website/issues/121) [#121](https://github.com/VilnaCRM-Org/website/issues/121) [#121](https://github.com/VilnaCRM-Org/website/issues/121) [#121](https://github.com/VilnaCRM-Org/website/issues/121) [#121](https://github.com/VilnaCRM-Org/website/issues/121)
+
+
+
 # [1.2.0](https://github.com/VilnaCRM-Org/website/compare/v1.1.0...v1.2.0) (2025-01-28)
 
 ### Features
