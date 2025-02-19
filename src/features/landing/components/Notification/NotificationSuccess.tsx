@@ -5,18 +5,17 @@ import { useTranslation } from 'react-i18next';
 
 import { UiButton } from '@/components';
 
+
 import UiTypography from '../../../../components/UiTypography';
 import Confetti from '../../assets/svg/notification/confetti.svg';
 import Settings from '../../assets/svg/notification/settings.svg';
-import { AuthenticationProps } from '../AuthSection/AuthFormComponent/types';
 
 import styles from './styles';
+import { NotificationProps } from './types';
 
-function NotificationSuccess({
-  setIsAuthenticated,
-}: Omit<AuthenticationProps, 'isAuthenticated'>): React.ReactElement {
+function NotificationSuccess({  setIsOpen }: Pick<NotificationProps, 'setIsOpen'>): React.ReactElement {
   const { t } = useTranslation();
-  const handleClick: () => void = (): void => setIsAuthenticated(false);
+  const handleClick: () => void = (): void => setIsOpen(false);
 
   return (
     <Box sx={styles.successBox} data-testid="success-box">

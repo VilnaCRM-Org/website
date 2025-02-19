@@ -34,8 +34,8 @@ function AuthFormComponent(): React.ReactElement {
 
       <Notification
         type="success"
-        setIsAuthenticated={setIsAuthenticated}
-        isAuthenticated={isAuthenticated}
+        setIsOpen={setIsAuthenticated}
+        isOpen={isAuthenticated}
       />
     </Box>
   );

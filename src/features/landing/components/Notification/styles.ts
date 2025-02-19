@@ -24,10 +24,10 @@ export default {
 
     [`@media (min-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
       minWidth: '39.8rem',
-      minHeight: '42.1rem',
+      minHeight: '42.2rem',
     },
 
-    [`@media (min-width: 768px) and (max-width:  ${breakpointsTheme.breakpoints.values.lg}px)`]: {
+    [`@media (min-width: 769px) and (max-width:  ${breakpointsTheme.breakpoints.values.lg}px)`]: {
       minWidth: '39.7rem',
       minHeight: '42.9rem',
     },
@@ -62,37 +62,36 @@ export default {
   successImgBox: {
     position: 'absolute',
 
-    // mobile
     top: '-0.78rem',
     left: '-8.5rem',
-    scale: 0.91,
+    transform: 'scale(0.91)',
 
     [`@media (min-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
       minWidth: '29rem',
       top: '0.25rem',
       left: '0.6rem',
-      scale: '1.04',
+      transform: 'scale(1.04)',
     },
   },
   bottomImgBox: {
     display: 'none',
     rotate: '-180deg',
 
-    [`@media (min-width: ${breakpointsTheme.breakpoints.values.sm}px) and (max-width: ${breakpointsTheme.breakpoints.values.lg}px)`]:
-      {
-        display: 'block',
-        minWidth: '29rem',
-        top: '25rem',
-        left: '0.6rem',
+    [`@media (min-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
+      display: 'block',
+      minWidth: '29rem',
+      top: '25.7rem',
+      left: '0.6rem',
+      transform: 'scale(1.04)',
+    },
 
-        transform: 'scaleX(1.14)',
-      },
+    [`@media (min-width: ${breakpointsTheme.breakpoints.values.md}px)`]: {
+      top: '26.5rem',
+    },
 
     [`@media (min-width: ${breakpointsTheme.breakpoints.values.lg}px)`]: {
-      display: 'block',
-      top: '26.6rem',
-      left: '-2.4rem',
-      scale: 0.98,
+      top: '24rem',
+      left: '-6.5rem',
     },
   },
 

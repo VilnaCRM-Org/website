@@ -1,5 +1,6 @@
 import { faker } from '@faker-js/faker';
 import { t } from 'i18next';
+import { AriaRole } from 'react';
 
 import { CardItem } from '@/components/UiCardList/types';
 
@@ -23,8 +24,8 @@ export const fullNamePlaceholder: string = t('sign_up.form.name_input.placeholde
 export const emailPlaceholder: string = t('sign_up.form.email_input.placeholder');
 export const passwordPlaceholder: string = t('sign_up.form.password_input.placeholder');
 export const submitButtonText: string = t('sign_up.form.button_text');
-export const checkboxRole: string = 'checkbox';
-export const buttonRole: string = 'button';
+export const checkboxRole: AriaRole = 'checkbox';
+export const buttonRole: AriaRole = 'button';
 
 export const typeOfCard: string = 'smallCard';
 

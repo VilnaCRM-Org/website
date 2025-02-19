@@ -1,12 +1,12 @@
 import React from 'react';
 
-import { AuthenticationProps } from '../AuthSection/AuthFormComponent/types';
-
 export type NotificationType = 'success';
 
 export interface NotificationProps {
   type: NotificationType;
+  isOpen: boolean;
+  setIsOpen: (isClosed: boolean) => void;
 }
 
-export type NotificationVariantComponent = React.FC<Omit<AuthenticationProps, 'isAuthenticated'>>;
+export type NotificationVariantComponent = React.FC<Pick<NotificationProps, 'setIsOpen'>>;
 export type NotificationComponents = Record<NotificationType, NotificationVariantComponent>;
