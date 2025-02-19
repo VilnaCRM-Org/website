@@ -21,9 +21,7 @@ import { validateFullName, validatePassword, validateEmail } from '../Validation
 import styles from './styles';
 import { AuthFormProps } from './types';
 
-interface ErrorData {
-  message: string;
-}
+const PRIVACY_POLICY_URL:string = process.env.NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL ||'https://github.com/VilnaCRM-Org';
 
 function AuthForm({ setIsAuthenticated, signupMutation }: AuthFormProps): React.ReactElement {
   const [serverError, setServerError] = React.useState('');
@@ -50,8 +48,12 @@ function AuthForm({ setIsAuthenticated, signupMutation }: AuthFormProps): React.
         },
       });
       setIsAuthenticated(true);
-    } catch (errorData) {
-      setServerError((errorData as ErrorData).message);
+    } catch (error) {
+      if (error instanceof Error) {
+        setServerError(error.message);
+      } else {
+        setServerError('An unexpected error occurred');
+      }
     }
   };
 
@@ -135,11 +137,11 @@ function AuthForm({ setIsAuthenticated, signupMutation }: AuthFormProps): React.
               <UiTypography variant="medium14" sx={styles.privacyText}>
                 <Trans i18nKey="sign_up.form.confidential_text.fullText">
                   I have read and accept the
-                  <UiLink href="https://github.com/VilnaCRM-Org" target="_blank">
+                  <UiLink href={PRIVACY_POLICY_URL} target="_blank">
                     Privacy Policy
                   </UiLink>
                   and the
-                  <UiLink href="https://github.com/VilnaCRM-Org" target="_blank">
+                  <UiLink href={PRIVACY_POLICY_URL} target="_blank">
                     Use Policy
                   </UiLink>
                   VilnaCRM Service

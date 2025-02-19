@@ -28,23 +28,35 @@ export const typeDefs: string = `
   }
 `;
 
-export const users: { email: string; id: string; initials: string; confirmed: boolean }[] = [];
+
+let userCounter:number = 0;
+export const users: Map<string, User> = new Map<string, { id: string; email: string; initials: string; confirmed: boolean }>();
+
 
 export const resolvers: { Mutation: MutationResolvers } = {
   Mutation: {
     createUser: async (_, { input }) => {
-      if (users.some(user => user.email === input.email)) {
+      if (users.has(input.email)) {
         throw new Error('A user with this email already exists.');
       }
 
       try {
+        if (!input.email.includes('@')) {
+          throw new Error('Invalid email format');
+        }
+        if (!input.initials.trim()) {
+          throw new Error('Initials cannot be empty');
+        }
+
+        userCounter += 1;
+
         const newUser: User = {
-          id: (users.length + 1).toString(),
+          id: `${Date.now()}-${userCounter}`,
           confirmed: true,
           email: input.email,
           initials: input.initials,
         };
-        users.push(newUser);
+        users.set(newUser.email, newUser);
 
         return {
           user: newUser,
@@ -61,7 +73,7 @@ export async function handleResponse<T extends { errors?: { message: string }[] 
   response: Response
 ): Promise<{ result: T; errors?: { message: string }[] }> {
   const result: T = await response.json();
-  return { result, errors: result.errors }; // ✅ Now TypeScript knows errors exist
+  return { result, errors: result.errors };
 }
 
 export async function createUser(

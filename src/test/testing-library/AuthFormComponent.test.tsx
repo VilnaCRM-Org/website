@@ -3,17 +3,28 @@ import { render, waitFor } from '@testing-library/react';
 import { t } from 'i18next';
 import React from 'react';
 
-import { testEmail, testInitials, testPassword } from '@/test/testing-library/constants';
+
 import { fillForm } from '@/test/testing-library/utils';
 
 import { SIGNUP_MUTATION } from '../../features/landing/api/service/userService';
 import AuthFormComponent from '../../features/landing/components/AuthSection/AuthFormComponent/AuthFormComponent';
+
+import {
+  buttonRole,
+  checkboxRole,
+  emailPlaceholder,
+  fullNamePlaceholder, passwordPlaceholder, submitButtonText,
+  testEmail,
+  testInitials,
+  testPassword,
+} from './constants';
 
 const statusRole: string = 'status';
 const alertRole: string = 'alert';
 
 const notificationId: string = 'notification';
 const formTitleText: string = t('sign_up.form.heading_main');
+const notificationTitle:string= t('notifications.success.title');
 
 const fulfilledMockResponse: MockedResponse = {
   request: {
@@ -50,24 +61,43 @@ const rejectedMockResponse: MockedResponse = {
   request: {
     query: SIGNUP_MUTATION,
     variables: {
-      input: {},
+      input: {
+        email: testEmail,
+        initials: testInitials,
+        password: testPassword,
+        clientMutationId: '132',
+      },
     },
   },
-  error: { name: 'MockError', message: 'Server Error' },
+  result: {
+    errors: [{
+    message: 'A user with this email already exists.',
+    locations: [{ line: 1, column: 1 }],
+    path: ['createUser'],
+    extensions: {
+      code: 'BAD_USER_INPUT'
+    }
+  }]
+ }
 };
 
 describe('AuthFormComponent', () => {
-  it('renders the component correctly', () => {
-    const { getByText } = render(
+  it('renders AuthComponent component correctly', () => {
+    const { getByText, getByPlaceholderText, getByRole } = render(
       <MockedProvider mocks={[]} addTypename={false}>
         <AuthFormComponent />
       </MockedProvider>
     );
     const formTitle: HTMLElement = getByText(formTitleText);
     expect(formTitle).toBeInTheDocument();
+    expect(getByPlaceholderText(fullNamePlaceholder)).toBeInTheDocument();
+    expect(getByPlaceholderText(emailPlaceholder)).toBeInTheDocument();
+    expect(getByPlaceholderText(passwordPlaceholder)).toBeInTheDocument();
+    expect(getByRole(checkboxRole)).toBeInTheDocument();
+    expect(getByRole(buttonRole, { name: submitButtonText })).toBeInTheDocument();
   });
 
-  it('successful registration', async () => {
+  it('displays loader and submits form successfully without errors', async () => {
     const { getByRole, queryByRole } = render(
       <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
         <AuthFormComponent />
@@ -84,7 +114,7 @@ describe('AuthFormComponent', () => {
     const serverErrorMessage: HTMLElement | null = queryByRole(alertRole);
     expect(serverErrorMessage).not.toBeInTheDocument();
   });
-  test('shows loading spinner when loading is true', async () => {
+  test('shows loading spinner during registration and hides it after completion', async () => {
     const { queryByRole } = render(
       <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
         <AuthFormComponent />
@@ -103,7 +133,7 @@ describe('AuthFormComponent', () => {
   });
 
   it('registration with server error', async () => {
-    const { findByRole } = render(
+    const { findByRole,  getByPlaceholderText } = render(
       <MockedProvider mocks={[rejectedMockResponse]} addTypename={false}>
         <AuthFormComponent />
       </MockedProvider>
@@ -113,9 +143,13 @@ describe('AuthFormComponent', () => {
 
     const serverErrorMessage: HTMLElement = await findByRole(alertRole);
     expect(serverErrorMessage).toBeInTheDocument();
+    expect(serverErrorMessage).toHaveTextContent('A user with this email already exists.');
+
+    expect(getByPlaceholderText(emailPlaceholder)).toHaveValue(testEmail);
+    expect(getByPlaceholderText(passwordPlaceholder)).toHaveValue(testPassword);
   });
   it('shows success notification after successful authentication', async () => {
-    const { getByTestId } = render(
+    const { getByTestId, getByText} = render(
       <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
         <AuthFormComponent />
       </MockedProvider>
@@ -125,6 +159,10 @@ describe('AuthFormComponent', () => {
 
     await waitFor(() => {
       expect(getByTestId(notificationId)).toBeInTheDocument();
+      const notification:HTMLElement = getByTestId(notificationId);
+      expect(notification).toBeInTheDocument();
+      expect(notification).toBeVisible();
+      expect(getByText(notificationTitle)).toBeInTheDocument();
     });
   });
 });

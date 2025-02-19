@@ -1,6 +1,6 @@
 import { MockedProvider } from '@apollo/client/testing';
 import { render, screen } from '@testing-library/react';
-import i18n, { t } from 'i18next';
+import i18n, { t, TFunction } from 'i18next';
 import React from 'react';
 import { I18nextProvider } from 'react-i18next';
 
@@ -60,14 +60,24 @@ describe('AuthSection', () => {
       expect(screen.getByText(i18n.t(title))).toBeInTheDocument();
     });
   });
-  test('does not render Notification component at all', () => {
+  test('renders all social links with fallback text if translation is missing', () => {
+    const mockT: jest.SpyInstance<string, Parameters<TFunction>> = jest.spyOn(i18n, 't').mockImplementation(((key, options) => {
+      return typeof key === 'string' ? key : key[0] || 'Fallback Text';
+    }) as typeof i18n.t);
+
+
     render(
-      <MockedProvider mocks={[]} addTypename={false}>
-        <AuthSection />
-      </MockedProvider>
+      <I18nextProvider i18n={i18n}>
+        <MockedProvider mocks={[]} addTypename={false}>
+          <AuthSection />
+        </MockedProvider>
+      </I18nextProvider>
     );
 
-    expect(screen.getByText(signupHeading)).toBeVisible();
-    expect(screen.queryByTestId('notification')).not.toBeVisible();
+    socialLinks.forEach(({ title }: SocialLink) => {
+      expect(screen.getByText(title)).toBeInTheDocument();
+    });
+
+    mockT.mockRestore();
   });
 });

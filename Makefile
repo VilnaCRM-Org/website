@@ -78,6 +78,7 @@ generate-ts-doc: ## This command generates documentation from the typescript fil
 
 mockoon:
 	$(DOCKER_COMPOSE) -f mockoon/docker-compose.mockoon.yml up -d
+	@echo "Mockoon service started successfully"
 
 stop-mockoon:
 	$(DOCKER_COMPOSE) -f mockoon/docker-compose.mockoon.yml down

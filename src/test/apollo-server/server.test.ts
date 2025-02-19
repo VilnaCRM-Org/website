@@ -15,7 +15,7 @@ describe('Apollo Server - createUser mutation', () => {
     });
 
     const { url: testUrl } = await startStandaloneServer(testServer, {
-      listen: { port: 8181 }, // Random available port
+      listen: { port: 0 },
     });
     url = testUrl;
   });
@@ -23,18 +23,22 @@ describe('Apollo Server - createUser mutation', () => {
   afterAll(async () => {
     await testServer.stop();
   });
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
 
   it('should successfully create a user', async () => {
-    const { result, errors } = await createUser(url, {
+    const { result, errors, response } = await createUser(url, {
       email: 'test@example.com',
       initials: 'TE',
       clientMutationId: 'test-mutation-1',
     });
 
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toMatch(/application\/json/);
     expect(errors).toBeUndefined();
-    expect(result.data.createUser).toEqual({
+    expect(result.data.createUser).toMatchObject({
       user: {
-        id: '1',
         confirmed: true,
         email: 'test@example.com',
         initials: 'TE',
@@ -122,8 +126,9 @@ describe('Apollo Server - createUser mutation', () => {
     expect(errors?.[0].message).toContain('A user with this email already exists.');
   });
 
+
   it('should handle unexpected errors gracefully', async () => {
-    jest.spyOn(users, 'push').mockImplementation(() => {
+    jest.spyOn(users, 'set').mockImplementation(() => {
       throw new Error('Database connection lost');
     });
 
@@ -136,6 +141,5 @@ describe('Apollo Server - createUser mutation', () => {
     expect(errors).toBeDefined();
     expect(errors?.[0].message).toContain('Failed to create user: Error: Database connection lost');
 
-    jest.restoreAllMocks();
   });
 });

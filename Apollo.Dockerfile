@@ -8,9 +8,7 @@ COPY package.json pnpm-lock.yaml checkNodeVersion.js ./
 COPY apollo-server ./apollo-server
 COPY tsconfig.docker.json ./
 
-RUN pnpm install
-
-RUN pnpm run compile-apollo
+RUN pnpm install && pnpm run compile-apollo
 
 EXPOSE 4000
 

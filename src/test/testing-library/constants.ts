@@ -20,10 +20,13 @@ export const testPlaceholder: string = faker.lorem.word(8);
 export const testUrl: string = faker.internet.url();
 export const mockEmail: string = 'info@vilnacrm.com';
 
+// Form placeholders
 export const fullNamePlaceholder: string = t('sign_up.form.name_input.placeholder');
 export const emailPlaceholder: string = t('sign_up.form.email_input.placeholder');
 export const passwordPlaceholder: string = t('sign_up.form.password_input.placeholder');
 export const submitButtonText: string = t('sign_up.form.button_text');
+
+// ARIA roles
 export const checkboxRole: AriaRole = 'checkbox';
 export const buttonRole: AriaRole = 'button';
 

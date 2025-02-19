@@ -19,7 +19,7 @@ function AuthFormComponent(): React.ReactElement {
   return (
     <Box sx={styles.formWrapper}>
       {loading && (
-        <Box sx={styles.loader} role="status">
+        <Box sx={styles.loader} role="status" component='div' aria-label="Loading" aria-live="polite">
           <CircularProgress color="primary" size={70} />
         </Box>
       )}

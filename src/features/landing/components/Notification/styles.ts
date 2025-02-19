@@ -2,6 +2,9 @@ import breakpointsTheme from '@/components/UiBreakpoints';
 import colorTheme from '@/components/UiColorTheme';
 import { golos } from '@/config/Fonts/golos';
 
+import { BREAKPOINTS, DIMENSIONS } from './constants';
+
+
 export default {
   notificationSection: {
     display: 'flex',
@@ -10,7 +13,7 @@ export default {
   },
 
   notificationWrapper: {
-    minWidth: '21.57rem',
+    minWidth: DIMENSIONS.MIN_WIDTH.XS,
     width: '100%',
     height: '100%',
     borderRadius: '2rem 2rem 0 0',
@@ -18,26 +21,27 @@ export default {
     backgroundColor: colorTheme.palette.white.main,
     overflow: 'hidden',
 
-    [`@media (max-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
-      minHeight: '32rem',
+    [`@media (max-width: ${BREAKPOINTS.SM})`]: {
+      minHeight: DIMENSIONS.MIN_HEIGHT.XS,
     },
 
-    [`@media (min-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
-      minWidth: '39.8rem',
-      minHeight: '42.2rem',
+    [`@media (min-width:  ${BREAKPOINTS.SM})`]: {
+      minWidth: DIMENSIONS.MIN_WIDTH.SM,
+      minHeight: DIMENSIONS.MIN_HEIGHT.SM,
     },
 
-    [`@media (min-width: 769px) and (max-width:  ${breakpointsTheme.breakpoints.values.lg}px)`]: {
-      minWidth: '39.7rem',
-      minHeight: '42.9rem',
+    [`@media (min-width: ${BREAKPOINTS.MD}) and (max-width: ${BREAKPOINTS.LG})`]: {
+       minWidth: DIMENSIONS.MIN_WIDTH.MD,
+      minHeight: DIMENSIONS.MIN_HEIGHT.MD,
     },
-    [`@media (min-width: ${breakpointsTheme.breakpoints.values.lg}px)`]: {
-      minWidth: '39.7rem',
-      minHeight: '42.8rem',
+
+    [`@media (min-width: ${BREAKPOINTS.LG})`]: {
+      minWidth: DIMENSIONS.MIN_WIDTH.MD,
+      minHeight: DIMENSIONS.MIN_HEIGHT.MD,
     },
-    [`@media (min-width: 1131px)`]: {
-      minWidth: '31.4rem',
-      minHeight: '40.45rem',
+    [`@media (min-width: ${BREAKPOINTS.XL})`]: {
+      minWidth: DIMENSIONS.MIN_WIDTH.LG,
+      minHeight: DIMENSIONS.MIN_HEIGHT.LG,
     },
   },
 
@@ -90,7 +94,13 @@ export default {
     },
 
     [`@media (min-width: ${breakpointsTheme.breakpoints.values.lg}px)`]: {
-      top: '24rem',
+      minWidth: '31rem',
+      top: '27rem',
+      left: '0.4rem',
+    },
+    [`@media (min-width: ${BREAKPOINTS.XL})`]: {
+      top: '24.5rem',
+      transform: 'scale(1)',
       left: '-6.5rem',
     },
   },

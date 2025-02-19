@@ -31,12 +31,7 @@ export interface MutationResolvers {
 export interface CreateUserResponse {
   data: {
     createUser: {
-      user: {
-        id: string;
-        confirmed: boolean;
-        email: string;
-        initials: string;
-      };
+      user: User;
       clientMutationId: string;
     };
   };
