@@ -99,7 +99,6 @@ function ForWhoSection(): React.ReactElement {
               sx={styles.hexagon}
               loading='lazy' 
               />
-            </Box>
             <Box
             component="img"  
             {...getImageProps(triangle, 'triangle')} 
@@ -107,6 +106,8 @@ function ForWhoSection(): React.ReactElement {
             sx={styles.triangle} 
             loading='lazy'
             />
+            </Box>
+
           </Box>
         </Box>
       </Container>

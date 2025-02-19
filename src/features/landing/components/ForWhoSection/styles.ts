@@ -53,17 +53,19 @@ export default {
     marginTop: '1.5rem',
     marginBottom: '-6rem',
     display: 'flex',
-    [`@media (min-width: 380px)`]: {
+    [`@media (min-width: 968px)`]: {
       marginTop: '-30rem',
-      marginLeft: '20rem',
+      marginLeft: '17.6rem',
     },
+    [`@media (min-width: 1131px)`]: {
+    }
   },
 
   svgContainer: {
     // Hidden in mobile-first approach. Will be displayed in tablet and desktop layouts.
-    [`@media (min-width: 380px)`]: {
+    [`@media (min-width: 968px)`]: {
       marginTop: '-15rem',
-
+      
     },
   },
 
@@ -72,11 +74,14 @@ export default {
     height: '0.5rem',
     marginTop: '5.1rem',
     marginLeft: '1.5rem',
-    [`@media (min-width: 380px)`]: {
-     width: '0.8rem',
-     height: '0.8rem',
-     marginTop: '2.1rem',
+    [`@media (min-width: 968px)`]: {
+      width: '0.8rem',
+      height: '0.8rem',
+      marginTop: '2rem',
+      marginLeft: '2rem',
     },
+    [`@media (min-width: 1131px)`]: {
+    }
   },
 
   rhombus: {
@@ -84,31 +89,55 @@ export default {
     height: '1.5rem',
     marginTop: '9.1rem',
     marginLeft: '1.1rem',
-    [`@media (min-width: 380px)`]: {
+    [`@media (min-width: 968px)`]: {
       width: '2.5rem',
       height: '2.5rem',
-      marginTop: '16rem',
-     },
+      marginTop: '15.8rem',
+      marginLeft: '1.3rem'
+    },
+    [`@media (min-width: 1131px)`]: {}
   },
 
   pointContainer: {
     display: 'flex',
     marginTop: '0.5rem',
-    marginLeft: '0.5rem'
+    marginLeft: '0.5rem',
+    [`@media (min-width: 968px)`]: {
+    marginTop: '1rem',
+    marginLeft: '1.4rem'
+    },
+    [`@media (min-width: 1131px)`]: {}
   },
 
   point6: {
     marginLeft: '0.9rem',
-    marginTop: '0.9rem'
+    marginTop: '0.9rem',
+    [`@media (min-width: 968px)`]: {
+      width: '0.43rem',
+      height: 'auto',
+      marginLeft: '0.4rem'
+    },
+    [`@media (min-width: 1131px)`]: {}
   },
 
   point8: {
     marginLeft: '0.2rem',
-    marginTop: '0.4rem'
+    marginTop: '0.4rem',
+    [`@media (min-width: 968px)`]: {
+      width: '0.43rem',
+      height: 'auto',
+      marginLeft: '0.4rem'
+    },
+    [`@media (min-width: 1131px)`]: {}
   },
 
   point10: {
     marginLeft: '0.2rem',
+    [`@media (min-width: 968px)`]: {
+      width: '0.43rem',
+      height: 'auto',
+    },
+    [`@media (min-width: 1131px)`]: {}
   },
 
   square: {
@@ -118,26 +147,29 @@ export default {
     marginLeft: '0.6rem',
     backgroundColor: '#1EAEFF',
     borderRadius: '6%',
-    [`@media (min-width: 380px)`]: {
-     width: '38rem',
-     height: '48rem',
-     marginTop: '-10.6rem',
-     marginLeft: '-2.5rem'
+    zIndex: 0,
+    [`@media (min-width: 968px)`]: {
+      width: '37.6rem',
+      height: '40.5rem',
+      marginTop: '-10.6rem',
+      marginLeft: '-1.4rem',
+    },
+    [`@media (min-width: 1131px)`]: {}
   },
-},
 
   bigScreen: {
     width: '18.5rem',
     height: 'auto',
     marginTop: '-2.8rem',
     marginLeft: '1.2rem',
-    zIndex: 0,
+    zIndex: 1,
     borderRadius: '0.6rem',
-    [`@media (min-width: 380px)`]: {
-    width: '33rem',
-    height: 'auto'
-
-   },
+    [`@media (min-width: 968px)`]: {
+      width: '31.6rem',
+      marginTop: '-4.4rem',
+      marginLeft: '2.1rem'
+    },
+    [`@media (min-width: 1131px)`]: {}
   },
 
   smallScreen: {
@@ -147,20 +179,50 @@ export default {
     marginLeft: '11.5rem',
     zIndex: 100,
     borderRadius: '0.6rem',
+    [`@media (min-width: 968px)`]: {
+      width: '15.6rem',
+      marginTop: '-11.1rem',
+      marginLeft: '19.7rem',
+      borderRadius: '1.5rem',
+    },
+    [`@media (min-width: 1131px)`]: {}
   },
 
   waves: {
     // Hidden in mobile-first approach. Will be displayed in tablet and desktop layouts.
     display: 'none',
+    [`@media (min-width: 968px)`]: {
+      display: 'flex',
+      position: 'relative',
+      marginTop: '-7.4rem',
+      marginLeft: '4.5rem',
+      opacity: '0.2',
+      zIndex: -1,
+    },
+    [`@media (min-width: 1131px)`]: {}
   },
 
   hexagon: {
     // Hidden in mobile-first approach. Will be displayed in tablet and desktop layouts.
     display: 'none',
+    [`@media (min-width: 968px)`]: {
+    display: 'block',
+    position: 'relative',
+    marginTop: '-12rem',
+    marginLeft: '29rem',
+    zIndex: -1,
+    },
+    [`@media (min-width: 1131px)`]: {}
   },
 
   triangle: {
     // Hidden in mobile-first approach. Will be displayed in tablet and desktop layouts.
     display: 'none',
+    [`@media (min-width: 968px)`]: {
+    display: 'block',
+    marginTop: '-32.8rem',
+    marginLeft: '35.1rem',
+    },
+    [`@media (min-width: 1131px)`]: {}
   },
 };
