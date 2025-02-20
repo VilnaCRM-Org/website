@@ -46,9 +46,6 @@ importers:
       react-i18next:
         specifier: ^15.4.0
         version: 15.4.0(i18next@23.16.8)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      serve:
-        specifier: ^14.2.4
-        version: 14.2.4
       terser-webpack-plugin:
         specifier: ^5.3.11
         version: 5.3.11(esbuild@0.24.2)(webpack@5.97.1(esbuild@0.24.2))
@@ -236,6 +233,9 @@ importers:
       semver:
         specifier: ^7.7.1
         version: 7.7.1
+      serve:
+        specifier: ^14.2.4
+        version: 14.2.4
       storybook:
         specifier: ^8.5.3
         version: 8.5.3(prettier@3.4.2)
@@ -17125,7 +17125,7 @@ snapshots:
     dependencies:
       ansi-align: 3.0.1
       camelcase: 7.0.1
-      chalk: 5.0.1
+      chalk: 5.4.1
       cli-boxes: 3.0.0
       string-width: 5.1.2
       type-fest: 2.19.0

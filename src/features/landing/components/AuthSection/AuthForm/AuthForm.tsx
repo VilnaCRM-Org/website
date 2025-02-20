@@ -21,7 +21,8 @@ import { validateFullName, validatePassword, validateEmail } from '../Validation
 import styles from './styles';
 import { AuthFormProps } from './types';
 
-const PRIVACY_POLICY_URL:string = process.env.NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL ||'https://github.com/VilnaCRM-Org';
+const PRIVACY_POLICY_URL: string =
+  process.env.NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL || 'https://github.com/VilnaCRM-Org';
 
 function AuthForm({ setIsAuthenticated, signupMutation }: AuthFormProps): React.ReactElement {
   const [serverError, setServerError] = React.useState('');

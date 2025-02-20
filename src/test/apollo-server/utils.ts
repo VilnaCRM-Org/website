@@ -1,37 +1,36 @@
 import { MutationResolvers, User, CreateUserInput, WrongInput, CreateUserResponse } from './types';
 
-export const typeDefs: string = `
-  type User {
-    id: ID!
-    confirmed: Boolean!
-    email: String!
-    initials: String!
+const defaultUrlSchema: string =
+  'https://raw.githubusercontent.com/VilnaCRM-Org/user-service/main/.github/graphql-spec/spec';
+const SCHEMA_URL: string = process.env.GRAPHQL_SCHEMA_URL || defaultUrlSchema;
+
+export async function getRemoteSchema(): Promise<string> {
+  const controller: AbortController = new AbortController();
+  const timeoutId: NodeJS.Timeout = setTimeout(() => controller.abort(), 5000);
+
+  try {
+    const response: Response = await fetch(`${SCHEMA_URL}`, {
+      signal: controller.signal,
+    }).finally(() => clearTimeout(timeoutId));
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch schema: ${response.statusText}`);
+    }
+
+    return await response.text();
+  } catch (error) {
+    if ((error as Error).name === 'AbortError') {
+      throw new Error('Schema fetch timeout after 5 seconds');
+    }
+    throw new Error(`Schema fetch failed: ${(error as Error).message}`);
   }
+}
 
-  input CreateUserInput {
-    email: String!
-    initials: String!
-    clientMutationId: String!
-  }
-
-  type CreateUserPayload {
-    user: User!
-    clientMutationId: String!
-  }
-
-  type Mutation {
-    createUser(input: CreateUserInput!): CreateUserPayload!
-  }
-
-  type Query {
-    _: String
-  }
-`;
-
-
-let userCounter:number = 0;
-export const users: Map<string, User> = new Map<string, { id: string; email: string; initials: string; confirmed: boolean }>();
-
+let userCounter: number = 0;
+export const users: Map<string, User> = new Map<
+  string,
+  { id: string; email: string; initials: string; confirmed: boolean }
+>();
 
 export const resolvers: { Mutation: MutationResolvers } = {
   Mutation: {
@@ -87,7 +86,7 @@ export async function createUser(
     },
     body: JSON.stringify({
       query: `
-        mutation CreateUser($input: CreateUserInput!) {
+        mutation CreateUser($input: createUserInput!) {
           createUser(input: $input) {
             user {
               id
@@ -103,6 +102,5 @@ export async function createUser(
     }),
   });
   const { result, errors } = await handleResponse<CreateUserResponse>(response);
-
   return { response, result, errors };
 }

@@ -1,10 +1,9 @@
-import { Box } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 import Image from 'next-export-optimize-images/image';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { UiButton } from '@/components';
-
 
 import UiTypography from '../../../../components/UiTypography';
 import Confetti from '../../assets/svg/notification/confetti.svg';
@@ -13,7 +12,9 @@ import Settings from '../../assets/svg/notification/settings.svg';
 import styles from './styles';
 import { NotificationProps } from './types';
 
-function NotificationSuccess({  setIsOpen }: Pick<NotificationProps, 'setIsOpen'>): React.ReactElement {
+function NotificationSuccess({
+  setIsOpen,
+}: Pick<NotificationProps, 'setIsOpen'>): React.ReactElement {
   const { t } = useTranslation();
   const handleClick: () => void = (): void => setIsOpen(false);
 
@@ -53,7 +54,9 @@ function NotificationSuccess({  setIsOpen }: Pick<NotificationProps, 'setIsOpen'
           fullWidth
           onClick={handleClick}
         >
-          {t('notifications.success.button')}
+          <Typography component="span" sx={styles.messageButtonText}>
+            {t('notifications.success.button')}
+          </Typography>
         </UiButton>
 
         <Box sx={{ ...styles.successImgBox, ...styles.bottomImgBox }}>

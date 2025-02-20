@@ -61,10 +61,9 @@ describe('AuthSection', () => {
     });
   });
   test('renders all social links with fallback text if translation is missing', () => {
-    const mockT: jest.SpyInstance<string, Parameters<TFunction>> = jest.spyOn(i18n, 't').mockImplementation(((key, options) => {
-      return typeof key === 'string' ? key : key[0] || 'Fallback Text';
-    }) as typeof i18n.t);
-
+    const mockT: jest.SpyInstance<string, Parameters<TFunction>> = jest
+      .spyOn(i18n, 't')
+      .mockImplementation(((key,) => typeof key === 'string' ? key : key[0] || 'Fallback Text') as typeof i18n.t);
 
     render(
       <I18nextProvider i18n={i18n}>

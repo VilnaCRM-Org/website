@@ -8,11 +8,10 @@
     "resolveJsonModule": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-
-    "outDir": "./dist-docker",
+    "outDir": "./out",
     "rootDir": "./",
     "noEmit": false
   },
-  "include": ["./apollo-server/server.mts"],
+  "include": ["docker/**/*"],
   "exclude": ["node_modules"]
 }

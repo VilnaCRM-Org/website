@@ -14,7 +14,7 @@ export const BREAKPOINTS: BreakpointsType = {
   XL: '1131px',
 };
 
- type DimensionsType = {
+type DimensionsType = {
   MIN_WIDTH: {
     XS: string;
     SM: string;

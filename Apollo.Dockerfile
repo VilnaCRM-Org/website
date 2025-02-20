@@ -1,15 +1,16 @@
-FROM node:20-alpine3.21
+FROM node:23-alpine3.20
 
 RUN npm install -g pnpm
 
 WORKDIR /app
 
 COPY package.json pnpm-lock.yaml checkNodeVersion.js ./
-COPY apollo-server ./apollo-server
-COPY tsconfig.docker.json ./
+COPY docker/apollo-server ./docker/apollo-server
+COPY tsconfig.server.json ./
 
-RUN pnpm install && pnpm run compile-apollo
+RUN pnpm install
+RUN pnpm run compile-server
 
 EXPOSE 4000
 
-CMD ["node", "./dist-docker/apollo-server/server.mjs"]
+CMD ["node", "./out/docker/apollo-server/server.mjs"]

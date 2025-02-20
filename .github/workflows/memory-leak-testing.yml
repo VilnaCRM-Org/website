@@ -35,8 +35,8 @@ jobs:
         if: |
           steps.cache-pnpm-store.outputs.cache-hit != 'true'
 
-      - name: Install Puppeteer browsers
-        run: npx puppeteer browsers install chrome@127.0.6533.88
+      - name: Set Puppeteer Environment Variables
+        run: echo "PUPPETEER_SKIP_DOWNLOAD=true" >> $GITHUB_ENV
 
       - name: Run dev and memory leak testing
         run: |

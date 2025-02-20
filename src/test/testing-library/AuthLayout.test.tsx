@@ -3,17 +3,18 @@ import { render, waitFor } from '@testing-library/react';
 import { t } from 'i18next';
 import React from 'react';
 
-
 import { fillForm } from '@/test/testing-library/utils';
 
 import { SIGNUP_MUTATION } from '../../features/landing/api/service/userService';
-import AuthFormComponent from '../../features/landing/components/AuthSection/AuthFormComponent/AuthFormComponent';
+import AuthLayout from '../../features/landing/components/AuthSection/AuthForm/AuthLayout';
 
 import {
   buttonRole,
   checkboxRole,
   emailPlaceholder,
-  fullNamePlaceholder, passwordPlaceholder, submitButtonText,
+  fullNamePlaceholder,
+  passwordPlaceholder,
+  submitButtonText,
   testEmail,
   testInitials,
   testPassword,
@@ -24,7 +25,7 @@ const alertRole: string = 'alert';
 
 const notificationId: string = 'notification';
 const formTitleText: string = t('sign_up.form.heading_main');
-const notificationTitle:string= t('notifications.success.title');
+const notificationTitle: string = t('notifications.success.title');
 
 const fulfilledMockResponse: MockedResponse = {
   request: {
@@ -70,22 +71,24 @@ const rejectedMockResponse: MockedResponse = {
     },
   },
   result: {
-    errors: [{
-    message: 'A user with this email already exists.',
-    locations: [{ line: 1, column: 1 }],
-    path: ['createUser'],
-    extensions: {
-      code: 'BAD_USER_INPUT'
-    }
-  }]
- }
+    errors: [
+      {
+        message: 'A user with this email already exists.',
+        locations: [{ line: 1, column: 1 }],
+        path: ['createUser'],
+        extensions: {
+          code: 'BAD_USER_INPUT',
+        },
+      },
+    ],
+  },
 };
 
-describe('AuthFormComponent', () => {
+describe('AuthLayout', () => {
   it('renders AuthComponent component correctly', () => {
     const { getByText, getByPlaceholderText, getByRole } = render(
       <MockedProvider mocks={[]} addTypename={false}>
-        <AuthFormComponent />
+        <AuthLayout />
       </MockedProvider>
     );
     const formTitle: HTMLElement = getByText(formTitleText);
@@ -100,7 +103,7 @@ describe('AuthFormComponent', () => {
   it('displays loader and submits form successfully without errors', async () => {
     const { getByRole, queryByRole } = render(
       <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
-        <AuthFormComponent />
+        <AuthLayout />
       </MockedProvider>
     );
 
@@ -117,7 +120,7 @@ describe('AuthFormComponent', () => {
   test('shows loading spinner during registration and hides it after completion', async () => {
     const { queryByRole } = render(
       <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
-        <AuthFormComponent />
+        <AuthLayout />
       </MockedProvider>
     );
 
@@ -133,9 +136,9 @@ describe('AuthFormComponent', () => {
   });
 
   it('registration with server error', async () => {
-    const { findByRole,  getByPlaceholderText } = render(
+    const { findByRole, getByPlaceholderText } = render(
       <MockedProvider mocks={[rejectedMockResponse]} addTypename={false}>
-        <AuthFormComponent />
+        <AuthLayout />
       </MockedProvider>
     );
 
@@ -149,9 +152,9 @@ describe('AuthFormComponent', () => {
     expect(getByPlaceholderText(passwordPlaceholder)).toHaveValue(testPassword);
   });
   it('shows success notification after successful authentication', async () => {
-    const { getByTestId, getByText} = render(
+    const { getByTestId, getByText } = render(
       <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
-        <AuthFormComponent />
+        <AuthLayout />
       </MockedProvider>
     );
 
@@ -159,7 +162,7 @@ describe('AuthFormComponent', () => {
 
     await waitFor(() => {
       expect(getByTestId(notificationId)).toBeInTheDocument();
-      const notification:HTMLElement = getByTestId(notificationId);
+      const notification: HTMLElement = getByTestId(notificationId);
       expect(notification).toBeInTheDocument();
       expect(notification).toBeVisible();
       expect(getByText(notificationTitle)).toBeInTheDocument();

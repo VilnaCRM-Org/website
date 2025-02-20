@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: pnpm run start
+    command: pnpm run start-prod
     restart: unless-stopped
     volumes:
       - .:/app
@@ -19,9 +19,6 @@ services:
       - .:/app
     ports:
       - '9323:9323'
-    environment:
-      - TEST_TYPE
-      - NEXT_PUBLIC_WEBSITE_URL=http://prod:3001
 
   apollo:
     build:

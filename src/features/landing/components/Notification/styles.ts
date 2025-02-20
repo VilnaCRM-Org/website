@@ -4,7 +4,6 @@ import { golos } from '@/config/Fonts/golos';
 
 import { BREAKPOINTS, DIMENSIONS } from './constants';
 
-
 export default {
   notificationSection: {
     display: 'flex',
@@ -31,7 +30,7 @@ export default {
     },
 
     [`@media (min-width: ${BREAKPOINTS.MD}) and (max-width: ${BREAKPOINTS.LG})`]: {
-       minWidth: DIMENSIONS.MIN_WIDTH.MD,
+      minWidth: DIMENSIONS.MIN_WIDTH.MD,
       minHeight: DIMENSIONS.MIN_HEIGHT.MD,
     },
 
@@ -157,20 +156,24 @@ export default {
     minWidth: '301px',
     marginTop: '1rem',
 
-    fontWeight: '500 !important',
+    [`@media (min-width: ${breakpointsTheme.breakpoints.values.md}px)`]: {
+      marginTop: '1.5rem',
+      maxWidth: '266px',
+    },
+    [`@media (min-width: ${breakpointsTheme.breakpoints.values.lg}px)`]: {
+      maxWidth: '242px',
+    },
+  },
+  messageButtonText: {
+    fontWeight: '500',
     fontSize: '15px',
     lineHeight: '18px',
     fontFamily: golos.style.fontFamily,
 
     [`@media (min-width: ${breakpointsTheme.breakpoints.values.md}px)`]: {
-      marginTop: '1.5rem',
-      maxWidth: '266px',
-      fontWeight: '600 !important',
+      fontWeight: '600',
       fontSize: '18px',
       lineHeight: '21.6px',
-    },
-    [`@media (min-width: ${breakpointsTheme.breakpoints.values.lg}px)`]: {
-      maxWidth: '242px',
     },
   },
 };

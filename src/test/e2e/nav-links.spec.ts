@@ -2,11 +2,12 @@ import { test, expect, Page } from '@playwright/test';
 
 import { t } from './utils/initializeLocalization';
 
+const WEBSITE_URL: string = process.env.NEXT_PUBLIC_PROD_API_URL || 'http://prod:3001';
 const links: Record<string, string> = {
-  advantages: `${process.env.NEXT_PUBLIC_WEBSITE_URL}/#Advantages`,
-  forWho: `${process.env.NEXT_PUBLIC_WEBSITE_URL}/#forWhoSection`,
-  integration: `${process.env.NEXT_PUBLIC_WEBSITE_URL}/#Integration`,
-  contacts: `${process.env.NEXT_PUBLIC_WEBSITE_URL}/#Contacts`,
+  advantages: `${WEBSITE_URL}/#Advantages`,
+  forWho: `${WEBSITE_URL}/#forWhoSection`,
+  integration: `${WEBSITE_URL}/#Integration`,
+  contacts: `${WEBSITE_URL}/#Contacts`,
 };
 
 const drawerTestId: string = 'drawer';

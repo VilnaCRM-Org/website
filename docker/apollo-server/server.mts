@@ -1,12 +1,17 @@
 /* eslint-disable */
 import { ApolloServer, BaseContext } from '@apollo/server';
 import { startStandaloneServer } from '@apollo/server/standalone';
+// @ts-ignore
+import { CreateUserInput, User } from './type.ts';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const defaultUrlSchema =
   'https://raw.githubusercontent.com/VilnaCRM-Org/user-service/main/.github/graphql-spec/spec';
-const SCHEMA_URL = process.env.SHEMA_URL || defaultUrlSchema;
+const SCHEMA_URL = process.env.GRAPHQL_SCHEMA_URL || defaultUrlSchema;
 
-async function getRemoteSchema() {
+export async function getRemoteSchema() {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 5000);
 
@@ -26,17 +31,6 @@ async function getRemoteSchema() {
     }
     throw new Error(`Schema fetch failed: ${(error as Error).message}`);
   }
-}
-interface CreateUserInput {
-  email: string;
-  initials: string;
-  clientMutationId: string;
-}
-interface User {
-  id: string;
-  confirmed: boolean;
-  email: string;
-  initials: string;
 }
 
 export const resolvers = {

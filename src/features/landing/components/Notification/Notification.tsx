@@ -13,7 +13,7 @@ const notificationComponents: NotificationComponents = {
   ),
 };
 
-function Notification({  type,  setIsOpen,  isOpen}: NotificationProps): React.ReactElement {
+function Notification({ type, setIsOpen, isOpen }: NotificationProps): React.ReactElement {
   const Component: NotificationVariantComponent =
     notificationComponents[type] || NotificationSuccess;
 

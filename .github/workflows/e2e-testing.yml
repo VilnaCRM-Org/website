@@ -19,12 +19,6 @@ jobs:
       - name: Install dependencies
         run: make install
 
-      - name: Start application
-        run: make start-prod
-
-      - name: Wait for services
-        run: make wait-for-prod
-
       - name: Run Playwright tests
         run: make test-e2e
 

@@ -10,7 +10,8 @@ import Notification from '../../features/landing/components/Notification';
 import NotificationSuccess from '../../features/landing/components/Notification/NotificationSuccess';
 import styles from '../../features/landing/components/Notification/styles';
 import {
-  NotificationComponents, NotificationProps,
+  NotificationComponents,
+  NotificationProps,
   NotificationType,
   NotificationVariantComponent,
 } from '../../features/landing/components/Notification/types';
@@ -85,7 +86,7 @@ describe('Notification', () => {
 
   it('renders hidden notification section when not authenticated', () => {
     const { getByTestId } = render(
-      <Notification type="success"  setIsOpen={mockSetIsAuthenticated} isOpen={false} />
+      <Notification type="success" setIsOpen={mockSetIsAuthenticated} isOpen={false} />
     );
 
     const notification: Element | null = getByTestId('notification');
@@ -98,17 +99,20 @@ describe('Notification', () => {
     render(
       <Notification
         type={'unknown' as NotificationType} // Force a non-existent type
-        setIsOpen={mockSetIsAuthenticated}   isOpen   />
+        setIsOpen={mockSetIsAuthenticated}
+        isOpen
+      />
     );
 
     expect(screen.getByTestId('success-box')).toBeInTheDocument();
   });
 
   it('renders SuccessNotification component based on the type prop', () => {
-    const MockNotificationSuccess: React.FC<{ setIsOpen: (value: boolean) => void }> =
-      jest.fn(() => <div data-testid="mock-success">Success</div>);
+    const MockNotificationSuccess: React.FC<{ setIsOpen: (value: boolean) => void }> = jest.fn(
+      () => <div data-testid="mock-success">Success</div>
+    );
     const notificationComponents: NotificationComponents = {
-      success: ({ setIsOpen }:  Pick<NotificationProps, 'setIsOpen'>) => (
+      success: ({ setIsOpen }: Pick<NotificationProps, 'setIsOpen'>) => (
         <MockNotificationSuccess setIsOpen={setIsOpen} />
       ),
     };

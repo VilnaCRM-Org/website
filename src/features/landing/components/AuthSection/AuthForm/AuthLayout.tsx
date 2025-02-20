@@ -10,7 +10,7 @@ import AuthForm from './AuthForm';
 import styles from './styles';
 import { CreateUserPayload, SignUpVariables } from './types';
 
-function AuthFormComponent(): React.ReactElement {
+function AuthLayout(): React.ReactElement {
   const [isAuthenticated, setIsAuthenticated] = React.useState(false);
   const [signupMutation, { loading }] = useMutation<CreateUserPayload, SignUpVariables>(
     SIGNUP_MUTATION
@@ -19,7 +19,13 @@ function AuthFormComponent(): React.ReactElement {
   return (
     <Box sx={styles.formWrapper}>
       {loading && (
-        <Box sx={styles.loader} role="status" component='div' aria-label="Loading" aria-live="polite">
+        <Box
+          sx={styles.loader}
+          role="status"
+          component="div"
+          aria-label="Loading"
+          aria-live="polite"
+        >
           <CircularProgress color="primary" size={70} />
         </Box>
       )}
@@ -32,13 +38,9 @@ function AuthFormComponent(): React.ReactElement {
         </Box>
       </Fade>
 
-      <Notification
-        type="success"
-        setIsOpen={setIsAuthenticated}
-        isOpen={isAuthenticated}
-      />
+      <Notification type="success" setIsOpen={setIsAuthenticated} isOpen={isAuthenticated} />
     </Box>
   );
 }
 
-export default AuthFormComponent;
+export default AuthLayout;

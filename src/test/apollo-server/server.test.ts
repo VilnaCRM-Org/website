@@ -2,13 +2,14 @@ import { ApolloServer, BaseContext } from '@apollo/server';
 import { startStandaloneServer } from '@apollo/server/standalone';
 
 import { CreateUserInput, CreateUserResponse } from './types';
-import { createUser, handleResponse, resolvers, users, typeDefs } from './utils';
+import { createUser, getRemoteSchema, handleResponse, resolvers, users } from './utils';
 
 describe('Apollo Server - createUser mutation', () => {
   let testServer: ApolloServer<BaseContext>;
   let url: string;
 
   beforeAll(async () => {
+    const typeDefs: string = await getRemoteSchema();
     testServer = new ApolloServer<BaseContext>({
       typeDefs,
       resolvers,
@@ -31,6 +32,7 @@ describe('Apollo Server - createUser mutation', () => {
     const { result, errors, response } = await createUser(url, {
       email: 'test@example.com',
       initials: 'TE',
+      password: 'qwe123QWE',
       clientMutationId: 'test-mutation-1',
     });
 
@@ -100,6 +102,7 @@ describe('Apollo Server - createUser mutation', () => {
     const { response, result } = await createUser(url, {
       email: 'clientid@example.com',
       initials: 'CI',
+      password: 'qwe123QWE',
       clientMutationId: mutationId,
     });
 
@@ -110,12 +113,14 @@ describe('Apollo Server - createUser mutation', () => {
     await createUser(url, {
       email: 'duplicate@example.com',
       initials: 'D1',
+      password: 'qwe123QWE',
       clientMutationId: 'test-mutation-4',
     });
 
     const { response, result, errors } = await createUser(url, {
       email: 'duplicate@example.com',
       initials: 'D2',
+      password: 'qwe123QWE',
       clientMutationId: 'test-mutation-5',
     });
 
@@ -126,7 +131,6 @@ describe('Apollo Server - createUser mutation', () => {
     expect(errors?.[0].message).toContain('A user with this email already exists.');
   });
 
-
   it('should handle unexpected errors gracefully', async () => {
     jest.spyOn(users, 'set').mockImplementation(() => {
       throw new Error('Database connection lost');
@@ -135,11 +139,11 @@ describe('Apollo Server - createUser mutation', () => {
     const { errors } = await createUser(url, {
       email: 'error@example.com',
       initials: 'ER',
+      password: 'qwe123QWE',
       clientMutationId: 'test-error',
     });
 
     expect(errors).toBeDefined();
     expect(errors?.[0].message).toContain('Failed to create user: Error: Database connection lost');
-
   });
 });

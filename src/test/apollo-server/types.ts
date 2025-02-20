@@ -1,9 +1,10 @@
 import { GraphQLResolveInfo } from 'graphql/type';
 
 export interface CreateUserInput {
+  clientMutationId: string;
   email: string;
   initials: string;
-  clientMutationId: string;
+  password: string;
 }
 export interface WrongInput {
   phone?: string;

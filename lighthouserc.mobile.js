@@ -3,7 +3,7 @@ require('dotenv').config();
 module.exports = {
   ci: {
     collect: {
-      url: `${process.env.NEXT_LOCALHOST_STANDARD}`,
+      url: `${process.env.NEXT_PUBLIC_LOCAL_API_URL}`,
       psiStrategy: 'mobile',
       settings: {
         chromeFlags: '--no-sandbox',

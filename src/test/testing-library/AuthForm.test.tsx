@@ -11,11 +11,11 @@ import {
   selectFormElements,
 } from '@/test/testing-library/utils';
 
-import AuthForm from '../../features/landing/components/AuthSection/AuthFormComponent/AuthForm';
+import AuthForm from '../../features/landing/components/AuthSection/AuthForm/AuthForm';
 import {
   CreateUserPayload,
   SignUpVariables,
-} from '../../features/landing/components/AuthSection/AuthFormComponent/types';
+} from '../../features/landing/components/AuthSection/AuthForm/types';
 
 import { testInitials, testEmail, testPassword } from './constants';
 
