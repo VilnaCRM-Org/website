@@ -9,6 +9,7 @@ import hexagon from '../../assets/svg/for-who/hexagon.svg';
 import point10 from '../../assets/svg/for-who/point10.svg';
 import point6 from '../../assets/svg/for-who/point6.svg';
 import point8 from '../../assets/svg/for-who/point8.svg';
+import pointgroup from '../../assets/svg/for-who/pointgroup.svg';
 import rhombus from '../../assets/svg/for-who/romb.svg';
 import triangle from '../../assets/svg/for-who/triangle.svg';
 import waves from '../../assets/svg/for-who/waves.svg';
@@ -47,6 +48,13 @@ function ForWhoSection(): React.ReactElement {
               loading='lazy' 
               />
               <Box sx={styles.pointContainer}>
+              <Box
+                 component="img" 
+                 {...getImageProps(pointgroup, 'pointgroup')} 
+                 alt='Decorative dot' 
+                 sx={styles.pointgroup}
+                 loading='lazy' 
+                 />
               <Box
                  component="img" 
                  {...getImageProps(point6, 'point6')} 
