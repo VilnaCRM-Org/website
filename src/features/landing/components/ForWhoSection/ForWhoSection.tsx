@@ -10,7 +10,7 @@ import point10 from '../../assets/svg/for-who/point10.svg';
 import point6 from '../../assets/svg/for-who/point6.svg';
 import point8 from '../../assets/svg/for-who/point8.svg';
 import pointgroup from '../../assets/svg/for-who/pointgroup.svg';
-import rhombus from '../../assets/svg/for-who/romb.svg';
+import rhombus from '../../assets/svg/for-who/rhombus.svg';
 import triangle from '../../assets/svg/for-who/triangle.svg';
 import waves from '../../assets/svg/for-who/waves.svg';
 
@@ -35,7 +35,8 @@ function ForWhoSection(): React.ReactElement {
               <Box
               component="img" 
               {...getImageProps(circle, 'circle')} 
-              alt='Small circular element' 
+              alt=""
+              aria-hidden="true" 
               sx={styles.circle}
               loading='lazy'
                />
@@ -43,7 +44,8 @@ function ForWhoSection(): React.ReactElement {
               <Box
               component="img" 
               {...getImageProps(rhombus, 'rhombus')} 
-              alt='Rhombus-shaped figure' 
+              alt=""
+              aria-hidden="true" 
               sx={styles.rhombus}
               loading='lazy' 
               />
@@ -51,28 +53,32 @@ function ForWhoSection(): React.ReactElement {
               <Box
                  component="img" 
                  {...getImageProps(pointgroup, 'pointgroup')} 
-                 alt='Decorative dot' 
+                 alt=""
+                 aria-hidden="true" 
                  sx={styles.pointgroup}
                  loading='lazy' 
                  />
               <Box
                  component="img" 
                  {...getImageProps(point6, 'point6')} 
-                 alt='Decorative dot' 
+                 alt=""
+                 aria-hidden="true" 
                  sx={styles.point6}
                  loading='lazy' 
                  />
                 <Box
                 component="img"  
                 {...getImageProps(point8, 'point8')} 
-                alt='Decorative dot' 
+                alt=""
+                aria-hidden="true" 
                 sx={styles.point8}
                 loading='lazy' 
                 />
                 <Box
                 component="img"   
                 {...getImageProps(point10, 'point10')}
-                alt='Decorative dot' 
+                alt=""
+                aria-hidden="true" 
                 sx={styles.point10} 
                 loading='lazy'
                 />
@@ -96,21 +102,24 @@ function ForWhoSection(): React.ReactElement {
               <Box
               component="img"  
               {...getImageProps(waves, 'waves')} 
-              alt='Abstract waves' 
+              alt=""
+              aria-hidden="true" 
               sx={styles.waves}
               loading='lazy' 
               />
               <Box
               component="img"  
               {...getImageProps(hexagon, 'hexagon')} 
-              alt='Hexagon shape' 
+              alt=""
+              aria-hidden="true" 
               sx={styles.hexagon}
               loading='lazy' 
               />
             <Box
             component="img"  
             {...getImageProps(triangle, 'triangle')} 
-            alt='Triangle shape' 
+            alt=""
+            aria-hidden="true" 
             sx={styles.triangle} 
             loading='lazy'
             />

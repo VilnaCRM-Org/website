@@ -65,7 +65,7 @@ export default {
   },
 
   svgContainer: {
-    // Hidden in mobile-first approach. 
+    // The container has elements inside, but no styles are needed except for the tablet layout. 
     [`@media (min-width: 968px)`]: {
       marginTop: '-15rem',
     },
@@ -124,7 +124,7 @@ export default {
   },
 
   pointgroup: {
-    // Hidden in mobile-first approach. 
+    // The pointgroup is hidden on mobile and tablet but becomes visible on desktop layouts.
     display: 'none',
     [`@media (min-width: 1131px)`]: {
       display: 'block',
@@ -228,7 +228,7 @@ export default {
   },
 
   waves: {
-    // Hidden in mobile-first approach.
+    // The waves is hidden on mobile but becomes visible on tablet and desktop layouts.
     display: 'none',
     [`@media (min-width: 968px)`]: {
       display: 'flex',
@@ -241,7 +241,7 @@ export default {
   },
 
   hexagon: {
-    // Hidden in mobile-first approach. 
+    // The hexagon is hidden on mobile but becomes visible on tablet and desktop layouts.
     display: 'none',
     [`@media (min-width: 968px)`]: {
     display: 'block',
@@ -253,7 +253,7 @@ export default {
   },
 
   triangle: {
-    // Hidden in mobile-first approach. 
+   // The triangle is hidden on mobile but becomes visible on tablet and desktop layouts. 
     display: 'none',
     [`@media (min-width: 968px)`]: {
     display: 'block',
