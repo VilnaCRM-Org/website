@@ -177,7 +177,7 @@ export default {
     height: '20rem',
     marginTop: '6.6rem',
     marginLeft: '0.6rem',
-    backgroundColor: '#1EAEFF',
+    backgroundColor: colorTheme.palette.primary.main,
     borderRadius: '6%',
     zIndex: 0,
     [`@media (min-width: 968px)`]: {
