@@ -7,7 +7,7 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml checkNodeVersion.js ./
 COPY docker/apollo-server apollo-server
 
-RUN make install
+RUN pnpm install
 RUN pnpm exec tsc apollo-server/server.mts  apollo-server/type.ts  \
   --outDir out --rootDir ./ \
   --module NodeNext --moduleResolution NodeNext \
