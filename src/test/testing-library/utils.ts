@@ -1,5 +1,8 @@
+import { MockedResponse } from '@apollo/client/testing';
 import { fireEvent, screen } from '@testing-library/react';
 import { t } from 'i18next';
+
+import { SIGNUP_MUTATION } from '../../features/landing/api/service/userService';
 
 import {
   fullNamePlaceholder,
@@ -8,9 +11,19 @@ import {
   submitButtonText,
   checkboxRole,
   buttonRole,
+  testEmail,
+  testInitials,
+  testPassword,
 } from './constants';
 
 export const createLocalizedRegExp: (key: string) => RegExp = key => new RegExp(t(key));
+
+class FormElementNotFoundError extends Error {
+  constructor(elementName: string, cause?: Error) {
+    super(`Form element "${elementName}" not found: ${cause?.message || ''}`);
+    this.name = 'FormElementNotFoundError';
+  }
+}
 
 export const selectFormElements: () => {
   fullNameInput: HTMLInputElement;
@@ -31,10 +44,9 @@ export const selectFormElements: () => {
     return { fullNameInput, emailInput, passwordInput, privacyCheckbox, signUpButton };
   } catch (error) {
     if (error instanceof Error) {
-      throw new Error(`Failed to select form elements: ${error.message}`);
-    } else {
-      throw new Error('An unknown error occurred');
+      throw new FormElementNotFoundError('form', error);
     }
+    throw new FormElementNotFoundError('form');
   }
 };
 
@@ -49,6 +61,10 @@ export const fillForm: (
   passwordInput: HTMLInputElement;
   privacyCheckbox: HTMLInputElement;
 } = (fullNameValue = '', emailValue = '', passwordValue = '', isChecked = false) => {
+  if (fullNameValue && fullNameValue.length < 2) {
+    throw new Error('Full name must be at least 2 characters');
+  }
+
   if (emailValue && !emailValue.includes('@')) {
     throw new Error('Invalid email format');
   }
@@ -75,4 +91,30 @@ export const checkElementsInDocument: (...elements: (HTMLElement | null)[]) => v
   ...elements
 ) => {
   elements.forEach(element => expect(element).toBeInTheDocument());
+};
+
+export const rejectedMockResponse: MockedResponse = {
+  request: {
+    query: SIGNUP_MUTATION,
+    variables: {
+      input: {
+        email: testEmail,
+        initials: testInitials,
+        password: testPassword,
+        clientMutationId: '132',
+      },
+    },
+  },
+  result: {
+    errors: [
+      {
+        message: 'A user with this email already exists.',
+        locations: [{ line: 1, column: 1 }],
+        path: ['createUser'],
+        extensions: {
+          code: 'BAD_USER_INPUT',
+        },
+      },
+    ],
+  },
 };

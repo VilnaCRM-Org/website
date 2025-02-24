@@ -7,10 +7,11 @@ import React from 'react';
 import { checkElementsInDocument } from '@/test/testing-library/utils';
 
 import Notification from '../../features/landing/components/Notification';
+import { notificationComponents } from '../../features/landing/components/Notification/Notification';
 import NotificationSuccess from '../../features/landing/components/Notification/NotificationSuccess';
 import styles from '../../features/landing/components/Notification/styles';
 import {
-  NotificationComponents,
+  NotificationComponentsProps,
   NotificationProps,
   NotificationType,
   NotificationVariantComponent,
@@ -25,7 +26,7 @@ const buttonText: string = t('notifications.success.button');
 
 const buttonRole: string = 'button';
 
-const mockSetIsAuthenticated: jest.Mock<(isAuthenticated: boolean) => void> = jest.fn<
+const mockSetIsOpen: jest.Mock<(isAuthenticated: boolean) => void> = jest.fn<
   (isAuthenticated: boolean) => void,
   [boolean]
 >();
@@ -37,7 +38,7 @@ describe('Notification', () => {
 
   it('renders notification success without crashing', () => {
     const { container, getByText, getByAltText, getAllByAltText, getByRole } = render(
-      <Notification type="success" setIsOpen={mockSetIsAuthenticated} isOpen />
+      <Notification type="success" setIsOpen={mockSetIsOpen} isOpen />
     );
 
     const notificationContainer: HTMLElement = container.querySelector(
@@ -60,22 +61,52 @@ describe('Notification', () => {
       button
     );
   });
+  test('notificationComponents contains the success notification component', () => {
+    expect(notificationComponents.success).toBeDefined();
+    render(<NotificationSuccess setIsOpen={mockSetIsOpen} />);
+    expect(screen.getByTestId('success-box')).toBeInTheDocument();
+  });
 
-  test('check if the setIsAuthenticated works properly', async () => {
-    const user: UserEvent = userEvent.setup();
-    const { getByRole } = render(
-      <Notification type="success" setIsOpen={mockSetIsAuthenticated} isOpen />
+  test('renders NotificationSuccess only when type is success or unknown', () => {
+    const { rerender } = render(<Notification type="success" setIsOpen={mockSetIsOpen} isOpen />);
+    expect(screen.getByTestId('success-box')).toBeInTheDocument();
+
+    rerender(
+      <Notification type={'unknown' as NotificationType} setIsOpen={mockSetIsOpen} isOpen />
     );
+    expect(screen.getByTestId('success-box')).toBeInTheDocument();
+
+    rerender(
+      <Notification type={'invalid' as NotificationType} setIsOpen={mockSetIsOpen} isOpen />
+    );
+    expect(screen.getByTestId('success-box')).toBeInTheDocument();
+  });
+
+  test('defaults to NotificationSuccess when type is unknown', () => {
+    render(
+      <Notification
+        type={'unknown' as NotificationType} // Force a non-existent type
+        setIsOpen={mockSetIsOpen}
+        isOpen
+      />
+    );
+
+    expect(screen.getByTestId('success-box')).toBeInTheDocument();
+  });
+
+  test('check if the setIsOpen works properly', async () => {
+    const user: UserEvent = userEvent.setup();
+    const { getByRole } = render(<Notification type="success" setIsOpen={mockSetIsOpen} isOpen />);
 
     const button: HTMLElement = getByRole(buttonRole);
     await user.click(button);
 
-    expect(mockSetIsAuthenticated).toHaveBeenCalledWith(false);
+    expect(mockSetIsOpen).toHaveBeenCalledWith(false);
   });
 
   test('renders visible notification section when authenticated', () => {
     const { getByTestId } = render(
-      <Notification type="success" setIsOpen={mockSetIsAuthenticated} isOpen />
+      <Notification type="success" setIsOpen={mockSetIsOpen} isOpen />
     );
 
     const notification: Element | null = getByTestId('notification');
@@ -86,7 +117,7 @@ describe('Notification', () => {
 
   it('renders hidden notification section when not authenticated', () => {
     const { getByTestId } = render(
-      <Notification type="success" setIsOpen={mockSetIsAuthenticated} isOpen={false} />
+      <Notification type="success" setIsOpen={mockSetIsOpen} isOpen={false} />
     );
 
     const notification: Element | null = getByTestId('notification');
@@ -95,33 +126,21 @@ describe('Notification', () => {
     expect(notification).toHaveStyle('opacity: 0');
   });
 
-  test('defaults to NotificationSuccess when type is unknown', () => {
-    render(
-      <Notification
-        type={'unknown' as NotificationType} // Force a non-existent type
-        setIsOpen={mockSetIsAuthenticated}
-        isOpen
-      />
-    );
-
-    expect(screen.getByTestId('success-box')).toBeInTheDocument();
-  });
-
   it('renders SuccessNotification component based on the type prop', () => {
     const MockNotificationSuccess: React.FC<{ setIsOpen: (value: boolean) => void }> = jest.fn(
       () => <div data-testid="mock-success">Success</div>
     );
-    const notificationComponents: NotificationComponents = {
+    const mockNotificationComponents: NotificationComponentsProps = {
       success: ({ setIsOpen }: Pick<NotificationProps, 'setIsOpen'>) => (
         <MockNotificationSuccess setIsOpen={setIsOpen} />
       ),
     };
 
-    const Component: NotificationVariantComponent = notificationComponents.success;
+    const Component: NotificationVariantComponent = mockNotificationComponents.success;
     render(
       <Box sx={styles.notificationSection}>
         <Box sx={styles.notificationWrapper}>
-          <Component setIsOpen={mockSetIsAuthenticated} />
+          <Component setIsOpen={mockSetIsOpen} />
         </Box>
       </Box>
     );
@@ -136,12 +155,12 @@ describe('NotificationSuccess', () => {
   });
 
   it('renders successfully', () => {
-    render(<NotificationSuccess setIsOpen={mockSetIsAuthenticated} />);
+    render(<NotificationSuccess setIsOpen={mockSetIsOpen} />);
     expect(screen.getByTestId('success-box')).toBeInTheDocument();
   });
 
   it('renders images with correct alt text', () => {
-    render(<NotificationSuccess setIsOpen={mockSetIsAuthenticated} />);
+    render(<NotificationSuccess setIsOpen={mockSetIsOpen} />);
 
     expect(screen.getByTestId('confetti')).toHaveAttribute('alt', confettiImgAltText);
 
@@ -149,25 +168,25 @@ describe('NotificationSuccess', () => {
   });
 
   it('renders the correct title and description', () => {
-    render(<NotificationSuccess setIsOpen={mockSetIsAuthenticated} />);
+    render(<NotificationSuccess setIsOpen={mockSetIsOpen} />);
 
     expect(screen.getByText(successTitleText)).toBeInTheDocument();
     expect(screen.getByText(successDescriptionText)).toBeInTheDocument();
   });
 
   it('renders the button with correct text and handles click event', () => {
-    render(<NotificationSuccess setIsOpen={mockSetIsAuthenticated} />);
+    render(<NotificationSuccess setIsOpen={mockSetIsOpen} />);
 
     const button: HTMLElement = screen.getByRole(buttonRole, { name: buttonText });
 
     expect(button).toBeInTheDocument();
     fireEvent.click(button);
-    expect(mockSetIsAuthenticated).toHaveBeenCalledWith(false);
+    expect(mockSetIsOpen).toHaveBeenCalledWith(false);
   });
 
   it('renders images with right alts', () => {
     const { getAllByAltText, getByAltText } = render(
-      <NotificationSuccess setIsOpen={mockSetIsAuthenticated} />
+      <NotificationSuccess setIsOpen={mockSetIsOpen} />
     );
 
     const successConfettiImg: HTMLElement[] = getAllByAltText(confettiImgAltText);

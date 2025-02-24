@@ -9,4 +9,4 @@ export interface NotificationProps {
 }
 
 export type NotificationVariantComponent = React.FC<Pick<NotificationProps, 'setIsOpen'>>;
-export type NotificationComponents = Record<NotificationType, NotificationVariantComponent>;
+export type NotificationComponentsProps = Record<NotificationType, NotificationVariantComponent>;

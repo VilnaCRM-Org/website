@@ -18,7 +18,7 @@ services:
     volumes:
       - .:/app
     ports:
-      - '9323:9323'
+      - '9324:9324'
 
   apollo:
     build:
@@ -28,3 +28,12 @@ services:
       - .:/app
     ports:
       - '4000:4000'
+
+  mockoon:
+    build:
+      context: .
+      dockerfile: Mockoon.Dockerfile
+    ports:
+      - '8080:8080'
+    restart: unless-stopped
+

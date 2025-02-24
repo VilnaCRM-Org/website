@@ -10,7 +10,7 @@ DOCKER_COMPOSE	= docker compose
 MAKE 			= make
 
 # Executables
-EXEC_NODEJS	= $(DOCKER_COMPOSE) exec nodejs
+EXEC_NODEJS	= $(DOCKER_COMPOSE) exec prod
 PNPM      	= $(EXEC_NODEJS) pnpm
 PNPM_RUN    = $(PNPM) run
 GIT         = git
@@ -76,27 +76,14 @@ storybook-build: ## Build Storybook UI. Storybook is a frontend workshop for bui
 generate-ts-doc: ## This command generates documentation from the typescript files.
 	$(PNPM_EXEC) doc
 
-mockoon:
-	$(DOCKER_COMPOSE) -f docker/mockoon/docker-compose.mockoon.yml up -d
-	@echo "Mockoon service started successfully"
-
-down-mockoon:
-	$(DOCKER_COMPOSE) -f docker/mockoon/docker-compose.mockoon.yml down
-
-start-apollo: # The target to run Apollo
-	$(DOCKER_COMPOSE) -f docker-compose.apollo.yml up -d
-
-down-apollo: # The target to stop Apollo
-	$(DOCKER_COMPOSE) -f docker-compose.apollo.yml down
-
 test-e2e: start-prod wait-for-prod  ## Start production and run E2E tests
 	$(DOCKER_COMPOSE) -f docker-compose.test.yml exec playwright pnpm run test:e2e
 
-start-prod: ## Build image and start container in production mode
-	$(DOCKER_COMPOSE) -f docker-compose.test.yml up -d
-
 test-visual: start-prod wait-for-prod  ## Start production and run visual tests
 	$(DOCKER_COMPOSE) -f docker-compose.test.yml exec playwright pnpm run test:visual
+
+start-prod: ## Build image and start container in production mode
+	$(DOCKER_COMPOSE) -f docker-compose.test.yml up -d
 
 wait-for-prod: ## Wait for the prod service to be ready on p ort 3001.
 	@echo "Waiting for prod service to be ready on port 3001..."
@@ -106,7 +93,10 @@ wait-for-prod: ## Wait for the prod service to be ready on p ort 3001.
 test-unit: ## This command executes unit tests using Jest library.
 	$(PNPM_EXEC) test:unit
 
-test-memory-leak: ## This command executes memory leaks tests using Memlab library.
+test-all: start-prod wait-for-prod  ## Start production and run all tests
+	$(DOCKER_COMPOSE) -f docker-compose.test.yml exec playwright sh -c 'pnpm run test:e2e & pnpm run test:visual & wait'
+
+test-memory-leak: start-prod wait-for-prod ## This command executes memory leaks tests using Memlab library.
 	$(PNPM_EXEC) test:memory-leak
 
 test-mutation:

@@ -27,21 +27,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-dependencies-
 
-      - name: Install pnpm
-        run: npm install -g pnpm
-
-      - name: Install dependencies
-        run: make install
-        if: |
-          steps.cache-pnpm-store.outputs.cache-hit != 'true'
-
-      - name: Set Puppeteer Environment Variables
-        run: echo "PUPPETEER_SKIP_DOWNLOAD=true" >> $GITHUB_ENV
-
       - name: Run dev and memory leak testing
-        run: |
-          pnpm run dev &
-          npx wait-on http://localhost:3000
-          node ./src/test/memory-leak/runMemlabTests.js
+        run: make test-memory-leak
+
         env:
           CI: true

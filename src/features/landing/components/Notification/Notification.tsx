@@ -5,9 +5,13 @@ import { animationTimeout } from '../../constants';
 
 import NotificationSuccess from './NotificationSuccess';
 import styles from './styles';
-import { NotificationProps, NotificationComponents, NotificationVariantComponent } from './types';
+import {
+  NotificationProps,
+  NotificationComponentsProps,
+  NotificationVariantComponent,
+} from './types';
 
-const notificationComponents: NotificationComponents = {
+export const notificationComponents: NotificationComponentsProps = {
   success: ({ setIsOpen }: Pick<NotificationProps, 'setIsOpen'>) => (
     <NotificationSuccess setIsOpen={setIsOpen} />
   ),

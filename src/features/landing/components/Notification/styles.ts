@@ -53,11 +53,11 @@ export default {
     flexDirection: 'column',
     paddingTop: '4.4rem',
 
-    [`@media (min-width: ${breakpointsTheme.breakpoints.values.md}px)`]: {
+    [`@media (min-width: ${breakpointsTheme.breakpoints.values.md})`]: {
       paddingTop: '3.5rem',
     },
 
-    [`@media (min-width: ${breakpointsTheme.breakpoints.values.lg}px)`]: {
+    [`@media (min-width: ${BREAKPOINTS.LG})`]: {
       paddingTop: '3.2rem',
     },
   },
@@ -69,7 +69,7 @@ export default {
     left: '-8.5rem',
     transform: 'scale(0.91)',
 
-    [`@media (min-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
+    [`@media (min-width: ${BREAKPOINTS.SM})`]: {
       minWidth: '29rem',
       top: '0.25rem',
       left: '0.6rem',
@@ -80,7 +80,7 @@ export default {
     display: 'none',
     rotate: '-180deg',
 
-    [`@media (min-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
+    [`@media (min-width: ${BREAKPOINTS.SM})`]: {
       display: 'block',
       minWidth: '29rem',
       top: '25.7rem',
@@ -92,7 +92,7 @@ export default {
       top: '26.5rem',
     },
 
-    [`@media (min-width: ${breakpointsTheme.breakpoints.values.lg}px)`]: {
+    [`@media (min-width: ${BREAKPOINTS.LG})`]: {
       minWidth: '31rem',
       top: '27rem',
       left: '0.4rem',
@@ -119,7 +119,7 @@ export default {
       marginTop: '0.3rem',
     },
 
-    [`@media (min-width: ${breakpointsTheme.breakpoints.values.lg}px)`]: {
+    [`@media (min-width: ${BREAKPOINTS.LG})`]: {
       marginTop: '0.6rem',
     },
   },
@@ -160,7 +160,7 @@ export default {
       marginTop: '1.5rem',
       maxWidth: '266px',
     },
-    [`@media (min-width: ${breakpointsTheme.breakpoints.values.lg}px)`]: {
+    [`@media (min-width: ${BREAKPOINTS.LG})`]: {
       maxWidth: '242px',
     },
   },

@@ -1,7 +1,7 @@
 FROM mcr.microsoft.com/playwright:v1.50.0-jammy
 
 RUN apt-get update && apt-get install -y python3 make g++ \
-    && npm install -g pnpm \
+    && npm install -g pnpm@10.4.1 \
     && apt-get clean
 
 WORKDIR /app

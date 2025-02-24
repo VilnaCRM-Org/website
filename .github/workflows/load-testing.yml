@@ -18,17 +18,5 @@ jobs:
         with:
           node-version: ${{ vars.NODE_VERSION }}
 
-      - name: Install pnpm
-        run: npm install -g pnpm
-
-      - name: Install dependencies
-        run: make install
-
-      - name: Start application
-        run: make start-prod
-
-      - name: Wait for services
-        run: make wait-for-prod
-
       - name: Run load tests
         run: make load-tests

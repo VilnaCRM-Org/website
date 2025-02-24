@@ -3,8 +3,6 @@ import { render, waitFor } from '@testing-library/react';
 import { t } from 'i18next';
 import React from 'react';
 
-import { fillForm } from '@/test/testing-library/utils';
-
 import { SIGNUP_MUTATION } from '../../features/landing/api/service/userService';
 import AuthLayout from '../../features/landing/components/AuthSection/AuthForm/AuthLayout';
 
@@ -19,6 +17,7 @@ import {
   testInitials,
   testPassword,
 } from './constants';
+import { fillForm, rejectedMockResponse } from './utils';
 
 const statusRole: string = 'status';
 const alertRole: string = 'alert';
@@ -55,32 +54,6 @@ const fulfilledMockResponse: MockedResponse = {
         },
       },
     };
-  },
-};
-
-const rejectedMockResponse: MockedResponse = {
-  request: {
-    query: SIGNUP_MUTATION,
-    variables: {
-      input: {
-        email: testEmail,
-        initials: testInitials,
-        password: testPassword,
-        clientMutationId: '132',
-      },
-    },
-  },
-  result: {
-    errors: [
-      {
-        message: 'A user with this email already exists.',
-        locations: [{ line: 1, column: 1 }],
-        path: ['createUser'],
-        extensions: {
-          code: 'BAD_USER_INPUT',
-        },
-      },
-    ],
   },
 };
 
