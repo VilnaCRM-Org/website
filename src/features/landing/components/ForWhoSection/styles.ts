@@ -65,7 +65,7 @@ export default {
   },
 
   svgContainer: {
-    // The container has elements inside, but no styles are needed except for the tablet layout. 
+    // The container has elements inside, but no styles are needed except for the tablet layout.
     [`@media (min-width: 968px)`]: {
       marginTop: '-15rem',
     },
@@ -123,7 +123,7 @@ export default {
     },
   },
 
-  pointgroup: {
+  pointGroup: {
     // The pointgroup is hidden on mobile and tablet but becomes visible on desktop layouts.
     display: 'none',
     [`@media (min-width: 1131px)`]: {
@@ -253,7 +253,7 @@ export default {
   },
 
   triangle: {
-   // The triangle is hidden on mobile but becomes visible on tablet and desktop layouts. 
+   // The triangle is hidden on mobile but becomes visible on tablet and desktop layouts.
     display: 'none',
     [`@media (min-width: 968px)`]: {
     display: 'block',
