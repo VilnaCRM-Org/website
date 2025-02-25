@@ -4,4 +4,6 @@ export interface UiCheckboxProps {
   disabled?: boolean;
   sx?: React.CSSProperties;
   error?: boolean;
+
+  checked?: boolean;
 }

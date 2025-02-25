@@ -45,7 +45,7 @@ export default {
   },
 
   // success box
-  successBox: {
+  contentBox: {
     position: 'relative',
     display: 'flex',
     justifyContent: 'center',
@@ -59,6 +59,20 @@ export default {
 
     [`@media (min-width: ${BREAKPOINTS.LG})`]: {
       paddingTop: '3.2rem',
+    },
+  },
+
+  contentBoxError: {
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: '3.0625rem',
+
+    [`@media (min-width: ${breakpointsTheme.breakpoints.values.md})`]: {
+      paddingTop: '4.25rem',
+    },
+    [`@media (min-width: ${BREAKPOINTS.LG})`]: {
+      paddingTop: '4.25rem',
     },
   },
 
@@ -124,6 +138,18 @@ export default {
     },
   },
 
+  messageContainerError: {
+    marginTop: '0.8125rem',
+
+    [`@media (min-width: ${breakpointsTheme.breakpoints.values.md}px)`]: {
+      marginTop: '0.75rem',
+    },
+
+    [`@media (min-width: ${BREAKPOINTS.LG})`]: {
+      marginTop: '0.75rem',
+    },
+  },
+
   messageTitle: {
     fontWeight: 700,
     fontSize: '22px',
@@ -171,6 +197,46 @@ export default {
     fontFamily: golos.style.fontFamily,
 
     [`@media (min-width: ${breakpointsTheme.breakpoints.values.md}px)`]: {
+      fontWeight: '600',
+      fontSize: '18px',
+      lineHeight: '21.6px',
+    },
+  },
+
+  // error notification
+  buttonsBox: {
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexDirection: 'column',
+    marginTop: '1rem',
+
+    [`@media (min-width: ${BREAKPOINTS.SM})`]: {
+      marginTop: '2rem',
+    },
+    [`@media (min-width: ${BREAKPOINTS.LG})`]: {
+      marginTop: '1rem',
+    },
+  },
+
+  errorButton: {
+    width: '301px',
+    height: '50px',
+    paddingY: '1rem',
+    borderRadius: '3.5625rem',
+    boxShadow: 'none',
+
+    [`@media (min-width: ${BREAKPOINTS.SM})`]: {
+      width: '315px',
+      height: '70px',
+    },
+    [`@media (min-width: ${breakpointsTheme.breakpoints.values.xl}px)`]: {
+      width: '291px',
+      height: '62px',
+    },
+  },
+  errorButtonMessage: {
+    [`@media (min-width: ${BREAKPOINTS.SM})`]: {
       fontWeight: '600',
       fontSize: '18px',
       lineHeight: '21.6px',

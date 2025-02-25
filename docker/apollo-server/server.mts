@@ -3,6 +3,7 @@ import { ApolloServer, BaseContext } from '@apollo/server';
 import { startStandaloneServer } from '@apollo/server/standalone';
 // @ts-ignore
 import { CreateUserInput, User } from './type.ts';
+// @ts-ignore
 import dotenv from 'dotenv';
 
 dotenv.config();

@@ -3,6 +3,7 @@ import React from 'react';
 
 import { animationTimeout } from '../../constants';
 
+import NotificationError from './NotificationError';
 import NotificationSuccess from './NotificationSuccess';
 import styles from './styles';
 import {
@@ -14,6 +15,9 @@ import {
 export const notificationComponents: NotificationComponentsProps = {
   success: ({ setIsOpen }: Pick<NotificationProps, 'setIsOpen'>) => (
     <NotificationSuccess setIsOpen={setIsOpen} />
+  ),
+  error: ({ setIsOpen }: Pick<NotificationProps, 'setIsOpen'>) => (
+    <NotificationError setIsOpen={setIsOpen} />
   ),
 };
 

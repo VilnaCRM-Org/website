@@ -19,7 +19,7 @@ function NotificationSuccess({
   const handleClick: () => void = (): void => setIsOpen(false);
 
   return (
-    <Box sx={styles.successBox} data-testid="success-box">
+    <Box sx={styles.contentBox} data-testid="success-box">
       <Box sx={styles.successImgBox}>
         <Image
           src={Confetti}

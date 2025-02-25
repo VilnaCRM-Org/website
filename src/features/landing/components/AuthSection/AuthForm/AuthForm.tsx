@@ -1,6 +1,6 @@
 import { Box, Stack } from '@mui/material';
 import Image from 'next-export-optimize-images/image';
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { Trans, useTranslation } from 'react-i18next';
 
@@ -19,44 +19,29 @@ import { PasswordTip } from '../PasswordTip';
 import { validateFullName, validatePassword, validateEmail } from '../Validations';
 
 import styles from './styles';
-import { AuthFormProps } from './types';
 
 const PRIVACY_POLICY_URL: string =
   process.env.NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL || 'https://github.com/VilnaCRM-Org';
 
-function AuthForm({ setIsAuthenticated, signupMutation }: AuthFormProps): React.ReactElement {
-  const [serverError, setServerError] = React.useState('');
+type AuthFormProps = { serverError: string; onSubmit: (data: RegisterItem) => Promise<void> };
+
+function AuthForm({ onSubmit, serverError }: AuthFormProps): React.ReactElement {
   const {
     handleSubmit,
     control,
+    reset,
+    formState,
     formState: { errors },
   } = useForm<RegisterItem>({
     mode: 'onTouched',
+    defaultValues: { Email: '', FullName: '', Password: '', Privacy: false },
   });
   const { t } = useTranslation();
 
-  const onSubmit: (data: RegisterItem) => Promise<void> = async (data: RegisterItem) => {
-    try {
-      setServerError('');
-      await signupMutation({
-        variables: {
-          input: {
-            email: data.Email,
-            initials: data.FullName,
-            password: data.Password,
-            clientMutationId: '132',
-          },
-        },
-      });
-      setIsAuthenticated(true);
-    } catch (error) {
-      if (error instanceof Error) {
-        setServerError(error.message);
-      } else {
-        setServerError('An unexpected error occurred');
-      }
-    }
-  };
+  useEffect(() => {
+    if (formState.isSubmitSuccessful && !serverError.length)
+      reset({ Email: '', FullName: '', Password: '', Privacy: false });
+  }, [formState, reset]);
 
   return (
     <Box component="form" data-testid="auth-form" onSubmit={handleSubmit(onSubmit)}>
@@ -93,11 +78,6 @@ function AuthForm({ setIsAuthenticated, signupMutation }: AuthFormProps): React.
             placeholder={t('sign_up.form.email_input.placeholder')}
             type="text"
           />
-          {serverError && (
-            <UiTypography variant="medium14" sx={styles.errorText} role="alert">
-              {serverError}
-            </UiTypography>
-          )}
         </Stack>
         <Stack sx={styles.inputWrapper}>
           <Stack direction="row" alignItems="center" gap="0.25rem">
@@ -129,9 +109,10 @@ function AuthForm({ setIsAuthenticated, signupMutation }: AuthFormProps): React.
         control={control}
         name="Privacy"
         rules={{ required: true }}
-        render={({ field }) => (
+        render={({ field: { value, onChange } }) => (
           <UiCheckbox
-            onChange={e => field.onChange(e)}
+            onChange={onChange}
+            checked={value}
             error={!!errors.Privacy}
             sx={styles.labelText as React.CSSProperties}
             label={
