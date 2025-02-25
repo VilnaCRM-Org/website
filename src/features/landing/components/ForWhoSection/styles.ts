@@ -54,7 +54,19 @@ export default {
     marginTop: '1.5rem',
     marginBottom: '-6rem',
     display: 'flex',
-    [`@media (min-width: 968px)`]: {
+    [`@media (min-width: 468px)`]: {
+      marginTop: '-1rem',
+      marginLeft: '5rem'
+      },
+    [`@media (min-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
+      marginTop: '-2rem',
+      marginLeft: '8rem'
+    },
+    [`@media (min-width: ${breakpointsTheme.breakpoints.values.md}px)`]: {
+      marginTop: '-11rem',
+      marginLeft: '10rem'
+    },
+    [`@media (min-width: 969px)`]: {
       marginTop: '-30rem',
       marginLeft: '17.6rem',
     },
@@ -66,7 +78,7 @@ export default {
 
   svgContainer: {
     // The container has elements inside, but no styles are needed except for the tablet layout.
-    [`@media (min-width: 968px)`]: {
+    [`@media (min-width: 969px)`]: {
       marginTop: '-15rem',
     },
   },
@@ -76,7 +88,17 @@ export default {
     height: '0.5rem',
     marginTop: '5.1rem',
     marginLeft: '1.5rem',
-    [`@media (min-width: 968px)`]: {
+    [`@media (min-width: 468px)`]: {
+    position: 'absolute',
+    },
+   [`@media (min-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
+      position: 'absolute',
+      marginTop: '4.7rem',
+      marginLeft: '1.7rem'
+    },
+    [`@media (min-width: ${breakpointsTheme.breakpoints.values.md}px)`]: {
+    },
+    [`@media (min-width: 969px)`]: {
       width: '0.8rem',
       height: '0.8rem',
       marginTop: '2rem',
@@ -94,10 +116,21 @@ export default {
     height: '1.5rem',
     marginTop: '9.1rem',
     marginLeft: '1.1rem',
-    [`@media (min-width: 968px)`]: {
+    [`@media (min-width: 468px)`]: {
+      position: 'absolute',
+      marginTop: '15rem'
+    },
+    [`@media (min-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
+      position: 'absolute',
+      marginTop: '15rem'
+    },
+    [`@media (min-width: ${breakpointsTheme.breakpoints.values.md}px)`]: {
+      marginTop: '16.5rem'
+    },
+    [`@media (min-width: 969px)`]: {
       width: '2.5rem',
       height: '2.5rem',
-      marginTop: '15.8rem',
+      marginTop: '18.9rem',
       marginLeft: '1.3rem'
     },
     [`@media (min-width: 1131px)`]: {
@@ -112,9 +145,18 @@ export default {
     display: 'flex',
     marginTop: '0.5rem',
     marginLeft: '0.5rem',
-    [`@media (min-width: 968px)`]: {
-    marginTop: '1rem',
-    marginLeft: '1.4rem'
+    [`@media (min-width: 468px)`]: {
+      marginTop: '17rem'
+    },
+    [`@media (min-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
+      marginTop: '17rem'
+    },
+    [`@media (min-width: ${breakpointsTheme.breakpoints.values.md}px)`]: {
+      marginTop: '19rem'
+    },
+    [`@media (min-width: 969px)`]: {
+      marginTop: '22.4rem',
+      marginLeft: '1.4rem'
     },
     [`@media (min-width: 1131px)`]: {
       position: 'absolute',
@@ -136,7 +178,7 @@ export default {
   point6: {
     marginLeft: '0.9rem',
     marginTop: '0.9rem',
-    [`@media (min-width: 968px)`]: {
+    [`@media (min-width: 969px)`]: {
       width: '0.43rem',
       height: 'auto',
       marginLeft: '0.4rem'
@@ -150,7 +192,7 @@ export default {
   point8: {
     marginLeft: '0.2rem',
     marginTop: '0.4rem',
-    [`@media (min-width: 968px)`]: {
+    [`@media (min-width: 969px)`]: {
       width: '0.43rem',
       height: 'auto',
       marginLeft: '0.4rem'
@@ -163,7 +205,7 @@ export default {
 
   point10: {
     marginLeft: '0.2rem',
-    [`@media (min-width: 968px)`]: {
+    [`@media (min-width: 969px)`]: {
       width: '0.43rem',
       height: 'auto',
     },
@@ -180,11 +222,18 @@ export default {
     backgroundColor: colorTheme.palette.primary.main,
     borderRadius: '6%',
     zIndex: 0,
-    [`@media (min-width: 968px)`]: {
+    [`@media (min-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
+      width: '22rem'
+    },
+    [`@media (min-width: ${breakpointsTheme.breakpoints.values.md}px)`]: {
+      width: '25rem',
+      height: '25rem'
+    },
+    [`@media (min-width: 969px)`]: {
       width: '37.6rem',
       height: '40.5rem',
       marginTop: '-10.6rem',
-      marginLeft: '-1.4rem',
+      marginLeft: '1.2rem',
     },
   },
 
@@ -195,8 +244,14 @@ export default {
     marginLeft: '1.2rem',
     zIndex: 1,
     borderRadius: '0.6rem',
-    [`@media (min-width: 968px)`]: {
+    [`@media (min-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
+    },
+    [`@media (min-width: ${breakpointsTheme.breakpoints.values.md}px)`]: {
+      width: '21rem'
+    },
+    [`@media (min-width: 969px)`]: {
       width: '31.6rem',
+      height: '21.7rem',
       marginTop: '-4.4rem',
       marginLeft: '2.1rem'
     },
@@ -215,9 +270,13 @@ export default {
     marginLeft: '11.5rem',
     zIndex: 100,
     borderRadius: '0.6rem',
-    [`@media (min-width: 968px)`]: {
+    [`@media (min-width: ${breakpointsTheme.breakpoints.values.md}px)`]: {
+      width: '10rem',
+      marginLeft: '13.7rem'
+    },
+    [`@media (min-width: 969px)`]: {
       width: '15.6rem',
-      marginTop: '-11.1rem',
+      marginTop: '-9.7rem',
       marginLeft: '19.7rem',
       borderRadius: '1.5rem',
     },
@@ -230,10 +289,10 @@ export default {
   waves: {
     // The waves is hidden on mobile but becomes visible on tablet and desktop layouts.
     display: 'none',
-    [`@media (min-width: 968px)`]: {
+    [`@media (min-width: 969px)`]: {
       display: 'flex',
       position: 'relative',
-      marginTop: '-7.4rem',
+      marginTop: '-7.5rem',
       marginLeft: '4.5rem',
       opacity: '0.2',
       zIndex: -1,
@@ -243,7 +302,7 @@ export default {
   hexagon: {
     // The hexagon is hidden on mobile but becomes visible on tablet and desktop layouts.
     display: 'none',
-    [`@media (min-width: 968px)`]: {
+    [`@media (min-width: 969px)`]: {
     display: 'block',
     position: 'relative',
     marginTop: '-12rem',
@@ -255,9 +314,9 @@ export default {
   triangle: {
    // The triangle is hidden on mobile but becomes visible on tablet and desktop layouts.
     display: 'none',
-    [`@media (min-width: 968px)`]: {
+    [`@media (min-width: 969px)`]: {
     display: 'block',
-    marginTop: '-32.8rem',
+    marginTop: '-32.9rem',
     marginLeft: '35.1rem',
     },
     [`@media (min-width: 1131px)`]: {
