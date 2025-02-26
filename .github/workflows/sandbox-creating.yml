@@ -147,19 +147,6 @@ jobs:
             exit 1
           fi
 
-      - name: Check GitHub Token Access
-        run: |
-          RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.PAT_WITH_REPO_PERMISSIONS }}" \
-            -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/YOUR_ORG/YOUR_REPO/pulls")
-        
-          echo "GitHub API Response: $RESPONSE"
-                  
-          if echo "$RESPONSE" | jq -e '.message == "Bad credentials"' > /dev/null; then
-            echo "::error:: Token is invalid or expired!"
-            exit 1
-          fi
-
       - name: Get PR Number
         id: get_pr_number
         run: |
