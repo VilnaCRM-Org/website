@@ -1,5 +1,5 @@
 import { MockedProvider, MockedResponse } from '@apollo/client/testing';
-import { render, waitFor } from '@testing-library/react';
+import { render, waitFor} from '@testing-library/react';
 import { t } from 'i18next';
 import React from 'react';
 
@@ -56,6 +56,7 @@ const fulfilledMockResponse: MockedResponse = {
     };
   },
 };
+
 
 describe('AuthLayout', () => {
   it('renders AuthComponent component correctly', () => {
@@ -141,4 +142,19 @@ describe('AuthLayout', () => {
       expect(getByText(notificationTitle)).toBeInTheDocument();
     });
   });
+
+  // test('shows error notification when API returns an error', async () => {
+  //  const {getByTestId}= render(
+  //     <MockedProvider mocks={[rejectedMockResponse]} addTypename={false}>
+  //       <AuthLayout />
+  //     </MockedProvider>
+  //   );
+  //
+  //   fillForm(testInitials, testEmail, testPassword, true);
+  //
+  //   await waitFor(() => {
+  //     expect(getByTestId('error-box')).toBeInTheDocument();
+  //   });
+  // });
+  //
 });

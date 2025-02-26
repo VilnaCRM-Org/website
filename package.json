@@ -19,7 +19,7 @@
     "test:mutation": "npx stryker run",
     "test:visual:update": "npx playwright test ./src/test/visual --update-snapshots",
     "test:visual": "pnpm exec playwright test ./src/test/visual",
-    "test:unit": "TEST_ENV=client jest --verbose ./src/test/testing-library/AuthForm.test.tsx",
+    "test:unit": "TEST_ENV=client jest --verbose ./src/test/testing-library/NotificationError.test.tsx",
     "test:memory-leak": "node ./src/test/memory-leak/runMemlabTests",
     "lighthouse:desktop": "next build && next-export-optimize-images && lhci autorun --config=lighthouserc.desktop.js --collect.startServerCommand=\"npx serve@latest out\"",
     "lighthouse:mobile": "next build && next-export-optimize-images && lhci autorun --config=lighthouserc.mobile.js --collect.startServerCommand=\"npx serve@latest out\"",

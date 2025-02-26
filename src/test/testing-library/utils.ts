@@ -118,3 +118,4 @@ export const rejectedMockResponse: MockedResponse = {
     ],
   },
 };
+export type SetIsOpenType = jest.Mock<(isOpen: boolean) => void>;

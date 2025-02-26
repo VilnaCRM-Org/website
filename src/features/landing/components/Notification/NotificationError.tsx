@@ -9,7 +9,7 @@ import UiTypography from '../../../../components/UiTypography';
 import ErrorImg from '../../assets/svg/notification/error.svg';
 
 import styles from './styles';
-import { NotificationProps } from './types';
+import { NotificationComponentProps } from './types';
 
 const buttonTextStyle: React.CSSProperties = {
   ...styles.messageButtonText,
@@ -18,17 +18,19 @@ const buttonTextStyle: React.CSSProperties = {
 
 function NotificationError({
   setIsOpen,
-}: Pick<NotificationProps, 'setIsOpen'>): React.ReactElement {
+  triggerFormSubmit,
+}: NotificationComponentProps): React.ReactElement {
   const { t } = useTranslation();
-  const onCLick: () => void = (): void => setIsOpen(false);
+  const onHandleClose: () => void = (): void => setIsOpen(false);
   return (
-    <Box sx={{ ...styles.contentBox, ...styles.contentBoxError }} data-testid="success-box">
+    <Box sx={{ ...styles.contentBox, ...styles.contentBoxError }} data-testid="error-box">
       <Box sx={styles.imgWrapper}>
         <Image
           src={ErrorImg}
           alt={t('notifications.error.images.error')}
           width={268}
           height={195}
+          data-testid="error-image"
         />
       </Box>
 
@@ -48,6 +50,7 @@ function NotificationError({
             type="button"
             size="medium"
             fullWidth
+            onClick={triggerFormSubmit}
           >
             <Typography component="span" sx={buttonTextStyle}>
               {t('notifications.error.retry_button')}
@@ -60,7 +63,7 @@ function NotificationError({
             type="button"
             size="medium"
             fullWidth
-            onClick={onCLick}
+            onClick={onHandleClose}
           >
             <Typography component="span" sx={buttonTextStyle}>
               {t('notifications.error.button')}

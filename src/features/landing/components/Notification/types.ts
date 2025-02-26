@@ -2,16 +2,17 @@ import React from 'react';
 
 export type NotificationType = 'success' | 'error';
 
-export interface NotificationProps {
+export interface NotificationControlProps {
   type: NotificationType;
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
-  // setType: (type: NotificationType | null) => void;
+  triggerFormSubmit: () => void;
 }
 
-// export type componentVariant = Pick<NotificationProps, 'setType'> & { handleClose: () => void };
-
-// export type NotificationVariantComponent = React.FC<Pick<NotificationProps, 'setType'>> ;
-// export type NotificationVariantComponent = React.FC<{ handleClose: () => void }>;
-export type NotificationVariantComponent = React.FC<Pick<NotificationProps, 'setIsOpen'>>;
-export type NotificationComponentsProps = Record<NotificationType, NotificationVariantComponent>;
+export type NotificationComponentProps = Pick<
+  NotificationControlProps,
+  'setIsOpen' | 'triggerFormSubmit'
+>;
+export type NotificationSuccessProps = Pick<NotificationComponentProps, 'setIsOpen'>;
+export type NotificationComponentType = React.FC<NotificationComponentProps>;
+export type NotificationComponentMap = Record<NotificationType, NotificationComponentType>;

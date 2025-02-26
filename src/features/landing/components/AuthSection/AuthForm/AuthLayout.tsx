@@ -1,21 +1,23 @@
 import { useMutation } from '@apollo/client';
 import { Box, CircularProgress, Fade } from '@mui/material';
-import React, { useState } from 'react';
+import React, { RefObject, useRef, useState } from 'react';
 
 import { SIGNUP_MUTATION } from '../../../api/service/userService';
 import { animationTimeout } from '../../../constants';
+import isHttpError from '../../../helpers/isHttpError';
 import { RegisterItem } from '../../../types/authentication/form';
 import Notification from '../../Notification/Notification';
+import { NotificationType } from '../../Notification/types';
 
 import AuthForm from './AuthForm';
 import styles from './styles';
-import { CreateUserPayload, SignUpVariables } from './types';
+import { CallableRef, CreateUserPayload, SignUpVariables } from './types';
 
 function AuthLayout(): React.ReactElement {
-  // const [isAuthenticated, setIsAuthenticated] = React.useState(false);
-  const [notificationType, setNotificationType] = useState<'error' | 'success'>('success');
-  const [isNotificationOpen, setNotificationOpen] = useState(false);
-  const [serverError, setServerError] = React.useState('');
+  const [notificationType, setNotificationType] = useState<NotificationType>('success');
+  const [errorDetails, setErrorDetails] = useState('');
+  const [isNotificationOpen, setNotificationOpen] = useState<boolean>(false);
+  const formRef: RefObject<CallableRef> = useRef(null);
   const [signupMutation, { loading }] = useMutation<CreateUserPayload, SignUpVariables>(
     SIGNUP_MUTATION
   );
@@ -32,19 +34,28 @@ function AuthLayout(): React.ReactElement {
           },
         },
       });
-
-      // setIsAuthenticated(true);
-      setServerError('');
+      setErrorDetails('');
       setNotificationOpen(true);
       setNotificationType('success');
     } catch (error) {
-      if (error instanceof Error) {
-        setServerError(error.message);
+      if (isHttpError(error)) {
+        if (error.statusCode === 500) {
+          setNotificationType('error');
+          setNotificationOpen(true);
+        } else {
+          setErrorDetails(error.message);
+        }
+      } else if (error instanceof Error) {
+        setErrorDetails(error.message);
       } else {
-        setServerError('An unexpected error occurred');
+        setErrorDetails('An unexpected error occurred');
       }
-      setNotificationType('error');
-      setNotificationOpen(true);
+    }
+  };
+
+  const triggerFormSubmit: () => void = () => {
+    if (formRef.current?.submit) {
+      formRef.current.submit();
     }
   };
 
@@ -66,7 +77,12 @@ function AuthLayout(): React.ReactElement {
 
       <Fade in={!isNotificationOpen} timeout={animationTimeout}>
         <Box sx={styles.formContent}>
-          <AuthForm serverError={serverError} onSubmit={onSubmit} />
+          <AuthForm
+            errorDetails={errorDetails}
+            notificationType={notificationType}
+            ref={formRef}
+            onSubmit={onSubmit}
+          />
         </Box>
       </Fade>
 
@@ -74,6 +90,7 @@ function AuthLayout(): React.ReactElement {
         type={notificationType}
         setIsOpen={setNotificationOpen}
         isOpen={isNotificationOpen}
+        triggerFormSubmit={triggerFormSubmit}
       />
     </Box>
   );
