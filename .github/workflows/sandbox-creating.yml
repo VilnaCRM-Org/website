@@ -153,6 +153,9 @@ jobs:
           RESPONSE=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" \
             -H "Accept: application/vnd.github+json" \
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/pulls?head=${GITHUB_REPOSITORY_OWNER}:${GITHUB_REF_NAME}")
+          
+          echo "GitHub API Response: $RESPONSE"  # Debugging step
+          
           if [ $? -ne 0 ]; then
             echo "::error::Failed to retrieve PR number: ${PR_NUMBER}"
             exit 1
