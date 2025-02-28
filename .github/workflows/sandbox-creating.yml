@@ -147,7 +147,7 @@ jobs:
             --region "${AWS_REGION}" \
             --query "SecretList[?starts_with(Name, 'github-token-') && DeletionDate==null].Name | [0]" \
             --output text)
-    
+
           if [ -z "$SECRET_ID" ] || [ "$SECRET_ID" = "None" ]; then
             echo "No active secret found with prefix 'github-token-'"
             exit 1
@@ -163,7 +163,7 @@ jobs:
             echo "Error: Unable to extract GitHub token from secret"
             exit 1
           fi
-    
+
           echo "GITHUB_TOKEN=${GITHUB_TOKEN}" >> $GITHUB_ENV
 
       - name: Get PR Number
@@ -188,7 +188,10 @@ jobs:
 
       - name: Validate AWS Region
         run: |
-          echo "AWS Region: ${{ env.AWS_REGION }}"
+          if [ -z "${{ vars.AWS_REGION }}" ]; then
+            echo "::error::AWS_REGION is not set"
+            exit 1
+          fi
 
       - name: Start Pipeline Execution
         run: |
