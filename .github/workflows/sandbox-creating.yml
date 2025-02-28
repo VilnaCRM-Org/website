@@ -143,7 +143,22 @@ jobs:
 
       - name: Retrieve GitHub Token from Secrets Manager
         run: |
-          GITHUB_TOKEN=$(aws secretsmanager get-secret-value --secret-id github-token --query SecretString --output text --region ${{ env.AWS_REGION }})
+          SECRET_ID=$(aws secretsmanager list-secrets \
+            --region "${AWS_REGION}" \
+            --query "SecretList[?starts_with(Name, 'github-token-') && DeletionDate==null].Name | [0]" \
+            --output text)
+
+          if [ -z "$SECRET_ID" ] || [ "$SECRET_ID" = "None" ]; then
+            echo "No active secret found with prefix 'github-token-'"
+            exit 1
+          fi
+
+          GITHUB_TOKEN=$(aws secretsmanager get-secret-value \
+            --region "${AWS_REGION}" \
+            --secret-id "$SECRET_ID" \
+            --query "SecretString" \
+            --output text)
+
           echo "GITHUB_TOKEN=$GITHUB_TOKEN" >> $GITHUB_ENV
 
       - name: Get PR Number
