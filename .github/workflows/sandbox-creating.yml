@@ -147,7 +147,7 @@ jobs:
             --region "${AWS_REGION}" \
             --query "SecretList[?starts_with(Name, 'github-token-') && DeletionDate==null].Name | [0]" \
             --output text)
-
+    
           if [ -z "$SECRET_ID" ] || [ "$SECRET_ID" = "None" ]; then
             echo "No active secret found with prefix 'github-token-'"
             exit 1
@@ -157,9 +157,14 @@ jobs:
             --region "${AWS_REGION}" \
             --secret-id "$SECRET_ID" \
             --query "SecretString" \
-            --output text)
+            --output text | jq -r '.token')
 
-          echo "GITHUB_TOKEN=$GITHUB_TOKEN" >> $GITHUB_ENV
+          if [ -z "$GITHUB_TOKEN" ]; then
+            echo "Error: Unable to extract GitHub token from secret"
+            exit 1
+          fi
+    
+          echo "GITHUB_TOKEN=${GITHUB_TOKEN}" >> $GITHUB_ENV
 
       - name: Get PR Number
         id: get_pr_number
