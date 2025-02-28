@@ -18,9 +18,6 @@ permissions:
 jobs:
   check-tokens:
     runs-on: ubuntu-latest
-    outputs:
-      rotate_test_needed: ${{ steps.determine_test_rotation.outputs.rotate_test_needed }}
-      rotate_prod_needed: ${{ steps.determine_prod_rotation.outputs.rotate_prod_needed }}
     steps:
       - name: Configure AWS Credentials (Test)
         uses: aws-actions/configure-aws-credentials@v4
@@ -40,7 +37,7 @@ jobs:
           fi
 
           if [ -z "$SECRET_ID" ] || [ "$SECRET_ID" = "None" ]; then
-            echo "rotate_test_needed=true" >> $GITHUB_OUTPUT
+            echo "Token doesn't exist in the test account."
           else
             SECRET_VALUE=$(aws secretsmanager get-secret-value \
               --secret-id "${SECRET_ID}" \
@@ -50,14 +47,14 @@ jobs:
 
             EXPIRES_AT=$(echo "$SECRET_VALUE" | jq -r '.expires_at // empty')
             if [ -z "$EXPIRES_AT" ]; then
-              echo "rotate_test_needed=true" >> $GITHUB_OUTPUT
+              echo "Token doesn't exist in the test account."
             else
               NOW=$(date -u +%s)
               EXPIRATION_TIME=$(date -d "$EXPIRES_AT" +%s 2>/dev/null)
               if [ "$NOW" -ge "$EXPIRATION_TIME" ]; then
-                echo "rotate_test_needed=true" >> $GITHUB_OUTPUT
+                echo "Token has expired in the test account."
               else
-                echo "rotate_test_needed=false" >> $GITHUB_OUTPUT
+                echo "Token exists in the test account."
               fi
             fi
           fi
@@ -80,7 +77,7 @@ jobs:
           fi
 
           if [ -z "$SECRET_ID" ] || [ "$SECRET_ID" = "None" ]; then
-            echo "rotate_prod_needed=true" >> $GITHUB_OUTPUT
+            echo "Token doesn't exist in the prod account."
           else
             SECRET_VALUE=$(aws secretsmanager get-secret-value \
               --secret-id "${SECRET_ID}" \
@@ -90,43 +87,17 @@ jobs:
 
             EXPIRES_AT=$(echo "$SECRET_VALUE" | jq -r '.expires_at // empty')
             if [ -z "$EXPIRES_AT" ]; then
-              echo "rotate_prod_needed=true" >> $GITHUB_OUTPUT
+              echo "Token doesn't exist in the prod account."
             else
               NOW=$(date -u +%s)
               EXPIRATION_TIME=$(date -d "$EXPIRES_AT" +%s 2>/dev/null)
               if [ "$NOW" -ge "$EXPIRATION_TIME" ]; then
-                echo "rotate_prod_needed=true" >> $GITHUB_OUTPUT
+                echo "Token has expired in the prod account."
               else
-                echo "rotate_prod_needed=false" >> $GITHUB_OUTPUT
+                echo "Token exists in the prod account."
               fi
             fi
           fi
-
-  rotate-tokens:
-    runs-on: ubuntu-latest
-    needs: [check-tokens]
-    if: needs.check-tokens.outputs.rotate_test_needed == 'true' || needs.check-tokens.outputs.rotate_prod_needed == 'true'
-    steps:
-      - name: Retrieve GitHub Token from Secrets Manager
-        run: |
-          GITHUB_TOKEN=$(aws secretsmanager get-secret-value --secret-id github-token --query SecretString --output text --region ${{ env.AWS_REGION }})
-          echo "GITHUB_TOKEN=$GITHUB_TOKEN" >> $GITHUB_ENV
-
-      - name: Trigger Test Rotation
-        run: |
-          curl -X POST \
-            -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer $GITHUB_TOKEN" \
-            https://api.github.com/repos/VilnaCRM-Org/website-infrastructure/dispatches \
-            -d '{"event_type":"rotate_token_test"}'
-
-      - name: Trigger Prod Rotation
-        run: |
-          curl -X POST \
-            -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer $GITHUB_TOKEN" \
-            https://api.github.com/repos/VilnaCRM-Org/website-infrastructure/dispatches \
-            -d '{"event_type":"rotate_token_prod"}'
 
   deploy:
     runs-on: ubuntu-latest
