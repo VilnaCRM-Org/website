@@ -1,3 +1,12 @@
+## [1.2.2](https://github.com/VilnaCRM-Org/website/compare/v1.2.1...v1.2.2) (2025-02-28)
+
+
+### Bug Fixes
+
+* **#135:** remove PAT usage ([#136](https://github.com/VilnaCRM-Org/website/issues/136)) ([77ffc1f](https://github.com/VilnaCRM-Org/website/commit/77ffc1fcf5a71094f9e542a1ed0ef9c8bc25dac6)), closes [#135](https://github.com/VilnaCRM-Org/website/issues/135) [#135](https://github.com/VilnaCRM-Org/website/issues/135) [#135](https://github.com/VilnaCRM-Org/website/issues/135) [#135](https://github.com/VilnaCRM-Org/website/issues/135) [#135](https://github.com/VilnaCRM-Org/website/issues/135) [#135](https://github.com/VilnaCRM-Org/website/issues/135) [#135](https://github.com/VilnaCRM-Org/website/issues/135)
+
+
+
 ## [1.2.1](https://github.com/VilnaCRM-Org/website/compare/v1.2.0...v1.2.1) (2025-02-14)
 
 
