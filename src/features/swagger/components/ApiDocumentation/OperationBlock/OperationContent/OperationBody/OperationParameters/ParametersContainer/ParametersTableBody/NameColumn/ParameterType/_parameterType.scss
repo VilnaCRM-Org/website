@@ -1,0 +1,12 @@
+@use "@swagger/global" as *;
+
+%parameterType {
+  .parameter__type {
+    padding: 0.25rem 0 0.375rem;
+    @include medium14($grey200);
+    @include for-small-screens {
+      @include medium12($grey200);
+      padding: 0.25rem 0 0.125rem;
+    }
+  }
+}
