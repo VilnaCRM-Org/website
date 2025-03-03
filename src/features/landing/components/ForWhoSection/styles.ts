@@ -54,25 +54,46 @@ export default {
     marginTop: '1.5rem',
     marginBottom: '-6rem',
     display: 'flex',
-    [`@media (min-width: 468px)`]: {
-      marginTop: '-1rem',
-      marginLeft: '5rem'
+    [`@media (min-width: 426px)`]: {
+      justifyContent: 'center', 
+      marginTop: '2rem',
+      marginLeft: 'auto',
+      marginRight: 'auto', 
     },
     [`@media (min-width: 483px)`]: {
-      marginTop: '-2rem',
-      marginLeft: '2.8rem',
-      marginRight: '-1.6rem'
+      justifyContent: 'center', 
+      marginTop: '2rem',
+      marginLeft: 'auto',
+      marginRight: 'auto', 
     },
     [`@media (min-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
-      marginTop: '-2rem',
-      marginLeft: '9.5rem',
-      marginRight: '-2rem'
+      justifyContent: 'center', 
+      marginTop: '1rem',
+      marginLeft: 'auto',
+      marginRight: 'auto',
     },
-    [`@media (min-width: ${breakpointsTheme.breakpoints.values.md}px)`]: {      
-      marginTop: '-12.5rem',
-      marginLeft: '0.1rem'
+    [`@media (min-width: 641px)`]: {
+      justifyContent: 'center', 
+      marginTop: '-8rem',
+      marginLeft: 'auto',
+      marginRight: 'auto',
+      width: '85vw', 
+      maxWidth: '1000px',
+      transform: 'scale(1.1)', 
+    },
+    [`@media (min-width: ${breakpointsTheme.breakpoints.values.md}px)`]: {
+      justifyContent: 'center', 
+      marginTop: '-8rem',
+      marginLeft: 'auto',
+      marginRight: 'auto',
+      width: '85vw', 
+      maxWidth: '1000px',
+      transform: 'scale(1.1)', 
     },
     [`@media (min-width: 969px)`]: {
+      width: 'auto', 
+      transform: 'none', 
+      marginRight: '0',
       marginTop: '-30rem',
       marginLeft: '17.6rem',
     },
@@ -114,6 +135,7 @@ export default {
     [`@media (min-width: ${breakpointsTheme.breakpoints.values.md}px)`]: {
       width: '0.8rem',
       height: '0.8rem',
+      marginTop: '2.9rem',
       marginLeft: '1.5rem'
     },
     [`@media (min-width: 969px)`]: {
@@ -185,11 +207,14 @@ export default {
     },
     [`@media (min-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
       marginTop: '19rem',
-      marginLeft: '0.4rem'
+      marginLeft: '0.2rem',
+    },
+    [`@media (min-width: 641px)`]: {
+     marginLeft: '0rem'
     },
     [`@media (min-width: ${breakpointsTheme.breakpoints.values.md}px)`]: {
       marginTop: '22rem',
-      marginLeft: '0.9rem'
+      marginLeft: '1.5rem'
     },
     [`@media (min-width: 969px)`]: {
       marginTop: '22.4rem',
@@ -214,56 +239,69 @@ export default {
 
   point6: {
     marginLeft: '0.9rem',
-    marginTop: '0.9rem',
+    marginTop: '1rem',
     [`@media (min-width: 483px)`]: {
       width: '0.40rem',
-      height: 'auto'
+      height: 'auto',
+      marginTop: '0.1rem'
     },
     [`@media (min-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
       width: '0.40rem',
-      height: 'auto'
+      height: 'auto',
+      marginTop: '0rem'
+    },
+    [`@media (min-width: 641px)`]: {
+      marginTop: '0.1rem',
     },
     [`@media (min-width: ${breakpointsTheme.breakpoints.values.md}px)`]: {
       width: '0.45rem',
       height: 'auto',
-      margin: 0,
-      marginLeft: '0.7rem'
+      marginTop: '0rem',
+      marginLeft: '-0.2rem'
     },
     [`@media (min-width: 969px)`]: {
       width: '0.43rem',
       height: 'auto',
-      marginLeft: '0.4rem'
+      marginLeft: '0.4rem',
+      marginTop: '0.18rem',
     },
     [`@media (min-width: 1131px)`]: {
-      marginTop: '0rem',
+      marginTop: '0.23rem',
       marginLeft: '0.4rem'
     },
   },
 
   point8: {
     marginLeft: '0.2rem',
-    marginTop: '0.4rem',
+    marginTop: '0.55rem',
     [`@media (min-width: 483px)`]: {
       width: '0.40rem',
-      height: 'auto'
+      height: 'auto',
+      marginTop: '0rem'
     },
     [`@media (min-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
       width: '0.40rem',
-      height: 'auto'
+      height: 'auto',
+      marginLeft: '0.3rem'
+    },
+    [`@media (min-width: 641px)`]: {
+      marginTop: '0rem',
+      marginLeft: '0.4rem'
     },
     [`@media (min-width: ${breakpointsTheme.breakpoints.values.md}px)`]: {
       width: '0.45rem',
       height: 'auto',
-
+      marginTop: '0rem'
     },
     [`@media (min-width: 969px)`]: {
       width: '0.43rem',
       height: 'auto',
-      marginLeft: '0.4rem'
+      marginLeft: '0.38rem',
+      marginTop: '0.15rem'
     },
     [`@media (min-width: 1131px)`]: {
-      marginTop: '-0.1rem',
-      marginLeft: '0.6rem'
+      marginTop: '0.21rem',
+      marginLeft: '0.5rem'
     },
   },
 
@@ -275,7 +313,11 @@ export default {
     },
     [`@media (min-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
       width: '0.40rem',
-      height: 'auto'
+      height: 'auto', 
+      marginLeft: '0.2rem'
+    },
+    [`@media (min-width: 641px)`]: {
+     marginLeft: '0.2rem',
     },
     [`@media (min-width: ${breakpointsTheme.breakpoints.values.md}px)`]: {
       width: '0.45rem',
@@ -284,6 +326,7 @@ export default {
     [`@media (min-width: 969px)`]: {
       width: '0.43rem',
       height: 'auto',
+      marginTop: '0.2rem'
     },
     [`@media (min-width: 1131px)`]: {
       marginLeft: '0.3rem'
@@ -291,16 +334,16 @@ export default {
   },
 
   square: {
-    width: '20rem',
-    height: '20rem',
+    width: '35rem',
+    height: '19.6rem',
     marginTop: '6.6rem',
     marginLeft: '0.6rem',
     backgroundColor: colorTheme.palette.primary.main,
     borderRadius: '6%',
     zIndex: 0,
-    [`@media (min-width: 483px)`]: {
+    [`@media (min-width: 426px)`]: {
       width: '27rem',
-      height: '22rem'
+      height: 'auto'
     },
     [`@media (min-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
       width: '27rem',
@@ -309,7 +352,7 @@ export default {
     [`@media (min-width: ${breakpointsTheme.breakpoints.values.md}px)`]: {
       width: '38rem',
       height: '29.7rem',
-      marginLeft: '0.9rem'
+      marginLeft: '1.5rem'
     },
     [`@media (min-width: 969px)`]: {
       width: '37.6rem',
@@ -317,11 +360,14 @@ export default {
       marginTop: '-10.6rem',
       marginLeft: '1.2rem',
     },
+    [`@media (min-width: 1131px)`]: {
+      marginLeft: '-1.3rem'
+    },
   },
 
   bigScreen: {
     width: '18.5rem',
-    height: 'auto',
+    height: '12.8rem',
     marginTop: '-2.8rem',
     marginLeft: '1.2rem',
     zIndex: 1,
@@ -346,7 +392,8 @@ export default {
       width: '31.6rem',
       height: '21.7rem',
       marginTop: '-4.4rem',
-      marginLeft: '2.1rem'
+      marginLeft: '2.1rem',
+      boxShadow: '6px 12px 20px #525764',
     },
     [`@media (min-width: 1131px)`]: {
       width: '39.4rem',
@@ -363,6 +410,9 @@ export default {
     marginLeft: '11.5rem',
     zIndex: 100,
     borderRadius: '0.6rem',
+    [`@media (max-width: 320px)`]: {
+      marginLeft: '7rem' 
+    },
     [`@media (min-width: 483px)`]: {
       width: '11rem',
       marginTop: '-7rem',
@@ -383,16 +433,26 @@ export default {
       marginTop: '-9.7rem',
       marginLeft: '19.7rem',
       borderRadius: '1.5rem',
+      boxShadow: '6px 6px 36px #525764',
     },
     [`@media (min-width: 1131px)`]: {
+      width: '15.7rem',
       marginTop: '-16.4rem',
-      marginLeft: '19.8rem'
+      marginLeft: '19.7rem'
     },
   },
 
   waves: {
     // The waves is hidden on mobile but becomes visible on tablet and desktop layouts.
     display: 'none',
+    [`@media (min-width: 768px)`]: {
+      display: 'flex',
+      position: 'relative',
+      marginTop: '-7.5rem',
+      marginLeft: '4.5rem',
+      opacity: '0.2',
+      zIndex: -1,
+    },
     [`@media (min-width: 969px)`]: {
       display: 'flex',
       position: 'relative',
@@ -406,26 +466,38 @@ export default {
   hexagon: {
     // The hexagon is hidden on mobile but becomes visible on tablet and desktop layouts.
     display: 'none',
+    [`@media (min-width: 768px)`]: {
+      display: 'block',
+      position: 'relative',
+      marginTop: '-11.9rem',
+      marginLeft: '29rem',
+      zIndex: -1,
+      },
     [`@media (min-width: 969px)`]: {
     display: 'block',
     position: 'relative',
-    marginTop: '-12rem',
+    marginTop: '-11.9rem',
     marginLeft: '29rem',
     zIndex: -1,
     },
   },
 
   triangle: {
-   // The triangle is hidden on mobile but becomes visible on tablet and desktop layouts.
-    display: 'none',
-    [`@media (min-width: 969px)`]: {
-    display: 'block',
-    marginTop: '-32.9rem',
-    marginLeft: '35.1rem',
-    },
-    [`@media (min-width: 1131px)`]: {
-      marginTop: '-32.9rem',
-      marginLeft: '35.2rem'
-    },
-  },
-};
+    // The triangle is hidden on mobile but becomes visible on tablet and desktop layouts.
+     display: 'none',
+     [`@media (min-width: 768px)`]: {
+       display: 'block',
+       marginTop: '-29.5rem',
+       marginLeft: '35.1rem',
+       },
+     [`@media (min-width: 969px)`]: {
+     display: 'block',
+     marginTop: '-32.9rem',
+     marginLeft: '35.1rem',
+     },
+     [`@media (min-width: 1131px)`]: {
+       marginTop: '-33rem',
+       marginLeft: '35.1rem'
+     },
+   },
+ }; 
