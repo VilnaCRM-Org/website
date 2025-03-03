@@ -1,9 +1,6 @@
 name: Trigger Sandbox Deletion
 
 on:
-  push:
-    branches-ignore:
-      main
   pull_request:
     types:
       - closed
@@ -40,6 +37,11 @@ jobs:
 
       - name: Retrieve GitHub Token from Secrets Manager
         run: |
+          if ! command -v jq &> /dev/null; then
+            echo "::error::jq is required but not installed"
+            exit 1
+          fi
+          
           SECRET_ID=$(aws secretsmanager list-secrets \
             --region "${AWS_REGION}" \
             --query "SecretList[?starts_with(Name, 'github-token-') && DeletionDate==null].Name | [0]" \
@@ -70,7 +72,7 @@ jobs:
             -H "Accept: application/vnd.github+json" \
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/pulls?head=${GITHUB_REPOSITORY_OWNER}:${GITHUB_REF_NAME}")
           if [ $? -ne 0 ]; then
-            echo "::error::Failed to retrieve PR number: ${PR_NUMBER}"
+            echo "::error::Failed to retrieve PR number. Full response: $RESPONSE"
             exit 1
           fi
           PR_NUMBER=$(echo "$RESPONSE" | jq -r '.[0].number')
@@ -83,7 +85,6 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::${{vars.PROD_AWS_ACCOUNT_ID}}:role/sandbox-deletion-trigger-role
-          role-session-name: GitHub_to_AWS_via_FederatedOIDC
           aws-region: ${{ env.AWS_REGION }}
 
       - name: trigger sandbox deletion pipeline
