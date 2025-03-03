@@ -1,7 +1,7 @@
 import { test, Locator } from '@playwright/test';
+import { t } from 'i18next';
 
-import { checkCheckbox } from '../utils/checkCheckbox';
-import { fillInput } from '../utils/fillInput';
+import fillForm from '../utils/fillForm';
 
 import {
   placeholderInitials,
@@ -9,12 +9,13 @@ import {
   placeholderPassword,
   signUpButton,
   policyText,
-  userData,
   graphqlEndpoint,
 } from './constants';
 import { responseFilter } from './utils';
 
-test('Submit the registration form', async ({ page }) => {
+const backToFormSuccess:string = t('notifications.success.button');
+
+test('Show notification success component', async ({ page }) => {
   const initialsInput: Locator = page.getByPlaceholder(placeholderInitials);
   const emailInput: Locator = page.getByPlaceholder(placeholderEmail);
   const passwordInput: Locator = page.getByPlaceholder(placeholderPassword);
@@ -26,10 +27,7 @@ test('Submit the registration form', async ({ page }) => {
 
   await page.goto('/');
 
-  await fillInput(initialsInput, userData.fullName);
-  await fillInput(emailInput, userData.email);
-  await fillInput(passwordInput, userData.password);
-  await checkCheckbox(policyTextCheckbox);
+  await fillForm({ initialsInput, emailInput, passwordInput, policyTextCheckbox });
 
   await page.route(graphqlEndpoint, route => {
     route.fulfill();
@@ -38,4 +36,11 @@ test('Submit the registration form', async ({ page }) => {
   await page.waitForResponse(responseFilter);
 
   await signupButton.click();
+
+
+  const backToForm: Locator= page.getByRole('button', {name: backToFormSuccess});
+
+
+  await backToForm.click();
+
 });

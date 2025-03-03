@@ -3,6 +3,7 @@ import { render, waitFor} from '@testing-library/react';
 import { t } from 'i18next';
 import React from 'react';
 
+
 import { SIGNUP_MUTATION } from '../../features/landing/api/service/userService';
 import AuthLayout from '../../features/landing/components/AuthSection/AuthForm/AuthLayout';
 
@@ -17,7 +18,11 @@ import {
   testInitials,
   testPassword,
 } from './constants';
-import { fillForm, rejectedMockResponse } from './utils';
+import {
+  fillForm,
+  mockInternalServerErrorResponse,
+  rejectedMockResponse, selectFormElements,
+} from './utils';
 
 const statusRole: string = 'status';
 const alertRole: string = 'alert';
@@ -59,6 +64,10 @@ const fulfilledMockResponse: MockedResponse = {
 
 
 describe('AuthLayout', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
   it('renders AuthComponent component correctly', () => {
     const { getByText, getByPlaceholderText, getByRole } = render(
       <MockedProvider mocks={[]} addTypename={false}>
@@ -142,19 +151,66 @@ describe('AuthLayout', () => {
       expect(getByText(notificationTitle)).toBeInTheDocument();
     });
   });
+  it('resets form fields after successful registration', async () => {
+    const { getByPlaceholderText, getByTestId } = render(
+      <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
+        <AuthLayout />
+      </MockedProvider>
+    );
 
-  // test('shows error notification when API returns an error', async () => {
-  //  const {getByTestId}= render(
-  //     <MockedProvider mocks={[rejectedMockResponse]} addTypename={false}>
-  //       <AuthLayout />
-  //     </MockedProvider>
-  //   );
-  //
-  //   fillForm(testInitials, testEmail, testPassword, true);
-  //
-  //   await waitFor(() => {
-  //     expect(getByTestId('error-box')).toBeInTheDocument();
-  //   });
-  // });
-  //
+    fillForm(testInitials, testEmail, testPassword, true);
+
+    await waitFor(() => {
+      expect(getByTestId(notificationId)).toBeInTheDocument();
+      expect(getByPlaceholderText(fullNamePlaceholder)).toHaveValue('');
+      expect(getByPlaceholderText(emailPlaceholder)).toHaveValue('');
+      expect(getByPlaceholderText(passwordPlaceholder)).toHaveValue('');
+    });
+  });
+
+  it('should successfully submit the form and update state', async () => {
+   const {getByTestId}= render(
+      <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
+        <AuthLayout />
+      </MockedProvider>
+    );
+
+    fillForm(testInitials, testEmail, testPassword, true);
+
+    await waitFor(() => {
+      expect(getByTestId('success-box')).toBeInTheDocument();
+    });
+  });
+
+  it('should handle errors correctly and update state', async () => {
+    const {  findByRole} = render(
+      <MockedProvider mocks={[mockInternalServerErrorResponse]} addTypename={false}>
+        <AuthLayout />
+      </MockedProvider>
+    );
+    fillForm(testInitials, testEmail, testPassword, true);
+
+    const serverErrorMessage: HTMLElement = await findByRole(alertRole);
+    expect(serverErrorMessage).toBeInTheDocument();
+    expect(serverErrorMessage).toHaveTextContent('Internal Server Error.');
+  });
+  it('resets the form after successful submit with no errors', async () => {
+   const {getByTestId, queryByRole}= render(
+      <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
+        <AuthLayout />
+      </MockedProvider>
+    );
+    fillForm(testInitials, testEmail, testPassword, true);
+    const { fullNameInput, emailInput, passwordInput, privacyCheckbox}= selectFormElements();
+
+    await waitFor(() => {
+      expect(fullNameInput.value).toBe('');
+      expect(emailInput.value).toBe('');
+      expect(passwordInput.value).toBe('');
+      expect(privacyCheckbox).not.toBeChecked();
+
+      expect(getByTestId('success-box')).toBeInTheDocument();
+      expect(queryByRole('alert')).not.toBeInTheDocument();
+    });
+  });
 });

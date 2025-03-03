@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import {render, screen, fireEvent} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { t } from 'i18next';
 
@@ -9,8 +9,8 @@ import {backToFormButtonText, buttonRole, retrySubmitButtonText} from './constan
 
 
 const errorImgAltText: string = t('notifications.error.images.error');
-const errorTitle:string=t('notifications.error.title');
-const errorDescription:string=t('notifications.error.description');
+export const errorTitle:string=t('notifications.error.title');
+export const errorDescription:string=t('notifications.error.description');
 
 describe('NotificationError Component', () => {
   let mockSetIsOpen: jest.Mock;
@@ -69,6 +69,56 @@ describe('NotificationError Component', () => {
     expect(screen.getByText(errorDescription)).toBeInTheDocument();
   });
 
+  test('renders content box with correct styles', () => {
+    render(
+      <NotificationError
+        setIsOpen={mockSetIsOpen}
+        triggerFormSubmit={mockTriggerFormSubmit}
+      />
+    );
+
+    const contentBox:HTMLElement = screen.getByTestId('error-box');
+    const computedStyle:CSSStyleDeclaration = window.getComputedStyle(contentBox);
+    expect(computedStyle.display).toBe('flex');
+    expect(computedStyle.alignItems).toBe('center');
+    expect(contentBox).toBeInTheDocument();
+    expect(contentBox).toHaveClass('MuiBox-root');
+  });
+  test('applies correct styles to button text', () => {
+    render(
+      <NotificationError
+        setIsOpen={mockSetIsOpen}
+        triggerFormSubmit={mockTriggerFormSubmit}
+      />
+    );
+
+    const backButtonText: HTMLElement = screen.getByText(backToFormButtonText);
+    const computedStyle:CSSStyleDeclaration = window.getComputedStyle(backButtonText);
+
+    expect(backButtonText).toBeInTheDocument();
+    expect(computedStyle.fontWeight).toBe('500');
+    expect(computedStyle.fontSize).toBe('15px');
+    expect(computedStyle.lineHeight).toBe('18px');
+
+  });
+
+  test('renders message container with correct styles', () => {
+    render(
+      <NotificationError
+        setIsOpen={mockSetIsOpen}
+        triggerFormSubmit={mockTriggerFormSubmit}
+      />
+    );
+
+    const messageContainer:HTMLElement = screen.getByTestId('error-message-container');
+    const computedStyle:CSSStyleDeclaration = window.getComputedStyle(messageContainer);
+
+    expect(computedStyle.display).toBe('flex');
+    expect(computedStyle.flexDirection).toBe('column');
+    expect(computedStyle.marginTop).toBe('0.8125rem');
+    expect(messageContainer).toBeInTheDocument();
+  });
+
   test('applies buttonTextStyle correctly', () => {
     render(
       <NotificationError
@@ -94,7 +144,6 @@ describe('NotificationError Component', () => {
     const backButton:HTMLElement =screen.getByRole(buttonRole, { name: backToFormButtonText });
     expect(backButton).toHaveStyle('marginTop: 0.5rem');
   });
-
 
   test('messageContainer should not have previous styles', () => {
     render(

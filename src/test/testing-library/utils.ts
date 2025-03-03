@@ -2,6 +2,8 @@ import { MockedResponse } from '@apollo/client/testing';
 import { fireEvent, screen } from '@testing-library/react';
 import { t } from 'i18next';
 
+import {CreateUserInput} from '@/test/apollo-server/types';
+
 import { SIGNUP_MUTATION } from '../../features/landing/api/service/userService';
 
 import {
@@ -72,10 +74,10 @@ export const fillForm: (
   if (passwordValue && passwordValue.length < 8) {
     throw new Error('Password must be at least 8 characters');
   }
+  // Mr. Darrin Heller Ezequiel_Grimes95@hotmail.com Q9YWFTDaQlACcJUN
 
   const { fullNameInput, emailInput, passwordInput, privacyCheckbox, signUpButton } =
     selectFormElements();
-
   fireEvent.change(fullNameInput, { target: { value: fullNameValue } });
   fireEvent.change(emailInput, { target: { value: emailValue } });
   fireEvent.change(passwordInput, { target: { value: passwordValue } });
@@ -93,22 +95,41 @@ export const checkElementsInDocument: (...elements: (HTMLElement | null)[]) => v
   elements.forEach(element => expect(element).toBeInTheDocument());
 };
 
+const input :CreateUserInput= {
+  email: testEmail,
+  initials: testInitials,
+  password: testPassword,
+  clientMutationId: '132',
+};
+
 export const rejectedMockResponse: MockedResponse = {
   request: {
     query: SIGNUP_MUTATION,
-    variables: {
-      input: {
-        email: testEmail,
-        initials: testInitials,
-        password: testPassword,
-        clientMutationId: '132',
-      },
-    },
+    variables: {  input    },
   },
   result: {
     errors: [
       {
         message: 'A user with this email already exists.',
+        locations: [{ line: 1, column: 1 }],
+        path: ['createUser'],
+        extensions: {
+          code: 'BAD_USER_INPUT',
+        },
+      },
+    ],
+  },
+};
+
+export const mockInternalServerErrorResponse:MockedResponse = {
+  request: {
+    query: SIGNUP_MUTATION,
+    variables: { input },
+  },
+  result: {
+    errors: [
+      {
+        message:'Internal Server Error.',
         locations: [{ line: 1, column: 1 }],
         path: ['createUser'],
         extensions: {

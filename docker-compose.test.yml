@@ -28,11 +28,3 @@ services:
       - .:/app
     ports:
       - '4000:4000'
-
-  mockoon:
-    build:
-      context: .
-      dockerfile: Mockoon.Dockerfile
-    ports:
-      - '8080:8080'
-    restart: unless-stopped

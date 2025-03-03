@@ -34,9 +34,7 @@ function Notification({
   return (
     <Fade in={isOpen} timeout={animationTimeout}>
       <Box sx={styles.notificationSection} data-testid="notification">
-        <Box sx={styles.notificationWrapper}>
           <Component setIsOpen={setIsOpen} triggerFormSubmit={triggerFormSubmit} />
-        </Box>
       </Box>
     </Fade>
   );

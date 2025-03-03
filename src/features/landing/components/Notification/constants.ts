@@ -31,8 +31,8 @@ type DimensionsType = {
 
 export const DIMENSIONS: DimensionsType = {
   MIN_WIDTH: {
-    XS: '21.57rem',
-    SM: '39.8rem',
+    XS: '21.563rem',
+    SM: '39.75rem',
     MD: '39.7rem',
     LG: '31.4rem',
   },

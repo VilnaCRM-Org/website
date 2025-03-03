@@ -57,7 +57,7 @@ function NotificationSuccess({ setIsOpen }: NotificationSuccessProps): React.Rea
           </Typography>
         </UiButton>
 
-        <Box sx={{ ...styles.successImgBox, ...styles.bottomImgBox }}>
+        <Box sx={{ ...styles.bottomImgBox }}>
           <Image src={Confetti} alt={t('notifications.success.images.confetti')} />
         </Box>
       </Box>

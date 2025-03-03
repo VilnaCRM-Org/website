@@ -16,7 +16,7 @@ import { CallableRef, CreateUserPayload, SignUpVariables } from './types';
 function AuthLayout(): React.ReactElement {
   const [notificationType, setNotificationType] = useState<NotificationType>('success');
   const [errorDetails, setErrorDetails] = useState('');
-  const [isNotificationOpen, setNotificationOpen] = useState<boolean>(false);
+  const [isNotificationOpen, setIsNotificationOpen] = useState<boolean>(true);
   const formRef: RefObject<CallableRef> = useRef(null);
   const [signupMutation, { loading }] = useMutation<CreateUserPayload, SignUpVariables>(
     SIGNUP_MUTATION
@@ -35,13 +35,14 @@ function AuthLayout(): React.ReactElement {
         },
       });
       setErrorDetails('');
-      setNotificationOpen(true);
+      setIsNotificationOpen(true);
       setNotificationType('success');
     } catch (error) {
       if (isHttpError(error)) {
         if (error.statusCode === 500) {
           setNotificationType('error');
-          setNotificationOpen(true);
+          setIsNotificationOpen(true);
+          setErrorDetails('');
         } else {
           setErrorDetails(error.message);
         }
@@ -88,7 +89,7 @@ function AuthLayout(): React.ReactElement {
 
       <Notification
         type={notificationType}
-        setIsOpen={setNotificationOpen}
+        setIsOpen={setIsNotificationOpen}
         isOpen={isNotificationOpen}
         triggerFormSubmit={triggerFormSubmit}
       />

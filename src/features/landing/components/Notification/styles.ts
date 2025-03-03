@@ -6,25 +6,21 @@ import { BREAKPOINTS, DIMENSIONS } from './constants';
 
 export default {
   notificationSection: {
-    display: 'flex',
     position: 'absolute',
-    zIndex: 100,
-  },
-
-  notificationWrapper: {
-    minWidth: DIMENSIONS.MIN_WIDTH.XS,
     width: '100%',
     height: '100%',
     borderRadius: '2rem 2rem 0 0',
     border: `1px solid ${colorTheme.palette.grey500.main} `,
     backgroundColor: colorTheme.palette.white.main,
     overflow: 'hidden',
+    zIndex: 100,
 
     [`@media (max-width: ${BREAKPOINTS.SM})`]: {
+      maxWidth: DIMENSIONS.MIN_WIDTH.XS,
       minHeight: DIMENSIONS.MIN_HEIGHT.XS,
     },
 
-    [`@media (min-width:  ${BREAKPOINTS.SM})`]: {
+    [`@media (min-width: 641px)`]: {
       minWidth: DIMENSIONS.MIN_WIDTH.SM,
       minHeight: DIMENSIONS.MIN_HEIGHT.SM,
     },
@@ -91,17 +87,19 @@ export default {
     },
   },
   bottomImgBox: {
-    display: 'none',
+    position: 'absolute',
     rotate: '-180deg',
+    minWidth: '29rem',
+    left: '0rem',
+    top: '24.7rem',
+
 
     [`@media (min-width: ${BREAKPOINTS.SM})`]: {
-      display: 'block',
       minWidth: '29rem',
-      top: '25.7rem',
-      left: '0.6rem',
       transform: 'scale(1.04)',
+      left: '0.6rem',
+      top: '25.7rem',
     },
-
     [`@media (min-width: ${breakpointsTheme.breakpoints.values.md}px)`]: {
       top: '26.5rem',
     },
@@ -179,9 +177,13 @@ export default {
   },
 
   messageButton: {
-    minWidth: '301px',
+    minWidth: '260px',
+    width:'100%',
     marginTop: '1rem',
 
+    [`@media (min-width: ${breakpointsTheme.breakpoints.values.xs}px)`]: {
+      minWidth: '301px',
+    },
     [`@media (min-width: ${breakpointsTheme.breakpoints.values.md}px)`]: {
       marginTop: '1.5rem',
       maxWidth: '266px',
@@ -220,12 +222,14 @@ export default {
   },
 
   errorButton: {
-    width: '301px',
     height: '50px',
     paddingY: '1rem',
     borderRadius: '3.5625rem',
     boxShadow: 'none',
 
+    [`@media (min-width: ${breakpointsTheme.breakpoints.values.xs}px)`]: {
+      minWidth: '301px',
+    },
     [`@media (min-width: ${BREAKPOINTS.SM})`]: {
       width: '315px',
       height: '70px',
