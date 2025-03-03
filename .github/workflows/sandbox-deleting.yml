@@ -76,6 +76,10 @@ jobs:
             exit 1
           fi
           PR_NUMBER=$(echo "$RESPONSE" | jq -r '.[0].number')
+          if [ -z "$PR_NUMBER" ]; then
+            echo "::error::PR number extraction failed; received an empty value"
+            exit 1
+          fi
           echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_ENV
 
       - name: Checkout code
