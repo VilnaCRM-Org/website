@@ -29,6 +29,9 @@ jobs:
             exit 1
           fi
 
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Configure AWS Credentials (Prod)
         uses: aws-actions/configure-aws-credentials@v4
         with:
