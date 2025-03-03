@@ -1,9 +1,6 @@
 name: Trigger Sandbox Deletion
 
 on:
-  push:
-    branches-ignore:
-      - main
   pull_request:
     types:
       - closed
@@ -27,7 +24,7 @@ jobs:
             echo "::error::AWS_REGION variable is not set"
             exit 1
           fi
-          if [ -z "${{ vars.PROD_AWS_ACCOUNT_ID }}" ]; then
+          if [ -z "${{ vars.TEST_AWS_ACCOUNT_ID }}" ]; then
             echo "::error::PROD_AWS_ACCOUNT_ID variable is not set"
             exit 1
           fi
@@ -38,7 +35,7 @@ jobs:
       - name: Configure AWS Credentials (Prod)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::${{vars.PROD_AWS_ACCOUNT_ID}}:role/github-actions-role
+          role-to-assume: arn:aws:iam::${{vars.TEST_AWS_ACCOUNT_ID}}:role/github-actions-role
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Retrieve GitHub Token from Secrets Manager
@@ -90,7 +87,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::${{vars.PROD_AWS_ACCOUNT_ID}}:role/sandbox-deletion-trigger-role
+          role-to-assume: arn:aws:iam::${{vars.TEST_AWS_ACCOUNT_ID}}:role/sandbox-deletion-trigger-role
           aws-region: ${{ env.AWS_REGION }}
 
       - name: trigger sandbox deletion pipeline
