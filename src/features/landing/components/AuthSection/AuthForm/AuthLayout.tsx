@@ -16,7 +16,7 @@ import { CallableRef, CreateUserPayload, SignUpVariables } from './types';
 function AuthLayout(): React.ReactElement {
   const [notificationType, setNotificationType] = useState<NotificationType>('success');
   const [errorDetails, setErrorDetails] = useState('');
-  const [isNotificationOpen, setIsNotificationOpen] = useState<boolean>(true);
+  const [isNotificationOpen, setIsNotificationOpen] = useState<boolean>(false);
   const formRef: RefObject<CallableRef> = useRef(null);
   const [signupMutation, { loading }] = useMutation<CreateUserPayload, SignUpVariables>(
     SIGNUP_MUTATION
