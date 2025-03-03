@@ -1,6 +1,9 @@
 name: Trigger Sandbox Deletion
 
 on:
+  push:
+    branches-ignore:
+      - main
   pull_request:
     types:
       - closed
