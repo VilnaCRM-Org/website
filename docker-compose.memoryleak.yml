@@ -1,0 +1,9 @@
+services:
+  memory-leak:
+    build:
+      context: .
+      dockerfile: MemoryLeak.Dockerfile
+    volumes:
+      - .:/app
+    command: >
+      sh -c "npx wait-on http://prod:3001 && node ./src/test/memory-leak/runMemlabTests.js"

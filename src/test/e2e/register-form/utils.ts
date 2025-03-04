@@ -43,5 +43,5 @@ export async function fillPasswordInput(page: Page, user: User): Promise<void> {
 }
 
 export function responseFilter(resp: Response): boolean {
-  return resp.url().includes(graphqlEndpoint) && resp.status() === 200;
+    return resp.url().includes(graphqlEndpoint) && resp.status() === 200;
 }
