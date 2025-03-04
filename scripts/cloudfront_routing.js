@@ -15,6 +15,10 @@ function handler(event) {
     } else if (uri === "/swagger.html") {
         request.uri = "/swagger";
     }
-    
+    else if (uri.startsWith("/index.html?")) {
+        request.uri = "/" + uri.substring("/index.html".length);
+    } else if (uri.startsWith("/swagger.html?")) {
+        request.uri = "/swagger" + uri.substring("/swagger.html".length);
+    }
     return event;
 }
