@@ -66,7 +66,7 @@ function AuthLayout(): React.ReactElement {
         <Box
           sx={styles.loader}
           role="status"
-          component="div"
+          component="output"
           aria-label="Loading"
           aria-live="polite"
         >

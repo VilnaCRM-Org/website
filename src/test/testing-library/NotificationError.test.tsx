@@ -21,7 +21,7 @@ describe('NotificationError Component', () => {
     mockTriggerFormSubmit = jest.fn();
   });
 
-  test('renders correctly', () => {
+  it('renders correctly', () => {
     render(
       <NotificationError setIsOpen={mockSetIsOpen} triggerFormSubmit={mockTriggerFormSubmit} />
     );
@@ -31,7 +31,7 @@ describe('NotificationError Component', () => {
     expect(screen.getByRole(buttonRole, { name: backToFormButtonText })).toBeInTheDocument();
   });
 
-  test('calls triggerFormSubmit when retry button is clicked', () => {
+  it('calls triggerFormSubmit when retry button is clicked', () => {
     render(
       <NotificationError setIsOpen={mockSetIsOpen} triggerFormSubmit={mockTriggerFormSubmit} />
     );
@@ -42,7 +42,7 @@ describe('NotificationError Component', () => {
     expect(mockTriggerFormSubmit).toHaveBeenCalledTimes(1);
   });
 
-  test('calls setIsOpen(false) when back-to-form button is clicked', () => {
+  it('calls setIsOpen(false) when back-to-form button is clicked', () => {
     render(
       <NotificationError setIsOpen={mockSetIsOpen} triggerFormSubmit={mockTriggerFormSubmit} />
     );
@@ -69,7 +69,7 @@ describe('NotificationError Component', () => {
     expect(screen.getByText(errorDescription)).toBeInTheDocument();
   });
 
-  test('renders content box with correct styles', () => {
+  it('renders content box with correct styles', () => {
     render(
       <NotificationError
         setIsOpen={mockSetIsOpen}
@@ -84,7 +84,7 @@ describe('NotificationError Component', () => {
     expect(contentBox).toBeInTheDocument();
     expect(contentBox).toHaveClass('MuiBox-root');
   });
-  test('applies correct styles to button text', () => {
+  it('applies correct styles to button text', () => {
     render(
       <NotificationError
         setIsOpen={mockSetIsOpen}
@@ -102,7 +102,7 @@ describe('NotificationError Component', () => {
 
   });
 
-  test('renders message container with correct styles', () => {
+  it('renders message container with correct styles', () => {
     render(
       <NotificationError
         setIsOpen={mockSetIsOpen}
@@ -119,7 +119,7 @@ describe('NotificationError Component', () => {
     expect(messageContainer).toBeInTheDocument();
   });
 
-  test('applies buttonTextStyle correctly', () => {
+  it('applies buttonTextStyle correctly', () => {
     render(
       <NotificationError
         setIsOpen={mockSetIsOpen}
@@ -133,7 +133,7 @@ describe('NotificationError Component', () => {
     expect(retryButtonText).toBeInTheDocument();
     expect(backButtonText).toBeInTheDocument();
   });
-  test('renders the second button with correct marginTop', () => {
+  it('renders the second button with correct marginTop', () => {
     render(
       <NotificationError
         setIsOpen={mockSetIsOpen}
@@ -145,7 +145,7 @@ describe('NotificationError Component', () => {
     expect(backButton).toHaveStyle('marginTop: 0.5rem');
   });
 
-  test('messageContainer should not have previous styles', () => {
+  it('messageContainer should not have previous styles', () => {
     render(
       <NotificationError
         setIsOpen={mockSetIsOpen}
@@ -161,7 +161,7 @@ describe('NotificationError Component', () => {
     expect(messageContainer).not.toHaveClass('messageContainerError');
   });
 
-  test('button text should not have previous styles applied', () => {
+  it('button text should not have previous styles applied', () => {
     render(
       <NotificationError
         setIsOpen={mockSetIsOpen}
@@ -182,7 +182,7 @@ describe('NotificationError Component', () => {
     expect(backButton).not.toHaveStyle(styles.errorButtonMessage);
   });
 
-  test('buttons work as expected', async () => {
+  it('buttons work as expected', async () => {
     render(
       <NotificationError
         setIsOpen={mockSetIsOpen}
@@ -204,7 +204,7 @@ describe('NotificationError Component', () => {
 
   });
 
-  test('button text does not have previous styles applied', () => {
+  it('button text does not have previous styles applied', () => {
     render(
       <NotificationError
         setIsOpen={mockSetIsOpen}
@@ -225,7 +225,7 @@ describe('NotificationError Component', () => {
     expect(backButtonText).not.toHaveStyle(styles.errorButtonMessage);
   });
 
-  test('buttons still function correctly', async () => {
+  it('buttons still function correctly', async () => {
     render(
       <NotificationError
         setIsOpen={mockSetIsOpen}

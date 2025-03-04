@@ -79,28 +79,35 @@ export async function createUser(
   url: string,
   input: CreateUserInput | WrongInput
 ): Promise<{ response: Response; result: CreateUserResponse; errors?: { message: string }[] }> {
-  const response: Response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      query: `
-        mutation CreateUser($input: createUserInput!) {
-          createUser(input: $input) {
-            user {
-              id
-              confirmed
-              email
-              initials
+  try {
+    const response: Response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        query: `
+          mutation CreateUser($input: createUserInput!) {
+            createUser(input: $input) {
+              user {
+                id
+                confirmed
+                email
+                initials
+              }
+              clientMutationId
             }
-            clientMutationId
           }
-        }
-      `,
-      variables: { input },
-    }),
-  });
-  const { result, errors } = await handleResponse<CreateUserResponse>(response);
-  return { response, result, errors };
+        `,
+        variables: { input },
+      }),
+    });
+    const { result, errors } = await handleResponse<CreateUserResponse>(response);
+    return { response, result, errors };
+  } catch (err) {
+    throw new Error(
+      `Network request failed: ${err instanceof Error ? err.message : String(err)}`
+    );
+  }
+
 }

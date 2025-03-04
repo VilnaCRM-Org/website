@@ -57,16 +57,20 @@ const AuthForm: AuthFormComponent = forwardRef<CallableRef, AuthFormProps>(
       [onSubmit]
     );
     return (
-      <Box component="form" data-testid="auth-form" onSubmit={handleSubmit(onSubmit)} ref={ref}>
+      <Box component="form" data-testid="auth-form" onSubmit={handleSubmit(onSubmit)}
+           ref={ref} role="form"
+           aria-label="Sign up form"
+      >
         <UiTypography variant="h4" component="h4" sx={styles.formTitle}>
           {t('sign_up.form.heading_main')}
         </UiTypography>
         <Stack sx={styles.inputsWrapper}>
           <Stack sx={styles.inputWrapper}>
-            <UiTypography variant="medium14" sx={styles.inputTitle}>
+            <UiTypography variant="medium14" sx={styles.inputTitle} component="label" htmlFor="FullName">
               {t('sign_up.form.name_input.label')}
             </UiTypography>
             <UiTextFieldForm
+              id="FullName"
               control={control}
               name="FullName"
               rules={{
@@ -78,10 +82,11 @@ const AuthForm: AuthFormComponent = forwardRef<CallableRef, AuthFormProps>(
             />
           </Stack>
           <Stack sx={styles.inputWrapper}>
-            <UiTypography variant="medium14" sx={styles.inputTitle}>
+            <UiTypography variant="medium14" sx={styles.inputTitle} component="label" htmlFor="Email">
               {t('sign_up.form.email_input.label')}
             </UiTypography>
             <UiTextFieldForm
+              id='Email'
               control={control}
               name="Email"
               rules={{
@@ -99,7 +104,7 @@ const AuthForm: AuthFormComponent = forwardRef<CallableRef, AuthFormProps>(
           </Stack>
           <Stack sx={styles.inputWrapper}>
             <Stack direction="row" alignItems="center" gap="0.25rem">
-              <UiTypography variant="medium14" sx={styles.inputTitle}>
+              <UiTypography variant="medium14" sx={styles.inputTitle} component="label" htmlFor="Password">
                 {t('sign_up.form.password_input.label')}
               </UiTypography>
               <UiTooltip placement="right" sx={styles.tip} arrow title={<PasswordTip />}>
@@ -112,6 +117,7 @@ const AuthForm: AuthFormComponent = forwardRef<CallableRef, AuthFormProps>(
               </UiTooltip>
             </Stack>
             <UiTextFieldForm
+              id='Password'
               control={control}
               name="Password"
               rules={{
@@ -137,7 +143,7 @@ const AuthForm: AuthFormComponent = forwardRef<CallableRef, AuthFormProps>(
                 <UiTypography variant="medium14" sx={styles.privacyText}>
                   <Trans i18nKey="sign_up.form.confidential_text.fullText">
                     I have read and accept the
-                    <UiLink href={PRIVACY_POLICY_URL} target="_blank">
+                    <UiLink href={PRIVACY_POLICY_URL} target="_blank" rel="noopener noreferrer">
                       Privacy Policy
                     </UiLink>
                     and the

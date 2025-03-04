@@ -13,7 +13,7 @@ export const signUpButton: string = t('sign_up.form.button_text');
 
 export const fullNameFormatError: string = t('sign_up.form.name_input.error_text');
 
-export const graphqlEndpoint: string = process.env.NEXT_PUBLIC_GRAPHQL_API_URL as string;
+export const graphqlEndpoint: string = process.env.NEXT_PUBLIC_GRAPHQL_API_URL || 'http://localhost:4000/';
 
 export const userData: User = {
   fullName: faker.person.fullName(),

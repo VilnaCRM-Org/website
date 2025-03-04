@@ -22,6 +22,10 @@ interface CreateUserPayload {
 }
 
 export interface MutationResolvers {
+  /**
+  * Creates a new user.
+  * @returns Promise resolving to CreateUserPayload containing the created user and clientMutationId
+  */
   createUser: (
     parent: unknown,
     args: { input: CreateUserInput },

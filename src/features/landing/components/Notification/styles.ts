@@ -1,4 +1,3 @@
-import breakpointsTheme from '@/components/UiBreakpoints';
 import colorTheme from '@/components/UiColorTheme';
 import { golos } from '@/config/Fonts/golos';
 
@@ -25,7 +24,7 @@ export default {
       minHeight: DIMENSIONS.MIN_HEIGHT.SM,
     },
 
-    [`@media (min-width: ${BREAKPOINTS.MD}) and (max-width: ${BREAKPOINTS.LG})`]: {
+    [`@media (min-width: 769px) and (max-width: ${BREAKPOINTS.LG})`]: {
       minWidth: DIMENSIONS.MIN_WIDTH.MD,
       minHeight: DIMENSIONS.MIN_HEIGHT.MD,
     },
@@ -34,7 +33,7 @@ export default {
       minWidth: DIMENSIONS.MIN_WIDTH.MD,
       minHeight: DIMENSIONS.MIN_HEIGHT.MD,
     },
-    [`@media (min-width: ${BREAKPOINTS.XL})`]: {
+    [`@media (min-width: 1131px)`]: {
       minWidth: DIMENSIONS.MIN_WIDTH.LG,
       minHeight: DIMENSIONS.MIN_HEIGHT.LG,
     },
@@ -49,7 +48,7 @@ export default {
     flexDirection: 'column',
     paddingTop: '4.4rem',
 
-    [`@media (min-width: ${breakpointsTheme.breakpoints.values.md})`]: {
+    [`@media (min-width: ${BREAKPOINTS.MD})`]: {
       paddingTop: '3.5rem',
     },
 
@@ -64,7 +63,7 @@ export default {
     alignItems: 'center',
     paddingTop: '3.0625rem',
 
-    [`@media (min-width: ${breakpointsTheme.breakpoints.values.md})`]: {
+    [`@media (min-width: ${BREAKPOINTS.MD})`]: {
       paddingTop: '4.25rem',
     },
     [`@media (min-width: ${BREAKPOINTS.LG})`]: {
@@ -100,7 +99,7 @@ export default {
       left: '0.6rem',
       top: '25.7rem',
     },
-    [`@media (min-width: ${breakpointsTheme.breakpoints.values.md}px)`]: {
+    [`@media (min-width: ${BREAKPOINTS.MD})`]: {
       top: '26.5rem',
     },
 
@@ -127,7 +126,7 @@ export default {
     marginTop: '1.39rem',
     zIndex: 3,
 
-    [`@media (min-width: ${breakpointsTheme.breakpoints.values.md}px)`]: {
+    [`@media (min-width: ${BREAKPOINTS.MD})`]: {
       marginTop: '0.3rem',
     },
 
@@ -139,7 +138,7 @@ export default {
   messageContainerError: {
     marginTop: '0.8125rem',
 
-    [`@media (min-width: ${breakpointsTheme.breakpoints.values.md}px)`]: {
+    [`@media (min-width: ${BREAKPOINTS.MD})`]: {
       marginTop: '0.75rem',
     },
 
@@ -155,7 +154,7 @@ export default {
     fontFamily: golos.style.fontFamily,
     color: colorTheme.palette.darkPrimary.main,
 
-    [`@media (min-width: ${breakpointsTheme.breakpoints.values.md}px)`]: {
+    [`@media (min-width: ${BREAKPOINTS.MD})`]: {
       fontWeight: 600,
       fontSize: '30px',
       lineHeight: '36px',
@@ -170,7 +169,7 @@ export default {
     fontFamily: golos.style.fontFamily,
     color: colorTheme.palette.darkPrimary.main,
 
-    [`@media (min-width: ${breakpointsTheme.breakpoints.values.md}px)`]: {
+    [`@media (min-width: ${BREAKPOINTS.MD})`]: {
       fontSize: '16px',
       lineHeight: '26px',
     },
@@ -181,10 +180,10 @@ export default {
     width:'100%',
     marginTop: '1rem',
 
-    [`@media (min-width: ${breakpointsTheme.breakpoints.values.xs}px)`]: {
+    [`@media (min-width: ${BREAKPOINTS.XS})`]: {
       minWidth: '301px',
     },
-    [`@media (min-width: ${breakpointsTheme.breakpoints.values.md}px)`]: {
+    [`@media (min-width: ${BREAKPOINTS.MD})`]: {
       marginTop: '1.5rem',
       maxWidth: '266px',
     },
@@ -198,7 +197,7 @@ export default {
     lineHeight: '18px',
     fontFamily: golos.style.fontFamily,
 
-    [`@media (min-width: ${breakpointsTheme.breakpoints.values.md}px)`]: {
+    [`@media (min-width: ${BREAKPOINTS.MD})`]: {
       fontWeight: '600',
       fontSize: '18px',
       lineHeight: '21.6px',
@@ -227,14 +226,14 @@ export default {
     borderRadius: '3.5625rem',
     boxShadow: 'none',
 
-    [`@media (min-width: ${breakpointsTheme.breakpoints.values.xs}px)`]: {
+    [`@media (min-width: ${BREAKPOINTS.XS})`]: {
       minWidth: '301px',
     },
     [`@media (min-width: ${BREAKPOINTS.SM})`]: {
       width: '315px',
       height: '70px',
     },
-    [`@media (min-width: ${breakpointsTheme.breakpoints.values.xl}px)`]: {
+    [`@media (min-width: ${BREAKPOINTS.XL})`]: {
       width: '291px',
       height: '62px',
     },

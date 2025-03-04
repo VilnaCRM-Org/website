@@ -1,6 +1,7 @@
 import breakpointsTheme from '@/components/UiBreakpoints';
 
 type BreakpointsType = {
+  XS: string;
   SM: string;
   MD: string;
   LG: string;
@@ -8,10 +9,11 @@ type BreakpointsType = {
 };
 
 export const BREAKPOINTS: BreakpointsType = {
+  XS: `${breakpointsTheme.breakpoints.values.xs}px`,
   SM: `${breakpointsTheme.breakpoints.values.sm}px`,
-  MD: '769px',
+  MD: `${breakpointsTheme.breakpoints.values.md}px`,
   LG: `${breakpointsTheme.breakpoints.values.lg}px`,
-  XL: '1131px',
+  XL: `${breakpointsTheme.breakpoints.values.xl}px`
 };
 
 type DimensionsType = {

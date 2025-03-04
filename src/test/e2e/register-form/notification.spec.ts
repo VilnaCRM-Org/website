@@ -9,13 +9,11 @@ import {
   placeholderPassword,
   signUpButton,
   policyText,
-  graphqlEndpoint,
 } from './constants';
-import { responseFilter } from './utils';
 
 const backToFormSuccess:string = t('notifications.success.button');
 
-test('Show notification success component', async ({ page }) => {
+test('Show notificationSuccess component', async ({ page }) => {
   const initialsInput: Locator = page.getByPlaceholder(placeholderInitials);
   const emailInput: Locator = page.getByPlaceholder(placeholderEmail);
   const passwordInput: Locator = page.getByPlaceholder(placeholderPassword);
@@ -29,18 +27,8 @@ test('Show notification success component', async ({ page }) => {
 
   await fillForm({ initialsInput, emailInput, passwordInput, policyTextCheckbox });
 
-  await page.route(graphqlEndpoint, route => {
-    route.fulfill();
-  });
-
-  await page.waitForResponse(responseFilter);
-
   await signupButton.click();
 
-
-  const backToForm: Locator= page.getByRole('button', {name: backToFormSuccess});
-
-
+  const backToForm: Locator = page.getByRole('button', {name: backToFormSuccess});
   await backToForm.click();
-
 });

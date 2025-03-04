@@ -65,11 +65,11 @@ describe('NotificationSuccess ', () => {
 
     expect(successGearsImg).toHaveAttribute('alt', gearsImgAltText);
   });
-  test('bottom image has correct styles for smaller screens', () => {
+  it('bottom image has correct styles for smaller screens', () => {
     window.matchMedia = jest.fn().mockImplementation(query => ({
       matches: query === '(max-width: 640px)',
-      addListener: jest.fn(),
-      removeListener: jest.fn(),
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
     }));
 
     const { getAllByAltText } = render(<NotificationSuccess setIsOpen={jest.fn()} />);
@@ -79,7 +79,7 @@ describe('NotificationSuccess ', () => {
 
     expect(imgParent).toHaveStyle('top: 24.7rem');
   });
-  test('uses correct translation key for success button', () => {
+  it('uses correct translation key for success button', () => {
     render(<NotificationSuccess setIsOpen={() => {}} />);
     const button: HTMLElement = screen.getByRole('button');
 

@@ -100,7 +100,7 @@ describe('AuthLayout', () => {
     const serverErrorMessage: HTMLElement | null = queryByRole(alertRole);
     expect(serverErrorMessage).not.toBeInTheDocument();
   });
-  test('shows loading spinner during registration and hides it after completion', async () => {
+  it('shows loading spinner during registration and hides it after completion', async () => {
     const { queryByRole } = render(
       <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
         <AuthLayout />
@@ -135,7 +135,7 @@ describe('AuthLayout', () => {
     expect(getByPlaceholderText(passwordPlaceholder)).toHaveValue(testPassword);
   });
   it('shows success notification after successful authentication', async () => {
-    const { getByTestId, getByText } = render(
+    const { getByTestId, getByText , getByRole} = render(
       <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
         <AuthLayout />
       </MockedProvider>
@@ -149,6 +149,7 @@ describe('AuthLayout', () => {
       expect(notification).toBeInTheDocument();
       expect(notification).toBeVisible();
       expect(getByText(notificationTitle)).toBeInTheDocument();
+      expect(getByRole('heading')).toHaveTextContent(notificationTitle);
     });
   });
   it('resets form fields after successful registration', async () => {

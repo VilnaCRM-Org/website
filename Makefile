@@ -97,7 +97,8 @@ test-all: start-prod wait-for-prod  ## Start production and run all tests
 	$(DOCKER_COMPOSE) -f docker-compose.test.yml exec playwright sh -c 'pnpm run test:e2e & pnpm run test:visual & wait'
 
 test-memory-leak: start-prod wait-for-prod ## This command executes memory leaks tests using Memlab library.
-	$(PNPM_EXEC) test:memory-leak
+	$(DOCKER_COMPOSE) -f docker-compose.memoryleak.yml up -d
+# 	$(PNPM_EXEC) test:memory-leak
 
 test-mutation:
 	$(PNPM_EXEC) test:mutation

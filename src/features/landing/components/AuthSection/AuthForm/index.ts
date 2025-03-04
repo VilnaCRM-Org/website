@@ -1,1 +1,3 @@
-export { default as AuthLayout } from './AuthLayout';
+import AuthLayout from './AuthLayout';
+
+export default AuthLayout;

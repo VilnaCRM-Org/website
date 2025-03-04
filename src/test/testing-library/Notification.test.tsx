@@ -83,7 +83,7 @@ describe('Notification', () => {
       button
     );
   });
-  test('notificationComponents contains the success notification component', () => {
+  it('notificationComponents contains the success notification component', () => {
     expect(notificationComponents.success).toBeDefined();
 
     renderNotification({ type: 'success', isOpen: true, setIsOpen: mockSetIsOpen });
@@ -91,14 +91,14 @@ describe('Notification', () => {
     expect(screen.getByTestId('success-box')).toBeInTheDocument();
   });
 
-  test('notificationComponents contains the error notification component', () => {
+  it('notificationComponents contains the error notification component', () => {
     expect(notificationComponents.error).toBeDefined();
     renderNotification({ type: 'error', isOpen: true, setIsOpen: mockSetIsOpen });
 
     expect(screen.getByTestId('error-box')).toBeInTheDocument();
   });
 
-  test('check if the setIsOpen works properly on NotificationSuccess', async () => {
+  it('check if the setIsOpen works properly on NotificationSuccess', async () => {
     const user: UserEvent = userEvent.setup();
     const { getByRole } = renderNotification({
       type: 'success',
@@ -111,7 +111,7 @@ describe('Notification', () => {
 
     expect(mockSetIsOpen).toHaveBeenCalledWith(false);
   });
-  test('check if the setIsOpen works properly on NotificationError', async () => {
+  it('check if the setIsOpen works properly on NotificationError', async () => {
     const user: UserEvent = userEvent.setup();
     const { getByRole } = renderNotification({
       type: 'error',
@@ -125,7 +125,7 @@ describe('Notification', () => {
 
     expect(mockSetIsOpen).toHaveBeenCalledWith(false);
   });
-  test('retry button works as expected', async () => {
+  it('retry button works as expected', async () => {
     const user: UserEvent = userEvent.setup();
     const triggerFormSubmit: () => void = jest.fn();
 
@@ -145,7 +145,7 @@ describe('Notification', () => {
     expect(triggerFormSubmit).toHaveBeenCalled();
   });
 
-  test('renders visible notification section', () => {
+  it('renders visible notification section', () => {
     const { getByTestId } = renderNotification({
       type: 'error',
       isOpen: true,

@@ -16,7 +16,8 @@ RUN tsc mockoon/data.ts --outDir out --rootDir ./ \
   --skipLibCheck --noImplicitAny --noEmitOnError \
   --lib es2018,dom
 
-RUN node ./out/mockoon/data.js ##create data.json
+##create data.json
+RUN node ./out/mockoon/data.js
 
 EXPOSE 8080
 

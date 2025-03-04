@@ -140,7 +140,7 @@ describe('AuthForm', () => {
     });
   });
 
-  test('resets the form after successful submission without errors', async () => {
+  it('resets the form after successful submission without errors', async () => {
     mockRenderAuthForm({
       errorDetails: '',
       notificationType: 'success',
@@ -158,7 +158,7 @@ describe('AuthForm', () => {
     expect(privacyCheckbox.checked).toBe(false);
   });
 
-  test('displays validation errors for required fields', async () => {
+  it('displays validation errors for required fields', async () => {
     const { getAllByText } = mockRenderAuthForm({
       errorDetails: '',
       notificationType: 'error',
@@ -175,7 +175,7 @@ describe('AuthForm', () => {
     });
   });
 
-  test('does not reset the form when notification type is error', async () => {
+  it('does not reset the form when notification type is error', async () => {
     mockRenderAuthForm({ errorDetails: '', notificationType: 'error', mockOnSubmit });
 
     fillForm(testInitials, testEmail, testPassword, true);
@@ -199,7 +199,7 @@ describe('AuthForm privacy links', () => {
     mockOnSubmit = jest.fn();
   });
 
-  test('displays custom privacy policy URL when url prop is set', async () => {
+  it('displays custom privacy policy URL when url prop is set', async () => {
     const CUSTOM_URL: string = 'https://custom-privacy-policy.com';
     const { getAllByRole } = render(<AuthLinksMock url={CUSTOM_URL} />);
 
@@ -222,7 +222,7 @@ describe('AuthForm privacy links', () => {
     const link: HTMLElement[] = getAllByRole('link');
     expect(link[0]).toHaveAttribute('href', PRIVACY_POLICY_URL);
   });
-  test('displays custom privacy policy URL when environment variable is set', async () => {
+  it('displays custom privacy policy URL when environment variable is set', async () => {
     delete process.env.NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL;
 
     process.env.NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL = 'https://custom-privacy-policy.com';
@@ -236,7 +236,7 @@ describe('AuthForm privacy links', () => {
 
   });
 
-  test('displays default privacy policy URL when environment variable is not set', async () => {
+  it('displays default privacy policy URL when environment variable is not set', async () => {
     delete process.env.NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL;
 
     const { getAllByRole } = render(<AuthLinksMock  url=''/>);
@@ -244,7 +244,7 @@ describe('AuthForm privacy links', () => {
     const privacyLinks:HTMLElement[] = getAllByRole('link');
     expect(privacyLinks[0]).toHaveAttribute('href', 'https://github.com/VilnaCRM-Org');
   });
-  test('falls back to default Privacy Policy URL when url prop is empty or whitespace', async () => {
+  it('falls back to default Privacy Policy URL when url prop is empty or whitespace', async () => {
     const { getAllByRole, rerender } = render(<AuthLinksMock url="" />);
 
     let privacyLinks: HTMLElement[] = getAllByRole('link');
@@ -258,7 +258,7 @@ describe('AuthForm privacy links', () => {
     expect(privacyLinks[1]).toHaveAttribute('href', 'https://github.com/VilnaCRM-Org');
   });
 
-  test('displays custom privacy policy URL when url prop is set', async () => {
+  it('displays custom privacy policy URL when url prop is set', async () => {
     const CUSTOM_URL :string= 'https://custom-privacy-policy.com';
     const { getAllByRole } = render(<AuthLinksMock url={CUSTOM_URL} />);
 
@@ -267,7 +267,7 @@ describe('AuthForm privacy links', () => {
     expect(privacyLinks[1]).toHaveAttribute('href', CUSTOM_URL);
   });
 
-  test('displays default privacy policy URL when url prop is undefined', async () => {
+  it('displays default privacy policy URL when url prop is undefined', async () => {
     const { getAllByRole } = render(<AuthLinksMock url={undefined as unknown as string} />);
 
     const privacyLinks: HTMLElement[] = getAllByRole('link');

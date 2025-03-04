@@ -13,8 +13,8 @@ test('Should display error messages for invalid inputs', async ({ page }) => {
 
   await page.getByRole('button', { name: signUpButton }).click();
 
-  const loading: Locator = page.locator('[data-testid="confetti"]');
-  await loading.waitFor({ state: 'attached' });
+  const notification: Locator = page.locator('[data-testid="confetti"]');
+  await notification.waitFor({ state: 'attached' });
 
-  await expect(loading).toBeAttached();
+  await expect(notification).toBeAttached();
 });

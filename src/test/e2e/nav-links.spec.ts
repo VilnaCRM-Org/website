@@ -2,7 +2,7 @@ import { test, expect, Page } from '@playwright/test';
 
 import { t } from './utils/initializeLocalization';
 
-const WEBSITE_URL: string = process.env.NEXT_PUBLIC_PROD_API_URL || 'http://prod:3001';
+const WEBSITE_URL: string = process.env.NEXT_PUBLIC_PRODUCTION_API_URL || 'http://prod:3001';
 const links: Record<string, string> = {
   advantages: `${WEBSITE_URL}/#Advantages`,
   forWho: `${WEBSITE_URL}/#forWhoSection`,
