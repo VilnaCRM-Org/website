@@ -1,0 +1,7 @@
+services:
+  memory-leak:
+    build:
+      context: .
+      dockerfile: MemoryLeak.Dockerfile
+    volumes:
+      - .:/app

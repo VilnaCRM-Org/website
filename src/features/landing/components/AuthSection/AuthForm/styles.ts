@@ -6,6 +6,10 @@ import Images from '../../../assets/svg/auth-section/image.svg';
 
 export default {
   formWrapper: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+
     position: 'relative',
     mt: '4.063rem',
     [`@media (max-width: 1130px)`]: {
@@ -71,7 +75,7 @@ export default {
     zIndex: '5',
     padding: '2.25rem 2.5rem 2.5rem 2.5rem',
     borderRadius: '2rem 2rem 0 0',
-    border: '1px solid  primary.main',
+    border: `1px solid  ${colorTheme.palette.brandGray.main}`,
     background: colorTheme.palette.white.main,
     minHeight: ' 40.438rem',
     maxWidth: '31.375rem',
