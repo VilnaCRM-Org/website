@@ -7,7 +7,10 @@ import { RegisterItem } from '../../features/landing/types/authentication/form';
 
 import { testInitials, testEmail, testPassword } from './constants';
 import {AuthLinksMock, mockRenderAuthForm} from './mock-render/MockRenderAuthForm';
-import { checkElementsInDocument, fillForm, selectFormElements } from './utils';
+import {
+  checkElementsInDocument,
+  fillForm,  selectFormElements
+} from './utils';
 
 
 dotenv.config();
@@ -38,6 +41,7 @@ describe('AuthForm', () => {
     jest.clearAllMocks();
     mockOnSubmit = jest.fn();
   });
+
 
   it('renders AuthForm component', () => {
     const { container, queryByRole, getByAltText, getByText, getByTestId } = mockRenderAuthForm({
@@ -96,6 +100,16 @@ describe('AuthForm', () => {
     });
   });
 
+  test('should have default values', () => {
+    mockRenderAuthForm({ errorDetails: '', notificationType: 'success', mockOnSubmit });
+
+    const { fullNameInput, emailInput, passwordInput, privacyCheckbox } = selectFormElements();
+
+    expect(fullNameInput).toHaveValue('');
+    expect(emailInput).toHaveValue('');
+    expect(passwordInput).toHaveValue('');
+    expect(privacyCheckbox).not.toBeChecked();
+  });
   it('correct linkage between inputs and values with no data', async () => {
     const { getAllByText, queryByRole } = mockRenderAuthForm({
       errorDetails: '',
@@ -188,7 +202,7 @@ describe('AuthForm', () => {
     expect(passwordInput.value).not.toBe(emptyValue);
     expect(privacyCheckbox.checked).toBe(true);
   });
-});
+ });
 
 
 describe('AuthForm privacy links', () => {

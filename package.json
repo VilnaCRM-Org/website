@@ -106,6 +106,8 @@
     "playwright": "^1.50.1",
     "prettier": "^3.4.2",
     "puppeteer": "^24.1.1",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
     "semver": "^7.7.1",
     "serve": "^14.2.4",
     "storybook": "^8.5.3",

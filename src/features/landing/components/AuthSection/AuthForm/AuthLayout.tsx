@@ -1,4 +1,4 @@
-import { useMutation } from '@apollo/client';
+import { useMutation} from '@apollo/client';
 import { Box, CircularProgress, Fade } from '@mui/material';
 import React, { RefObject, useRef, useState } from 'react';
 
@@ -37,7 +37,7 @@ function AuthLayout(): React.ReactElement {
       setErrorDetails('');
       setIsNotificationOpen(true);
       setNotificationType('success');
-    } catch (error) {
+    } catch (error: unknown) {
       if (isHttpError(error)) {
         if (error.statusCode === 500) {
           setNotificationType('error');

@@ -118,7 +118,7 @@ describe('AuthLayout', () => {
     });
   });
 
-  it('registration with server error', async () => {
+  it('registration with server error: user exist ', async () => {
     const { findByRole, getByPlaceholderText } = render(
       <MockedProvider mocks={[rejectedMockResponse]} addTypename={false}>
         <AuthLayout />
@@ -134,6 +134,8 @@ describe('AuthLayout', () => {
     expect(getByPlaceholderText(emailPlaceholder)).toHaveValue(testEmail);
     expect(getByPlaceholderText(passwordPlaceholder)).toHaveValue(testPassword);
   });
+
+
   it('shows success notification after successful authentication', async () => {
     const { getByTestId, getByText , getByRole} = render(
       <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
@@ -182,7 +184,30 @@ describe('AuthLayout', () => {
       expect(getByTestId('success-box')).toBeInTheDocument();
     });
   });
+  it('registration with server error: status code 500', async () => {
 
+    const mocks: MockedResponse[] = [
+      {
+        request: {
+          query: SIGNUP_MUTATION,
+          variables: { input: { email: testEmail, initials: testInitials, password: testPassword, clientMutationId: '132' } },
+        },
+        result: {
+          errors: [{ message: 'Internal Server Error', extensions: { statusCode: 500 } }],
+        },
+      },
+    ];
+    const { findByRole} = render(
+      <MockedProvider mocks={mocks} addTypename={false}>
+        <AuthLayout />
+      </MockedProvider>
+    );
+
+    fillForm(testInitials, testEmail, testPassword, true);
+
+    const serverErrorMessage: HTMLElement = await findByRole(alertRole);
+    expect(serverErrorMessage).toBeInTheDocument();
+  });
   it('should handle errors correctly and update state', async () => {
     const {  findByRole} = render(
       <MockedProvider mocks={[mockInternalServerErrorResponse]} addTypename={false}>
