@@ -20,6 +20,8 @@ import { validateFullName, validatePassword, validateEmail } from '../Validation
 
 import styles from './styles';
 import { AuthFormProps, CallableRef } from './types';
+import useFormReset from "@/features/landing/hooks/useFormReset";
+import useImperativeSubmit from "@/features/landing/hooks/useImperativeSubmit";
 
 const PRIVACY_POLICY_URL: string =
   process.env.NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL || 'https://github.com/VilnaCRM-Org';
@@ -39,23 +41,13 @@ const AuthForm: AuthFormComponent = forwardRef<CallableRef, AuthFormProps>(
       mode: 'onTouched',
       defaultValues: { Email: '', FullName: '', Password: '', Privacy: false },
     });
-
     const { t } = useTranslation();
 
-    useEffect(() => {
-      if (formState.isSubmitSuccessful && !errorDetails.length && notificationType !== 'error')
-        reset({ Email: '', FullName: '', Password: '', Privacy: false });
-    }, [formState, reset, errorDetails]);
+    useFormReset({ formState, reset, errorDetails, notificationType });
 
-    React.useImperativeHandle(
-      ref,
-      () => ({
-        submit: (): void => {
-          handleSubmit(onSubmit)();
-        },
-      }),
-      [onSubmit]
-    );
+    // make submit after click on retryButton inside notification error component
+    useImperativeSubmit({ ref, handleSubmit, onSubmit });
+
     return (
       <Box component="form" data-testid="auth-form" onSubmit={handleSubmit(onSubmit)}
            ref={ref} role="form"

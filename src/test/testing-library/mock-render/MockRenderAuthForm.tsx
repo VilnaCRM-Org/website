@@ -1,6 +1,6 @@
 import { MockedProvider } from '@apollo/client/testing';
 import { render, RenderResult } from '@testing-library/react';
-import React, { RefObject, useRef } from 'react';
+import React, { RefObject, } from 'react';
 
 import AuthForm from '../../../features/landing/components/AuthSection/AuthForm/AuthForm';
 import { CallableRef } from '../../../features/landing/components/AuthSection/AuthForm/types';
@@ -12,14 +12,16 @@ export interface AuthPropsForMock {
   errorDetails: string | undefined;
   notificationType: NotificationType | undefined;
   mockOnSubmit: (data: RegisterItem) => Promise<void>;
+  formRef?: RefObject<CallableRef> | null;
 }
 
 export function AuthFormWithRef({
   errorDetails,
   notificationType,
   mockOnSubmit,
+  formRef= null
 }: AuthPropsForMock): React.ReactElement {
-  const formRef: RefObject<CallableRef> = useRef(null);
+  // const formRef: RefObject<CallableRef> = useRef(null);
   return (
     <MockedProvider>
       <AuthForm
@@ -31,9 +33,13 @@ export function AuthFormWithRef({
     </MockedProvider>
   );
 }
+AuthFormWithRef.defaultProps = {
+  formRef: null,
+};
 export function mockRenderAuthForm({
   errorDetails,
   notificationType,
+  formRef,
   mockOnSubmit,
 }: AuthPropsForMock): RenderResult {
   return render(
@@ -41,6 +47,7 @@ export function mockRenderAuthForm({
       errorDetails={errorDetails}
       notificationType={notificationType}
       mockOnSubmit={mockOnSubmit}
+      formRef={formRef}
     />
   );
 }
