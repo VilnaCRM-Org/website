@@ -1,7 +1,7 @@
 import { useImperativeHandle, ForwardedRef } from 'react';
 import { UseFormHandleSubmit } from 'react-hook-form';
 
-import {RegisterItem} from '../types/authentication/form';
+import { RegisterItem } from '../types/authentication/form';
 
 interface ImperativeSubmitHandle {
   submit: () => void;
@@ -14,12 +14,15 @@ interface UseImperativeSubmitProps {
 
 type UseImperativeSubmitHook = (props: UseImperativeSubmitProps) => void;
 
-const useImperativeSubmit:UseImperativeSubmitHook = ({ref, handleSubmit, onSubmit}:UseImperativeSubmitProps
-): void => {
+const useImperativeSubmit: UseImperativeSubmitHook = ({
+  ref,
+  handleSubmit,
+  onSubmit,
+}: UseImperativeSubmitProps): void => {
   useImperativeHandle(
     ref,
     () => ({
-      submit: ():void => {
+      submit: (): void => {
         handleSubmit(onSubmit)();
       },
     }),

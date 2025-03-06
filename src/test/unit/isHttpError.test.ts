@@ -7,7 +7,7 @@ type fullError = {
 
 describe('isHttpError', () => {
   test('returns true for valid HTTP error', () => {
-    const error:fullError= { statusCode: 400, message: 'Bad Request' };
+    const error: fullError = { statusCode: 400, message: 'Bad Request' };
     expect(isHttpError(error)).toBe(true);
   });
 

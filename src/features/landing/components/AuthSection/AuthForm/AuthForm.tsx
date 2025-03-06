@@ -1,6 +1,6 @@
 import { Box, Stack } from '@mui/material';
 import Image from 'next-export-optimize-images/image';
-import React, { forwardRef, useEffect } from 'react';
+import React, { forwardRef } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { Trans, useTranslation } from 'react-i18next';
 
@@ -14,14 +14,14 @@ import {
 } from '@/components';
 
 import QuestionMark from '../../../assets/svg/auth-section/questionMark.svg';
+import useFormReset from '../../../hooks/useFormReset';
+import useImperativeSubmit from '../../../hooks/useImperativeSubmit';
 import { RegisterItem } from '../../../types/authentication/form';
 import { PasswordTip } from '../PasswordTip';
 import { validateFullName, validatePassword, validateEmail } from '../Validations';
 
 import styles from './styles';
 import { AuthFormProps, CallableRef } from './types';
-import useFormReset from "@/features/landing/hooks/useFormReset";
-import useImperativeSubmit from "@/features/landing/hooks/useImperativeSubmit";
 
 const PRIVACY_POLICY_URL: string =
   process.env.NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL || 'https://github.com/VilnaCRM-Org';
@@ -49,16 +49,25 @@ const AuthForm: AuthFormComponent = forwardRef<CallableRef, AuthFormProps>(
     useImperativeSubmit({ ref, handleSubmit, onSubmit });
 
     return (
-      <Box component="form" data-testid="auth-form" onSubmit={handleSubmit(onSubmit)}
-           ref={ref} role="form"
-           aria-label="Sign up form"
+      <Box
+        component="form"
+        data-testid="auth-form"
+        onSubmit={handleSubmit(onSubmit)}
+        ref={ref}
+        role="form"
+        aria-label="Sign up form"
       >
         <UiTypography variant="h4" component="h4" sx={styles.formTitle}>
           {t('sign_up.form.heading_main')}
         </UiTypography>
         <Stack sx={styles.inputsWrapper}>
           <Stack sx={styles.inputWrapper}>
-            <UiTypography variant="medium14" sx={styles.inputTitle} component="label" htmlFor="FullName">
+            <UiTypography
+              variant="medium14"
+              sx={styles.inputTitle}
+              component="label"
+              htmlFor="FullName"
+            >
               {t('sign_up.form.name_input.label')}
             </UiTypography>
             <UiTextFieldForm
@@ -74,11 +83,16 @@ const AuthForm: AuthFormComponent = forwardRef<CallableRef, AuthFormProps>(
             />
           </Stack>
           <Stack sx={styles.inputWrapper}>
-            <UiTypography variant="medium14" sx={styles.inputTitle} component="label" htmlFor="Email">
+            <UiTypography
+              variant="medium14"
+              sx={styles.inputTitle}
+              component="label"
+              htmlFor="Email"
+            >
               {t('sign_up.form.email_input.label')}
             </UiTypography>
             <UiTextFieldForm
-              id='Email'
+              id="Email"
               control={control}
               name="Email"
               rules={{
@@ -96,7 +110,12 @@ const AuthForm: AuthFormComponent = forwardRef<CallableRef, AuthFormProps>(
           </Stack>
           <Stack sx={styles.inputWrapper}>
             <Stack direction="row" alignItems="center" gap="0.25rem">
-              <UiTypography variant="medium14" sx={styles.inputTitle} component="label" htmlFor="Password">
+              <UiTypography
+                variant="medium14"
+                sx={styles.inputTitle}
+                component="label"
+                htmlFor="Password"
+              >
                 {t('sign_up.form.password_input.label')}
               </UiTypography>
               <UiTooltip placement="right" sx={styles.tip} arrow title={<PasswordTip />}>
@@ -109,7 +128,7 @@ const AuthForm: AuthFormComponent = forwardRef<CallableRef, AuthFormProps>(
               </UiTooltip>
             </Stack>
             <UiTextFieldForm
-              id='Password'
+              id="Password"
               control={control}
               name="Password"
               rules={{

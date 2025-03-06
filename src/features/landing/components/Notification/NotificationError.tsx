@@ -34,7 +34,10 @@ function NotificationError({
         />
       </Box>
 
-      <Box sx={{ ...styles.messageContainer, ...styles.messageContainerError }} data-testid='error-message-container'>
+      <Box
+        sx={{ ...styles.messageContainer, ...styles.messageContainerError }}
+        data-testid="error-message-container"
+      >
         <UiTypography component="h4" sx={styles.messageTitle}>
           {t('notifications.error.title')}
         </UiTypography>

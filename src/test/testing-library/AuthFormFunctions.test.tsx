@@ -1,40 +1,39 @@
-import {fireEvent, render, waitFor} from '@testing-library/react';
-import {t} from 'i18next';
-import {act} from 'react';
+import { fireEvent, render, waitFor } from '@testing-library/react';
+import { t } from 'i18next';
+import { act } from 'react';
 
-import { CallableRef} from '../../features/landing/components/AuthSection/AuthForm/types';
+import { CallableRef } from '../../features/landing/components/AuthSection/AuthForm/types';
 import NotificationError from '../../features/landing/components/Notification/NotificationError';
 import isHttpError from '../../features/landing/helpers/isHttpError';
-import {RegisterItem} from '../../features/landing/types/authentication/form';
+import { RegisterItem } from '../../features/landing/types/authentication/form';
 
 import '@testing-library/jest-dom';
-import {testEmail, testInitials, testPassword} from './constants';
-import {AuthPropsForMock, mockRenderAuthForm} from './mock-render/MockRenderAuthForm';
-import {fillForm} from './utils';
+import { testEmail, testInitials, testPassword } from './constants';
+import { AuthPropsForMock, mockRenderAuthForm } from './mock-render/MockRenderAuthForm';
+import { fillForm } from './utils';
 
+const retryButtonText: string = t('notifications.error.retry_button');
 
-const retryButtonText:string =t('notifications.error.retry_button');
-
-type CreateUserPayload ={
+type CreateUserPayload = {
   data: {
     success: boolean;
   };
 };
 
 type SignupMutationVariables = {
- variables:{
-  input: {
-    email: string;
-    initials: string;
-    password: string;
-    clientMutationId: string;
+  variables: {
+    input: {
+      email: string;
+      initials: string;
+      password: string;
+      clientMutationId: string;
+    };
   };
- };
 };
 
-const signupMutation: jest.MockedFunction<(variables: SignupMutationVariables) =>
-  Promise<CreateUserPayload>> = jest.fn();
-
+const signupMutation: jest.MockedFunction<
+  (variables: SignupMutationVariables) => Promise<CreateUserPayload>
+> = jest.fn();
 
 type AuthFormTestHelpers = {
   setNotificationType: jest.Mock;
@@ -42,18 +41,20 @@ type AuthFormTestHelpers = {
   setIsNotificationOpen: jest.Mock;
   mockOnSubmit: (data: RegisterItem) => Promise<void>;
 };
-type SetupAuthFormTestType = (signupMutationMock: jest.MockedFunction<
-  (variables: SignupMutationVariables) => Promise<CreateUserPayload>
->) => AuthFormTestHelpers;
+type SetupAuthFormTestType = (
+  signupMutationMock: jest.MockedFunction<
+    (variables: SignupMutationVariables) => Promise<CreateUserPayload>
+  >
+) => AuthFormTestHelpers;
 
-export const setupAuthFormTest: SetupAuthFormTestType = (signupMutationMock)  => {
+export const setupAuthFormTest: SetupAuthFormTestType = signupMutationMock => {
   const setNotificationType: jest.Mock = jest.fn();
   const setErrorDetails: jest.Mock = jest.fn();
   const setIsNotificationOpen: jest.Mock = jest.fn();
 
-  const mockOnSubmit: (data: RegisterItem) => Promise<void> = async (data: RegisterItem) =>  {
+  const mockOnSubmit: (data: RegisterItem) => Promise<void> = async (data: RegisterItem) => {
     try {
-     await signupMutationMock({
+      await signupMutationMock({
         variables: {
           input: {
             email: data.Email,
@@ -94,7 +95,6 @@ describe('mockOnSubmit', () => {
     jest.clearAllMocks();
   });
 
-
   it('should handle successful form submission', async () => {
     signupMutation.mockResolvedValueOnce({ data: { success: true } });
     const { setNotificationType, setErrorDetails, setIsNotificationOpen, mockOnSubmit } =
@@ -116,8 +116,8 @@ describe('mockOnSubmit', () => {
   });
 
   it('displays error message when signup mutation fails', async () => {
-    signupMutation.mockRejectedValueOnce({ data: {  success: false }});
-    const {  setErrorDetails,  mockOnSubmit } = setupAuthFormTest(signupMutation);
+    signupMutation.mockRejectedValueOnce({ data: { success: false } });
+    const { setErrorDetails, mockOnSubmit } = setupAuthFormTest(signupMutation);
 
     mockRenderAuthForm({
       errorDetails: 'Something went wrong',
@@ -129,12 +129,12 @@ describe('mockOnSubmit', () => {
 
     await waitFor(() => {
       expect(setErrorDetails).toHaveBeenCalledWith('An unexpected error occurred');
-
     });
   });
   it('should handle unexpected errors correctly', async () => {
     signupMutation.mockRejectedValueOnce(42);
-    const { setIsNotificationOpen, setNotificationType, setErrorDetails,  mockOnSubmit } = setupAuthFormTest(signupMutation);
+    const { setIsNotificationOpen, setNotificationType, setErrorDetails, mockOnSubmit } =
+      setupAuthFormTest(signupMutation);
 
     mockRenderAuthForm({
       errorDetails: 'An unexpected error occurred',
@@ -157,7 +157,8 @@ describe('mockOnSubmit', () => {
       message: 'Internal Server Error',
     });
 
-    const {setIsNotificationOpen,setNotificationType, setErrorDetails, mockOnSubmit } = setupAuthFormTest(signupMutation);
+    const { setIsNotificationOpen, setNotificationType, setErrorDetails, mockOnSubmit } =
+      setupAuthFormTest(signupMutation);
 
     mockRenderAuthForm({
       errorDetails: '',
@@ -179,7 +180,7 @@ describe('mockOnSubmit', () => {
     const { setNotificationType, setErrorDetails, setIsNotificationOpen, mockOnSubmit } =
       setupAuthFormTest(signupMutation);
 
-    const mockRenderAuthFormWithouthFormRef:(props: AuthPropsWithFormRef) => void = (props) => {
+    const mockRenderAuthFormWithouthFormRef: (props: AuthPropsWithFormRef) => void = props => {
       mockRenderAuthForm({
         ...props,
       });
@@ -195,7 +196,6 @@ describe('mockOnSubmit', () => {
       expect(setErrorDetails).not.toHaveBeenCalled();
       expect(setIsNotificationOpen).not.toHaveBeenCalled();
       expect(setNotificationType).not.toHaveBeenCalled();
-
     });
   });
   it('should handle notificationType set to empty string initially', async () => {
@@ -220,7 +220,7 @@ describe('mockOnSubmit', () => {
   it('should handle when isHttpError always true', async () => {
     signupMutation.mockRejectedValueOnce({ statusCode: 404, message: 'Not Found' });
 
-    const { setNotificationType, setErrorDetails,setIsNotificationOpen, mockOnSubmit } =
+    const { setNotificationType, setErrorDetails, setIsNotificationOpen, mockOnSubmit } =
       setupAuthFormTest(signupMutation);
 
     mockRenderAuthForm({
@@ -259,10 +259,11 @@ describe('mockOnSubmit', () => {
   });
 
   it('should handle non-HTTP errors', async () => {
-    const error:Error = new Error('Network Error');
+    const error: Error = new Error('Network Error');
     signupMutation.mockRejectedValueOnce(error);
 
-    const {setNotificationType, setIsNotificationOpen, setErrorDetails,  mockOnSubmit } = setupAuthFormTest(signupMutation);
+    const { setNotificationType, setIsNotificationOpen, setErrorDetails, mockOnSubmit } =
+      setupAuthFormTest(signupMutation);
 
     mockRenderAuthForm({
       errorDetails: '',
@@ -280,9 +281,7 @@ describe('mockOnSubmit', () => {
   });
 });
 
-
 describe('Across Form components', () => {
-
   it('calls submit() via imperative handle', async () => {
     signupMutation.mockRejectedValueOnce({
       statusCode: 500,
@@ -291,28 +290,25 @@ describe('Across Form components', () => {
     const mockRef: React.RefObject<CallableRef> = {
       current: { submit: jest.fn() },
     };
-    const onSubmit: (data: RegisterItem) => Promise<void> = jest.fn() ;
+    const onSubmit: (data: RegisterItem) => Promise<void> = jest.fn();
 
     mockRenderAuthForm({
       errorDetails: 'Internal error',
       notificationType: 'error',
-      mockOnSubmit:onSubmit,
+      mockOnSubmit: onSubmit,
     });
     fillForm(testInitials, testEmail, testPassword, true);
 
-     const mockTriggerFormSubmit: () => void = () => {
+    const mockTriggerFormSubmit: () => void = () => {
       if (mockRef.current?.submit) {
         mockRef.current.submit();
       }
     };
-    const mockSetIsOpen:jest.Mock = jest.fn();
-    const {getByText}= render(
-      <NotificationError
-        setIsOpen={mockSetIsOpen}
-        triggerFormSubmit={mockTriggerFormSubmit}
-      />
+    const mockSetIsOpen: jest.Mock = jest.fn();
+    const { getByText } = render(
+      <NotificationError setIsOpen={mockSetIsOpen} triggerFormSubmit={mockTriggerFormSubmit} />
     );
-    const retryButton:HTMLElement = getByText(retryButtonText);
+    const retryButton: HTMLElement = getByText(retryButtonText);
     fireEvent.click(retryButton);
 
     await waitFor(() => {
@@ -329,10 +325,10 @@ type fullError = {
 
 describe('Error Handling', () => {
   test('handles HTTP 500 error', () => {
-    const error :fullError= { statusCode: 500, message: 'Internal Server Error' };
-    let errorDetails:string = '';
-    let notificationOpen:boolean = false;
-    let notificationType:string = '';
+    const error: fullError = { statusCode: 500, message: 'Internal Server Error' };
+    let errorDetails: string = '';
+    let notificationOpen: boolean = false;
+    let notificationType: string = '';
 
     act(() => {
       if (isHttpError(error)) {
@@ -348,8 +344,8 @@ describe('Error Handling', () => {
   });
 
   test('handles generic Error instance', () => {
-    const error:Error = new Error('Something went wrong');
-    let errorDetails:string = '';
+    const error: Error = new Error('Something went wrong');
+    let errorDetails: string = '';
 
     act(() => {
       if (error instanceof Error) {
@@ -361,8 +357,8 @@ describe('Error Handling', () => {
   });
 
   test('handles unknown error', () => {
-    const error:unknown= 42;
-    let errorDetails:string = '';
+    const error: unknown = 42;
+    let errorDetails: string = '';
 
     act(() => {
       if (!isHttpError(error) && !(error instanceof Error)) {

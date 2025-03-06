@@ -11,7 +11,7 @@ import {
   policyText,
 } from './constants';
 
-const backToFormSuccess:string = t('notifications.success.button');
+const backToFormSuccess: string = t('notifications.success.button');
 
 test('Show notificationSuccess component', async ({ page }) => {
   const initialsInput: Locator = page.getByPlaceholder(placeholderInitials);
@@ -29,6 +29,6 @@ test('Show notificationSuccess component', async ({ page }) => {
 
   await signupButton.click();
 
-  const backToForm: Locator = page.getByRole('button', {name: backToFormSuccess});
+  const backToForm: Locator = page.getByRole('button', { name: backToFormSuccess });
   await backToForm.click();
 });

@@ -105,9 +105,6 @@ export async function createUser(
     const { result, errors } = await handleResponse<CreateUserResponse>(response);
     return { response, result, errors };
   } catch (err) {
-    throw new Error(
-      `Network request failed: ${err instanceof Error ? err.message : String(err)}`
-    );
+    throw new Error(`Network request failed: ${err instanceof Error ? err.message : String(err)}`);
   }
-
 }

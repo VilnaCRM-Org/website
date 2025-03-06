@@ -1,8 +1,7 @@
 import { MockedProvider, MockedResponse } from '@apollo/client/testing';
-import { render, waitFor} from '@testing-library/react';
+import { render, waitFor } from '@testing-library/react';
 import { t } from 'i18next';
 import React from 'react';
-
 
 import { SIGNUP_MUTATION } from '../../features/landing/api/service/userService';
 import AuthLayout from '../../features/landing/components/AuthSection/AuthForm/AuthLayout';
@@ -21,7 +20,8 @@ import {
 import {
   fillForm,
   mockInternalServerErrorResponse,
-  rejectedMockResponse, selectFormElements,
+  rejectedMockResponse,
+  selectFormElements,
 } from './utils';
 
 const statusRole: string = 'status';
@@ -61,7 +61,6 @@ const fulfilledMockResponse: MockedResponse = {
     };
   },
 };
-
 
 describe('AuthLayout', () => {
   beforeEach(() => {
@@ -135,9 +134,8 @@ describe('AuthLayout', () => {
     expect(getByPlaceholderText(passwordPlaceholder)).toHaveValue(testPassword);
   });
 
-
   it('shows success notification after successful authentication', async () => {
-    const { getByTestId, getByText , getByRole} = render(
+    const { getByTestId, getByText, getByRole } = render(
       <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
         <AuthLayout />
       </MockedProvider>
@@ -172,7 +170,7 @@ describe('AuthLayout', () => {
   });
 
   it('should successfully submit the form and update state', async () => {
-   const {getByTestId}= render(
+    const { getByTestId } = render(
       <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
         <AuthLayout />
       </MockedProvider>
@@ -185,19 +183,25 @@ describe('AuthLayout', () => {
     });
   });
   it('registration with server error: status code 500', async () => {
-
     const mocks: MockedResponse[] = [
       {
         request: {
           query: SIGNUP_MUTATION,
-          variables: { input: { email: testEmail, initials: testInitials, password: testPassword, clientMutationId: '132' } },
+          variables: {
+            input: {
+              email: testEmail,
+              initials: testInitials,
+              password: testPassword,
+              clientMutationId: '132',
+            },
+          },
         },
         result: {
           errors: [{ message: 'Internal Server Error', extensions: { statusCode: 500 } }],
         },
       },
     ];
-    const { findByRole} = render(
+    const { findByRole } = render(
       <MockedProvider mocks={mocks} addTypename={false}>
         <AuthLayout />
       </MockedProvider>
@@ -209,7 +213,7 @@ describe('AuthLayout', () => {
     expect(serverErrorMessage).toBeInTheDocument();
   });
   it('should handle errors correctly and update state', async () => {
-    const {  findByRole} = render(
+    const { findByRole } = render(
       <MockedProvider mocks={[mockInternalServerErrorResponse]} addTypename={false}>
         <AuthLayout />
       </MockedProvider>
@@ -221,13 +225,13 @@ describe('AuthLayout', () => {
     expect(serverErrorMessage).toHaveTextContent('Internal Server Error.');
   });
   it('resets the form after successful submit with no errors', async () => {
-   const {getByTestId, queryByRole}= render(
+    const { getByTestId, queryByRole } = render(
       <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
         <AuthLayout />
       </MockedProvider>
     );
     fillForm(testInitials, testEmail, testPassword, true);
-    const { fullNameInput, emailInput, passwordInput, privacyCheckbox}= selectFormElements();
+    const { fullNameInput, emailInput, passwordInput, privacyCheckbox } = selectFormElements();
 
     await waitFor(() => {
       expect(fullNameInput.value).toBe('');

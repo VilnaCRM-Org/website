@@ -92,7 +92,6 @@ export default {
     left: '0rem',
     top: '24.7rem',
 
-
     [`@media (min-width: ${BREAKPOINTS.SM})`]: {
       minWidth: '29rem',
       transform: 'scale(1.04)',
@@ -177,7 +176,7 @@ export default {
 
   messageButton: {
     minWidth: '260px',
-    width:'100%',
+    width: '100%',
     marginTop: '1rem',
 
     [`@media (min-width: ${BREAKPOINTS.XS})`]: {

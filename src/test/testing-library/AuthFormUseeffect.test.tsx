@@ -1,17 +1,16 @@
-import {waitFor} from '@testing-library/react';
-import {useForm} from 'react-hook-form';
+import { waitFor } from '@testing-library/react';
+import { useForm } from 'react-hook-form';
 
-import {testEmail, testInitials, testPassword} from '@/test/testing-library/constants';
-import {mockRenderAuthForm} from '@/test/testing-library/mock-render/MockRenderAuthForm';
-import {fillForm,} from '@/test/testing-library/utils';
-
+import { testEmail, testInitials, testPassword } from '@/test/testing-library/constants';
+import { mockRenderAuthForm } from '@/test/testing-library/mock-render/MockRenderAuthForm';
+import { fillForm } from '@/test/testing-library/utils';
 
 jest.mock('react-hook-form', () => ({
   useForm: jest.fn(),
   Controller: jest.fn(({ render }) =>
     render({
-      field: {onChange: jest.fn()},
-      fieldState: { errors: {Privacy:'Privacy error'} },
+      field: { onChange: jest.fn() },
+      fieldState: { errors: { Privacy: 'Privacy error' } },
     })
   ),
 }));
@@ -28,7 +27,7 @@ describe('AuthForm useEffect behavior', () => {
       reset: jest.fn(),
       formState: {
         isSubmitSuccessful: true,
-        errors: {Privacy:'Privacy error'},
+        errors: { Privacy: 'Privacy error' },
       },
       control: {},
       getValues: jest.fn(),
@@ -36,14 +35,12 @@ describe('AuthForm useEffect behavior', () => {
     });
   });
 
-
   it('should reset form on successful submission with no errors and non-error notificationType', async () => {
     (useForm as jest.Mock).mockReturnValueOnce({
       handleSubmit: jest.fn(fn => fn),
       reset: mockReset,
-      formState: { isSubmitSuccessful: true, errors: {Privacy:'Privacy error'} },
+      formState: { isSubmitSuccessful: true, errors: { Privacy: 'Privacy error' } },
       control: {},
-
     });
 
     mockRenderAuthForm({
@@ -52,12 +49,7 @@ describe('AuthForm useEffect behavior', () => {
       mockOnSubmit: jest.fn(),
     });
 
-    fillForm(
-      testInitials,
-      testEmail,
-      testPassword,
-      true
-    );
+    fillForm(testInitials, testEmail, testPassword, true);
 
     await waitFor(() =>
       expect(mockReset).toHaveBeenCalledWith({
@@ -83,13 +75,7 @@ describe('AuthForm useEffect behavior', () => {
       mockOnSubmit: jest.fn(),
     });
 
-    fillForm(
-      testInitials,
-      testEmail,
-      testPassword,
-      true
-    );
-
+    fillForm(testInitials, testEmail, testPassword, true);
 
     await waitFor(() => expect(mockReset).not.toHaveBeenCalled());
   });
@@ -102,19 +88,13 @@ describe('AuthForm useEffect behavior', () => {
       control: {},
     });
 
-
     mockRenderAuthForm({
       errorDetails: 'Unexpected error',
       notificationType: 'error',
       mockOnSubmit: jest.fn(),
     });
 
-    fillForm(
-      testInitials,
-      testEmail,
-      testPassword,
-      true
-    );
+    fillForm(testInitials, testEmail, testPassword, true);
 
     await waitFor(() => expect(mockReset).not.toHaveBeenCalled());
   });

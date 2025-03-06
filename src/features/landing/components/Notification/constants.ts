@@ -13,7 +13,7 @@ export const BREAKPOINTS: BreakpointsType = {
   SM: `${breakpointsTheme.breakpoints.values.sm}px`,
   MD: `${breakpointsTheme.breakpoints.values.md}px`,
   LG: `${breakpointsTheme.breakpoints.values.lg}px`,
-  XL: `${breakpointsTheme.breakpoints.values.xl}px`
+  XL: `${breakpointsTheme.breakpoints.values.xl}px`,
 };
 
 type DimensionsType = {

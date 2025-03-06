@@ -1,4 +1,4 @@
-import {fireEvent, render, waitFor} from '@testing-library/react';
+import { fireEvent, render, waitFor } from '@testing-library/react';
 import userEvent, { UserEvent } from '@testing-library/user-event';
 import dotenv from 'dotenv';
 import { t } from 'i18next';
@@ -6,12 +6,8 @@ import { t } from 'i18next';
 import { RegisterItem } from '../../features/landing/types/authentication/form';
 
 import { testInitials, testEmail, testPassword } from './constants';
-import {AuthLinksMock, mockRenderAuthForm} from './mock-render/MockRenderAuthForm';
-import {
-  checkElementsInDocument,
-  fillForm,  selectFormElements
-} from './utils';
-
+import { AuthLinksMock, mockRenderAuthForm } from './mock-render/MockRenderAuthForm';
+import { checkElementsInDocument, fillForm, selectFormElements } from './utils';
 
 dotenv.config();
 
@@ -33,7 +29,6 @@ const authFormSelector: string = '.MuiBox-root';
 
 const borderStyle: string = 'border: 1px solid #DC3939';
 
-
 describe('AuthForm', () => {
   let mockOnSubmit: jest.Mock<Promise<void>, [RegisterItem]>;
 
@@ -41,7 +36,6 @@ describe('AuthForm', () => {
     jest.clearAllMocks();
     mockOnSubmit = jest.fn();
   });
-
 
   it('renders AuthForm component', () => {
     const { container, queryByRole, getByAltText, getByText, getByTestId } = mockRenderAuthForm({
@@ -202,8 +196,7 @@ describe('AuthForm', () => {
     expect(passwordInput.value).not.toBe(emptyValue);
     expect(privacyCheckbox.checked).toBe(true);
   });
- });
-
+});
 
 describe('AuthForm privacy links', () => {
   let mockOnSubmit: jest.Mock<Promise<void>, [RegisterItem]>;
@@ -240,22 +233,20 @@ describe('AuthForm privacy links', () => {
     delete process.env.NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL;
 
     process.env.NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL = 'https://custom-privacy-policy.com';
-    const PRIVACY_URL:string =process.env.NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL;
+    const PRIVACY_URL: string = process.env.NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL;
 
-    const { getAllByRole } = render(<AuthLinksMock url={PRIVACY_URL}/>);
+    const { getAllByRole } = render(<AuthLinksMock url={PRIVACY_URL} />);
 
-
-    const privacyLinks:HTMLElement[] = getAllByRole('link');
+    const privacyLinks: HTMLElement[] = getAllByRole('link');
     expect(privacyLinks[0]).toHaveAttribute('href', 'https://custom-privacy-policy.com');
-
   });
 
   it('displays default privacy policy URL when environment variable is not set', async () => {
     delete process.env.NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL;
 
-    const { getAllByRole } = render(<AuthLinksMock  url=''/>);
+    const { getAllByRole } = render(<AuthLinksMock url="" />);
 
-    const privacyLinks:HTMLElement[] = getAllByRole('link');
+    const privacyLinks: HTMLElement[] = getAllByRole('link');
     expect(privacyLinks[0]).toHaveAttribute('href', 'https://github.com/VilnaCRM-Org');
   });
   it('falls back to default Privacy Policy URL when url prop is empty or whitespace', async () => {
@@ -273,7 +264,7 @@ describe('AuthForm privacy links', () => {
   });
 
   it('displays custom privacy policy URL when url prop is set', async () => {
-    const CUSTOM_URL :string= 'https://custom-privacy-policy.com';
+    const CUSTOM_URL: string = 'https://custom-privacy-policy.com';
     const { getAllByRole } = render(<AuthLinksMock url={CUSTOM_URL} />);
 
     const privacyLinks: HTMLElement[] = getAllByRole('link');

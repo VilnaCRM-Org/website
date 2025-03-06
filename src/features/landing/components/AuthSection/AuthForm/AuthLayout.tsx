@@ -1,4 +1,4 @@
-import { useMutation} from '@apollo/client';
+import { useMutation } from '@apollo/client';
 import { Box, CircularProgress, Fade } from '@mui/material';
 import React, { RefObject, useRef, useState } from 'react';
 

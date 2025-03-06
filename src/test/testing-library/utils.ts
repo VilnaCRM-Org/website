@@ -2,7 +2,7 @@ import { MockedResponse } from '@apollo/client/testing';
 import { fireEvent, screen } from '@testing-library/react';
 import { t } from 'i18next';
 
-import {CreateUserInput} from '@/test/apollo-server/types';
+import { CreateUserInput } from '@/test/apollo-server/types';
 
 import { SIGNUP_MUTATION } from '../../features/landing/api/service/userService';
 
@@ -95,7 +95,7 @@ export const checkElementsInDocument: (...elements: (HTMLElement | null)[]) => v
   elements.forEach(element => expect(element).toBeInTheDocument());
 };
 
-const input :CreateUserInput= {
+const input: CreateUserInput = {
   email: testEmail,
   initials: testInitials,
   password: testPassword,
@@ -105,7 +105,7 @@ const input :CreateUserInput= {
 export const rejectedMockResponse: MockedResponse = {
   request: {
     query: SIGNUP_MUTATION,
-    variables: {  input    },
+    variables: { input },
   },
   result: {
     errors: [
@@ -121,7 +121,7 @@ export const rejectedMockResponse: MockedResponse = {
   },
 };
 
-export const mockInternalServerErrorResponse:MockedResponse = {
+export const mockInternalServerErrorResponse: MockedResponse = {
   request: {
     query: SIGNUP_MUTATION,
     variables: { input },
@@ -129,7 +129,7 @@ export const mockInternalServerErrorResponse:MockedResponse = {
   result: {
     errors: [
       {
-        message:'Internal Server Error.',
+        message: 'Internal Server Error.',
         locations: [{ line: 1, column: 1 }],
         path: ['createUser'],
         extensions: {
