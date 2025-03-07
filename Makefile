@@ -87,17 +87,18 @@ start-prod: ## Build image and start container in production mode
 
 wait-for-prod: ## Wait for the prod service to be ready on port 3001.
 	@echo "Waiting for prod service to be ready on port 3001..."
-	npx wait-on http://localhost:3001
+	npx wait-on -v http://localhost:3001
 	@echo "Prod service is up and running!"
 
 diagnose-prod: ## Run diagnostics on the prod container
 	@echo "Checking prod container logs..."
 	docker logs website-prod-1
+	@echo "\nChecking container status..."
+	docker ps -a | grep website-prod-1
 	@echo "\nChecking if process is listening on port 3001..."
 	docker exec website-prod-1 netstat -tulpn | grep 3001 || echo "No process found listening on port 3001"
 	@echo "\nChecking resource usage..."
 	docker stats website-prod-1 --no-stream
-
 
 test-unit: ## This command executes unit tests using Jest library.
 	$(PNPM_EXEC) test:unit
@@ -106,7 +107,7 @@ test-all: start-prod wait-for-prod  ## Start production and run all tests
 	$(DOCKER_COMPOSE) -f docker-compose.test.yml exec playwright sh -c 'pnpm run test:e2e & pnpm run test:visual & wait'
 
 test-memory-leak: start-prod wait-for-prod ## This command executes memory leaks tests using Memlab library.
-	$(DOCKER_COMPOSE) -f docker-compose.memory-leak.yml up -d
+	$(DOCKER_COMPOSE) -f docker-compose.memory-leak.yml up -d || (echo "Failed to start memory leak container" && exit 1)
 
 test-mutation:
 	$(PNPM_EXEC) test:mutation
