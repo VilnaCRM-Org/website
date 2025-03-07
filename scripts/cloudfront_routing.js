@@ -1,6 +1,5 @@
 /**
  * This script follows ES5.1 rules for compatibility.
- * - Uses "use strict" to enforce stricter parsing.
  * - Avoids ES6+ syntax (e.g., `let`, `const`, arrow functions).
  */
 function handler(event) {
@@ -48,6 +47,7 @@ function handler(event) {
         return request;
     } catch (error) {
         // Log error and return unmodified request
+        console.log('CloudFront Function error:', error);
         return request;
     }
 }
