@@ -28,7 +28,6 @@ function handler(event) {
             "/en/": "/en/index.html",
             // You can add "/fr": "/fr/index.html", "/fr/": "/fr/index.html", etc., for other languages.
             "/swagger": "/swagger.html",    // '/swagger' -> '/swagger.html'
-            "/test": "/_next/static/media/desktop.0ec56f83.jpg"
         };
         
         // Check for direct route mapping first
