@@ -87,7 +87,7 @@ start-prod: ## Build image and start container in production mode
 
 wait-for-prod: ## Wait for the prod service to be ready on port 3001.
 	@echo "Waiting for prod service to be ready on port 3001..."
-	$(EXEC_NODEJS) pnpm exec wait-on http://localhost:3001
+	$(EXEC_NODEJS) sh -c 'until nc -z localhost 3001; do echo "Waiting for service..."; sleep 2; done'
 	@echo "Prod service is up and running!"
 
 test-unit: ## This command executes unit tests using Jest library.
@@ -98,7 +98,6 @@ test-all: start-prod wait-for-prod  ## Start production and run all tests
 
 test-memory-leak: start-prod wait-for-prod ## This command executes memory leaks tests using Memlab library.
 	$(DOCKER_COMPOSE) -f docker-compose.memory-leak.yml up -d
-# 	$(PNPM_EXEC) test:memory-leak
 
 test-mutation:
 	$(PNPM_EXEC) test:mutation
