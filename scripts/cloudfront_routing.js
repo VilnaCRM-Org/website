@@ -2,6 +2,7 @@
  * This script follows ES5.1 rules for compatibility.
  * - Avoids ES6+ syntax (e.g., `let`, `const`, arrow functions).
  */
+'use strict';
 function handler(event) {
     var request = event.request;
     
