@@ -1,32 +1,27 @@
-import { MockedProvider, MockedResponse } from '@apollo/client/testing';
-import { render, fireEvent, waitFor, screen } from '@testing-library/react';
+import { fireEvent, render, waitFor } from '@testing-library/react';
 import userEvent, { UserEvent } from '@testing-library/user-event';
+import dotenv from 'dotenv';
 import { t } from 'i18next';
-import React from 'react';
 
-import { SIGNUP_MUTATION } from '../../features/landing/api/service/userService';
-import AuthForm from '../../features/landing/components/AuthSection/AuthForm/AuthForm';
+import { RegisterItem } from '../../features/landing/types/authentication/form';
 
 import { testInitials, testEmail, testPassword } from './constants';
+import { AuthLinksMock, mockRenderAuthForm } from './mock-render/MockRenderAuthForm';
+import { checkElementsInDocument, fillForm, selectFormElements } from './utils';
 
-const fullNamePlaceholder: string = t('sign_up.form.name_input.placeholder');
-const emailPlaceholder: string = t('sign_up.form.email_input.placeholder');
-const passwordPlaceholder: string = t('sign_up.form.password_input.placeholder');
+dotenv.config();
 
-const submitButtonText: string = t('sign_up.form.button_text');
 const formTitleText: string = t('sign_up.form.heading_main');
 
 const nameInputText: string = t('sign_up.form.name_input.label');
 const emailInputText: string = t('sign_up.form.email_input.label');
 const passwordInputText: string = t('sign_up.form.password_input.label');
 
-const requiredText: string = t('sign_up.form.name_input.required');
+const requiredText: string = t('sign_up.form.email_input.required');
 const passwordTipAltText: string = t('sign_up.form.password_tip.alt');
 
 const statusRole: string = 'status';
-const checkboxRole: string = 'checkbox';
 const alertRole: string = 'alert';
-const buttonRole: string = 'button';
 
 const emptyValue: string = '';
 
@@ -34,100 +29,20 @@ const authFormSelector: string = '.MuiBox-root';
 
 const borderStyle: string = 'border: 1px solid #DC3939';
 
-const fulfilledMockResponse: MockedResponse = {
-  request: {
-    query: SIGNUP_MUTATION,
-  },
-  variableMatcher: () => true,
-  result: variables => {
-    const { input } = variables;
-    const { initials, email, password, clientMutationId } = input;
+describe('AuthForm', () => {
+  let mockOnSubmit: jest.Mock<Promise<void>, [RegisterItem]>;
 
-    expect(input).not.toBeUndefined();
-    expect(initials).toBe(testInitials);
-    expect(email).toBe(testEmail);
-    expect(password).toBe(testPassword);
-    expect(clientMutationId).toBe('132');
-
-    return {
-      data: {
-        createUser: {
-          user: {
-            email,
-            initials,
-            id: 0,
-            confirmed: true,
-          },
-          clientMutationId: '132',
-        },
-      },
-    };
-  },
-};
-const rejectedMockResponse: MockedResponse = {
-  request: {
-    query: SIGNUP_MUTATION,
-    variables: {
-      input: {},
-    },
-  },
-  error: { name: 'MockError', message: 'Server Error' },
-};
-
-const selectFormElements: () => {
-  fullNameInput: HTMLInputElement;
-  emailInput: HTMLInputElement;
-  passwordInput: HTMLInputElement;
-  privacyCheckbox: HTMLInputElement;
-  signUpButton: HTMLElement;
-} = () => {
-  const fullNameInput: HTMLInputElement = screen.getByPlaceholderText(fullNamePlaceholder);
-  const emailInput: HTMLInputElement = screen.getByPlaceholderText(emailPlaceholder);
-  const passwordInput: HTMLInputElement = screen.getByPlaceholderText(passwordPlaceholder);
-  const privacyCheckbox: HTMLInputElement = screen.getByRole(checkboxRole);
-  const signUpButton: HTMLElement = screen.getByRole(buttonRole, {
-    name: submitButtonText,
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockOnSubmit = jest.fn();
   });
 
-  return { fullNameInput, emailInput, passwordInput, privacyCheckbox, signUpButton };
-};
-
-const fillForm: (
-  fullNameValue?: string,
-  emailValue?: string,
-  passwordValue?: string,
-  isChecked?: boolean
-) => {
-  fullNameInput: HTMLInputElement;
-  emailInput: HTMLInputElement;
-  passwordInput: HTMLInputElement;
-  privacyCheckbox: HTMLInputElement;
-} = (fullNameValue = '', emailValue = '', passwordValue = '', isChecked = false) => {
-  const { fullNameInput, emailInput, passwordInput, privacyCheckbox, signUpButton } =
-    selectFormElements();
-
-  fireEvent.change(fullNameInput, { target: { value: fullNameValue } });
-  fireEvent.change(emailInput, { target: { value: emailValue } });
-  fireEvent.change(passwordInput, { target: { value: passwordValue } });
-
-  if (isChecked) fireEvent.click(privacyCheckbox);
-
-  fireEvent.click(signUpButton);
-
-  return { fullNameInput, emailInput, passwordInput, privacyCheckbox };
-};
-
-const checkElementsInDocument: (...elements: (HTMLElement | null)[]) => void = (...elements) => {
-  elements.forEach(element => expect(element).toBeInTheDocument());
-};
-
-describe('AuthForm', () => {
   it('renders AuthForm component', () => {
-    const { container, queryByRole, getByAltText, getByText } = render(
-      <MockedProvider>
-        <AuthForm />
-      </MockedProvider>
-    );
+    const { container, queryByRole, getByAltText, getByText, getByTestId } = mockRenderAuthForm({
+      errorDetails: '',
+      notificationType: 'success',
+      mockOnSubmit,
+    });
 
     const authForm: HTMLElement = container.querySelector(authFormSelector) as HTMLElement;
     const formTitle: HTMLElement = getByText(formTitleText);
@@ -148,59 +63,21 @@ describe('AuthForm', () => {
       passwordTipImage
     );
 
+    expect(getByTestId('auth-form')).toBeVisible();
     expect(loader).not.toBeInTheDocument();
     expect(serverErrorMessage).not.toBeInTheDocument();
   });
 
   it('renders input fields', () => {
-    render(
-      <MockedProvider>
-        <AuthForm />
-      </MockedProvider>
-    );
+    mockRenderAuthForm({ errorDetails: '', notificationType: 'success', mockOnSubmit });
 
     const { fullNameInput, emailInput, passwordInput } = selectFormElements();
 
     checkElementsInDocument(fullNameInput, emailInput, passwordInput);
   });
 
-  it('successful registration', async () => {
-    const { getByRole, queryByRole } = render(
-      <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
-        <AuthForm />
-      </MockedProvider>
-    );
-
-    fillForm(testInitials, testEmail, testPassword, true);
-
-    await waitFor(() => {
-      const loader: HTMLElement = getByRole(statusRole);
-      expect(loader).toBeInTheDocument();
-    });
-
-    const serverErrorMessage: HTMLElement | null = queryByRole(alertRole);
-    expect(serverErrorMessage).not.toBeInTheDocument();
-  });
-
-  it('registration with server error', async () => {
-    const { findByRole } = render(
-      <MockedProvider mocks={[rejectedMockResponse]} addTypename={false}>
-        <AuthForm />
-      </MockedProvider>
-    );
-
-    fillForm(testInitials, testEmail, testPassword, true);
-
-    const serverErrorMessage: HTMLElement = await findByRole(alertRole);
-    expect(serverErrorMessage).toBeInTheDocument();
-  });
-
   it('correct linkage between inputs and values', async () => {
-    render(
-      <MockedProvider addTypename={false}>
-        <AuthForm />
-      </MockedProvider>
-    );
+    mockRenderAuthForm({ errorDetails: '', notificationType: 'success', mockOnSubmit });
 
     const { fullNameInput, emailInput, passwordInput, privacyCheckbox } = fillForm(
       testInitials,
@@ -217,12 +94,22 @@ describe('AuthForm', () => {
     });
   });
 
+  test('should have default values', () => {
+    mockRenderAuthForm({ errorDetails: '', notificationType: 'success', mockOnSubmit });
+
+    const { fullNameInput, emailInput, passwordInput, privacyCheckbox } = selectFormElements();
+
+    expect(fullNameInput).toHaveValue('');
+    expect(emailInput).toHaveValue('');
+    expect(passwordInput).toHaveValue('');
+    expect(privacyCheckbox).not.toBeChecked();
+  });
   it('correct linkage between inputs and values with no data', async () => {
-    const { getAllByText, queryByRole } = render(
-      <MockedProvider addTypename={false}>
-        <AuthForm />
-      </MockedProvider>
-    );
+    const { getAllByText, queryByRole } = mockRenderAuthForm({
+      errorDetails: '',
+      notificationType: 'success',
+      mockOnSubmit,
+    });
 
     const { fullNameInput, emailInput, passwordInput, privacyCheckbox } = fillForm();
 
@@ -244,11 +131,11 @@ describe('AuthForm', () => {
 
   it('Check onTouched mode', async () => {
     const user: UserEvent = userEvent.setup();
-    const { getByText } = render(
-      <MockedProvider addTypename={false}>
-        <AuthForm />
-      </MockedProvider>
-    );
+    const { getByText } = mockRenderAuthForm({
+      errorDetails: '',
+      notificationType: 'success',
+      mockOnSubmit,
+    });
 
     const { fullNameInput, emailInput } = selectFormElements();
 
@@ -259,5 +146,137 @@ describe('AuthForm', () => {
       const requiredError: HTMLElement = getByText(requiredText);
       expect(requiredError).toBeInTheDocument();
     });
+  });
+
+  it('resets the form after successful submission without errors', async () => {
+    mockRenderAuthForm({
+      errorDetails: '',
+      notificationType: 'success',
+      mockOnSubmit,
+    });
+
+    fillForm(testInitials, testEmail, testPassword, true);
+
+    await waitFor(() => expect(mockOnSubmit).toHaveBeenCalled());
+    const { fullNameInput, emailInput, passwordInput, privacyCheckbox } = selectFormElements();
+
+    expect(fullNameInput.value).toBe('');
+    expect(emailInput.value).toBe('');
+    expect(passwordInput.value).toBe('');
+    expect(privacyCheckbox.checked).toBe(false);
+  });
+
+  it('displays validation errors for required fields', async () => {
+    const { getAllByText } = mockRenderAuthForm({
+      errorDetails: '',
+      notificationType: 'error',
+      mockOnSubmit,
+    });
+
+    const { signUpButton } = selectFormElements();
+    fireEvent.click(signUpButton);
+
+    await waitFor(() => {
+      const requiredError: HTMLElement[] = getAllByText(requiredText);
+
+      expect(requiredError.length).toBe(3);
+    });
+  });
+
+  it('does not reset the form when notification type is error', async () => {
+    mockRenderAuthForm({ errorDetails: '', notificationType: 'error', mockOnSubmit });
+
+    fillForm(testInitials, testEmail, testPassword, true);
+
+    await waitFor(() => expect(mockOnSubmit).toHaveBeenCalled());
+    const { fullNameInput, emailInput, passwordInput, privacyCheckbox } = selectFormElements();
+
+    expect(fullNameInput.value).not.toBe(emptyValue);
+    expect(emailInput.value).not.toBe(emptyValue);
+    expect(passwordInput.value).not.toBe(emptyValue);
+    expect(privacyCheckbox.checked).toBe(true);
+  });
+});
+
+describe('AuthForm privacy links', () => {
+  let mockOnSubmit: jest.Mock<Promise<void>, [RegisterItem]>;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockOnSubmit = jest.fn();
+  });
+
+  it('displays custom privacy policy URL when url prop is set', async () => {
+    const CUSTOM_URL: string = 'https://custom-privacy-policy.com';
+    const { getAllByRole } = render(<AuthLinksMock url={CUSTOM_URL} />);
+
+    const privacyLinks: HTMLElement[] = getAllByRole('link');
+    expect(privacyLinks[0]).toHaveAttribute('href', CUSTOM_URL);
+    expect(privacyLinks[1]).toHaveAttribute('href', CUSTOM_URL);
+  });
+
+  it('falls back to default Privacy Policy URL when env variable is missing or empty', async () => {
+    const PRIVACY_POLICY_URL: string = process.env.NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL?.trim()
+      ? process.env.NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL
+      : 'https://github.com/VilnaCRM-Org';
+
+    const { getAllByRole } = mockRenderAuthForm({
+      errorDetails: '',
+      notificationType: 'success',
+      mockOnSubmit,
+    });
+
+    const link: HTMLElement[] = getAllByRole('link');
+    expect(link[0]).toHaveAttribute('href', PRIVACY_POLICY_URL);
+  });
+  it('displays custom privacy policy URL when environment variable is set', async () => {
+    delete process.env.NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL;
+
+    process.env.NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL = 'https://custom-privacy-policy.com';
+    const PRIVACY_URL: string = process.env.NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL;
+
+    const { getAllByRole } = render(<AuthLinksMock url={PRIVACY_URL} />);
+
+    const privacyLinks: HTMLElement[] = getAllByRole('link');
+    expect(privacyLinks[0]).toHaveAttribute('href', 'https://custom-privacy-policy.com');
+  });
+
+  it('displays default privacy policy URL when environment variable is not set', async () => {
+    delete process.env.NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL;
+
+    const { getAllByRole } = render(<AuthLinksMock url="" />);
+
+    const privacyLinks: HTMLElement[] = getAllByRole('link');
+    expect(privacyLinks[0]).toHaveAttribute('href', 'https://github.com/VilnaCRM-Org');
+  });
+  it('falls back to default Privacy Policy URL when url prop is empty or whitespace', async () => {
+    const { getAllByRole, rerender } = render(<AuthLinksMock url="" />);
+
+    let privacyLinks: HTMLElement[] = getAllByRole('link');
+    expect(privacyLinks[0]).toHaveAttribute('href', 'https://github.com/VilnaCRM-Org');
+    expect(privacyLinks[1]).toHaveAttribute('href', 'https://github.com/VilnaCRM-Org');
+
+    rerender(<AuthLinksMock url="   " />);
+
+    privacyLinks = getAllByRole('link');
+    expect(privacyLinks[0]).toHaveAttribute('href', 'https://github.com/VilnaCRM-Org');
+    expect(privacyLinks[1]).toHaveAttribute('href', 'https://github.com/VilnaCRM-Org');
+  });
+
+  it('displays custom privacy policy URL when url prop is set', async () => {
+    const CUSTOM_URL: string = 'https://custom-privacy-policy.com';
+    const { getAllByRole } = render(<AuthLinksMock url={CUSTOM_URL} />);
+
+    const privacyLinks: HTMLElement[] = getAllByRole('link');
+    expect(privacyLinks[0]).toHaveAttribute('href', CUSTOM_URL);
+    expect(privacyLinks[1]).toHaveAttribute('href', CUSTOM_URL);
+  });
+
+  it('displays default privacy policy URL when url prop is undefined', async () => {
+    const { getAllByRole } = render(<AuthLinksMock url={undefined as unknown as string} />);
+
+    const privacyLinks: HTMLElement[] = getAllByRole('link');
+    expect(privacyLinks[0]).toHaveAttribute('href', 'https://github.com/VilnaCRM-Org');
+    expect(privacyLinks[1]).toHaveAttribute('href', 'https://github.com/VilnaCRM-Org');
   });
 });
