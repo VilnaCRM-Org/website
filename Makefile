@@ -87,7 +87,7 @@ start-prod: ## Build image and start container in production mode
 
 wait-for-prod: ## Wait for the prod service to be ready on port 3001.
 	@echo "Waiting for prod service to be ready on port 3001..."
-	npx wait-on -v http://prod:3001
+	npx wait-on -v http://localhost:3001
 	@echo "Prod service is up and running!"
 
 diagnose-prod: ## Run diagnostics on the prod container

@@ -13,8 +13,11 @@ jobs:
         with:
           node-version: ${{ vars.NODE_VERSION }}
 
-      - name: Install wait-on globally
-        run: npm install -g wait-on
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install dependencies
+        run: make install
 
       - name: Run Playwright tests
         run: make test-e2e
