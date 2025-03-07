@@ -87,7 +87,7 @@ start-prod: ## Build image and start container in production mode
 
 wait-for-prod: ## Wait for the prod service to be ready on port 3001.
 	@echo "Waiting for prod service to be ready on port 3001..."
-	$(EXEC_NODEJS) sh -c 'until curl -s -f http://localhost:3001; do echo "Waiting for service..."; sleep 2; done'
+	npx wait-on http://localhost:3001
 	@echo "Prod service is up and running!"
 
 test-unit: ## This command executes unit tests using Jest library.
