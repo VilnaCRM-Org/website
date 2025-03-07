@@ -1,7 +1,7 @@
 FROM node:23-alpine3.20
 
 RUN apk add --no-cache python3 make g++ \
-    && npm install -g pnpm wait-on
+    && npm install -g pnpm
 
 WORKDIR /app
 
