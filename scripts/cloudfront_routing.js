@@ -1,33 +1,53 @@
+/**
+ * This script follows ES5.1 rules for compatibility.
+ * - Uses "use strict" to enforce stricter parsing.
+ * - Avoids ES6+ syntax (e.g., `let`, `const`, arrow functions).
+ */
 function handler(event) {
     var request = event.request;
-    var uri = request.uri;
-
+    
+    // Early return for invalid URIs
+    if (!request.uri || typeof request.uri !== "string") {
+        return request;
+    }
+    
     try {
-        if (!uri || typeof uri !== "string") {
-            return request;
-        }
-
+        var uri = request.uri;
+        
+        // Mapping of routes to their rewritten URIs for dynamic routing
         var routeMap = {
-            "/": "/index.html",
-            "/about": "/about/index.html",
-            "/about/": "/about/index.html",
+            "/": "/index.html",             // Root path -> serve the index.html file
+            "/about": "/about/index.html",  // '/about' -> '/about/index.html'
+            "/about/": "/about/index.html", // '/about/' -> '/about/index.html'
+            // Add other routes that need special handling:
+            // e.g., old paths redirected to new paths or default documents for sections.
+            // Example:
+            // "/old-page": "/new-page",      // redirect '/old-page' -> '/new-page'
+            // Internationalization (i18n) examples for language-specific homepages:
             "/en": "/en/index.html",
             "/en/": "/en/index.html",
-            "/swagger": "/swagger.html",
+            // You can add "/fr": "/fr/index.html", "/fr/": "/fr/index.html", etc., for other languages.
+            "/swagger": "/swagger.html",    // '/swagger' -> '/swagger.html'
             "/test": "/_next/static/media/desktop.0ec56f83.jpg"
         };
-
+        
+        // Check for direct route mapping first
         if (routeMap[uri] !== undefined) {
-            uri = routeMap[uri];
-        } else if (uri.substr(-1) === '/') {
+            request.uri = routeMap[uri];
+            return request;
+        }
+        
+        // Handle default routing cases
+        if (uri.substr(-1) === '/') {
             uri += 'index.html';
         } else if (uri.indexOf('.') === -1) {
             uri += '/index.html';
         }
-
+        
         request.uri = uri;
         return request;
-    } catch (e) {
-        return request; // Возвращаем request без изменений в случае ошибки
+    } catch (error) {
+        // Log error and return unmodified request
+        return request;
     }
 }
