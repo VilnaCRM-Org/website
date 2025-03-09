@@ -18,7 +18,7 @@ const buttonTextStyle: React.CSSProperties = {
 
 function NotificationError({
   setIsOpen,
-  triggerFormSubmit,
+  retrySubmit,
 }: NotificationComponentProps): React.ReactElement {
   const { t } = useTranslation();
   const onHandleClose: () => void = (): void => setIsOpen(false);
@@ -53,7 +53,7 @@ function NotificationError({
             type="button"
             size="medium"
             fullWidth
-            onClick={triggerFormSubmit}
+            onClick={retrySubmit}
           >
             <Typography component="span" sx={buttonTextStyle}>
               {t('notifications.error.retry_button')}

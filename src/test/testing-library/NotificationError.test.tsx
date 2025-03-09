@@ -13,38 +13,32 @@ export const errorDescription: string = t('notifications.error.description');
 
 describe('NotificationError Component', () => {
   let mockSetIsOpen: jest.Mock;
-  let mockTriggerFormSubmit: jest.Mock;
+  let mockretrySubmit: jest.Mock;
 
   beforeEach(() => {
     mockSetIsOpen = jest.fn();
-    mockTriggerFormSubmit = jest.fn();
+    mockretrySubmit = jest.fn();
   });
 
   it('renders correctly', () => {
-    render(
-      <NotificationError setIsOpen={mockSetIsOpen} triggerFormSubmit={mockTriggerFormSubmit} />
-    );
+    render(<NotificationError setIsOpen={mockSetIsOpen} retrySubmit={mockretrySubmit} />);
 
     expect(screen.getByTestId('error-box')).toBeInTheDocument();
     expect(screen.getByRole(buttonRole, { name: retrySubmitButtonText })).toBeInTheDocument();
     expect(screen.getByRole(buttonRole, { name: backToFormButtonText })).toBeInTheDocument();
   });
 
-  it('calls triggerFormSubmit when retry button is clicked', () => {
-    render(
-      <NotificationError setIsOpen={mockSetIsOpen} triggerFormSubmit={mockTriggerFormSubmit} />
-    );
+  it('calls retrySubmit when retry button is clicked', () => {
+    render(<NotificationError setIsOpen={mockSetIsOpen} retrySubmit={mockretrySubmit} />);
 
     const retryButton: HTMLElement = screen.getByRole(buttonRole, { name: retrySubmitButtonText });
     fireEvent.click(retryButton);
 
-    expect(mockTriggerFormSubmit).toHaveBeenCalledTimes(1);
+    expect(mockretrySubmit).toHaveBeenCalledTimes(1);
   });
 
   it('calls setIsOpen(false) when back-to-form button is clicked', () => {
-    render(
-      <NotificationError setIsOpen={mockSetIsOpen} triggerFormSubmit={mockTriggerFormSubmit} />
-    );
+    render(<NotificationError setIsOpen={mockSetIsOpen} retrySubmit={mockretrySubmit} />);
 
     const backButton: HTMLElement = screen.getByRole(buttonRole, { name: backToFormButtonText });
     fireEvent.click(backButton);
@@ -52,26 +46,20 @@ describe('NotificationError Component', () => {
     expect(mockSetIsOpen).toHaveBeenCalledWith(false);
   });
   it('renders images with correct alt text', () => {
-    render(
-      <NotificationError setIsOpen={mockSetIsOpen} triggerFormSubmit={mockTriggerFormSubmit} />
-    );
+    render(<NotificationError setIsOpen={mockSetIsOpen} retrySubmit={mockretrySubmit} />);
 
     expect(screen.getByTestId('error-image')).toHaveAttribute('alt', errorImgAltText);
   });
 
   it('renders the correct title and description', () => {
-    render(
-      <NotificationError setIsOpen={mockSetIsOpen} triggerFormSubmit={mockTriggerFormSubmit} />
-    );
+    render(<NotificationError setIsOpen={mockSetIsOpen} retrySubmit={mockretrySubmit} />);
 
     expect(screen.getByText(errorTitle)).toBeInTheDocument();
     expect(screen.getByText(errorDescription)).toBeInTheDocument();
   });
 
   it('renders content box with correct styles', () => {
-    render(
-      <NotificationError setIsOpen={mockSetIsOpen} triggerFormSubmit={mockTriggerFormSubmit} />
-    );
+    render(<NotificationError setIsOpen={mockSetIsOpen} retrySubmit={mockretrySubmit} />);
 
     const contentBox: HTMLElement = screen.getByTestId('error-box');
     const computedStyle: CSSStyleDeclaration = window.getComputedStyle(contentBox);
@@ -81,9 +69,7 @@ describe('NotificationError Component', () => {
     expect(contentBox).toHaveClass('MuiBox-root');
   });
   it('applies correct styles to button text', () => {
-    render(
-      <NotificationError setIsOpen={mockSetIsOpen} triggerFormSubmit={mockTriggerFormSubmit} />
-    );
+    render(<NotificationError setIsOpen={mockSetIsOpen} retrySubmit={mockretrySubmit} />);
 
     const backButtonText: HTMLElement = screen.getByText(backToFormButtonText);
     const computedStyle: CSSStyleDeclaration = window.getComputedStyle(backButtonText);
@@ -95,9 +81,7 @@ describe('NotificationError Component', () => {
   });
 
   it('renders message container with correct styles', () => {
-    render(
-      <NotificationError setIsOpen={mockSetIsOpen} triggerFormSubmit={mockTriggerFormSubmit} />
-    );
+    render(<NotificationError setIsOpen={mockSetIsOpen} retrySubmit={mockretrySubmit} />);
 
     const messageContainer: HTMLElement = screen.getByTestId('error-message-container');
     const computedStyle: CSSStyleDeclaration = window.getComputedStyle(messageContainer);
@@ -109,9 +93,7 @@ describe('NotificationError Component', () => {
   });
 
   it('applies buttonTextStyle correctly', () => {
-    render(
-      <NotificationError setIsOpen={mockSetIsOpen} triggerFormSubmit={mockTriggerFormSubmit} />
-    );
+    render(<NotificationError setIsOpen={mockSetIsOpen} retrySubmit={mockretrySubmit} />);
 
     const retryButtonText: HTMLElement = screen.getByText(backToFormButtonText);
     const backButtonText: HTMLElement = screen.getByText(retrySubmitButtonText);
@@ -120,18 +102,14 @@ describe('NotificationError Component', () => {
     expect(backButtonText).toBeInTheDocument();
   });
   it('renders the second button with correct marginTop', () => {
-    render(
-      <NotificationError setIsOpen={mockSetIsOpen} triggerFormSubmit={mockTriggerFormSubmit} />
-    );
+    render(<NotificationError setIsOpen={mockSetIsOpen} retrySubmit={mockretrySubmit} />);
 
     const backButton: HTMLElement = screen.getByRole(buttonRole, { name: backToFormButtonText });
     expect(backButton).toHaveStyle('marginTop: 0.5rem');
   });
 
   it('messageContainer should not have previous styles', () => {
-    render(
-      <NotificationError setIsOpen={mockSetIsOpen} triggerFormSubmit={mockTriggerFormSubmit} />
-    );
+    render(<NotificationError setIsOpen={mockSetIsOpen} retrySubmit={mockretrySubmit} />);
 
     const messageContainer: HTMLElement = screen.getByTestId('error-box');
 
@@ -142,9 +120,7 @@ describe('NotificationError Component', () => {
   });
 
   it('button text should not have previous styles applied', () => {
-    render(
-      <NotificationError setIsOpen={mockSetIsOpen} triggerFormSubmit={mockTriggerFormSubmit} />
-    );
+    render(<NotificationError setIsOpen={mockSetIsOpen} retrySubmit={mockretrySubmit} />);
 
     const retryButton: HTMLElement = screen.getByText(retrySubmitButtonText);
     const backButton: HTMLElement = screen.getByText(backToFormButtonText);
@@ -159,9 +135,7 @@ describe('NotificationError Component', () => {
   });
 
   it('buttons work as expected', async () => {
-    render(
-      <NotificationError setIsOpen={mockSetIsOpen} triggerFormSubmit={mockTriggerFormSubmit} />
-    );
+    render(<NotificationError setIsOpen={mockSetIsOpen} retrySubmit={mockretrySubmit} />);
 
     const retryButton: HTMLElement = screen.getByRole(buttonRole, { name: retrySubmitButtonText });
     const backButton: HTMLElement = screen.getByRole(buttonRole, { name: backToFormButtonText });
@@ -170,21 +144,18 @@ describe('NotificationError Component', () => {
     expect(backButton).toBeInTheDocument();
 
     await userEvent.click(retryButton);
-    expect(mockTriggerFormSubmit).toHaveBeenCalledTimes(1);
+    expect(mockretrySubmit).toHaveBeenCalledTimes(1);
 
     await userEvent.click(backButton);
     expect(mockSetIsOpen).toHaveBeenCalledWith(false);
   });
 
   it('button text does not have previous styles applied', () => {
-    render(
-      <NotificationError setIsOpen={mockSetIsOpen} triggerFormSubmit={mockTriggerFormSubmit} />
-    );
+    render(<NotificationError setIsOpen={mockSetIsOpen} retrySubmit={mockretrySubmit} />);
 
     const retryButtonText: HTMLElement = screen.getByText(retrySubmitButtonText);
     const backButtonText: HTMLElement = screen.getByText(backToFormButtonText);
 
-    // Ensure buttons are in the document
     expect(retryButtonText).toBeInTheDocument();
     expect(backButtonText).toBeInTheDocument();
 
@@ -195,15 +166,13 @@ describe('NotificationError Component', () => {
   });
 
   it('buttons still function correctly', async () => {
-    render(
-      <NotificationError setIsOpen={mockSetIsOpen} triggerFormSubmit={mockTriggerFormSubmit} />
-    );
+    render(<NotificationError setIsOpen={mockSetIsOpen} retrySubmit={mockretrySubmit} />);
 
     const retryButton: HTMLElement = screen.getByRole(buttonRole, { name: retrySubmitButtonText });
     const backButton: HTMLElement = screen.getByRole(buttonRole, { name: backToFormButtonText });
 
     await userEvent.click(retryButton);
-    expect(mockTriggerFormSubmit).toHaveBeenCalled();
+    expect(mockretrySubmit).toHaveBeenCalled();
 
     await userEvent.click(backButton);
     expect(mockSetIsOpen).toHaveBeenCalledWith(false);

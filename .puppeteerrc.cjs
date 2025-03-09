@@ -9,7 +9,7 @@ puppeteer.use(StealthPlugin());
 (async () => {
   const browser = await puppeteer.launch({
     executablePath: '/usr/bin/chromium',
-    headless: true, // Use true instead of 'new'
+    headless: true,
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
@@ -17,7 +17,7 @@ puppeteer.use(StealthPlugin());
       '--disable-extensions',
       '--no-first-run',
       '--disable-dev-shm-usage',
-      '--user-data-dir=/root/.config/chromium/docker-chromium-profile', // Absolute path
+      '--user-data-dir=/root/.config/chromium/docker-chromium-profile',
       '--no-zygote',
     ],
   });

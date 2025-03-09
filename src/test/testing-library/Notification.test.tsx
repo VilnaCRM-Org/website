@@ -1,12 +1,14 @@
 import { render, RenderResult, screen } from '@testing-library/react';
 import userEvent, { UserEvent } from '@testing-library/user-event';
 import { t } from 'i18next';
-import React, { RefObject, useRef } from 'react';
+import React from 'react';
 
-import { CallableRef } from '../../features/landing/components/AuthSection/AuthForm/types';
 import Notification from '../../features/landing/components/Notification';
 import { notificationComponents } from '../../features/landing/components/Notification/Notification';
-import { NotificationControlProps } from '../../features/landing/components/Notification/types';
+import {
+  NotificationControlProps,
+  NotificationType,
+} from '../../features/landing/components/Notification/types';
 
 import { checkElementsInDocument, SetIsOpenType } from './utils';
 
@@ -20,32 +22,15 @@ const retryButton: string = t('notifications.error.retry_button');
 
 const buttonRole: string = 'button';
 
-type RenderNotificationProps = Omit<NotificationControlProps, 'triggerFormSubmit'>;
-
-export function RenderNotification({
+function renderNotification({
   type,
   isOpen,
   setIsOpen,
-}: RenderNotificationProps): React.ReactElement {
-  const formRef: RefObject<CallableRef> = useRef(null);
-
-  const triggerFormSubmit: () => void = jest.fn(() => {
-    if (formRef.current?.submit) {
-      formRef.current.submit();
-    }
-  });
-  return (
-    <Notification
-      type={type}
-      setIsOpen={setIsOpen}
-      isOpen={isOpen}
-      triggerFormSubmit={triggerFormSubmit}
-    />
+}: Omit<NotificationControlProps, 'retrySubmit'>): RenderResult {
+  const retrySubmitMock: jest.Mock = jest.fn();
+  return render(
+    <Notification type={type} setIsOpen={setIsOpen} isOpen={isOpen} retrySubmit={retrySubmitMock} />
   );
-}
-
-function renderNotification({ type, isOpen, setIsOpen }: RenderNotificationProps): RenderResult {
-  return render(<RenderNotification type={type} isOpen={isOpen} setIsOpen={setIsOpen} />);
 }
 
 describe('Notification', () => {
@@ -98,6 +83,36 @@ describe('Notification', () => {
     expect(screen.getByTestId('error-box')).toBeInTheDocument();
   });
 
+  it('should use the correct component based on the "type" prop', () => {
+    const type = 'success'; // Or 'error' to test the other case
+    const setIsOpen = jest.fn();
+    const retrySubmit = jest.fn();
+    const isOpen = true;
+
+    render(
+      <Notification type={type} setIsOpen={setIsOpen} retrySubmit={retrySubmit} isOpen={isOpen} />
+    );
+
+    expect(screen.getByText(successTitleText)).toBeInTheDocument();
+  });
+
+  it('should fallback to NotificationSuccess when no matching type is found', () => {
+    const type = 'unknown'; // Unrecognized type, should fall back to NotificationSuccess
+    const setIsOpen = jest.fn();
+    const retrySubmit = jest.fn();
+    const isOpen = true;
+
+    render(
+      <Notification
+        type={type as NotificationType}
+        setIsOpen={setIsOpen}
+        retrySubmit={retrySubmit}
+        isOpen={isOpen}
+      />
+    );
+
+    expect(screen.getByText(successTitleText)).toBeInTheDocument();
+  });
   it('check if the setIsOpen works properly on NotificationSuccess', async () => {
     const user: UserEvent = userEvent.setup();
     const { getByRole } = renderNotification({
@@ -127,22 +142,17 @@ describe('Notification', () => {
   });
   it('retry button works as expected', async () => {
     const user: UserEvent = userEvent.setup();
-    const triggerFormSubmit: () => void = jest.fn();
+    const retrySubmitMock: jest.Mock = jest.fn();
 
     const { getByRole } = render(
-      <Notification
-        type="error"
-        isOpen
-        setIsOpen={mockSetIsOpen}
-        triggerFormSubmit={triggerFormSubmit}
-      />
+      <Notification type="error" isOpen setIsOpen={mockSetIsOpen} retrySubmit={retrySubmitMock} />
     );
 
     const button: HTMLElement = getByRole(buttonRole, { name: retryButton });
 
     await user.click(button);
 
-    expect(triggerFormSubmit).toHaveBeenCalled();
+    expect(retrySubmitMock).toHaveBeenCalled();
   });
 
   it('renders visible notification section', () => {

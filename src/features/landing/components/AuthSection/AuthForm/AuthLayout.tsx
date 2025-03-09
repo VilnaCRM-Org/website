@@ -1,23 +1,34 @@
 import { useMutation } from '@apollo/client';
 import { Box, CircularProgress, Fade } from '@mui/material';
-import React, { RefObject, useRef, useState } from 'react';
+import React, { useState } from 'react';
+import { useForm } from 'react-hook-form';
 
 import { SIGNUP_MUTATION } from '../../../api/service/userService';
 import { animationTimeout } from '../../../constants';
 import isHttpError from '../../../helpers/isHttpError';
+import useFormReset from '../../../hooks/useFormReset';
 import { RegisterItem } from '../../../types/authentication/form';
 import Notification from '../../Notification/Notification';
 import { NotificationType } from '../../Notification/types';
 
 import AuthForm from './AuthForm';
 import styles from './styles';
-import { CallableRef, CreateUserPayload, SignUpVariables } from './types';
+import { CreateUserPayload, SignUpVariables } from './types';
 
 function AuthLayout(): React.ReactElement {
   const [notificationType, setNotificationType] = useState<NotificationType>('success');
   const [errorDetails, setErrorDetails] = useState('');
   const [isNotificationOpen, setIsNotificationOpen] = useState<boolean>(false);
-  const formRef: RefObject<CallableRef> = useRef(null);
+  const {
+    handleSubmit,
+    control,
+    reset,
+    formState,
+    formState: { errors },
+  } = useForm<RegisterItem>({
+    mode: 'onTouched',
+    defaultValues: { Email: '', FullName: '', Password: '', Privacy: false },
+  });
   const [signupMutation, { loading }] = useMutation<CreateUserPayload, SignUpVariables>(
     SIGNUP_MUTATION
   );
@@ -53,12 +64,11 @@ function AuthLayout(): React.ReactElement {
       }
     }
   };
-
-  const triggerFormSubmit: () => void = () => {
-    if (formRef.current?.submit) {
-      formRef.current.submit();
-    }
+  const retrySubmit: () => void = (): void => {
+    handleSubmit(onSubmit)();
   };
+
+  useFormReset({ formState, reset, errorDetails, notificationType });
 
   return (
     <Box sx={styles.formWrapper}>
@@ -80,9 +90,10 @@ function AuthLayout(): React.ReactElement {
         <Box sx={styles.formContent}>
           <AuthForm
             errorDetails={errorDetails}
-            notificationType={notificationType}
-            ref={formRef}
             onSubmit={onSubmit}
+            errors={errors}
+            handleSubmit={handleSubmit}
+            control={control}
           />
         </Box>
       </Fade>
@@ -91,7 +102,7 @@ function AuthLayout(): React.ReactElement {
         type={notificationType}
         setIsOpen={setIsNotificationOpen}
         isOpen={isNotificationOpen}
-        triggerFormSubmit={triggerFormSubmit}
+        retrySubmit={retrySubmit}
       />
     </Box>
   );

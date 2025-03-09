@@ -18,8 +18,8 @@ export const notificationComponents: NotificationComponentMap = {
   success: ({ setIsOpen }: NotificationSuccessProps) => (
     <NotificationSuccess setIsOpen={setIsOpen} />
   ),
-  error: ({ setIsOpen, triggerFormSubmit }: NotificationComponentProps) => (
-    <NotificationError setIsOpen={setIsOpen} triggerFormSubmit={triggerFormSubmit} />
+  error: ({ setIsOpen, retrySubmit }: NotificationComponentProps) => (
+    <NotificationError setIsOpen={setIsOpen} retrySubmit={retrySubmit} />
   ),
 };
 
@@ -27,14 +27,14 @@ function Notification({
   type,
   setIsOpen,
   isOpen,
-  triggerFormSubmit,
+  retrySubmit,
 }: NotificationControlProps): React.ReactElement {
   const Component: NotificationComponentType = notificationComponents[type] || NotificationSuccess;
 
   return (
     <Fade in={isOpen} timeout={animationTimeout}>
       <Box sx={styles.notificationSection} data-testid="notification">
-        <Component setIsOpen={setIsOpen} triggerFormSubmit={triggerFormSubmit} />
+        <Component setIsOpen={setIsOpen} retrySubmit={retrySubmit} />
       </Box>
     </Fade>
   );

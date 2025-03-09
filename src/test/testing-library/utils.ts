@@ -74,14 +74,13 @@ export const fillForm: (
   if (passwordValue && passwordValue.length < 8) {
     throw new Error('Password must be at least 8 characters');
   }
-  // Mr. Darrin Heller Ezequiel_Grimes95@hotmail.com Q9YWFTDaQlACcJUN
 
   const { fullNameInput, emailInput, passwordInput, privacyCheckbox, signUpButton } =
     selectFormElements();
+
   fireEvent.change(fullNameInput, { target: { value: fullNameValue } });
   fireEvent.change(emailInput, { target: { value: emailValue } });
   fireEvent.change(passwordInput, { target: { value: passwordValue } });
-
   if (isChecked) fireEvent.click(privacyCheckbox);
 
   fireEvent.click(signUpButton);

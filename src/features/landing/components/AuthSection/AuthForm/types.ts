@@ -1,6 +1,7 @@
+import { Control, FieldErrors, UseFormHandleSubmit } from 'react-hook-form';
+
 import { SignupMutationVariables } from '../../../api/service/types';
 import { RegisterItem } from '../../../types/authentication/form';
-import { NotificationType } from '../../Notification/types';
 
 export interface SignUpVariables {
   input: SignupMutationVariables;
@@ -23,11 +24,9 @@ export interface CreateUserPayload {
 }
 
 export type AuthFormProps = {
-  notificationType: NotificationType;
+  handleSubmit: UseFormHandleSubmit<RegisterItem, undefined>;
+  control: Control<RegisterItem>;
+  errors: FieldErrors<RegisterItem>;
   errorDetails: string;
   onSubmit: (data: RegisterItem) => Promise<void>;
 };
-
-export type CallableRef = {
-  submit: () => void;
-} | null;

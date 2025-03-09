@@ -6,12 +6,12 @@ export interface NotificationControlProps {
   type: NotificationType;
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
-  triggerFormSubmit: () => void;
+  retrySubmit: () => void;
 }
 
 export type NotificationComponentProps = Pick<
   NotificationControlProps,
-  'setIsOpen' | 'triggerFormSubmit'
+  'setIsOpen' | 'retrySubmit'
 >;
 export type NotificationSuccessProps = Pick<NotificationComponentProps, 'setIsOpen'>;
 export type NotificationComponentType = React.FC<NotificationComponentProps>;

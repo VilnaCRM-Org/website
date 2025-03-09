@@ -10,9 +10,6 @@ services:
       - /app/node_modules
     ports:
       - '3001:3001'
-    extra_hosts:
-      - "prod:127.0.0.1"
-
 
   playwright:
     build:
@@ -23,8 +20,6 @@ services:
       - .:/app
     ports:
       - '9324:9324'
-    environment:
-      - NEXT_PUBLIC_PRODUCTION_API_URL=http://prod:3001
 
   apollo:
     build:
