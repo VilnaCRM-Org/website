@@ -2,16 +2,13 @@ import { test, expect, Locator, Page } from '@playwright/test';
 
 import { t } from './utils/initializeLocalization';
 
-const servicesOpenButtonSelector: string = 'span[data-mui-internal-clone-element="true"]';
+const servicesOpenButtonSelector: string = `${t('unlimited_possibilities.service_text.title')}`;
 const possibilitiesPluginsCard: string = t(
   'unlimited_possibilities.cards_headings.heading_ready_plugins'
 );
 
 const registerOnWebsiteText: string = t('sign_up.form.heading_main');
 const servicesTooltipFullText: string = `${t('unlimited_possibilities.service_text.title')} ${t('unlimited_possibilities.service_text.text')}`;
-const servicesTooltipTitleText: string = t(
-  'unlimited_possibilities.service_text.title'
-).toLowerCase();
 
 const passwordTipAlt: string = t('sign_up.form.password_tip.alt');
 const passwordTipText: string = t('sign_up.form.password_tip.recommendation_text');
@@ -35,11 +32,7 @@ test.describe('Checking if the tooltips are working', () => {
   test('Tooltip services test', async ({ page }) => {
     await handleTooltip(page, {
       name: possibilitiesPluginsCard,
-      element: page
-        .locator(servicesOpenButtonSelector, {
-          hasText: servicesTooltipTitleText,
-        })
-        .nth(0),
+      element: page.locator('span', { hasText: servicesOpenButtonSelector }).nth(0),
       tooltip: page.getByRole('tooltip', { name: servicesTooltipFullText }),
     });
   });

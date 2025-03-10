@@ -35,7 +35,7 @@ test('Submit the registration form', async ({ page }) => {
     route.fulfill();
   });
 
-  page.waitForResponse(responseFilter);
+  await page.waitForResponse(responseFilter);
 
   await signupButton.click();
 });
