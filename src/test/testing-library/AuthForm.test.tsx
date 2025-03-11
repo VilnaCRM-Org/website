@@ -1,14 +1,15 @@
+import { MockedResponse } from '@apollo/client/testing';
 import { render, waitFor } from '@testing-library/react';
 import dotenv from 'dotenv';
 import { t } from 'i18next';
+import React from 'react';
+
+import { SIGNUP_MUTATION } from '../../features/landing/api/service/userService';
 import { RegisterItem } from '../../features/landing/types/authentication/form';
 
-import { testInitials, testEmail, testPassword, buttonRole, submitButtonText } from './constants';
+import { testInitials, testEmail, testPassword } from './constants';
 import { AuthLinksMock, mockRenderAuthForm } from './mock-render/MockRenderAuthForm';
 import { checkElementsInDocument, fillForm, selectFormElements } from './utils';
-import React from 'react';
-import { SIGNUP_MUTATION } from '@/features/landing/api/service/userService';
-import { MockedResponse } from '@apollo/client/testing';
 
 dotenv.config();
 
@@ -18,7 +19,7 @@ const nameInputText: string = t('sign_up.form.name_input.label');
 const emailInputText: string = t('sign_up.form.email_input.label');
 const passwordInputText: string = t('sign_up.form.password_input.label');
 
-const requiredText: string = t('sign_up.form.email_input.required');
+// const requiredText: string = t('sign_up.form.email_input.required');
 const passwordTipAltText: string = t('sign_up.form.password_tip.alt');
 
 const statusRole: string = 'status';
@@ -28,7 +29,7 @@ const emptyValue: string = '';
 
 const authFormSelector: string = '.MuiBox-root';
 
-const borderStyle: string = 'border: 1px solid #DC3939';
+// const borderStyle: string = 'border: 1px solid #DC3939';
 
 const fulfilledMockResponse: MockedResponse = {
   request: {

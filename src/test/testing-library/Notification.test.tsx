@@ -84,10 +84,10 @@ describe('Notification', () => {
   });
 
   it('should use the correct component based on the "type" prop', () => {
-    const type = 'success'; // Or 'error' to test the other case
-    const setIsOpen = jest.fn();
-    const retrySubmit = jest.fn();
-    const isOpen = true;
+    const type: NotificationType = 'success'; // Or 'error' to test the other case
+    const setIsOpen: jest.Mock = jest.fn();
+    const retrySubmit: jest.Mock = jest.fn();
+    const isOpen: boolean = true;
 
     render(
       <Notification type={type} setIsOpen={setIsOpen} retrySubmit={retrySubmit} isOpen={isOpen} />
@@ -97,10 +97,10 @@ describe('Notification', () => {
   });
 
   it('should fallback to NotificationSuccess when no matching type is found', () => {
-    const type = 'unknown'; // Unrecognized type, should fall back to NotificationSuccess
-    const setIsOpen = jest.fn();
-    const retrySubmit = jest.fn();
-    const isOpen = true;
+    const type: NotificationType = 'unknown' as NotificationType; // Unrecognized type, should fall back to NotificationSuccess
+    const setIsOpen: jest.Mock = jest.fn();
+    const retrySubmit: jest.Mock = jest.fn();
+    const isOpen: boolean = true;
 
     render(
       <Notification

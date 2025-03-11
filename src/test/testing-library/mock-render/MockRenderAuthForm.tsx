@@ -1,12 +1,11 @@
 import { MockedProvider, MockedResponse } from '@apollo/client/testing';
 import { render, RenderResult } from '@testing-library/react';
 import React from 'react';
-import {  FieldErrors, useForm } from 'react-hook-form';
+import { FieldErrors, useForm } from 'react-hook-form';
 
 import AuthForm from '../../../features/landing/components/AuthSection/AuthForm/AuthForm';
 import { AuthFormProps } from '../../../features/landing/components/AuthSection/AuthForm/types';
 import { RegisterItem } from '../../../features/landing/types/authentication/form';
-
 
 export const mockErrors: FieldErrors<RegisterItem> = {
   Email: { type: 'required', message: 'Email is required' },

@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/playwright:v1.50.0-jammy
+FROM mcr.microsoft.com/playwright:v1.51.0-jammy
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
      python3 make g++ \
