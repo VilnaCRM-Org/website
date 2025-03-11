@@ -20,9 +20,6 @@ import { validateFullName, validatePassword, validateEmail } from '../Validation
 import styles from './styles';
 import { AuthFormProps } from './types';
 
-const PRIVACY_POLICY_URL: string =
-  process.env.NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL || 'https://github.com/VilnaCRM-Org';
-
 function AuthForm({
   errorDetails,
   onSubmit,
@@ -31,7 +28,6 @@ function AuthForm({
   errors,
 }: AuthFormProps): React.ReactElement {
   const { t } = useTranslation();
-
   return (
     <Box
       component="form"
@@ -132,11 +128,15 @@ function AuthForm({
               <UiTypography variant="medium14" sx={styles.privacyText}>
                 <Trans i18nKey="sign_up.form.confidential_text.fullText">
                   I have read and accept the
-                  <UiLink href={PRIVACY_POLICY_URL} target="_blank" rel="noopener noreferrer">
+                  <UiLink
+                    href="https://github.com/VilnaCRM-Org"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
                     Privacy Policy
                   </UiLink>
                   and the
-                  <UiLink href={PRIVACY_POLICY_URL} target="_blank">
+                  <UiLink href="https://github.com/VilnaCRM-Org" target="_blank">
                     Use Policy
                   </UiLink>
                   VilnaCRM Service

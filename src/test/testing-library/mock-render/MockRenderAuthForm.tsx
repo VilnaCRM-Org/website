@@ -52,16 +52,3 @@ export function mockRenderAuthForm(props: RenderAuthFormProps): RenderResult {
     </MockFormWrapper>
   );
 }
-
-export function AuthLinksMock({ url }: { url: string }): React.ReactElement {
-  const defaultUrl: string = 'https://github.com/VilnaCRM-Org';
-  const privacyPolicyUrl: string = process.env.NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL?.trim()
-    ? process.env.NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL
-    : defaultUrl;
-  return (
-    <form>
-      <a href={url?.trim() || privacyPolicyUrl}>Privacy Policy</a>
-      <a href={url?.trim() || privacyPolicyUrl}>Use Policy</a>
-    </form>
-  );
-}

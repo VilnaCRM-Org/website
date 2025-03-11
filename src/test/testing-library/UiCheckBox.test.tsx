@@ -7,8 +7,6 @@ import { testText } from './constants';
 
 const mockOnChange: () => void = jest.fn();
 
-const borderStyle: string = 'border: 1px solid #DC3939';
-
 describe('UiCheckbox', () => {
   it('renders the checkbox with the provided label', () => {
     const { getByLabelText } = render(<UiCheckbox label={testText} onChange={mockOnChange} />);
@@ -29,13 +27,18 @@ describe('UiCheckbox', () => {
     expect(checkboxInput).toBeDisabled();
   });
 
-  it('renders the checkbox with the provided error', () => {
-    const { getByLabelText, getByRole } = render(
-      <UiCheckbox error onChange={mockOnChange} label={testText} />
-    );
-    const checkboxLabel: HTMLElement = getByLabelText(testText);
+  it('applies default style when there is no error', () => {
+    const { container } = render(<UiCheckbox label="Test" onChange={mockOnChange} />);
+
+    const checkboxInput: Element | null = container.querySelector('input[type="checkbox"]');
+
+    expect(checkboxInput).toHaveStyle('border-color: #1eaeff');
+  });
+
+  it('applies error style when error prop is true', () => {
+    const { getByRole } = render(<UiCheckbox error label={testText} onChange={mockOnChange} />);
     const checkboxInput: HTMLElement = getByRole('checkbox');
-    expect(checkboxLabel).toBeInTheDocument();
-    expect(checkboxInput).toHaveStyle(borderStyle);
+
+    expect(checkboxInput).toHaveStyle('border-color: #DC3939');
   });
 });

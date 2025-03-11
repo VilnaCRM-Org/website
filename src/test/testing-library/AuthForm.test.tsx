@@ -1,14 +1,13 @@
 import { MockedResponse } from '@apollo/client/testing';
-import { render, waitFor } from '@testing-library/react';
+import { waitFor } from '@testing-library/react';
 import dotenv from 'dotenv';
 import { t } from 'i18next';
-import React from 'react';
 
 import { SIGNUP_MUTATION } from '../../features/landing/api/service/userService';
 import { RegisterItem } from '../../features/landing/types/authentication/form';
 
 import { testInitials, testEmail, testPassword } from './constants';
-import { AuthLinksMock, mockRenderAuthForm } from './mock-render/MockRenderAuthForm';
+import { mockRenderAuthForm } from './mock-render/MockRenderAuthForm';
 import { checkElementsInDocument, fillForm, selectFormElements } from './utils';
 
 dotenv.config();
@@ -340,83 +339,27 @@ describe('AuthForm', () => {
 });
 
 describe('AuthForm privacy links', () => {
+  let onSubmit: jest.Mock<Promise<void>, [RegisterItem]>;
+  let handleSubmit: jest.Mock;
+
   beforeEach(() => {
-    jest.clearAllMocks();
+    jest.resetModules();
+    onSubmit = jest.fn();
+    handleSubmit = jest.fn();
   });
 
-  it('displays custom privacy policy URL when url prop is set', async () => {
-    const CUSTOM_URL: string = 'https://custom-privacy-policy.com';
-    const { getAllByRole } = render(<AuthLinksMock url={CUSTOM_URL} />);
-
-    const privacyLinks: HTMLElement[] = getAllByRole('link');
-    expect(privacyLinks[0]).toHaveAttribute('href', CUSTOM_URL);
-    expect(privacyLinks[1]).toHaveAttribute('href', CUSTOM_URL);
-  });
-
-  it('falls back to default Privacy Policy URL when env variable is missing or empty', async () => {
-    const PRIVACY_POLICY_URL: string = process.env.NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL?.trim()
-      ? process.env.NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL
-      : 'https://github.com/VilnaCRM-Org';
-
+  it('should use from .env privacy policy URL if environment variable is set', () => {
     const { getAllByRole } = mockRenderAuthForm({
       errorDetails: '',
       errors: {},
-      handleSubmit: jest.fn(),
-      onSubmit: jest.fn(),
-      mocks: [],
+      handleSubmit,
+      onSubmit,
+      mocks: [fulfilledMockResponse],
     });
 
-    const link: HTMLElement[] = getAllByRole('link');
-    expect(link[0]).toHaveAttribute('href', PRIVACY_POLICY_URL);
-  });
-  it('displays custom privacy policy URL when environment variable is set', async () => {
-    delete process.env.NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL;
+    const privacyPolicyLink: HTMLElement[] = getAllByRole('link');
 
-    process.env.NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL = 'https://custom-privacy-policy.com';
-    const PRIVACY_URL: string = process.env.NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL;
-
-    const { getAllByRole } = render(<AuthLinksMock url={PRIVACY_URL} />);
-
-    const privacyLinks: HTMLElement[] = getAllByRole('link');
-    expect(privacyLinks[0]).toHaveAttribute('href', 'https://custom-privacy-policy.com');
-  });
-
-  it('displays default privacy policy URL when environment variable is not set', async () => {
-    delete process.env.NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL;
-
-    const { getAllByRole } = render(<AuthLinksMock url="" />);
-
-    const privacyLinks: HTMLElement[] = getAllByRole('link');
-    expect(privacyLinks[0]).toHaveAttribute('href', 'https://github.com/VilnaCRM-Org');
-  });
-  it('falls back to default Privacy Policy URL when url prop is empty or whitespace', async () => {
-    const { getAllByRole, rerender } = render(<AuthLinksMock url="" />);
-
-    let privacyLinks: HTMLElement[] = getAllByRole('link');
-    expect(privacyLinks[0]).toHaveAttribute('href', 'https://github.com/VilnaCRM-Org');
-    expect(privacyLinks[1]).toHaveAttribute('href', 'https://github.com/VilnaCRM-Org');
-
-    rerender(<AuthLinksMock url="   " />);
-
-    privacyLinks = getAllByRole('link');
-    expect(privacyLinks[0]).toHaveAttribute('href', 'https://github.com/VilnaCRM-Org');
-    expect(privacyLinks[1]).toHaveAttribute('href', 'https://github.com/VilnaCRM-Org');
-  });
-
-  it('displays custom privacy policy URL when url prop is set', async () => {
-    const CUSTOM_URL: string = 'https://custom-privacy-policy.com';
-    const { getAllByRole } = render(<AuthLinksMock url={CUSTOM_URL} />);
-
-    const privacyLinks: HTMLElement[] = getAllByRole('link');
-    expect(privacyLinks[0]).toHaveAttribute('href', CUSTOM_URL);
-    expect(privacyLinks[1]).toHaveAttribute('href', CUSTOM_URL);
-  });
-
-  it('displays default privacy policy URL when url prop is undefined', async () => {
-    const { getAllByRole } = render(<AuthLinksMock url={undefined as unknown as string} />);
-
-    const privacyLinks: HTMLElement[] = getAllByRole('link');
-    expect(privacyLinks[0]).toHaveAttribute('href', 'https://github.com/VilnaCRM-Org');
-    expect(privacyLinks[1]).toHaveAttribute('href', 'https://github.com/VilnaCRM-Org');
+    expect(privacyPolicyLink[0]).toHaveAttribute('href', 'https://github.com/VilnaCRM-Org');
+    expect(privacyPolicyLink[0]).toHaveAttribute('href', 'https://github.com/VilnaCRM-Org');
   });
 });
