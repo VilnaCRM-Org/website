@@ -1,9 +1,9 @@
 import { test, expect } from '@playwright/test';
 
-import { screenSizes } from './constants';
+import { screenSizes, timeoutDuration } from './constants';
 
 const currentLanguage: string = process.env.NEXT_PUBLIC_MAIN_LANGUAGE as string;
-const timeoutDuration: number = 3000;
+
 
 test.describe('Visual Tests', () => {
   for (const screen of screenSizes) {
