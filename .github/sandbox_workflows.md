@@ -57,7 +57,7 @@ Additionally, you need to ensure that an AWS_REGION variable is set either at th
   - `TEST_AWS_ACCOUNT_ID`: The ID of the AWS account for token rotation in the test environment.
   - `PROD_AWS_ACCOUNT_ID`: The ID of the AWS account for token rotation in the prod environment.
   - `AWS_REGION`: The region of the AWS account.
-  - [`GITHUB_TOKEN`](https://github.com/VilnaCRM-Org/website-infrastructure/blob/main/.github/github-token-usage.md): The token for getting PR number.
+  - [`GITHUB_TOKEN`](https://github.com/VilnaCRM-Org/website-infrastructure/blob/main/.github/github-token-usage.md): The token for getting a PR number.
 
 ## Workflow 2: Trigger Sandbox Deletion
 ### Deletion Overview
@@ -79,7 +79,7 @@ Key Features:
   - `TEST_AWS_ACCOUNT_ID`: The ID of the AWS account for token rotation in the test environment.
   - `PROD_AWS_ACCOUNT_ID`: The ID of the AWS account for token rotation in the prod environment.
   - `AWS_REGION`: The region of the AWS account.
-  - [`GITHUB_TOKEN`](https://github.com/VilnaCRM-Org/website-infrastructure/blob/main/.github/github-token-usage.md): The token for getting PR number.
+  - [`GITHUB_TOKEN`](https://github.com/VilnaCRM-Org/website-infrastructure/blob/main/.github/github-token-usage.md): The token for getting a PR number.
 
 ## AWS IAM Role Configuration
 
