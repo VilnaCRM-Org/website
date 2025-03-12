@@ -66,14 +66,17 @@ pnpm lighthouse:mobile - lighthouse mobile tesitng
 
 ## Routing
 
-This project includes a routing script for managing URLs. The routing script ensures that requests to various paths are mapped to their corresponding HTML files. For detailed information, check the [routing script](scripts/cloudfront_routing.js).
+This project includes a routing script for managing URLs. 
+The routing script ensures that requests to various paths are mapped to their corresponding HTML files. 
+For detailed information, check the [routing script](scripts/cloudfront_routing.js).
 How It Works:
 
-  - Mapping: Specific URL paths are mapped to corresponding HTML files.
-  - Fallback Logic: For undefined routes, the script appends /index.html to handle directory-like paths.
-  - Error Handling: If an error occurs, the script logs it and returns the original request.
+- Mapping: Specific URL paths are mapped to corresponding HTML files.
+- Fallback Logic: For undefined routes, the script appends /index.html to handle directory-like paths.
+- Error Handling: If an error occurs, the script logs it and returns the original request.
 
-This routing logic is useful for SSR (Server-Side Rendered) applications, particularly when hosted on platforms like AWS CloudFront.
+This routing logic is useful for SSR (Server-Side Rendered) applications, 
+particularly when hosted on platforms like AWS CloudFront.
 
 ## Documentation
 
