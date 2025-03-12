@@ -8,10 +8,10 @@ This documentation provides an overview of two GitHub Actions workflows used for
 - [Prerequisites](#prerequisites)
 - [Workflow 1: Sandbox Creation](#workflow-1-sandbox-creation)
   - [Creation and Rebuild Overview](#creation-and-rebuild-overview)
-  - [Creation Variables Setup](#creation-secrets-setup)
+  - [Creation Variables Setup](#creation-variables-setup)
 - [Workflow 2: Trigger Sandbox Deletion](#workflow-2-trigger-sandbox-deletion)
   - [Deletion Overview](#deletion-overview)
-  - [Deletion Variables Setup](#deletion-required-variables)
+  - [Deletion Variables Setup](#deletion-variables-setup)
 - [AWS IAM Role Configuration](#aws-iam-role-configuration)
 - [Additional Notes](#additional-notes)
 
