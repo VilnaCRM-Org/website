@@ -18,14 +18,13 @@ function NotificationSuccess({ setIsOpen }: NotificationSuccessProps): React.Rea
 
   return (
     <Box sx={styles.contentBox} data-testid="success-box">
-      <Box sx={styles.successImgBox}>
+      <Box sx={styles.successTopImgBox}>
         <Image
           src={Confetti}
           data-testid="confetti"
           alt={t('notifications.success.images.confetti')}
         />
       </Box>
-
       <Box sx={styles.imgWrapper}>
         <Image
           src={Settings}
@@ -56,10 +55,9 @@ function NotificationSuccess({ setIsOpen }: NotificationSuccessProps): React.Rea
             {t('notifications.success.button')}
           </Typography>
         </UiButton>
-
-        <Box sx={{ ...styles.bottomImgBox }}>
-          <Image src={Confetti} alt={t('notifications.success.images.confetti')} />
-        </Box>
+      </Box>
+      <Box sx={{ ...styles.bottomImgBox }}>
+        <Image src={Confetti} alt={t('notifications.success.images.confetti')} />
       </Box>
     </Box>
   );

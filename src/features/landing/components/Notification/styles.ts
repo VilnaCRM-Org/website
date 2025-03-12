@@ -8,6 +8,11 @@ export default {
     position: 'absolute',
     width: '100%',
     height: '100%',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexDirection: 'column',
+
     borderRadius: '2rem 2rem 0 0',
     border: `1px solid ${colorTheme.palette.grey500.main} `,
     backgroundColor: colorTheme.palette.white.main,
@@ -41,136 +46,114 @@ export default {
 
   // success box
   contentBox: {
-    position: 'relative',
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    flexDirection: 'column',
-    paddingTop: '4.4rem',
-
-    [`@media (min-width: ${BREAKPOINTS.MD})`]: {
-      paddingTop: '3.5rem',
-    },
-
-    [`@media (min-width: ${BREAKPOINTS.LG})`]: {
-      paddingTop: '3.2rem',
-    },
+    zIndex: 3,
   },
 
-  contentBoxError: {
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingTop: '3.0625rem',
-
-    [`@media (min-width: ${BREAKPOINTS.MD})`]: {
-      paddingTop: '4.25rem',
-    },
-    [`@media (min-width: ${BREAKPOINTS.LG})`]: {
-      paddingTop: '4.25rem',
-    },
-  },
-
-  successImgBox: {
+  successTopImgBox: {
     position: 'absolute',
-
     top: '-0.78rem',
     left: '-8.5rem',
-    transform: 'scale(0.91)',
+    zIndex: -1,
+
+    [`@media (max-width: ${BREAKPOINTS.SM})`]: {
+      transform: 'scale(0.91)',
+    },
 
     [`@media (min-width: ${BREAKPOINTS.SM})`]: {
-      minWidth: '29rem',
-      top: '0.25rem',
-      left: '0.6rem',
-      transform: 'scale(1.04)',
+      top: '0.6rem',
+      left: '0rem',
+      transform: 'scale(1.07)',
+    },
+    [`@media (min-width: 1131px)`]: {
+      left: '-7rem',
+      top: '0rem',
+      transform: 'scale(1)',
     },
   },
   bottomImgBox: {
     position: 'absolute',
     rotate: '-180deg',
-    minWidth: '29rem',
-    left: '0rem',
-    top: '24.7rem',
+    bottom: '-0.78rem',
+    left: '-11.8rem',
+    zIndex: -1,
+
+    [`@media (max-width: ${BREAKPOINTS.SM})`]: {
+      transform: 'scale(0.91)',
+    },
 
     [`@media (min-width: ${BREAKPOINTS.SM})`]: {
-      minWidth: '29rem',
-      transform: 'scale(1.04)',
-      left: '0.6rem',
-      top: '25.7rem',
-    },
-    [`@media (min-width: ${BREAKPOINTS.MD})`]: {
-      top: '26.5rem',
+      left: '0rem',
+      bottom: '0.6rem',
+      transform: 'scale(1.07)',
     },
 
     [`@media (min-width: ${BREAKPOINTS.LG})`]: {
-      minWidth: '31rem',
-      top: '27rem',
-      left: '0.4rem',
+      left: '1.3rem',
+      bottom: '0.6rem',
     },
-    [`@media (min-width: ${BREAKPOINTS.XL})`]: {
-      top: '24.5rem',
+    [`@media (min-width: 1131px)`]: {
+      left: '0rem',
+      bottom: '0.1rem',
       transform: 'scale(1)',
-      left: '-6.5rem',
     },
   },
 
   imgWrapper: {
-    zIndex: 3,
+    position: 'absolute',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    top: '2rem',
+
+    [`@media (min-width: ${BREAKPOINTS.MD})`]: {
+      top: '3rem',
+    },
   },
+
   messageContainer: {
+    height: '100%',
+    width: '100%',
     display: 'flex',
     justifyContent: 'center',
     flexDirection: 'column',
     alignItems: 'center',
-    marginTop: '1.39rem',
+    paddingBottom: '1.7rem',
+    background: `${colorTheme.palette.white.main}`,
     zIndex: 3,
 
-    [`@media (min-width: ${BREAKPOINTS.MD})`]: {
-      marginTop: '0.3rem',
-    },
-
     [`@media (min-width: ${BREAKPOINTS.LG})`]: {
-      marginTop: '0.6rem',
-    },
-  },
-
-  messageContainerError: {
-    marginTop: '0.8125rem',
-
-    [`@media (min-width: ${BREAKPOINTS.MD})`]: {
-      marginTop: '0.75rem',
+      padding: '0rem',
     },
 
-    [`@media (min-width: ${BREAKPOINTS.LG})`]: {
-      marginTop: '0.75rem',
+    [`@media (min-width: 1131px)`]: {
+      padding: '3rem',
     },
   },
 
   messageTitle: {
     fontWeight: 700,
-    fontSize: '22px',
-    lineHeight: '26.4px',
+    fontSize: '1.375rem',
+    lineHeight: '1.65rem',
     fontFamily: golos.style.fontFamily,
     color: colorTheme.palette.darkPrimary.main,
 
-    [`@media (min-width: ${BREAKPOINTS.MD})`]: {
+    [`@media (min-width: ${BREAKPOINTS.SM})`]: {
       fontWeight: 600,
-      fontSize: '30px',
-      lineHeight: '36px',
+      fontSize: '1.875rem',
+      lineHeight: '2.25rem',
     },
   },
 
   messageDescription: {
     mt: '0.5rem',
     fontWeight: 400,
-    fontSize: '15px',
-    lineHeight: '25px',
+    fontSize: '0.98rem',
+    lineHeight: '1.5625rem',
     fontFamily: golos.style.fontFamily,
     color: colorTheme.palette.darkPrimary.main,
 
-    [`@media (min-width: ${BREAKPOINTS.MD})`]: {
-      fontSize: '16px',
-      lineHeight: '26px',
+    [`@media (min-width: ${BREAKPOINTS.SM})`]: {
+      fontSize: '1.2rem',
+      lineHeight: '1.625rem',
     },
   },
 
@@ -192,18 +175,45 @@ export default {
   },
   messageButtonText: {
     fontWeight: '500',
-    fontSize: '15px',
-    lineHeight: '18px',
+    fontSize: '0.9375rem',
+    lineHeight: '1.125rem',
     fontFamily: golos.style.fontFamily,
 
-    [`@media (min-width: ${BREAKPOINTS.MD})`]: {
+    [`@media (min-width: ${BREAKPOINTS.SM})`]: {
       fontWeight: '600',
-      fontSize: '18px',
-      lineHeight: '21.6px',
+      fontSize: '1.125rem',
+      lineHeight: '1.35rem',
     },
   },
 
   // error notification
+  contentBoxError: {
+    height: '100%',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    paddingTop: '3.0625rem',
+    [`@media (min-width: ${BREAKPOINTS.MD})`]: {
+      paddingTop: '4.25rem',
+    },
+    [`@media (min-width: ${BREAKPOINTS.LG})`]: {
+      paddingTop: '4.25rem',
+    },
+  },
+  imageWrapperError: {
+    marginBottom: '0.8125rem',
+
+    [`@media (min-width: ${BREAKPOINTS.SM})`]: {
+      marginBottom: '0.75rem',
+    },
+  },
+  messageContainerError: {
+    display: 'flex',
+    justifyContent: 'center',
+    flexDirection: 'column',
+    alignItems: 'center',
+  },
+
   buttonsBox: {
     display: 'flex',
     justifyContent: 'center',

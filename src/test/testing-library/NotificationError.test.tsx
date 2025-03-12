@@ -76,8 +76,8 @@ describe('NotificationError Component', () => {
 
     expect(backButtonText).toBeInTheDocument();
     expect(computedStyle.fontWeight).toBe('500');
-    expect(computedStyle.fontSize).toBe('15px');
-    expect(computedStyle.lineHeight).toBe('18px');
+    expect(computedStyle.fontSize).toBe('0.9375rem');
+    expect(computedStyle.lineHeight).toBe('1.125rem');
   });
 
   it('renders message container with correct styles', () => {
@@ -88,7 +88,6 @@ describe('NotificationError Component', () => {
 
     expect(computedStyle.display).toBe('flex');
     expect(computedStyle.flexDirection).toBe('column');
-    expect(computedStyle.marginTop).toBe('0.8125rem');
     expect(messageContainer).toBeInTheDocument();
   });
 

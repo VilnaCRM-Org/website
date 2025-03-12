@@ -77,7 +77,7 @@ describe('NotificationSuccess ', () => {
     const successConfettiImgBottom: HTMLElement = getAllByAltText(confettiImgAltText)[1];
     const imgParent: HTMLElement | null = successConfettiImgBottom.parentElement;
 
-    expect(imgParent).toHaveStyle('top: 24.7rem');
+    expect(imgParent).toHaveStyle('bottom: -0.78rem');
   });
   it('uses correct translation key for success button', () => {
     render(<NotificationSuccess setIsOpen={() => {}} />);

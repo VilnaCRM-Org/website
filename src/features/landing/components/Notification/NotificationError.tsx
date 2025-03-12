@@ -23,8 +23,8 @@ function NotificationError({
   const { t } = useTranslation();
   const onHandleClose: () => void = (): void => setIsOpen(false);
   return (
-    <Box sx={{ ...styles.contentBox, ...styles.contentBoxError }} data-testid="error-box">
-      <Box sx={styles.imgWrapper}>
+    <Box sx={styles.contentBoxError} data-testid="error-box">
+      <Box sx={styles.imageWrapperError}>
         <Image
           src={ErrorImg}
           alt={t('notifications.error.images.error')}
@@ -34,10 +34,7 @@ function NotificationError({
         />
       </Box>
 
-      <Box
-        sx={{ ...styles.messageContainer, ...styles.messageContainerError }}
-        data-testid="error-message-container"
-      >
+      <Box sx={styles.messageContainerError} data-testid="error-message-container">
         <UiTypography component="h4" sx={styles.messageTitle}>
           {t('notifications.error.title')}
         </UiTypography>
