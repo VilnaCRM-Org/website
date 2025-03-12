@@ -70,7 +70,7 @@ This project includes a routing script for managing URLs.
 The routing script maps requests to the correct HTML files, ensuring proper navigation.
 For detailed information, check the [routing script](scripts/cloudfront_routing.js).
 
-### How It Works:
+### How It Works
 
 - Mapping: Specific URL paths are mapped to corresponding HTML files.
 - Fallback Logic: For undefined routes, the script appends /index.html to handle directory-like paths.
