@@ -8,12 +8,10 @@ This documentation provides an overview of two GitHub Actions workflows used for
 - [Prerequisites](#prerequisites)
 - [Workflow 1: Sandbox Creation](#workflow-1-sandbox-creation)
   - [Creation and Rebuild Overview](#creation-and-rebuild-overview)
-  - [Creation Required Secrets](#creation-required-secrets)
-  - [Creation Secrets Setup](#creation-secrets-setup)
+  - [Creation Variables Setup](#creation-variables-setup)
 - [Workflow 2: Trigger Sandbox Deletion](#workflow-2-trigger-sandbox-deletion)
   - [Deletion Overview](#deletion-overview)
-  - [Deletion Required Variables](#deletion-required-variables)
-  - [Deletion Required Secrets](#deletion-required-secrets)
+  - [Deletion Variables Setup](#deletion-variables-setup)
 - [AWS IAM Role Configuration](#aws-iam-role-configuration)
 - [Additional Notes](#additional-notes)
 
@@ -47,57 +45,19 @@ New Feature: Before starting the pipeline execution, the workflow checks if secr
 Key Points:
 
   Uses OIDC for secure authentication with AWS.
-  Validates required secrets.
-  Checks secret rotation timing against a defined maximum age (in seconds), triggering rotation if needed.
+  Validates required variables.
   Starts AWS CodePipeline execution for sandbox creation or update after handling secret rotation needs.
-
-### Creation Required Secrets
-
-  GITHUB_TOKEN_ROTATION_ROLE_TO_ASSUME_TEST: The IAM role ARN used for checking and rotating test secrets.
-  GITHUB_TOKEN_ROTATION_ROLE_TO_ASSUME_PROD: The IAM role ARN used for checking and rotating production secrets.
-  PAT_WITH_REPO_PERMISSIONS: A Personal Access Token with repo permissions, used to dispatch custom GitHub events to initiate secret rotation workflows.
 
 Additionally, you need to ensure that an AWS_REGION variable is set either at the repository or organization level.
 
-### Creation Secrets Setup
+### Creation Variables Setup
 
-1. GITHUB_TOKEN_ROTATION_ROLE_TO_ASSUME_TEST
-IAM role ARN for test secret verification and rotation.
-
-  Name: GITHUB_TOKEN_ROTATION_ROLE_TO_ASSUME_TEST
-  Value: arn:aws:iam::123456789012:role/TestSecretRotationRole
-
-2. GITHUB_TOKEN_ROTATION_ROLE_TO_ASSUME_PROD
-IAM role ARN for production secret verification and rotation.
-
-  Name: GITHUB_TOKEN_ROTATION_ROLE_TO_ASSUME_PROD
-  Value: arn:aws:iam::123456789012:role/ProdSecretRotationRole
-
-3. PAT_WITH_REPO_PERMISSIONS
-A PAT with repo level permissions for dispatching repository events.
-
-  Name: PAT_WITH_REPO_PERMISSIONS
-  Value: Your Personal Access Token string
-
-**Required Scopes for the Token**:
-- **`repo`**: Full access to the repository, including reading and writing to all aspects of the repository.
-- **`workflow`**: Permission to trigger workflows in another repository.
-
-Note: All these secrets should be added under: Settings > Secrets and variables > Actions > New repository secret.
-
-AWS_REGION:
-This should be set as a variable (not a secret) under Settings > Secrets and variables > Actions > Variables.
-
-  Name: AWS_REGION
-  Value: us-east-1 (or your preferred AWS region)
-
-MAX_AGE:
-  The variable specifies the maximum allowed age of a token in seconds, after which the token is considered expired and requires rotation.
-  Optional:
-    If not provided, the default value of 601200 seconds (approximately 7 days) will be used.
-
-  Name: TOKEN_MAX_AGE_SECONDS
-  Value: 601200
+- Navigate to **Settings > Secrets and variables > Actions > Variables** in your GitHub organization.
+- Add the following variables:
+  - `TEST_AWS_ACCOUNT_ID`: The ID of the AWS account for token rotation in the test environment.
+  - `PROD_AWS_ACCOUNT_ID`: The ID of the AWS account for token rotation in the prod environment.
+  - `AWS_REGION`: The region of the AWS account.
+  - [`GITHUB_TOKEN`](https://github.com/VilnaCRM-Org/website-infrastructure/blob/main/.github/github-token-usage.md): The token for getting a PR number.
 
 ## Workflow 2: Trigger Sandbox Deletion
 ### Deletion Overview
@@ -112,19 +72,14 @@ Key Features:
    Utilizes OIDC for secure authentication with AWS.
    Validates the presence of required secrets and environment variables.
 
-### Deletion Required Variables
+### Deletion Variables Setup
 
-   TEST_AWS_ACCOUNT_ID: ID of test the account.
-
-   PROD_AWS_ACCOUNT_ID: ID of the prod account.
-
-### Deletion Required Secrets
-
-PAT_WITH_REPO_PERMISSIONS
-A PAT with repo level permissions for dispatching repository events.
-
-  Name: PAT_WITH_REPO_PERMISSIONS
-  Value: Your Personal Access Token string
+- Navigate to **Settings > Secrets and variables > Actions > Variables** in your GitHub organization.
+- Add the following variables:
+  - `TEST_AWS_ACCOUNT_ID`: The ID of the AWS account for token rotation in the test environment.
+  - `PROD_AWS_ACCOUNT_ID`: The ID of the AWS account for token rotation in the prod environment.
+  - `AWS_REGION`: The region of the AWS account.
+  - [`GITHUB_TOKEN`](https://github.com/VilnaCRM-Org/website-infrastructure/blob/main/.github/github-token-usage.md): The token for getting a PR number.
 
 ## AWS IAM Role Configuration
 
