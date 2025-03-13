@@ -19,7 +19,7 @@ import MainTitle from './MainTitle/MainTitle';
 import styles from './styles';
 
 function ForWhoSection(): React.ReactElement {
-  const getImageProps: (src: string, alt?: string) => React.ImgHTMLAttributes<HTMLImageElement> = (src, alt = "") => 
+  const getImageProps: (src: string, alt?: string) => React.ImgHTMLAttributes<HTMLImageElement> = (src, alt = '') => 
     getOptimizedImageProps({ src, alt }).props;
 
   return (

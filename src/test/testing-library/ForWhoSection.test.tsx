@@ -16,10 +16,10 @@ describe('ForWhoSection component', () => {
   it('should have the correct number of images with empty alt text and images with proper alt text', () => {
     const { getAllByAltText } = render(<ForWhoSection />);
 
-    const imagesWithEmptyAlt = getAllByAltText('');
+    const imagesWithEmptyAlt: HTMLElement[] = getAllByAltText('');
     expect(imagesWithEmptyAlt).toHaveLength(9);
 
-    const imagesWithAltText = getAllByAltText('Vector');
+    const imagesWithAltText: HTMLElement[] = getAllByAltText('Vector');
     expect(imagesWithAltText).toHaveLength(4); 
   });
 });
