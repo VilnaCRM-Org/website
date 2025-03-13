@@ -24,8 +24,5 @@ jobs:
       - name: Install dependencies
         run: make install
 
-      - name: Start application
-        run: make start
-
       - name: Run load tests
         run: make load-tests

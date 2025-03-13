@@ -10,7 +10,7 @@ DOCKER_COMPOSE	= docker compose
 MAKE 			= make
 
 # Executables
-EXEC_NODEJS	= $(DOCKER_COMPOSE) exec nodejs
+EXEC_NODEJS	= $(DOCKER_COMPOSE) exec prod
 PNPM      	= $(EXEC_NODEJS) pnpm
 PNPM_RUN    = $(PNPM) run
 GIT         = git
@@ -76,17 +76,28 @@ storybook-build: ## Build Storybook UI. Storybook is a frontend workshop for bui
 generate-ts-doc: ## This command generates documentation from the typescript files.
 	$(PNPM_EXEC) doc
 
-test-e2e: ## This command executes PlayWright E2E tests.
-	$(PLAYWRIGHT_EXEC) test:e2e
+test-e2e: start-prod wait-for-prod  ## Start production and run E2E tests
+	$(DOCKER_COMPOSE) -f docker-compose.test.yml exec playwright pnpm run test:e2e
 
-test-visual: ## This command executes PlayWright Visual tests.
-	$(PLAYWRIGHT_EXEC) test:visual
+test-visual: start-prod wait-for-prod  ## Start production and run visual tests
+	$(DOCKER_COMPOSE) -f docker-compose.test.yml exec playwright pnpm run test:visual
+
+start-prod: ## Build image and start container in production mode
+	$(DOCKER_COMPOSE) -f docker-compose.test.yml up -d
+
+wait-for-prod: ## Wait for the prod service to be ready on port 3001.
+	@echo "Waiting for prod service to be ready on port 3001..."
+	npx wait-on -v http://localhost:3001
+	@echo "Prod service is up and running!"
 
 test-unit: ## This command executes unit tests using Jest library.
 	$(PNPM_EXEC) test:unit
 
-test-memory-leak: ## This command executes memory leaks tests using Memlab library.
-	$(PNPM_EXEC) test:memory-leak
+test-all: start-prod wait-for-prod  ## Start production and run all tests
+	$(DOCKER_COMPOSE) -f docker-compose.test.yml exec playwright sh -c 'pnpm run test:e2e & pnpm run test:visual & wait'
+
+test-memory-leak: start-prod wait-for-prod ## This command executes memory leaks tests using Memlab library.
+	$(DOCKER_COMPOSE) -f docker-compose.memory-leak.yml up -d || (echo "Failed to start memory leak container" && exit 1)
 
 test-mutation:
 	$(PNPM_EXEC) test:mutation
@@ -94,7 +105,7 @@ test-mutation:
 build-k6-docker: ## This command build K6 image
 	$(DOCKER) build -t k6 -f ./src/test/load/Dockerfile .
 
-load-tests: ## This command executes load tests using K6 library.
+load-tests: start-prod wait-for-prod ## This command executes load tests using K6 library.
 	$(BUILD_K6_DOCKER)
 	$(LOAD_TESTS_RUN)
 

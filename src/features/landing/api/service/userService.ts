@@ -2,7 +2,7 @@ import { TypedDocumentNode, gql } from '@apollo/client';
 
 import { SignupMutationVariables } from './types';
 
-export const SIGNUP_MUTATION: TypedDocumentNode<SignupMutationVariables> = gql`
+const SIGNUP_MUTATION: TypedDocumentNode<SignupMutationVariables> = gql`
   mutation AddUser($input: createUserInput!) {
     createUser(input: $input) {
       user {
@@ -15,3 +15,4 @@ export const SIGNUP_MUTATION: TypedDocumentNode<SignupMutationVariables> = gql`
     }
   }
 `;
+export default SIGNUP_MUTATION;

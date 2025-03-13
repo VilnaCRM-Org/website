@@ -150,6 +150,24 @@
           "error_text": "There was an error. Please check again"
         }
       },
+      "notifications": {
+        "success": {
+          "title": "Congratulations!",
+          "description": "You have successfully registered",
+          "button": "To the registration form",
+          "images": {
+            "confetti": "Cheerful and colorful confetti",
+            "gears": "Cheerful and colorful confetti"
+          }
+        },
+        "error": {
+          "title": "An error occurred",
+          "description": "Internal Server Error",
+          "retry_button": "Try again",
+          "button": "To the registration form",
+          "images": { "error": "Red triangle with a warning about an error." }
+        }
+      },
       "footer": {
         "logo_alt": "Vilna logo",
         "copyright": "Copyright © ТОВ “Vilna CRM”",
@@ -322,6 +340,21 @@
           },
           "button_text": "Реєєстрація",
           "error_text": "Виникла помилка. Перевірте ще раз"
+        }
+      },
+      "notifications": {
+        "success": {
+          "title": "Вітаємо!",
+          "description": "Ви успішно зареєструвались",
+          "button": "До реєстраційної форми",
+          "images": { "confetti": "Веселе і барвисте конфеті", "gears": "Святкові шестерні" }
+        },
+        "error": {
+          "title": "Трапилась помилка",
+          "description": "Внутрішня помилка сервера",
+          "retry_button": "Спробувати ще раз",
+          "button": "До реєстраційної форми",
+          "images": { "error": "Червоний трикутник з попередженням про помилку." }
         }
       },
       "footer": {
