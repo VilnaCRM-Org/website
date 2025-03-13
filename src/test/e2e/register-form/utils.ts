@@ -45,3 +45,11 @@ export async function fillPasswordInput(page: Page, user: User): Promise<void> {
 export function responseFilter(resp: Response): boolean {
   return resp.url().includes(graphqlEndpoint) && resp.status() === 200;
 }
+interface GraphQLResponse {
+  errors: { message: string }[];
+}
+
+export async function responseErrorFilter(resp: Response): Promise<boolean> {
+  const json: GraphQLResponse = await resp.json();
+  return resp.url().includes(graphqlEndpoint) && json.errors?.length > 0;
+}

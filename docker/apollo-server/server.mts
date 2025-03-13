@@ -5,6 +5,8 @@ import { startStandaloneServer } from '@apollo/server/standalone';
 import { CreateUserInput, User } from './type.ts';
 // @ts-ignore
 import dotenv from 'dotenv';
+import { GraphQLError } from 'graphql';
+import { ApolloServerErrorCode } from '@apollo/server/errors';
 
 dotenv.config();
 
@@ -49,10 +51,48 @@ export const resolvers = {
           clientMutationId: input.clientMutationId,
         };
       } catch (error) {
-        throw new Error(`Failed to create user: ${error}`);
+        throw new GraphQLError('Internal Server Error: Failed to create user', {
+          extensions: {
+            code: 'INTERNAL_SERVER_ERROR',
+            http: {
+              status: 500,
+              headers: new Map([['x-error-type', 'server-error']]),
+            },
+          },
+        });
       }
     },
   },
+};
+const formatError = (formattedError: any, error: any) => {
+  // Handle 500 (server errors)
+  if (formattedError.extensions.code === 'INTERNAL_SERVER_ERROR') {
+    return {
+      ...formattedError,
+      message: 'Something went wrong on the server. Please try again later.',
+      details: error.message,
+    };
+  }
+
+  // Handle 400 (client errors)
+  if (formattedError.extensions.code === 'BAD_REQUEST') {
+    return {
+      ...formattedError,
+      message: 'The request was invalid. Please check your input.',
+      details: error.message,
+    };
+  }
+
+  // Handle other errors (e.g., validation)
+  if (formattedError.extensions.code === ApolloServerErrorCode.GRAPHQL_VALIDATION_FAILED) {
+    return {
+      ...formattedError,
+      message: "Your query doesn't match the schema. Please check it!",
+    };
+  }
+
+  // Default behavior for other errors
+  return formattedError;
 };
 async function startServer(): Promise<void> {
   try {
@@ -73,20 +113,7 @@ async function startServer(): Promise<void> {
           'X-Apollo-Operation-Name', // For mobile clients
         ],
       },
-      formatError: error => {
-        console.error('GraphQL Error:', {
-          message: error.message,
-          locations: error.locations,
-          path: error.path,
-          code: error.extensions?.code || 'INTERNAL_SERVER_ERROR',
-        });
-        return {
-          message: error.message,
-          code: error.extensions?.code || 'INTERNAL_SERVER_ERROR',
-          locations: error.locations,
-          path: error.path,
-        };
-      },
+      formatError,
     });
 
     const { url } = await startStandaloneServer(server, {

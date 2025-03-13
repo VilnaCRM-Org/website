@@ -1,11 +1,10 @@
-import { useMutation } from '@apollo/client';
+import { ApolloError, useMutation } from '@apollo/client';
 import { Box, CircularProgress, Fade } from '@mui/material';
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 
-import { SIGNUP_MUTATION } from '../../../api/service/userService';
+import SIGNUP_MUTATION from '../../../api/service/userService';
 import { animationTimeout } from '../../../constants';
-import isHttpError from '../../../helpers/isHttpError';
 import useFormReset from '../../../hooks/useFormReset';
 import { RegisterItem } from '../../../types/authentication/form';
 import Notification from '../../Notification/Notification';
@@ -33,14 +32,14 @@ function AuthLayout(): React.ReactElement {
     SIGNUP_MUTATION
   );
 
-  const onSubmit: (data: RegisterItem) => Promise<void> = async (data: RegisterItem) => {
+  const onSubmit: (userData: RegisterItem) => Promise<void> = async (userData: RegisterItem) => {
     try {
       await signupMutation({
         variables: {
           input: {
-            email: data.Email,
-            initials: data.FullName,
-            password: data.Password,
+            email: userData.Email,
+            initials: userData.FullName,
+            password: userData.Password,
             clientMutationId: '132',
           },
         },
@@ -48,27 +47,33 @@ function AuthLayout(): React.ReactElement {
       setErrorDetails('');
       setIsNotificationOpen(true);
       setNotificationType('success');
-    } catch (error: unknown) {
-      if (isHttpError(error)) {
-        if (error.statusCode === 500) {
-          setNotificationType('error');
-          setIsNotificationOpen(true);
-          setErrorDetails('');
-        } else {
-          setErrorDetails(error.message);
-        }
-      } else if (error instanceof Error) {
-        setErrorDetails(error.message);
+    } catch (error) {
+      let message: string = 'An unexpected error occurred';
+
+      if (error instanceof ApolloError || error instanceof Error) {
+        message = error.message || message;
+      }
+
+      const normalizedMessage: string = message.toLowerCase().trim();
+      const isServerError: boolean =
+        normalizedMessage.includes('500') ||
+        normalizedMessage.includes('server error') ||
+        normalizedMessage.includes('internal server');
+
+      if (isServerError) {
+        setNotificationType('error');
+        setIsNotificationOpen(true);
       } else {
-        setErrorDetails('An unexpected error occurred');
+        setErrorDetails(message);
       }
     }
   };
+
+  useFormReset({ formState, reset, errorDetails, notificationType });
+
   const retrySubmit: () => void = (): void => {
     handleSubmit(onSubmit)();
   };
-
-  useFormReset({ formState, reset, errorDetails, notificationType });
 
   return (
     <Box sx={styles.formWrapper}>

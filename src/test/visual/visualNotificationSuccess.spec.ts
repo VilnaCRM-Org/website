@@ -1,6 +1,7 @@
-import {test, expect, Locator} from '@playwright/test';
+import { test, expect, Locator } from '@playwright/test';
 
-import {screenSizes, currentLanguage, timeoutDuration, placeholders} from '@/test/visual/constants';
+import { screenSizes, currentLanguage, timeoutDuration, placeholders } from './constants';
+import { successResponse } from './graphqlMocks';
 
 test.describe('Form Submission Visual Test', () => {
   for (const screen of screenSizes) {
@@ -12,11 +13,11 @@ test.describe('Form Submission Visual Test', () => {
 
       await page.setViewportSize({ width: screen.width, height: screen.height });
 
-
       await page.waitForFunction(() => document.readyState === 'complete');
 
+      await page.route('**/graphql', successResponse);
 
-      const nameInput:Locator = page.getByPlaceholder(placeholders.name);
+      const nameInput: Locator = page.getByPlaceholder(placeholders.name);
       await nameInput.scrollIntoViewIfNeeded();
       await page.waitForTimeout(timeoutDuration);
 
@@ -25,7 +26,10 @@ test.describe('Form Submission Visual Test', () => {
       await page.getByPlaceholder(placeholders.password).fill('SecurePassword123');
       await page.getByRole('checkbox').check();
 
-      await page.click('button[type="submit"]');
+      const submitButton: Locator = page.locator('button[type="submit"]');
+      await submitButton.click();
+
+      await page.waitForTimeout(timeoutDuration);
 
       const successBox: Locator = page.getByTestId('success-box');
       await expect(successBox).toBeVisible();

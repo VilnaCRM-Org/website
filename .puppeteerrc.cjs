@@ -1,10 +1,8 @@
-const puppeteer = require('puppeteer-extra');
 const { loadEnvConfig } = require('@next/env');
 const projectDir = process.cwd();
-const StealthPlugin = require('puppeteer-extra-plugin-stealth');
+const puppeteer = require('puppeteer-core');
 
 loadEnvConfig(projectDir);
-puppeteer.use(StealthPlugin());
 
 (async () => {
   const browser = await puppeteer.launch({
@@ -24,7 +22,7 @@ puppeteer.use(StealthPlugin());
 
   try {
     const page = await browser.newPage();
-    await page.goto('https://prod:3000');
+    await page.goto('https://prod:3001');
     console.log('Page loaded');
   } finally {
     await browser.close();

@@ -4,7 +4,7 @@ import { t } from 'i18next';
 
 import { CreateUserInput } from '@/test/apollo-server/types';
 
-import { SIGNUP_MUTATION } from '../../features/landing/api/service/userService';
+import SIGNUP_MUTATION from '../../features/landing/api/service/userService';
 
 import {
   fullNamePlaceholder,

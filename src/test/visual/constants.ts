@@ -70,9 +70,14 @@ export const screenSizes: { width: number; height: number; name: string }[] = [
 export const currentLanguage: string = process.env.NEXT_PUBLIC_MAIN_LANGUAGE as string;
 export const timeoutDuration: number = 3000;
 
+interface PlaceholderFields {
+  name: string;
+  email: string;
+  password: string;
+}
 
-interface PlaceholderFields{ name: string; email: string; password: string }
-
-export const placeholders:PlaceholderFields ={
-  name: 'Михайло Светський',email:'vilnaCRM@gmail.com', password:'Створіть пароль'
+export const placeholders: PlaceholderFields = {
+  name: 'Михайло Светський',
+  email: 'vilnaCRM@gmail.com',
+  password: 'Створіть пароль',
 };

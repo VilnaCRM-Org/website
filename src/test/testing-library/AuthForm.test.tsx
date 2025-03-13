@@ -3,7 +3,7 @@ import { waitFor } from '@testing-library/react';
 import dotenv from 'dotenv';
 import { t } from 'i18next';
 
-import { SIGNUP_MUTATION } from '../../features/landing/api/service/userService';
+import SIGNUP_MUTATION from '../../features/landing/api/service/userService';
 import { RegisterItem } from '../../features/landing/types/authentication/form';
 
 import { testInitials, testEmail, testPassword } from './constants';

@@ -3,7 +3,7 @@ import { render, waitFor } from '@testing-library/react';
 import { t } from 'i18next';
 import React from 'react';
 
-import { SIGNUP_MUTATION } from '../../features/landing/api/service/userService';
+import SIGNUP_MUTATION from '../../features/landing/api/service/userService';
 import AuthLayout from '../../features/landing/components/AuthSection/AuthForm/AuthLayout';
 
 import {
