@@ -19,7 +19,7 @@ import MainTitle from './MainTitle/MainTitle';
 import styles from './styles';
 
 function ForWhoSection(): React.ReactElement {
-  const getImageProps: (src: string, alt: string) => React.ImgHTMLAttributes<HTMLImageElement> = (src, alt) => 
+  const getImageProps: (src: string, alt?: string) => React.ImgHTMLAttributes<HTMLImageElement> = (src, alt = "") => 
     getOptimizedImageProps({ src, alt }).props;
 
   return (
@@ -33,98 +33,86 @@ function ForWhoSection(): React.ReactElement {
           <Box sx={styles.container}>
             <Box sx={styles.svgContainer}>
               <Box
-              component="img" 
-              {...getImageProps(circle, 'circle')} 
-              alt=""
-              aria-hidden="true" 
-              sx={styles.circle}
-              loading='lazy'
-               />
+                component="img"
+                {...getImageProps(circle)}
+                aria-hidden="true"
+                sx={styles.circle}
+                loading="lazy"
+              />
 
               <Box
-              component="img" 
-              {...getImageProps(rhombus, 'rhombus')} 
-              alt=""
-              aria-hidden="true" 
-              sx={styles.rhombus}
-              loading='lazy' 
+                component="img"
+                {...getImageProps(rhombus)}
+                aria-hidden="true"
+                sx={styles.rhombus}
+                loading="lazy"
               />
               <Box sx={styles.pointContainer}>
-              <Box
-                 component="img" 
-                 {...getImageProps(pointGroup, 'pointGroup')} 
-                 alt=""
-                 aria-hidden="true" 
-                 sx={styles.pointGroup}
-                 loading='lazy' 
-                 />
-              <Box
-                 component="img" 
-                 {...getImageProps(point6, 'point6')} 
-                 alt=""
-                 aria-hidden="true" 
-                 sx={styles.point6}
-                 loading='lazy' 
-                 />
                 <Box
-                component="img"  
-                {...getImageProps(point8, 'point8')} 
-                alt=""
-                aria-hidden="true" 
-                sx={styles.point8}
-                loading='lazy' 
+                  component="img"
+                  {...getImageProps(pointGroup)}
+                  aria-hidden="true"
+                  sx={styles.pointGroup}
+                  loading="lazy"
                 />
                 <Box
-                component="img"   
-                {...getImageProps(point10, 'point10')}
-                alt=""
-                aria-hidden="true" 
-                sx={styles.point10} 
-                loading='lazy'
+                  component="img"
+                  {...getImageProps(point6)}
+                  aria-hidden="true"
+                  sx={styles.point6}
+                  loading="lazy"
+                />
+                <Box
+                  component="img"
+                  {...getImageProps(point8)}
+                  aria-hidden="true"
+                  sx={styles.point8}
+                  loading="lazy"
+                />
+                <Box
+                  component="img"
+                  {...getImageProps(point10)}
+                  aria-hidden="true"
+                  sx={styles.point10}
+                  loading="lazy"
                 />
               </Box>
             </Box>
             <Box sx={styles.square}>
-            <Box
-              component="img"  
-              {...getImageProps(bigScreen, 'bigScreen')} 
-              alt='Large digital screen with a blue background' 
-              sx={styles.bigScreen} 
-              loading='lazy'
+              <Box
+                component="img"
+                {...getImageProps(bigScreen, 'Large digital screen with a blue background')}
+                sx={styles.bigScreen}
+                loading="lazy"
               />
               <Box
-              component="img" 
-              {...getImageProps(smallScreen, 'smallScreen')} 
-              alt='Small digital screen displaying minimal content' 
-              sx={styles.smallScreen} 
-              loading='lazy'
+                component="img"
+                {...getImageProps(smallScreen, 'Small digital screen displaying minimal content')}
+                sx={styles.smallScreen}
+                loading="lazy"
               />
               <Box
-              component="img"  
-              {...getImageProps(waves, 'waves')} 
-              alt=""
-              aria-hidden="true" 
-              sx={styles.waves}
-              loading='lazy' 
+                component="img"
+                {...getImageProps(waves)}
+                aria-hidden="true"
+                sx={styles.waves}
+                loading="lazy"
               />
               <Box
-              component="img"  
-              {...getImageProps(hexagon, 'hexagon')} 
-              alt=""
-              aria-hidden="true" 
-              sx={styles.hexagon}
-              loading='lazy' 
+                component="img"
+                {...getImageProps(hexagon)}
+                aria-hidden="true"
+                sx={styles.hexagon}
+                loading="lazy"
               />
-            <Box
-            component="img"  
-            {...getImageProps(triangle, 'triangle')} 
-            alt=""
-            aria-hidden="true" 
-            sx={styles.triangle} 
-            loading='lazy'
-            />
+              <Box
+                component="img"
+                {...getImageProps(triangle)}
+                aria-hidden="true"
+                sx={styles.triangle}
+                loading="lazy"
+              />
             </Box>
-
           </Box>
         </Box>
       </Container>
