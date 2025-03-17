@@ -59,7 +59,7 @@ export default {
       transform: 'scale(0.91)',
     },
 
-    [`@media (min-width: ${BREAKPOINTS.SM})`]: {
+    [`@media (min-width: 641px)`]: {
       top: '0.6rem',
       left: '0rem',
       transform: 'scale(1.07)',
@@ -81,7 +81,7 @@ export default {
       transform: 'scale(0.91)',
     },
 
-    [`@media (min-width: ${BREAKPOINTS.SM})`]: {
+    [`@media (min-width: 641px)`]: {
       left: '0rem',
       bottom: '0.6rem',
       transform: 'scale(1.07)',
@@ -104,6 +104,19 @@ export default {
     transform: 'translateX(-50%)',
     top: '2rem',
 
+    [`@media (min-width: ${BREAKPOINTS.MD})`]: {
+      top: '3rem',
+    },
+  },
+  imgWrapperSuccess: {
+    position: 'absolute',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    top: '2rem',
+
+    [`@media (max-width: 640px)`]: {
+      transform: 'translateX(-50%) scale(0.8)',
+    },
     [`@media (min-width: ${BREAKPOINTS.MD})`]: {
       top: '3rem',
     },
@@ -136,7 +149,7 @@ export default {
     fontFamily: golos.style.fontFamily,
     color: colorTheme.palette.darkPrimary.main,
 
-    [`@media (min-width: ${BREAKPOINTS.SM})`]: {
+    [`@media (min-width: 641px)`]: {
       fontWeight: 600,
       fontSize: '1.875rem',
       lineHeight: '2.25rem',

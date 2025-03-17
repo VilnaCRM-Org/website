@@ -21,7 +21,7 @@ import {
   fillForm,
   mockInternalServerErrorResponse,
   rejectedMockResponse,
-  selectFormElements,
+  getFormElements,
 } from './utils';
 
 const statusRole: string = 'status';
@@ -231,7 +231,7 @@ describe('AuthLayout', () => {
       </MockedProvider>
     );
     fillForm(testInitials, testEmail, testPassword, true);
-    const { fullNameInput, emailInput, passwordInput, privacyCheckbox } = selectFormElements();
+    const { fullNameInput, emailInput, passwordInput, privacyCheckbox } = getFormElements();
 
     await waitFor(() => {
       expect(fullNameInput.value).toBe('');

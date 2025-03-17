@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { t } from 'i18next';
 
@@ -28,20 +28,20 @@ describe('NotificationError Component', () => {
     expect(screen.getByRole(buttonRole, { name: backToFormButtonText })).toBeInTheDocument();
   });
 
-  it('calls retrySubmit when retry button is clicked', () => {
+  it('calls retrySubmit when retry button is clicked', async () => {
     render(<NotificationError setIsOpen={mockSetIsOpen} retrySubmit={mockRetrySubmit} />);
 
     const retryButton: HTMLElement = screen.getByRole(buttonRole, { name: retrySubmitButtonText });
-    fireEvent.click(retryButton);
+    await userEvent.click(retryButton);
 
     expect(mockRetrySubmit).toHaveBeenCalledTimes(1);
   });
 
-  it('calls setIsOpen(false) when back-to-form button is clicked', () => {
+  it('calls setIsOpen(false) when back-to-form button is clicked', async () => {
     render(<NotificationError setIsOpen={mockSetIsOpen} retrySubmit={mockRetrySubmit} />);
 
     const backButton: HTMLElement = screen.getByRole(buttonRole, { name: backToFormButtonText });
-    fireEvent.click(backButton);
+    await userEvent.click(backButton);
 
     expect(mockSetIsOpen).toHaveBeenCalledWith(false);
   });

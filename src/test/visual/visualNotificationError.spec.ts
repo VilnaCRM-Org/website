@@ -1,45 +1,24 @@
-import { test, Request, Locator, expect } from '@playwright/test';
+import { test, Locator, expect } from '@playwright/test';
 
-import {
-  currentLanguage,
-  placeholders,
-  screenSizes,
-  timeoutDuration,
-} from '@/test/visual/constants';
+import { currentLanguage, placeholders, screenSizes } from '@/test/visual/constants';
 
-interface GraphQLRequestPayload {
-  operationName?: string;
-  variables?: Record<string, unknown>;
-  query?: string;
-}
+import { errorResponse } from './graphqlMocks';
 
 test.describe('Form Submission Server Error Test', () => {
   for (const screen of screenSizes) {
     test(`Server error notification - ${screen.name}`, async ({ page }) => {
-      await page.route('**/graphql', async route => {
-        const request: Request = route.request();
-        const postData: GraphQLRequestPayload = await request.postDataJSON();
-
-        if (postData?.query?.includes('mutation AddUser')) {
-          await route.fulfill({
-            contentType: 'application/json',
-            body: JSON.stringify({
-              errors: [{ message: 'Internal Server Error', statusCode: 500 }],
-            }),
-          });
-        } else {
-          await route.continue();
-        }
-      });
+      await page.route('**/graphql', errorResponse);
       await page.goto('/');
 
       await page.waitForLoadState('networkidle');
-      await page.evaluateHandle('document.fonts.ready');
+      await page.evaluate(() => document.fonts.ready);
       await page.setViewportSize({ width: screen.width, height: screen.height });
 
       await page.waitForFunction(() => document.readyState === 'complete');
       await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-      await page.waitForTimeout(timeoutDuration);
+
+      const form: Locator = page.getByTestId('auth-form');
+      await expect(form).toBeVisible();
 
       await page.getByPlaceholder(placeholders.name).fill('John Doe');
       await page.getByPlaceholder(placeholders.email).fill('john@example.com');
@@ -49,12 +28,18 @@ test.describe('Form Submission Server Error Test', () => {
       const submitButton: Locator = page.locator('button[type="submit"]');
       await submitButton.click();
 
-      await page.waitForTimeout(timeoutDuration);
-
       const serverErrorBox: Locator = page.getByTestId('error-box');
+      await serverErrorBox.waitFor({ state: 'visible' });
       await expect(serverErrorBox).toBeVisible();
 
-      await page.waitForTimeout(timeoutDuration);
+      await page.waitForFunction(() => {
+        const errorBox: Element | null = document.querySelector('[data-testid="error-box"]');
+        return (
+          errorBox &&
+          !errorBox.classList.contains('animating') &&
+          window.getComputedStyle(errorBox).opacity === '1'
+        );
+      });
       await expect(page).toHaveScreenshot(`${currentLanguage}_${screen.name}_error.png`);
     });
   }

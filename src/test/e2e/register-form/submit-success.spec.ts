@@ -61,8 +61,10 @@ test('Submit the registration form and verify success notification', async ({ pa
   await responsePromise;
 
   const successNotification: Locator = page.getByTestId('success-box');
+  const successConfetti: Locator = page.getByTestId('confetti');
 
   await successNotification.waitFor({ state: 'visible' });
+  await successConfetti.waitFor({ state: 'visible' });
 
   await page.getByTestId('success-box').getByRole('button').click();
 });

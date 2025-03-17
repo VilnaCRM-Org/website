@@ -30,8 +30,8 @@ export const handleNetworkError: HandleNetworkErrorType = ({
   }
 };
 
-type HandleApolloErrorProps = HandleErrorProps & { err: unknown };
-type HandleApolloErrorType = (props: HandleApolloErrorProps) => void;
+export type HandleApolloErrorProps = HandleErrorProps & { err: unknown };
+export type HandleApolloErrorType = (props: HandleApolloErrorProps) => void;
 
 export const handleApolloError: HandleApolloErrorType = ({
   err,

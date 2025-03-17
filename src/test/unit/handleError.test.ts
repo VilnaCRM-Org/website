@@ -134,5 +134,21 @@ describe('Error Handling', () => {
         'An unexpected error occurred. Please try again.'
       );
     });
+
+    it('should set notification visibility for GraphQL errors', () => {
+      const apolloError: ApolloError = new ApolloError({
+        networkError: null,
+        graphQLErrors: [{ message: 'GraphQL error occurred' }],
+      });
+
+      handleApolloError({
+        err: apolloError,
+        setErrorDetails: setErrorDetailsMock,
+        setNotificationType: setNotificationTypeMock,
+        setIsNotificationOpen: setIsNotificationOpenMock,
+      });
+
+      expect(setErrorDetailsMock).toHaveBeenCalledWith('GraphQL error occurred');
+    });
   });
 });

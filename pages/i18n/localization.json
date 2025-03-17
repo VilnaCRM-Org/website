@@ -154,7 +154,7 @@
         "success": {
           "title": "Congratulations!",
           "description": "You have successfully registered",
-          "button": "To the registration form",
+          "button": "Go Back",
           "images": {
             "confetti": "Cheerful and colorful confetti",
             "gears": "Cheerful and colorful confetti"
@@ -164,7 +164,7 @@
           "title": "An error occurred",
           "description": "Internal Server Error",
           "retry_button": "Try again",
-          "button": "To the registration form",
+          "button": "Go Back",
           "images": { "error": "Red triangle with a warning about an error." }
         }
       },
@@ -346,14 +346,14 @@
         "success": {
           "title": "Вітаємо!",
           "description": "Ви успішно зареєструвались",
-          "button": "До реєстраційної форми",
+          "button": "Назад",
           "images": { "confetti": "Веселе і барвисте конфеті", "gears": "Святкові шестерні" }
         },
         "error": {
           "title": "Трапилась помилка",
           "description": "Внутрішня помилка сервера",
           "retry_button": "Спробувати ще раз",
-          "button": "До реєстраційної форми",
+          "button": "Назад",
           "images": { "error": "Червоний трикутник з попередженням про помилку." }
         }
       },

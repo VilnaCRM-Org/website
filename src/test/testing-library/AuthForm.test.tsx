@@ -8,7 +8,7 @@ import { RegisterItem } from '../../features/landing/types/authentication/form';
 
 import { testInitials, testEmail, testPassword } from './constants';
 import { mockRenderAuthForm } from './mock-render/MockRenderAuthForm';
-import { checkElementsInDocument, fillForm, selectFormElements } from './utils';
+import { checkElementsInDocument, fillForm, getFormElements } from './utils';
 
 dotenv.config();
 
@@ -27,8 +27,6 @@ const alertRole: string = 'alert';
 const emptyValue: string = '';
 
 const authFormSelector: string = '.MuiBox-root';
-
-// const borderStyle: string = 'border: 1px solid #DC3939';
 
 const fulfilledMockResponse: MockedResponse = {
   request: {
@@ -122,7 +120,7 @@ describe('AuthForm', () => {
       mocks: [fulfilledMockResponse],
     });
 
-    const { fullNameInput, emailInput, passwordInput } = selectFormElements();
+    const { fullNameInput, emailInput, passwordInput } = getFormElements();
 
     checkElementsInDocument(fullNameInput, emailInput, passwordInput);
   });
@@ -186,7 +184,7 @@ describe('AuthForm', () => {
       mocks: [],
     });
 
-    const { fullNameInput, emailInput, passwordInput, privacyCheckbox } = selectFormElements();
+    const { fullNameInput, emailInput, passwordInput, privacyCheckbox } = getFormElements();
 
     expect(fullNameInput).toHaveValue('');
     expect(emailInput).toHaveValue('');
@@ -206,7 +204,6 @@ describe('AuthForm', () => {
     const { fullNameInput, emailInput, passwordInput, privacyCheckbox } = fillForm();
 
     await waitFor(() => {
-      // const requiredError: HTMLElement[] = getAllByText(requiredText); //submit doesn't work
       const serverErrorMessage: HTMLElement | null = queryByRole(alertRole);
 
       expect(fullNameInput.value).toBe(emptyValue);
@@ -316,7 +313,6 @@ describe('AuthForm', () => {
   //   expect(privacyCheckbox.checked).toBe(false);
   // });
 
-  //
   it('does not reset the form when notification type is error', async () => {
     const mockOnSubmit: (data: RegisterItem) => Promise<void> = jest.fn();
     mockRenderAuthForm({
@@ -328,8 +324,7 @@ describe('AuthForm', () => {
     });
     fillForm(testInitials, testEmail, testPassword, true);
 
-    // await waitFor(() => expect(mockOnSubmit).toHaveBeenCalled());
-    const { fullNameInput, emailInput, passwordInput, privacyCheckbox } = selectFormElements();
+    const { fullNameInput, emailInput, passwordInput, privacyCheckbox } = getFormElements();
 
     expect(fullNameInput.value).not.toBe(emptyValue);
     expect(emailInput.value).not.toBe(emptyValue);

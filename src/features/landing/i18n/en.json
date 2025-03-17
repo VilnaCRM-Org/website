@@ -161,7 +161,7 @@
     "success": {
       "title": "Congratulations!",
       "description": "You have successfully registered",
-      "button": "To the registration form",
+      "button": "Go Back",
       "images": {
         "confetti": "Cheerful and colorful confetti",
         "gears": "Cheerful and colorful confetti"
@@ -171,7 +171,7 @@
       "title": "An error occurred",
       "description": "Internal Server Error",
       "retry_button": "Try again",
-      "button": "To the registration form",
+      "button": "Go Back",
       "images": {
         "error": "Red triangle with a warning about an error."
       }

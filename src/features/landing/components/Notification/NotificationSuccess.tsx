@@ -25,7 +25,7 @@ function NotificationSuccess({ setIsOpen }: NotificationSuccessProps): React.Rea
           alt={t('notifications.success.images.confetti')}
         />
       </Box>
-      <Box sx={styles.imgWrapper}>
+      <Box sx={styles.imgWrapperSuccess}>
         <Image
           src={Settings}
           alt={t('notifications.success.images.gears')}

@@ -27,7 +27,7 @@ class FormElementNotFoundError extends Error {
   }
 }
 
-export const selectFormElements: () => {
+export const getFormElements: () => {
   fullNameInput: HTMLInputElement;
   emailInput: HTMLInputElement;
   passwordInput: HTMLInputElement;
@@ -76,7 +76,7 @@ export const fillForm: (
   }
 
   const { fullNameInput, emailInput, passwordInput, privacyCheckbox, signUpButton } =
-    selectFormElements();
+    getFormElements();
 
   fireEvent.change(fullNameInput, { target: { value: fullNameValue } });
   fireEvent.change(emailInput, { target: { value: emailValue } });
