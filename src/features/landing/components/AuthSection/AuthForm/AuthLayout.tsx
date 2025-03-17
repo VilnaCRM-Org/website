@@ -1,11 +1,11 @@
-import {  useMutation } from '@apollo/client';
+import { useMutation } from '@apollo/client';
 import { Box, CircularProgress, Fade } from '@mui/material';
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 
 import SIGNUP_MUTATION from '../../../api/service/userService';
 import { animationTimeout } from '../../../constants';
-import {handleApolloError} from '../../../helpers/handleApolloError';
+import { handleApolloError } from '../../../helpers/handleApolloError';
 import useFormReset from '../../../hooks/useFormReset';
 import { RegisterItem } from '../../../types/authentication/form';
 import Notification from '../../Notification/Notification';
@@ -14,7 +14,6 @@ import { NotificationType } from '../../Notification/types';
 import AuthForm from './AuthForm';
 import styles from './styles';
 import { CreateUserPayload, SignUpVariables } from './types';
-
 
 function AuthLayout(): React.ReactElement {
   const [notificationType, setNotificationType] = useState<NotificationType>('success');
@@ -30,7 +29,9 @@ function AuthLayout(): React.ReactElement {
     mode: 'onTouched',
     defaultValues: { Email: '', FullName: '', Password: '', Privacy: false },
   });
-  const [signupMutation, { loading }] = useMutation<CreateUserPayload, SignUpVariables>(SIGNUP_MUTATION);
+  const [signupMutation, { loading }] = useMutation<CreateUserPayload, SignUpVariables>(
+    SIGNUP_MUTATION
+  );
 
   const onSubmit: (userData: RegisterItem) => Promise<void> = async (userData: RegisterItem) => {
     try {
