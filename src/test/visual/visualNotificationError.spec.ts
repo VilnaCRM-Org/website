@@ -24,7 +24,10 @@ test.describe('Form Submission Server Error Test', () => {
           await route.fulfill({
             contentType: 'application/json',
             body: JSON.stringify({
-              errors: [{ message: 'Internal Server Error', statusCode: 500 }],
+              errors: [{
+                message: 'Internal Server Error',
+                extensions: { code: 'INTERNAL_SERVER_ERROR' }
+              }],
             }),
           });
         } else {
