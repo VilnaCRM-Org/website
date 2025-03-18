@@ -1,3 +1,5 @@
+import {CSSProperties} from 'react';
+
 import breakpointsTheme from '@/components/UiBreakpoints';
 import colorTheme from '@/components/UiColorTheme';
 
@@ -11,12 +13,12 @@ export default {
     alignItems: 'center',
 
     position: 'relative',
-    mt: '4.063rem',
+    marginTop: '4.063rem',
     [`@media (max-width: 1130px)`]: {
-      mt: '3.875rem',
+      marginTop: '3.875rem',
     },
     [`@media (max-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
-      mt: '2.125rem',
+      marginTop: '2.125rem',
     },
   },
 
@@ -43,12 +45,12 @@ export default {
   },
 
   loader: {
-    position: 'absolute',
+    position: 'absolute' as CSSProperties['position'] ,
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
-    inset: '0',
-    zIndex: '1000',
+    inset: 0,
+    zIndex: 1000,
     backgroundColor: 'rgba(255,255, 255, 0.6)',
     borderRadius: '2rem 2rem 0 0',
   },
@@ -134,14 +136,14 @@ export default {
   },
 
   labelText: {
-    mt: '1.25rem',
-    mb: '2rem',
+    marginTop: '1.25rem',
+    marginBottom: '2rem',
     mx: '0',
     [`@media (max-width: 1130px)`]: {
-      mb: '1.5rem',
+      marginBottom: '1.5rem',
     },
     [`@media (max-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
-      mb: '1.188rem',
+      marginBottom: '1.188rem',
     },
   },
 

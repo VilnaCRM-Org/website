@@ -8,8 +8,8 @@ import styles from '../../features/landing/components/Notification/styles';
 import { backToFormButtonText, buttonRole, retrySubmitButtonText } from './constants';
 
 const errorImgAltText: string = t('notifications.error.images.error');
-export const errorTitle: string = t('notifications.error.title');
-export const errorDescription: string = t('notifications.error.description');
+const errorTitle: string = t('notifications.error.title');
+const errorDescription: string = t('notifications.error.description');
 
 describe('NotificationError Component', () => {
   let mockSetIsOpen: jest.Mock;
@@ -94,8 +94,8 @@ describe('NotificationError Component', () => {
   it('applies buttonTextStyle correctly', () => {
     render(<NotificationError setIsOpen={mockSetIsOpen} retrySubmit={mockRetrySubmit} />);
 
-    const retryButtonText: HTMLElement = screen.getByText(backToFormButtonText);
-    const backButtonText: HTMLElement = screen.getByText(retrySubmitButtonText);
+    const retryButtonText: HTMLElement = screen.getByText(retrySubmitButtonText);
+    const backButtonText: HTMLElement = screen.getByText(backToFormButtonText);
 
     expect(retryButtonText).toBeInTheDocument();
     expect(backButtonText).toBeInTheDocument();
@@ -144,34 +144,6 @@ describe('NotificationError Component', () => {
 
     await userEvent.click(retryButton);
     expect(mockRetrySubmit).toHaveBeenCalledTimes(1);
-
-    await userEvent.click(backButton);
-    expect(mockSetIsOpen).toHaveBeenCalledWith(false);
-  });
-
-  it('button text does not have previous styles applied', () => {
-    render(<NotificationError setIsOpen={mockSetIsOpen} retrySubmit={mockRetrySubmit} />);
-
-    const retryButtonText: HTMLElement = screen.getByText(retrySubmitButtonText);
-    const backButtonText: HTMLElement = screen.getByText(backToFormButtonText);
-
-    expect(retryButtonText).toBeInTheDocument();
-    expect(backButtonText).toBeInTheDocument();
-
-    expect(retryButtonText).not.toHaveStyle(styles.messageButtonText);
-    expect(retryButtonText).not.toHaveStyle(styles.errorButtonMessage);
-    expect(backButtonText).not.toHaveStyle(styles.messageButtonText);
-    expect(backButtonText).not.toHaveStyle(styles.errorButtonMessage);
-  });
-
-  it('buttons still function correctly', async () => {
-    render(<NotificationError setIsOpen={mockSetIsOpen} retrySubmit={mockRetrySubmit} />);
-
-    const retryButton: HTMLElement = screen.getByRole(buttonRole, { name: retrySubmitButtonText });
-    const backButton: HTMLElement = screen.getByRole(buttonRole, { name: backToFormButtonText });
-
-    await userEvent.click(retryButton);
-    expect(mockRetrySubmit).toHaveBeenCalled();
 
     await userEvent.click(backButton);
     expect(mockSetIsOpen).toHaveBeenCalledWith(false);

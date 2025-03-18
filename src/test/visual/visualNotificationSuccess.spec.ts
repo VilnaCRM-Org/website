@@ -19,7 +19,7 @@ test.describe('Form Submission Visual Test', () => {
 
       const nameInput: Locator = page.getByPlaceholder(placeholders.name);
       await nameInput.scrollIntoViewIfNeeded();
-      await page.waitForTimeout(timeoutDuration);
+      await nameInput.waitFor({ state: 'visible' });
 
       await nameInput.fill('John Doe');
       await page.getByPlaceholder(placeholders.email).fill('johndoe@example.com');
@@ -28,8 +28,6 @@ test.describe('Form Submission Visual Test', () => {
 
       const submitButton: Locator = page.locator('button[type="submit"]');
       await submitButton.click();
-
-      await page.waitForTimeout(timeoutDuration);
 
       const successBox: Locator = page.getByTestId('success-box');
       await expect(successBox).toBeVisible();

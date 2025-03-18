@@ -72,19 +72,19 @@ export default {
   },
   bottomImgBox: {
     position: 'absolute',
-    rotate: '-180deg',
     bottom: '-0.78rem',
     left: '-11.8rem',
     zIndex: -1,
+    transform: 'rotate(-180deg)',
 
     [`@media (max-width: ${BREAKPOINTS.SM})`]: {
-      transform: 'scale(0.91)',
+      transform: 'rotate(-180deg) scale(0.91)',
     },
 
     [`@media (min-width: 641px)`]: {
       left: '0rem',
       bottom: '0.6rem',
-      transform: 'scale(1.07)',
+      transform: 'rotate(-180deg) scale(1.07)',
     },
 
     [`@media (min-width: ${BREAKPOINTS.LG})`]: {
@@ -94,7 +94,7 @@ export default {
     [`@media (min-width: 1131px)`]: {
       left: '0rem',
       bottom: '0.1rem',
-      transform: 'scale(1)',
+      transform: 'rotate(-180deg) scale(1)',
     },
   },
 
@@ -114,7 +114,7 @@ export default {
     transform: 'translateX(-50%)',
     top: '2rem',
 
-    [`@media (max-width: 640px)`]: {
+    [`@media (max-width: ${BREAKPOINTS.SM})`]: {
       transform: 'translateX(-50%) scale(0.8)',
     },
     [`@media (min-width: ${BREAKPOINTS.MD})`]: {
@@ -157,7 +157,7 @@ export default {
   },
 
   messageDescription: {
-    mt: '0.5rem',
+    marginTop: '0.5rem',
     fontWeight: 400,
     fontSize: '0.98rem',
     lineHeight: '1.5625rem',
@@ -187,13 +187,13 @@ export default {
     },
   },
   messageButtonText: {
-    fontWeight: '500',
+    fontWeight: 500,
     fontSize: '0.9375rem',
     lineHeight: '1.125rem',
     fontFamily: golos.style.fontFamily,
 
     [`@media (min-width: ${BREAKPOINTS.SM})`]: {
-      fontWeight: '600',
+      fontWeight: 600,
       fontSize: '1.125rem',
       lineHeight: '1.35rem',
     },
@@ -244,7 +244,8 @@ export default {
 
   errorButton: {
     height: '50px',
-    paddingY: '1rem',
+    paddingTop: '1rem',
+    paddingBottom: '1rem',
     borderRadius: '3.5625rem',
     boxShadow: 'none',
 
@@ -262,7 +263,7 @@ export default {
   },
   errorButtonMessage: {
     [`@media (min-width: ${BREAKPOINTS.SM})`]: {
-      fontWeight: '600',
+      fontWeight: 600,
       fontSize: '18px',
       lineHeight: '21.6px',
     },

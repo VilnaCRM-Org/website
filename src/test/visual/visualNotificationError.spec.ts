@@ -2,12 +2,15 @@ import { test, Locator, expect } from '@playwright/test';
 
 import { currentLanguage, placeholders, screenSizes } from '@/test/visual/constants';
 
-import { errorResponse } from './graphqlMocks';
+import {errorResponse, ErrorResponseProps} from './graphqlMocks';
+
+const serverErrorResponse:ErrorResponseProps = {status: 500, message: 'Unauthorized',code: 'UNAUTHORIZED'};
 
 test.describe('Form Submission Server Error Test', () => {
   for (const screen of screenSizes) {
     test(`Server error notification - ${screen.name}`, async ({ page }) => {
-      await page.route('**/graphql', errorResponse);
+      await page.route('**/graphql', (route) =>  errorResponse(route, serverErrorResponse));
+
       await page.goto('/');
 
       await page.waitForLoadState('networkidle');

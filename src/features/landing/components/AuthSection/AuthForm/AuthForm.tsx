@@ -33,7 +33,6 @@ function AuthForm({
       component="form"
       data-testid="auth-form"
       onSubmit={handleSubmit(onSubmit)}
-      role="form"
       aria-label="Sign up form"
     >
       <UiTypography variant="h4" component="h4" sx={styles.formTitle}>

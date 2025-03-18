@@ -56,13 +56,13 @@ export const fillForm: (
   fullNameValue?: string,
   emailValue?: string,
   passwordValue?: string,
-  isChecked?: boolean
+  checkPrivacyPolicy?: boolean
 ) => {
   fullNameInput: HTMLInputElement;
   emailInput: HTMLInputElement;
   passwordInput: HTMLInputElement;
   privacyCheckbox: HTMLInputElement;
-} = (fullNameValue = '', emailValue = '', passwordValue = '', isChecked = false) => {
+} = (fullNameValue = '', emailValue = '', passwordValue = '', checkPrivacyPolicy = false) => {
   if (fullNameValue && fullNameValue.length < 2) {
     throw new Error('Full name must be at least 2 characters');
   }
@@ -81,9 +81,10 @@ export const fillForm: (
   fireEvent.change(fullNameInput, { target: { value: fullNameValue } });
   fireEvent.change(emailInput, { target: { value: emailValue } });
   fireEvent.change(passwordInput, { target: { value: passwordValue } });
-  if (isChecked) fireEvent.click(privacyCheckbox);
+  if (checkPrivacyPolicy) fireEvent.click(privacyCheckbox);
 
   fireEvent.click(signUpButton);
+
 
   return { fullNameInput, emailInput, passwordInput, privacyCheckbox };
 };
@@ -138,4 +139,5 @@ export const mockInternalServerErrorResponse: MockedResponse = {
     ],
   },
 };
+
 export type SetIsOpenType = jest.Mock<(isOpen: boolean) => void>;

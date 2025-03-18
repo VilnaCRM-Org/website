@@ -29,7 +29,12 @@ describe('AuthLayout Error Handling', () => {
         request: {
           query: SIGNUP_MUTATION,
           variables: {
-            input: {},
+            input: {
+              email: testEmail,
+              initials: testInitials,
+              password: testPassword,
+              clientMutationId: expect.any(String)
+            },
           },
         },
         error: new Error('Network error occurred'),
