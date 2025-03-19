@@ -55,13 +55,13 @@ export default {
     marginBottom: '-6rem',
     display: 'flex',
     [`@media (min-width: 426px)`]: {
-      justifyContent: 'center', 
+      justifyContent: 'center',
       marginTop: '0rem',
       marginLeft: 'auto',
-      marginRight: 'auto', 
+      marginRight: 'auto',
       width: 'auto',
-      maxWidth: '100%', 
-      flexGrow: 1, 
+      maxWidth: '100%',
+      flexGrow: 1,
       transform: 'scale(1.1)',
     },
     [`@media (min-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
@@ -70,20 +70,20 @@ export default {
     },
     [`@media (min-width: 641px)`]: {
       marginTop: '-8rem',
-      width: '85vw', 
+      width: '85vw',
       maxWidth: '1000px',
-      transform: 'scale(1.1)', 
+      transform: 'scale(1.1)',
     },
     [`@media (min-width: 969px)`]: {
-      width: 'auto', 
-      transform: 'none', 
+      width: 'auto',
+      transform: 'none',
       marginRight: '0',
       marginTop: '-30rem',
       marginLeft: '17.6rem',
     },
     [`@media (min-width: 1131px)`]: {
       marginTop: '-27.2rem',
-      marginLeft: '38.2rem'
+      marginLeft: '38.2rem',
     },
   },
 
@@ -100,27 +100,27 @@ export default {
     marginTop: '5.1rem',
     marginLeft: '1.5rem',
     [`@media (min-width: 468px)`]: {
-    position: 'absolute',
+      position: 'absolute',
     },
-   [`@media (min-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
+    [`@media (min-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
       width: '0.6rem',
       height: '0.6rem',
       marginTop: '4.7rem',
-      marginLeft: '1rem'
+      marginLeft: '1rem',
     },
     [`@media (min-width: ${breakpointsTheme.breakpoints.values.md}px)`]: {
       width: '0.8rem',
       height: '0.8rem',
       marginTop: '2.9rem',
-      marginLeft: '1.5rem'
+      marginLeft: '1.5rem',
     },
     [`@media (min-width: 969px)`]: {
       marginTop: '2rem',
       marginLeft: '2rem',
     },
     [`@media (min-width: 1131px)`]: {
-    marginTop: '1.9rem',
-    marginLeft: '-9.4rem'
+      marginTop: '1.9rem',
+      marginLeft: '-9.4rem',
     },
   },
 
@@ -131,23 +131,23 @@ export default {
     marginLeft: '1.1rem',
     [`@media (min-width: 468px)`]: {
       position: 'absolute',
-      marginTop: '15rem'
+      marginTop: '15rem',
     },
     [`@media (min-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
       width: '2rem',
       height: '2rem',
       marginTop: '16rem',
-      marginLeft: '0.5rem'
+      marginLeft: '0.5rem',
     },
     [`@media (min-width: ${breakpointsTheme.breakpoints.values.md}px)`]: {
       width: '2.5rem',
       height: '2.5rem',
       marginTop: '18.5rem',
-      marginLeft: '0.7rem'
+      marginLeft: '0.7rem',
     },
     [`@media (min-width: 969px)`]: {
       marginTop: '18.9rem',
-      marginLeft: '1.3rem'
+      marginLeft: '1.3rem',
     },
     [`@media (min-width: 1131px)`]: {
       marginTop: '19rem',
@@ -161,27 +161,27 @@ export default {
     marginTop: '0.5rem',
     marginLeft: '0.5rem',
     [`@media (min-width: 468px)`]: {
-      marginTop: '17rem'
+      marginTop: '17rem',
     },
     [`@media (min-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
       marginTop: '19rem',
       marginLeft: '0.2rem',
     },
     [`@media (min-width: 641px)`]: {
-     marginLeft: '0rem'
+      marginLeft: '0rem',
     },
     [`@media (min-width: ${breakpointsTheme.breakpoints.values.md}px)`]: {
       marginTop: '22rem',
-      marginLeft: '1.5rem'
+      marginLeft: '1.5rem',
     },
     [`@media (min-width: 969px)`]: {
       marginTop: '22.4rem',
-      marginLeft: '1.4rem'
+      marginLeft: '1.4rem',
     },
     [`@media (min-width: 1131px)`]: {
       position: 'absolute',
       marginTop: '22.6rem',
-      marginLeft: '-13rem'
+      marginLeft: '-13rem',
     },
   },
 
@@ -191,9 +191,9 @@ export default {
     [`@media (min-width: 1131px)`]: {
       display: 'block',
       marginTop: '4rem',
-      marginLeft: '-0.2rem'
+      marginLeft: '-0.2rem',
+    },
   },
-},
 
   point6: {
     marginLeft: '0.9rem',
@@ -201,7 +201,7 @@ export default {
     [`@media (min-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
       width: '0.40rem',
       height: 'auto',
-      marginTop: '0rem'
+      marginTop: '0rem',
     },
     [`@media (min-width: 641px)`]: {
       marginTop: '0.1rem',
@@ -210,7 +210,7 @@ export default {
       width: '0.45rem',
       height: 'auto',
       marginTop: '0rem',
-      marginLeft: '-0.2rem'
+      marginLeft: '-0.2rem',
     },
     [`@media (min-width: 969px)`]: {
       width: '0.43rem',
@@ -220,7 +220,7 @@ export default {
     },
     [`@media (min-width: 1131px)`]: {
       marginTop: '0.23rem',
-      marginLeft: '0.4rem'
+      marginLeft: '0.4rem',
     },
   },
 
@@ -230,26 +230,26 @@ export default {
     [`@media (min-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
       width: '0.40rem',
       height: 'auto',
-      marginLeft: '0.3rem'
+      marginLeft: '0.3rem',
     },
     [`@media (min-width: 641px)`]: {
       marginTop: '0rem',
-      marginLeft: '0.4rem'
+      marginLeft: '0.4rem',
     },
     [`@media (min-width: ${breakpointsTheme.breakpoints.values.md}px)`]: {
       width: '0.45rem',
       height: 'auto',
-      marginTop: '0rem'
+      marginTop: '0rem',
     },
     [`@media (min-width: 969px)`]: {
       width: '0.43rem',
       height: 'auto',
       marginLeft: '0.38rem',
-      marginTop: '0.15rem'
+      marginTop: '0.15rem',
     },
     [`@media (min-width: 1131px)`]: {
       marginTop: '0.21rem',
-      marginLeft: '0.5rem'
+      marginLeft: '0.5rem',
     },
   },
 
@@ -257,11 +257,11 @@ export default {
     marginLeft: '0.2rem',
     [`@media (min-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
       width: '0.40rem',
-      height: 'auto', 
-      marginLeft: '0.2rem'
+      height: 'auto',
+      marginLeft: '0.2rem',
     },
     [`@media (min-width: 641px)`]: {
-     marginLeft: '0.2rem',
+      marginLeft: '0.2rem',
     },
     [`@media (min-width: ${breakpointsTheme.breakpoints.values.md}px)`]: {
       width: '0.45rem',
@@ -270,10 +270,10 @@ export default {
     [`@media (min-width: 969px)`]: {
       width: '0.43rem',
       height: 'auto',
-      marginTop: '0.2rem'
+      marginTop: '0.2rem',
     },
     [`@media (min-width: 1131px)`]: {
-      marginLeft: '0.3rem'
+      marginLeft: '0.3rem',
     },
   },
 
@@ -287,16 +287,16 @@ export default {
     zIndex: 0,
     [`@media (min-width: 426px)`]: {
       width: '22rem',
-      height: '20rem'
+      height: '20rem',
     },
     [`@media (min-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
       width: '26.5rem',
-      height: '22rem'
+      height: '22rem',
     },
     [`@media (min-width: ${breakpointsTheme.breakpoints.values.md}px)`]: {
       width: '38rem',
       height: '29.7rem',
-      marginLeft: '1.5rem'
+      marginLeft: '1.5rem',
     },
     [`@media (min-width: 969px)`]: {
       width: '37.6rem',
@@ -305,7 +305,7 @@ export default {
       marginLeft: '1.2rem',
     },
     [`@media (min-width: 1131px)`]: {
-      marginLeft: '-1.3rem'
+      marginLeft: '-1.3rem',
     },
   },
 
@@ -318,15 +318,15 @@ export default {
     borderRadius: '0.6rem',
     boxShadow: '0px 24px 48px rgba(0, 0, 0, 0.15), 0px 12px 24px rgba(0, 0, 0, 0.1)',
     [`@media (min-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
-     width: '22rem',
-     height: '16rem',
-     marginTop: '-4.3rem'     
+      width: '22rem',
+      height: '16rem',
+      marginTop: '-4.3rem',
     },
     [`@media (min-width: ${breakpointsTheme.breakpoints.values.md}px)`]: {
       width: '31.6rem',
       height: '20.5rem',
       marginTop: '-5rem',
-      marginLeft: '1.5rem'
+      marginLeft: '1.5rem',
     },
     [`@media (min-width: 969px)`]: {
       width: '31.6rem',
@@ -339,7 +339,7 @@ export default {
       width: '39.4rem',
       height: '27.5rem',
       marginTop: '-3.7rem',
-      marginLeft: '-5.7rem'
+      marginLeft: '-5.7rem',
     },
   },
 
@@ -352,17 +352,17 @@ export default {
     borderRadius: '0.6rem',
     boxShadow: '0px 12px 24px rgba(0, 0, 0, 0.2), 0px 6px 12px rgba(0, 0, 0, 0.15)',
     [`@media (max-width: 320px)`]: {
-      marginLeft: '7rem' 
+      marginLeft: '7rem',
     },
     [`@media (min-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
       width: '11rem',
       marginTop: '-7rem',
-      marginLeft: '13.3rem'   
-     },
+      marginLeft: '13.3rem',
+    },
     [`@media (min-width: ${breakpointsTheme.breakpoints.values.md}px)`]: {
       width: '14rem',
       marginTop: '-10rem',
-      marginLeft: '20.5rem'
+      marginLeft: '20.5rem',
     },
     [`@media (min-width: 969px)`]: {
       width: '15.6rem',
@@ -374,7 +374,7 @@ export default {
     [`@media (min-width: 1131px)`]: {
       width: '15.7rem',
       marginTop: '-16.4rem',
-      marginLeft: '19.7rem'
+      marginLeft: '19.7rem',
     },
   },
 
@@ -396,7 +396,7 @@ export default {
       height: '12rem',
       marginTop: '-10.5rem',
       marginLeft: '2.1rem',
-      },
+    },
     [`@media (min-width: 641px)`]: {
       marginTop: '-11.1rem',
       marginLeft: '2.5rem',
@@ -429,34 +429,34 @@ export default {
     },
     [`@media (min-width: 768px)`]: {
       marginLeft: '29rem',
-      },
+    },
   },
 
   triangle: {
     // The triangle is hidden on mobile but becomes visible on tablet and desktop layouts.
-     display: 'none',
-     [`@media (min-width: 426px)`]: {
+    display: 'none',
+    [`@media (min-width: 426px)`]: {
       display: 'block',
       width: '1.7rem',
       height: '1.7rem',
       marginTop: '-21.8rem',
       marginLeft: '20rem',
-     },
+    },
     [`@media (min-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
       width: 'auto',
       height: 'auto',
       marginTop: '-25.5rem',
       marginLeft: '23.5rem',
     },
-     [`@media (min-width: 768px)`]: {
-       marginTop: '-29rem',
-       marginLeft: '34.5rem',
-     },
-     [`@media (min-width: 969px)`]: {
-       marginTop: '-32.9rem',
-     },
-     [`@media (min-width: 1131px)`]: {
-       marginTop: '-33rem',
-     },
-   },
- }; 
+    [`@media (min-width: 768px)`]: {
+      marginTop: '-29rem',
+      marginLeft: '34.5rem',
+    },
+    [`@media (min-width: 969px)`]: {
+      marginTop: '-32.9rem',
+    },
+    [`@media (min-width: 1131px)`]: {
+      marginTop: '-33rem',
+    },
+  },
+};

@@ -20,6 +20,6 @@ describe('ForWhoSection component', () => {
     expect(imagesWithEmptyAlt).toHaveLength(9);
 
     const imagesWithAltText: HTMLElement[] = getAllByAltText('Vector');
-    expect(imagesWithAltText).toHaveLength(4); 
+    expect(imagesWithAltText).toHaveLength(4);
   });
 });

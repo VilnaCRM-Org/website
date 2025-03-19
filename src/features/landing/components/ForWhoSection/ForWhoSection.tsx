@@ -19,8 +19,10 @@ import MainTitle from './MainTitle/MainTitle';
 import styles from './styles';
 
 function ForWhoSection(): React.ReactElement {
-  const getImageProps: (src: string, alt?: string) => React.ImgHTMLAttributes<HTMLImageElement> = (src, alt = '') => 
-    getOptimizedImageProps({ src, alt }).props;
+  const getImageProps: (src: string, alt?: string) => React.ImgHTMLAttributes<HTMLImageElement> = (
+    src,
+    alt = ''
+  ) => getOptimizedImageProps({ src, alt }).props;
 
   return (
     <Box id="forWhoSection" component="section" sx={styles.wrapper}>
