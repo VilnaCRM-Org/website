@@ -1,5 +1,5 @@
 import { MockedProvider, MockedResponse } from '@apollo/client/testing';
-import { render,  waitFor } from '@testing-library/react';
+import { fireEvent, render, waitFor } from '@testing-library/react';
 import userEvent, {UserEvent} from '@testing-library/user-event';
 import {t} from 'i18next';
 import React from 'react';
@@ -68,12 +68,20 @@ interface AuthFormWrapperProps {
   onSubmit: (data: RegisterItem) => Promise<void>;
   errorDetails: string;
 }
+interface GetElementsResult {
+  fullNameInput: HTMLInputElement;
+  emailInput: HTMLInputElement;
+  passwordInput: HTMLInputElement;
+  privacyCheckbox: HTMLInputElement;
+  signUpButton: HTMLElement;
+}
 
 function AuthFormWrapper({errorDetails,onSubmit }:AuthFormWrapperProps): React.ReactElement{
   const { handleSubmit, control,  formState: { errors }} = useForm<RegisterItem>({
     mode: 'onTouched',
     defaultValues: { Email: '', FullName: '', Password: '', Privacy: false },
   });
+
   return (
     <AuthForm
       errorDetails={errorDetails}
@@ -83,7 +91,9 @@ function AuthFormWrapper({errorDetails,onSubmit }:AuthFormWrapperProps): React.R
       control={control}
     />
   );
-};
+}
+
+
 describe('AuthForm', () => {
   it('renders AuthForm component', () => {
     const onSubmit: jest.Mock<Promise<void>, [RegisterItem]> =jest.fn();
@@ -170,14 +180,43 @@ describe('AuthForm', () => {
       expect(passwordInput.value).toBe('');
       expect(privacyCheckbox).not.toBeChecked();
 
-
       const requiredError:HTMLElement[]= getAllByText(requiredText);
       expect(requiredError[0]).toBeInTheDocument();
       expect(requiredError.length).toBe(3);
+      expect(privacyCheckbox).toHaveStyle('border: 1px solid #DC3939');
       expect(serverErrorMessage).not.toBeInTheDocument();
       expect(onSubmit).not.toHaveBeenCalled();
     });
   });
+
+  test.each([
+    { fieldKey: 'fullNameInput', value: testInitials,  },
+    { fieldKey: 'emailInput', value: testEmail,},
+    { fieldKey: 'passwordInput', value: testPassword,  }
+  ])('should display and remove required validation message for %s', async ({ fieldKey, value }) => {
+    const onSubmit: jest.Mock<Promise<void>, [RegisterItem]> = jest.fn();
+    const { queryByText, getByText } = render(
+      <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
+        <AuthFormWrapper errorDetails="" onSubmit={onSubmit} />
+      </MockedProvider>
+    );
+
+    const formElements: GetElementsResult = getFormElements();
+    const inputField:HTMLInputElement|HTMLElement = formElements[fieldKey as keyof typeof formElements];
+
+
+    await userEvent.clear(inputField);
+    await userEvent.tab();
+
+    expect(getByText(requiredText)).toBeInTheDocument();
+
+    fireEvent.change(inputField, { target: { value } });
+
+    await waitFor(() => {
+      expect(queryByText(requiredText)).not.toBeInTheDocument();
+    });
+  });
+
   it('should have default values', () => {
     const onSubmit: jest.Mock<Promise<void>, [RegisterItem]> = jest.fn();
     render(
@@ -225,20 +264,23 @@ describe('AuthForm', () => {
   it('check onTouched mode', async () => {
     const user: UserEvent = userEvent.setup();
     const onSubmit: jest.Mock<Promise<void>, [RegisterItem]> = jest.fn().mockResolvedValueOnce(undefined);
-    const {getByText} = render(
+    const {getAllByText} = render(
       <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
-        <AuthFormWrapper errorDetails="Internal Server Error." onSubmit={onSubmit} />
+        <AuthFormWrapper errorDetails="" onSubmit={onSubmit} />
       </MockedProvider>
     );
 
-    const { fullNameInput, emailInput } = getFormElements();
+    const { fullNameInput, emailInput, passwordInput } = getFormElements();
 
     await user.click(fullNameInput);
     await user.click(emailInput);
+    await user.click(passwordInput);
+    await userEvent.tab();
 
     await waitFor(() => {
-      const requiredError: HTMLElement = getByText(requiredText);
-      expect(requiredError).toBeInTheDocument();
+      const requiredError: HTMLElement[] = getAllByText(requiredText);
+      expect(requiredError[0]).toBeInTheDocument();
+      expect(requiredError.length).toBe(3);
     });
   });
   it('should render privacy policy links with the correct URLs', ()=>{
@@ -253,5 +295,4 @@ describe('AuthForm', () => {
     expect(privacyPolicyLink[0]).toHaveAttribute('href', 'https://github.com/VilnaCRM-Org');
     expect(privacyPolicyLink[1]).toHaveAttribute('href', 'https://github.com/VilnaCRM-Org');
   });
-
 });

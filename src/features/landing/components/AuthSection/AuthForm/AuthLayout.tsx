@@ -25,10 +25,7 @@ function AuthLayout(): React.ReactElement {
     reset,
     formState,
     formState: { errors },
-  } = useForm<RegisterItem>({
-    mode: 'onTouched',
-    defaultValues: { Email: '', FullName: '', Password: '', Privacy: false },
-  });
+  } = useForm<RegisterItem>({ mode: 'onTouched' });
   const [signupMutation, { loading }] = useMutation<CreateUserPayload, SignUpVariables>(
     SIGNUP_MUTATION
   );
