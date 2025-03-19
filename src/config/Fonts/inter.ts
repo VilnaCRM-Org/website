@@ -19,4 +19,5 @@ export const inter: NextFont = localFont({
       style: 'normal',
     },
   ],
+  display: 'swap',
 });

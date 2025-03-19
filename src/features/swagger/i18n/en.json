@@ -1,0 +1,59 @@
+{
+  "header": {
+    "advantages": "Advantages",
+    "for_who": "For who",
+    "integration": "Integration",
+    "contacts": "Contacts",
+    "logo_alt": "Vilna logo",
+    "actions": {
+      "try_it_out": "Try it out",
+      "log_in": "Log in"
+    },
+    "drawer": {
+      "button_aria_labels": {
+        "bars": "Button to open the drawer",
+        "exit": "Button to exit the drawer"
+      },
+      "image_alt": {
+        "bars": "Bars Icon",
+        "exit": "Exit Icon"
+      },
+      "aria_labels_social_images": {
+        "instagram": "Link to Instagram",
+        "github": "Link to GitHub",
+        "facebook": "Link to Facebook",
+        "linkedin": "Link to Linkedin"
+      },
+      "vilna_email": "info@vilnacrm.com",
+      "alt_social_images": {
+        "instagram": "Instagram Icon",
+        "github": "GitHub Icon",
+        "facebook": "Facebook Icon",
+        "linkedin": "Linkedin Icon"
+      }
+    }
+  },
+  "navigation": {
+    "navigate_to_home_page": "To the main page",
+    "back_arrow_description": "Back arrow icon"
+  },
+  "footer": {
+    "logo_alt": "Vilna logo",
+    "copyright": "Copyright © ТОВ “Vilna CRM”",
+    "privacy": "Privacy policy",
+    "usage_policy": "Usage policy",
+    "vilna_email": "info@vilnacrm.com",
+    "aria_labels": {
+      "instagram": "Link to Instagram",
+      "github": "Link to GitHub",
+      "facebook": "Link to Facebook",
+      "linkedin": "Link to Linkedin"
+    },
+    "alt_images": {
+      "instagram": "Instagram Icon",
+      "github": "GitHub Icon",
+      "facebook": "Facebook Icon",
+      "linkedin": "Linkedin Icon"
+    }
+  }
+}

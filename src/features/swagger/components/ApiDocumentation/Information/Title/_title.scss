@@ -1,0 +1,33 @@
+@use "@swagger/global" as *;
+
+@use "Links/links";
+@use "Stamps/stamps";
+
+%title {
+  .main {
+    margin-bottom: 0.75rem;
+    @include for-large-screens {
+      margin-bottom: 1.5rem;
+    }
+    @include for-small-screens {
+      margin-bottom: 0.75rem;
+    }
+    @extend %links;
+    .title {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      margin-bottom: 0.625rem;
+      @include h2Text();
+      @include for-large-screens {
+        margin-bottom: 0.75rem;
+      }
+      @include for-small-screens {
+        gap: 0.5rem;
+        margin-bottom: 0.75rem;
+        @include h2MobileText();
+      }
+      @extend %stamps;
+    }
+  }
+}
