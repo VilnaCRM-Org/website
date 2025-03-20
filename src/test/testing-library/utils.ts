@@ -1,6 +1,7 @@
 import { MockedResponse } from '@apollo/client/testing';
 import { fireEvent, screen } from '@testing-library/react';
 import { t } from 'i18next';
+import { AriaRole } from 'react';
 
 import { CreateUserInput } from '@/test/apollo-server/types';
 
@@ -11,12 +12,13 @@ import {
   emailPlaceholder,
   passwordPlaceholder,
   submitButtonText,
-  checkboxRole,
   buttonRole,
   testEmail,
   testInitials,
   testPassword,
 } from './constants';
+
+const checkboxRole: AriaRole = 'checkbox';
 
 export const createLocalizedRegExp: (key: string) => RegExp = key => new RegExp(t(key));
 
@@ -84,7 +86,6 @@ export const fillForm: (
   if (checkPrivacyPolicy) fireEvent.click(privacyCheckbox);
 
   fireEvent.click(signUpButton);
-
 
   return { fullNameInput, emailInput, passwordInput, privacyCheckbox };
 };

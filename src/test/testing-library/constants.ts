@@ -27,12 +27,7 @@ export const passwordPlaceholder: string = t('sign_up.form.password_input.placeh
 export const submitButtonText: string = t('sign_up.form.button_text');
 
 // ARIA roles
-export const checkboxRole: AriaRole = 'checkbox';
 export const buttonRole: AriaRole = 'button';
-
-// by text
-export const retrySubmitButtonText: string = t('notifications.error.retry_button');
-export const backToFormButtonText: string = t('notifications.error.button');
 
 export const typeOfCard: string = 'smallCard';
 

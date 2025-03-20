@@ -1,9 +1,9 @@
 import { MockedProvider, MockedResponse } from '@apollo/client/testing';
 import { fireEvent, render, waitFor } from '@testing-library/react';
-import userEvent, {UserEvent} from '@testing-library/user-event';
-import {t} from 'i18next';
+import userEvent, { UserEvent } from '@testing-library/user-event';
+import { t } from 'i18next';
 import React from 'react';
-import {useForm} from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 
 import SIGNUP_MUTATION from '../../features/landing/api/service/userService';
 import AuthForm from '../../features/landing/components/AuthSection/AuthForm/AuthForm';
@@ -14,9 +14,8 @@ import {
   checkElementsInDocument,
   fillForm,
   getFormElements,
-  mockInternalServerErrorResponse
+  mockInternalServerErrorResponse,
 } from './utils';
-
 
 const fulfilledMockResponse: MockedResponse = {
   request: {
@@ -61,8 +60,7 @@ const passwordTipAltText: string = t('sign_up.form.password_tip.alt');
 const statusRole: string = 'status';
 const alertRole: string = 'alert';
 
-const authFormSelector: string = '.MuiBox-root';
-
+const authFormId: string = 'auth-form';
 
 interface AuthFormWrapperProps {
   onSubmit: (data: RegisterItem) => Promise<void>;
@@ -76,8 +74,12 @@ interface GetElementsResult {
   signUpButton: HTMLElement;
 }
 
-function AuthFormWrapper({errorDetails,onSubmit }:AuthFormWrapperProps): React.ReactElement{
-  const { handleSubmit, control,  formState: { errors }} = useForm<RegisterItem>({
+function AuthFormWrapper({ errorDetails, onSubmit }: AuthFormWrapperProps): React.ReactElement {
+  const {
+    handleSubmit,
+    control,
+    formState: { errors },
+  } = useForm<RegisterItem>({
     mode: 'onTouched',
     defaultValues: { Email: '', FullName: '', Password: '', Privacy: false },
   });
@@ -93,18 +95,22 @@ function AuthFormWrapper({errorDetails,onSubmit }:AuthFormWrapperProps): React.R
   );
 }
 
-
 describe('AuthForm', () => {
-  it('renders AuthForm component', () => {
-    const onSubmit: jest.Mock<Promise<void>, [RegisterItem]> =jest.fn();
-    const { container, queryByRole, getByAltText, getByText, getByTestId } =
-      render(
-        <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
-          <AuthFormWrapper errorDetails="" onSubmit={onSubmit} />
-        </MockedProvider>
-      );
+  let onSubmit: jest.Mock<Promise<void>, [RegisterItem]>;
 
-    const authForm: HTMLElement = container.querySelector(authFormSelector) as HTMLElement;
+  beforeEach(() => {
+    jest.unmock('../../features/landing/components/AuthSection/AuthForm/AuthForm');
+    onSubmit = jest.fn().mockResolvedValueOnce(undefined);
+  });
+
+  it('renders AuthForm component', () => {
+    const { queryByRole, getByAltText, getByText, getByTestId } = render(
+      <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
+        <AuthFormWrapper errorDetails="" onSubmit={onSubmit} />
+      </MockedProvider>
+    );
+
+    const authForm: HTMLElement = getByTestId(authFormId);
     const formTitle: HTMLElement = getByText(formTitleText);
     const nameInputLabel: HTMLElement = getByText(nameInputText);
     const emailInputLabel: HTMLElement = getByText(emailInputText);
@@ -128,7 +134,6 @@ describe('AuthForm', () => {
     expect(serverErrorMessage).not.toBeInTheDocument();
   });
   it('renders input fields', () => {
-    const onSubmit: jest.Mock<Promise<void>, [RegisterItem]> =jest.fn();
     render(
       <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
         <AuthFormWrapper errorDetails="" onSubmit={onSubmit} />
@@ -140,7 +145,6 @@ describe('AuthForm', () => {
     checkElementsInDocument(fullNameInput, emailInput, passwordInput);
   });
   it('correct linkage between inputs and values', async () => {
-    const onSubmit: jest.Mock<Promise<void>, [RegisterItem]> =jest.fn();
     render(
       <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
         <AuthFormWrapper errorDetails="" onSubmit={onSubmit} />
@@ -161,10 +165,8 @@ describe('AuthForm', () => {
       expect(privacyCheckbox).toBeChecked();
     });
   });
-
   it('displays "required" validation message when the input fields are left empty', async () => {
-    const onSubmit: jest.Mock<Promise<void>, [RegisterItem]> = jest.fn();
-       const {queryByRole, getAllByText}= render(
+    const { queryByRole, getAllByText } = render(
       <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
         <AuthFormWrapper errorDetails="" onSubmit={onSubmit} />
       </MockedProvider>
@@ -180,7 +182,7 @@ describe('AuthForm', () => {
       expect(passwordInput.value).toBe('');
       expect(privacyCheckbox).not.toBeChecked();
 
-      const requiredError:HTMLElement[]= getAllByText(requiredText);
+      const requiredError: HTMLElement[] = getAllByText(requiredText);
       expect(requiredError[0]).toBeInTheDocument();
       expect(requiredError.length).toBe(3);
       expect(privacyCheckbox).toHaveStyle('border: 1px solid #DC3939');
@@ -190,35 +192,36 @@ describe('AuthForm', () => {
   });
 
   test.each([
-    { fieldKey: 'fullNameInput', value: testInitials,  },
-    { fieldKey: 'emailInput', value: testEmail,},
-    { fieldKey: 'passwordInput', value: testPassword,  }
-  ])('should display and remove required validation message for %s', async ({ fieldKey, value }) => {
-    const onSubmit: jest.Mock<Promise<void>, [RegisterItem]> = jest.fn();
-    const { queryByText, getByText } = render(
-      <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
-        <AuthFormWrapper errorDetails="" onSubmit={onSubmit} />
-      </MockedProvider>
-    );
+    { fieldKey: 'fullNameInput', value: testInitials },
+    { fieldKey: 'emailInput', value: testEmail },
+    { fieldKey: 'passwordInput', value: testPassword },
+  ])(
+    'should display and remove required validation message for %s',
+    async ({ fieldKey, value }) => {
+      const { queryByText, getByText } = render(
+        <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
+          <AuthFormWrapper errorDetails="" onSubmit={onSubmit} />
+        </MockedProvider>
+      );
 
-    const formElements: GetElementsResult = getFormElements();
-    const inputField:HTMLInputElement|HTMLElement = formElements[fieldKey as keyof typeof formElements];
+      const formElements: GetElementsResult = getFormElements();
+      const inputField: HTMLInputElement | HTMLElement =
+        formElements[fieldKey as keyof typeof formElements];
 
+      await userEvent.clear(inputField);
+      await userEvent.tab();
 
-    await userEvent.clear(inputField);
-    await userEvent.tab();
+      expect(getByText(requiredText)).toBeInTheDocument();
 
-    expect(getByText(requiredText)).toBeInTheDocument();
+      fireEvent.change(inputField, { target: { value } });
 
-    fireEvent.change(inputField, { target: { value } });
-
-    await waitFor(() => {
-      expect(queryByText(requiredText)).not.toBeInTheDocument();
-    });
-  });
+      await waitFor(() => {
+        expect(queryByText(requiredText)).not.toBeInTheDocument();
+      });
+    }
+  );
 
   it('should have default values', () => {
-    const onSubmit: jest.Mock<Promise<void>, [RegisterItem]> = jest.fn();
     render(
       <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
         <AuthFormWrapper errorDetails="" onSubmit={onSubmit} />
@@ -233,8 +236,7 @@ describe('AuthForm', () => {
     expect(privacyCheckbox).not.toBeChecked();
   });
   it('onSubmit have been called after registration', async () => {
-    const onSubmit: jest.Mock<Promise<void>, [RegisterItem]> = jest.fn().mockResolvedValueOnce(undefined);
-    const {queryByRole} = render(
+    const { queryByRole } = render(
       <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
         <AuthFormWrapper errorDetails="" onSubmit={onSubmit} />
       </MockedProvider>
@@ -247,24 +249,22 @@ describe('AuthForm', () => {
 
     expect(queryByRole('alert')).not.toBeInTheDocument();
   });
-  it('should show error alert', ()=>{
-    const onSubmit: jest.Mock<Promise<void>, [RegisterItem]> = jest.fn().mockResolvedValueOnce(undefined);
-    const {queryByRole} = render(
+  it('should show error alert', () => {
+    const { queryByRole } = render(
       <MockedProvider mocks={[mockInternalServerErrorResponse]} addTypename={false}>
         <AuthFormWrapper errorDetails="Internal Server Error." onSubmit={onSubmit} />
       </MockedProvider>
     );
     fillForm(testInitials, testEmail, testPassword, true);
 
-    const alert: HTMLElement | null =queryByRole('alert');
+    const alert: HTMLElement | null = queryByRole('alert');
 
     expect(alert).toBeInTheDocument();
     expect(alert).toHaveTextContent('Internal Server Error');
   });
   it('check onTouched mode', async () => {
     const user: UserEvent = userEvent.setup();
-    const onSubmit: jest.Mock<Promise<void>, [RegisterItem]> = jest.fn().mockResolvedValueOnce(undefined);
-    const {getAllByText} = render(
+    const { getAllByText } = render(
       <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
         <AuthFormWrapper errorDetails="" onSubmit={onSubmit} />
       </MockedProvider>
@@ -283,9 +283,8 @@ describe('AuthForm', () => {
       expect(requiredError.length).toBe(3);
     });
   });
-  it('should render privacy policy links with the correct URLs', ()=>{
-    const onSubmit: jest.Mock<Promise<void>, [RegisterItem]> = jest.fn().mockResolvedValueOnce(undefined);
-    const {getAllByRole} = render(
+  it('should render privacy policy links with the correct URLs', () => {
+    const { getAllByRole } = render(
       <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
         <AuthFormWrapper errorDetails="Internal Server Error." onSubmit={onSubmit} />
       </MockedProvider>

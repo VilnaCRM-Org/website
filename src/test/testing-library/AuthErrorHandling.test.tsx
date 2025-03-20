@@ -33,7 +33,7 @@ describe('AuthLayout Error Handling', () => {
               email: testEmail,
               initials: testInitials,
               password: testPassword,
-              clientMutationId: expect.any(String)
+              clientMutationId: expect.any(String),
             },
           },
         },

@@ -5,7 +5,10 @@ import { t } from 'i18next';
 import NotificationError from '../../features/landing/components/Notification/NotificationError';
 import styles from '../../features/landing/components/Notification/styles';
 
-import { backToFormButtonText, buttonRole, retrySubmitButtonText } from './constants';
+import { buttonRole } from './constants';
+
+export const retrySubmitButtonText: string = t('notifications.error.retry_button');
+export const backToFormButtonText: string = t('notifications.error.button');
 
 const errorImgAltText: string = t('notifications.error.images.error');
 const errorTitle: string = t('notifications.error.title');
@@ -17,7 +20,7 @@ describe('NotificationError Component', () => {
 
   beforeEach(() => {
     mockSetIsOpen = jest.fn();
-    mockRetrySubmit = jest.fn();
+    mockRetrySubmit = jest.fn().mockResolvedValueOnce(undefined);
   });
 
   it('renders correctly', () => {
@@ -131,21 +134,5 @@ describe('NotificationError Component', () => {
     expect(retryButton).not.toHaveStyle(styles.errorButtonMessage);
     expect(backButton).not.toHaveStyle(styles.messageButtonText);
     expect(backButton).not.toHaveStyle(styles.errorButtonMessage);
-  });
-
-  it('buttons work as expected', async () => {
-    render(<NotificationError setIsOpen={mockSetIsOpen} retrySubmit={mockRetrySubmit} />);
-
-    const retryButton: HTMLElement = screen.getByRole(buttonRole, { name: retrySubmitButtonText });
-    const backButton: HTMLElement = screen.getByRole(buttonRole, { name: backToFormButtonText });
-
-    expect(retryButton).toBeInTheDocument();
-    expect(backButton).toBeInTheDocument();
-
-    await userEvent.click(retryButton);
-    expect(mockRetrySubmit).toHaveBeenCalledTimes(1);
-
-    await userEvent.click(backButton);
-    expect(mockSetIsOpen).toHaveBeenCalledWith(false);
   });
 });

@@ -54,8 +54,15 @@ export const handleApolloError: HandleApolloErrorType = ({
     });
     return;
   }
-
   if (err.graphQLErrors?.length) {
+    const hasServerError: boolean = err.graphQLErrors.some(e => e.extensions?.statusCode === 500);
+
+    if (hasServerError) {
+      setNotificationType('error');
+      setIsNotificationOpen(true);
+      return;
+    }
+
     const message: string = err.graphQLErrors
       .map((e: GraphQLFormattedError) => e.message)
       .join(', ');

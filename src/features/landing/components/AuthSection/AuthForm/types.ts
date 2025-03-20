@@ -22,10 +22,11 @@ export interface CreateUserPayload {
     __typename: 'createUserPayload';
   };
 }
+export type UseFormControl = Control<RegisterItem>;
 
 export type AuthFormProps = {
   handleSubmit: UseFormHandleSubmit<RegisterItem, undefined>;
-  control: Control<RegisterItem>;
+  control: UseFormControl;
   errors: FieldErrors<RegisterItem>;
   errorDetails: string;
   onSubmit: (data: RegisterItem) => Promise<void>;

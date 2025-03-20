@@ -1,6 +1,6 @@
 import { useMutation } from '@apollo/client';
 import { Box, CircularProgress, Fade } from '@mui/material';
-import React, { useState } from 'react';
+import React from 'react';
 import { useForm } from 'react-hook-form';
 
 import SIGNUP_MUTATION from '../../../api/service/userService';
@@ -16,9 +16,9 @@ import styles from './styles';
 import { CreateUserPayload, SignUpVariables } from './types';
 
 function AuthLayout(): React.ReactElement {
-  const [notificationType, setNotificationType] = useState<NotificationType>('success');
-  const [errorDetails, setErrorDetails] = useState('');
-  const [isNotificationOpen, setIsNotificationOpen] = useState<boolean>(false);
+  const [notificationType, setNotificationType] = React.useState<NotificationType>('success');
+  const [errorDetails, setErrorDetails] = React.useState('');
+  const [isNotificationOpen, setIsNotificationOpen] = React.useState<boolean>(false);
   const {
     handleSubmit,
     control,
@@ -59,11 +59,7 @@ function AuthLayout(): React.ReactElement {
   return (
     <Box sx={styles.formWrapper}>
       {loading && (
-        <output
-          style={styles.loader}
-          aria-label="Loading"
-          aria-live="polite"
-        >
+        <output style={styles.loader} aria-label="Loading" aria-live="polite">
           <CircularProgress color="primary" size={70} />
         </output>
       )}

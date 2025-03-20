@@ -15,7 +15,7 @@ test.describe('Form Submission Visual Test', () => {
 
       await page.waitForFunction(() => document.readyState === 'complete');
 
-      await page.route('**/graphql', successResponse);
+      await page.route('**/graphql', route => successResponse(route, 200));
 
       const nameInput: Locator = page.getByPlaceholder(placeholders.name);
       await nameInput.scrollIntoViewIfNeeded();

@@ -79,6 +79,22 @@ describe('Error Handling', () => {
         'Something went wrong with the request. Try again later.'
       );
     });
+    it('should set a generic error message for unknown network errors', () => {
+      const networkError: NetworkErrorType = {
+        message: 'Some unknown network error',
+      } as ApolloError['networkError'];
+
+      handleNetworkError({
+        networkError,
+        setErrorDetails: setErrorDetailsMock,
+        setNotificationType: setNotificationTypeMock,
+        setIsNotificationOpen: setIsNotificationOpenMock,
+      });
+
+      expect(setErrorDetailsMock).toHaveBeenCalledWith(
+        'Something went wrong with the request. Try again later.'
+      );
+    });
   });
 
   describe('handleApolloError', () => {
@@ -149,6 +165,37 @@ describe('Error Handling', () => {
       });
 
       expect(setErrorDetailsMock).toHaveBeenCalledWith('GraphQL error occurred');
+    });
+
+    it('should set a generic error message when err is not an instance of ApolloError', () => {
+      const nonApolloError: Error = new Error('Random error');
+
+      handleApolloError({
+        err: nonApolloError,
+        setErrorDetails: setErrorDetailsMock,
+        setNotificationType: setNotificationTypeMock,
+        setIsNotificationOpen: setIsNotificationOpenMock,
+      });
+
+      expect(setErrorDetailsMock).toHaveBeenCalledWith(
+        'An unexpected error occurred. Please try again.'
+      );
+    });
+
+    it('should set notification type to error and open notification for GraphQL 500 error', () => {
+      const apolloError: ApolloError = new ApolloError({
+        graphQLErrors: [{ message: 'Internal Server Error', extensions: { statusCode: 500 } }],
+      });
+
+      handleApolloError({
+        err: apolloError,
+        setErrorDetails: setErrorDetailsMock,
+        setNotificationType: setNotificationTypeMock,
+        setIsNotificationOpen: setIsNotificationOpenMock,
+      });
+
+      expect(setNotificationTypeMock).toHaveBeenCalledWith('error');
+      expect(setIsNotificationOpenMock).toHaveBeenCalledWith(true);
     });
   });
 });

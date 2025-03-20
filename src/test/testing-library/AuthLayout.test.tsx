@@ -1,14 +1,14 @@
 import { MockedProvider, MockedResponse } from '@apollo/client/testing';
-import {fireEvent, render, waitFor} from '@testing-library/react';
+import { fireEvent, render, waitFor } from '@testing-library/react';
 import { t } from 'i18next';
-import React from 'react';
+import React, { AriaRole, Dispatch } from 'react';
 
 import SIGNUP_MUTATION from '../../features/landing/api/service/userService';
-import AuthLayout from '../../features/landing/components/AuthSection/AuthForm/AuthLayout';
+import AuthLayout from '../../features/landing/components/AuthSection/AuthForm';
+import { NotificationType } from '../../features/landing/components/Notification/types';
 
 import {
   buttonRole,
-  checkboxRole,
   emailPlaceholder,
   fullNamePlaceholder,
   passwordPlaceholder,
@@ -24,16 +24,17 @@ import {
   getFormElements,
 } from './utils';
 
-
 const statusRole: string = 'status';
 const alertRole: string = 'alert';
+const checkboxRole: AriaRole = 'checkbox';
 
 const notificationId: string = 'notification';
 const formTitleText: string = t('sign_up.form.heading_main');
 const notificationTitle: string = t('notifications.success.title');
 const requiredText: string = t('sign_up.form.email_input.required');
-const successBoxId :string='success-box';
+const successBoxId: string = 'success-box';
 const errorTitle: string = t('notifications.error.title');
+const retryTextButton: string = t('notifications.error.retry_button');
 
 const fulfilledMockResponse: MockedResponse = {
   request: {
@@ -65,6 +66,9 @@ const fulfilledMockResponse: MockedResponse = {
     };
   },
 };
+const networkError: Error = new Error('Network error');
+Object.defineProperty(networkError, 'statusCode', { value: 500 });
+
 const internalServerErrorResponse: MockedResponse[] = [
   {
     request: {
@@ -78,10 +82,9 @@ const internalServerErrorResponse: MockedResponse[] = [
         },
       },
     },
-    result: {
-      errors: [{ message: 'Internal Server Error', extensions: { statusCode: 500 } }],
-    },
+    error: networkError,
   },
+  fulfilledMockResponse,
 ];
 interface GetElementsResult {
   fullNameInput: HTMLInputElement;
@@ -129,8 +132,8 @@ describe('AuthLayout', () => {
     expect(serverErrorMessage).not.toBeInTheDocument();
 
     await waitFor(() => {
-       expect(queryByRole(statusRole)).not.toBeInTheDocument();
-       expect(getByTestId(successBoxId)).toBeInTheDocument();
+      expect(queryByRole(statusRole)).not.toBeInTheDocument();
+      expect(getByTestId(successBoxId)).toBeInTheDocument();
       expect(queryByText(errorTitle)).not.toBeInTheDocument();
     });
   });
@@ -149,6 +152,10 @@ describe('AuthLayout', () => {
 
     await waitFor(() => {
       expect(queryByRole('status')).toBeInTheDocument();
+    });
+
+    await waitFor(() => {
+      expect(queryByRole('status')).not.toBeInTheDocument();
     });
   });
   it('registration with server error: user exist ', async () => {
@@ -204,7 +211,7 @@ describe('AuthLayout', () => {
     });
   });
   it('registration with server error: status code 500', async () => {
-      const { findByRole } = render(
+    const { findByTestId } = render(
       <MockedProvider mocks={internalServerErrorResponse} addTypename={false}>
         <AuthLayout />
       </MockedProvider>
@@ -212,10 +219,30 @@ describe('AuthLayout', () => {
 
     fillForm(testInitials, testEmail, testPassword, true);
 
-    const serverErrorMessage: HTMLElement = await findByRole(alertRole);
-    expect(serverErrorMessage).toBeInTheDocument();
+    const errorBox: HTMLElement = await findByTestId('error-box');
+    expect(errorBox).toBeInTheDocument();
   });
-  it('should handle errors correctly and update state', async () => {
+  it('should successfully retry submission after a 500 error', async () => {
+    const { findByTestId, findByText, getByTestId } = render(
+      <MockedProvider mocks={internalServerErrorResponse} addTypename={false}>
+        <AuthLayout />
+      </MockedProvider>
+    );
+
+    fillForm(testInitials, testEmail, testPassword, true);
+
+    const errorBox: HTMLElement = await findByTestId('error-box');
+    expect(errorBox).toBeInTheDocument();
+
+    const retryButton: HTMLElement = await findByText(retryTextButton);
+    fireEvent.click(retryButton);
+
+    await waitFor(() => {
+      expect(getByTestId(successBoxId)).toBeInTheDocument();
+      expect(getByTestId(successBoxId)).toBeVisible();
+    });
+  });
+  it('should handle alert errors correctly and update state', async () => {
     const { findByRole } = render(
       <MockedProvider mocks={[mockInternalServerErrorResponse]} addTypename={false}>
         <AuthLayout />
@@ -250,13 +277,13 @@ describe('AuthLayout', () => {
   });
 
   it('notification state has success value by default', async () => {
-   const {getByTestId, queryByText}= render(
+    const { getByTestId, queryByText } = render(
       <MockedProvider mocks={internalServerErrorResponse} addTypename={false}>
         <AuthLayout />
       </MockedProvider>
     );
-    const successBox:HTMLElement = getByTestId(successBoxId);
-    const errorBox:HTMLElement|null = queryByText(errorTitle);
+    const successBox: HTMLElement = getByTestId(successBoxId);
+    const errorBox: HTMLElement | null = queryByText(errorTitle);
 
     expect(successBox).toBeInTheDocument();
     expect(successBox).not.toBeVisible();
@@ -264,7 +291,7 @@ describe('AuthLayout', () => {
   });
 
   it('does not reset the form when notification type is error', async () => {
-    const {queryByRole} =render(
+    const { findByTestId } = render(
       <MockedProvider mocks={internalServerErrorResponse} addTypename={false}>
         <AuthLayout />
       </MockedProvider>
@@ -278,35 +305,71 @@ describe('AuthLayout', () => {
     expect(passwordInput.value).not.toBe('');
     expect(privacyCheckbox.checked).toBe(true);
 
-    await waitFor(() => {
-      expect(queryByRole('alert')).toBeInTheDocument();
-    });
+    const errorBox: HTMLElement = await findByTestId('error-box');
+    expect(errorBox).toBeInTheDocument();
   });
   test.each([
-    { fieldKey: 'fullNameInput', value: testInitials,  },
-    { fieldKey: 'emailInput', value: testEmail,},
-    { fieldKey: 'passwordInput', value: testPassword,  }
-  ])('displays validation errors only after touching fields when mode is onTouche', async ({ fieldKey, value }) => {
-    const {  queryByText } = render(
-      <MockedProvider mocks={[]} addTypename={false}>
+    { fieldKey: 'fullNameInput', value: testInitials },
+    { fieldKey: 'emailInput', value: testEmail },
+    { fieldKey: 'passwordInput', value: testPassword },
+  ])(
+    'displays validation errors only after touching fields when mode is onTouche',
+    async ({ fieldKey, value }) => {
+      const { queryByText } = render(
+        <MockedProvider mocks={[]} addTypename={false}>
+          <AuthLayout />
+        </MockedProvider>
+      );
+
+      const formElements: GetElementsResult = getFormElements();
+      const inputField: HTMLInputElement | HTMLElement =
+        formElements[fieldKey as keyof typeof formElements];
+
+      expect(queryByText(requiredText)).not.toBeInTheDocument();
+
+      fireEvent.blur(inputField);
+
+      await waitFor(() => {
+        expect(queryByText(requiredText)).toBeInTheDocument();
+      });
+      fireEvent.change(inputField, { target: { value } });
+
+      await waitFor(() => {
+        expect(queryByText(requiredText)).not.toBeInTheDocument();
+      });
+    }
+  );
+  it('should show success notification after successful form submission', async () => {
+    const { queryByTestId } = render(
+      <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
         <AuthLayout />
       </MockedProvider>
     );
 
-    const formElements: GetElementsResult = getFormElements();
-    const inputField:HTMLInputElement|HTMLElement = formElements[fieldKey as keyof typeof formElements];
-
-    expect(queryByText(requiredText)).not.toBeInTheDocument();
-
-    fireEvent.blur(inputField);
+    fillForm(testInitials, testEmail, testPassword, true);
 
     await waitFor(() => {
-      expect(queryByText(requiredText)).toBeInTheDocument();
+      expect(queryByTestId('confetti')).toBeInTheDocument();
     });
-    fireEvent.change(inputField, { target: { value } });
+  });
+  it('should initialize notificationType with "success" value', () => {
+    const mockSetNotificationType: jest.Mock<void> = jest.fn();
+    const useStateSpy: jest.SpyInstance<[unknown, Dispatch<unknown>], [], NotificationType> = jest
+      .spyOn(React, 'useState')
+      .mockImplementationOnce(
+        () => ['success', mockSetNotificationType] as [NotificationType, jest.Mock]
+      );
 
-    await waitFor(() => {
-      expect(queryByText(requiredText)).not.toBeInTheDocument();
-    });
+    render(
+      <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
+        <AuthLayout />
+      </MockedProvider>
+    );
+
+    const initialState: undefined = useStateSpy.mock.results[0]?.value?.[0];
+
+    expect(initialState).toBe('success');
+
+    useStateSpy.mockRestore();
   });
 });

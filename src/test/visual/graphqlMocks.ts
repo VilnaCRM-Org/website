@@ -1,8 +1,5 @@
 import { Route, Request } from '@playwright/test';
 
-type ErrorCodes = {SERVER: number; SUCCESS:number};
-const ERROR_CODES :ErrorCodes= { SERVER: 500, SUCCESS:200};
-
 export type GraphQLRequestPayload = {
   query: string;
   operationName?: string;
@@ -16,7 +13,10 @@ export type GraphQLRequestPayload = {
   };
 };
 
-export const successResponse: (route: Route) => void = async (route: Route): Promise<void> => {
+export const successResponse: (route: Route, status: number) => void = async (
+  route: Route,
+  status
+): Promise<void> => {
   const request: Request = route.request();
   let postData: GraphQLRequestPayload;
   try {
@@ -30,7 +30,7 @@ export const successResponse: (route: Route) => void = async (route: Route): Pro
     await route.fulfill({
       contentType: 'application/json',
       body: JSON.stringify({
-        status: ERROR_CODES.SUCCESS,
+        status,
         data: {
           createUser: {
             user: {
@@ -55,21 +55,28 @@ interface GraphQLErrorRequestPayload {
   variables?: Record<string, unknown>;
   query?: string;
 }
-export interface ErrorResponseProps {status:number; message:string; code:string}
+export interface ErrorResponseProps {
+  status: number;
+  message: string;
+  code: string;
+}
 
-export const errorResponse: (route: Route, {status, message, code }: ErrorResponseProps) => void = async (route: Route) => {
+export const errorResponse: (
+  route: Route,
+  { status, message, code }: ErrorResponseProps
+) => void = async (route: Route, { status, message, code }) => {
   const request: Request = route.request();
   const postData: GraphQLErrorRequestPayload = await request.postDataJSON();
 
   if (postData?.query?.includes('mutation AddUser')) {
     await route.fulfill({
       contentType: 'application/json',
-      status: ERROR_CODES.SERVER,
+      status,
       body: JSON.stringify({
         errors: [
           {
-            message: 'Internal Server Error',
-            extensions: { code: 'INTERNAL_SERVER_ERROR' },
+            message,
+            extensions: { code },
           },
         ],
       }),

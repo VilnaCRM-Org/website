@@ -24,10 +24,10 @@ loadEnvConfig(projectDir);
     const page = await browser.newPage();
     await page.goto('https://prod:3001');
     console.log('Page loaded');
-  } catch(error){
+  } catch (error) {
     console.error('Navigation failed:', error);
     process.exit(1);
-  }finally {
+  } finally {
     await browser.close();
   }
 })();
