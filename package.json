@@ -99,7 +99,7 @@
     "jsdoc": "^4.0.4",
     "markdownlint-cli": "^0.39.0",
     "memlab": "^1.1.56",
-    "next": "^15.1.6",
+    "next": "^15.2.3",
     "next-export-optimize-images": "^4.6.1",
     "prettier": "^3.4.2",
     "semver": "^7.6.3",
