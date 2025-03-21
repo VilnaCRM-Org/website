@@ -223,7 +223,7 @@ describe('AuthLayout', () => {
     expect(errorBox).toBeInTheDocument();
   });
   it('should successfully retry submission after a 500 error', async () => {
-    const { findByTestId, findByText, getByTestId } = render(
+    const { findByTestId, findByText, getByTestId, queryByRole } = render(
       <MockedProvider mocks={internalServerErrorResponse} addTypename={false}>
         <AuthLayout />
       </MockedProvider>
@@ -231,11 +231,19 @@ describe('AuthLayout', () => {
 
     fillForm(testInitials, testEmail, testPassword, true);
 
+    await waitFor(() => {
+      expect(queryByRole('status')).toBeInTheDocument();
+    });
+
     const errorBox: HTMLElement = await findByTestId('error-box');
     expect(errorBox).toBeInTheDocument();
 
     const retryButton: HTMLElement = await findByText(retryTextButton);
     fireEvent.click(retryButton);
+
+    await waitFor(() => {
+      expect(queryByRole('status')).toBeInTheDocument();
+    });
 
     await waitFor(() => {
       expect(getByTestId(successBoxId)).toBeInTheDocument();

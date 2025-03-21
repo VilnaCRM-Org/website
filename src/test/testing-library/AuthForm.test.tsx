@@ -99,7 +99,6 @@ describe('AuthForm', () => {
   let onSubmit: jest.Mock<Promise<void>, [RegisterItem]>;
 
   beforeEach(() => {
-    jest.unmock('../../features/landing/components/AuthSection/AuthForm/AuthForm');
     onSubmit = jest.fn().mockResolvedValueOnce(undefined);
   });
 

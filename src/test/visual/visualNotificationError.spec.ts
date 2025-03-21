@@ -13,19 +13,20 @@ const serverErrorResponse: ErrorResponseProps = {
 test.describe('Form Submission Server Error Test', () => {
   for (const screen of screenSizes) {
     test(`Server error notification - ${screen.name}`, async ({ page }) => {
-      await page.route('**/graphql', route => errorResponse(route, serverErrorResponse));
-
       await page.goto('/');
 
       await page.waitForLoadState('networkidle');
       await page.evaluate(() => document.fonts.ready);
+
       await page.setViewportSize({ width: screen.width, height: screen.height });
 
       await page.waitForFunction(() => document.readyState === 'complete');
-      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
 
-      const form: Locator = page.getByTestId('auth-form');
-      await expect(form).toBeVisible();
+      await page.route('**/graphql', route => errorResponse(route, serverErrorResponse));
+
+      const nameInput: Locator = page.getByPlaceholder(placeholders.name);
+      await nameInput.scrollIntoViewIfNeeded();
+      await nameInput.waitFor({ state: 'visible' });
 
       await page.getByPlaceholder(placeholders.name).fill('John Doe');
       await page.getByPlaceholder(placeholders.email).fill('john@example.com');
@@ -36,7 +37,6 @@ test.describe('Form Submission Server Error Test', () => {
       await submitButton.click();
 
       const serverErrorBox: Locator = page.getByTestId('error-box');
-      await serverErrorBox.waitFor({ state: 'visible' });
       await expect(serverErrorBox).toBeVisible();
 
       await page.waitForFunction(() => {

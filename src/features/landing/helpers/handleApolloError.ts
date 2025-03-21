@@ -67,5 +67,7 @@ export const handleApolloError: HandleApolloErrorType = ({
       .map((e: GraphQLFormattedError) => e.message)
       .join(', ');
     setErrorDetails(message);
+    return;
   }
+  setErrorDetails('An error occurred with the request. Please try again.');
 };
