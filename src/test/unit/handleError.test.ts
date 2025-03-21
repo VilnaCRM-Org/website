@@ -197,5 +197,22 @@ describe('Error Handling', () => {
       expect(setNotificationTypeMock).toHaveBeenCalledWith('error');
       expect(setIsNotificationOpenMock).toHaveBeenCalledWith(true);
     });
+    it('should set default error message when no networkError or graphQLErrors are present', () => {
+      const apolloError: ApolloError = new ApolloError({
+        networkError: null,
+        graphQLErrors: [],
+      });
+
+      handleApolloError({
+        err: apolloError,
+        setErrorDetails: setErrorDetailsMock,
+        setNotificationType: setNotificationTypeMock,
+        setIsNotificationOpen: setIsNotificationOpenMock,
+      });
+
+      expect(setErrorDetailsMock).toHaveBeenCalledWith(
+        'An error occurred with the request. Please try again.'
+      );
+    });
   });
 });

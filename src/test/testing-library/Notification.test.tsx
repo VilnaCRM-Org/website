@@ -3,6 +3,7 @@ import userEvent, { UserEvent } from '@testing-library/user-event';
 import { t } from 'i18next';
 import React from 'react';
 
+import {NotificationStatus} from '../../features/landing/components/AuthSection/AuthForm/types';
 import Notification from '../../features/landing/components/Notification';
 import { notificationComponents } from '../../features/landing/components/Notification/Notification';
 import {
@@ -43,7 +44,7 @@ describe('Notification', () => {
 
   it('renders notification success without crashing', () => {
     const { container, getByText, getByAltText, getAllByAltText, getByRole } = renderNotification({
-      type: 'success',
+      type: NotificationStatus.SUCCESS,
       isOpen: true,
       setIsOpen: mockSetIsOpen,
     });
@@ -71,20 +72,20 @@ describe('Notification', () => {
   it('notificationComponents contains the success notification component', () => {
     expect(notificationComponents.success).toBeDefined();
 
-    renderNotification({ type: 'success', isOpen: true, setIsOpen: mockSetIsOpen });
+    renderNotification({ type: NotificationStatus.SUCCESS, isOpen: true, setIsOpen: mockSetIsOpen });
 
     expect(screen.getByTestId('success-box')).toBeInTheDocument();
   });
 
   it('notificationComponents contains the error notification component', () => {
     expect(notificationComponents.error).toBeDefined();
-    renderNotification({ type: 'error', isOpen: true, setIsOpen: mockSetIsOpen });
+    renderNotification({ type: NotificationStatus.ERROR, isOpen: true, setIsOpen: mockSetIsOpen });
 
     expect(screen.getByTestId('error-box')).toBeInTheDocument();
   });
 
   it('should use the correct component based on the "type" prop', () => {
-    const type: NotificationType = 'success'; // Or 'error' to test the other case
+    const type: NotificationType = NotificationStatus.SUCCESS;
     const setIsOpen: jest.Mock = jest.fn();
     const retrySubmit: jest.Mock = jest.fn();
     const isOpen: boolean = true;
@@ -97,7 +98,7 @@ describe('Notification', () => {
   });
 
   it('should fallback to NotificationSuccess when no matching type is found', () => {
-    const type: NotificationType = 'unknown' as NotificationType; // Unrecognized type, should fall back to NotificationSuccess
+    const type: NotificationType = 'unknown';
     const setIsOpen: jest.Mock = jest.fn();
     const retrySubmit: jest.Mock = jest.fn();
     const isOpen: boolean = true;
@@ -113,10 +114,15 @@ describe('Notification', () => {
 
     expect(screen.getByText(successTitleText)).toBeInTheDocument();
   });
+  it('renders "success" notification by default when type is empty' , () => {
+   renderNotification({ type: '', isOpen: false, setIsOpen: mockSetIsOpen, });
+
+    expect(screen.getByText(successTitleText)).toBeInTheDocument();
+  });
   it('check if the setIsOpen works properly on NotificationSuccess', async () => {
     const user: UserEvent = userEvent.setup();
     const { getByRole } = renderNotification({
-      type: 'success',
+      type: NotificationStatus.SUCCESS,
       isOpen: true,
       setIsOpen: mockSetIsOpen,
     });
@@ -129,7 +135,7 @@ describe('Notification', () => {
   it('check if the setIsOpen works properly on NotificationError', async () => {
     const user: UserEvent = userEvent.setup();
     const { getByRole } = renderNotification({
-      type: 'error',
+      type: NotificationStatus.ERROR,
       isOpen: true,
       setIsOpen: mockSetIsOpen,
     });
@@ -145,7 +151,7 @@ describe('Notification', () => {
     const retrySubmitMock: jest.Mock = jest.fn();
 
     const { getByRole } = render(
-      <Notification type="error" isOpen setIsOpen={mockSetIsOpen} retrySubmit={retrySubmitMock} />
+      <Notification type={NotificationStatus.ERROR} isOpen setIsOpen={mockSetIsOpen} retrySubmit={retrySubmitMock} />
     );
 
     const button: HTMLElement = getByRole(buttonRole, { name: retryButton });
@@ -157,7 +163,7 @@ describe('Notification', () => {
 
   it('renders visible notification section', () => {
     const { getByTestId } = renderNotification({
-      type: 'error',
+      type: NotificationStatus.ERROR,
       isOpen: true,
       setIsOpen: mockSetIsOpen,
     });
@@ -169,7 +175,7 @@ describe('Notification', () => {
   });
   it('renders hidden notification section when not authenticated', () => {
     const { getByTestId } = renderNotification({
-      type: 'error',
+      type: NotificationStatus.ERROR,
       isOpen: false,
       setIsOpen: mockSetIsOpen,
     });

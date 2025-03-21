@@ -14,6 +14,7 @@ import {
 } from '@/components';
 
 import QuestionMark from '../../../assets/svg/auth-section/questionMark.svg';
+import FormAlert from '../FormAlert';
 import { PasswordTip } from '../PasswordTip';
 import { validateFullName, validatePassword, validateEmail } from '../Validations';
 
@@ -75,11 +76,7 @@ function AuthForm({
             placeholder={t('sign_up.form.email_input.placeholder')}
             type="text"
           />
-          {errorDetails && (
-            <UiTypography variant="medium14" sx={styles.errorText} role="alert">
-              {errorDetails}
-            </UiTypography>
-          )}
+          {errorDetails && (<FormAlert errorDetails={errorDetails}/>)}
         </Stack>
         <Stack sx={styles.inputWrapper}>
           <Stack direction="row" alignItems="center" gap="0.25rem">

@@ -1,6 +1,8 @@
 import React from 'react';
 
-export type NotificationType = 'success' | 'error';
+import {NotificationStatus} from '../AuthSection/AuthForm/types';
+
+export type NotificationType = typeof NotificationStatus[keyof typeof NotificationStatus];
 
 export interface NotificationControlProps {
   type: NotificationType;

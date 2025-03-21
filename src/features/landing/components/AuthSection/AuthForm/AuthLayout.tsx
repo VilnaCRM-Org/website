@@ -13,10 +13,11 @@ import { NotificationType } from '../../Notification/types';
 
 import AuthForm from './AuthForm';
 import styles from './styles';
-import { CreateUserPayload, SignUpVariables } from './types';
+import {CreateUserPayload, NotificationStatus, SignUpVariables} from './types';
+
 
 function AuthLayout(): React.ReactElement {
-  const [notificationType, setNotificationType] = React.useState<NotificationType>('success');
+  const [notificationType, setNotificationType] = React.useState<NotificationType>(NotificationStatus.SUCCESS);
   const [errorDetails, setErrorDetails] = React.useState('');
   const [isNotificationOpen, setIsNotificationOpen] = React.useState<boolean>(false);
   const {
@@ -44,7 +45,7 @@ function AuthLayout(): React.ReactElement {
       });
       setErrorDetails('');
       setIsNotificationOpen(true);
-      setNotificationType('success');
+      setNotificationType(NotificationStatus.SUCCESS);
     } catch (err) {
       handleApolloError({ err, setErrorDetails, setNotificationType, setIsNotificationOpen });
     }
