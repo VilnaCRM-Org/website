@@ -3,7 +3,7 @@ import userEvent, { UserEvent } from '@testing-library/user-event';
 import { t } from 'i18next';
 import React from 'react';
 
-import {NotificationStatus} from '../../features/landing/components/AuthSection/AuthForm/types';
+import { NotificationStatus } from '../../features/landing/components/AuthSection/AuthForm/types';
 import Notification from '../../features/landing/components/Notification';
 import { notificationComponents } from '../../features/landing/components/Notification/Notification';
 import {
@@ -72,7 +72,11 @@ describe('Notification', () => {
   it('notificationComponents contains the success notification component', () => {
     expect(notificationComponents.success).toBeDefined();
 
-    renderNotification({ type: NotificationStatus.SUCCESS, isOpen: true, setIsOpen: mockSetIsOpen });
+    renderNotification({
+      type: NotificationStatus.SUCCESS,
+      isOpen: true,
+      setIsOpen: mockSetIsOpen,
+    });
 
     expect(screen.getByTestId('success-box')).toBeInTheDocument();
   });
@@ -114,8 +118,8 @@ describe('Notification', () => {
 
     expect(screen.getByText(successTitleText)).toBeInTheDocument();
   });
-  it('renders "success" notification by default when type is empty' , () => {
-   renderNotification({ type: '', isOpen: false, setIsOpen: mockSetIsOpen, });
+  it('renders "success" notification by default when type is empty', () => {
+    renderNotification({ type: '', isOpen: false, setIsOpen: mockSetIsOpen });
 
     expect(screen.getByText(successTitleText)).toBeInTheDocument();
   });
@@ -151,7 +155,12 @@ describe('Notification', () => {
     const retrySubmitMock: jest.Mock = jest.fn();
 
     const { getByRole } = render(
-      <Notification type={NotificationStatus.ERROR} isOpen setIsOpen={mockSetIsOpen} retrySubmit={retrySubmitMock} />
+      <Notification
+        type={NotificationStatus.ERROR}
+        isOpen
+        setIsOpen={mockSetIsOpen}
+        retrySubmit={retrySubmitMock}
+      />
     );
 
     const button: HTMLElement = getByRole(buttonRole, { name: retryButton });

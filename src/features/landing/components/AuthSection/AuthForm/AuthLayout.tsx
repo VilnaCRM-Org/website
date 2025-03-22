@@ -13,11 +13,12 @@ import { NotificationType } from '../../Notification/types';
 
 import AuthForm from './AuthForm';
 import styles from './styles';
-import {CreateUserPayload, NotificationStatus, SignUpVariables} from './types';
-
+import { CreateUserPayload, NotificationStatus, SignUpVariables } from './types';
 
 function AuthLayout(): React.ReactElement {
-  const [notificationType, setNotificationType] = React.useState<NotificationType>(NotificationStatus.SUCCESS);
+  const [notificationType, setNotificationType] = React.useState<NotificationType>(
+    NotificationStatus.SUCCESS
+  );
   const [errorDetails, setErrorDetails] = React.useState('');
   const [isNotificationOpen, setIsNotificationOpen] = React.useState<boolean>(false);
   const {

@@ -1,3 +1,3 @@
 import FormAlert from './FormAlert';
 
-export default  FormAlert;
+export default FormAlert;

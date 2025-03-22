@@ -32,8 +32,7 @@ export type AuthFormProps = {
   onSubmit: (data: RegisterItem) => Promise<void>;
 };
 
-export const NotificationStatus :{ SUCCESS: string;
-  ERROR: string; } = {
+export const NotificationStatus: { SUCCESS: string; ERROR: string } = {
   SUCCESS: 'success',
   ERROR: 'error',
 } as const;
