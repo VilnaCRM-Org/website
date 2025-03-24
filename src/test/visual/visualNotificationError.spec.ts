@@ -1,6 +1,11 @@
 import { test, Locator, expect } from '@playwright/test';
 
-import { currentLanguage, placeholders, screenSizes } from '@/test/visual/constants';
+import {
+  currentLanguage,
+  placeholders,
+  screenSizes,
+  timeoutDuration,
+} from '@/test/visual/constants';
 
 import { errorResponse, ErrorResponseProps } from './graphqlMocks';
 
@@ -36,17 +41,11 @@ test.describe('Form Submission Server Error Test', () => {
       const submitButton: Locator = page.locator('button[type="submit"]');
       await submitButton.click();
 
-      const serverErrorBox: Locator = page.getByTestId('error-box');
-      await expect(serverErrorBox).toBeVisible();
+      const errorBox: Locator = page.locator('#error-box');
+      await expect(errorBox).toBeVisible();
 
-      await page.waitForFunction(() => {
-        const errorBox: Element | null = document.querySelector('[data-testid="error-box"]');
-        return (
-          errorBox &&
-          !errorBox.classList.contains('animating') &&
-          window.getComputedStyle(errorBox).opacity === '1'
-        );
-      });
+      await page.waitForTimeout(timeoutDuration);
+
       await expect(page).toHaveScreenshot(`${currentLanguage}_${screen.name}_error.png`);
     });
   }

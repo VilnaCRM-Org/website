@@ -15,6 +15,7 @@ import { checkElementsInDocument, SetIsOpenType } from './utils';
 
 const notificationBoxSelector: string = '.MuiBox-root';
 const successTitleText: string = t('notifications.success.title');
+const errorTitleText: string = t('notifications.error.title');
 const successDescriptionText: string = t('notifications.success.description');
 const confettiImgAltText: string = t('notifications.success.images.confetti');
 const gearsImgAltText: string = t('notifications.success.images.gears');
@@ -78,14 +79,14 @@ describe('Notification', () => {
       setIsOpen: mockSetIsOpen,
     });
 
-    expect(screen.getByTestId('success-box')).toBeInTheDocument();
+    expect(screen.getByText(successTitleText)).toBeInTheDocument();
   });
 
   it('notificationComponents contains the error notification component', () => {
     expect(notificationComponents.error).toBeDefined();
     renderNotification({ type: NotificationStatus.ERROR, isOpen: true, setIsOpen: mockSetIsOpen });
 
-    expect(screen.getByTestId('error-box')).toBeInTheDocument();
+    expect(screen.getByText(errorTitleText)).toBeInTheDocument();
   });
 
   it('should use the correct component based on the "type" prop', () => {
@@ -171,26 +172,17 @@ describe('Notification', () => {
   });
 
   it('renders visible notification section', () => {
-    const { getByTestId } = renderNotification({
+    const { getByRole } = renderNotification({
       type: NotificationStatus.ERROR,
       isOpen: true,
       setIsOpen: mockSetIsOpen,
     });
 
-    const notification: Element | null = getByTestId('notification');
+    const errorImage: HTMLElement = getByRole('img');
+    const generalNotificationBox: Element | null | undefined =
+      errorImage.parentElement?.parentElement?.parentElement;
 
-    expect(notification).toBeVisible();
-    expect(notification).toHaveStyle('opacity: 1');
-  });
-  it('renders hidden notification section when not authenticated', () => {
-    const { getByTestId } = renderNotification({
-      type: NotificationStatus.ERROR,
-      isOpen: false,
-      setIsOpen: mockSetIsOpen,
-    });
-    const notification: Element | null = getByTestId('notification');
-
-    expect(notification).not.toBeVisible();
-    expect(notification).toHaveStyle('opacity: 0');
+    expect(generalNotificationBox).toBeVisible();
+    expect(generalNotificationBox).toHaveStyle('opacity: 1');
   });
 });

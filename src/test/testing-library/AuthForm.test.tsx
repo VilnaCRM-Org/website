@@ -60,8 +60,6 @@ const passwordTipAltText: string = t('sign_up.form.password_tip.alt');
 const statusRole: string = 'status';
 const alertRole: string = 'alert';
 
-const authFormId: string = 'auth-form';
-
 interface AuthFormWrapperProps {
   onSubmit: (data: RegisterItem) => Promise<void>;
   errorDetails: string;
@@ -103,13 +101,13 @@ describe('AuthForm', () => {
   });
 
   it('renders AuthForm component', () => {
-    const { queryByRole, getByAltText, getByText, getByTestId } = render(
+    const { queryByRole, getByAltText, getByText, getByRole } = render(
       <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
         <AuthFormWrapper errorDetails="" onSubmit={onSubmit} />
       </MockedProvider>
     );
 
-    const authForm: HTMLElement = getByTestId(authFormId);
+    const authForm: HTMLElement = getByRole('form');
     const formTitle: HTMLElement = getByText(formTitleText);
     const nameInputLabel: HTMLElement = getByText(nameInputText);
     const emailInputLabel: HTMLElement = getByText(emailInputText);
@@ -128,7 +126,6 @@ describe('AuthForm', () => {
       passwordTipImage
     );
 
-    expect(getByTestId('auth-form')).toBeVisible();
     expect(loader).not.toBeInTheDocument();
     expect(serverErrorMessage).not.toBeInTheDocument();
   });

@@ -29,7 +29,7 @@ test.describe('Form Submission Visual Test', () => {
       const submitButton: Locator = page.locator('button[type="submit"]');
       await submitButton.click();
 
-      const successBox: Locator = page.getByTestId('success-box');
+      const successBox: Locator = page.locator('#success-box');
       await expect(successBox).toBeVisible();
 
       await page.waitForTimeout(timeoutDuration);

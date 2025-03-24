@@ -33,7 +33,7 @@ function Notification({
 
   return (
     <Fade in={isOpen} timeout={animationTimeout}>
-      <Box sx={styles.notificationSection} data-testid="notification">
+      <Box sx={styles.notificationSection}>
         <Component setIsOpen={setIsOpen} retrySubmit={retrySubmit} />
       </Box>
     </Fade>

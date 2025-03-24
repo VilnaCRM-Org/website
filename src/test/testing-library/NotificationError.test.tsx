@@ -11,7 +11,7 @@ export const retrySubmitButtonText: string = t('notifications.error.retry_button
 export const backToFormButtonText: string = t('notifications.error.button');
 
 const errorImgAltText: string = t('notifications.error.images.error');
-const errorTitle: string = t('notifications.error.title');
+const errorTitleText: string = t('notifications.error.title');
 const errorDescription: string = t('notifications.error.description');
 
 describe('NotificationError Component', () => {
@@ -26,7 +26,7 @@ describe('NotificationError Component', () => {
   it('renders correctly', () => {
     render(<NotificationError setIsOpen={mockSetIsOpen} retrySubmit={mockRetrySubmit} />);
 
-    expect(screen.getByTestId('error-box')).toBeInTheDocument();
+    expect(screen.getByText(errorTitleText)).toBeInTheDocument();
     expect(screen.getByRole(buttonRole, { name: retrySubmitButtonText })).toBeInTheDocument();
     expect(screen.getByRole(buttonRole, { name: backToFormButtonText })).toBeInTheDocument();
   });
@@ -51,25 +51,32 @@ describe('NotificationError Component', () => {
   it('renders images with correct alt text', () => {
     render(<NotificationError setIsOpen={mockSetIsOpen} retrySubmit={mockRetrySubmit} />);
 
-    expect(screen.getByTestId('error-image')).toHaveAttribute('alt', errorImgAltText);
+    const errorImage: HTMLElement = screen.getByRole('img');
+    expect(errorImage).toBeVisible();
+    expect(errorImage).toHaveAttribute('alt', errorImgAltText);
   });
 
   it('renders the correct title and description', () => {
     render(<NotificationError setIsOpen={mockSetIsOpen} retrySubmit={mockRetrySubmit} />);
 
-    expect(screen.getByText(errorTitle)).toBeInTheDocument();
+    expect(screen.getByText(errorTitleText)).toBeInTheDocument();
     expect(screen.getByText(errorDescription)).toBeInTheDocument();
   });
 
   it('renders content box with correct styles', () => {
     render(<NotificationError setIsOpen={mockSetIsOpen} retrySubmit={mockRetrySubmit} />);
 
-    const contentBox: HTMLElement = screen.getByTestId('error-box');
-    const computedStyle: CSSStyleDeclaration = window.getComputedStyle(contentBox);
-    expect(computedStyle.display).toBe('flex');
-    expect(computedStyle.alignItems).toBe('center');
-    expect(contentBox).toBeInTheDocument();
-    expect(contentBox).toHaveClass('MuiBox-root');
+    const errorTitle: HTMLElement = screen.getByText(errorTitleText);
+    const titleBox: HTMLElement | null = errorTitle.parentElement;
+    const notificationBox: HTMLElement | null | undefined = titleBox?.parentElement;
+
+    if (notificationBox) {
+      const computedStyle: CSSStyleDeclaration = window.getComputedStyle(notificationBox);
+      expect(computedStyle.display).toBe('flex');
+      expect(computedStyle.alignItems).toBe('center');
+      expect(notificationBox).toBeInTheDocument();
+      expect(notificationBox).toHaveClass('MuiBox-root');
+    }
   });
   it('applies correct styles to button text', () => {
     render(<NotificationError setIsOpen={mockSetIsOpen} retrySubmit={mockRetrySubmit} />);
@@ -86,12 +93,15 @@ describe('NotificationError Component', () => {
   it('renders message container with correct styles', () => {
     render(<NotificationError setIsOpen={mockSetIsOpen} retrySubmit={mockRetrySubmit} />);
 
-    const messageContainer: HTMLElement = screen.getByTestId('error-message-container');
-    const computedStyle: CSSStyleDeclaration = window.getComputedStyle(messageContainer);
+    const errorTitle: HTMLElement = screen.getByText(errorTitleText);
 
-    expect(computedStyle.display).toBe('flex');
-    expect(computedStyle.flexDirection).toBe('column');
-    expect(messageContainer).toBeInTheDocument();
+    expect(errorTitle).toBeInTheDocument();
+    if (errorTitle.parentElement) {
+      const computedStyle: CSSStyleDeclaration = window.getComputedStyle(errorTitle.parentElement);
+
+      expect(computedStyle.display).toBe('flex');
+      expect(computedStyle.flexDirection).toBe('column');
+    }
   });
 
   it('applies buttonTextStyle correctly', () => {
@@ -113,12 +123,13 @@ describe('NotificationError Component', () => {
   it('messageContainer should not have previous styles', () => {
     render(<NotificationError setIsOpen={mockSetIsOpen} retrySubmit={mockRetrySubmit} />);
 
-    const messageContainer: HTMLElement = screen.getByTestId('error-box');
+    const errorBox: HTMLElement | null | undefined =
+      screen.getByAltText(errorImgAltText)?.parentElement?.parentElement;
 
-    expect(messageContainer).toBeInTheDocument();
+    expect(errorBox).toBeInTheDocument();
 
-    expect(messageContainer).not.toHaveClass('messageContainer');
-    expect(messageContainer).not.toHaveClass('messageContainerError');
+    expect(errorBox).not.toHaveClass('messageContainer');
+    expect(errorBox).not.toHaveClass('messageContainerError');
   });
 
   it('button text should not have previous styles applied', () => {

@@ -22,16 +22,28 @@ describe('NotificationSuccess ', () => {
   });
 
   it('renders NotificationSuccess successfully', () => {
-    const { getByTestId } = render(<NotificationSuccess setIsOpen={mockSetIsOpen} />);
-    expect(getByTestId('success-box')).toBeInTheDocument();
+    const { getAllByAltText } = render(<NotificationSuccess setIsOpen={mockSetIsOpen} />);
+    const confettiImages: HTMLElement[] = getAllByAltText(confettiImgAltText);
+    const successBox: HTMLElement | null | undefined =
+      confettiImages[0].parentElement?.parentElement;
+
+    expect(successBox).toBeInTheDocument();
   });
 
   it('renders images with correct alt text', () => {
     render(<NotificationSuccess setIsOpen={mockSetIsOpen} />);
 
-    expect(screen.getByTestId('confetti')).toHaveAttribute('alt', confettiImgAltText);
+    const images: HTMLElement[] = screen.getAllByRole('img');
+    expect(images).toHaveLength(3);
 
-    expect(screen.getByAltText(gearsImgAltText)).toBeInTheDocument();
+    images.forEach((image: HTMLElement) => {
+      expect(image).toBeInTheDocument();
+      expect(image).toBeVisible();
+    });
+
+    expect(images[0]).toHaveAttribute('alt', confettiImgAltText);
+    expect(images[1]).toHaveAttribute('alt', gearsImgAltText);
+    expect(images[2]).toHaveAttribute('alt', confettiImgAltText);
   });
 
   it('renders the correct title and description', () => {
@@ -51,20 +63,6 @@ describe('NotificationSuccess ', () => {
     expect(mockSetIsOpen).toHaveBeenCalledWith(false);
   });
 
-  it('renders images with right alts', () => {
-    const { getAllByAltText, getByAltText } = render(
-      <NotificationSuccess setIsOpen={mockSetIsOpen} />
-    );
-
-    const successConfettiImg: HTMLElement[] = getAllByAltText(confettiImgAltText);
-    const successGearsImg: HTMLElement = getByAltText(gearsImgAltText);
-
-    expect(successConfettiImg).toHaveLength(2);
-    expect(successConfettiImg[0]).toHaveAttribute('alt', confettiImgAltText);
-    expect(successConfettiImg[1]).toHaveAttribute('alt', confettiImgAltText);
-
-    expect(successGearsImg).toHaveAttribute('alt', gearsImgAltText);
-  });
   it('bottom image has correct styles for smaller screens', () => {
     window.matchMedia = jest.fn().mockImplementation(query => ({
       matches: query === '(max-width: 640px)',

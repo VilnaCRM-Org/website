@@ -33,8 +33,8 @@ function AuthFormWrapper({ errorDetails, onSubmit }: AuthFormWrapperProps): Reac
 }
 
 jest.mock('../../features/landing/components/AuthSection/AuthForm/AuthForm', () => ({
-  __esModule: true, // Ensure it's treated as a module
-  default: jest.fn(() => <div data-testid="auth-form" />),
+  __esModule: true,
+  default: jest.fn(() => <form />),
 }));
 
 describe('AuthFormWrapper - Props Forwarding', () => {

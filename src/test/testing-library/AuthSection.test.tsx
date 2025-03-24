@@ -11,6 +11,7 @@ import { SocialLink } from '../../features/landing/types/authentication/social';
 const authSectionSelector: string = 'section';
 
 const signupHeading: string = t('sign_up.vilna_text');
+const successTitleText: string = t('notifications.success.title');
 
 describe('AuthSection', () => {
   it('renders without crashing', () => {
@@ -34,7 +35,7 @@ describe('AuthSection', () => {
     const signUpText: HTMLElement = getByText(signupHeading);
 
     expect(signUpText).toBeInTheDocument();
-    expect(screen.getByTestId('auth-form')).toBeInTheDocument();
+    expect(screen.getByRole('form')).toBeInTheDocument();
   });
   test('renders AuthForm, and don`t render Notification component', () => {
     render(
@@ -44,7 +45,7 @@ describe('AuthSection', () => {
     );
 
     expect(screen.getByText(signupHeading)).toBeVisible();
-    expect(screen.getByTestId('notification')).not.toBeVisible();
+    expect(screen.getByText(successTitleText)).not.toBeVisible();
   });
 
   test('renders all social links', () => {
