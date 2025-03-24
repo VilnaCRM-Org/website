@@ -18,7 +18,7 @@
     "test:e2e": "pnpm exec playwright test ./src/test/e2e",
     "test:mutation": "npx stryker run",
     "test:visual:update": "npx playwright test ./src/test/visual --update-snapshots",
-    "test:visual": "pnpm exec playwright test ./src/test/visual/visualNotificationError.spec.ts",
+    "test:visual": "pnpm exec playwright test",
     "test:unit": "TEST_ENV=client jest --verbose",
     "test:unit-all": "TEST_ENV=client jest --verbose && TEST_ENV=server jest ./src/test/apollo-server",
     "test:memory-leak": "node ./src/test/memory-leak/runMemlabTests",
