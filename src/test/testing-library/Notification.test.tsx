@@ -102,7 +102,7 @@ describe('Notification', () => {
   });
 
   it('should fallback to NotificationSuccess when no matching type is found', () => {
-    const type: NotificationType = 'unknown';
+    const type: NotificationType = 'unknown' as NotificationType;
     const setIsOpen: jest.Mock = jest.fn();
     const retrySubmit: jest.Mock = jest.fn();
     const isOpen: boolean = true;
@@ -119,7 +119,7 @@ describe('Notification', () => {
     expect(screen.getByText(successTitleText)).toBeInTheDocument();
   });
   it('renders "success" notification by default when type is empty', () => {
-    renderNotification({ type: '', isOpen: false, setIsOpen: mockSetIsOpen });
+    renderNotification({ type: '' as NotificationType, isOpen: false, setIsOpen: mockSetIsOpen });
 
     expect(screen.getByText(successTitleText)).toBeInTheDocument();
   });

@@ -1,6 +1,7 @@
 import { ApolloError } from '@apollo/client';
 import { GraphQLFormattedError } from 'graphql';
 
+import { NotificationStatus } from '../components/AuthSection/AuthForm/types';
 import { NotificationType } from '../components/Notification/types';
 
 interface HandleErrorProps {
@@ -21,7 +22,7 @@ export const handleNetworkError: HandleNetworkErrorType = ({
   if (networkError === null) return;
 
   if ('statusCode' in networkError && networkError.statusCode === 500) {
-    setNotificationType('error');
+    setNotificationType(NotificationStatus.ERROR);
     setIsNotificationOpen(true);
   } else if (networkError.message.includes('Failed to fetch')) {
     setErrorDetails('Network error. Please check your internet connection.');
@@ -58,7 +59,7 @@ export const handleApolloError: HandleApolloErrorType = ({
     const hasServerError: boolean = err.graphQLErrors.some(e => e.extensions?.statusCode === 500);
 
     if (hasServerError) {
-      setNotificationType('error');
+      setNotificationType(NotificationStatus.ERROR);
       setIsNotificationOpen(true);
       return;
     }

@@ -1,6 +1,6 @@
 FROM node:23-alpine3.20
 
-RUN npm install -g pnpm@10.4.1 @types/node typescript
+RUN npm install -g pnpm@10.6.5 @types/node typescript
 
 WORKDIR /app
 

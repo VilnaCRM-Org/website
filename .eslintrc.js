@@ -77,6 +77,8 @@ module.exports = {
         ],
         'no-extra-semi': 'off',
         'class-methods-use-this': 'off',
+        'no-shadow': 'off',
+        '@typescript-eslint/no-shadow': 'error',
         quotes: ['error', 'single', { avoidEscape: true, allowTemplateLiterals: true }],
         'no-multiple-empty-lines': [2, { max: 2, maxEOF: 0 }],
         'linebreak-style': ['error', 'unix'],

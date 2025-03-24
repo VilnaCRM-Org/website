@@ -1,49 +1,20 @@
-import { test, Locator, Route } from '@playwright/test';
+import { test, Locator, expect } from '@playwright/test';
+import { t } from 'i18next';
 import { Response } from 'playwright';
 
 import { checkCheckbox } from '../utils/checkCheckbox';
 import { fillInput } from '../utils/fillInput';
 
-import {
-  placeholderInitials,
-  placeholderEmail,
-  placeholderPassword,
-  signUpButton,
-  policyText,
-  userData,
-  graphqlEndpoint,
-} from './constants';
-import { responseFilter } from './utils';
+import { userData, graphqlEndpoint } from './constants';
+import { getFormFields, responseFilter, successResponse } from './utils';
 
-async function successResponse(route: Route): Promise<void> {
-  await route.fulfill({
-    status: 200,
-    contentType: 'application/json',
-    body: JSON.stringify({
-      data: {
-        createUser: {
-          user: {
-            email: userData.email,
-            initials: userData.fullName,
-            id: '12345',
-            confirmed: true,
-          },
-          clientMutationId: 'some-client-id',
-        },
-      },
-    }),
-  });
-}
+const successTitleText: string = t('notifications.success.title');
+const successButtonText: string = t('notifications.success.button');
+const confettiAltText: string = t('notifications.success.images.confetti');
 
 test('Submit the registration form and verify success notification', async ({ page }) => {
-  const initialsInput: Locator = page.getByPlaceholder(placeholderInitials);
-  const emailInput: Locator = page.getByPlaceholder(placeholderEmail);
-  const passwordInput: Locator = page.getByPlaceholder(placeholderPassword);
-  const policyTextCheckbox: Locator = page.getByLabel(policyText);
-
-  const signupButton: Locator = page.getByRole('button', {
-    name: signUpButton,
-  });
+  const { initialsInput, emailInput, passwordInput, policyTextCheckbox, signupButton } =
+    getFormFields(page);
 
   await page.goto('/');
 
@@ -60,11 +31,19 @@ test('Submit the registration form and verify success notification', async ({ pa
 
   await responsePromise;
 
-  const successNotification: Locator = page.getByTestId('success-box');
-  const successConfetti: Locator = page.getByTestId('confetti');
+  const successTitle: Locator = page.getByText(successTitleText);
+  const successConfettiImages: Locator[] = await page.getByAltText(confettiAltText).all();
 
-  await successNotification.waitFor({ state: 'visible' });
-  await successConfetti.waitFor({ state: 'visible' });
+  await successTitle.waitFor({ state: 'visible' });
+  await successConfettiImages[0].waitFor({ state: 'visible' });
+  await successConfettiImages[1].waitFor({ state: 'visible' });
 
-  await page.getByTestId('success-box').getByRole('button').click();
+  await page.getByRole('button', { name: successButtonText }).click();
+
+  await expect(initialsInput).toBeVisible();
+
+  await expect(initialsInput).toHaveValue('');
+  await expect(emailInput).toHaveValue('');
+  await expect(passwordInput).toHaveValue('');
+  await expect(policyTextCheckbox).not.toBeChecked();
 });
