@@ -3,6 +3,8 @@ import { fireEvent, render, waitFor } from '@testing-library/react';
 import { t } from 'i18next';
 import React, { AriaRole, Dispatch } from 'react';
 
+import { CreateUserInput } from '@/test/apollo-server/types';
+
 import SIGNUP_MUTATION from '../../features/landing/api/service/userService';
 import AuthLayout from '../../features/landing/components/AuthSection/AuthForm';
 import { NotificationType } from '../../features/landing/components/Notification/types';
@@ -31,6 +33,8 @@ const checkboxRole: AriaRole = 'checkbox';
 const formTitleText: string = t('sign_up.form.heading_main');
 const successTitleText: string = t('notifications.success.title');
 const confettiAltText: string = t('notifications.success.images.confetti');
+const confettiBottomAltText: string = t('notifications.success.images.confetti-bottom');
+const successBackButton: string = t('notifications.success.button');
 const requiredText: string = t('sign_up.form.email_input.required');
 const errorTitleText: string = t('notifications.error.title');
 const retryTextButton: string = t('notifications.error.retry_button');
@@ -39,16 +43,14 @@ const fulfilledMockResponse: MockedResponse = {
   request: {
     query: SIGNUP_MUTATION,
   },
-  variableMatcher: () => true,
+  variableMatcher: variables => {
+    const { input } = variables;
+    return !!input?.email && !!input?.initials && !!input?.password;
+  },
+
   result: variables => {
     const { input } = variables;
-    const { initials, email, password, clientMutationId } = input;
-
-    expect(input).not.toBeUndefined();
-    expect(initials).toBe(testInitials);
-    expect(email).toBe(testEmail);
-    expect(password).toBe(testPassword);
-    expect(clientMutationId).toBe('132');
+    const { initials, email, clientMutationId } = input;
 
     return {
       data: {
@@ -59,14 +61,23 @@ const fulfilledMockResponse: MockedResponse = {
             id: 0,
             confirmed: true,
           },
-          clientMutationId: '132',
+          clientMutationId,
         },
       },
     };
   },
 };
-const networkError: Error = new Error('Network error');
-Object.defineProperty(networkError, 'statusCode', { value: 500 });
+
+class ServerError extends Error {
+  public statusCode: number = 500;
+
+  constructor(message = 'Network error') {
+    super(message);
+    this.name = 'ServerError';
+  }
+}
+
+const networkError: Error = new ServerError();
 
 const internalServerErrorResponse: MockedResponse[] = [
   {
@@ -92,6 +103,12 @@ interface GetElementsResult {
   privacyCheckbox: HTMLInputElement;
   signUpButton: HTMLElement;
 }
+const inputFields: { fieldKey: string; value: string }[] = [
+  { fieldKey: 'fullNameInput', value: testInitials },
+  { fieldKey: 'emailInput', value: testEmail },
+  { fieldKey: 'passwordInput', value: testPassword },
+];
+
 describe('AuthLayout', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -134,6 +151,38 @@ describe('AuthLayout', () => {
       expect(queryByRole(statusRole)).not.toBeInTheDocument();
       expect(getByText(successTitleText)).toBeInTheDocument();
       expect(queryByText(errorTitleText)).not.toBeInTheDocument();
+    });
+  });
+  it('should pass correct data to the mutation', async () => {
+    const mockVariableMatcher: jest.Mock<boolean, [{ input: CreateUserInput }]> = jest
+      .fn()
+      .mockReturnValue(true);
+
+    const mockWithVariableCapture: typeof fulfilledMockResponse & {
+      variableMatcher: jest.Mock<boolean, [{ input: CreateUserInput }]>;
+    } = {
+      ...fulfilledMockResponse,
+      variableMatcher: mockVariableMatcher,
+    };
+
+    render(
+      <MockedProvider mocks={[mockWithVariableCapture]} addTypename={false}>
+        <AuthLayout />
+      </MockedProvider>
+    );
+
+    fillForm(testInitials, testEmail, testPassword, true);
+
+    await waitFor(() => {
+      expect(mockVariableMatcher).toHaveBeenCalled();
+      const capturedVariables: { input: CreateUserInput } = mockVariableMatcher.mock.calls[0][0];
+      const { input } = capturedVariables;
+
+      expect(input).not.toBeUndefined();
+      expect(input.initials).toBe(testInitials);
+      expect(input.email).toBe(testEmail);
+      expect(input.password).toBe(testPassword);
+      expect(input.clientMutationId).toBe('132');
     });
   });
   it('shows loading spinner during registration and hides it after completion', async () => {
@@ -320,11 +369,7 @@ describe('AuthLayout', () => {
     const errorBox: HTMLElement = await findByText(errorTitleText);
     expect(errorBox).toBeInTheDocument();
   });
-  test.each([
-    { fieldKey: 'fullNameInput', value: testInitials },
-    { fieldKey: 'emailInput', value: testEmail },
-    { fieldKey: 'passwordInput', value: testPassword },
-  ])(
+  test.each(inputFields)(
     'displays validation errors only after touching fields when mode is onTouche',
     async ({ fieldKey, value }) => {
       const { queryByText } = render(
@@ -351,8 +396,8 @@ describe('AuthLayout', () => {
       });
     }
   );
-  it('should show success notification after successful form submission', async () => {
-    const { queryAllByAltText } = render(
+  it('should show success notification after successful form submission and hide it after clicking back', async () => {
+    const { queryByAltText, getByRole } = render(
       <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
         <AuthLayout />
       </MockedProvider>
@@ -361,14 +406,24 @@ describe('AuthLayout', () => {
     fillForm(testInitials, testEmail, testPassword, true);
 
     await waitFor(() => {
-      const confettiElements: HTMLElement[] = queryAllByAltText(confettiAltText);
+      expect(queryByAltText(confettiAltText)).toBeInTheDocument();
+      expect(queryByAltText(confettiAltText)).toBeVisible();
+      expect(queryByAltText(confettiBottomAltText)).toBeInTheDocument();
+      expect(queryByAltText(confettiBottomAltText)).toBeVisible();
+    });
 
-      confettiElements.forEach(element => {
-        expect(element).toBeInTheDocument();
-        expect(element).toBeVisible();
-      });
+    const backButton: HTMLElement = getByRole('button', { name: successBackButton });
+    expect(backButton).toBeInTheDocument();
+    expect(backButton).toBeVisible();
+
+    backButton.click();
+
+    await waitFor(() => {
+      expect(queryByAltText(confettiAltText)).not.toBeVisible();
+      expect(queryByAltText(confettiBottomAltText)).not.toBeVisible();
     });
   });
+
   it('should initialize notificationType with "success" value', () => {
     const mockSetNotificationType: jest.Mock<void> = jest.fn();
     const useStateSpy: jest.SpyInstance<[unknown, Dispatch<unknown>], [], NotificationType> = jest
@@ -388,5 +443,52 @@ describe('AuthLayout', () => {
     expect(initialState).toBe('success');
 
     useStateSpy.mockRestore();
+  });
+  it('should initialize with success notification state', () => {
+    const { getByText, queryByText } = render(
+      <MockedProvider mocks={[]} addTypename={false}>
+        <AuthLayout />
+      </MockedProvider>
+    );
+
+    const successTitle: HTMLElement = getByText(successTitleText);
+    expect(successTitle).toBeInTheDocument();
+    expect(successTitle).not.toBeVisible();
+
+    expect(queryByText(errorTitleText)).not.toBeInTheDocument();
+  });
+  it('handles maximum length and special character inputs', async () => {
+    const longName: string = 'A'.repeat(50);
+    const specialCharsEmail: string = 'test.user+special@example.com';
+    const complexPassword: string = 'P@$$w0rd!*&^%';
+
+    const specialCharsMock: MockedResponse = {
+      ...fulfilledMockResponse,
+      result: () => ({
+        data: {
+          createUser: {
+            user: {
+              email: specialCharsEmail,
+              initials: longName,
+              id: 0,
+              confirmed: true,
+            },
+            clientMutationId: '132',
+          },
+        },
+      }),
+    };
+
+    const { getByText } = render(
+      <MockedProvider mocks={[specialCharsMock]} addTypename={false}>
+        <AuthLayout />
+      </MockedProvider>
+    );
+
+    fillForm(longName, specialCharsEmail, complexPassword, true);
+
+    await waitFor(() => {
+      expect(getByText(successTitleText)).toBeInTheDocument();
+    });
   });
 });

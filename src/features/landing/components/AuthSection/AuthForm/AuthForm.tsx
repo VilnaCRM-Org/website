@@ -29,12 +29,13 @@ function AuthForm({
   errors,
 }: AuthFormProps): React.ReactElement {
   const { t } = useTranslation();
+
   return (
     <Box
       component="form"
       data-testid="auth-form"
       onSubmit={handleSubmit(onSubmit)}
-      aria-label="Sign up form"
+      aria-label="SignUpForm"
     >
       <UiTypography variant="h4" component="h4" sx={styles.formTitle}>
         {t('sign_up.form.heading_main')}
@@ -74,7 +75,7 @@ function AuthForm({
               validate: validateEmail,
             }}
             placeholder={t('sign_up.form.email_input.placeholder')}
-            type="text"
+            type="email"
           />
           {errorDetails && <FormAlert errorDetails={errorDetails} />}
         </Stack>
@@ -119,6 +120,7 @@ function AuthForm({
             onChange={onChange}
             checked={value}
             error={!!errors.Privacy}
+            isInvalid={errors?.Privacy?.ref && errors?.Privacy?.ref.name === 'Privacy'}
             sx={styles.labelText as React.CSSProperties}
             label={
               <UiTypography variant="medium14" sx={styles.privacyText}>

@@ -1,4 +1,4 @@
-import { render, RenderResult, screen } from '@testing-library/react';
+import { render, RenderResult, screen, waitFor } from '@testing-library/react';
 import userEvent, { UserEvent } from '@testing-library/user-event';
 import { t } from 'i18next';
 import React from 'react';
@@ -18,6 +18,7 @@ const successTitleText: string = t('notifications.success.title');
 const errorTitleText: string = t('notifications.error.title');
 const successDescriptionText: string = t('notifications.success.description');
 const confettiImgAltText: string = t('notifications.success.images.confetti');
+const confettiImgBottomAltText: string = t('notifications.success.images.confetti-bottom');
 const gearsImgAltText: string = t('notifications.success.images.gears');
 const backToFormButton: string = t('notifications.error.button');
 const retryButton: string = t('notifications.error.retry_button');
@@ -28,10 +29,17 @@ function renderNotification({
   type,
   isOpen,
   setIsOpen,
-}: Omit<NotificationControlProps, 'retrySubmit'>): RenderResult {
-  const retrySubmitMock: jest.Mock = jest.fn();
+  retrySubmit = jest.fn(),
+}: Partial<NotificationControlProps> & {
+  setIsOpen: NotificationControlProps['setIsOpen'];
+}): RenderResult {
   return render(
-    <Notification type={type} setIsOpen={setIsOpen} isOpen={isOpen} retrySubmit={retrySubmitMock} />
+    <Notification
+      type={type || NotificationStatus.SUCCESS}
+      setIsOpen={setIsOpen}
+      isOpen={isOpen || false}
+      retrySubmit={retrySubmit}
+    />
   );
 }
 
@@ -44,7 +52,7 @@ describe('Notification', () => {
   });
 
   it('renders notification success without crashing', () => {
-    const { container, getByText, getByAltText, getAllByAltText, getByRole } = renderNotification({
+    const { container, getByText, getByAltText, getByRole } = renderNotification({
       type: NotificationStatus.SUCCESS,
       isOpen: true,
       setIsOpen: mockSetIsOpen,
@@ -53,8 +61,8 @@ describe('Notification', () => {
     const notificationContainer: HTMLElement = container.querySelector(
       notificationBoxSelector
     ) as HTMLElement;
-    const successConfettiImg: HTMLElement = getAllByAltText(confettiImgAltText)[0];
-    const successConfettiImgBottom: HTMLElement = getAllByAltText(confettiImgAltText)[1];
+    const successConfettiImg: HTMLElement = getByAltText(confettiImgAltText);
+    const successConfettiImgBottom: HTMLElement = getByAltText(confettiImgBottomAltText);
     const successGearsImg: HTMLElement = getByAltText(gearsImgAltText);
     const successTitle: HTMLElement = getByText(successTitleText);
     const successDescription: HTMLElement = getByText(successDescriptionText);
@@ -169,6 +177,9 @@ describe('Notification', () => {
     await user.click(button);
 
     expect(retrySubmitMock).toHaveBeenCalled();
+    expect(retrySubmitMock).toHaveBeenCalledTimes(1);
+
+    expect(mockSetIsOpen).not.toHaveBeenCalled();
   });
 
   it('renders visible notification section', () => {
@@ -184,5 +195,27 @@ describe('Notification', () => {
 
     expect(generalNotificationBox).toBeVisible();
     expect(generalNotificationBox).toHaveStyle('opacity: 1');
+  });
+  it('should handle keyboard navigation', async () => {
+    const user: UserEvent = userEvent.setup();
+
+    const { getByRole } = renderNotification({
+      type: NotificationStatus.SUCCESS,
+      isOpen: true,
+      setIsOpen: mockSetIsOpen,
+    });
+
+    expect(getByRole(buttonRole)).toBeInTheDocument();
+
+    await waitFor(() => user.tab());
+
+    const button: HTMLElement = getByRole(buttonRole);
+
+    expect(button).toHaveFocus();
+
+    await user.keyboard('{Enter}');
+
+    expect(mockSetIsOpen).toHaveBeenCalledTimes(1);
+    expect(mockSetIsOpen).toHaveBeenCalledWith(false);
   });
 });

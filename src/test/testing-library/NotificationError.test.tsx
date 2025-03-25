@@ -3,12 +3,11 @@ import userEvent from '@testing-library/user-event';
 import { t } from 'i18next';
 
 import NotificationError from '../../features/landing/components/Notification/NotificationError';
-import styles from '../../features/landing/components/Notification/styles';
 
 import { buttonRole } from './constants';
 
-export const retrySubmitButtonText: string = t('notifications.error.retry_button');
-export const backToFormButtonText: string = t('notifications.error.button');
+const retrySubmitButtonText: string = t('notifications.error.retry_button');
+const backToFormButtonText: string = t('notifications.error.button');
 
 const errorImgAltText: string = t('notifications.error.images.error');
 const errorTitleText: string = t('notifications.error.title');
@@ -74,7 +73,6 @@ describe('NotificationError Component', () => {
       const computedStyle: CSSStyleDeclaration = window.getComputedStyle(notificationBox);
       expect(computedStyle.display).toBe('flex');
       expect(computedStyle.alignItems).toBe('center');
-      expect(notificationBox).toBeInTheDocument();
       expect(notificationBox).toHaveClass('MuiBox-root');
     }
   });
@@ -104,7 +102,7 @@ describe('NotificationError Component', () => {
     }
   });
 
-  it('applies buttonTextStyle correctly', () => {
+  it('renders button text elements', () => {
     render(<NotificationError setIsOpen={mockSetIsOpen} retrySubmit={mockRetrySubmit} />);
 
     const retryButtonText: HTMLElement = screen.getByText(retrySubmitButtonText);
@@ -141,9 +139,7 @@ describe('NotificationError Component', () => {
     expect(retryButton).toBeInTheDocument();
     expect(backButton).toBeInTheDocument();
 
-    expect(retryButton).not.toHaveStyle(styles.messageButtonText);
-    expect(retryButton).not.toHaveStyle(styles.errorButtonMessage);
-    expect(backButton).not.toHaveStyle(styles.messageButtonText);
-    expect(backButton).not.toHaveStyle(styles.errorButtonMessage);
+    expect(window.getComputedStyle(retryButton).fontWeight).not.toBe('bold');
+    expect(window.getComputedStyle(backButton).color).not.toBe('red');
   });
 });

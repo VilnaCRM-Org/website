@@ -10,6 +10,7 @@ import { SetIsOpenType } from './utils';
 const successTitleText: string = t('notifications.success.title');
 const successDescriptionText: string = t('notifications.success.description');
 const confettiImgAltText: string = t('notifications.success.images.confetti');
+const confettiImgBottomAltText: string = t('notifications.success.images.confetti-bottom');
 const gearsImgAltText: string = t('notifications.success.images.gears');
 const buttonText: string = t('notifications.success.button');
 
@@ -43,7 +44,7 @@ describe('NotificationSuccess ', () => {
 
     expect(images[0]).toHaveAttribute('alt', confettiImgAltText);
     expect(images[1]).toHaveAttribute('alt', gearsImgAltText);
-    expect(images[2]).toHaveAttribute('alt', confettiImgAltText);
+    expect(images[2]).toHaveAttribute('alt', confettiImgBottomAltText);
   });
 
   it('renders the correct title and description', () => {
@@ -70,9 +71,9 @@ describe('NotificationSuccess ', () => {
       removeEventListener: jest.fn(),
     }));
 
-    const { getAllByAltText } = render(<NotificationSuccess setIsOpen={jest.fn()} />);
+    const { getByAltText } = render(<NotificationSuccess setIsOpen={jest.fn()} />);
 
-    const successConfettiImgBottom: HTMLElement = getAllByAltText(confettiImgAltText)[1];
+    const successConfettiImgBottom: HTMLElement = getByAltText(confettiImgBottomAltText);
     const imgParent: HTMLElement | null = successConfettiImgBottom.parentElement;
 
     expect(imgParent).toHaveStyle('bottom: -0.78rem');

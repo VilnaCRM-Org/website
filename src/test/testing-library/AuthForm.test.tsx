@@ -1,5 +1,5 @@
 import { MockedProvider, MockedResponse } from '@apollo/client/testing';
-import { fireEvent, render, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent, { UserEvent } from '@testing-library/user-event';
 import { t } from 'i18next';
 import React from 'react';
@@ -9,7 +9,7 @@ import SIGNUP_MUTATION from '../../features/landing/api/service/userService';
 import AuthForm from '../../features/landing/components/AuthSection/AuthForm/AuthForm';
 import { RegisterItem } from '../../features/landing/types/authentication/form';
 
-import { testInitials, testEmail, testPassword } from './constants';
+import { testInitials, testEmail, testPassword, buttonRole, submitButtonText } from './constants';
 import {
   checkElementsInDocument,
   fillForm,
@@ -181,7 +181,7 @@ describe('AuthForm', () => {
       const requiredError: HTMLElement[] = getAllByText(requiredText);
       expect(requiredError[0]).toBeInTheDocument();
       expect(requiredError.length).toBe(3);
-      expect(privacyCheckbox).toHaveStyle('border: 1px solid #DC3939');
+      expect(privacyCheckbox).toHaveAttribute('aria-invalid', 'true');
       expect(serverErrorMessage).not.toBeInTheDocument();
       expect(onSubmit).not.toHaveBeenCalled();
     });
@@ -237,10 +237,17 @@ describe('AuthForm', () => {
         <AuthFormWrapper errorDetails="" onSubmit={onSubmit} />
       </MockedProvider>
     );
+
     fillForm(testInitials, testEmail, testPassword, true);
 
     await waitFor(() => {
       expect(onSubmit).toHaveBeenCalled();
+      expect(onSubmit.mock.calls[0][0]).toMatchObject({
+        Email: testEmail,
+        FullName: testInitials,
+        Password: testPassword,
+        Privacy: true,
+      });
     });
 
     expect(queryByRole('alert')).not.toBeInTheDocument();
@@ -287,7 +294,114 @@ describe('AuthForm', () => {
     );
 
     const privacyPolicyLink: HTMLElement[] = getAllByRole('link');
-    expect(privacyPolicyLink[0]).toHaveAttribute('href', 'https://github.com/VilnaCRM-Org');
-    expect(privacyPolicyLink[1]).toHaveAttribute('href', 'https://github.com/VilnaCRM-Org');
+    const expectedUrl: string =
+      process.env.NEXT_PUBLIC_PRIVACY_POLICY_URL || 'https://github.com/VilnaCRM-Org';
+    expect(privacyPolicyLink[0]).toHaveAttribute('href', expectedUrl);
+    expect(privacyPolicyLink[1]).toHaveAttribute('href', expectedUrl);
+  });
+
+  // checkbox
+  it('should not set error on Privacy checkbox when there are no validation errors', async () => {
+    render(
+      <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
+        <AuthFormWrapper errorDetails="" onSubmit={onSubmit} />
+      </MockedProvider>
+    );
+
+    const { privacyCheckbox } = fillForm(testInitials, testEmail, testPassword, true);
+
+    await waitFor(() => {
+      expect(privacyCheckbox).not.toHaveAttribute('aria-invalid');
+    });
+  });
+  it('should mark Privacy checkbox as invalid if other fields are filled, but checkbox is not checked', async () => {
+    const { queryByText } = render(
+      <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
+        <AuthFormWrapper errorDetails="" onSubmit={onSubmit} />
+      </MockedProvider>
+    );
+
+    const { privacyCheckbox } = fillForm(testInitials, testEmail, testPassword, false);
+
+    await waitFor(() => {
+      expect(privacyCheckbox).toHaveAttribute('aria-invalid', 'true');
+
+      expect(queryByText(requiredText)).not.toBeInTheDocument();
+    });
+  });
+  it('should not mark Privacy checkbox as invalid if other fields are invalid but checkbox was checked', async () => {
+    const { getAllByText } = render(
+      <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
+        <AuthFormWrapper errorDetails="" onSubmit={onSubmit} />
+      </MockedProvider>
+    );
+
+    const { privacyCheckbox } = fillForm('', '', '', true);
+
+    await waitFor(() => {
+      expect(privacyCheckbox).not.toHaveAttribute('aria-invalid');
+
+      const requiredError: HTMLElement[] = getAllByText(requiredText);
+      expect(requiredError[0]).toBeInTheDocument();
+      expect(requiredError.length).toBe(3);
+    });
+  });
+  it('should have isInvalid true for checkbox if it is not checked and other fields are empty', async () => {
+    const { getAllByText } = render(
+      <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
+        <AuthFormWrapper errorDetails="" onSubmit={onSubmit} />
+      </MockedProvider>
+    );
+    const { privacyCheckbox } = fillForm('', '', '', false);
+
+    await waitFor(() => {
+      expect(privacyCheckbox).toHaveAttribute('aria-invalid', 'true');
+
+      const requiredError: HTMLElement[] = getAllByText(requiredText);
+      expect(requiredError[0]).toBeInTheDocument();
+      expect(requiredError.length).toBe(3);
+    });
+  });
+  it('should have isInvalid true when Privacy checkbox is not checked on submit', async () => {
+    const { getAllByText } = render(
+      <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
+        <AuthFormWrapper errorDetails="" onSubmit={onSubmit} />
+      </MockedProvider>
+    );
+
+    const { signUpButton, privacyCheckbox } = getFormElements();
+
+    fireEvent.click(signUpButton);
+
+    await waitFor(() => {
+      const ariaInvalid: string | null = privacyCheckbox.getAttribute('aria-invalid');
+      expect(ariaInvalid).toBe('true');
+
+      const requiredError: HTMLElement[] = getAllByText(requiredText);
+      expect(requiredError[0]).toBeInTheDocument();
+      expect(requiredError.length).toBe(3);
+    });
+    expect(privacyCheckbox).toBeInTheDocument();
+  });
+
+  it('should pass validation when Privacy checkbox is checked after failing validation', async () => {
+    render(
+      <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
+        <AuthFormWrapper errorDetails="" onSubmit={onSubmit} />
+      </MockedProvider>
+    );
+    const { privacyCheckbox } = fillForm(testInitials, testEmail, testPassword, false);
+    const signUpButton: HTMLElement = screen.getByRole(buttonRole, { name: submitButtonText });
+    fireEvent.click(signUpButton);
+
+    await waitFor(() => {
+      expect(privacyCheckbox).toHaveAttribute('aria-invalid', 'true');
+    });
+
+    fireEvent.click(privacyCheckbox);
+
+    await waitFor(() => {
+      expect(privacyCheckbox).not.toHaveAttribute('aria-invalid');
+    });
   });
 });

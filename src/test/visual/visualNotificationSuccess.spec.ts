@@ -1,4 +1,4 @@
-import { test, expect, Locator } from '@playwright/test';
+import { test, expect, Locator, Route } from '@playwright/test';
 
 import { screenSizes, currentLanguage, timeoutDuration, placeholders } from './constants';
 import { successResponse } from './graphqlMocks';
@@ -15,7 +15,9 @@ test.describe('Form Submission Visual Test', () => {
 
       await page.waitForFunction(() => document.readyState === 'complete');
 
-      await page.route('**/graphql', route => successResponse(route, 200));
+      const routeHandler: (route: Route) => void = (route: Route): void =>
+        successResponse(route, 200);
+      await page.route('**/graphql', routeHandler);
 
       const nameInput: Locator = page.getByPlaceholder(placeholders.name);
       await nameInput.scrollIntoViewIfNeeded();
@@ -35,6 +37,8 @@ test.describe('Form Submission Visual Test', () => {
       await page.waitForTimeout(timeoutDuration);
 
       await expect(page).toHaveScreenshot(`${currentLanguage}_${screen.name}_success.png`);
+
+      await page.unroute('**/graphql', routeHandler);
     });
   }
 });

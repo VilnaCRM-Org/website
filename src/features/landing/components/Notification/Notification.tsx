@@ -22,6 +22,9 @@ export const notificationComponents: NotificationComponentMap = {
     <NotificationError setIsOpen={setIsOpen} retrySubmit={retrySubmit} />
   ),
 };
+function getNotificationComponent(type: keyof NotificationComponentMap): NotificationComponentType {
+  return notificationComponents[type] ?? NotificationSuccess;
+}
 
 function Notification({
   type,
@@ -29,7 +32,7 @@ function Notification({
   isOpen,
   retrySubmit,
 }: NotificationControlProps): React.ReactElement {
-  const Component: NotificationComponentType = notificationComponents[type] || NotificationSuccess;
+  const Component: NotificationComponentType = getNotificationComponent(type);
 
   return (
     <Fade in={isOpen} timeout={animationTimeout}>

@@ -61,9 +61,15 @@ function AuthLayout(): React.ReactElement {
   return (
     <Box sx={styles.formWrapper}>
       {loading && (
-        <output style={styles.loader} aria-label="Loading" aria-live="polite">
+        <Box
+          component="output"
+          style={styles.loader}
+          aria-label="Loading"
+          aria-live="polite"
+          role="status"
+        >
           <CircularProgress color="primary" size={70} />
-        </output>
+        </Box>
       )}
       <Box sx={styles.backgroundImage} />
       <Box sx={styles.backgroundBlock} />

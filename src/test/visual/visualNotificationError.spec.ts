@@ -1,11 +1,6 @@
-import { test, Locator, expect } from '@playwright/test';
+import { test, Locator, expect, Route } from '@playwright/test';
 
-import {
-  currentLanguage,
-  placeholders,
-  screenSizes,
-  timeoutDuration,
-} from '@/test/visual/constants';
+import { currentLanguage, placeholders, screenSizes } from '@/test/visual/constants';
 
 import { errorResponse, ErrorResponseProps } from './graphqlMocks';
 
@@ -27,7 +22,10 @@ test.describe('Form Submission Server Error Test', () => {
 
       await page.waitForFunction(() => document.readyState === 'complete');
 
-      await page.route('**/graphql', route => errorResponse(route, serverErrorResponse));
+      const routeHandler: (route: Route) => void = (route: Route): void =>
+        errorResponse(route, serverErrorResponse);
+
+      await page.route('**/graphql', routeHandler);
 
       const nameInput: Locator = page.getByPlaceholder(placeholders.name);
       await nameInput.scrollIntoViewIfNeeded();
@@ -44,9 +42,13 @@ test.describe('Form Submission Server Error Test', () => {
       const errorBox: Locator = page.locator('#error-box');
       await expect(errorBox).toBeVisible();
 
-      await page.waitForTimeout(timeoutDuration);
+      await page.waitForFunction(
+        () => !document.querySelector('#error-box')?.classList.contains('animating')
+      );
 
       await expect(page).toHaveScreenshot(`${currentLanguage}_${screen.name}_error.png`);
+
+      await page.unroute('**/graphql', routeHandler);
     });
   }
 });
