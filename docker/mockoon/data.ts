@@ -2,24 +2,32 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 
 import { config } from 'dotenv';
+import { createLogger, Logger, format, transports } from 'winston';
 
 config();
 
-const defaultUrlSchema: string =
-  'https://raw.githubusercontent.com/VilnaCRM-Org/user-service/main/.github/openapi-spec/spec.yaml';
+const SCHEMA_URL: string = process.env.MOCKOON_SCHEMA_URL || '';
 
-const SCHEMA_URL: string = process.env.MOCKOON_SCHEMA_URL || defaultUrlSchema;
+if (!SCHEMA_URL) {
+  throw new Error('Schema URL is not configured. Please set the SCHEMA_URL environment variable.');
+}
 
 const OUTPUT_DIR: string = path.join(__dirname);
 const OUTPUT_FILE: string = path.join(OUTPUT_DIR, 'data.json');
 
+const logger: Logger = createLogger({
+  level: 'info',
+  format: format.combine(format.timestamp(), format.json()),
+  transports: [new transports.Console(), new transports.File({ filename: 'app.log' })],
+});
+
 export async function fetchAndSaveSchema(): Promise<void> {
+  logger.info(`Fetching OpenAPI schema from: ${SCHEMA_URL}...`);
+
   const controller: AbortController = new AbortController();
   const timeoutId: NodeJS.Timeout = setTimeout(() => controller.abort(), 5000);
 
   try {
-    console.log(`Fetching OpenAPI schema from: ${SCHEMA_URL}...`);
-
     // Fetch schema
     const response: Response = await fetch(SCHEMA_URL, { signal: controller.signal }).finally(() =>
       clearTimeout(timeoutId)
@@ -38,15 +46,23 @@ export async function fetchAndSaveSchema(): Promise<void> {
     const data: string = await response.text();
     fs.writeFileSync(OUTPUT_FILE, data, 'utf-8');
 
-    console.log(`Schema successfully saved to: ${OUTPUT_FILE}`);
+    logger.info(`Schema successfully saved to: ${OUTPUT_FILE}`);
   } catch (error) {
     if ((error as Error).name === 'AbortError') {
-      console.error('Schema fetch timeout after 5 seconds');
+      logger.error('Schema fetch timeout after 5 seconds');
     } else {
-      console.error(`Schema fetch failed: ${(error as Error).message}`);
+      logger.error(`Schema fetch failed: ${(error as Error).message}`);
     }
-    process.exit(1); // Exit with an error code
+    if (process.env.MOCKOON_EXIT_ON_ERROR !== 'false') {
+      process.exit(1); // Exit with an error code
+    }
+    logger.info('Error handling complete, continuing with execution...');
   }
 }
 
-fetchAndSaveSchema();
+if (require.main === module) {
+  fetchAndSaveSchema().catch(error => {
+    logger.error('Fatal error during schema fetch:', error);
+    process.exit(1);
+  });
+}

@@ -68,10 +68,10 @@ describe('AuthLayout Error Handling', () => {
           query: SIGNUP_MUTATION,
           variables: {
             input: {
-              email: 'test@example.com',
-              initials: 'Test User',
-              password: 'Password123!',
-              clientMutationId: '132',
+              email: testEmail,
+              initials: testInitials,
+              password: testPassword,
+              clientMutationId: expect.any(String),
             },
           },
         },

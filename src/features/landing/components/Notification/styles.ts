@@ -243,6 +243,8 @@ export default {
   },
 
   errorButton: {
+    minWidth: '260px',
+    width: '100%',
     height: '50px',
     paddingTop: '1rem',
     paddingBottom: '1rem',

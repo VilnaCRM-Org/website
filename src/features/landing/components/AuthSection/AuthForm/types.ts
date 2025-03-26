@@ -24,13 +24,13 @@ export interface CreateUserPayload {
 }
 export type UseFormControl = Control<RegisterItem>;
 
-export type AuthFormProps = {
+export interface AuthFormProps {
   handleSubmit: UseFormHandleSubmit<RegisterItem, undefined>;
   control: UseFormControl;
   errors: FieldErrors<RegisterItem>;
   errorDetails: string;
   onSubmit: (data: RegisterItem) => Promise<void>;
-};
+}
 
 export enum NotificationStatus {
   SUCCESS = 'success',

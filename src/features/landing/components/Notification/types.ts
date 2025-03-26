@@ -8,13 +8,10 @@ export interface NotificationControlProps {
   type: NotificationType;
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
-  retrySubmit: () => void;
+  onRetry: () => void;
 }
 
-export type NotificationComponentProps = Pick<
-  NotificationControlProps,
-  'setIsOpen' | 'retrySubmit'
->;
+export type NotificationComponentProps = Pick<NotificationControlProps, 'setIsOpen' | 'onRetry'>;
 export type NotificationSuccessProps = Pick<NotificationComponentProps, 'setIsOpen'>;
 export type NotificationComponentType = React.FC<NotificationComponentProps>;
 export type NotificationComponentMap = Record<NotificationType, NotificationComponentType>;

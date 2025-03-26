@@ -17,11 +17,7 @@ function UiCheckbox({
     <FormControlLabel
       sx={sx}
       control={
-        <Box
-          component="span"
-          onChange={onChange}
-          sx={error ? styles.checkboxWrapperError : styles.checkboxWrapper}
-        >
+        <Box component="span" sx={error ? styles.checkboxWrapperError : styles.checkboxWrapper}>
           <input
             type="checkbox"
             className="PrivateSwitchBase-input"

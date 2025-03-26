@@ -72,6 +72,9 @@ export const fillForm: (
   if (emailValue && !emailValue.includes('@')) {
     throw new Error('Invalid email format');
   }
+  if (emailValue && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailValue)) {
+    throw new Error('Invalid email format');
+  }
 
   if (passwordValue && passwordValue.length < 8) {
     throw new Error('Password must be at least 8 characters');

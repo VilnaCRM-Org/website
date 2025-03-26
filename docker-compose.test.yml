@@ -20,6 +20,8 @@ services:
       - .:/app
     ports:
       - '9324:9324'
+    environment:
+      - NEXT_PUBLIC_PRODUCTION_API_URL=http://prod:3001
 
   apollo:
     build:

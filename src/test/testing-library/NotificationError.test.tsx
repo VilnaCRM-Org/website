@@ -23,7 +23,7 @@ describe('NotificationError Component', () => {
   });
 
   it('renders correctly', () => {
-    render(<NotificationError setIsOpen={mockSetIsOpen} retrySubmit={mockRetrySubmit} />);
+    render(<NotificationError setIsOpen={mockSetIsOpen} onRetry={mockRetrySubmit} />);
 
     expect(screen.getByText(errorTitleText)).toBeInTheDocument();
     expect(screen.getByRole(buttonRole, { name: retrySubmitButtonText })).toBeInTheDocument();
@@ -31,7 +31,7 @@ describe('NotificationError Component', () => {
   });
 
   it('calls retrySubmit when retry button is clicked', async () => {
-    render(<NotificationError setIsOpen={mockSetIsOpen} retrySubmit={mockRetrySubmit} />);
+    render(<NotificationError setIsOpen={mockSetIsOpen} onRetry={mockRetrySubmit} />);
 
     const retryButton: HTMLElement = screen.getByRole(buttonRole, { name: retrySubmitButtonText });
     await userEvent.click(retryButton);
@@ -40,7 +40,7 @@ describe('NotificationError Component', () => {
   });
 
   it('calls setIsOpen(false) when back-to-form button is clicked', async () => {
-    render(<NotificationError setIsOpen={mockSetIsOpen} retrySubmit={mockRetrySubmit} />);
+    render(<NotificationError setIsOpen={mockSetIsOpen} onRetry={mockRetrySubmit} />);
 
     const backButton: HTMLElement = screen.getByRole(buttonRole, { name: backToFormButtonText });
     await userEvent.click(backButton);
@@ -48,7 +48,7 @@ describe('NotificationError Component', () => {
     expect(mockSetIsOpen).toHaveBeenCalledWith(false);
   });
   it('renders images with correct alt text', () => {
-    render(<NotificationError setIsOpen={mockSetIsOpen} retrySubmit={mockRetrySubmit} />);
+    render(<NotificationError setIsOpen={mockSetIsOpen} onRetry={mockRetrySubmit} />);
 
     const errorImage: HTMLElement = screen.getByRole('img');
     expect(errorImage).toBeVisible();
@@ -56,14 +56,14 @@ describe('NotificationError Component', () => {
   });
 
   it('renders the correct title and description', () => {
-    render(<NotificationError setIsOpen={mockSetIsOpen} retrySubmit={mockRetrySubmit} />);
+    render(<NotificationError setIsOpen={mockSetIsOpen} onRetry={mockRetrySubmit} />);
 
     expect(screen.getByText(errorTitleText)).toBeInTheDocument();
     expect(screen.getByText(errorDescription)).toBeInTheDocument();
   });
 
   it('renders content box with correct styles', () => {
-    render(<NotificationError setIsOpen={mockSetIsOpen} retrySubmit={mockRetrySubmit} />);
+    render(<NotificationError setIsOpen={mockSetIsOpen} onRetry={mockRetrySubmit} />);
 
     const errorTitle: HTMLElement = screen.getByText(errorTitleText);
     const titleBox: HTMLElement | null = errorTitle.parentElement;
@@ -77,7 +77,7 @@ describe('NotificationError Component', () => {
     }
   });
   it('applies correct styles to button text', () => {
-    render(<NotificationError setIsOpen={mockSetIsOpen} retrySubmit={mockRetrySubmit} />);
+    render(<NotificationError setIsOpen={mockSetIsOpen} onRetry={mockRetrySubmit} />);
 
     const backButtonText: HTMLElement = screen.getByText(backToFormButtonText);
     const computedStyle: CSSStyleDeclaration = window.getComputedStyle(backButtonText);
@@ -89,7 +89,7 @@ describe('NotificationError Component', () => {
   });
 
   it('renders message container with correct styles', () => {
-    render(<NotificationError setIsOpen={mockSetIsOpen} retrySubmit={mockRetrySubmit} />);
+    render(<NotificationError setIsOpen={mockSetIsOpen} onRetry={mockRetrySubmit} />);
 
     const errorTitle: HTMLElement = screen.getByText(errorTitleText);
 
@@ -103,7 +103,7 @@ describe('NotificationError Component', () => {
   });
 
   it('renders button text elements', () => {
-    render(<NotificationError setIsOpen={mockSetIsOpen} retrySubmit={mockRetrySubmit} />);
+    render(<NotificationError setIsOpen={mockSetIsOpen} onRetry={mockRetrySubmit} />);
 
     const retryButtonText: HTMLElement = screen.getByText(retrySubmitButtonText);
     const backButtonText: HTMLElement = screen.getByText(backToFormButtonText);
@@ -112,14 +112,14 @@ describe('NotificationError Component', () => {
     expect(backButtonText).toBeInTheDocument();
   });
   it('renders the second button with correct marginTop', () => {
-    render(<NotificationError setIsOpen={mockSetIsOpen} retrySubmit={mockRetrySubmit} />);
+    render(<NotificationError setIsOpen={mockSetIsOpen} onRetry={mockRetrySubmit} />);
 
     const backButton: HTMLElement = screen.getByRole(buttonRole, { name: backToFormButtonText });
     expect(backButton).toHaveStyle('marginTop: 0.5rem');
   });
 
   it('messageContainer should not have previous styles', () => {
-    render(<NotificationError setIsOpen={mockSetIsOpen} retrySubmit={mockRetrySubmit} />);
+    render(<NotificationError setIsOpen={mockSetIsOpen} onRetry={mockRetrySubmit} />);
 
     const errorBox: HTMLElement | null | undefined =
       screen.getByAltText(errorImgAltText)?.parentElement?.parentElement;
@@ -131,7 +131,7 @@ describe('NotificationError Component', () => {
   });
 
   it('button text should not have previous styles applied', () => {
-    render(<NotificationError setIsOpen={mockSetIsOpen} retrySubmit={mockRetrySubmit} />);
+    render(<NotificationError setIsOpen={mockSetIsOpen} onRetry={mockRetrySubmit} />);
 
     const retryButton: HTMLElement = screen.getByText(retrySubmitButtonText);
     const backButton: HTMLElement = screen.getByText(backToFormButtonText);

@@ -37,8 +37,8 @@ function AuthLayout(): React.ReactElement {
       await signupMutation({
         variables: {
           input: {
-            email: userData.Email,
-            initials: userData.FullName,
+            email: userData.Email.trim().toLowerCase(),
+            initials: userData.FullName.trim(),
             password: userData.Password,
             clientMutationId: '132',
           },
@@ -61,13 +61,7 @@ function AuthLayout(): React.ReactElement {
   return (
     <Box sx={styles.formWrapper}>
       {loading && (
-        <Box
-          component="output"
-          style={styles.loader}
-          aria-label="Loading"
-          aria-live="polite"
-          role="status"
-        >
+        <Box component="output" style={styles.loader} aria-label="Loading" aria-live="polite">
           <CircularProgress color="primary" size={70} />
         </Box>
       )}
@@ -90,7 +84,7 @@ function AuthLayout(): React.ReactElement {
         type={notificationType}
         setIsOpen={setIsNotificationOpen}
         isOpen={isNotificationOpen}
-        retrySubmit={retrySubmit}
+        onRetry={retrySubmit}
       />
     </Box>
   );

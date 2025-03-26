@@ -29,7 +29,7 @@ function renderNotification({
   type,
   isOpen,
   setIsOpen,
-  retrySubmit = jest.fn(),
+  onRetry = jest.fn(),
 }: Partial<NotificationControlProps> & {
   setIsOpen: NotificationControlProps['setIsOpen'];
 }): RenderResult {
@@ -38,7 +38,7 @@ function renderNotification({
       type={type || NotificationStatus.SUCCESS}
       setIsOpen={setIsOpen}
       isOpen={isOpen || false}
-      retrySubmit={retrySubmit}
+      onRetry={onRetry}
     />
   );
 }
@@ -104,7 +104,7 @@ describe('Notification', () => {
     const isOpen: boolean = true;
 
     render(
-      <Notification type={type} setIsOpen={setIsOpen} retrySubmit={retrySubmit} isOpen={isOpen} />
+      <Notification type={type} setIsOpen={setIsOpen} onRetry={retrySubmit} isOpen={isOpen} />
     );
 
     expect(screen.getByText(successTitleText)).toBeInTheDocument();
@@ -120,7 +120,7 @@ describe('Notification', () => {
       <Notification
         type={type as NotificationType}
         setIsOpen={setIsOpen}
-        retrySubmit={retrySubmit}
+        onRetry={retrySubmit}
         isOpen={isOpen}
       />
     );
@@ -168,7 +168,7 @@ describe('Notification', () => {
         type={NotificationStatus.ERROR}
         isOpen
         setIsOpen={mockSetIsOpen}
-        retrySubmit={retrySubmitMock}
+        onRetry={retrySubmitMock}
       />
     );
 

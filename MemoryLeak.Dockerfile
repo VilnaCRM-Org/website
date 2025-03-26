@@ -4,10 +4,10 @@ RUN apk add --no-cache \
     udev \
     ttf-freefont \
     chromium \
-    python3 \
-    make \
-    g++ \
-    && npm install -g pnpm
+    python3=3.10.* \
+    make=4.3* \
+    g++=4:11.* \
+    && npm install -g pnpm@10.6.5
 
 WORKDIR /app
 COPY .puppeteerrc.cjs /app/.puppeteerrc.cjs
@@ -20,8 +20,8 @@ ENV PUPPETEER_CONFIG_FILE="/app/.puppeteerrc.cjs" \
 RUN make install
 
 # Cleanup old profile locks and ensure proper directory permissions
-RUN rm -rf /tmp/chromium/Singleton* /tmp/chromium/Lock /tmp/chromium/Default/Singleton*
-RUN mkdir -p /tmp/chromium && chown -R root:root /tmp/chromium
+RUN rm -rf /tmp/chromium/Singleton* /tmp/chromium/Lock /tmp/chromium/Default/Singleton* && \
+    mkdir -p /tmp/chromium && chown -R root:root /tmp/chromium
 
 # Ensure no lingering Chromium processes
 RUN pkill -o chromium || true

@@ -66,9 +66,16 @@ export const errorResponse: (
   { status, message, code }: ErrorResponseProps
 ) => void = async (route: Route, { status, message, code }) => {
   const request: Request = route.request();
-  const postData: GraphQLErrorRequestPayload = await request.postDataJSON();
+  let postData: GraphQLErrorRequestPayload;
+  try {
+    postData = await request.postDataJSON();
+  } catch (error) {
+    await route.continue();
+    return;
+  }
 
-  if (postData?.query?.includes('mutation AddUser')) {
+  const operationToMatch: string = 'mutation AddUser';
+  if (postData?.query?.includes(operationToMatch)) {
     await route.fulfill({
       contentType: 'application/json',
       status,

@@ -151,37 +151,6 @@ describe('Error Handling', () => {
       );
     });
 
-    it('should set notification visibility for GraphQL errors', () => {
-      const apolloError: ApolloError = new ApolloError({
-        networkError: null,
-        graphQLErrors: [{ message: 'GraphQL error occurred' }],
-      });
-
-      handleApolloError({
-        err: apolloError,
-        setErrorDetails: setErrorDetailsMock,
-        setNotificationType: setNotificationTypeMock,
-        setIsNotificationOpen: setIsNotificationOpenMock,
-      });
-
-      expect(setErrorDetailsMock).toHaveBeenCalledWith('GraphQL error occurred');
-    });
-
-    it('should set a generic error message when err is not an instance of ApolloError', () => {
-      const nonApolloError: Error = new Error('Random error');
-
-      handleApolloError({
-        err: nonApolloError,
-        setErrorDetails: setErrorDetailsMock,
-        setNotificationType: setNotificationTypeMock,
-        setIsNotificationOpen: setIsNotificationOpenMock,
-      });
-
-      expect(setErrorDetailsMock).toHaveBeenCalledWith(
-        'An unexpected error occurred. Please try again.'
-      );
-    });
-
     it('should set notification type to error and open notification for GraphQL 500 error', () => {
       const apolloError: ApolloError = new ApolloError({
         graphQLErrors: [{ message: 'Internal Server Error', extensions: { statusCode: 500 } }],

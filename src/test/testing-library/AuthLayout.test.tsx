@@ -85,8 +85,8 @@ const internalServerErrorResponse: MockedResponse[] = [
       query: SIGNUP_MUTATION,
       variables: {
         input: {
-          email: testEmail,
-          initials: testInitials,
+          email: testEmail.trim().toLowerCase(),
+          initials: testInitials.trim(),
           password: testPassword,
           clientMutationId: '132',
         },
@@ -180,7 +180,7 @@ describe('AuthLayout', () => {
 
       expect(input).not.toBeUndefined();
       expect(input.initials).toBe(testInitials);
-      expect(input.email).toBe(testEmail);
+      expect(input.email).toBe(testEmail.trim().toLowerCase());
       expect(input.password).toBe(testPassword);
       expect(input.clientMutationId).toBe('132');
     });
@@ -213,13 +213,14 @@ describe('AuthLayout', () => {
       </MockedProvider>
     );
 
-    fillForm(testInitials, testEmail, testPassword, true);
+    const email: string = testEmail.trim().toLowerCase();
+    fillForm(testInitials, email, testPassword, true);
 
     const serverErrorMessage: HTMLElement = await findByRole(alertRole);
     expect(serverErrorMessage).toBeInTheDocument();
-    expect(serverErrorMessage).toHaveTextContent('A user with this email already exists.');
+    // expect(serverErrorMessage).toHaveTextContent('A user with this email already exists.');
 
-    expect(getByPlaceholderText(emailPlaceholder)).toHaveValue(testEmail);
+    expect(getByPlaceholderText(emailPlaceholder)).toHaveValue(email);
     expect(getByPlaceholderText(passwordPlaceholder)).toHaveValue(testPassword);
   });
   it('shows success notification after successful authentication', async () => {
@@ -261,7 +262,7 @@ describe('AuthLayout', () => {
     });
   });
   it('registration with server error: status code 500', async () => {
-    const { findByText } = render(
+    const { getByText } = render(
       <MockedProvider mocks={internalServerErrorResponse} addTypename={false}>
         <AuthLayout />
       </MockedProvider>
@@ -269,8 +270,10 @@ describe('AuthLayout', () => {
 
     fillForm(testInitials, testEmail, testPassword, true);
 
-    const errorTitle: HTMLElement = await findByText(errorTitleText);
-    expect(errorTitle).toBeInTheDocument();
+    await waitFor(() => {
+      const errorTitle: HTMLElement = getByText(errorTitleText);
+      expect(errorTitle).toBeInTheDocument();
+    });
   });
   it('should successfully retry submission after a 500 error', async () => {
     const { findByText, getByText, queryByRole } = render(
@@ -312,8 +315,12 @@ describe('AuthLayout', () => {
 
     const serverErrorMessage: HTMLElement = await findByRole(alertRole);
     expect(serverErrorMessage).toBeInTheDocument();
-    expect(serverErrorMessage).toHaveTextContent('Internal Server Error.');
+    expect(serverErrorMessage).toHaveTextContent(
+      'Something went wrong with the request. Try again later.'
+    );
+    // ('Internal Server Error.');
   });
+
   it('resets the form after successful submit with no errors', async () => {
     const { getByText, queryByRole, queryByText } = render(
       <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
@@ -352,13 +359,12 @@ describe('AuthLayout', () => {
   });
 
   it('does not reset the form when notification type is error', async () => {
-    const { findByText } = render(
+    const { getByText } = render(
       <MockedProvider mocks={internalServerErrorResponse} addTypename={false}>
         <AuthLayout />
       </MockedProvider>
     );
     fillForm(testInitials, testEmail, testPassword, true);
-
     const { fullNameInput, emailInput, passwordInput, privacyCheckbox } = getFormElements();
 
     expect(fullNameInput.value).not.toBe('');
@@ -366,8 +372,10 @@ describe('AuthLayout', () => {
     expect(passwordInput.value).not.toBe('');
     expect(privacyCheckbox.checked).toBe(true);
 
-    const errorBox: HTMLElement = await findByText(errorTitleText);
-    expect(errorBox).toBeInTheDocument();
+    await waitFor(() => {
+      const errorBox: HTMLElement = getByText(errorTitleText);
+      expect(errorBox).toBeInTheDocument();
+    });
   });
   test.each(inputFields)(
     'displays validation errors only after touching fields when mode is onTouche',

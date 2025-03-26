@@ -1,4 +1,3 @@
-/* eslint-disable */
 import { ApolloServer, BaseContext } from '@apollo/server';
 import { startStandaloneServer } from '@apollo/server/standalone';
 // @ts-ignore
@@ -29,6 +28,8 @@ export async function getRemoteSchema() {
 
     return await response.text();
   } catch (error) {
+    console.error('Error fetching remote schema:', error);
+
     if ((error as Error).name === 'AbortError') {
       throw new Error('Schema fetch timeout after 5 seconds');
     }
@@ -138,7 +139,80 @@ process.on('unhandledRejection', error => {
   console.error('Unhandled Promise Rejection:', error);
   process.exit(1);
 });
-startServer().catch(error => {
-  console.error('Error starting server:', error);
+
+let isShuttingDown = false;
+
+async function initializeServer() {
+  try {
+    const server = await startServer();
+
+    // Attach shutdown handlers (only once)
+    if (!isShuttingDown) {
+      process.once('SIGINT', () => handleShutdown(server, 'SIGINT'));
+      process.once('SIGTERM', () => handleShutdown(server, 'SIGTERM'));
+    }
+
+    return server;
+  } catch (error) {
+    console.error('Error starting server:', error);
+    await handleServerFailure();
+  }
+}
+
+async function handleShutdown(server: any, signal: string) {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+
+  console.log(`Received ${signal}. Gracefully shutting down...`);
+
+  try {
+    await shutdown(server);
+    console.log('Server shutdown completed.');
+    process.exit(0);
+  } catch (error) {
+    console.error('Error during server shutdown:', error);
+    process.exit(1);
+  }
+}
+
+async function shutdown(server: any) {
+  try {
+    await server.close(); // Close server connections
+  } catch (err) {
+    console.error('Error while closing server connections:', err);
+  }
+
+  await cleanupResources();
+}
+
+// ✅ Handle startup failures
+async function handleServerFailure() {
+  console.log('Attempting to clean up before exiting...');
+  await cleanupResources();
+  process.exit(1);
+}
+
+// ✅ Cleanup function for external resources (e.g., DB connections)
+async function cleanupResources() {
+  try {
+    console.log('Cleaning up resources...');
+
+    // Example: Close DB connections
+    await closeDatabaseConnections();
+
+    console.log('Cleanup complete.');
+  } catch (err) {
+    console.error('Error cleaning up resources:', err);
+  }
+}
+
+// ✅ Example: Mock database close function
+async function closeDatabaseConnections() {
+  return new Promise(resolve => setTimeout(resolve, 1000)); // Simulate DB cleanup
+}
+
+// Start server with proper error handling
+initializeServer().catch(error => {
+  console.error('Fatal error during server initialization:', error);
   process.exit(1);
 });

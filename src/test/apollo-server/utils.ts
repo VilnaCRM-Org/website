@@ -1,4 +1,10 @@
-import { MutationResolvers, User, CreateUserInput, WrongInput, CreateUserResponse } from './types';
+import {
+  MutationResolvers,
+  User,
+  CreateUserInput,
+  OptionalPhoneInput,
+  CreateUserResponse,
+} from './types';
 
 const defaultUrlSchema: string =
   'https://raw.githubusercontent.com/VilnaCRM-Org/user-service/main/.github/graphql-spec/spec';
@@ -77,7 +83,7 @@ export async function handleResponse<T extends { errors?: { message: string }[] 
 
 export async function createUser(
   url: string,
-  input: CreateUserInput | WrongInput
+  input: CreateUserInput | OptionalPhoneInput
 ): Promise<{ response: Response; result: CreateUserResponse; errors?: { message: string }[] }> {
   try {
     const response: Response = await fetch(url, {

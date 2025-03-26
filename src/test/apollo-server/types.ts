@@ -1,4 +1,4 @@
-import { GraphQLResolveInfo } from 'graphql/type';
+import { GraphQLResolveInfo } from 'graphql';
 
 export interface CreateUserInput {
   clientMutationId: string;
@@ -6,7 +6,7 @@ export interface CreateUserInput {
   initials: string;
   password: string;
 }
-export interface WrongInput {
+export interface OptionalPhoneInput {
   phone?: string;
 }
 export interface User {
@@ -21,10 +21,23 @@ interface CreateUserPayload {
   clientMutationId: string;
 }
 
+export interface CreateUserResponse {
+  data: {
+    createUser: CreateUserPayload;
+  };
+  errors?: { message: string }[];
+}
+
 export interface MutationResolvers {
   /**
    * Creates a new user.
-   * @returns Promise resolving to CreateUserPayload containing the created user and clientMutationId
+   *
+   * @param parent - The parent object, typically not used in root-level resolvers.
+   * @param args - An object containing the `input` field, which holds the user data required for creation.
+   * @param context - The GraphQL execution context, providing access to authentication, database, loaders, etc.
+   * @param info - Information about the GraphQL execution state, including the query AST and schema details.
+   *
+   * @returns Promise resolving to `CreateUserPayload` containing the created user and `clientMutationId`.
    */
   createUser: (
     parent: unknown,
@@ -32,13 +45,4 @@ export interface MutationResolvers {
     context: unknown,
     info: GraphQLResolveInfo
   ) => Promise<CreateUserPayload>;
-}
-export interface CreateUserResponse {
-  data: {
-    createUser: {
-      user: User;
-      clientMutationId: string;
-    };
-  };
-  errors?: { message: string }[];
 }

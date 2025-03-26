@@ -6,7 +6,7 @@ loadEnvConfig(projectDir);
 
 (async () => {
   const browser = await puppeteer.launch({
-    executablePath: '/usr/bin/chromium',
+    executablePath: process.env.CHROMIUM_PATH || '/usr/bin/chromium',
     headless: true,
     args: [
       '--no-sandbox',
