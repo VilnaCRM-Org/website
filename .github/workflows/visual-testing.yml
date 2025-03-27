@@ -22,11 +22,11 @@ jobs:
         run: npm install -g pnpm
 
       - name: Install dependencies
-        run: make install
+        run: pnpm install
 
       - name: Start application
-        run: make start
+        run: pnpm run start & npx wait-on http://localhost:3000
 
       - name: Run visual tests
-        run: make test-visual
+        run: pnpm run test:visual
 

@@ -31,9 +31,7 @@ jobs:
         run: npm install -g pnpm
 
       - name: Install dependencies
-        run: make install
-        if: |
-          steps.cache-pnpm-store.outputs.cache-hit != 'true'
+        run: pnpm run install && npx puppeteer browsers install chrome
 
       - name: Run dev and memory leak testing
         run: |
