@@ -31,7 +31,7 @@ jobs:
         run: npm install -g pnpm
 
       - name: Install dependencies
-        run: pnpm run install
+        run: pnpm install
 
       - name: Install chrome
         run: npx puppeteer browsers install chrome
