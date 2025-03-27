@@ -1,8 +1,8 @@
 import { ApolloServer, BaseContext } from '@apollo/server';
 import { startStandaloneServer } from '@apollo/server/standalone';
-// @ts-ignore
+// @ts-ignore - Import path uses .ts extension which is resolved at runtime
 import { CreateUserInput, User } from './type.ts';
-// @ts-ignore
+// @ts-ignore - Using CommonJS module in ESM context
 import dotenv from 'dotenv';
 import { GraphQLError } from 'graphql';
 import { ApolloServerErrorCode } from '@apollo/server/errors';
@@ -95,7 +95,7 @@ const formatError = (formattedError: any, error: any) => {
   // Default behavior for other errors
   return formattedError;
 };
-async function startServer(): Promise<void> {
+async function startServer(): Promise<ApolloServer<BaseContext>> {
   try {
     const typeDefs: string = await getRemoteSchema();
 
@@ -129,6 +129,7 @@ async function startServer(): Promise<void> {
     });
 
     console.log(`🚀 Server ready at ${url}`);
+    return server;
   } catch (error) {
     console.error('Failed to start server:', error);
     process.exit(1);

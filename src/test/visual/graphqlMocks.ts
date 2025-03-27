@@ -13,9 +13,9 @@ export type GraphQLRequestPayload = {
   };
 };
 
-export const successResponse: (route: Route, status: number) => void = async (
+export const successResponse: (route: Route, status: number) => Promise<void> = async (
   route: Route,
-  status
+  status: number
 ): Promise<void> => {
   const request: Request = route.request();
   let postData: GraphQLRequestPayload;
@@ -40,7 +40,7 @@ export const successResponse: (route: Route, status: number) => void = async (
               confirmed: true,
               __typename: 'User',
             },
-            clientMutationId: postData.variables.input.clientMutationId || 'default-client-id',
+            clientMutationId: postData.variables?.input?.clientMutationId || 'default-client-id',
           },
         },
       }),
@@ -64,7 +64,7 @@ export interface ErrorResponseProps {
 export const errorResponse: (
   route: Route,
   { status, message, code }: ErrorResponseProps
-) => void = async (route: Route, { status, message, code }) => {
+) => Promise<void> = async (route: Route, { status, message, code }): Promise<void> => {
   const request: Request = route.request();
   let postData: GraphQLErrorRequestPayload;
   try {

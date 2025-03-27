@@ -20,7 +20,7 @@ function NotificationError({ setIsOpen, onRetry }: NotificationComponentProps): 
   const { t } = useTranslation();
   const onHandleClose: () => void = (): void => setIsOpen(false);
   return (
-    <Box sx={styles.contentBoxError} id="error-box">
+    <Box sx={styles.contentBoxError} aria-live="polite">
       <Box sx={styles.imageWrapperError}>
         <Image
           src={ErrorImg}

@@ -22,7 +22,7 @@ test.describe('Form Submission Server Error Test', () => {
 
       await page.waitForFunction(() => document.readyState === 'complete');
 
-      const routeHandler: (route: Route) => void = (route: Route): void =>
+      const routeHandler: (route: Route) => Promise<void> = async (route: Route): Promise<void> =>
         errorResponse(route, serverErrorResponse);
 
       await page.route('**/graphql', routeHandler);
@@ -39,11 +39,11 @@ test.describe('Form Submission Server Error Test', () => {
       const submitButton: Locator = page.locator('button[type="submit"]');
       await submitButton.click();
 
-      const errorBox: Locator = page.locator('#error-box');
+      const errorBox: Locator = page.locator('[aria-live="polite"]');
       await expect(errorBox).toBeVisible();
 
       await page.waitForFunction(
-        () => !document.querySelector('#error-box')?.classList.contains('animating')
+        () => !document.querySelector('[aria-live="polite"]')?.classList.contains('animating')
       );
 
       await expect(page).toHaveScreenshot(`${currentLanguage}_${screen.name}_error.png`);

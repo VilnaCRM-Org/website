@@ -23,10 +23,8 @@ describe('NotificationSuccess ', () => {
   });
 
   it('renders NotificationSuccess successfully', () => {
-    const { getAllByAltText } = render(<NotificationSuccess setIsOpen={mockSetIsOpen} />);
-    const confettiImages: HTMLElement[] = getAllByAltText(confettiImgAltText);
-    const successBox: HTMLElement | null | undefined =
-      confettiImages[0].parentElement?.parentElement;
+    const { container } = render(<NotificationSuccess setIsOpen={mockSetIsOpen} />);
+    const successBox: HTMLElement | null = container.querySelector('[aria-live="polite"]');
 
     expect(successBox).toBeInTheDocument();
   });
@@ -82,6 +80,6 @@ describe('NotificationSuccess ', () => {
     render(<NotificationSuccess setIsOpen={() => {}} />);
     const button: HTMLElement = screen.getByRole('button');
 
-    expect(button).toHaveTextContent(t('notifications.success.button'));
+    expect(button).toHaveTextContent(buttonText);
   });
 });

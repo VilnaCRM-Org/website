@@ -36,7 +36,7 @@ function Notification({
 
   return (
     <Fade in={isOpen} timeout={animationTimeout}>
-      <Box sx={styles.notificationSection} aria-live="polite">
+      <Box sx={styles.notificationSection} role="dialog">
         <Component setIsOpen={setIsOpen} onRetry={onRetry} />
       </Box>
     </Fade>

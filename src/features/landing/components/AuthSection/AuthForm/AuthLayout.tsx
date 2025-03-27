@@ -15,6 +15,8 @@ import AuthForm from './AuthForm';
 import styles from './styles';
 import { CreateUserPayload, NotificationStatus, SignUpVariables } from './types';
 
+const clientID: string = '132';
+
 function AuthLayout(): React.ReactElement {
   const [notificationType, setNotificationType] = React.useState<NotificationType>(
     NotificationStatus.SUCCESS
@@ -32,21 +34,24 @@ function AuthLayout(): React.ReactElement {
     SIGNUP_MUTATION
   );
 
+  const handleSuccess: () => void = (): void => {
+    setErrorDetails('');
+    setIsNotificationOpen(true);
+    setNotificationType(NotificationStatus.SUCCESS);
+  };
   const onSubmit: (userData: RegisterItem) => Promise<void> = async (userData: RegisterItem) => {
     try {
       await signupMutation({
         variables: {
           input: {
-            email: userData.Email.trim().toLowerCase(),
-            initials: userData.FullName.trim(),
+            email: userData.Email.toLowerCase(),
+            initials: userData.FullName,
             password: userData.Password,
-            clientMutationId: '132',
+            clientMutationId: clientID,
           },
         },
       });
-      setErrorDetails('');
-      setIsNotificationOpen(true);
-      setNotificationType(NotificationStatus.SUCCESS);
+      handleSuccess();
     } catch (err) {
       handleApolloError({ err, setErrorDetails, setNotificationType, setIsNotificationOpen });
     }

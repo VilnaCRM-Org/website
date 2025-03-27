@@ -54,6 +54,23 @@ export const getFormElements: () => {
   }
 };
 
+export const validateFormInput: (
+  fullNameValue: string,
+  emailValue: string,
+  passwordValue: string
+) => void = (fullNameValue: string, emailValue: string, passwordValue: string): void => {
+  if (fullNameValue && fullNameValue.length < 2) {
+    throw new Error('Full name must be at least 2 characters');
+  }
+
+  if (emailValue && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailValue)) {
+    throw new Error('Invalid email format');
+  }
+
+  if (passwordValue && passwordValue.length < 8) {
+    throw new Error('Password must be at least 8 characters');
+  }
+};
 export const fillForm: (
   fullNameValue?: string,
   emailValue?: string,
@@ -65,20 +82,7 @@ export const fillForm: (
   passwordInput: HTMLInputElement;
   privacyCheckbox: HTMLInputElement;
 } = (fullNameValue = '', emailValue = '', passwordValue = '', checkPrivacyPolicy = false) => {
-  if (fullNameValue && fullNameValue.length < 2) {
-    throw new Error('Full name must be at least 2 characters');
-  }
-
-  if (emailValue && !emailValue.includes('@')) {
-    throw new Error('Invalid email format');
-  }
-  if (emailValue && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailValue)) {
-    throw new Error('Invalid email format');
-  }
-
-  if (passwordValue && passwordValue.length < 8) {
-    throw new Error('Password must be at least 8 characters');
-  }
+  validateFormInput(fullNameValue, emailValue, passwordValue);
 
   const { fullNameInput, emailInput, passwordInput, privacyCheckbox, signUpButton } =
     getFormElements();

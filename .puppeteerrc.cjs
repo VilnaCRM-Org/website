@@ -9,7 +9,7 @@ loadEnvConfig(projectDir);
     executablePath: process.env.CHROMIUM_PATH || '/usr/bin/chromium',
     headless: true,
     args: [
-      '--no-sandbox',
+      '--no-sandbox', // Required for running in Docker, disables Chrome sandbox
       '--disable-setuid-sandbox',
       '--disable-gpu',
       '--disable-extensions',
@@ -22,10 +22,18 @@ loadEnvConfig(projectDir);
 
   try {
     const page = await browser.newPage();
-    await page.goto('https://prod:3001');
-    console.log('Page loaded');
+    const targetUrl = process.env.NEXT_PUBLIC_PROD_CONTAINER_API_URL || 'http://prod:3001';
+
+    await page.goto('http://prod:3001');
+    console.log(`Page loaded successfully: ${targetUrl}`);
   } catch (error) {
     console.error('Navigation failed:', error);
+    try {
+      await page.screenshot({ path: 'error-screenshot.png' });
+      console.log('Error screenshot saved to error-screenshot.png');
+    } catch (screenshotError) {
+      console.error('Failed to capture error screenshot:', screenshotError);
+    }
     process.exit(1);
   } finally {
     await browser.close();

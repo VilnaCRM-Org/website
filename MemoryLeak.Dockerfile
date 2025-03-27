@@ -4,9 +4,9 @@ RUN apk add --no-cache \
     udev \
     ttf-freefont \
     chromium \
-    python3=3.10.* \
-    make=4.3* \
-    g++=4:11.* \
+    python3\
+    make \
+    g++ \
     && npm install -g pnpm@10.6.5
 
 WORKDIR /app

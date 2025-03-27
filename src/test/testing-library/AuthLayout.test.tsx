@@ -1,13 +1,12 @@
 import { MockedProvider, MockedResponse } from '@apollo/client/testing';
 import { fireEvent, render, waitFor } from '@testing-library/react';
 import { t } from 'i18next';
-import React, { AriaRole, Dispatch } from 'react';
+import React, { AriaRole } from 'react';
 
 import { CreateUserInput } from '@/test/apollo-server/types';
 
 import SIGNUP_MUTATION from '../../features/landing/api/service/userService';
 import AuthLayout from '../../features/landing/components/AuthSection/AuthForm';
-import { NotificationType } from '../../features/landing/components/Notification/types';
 
 import {
   buttonRole,
@@ -85,8 +84,8 @@ const internalServerErrorResponse: MockedResponse[] = [
       query: SIGNUP_MUTATION,
       variables: {
         input: {
-          email: testEmail.trim().toLowerCase(),
-          initials: testInitials.trim(),
+          email: testEmail.toLowerCase(),
+          initials: testInitials,
           password: testPassword,
           clientMutationId: '132',
         },
@@ -180,7 +179,7 @@ describe('AuthLayout', () => {
 
       expect(input).not.toBeUndefined();
       expect(input.initials).toBe(testInitials);
-      expect(input.email).toBe(testEmail.trim().toLowerCase());
+      expect(input.email).toBe(testEmail.toLowerCase());
       expect(input.password).toBe(testPassword);
       expect(input.clientMutationId).toBe('132');
     });
@@ -213,12 +212,11 @@ describe('AuthLayout', () => {
       </MockedProvider>
     );
 
-    const email: string = testEmail.trim().toLowerCase();
+    const email: string = testEmail.toLowerCase();
     fillForm(testInitials, email, testPassword, true);
 
     const serverErrorMessage: HTMLElement = await findByRole(alertRole);
     expect(serverErrorMessage).toBeInTheDocument();
-    // expect(serverErrorMessage).toHaveTextContent('A user with this email already exists.');
 
     expect(getByPlaceholderText(emailPlaceholder)).toHaveValue(email);
     expect(getByPlaceholderText(passwordPlaceholder)).toHaveValue(testPassword);
@@ -318,7 +316,6 @@ describe('AuthLayout', () => {
     expect(serverErrorMessage).toHaveTextContent(
       'Something went wrong with the request. Try again later.'
     );
-    // ('Internal Server Error.');
   });
 
   it('resets the form after successful submit with no errors', async () => {
@@ -432,26 +429,18 @@ describe('AuthLayout', () => {
     });
   });
 
-  it('should initialize notificationType with "success" value', () => {
-    const mockSetNotificationType: jest.Mock<void> = jest.fn();
-    const useStateSpy: jest.SpyInstance<[unknown, Dispatch<unknown>], [], NotificationType> = jest
-      .spyOn(React, 'useState')
-      .mockImplementationOnce(
-        () => ['success', mockSetNotificationType] as [NotificationType, jest.Mock]
-      );
-
-    render(
+  it('should have success state by default when notificationType is "success"', async () => {
+    const { getByText } = render(
       <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
         <AuthLayout />
       </MockedProvider>
     );
-
-    const initialState: undefined = useStateSpy.mock.results[0]?.value?.[0];
-
-    expect(initialState).toBe('success');
-
-    useStateSpy.mockRestore();
+    await waitFor(() => {
+      const successElement: HTMLElement = getByText(successTitleText);
+      expect(successElement).toBeInTheDocument();
+    });
   });
+
   it('should initialize with success notification state', () => {
     const { getByText, queryByText } = render(
       <MockedProvider mocks={[]} addTypename={false}>

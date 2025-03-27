@@ -63,22 +63,6 @@ describe('Error Handling', () => {
       );
     });
 
-    it('should set error details for a generic network error message', () => {
-      const networkError: NetworkErrorType = {
-        message: 'Some other network error',
-      } as ApolloError['networkError'];
-
-      handleNetworkError({
-        networkError,
-        setErrorDetails: setErrorDetailsMock,
-        setNotificationType: setNotificationTypeMock,
-        setIsNotificationOpen: setIsNotificationOpenMock,
-      });
-
-      expect(setErrorDetailsMock).toHaveBeenCalledWith(
-        'Something went wrong with the request. Try again later.'
-      );
-    });
     it('should set a generic error message for unknown network errors', () => {
       const networkError: NetworkErrorType = {
         message: 'Some unknown network error',
@@ -183,5 +167,20 @@ describe('Error Handling', () => {
         'An error occurred with the request. Please try again.'
       );
     });
+  });
+  it('should combine multiple GraphQL error messages', () => {
+    const apolloError: ApolloError = new ApolloError({
+      networkError: null,
+      graphQLErrors: [{ message: 'Error 1' }, { message: 'Error 2' }],
+    });
+
+    handleApolloError({
+      err: apolloError,
+      setErrorDetails: setErrorDetailsMock,
+      setNotificationType: setNotificationTypeMock,
+      setIsNotificationOpen: setIsNotificationOpenMock,
+    });
+
+    expect(setErrorDetailsMock).toHaveBeenCalledWith('Error 1, Error 2');
   });
 });

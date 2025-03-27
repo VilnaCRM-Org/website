@@ -31,12 +31,7 @@ function AuthForm({
   const { t } = useTranslation();
 
   return (
-    <Box
-      component="form"
-      data-testid="auth-form"
-      onSubmit={handleSubmit(onSubmit)}
-      aria-label="SignUpForm"
-    >
+    <Box component="form" onSubmit={handleSubmit(onSubmit)} aria-label="SignUpForm">
       <UiTypography variant="h4" component="h4" sx={styles.formTitle}>
         {t('sign_up.form.heading_main')}
       </UiTypography>

@@ -15,8 +15,9 @@ test.describe('Form Submission Visual Test', () => {
 
       await page.waitForFunction(() => document.readyState === 'complete');
 
-      const routeHandler: (route: Route) => void = (route: Route): void =>
-        successResponse(route, 200);
+      const routeHandler: (route: Route) => Promise<void> = async (route: Route): Promise<void> => {
+        await successResponse(route, 200);
+      };
       await page.route('**/graphql', routeHandler);
 
       const nameInput: Locator = page.getByPlaceholder(placeholders.name);
@@ -31,7 +32,7 @@ test.describe('Form Submission Visual Test', () => {
       const submitButton: Locator = page.locator('button[type="submit"]');
       await submitButton.click();
 
-      const successBox: Locator = page.locator('#success-box');
+      const successBox: Locator = page.locator('[aria-live="polite"]');
       await expect(successBox).toBeVisible();
 
       await page.waitForTimeout(timeoutDuration);

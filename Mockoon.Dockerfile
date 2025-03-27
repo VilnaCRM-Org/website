@@ -4,7 +4,7 @@ WORKDIR /app
 
 RUN npm install -g @mockoon/cli@9.2.0 typescript@5.8.2 && \
     npm install dotenv@16.4.7 @types/node@22.13.13 @types/dotenv@8.2.3 --save-dev && \
-    npm install winston @types/winston --save-dev
+    npm install winston@3.11.0 @types/winston@2.4.4 --save-dev
 
 
 COPY docker/mockoon/data.ts mockoon/data.ts
@@ -17,11 +17,10 @@ RUN tsc mockoon/data.ts --outDir out --rootDir ./ \
   --experimentalDecorators --emitDecoratorMetadata \
   --esModuleInterop --allowSyntheticDefaultImports \
   --skipLibCheck --noImplicitAny --noEmitOnError \
-  --lib es2018,dom  && \
-  node ./out/mockoon/data.js
+  --lib es2018,dom
 
 ##create data.json
-#RUN node ./out/mockoon/data.js
+RUN node ./out/mockoon/data.js
 
 EXPOSE 8080
 

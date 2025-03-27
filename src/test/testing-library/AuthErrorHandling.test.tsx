@@ -1,8 +1,9 @@
 import { ApolloError } from '@apollo/client';
 import { MockedProvider, MockedResponse } from '@apollo/client/testing';
 import { render, waitFor } from '@testing-library/react';
-import { GraphQLError } from 'graphql';
 import React from 'react';
+
+import { CreateUserInput } from '@/test/apollo-server/types';
 
 import SIGNUP_MUTATION from '../../features/landing/api/service/userService';
 import AuthLayout from '../../features/landing/components/AuthSection/AuthForm';
@@ -23,19 +24,19 @@ describe('AuthLayout Error Handling', () => {
     jest.clearAllMocks();
   });
 
+  const input: CreateUserInput = {
+    email: testEmail,
+    initials: testInitials,
+    password: testPassword,
+    clientMutationId: expect.any(String),
+  };
+
   test('should handle network error correctly', async () => {
     const networkErrorMock: MockedResponse[] = [
       {
         request: {
           query: SIGNUP_MUTATION,
-          variables: {
-            input: {
-              email: testEmail,
-              initials: testInitials,
-              password: testPassword,
-              clientMutationId: expect.any(String),
-            },
-          },
+          variables: { input },
         },
         error: new Error('Network error occurred'),
       },
@@ -45,7 +46,6 @@ describe('AuthLayout Error Handling', () => {
         <AuthLayout />
       </MockedProvider>
     );
-
     fillForm(testInitials, testEmail, testPassword, true);
 
     await waitFor(() => {
@@ -66,22 +66,22 @@ describe('AuthLayout Error Handling', () => {
       {
         request: {
           query: SIGNUP_MUTATION,
-          variables: {
-            input: {
-              email: testEmail,
-              initials: testInitials,
-              password: testPassword,
-              clientMutationId: expect.any(String),
-            },
-          },
+          variables: { input },
         },
         result: {
-          errors: [new GraphQLError('Email already exists')],
+          errors: [
+            {
+              message: 'Email already exists',
+              locations: [{ line: 1, column: 1 }],
+              path: ['signup'],
+              extensions: { code: 'DUPLICATE_EMAIL' },
+            },
+          ],
         },
       },
     ];
 
-    render(
+    const { getByRole } = render(
       <MockedProvider mocks={graphqlErrorMock} addTypename={false}>
         <AuthLayout />
       </MockedProvider>
@@ -96,6 +96,10 @@ describe('AuthLayout Error Handling', () => {
 
       const error: ApolloError = callArg.err as ApolloError;
       expect(error.graphQLErrors).toBeDefined();
+
+      callArg.setErrorDetails('Email already exists');
+      expect(getByRole('alert')).toBeInTheDocument();
+      expect(getByRole('alert')).toHaveTextContent('Email already exists');
     });
   });
 });

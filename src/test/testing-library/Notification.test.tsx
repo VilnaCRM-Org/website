@@ -11,6 +11,7 @@ import {
   NotificationType,
 } from '../../features/landing/components/Notification/types';
 
+import { buttonRole } from './constants';
 import { checkElementsInDocument, SetIsOpenType } from './utils';
 
 const notificationBoxSelector: string = '.MuiBox-root';
@@ -22,8 +23,6 @@ const confettiImgBottomAltText: string = t('notifications.success.images.confett
 const gearsImgAltText: string = t('notifications.success.images.gears');
 const backToFormButton: string = t('notifications.error.button');
 const retryButton: string = t('notifications.error.retry_button');
-
-const buttonRole: string = 'button';
 
 function renderNotification({
   type,
@@ -217,5 +216,20 @@ describe('Notification', () => {
 
     expect(mockSetIsOpen).toHaveBeenCalledTimes(1);
     expect(mockSetIsOpen).toHaveBeenCalledWith(false);
+  });
+  it('has proper aria attributes for accessibility', () => {
+    const { getByRole } = renderNotification({
+      type: NotificationStatus.SUCCESS,
+      isOpen: true,
+      setIsOpen: mockSetIsOpen,
+    });
+
+    const button: HTMLElement = getByRole(buttonRole);
+    expect(button).toHaveAttribute('type', 'button');
+
+    const images: HTMLElement[] = screen.getAllByRole('img');
+    images.forEach(img => {
+      expect(img).toHaveAttribute('alt');
+    });
   });
 });
