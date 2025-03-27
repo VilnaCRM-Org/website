@@ -31,7 +31,10 @@ jobs:
         run: npm install -g pnpm
 
       - name: Install dependencies
-        run: pnpm run install && npx puppeteer browsers install chrome
+        run: pnpm run install
+
+      - name: Install chrome
+        run: npx puppeteer browsers install chrome
 
       - name: Run dev and memory leak testing
         run: |
