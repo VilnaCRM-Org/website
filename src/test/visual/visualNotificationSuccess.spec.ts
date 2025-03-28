@@ -32,7 +32,9 @@ test.describe('Form Submission Visual Test', () => {
       const submitButton: Locator = page.locator('button[type="submit"]');
       await submitButton.click();
 
-      const successBox: Locator = page.locator('[aria-invalid="true"]');
+      const successBox: Locator = page
+        .locator('[aria-live="polite"]')
+        .filter({ has: page.locator('img') });
       await expect(successBox).toBeVisible();
 
       await page.waitForTimeout(timeoutDuration);
