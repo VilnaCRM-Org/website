@@ -2,7 +2,13 @@ const { loadEnvConfig } = require('@next/env');
 const projectDir = process.cwd();
 const puppeteer = require('puppeteer-core');
 
-loadEnvConfig(projectDir, process.env.PROD_NODE_ENV || 'production');
+
+const { combinedEnv, loadedEnvFiles } = loadEnvConfig(
+  projectDir,
+  process.env.NODE_ENV || 'production',
+  { info: console.log, error: console.error }
+);
+console.log(`Loaded ${loadedEnvFiles.length} environment file(s)`);
 
 (async () => {
   const browser = await puppeteer.launch({
@@ -20,17 +26,22 @@ loadEnvConfig(projectDir, process.env.PROD_NODE_ENV || 'production');
     ],
   });
 
+  let page;
   try {
-    const page = await browser.newPage();
+    page = await browser.newPage();
     const targetUrl = process.env.NEXT_PUBLIC_PROD_CONTAINER_API_URL || 'http://prod:3001';
 
-    await page.goto('http://prod:3001');
+    await page.goto(targetUrl);
     console.log(`Page loaded successfully: ${targetUrl}`);
   } catch (error) {
     console.error('Navigation failed:', error);
     try {
-      await page.screenshot({ path: 'error-screenshot.png' });
-      console.log('Error screenshot saved to error-screenshot.png');
+      if (page) {
+        await page.screenshot({ path: 'error-screenshot.png' });
+        console.log('Error screenshot saved to error-screenshot.png');
+      } else {
+        console.error('Cannot take screenshot: page not initialized');
+      }
     } catch (screenshotError) {
       console.error('Failed to capture error screenshot:', screenshotError);
     }

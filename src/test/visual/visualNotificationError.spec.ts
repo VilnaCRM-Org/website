@@ -16,7 +16,9 @@ test.describe('Form Submission Server Error Test', () => {
       await page.goto('/');
 
       await page.waitForLoadState('networkidle');
-      await page.evaluate(() => document.fonts.ready);
+      await page.evaluate(async () => {
+        await document.fonts.ready;
+      });
 
       await page.setViewportSize({ width: screen.width, height: screen.height });
 
@@ -41,6 +43,8 @@ test.describe('Form Submission Server Error Test', () => {
 
       const errorBox: Locator = page.locator('[aria-invalid="true"]');
       await expect(errorBox).toBeVisible();
+
+      await expect(submitButton).toBeEnabled();
 
       await page.waitForFunction(
         () => !document.querySelector('[aria-invalid="true"]')?.classList.contains('animating')

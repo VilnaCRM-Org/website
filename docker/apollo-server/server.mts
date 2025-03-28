@@ -33,13 +33,36 @@ export async function getRemoteSchema() {
     if ((error as Error).name === 'AbortError') {
       throw new Error('Schema fetch timeout after 5 seconds');
     }
-    throw new Error(`Schema fetch failed: ${(error as Error).message}`);
+    const customError = new Error(`Schema fetch failed: ${(error as Error).message}`);
+    (customError as any).cause = error; // Attach the original error as a custom property
+    throw customError;
   }
 }
+const validateCreateUserInput = (input: CreateUserInput) => {
+  if (!input.email || !input.email.includes('@')) {
+    throw new GraphQLError('Invalid email format', {
+      extensions: {
+        code: 'BAD_REQUEST',
+        http: { status: 400 },
+      },
+    });
+  }
+
+  if (!input.initials || input.initials.length < 2) {
+    throw new GraphQLError('Invalid initials', {
+      extensions: {
+        code: 'BAD_REQUEST',
+        http: { status: 400 },
+      },
+    });
+  }
+};
 
 export const resolvers = {
   Mutation: {
     createUser: async (_: unknown, { input }: { input: CreateUserInput }) => {
+      // Validate input
+      validateCreateUserInput(input);
       try {
         const newUser: User = {
           id: '1',

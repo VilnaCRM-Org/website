@@ -54,9 +54,11 @@ export async function fetchAndSaveSchema(): Promise<void> {
       logger.error(`Schema fetch failed: ${(error as Error).message}`);
     }
     if (process.env.MOCKOON_EXIT_ON_ERROR !== 'false') {
+      logger.info('Exiting process due to error...');
       process.exit(1); // Exit with an error code
+    } else {
+      logger.info('Error handling complete, continuing with execution...');
     }
-    logger.info('Error handling complete, continuing with execution...');
   }
 }
 

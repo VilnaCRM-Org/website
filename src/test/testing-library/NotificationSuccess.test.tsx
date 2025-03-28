@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render } from '@testing-library/react';
 import { t } from 'i18next';
 
 import { buttonRole } from '@/test/testing-library/constants';
@@ -30,9 +30,9 @@ describe('NotificationSuccess ', () => {
   });
 
   it('renders images with correct alt text', () => {
-    render(<NotificationSuccess setIsOpen={mockSetIsOpen} />);
+    const { getAllByRole } = render(<NotificationSuccess setIsOpen={mockSetIsOpen} />);
 
-    const images: HTMLElement[] = screen.getAllByRole('img');
+    const images: HTMLElement[] = getAllByRole('img');
     expect(images).toHaveLength(3);
 
     images.forEach((image: HTMLElement) => {
@@ -46,16 +46,16 @@ describe('NotificationSuccess ', () => {
   });
 
   it('renders the correct title and description', () => {
-    render(<NotificationSuccess setIsOpen={mockSetIsOpen} />);
+    const { getByText } = render(<NotificationSuccess setIsOpen={mockSetIsOpen} />);
 
-    expect(screen.getByText(successTitleText)).toBeInTheDocument();
-    expect(screen.getByText(successDescriptionText)).toBeInTheDocument();
+    expect(getByText(successTitleText)).toBeInTheDocument();
+    expect(getByText(successDescriptionText)).toBeInTheDocument();
   });
 
   it('renders the button with correct text and handles click event', () => {
-    render(<NotificationSuccess setIsOpen={mockSetIsOpen} />);
+    const { getByRole } = render(<NotificationSuccess setIsOpen={mockSetIsOpen} />);
 
-    const button: HTMLElement = screen.getByRole(buttonRole, { name: buttonText });
+    const button: HTMLElement = getByRole(buttonRole, { name: buttonText });
 
     expect(button).toBeInTheDocument();
     fireEvent.click(button);
@@ -77,8 +77,8 @@ describe('NotificationSuccess ', () => {
     expect(imgParent).toHaveStyle('bottom: -0.78rem');
   });
   it('uses correct translation key for success button', () => {
-    render(<NotificationSuccess setIsOpen={() => {}} />);
-    const button: HTMLElement = screen.getByRole('button');
+    const { getByRole } = render(<NotificationSuccess setIsOpen={() => {}} />);
+    const button: HTMLElement = getByRole('button');
 
     expect(button).toHaveTextContent(buttonText);
   });

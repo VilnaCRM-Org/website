@@ -1,6 +1,6 @@
 import { ApolloError } from '@apollo/client';
 import { MockedProvider, MockedResponse } from '@apollo/client/testing';
-import { render, waitFor } from '@testing-library/react';
+import { render, waitFor, screen } from '@testing-library/react';
 import React from 'react';
 
 import { CreateUserInput } from '@/test/apollo-server/types';
@@ -32,7 +32,7 @@ describe('AuthLayout Error Handling', () => {
   };
 
   test('should handle network error correctly', async () => {
-    const networkErrorMock: MockedResponse[] = [
+    const networkErrorMocks: MockedResponse[] = [
       {
         request: {
           query: SIGNUP_MUTATION,
@@ -42,7 +42,7 @@ describe('AuthLayout Error Handling', () => {
       },
     ];
     render(
-      <MockedProvider mocks={networkErrorMock} addTypename={false}>
+      <MockedProvider mocks={networkErrorMocks} addTypename={false}>
         <AuthLayout />
       </MockedProvider>
     );
@@ -81,7 +81,7 @@ describe('AuthLayout Error Handling', () => {
       },
     ];
 
-    const { getByRole } = render(
+    render(
       <MockedProvider mocks={graphqlErrorMock} addTypename={false}>
         <AuthLayout />
       </MockedProvider>
@@ -98,8 +98,8 @@ describe('AuthLayout Error Handling', () => {
       expect(error.graphQLErrors).toBeDefined();
 
       callArg.setErrorDetails('Email already exists');
-      expect(getByRole('alert')).toBeInTheDocument();
-      expect(getByRole('alert')).toHaveTextContent('Email already exists');
+      expect(screen.getByRole('alert')).toBeInTheDocument();
+      expect(screen.getByRole('alert')).toHaveTextContent('Email already exists');
     });
   });
 });

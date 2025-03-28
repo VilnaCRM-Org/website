@@ -37,7 +37,13 @@ test.describe('Form Submission Visual Test', () => {
         .filter({ has: page.locator('img') });
       await expect(successBox).toBeVisible();
 
-      await page.waitForTimeout(timeoutDuration);
+      try {
+        await page.evaluate(() =>
+          Promise.all(document.getAnimations().map(animation => animation.finished))
+        );
+      } catch (error) {
+        await page.waitForTimeout(timeoutDuration);
+      }
 
       await expect(page).toHaveScreenshot(`${currentLanguage}_${screen.name}_success.png`);
 

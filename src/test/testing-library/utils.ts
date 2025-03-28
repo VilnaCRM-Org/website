@@ -36,22 +36,44 @@ export const getFormElements: () => {
   privacyCheckbox: HTMLInputElement;
   signUpButton: HTMLElement;
 } = () => {
-  try {
-    const fullNameInput: HTMLInputElement = screen.getByPlaceholderText(fullNamePlaceholder);
-    const emailInput: HTMLInputElement = screen.getByPlaceholderText(emailPlaceholder);
-    const passwordInput: HTMLInputElement = screen.getByPlaceholderText(passwordPlaceholder);
-    const privacyCheckbox: HTMLInputElement = screen.getByRole(checkboxRole);
-    const signUpButton: HTMLElement = screen.getByRole(buttonRole, {
-      name: submitButtonText,
-    });
-
-    return { fullNameInput, emailInput, passwordInput, privacyCheckbox, signUpButton };
-  } catch (error) {
-    if (error instanceof Error) {
-      throw new FormElementNotFoundError('form', error);
+  const getElement: <T extends HTMLElement>(queryFunction: () => T, elementName: string) => T = <
+    T extends HTMLElement,
+  >(
+    queryFunction: () => T,
+    elementName: string
+  ): T => {
+    try {
+      return queryFunction();
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new FormElementNotFoundError(elementName, error);
+      }
+      throw new FormElementNotFoundError(elementName);
     }
-    throw new FormElementNotFoundError('form');
-  }
+  };
+
+  const fullNameInput: HTMLInputElement = getElement(
+    () => screen.getByPlaceholderText(fullNamePlaceholder),
+    'fullNameInput'
+  );
+  const emailInput: HTMLInputElement = getElement(
+    () => screen.getByPlaceholderText(emailPlaceholder),
+    'emailInput'
+  );
+  const passwordInput: HTMLInputElement = getElement(
+    () => screen.getByPlaceholderText(passwordPlaceholder),
+    'passwordInput'
+  );
+  const privacyCheckbox: HTMLInputElement = getElement(
+    () => screen.getByRole(checkboxRole),
+    'privacyCheckbox'
+  );
+  const signUpButton: HTMLElement = getElement(
+    () => screen.getByRole(buttonRole, { name: submitButtonText }),
+    'signUpButton'
+  );
+
+  return { fullNameInput, emailInput, passwordInput, privacyCheckbox, signUpButton };
 };
 
 export const validateFormInput: (

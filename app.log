@@ -4,3 +4,7 @@
 {"level":"info","message":"Schema successfully saved to: /home/yu/WebstormProjects/my-branch/website/out/docker/mockoon/data.json","timestamp":"2025-03-26T18:05:12.586Z"}
 {"level":"info","message":"Fetching OpenAPI schema from: https://raw.githubusercontent.com/VilnaCRM-Org/user-service/main/.github/openapi-spec/spec.yaml...","timestamp":"2025-03-26T18:05:31.262Z"}
 {"level":"error","message":"Schema fetch timeout after 5 seconds","timestamp":"2025-03-26T18:05:36.268Z"}
+{"level":"info","message":"Fetching OpenAPI schema from: https://raw.githubusercontent.com/VilnaCRM-Org/user-service/main/.github/openapi-spec/spec.yaml...","timestamp":"2025-03-28T12:41:06.891Z"}
+{"level":"info","message":"Schema successfully saved to: /home/yu/WebstormProjects/my-branch/website/out/docker/mockoon/data.json","timestamp":"2025-03-28T12:41:07.352Z"}
+{"level":"info","message":"Fetching OpenAPI schema from: https://raw.githubusercontent.com/VilnaCRM-Org/user-service/main/.github/openapi-spec/spec.yaml...","timestamp":"2025-03-28T12:46:09.076Z"}
+{"level":"info","message":"Schema successfully saved to: /home/yu/WebstormProjects/my-branch/website/out/docker/mockoon/data.json","timestamp":"2025-03-28T12:46:09.397Z"}

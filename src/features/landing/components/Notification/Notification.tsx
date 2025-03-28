@@ -36,7 +36,7 @@ function Notification({
 
   return (
     <Fade in={isOpen} timeout={animationTimeout}>
-      <Box sx={styles.notificationSection} role="dialog">
+      <Box sx={styles.notificationSection} role="alert">
         <Component setIsOpen={setIsOpen} onRetry={onRetry} />
       </Box>
     </Fade>

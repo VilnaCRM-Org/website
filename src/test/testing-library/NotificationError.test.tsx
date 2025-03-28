@@ -72,10 +72,10 @@ describe('NotificationError Component', () => {
     if (errorBox) {
       const computedStyle: CSSStyleDeclaration = window.getComputedStyle(errorBox);
       expect(computedStyle.display).toBe('flex');
-      expect(computedStyle.alignItems).toBe('center');
-      expect(errorBox).toBeVisible();
-      expect(errorBox).toHaveClass('MuiBox-root');
+      expect(computedStyle.flexDirection).toBe('column');
     }
+    expect(errorBox).toBeVisible();
+    expect(errorBox).toHaveClass('MuiBox-root');
   });
   it('applies correct styles to button text', () => {
     render(<NotificationError setIsOpen={mockSetIsOpen} onRetry={mockOnRetry} />);

@@ -26,11 +26,11 @@ export const successResponse: (route: Route, status: number) => Promise<void> = 
     return;
   }
 
-  if (postData && postData.query && postData.query.includes('mutation AddUser')) {
+  if (postData?.query?.includes('mutation AddUser')) {
     await route.fulfill({
       contentType: 'application/json',
+      status,
       body: JSON.stringify({
-        status,
         data: {
           createUser: {
             user: {

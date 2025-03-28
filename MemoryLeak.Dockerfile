@@ -1,4 +1,4 @@
-FROM node:23-alpine3.20
+FROM node:22-alpine3.20
 
 RUN apk add --no-cache \
     udev \
@@ -22,9 +22,6 @@ RUN make install
 # Cleanup old profile locks and ensure proper directory permissions
 RUN rm -rf /tmp/chromium/Singleton* /tmp/chromium/Lock /tmp/chromium/Default/Singleton* && \
     mkdir -p /tmp/chromium && chown -R root:root /tmp/chromium
-
-# Ensure no lingering Chromium processes
-RUN pkill -o chromium || true
 
 # Create Chromium profile directory
 RUN mkdir -p /root/.config/chromium/docker-chromium-profile && chown -R root:root /root/.config/chromium

@@ -22,8 +22,8 @@
     "test:unit": "TEST_ENV=client jest --verbose",
     "test:unit-all": "TEST_ENV=client jest --verbose && TEST_ENV=server jest ./src/test/apollo-server",
     "test:memory-leak": "node ./src/test/memory-leak/runMemlabTests",
-    "lighthouse:desktop": "next build && next-export-optimize-images && lhci autorun --config=lighthouserc.desktop.js --collect.startServerCommand=\"npx serve@latest out\"",
-    "lighthouse:mobile": "next build && next-export-optimize-images && lhci autorun --config=lighthouserc.mobile.js --collect.startServerCommand=\"npx serve@latest out\"",
+    "lighthouse:desktop": "next build && next-export-optimize-images && lhci autorun --config=lighthouserc.desktop.js --collect.startServerCommand=\"npx serve out\"",
+    "lighthouse:mobile": "next build && next-export-optimize-images && lhci autorun --config=lighthouserc.mobile.js --collect.startServerCommand=\"npx serve out\"",
     "lighthouse:desktop-autorun": "lhci autorun --config=lighthouserc.desktop.js",
     "lighthouse:mobile-autorun": "lhci autorun --config=lighthouserc.mobile.js",
     "check-node-version": "node checkNodeVersion.js",
@@ -32,7 +32,7 @@
     "start:apollo-server": "node ./out/docker/apollo-server/server.mjs"
   },
   "dependencies": {
-    "@apollo/client": "^3.12.9",
+    "@apollo/client": "^3.13.5",
     "@emotion/styled": "^11.14.0",
     "@mui/material": "^6.4.2",
     "@mui/system": "^6.4.2",
@@ -107,7 +107,7 @@
     "jsdoc": "^4.0.4",
     "markdownlint-cli": "^0.39.0",
     "memlab": "^1.1.56",
-    "next": "^15.1.6",
+    "next": "^15.2.4",
     "next-export-optimize-images": "^4.6.1",
     "playwright": "^1.51.0",
     "prettier": "^3.4.2",

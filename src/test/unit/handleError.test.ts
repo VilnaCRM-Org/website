@@ -167,20 +167,21 @@ describe('Error Handling', () => {
         'An error occurred with the request. Please try again.'
       );
     });
-  });
-  it('should combine multiple GraphQL error messages', () => {
-    const apolloError: ApolloError = new ApolloError({
-      networkError: null,
-      graphQLErrors: [{ message: 'Error 1' }, { message: 'Error 2' }],
-    });
 
-    handleApolloError({
-      err: apolloError,
-      setErrorDetails: setErrorDetailsMock,
-      setNotificationType: setNotificationTypeMock,
-      setIsNotificationOpen: setIsNotificationOpenMock,
-    });
+    it('should combine multiple GraphQL error messages', () => {
+      const apolloError: ApolloError = new ApolloError({
+        networkError: null,
+        graphQLErrors: [{ message: 'Error 1' }, { message: 'Error 2' }],
+      });
 
-    expect(setErrorDetailsMock).toHaveBeenCalledWith('Error 1, Error 2');
+      handleApolloError({
+        err: apolloError,
+        setErrorDetails: setErrorDetailsMock,
+        setNotificationType: setNotificationTypeMock,
+        setIsNotificationOpen: setIsNotificationOpenMock,
+      });
+
+      expect(setErrorDetailsMock).toHaveBeenCalledWith('Error 1, Error 2');
+    });
   });
 });

@@ -37,6 +37,11 @@ const successBackButton: string = t('notifications.success.button');
 const requiredText: string = t('sign_up.form.email_input.required');
 const errorTitleText: string = t('notifications.error.title');
 const retryTextButton: string = t('notifications.error.retry_button');
+const emailMissingSymbols: string = t('sign_up.form.email_input.step_error_message');
+const emailValidationText: string = t('sign_up.form.email_input.invalid_message');
+const passwordErrorLength: string = t('sign_up.form.password_input.error_length');
+const passwordErrorNumbers: string = t('sign_up.form.password_input.error_numbers');
+const passwordErrorUppercase: string = t('sign_up.form.password_input.error_uppercase');
 
 const fulfilledMockResponse: MockedResponse = {
   request: {
@@ -102,12 +107,20 @@ interface GetElementsResult {
   privacyCheckbox: HTMLInputElement;
   signUpButton: HTMLElement;
 }
-const inputFields: { fieldKey: string; value: string }[] = [
+type FormElement = { fieldKey: string; value: string };
+const inputFields: FormElement[] = [
   { fieldKey: 'fullNameInput', value: testInitials },
   { fieldKey: 'emailInput', value: testEmail },
   { fieldKey: 'passwordInput', value: testPassword },
 ];
-
+type ValidationFormElement = FormElement & { errorMessage: string };
+const validationInputFields: ValidationFormElement[] = [
+  { fieldKey: 'emailInput', value: 'invalid-email', errorMessage: emailMissingSymbols },
+  { fieldKey: 'emailInput', value: 'invalid-email@gmail.', errorMessage: emailValidationText },
+  { fieldKey: 'passwordInput', value: '123', errorMessage: passwordErrorLength },
+  { fieldKey: 'passwordInput', value: 'qwertyui', errorMessage: passwordErrorNumbers },
+  { fieldKey: 'passwordInput', value: 'q1wertyui', errorMessage: passwordErrorUppercase },
+];
 describe('AuthLayout', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -144,7 +157,7 @@ describe('AuthLayout', () => {
     });
 
     const serverErrorMessage: HTMLElement | null = queryByRole(alertRole);
-    expect(serverErrorMessage).not.toBeInTheDocument();
+    expect(serverErrorMessage).not.toHaveAttribute('aria-live', 'assertive');
 
     await waitFor(() => {
       expect(queryByRole(statusRole)).not.toBeInTheDocument();
@@ -152,6 +165,7 @@ describe('AuthLayout', () => {
       expect(queryByText(errorTitleText)).not.toBeInTheDocument();
     });
   });
+
   it('should pass correct data to the mutation', async () => {
     const mockVariableMatcher: jest.Mock<boolean, [{ input: CreateUserInput }]> = jest
       .fn()
@@ -243,7 +257,7 @@ describe('AuthLayout', () => {
     });
   });
   it('should successfully submit the form and update state', async () => {
-    const { queryByRole, queryByText, getByText } = render(
+    const { getByRole, queryByText, getByText } = render(
       <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
         <AuthLayout />
       </MockedProvider>
@@ -253,24 +267,48 @@ describe('AuthLayout', () => {
 
     await waitFor(() => {
       const successTitle: HTMLElement = getByText(successTitleText);
+      const alertBox: HTMLElement | null = getByRole('alert');
+
       expect(successTitle).toBeInTheDocument();
       expect(successTitle).toBeVisible();
-      expect(queryByRole('alert')).not.toBeInTheDocument();
+      expect(alertBox).toBeInTheDocument();
+      expect(alertBox).not.toHaveAttribute('aria-live', 'assertive');
       expect(queryByText(errorTitleText)).not.toBeInTheDocument();
     });
   });
   it('registration with server error: status code 500', async () => {
-    const { getByText } = render(
+    const { getByText, queryByRole } = render(
       <MockedProvider mocks={internalServerErrorResponse} addTypename={false}>
         <AuthLayout />
       </MockedProvider>
     );
 
-    fillForm(testInitials, testEmail, testPassword, true);
+    const { fullNameInput, emailInput, passwordInput, privacyCheckbox } = fillForm(
+      testInitials,
+      testEmail,
+      testPassword,
+      true
+    );
+    await waitFor(() => {
+      expect(queryByRole('status')).toBeInTheDocument();
+    });
 
     await waitFor(() => {
       const errorTitle: HTMLElement = getByText(errorTitleText);
       expect(errorTitle).toBeInTheDocument();
+    });
+
+    expect(fullNameInput).toHaveValue(testInitials);
+    expect(emailInput).toHaveValue(testEmail);
+    expect(passwordInput).toHaveValue(testPassword);
+    expect(privacyCheckbox).toBeChecked();
+
+    const retryButton: HTMLElement = getByText(retryTextButton);
+
+    fireEvent.click(retryButton);
+
+    await waitFor(() => {
+      expect(queryByRole('status')).toBeInTheDocument();
     });
   });
   it('should successfully retry submission after a 500 error', async () => {
@@ -319,7 +357,7 @@ describe('AuthLayout', () => {
   });
 
   it('resets the form after successful submit with no errors', async () => {
-    const { getByText, queryByRole, queryByText } = render(
+    const { getByText, getByRole, queryByText } = render(
       <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
         <AuthLayout />
       </MockedProvider>
@@ -334,9 +372,12 @@ describe('AuthLayout', () => {
       expect(privacyCheckbox).not.toBeChecked();
 
       const successTitle: HTMLElement = getByText(successTitleText);
+      const alertBox: HTMLElement | null = getByRole('alert');
+
       expect(successTitle).toBeInTheDocument();
       expect(successTitle).toBeVisible();
-      expect(queryByRole('alert')).not.toBeInTheDocument();
+      expect(alertBox).toBeInTheDocument();
+      expect(alertBox).not.toHaveAttribute('aria-live', 'assertive');
       expect(queryByText(errorTitleText)).not.toBeInTheDocument();
     });
   });
@@ -348,10 +389,13 @@ describe('AuthLayout', () => {
       </MockedProvider>
     );
     const successTitle: HTMLElement = getByText(successTitleText);
+    const successButton: HTMLElement = getByText(successBackButton);
     const errorBox: HTMLElement | null = queryByText(errorTitleText);
 
     expect(successTitle).toBeInTheDocument();
     expect(successTitle).not.toBeVisible();
+    expect(successButton).toBeInTheDocument();
+    expect(successButton).not.toBeVisible();
     expect(errorBox).not.toBeInTheDocument();
   });
 
@@ -401,6 +445,29 @@ describe('AuthLayout', () => {
       });
     }
   );
+  test.each(validationInputFields)(
+    'displays validation errors for incorrect input values',
+    async ({ fieldKey, value, errorMessage }) => {
+      const { queryByText } = render(
+        <MockedProvider mocks={[]} addTypename={false}>
+          <AuthLayout />
+        </MockedProvider>
+      );
+
+      const formElements: GetElementsResult = getFormElements();
+      const inputField: HTMLInputElement | HTMLElement =
+        formElements[fieldKey as keyof typeof formElements];
+
+      fireEvent.change(inputField, { target: { value } });
+
+      fireEvent.blur(inputField);
+
+      await waitFor(() => {
+        expect(queryByText(errorMessage)).toBeInTheDocument();
+      });
+    }
+  );
+
   it('should show success notification after successful form submission and hide it after clicking back', async () => {
     const { queryByAltText, getByRole } = render(
       <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
