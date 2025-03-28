@@ -2,7 +2,7 @@ const { loadEnvConfig } = require('@next/env');
 const projectDir = process.cwd();
 const puppeteer = require('puppeteer-core');
 
-loadEnvConfig(projectDir);
+loadEnvConfig(projectDir, process.env.PROD_NODE_ENV || 'production');
 
 (async () => {
   const browser = await puppeteer.launch({

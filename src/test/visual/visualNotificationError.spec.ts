@@ -39,11 +39,11 @@ test.describe('Form Submission Server Error Test', () => {
       const submitButton: Locator = page.locator('button[type="submit"]');
       await submitButton.click();
 
-      const errorBox: Locator = page.locator('[aria-live="polite"]');
+      const errorBox: Locator = page.locator('[aria-invalid="true"]');
       await expect(errorBox).toBeVisible();
 
       await page.waitForFunction(
-        () => !document.querySelector('[aria-live="polite"]')?.classList.contains('animating')
+        () => !document.querySelector('[aria-invalid="true"]')?.classList.contains('animating')
       );
 
       await expect(page).toHaveScreenshot(`${currentLanguage}_${screen.name}_error.png`);

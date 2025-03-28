@@ -125,7 +125,7 @@ describe('NotificationError Component', () => {
       <NotificationError setIsOpen={mockSetIsOpen} onRetry={mockOnRetry} />
     );
 
-    const errorBox: HTMLElement | null = container.querySelector('[aria-live="polite"]');
+    const errorBox: HTMLElement | null = container.querySelector('[aria-invalid="true"]');
 
     expect(errorBox).toBeInTheDocument();
 
