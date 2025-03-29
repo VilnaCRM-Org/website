@@ -2,7 +2,6 @@ const { loadEnvConfig } = require('@next/env');
 const projectDir = process.cwd();
 const puppeteer = require('puppeteer-core');
 
-
 const { combinedEnv, loadedEnvFiles } = loadEnvConfig(
   projectDir,
   process.env.NODE_ENV || 'production',
