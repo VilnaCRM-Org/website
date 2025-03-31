@@ -1,4 +1,4 @@
-import { fireEvent, render } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { t } from 'i18next';
 
 import { buttonRole } from '@/test/testing-library/constants';
@@ -69,9 +69,10 @@ describe('NotificationSuccess ', () => {
       removeEventListener: jest.fn(),
     }));
 
-    const { getByAltText } = render(<NotificationSuccess setIsOpen={jest.fn()} />);
+    // const { getByAltText } =
+    render(<NotificationSuccess setIsOpen={jest.fn()} />);
 
-    const successConfettiImgBottom: HTMLElement = getByAltText(confettiImgBottomAltText);
+    const successConfettiImgBottom: HTMLElement = screen.getByAltText(confettiImgBottomAltText);
     const imgParent: HTMLElement | null = successConfettiImgBottom.parentElement;
 
     expect(imgParent).toHaveStyle('bottom: -0.78rem');

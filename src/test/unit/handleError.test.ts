@@ -44,6 +44,7 @@ describe('Error Handling', () => {
 
       expect(setNotificationTypeMock).toHaveBeenCalledWith('error');
       expect(setIsNotificationOpenMock).toHaveBeenCalledWith(true);
+      expect(setErrorDetailsMock).not.toHaveBeenCalled();
     });
 
     it('should set error details for network error message "Failed to fetch"', () => {

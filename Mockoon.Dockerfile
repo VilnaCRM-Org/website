@@ -17,10 +17,8 @@ RUN tsc mockoon/data.ts --outDir out --rootDir ./ \
   --experimentalDecorators --emitDecoratorMetadata \
   --esModuleInterop --allowSyntheticDefaultImports \
   --skipLibCheck --noImplicitAny --noEmitOnError \
-  --lib es2018,dom
-
-##create data.json
-RUN node ./out/mockoon/data.js
+  --lib es2018,dom && \
+  node ./out/mockoon/data.js ##create data.json
 
 EXPOSE 8080
 

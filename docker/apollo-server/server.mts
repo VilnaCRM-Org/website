@@ -144,6 +144,16 @@ async function startServer(): Promise<ApolloServer<BaseContext>> {
       listen: { port: 4000 },
 
       context: async ({ req }) => {
+        if (req.url === '/health') {
+          // Return 200 without executing GraphQL
+          throw new GraphQLError('Health check endpoint', {
+            extensions: {
+              http: { status: 200 },
+              code: 'HEALTH_CHECK',
+            },
+          });
+        }
+
         if (!req.headers['content-type'] || req.headers['content-type'].includes('text/plain')) {
           throw new Error('Invalid content-type header for CSRF prevention.');
         }
@@ -161,7 +171,10 @@ async function startServer(): Promise<ApolloServer<BaseContext>> {
 
 process.on('unhandledRejection', error => {
   console.error('Unhandled Promise Rejection:', error);
-  process.exit(1);
+  handleServerFailure().catch(shutdownError => {
+    console.error('Error during graceful shutdown after unhandled rejection:', shutdownError);
+    process.exit(1);
+  });
 });
 
 let isShuttingDown = false;
@@ -201,7 +214,12 @@ async function handleShutdown(server: any, signal: string) {
 
 async function shutdown(server: any) {
   try {
-    await server.close(); // Close server connections
+    if (server && typeof server.stop === 'function') {
+      await server.stop();
+      console.log('Apollo Server stopped');
+    } else {
+      console.warn('Server instance missing stop method');
+    }
   } catch (err) {
     console.error('Error while closing server connections:', err);
   }

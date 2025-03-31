@@ -17,6 +17,7 @@ import { checkElementsInDocument, SetIsOpenType } from './utils';
 const notificationBoxSelector: string = '.MuiBox-root';
 const successTitleText: string = t('notifications.success.title');
 const errorTitleText: string = t('notifications.error.title');
+const fallbackTitleText: string = t('notification.unknown.title');
 const successDescriptionText: string = t('notifications.success.description');
 const confettiImgAltText: string = t('notifications.success.images.confetti');
 const confettiImgBottomAltText: string = t('notifications.success.images.confetti-bottom');
@@ -124,7 +125,7 @@ describe('Notification', () => {
       />
     );
 
-    expect(screen.getByText(successTitleText)).toBeInTheDocument();
+    expect(screen.getByText(fallbackTitleText)).toBeInTheDocument();
   });
   it('renders "success" notification by default when type is empty', () => {
     renderNotification({ type: '' as NotificationType, isOpen: false, setIsOpen: mockSetIsOpen });

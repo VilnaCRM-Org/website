@@ -7,7 +7,6 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml checkNodeVersion.js ./
 COPY docker/apollo-server docker/apollo-server
 
-
 RUN pnpm install --frozen-lockfile && pnpm exec tsc \
     --target ES6 \
     --module NodeNext \
