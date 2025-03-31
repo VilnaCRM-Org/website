@@ -1,5 +1,5 @@
 import { MockedProvider, MockedResponse } from '@apollo/client/testing';
-import { fireEvent, render, RenderResult, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, RenderResult, waitFor } from '@testing-library/react';
 import userEvent, { UserEvent } from '@testing-library/user-event';
 import { t } from 'i18next';
 import React from 'react';
@@ -9,7 +9,7 @@ import SIGNUP_MUTATION from '../../features/landing/api/service/userService';
 import AuthForm from '../../features/landing/components/AuthSection/AuthForm/AuthForm';
 import { RegisterItem } from '../../features/landing/types/authentication/form';
 
-import { testInitials, testEmail, testPassword, buttonRole, submitButtonText } from './constants';
+import { testInitials, testEmail, testPassword } from './constants';
 import {
   checkElementsInDocument,
   fillForm,
@@ -24,6 +24,8 @@ const emailInputText: string = t('sign_up.form.email_input.label');
 const passwordInputText: string = t('sign_up.form.password_input.label');
 
 const requiredText: string = t('sign_up.form.email_input.required');
+const emailMissingSymbols: string = t('sign_up.form.email_input.step_error_message');
+const passwordErrorLength: string = t('sign_up.form.password_input.error_length');
 const passwordTipAltText: string = t('sign_up.form.password_tip.alt');
 
 const statusRole: string = 'status';
@@ -288,11 +290,20 @@ describe('AuthForm', () => {
   });
   it('should mark Privacy checkbox as invalid if other fields are filled, but checkbox is not checked', async () => {
     const { queryByText } = renderAuthFormWithSuccess();
-    const { privacyCheckbox } = fillForm(testInitials, testEmail, testPassword, false);
+    const { privacyCheckbox, passwordInput, emailInput, fullNameInput } = fillForm(
+      testInitials,
+      testEmail,
+      testPassword,
+      false
+    );
 
     await waitFor(() => {
       expect(privacyCheckbox).toHaveAttribute('aria-invalid', 'true');
+      expect(privacyCheckbox).not.toBeChecked();
 
+      expect(fullNameInput.checkValidity()).toBe(true);
+      expect(emailInput.checkValidity()).toBe(true);
+      expect(passwordInput.checkValidity()).toBe(true);
       expect(queryByText(requiredText)).not.toBeInTheDocument();
     });
   });
@@ -314,6 +325,7 @@ describe('AuthForm', () => {
 
     await waitFor(() => {
       expect(privacyCheckbox).toHaveAttribute('aria-invalid', 'true');
+      expect(privacyCheckbox.checkValidity()).toBe(true);
 
       const requiredError: HTMLElement[] = getAllByText(requiredText);
       expect(requiredError[0]).toBeInTheDocument();
@@ -340,8 +352,6 @@ describe('AuthForm', () => {
   it('should pass validation when Privacy checkbox is checked after failing validation', async () => {
     renderAuthFormWithSuccess();
     const { privacyCheckbox } = fillForm(testInitials, testEmail, testPassword, false);
-    const signUpButton: HTMLElement = screen.getByRole(buttonRole, { name: submitButtonText });
-    fireEvent.click(signUpButton);
 
     await waitFor(() => {
       expect(privacyCheckbox).toHaveAttribute('aria-invalid', 'true');
@@ -351,6 +361,26 @@ describe('AuthForm', () => {
 
     await waitFor(() => {
       expect(privacyCheckbox).not.toHaveAttribute('aria-invalid');
+    });
+  });
+  it('displays validation errors for incorrect input values and correct for checkbox', async () => {
+    const { queryByText } = renderAuthFormWithSuccess();
+    const { privacyCheckbox, passwordInput, emailInput, fullNameInput } = getFormElements();
+
+    fireEvent.change(fullNameInput, { target: { value: '' } });
+    fireEvent.blur(fullNameInput);
+    fireEvent.change(emailInput, { target: { value: 'invalid-email' } });
+    fireEvent.blur(emailInput);
+    fireEvent.change(passwordInput, { target: { value: '123' } });
+    fireEvent.blur(passwordInput);
+    fireEvent.click(privacyCheckbox);
+
+    await waitFor(() => {
+      expect(privacyCheckbox).not.toHaveAttribute('aria-invalid');
+
+      expect(queryByText(emailMissingSymbols)).toBeInTheDocument();
+      expect(queryByText(passwordErrorLength)).toBeInTheDocument();
+      expect(queryByText(requiredText)).toBeInTheDocument();
     });
   });
 });
