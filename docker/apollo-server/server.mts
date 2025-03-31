@@ -85,7 +85,6 @@ export const resolvers = {
               headers: new Map([['x-error-type', 'server-error']]),
             },
           },
-          originalError: error,
         });
       }
     },
