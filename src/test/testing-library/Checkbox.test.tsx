@@ -8,20 +8,20 @@ import { getFormElements } from '@/test/testing-library/utils';
 import AuthForm from '../../features/landing/components/AuthSection/AuthForm/AuthForm';
 import { RegisterItem } from '../../features/landing/types/authentication/form';
 
+const ERROR_BORDER_STYLE: string = 'border: 1px solid #DC3939';
+
 type FormWrapperProps = {
   children: (control: Control<RegisterItem>) => React.ReactElement;
 };
-const FormWrapper: React.FC<FormWrapperProps> = ({
-  children,
-}: {
-  children: (control: Control<RegisterItem>) => React.ReactElement;
-}) => {
+const FormWrapper: React.FC<FormWrapperProps> = ({ children }: FormWrapperProps) => {
   const { control } = useForm<RegisterItem>();
   return children(control);
 };
 const privacyError: FieldErrors<RegisterItem> = {
   Privacy: { message: '', ref: { name: 'Privacy' }, type: 'required' },
 };
+const mockOnSubmit: jest.Mock = jest.fn();
+const mockHandleSubmit: jest.Mock = jest.fn().mockResolvedValueOnce(undefined);
 
 const RenderAuthComponent: (errors: FieldErrors<RegisterItem>) => RenderResult = (
   errors: FieldErrors<RegisterItem>
@@ -32,8 +32,8 @@ const RenderAuthComponent: (errors: FieldErrors<RegisterItem>) => RenderResult =
         {control => (
           <AuthForm
             errorDetails=""
-            onSubmit={jest.fn()}
-            handleSubmit={jest.fn().mockResolvedValueOnce(undefined)}
+            onSubmit={mockOnSubmit}
+            handleSubmit={mockHandleSubmit}
             errors={errors}
             control={control}
           />
@@ -43,14 +43,14 @@ const RenderAuthComponent: (errors: FieldErrors<RegisterItem>) => RenderResult =
   );
 
 describe('Checkbox', () => {
-  it('has checkbox error', async () => {
+  it('has checkbox error', () => {
     RenderAuthComponent(privacyError);
 
     const { privacyCheckbox } = getFormElements();
 
     expect(privacyCheckbox).toHaveAttribute('aria-invalid', 'true');
   });
-  it('does not show error when Privacy checkbox is valid', async () => {
+  it('does not show error when Privacy checkbox is valid', () => {
     RenderAuthComponent({});
     const { privacyCheckbox } = getFormElements();
 
@@ -61,16 +61,16 @@ describe('Checkbox', () => {
 
     const { privacyCheckbox } = getFormElements();
 
-    await waitFor(async () => {
-      expect(privacyCheckbox).toHaveStyle('border: 1px solid #DC3939');
+    await waitFor(() => {
+      expect(privacyCheckbox).toHaveStyle(ERROR_BORDER_STYLE);
     });
   });
   it('does not set isInvalid when Privacy error does not exist', async () => {
     RenderAuthComponent({});
     const { privacyCheckbox } = getFormElements();
 
-    await waitFor(async () => {
-      expect(privacyCheckbox).not.toHaveStyle('border: 1px solid #DC3939');
+    await waitFor(() => {
+      expect(privacyCheckbox).not.toHaveStyle(ERROR_BORDER_STYLE);
     });
   });
   it('does not set isInvalid when Privacy error exists but ref is missing', async () => {
@@ -86,7 +86,7 @@ describe('Checkbox', () => {
     });
   });
   it('does not break when errors is undefined', async () => {
-    RenderAuthComponent('' as FieldErrors<RegisterItem>);
+    RenderAuthComponent({} as FieldErrors<RegisterItem>);
 
     const { privacyCheckbox } = getFormElements();
 

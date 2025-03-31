@@ -31,7 +31,7 @@ const passwordTipAltText: string = t('sign_up.form.password_tip.alt');
 const statusRole: string = 'status';
 const alertRole: string = 'alert';
 
-interface AuthFormWrapperProps {
+interface AuthFormTestWrapperProps {
   onSubmit: (data: RegisterItem) => Promise<void>;
   errorDetails: string;
 }
@@ -43,7 +43,7 @@ interface GetElementsResult {
   signUpButton: HTMLElement;
 }
 
-function AuthFormWrapper({ errorDetails, onSubmit }: AuthFormWrapperProps): React.ReactElement {
+function AuthFormWrapper({ errorDetails, onSubmit }: AuthFormTestWrapperProps): React.ReactElement {
   const {
     handleSubmit,
     control,

@@ -39,7 +39,9 @@ export async function getRemoteSchema() {
   }
 }
 const validateCreateUserInput = (input: CreateUserInput) => {
-  if (!input.email || !input.email.includes('@')) {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  if (!input.email || !emailRegex.test(input.email)) {
     throw new GraphQLError('Invalid email format', {
       extensions: {
         code: 'BAD_REQUEST',
@@ -83,6 +85,7 @@ export const resolvers = {
               headers: new Map([['x-error-type', 'server-error']]),
             },
           },
+          originalError: error,
         });
       }
     },
