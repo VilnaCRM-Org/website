@@ -12,7 +12,7 @@ console.log(`Loaded ${loadedEnvFiles.length} environment file(s)`);
 (async () => {
   const browser = await puppeteer.launch({
     executablePath: process.env.CHROMIUM_PATH || '/usr/bin/chromium',
-    headless: true,
+    headless: 'new',
     args: [
       '--no-sandbox', // Required for running in Docker, disables Chrome sandbox
       '--disable-setuid-sandbox',

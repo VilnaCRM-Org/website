@@ -5,6 +5,10 @@ import { UiCheckbox } from '@/components';
 
 import { testText } from './constants';
 
+const DEFAULT_BORDER_COLOR: string = '#D0D4D8';
+const HOVER_BORDER_COLOR: string = '#1EAEFF';
+const ERROR_BORDER_COLOR: string = '#DC3939';
+
 const mockOnChange: () => void = jest.fn();
 
 describe('UiCheckbox', () => {
@@ -33,12 +37,12 @@ describe('UiCheckbox', () => {
 
     const checkboxInput: HTMLElement = getByRole('checkbox');
 
-    expect(checkboxInput).toHaveStyle('border-color: #D0D4D8');
+    expect(checkboxInput).toHaveStyle(`border-color: ${DEFAULT_BORDER_COLOR}`);
 
     fireEvent.mouseOver(checkboxInput);
 
     await waitFor(() => {
-      expect(checkboxInput).toHaveStyle('border-color: #1EAEFF');
+      expect(checkboxInput).toHaveStyle(`border-color: ${HOVER_BORDER_COLOR}`);
     });
   });
 
@@ -46,7 +50,7 @@ describe('UiCheckbox', () => {
     const { getByRole } = render(<UiCheckbox error label={testText} onChange={mockOnChange} />);
     const checkboxInput: HTMLElement = getByRole('checkbox');
 
-    expect(checkboxInput).toHaveStyle('border-color: #DC3939');
+    expect(checkboxInput).toHaveStyle(`border-color: ${ERROR_BORDER_COLOR}`);
   });
   it('controls checkbox state with checked prop', () => {
     const { getByRole, rerender } = render(

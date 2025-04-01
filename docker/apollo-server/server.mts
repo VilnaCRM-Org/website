@@ -23,7 +23,7 @@ export async function getRemoteSchema() {
 
     clearTimeout(timeoutId);
     if (!response.ok) {
-      throw new Error(`Failed to fetch schema: ${response.statusText} ${response.statusText}`);
+      throw new Error(`Failed to fetch schema: ${response.statusText} (${response.status})`);
     }
 
     return await response.text();
@@ -79,7 +79,7 @@ export const resolvers = {
             code: 'INTERNAL_SERVER_ERROR',
             http: {
               status: 500,
-              headers: new Map([['x-error-type', 'server-error']]),
+              headers: { 'x-error-type': 'server-error' },
             },
           },
         });

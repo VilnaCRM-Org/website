@@ -1,6 +1,6 @@
 import { MockedProvider, MockedResponse } from '@apollo/client/testing';
 import { fireEvent, render, RenderResult, waitFor } from '@testing-library/react';
-import userEvent, { UserEvent } from '@testing-library/user-event';
+import { UserEvent, userEvent } from '@testing-library/user-event';
 import { t } from 'i18next';
 import React from 'react';
 import { useForm } from 'react-hook-form';
@@ -41,7 +41,7 @@ interface GetElementsResult {
   signUpButton: HTMLElement;
 }
 
-function AuthFormWrapper({ errorDetails, onSubmit }: AuthFormWrapperProps): React.ReactElement {
+function AuthFormWrapper({ apiErrorDetails, onSubmit }: AuthFormWrapperProps): React.ReactElement {
   const {
     handleSubmit,
     control,
@@ -53,10 +53,10 @@ function AuthFormWrapper({ errorDetails, onSubmit }: AuthFormWrapperProps): Reac
 
   return (
     <AuthForm
-      errorDetails={errorDetails}
+      apiErrorDetails={apiErrorDetails}
       onSubmit={onSubmit}
       handleSubmit={handleSubmit}
-      errors={errors}
+      formValidationErrors={errors}
       control={control}
     />
   );
@@ -95,10 +95,11 @@ const mockSubmitSuccess: () => OnSubmitType = (): OnSubmitType =>
   jest.fn().mockResolvedValueOnce(undefined);
 const renderAuthFormWithSuccess: (
   onSubmit?: OnSubmitType,
-  errorDetails?: string
-) => RenderResult = (onSubmit = mockSubmitSuccess(), errorDetails = ''): RenderResult => render(
+  apiErrorDetails?: string
+) => RenderResult = (onSubmit = mockSubmitSuccess(), apiErrorDetails = ''): RenderResult =>
+  render(
     <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
-      <AuthFormWrapper errorDetails={errorDetails} onSubmit={onSubmit} />
+      <AuthFormWrapper apiErrorDetails={apiErrorDetails} onSubmit={onSubmit} />
     </MockedProvider>
   );
 
@@ -235,7 +236,7 @@ describe('AuthForm', () => {
   it('should show error alert', () => {
     const { queryByRole } = render(
       <MockedProvider mocks={[mockInternalServerErrorResponse]} addTypename={false}>
-        <AuthFormWrapper errorDetails="Internal Server Error." onSubmit={onSubmit} />
+        <AuthFormWrapper apiErrorDetails="Internal Server Error." onSubmit={onSubmit} />
       </MockedProvider>
     );
     fillForm(testInitials, testEmail, testPassword, true);
@@ -270,6 +271,19 @@ describe('AuthForm', () => {
       process.env.NEXT_PUBLIC_PRIVACY_POLICY_URL || 'https://github.com/VilnaCRM-Org';
     expect(privacyPolicyLink[0]).toHaveAttribute('href', expectedUrl);
     expect(privacyPolicyLink[1]).toHaveAttribute('href', expectedUrl);
+  });
+  it('calls onSubmit with form data when form is submitted', async () => {
+    render(
+      <MockedProvider mocks={[]} addTypename={false}>
+        <AuthFormWrapper apiErrorDetails="" onSubmit={onSubmit} />
+      </MockedProvider>
+    );
+
+    fillForm(testInitials, testEmail, testPassword, true);
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalled();
+    });
   });
 
   // checkbox

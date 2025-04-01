@@ -53,7 +53,7 @@ describe('AuthLayout Error Handling', () => {
       expect(handleApolloError).toHaveBeenCalledWith(
         expect.objectContaining({
           err: expect.any(Error),
-          setErrorDetails: expect.any(Function),
+          setApiErrorDetails: expect.any(Function),
           setNotificationType: expect.any(Function),
           setIsNotificationOpen: expect.any(Function),
         })
@@ -97,7 +97,7 @@ describe('AuthLayout Error Handling', () => {
       const error: ApolloError = callArg.err as ApolloError;
       expect(error.graphQLErrors).toBeDefined();
 
-      callArg.setErrorDetails('Email already exists');
+      callArg.setApiErrorDetails('Email already exists');
       expect(screen.getByRole('alert')).toBeInTheDocument();
       expect(screen.getByRole('alert')).toHaveTextContent('Email already exists');
     });

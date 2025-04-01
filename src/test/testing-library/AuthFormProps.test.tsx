@@ -8,7 +8,7 @@ import { RegisterItem } from '../../features/landing/types/authentication/form';
 
 import { AuthFormWrapperProps, OnSubmitType } from './utils';
 
-function AuthFormWrapper({ errorDetails, onSubmit }: AuthFormWrapperProps): React.ReactElement {
+function AuthFormWrapper({ apiErrorDetails, onSubmit }: AuthFormWrapperProps): React.ReactElement {
   const {
     handleSubmit,
     control,
@@ -20,10 +20,10 @@ function AuthFormWrapper({ errorDetails, onSubmit }: AuthFormWrapperProps): Reac
 
   return (
     <AuthForm
-      errorDetails={errorDetails}
+      apiErrorDetails={apiErrorDetails}
       onSubmit={onSubmit}
       handleSubmit={handleSubmit}
-      errors={errors}
+      formValidationErrors={errors}
       control={control}
     />
   );
@@ -42,21 +42,21 @@ describe('AuthFormWrapper - Props Forwarding', () => {
   });
 
   it('forwards props correctly to AuthForm', () => {
-    const errorDetails: string = 'Invalid credentials';
+    const apiErrorDetails: string = 'Invalid credentials';
 
     render(
       <MockedProvider mocks={[]} addTypename={false}>
-        <AuthFormWrapper errorDetails={errorDetails} onSubmit={onSubmit} />
+        <AuthFormWrapper apiErrorDetails={apiErrorDetails} onSubmit={onSubmit} />
       </MockedProvider>
     );
 
     expect(AuthForm).toHaveBeenCalledWith(
       expect.objectContaining({
-        errorDetails,
+        apiErrorDetails,
         onSubmit,
         handleSubmit: expect.any(Function),
         control: expect.any(Object),
-        errors: expect.any(Object),
+        formValidationErrors: expect.any(Object),
       }),
       {}
     );

@@ -176,5 +176,5 @@ export type OnSubmitType = jest.Mock<Promise<void>, [RegisterItem]>;
 
 export interface AuthFormWrapperProps {
   onSubmit: OnSubmitType;
-  errorDetails: string;
+  apiErrorDetails: string;
 }

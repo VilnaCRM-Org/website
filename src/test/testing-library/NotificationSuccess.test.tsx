@@ -54,16 +54,16 @@ describe('NotificationSuccess ', () => {
   });
 
   it('renders the correct title and description', () => {
-    const { getByText } = render(<NotificationSuccess setIsOpen={mockSetIsOpen} />);
+    render(<NotificationSuccess setIsOpen={mockSetIsOpen} />);
 
-    expect(getByText(successTitleText)).toBeInTheDocument();
-    expect(getByText(successDescriptionText)).toBeInTheDocument();
+    expect(screen.getByText(successTitleText)).toBeInTheDocument();
+    expect(screen.getByText(successDescriptionText)).toBeInTheDocument();
   });
 
   it('renders the button with correct text and handles click event', () => {
-    const { getByRole } = render(<NotificationSuccess setIsOpen={mockSetIsOpen} />);
+    render(<NotificationSuccess setIsOpen={mockSetIsOpen} />);
 
-    const button: HTMLElement = getByRole(buttonRole, { name: buttonText });
+    const button: HTMLElement = screen.getByRole(buttonRole, { name: buttonText });
 
     expect(button).toBeInTheDocument();
     fireEvent.click(button);
@@ -81,8 +81,8 @@ describe('NotificationSuccess ', () => {
     expect(imgParent).toHaveStyle('bottom: -0.78rem');
   });
   it('uses correct translation key for success button', () => {
-    const { getByRole } = render(<NotificationSuccess setIsOpen={() => {}} />);
-    const button: HTMLElement = getByRole('button');
+    render(<NotificationSuccess setIsOpen={() => {}} />);
+    const button: HTMLElement = screen.getByRole(buttonRole, { name: buttonText });
 
     expect(button).toHaveTextContent(buttonText);
   });

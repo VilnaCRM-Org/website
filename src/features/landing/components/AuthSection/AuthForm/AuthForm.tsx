@@ -22,11 +22,11 @@ import styles from './styles';
 import { AuthFormProps } from './types';
 
 function AuthForm({
-  errorDetails,
+  apiErrorDetails,
   onSubmit,
   handleSubmit,
   control,
-  errors,
+  formValidationErrors,
 }: AuthFormProps): React.ReactElement {
   const { t } = useTranslation();
 
@@ -72,7 +72,7 @@ function AuthForm({
             placeholder={t('sign_up.form.email_input.placeholder')}
             type="email"
           />
-          {errorDetails && <FormAlert errorDetails={errorDetails} />}
+          {apiErrorDetails && <FormAlert apiErrorDetails={apiErrorDetails} />}
         </Stack>
         <Stack sx={styles.inputWrapper}>
           <Stack direction="row" alignItems="center" gap="0.25rem">
@@ -114,7 +114,7 @@ function AuthForm({
           <UiCheckbox
             onChange={onChange}
             checked={value}
-            error={!!errors.Privacy}
+            error={!!formValidationErrors.Privacy}
             sx={styles.labelText as React.CSSProperties}
             label={
               <UiTypography variant="medium14" sx={styles.privacyText}>
