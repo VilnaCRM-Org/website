@@ -11,6 +11,7 @@ describe('UiCheckbox', () => {
   it('renders the checkbox with the provided label', () => {
     const { getByLabelText } = render(<UiCheckbox label={testText} onChange={mockOnChange} />);
     const checkboxLabel: HTMLElement = getByLabelText(testText);
+
     expect(checkboxLabel).toBeInTheDocument();
   });
 
@@ -28,20 +29,16 @@ describe('UiCheckbox', () => {
   });
 
   it('applies default style when there is no error', async () => {
-    const { container } = render(<UiCheckbox label="Test" onChange={mockOnChange} />);
+    const { getByRole } = render(<UiCheckbox label="Test" onChange={mockOnChange} />);
 
-    const checkboxInput: Element | null = container.querySelector('input[type="checkbox"]');
+    const checkboxInput: HTMLElement = getByRole('checkbox');
 
     expect(checkboxInput).toHaveStyle('border-color: #D0D4D8');
 
-    if (checkboxInput) {
-      fireEvent.mouseOver(checkboxInput);
-    }
+    fireEvent.mouseOver(checkboxInput);
 
     await waitFor(() => {
-      if (checkboxInput) {
-        expect(checkboxInput).toHaveStyle('border-color: #1EAEFF');
-      }
+      expect(checkboxInput).toHaveStyle('border-color: #1EAEFF');
     });
   });
 
@@ -50,5 +47,16 @@ describe('UiCheckbox', () => {
     const checkboxInput: HTMLElement = getByRole('checkbox');
 
     expect(checkboxInput).toHaveStyle('border-color: #DC3939');
+  });
+  it('controls checkbox state with checked prop', () => {
+    const { getByRole, rerender } = render(
+      <UiCheckbox label="Test" onChange={mockOnChange} checked />
+    );
+
+    const checkboxInput: HTMLElement = getByRole('checkbox');
+    expect(checkboxInput).toBeChecked();
+
+    rerender(<UiCheckbox label="Test" onChange={mockOnChange} checked={false} />);
+    expect(checkboxInput).not.toBeChecked();
   });
 });

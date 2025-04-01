@@ -1,10 +1,10 @@
 import { Control, FieldErrors, UseFormHandleSubmit } from 'react-hook-form';
 
-import { SignupMutationVariables } from '../../../api/service/types';
+import { SignUpInput } from '../../../api/service/types';
 import { RegisterItem } from '../../../types/authentication/form';
 
 export interface SignUpVariables {
-  input: SignupMutationVariables;
+  input: SignUpInput;
 }
 
 interface User {

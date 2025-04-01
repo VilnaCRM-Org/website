@@ -1,4 +1,4 @@
-export type SignupMutationVariables = {
+export type SignUpInput = {
   initials: string;
   email: string;
   password: string;

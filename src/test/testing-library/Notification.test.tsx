@@ -114,12 +114,7 @@ describe('Notification', () => {
     const isOpen: boolean = true;
 
     render(
-      <Notification
-        type={type as NotificationType}
-        setIsOpen={setIsOpen}
-        onRetry={retrySubmit}
-        isOpen={isOpen}
-      />
+      <Notification type={type} setIsOpen={setIsOpen} onRetry={retrySubmit} isOpen={isOpen} />
     );
 
     expect(screen.getByText(fallbackTitleText)).toBeInTheDocument();

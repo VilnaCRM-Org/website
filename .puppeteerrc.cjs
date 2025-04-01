@@ -25,13 +25,17 @@ console.log(`Loaded ${loadedEnvFiles.length} environment file(s)`);
     ],
   });
 
+  const context = await browser.createIncognitoBrowserContext();
   let page;
   try {
-    page = await browser.newPage();
+    page = await context.newPage();
     await page.setViewport({ width: 1280, height: 800 });
     const targetUrl = process.env.NEXT_PUBLIC_PROD_CONTAINER_API_URL || 'http://prod:3001';
 
-    await page.goto(targetUrl, { timeout: 30000 });
+    await page.goto(targetUrl, {
+      timeout: 30000,
+      waitUntil: 'networkidle2',
+    });
     console.log(`Page loaded successfully: ${targetUrl}`);
   } catch (error) {
     console.error('Navigation failed:', error);
@@ -47,6 +51,7 @@ console.log(`Loaded ${loadedEnvFiles.length} environment file(s)`);
     }
     process.exit(1);
   } finally {
+    if (context) await context.close();
     await browser.close();
   }
 })();

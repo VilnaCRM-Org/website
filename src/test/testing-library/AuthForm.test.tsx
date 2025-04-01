@@ -15,6 +15,7 @@ import {
   fillForm,
   getFormElements,
   OnSubmitType,
+  AuthFormWrapperProps,
   mockInternalServerErrorResponse,
 } from './utils';
 
@@ -32,10 +33,6 @@ const passwordTipAltText: string = t('sign_up.form.password_tip.alt');
 const statusRole: string = 'status';
 const alertRole: string = 'alert';
 
-interface AuthFormTestWrapperProps {
-  onSubmit: (data: RegisterItem) => Promise<void>;
-  errorDetails: string;
-}
 interface GetElementsResult {
   fullNameInput: HTMLInputElement;
   emailInput: HTMLInputElement;
@@ -44,7 +41,7 @@ interface GetElementsResult {
   signUpButton: HTMLElement;
 }
 
-function AuthFormWrapper({ errorDetails, onSubmit }: AuthFormTestWrapperProps): React.ReactElement {
+function AuthFormWrapper({ errorDetails, onSubmit }: AuthFormWrapperProps): React.ReactElement {
   const {
     handleSubmit,
     control,
@@ -94,25 +91,22 @@ const fulfilledMockResponse: MockedResponse = {
     };
   },
 };
-
+const mockSubmitSuccess: () => OnSubmitType = (): OnSubmitType =>
+  jest.fn().mockResolvedValueOnce(undefined);
 const renderAuthFormWithSuccess: (
   onSubmit?: OnSubmitType,
   errorDetails?: string
-) => RenderResult = (onSubmit, errorDetails = ''): RenderResult => {
-  const mockOnSubmit: OnSubmitType = jest.fn().mockResolvedValueOnce(undefined);
-
-  return render(
+) => RenderResult = (onSubmit = mockSubmitSuccess(), errorDetails = ''): RenderResult => render(
     <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
-      <AuthFormWrapper errorDetails={errorDetails} onSubmit={onSubmit || mockOnSubmit} />
+      <AuthFormWrapper errorDetails={errorDetails} onSubmit={onSubmit} />
     </MockedProvider>
   );
-};
 
 describe('AuthForm', () => {
-  let onSubmit: jest.Mock<Promise<void>, [RegisterItem]>;
+  let onSubmit: OnSubmitType;
 
   beforeEach(() => {
-    onSubmit = jest.fn().mockResolvedValueOnce(undefined);
+    onSubmit = mockSubmitSuccess();
   });
 
   it('renders AuthForm component', () => {

@@ -173,3 +173,8 @@ export const mockInternalServerErrorResponse: MockedResponse = {
 
 export type SetIsOpenType = jest.Mock<(isOpen: boolean) => void>;
 export type OnSubmitType = jest.Mock<Promise<void>, [RegisterItem]>;
+
+export interface AuthFormWrapperProps {
+  onSubmit: OnSubmitType;
+  errorDetails: string;
+}

@@ -33,9 +33,7 @@ export async function getRemoteSchema() {
     if ((error as Error).name === 'AbortError') {
       throw new Error(`Schema fetch timeout after ${FETCH_TIMEOUT / 1000} seconds`);
     }
-    const customError = new Error(`Schema fetch failed: ${(error as Error).message}`);
-    (customError as any).cause = error;
-    throw customError;
+    throw new Error(`Schema fetch failed: ${(error as Error).message}`);
   }
 }
 const validateCreateUserInput = (input: CreateUserInput) => {
@@ -90,7 +88,6 @@ export const resolvers = {
   },
 };
 const formatError = (formattedError: any, error: any) => {
-  // Handle 500 (server errors)
   if (formattedError.extensions.code === 'INTERNAL_SERVER_ERROR') {
     return {
       ...formattedError,
@@ -99,7 +96,6 @@ const formatError = (formattedError: any, error: any) => {
     };
   }
 
-  // Handle 400 (client errors)
   if (formattedError.extensions.code === 'BAD_REQUEST') {
     return {
       ...formattedError,
@@ -108,7 +104,6 @@ const formatError = (formattedError: any, error: any) => {
     };
   }
 
-  // Handle other errors (e.g., validation)
   if (formattedError.extensions.code === ApolloServerErrorCode.GRAPHQL_VALIDATION_FAILED) {
     return {
       ...formattedError,

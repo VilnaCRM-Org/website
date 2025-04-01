@@ -6,12 +6,7 @@ import { useForm } from 'react-hook-form';
 import AuthForm from '../../features/landing/components/AuthSection/AuthForm/AuthForm';
 import { RegisterItem } from '../../features/landing/types/authentication/form';
 
-import { OnSubmitType } from './utils';
-
-interface AuthFormWrapperProps {
-  onSubmit: OnSubmitType;
-  errorDetails: string;
-}
+import { AuthFormWrapperProps, OnSubmitType } from './utils';
 
 function AuthFormWrapper({ errorDetails, onSubmit }: AuthFormWrapperProps): React.ReactElement {
   const {
@@ -40,10 +35,10 @@ jest.mock('../../features/landing/components/AuthSection/AuthForm/AuthForm', () 
 }));
 
 describe('AuthFormWrapper - Props Forwarding', () => {
-  let onSubmit: jest.Mock<Promise<void>, [RegisterItem]>;
+  let onSubmit: OnSubmitType;
 
   beforeEach(() => {
-    onSubmit = jest.fn().mockResolvedValueOnce(undefined);
+    onSubmit = jest.fn<Promise<void>, [RegisterItem]>().mockResolvedValueOnce(undefined);
   });
 
   it('forwards props correctly to AuthForm', () => {

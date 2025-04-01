@@ -1,5 +1,6 @@
 import { ApolloError, ServerError, ServerParseError } from '@apollo/client';
 
+import { NotificationStatus } from '../../features/landing/components/AuthSection/AuthForm/types';
 import {
   handleApolloError,
   handleNetworkError,
@@ -42,7 +43,7 @@ describe('Error Handling', () => {
         setIsNotificationOpen: setIsNotificationOpenMock,
       });
 
-      expect(setNotificationTypeMock).toHaveBeenCalledWith('error');
+      expect(setNotificationTypeMock).toHaveBeenCalledWith(NotificationStatus.ERROR);
       expect(setIsNotificationOpenMock).toHaveBeenCalledWith(true);
       expect(setErrorDetailsMock).not.toHaveBeenCalled();
     });
@@ -148,7 +149,7 @@ describe('Error Handling', () => {
         setIsNotificationOpen: setIsNotificationOpenMock,
       });
 
-      expect(setNotificationTypeMock).toHaveBeenCalledWith('error');
+      expect(setNotificationTypeMock).toHaveBeenCalledWith(NotificationStatus.ERROR);
       expect(setIsNotificationOpenMock).toHaveBeenCalledWith(true);
     });
     it('should set default error message when no networkError or graphQLErrors are present', () => {

@@ -14,6 +14,14 @@ const confettiImgBottomAltText: string = t('notifications.success.images.confett
 const gearsImgAltText: string = t('notifications.success.images.gears');
 const buttonText: string = t('notifications.success.button');
 
+const mockMatchMedia: (matches: boolean) => void = (matches = false) => {
+  window.matchMedia = jest.fn().mockImplementation(query => ({
+    matches: query === '(max-width: 640px)' ? matches : false,
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn(),
+  }));
+};
+
 describe('NotificationSuccess ', () => {
   let mockSetIsOpen: SetIsOpenType;
 
@@ -63,13 +71,8 @@ describe('NotificationSuccess ', () => {
   });
 
   it('bottom image has correct styles for smaller screens', () => {
-    window.matchMedia = jest.fn().mockImplementation(query => ({
-      matches: query === '(max-width: 640px)',
-      addEventListener: jest.fn(),
-      removeEventListener: jest.fn(),
-    }));
+    mockMatchMedia(true);
 
-    // const { getByAltText } =
     render(<NotificationSuccess setIsOpen={jest.fn()} />);
 
     const successConfettiImgBottom: HTMLElement = screen.getByAltText(confettiImgBottomAltText);
