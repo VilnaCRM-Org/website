@@ -6,6 +6,7 @@ import { AriaRole } from 'react';
 import { CreateUserInput } from '@/test/apollo-server/types';
 
 import SIGNUP_MUTATION from '../../features/landing/api/service/userService';
+import { RegisterItem } from '../../features/landing/types/authentication/form';
 
 import {
   fullNamePlaceholder,
@@ -171,3 +172,4 @@ export const mockInternalServerErrorResponse: MockedResponse = {
 };
 
 export type SetIsOpenType = jest.Mock<(isOpen: boolean) => void>;
+export type OnSubmitType = jest.Mock<Promise<void>, [RegisterItem]>;

@@ -14,10 +14,9 @@ import {
 import { buttonRole } from './constants';
 import { checkElementsInDocument, SetIsOpenType } from './utils';
 
-const notificationBoxSelector: string = '.MuiBox-root';
 const successTitleText: string = t('notifications.success.title');
 const errorTitleText: string = t('notifications.error.title');
-const fallbackTitleText: string = t('notification.unknown.title');
+const fallbackTitleText: string = t('notifications.unknown.title');
 const successDescriptionText: string = t('notifications.success.description');
 const confettiImgAltText: string = t('notifications.success.images.confetti');
 const confettiImgBottomAltText: string = t('notifications.success.images.confetti-bottom');
@@ -52,15 +51,13 @@ describe('Notification', () => {
   });
 
   it('renders notification success without crashing', () => {
-    const { container, getByText, getByAltText, getByRole } = renderNotification({
+    const { getByText, getByAltText, getByRole } = renderNotification({
       type: NotificationStatus.SUCCESS,
       isOpen: true,
       setIsOpen: mockSetIsOpen,
     });
 
-    const notificationContainer: HTMLElement = container.querySelector(
-      notificationBoxSelector
-    ) as HTMLElement;
+    const notificationContainer: HTMLElement = getByRole('alert');
     const successConfettiImg: HTMLElement = getByAltText(confettiImgAltText);
     const successConfettiImgBottom: HTMLElement = getByAltText(confettiImgBottomAltText);
     const successGearsImg: HTMLElement = getByAltText(gearsImgAltText);

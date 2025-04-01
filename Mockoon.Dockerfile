@@ -7,18 +7,17 @@ RUN npm install -g @mockoon/cli@9.2.0 typescript@5.8.2 && \
     npm install winston@3.11.0 @types/winston@2.4.4 --save-dev
 
 
-COPY docker/mockoon/data.ts mockoon/data.ts
+COPY docker/mockoon/schemaFetcher.ts mockoon/schemaFetcher.ts
 COPY .env .env
 
-##compilation
-RUN tsc mockoon/data.ts --outDir out --rootDir ./ \
+RUN tsc mockoon/schemaFetcher.ts --outDir out --rootDir ./ \
   --module NodeNext --moduleResolution NodeNext \
   --target ESNext --strict --resolveJsonModule \
   --experimentalDecorators --emitDecoratorMetadata \
   --esModuleInterop --allowSyntheticDefaultImports \
   --skipLibCheck --noImplicitAny --noEmitOnError \
   --lib es2018,dom && \
-  node ./out/mockoon/data.js ##create data.json
+  node ./out/mockoon/schemaFetcher.js
 
 EXPOSE 8080
 

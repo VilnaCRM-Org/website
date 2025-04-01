@@ -28,7 +28,6 @@ export async function fetchAndSaveSchema(): Promise<void> {
   const timeoutId: NodeJS.Timeout = setTimeout(() => controller.abort(), 5000);
 
   try {
-    // Fetch schema
     const response: Response = await fetch(SCHEMA_URL, { signal: controller.signal }).finally(() =>
       clearTimeout(timeoutId)
     );
@@ -37,12 +36,10 @@ export async function fetchAndSaveSchema(): Promise<void> {
       throw new Error(`Failed to fetch schema: ${response.statusText}`);
     }
 
-    // Ensure output directory exists
     if (!fs.existsSync(OUTPUT_DIR)) {
       fs.mkdirSync(OUTPUT_DIR, { recursive: true });
     }
 
-    // Save response as JSON
     const data: string = await response.text();
     fs.writeFileSync(OUTPUT_FILE, data, 'utf-8');
 
@@ -55,7 +52,7 @@ export async function fetchAndSaveSchema(): Promise<void> {
     }
     if (process.env.MOCKOON_EXIT_ON_ERROR !== 'false') {
       logger.info('Exiting process due to error...');
-      process.exit(1); // Exit with an error code
+      process.exit(1);
     } else {
       logger.info('Error handling complete, continuing with execution...');
     }

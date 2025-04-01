@@ -11,7 +11,6 @@ function UiCheckbox({
   error,
   disabled,
   checked,
-  isInvalid,
 }: UiCheckboxProps): React.ReactElement {
   return (
     <FormControlLabel
@@ -24,7 +23,7 @@ function UiCheckbox({
             disabled={disabled}
             checked={checked}
             onChange={onChange}
-            aria-invalid={isInvalid ? 'true' : undefined}
+            aria-invalid={error ? 'true' : undefined}
           />
         </Box>
       }

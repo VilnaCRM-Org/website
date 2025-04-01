@@ -14,16 +14,16 @@ const defaultUrlSchema =
 const SCHEMA_URL = process.env.GRAPHQL_SCHEMA_URL || defaultUrlSchema;
 
 export async function getRemoteSchema() {
+  const FETCH_TIMEOUT = process.env.FETCH_TIMEOUT ? Number(process.env.FETCH_TIMEOUT) : 10000;
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 5000);
+  const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
 
   try {
-    const response = await fetch(`${SCHEMA_URL}`, {
-      signal: controller.signal,
-    }).finally(() => clearTimeout(timeoutId));
+    const response = await fetch(`${SCHEMA_URL}`, { signal: controller.signal });
 
+    clearTimeout(timeoutId);
     if (!response.ok) {
-      throw new Error(`Failed to fetch schema: ${response.statusText}`);
+      throw new Error(`Failed to fetch schema: ${response.statusText} ${response.statusText}`);
     }
 
     return await response.text();
@@ -31,10 +31,10 @@ export async function getRemoteSchema() {
     console.error('Error fetching remote schema:', error);
 
     if ((error as Error).name === 'AbortError') {
-      throw new Error('Schema fetch timeout after 5 seconds');
+      throw new Error(`Schema fetch timeout after ${FETCH_TIMEOUT / 1000} seconds`);
     }
     const customError = new Error(`Schema fetch failed: ${(error as Error).message}`);
-    (customError as any).cause = error; // Attach the original error as a custom property
+    (customError as any).cause = error;
     throw customError;
   }
 }
@@ -63,7 +63,6 @@ const validateCreateUserInput = (input: CreateUserInput) => {
 export const resolvers = {
   Mutation: {
     createUser: async (_: unknown, { input }: { input: CreateUserInput }) => {
-      // Validate input
       validateCreateUserInput(input);
       try {
         const newUser: User = {
@@ -117,7 +116,6 @@ const formatError = (formattedError: any, error: any) => {
     };
   }
 
-  // Default behavior for other errors
   return formattedError;
 };
 async function startServer(): Promise<ApolloServer<BaseContext>> {
@@ -147,7 +145,6 @@ async function startServer(): Promise<ApolloServer<BaseContext>> {
 
       context: async ({ req }) => {
         if (req.url === '/health') {
-          // Return 200 without executing GraphQL
           throw new GraphQLError('Health check endpoint', {
             extensions: {
               http: { status: 200 },
@@ -185,7 +182,6 @@ async function initializeServer() {
   try {
     const server = await startServer();
 
-    // Attach shutdown handlers (only once)
     if (!isShuttingDown) {
       process.once('SIGINT', () => handleShutdown(server, 'SIGINT'));
       process.once('SIGTERM', () => handleShutdown(server, 'SIGTERM'));
@@ -229,19 +225,16 @@ async function shutdown(server: any) {
   await cleanupResources();
 }
 
-// ✅ Handle startup failures
 async function handleServerFailure() {
   console.log('Attempting to clean up before exiting...');
   await cleanupResources();
   process.exit(1);
 }
 
-// ✅ Cleanup function for external resources (e.g., DB connections)
 async function cleanupResources() {
   try {
     console.log('Cleaning up resources...');
 
-    // Example: Close DB connections
     await closeDatabaseConnections();
 
     console.log('Cleanup complete.');
@@ -250,12 +243,10 @@ async function cleanupResources() {
   }
 }
 
-// ✅ Example: Mock database close function
 async function closeDatabaseConnections() {
-  return new Promise(resolve => setTimeout(resolve, 1000)); // Simulate DB cleanup
+  return new Promise(resolve => setTimeout(resolve, 1000));
 }
 
-// Start server with proper error handling
 initializeServer().catch(error => {
   console.error('Fatal error during server initialization:', error);
   process.exit(1);

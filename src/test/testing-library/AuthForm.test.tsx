@@ -14,6 +14,7 @@ import {
   checkElementsInDocument,
   fillForm,
   getFormElements,
+  OnSubmitType,
   mockInternalServerErrorResponse,
 } from './utils';
 
@@ -93,8 +94,6 @@ const fulfilledMockResponse: MockedResponse = {
     };
   },
 };
-
-type OnSubmitType = jest.Mock<Promise<void>, [RegisterItem]>;
 
 const renderAuthFormWithSuccess: (
   onSubmit?: OnSubmitType,

@@ -1,4 +1,4 @@
-import { render, fireEvent } from '@testing-library/react';
+import { render, fireEvent, waitFor } from '@testing-library/react';
 import React from 'react';
 
 import { UiCheckbox } from '@/components';
@@ -27,12 +27,22 @@ describe('UiCheckbox', () => {
     expect(checkboxInput).toBeDisabled();
   });
 
-  it('applies default style when there is no error', () => {
+  it('applies default style when there is no error', async () => {
     const { container } = render(<UiCheckbox label="Test" onChange={mockOnChange} />);
 
     const checkboxInput: Element | null = container.querySelector('input[type="checkbox"]');
 
-    expect(checkboxInput).toHaveStyle('border-color: #1eaeff');
+    expect(checkboxInput).toHaveStyle('border-color: #D0D4D8');
+
+    if (checkboxInput) {
+      fireEvent.mouseOver(checkboxInput);
+    }
+
+    await waitFor(() => {
+      if (checkboxInput) {
+        expect(checkboxInput).toHaveStyle('border-color: #1EAEFF');
+      }
+    });
   });
 
   it('applies error style when error prop is true', () => {

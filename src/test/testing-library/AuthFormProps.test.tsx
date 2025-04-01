@@ -6,8 +6,10 @@ import { useForm } from 'react-hook-form';
 import AuthForm from '../../features/landing/components/AuthSection/AuthForm/AuthForm';
 import { RegisterItem } from '../../features/landing/types/authentication/form';
 
+import { OnSubmitType } from './utils';
+
 interface AuthFormWrapperProps {
-  onSubmit: (data: RegisterItem) => Promise<void>;
+  onSubmit: OnSubmitType;
   errorDetails: string;
 }
 

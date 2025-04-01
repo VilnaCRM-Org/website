@@ -29,7 +29,7 @@ function NotificationFallback(): React.ReactElement {
   const { t } = useTranslation();
   return (
     <UiTypography component="h4" sx={styles.messageTitle}>
-      {t('notification.unknown.title')}
+      {t('notifications.unknown.title')}
     </UiTypography>
   );
 }

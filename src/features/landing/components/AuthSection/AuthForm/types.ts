@@ -25,7 +25,7 @@ export interface CreateUserPayload {
 export type UseFormControl = Control<RegisterItem>;
 
 export interface AuthFormProps {
-  handleSubmit: UseFormHandleSubmit<RegisterItem, undefined>;
+  handleSubmit: UseFormHandleSubmit<RegisterItem, RegisterItem>;
   control: UseFormControl;
   errors: FieldErrors<RegisterItem>;
   errorDetails: string;

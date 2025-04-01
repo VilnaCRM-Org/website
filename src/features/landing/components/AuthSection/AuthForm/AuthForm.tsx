@@ -115,7 +115,6 @@ function AuthForm({
             onChange={onChange}
             checked={value}
             error={!!errors.Privacy}
-            isInvalid={errors?.Privacy?.ref?.name === 'Privacy'}
             sx={styles.labelText as React.CSSProperties}
             label={
               <UiTypography variant="medium14" sx={styles.privacyText}>
