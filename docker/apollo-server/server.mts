@@ -115,7 +115,7 @@ const formatError = (formattedError: any, error: any) => {
 
   return formattedError;
 };
-let server:ApolloServer<BaseContext>;
+let server: ApolloServer<BaseContext>;
 async function startServer() {
   try {
     const typeDefs: string = await getRemoteSchema();
@@ -173,7 +173,7 @@ async function startServer() {
   }
 }
 
-process.on('unhandledRejection', async(error) => {
+process.on('unhandledRejection', async error => {
   console.error('Unhandled Promise Rejection:', error);
 
   await gracefulShutdownAndExit(server);
@@ -203,8 +203,6 @@ async function gracefulShutdownAndExit(server: any, timeout: number = 10000) {
   }
 }
 
-
-
 let isShuttingDown = false;
 
 async function initializeServer() {
@@ -222,7 +220,6 @@ async function initializeServer() {
     await handleServerFailure();
   }
 }
-
 
 async function handleShutdown(server: any, signal: string) {
   if (isShuttingDown) return;
