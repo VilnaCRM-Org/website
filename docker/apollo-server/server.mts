@@ -9,6 +9,9 @@ import { ApolloServerErrorCode } from '@apollo/server/errors';
 
 dotenv.config();
 
+const GRAPHQL_API_PATH = process.env.GRAPHQL_API_PATH || 'graphql';
+const HEALTH_CHECK_PATH = process.env.HEALTH_CHECK_PATH || 'health';
+
 const defaultUrlSchema =
   'https://raw.githubusercontent.com/VilnaCRM-Org/user-service/main/.github/graphql-spec/spec';
 const SCHEMA_URL = process.env.GRAPHQL_SCHEMA_URL || defaultUrlSchema;
@@ -113,7 +116,7 @@ const formatError = (formattedError: any, error: any) => {
 
   return formattedError;
 };
-async function startServer(): Promise<ApolloServer<BaseContext>> {
+async function startServer() {
   try {
     const typeDefs: string = await getRemoteSchema();
 
@@ -139,7 +142,7 @@ async function startServer(): Promise<ApolloServer<BaseContext>> {
       listen: { port: 4000 },
 
       context: async ({ req }) => {
-        if (req.url === '/health') {
+        if (req.url === HEALTH_CHECK_PATH) {
           throw new GraphQLError('Health check endpoint', {
             extensions: {
               http: { status: 200 },
@@ -155,7 +158,9 @@ async function startServer(): Promise<ApolloServer<BaseContext>> {
       },
     });
 
-    console.log(`🚀 Server ready at ${url}`);
+    console.log(`🚀 GraphQL API ready at ${url}${GRAPHQL_API_PATH}`);
+    console.log(`✅ Health Check at ${url}${HEALTH_CHECK_PATH}`);
+
     return server;
   } catch (error) {
     console.error('Failed to start server:', error);
