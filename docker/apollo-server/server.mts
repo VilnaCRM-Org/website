@@ -2,7 +2,6 @@ import { ApolloServer, BaseContext } from '@apollo/server';
 import { startStandaloneServer } from '@apollo/server/standalone';
 // @ts-ignore - Import path uses .ts extension which is resolved at runtime
 import { CreateUserInput, User } from './type.ts';
-// @ts-ignore - Using CommonJS module in ESM context
 import dotenv from 'dotenv';
 import { GraphQLError } from 'graphql';
 import { ApolloServerErrorCode } from '@apollo/server/errors';
@@ -116,6 +115,7 @@ const formatError = (formattedError: any, error: any) => {
 
   return formattedError;
 };
+let server:ApolloServer<BaseContext>;
 async function startServer() {
   try {
     const typeDefs: string = await getRemoteSchema();
@@ -123,10 +123,12 @@ async function startServer() {
     if (!typeDefs) {
       throw new Error('Failed to load remote schema.');
     }
+
     if (!resolvers || Object.keys(resolvers).length === 0) {
       throw new Error('Resolvers are missing or not defined properly.');
     }
-    const server = new ApolloServer<BaseContext>({
+
+    server = new ApolloServer<BaseContext>({
       typeDefs,
       resolvers,
       csrfPrevention: {
@@ -164,17 +166,44 @@ async function startServer() {
     return server;
   } catch (error) {
     console.error('Failed to start server:', error);
+    if (server) {
+      await gracefulShutdownAndExit(server);
+    }
     process.exit(1);
   }
 }
 
-process.on('unhandledRejection', error => {
+process.on('unhandledRejection', async(error) => {
   console.error('Unhandled Promise Rejection:', error);
-  handleServerFailure().catch(shutdownError => {
-    console.error('Error during graceful shutdown after unhandled rejection:', shutdownError);
-    process.exit(1);
-  });
+
+  await gracefulShutdownAndExit(server);
 });
+async function gracefulShutdownAndExit(server: any, timeout: number = 10000) {
+  console.log('Initiating graceful shutdown...');
+
+  if (server) {
+    const shutdownTimeout = setTimeout(() => {
+      console.error('Graceful shutdown timeout reached. Forcing exit.');
+      process.exit(1);
+    }, timeout);
+    try {
+      await server.stop();
+      console.log('Server stopped gracefully.');
+
+      clearTimeout(shutdownTimeout);
+      process.exit(0);
+    } catch (shutdownError) {
+      console.error('Error during graceful shutdown:', shutdownError);
+      clearTimeout(shutdownTimeout);
+      process.exit(1);
+    }
+  } else {
+    console.error('No server instance found for shutdown.');
+    process.exit(1);
+  }
+}
+
+
 
 let isShuttingDown = false;
 
@@ -193,6 +222,7 @@ async function initializeServer() {
     await handleServerFailure();
   }
 }
+
 
 async function handleShutdown(server: any, signal: string) {
   if (isShuttingDown) return;
@@ -220,6 +250,9 @@ async function shutdown(server: any) {
     }
   } catch (err) {
     console.error('Error while closing server connections:', err);
+    const error = new Error('Failed to shut down the server gracefully');
+    (error as any).cause = err;
+    throw error;
   }
 
   await cleanupResources();
@@ -228,7 +261,7 @@ async function shutdown(server: any) {
 async function handleServerFailure() {
   console.log('Attempting to clean up before exiting...');
   await cleanupResources();
-  process.exit(1);
+  await gracefulShutdownAndExit(server);
 }
 
 async function cleanupResources() {
