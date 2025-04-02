@@ -9,20 +9,14 @@ RUN npm install -g @mockoon/cli@9.2.0 typescript@5.8.2 && \
     npm install winston@3.11.0 @types/winston@2.4.4 --save-dev
 
 
-COPY docker/mockoon/schemaFetcher.ts mockoon/schemaFetcher.ts
+COPY tsconfig.server.json tsconfig.server.json
+COPY docker/mockoon docker/mockoon
 COPY .env .env
 
-RUN tsc mockoon/schemaFetcher.ts --outDir out --rootDir ./ \
-  --module NodeNext --moduleResolution NodeNext \
-  --target ESNext --strict --resolveJsonModule \
-  --experimentalDecorators --emitDecoratorMetadata \
-  --esModuleInterop --allowSyntheticDefaultImports \
-  --skipLibCheck --noImplicitAny --noEmitOnError \
-  --lib es2018,dom && \
-  node ./out/mockoon/schemaFetcher.js
+RUN tsc --project tsconfig.server.json && node ./out/docker/mockoon/schemaFetcher.js
 
 EXPOSE 8080
 
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 CMD curl -f http://localhost:8080 || exit 1
 
-CMD ["mockoon-cli", "start", "-d", "out/mockoon/data.json"]
+CMD ["mockoon-cli", "start", "-d", "out/docker/mockoon/data.json"]

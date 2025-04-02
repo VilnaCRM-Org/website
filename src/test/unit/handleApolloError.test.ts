@@ -1,6 +1,6 @@
 import { ApolloError, ServerError, ServerParseError } from '@apollo/client';
 
-import { NotificationStatus } from '../../features/landing/components/AuthSection/AuthForm/types';
+import { NotificationStatus } from '../../features/landing/components/Notification/types';
 import {
   handleApolloError,
   handleNetworkError,

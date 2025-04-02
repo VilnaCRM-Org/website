@@ -12,12 +12,10 @@ interface UseFormResetProps {
   serverErrorMessage: string;
   notificationType?: string;
 }
-type UseFormResetHook = ({
-  formState,
-  reset,
-  serverErrorMessage,
-  notificationType,
-}: UseFormResetProps) => void;
+
+type UseFormResetHook = (props: UseFormResetProps) => void;
+
+const initialFormValues: RegisterItem = { Email: '', FullName: '', Password: '', Privacy: false };
 
 const useFormReset: UseFormResetHook = ({
   formState,
@@ -31,7 +29,7 @@ const useFormReset: UseFormResetHook = ({
       !serverErrorMessage.length &&
       notificationType !== 'error'
     ) {
-      reset({ Email: '', FullName: '', Password: '', Privacy: false });
+      reset(initialFormValues);
     }
   }, [formState, reset, serverErrorMessage, notificationType]);
 };

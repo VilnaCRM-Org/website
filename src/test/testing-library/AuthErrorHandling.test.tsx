@@ -16,6 +16,7 @@ import { testEmail, testInitials, testPassword } from './constants';
 import { fillForm } from './utils';
 
 jest.mock('../../features/landing/helpers/handleApolloError', () => ({
+  ...jest.requireActual('../../features/landing/helpers/handleApolloError'),
   handleApolloError: jest.fn(),
 }));
 
@@ -38,7 +39,17 @@ describe('AuthLayout Error Handling', () => {
           query: SIGNUP_MUTATION,
           variables: { input },
         },
-        error: new Error('Network error occurred'),
+        error: ((): Error => {
+          class NetworkError extends Error {
+            private statusCode: number = 500;
+
+            constructor(message: string) {
+              super(message);
+              this.name = 'NetworkError';
+            }
+          }
+          return new NetworkError('Network error occurred');
+        })(),
       },
     ];
     render(

@@ -34,11 +34,10 @@ const statusRole: string = 'status';
 const alertRole: string = 'alert';
 
 interface GetElementsResult {
-  fullNameInput: HTMLInputElement;
-  emailInput: HTMLInputElement;
-  passwordInput: HTMLInputElement;
-  privacyCheckbox: HTMLInputElement;
-  signUpButton: HTMLElement;
+  fullNameInput: HTMLInputElement | null;
+  emailInput: HTMLInputElement | null;
+  passwordInput: HTMLInputElement | null;
+  privacyCheckbox: HTMLInputElement | null;
 }
 
 function AuthFormWrapper({
@@ -96,6 +95,7 @@ const fulfilledMockResponse: MockedResponse = {
 };
 const mockSubmitSuccess: () => OnSubmitType = (): OnSubmitType =>
   jest.fn().mockResolvedValueOnce(undefined);
+
 const renderAuthFormWithSuccess: (
   onSubmit?: OnSubmitType,
   serverErrorMessage?: string
@@ -155,9 +155,9 @@ describe('AuthForm', () => {
     );
 
     await waitFor(() => {
-      expect(emailInput.value).toBe(testEmail);
-      expect(passwordInput.value).toBe(testPassword);
-      expect(fullNameInput.value).toBe(testInitials);
+      expect(emailInput?.value).toBe(testEmail);
+      expect(passwordInput?.value).toBe(testPassword);
+      expect(fullNameInput?.value).toBe(testInitials);
       expect(privacyCheckbox).toBeChecked();
     });
   });
@@ -169,9 +169,9 @@ describe('AuthForm', () => {
     await waitFor(() => {
       const serverErrorMessage: HTMLElement | null = queryByRole(alertRole);
 
-      expect(fullNameInput.value).toBe('');
-      expect(emailInput.value).toBe('');
-      expect(passwordInput.value).toBe('');
+      expect(fullNameInput?.value).toBe('');
+      expect(emailInput?.value).toBe('');
+      expect(passwordInput?.value).toBe('');
       expect(privacyCheckbox).not.toBeChecked();
 
       const requiredError: HTMLElement[] = queryAllByText(requiredText);
@@ -193,15 +193,16 @@ describe('AuthForm', () => {
       const { queryByText, getByText } = renderAuthFormWithSuccess();
 
       const formElements: GetElementsResult = getFormElements();
-      const inputField: HTMLInputElement | HTMLElement =
+      const inputField: HTMLInputElement | null =
         formElements[fieldKey as keyof typeof formElements];
 
-      await userEvent.clear(inputField);
+      if (inputField) await userEvent.clear(inputField);
+
       await userEvent.tab();
 
       expect(getByText(requiredText)).toBeInTheDocument();
 
-      fireEvent.change(inputField, { target: { value } });
+      if (inputField) fireEvent.change(inputField, { target: { value } });
 
       await waitFor(() => {
         expect(queryByText(requiredText)).not.toBeInTheDocument();
@@ -255,9 +256,9 @@ describe('AuthForm', () => {
 
     const { fullNameInput, emailInput, passwordInput } = getFormElements();
 
-    await user.click(fullNameInput);
-    await user.click(emailInput);
-    await user.click(passwordInput);
+    if (fullNameInput) await user.click(fullNameInput);
+    if (emailInput) await user.click(emailInput);
+    if (passwordInput) await user.click(passwordInput);
     await userEvent.tab();
 
     await waitFor(() => {
@@ -311,9 +312,9 @@ describe('AuthForm', () => {
       expect(privacyCheckbox).toHaveAttribute('aria-invalid', 'true');
       expect(privacyCheckbox).not.toBeChecked();
 
-      expect(fullNameInput.checkValidity()).toBe(true);
-      expect(emailInput.checkValidity()).toBe(true);
-      expect(passwordInput.checkValidity()).toBe(true);
+      expect(fullNameInput?.checkValidity()).toBe(true);
+      expect(emailInput?.checkValidity()).toBe(true);
+      expect(passwordInput?.checkValidity()).toBe(true);
       expect(queryByText(requiredText)).not.toBeInTheDocument();
     });
   });
@@ -335,7 +336,7 @@ describe('AuthForm', () => {
 
     await waitFor(() => {
       expect(privacyCheckbox).toHaveAttribute('aria-invalid', 'true');
-      expect(privacyCheckbox.checkValidity()).toBe(true);
+      expect(privacyCheckbox?.checkValidity()).toBe(true);
 
       const requiredError: HTMLElement[] = getAllByText(requiredText);
       expect(requiredError[0]).toBeInTheDocument();
@@ -346,10 +347,10 @@ describe('AuthForm', () => {
     const { getAllByText } = renderAuthFormWithSuccess();
     const { signUpButton, privacyCheckbox } = getFormElements();
 
-    fireEvent.click(signUpButton);
+    if (signUpButton) fireEvent.click(signUpButton);
 
     await waitFor(() => {
-      const ariaInvalid: string | null = privacyCheckbox.getAttribute('aria-invalid');
+      const ariaInvalid: string | null | undefined = privacyCheckbox?.getAttribute('aria-invalid');
       expect(ariaInvalid).toBe('true');
 
       const requiredError: HTMLElement[] = getAllByText(requiredText);
@@ -367,7 +368,7 @@ describe('AuthForm', () => {
       expect(privacyCheckbox).toHaveAttribute('aria-invalid', 'true');
     });
 
-    fireEvent.click(privacyCheckbox);
+    if (privacyCheckbox) fireEvent.click(privacyCheckbox);
 
     await waitFor(() => {
       expect(privacyCheckbox).not.toHaveAttribute('aria-invalid');
@@ -377,13 +378,20 @@ describe('AuthForm', () => {
     const { queryByText } = renderAuthFormWithSuccess();
     const { privacyCheckbox, passwordInput, emailInput, fullNameInput } = getFormElements();
 
-    fireEvent.change(fullNameInput, { target: { value: '' } });
-    fireEvent.blur(fullNameInput);
-    fireEvent.change(emailInput, { target: { value: 'invalid-email' } });
-    fireEvent.blur(emailInput);
-    fireEvent.change(passwordInput, { target: { value: '123' } });
-    fireEvent.blur(passwordInput);
-    fireEvent.click(privacyCheckbox);
+    if (fullNameInput) {
+      fireEvent.change(fullNameInput, { target: { value: '' } });
+      fireEvent.blur(fullNameInput);
+    }
+    if (emailInput) {
+      fireEvent.change(emailInput, { target: { value: 'invalid-email' } });
+      fireEvent.blur(emailInput);
+    }
+    if (passwordInput) {
+      fireEvent.change(passwordInput, { target: { value: '123' } });
+      fireEvent.blur(passwordInput);
+    }
+
+    if (privacyCheckbox) fireEvent.click(privacyCheckbox);
 
     await waitFor(() => {
       expect(privacyCheckbox).not.toHaveAttribute('aria-invalid');

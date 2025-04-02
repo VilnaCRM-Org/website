@@ -31,8 +31,3 @@ export interface AuthFormProps {
   serverErrorMessage: string;
   onSubmit: (data: RegisterItem) => Promise<void>;
 }
-
-export enum NotificationStatus {
-  SUCCESS = 'success',
-  ERROR = 'error',
-}

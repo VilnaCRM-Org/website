@@ -33,7 +33,7 @@ test.describe('Form Submission Visual Test', () => {
       await submitButton.click();
 
       const successBox: Locator = page
-        .locator('[aria-live="polite"]')
+        .locator('[aria-label="success"]')
         .filter({ has: page.locator('img') });
 
       await expect(successBox).toBeVisible();

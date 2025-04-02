@@ -12,7 +12,7 @@ const GRAPHQL_API_PATH = process.env.GRAPHQL_API_PATH || 'graphql';
 const HEALTH_CHECK_PATH = process.env.HEALTH_CHECK_PATH || 'health';
 
 const defaultUrlSchema =
-  'https://raw.githubusercontent.com/VilnaCRM-Org/user-service/main/.github/graphql-spec/spec';
+  'https://raw.githubusercontent.com/VilnaCRM-Org/user-service/v2.4.1/.github/graphql-spec/spec';
 const SCHEMA_URL = process.env.GRAPHQL_SCHEMA_URL || defaultUrlSchema;
 
 export async function getRemoteSchema() {
@@ -169,16 +169,32 @@ async function startServer() {
     if (server) {
       await gracefulShutdownAndExit(server);
     }
-    process.exit(1);
+    setTimeout(() => {
+      process.exit(1);
+    }, 1000);
   }
 }
 
-process.on('unhandledRejection', async error => {
-  console.error('Unhandled Promise Rejection:', error);
+process.on('unhandledRejection', async (reason, promise) => {
+  const timestamp = new Date().toISOString();
 
-  await gracefulShutdownAndExit(server);
+  console.error(`[${timestamp}] Unhandled Promise Rejection:`, { reason, promise });
+
+  if (shouldShutdown(reason)) {
+    console.error(`[${timestamp}] Critical error detected, initiating graceful shutdown...`);
+    await gracefulShutdownAndExit(server);
+  } else {
+    console.warn(`[${timestamp}] Recoverable error, system will continue running.`);
+  }
 });
-async function gracefulShutdownAndExit(server: any, timeout: number = 10000) {
+
+function shouldShutdown(error: unknown): boolean {
+  return error instanceof Error && error.message.includes('critical');
+}
+async function gracefulShutdownAndExit(
+  server: any,
+  timeout: number = Number(process.env.GRACEFUL_SHUTDOWN_TIMEOUT) || 10000
+) {
   console.log('Initiating graceful shutdown...');
 
   if (server) {
@@ -186,6 +202,7 @@ async function gracefulShutdownAndExit(server: any, timeout: number = 10000) {
       console.error('Graceful shutdown timeout reached. Forcing exit.');
       process.exit(1);
     }, timeout);
+
     try {
       await server.stop();
       console.log('Server stopped gracefully.');

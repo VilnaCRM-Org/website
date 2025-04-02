@@ -4,7 +4,7 @@ import React from 'react';
 import { animationTimeout } from '../../constants';
 
 import NotificationError from './NotificationError';
-import NotificationFallback from './NotificationFallback.test';
+import NotificationFallback from './NotificationFallback';
 import NotificationSuccess from './NotificationSuccess';
 import styles from './styles';
 import {
@@ -38,7 +38,7 @@ function Notification({
 
   return (
     <Fade in={isOpen} timeout={animationTimeout}>
-      <Box sx={styles.notificationSection} role="alert">
+      <Box sx={styles.notificationSection} role="alert" aria-live="polite">
         <Component setIsOpen={setIsOpen} onRetry={onRetry} />
       </Box>
     </Fade>

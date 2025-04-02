@@ -1,12 +1,11 @@
 import { ApolloError } from '@apollo/client';
 import { GraphQLFormattedError } from 'graphql';
 
-import { NotificationStatus } from '../components/AuthSection/AuthForm/types';
-import { NotificationType } from '../components/Notification/types';
+import { NotificationStatus } from '../components/Notification/types';
 
 interface HandleErrorProps {
   setServerErrorMessage: (message: string) => void;
-  setNotificationType: (type: NotificationType) => void;
+  setNotificationType: (type: NotificationStatus) => void;
   setIsNotificationOpen: (isOpen: boolean) => void;
 }
 

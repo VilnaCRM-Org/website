@@ -17,7 +17,7 @@ function NotificationSuccess({ setIsOpen }: NotificationSuccessProps): React.Rea
   const handleClick: () => void = (): void => setIsOpen(false);
 
   return (
-    <Box sx={styles.contentBox} aria-live="polite">
+    <Box sx={styles.contentBox} aria-label="success" aria-live="polite">
       <Box sx={styles.successTopImgBox}>
         <Image src={Confetti} alt={t('notifications.success.images.confetti')} />
       </Box>

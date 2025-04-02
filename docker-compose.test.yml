@@ -1,27 +1,27 @@
 services:
-  prod:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    command: pnpm run start-prod
-    restart: unless-stopped
-    volumes:
-      - .:/app
-      - /app/node_modules
-    ports:
-      - '3001:3001'
-
-  playwright:
-    build:
-      context: .
-      dockerfile: Playwright.Dockerfile
-    restart: unless-stopped
-    volumes:
-      - .:/app
-    ports:
-      - '9324:9324'
-    environment:
-      - NEXT_PUBLIC_PRODUCTION_API_URL=http://prod:3001
+  #  prod:
+  #    build:
+  #      context: .
+  #      dockerfile: Dockerfile
+  #    command: pnpm run start-prod
+  #    restart: unless-stopped
+  #    volumes:
+  #      - .:/app
+  #      - /app/node_modules
+  #    ports:
+  #      - '3001:3001'
+  #
+  #  playwright:
+  #    build:
+  #      context: .
+  #      dockerfile: Playwright.Dockerfile
+  #    restart: unless-stopped
+  #    volumes:
+  #      - .:/app
+  #    ports:
+  #      - '9324:9324'
+  #    environment:
+  #      - NEXT_PUBLIC_PRODUCTION_API_URL=http://prod:3001
 
   apollo:
     build:
@@ -32,11 +32,10 @@ services:
       - .:/app
     ports:
       - '4000:4000'
-
-  mockoon:
-    build:
-      context: .
-      dockerfile: Mockoon.Dockerfile
-    ports:
-      - '8080:8080'
-    restart: unless-stopped
+#  mockoon:
+#    build:
+#      context: .
+#      dockerfile: Mockoon.Dockerfile
+#    ports:
+#      - '8080:8080'
+#    restart: unless-stopped

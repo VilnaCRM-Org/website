@@ -3,12 +3,11 @@ import userEvent, { UserEvent } from '@testing-library/user-event';
 import { t } from 'i18next';
 import React from 'react';
 
-import { NotificationStatus } from '../../features/landing/components/AuthSection/AuthForm/types';
 import Notification from '../../features/landing/components/Notification';
 import { notificationComponents } from '../../features/landing/components/Notification/Notification';
 import {
   NotificationControlProps,
-  NotificationType,
+  NotificationStatus,
 } from '../../features/landing/components/Notification/types';
 
 import { buttonRole } from './constants';
@@ -95,7 +94,7 @@ describe('Notification', () => {
   });
 
   it('should use the correct component based on the "type" prop', () => {
-    const type: NotificationType = NotificationStatus.SUCCESS;
+    const type: NotificationStatus = NotificationStatus.SUCCESS;
     const setIsOpen: jest.Mock = jest.fn();
     const retrySubmit: jest.Mock = jest.fn();
     const isOpen: boolean = true;
@@ -108,7 +107,7 @@ describe('Notification', () => {
   });
 
   it('should fallback to NotificationSuccess when no matching type is found', () => {
-    const type: NotificationType = 'unknown' as NotificationType;
+    const type: NotificationStatus = 'unknown' as NotificationStatus;
     const setIsOpen: jest.Mock = jest.fn();
     const retrySubmit: jest.Mock = jest.fn();
     const isOpen: boolean = true;
@@ -120,7 +119,7 @@ describe('Notification', () => {
     expect(screen.getByText(fallbackTitleText)).toBeInTheDocument();
   });
   it('renders "success" notification by default when type is empty', () => {
-    renderNotification({ type: '' as NotificationType, isOpen: false, setIsOpen: mockSetIsOpen });
+    renderNotification({ type: '' as NotificationStatus, isOpen: false, setIsOpen: mockSetIsOpen });
 
     expect(screen.getByText(successTitleText)).toBeInTheDocument();
   });

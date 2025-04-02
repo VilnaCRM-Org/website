@@ -9,16 +9,16 @@ import { handleApolloError } from '../../../helpers/handleApolloError';
 import useFormReset from '../../../hooks/useFormReset';
 import { RegisterItem } from '../../../types/authentication/form';
 import Notification from '../../Notification/Notification';
-import { NotificationType } from '../../Notification/types';
+import { NotificationStatus } from '../../Notification/types';
 
 import AuthForm from './AuthForm';
 import styles from './styles';
-import { CreateUserPayload, NotificationStatus, SignUpVariables } from './types';
+import { CreateUserPayload, SignUpVariables } from './types';
 
 const clientID: string = '132';
 
 function AuthLayout(): React.ReactElement {
-  const [notificationType, setNotificationType] = React.useState<NotificationType>(
+  const [notificationType, setNotificationType] = React.useState<NotificationStatus>(
     NotificationStatus.SUCCESS
   );
   const [serverErrorMessage, setServerErrorMessage] = React.useState('');

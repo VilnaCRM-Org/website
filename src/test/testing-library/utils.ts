@@ -31,48 +31,53 @@ class FormElementNotFoundError extends Error {
 }
 
 export const getFormElements: () => {
-  fullNameInput: HTMLInputElement;
-  emailInput: HTMLInputElement;
-  passwordInput: HTMLInputElement;
-  privacyCheckbox: HTMLInputElement;
-  signUpButton: HTMLElement;
+  fullNameInput: HTMLInputElement | null;
+  emailInput: HTMLInputElement | null;
+  passwordInput: HTMLInputElement | null;
+  privacyCheckbox: HTMLInputElement | null;
+  signUpButton: HTMLElement | null;
 } = () => {
-  const getElement: <T extends HTMLElement>(queryFunction: () => T, elementName: string) => T = <
-    T extends HTMLElement,
-  >(
+  const missingElements: string[] = [];
+
+  const getElementSafe: <T extends HTMLInputElement>(
     queryFunction: () => T,
     elementName: string
-  ): T => {
+  ) => T | null = <T extends HTMLInputElement>(
+    queryFunction: () => T,
+    elementName: string
+  ): T | null => {
     try {
       return queryFunction();
     } catch (error) {
-      if (error instanceof Error) {
-        throw new FormElementNotFoundError(elementName, error);
-      }
-      throw new FormElementNotFoundError(elementName);
+      missingElements.push(elementName);
+      return null;
     }
   };
 
-  const fullNameInput: HTMLInputElement = getElement(
+  const fullNameInput: HTMLInputElement | null = getElementSafe(
     () => screen.getByPlaceholderText(fullNamePlaceholder),
     'fullNameInput'
   );
-  const emailInput: HTMLInputElement = getElement(
+  const emailInput: HTMLInputElement | null = getElementSafe(
     () => screen.getByPlaceholderText(emailPlaceholder),
     'emailInput'
   );
-  const passwordInput: HTMLInputElement = getElement(
+  const passwordInput: HTMLInputElement | null = getElementSafe(
     () => screen.getByPlaceholderText(passwordPlaceholder),
     'passwordInput'
   );
-  const privacyCheckbox: HTMLInputElement = getElement(
+  const privacyCheckbox: HTMLInputElement | null = getElementSafe(
     () => screen.getByRole(checkboxRole),
     'privacyCheckbox'
   );
-  const signUpButton: HTMLElement = getElement(
+  const signUpButton: HTMLInputElement | null = getElementSafe(
     () => screen.getByRole(buttonRole, { name: submitButtonText }),
     'signUpButton'
   );
+
+  if (missingElements.length > 0) {
+    throw new FormElementNotFoundError(`Missing elements: ${missingElements.join(', ')}`);
+  }
 
   return { fullNameInput, emailInput, passwordInput, privacyCheckbox, signUpButton };
 };
@@ -94,28 +99,42 @@ export const validateFormInput: (
     throw new Error('Password must be at least 8 characters');
   }
 };
+
 export const fillForm: (
   fullNameValue?: string,
   emailValue?: string,
   passwordValue?: string,
   acceptPrivacyPolicy?: boolean
 ) => {
-  fullNameInput: HTMLInputElement;
-  emailInput: HTMLInputElement;
-  passwordInput: HTMLInputElement;
-  privacyCheckbox: HTMLInputElement;
+  fullNameInput: HTMLInputElement | null;
+  emailInput: HTMLInputElement | null;
+  passwordInput: HTMLInputElement | null;
+  privacyCheckbox: HTMLInputElement | null;
 } = (fullNameValue = '', emailValue = '', passwordValue = '', acceptPrivacyPolicy = false) => {
   validateFormInput(fullNameValue, emailValue, passwordValue);
 
   const { fullNameInput, emailInput, passwordInput, privacyCheckbox, signUpButton } =
     getFormElements();
 
-  fireEvent.change(fullNameInput, { target: { value: fullNameValue } });
-  fireEvent.change(emailInput, { target: { value: emailValue } });
-  fireEvent.change(passwordInput, { target: { value: passwordValue } });
-  if (acceptPrivacyPolicy) fireEvent.click(privacyCheckbox);
+  if (fullNameInput) {
+    fireEvent.change(fullNameInput, { target: { value: fullNameValue } });
+  }
 
-  fireEvent.click(signUpButton);
+  if (emailInput) {
+    fireEvent.change(emailInput, { target: { value: emailValue } });
+  }
+
+  if (passwordInput) {
+    fireEvent.change(passwordInput, { target: { value: passwordValue } });
+  }
+
+  if (acceptPrivacyPolicy && privacyCheckbox) {
+    fireEvent.click(privacyCheckbox);
+  }
+
+  if (signUpButton) {
+    fireEvent.click(signUpButton);
+  }
 
   return { fullNameInput, emailInput, passwordInput, privacyCheckbox };
 };

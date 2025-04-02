@@ -101,11 +101,10 @@ const internalServerErrorResponse: MockedResponse[] = [
   fulfilledMockResponse,
 ];
 interface GetElementsResult {
-  fullNameInput: HTMLInputElement;
-  emailInput: HTMLInputElement;
-  passwordInput: HTMLInputElement;
-  privacyCheckbox: HTMLInputElement;
-  signUpButton: HTMLElement;
+  fullNameInput: HTMLInputElement | null;
+  emailInput: HTMLInputElement | null;
+  passwordInput: HTMLInputElement | null;
+  privacyCheckbox: HTMLInputElement | null;
 }
 type FormElement = { fieldKey: string; value: string };
 const inputFields: FormElement[] = [
@@ -366,9 +365,9 @@ describe('AuthLayout', () => {
     const { fullNameInput, emailInput, passwordInput, privacyCheckbox } = getFormElements();
 
     await waitFor(() => {
-      expect(fullNameInput.value).toBe('');
-      expect(emailInput.value).toBe('');
-      expect(passwordInput.value).toBe('');
+      expect(fullNameInput?.value).toBe('');
+      expect(emailInput?.value).toBe('');
+      expect(passwordInput?.value).toBe('');
       expect(privacyCheckbox).not.toBeChecked();
 
       const successTitle: HTMLElement = getByText(successTitleText);
@@ -408,10 +407,10 @@ describe('AuthLayout', () => {
     fillForm(testInitials, testEmail, testPassword, true);
     const { fullNameInput, emailInput, passwordInput, privacyCheckbox } = getFormElements();
 
-    expect(fullNameInput.value).not.toBe('');
-    expect(emailInput.value).not.toBe('');
-    expect(passwordInput.value).not.toBe('');
-    expect(privacyCheckbox.checked).toBe(true);
+    expect(fullNameInput?.value).not.toBe('');
+    expect(emailInput?.value).not.toBe('');
+    expect(passwordInput?.value).not.toBe('');
+    expect(privacyCheckbox?.checked).toBe(true);
 
     await waitFor(() => {
       const errorBox: HTMLElement = getByText(errorTitleText);
@@ -428,17 +427,17 @@ describe('AuthLayout', () => {
       );
 
       const formElements: GetElementsResult = getFormElements();
-      const inputField: HTMLInputElement | HTMLElement =
+      const inputField: HTMLInputElement | null =
         formElements[fieldKey as keyof typeof formElements];
 
       expect(queryByText(requiredText)).not.toBeInTheDocument();
 
-      fireEvent.blur(inputField);
+      if (inputField) fireEvent.blur(inputField);
 
       await waitFor(() => {
         expect(queryByText(requiredText)).toBeInTheDocument();
       });
-      fireEvent.change(inputField, { target: { value } });
+      if (inputField) fireEvent.change(inputField, { target: { value } });
 
       await waitFor(() => {
         expect(queryByText(requiredText)).not.toBeInTheDocument();
@@ -455,12 +454,13 @@ describe('AuthLayout', () => {
       );
 
       const formElements: GetElementsResult = getFormElements();
-      const inputField: HTMLInputElement | HTMLElement =
+      const inputField: HTMLInputElement | null =
         formElements[fieldKey as keyof typeof formElements];
 
-      fireEvent.change(inputField, { target: { value } });
-
-      fireEvent.blur(inputField);
+      if (inputField) {
+        fireEvent.change(inputField, { target: { value } });
+        fireEvent.blur(inputField);
+      }
 
       await waitFor(() => {
         expect(queryByText(errorMessage)).toBeInTheDocument();
