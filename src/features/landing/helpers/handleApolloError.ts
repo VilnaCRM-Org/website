@@ -5,7 +5,7 @@ import { NotificationStatus } from '../components/AuthSection/AuthForm/types';
 import { NotificationType } from '../components/Notification/types';
 
 interface HandleErrorProps {
-  setApiErrorDetails: (message: string) => void;
+  setServerErrorMessage: (message: string) => void;
   setNotificationType: (type: NotificationType) => void;
   setIsNotificationOpen: (isOpen: boolean) => void;
 }
@@ -15,7 +15,7 @@ type HandleNetworkErrorType = (props: HandleNetworkErrorProps) => void;
 
 export const handleNetworkError: HandleNetworkErrorType = ({
   networkError,
-  setApiErrorDetails,
+  setServerErrorMessage,
   setNotificationType,
   setIsNotificationOpen,
 }: HandleNetworkErrorProps): void => {
@@ -32,59 +32,33 @@ export const handleNetworkError: HandleNetworkErrorType = ({
   }
 
   if (serverError.statusCode === 401) {
-    setApiErrorDetails('Unauthorized access. Please log in again.');
+    setServerErrorMessage('Unauthorized access. Please log in again.');
     return;
   }
 
   if (serverError.statusCode === 403) {
-    setApiErrorDetails('Access denied. You do not have permission to perform this action.');
+    setServerErrorMessage('Access denied. You do not have permission to perform this action.');
     return;
   }
 
   if (serverError.message?.includes('Failed to fetch')) {
-    setApiErrorDetails('Network error. Please check your internet connection.');
+    setServerErrorMessage('Network error. Please check your internet connection.');
     return;
   }
 
-  setApiErrorDetails('Something went wrong with the request. Try again later.');
-  //
-  // if ('statusCode' in networkError && networkError.statusCode === 500) {
-  //   setNotificationType(NotificationStatus.ERROR);
-  //   setIsNotificationOpen(true);
-  // }
-  // if (networkError?.message?.includes('Failed to fetch')) {
-  //   setErrorDetails('Network error. Please check your internet connection.');
-  //   return;
-  // }
-  //
-  // if ('statusCode' in networkError &&  networkError?.statusCode === 401) {
-  //   setErrorDetails('Unauthorized access. Please log in again.');
-  //   return;
-  // }
-  //
-  // if ( 'statusCode' in networkError &&  networkError?.statusCode === 403) {
-  //   setErrorDetails('Access denied. You do not have permission to perform this action.');
-  //   return;
-  // }
-  //
-  // setErrorDetails('Something went wrong with the request. Try again later.');
+  setServerErrorMessage('Something went wrong with the request. Try again later.');
 };
-// else if (networkError.message.includes('Failed to fetch')) {
-//   setErrorDetails('Network error. Please check your internet connection.');
-// } else {
-//   setErrorDetails('Something went wrong with the request. Try again later.');
-// }
 export type HandleApolloErrorProps = HandleErrorProps & { err: unknown };
 export type HandleApolloErrorType = (props: HandleApolloErrorProps) => void;
 
 export const handleApolloError: HandleApolloErrorType = ({
   err,
-  setApiErrorDetails,
+  setServerErrorMessage,
   setNotificationType,
   setIsNotificationOpen,
 }: HandleApolloErrorProps): void => {
   if (!(err instanceof ApolloError)) {
-    setApiErrorDetails('An unexpected error occurred. Please try again.');
+    setServerErrorMessage('An unexpected error occurred. Please try again.');
     return;
   }
 
@@ -92,7 +66,7 @@ export const handleApolloError: HandleApolloErrorType = ({
     const { networkError } = err;
     handleNetworkError({
       networkError,
-      setApiErrorDetails,
+      setServerErrorMessage,
       setNotificationType,
       setIsNotificationOpen,
     });
@@ -110,8 +84,8 @@ export const handleApolloError: HandleApolloErrorType = ({
     const message: string = err.graphQLErrors
       .map((e: GraphQLFormattedError) => e.message)
       .join(', ');
-    setApiErrorDetails(message);
+    setServerErrorMessage(message);
     return;
   }
-  setApiErrorDetails('An error occurred with the request. Please try again.');
+  setServerErrorMessage('An error occurred with the request. Please try again.');
 };

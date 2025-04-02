@@ -28,7 +28,7 @@ export interface AuthFormProps {
   handleSubmit: UseFormHandleSubmit<RegisterItem, RegisterItem>;
   control: UseFormControl;
   formValidationErrors: FieldErrors<RegisterItem>;
-  apiErrorDetails: string;
+  serverErrorMessage: string;
   onSubmit: (data: RegisterItem) => Promise<void>;
 }
 

@@ -98,13 +98,13 @@ export const fillForm: (
   fullNameValue?: string,
   emailValue?: string,
   passwordValue?: string,
-  checkPrivacyPolicy?: boolean
+  acceptPrivacyPolicy?: boolean
 ) => {
   fullNameInput: HTMLInputElement;
   emailInput: HTMLInputElement;
   passwordInput: HTMLInputElement;
   privacyCheckbox: HTMLInputElement;
-} = (fullNameValue = '', emailValue = '', passwordValue = '', checkPrivacyPolicy = false) => {
+} = (fullNameValue = '', emailValue = '', passwordValue = '', acceptPrivacyPolicy = false) => {
   validateFormInput(fullNameValue, emailValue, passwordValue);
 
   const { fullNameInput, emailInput, passwordInput, privacyCheckbox, signUpButton } =
@@ -113,7 +113,7 @@ export const fillForm: (
   fireEvent.change(fullNameInput, { target: { value: fullNameValue } });
   fireEvent.change(emailInput, { target: { value: emailValue } });
   fireEvent.change(passwordInput, { target: { value: passwordValue } });
-  if (checkPrivacyPolicy) fireEvent.click(privacyCheckbox);
+  if (acceptPrivacyPolicy) fireEvent.click(privacyCheckbox);
 
   fireEvent.click(signUpButton);
 
@@ -164,7 +164,7 @@ export const mockInternalServerErrorResponse: MockedResponse = {
         locations: [{ line: 1, column: 1 }],
         path: ['createUser'],
         extensions: {
-          code: 'BAD_USER_INPUT',
+          code: 'INTERNAL_SERVER_ERROR',
         },
       },
     ],
@@ -176,5 +176,5 @@ export type OnSubmitType = jest.Mock<Promise<void>, [RegisterItem]>;
 
 export interface AuthFormWrapperProps {
   onSubmit: OnSubmitType;
-  apiErrorDetails: string;
+  serverErrorMessage: string;
 }

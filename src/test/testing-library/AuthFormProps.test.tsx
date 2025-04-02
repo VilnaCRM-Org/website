@@ -8,7 +8,10 @@ import { RegisterItem } from '../../features/landing/types/authentication/form';
 
 import { AuthFormWrapperProps, OnSubmitType } from './utils';
 
-function AuthFormWrapper({ apiErrorDetails, onSubmit }: AuthFormWrapperProps): React.ReactElement {
+function AuthFormWrapper({
+  serverErrorMessage,
+  onSubmit,
+}: AuthFormWrapperProps): React.ReactElement {
   const {
     handleSubmit,
     control,
@@ -20,7 +23,7 @@ function AuthFormWrapper({ apiErrorDetails, onSubmit }: AuthFormWrapperProps): R
 
   return (
     <AuthForm
-      apiErrorDetails={apiErrorDetails}
+      serverErrorMessage={serverErrorMessage}
       onSubmit={onSubmit}
       handleSubmit={handleSubmit}
       formValidationErrors={errors}
@@ -31,7 +34,7 @@ function AuthFormWrapper({ apiErrorDetails, onSubmit }: AuthFormWrapperProps): R
 
 jest.mock('../../features/landing/components/AuthSection/AuthForm/AuthForm', () => ({
   __esModule: true,
-  default: jest.fn(() => <form />),
+  default: jest.fn(() => <form data-testid="auth-form-mock" />),
 }));
 
 describe('AuthFormWrapper - Props Forwarding', () => {
@@ -42,17 +45,17 @@ describe('AuthFormWrapper - Props Forwarding', () => {
   });
 
   it('forwards props correctly to AuthForm', () => {
-    const apiErrorDetails: string = 'Invalid credentials';
+    const serverErrorMessage: string = 'Invalid credentials';
 
     render(
       <MockedProvider mocks={[]} addTypename={false}>
-        <AuthFormWrapper apiErrorDetails={apiErrorDetails} onSubmit={onSubmit} />
+        <AuthFormWrapper serverErrorMessage={serverErrorMessage} onSubmit={onSubmit} />
       </MockedProvider>
     );
 
     expect(AuthForm).toHaveBeenCalledWith(
       expect.objectContaining({
-        apiErrorDetails,
+        serverErrorMessage,
         onSubmit,
         handleSubmit: expect.any(Function),
         control: expect.any(Object),

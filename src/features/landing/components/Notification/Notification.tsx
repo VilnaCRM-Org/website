@@ -1,11 +1,10 @@
 import { Box, Fade } from '@mui/material';
 import React from 'react';
-import { useTranslation } from 'react-i18next';
 
-import UiTypography from '../../../../components/UiTypography';
 import { animationTimeout } from '../../constants';
 
 import NotificationError from './NotificationError';
+import NotificationFallback from './NotificationFallback.test';
 import NotificationSuccess from './NotificationSuccess';
 import styles from './styles';
 import {
@@ -24,15 +23,6 @@ export const notificationComponents: NotificationComponentMap = {
     <NotificationError setIsOpen={setIsOpen} onRetry={onRetry} />
   ),
 };
-
-function NotificationFallback(): React.ReactElement {
-  const { t } = useTranslation();
-  return (
-    <UiTypography component="h4" sx={styles.messageTitle}>
-      {t('notifications.unknown.title')}
-    </UiTypography>
-  );
-}
 
 function getNotificationComponent(type: keyof NotificationComponentMap): NotificationComponentType {
   return notificationComponents[type] ?? NotificationFallback;

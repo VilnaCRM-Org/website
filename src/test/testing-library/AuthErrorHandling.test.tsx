@@ -53,7 +53,7 @@ describe('AuthLayout Error Handling', () => {
       expect(handleApolloError).toHaveBeenCalledWith(
         expect.objectContaining({
           err: expect.any(Error),
-          setApiErrorDetails: expect.any(Function),
+          setServerErrorMessage: expect.any(Function),
           setNotificationType: expect.any(Function),
           setIsNotificationOpen: expect.any(Function),
         })
@@ -62,7 +62,7 @@ describe('AuthLayout Error Handling', () => {
   });
 
   test('should handle GraphQL error correctly', async () => {
-    const graphqlErrorMock: MockedResponse[] = [
+    const graphqlErrorMocks: MockedResponse[] = [
       {
         request: {
           query: SIGNUP_MUTATION,
@@ -82,7 +82,7 @@ describe('AuthLayout Error Handling', () => {
     ];
 
     render(
-      <MockedProvider mocks={graphqlErrorMock} addTypename={false}>
+      <MockedProvider mocks={graphqlErrorMocks} addTypename={false}>
         <AuthLayout />
       </MockedProvider>
     );
@@ -97,7 +97,7 @@ describe('AuthLayout Error Handling', () => {
       const error: ApolloError = callArg.err as ApolloError;
       expect(error.graphQLErrors).toBeDefined();
 
-      callArg.setApiErrorDetails('Email already exists');
+      callArg.setServerErrorMessage('Email already exists');
       expect(screen.getByRole('alert')).toBeInTheDocument();
       expect(screen.getByRole('alert')).toHaveTextContent('Email already exists');
     });

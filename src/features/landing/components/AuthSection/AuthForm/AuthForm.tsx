@@ -22,7 +22,7 @@ import styles from './styles';
 import { AuthFormProps } from './types';
 
 function AuthForm({
-  apiErrorDetails,
+  serverErrorMessage,
   onSubmit,
   handleSubmit,
   control,
@@ -72,7 +72,7 @@ function AuthForm({
             placeholder={t('sign_up.form.email_input.placeholder')}
             type="email"
           />
-          {apiErrorDetails && <FormAlert apiErrorDetails={apiErrorDetails} />}
+          {serverErrorMessage && <FormAlert apiErrorDetails={serverErrorMessage} />}
         </Stack>
         <Stack sx={styles.inputWrapper}>
           <Stack direction="row" alignItems="center" gap="0.25rem">

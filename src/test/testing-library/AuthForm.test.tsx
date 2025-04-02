@@ -41,7 +41,10 @@ interface GetElementsResult {
   signUpButton: HTMLElement;
 }
 
-function AuthFormWrapper({ apiErrorDetails, onSubmit }: AuthFormWrapperProps): React.ReactElement {
+function AuthFormWrapper({
+  serverErrorMessage,
+  onSubmit,
+}: AuthFormWrapperProps): React.ReactElement {
   const {
     handleSubmit,
     control,
@@ -53,7 +56,7 @@ function AuthFormWrapper({ apiErrorDetails, onSubmit }: AuthFormWrapperProps): R
 
   return (
     <AuthForm
-      apiErrorDetails={apiErrorDetails}
+      serverErrorMessage={serverErrorMessage}
       onSubmit={onSubmit}
       handleSubmit={handleSubmit}
       formValidationErrors={errors}
@@ -95,11 +98,11 @@ const mockSubmitSuccess: () => OnSubmitType = (): OnSubmitType =>
   jest.fn().mockResolvedValueOnce(undefined);
 const renderAuthFormWithSuccess: (
   onSubmit?: OnSubmitType,
-  apiErrorDetails?: string
-) => RenderResult = (onSubmit = mockSubmitSuccess(), apiErrorDetails = ''): RenderResult =>
+  serverErrorMessage?: string
+) => RenderResult = (onSubmit = mockSubmitSuccess(), serverErrorMessage = ''): RenderResult =>
   render(
     <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
-      <AuthFormWrapper apiErrorDetails={apiErrorDetails} onSubmit={onSubmit} />
+      <AuthFormWrapper serverErrorMessage={serverErrorMessage} onSubmit={onSubmit} />
     </MockedProvider>
   );
 
@@ -236,7 +239,7 @@ describe('AuthForm', () => {
   it('should show error alert', () => {
     const { queryByRole } = render(
       <MockedProvider mocks={[mockInternalServerErrorResponse]} addTypename={false}>
-        <AuthFormWrapper apiErrorDetails="Internal Server Error." onSubmit={onSubmit} />
+        <AuthFormWrapper serverErrorMessage="Internal Server Error." onSubmit={onSubmit} />
       </MockedProvider>
     );
     fillForm(testInitials, testEmail, testPassword, true);
@@ -275,7 +278,7 @@ describe('AuthForm', () => {
   it('calls onSubmit with form data when form is submitted', async () => {
     render(
       <MockedProvider mocks={[]} addTypename={false}>
-        <AuthFormWrapper apiErrorDetails="" onSubmit={onSubmit} />
+        <AuthFormWrapper serverErrorMessage="" onSubmit={onSubmit} />
       </MockedProvider>
     );
 

@@ -21,7 +21,7 @@ function AuthLayout(): React.ReactElement {
   const [notificationType, setNotificationType] = React.useState<NotificationType>(
     NotificationStatus.SUCCESS
   );
-  const [apiErrorDetails, setApiErrorDetails] = React.useState('');
+  const [serverErrorMessage, setServerErrorMessage] = React.useState('');
   const [isNotificationOpen, setIsNotificationOpen] = React.useState<boolean>(false);
   const {
     handleSubmit,
@@ -35,7 +35,7 @@ function AuthLayout(): React.ReactElement {
   );
 
   const handleSuccess: () => void = (): void => {
-    setApiErrorDetails('');
+    setServerErrorMessage('');
     setIsNotificationOpen(true);
     setNotificationType(NotificationStatus.SUCCESS);
   };
@@ -53,11 +53,11 @@ function AuthLayout(): React.ReactElement {
       });
       handleSuccess();
     } catch (err) {
-      handleApolloError({ err, setApiErrorDetails, setNotificationType, setIsNotificationOpen });
+      handleApolloError({ err, setServerErrorMessage, setNotificationType, setIsNotificationOpen });
     }
   };
 
-  useFormReset({ formState, reset, apiErrorDetails, notificationType });
+  useFormReset({ formState, reset, serverErrorMessage, notificationType });
 
   const retrySubmit: () => void = (): void => {
     handleSubmit(onSubmit)();
@@ -76,7 +76,7 @@ function AuthLayout(): React.ReactElement {
       <Fade in={!isNotificationOpen} timeout={animationTimeout}>
         <Box sx={styles.formContent}>
           <AuthForm
-            apiErrorDetails={apiErrorDetails}
+            serverErrorMessage={serverErrorMessage}
             onSubmit={onSubmit}
             formValidationErrors={errors}
             handleSubmit={handleSubmit}

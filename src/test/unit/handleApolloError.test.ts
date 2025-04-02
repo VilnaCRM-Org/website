@@ -9,12 +9,12 @@ import {
 type NetworkErrorType = Error | ServerParseError | ServerError | null;
 
 describe('Error Handling', () => {
-  let setApiErrorDetailsMock: jest.Mock;
+  let setServerErrorMessageMock: jest.Mock;
   let setNotificationTypeMock: jest.Mock;
   let setIsNotificationOpenMock: jest.Mock;
 
   beforeEach(() => {
-    setApiErrorDetailsMock = jest.fn();
+    setServerErrorMessageMock = jest.fn();
     setNotificationTypeMock = jest.fn();
     setIsNotificationOpenMock = jest.fn();
   });
@@ -23,12 +23,12 @@ describe('Error Handling', () => {
     it('should do nothing if networkError is null', () => {
       handleNetworkError({
         networkError: null,
-        setApiErrorDetails: setApiErrorDetailsMock,
+        setServerErrorMessage: setServerErrorMessageMock,
         setNotificationType: setNotificationTypeMock,
         setIsNotificationOpen: setIsNotificationOpenMock,
       });
 
-      expect(setApiErrorDetailsMock).not.toHaveBeenCalled();
+      expect(setServerErrorMessageMock).not.toHaveBeenCalled();
       expect(setNotificationTypeMock).not.toHaveBeenCalled();
       expect(setIsNotificationOpenMock).not.toHaveBeenCalled();
     });
@@ -38,14 +38,14 @@ describe('Error Handling', () => {
 
       handleNetworkError({
         networkError,
-        setApiErrorDetails: setApiErrorDetailsMock,
+        setServerErrorMessage: setServerErrorMessageMock,
         setNotificationType: setNotificationTypeMock,
         setIsNotificationOpen: setIsNotificationOpenMock,
       });
 
       expect(setNotificationTypeMock).toHaveBeenCalledWith(NotificationStatus.ERROR);
       expect(setIsNotificationOpenMock).toHaveBeenCalledWith(true);
-      expect(setApiErrorDetailsMock).not.toHaveBeenCalled();
+      expect(setServerErrorMessageMock).not.toHaveBeenCalled();
     });
 
     it('should set error details for network error message "Failed to fetch"', () => {
@@ -55,12 +55,12 @@ describe('Error Handling', () => {
 
       handleNetworkError({
         networkError,
-        setApiErrorDetails: setApiErrorDetailsMock,
+        setServerErrorMessage: setServerErrorMessageMock,
         setNotificationType: setNotificationTypeMock,
         setIsNotificationOpen: setIsNotificationOpenMock,
       });
 
-      expect(setApiErrorDetailsMock).toHaveBeenCalledWith(
+      expect(setServerErrorMessageMock).toHaveBeenCalledWith(
         'Network error. Please check your internet connection.'
       );
     });
@@ -72,12 +72,12 @@ describe('Error Handling', () => {
 
       handleNetworkError({
         networkError,
-        setApiErrorDetails: setApiErrorDetailsMock,
+        setServerErrorMessage: setServerErrorMessageMock,
         setNotificationType: setNotificationTypeMock,
         setIsNotificationOpen: setIsNotificationOpenMock,
       });
 
-      expect(setApiErrorDetailsMock).toHaveBeenCalledWith(
+      expect(setServerErrorMessageMock).toHaveBeenCalledWith(
         'Something went wrong with the request. Try again later.'
       );
     });
@@ -87,12 +87,12 @@ describe('Error Handling', () => {
 
       handleNetworkError({
         networkError,
-        setApiErrorDetails: setApiErrorDetailsMock,
+        setServerErrorMessage: setServerErrorMessageMock,
         setNotificationType: setNotificationTypeMock,
         setIsNotificationOpen: setIsNotificationOpenMock,
       });
 
-      expect(setApiErrorDetailsMock).toHaveBeenCalledWith(
+      expect(setServerErrorMessageMock).toHaveBeenCalledWith(
         'Unauthorized access. Please log in again.'
       );
     });
@@ -101,12 +101,12 @@ describe('Error Handling', () => {
 
       handleNetworkError({
         networkError,
-        setApiErrorDetails: setApiErrorDetailsMock,
+        setServerErrorMessage: setServerErrorMessageMock,
         setNotificationType: setNotificationTypeMock,
         setIsNotificationOpen: setIsNotificationOpenMock,
       });
 
-      expect(setApiErrorDetailsMock).toHaveBeenCalledWith(
+      expect(setServerErrorMessageMock).toHaveBeenCalledWith(
         'Access denied. You do not have permission to perform this action.'
       );
     });
@@ -116,12 +116,12 @@ describe('Error Handling', () => {
 
       handleNetworkError({
         networkError,
-        setApiErrorDetails: setApiErrorDetailsMock,
+        setServerErrorMessage: setServerErrorMessageMock,
         setNotificationType: setNotificationTypeMock,
         setIsNotificationOpen: setIsNotificationOpenMock,
       });
 
-      expect(setApiErrorDetailsMock).toHaveBeenCalledWith(
+      expect(setServerErrorMessageMock).toHaveBeenCalledWith(
         'Something went wrong with the request. Try again later.'
       );
     });
@@ -131,12 +131,12 @@ describe('Error Handling', () => {
 
       handleNetworkError({
         networkError,
-        setApiErrorDetails: setApiErrorDetailsMock,
+        setServerErrorMessage: setServerErrorMessageMock,
         setNotificationType: setNotificationTypeMock,
         setIsNotificationOpen: setIsNotificationOpenMock,
       });
 
-      expect(setApiErrorDetailsMock).toHaveBeenCalledWith(
+      expect(setServerErrorMessageMock).toHaveBeenCalledWith(
         'Something went wrong with the request. Try again later.'
       );
     });
@@ -154,15 +154,15 @@ describe('Error Handling', () => {
 
       handleApolloError({
         err: apolloError,
-        setApiErrorDetails: setApiErrorDetailsMock,
+        setServerErrorMessage: setServerErrorMessageMock,
         setNotificationType: setNotificationTypeMock,
         setIsNotificationOpen: setIsNotificationOpenMock,
       });
 
       expect(setNotificationTypeMock).not.toHaveBeenCalled();
       expect(setIsNotificationOpenMock).not.toHaveBeenCalled();
-      expect(setApiErrorDetailsMock).toHaveBeenCalled();
-      expect(setApiErrorDetailsMock).toHaveBeenCalledWith(
+      expect(setServerErrorMessageMock).toHaveBeenCalled();
+      expect(setServerErrorMessageMock).toHaveBeenCalledWith(
         'Network error. Please check your internet connection.'
       );
     });
@@ -175,23 +175,23 @@ describe('Error Handling', () => {
 
       handleApolloError({
         err: apolloError,
-        setApiErrorDetails: setApiErrorDetailsMock,
+        setServerErrorMessage: setServerErrorMessageMock,
         setNotificationType: setNotificationTypeMock,
         setIsNotificationOpen: setIsNotificationOpenMock,
       });
 
-      expect(setApiErrorDetailsMock).toHaveBeenCalledWith('GraphQL error occurred');
+      expect(setServerErrorMessageMock).toHaveBeenCalledWith('GraphQL error occurred');
     });
 
     it('should set a generic error if err is not an instance of ApolloError', () => {
       handleApolloError({
         err: new Error('Some unknown error'),
-        setApiErrorDetails: setApiErrorDetailsMock,
+        setServerErrorMessage: setServerErrorMessageMock,
         setNotificationType: setNotificationTypeMock,
         setIsNotificationOpen: setIsNotificationOpenMock,
       });
 
-      expect(setApiErrorDetailsMock).toHaveBeenCalledWith(
+      expect(setServerErrorMessageMock).toHaveBeenCalledWith(
         'An unexpected error occurred. Please try again.'
       );
     });
@@ -203,7 +203,7 @@ describe('Error Handling', () => {
 
       handleApolloError({
         err: apolloError,
-        setApiErrorDetails: setApiErrorDetailsMock,
+        setServerErrorMessage: setServerErrorMessageMock,
         setNotificationType: setNotificationTypeMock,
         setIsNotificationOpen: setIsNotificationOpenMock,
       });
@@ -219,12 +219,12 @@ describe('Error Handling', () => {
 
       handleApolloError({
         err: apolloError,
-        setApiErrorDetails: setApiErrorDetailsMock,
+        setServerErrorMessage: setServerErrorMessageMock,
         setNotificationType: setNotificationTypeMock,
         setIsNotificationOpen: setIsNotificationOpenMock,
       });
 
-      expect(setApiErrorDetailsMock).toHaveBeenCalledWith(
+      expect(setServerErrorMessageMock).toHaveBeenCalledWith(
         'An error occurred with the request. Please try again.'
       );
     });
@@ -237,12 +237,12 @@ describe('Error Handling', () => {
 
       handleApolloError({
         err: apolloError,
-        setApiErrorDetails: setApiErrorDetailsMock,
+        setServerErrorMessage: setServerErrorMessageMock,
         setNotificationType: setNotificationTypeMock,
         setIsNotificationOpen: setIsNotificationOpenMock,
       });
 
-      expect(setApiErrorDetailsMock).toHaveBeenCalledWith('Error 1, Error 2');
+      expect(setServerErrorMessageMock).toHaveBeenCalledWith('Error 1, Error 2');
     });
   });
 });
