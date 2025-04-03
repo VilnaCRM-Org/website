@@ -48,10 +48,7 @@ function AuthFormWrapper({
     handleSubmit,
     control,
     formState: { errors },
-  } = useForm<RegisterItem>({
-    mode: 'onTouched',
-    defaultValues: { Email: '', FullName: '', Password: '', Privacy: false },
-  });
+  } = useForm<RegisterItem>({ mode: 'onTouched' });
 
   return (
     <AuthForm
@@ -219,6 +216,21 @@ describe('AuthForm', () => {
     expect(emailInput).toHaveValue('');
     expect(passwordInput).toHaveValue('');
     expect(privacyCheckbox).not.toBeChecked();
+  });
+  it('should have correct values', () => {
+    renderAuthFormWithSuccess();
+
+    const { fullNameInput, emailInput, passwordInput, privacyCheckbox } = getFormElements();
+
+    if (fullNameInput) fireEvent.change(fullNameInput, { target: { value: testInitials } });
+    if (emailInput) fireEvent.change(emailInput, { target: { value: testEmail } });
+    if (passwordInput) fireEvent.change(passwordInput, { target: { value: testPassword } });
+    if (privacyCheckbox) fireEvent.click(privacyCheckbox);
+
+    expect(fullNameInput).toHaveValue(testInitials);
+    expect(emailInput).toHaveValue(testEmail);
+    expect(passwordInput).toHaveValue(testPassword);
+    expect(privacyCheckbox).toBeChecked();
   });
   it('onSubmit have been called after registration', async () => {
     const { queryByRole } = renderAuthFormWithSuccess(onSubmit);

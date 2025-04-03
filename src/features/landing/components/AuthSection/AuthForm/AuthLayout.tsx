@@ -13,7 +13,7 @@ import { NotificationStatus } from '../../Notification/types';
 
 import AuthForm from './AuthForm';
 import styles from './styles';
-import { CreateUserPayload, SignUpVariables } from './types';
+import { CreateUserPayload, SignupVariables } from './types';
 
 const clientID: string = '132';
 
@@ -30,7 +30,7 @@ function AuthLayout(): React.ReactElement {
     formState,
     formState: { errors },
   } = useForm<RegisterItem>({ mode: 'onTouched' });
-  const [signupMutation, { loading }] = useMutation<CreateUserPayload, SignUpVariables>(
+  const [signupMutation, { loading }] = useMutation<CreateUserPayload, SignupVariables>(
     SIGNUP_MUTATION
   );
 

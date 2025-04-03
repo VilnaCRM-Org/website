@@ -157,7 +157,6 @@
           "button": "Go back",
           "images": {
             "confetti": "Cheerful and colorful confetti",
-            "confetti-bottom": "Cheerful and colorful confetti at the bottom",
             "gears": "Decorative celebration gears"
           }
         },
@@ -349,11 +348,7 @@
           "title": "Вітаємо!",
           "description": "Ви успішно зареєструвались",
           "button": "Назад",
-          "images": {
-            "confetti": "Веселе і барвисте конфеті",
-            "confetti-bottom": "Веселе і барвисте конфеті внизу",
-            "gears": "Святкові шестерні"
-          }
+          "images": { "confetti": "Веселе і барвисте конфеті", "gears": "Святкові шестерні" }
         },
         "error": {
           "title": "Трапилась помилка",

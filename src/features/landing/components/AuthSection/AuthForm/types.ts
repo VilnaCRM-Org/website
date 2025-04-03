@@ -3,7 +3,7 @@ import { Control, FieldErrors, UseFormHandleSubmit } from 'react-hook-form';
 import { SignUpInput } from '../../../api/service/types';
 import { RegisterItem } from '../../../types/authentication/form';
 
-export interface SignUpVariables {
+export interface SignupVariables {
   input: SignUpInput;
 }
 

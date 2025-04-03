@@ -25,7 +25,10 @@ export const notificationComponents: NotificationComponentMap = {
 };
 
 function getNotificationComponent(type: keyof NotificationComponentMap): NotificationComponentType {
-  return notificationComponents[type] ?? NotificationFallback;
+  if (!notificationComponents[type]) {
+    return NotificationFallback;
+  }
+  return notificationComponents[type];
 }
 
 function Notification({

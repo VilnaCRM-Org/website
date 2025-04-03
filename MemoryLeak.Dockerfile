@@ -7,7 +7,7 @@ RUN apk add --no-cache \
     python3\
     make \
     g++ \
-    && npm install -g pnpm@10.6.5
+    && npm install -g pnpm@11.2.0
 
 WORKDIR /app
 COPY .puppeteerrc.cjs /app/.puppeteerrc.cjs

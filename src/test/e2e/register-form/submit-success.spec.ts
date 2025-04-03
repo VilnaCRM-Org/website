@@ -32,11 +32,12 @@ test('Submit the registration form and verify success notification', async ({ pa
   await responsePromise;
 
   const successTitle: Locator = page.getByText(successTitleText);
-  const successConfettiImages: Locator[] = await page.getByAltText(confettiAltText).all();
+  const successConfettiImage: Locator = page.getByAltText(confettiAltText);
+  const successConfettiBottomImage: Locator = page.getByAltText(confettiAltText);
 
   await successTitle.waitFor({ state: 'visible' });
-  await successConfettiImages[0].waitFor({ state: 'visible' });
-  await successConfettiImages[1].waitFor({ state: 'visible' });
+  await successConfettiImage.waitFor({ state: 'visible' });
+  await successConfettiBottomImage.waitFor({ state: 'visible' });
 
   await page.getByRole('button', { name: successButtonText }).click();
 

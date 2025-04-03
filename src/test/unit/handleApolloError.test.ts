@@ -225,7 +225,7 @@ describe('Error Handling', () => {
       });
 
       expect(setServerErrorMessageMock).toHaveBeenCalledWith(
-        'An error occurred with the request. Please try again.'
+        'An unexpected error occurred. Please try again.'
       );
     });
 

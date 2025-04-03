@@ -145,12 +145,7 @@ async function startServer() {
 
       context: async ({ req }) => {
         if (req.url === HEALTH_CHECK_PATH) {
-          throw new GraphQLError('Health check endpoint', {
-            extensions: {
-              http: { status: 200 },
-              code: 'HEALTH_CHECK',
-            },
-          });
+          return {};
         }
 
         if (!req.headers['content-type'] || req.headers['content-type'].includes('text/plain')) {
@@ -171,7 +166,7 @@ async function startServer() {
     }
     setTimeout(() => {
       process.exit(1);
-    }, 1000);
+    }, 3000);
   }
 }
 

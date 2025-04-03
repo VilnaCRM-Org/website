@@ -12,6 +12,17 @@ interface HandleErrorProps {
 type HandleNetworkErrorProps = HandleErrorProps & { networkError: ApolloError['networkError'] };
 type HandleNetworkErrorType = (props: HandleNetworkErrorProps) => void;
 
+function isServerError(error: unknown): error is Partial<{ statusCode: number; message: string }> {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    ('statusCode' in error
+      ? typeof (error as { statusCode?: unknown }).statusCode === 'number'
+      : true) &&
+    ('message' in error ? typeof (error as { message?: unknown }).message === 'string' : true)
+  );
+}
+
 export const handleNetworkError: HandleNetworkErrorType = ({
   networkError,
   setServerErrorMessage,
@@ -20,27 +31,28 @@ export const handleNetworkError: HandleNetworkErrorType = ({
 }: HandleNetworkErrorProps): void => {
   if (networkError === null) return;
 
-  const serverError: Partial<{ statusCode: number; message: string }> = networkError as Partial<{
-    statusCode: number;
-    message: string;
-  }>;
-  if (serverError.statusCode === 500) {
+  if (!isServerError(networkError)) {
+    setServerErrorMessage('Something went wrong with the request. Try again later.');
+    return;
+  }
+
+  if (networkError.statusCode === 500) {
     setNotificationType(NotificationStatus.ERROR);
     setIsNotificationOpen(true);
     return;
   }
 
-  if (serverError.statusCode === 401) {
+  if (networkError.statusCode === 401) {
     setServerErrorMessage('Unauthorized access. Please log in again.');
     return;
   }
 
-  if (serverError.statusCode === 403) {
+  if (networkError.statusCode === 403) {
     setServerErrorMessage('Access denied. You do not have permission to perform this action.');
     return;
   }
 
-  if (serverError.message?.includes('Failed to fetch')) {
+  if (networkError.message?.includes('Failed to fetch')) {
     setServerErrorMessage('Network error. Please check your internet connection.');
     return;
   }
@@ -62,16 +74,15 @@ export const handleApolloError: HandleApolloErrorType = ({
   }
 
   if (err.networkError) {
-    const { networkError } = err;
     handleNetworkError({
-      networkError,
+      networkError: err.networkError,
       setServerErrorMessage,
       setNotificationType,
       setIsNotificationOpen,
     });
     return;
   }
-  if (err.graphQLErrors?.length) {
+  if (Array.isArray(err.graphQLErrors) && err.graphQLErrors.length > 0) {
     const hasServerError: boolean = err.graphQLErrors.some(e => e.extensions?.statusCode === 500);
 
     if (hasServerError) {
@@ -86,5 +97,5 @@ export const handleApolloError: HandleApolloErrorType = ({
     setServerErrorMessage(message);
     return;
   }
-  setServerErrorMessage('An error occurred with the request. Please try again.');
+  setServerErrorMessage('An unexpected error occurred. Please try again.');
 };

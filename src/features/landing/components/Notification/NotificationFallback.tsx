@@ -8,7 +8,7 @@ import styles from './styles';
 function NotificationFallback(): React.ReactElement {
   const { t } = useTranslation();
   return (
-    <UiTypography component="h4" sx={styles.messageTitle}>
+    <UiTypography component="h4" sx={styles.messageTitle} role="alert" aria-live="polite">
       {t('notifications.unknown.title')}
     </UiTypography>
   );

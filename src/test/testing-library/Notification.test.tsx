@@ -18,7 +18,6 @@ const errorTitleText: string = t('notifications.error.title');
 const fallbackTitleText: string = t('notifications.unknown.title');
 const successDescriptionText: string = t('notifications.success.description');
 const confettiImgAltText: string = t('notifications.success.images.confetti');
-const confettiImgBottomAltText: string = t('notifications.success.images.confetti-bottom');
 const gearsImgAltText: string = t('notifications.success.images.gears');
 const backToFormButton: string = t('notifications.error.button');
 const retryButton: string = t('notifications.error.retry_button');
@@ -58,7 +57,7 @@ describe('Notification', () => {
 
     const notificationContainer: HTMLElement = getByRole('alert');
     const successConfettiImg: HTMLElement = getByAltText(confettiImgAltText);
-    const successConfettiImgBottom: HTMLElement = getByAltText(confettiImgBottomAltText);
+    const successConfettiImgBottom: HTMLElement = getByAltText('');
     const successGearsImg: HTMLElement = getByAltText(gearsImgAltText);
     const successTitle: HTMLElement = getByText(successTitleText);
     const successDescription: HTMLElement = getByText(successDescriptionText);
@@ -116,7 +115,10 @@ describe('Notification', () => {
       <Notification type={type} setIsOpen={setIsOpen} onRetry={retrySubmit} isOpen={isOpen} />
     );
 
-    expect(screen.getByText(fallbackTitleText)).toBeInTheDocument();
+    const fallbackComponent: HTMLElement = screen.getByText(fallbackTitleText);
+
+    expect(fallbackComponent).toBeInTheDocument();
+    expect(fallbackComponent).toHaveRole('alert');
   });
   it('renders "success" notification by default when type is empty', () => {
     renderNotification({ type: '' as NotificationStatus, isOpen: false, setIsOpen: mockSetIsOpen });
@@ -171,6 +173,8 @@ describe('Notification', () => {
     expect(retrySubmitMock).toHaveBeenCalledTimes(1);
 
     expect(mockSetIsOpen).not.toHaveBeenCalled();
+    expect(button).toBeVisible();
+    expect(button).toBeEnabled();
   });
 
   it('renders visible notification section', () => {

@@ -32,7 +32,6 @@ const checkboxRole: AriaRole = 'checkbox';
 const formTitleText: string = t('sign_up.form.heading_main');
 const successTitleText: string = t('notifications.success.title');
 const confettiAltText: string = t('notifications.success.images.confetti');
-const confettiBottomAltText: string = t('notifications.success.images.confetti-bottom');
 const successBackButton: string = t('notifications.success.button');
 const requiredText: string = t('sign_up.form.email_input.required');
 const errorTitleText: string = t('notifications.error.title');
@@ -43,14 +42,18 @@ const passwordErrorLength: string = t('sign_up.form.password_input.error_length'
 const passwordErrorNumbers: string = t('sign_up.form.password_input.error_numbers');
 const passwordErrorUppercase: string = t('sign_up.form.password_input.error_uppercase');
 
+const validateCreateUserInput: (variables: { input: CreateUserInput }) => boolean = (variables: {
+  input: CreateUserInput;
+}) => {
+  const { input } = variables;
+  return !!input?.email && !!input?.initials && !!input?.password;
+};
+
 const fulfilledMockResponse: MockedResponse = {
   request: {
     query: SIGNUP_MUTATION,
   },
-  variableMatcher: variables => {
-    const { input } = variables;
-    return !!input?.email && !!input?.initials && !!input?.password;
-  },
+  variableMatcher: validateCreateUserInput,
 
   result: variables => {
     const { input } = variables;
@@ -480,8 +483,8 @@ describe('AuthLayout', () => {
     await waitFor(() => {
       expect(queryByAltText(confettiAltText)).toBeInTheDocument();
       expect(queryByAltText(confettiAltText)).toBeVisible();
-      expect(queryByAltText(confettiBottomAltText)).toBeInTheDocument();
-      expect(queryByAltText(confettiBottomAltText)).toBeVisible();
+      expect(queryByAltText('')).toBeInTheDocument();
+      expect(queryByAltText('')).toBeVisible();
     });
 
     const backButton: HTMLElement = getByRole('button', { name: successBackButton });
@@ -492,7 +495,7 @@ describe('AuthLayout', () => {
 
     await waitFor(() => {
       expect(queryByAltText(confettiAltText)).not.toBeVisible();
-      expect(queryByAltText(confettiBottomAltText)).not.toBeVisible();
+      expect(queryByAltText('')).not.toBeVisible();
     });
   });
 

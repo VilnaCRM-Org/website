@@ -37,49 +37,35 @@ export const getFormElements: () => {
   privacyCheckbox: HTMLInputElement | null;
   signUpButton: HTMLElement | null;
 } = () => {
-  const missingElements: string[] = [];
-
   const getElementSafe: <T extends HTMLInputElement>(
     queryFunction: () => T,
     elementName: string
-  ) => T | null = <T extends HTMLInputElement>(
-    queryFunction: () => T,
-    elementName: string
-  ): T | null => {
+  ) => T | null = <T extends HTMLElement>(queryFunction: () => T, elementName: string): T => {
     try {
       return queryFunction();
     } catch (error) {
-      missingElements.push(elementName);
-      return null;
+      throw new FormElementNotFoundError(
+        `Form element "${elementName}" not found using query: ${queryFunction.toString()}`
+      );
     }
   };
 
-  const fullNameInput: HTMLInputElement | null = getElementSafe(
-    () => screen.getByPlaceholderText(fullNamePlaceholder),
-    'fullNameInput'
-  );
-  const emailInput: HTMLInputElement | null = getElementSafe(
-    () => screen.getByPlaceholderText(emailPlaceholder),
-    'emailInput'
-  );
-  const passwordInput: HTMLInputElement | null = getElementSafe(
-    () => screen.getByPlaceholderText(passwordPlaceholder),
-    'passwordInput'
-  );
-  const privacyCheckbox: HTMLInputElement | null = getElementSafe(
-    () => screen.getByRole(checkboxRole),
-    'privacyCheckbox'
-  );
-  const signUpButton: HTMLInputElement | null = getElementSafe(
-    () => screen.getByRole(buttonRole, { name: submitButtonText }),
-    'signUpButton'
-  );
-
-  if (missingElements.length > 0) {
-    throw new FormElementNotFoundError(`Missing elements: ${missingElements.join(', ')}`);
-  }
-
-  return { fullNameInput, emailInput, passwordInput, privacyCheckbox, signUpButton };
+  return {
+    fullNameInput: getElementSafe(
+      () => screen.getByPlaceholderText(fullNamePlaceholder),
+      'fullNameInput'
+    ),
+    emailInput: getElementSafe(() => screen.getByPlaceholderText(emailPlaceholder), 'emailInput'),
+    passwordInput: getElementSafe(
+      () => screen.getByPlaceholderText(passwordPlaceholder),
+      'passwordInput'
+    ),
+    privacyCheckbox: getElementSafe(() => screen.getByRole(checkboxRole), 'privacyCheckbox'),
+    signUpButton: getElementSafe(
+      () => screen.getByRole(buttonRole, { name: submitButtonText }),
+      'signUpButton'
+    ),
+  };
 };
 
 export const validateFormInput: (

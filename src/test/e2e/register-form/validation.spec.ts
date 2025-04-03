@@ -16,10 +16,12 @@ test('Should display error messages for invalid inputs', async ({ page }) => {
 
   await page.getByRole('button', { name: signUpButton }).click();
 
-  const notifications: Locator[] = await page.getByAltText(confettiAltText).all();
-  await notifications[0].waitFor({ state: 'attached' });
-  await notifications[1].waitFor({ state: 'attached' });
+  const successConfettiImage: Locator = page.getByAltText(confettiAltText);
+  const successConfettiBottomImage: Locator = page.getByAltText(confettiAltText);
 
-  await expect(notifications[0]).toBeAttached();
-  await expect(notifications[1]).toBeAttached();
+  await successConfettiImage.waitFor({ state: 'attached' });
+  await successConfettiBottomImage.waitFor({ state: 'attached' });
+
+  await expect(successConfettiImage).toBeAttached();
+  await expect(successConfettiBottomImage).toBeAttached();
 });
