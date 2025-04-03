@@ -7,78 +7,72 @@ export default {
     overflow: 'hidden',
     width: '100%',
     zIndex: 2,
-    minHeight: { 
-      xs: '17.75rem', 
-      lg: '30.813rem', 
+    // Додаємо мінімальну висоту, щоб уникнути зсуву
+    minHeight: '30.813rem', // ≈ висота backgroundImage за замовчуванням
+    [`@media (max-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
+      minHeight: '17.75rem', // ≈ висота backgroundImage на мобільних
+    },
   },
-},
 
   backgroundImage: {
     position: 'absolute',
     background: 'linear-gradient(to bottom, rgba(34, 181, 252, 1) 0%, rgba(252, 231, 104, 1) 100%)',
     width: '100%',
-    maxWidth: '74.5rem', 
-    height: '30.813rem',
+    maxWidth: '74.5rem',
+    height: '30.813rem', // Фіксована висота (не динамічна)
     zIndex: '-1',
     top: '9%',
     left: '0',
     borderRadius: '3rem',
-    aspectRatio: '1192/493',
     [`@media (max-width: ${breakpointsTheme.breakpoints.values.lg}px)`]: {
       top: '28%',
-      height: 'auto',
-      aspectRatio: '1/0.7'
     },
     [`@media (max-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
       borderRadius: '1.5rem',
-      height: '17.75rem',
+      height: '17.75rem', // Фіксована висота для мобільних
       top: '14%',
-      aspectRatio: '1/0.9'
     },
   },
 
   screenBorder: {
     maxWidth: '50.25rem',
-    width: '100%',
-    border: '0.1875rem solid #78797D',  
+    border: '3px solid #78797D',
     borderBottom: '0.625rem solid #252525',
     borderTopRightRadius: '1.875rem',
     borderTopLeftRadius: '1.875rem',
     overflow: 'hidden',
-    aspectRatio: '804/396',
+    margin: '0 auto', 
     [`@media (max-width: ${breakpointsTheme.breakpoints.values.lg}px)`]: {
       borderRadius: '1.875rem',
       borderBottom: 'none',
       border: 'none',
-      aspectRatio: '1/1'
     },
     [`@media (max-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
       border: 'none',
       borderBottom: 'none',
       marginBottom: '-8.125rem',
-      aspectRatio: '1/1.2'
     },
   },
 
   screenBackground: {
-    border: '0.25rem solid #232122',  
-    borderTopRightRadius: '1.563rem',  
+    border: '4px solid #232122',
+    borderTopRightRadius: '1.563rem',
     borderTopLeftRadius: '1.563rem',
     backgroundColor: colorTheme.palette.darkPrimary.main,
-    padding: '0.75rem',  
+    padding: '0.75rem',
     overflow: 'hidden',
-    minHeight: '18.75rem', 
+    // Додаємо фіксовані розміри, якщо можливо
+    width: '100%',
+    height: 'auto', // Або фіксовану висоту, якщо контент статичний
     [`@media (max-width: ${breakpointsTheme.breakpoints.values.lg}px)`]: {
       borderRadius: '1.563rem',
     },
     [`@media (max-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
-      padding: '0.375rem',  
-      border: '0.25rem solid #444',
-      borderRadius: '2.25rem',  
-      backgroundColor: colorTheme.palette.darkPrimary.main,
+      padding: '0.375rem',
+      border: '4px solid #444',
+      borderRadius: '2.25rem',
       margin: '0 auto',
       overflow: 'hidden',
-      minHeight: '12.5rem' 
     },
   },
 };

@@ -26,7 +26,6 @@ export default {
   content: {
     pt: '8.25rem',
     position: 'relative',
-    minHeight: '50rem',
     [`@media (max-width: ${breakpointsTheme.breakpoints.values.lg}px)`]: {
       pt: '7.375rem',
     },
@@ -44,7 +43,6 @@ export default {
       position: 'absolute',
       top: '7%',
       right: '-6%',
-      aspectRatio: '514/425',
       '@media (max-width: 1130.98px)': {
         width: '100dvw',
         maxWidth: '43rem',
