@@ -34,9 +34,6 @@ importers:
       i18next:
         specifier: ^23.16.8
         version: 23.16.8
-      puppeteer:
-        specifier: ^24.4.0
-        version: 24.4.0(typescript@5.8.2)
       puppeteer-core:
         specifier: ^24.4.0
         version: 24.4.0
@@ -10828,14 +10825,6 @@ packages:
     engines: { node: '>=18' }
     hasBin: true
 
-  puppeteer@24.4.0:
-    resolution:
-      {
-        integrity: sha512-E4JhJzjS8AAI+6N/b+Utwarhz6zWl3+MR725fal+s3UlOlX2eWdsvYYU+Q5bXMjs9eZEGkNQroLkn7j11s2k1Q==,
-      }
-    engines: { node: '>=18' }
-    hasBin: true
-
   pure-rand@6.1.0:
     resolution:
       {
@@ -21153,21 +21142,6 @@ snapshots:
       cosmiconfig: 9.0.0(typescript@5.8.2)
       devtools-protocol: 0.0.1312386
       puppeteer-core: 22.15.0
-    transitivePeerDependencies:
-      - bare-buffer
-      - bufferutil
-      - supports-color
-      - typescript
-      - utf-8-validate
-
-  puppeteer@24.4.0(typescript@5.8.2):
-    dependencies:
-      '@puppeteer/browsers': 2.8.0
-      chromium-bidi: 2.1.2(devtools-protocol@0.0.1413902)
-      cosmiconfig: 9.0.0(typescript@5.8.2)
-      devtools-protocol: 0.0.1413902
-      puppeteer-core: 24.4.0
-      typed-query-selector: 2.12.0
     transitivePeerDependencies:
       - bare-buffer
       - bufferutil

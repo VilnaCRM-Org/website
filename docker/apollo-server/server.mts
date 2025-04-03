@@ -1,43 +1,26 @@
+// **Environment & Configuration**
+import dotenv from 'dotenv';
+
+// **Apollo Server & GraphQL**
 import { ApolloServer, BaseContext } from '@apollo/server';
 import { startStandaloneServer } from '@apollo/server/standalone';
-// @ts-ignore - Import path uses .ts extension which is resolved at runtime
-import { CreateUserInput, User } from './type.ts';
-import dotenv from 'dotenv';
 import { GraphQLError } from 'graphql';
 import { ApolloServerErrorCode } from '@apollo/server/errors';
+
+// **Types**
+// @ts-ignore - Import path uses .ts extension which is resolved at runtime
+import { CreateUserInput, User } from './type.ts';
+
+// **Node.js Built-in Modules**
+import fs from 'node:fs';
+import path, { dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 dotenv.config();
 
 const GRAPHQL_API_PATH = process.env.GRAPHQL_API_PATH || 'graphql';
 const HEALTH_CHECK_PATH = process.env.HEALTH_CHECK_PATH || 'health';
 
-const defaultUrlSchema =
-  'https://raw.githubusercontent.com/VilnaCRM-Org/user-service/v2.4.1/.github/graphql-spec/spec';
-const SCHEMA_URL = process.env.GRAPHQL_SCHEMA_URL || defaultUrlSchema;
-
-export async function getRemoteSchema() {
-  const FETCH_TIMEOUT = process.env.FETCH_TIMEOUT ? Number(process.env.FETCH_TIMEOUT) : 10000;
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
-
-  try {
-    const response = await fetch(`${SCHEMA_URL}`, { signal: controller.signal });
-
-    clearTimeout(timeoutId);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch schema: ${response.statusText} (${response.status})`);
-    }
-
-    return await response.text();
-  } catch (error) {
-    console.error('Error fetching remote schema:', error);
-
-    if ((error as Error).name === 'AbortError') {
-      throw new Error(`Schema fetch timeout after ${FETCH_TIMEOUT / 1000} seconds`);
-    }
-    throw new Error(`Schema fetch failed: ${(error as Error).message}`);
-  }
-}
 const validateCreateUserInput = (input: CreateUserInput) => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -115,10 +98,17 @@ const formatError = (formattedError: any, error: any) => {
 
   return formattedError;
 };
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const SCHEMA_FILE_PATH = path.join(__dirname, 'schema.graphql');
+
 let server: ApolloServer<BaseContext>;
+
 async function startServer() {
   try {
-    const typeDefs: string = await getRemoteSchema();
+    const typeDefs: string = fs.readFileSync(SCHEMA_FILE_PATH, 'utf-8');
 
     if (!typeDefs) {
       throw new Error('Failed to load remote schema.');
