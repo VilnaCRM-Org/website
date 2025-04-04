@@ -20,7 +20,7 @@
     "test:visual:update": "npx playwright test ./src/test/visual --update-snapshots",
     "test:visual": "pnpm exec playwright test ./src/test/visual",
     "test:unit": "TEST_ENV=client jest --verbose",
-    "test:unit-all": "TEST_ENV=client jest --verbose && TEST_ENV=server jest ./src/test/apollo-server",
+    "test:unit:all": "TEST_ENV=client jest --verbose && TEST_ENV=server jest ./src/test/apollo-server",
     "test:memory-leak": "node ./src/test/memory-leak/runMemlabTests",
     "lighthouse:desktop": "next build && next-export-optimize-images && lhci autorun --config=lighthouserc.desktop.js --collect.startServerCommand=\"npx serve out\"",
     "lighthouse:mobile": "next build && next-export-optimize-images && lhci autorun --config=lighthouserc.mobile.js --collect.startServerCommand=\"npx serve out\"",
