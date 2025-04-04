@@ -1,17 +1,13 @@
-// **Environment & Configuration**
 import dotenv from 'dotenv';
 
-// **Apollo Server & GraphQL**
 import { ApolloServer, BaseContext } from '@apollo/server';
 import { startStandaloneServer } from '@apollo/server/standalone';
 import { GraphQLError } from 'graphql';
 import { ApolloServerErrorCode } from '@apollo/server/errors';
 
-// **Types**
 // @ts-ignore - Import path uses .ts extension which is resolved at runtime
-import { CreateUserInput, User } from './type.ts';
+import { CreateUserInput, CreateUserResponse, User } from './type.ts';
 
-// **Node.js Built-in Modules**
 import fs from 'node:fs';
 import path, { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -42,10 +38,13 @@ const validateCreateUserInput = (input: CreateUserInput) => {
     });
   }
 };
-
+export const users = new Map<string, User>();
 export const resolvers = {
   Mutation: {
-    createUser: async (_: unknown, { input }: { input: CreateUserInput }) => {
+    createUser: async (
+      _: unknown,
+      { input }: { input: CreateUserInput }
+    ): Promise<CreateUserResponse> => {
       validateCreateUserInput(input);
       try {
         const newUser: User = {
@@ -54,9 +53,14 @@ export const resolvers = {
           email: input.email,
           initials: input.initials,
         };
+        users.set(newUser.email, newUser);
         return {
-          user: newUser,
-          clientMutationId: input.clientMutationId,
+          data: {
+            createUser: {
+              user: newUser,
+              clientMutationId: input.clientMutationId,
+            },
+          },
         };
       } catch (error) {
         throw new GraphQLError('Internal Server Error: Failed to create user', {
@@ -122,10 +126,7 @@ async function startServer() {
       typeDefs,
       resolvers,
       csrfPrevention: {
-        requestHeaders: [
-          'Apollo-Require-Preflight', // For web clients
-          'X-Apollo-Operation-Name', // For mobile clients
-        ],
+        requestHeaders: ['Apollo-Require-Preflight', 'X-Apollo-Operation-Name'],
       },
       formatError,
     });

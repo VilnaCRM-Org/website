@@ -1,6 +1,6 @@
-FROM node:22-alpine3.20
+FROM node:23.10.0-alpine3.21
 
-RUN apk add --no-cache curl=8.12.1-r0
+RUN apk add --no-cache curl=8.12.1-r1
 
 RUN npm install -g pnpm@10.6.5 typescript@5.8.2
 
@@ -8,7 +8,7 @@ WORKDIR /app
 
 COPY package.json pnpm-lock.yaml checkNodeVersion.js ./
 COPY tsconfig.server.json tsconfig.server.json
-COPY docker/apollo-server docker/apollo-server
+COPY docker docker
 COPY .env .env
 
 RUN pnpm install --frozen-lockfile && tsc --project tsconfig.server.json

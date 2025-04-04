@@ -12,14 +12,16 @@ interface HandleErrorProps {
 type HandleNetworkErrorProps = HandleErrorProps & { networkError: ApolloError['networkError'] };
 type HandleNetworkErrorType = (props: HandleNetworkErrorProps) => void;
 
-function isServerError(error: unknown): error is Partial<{ statusCode: number; message: string }> {
+export function isServerError(error: unknown): error is { statusCode?: number; message?: string } {
+  if (typeof error !== 'object' || error === null) {
+    return false;
+  }
+
+  const { statusCode, message } = error as { statusCode?: unknown; message?: unknown };
+
   return (
-    typeof error === 'object' &&
-    error !== null &&
-    ('statusCode' in error
-      ? typeof (error as { statusCode?: unknown }).statusCode === 'number'
-      : true) &&
-    ('message' in error ? typeof (error as { message?: unknown }).message === 'string' : true)
+    (statusCode === undefined || typeof statusCode === 'number') &&
+    (message === undefined || typeof message === 'string')
   );
 }
 

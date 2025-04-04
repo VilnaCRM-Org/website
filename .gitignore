@@ -62,3 +62,5 @@ next-env.d.ts
 
 # memlab
 /src/test/memory-leak/results
+
+app.log
