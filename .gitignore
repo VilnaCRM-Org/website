@@ -64,3 +64,4 @@ next-env.d.ts
 /src/test/memory-leak/results
 
 app.log
+*.log
