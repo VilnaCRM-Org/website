@@ -7,10 +7,9 @@ export default {
     overflow: 'hidden',
     width: '100%',
     zIndex: 2,
-    // Додаємо мінімальну висоту, щоб уникнути зсуву
-    minHeight: '30.813rem', // ≈ висота backgroundImage за замовчуванням
+    minHeight: '30.813rem', 
     [`@media (max-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
-      minHeight: '17.75rem', // ≈ висота backgroundImage на мобільних
+      minHeight: '17.75rem', 
     },
   },
 
@@ -19,7 +18,7 @@ export default {
     background: 'linear-gradient(to bottom, rgba(34, 181, 252, 1) 0%, rgba(252, 231, 104, 1) 100%)',
     width: '100%',
     maxWidth: '74.5rem',
-    height: '30.813rem', // Фіксована висота (не динамічна)
+    height: '30.813rem',
     zIndex: '-1',
     top: '9%',
     left: '0',
@@ -29,7 +28,7 @@ export default {
     },
     [`@media (max-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
       borderRadius: '1.5rem',
-      height: '17.75rem', // Фіксована висота для мобільних
+      height: '17.75rem', 
       top: '14%',
     },
   },
@@ -61,9 +60,8 @@ export default {
     backgroundColor: colorTheme.palette.darkPrimary.main,
     padding: '0.75rem',
     overflow: 'hidden',
-    // Додаємо фіксовані розміри, якщо можливо
     width: '100%',
-    height: 'auto', // Або фіксовану висоту, якщо контент статичний
+    height: 'auto', 
     [`@media (max-width: ${breakpointsTheme.breakpoints.values.lg}px)`]: {
       borderRadius: '1.563rem',
     },
