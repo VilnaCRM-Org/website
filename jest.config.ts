@@ -9,11 +9,13 @@ const config: Config = {
   coverageDirectory: 'coverage',
   coverageProvider: 'v8',
   testMatch: [
-    '<rootDir>/src/test/testing-library**/*.test.tsx',
+    process.env.TEST_ENV === 'server'
+      ? '<rootDir>/src/test/apollo-server**/*.test.ts'
+      : '<rootDir>/src/test/testing-library**/*.test.tsx',
     '<rootDir>/src/test/unit/**/*.test.ts',
   ],
   preset: 'ts-jest',
-  testEnvironment: 'jsdom',
+  testEnvironment: process.env.TEST_ENV === 'server' ? 'node' : 'jsdom',
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
 };
 

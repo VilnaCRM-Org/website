@@ -3,4 +3,5 @@ export interface UiLinkProps {
   href: string;
   target?: string;
   sx?: React.CSSProperties;
+  rel?: string;
 }
