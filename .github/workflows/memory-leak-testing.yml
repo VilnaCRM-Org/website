@@ -4,11 +4,9 @@ on:
   pull_request:
     branches:
       - main
-
 jobs:
   memory-leak-testing:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -18,28 +16,14 @@ jobs:
         with:
           node-version: ${{ vars.NODE_VERSION }}
 
-      - name: Cache pnpm dependencies
-        id: cache-pnpm-store
-        uses: actions/cache@v3.4.0
-        with:
-          path: ~/.pnpm-store
-          key: ${{ runner.os }}-dependencies-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-dependencies-
-
       - name: Install pnpm
         run: npm install -g pnpm
 
       - name: Install dependencies
-        run: pnpm install
-
-      - name: Install chrome
-        run: npx puppeteer browsers install chrome@127.0.6533.88
+        run: make install
 
       - name: Run dev and memory leak testing
-        run: |
-          pnpm run start &
-          npx wait-on http://localhost:3000
-          pnpm run test:memory-leak
+        run: make test-memory-leak
+
         env:
           CI: true
