@@ -6,10 +6,15 @@ export default {
     background: colorTheme.palette.backgroundGrey100.main,
     maxWidth: '100dvw',
     overflow: 'hidden',
+    position: 'relative',
+    minHeight: '30rem', 
+    contain: 'layout',
   },
 
   lgCardsWrapper: {
     display: 'flex',
+    minHeight: '20rem',
+    contain: 'content', 
     [`@media (max-width: 968px)`]: {
       display: 'none',
     },
@@ -17,6 +22,7 @@ export default {
 
   smCardsWrapper: {
     display: 'none',
+    minHeight: '25rem',
     [`@media (max-width: 968px)`]: {
       display: 'flex',
       justifyContent: 'center',
@@ -26,21 +32,25 @@ export default {
   content: {
     pt: '8.25rem',
     position: 'relative',
+    paddingBottom: '-2rem',
     [`@media (max-width: ${breakpointsTheme.breakpoints.values.lg}px)`]: {
       pt: '7.375rem',
+      paddingBottom: '-2rem',
     },
     [`@media (max-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
       pt: '2rem',
+      paddingBottom: '-2rem',
     },
   },
 
   mainImage: {
     img: {
-      width: '100dvw',
+      width: '100%',
       maxWidth: '51.4rem',
-      height: '42.5rem',
+      height: 'auto',
       zIndex: '1',
       position: 'absolute',
+      aspectRatio: '514 / 425',
       top: '7%',
       right: '-6%',
       '@media (max-width: 1130.98px)': {

@@ -10,7 +10,7 @@ const DynamicBackgroundImages: ComponentType = dynamic(() => import('../Backgrou
 const DynamicAboutUs: ComponentType = dynamic(() => import('../AboutUs'), { ssr: false });
 const DynamicUiFooter: ComponentType = dynamic(() => import('../../../../components/UiFooter'), {
   ssr: false,
-});
+}); 
 const DynamicForWhoSection: ComponentType = dynamic(() => import('../ForWhoSection'), {
   ssr: false,
 });
@@ -18,7 +18,7 @@ const DynamicHeader: ComponentType = dynamic(() => import('../Header'), { ssr: f
 const DynamicPossibilities: ComponentType = dynamic(() => import('../Possibilities'), {
   ssr: false,
 });
-const DynamicWhyUs: ComponentType = dynamic(() => import('../WhyUs'), { ssr: false });
+const DynamicWhyUs: ComponentType = dynamic(() => import('../WhyUs'), { ssr: false }); 
 const DynamicAuthSection: ComponentType = dynamic(() => import('../AuthSection'), { ssr: false });
 
 function Landing(): React.ReactElement {
@@ -32,7 +32,7 @@ function Landing(): React.ReactElement {
         <link rel="apple-touch-icon" href="../../assets/img/about-vilna/touch.png" />
       </Head>
       <DynamicHeader />
-      <Box sx={{ position: 'relative' }}>
+       <Box sx={{ position: 'relative' }}>
         <DynamicBackgroundImages />
         <DynamicAboutUs />
         <Container maxWidth="xl">
@@ -42,7 +42,7 @@ function Landing(): React.ReactElement {
         <Container maxWidth="xl">
           <DynamicPossibilities />
         </Container>
-      </Box>
+      </Box> 
       <DynamicAuthSection />
       <DynamicUiFooter />
     </>
