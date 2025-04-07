@@ -34,4 +34,4 @@ jobs:
           steps.cache-pnpm-packages.outputs.cache-hit != 'true'
 
       - name: Run unit tests
-        run: pnpm run test:unit:all
+        run: make test-unit-all

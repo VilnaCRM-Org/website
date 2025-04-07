@@ -37,7 +37,7 @@ jobs:
           steps.cache-pnpm-packages.outputs.cache-hit != 'true'
 
       - name: Run desktop performance test
-        run: pnpm run lighthouse:desktop
+        run: make lighthouse-desktop
 
       - name: Run mobile performance test
-        run: pnpm run lighthouse:mobile
+        run: make lighthouse-mobile

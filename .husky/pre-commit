@@ -1,8 +1,10 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
-pnpm format
-pnpm lint:next
-pnpm lint:tsc --noEmit
-pnpm lint:md
-pnpm test:unit
+export CI=1
+
+make format
+make lint-next
+make lint-tsc TSC_FLAGS="--noEmit"
+make lint-md
+make test-unit

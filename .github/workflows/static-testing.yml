@@ -34,13 +34,13 @@ jobs:
           steps.cache-pnpm-packages.outputs.cache-hit != 'true'
 
       - name: Run next linter
-        run: pnpm run lint:next
+        run: make lint-next
 
       - name: Run tsc linter
-        run: pnpm run lint:tsc
+        run: make lint-tsc
 
       - name: Run markdown linter
-        run: pnpm run lint:md
+        run: make lint-md
 
       - name: Run code formatter
-        run: pnpm run format
+        run: make format

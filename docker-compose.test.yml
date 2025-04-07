@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: pnpm run start-prod
+    command: make app-start
     restart: unless-stopped
     volumes:
       - .:/app
