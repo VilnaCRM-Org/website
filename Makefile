@@ -15,6 +15,9 @@ IMG_OPTIMIZE = ./node_modules/.bin/next-export-optimize-images
 NEXT_BUILD_CMD = $(NEXT_BUILD) && $(IMG_OPTIMIZE)
 TS_BIN = ./node_modules/.bin/tsc
 
+SERVE_CMD = --collect.startServerCommand="npx serve out"
+LHCI = pnpm lhci autorun
+
 # Executables
 EXEC_NODEJS	=
 PNPM      	= $(EXEC_NODEJS) pnpm
@@ -27,16 +30,12 @@ CI ?= 0
 # Conditional PNPM_EXEC based on CI
 ifeq ($(CI), 1)
     PNPM_EXEC = $(PNPM_BIN)
-	LHCI_DESKTOP = lhci autorun --config=lighthouserc.desktop.js
-	LHCI_MOBILE = lhci autorun --config=lighthouserc.mobile.js
 	EXEC_NODEJS	= $(DOCKER_COMPOSE) exec prod
 	PLAYWRIGHT_EXEC = $(PNPM_EXEC)
 	LOAD_TESTS_RUN = $(K6_BIN) run --summary-trend-stats="avg,min,med,max,p(95),p(99)" --out "web-dashboard=period=1s&export=./src/test/load/results/index.html" ./src/test/load/homepage.js
 	BUILD_K6_DOCKER =
 else
     PNPM_EXEC = $(PNPM_RUN)
-	LHCI_DESKTOP = $(NEXT_BUILD_CMD) && lhci autorun --config=lighthouserc.desktop.js --collect.startServerCommand=\"npx serve out\"
-	LHCI_MOBILE = $(NEXT_BUILD_CMD) && lhci autorun --config=lighthouserc.mobile.js --collect.startServerCommand=\"npx serve out\"
 	PLAYWRIGHT_EXEC = $(DOCKER) exec website-playwright-1 pnpm run
 	LOAD_TESTS_RUN = $(K6) --out 'web-dashboard=period=1s&export=/loadTests/results/homepage.html' /loadTests/homepage.js
 	BUILD_K6_DOCKER = $(MAKE) build-k6-docker
@@ -108,12 +107,6 @@ test-unit: ## This command executes unit tests using Jest library.
 test-unit-all: ## This command executes unit tests for both client and server environments.
 	TEST_ENV=client ./node_modules/.bin/jest --verbose && TEST_ENV=server ./node_modules/.bin/jest --verbose
 
-test-all: start-prod wait-for-prod  ## Start production and run all tests
-	$(DOCKER_COMPOSE) -f docker-compose.test.yml exec playwright sh -c '\
-    		./node_modules/.bin/playwright test ./src/test/e2e & \
-    		./node_modules/.bin/playwright test ./src/test/visual & \
-    		wait'
-
 test-memory-leak: start-prod wait-for-prod ## This command executes memory leaks tests using Memlab library.
 	$(DOCKER_COMPOSE) -f docker-compose.memory-leak.yml up -d || (echo "Failed to start memory leak container" && exit 1)
 
@@ -127,11 +120,17 @@ load-tests: start-prod wait-for-prod ## This command executes load tests using K
 	$(BUILD_K6_DOCKER)
 	$(LOAD_TESTS_RUN)
 
-lighthouse-desktop: ## This command executes Lighthouse tests for desktop.
-	$(PNPM_EXEC) $(LHCI_DESKTOP)
+lighthouse-desktop: ## Full desktop audit (build + optimize + serve + lhci)
+	$(NEXT_BUILD_CMD) && $(LHCI) --config=lighthouserc.desktop.js $(SERVE_CMD)
 
-lighthouse-mobile: ## This command executes Lighthouse tests for mobile.
-	$(PNPM_EXEC) $(LHCI_MOBILE)
+lighthouse-mobile: ## Full mobile audit (build + optimize + serve + lhci)
+	$(NEXT_BUILD_CMD) && $(LHCI) --config=lighthouserc.mobile.js $(SERVE_CMD)
+
+lighthouse-desktop-autorun: ## Run LHCI against running app (desktop config)
+	$(LHCI) --config=lighthouserc.desktop.js
+
+lighthouse-mobile-autorun: ## Run LHCI against running app (mobile config)
+	$(LHCI) --config=lighthouserc.mobile.js
 
 install: ## Install node modules according to the current pnpm-lock.yaml file
 	$(PNPM_BIN) install --frozen-lockfile

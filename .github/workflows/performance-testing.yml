@@ -8,8 +8,6 @@ on:
 jobs:
   performance:
     runs-on: ubuntu-latest
-    env:
-      CI: 1
 
     steps:
       - name: Checkout code
@@ -37,6 +35,12 @@ jobs:
         if: |
           steps.cache-pnpm-dependencies.outputs.cache-hit != 'true' ||
           steps.cache-pnpm-packages.outputs.cache-hit != 'true'
+
+      - name: Run prod container
+        run: make start-prod
+
+      - name: Run prod container
+        run: make wait-for-prod
 
       - name: Run desktop performance test
         run: make lighthouse-desktop
