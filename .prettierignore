@@ -1,8 +1,37 @@
 # Ignore artifacts:
-build
-coverage
-.next
 .lighthouseci
+
+# Dependencies
+node_modules
+.pnpm-store
+
+# Build outputs
+.next
 out
+dist
+build
+
+# Testing
+.stryker-tmp
+**/.stryker-tmp/**
+coverage
+.nyc_output
+**/*.snap
+
+# Storybook
 storybook-static
+
+# Cache
+.cache
+.eslintcache
+.stylelintcache
+.npm
+
+
+
+# Misc
+*.log
+*.lock
+yarn-error.log
 .github
+.husky

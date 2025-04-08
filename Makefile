@@ -16,7 +16,7 @@ NEXT_BUILD_CMD = $(NEXT_BUILD) && $(IMG_OPTIMIZE)
 TS_BIN = ./node_modules/.bin/tsc
 
 # Executables
-EXEC_NODEJS	= $(DOCKER_COMPOSE) exec prod
+EXEC_NODEJS	=
 PNPM      	= $(EXEC_NODEJS) pnpm
 PNPM_RUN    = $(PNPM) run
 GIT         = git
@@ -29,6 +29,7 @@ ifeq ($(CI), 1)
     PNPM_EXEC = $(PNPM_BIN)
 	LHCI_DESKTOP = lhci autorun --config=lighthouserc.desktop.js
 	LHCI_MOBILE = lhci autorun --config=lighthouserc.mobile.js
+	EXEC_NODEJS	= $(DOCKER_COMPOSE) exec prod
 	PLAYWRIGHT_EXEC = $(PNPM_EXEC)
 	LOAD_TESTS_RUN = $(K6_BIN) run --summary-trend-stats="avg,min,med,max,p(95),p(99)" --out "web-dashboard=period=1s&export=./src/test/load/results/index.html" ./src/test/load/homepage.js
 	BUILD_K6_DOCKER =
@@ -39,6 +40,7 @@ else
 	PLAYWRIGHT_EXEC = $(DOCKER) exec website-playwright-1 pnpm run
 	LOAD_TESTS_RUN = $(K6) --out 'web-dashboard=period=1s&export=/loadTests/results/homepage.html' /loadTests/homepage.js
 	BUILD_K6_DOCKER = $(MAKE) build-k6-docker
+	EXEC_NODEJS	= $(DOCKER_COMPOSE) exec dev
 endif
 
 # To Run in CI mode specify CI variable. Example: make lint-md CI=1
@@ -50,7 +52,7 @@ endif
 
 # Variables
 REPORT_FILENAME ?= default_value
-TSC_FLAGS ?= --newLine LF
+TSC_FLAGS ?= --newLine LF --strict
 
 help:
 	@printf "\033[33mUsage:\033[0m\n  make [target] [arg=\"val\"...]\n\n\033[33mTargets:\033[0m\n"
@@ -60,10 +62,10 @@ build: ## A tool build the project
 	$(PNPM_EXEC) $(NEXT_BUILD)
 
 build-analyze:
-	@ANALYZE=true $(NEXT_BUILD_CMD)
+	ANALYZE=true $(NEXT_BUILD_CMD)
 
 format: ## This command executes Prettier Formating
-	$(PNPM_EXEC) ./node_modules/.bin/prettier . --write
+	$(PNPM_EXEC) ./node_modules/.bin/prettier "**/*.{js,jsx,ts,tsx,json,css,scss,md}" --write --ignore-path .prettierignore
 
 lint-next: ## This command executes ESLint
 	$(NEXT_BIN) lint
@@ -88,6 +90,9 @@ test-e2e: start-prod wait-for-prod  ## Start production and run E2E tests
 
 test-visual: start-prod wait-for-prod  ## Start production and run visual tests
 	$(DOCKER_COMPOSE) -f docker-compose.test.yml exec playwright pnpm exec playwright test ./src/test/visual
+
+test-visual-update:
+	$(DOCKER_COMPOSE) -f docker-compose.test.yml exec playwright pnpm exec playwright test ./src/test/visual --update-snapshots
 
 start-prod: ## Build image and start container in production mode
 	$(DOCKER_COMPOSE) -f docker-compose.test.yml up -d
@@ -166,5 +171,5 @@ app-serve: ## Serve the app on port 3001
 app-start: ## Build and serve the production version
 	$(NEXT_BUILD_CMD) && make app-serve
 
-check-node-version: ## Check if the correct Node.js version is installed //DOCKER
-	node checkNodeVersion.js
+check-node-version: ## Check if the correct Node.js version is installed
+	$(EXEC_NODEJS) node checkNodeVersion.js
