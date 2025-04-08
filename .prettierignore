@@ -1,6 +1,5 @@
 # Ignore artifacts:
 .lighthouseci
-
 # Dependencies
 node_modules
 .pnpm-store
@@ -29,7 +28,6 @@ storybook-static
 .eslintcache
 .stylelintcache
 .npm
-
 
 
 # Misc

@@ -39,7 +39,7 @@ jobs:
       - name: Run prod container
         run: make start-prod
 
-      - name: Run prod container
+      - name: Wait for prod container
         run: make wait-for-prod
 
       - name: Run desktop performance test

@@ -9,14 +9,14 @@ DOCKER			= docker
 DOCKER_COMPOSE	= docker compose
 MAKE 			= make
 
-NEXT_BIN = ./node_modules/.bin/next
-NEXT_BUILD = $(NEXT_BIN) build
-IMG_OPTIMIZE = ./node_modules/.bin/next-export-optimize-images
-NEXT_BUILD_CMD = $(NEXT_BUILD) && $(IMG_OPTIMIZE)
-TS_BIN = ./node_modules/.bin/tsc
+NEXT_BIN = ./node_modules/.bin/next     # Path to Next.js binary for direct command execution
+NEXT_BUILD = $(NEXT_BIN) build          # Command to build Next.js application
+IMG_OPTIMIZE = ./node_modules/.bin/next-export-optimize-images   # Tool for optimizing exported images
+NEXT_BUILD_CMD = $(NEXT_BUILD) && $(IMG_OPTIMIZE)  # Full build command including image optimization
+TS_BIN = ./node_modules/.bin/tsc        # Path to TypeScript compiler binary
 
-SERVE_CMD = --collect.startServerCommand="npx serve out"
-LHCI = pnpm lhci autorun
+SERVE_CMD = --collect.startServerCommand="npx serve out"           # Command for serving the built application during testing
+LHCI = pnpm lhci autorun                                           # Lighthouse CI command for performance testing
 
 # Executables
 EXEC_NODEJS	=
@@ -121,10 +121,16 @@ load-tests: start-prod wait-for-prod ## This command executes load tests using K
 	$(LOAD_TESTS_RUN)
 
 lighthouse-desktop: ## Full desktop audit (build + optimize + serve + lhci)
-	$(NEXT_BUILD_CMD) && $(LHCI) --config=lighthouserc.desktop.js $(SERVE_CMD)
+	mkdir -p .next; \
+    chmod -R 777 .next; \
+    $(NEXT_BUILD_CMD); \
+    $(LHCI) --config=lighthouserc.desktop.js $(SERVE_CMD)
 
 lighthouse-mobile: ## Full mobile audit (build + optimize + serve + lhci)
-	$(NEXT_BUILD_CMD) && $(LHCI) --config=lighthouserc.mobile.js $(SERVE_CMD)
+	mkdir -p .next; \
+	chmod -R 777 .next; \
+	$(NEXT_BUILD_CMD); \
+	$(LHCI) --config=lighthouserc.mobile.js $(SERVE_CMD)
 
 lighthouse-desktop-autorun: ## Run LHCI against running app (desktop config)
 	$(LHCI) --config=lighthouserc.desktop.js
