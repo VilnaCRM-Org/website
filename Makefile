@@ -121,15 +121,15 @@ load-tests: start-prod wait-for-prod ## This command executes load tests using K
 	$(LOAD_TESTS_RUN)
 
 lighthouse-desktop: ## Full desktop audit (build + optimize + serve + lhci)
-	mkdir -p .next; \
-    chmod -R 777 .next; \
-    $(NEXT_BUILD_CMD); \
-    $(LHCI) --config=lighthouserc.desktop.js $(SERVE_CMD)
+	mkdir -p .next && \
+	chmod -R 777 .next && \
+	$(NEXT_BUILD_CMD) && \
+	$(LHCI) --config=lighthouserc.desktop.js $(SERVE_CMD)
 
 lighthouse-mobile: ## Full mobile audit (build + optimize + serve + lhci)
-	mkdir -p .next; \
-	chmod -R 777 .next; \
-	$(NEXT_BUILD_CMD); \
+	mkdir -p .next && \
+	chmod -R 777 .next && \
+	$(NEXT_BUILD_CMD) && \
 	$(LHCI) --config=lighthouserc.mobile.js $(SERVE_CMD)
 
 lighthouse-desktop-autorun: ## Run LHCI against running app (desktop config)
