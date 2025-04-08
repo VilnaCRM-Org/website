@@ -17,8 +17,9 @@ build
 coverage
 .nyc_output
 **/*.snap
-playwright-report
-lhci-reports-desktop
+playwright-report/
+lhci-reports-desktop/
+lhci-reports-mobile/
 
 # Storybook
 storybook-static
