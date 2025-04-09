@@ -124,7 +124,7 @@ lighthouse-desktop: start-prod wait-for-prod ## Full desktop audit (build + opti
 	$(NEXT_BUILD_CMD) && $(LHCI) --config=lighthouserc.desktop.js $(SERVE_CMD)
 
 lighthouse-mobile: start-prod wait-for-prod ## Full mobile audit (build + optimize + serve + lhci)
-	rm -rf .next && $(NEXT_BUILD_CMD) && $(LHCI) --config=lighthouserc.mobile.js $(SERVE_CMD)
+	$(NEXT_BUILD_CMD) && $(LHCI) --config=lighthouserc.mobile.js $(SERVE_CMD)
 
 lighthouse-desktop-autorun: ## Run LHCI against running app (desktop config)
 	$(LHCI) --config=lighthouserc.desktop.js

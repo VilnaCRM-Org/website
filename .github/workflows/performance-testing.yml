@@ -40,8 +40,11 @@ jobs:
       - name: Run start prod
         run: make start-prod &
 
-      - name: Run start prod
+      - name: Run wait for prod
         run: make wait-for-prod
 
       - name: Run desktop performance test
-        run: pnpm lhci autorun --config=lighthouserc.desktop.js --collect.url=http://localhost:3001
+        run: lighthouse-desktop-autorun
+
+      - name: Run mobile performance test
+        run: lighthouse-mobile-autorun
