@@ -73,9 +73,9 @@ Our commits are based on [Conventional Commits](https://www.conventionalcommits.
 
 If your local setup isn't working as expected after making changes:
 
-- Feel free to reach out to your team lead for guidance.
+- Please contact your team lead for guidance.
 - Alternatively, push your changes to a branch and open a pull request — this will trigger
-an automated code review.
+  an automated code review.
 
 ### 🤖 Automatic Code Review
 

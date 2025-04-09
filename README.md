@@ -13,8 +13,8 @@
   (Security checks, Code style fixer, static linters, DeepScan, Snyk)
 - Configured testing tools: [Playwright](https://playwright.dev/), [Jest](https://jestjs.io/)
 - This template is based on [bulletproof-react](https://github.com/alan2207/bulletproof-react/tree/master).
-There may be differences from the original implementation,
-as it has been adapted to fit specific project needs
+  There may be differences from the original implementation,
+  as it has been adapted to fit specific project needs
 - Much more!
 
 ## Why you might need it
@@ -46,7 +46,7 @@ We recommend to install
 [docker compose](https://docs.docker.com/compose/install/)
 to have the same setup across dev, sandbox and production environments
 
-To see the list of possible commands through the make command
+To see the list of available commands, run the following make command:
 
 ```bash
   make help
@@ -54,18 +54,26 @@ To see the list of possible commands through the make command
 
 The list of possibilities if project installed locally
 
-Run commands in dev Docker container
+Run commands in the dev Docker container:
 
 ```bash
   make start - starts the application in dev container
   make build - build the application
-  make format = formats the codebase to ensure consistent style across all files.
+  make format - formats the codebase to ensure consistent style across all files.
   make lint-next - static next lint
   make lint-tsc - static TypeScript lint
   make lint-md - Lints all Markdown files (excluding CHANGELOG.md) using markdownlint
+  
+  
+  
+pnpm test:e2e - end-to-end testing
+pnpm test:e2e:local - open GUI with list of end-to-end test
+pnpm test:unit - unit testing
+pnpm lighthouse:desktop - lighthouse desktop testing
+pnpm lighthouse:mobile - lighthouse mobile tesitng
 ```
 
-💡 Tip: If you want to run commands locally without Docker, prefix each command with CI=1.
+💡 Tip: Tip: To run commands locally without Docker, please prefix each command with CI=1.
 Example:
 
 ```bash
