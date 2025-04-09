@@ -71,16 +71,19 @@ Our commits are based on [Conventional Commits](https://www.conventionalcommits.
 
 ### 💡 Encountering Issues?
 
-If your local setup isn't working as expected after making changes:
+If you're unsure about how to proceed with your changes, you have two options:
 
-- Please contact your team lead for guidance.
-- Alternatively, push your changes to a branch and open a pull request — this will trigger
+- **Contact your team lead** for guidance.
+- **Push your changes** to a branch and **open a pull request** — this will trigger
   an automated code review.
 
 ### 🤖 Automatic Code Review
 
-Once the pull request is created, [CodeRabbitAI](https://coderabbit.ai/) will automatically review
-your code and leave comments that may help identify the issue or suggest improvements.
+Once you open a pull request, [CodeRabbitAI](https://coderabbit.ai/) will automatically review
+your code and leave comments.
+
+These comments may help identify potential issues such as logic errors, style inconsistencies,
+or opportunities for refactoring — giving you actionable suggestions before human review.
 
 ### Pull Request
 

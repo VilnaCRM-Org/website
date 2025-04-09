@@ -21,6 +21,7 @@ LHCI = pnpm lhci autorun                                           # Lighthouse 
 DEV_ENV     = $(DOCKER_COMPOSE) up -d
 BUILD       = $(NEXT_BUILD)
 LINT        = $(NEXT_BIN) lint
+
 # Executables
 EXEC_DEV	=  $(DOCKER_COMPOSE) exec dev
 PNPM      	= $(EXEC_DEV) pnpm
@@ -34,12 +35,16 @@ CI ?= 0
 ifeq ($(CI), 1)
     PNPM_EXEC = $(PNPM_BIN)
 	PLAYWRIGHT_EXEC = $(PNPM_EXEC)
+	LHCI_DESKTOP = $(LHCI) --config=lighthouserc.desktop.js
+    LHCI_MOBILE = $(LHCI) --config=lighthouserc.mobile.js
 	LOAD_TESTS_RUN = $(K6_BIN) run --summary-trend-stats="avg,min,med,max,p(95),p(99)" --out "web-dashboard=period=1s&export=./src/test/load/results/index.html" ./src/test/load/homepage.js
 	BUILD_K6_DOCKER =
 	DEV_ENV = $(NEXT_BIN) dev
 else
     PNPM_EXEC = $(EXEC_DEV)
 	PLAYWRIGHT_EXEC = $(DOCKER) exec website-playwright-1 pnpm run
+	LHCI_DESKTOP = $(NEXT_BUILD_CMD) && $(LHCI) --config=lighthouserc.desktop.js $(SERVE_CMD)
+    LHCI_MOBILE = $(NEXT_BUILD_CMD) && $(LHCI) --config=lighthouserc.mobile.js $(SERVE_CMD)
 	LOAD_TESTS_RUN = $(K6) --out 'web-dashboard=period=1s&export=/loadTests/results/homepage.html' /loadTests/homepage.js
 	BUILD_K6_DOCKER = $(MAKE) build-k6-docker
 	BUILD = $(EXEC_DEV) $(NEXT_BUILD)
@@ -128,22 +133,16 @@ load-tests: start-prod wait-for-prod ## This command executes load tests using K
 	$(LOAD_TESTS_RUN)
 
 lighthouse-desktop: start-prod wait-for-prod ## Full desktop audit (build + optimize + serve + lhci)
-	$(NEXT_BUILD_CMD) && $(LHCI) --config=lighthouserc.desktop.js $(SERVE_CMD)
+	$(LHCI_DESKTOP)
 
 lighthouse-mobile: start-prod wait-for-prod ## Full mobile audit (build + optimize + serve + lhci)
-	$(NEXT_BUILD_CMD) && $(LHCI) --config=lighthouserc.mobile.js $(SERVE_CMD)
-
-lighthouse-desktop-autorun: ## Run LHCI against running app (desktop config)
-	$(LHCI) --config=lighthouserc.desktop.js
-
-lighthouse-mobile-autorun: ## Run LHCI against running app (mobile config)
-	$(LHCI) --config=lighthouserc.mobile.js
+	$(LHCI_MOBILE)
 
 install: ## Install node modules according to the current pnpm-lock.yaml file
 	$(PNPM_BIN) install --frozen-lockfile
 
 update: ## Update node modules according to the current package.json file
-	$(PNPM_EXEC) update
+	$(PNPM_BIN) update
 
 down: ## Stop the docker hub
 	$(DOCKER_COMPOSE) down --remove-orphans
@@ -157,13 +156,11 @@ ps: ## Log to the docker container
 logs: ## Show all logs
 	@$(DOCKER_COMPOSE) logs --follow
 
-new-logs: ## Show live logs
+new-logs: ## Show live logs of the dev container
 	@$(DOCKER_COMPOSE) logs --tail=0 --follow
-
 
 stop: ## Stop docker
 	$(DOCKER_COMPOSE) stop
-
 
 app-serve: ## Serve the app on port 3001
 	npx serve -s out -p 3001

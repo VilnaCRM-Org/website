@@ -58,22 +58,22 @@ Run commands in the dev Docker container:
 
 ```bash
   make start - starts the application in dev container
-  make build - build the application
+  make build - builds the application
   make format - formats the codebase to ensure consistent style across all files.
   make lint-next - static next lint
   make lint-tsc - static TypeScript lint
   make lint-md - Lints all Markdown files (excluding CHANGELOG.md) using markdownlint
-  
-  
-  
-pnpm test:e2e - end-to-end testing
-pnpm test:e2e:local - open GUI with list of end-to-end test
-pnpm test:unit - unit testing
-pnpm lighthouse:desktop - lighthouse desktop testing
-pnpm lighthouse:mobile - lighthouse mobile tesitng
+  make lighthouse-desktop - lighthouse desktop testing
+  make lighthouse-mobile - lighthouse mobile tesitng
+
+No CI=1 needed for the following:
+  make test-e2e - runs end-to-end tests inside the prod container
+  make test-visual - runs visual tests inside the prod container
+  make test-unit - runs unit tests locally without using Docker
+  make update - updates dependencies
 ```
 
-💡 Tip: Tip: To run commands locally without Docker, please prefix each command with CI=1.
+💡 Tip: To run commands locally without Docker, please prefix each command with CI=1.
 Example:
 
 ```bash
