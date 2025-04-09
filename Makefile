@@ -120,7 +120,7 @@ load-tests: start-prod wait-for-prod ## This command executes load tests using K
 	$(BUILD_K6_DOCKER)
 	$(LOAD_TESTS_RUN)
 
-lighthouse-desktop:  ## Full desktop audit (build + optimize + serve + lhci)
+lighthouse-desktop: start-prod wait-for-prod ## Full desktop audit (build + optimize + serve + lhci)
 	$(NEXT_BUILD_CMD) && $(LHCI) --config=lighthouserc.desktop.js $(SERVE_CMD)
 
 lighthouse-mobile: start-prod wait-for-prod ## Full mobile audit (build + optimize + serve + lhci)
