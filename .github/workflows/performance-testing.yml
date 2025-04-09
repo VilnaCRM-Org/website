@@ -44,7 +44,7 @@ jobs:
         run: make wait-for-prod
 
       - name: Run desktop performance test
-        run: lighthouse-desktop-autorun
+        run: make lighthouse-desktop-autorun
 
       - name: Run mobile performance test
-        run: lighthouse-mobile-autorun
+        run: make lighthouse-mobile-autorun
