@@ -64,7 +64,7 @@ Run commands in the dev Docker container:
   make lint-tsc - static TypeScript lint
   make lint-md - Lints all Markdown files (excluding CHANGELOG.md) using markdownlint
   make lighthouse-desktop - lighthouse desktop testing
-  make lighthouse-mobile - lighthouse mobile tesitng
+  make lighthouse-mobile - lighthouse mobile testing
 
 No CI=1 needed for the following:
   make test-e2e - runs end-to-end tests inside the prod container
