@@ -18,9 +18,12 @@ TS_BIN = ./node_modules/.bin/tsc        # Path to TypeScript compiler binary
 SERVE_CMD = --collect.startServerCommand="npx serve out"           # Command for serving the built application during testing
 LHCI = pnpm lhci autorun                                           # Lighthouse CI command for performance testing
 
+DEV_ENV     = $(DOCKER_COMPOSE) up -d
+BUILD       = $(NEXT_BUILD)
+LINT        = $(NEXT_BIN) lint
 # Executables
-EXEC_NODEJS	=
-PNPM      	= $(EXEC_NODEJS) pnpm
+EXEC_DEV	=  $(DOCKER_COMPOSE) exec dev
+PNPM      	= $(EXEC_DEV) pnpm
 PNPM_RUN    = $(PNPM) run
 GIT         = git
 
@@ -30,16 +33,17 @@ CI ?= 0
 # Conditional PNPM_EXEC based on CI
 ifeq ($(CI), 1)
     PNPM_EXEC = $(PNPM_BIN)
-	EXEC_NODEJS	= $(DOCKER_COMPOSE) exec prod
 	PLAYWRIGHT_EXEC = $(PNPM_EXEC)
 	LOAD_TESTS_RUN = $(K6_BIN) run --summary-trend-stats="avg,min,med,max,p(95),p(99)" --out "web-dashboard=period=1s&export=./src/test/load/results/index.html" ./src/test/load/homepage.js
 	BUILD_K6_DOCKER =
+	DEV_ENV = $(NEXT_BIN) dev
 else
-    PNPM_EXEC = $(PNPM_RUN)
+    PNPM_EXEC = $(EXEC_DEV)
 	PLAYWRIGHT_EXEC = $(DOCKER) exec website-playwright-1 pnpm run
 	LOAD_TESTS_RUN = $(K6) --out 'web-dashboard=period=1s&export=/loadTests/results/homepage.html' /loadTests/homepage.js
 	BUILD_K6_DOCKER = $(MAKE) build-k6-docker
-	EXEC_NODEJS	= $(DOCKER_COMPOSE) exec dev
+	BUILD = $(EXEC_DEV) $(NEXT_BUILD)
+	LINT = $(EXEC_DEV) $(NEXT_BIN) lint
 endif
 
 # To Run in CI mode specify CI variable. Example: make lint-md CI=1
@@ -57,8 +61,11 @@ help:
 	@printf "\033[33mUsage:\033[0m\n  make [target] [arg=\"val\"...]\n\n\033[33mTargets:\033[0m\n"
 	@grep -E '^[-a-zA-Z0-9_\.\/]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[32m%-15s\033[0m %s\n", $$1, $$2}'
 
+start: ## Start the application
+	$(DEV_ENV)
+
 build: ## A tool build the project
-	$(PNPM_EXEC) $(NEXT_BUILD)
+	${BUILD}
 
 build-analyze:
 	ANALYZE=true $(NEXT_BUILD_CMD)
@@ -67,7 +74,7 @@ format: ## This command executes Prettier Formating
 	$(PNPM_EXEC) ./node_modules/.bin/prettier "**/*.{js,jsx,ts,tsx,json,css,scss,md}" --write --ignore-path .prettierignore
 
 lint-next: ## This command executes ESLint
-	$(NEXT_BIN) lint
+	$(LINT)
 
 lint-tsc: ## This command executes Typescript linter
 	$(PNPM_EXEC) $(TS_BIN) $(TSC_FLAGS)
@@ -138,14 +145,11 @@ install: ## Install node modules according to the current pnpm-lock.yaml file
 update: ## Update node modules according to the current package.json file
 	$(PNPM_EXEC) update
 
-up: ## Start the docker hub (Nodejs)
-	$(DOCKER_COMPOSE) up -d
-
 down: ## Stop the docker hub
 	$(DOCKER_COMPOSE) down --remove-orphans
 
 sh: ## Log to the docker container
-	@$(EXEC_NODEJS) sh
+	@$(EXEC_DEV) sh
 
 ps: ## Log to the docker container
 	@$(DOCKER_COMPOSE) ps
@@ -156,13 +160,10 @@ logs: ## Show all logs
 new-logs: ## Show live logs
 	@$(DOCKER_COMPOSE) logs --tail=0 --follow
 
-start: up ## Start docker
 
 stop: ## Stop docker
 	$(DOCKER_COMPOSE) stop
 
-dev: ## Launch the app in development mode with hot-reloading and debug support
-	$(NEXT_BIN) dev
 
 app-serve: ## Serve the app on port 3001
 	npx serve -s out -p 3001
@@ -171,4 +172,4 @@ app-start: ## Build and serve the production version
 	$(NEXT_BUILD_CMD) && make app-serve
 
 check-node-version: ## Check if the correct Node.js version is installed
-	$(EXEC_NODEJS) node checkNodeVersion.js
+	$(EXEC_DEV) node checkNodeVersion.js

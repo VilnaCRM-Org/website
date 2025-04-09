@@ -12,7 +12,9 @@
 - A lot of CI checks to ensure the highest code quality that can be
   (Security checks, Code style fixer, static linters, DeepScan, Snyk)
 - Configured testing tools: [Playwright](https://playwright.dev/), [Jest](https://jestjs.io/)
-- This template is based on [bulletproof-react](https://github.com/alan2207/bulletproof-react/tree/master)
+- This template is based on [bulletproof-react](https://github.com/alan2207/bulletproof-react/tree/master).
+There may be differences from the original implementation,
+as it has been adapted to fit specific project needs
 - Much more!
 
 ## Why you might need it
@@ -31,7 +33,7 @@ on the software availability and distribution.
 
 ### Minimal installation
 
-You can clone this repository locally or use Github functionality "Use this template"
+You can clone this repository locally or use GitHub functionality "Use this template"
 
 Install [node.js](https://nodejs.org/en/) 20 version or higher and [pnpm](https://pnpm.io/)
 
@@ -47,21 +49,27 @@ to have the same setup across dev, sandbox and production environments
 To see the list of possible commands through the make command
 
 ```bash
-make help
+  make help
 ```
 
 The list of possibilities if project installed locally
 
+Run commands in dev Docker container
+
 ```bash
-pnpm run dev - starts application
-pnpm run build - build application
-pnpm lint:next - static next lint
-pnpm lint:tsc - static TypeScript lint
-pnpm test:e2e - end-to-end testing
-pnpm test:e2e:local - open GUI with list of end-to-end test
-pnpm test:unit - unit testing
-pnpm lighthouse:desktop - lighthouse desktop testing
-pnpm lighthouse:mobile - lighthouse mobile tesitng
+  make start - starts the application in dev container
+  make build - build the application
+  make format = formats the codebase to ensure consistent style across all files.
+  make lint-next - static next lint
+  make lint-tsc - static TypeScript lint
+  make lint-md - Lints all Markdown files (excluding CHANGELOG.md) using markdownlint
+```
+
+💡 Tip: If you want to run commands locally without Docker, prefix each command with CI=1.
+Example:
+
+```bash
+  CI=1 make start
 ```
 
 ## Routing
