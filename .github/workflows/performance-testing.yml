@@ -36,8 +36,12 @@ jobs:
           steps.cache-pnpm-dependencies.outputs.cache-hit != 'true' ||
           steps.cache-pnpm-packages.outputs.cache-hit != 'true'
 
+
+      - name: Run start prod
+        run: make start-prod
+
+      - name: Run start prod
+        run: make wait-for-prod
+
       - name: Run desktop performance test
         run: make lighthouse-desktop
-
-      - name: Run mobile performance test
-        run: make lighthouse-mobile
