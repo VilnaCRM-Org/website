@@ -10,7 +10,7 @@
 
 - A modern JavaScript-based stack for services: [React](https://react.dev/), [Next.js](https://nextjs.org/).
 - Extensive CI checks (including security checks, code style fixing, static linters, DeepScan, and Snyk)
-ensure the highest code quality.
+  ensure the highest code quality.
 - Configured testing tools: [Playwright](https://playwright.dev/), [Jest](https://jestjs.io/).
 - This template is based on [bulletproof-react](https://github.com/alan2207/bulletproof-react/tree/master),
   but has been adapted to meet the specific needs of this project and may differ from the original implementation.
@@ -32,44 +32,44 @@ on the software availability and distribution.
 
 ### Minimal installation
 
-Clone the repository locally or use GitHub’s `Use this template` feature
+Clone the repository locally or use GitHub’s `Use this template` feature.
 
-Install [Node.js](https://nodejs.org/en/) version 20 or higher
+Install [Node.js](https://nodejs.org/en/) version 20 or higher.
 
-Use `make install` to install all dependencies and `make start` to run the application
+Use `make install` to install all dependencies and `make start` to run the application.
 
 ## Usage
 
 We recommend to install
 [docker](https://docs.docker.com/engine/install/) and
 [docker compose](https://docs.docker.com/compose/install/)
-to have the same setup across dev, sandbox and production environments
+to have the same setup across dev, sandbox and production environments.
 
-To see the list of available commands, run the following make command:
+To view all available commands, run `make help`:
 
 ```bash
   make help
 ```
 
-The list of possibilities if project installed locally
+The list of possibilities if project installed locally.
 
 Run commands in the dev Docker container:
 
 ```bash
-  make start: starts the application in dev container
+  make start: starts the application in the dev container
   make build: builds the application
   make format: formats the codebase to ensure consistent style across all files
-  make lint-next: static next lint
-  make lint-tsc: static TypeScript lint
-  make lint-md: Lints all Markdown files (excluding CHANGELOG.md) using markdownlint
-  make lighthouse-desktop: lighthouse desktop testing
-  make lighthouse-mobile: lighthouse mobile testing
+  make lint-next: lints the codebase using Next.js rules
+  make lint-tsc: runs static type checking with TypeScript
+  make lint-md: lints all Markdown files (excluding CHANGELOG.md) using markdownlint
+  make lighthouse-desktop: runs Lighthouse audits in desktop mode
+  make lighthouse-mobile: runs Lighthouse audits in mobile mode
 
 Note: The following commands do not require the `CI=1` prefix:
   make test-e2e: runs end-to-end tests inside the prod container
   make test-visual: runs visual tests inside the prod container
   make test-unit: runs unit tests locally without using Docker
-  make update: updates dependencies
+  make update: updates project dependencies
   make git-hooks-install: installs Husky Git hooks locally
 ```
 
