@@ -33,11 +33,11 @@ on the software availability and distribution.
 
 ### Minimal installation
 
-You can clone this repository locally or use GitHub functionality "Use this template"
+You can clone this repository locally or use GitHub's `Use this template` feature
 
-Install [Node.js](https://nodejs.org/en/) 20 version or higher and [make](https://phoenixnap.com/kb/linux-make-command#:~:text=The%20make%20command%20compiles%20different,dependencies%20required%20for%20the%20project.)
+Install [Node.js](https://nodejs.org/en/) 20 version or higher
 
-Use make install for installing all dependencies and make start for running application
+Use `make install` to install all dependencies and `make start` to run the application
 
 ## Usage
 
@@ -57,21 +57,21 @@ The list of possibilities if project installed locally
 Run commands in the dev Docker container:
 
 ```bash
-  make start - starts the application in dev container
-  make build - builds the application
-  make format - formats the codebase to ensure consistent style across all files
-  make lint-next - static next lint
-  make lint-tsc - static TypeScript lint
-  make lint-md - Lints all Markdown files (excluding CHANGELOG.md) using markdownlint
-  make lighthouse-desktop - lighthouse desktop testing
-  make lighthouse-mobile - lighthouse mobile testing
+  make start: starts the application in dev container
+  make build: builds the application
+  make format: formats the codebase to ensure consistent style across all files
+  make lint-next: static next lint
+  make lint-tsc: static TypeScript lint
+  make lint-md: Lints all Markdown files (excluding CHANGELOG.md) using markdownlint
+  make lighthouse-desktop: lighthouse desktop testing
+  make lighthouse-mobile: lighthouse mobile testing
 
-No CI=1 needed for the following:
-  make test-e2e - runs end-to-end tests inside the prod container
-  make test-visual - runs visual tests inside the prod container
-  make test-unit - runs unit tests locally without using Docker
-  make update - updates dependencies
-  make git-hooks-install - installs Husky Git hooks locally
+Note: The following commands do not require the `CI=1` prefix:
+  make test-e2e: runs end-to-end tests inside the prod container
+  make test-visual: runs visual tests inside the prod container
+  make test-unit: runs unit tests locally without using Docker
+  make update: updates dependencies
+  make git-hooks-install: installs Husky Git hooks locally
 ```
 
 💡 Tip: To run commands locally without Docker, please prefix each command with CI=1.
