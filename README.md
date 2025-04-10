@@ -31,13 +31,13 @@ This software is distributed under the
 Please read [LICENSE](https://github.com/VilnaCRM-Org/frontend-ssr-template/blob/main/LICENSE) for information
 on the software availability and distribution.
 
-### Minimal installation 
+### Minimal installation
 
 You can clone this repository locally or use GitHub functionality "Use this template"
 
-Install [node.js](https://nodejs.org/en/) 20 version or higher and [make](https://phoenixnap.com/kb/linux-make-command#:~:text=The%20make%20command%20compiles%20different,dependencies%20required%20for%20the%20project.)
+Install [Node.js](https://nodejs.org/en/) 20 version or higher and [make](https://phoenixnap.com/kb/linux-make-command#:~:text=The%20make%20command%20compiles%20different,dependencies%20required%20for%20the%20project.)
 
-Use `make install` for installing all dependencies and `make start` for running application
+Use make install for installing all dependencies and make start for running application
 
 ## Usage
 
@@ -59,7 +59,7 @@ Run commands in the dev Docker container:
 ```bash
   make start - starts the application in dev container
   make build - builds the application
-  make format - formats the codebase to ensure consistent style across all files.
+  make format - formats the codebase to ensure consistent style across all files
   make lint-next - static next lint
   make lint-tsc - static TypeScript lint
   make lint-md - Lints all Markdown files (excluding CHANGELOG.md) using markdownlint
