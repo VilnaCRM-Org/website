@@ -8,13 +8,12 @@
 
 ## Possibilities
 
-- Modern JavaScript stack for services: [React](https://react.dev/), [Next.js](https://nextjs.org/).
-- A lot of CI checks to ensure the highest code quality that can be
-  (Security checks, Code style fixer, static linters, DeepScan, Snyk).
+- A modern JavaScript-based stack for services: [React](https://react.dev/), [Next.js](https://nextjs.org/).
+- Extensive CI checks (including security checks, code style fixing, static linters, DeepScan, and Snyk)
+ensure the highest code quality.
 - Configured testing tools: [Playwright](https://playwright.dev/), [Jest](https://jestjs.io/).
-- This template is based on [bulletproof-react](https://github.com/alan2207/bulletproof-react/tree/master).
-  There may be differences from the original implementation,
-  as it has been adapted to fit specific project needs.
+- This template is based on [bulletproof-react](https://github.com/alan2207/bulletproof-react/tree/master),
+  but has been adapted to meet the specific needs of this project and may differ from the original implementation.
 - Much more!
 
 ## Why you might need it
@@ -35,7 +34,7 @@ on the software availability and distribution.
 
 Clone the repository locally or use GitHub’s `Use this template` feature
 
-Install [Node.js](https://nodejs.org/en/) 20 version or higher
+Install [Node.js](https://nodejs.org/en/) version 20 or higher
 
 Use `make install` to install all dependencies and `make start` to run the application
 
