@@ -1,5 +1,6 @@
-import React from 'react';
 import { Meta, StoryObj } from '@storybook/react';
+import React from 'react';
+
 import ForWhoSection from './ForWhoSection';
 
 const meta: Meta<typeof ForWhoSection> = {
