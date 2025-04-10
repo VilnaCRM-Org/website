@@ -8,8 +8,6 @@ on:
 jobs:
   performance:
     runs-on: ubuntu-latest
-    env:
-      CI: 1
 
     steps:
       - name: Checkout code

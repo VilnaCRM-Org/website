@@ -37,16 +37,16 @@ CI ?= 0
 ifeq ($(CI), 1)
     PNPM_EXEC = $(PNPM_BIN)
 	PLAYWRIGHT_EXEC = $(PNPM_EXEC)
-	LHCI_DESKTOP = $(LHCI) --config=lighthouserc.desktop.js
-    LHCI_MOBILE = $(LHCI) --config=lighthouserc.mobile.js
+	LHCI_DESKTOP = $(NEXT_BUILD_CMD) && $(LHCI) --config=lighthouserc.desktop.js $(SERVE_CMD)
+    LHCI_MOBILE = $(NEXT_BUILD_CMD) && $(LHCI) --config=lighthouserc.mobile.js $(SERVE_CMD)
 	LOAD_TESTS_RUN = $(K6_BIN) run --summary-trend-stats="avg,min,med,max,p(95),p(99)" --out "web-dashboard=period=1s&export=./src/test/load/results/index.html" ./src/test/load/homepage.js
 	BUILD_K6_DOCKER =
 	DEV_ENV = $(NEXT_BIN) dev
 else
     PNPM_EXEC = $(EXEC_DEV)
 	PLAYWRIGHT_EXEC = $(DOCKER) exec website-playwright-1 pnpm run
-	LHCI_DESKTOP = $(NEXT_BUILD_CMD) && $(LHCI) --config=lighthouserc.desktop.js $(SERVE_CMD)
-    LHCI_MOBILE = $(NEXT_BUILD_CMD) && $(LHCI) --config=lighthouserc.mobile.js $(SERVE_CMD)
+	LHCI_DESKTOP = make start-prod && make wait-for-prod && $(LHCI) --config=lighthouserc.desktop.js
+    LHCI_MOBILE = make start-prod && make wait-for-prod && $(LHCI) --config=lighthouserc.mobile.js
 	LOAD_TESTS_RUN = $(K6) --out 'web-dashboard=period=1s&export=/loadTests/results/homepage.html' /loadTests/homepage.js
 	BUILD_K6_DOCKER = $(MAKE) build-k6-docker
 	BUILD = $(EXEC_DEV) $(NEXT_BUILD)
@@ -135,10 +135,11 @@ load-tests: start-prod wait-for-prod ## This command executes load tests using K
 	$(BUILD_K6_DOCKER)
 	$(LOAD_TESTS_RUN)
 
-lighthouse-desktop: start-prod wait-for-prod ## Full desktop audit (build + optimize + serve + lhci)
+
+lighthouse-desktop: ## Full desktop audit (build + optimize + serve + lhci)
 	$(LHCI_DESKTOP)
 
-lighthouse-mobile: start-prod wait-for-prod ## Full mobile audit (build + optimize + serve + lhci)
+lighthouse-mobile: ## Full mobile audit (build + optimize + serve + lhci)
 	$(LHCI_MOBILE)
 
 install: ## Install node modules according to the current pnpm-lock.yaml file
