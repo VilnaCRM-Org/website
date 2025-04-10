@@ -135,10 +135,10 @@ load-tests: start-prod wait-for-prod ## This command executes load tests using K
 	$(BUILD_K6_DOCKER)
 	$(LOAD_TESTS_RUN)
 
-lighthouse-desktop: ## Full desktop audit (build + optimize + serve + lhci)
+lighthouse-desktop: ## Run a Lighthouse audit using the desktop configuration
 	$(LHCI_DESKTOP)
 
-lighthouse-mobile: ## Full mobile audit (build + optimize + serve + lhci)
+lighthouse-mobile: ## Run a Lighthouse audit using the mobile configuration
 	$(LHCI_MOBILE)
 
 install: ## Install node modules according to the current pnpm-lock.yaml file

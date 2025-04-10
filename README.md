@@ -35,9 +35,9 @@ on the software availability and distribution.
 
 You can clone this repository locally or use GitHub functionality "Use this template"
 
-Install [node.js](https://nodejs.org/en/) 20 version or higher and [pnpm](https://pnpm.io/)
+Install [node.js](https://nodejs.org/en/) 20 version or higher and [make](https://phoenixnap.com/kb/linux-make-command#:~:text=The%20make%20command%20compiles%20different,dependencies%20required%20for%20the%20project.)
 
-Use pnpm install for installing all dependencies and pnpm run dev for running application
+Use make install for installing all dependencies and make start  for running application
 
 ## Usage
 
