@@ -91,7 +91,7 @@ lint-md: ## This command executes Markdown linter
 	$(PNPM_CMD) ./node_modules/.bin/markdownlint -i CHANGELOG.md **/*.md
 
 git-hooks-install: ## Install git hooks
-	$(PNPM_EXEC) husky install
+	 $(PNPM_BIN) husky install
 
 storybook-start: ## Start Storybook UI. Storybook is a frontend workshop for building UI components and pages in isolation.
 	$(PNPM_EXEC) ./node_modules/.bin/storybook dev -p 6006
@@ -134,7 +134,6 @@ build-k6-docker: ## This command build K6 image
 load-tests: start-prod wait-for-prod ## This command executes load tests using K6 library.
 	$(BUILD_K6_DOCKER)
 	$(LOAD_TESTS_RUN)
-
 
 lighthouse-desktop: ## Full desktop audit (build + optimize + serve + lhci)
 	$(LHCI_DESKTOP)

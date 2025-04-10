@@ -71,6 +71,7 @@ No CI=1 needed for the following:
   make test-visual - runs visual tests inside the prod container
   make test-unit - runs unit tests locally without using Docker
   make update - updates dependencies
+  make git-hooks-install - installs Husky Git hooks locally
 ```
 
 💡 Tip: To run commands locally without Docker, please prefix each command with CI=1.
