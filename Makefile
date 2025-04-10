@@ -9,21 +9,23 @@ DOCKER			= docker
 DOCKER_COMPOSE	= docker compose
 MAKE 			= make
 
-NEXT_BIN = ./node_modules/.bin/next     # Path to Next.js binary for direct command execution
-NEXT_BUILD = $(NEXT_BIN) build          # Command to build Next.js application
-IMG_OPTIMIZE = ./node_modules/.bin/next-export-optimize-images   # Tool for optimizing exported images
-NEXT_BUILD_CMD = $(NEXT_BUILD) && $(IMG_OPTIMIZE)  # Full build command including image optimization
-TS_BIN = ./node_modules/.bin/tsc        # Path to TypeScript compiler binary
+NEXT_BIN = ./node_modules/.bin/next
+NEXT_BUILD = $(NEXT_BIN) build
+IMG_OPTIMIZE = ./node_modules/.bin/next-export-optimize-images
+NEXT_BUILD_CMD = $(NEXT_BUILD) && $(IMG_OPTIMIZE)
+TS_BIN = ./node_modules/.bin/tsc
 
-SERVE_CMD = --collect.startServerCommand="npx serve out"           # Command for serving the built application during testing
-LHCI = pnpm lhci autorun                                           # Lighthouse CI command for performance testing
+SERVE_CMD = --collect.startServerCommand="npx serve out"
+LHCI = pnpm lhci autorun
 
 DEV_ENV     = $(DOCKER_COMPOSE) up -d
+EXEC_DEV	= $(DOCKER_COMPOSE) exec dev
+PNPM_CMD    = $(PNPM_BIN)
 BUILD       = $(NEXT_BUILD)
-LINT        = $(NEXT_BIN) lint
+EXEC_DEV_TTYLESS =
+
 
 # Executables
-EXEC_DEV	=  $(DOCKER_COMPOSE) exec dev
 PNPM      	= $(EXEC_DEV) pnpm
 PNPM_RUN    = $(PNPM) run
 GIT         = git
@@ -48,7 +50,8 @@ else
 	LOAD_TESTS_RUN = $(K6) --out 'web-dashboard=period=1s&export=/loadTests/results/homepage.html' /loadTests/homepage.js
 	BUILD_K6_DOCKER = $(MAKE) build-k6-docker
 	BUILD = $(EXEC_DEV) $(NEXT_BUILD)
-	LINT = $(EXEC_DEV) $(NEXT_BIN) lint
+	EXEC_DEV_TTYLESS = $(DOCKER_COMPOSE) exec -T dev
+	PNPM_CMD = $(DOCKER_COMPOSE) exec -T dev
 endif
 
 # To Run in CI mode specify CI variable. Example: make lint-md CI=1
@@ -76,16 +79,16 @@ build-analyze:
 	ANALYZE=true $(NEXT_BUILD_CMD)
 
 format: ## This command executes Prettier Formating
-	$(PNPM_EXEC) ./node_modules/.bin/prettier "**/*.{js,jsx,ts,tsx,json,css,scss,md}" --write --ignore-path .prettierignore
+	$(PNPM_CMD) ./node_modules/.bin/prettier "**/*.{js,jsx,ts,tsx,json,css,scss,md}" --write --ignore-path .prettierignore
 
 lint-next: ## This command executes ESLint
-	$(LINT)
+	$(EXEC_DEV_TTYLESS) $(NEXT_BIN) lint
 
 lint-tsc: ## This command executes Typescript linter
-	$(PNPM_EXEC) $(TS_BIN) $(TSC_FLAGS)
+	$(PNPM_CMD) $(TS_BIN) $(TSC_FLAGS)
 
 lint-md: ## This command executes Markdown linter
-	$(PNPM_EXEC) ./node_modules/.bin/markdownlint -i CHANGELOG.md **/*.md
+	$(PNPM_CMD) ./node_modules/.bin/markdownlint -i CHANGELOG.md **/*.md
 
 git-hooks-install: ## Install git hooks
 	$(PNPM_EXEC) husky install
@@ -162,11 +165,6 @@ new-logs: ## Show live logs of the dev container
 stop: ## Stop docker
 	$(DOCKER_COMPOSE) stop
 
-app-serve: ## Serve the app on port 3001
-	npx serve -s out -p 3001
-
-app-start: ## Build and serve the production version
-	$(NEXT_BUILD_CMD) && make app-serve
 
 check-node-version: ## Check if the correct Node.js version is installed
 	$(EXEC_DEV) node checkNodeVersion.js

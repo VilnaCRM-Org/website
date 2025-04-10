@@ -7,7 +7,7 @@ WORKDIR /app
 
 COPY . .
 
-RUN make install
+RUN pnpm install --frozen-lockfile
 
 EXPOSE 3001
 

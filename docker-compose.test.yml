@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: make app-start
+    command: sh -c "next build && next-export-optimize-images && npx serve -s out -p 3001"
     restart: unless-stopped
     volumes:
       - .:/app

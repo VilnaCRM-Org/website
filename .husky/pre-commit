@@ -1,7 +1,6 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
-export CI=1
 
 make format
 make lint-next

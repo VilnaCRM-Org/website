@@ -12,6 +12,6 @@ WORKDIR /app
 
 COPY . .
 
-RUN make install
+RUN pnpm install --frozen-lockfile
 
 CMD ["tail", "-f", "/dev/null"]

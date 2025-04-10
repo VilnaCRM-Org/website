@@ -1,11 +1,10 @@
 services:
   dev:
     build: .
-    command: make start CI=1
+    command: pnpm exec next dev
     restart: unless-stopped
     volumes:
       - .:/app
-      - /app/node_modules
     ports:
       - '3000:3000'
     environment:
