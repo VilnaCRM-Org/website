@@ -47,6 +47,7 @@ export default {
   // success box
   contentBox: {
     zIndex: 3,
+    display: 'flex',
   },
 
   successTopImgBox: {

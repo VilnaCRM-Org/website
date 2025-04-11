@@ -12,11 +12,11 @@ import {
   NotificationComponentProps,
   NotificationComponentType,
   NotificationControlProps,
-  NotificationSuccessProps,
+  NotificationToggleProps,
 } from './types';
 
 export const notificationComponents: NotificationComponentMap = {
-  success: ({ setIsOpen }: NotificationSuccessProps) => (
+  success: ({ setIsOpen }: NotificationToggleProps) => (
     <NotificationSuccess setIsOpen={setIsOpen} />
   ),
   error: ({ setIsOpen, onRetry }: NotificationComponentProps) => (
