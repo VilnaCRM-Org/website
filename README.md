@@ -40,7 +40,7 @@ Use `make install` to install all dependencies and `make start` to run the appli
 
 ## Usage
 
-We recommend to install
+We recommend installing
 [docker](https://docs.docker.com/engine/install/) and
 [docker compose](https://docs.docker.com/compose/install/)
 to have the same setup across dev, sandbox and production environments.
@@ -51,7 +51,7 @@ To view all available commands, run `make help`:
   make help
 ```
 
-The list of possibilities if project installed locally.
+The following commands are available when the project is installed locally.
 
 Run commands in the dev Docker container:
 
@@ -61,16 +61,16 @@ Run commands in the dev Docker container:
   make format: formats the codebase to ensure consistent style across all files
   make lint-next: lints the codebase using Next.js rules
   make lint-tsc: runs static type checking with TypeScript
-  make lint-md: lints all Markdown files (excluding CHANGELOG.md) using markdownlint
-  make lighthouse-desktop: runs Lighthouse audits in desktop mode
-  make lighthouse-mobile: runs Lighthouse audits in mobile mode
+  make lint-md: lints all markdown files (excluding CHANGELOG.md) using markdownlint
+  make lighthouse-desktop: runs lighthouse audits in desktop mode
+  make lighthouse-mobile: runs lighthouse audits in mobile mode
 
 Note: The following commands do not require the `CI=1` prefix:
   make test-e2e: runs end-to-end tests inside the prod container
   make test-visual: runs visual tests inside the prod container
   make test-unit: runs unit tests locally without using Docker
   make update: updates project dependencies
-  make git-hooks-install: installs Husky Git hooks locally
+  make git-hooks-install: installs husky Git hooks locally
 ```
 
 💡 Tip: To run commands locally without Docker, please prefix each command with CI=1.
