@@ -7,9 +7,9 @@ import { UiButton } from '@/components';
 import UiTypography from '../../../../components/UiTypography';
 
 import styles from './styles';
-import { NotificationSuccessProps } from './types';
+import { NotificationToggleProps } from './types';
 
-function NotificationFallback({ setIsOpen }: NotificationSuccessProps): React.ReactElement {
+function NotificationFallback({ setIsOpen }: NotificationToggleProps): React.ReactElement {
   const { t } = useTranslation();
   const onHandleClose: () => void = (): void => setIsOpen(false);
   return (
@@ -26,7 +26,7 @@ function NotificationFallback({ setIsOpen }: NotificationSuccessProps): React.Re
         onClick={onHandleClose}
       >
         <Typography component="span" sx={styles.messageButtonText}>
-          {t('notifications.success.button')}
+          {t('notifications.unknown.button')}
         </Typography>
       </UiButton>
     </>

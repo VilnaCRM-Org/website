@@ -10,9 +10,9 @@ import Confetti from '../../assets/svg/notification/confetti.svg';
 import Settings from '../../assets/svg/notification/settings.svg';
 
 import styles from './styles';
-import { NotificationSuccessProps } from './types';
+import { NotificationToggleProps } from './types';
 
-function NotificationSuccess({ setIsOpen }: NotificationSuccessProps): React.ReactElement {
+function NotificationSuccess({ setIsOpen }: NotificationToggleProps): React.ReactElement {
   const { t } = useTranslation();
   const handleClick: () => void = (): void => setIsOpen(false);
 

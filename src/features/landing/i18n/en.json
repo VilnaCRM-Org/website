@@ -176,7 +176,7 @@
         "error": "Red triangle with a warning about an error."
       }
     },
-    "unknown": { "title": "Unknown notification type" }
+    "unknown": { "title": "Unknown notification type", "button": "Go back" }
   },
   "footer": {
     "logo_alt": "Vilna logo",
