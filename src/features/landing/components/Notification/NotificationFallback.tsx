@@ -9,15 +9,14 @@ import UiTypography from '../../../../components/UiTypography';
 import styles from './styles';
 import { NotificationSuccessProps } from './types';
 
-
 function NotificationFallback({ setIsOpen }: NotificationSuccessProps): React.ReactElement {
   const { t } = useTranslation();
   const onHandleClose: () => void = (): void => setIsOpen(false);
   return (
     <>
-    <UiTypography component="h4" sx={styles.messageTitle} role="alert" aria-live="polite">
-      {t('notifications.unknown.title')}
-    </UiTypography>
+      <UiTypography component="h4" sx={styles.messageTitle} role="alert" aria-live="polite">
+        {t('notifications.unknown.title')}
+      </UiTypography>
       <UiButton
         sx={styles.messageButton}
         variant="contained"
