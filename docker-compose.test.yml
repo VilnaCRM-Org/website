@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: pnpm run start-prod
+    command: sh -c "./node_modules/.bin/next build && ./node_modules/.bin/next-export-optimize-images && ./node_modules/.bin/serve -s out -p 3001"
     restart: unless-stopped
     volumes:
       - .:/app
@@ -28,8 +28,6 @@ services:
       context: .
       dockerfile: Apollo.Dockerfile
     restart: unless-stopped
-    volumes:
-      - .:/app
     ports:
       - '4000:4000'
 

@@ -3,7 +3,7 @@ require('dotenv').config();
 module.exports = {
   ci: {
     collect: {
-      url: `${process.env.NEXT_PUBLIC_DEVELOPMENT_API_URL}`,
+      url: `${process.env.NEXT_PUBLIC_PROD_HOST_API_URL}`,
       psiStrategy: 'desktop',
       settings: {
         preset: 'desktop',

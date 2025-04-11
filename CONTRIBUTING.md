@@ -69,6 +69,22 @@ Don't forget to self-review to speed up the review process:zap:.
 
 Our commits are based on [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/)
 
+### 💡 Encountering Issues?
+
+If you're unsure about how to proceed with your changes, you have two options:
+
+- **Contact your team lead** for guidance.
+- **Push your changes** to a branch and **open a pull request** — this will trigger
+  an automated code review.
+
+### 🤖 Automatic Code Review
+
+Once you open a pull request, [CodeRabbitAI](https://coderabbit.ai/) will automatically review
+your code and leave comments.
+
+These comments may help identify potential issues such as logic errors, style inconsistencies,
+or opportunities for refactoring — giving you actionable suggestions before human review.
+
 ### Pull Request
 
 When you're finished with the changes, create a pull request, also known as a PR.

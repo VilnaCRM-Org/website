@@ -8,11 +8,12 @@
 
 ## Possibilities
 
-- Modern JavaScript stack for services: [React](https://react.dev/), [Next.js](https://nextjs.org/)
-- A lot of CI checks to ensure the highest code quality that can be
-  (Security checks, Code style fixer, static linters, DeepScan, Snyk)
-- Configured testing tools: [Playwright](https://playwright.dev/), [Jest](https://jestjs.io/)
-- This template is based on [bulletproof-react](https://github.com/alan2207/bulletproof-react/tree/master)
+- A modern JavaScript-based stack for services: [React](https://react.dev/), [Next.js](https://nextjs.org/).
+- Extensive CI checks (including security checks, code style fixing, static linters, DeepScan, and Snyk)
+  ensure the highest code quality.
+- Configured testing tools: [Playwright](https://playwright.dev/), [Jest](https://jestjs.io/).
+- This template is based on [bulletproof-react](https://github.com/alan2207/bulletproof-react/tree/master),
+  but has been adapted to meet the specific needs of this project and may differ from the original implementation.
 - Much more!
 
 ## Why you might need it
@@ -31,37 +32,52 @@ on the software availability and distribution.
 
 ### Minimal installation
 
-You can clone this repository locally or use Github functionality "Use this template"
+Clone the repository locally or use GitHub’s `Use this template` feature.
 
-Install [node.js](https://nodejs.org/en/) 20 version or higher and [pnpm](https://pnpm.io/)
+Install [Node.js](https://nodejs.org/en/) version 20 or higher.
 
-Use pnpm install for installing all dependencies and pnpm run dev for running application
+Use `make install` to install all dependencies and `make start` to run the application.
 
 ## Usage
 
-We recommend to install
+We recommend installing
 [docker](https://docs.docker.com/engine/install/) and
 [docker compose](https://docs.docker.com/compose/install/)
-to have the same setup across dev, sandbox and production environments
+to have the same setup across dev, sandbox and production environments.
 
-To see the list of possible commands throught the make command
+To view all available commands, run `make help`:
 
 ```bash
-make help
+  make help
 ```
 
-The list of possibilities if project installed locally
+The following commands are available when the project is installed locally.
+
+Run commands in the dev Docker container:
 
 ```bash
-pnpm run dev - starts application
-pnpm run build - build application
-pnpm lint:next - static next lint
-pnpm lint:tsc - static TypeScript lint
-pnpm test:e2e - end-to-end testing
-pnpm test:e2e:local - open GUI with list of end-to-end test
-pnpm test:unit - unit testing
-pnpm lighthouse:desktop - lighthouse desktop testing
-pnpm lighthouse:mobile - lighthouse mobile tesitng
+  make start: starts the application in the dev container
+  make build: builds the application
+  make format: formats the codebase to ensure consistent style across all files
+  make lint-next: lints the codebase using Next.js rules
+  make lint-tsc: runs static type checking with TypeScript
+  make lint-md: lints all markdown files (excluding CHANGELOG.md) using markdownlint
+  make lighthouse-desktop: runs lighthouse audits in desktop mode
+  make lighthouse-mobile: runs lighthouse audits in mobile mode
+
+Note: The following commands do not require the `CI=1` prefix:
+  make test-e2e: runs end-to-end tests inside the prod container
+  make test-visual: runs visual tests inside the prod container
+  make test-unit: runs unit tests locally without using Docker
+  make update: updates project dependencies
+  make git-hooks-install: installs husky Git hooks locally
+```
+
+💡 Tip: To run commands locally without Docker, please prefix each command with CI=1.
+Example:
+
+```bash
+  CI=1 make start
 ```
 
 ## Routing
