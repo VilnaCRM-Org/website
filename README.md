@@ -54,6 +54,7 @@ To view all available commands, run `make help`:
 The following commands are available when the project is installed locally.
 
 General
+
 ```bash
   make start: starts the application
   make build: builds the application
@@ -64,6 +65,7 @@ General
 ```
 
 Linting & Formatting
+
 ```bash
   make lint-next: lints the codebase using Next.js rules
   make lint-tsc: runs static type checking with TypeScript
@@ -71,6 +73,7 @@ Linting & Formatting
 ```
 
 Testing
+
 ```bash
   make test-unit: runs unit tests locally without using Docker
   make test-unit-all: runs unit tests for both client and server environments
@@ -84,29 +87,34 @@ Testing
 ```
 
 Lighthouse
+
 ```bash
   make lighthouse-desktop: runs Lighthouse audits in desktop mode
   make lighthouse-mobile: runs Lighthouse audits in mobile mode
 ```
 
 Git
+
 ```bash
   make git-hooks-install: installs husky Git hooks locally
 ```
 
 Storybook
+
 ```bash
   make storybook-start: starts Storybook UI
   make storybook-build: builds Storybook UI
 ```
 
 Load Testing
+
 ```bash
   make load-tests: executes load tests using the K6 library
   make build-k6-docker: builds a Docker image for K6
 ```
 
 Docker
+
 ```bash
   make down: stops the Docker hub
   make stop: stops Docker
@@ -119,12 +127,13 @@ Docker
 ```
 
 Note: The following commands do not require the `CI=1` prefix:
+
 ```bash
   make test-e2e: runs end-to-end tests inside the prod container
   make test-visual: runs visual tests inside the prod container
   make test-e2e-ui: runs end-to-end tests with UI inside the prod container
   make test-visual-ui: runs visual tests with UI inside the prod container
-  
+
   make git-hooks-install: installs husky Git hooks locally
 ```
 
