@@ -30,5 +30,4 @@ export interface AuthFormProps {
   formValidationErrors: FieldErrors<RegisterItem>;
   serverErrorMessage: string;
   onSubmit: (data: RegisterItem) => Promise<void>;
-
 }
