@@ -53,23 +53,78 @@ To view all available commands, run `make help`:
 
 The following commands are available when the project is installed locally.
 
-Run commands in the dev Docker container:
-
+General
 ```bash
-  make start: starts the application in the dev container
+  make start: starts the application
   make build: builds the application
   make format: formats the codebase to ensure consistent style across all files
+  make update: updates node modules according to the current package.json file
+  make install: installs node modules according to the current pnpm-lock.yaml file
+  make check-node-version: checks if the correct Node.js version is installed
+```
+
+Linting & Formatting
+```bash
   make lint-next: lints the codebase using Next.js rules
   make lint-tsc: runs static type checking with TypeScript
   make lint-md: lints all markdown files (excluding CHANGELOG.md) using markdownlint
-  make lighthouse-desktop: runs lighthouse audits in desktop mode
-  make lighthouse-mobile: runs lighthouse audits in mobile mode
+```
+
+Testing
+```bash
+  make test-unit: runs unit tests locally without using Docker
+  make test-unit-all: runs unit tests for both client and server environments
+  make test-unit-client: runs unit tests for the client using Jest
+  make test-unit-server: runs unit tests for the server using Jest
+  make test-memory-leak: runs memory leak tests using Memlab
+  make test-e2e: runs end-to-end tests inside the prod container
+  make test-e2e-ui: runs end-to-end tests with UI inside the prod container
+  make test-visual: runs visual tests inside the prod container
+  make test-visual-ui: runs visual tests with UI inside the prod container
+```
+
+Lighthouse
+```bash
+  make lighthouse-desktop: runs Lighthouse audits in desktop mode
+  make lighthouse-mobile: runs Lighthouse audits in mobile mode
+```
+
+Git
+```bash
+  make git-hooks-install: installs husky Git hooks locally
+```
+
+Storybook
+```bash
+  make storybook-start: starts Storybook UI
+  make storybook-build: builds Storybook UI
+```
+
+Load Testing
+```bash
+  make load-tests: executes load tests using the K6 library
+  make build-k6-docker: builds a Docker image for K6
+```
+
+Docker
+```bash
+  make down: stops the Docker hub
+  make stop: stops Docker
+  make start-prod: builds image and starts the container in production mode
+  make ps: logs into the Docker container
+  make sh: logs into the Docker container
+  make logs: shows all logs
+  make new-logs: shows live logs of the dev container
+  make wait-for-prod: waits for the prod service to be ready on port 3001
+```
 
 Note: The following commands do not require the `CI=1` prefix:
+```bash
   make test-e2e: runs end-to-end tests inside the prod container
   make test-visual: runs visual tests inside the prod container
-  make test-unit: runs unit tests locally without using Docker
-  make update: updates project dependencies
+  make test-e2e-ui: runs end-to-end tests with UI inside the prod container
+  make test-visual-ui: runs visual tests with UI inside the prod container
+  
   make git-hooks-install: installs husky Git hooks locally
 ```
 

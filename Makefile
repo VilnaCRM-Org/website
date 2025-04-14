@@ -23,7 +23,8 @@ EXEC_DEV	= $(DOCKER_COMPOSE) exec dev
 PNPM_CMD    = $(PNPM_BIN)
 BUILD       = $(NEXT_BUILD)
 EXEC_DEV_TTYLESS =
-
+UNIT_TESTS =
+PLAYWRIGHT_TEST = $(DOCKER_COMPOSE) -f docker-compose.test.yml exec playwright pnpm exec playwright test
 
 # Executables
 PNPM      	= $(EXEC_DEV) pnpm
@@ -52,6 +53,7 @@ else
 	BUILD = $(EXEC_DEV) $(NEXT_BUILD)
 	EXEC_DEV_TTYLESS = $(DOCKER_COMPOSE) exec -T dev
 	PNPM_CMD = $(DOCKER_COMPOSE) exec -T dev
+	UNIT_TESTS = $(EXEC_DEV) env
 endif
 
 # To Run in CI mode specify CI variable. Example: make lint-md CI=1
@@ -100,13 +102,19 @@ storybook-build: ## Build Storybook UI. Storybook is a frontend workshop for bui
 	$(PNPM_EXEC) ./node_modules/.bin/storybook build
 
 test-e2e: start-prod wait-for-prod  ## Start production and run E2E tests
-	$(DOCKER_COMPOSE) -f docker-compose.test.yml exec playwright pnpm exec playwright test ./src/test/e2e
+	$(PLAYWRIGHT_TEST) ./src/test/e2e
+
+test-e2e-ui: start-prod wait-for-prod  ## Start the production environment and run E2E tests with the UI available at http://localhost:9324
+	$(PLAYWRIGHT_TEST) ./src/test/e2e --ui-port=9324 --ui-host=0.0.0.0
 
 test-visual: start-prod wait-for-prod  ## Start production and run visual tests
-	$(DOCKER_COMPOSE) -f docker-compose.test.yml exec playwright pnpm exec playwright test ./src/test/visual
+	$(PLAYWRIGHT_TEST) ./src/test/visual
+
+test-visual-ui: start-prod wait-for-prod  ## Start the production environment and run visual tests with the UI available at http://localhost:9324
+	$(PLAYWRIGHT_TEST) ./src/test/visual --ui-port=9324 --ui-host=0.0.0.0
 
 test-visual-update:
-	$(DOCKER_COMPOSE) -f docker-compose.test.yml exec playwright pnpm exec playwright test ./src/test/visual --update-snapshots
+	$(PLAYWRIGHT_TEST) ./src/test/visual --update-snapshots
 
 start-prod: ## Build image and start container in production mode
 	$(DOCKER_COMPOSE) -f docker-compose.test.yml up -d
@@ -116,11 +124,13 @@ wait-for-prod: ## Wait for the prod service to be ready on port 3001.
 	npx wait-on -v http://localhost:3001
 	@echo "Prod service is up and running!"
 
-test-unit: ## This command executes unit tests using Jest library.
-	TEST_ENV=client ./node_modules/.bin/jest --verbose
+test-unit-all: test-unit-client test-unit-server ## This command executes unit tests for both client and server environments.
 
-test-unit-all: ## This command executes unit tests for both client and server environments.
-	TEST_ENV=client ./node_modules/.bin/jest --verbose && TEST_ENV=server ./node_modules/.bin/jest --verbose
+test-unit-client: ## This command executes unit tests using Jest library.
+	$(UNIT_TESTS) TEST_ENV=client ./node_modules/.bin/jest --verbose
+
+test-unit-server: ## This command executes unit tests using Jest library.
+	$(UNIT_TESTS) TEST_ENV=server ./node_modules/.bin/jest --verbose ./src/test/apollo-server
 
 test-memory-leak: start-prod wait-for-prod ## This command executes memory leaks tests using Memlab library.
 	$(DOCKER_COMPOSE) -f docker-compose.memory-leak.yml up -d || (echo "Failed to start memory leak container" && exit 1)
