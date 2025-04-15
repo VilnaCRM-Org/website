@@ -27,9 +27,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-dependencies-
 
-      - name: Install pnpm
-        run: npm install -g pnpm
-
       - name: Run desktop performance test
         run: make lighthouse-desktop
 

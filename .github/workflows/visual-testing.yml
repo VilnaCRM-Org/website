@@ -18,9 +18,6 @@ jobs:
         with:
           node-version: ${{ vars.NODE_VERSION }}
 
-      - name: Install pnpm
-        run: npm install -g pnpm
-
       - name: Run visual tests
         run: make test-visual
 
