@@ -7,7 +7,7 @@ const meta: Meta<typeof ForWhoSection> = {
   component: ForWhoSection,
   tags: ['autodocs'],
   parameters: {
-    layout: "",  
+    layout: '',  
   },
 };
 

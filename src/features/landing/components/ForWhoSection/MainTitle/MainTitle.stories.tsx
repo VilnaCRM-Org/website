@@ -7,7 +7,7 @@ const meta: Meta<typeof MainTitle> = {
   component: MainTitle,
   tags: ['autodocs'],
   parameters: {
-    layout: "",  
+    layout: '',  
   },
 };
 
