@@ -1,13 +1,13 @@
 import { Meta, StoryObj } from '@storybook/react';
-import React from 'react';
 
 import ForWhoSection from './ForWhoSection';
 
 const meta: Meta<typeof ForWhoSection> = {
-  title: 'Sections/ForWhoSection',
+  title: 'Components/ForWhoSection/ForWhoSection',  
   component: ForWhoSection,
+  tags: ['autodocs'],
   parameters: {
-    layout: 'fullscreen',
+    layout: "",  
   },
 };
 
@@ -15,6 +15,4 @@ export default meta;
 
 type Story = StoryObj<typeof ForWhoSection>;
 
-export const Default: Story = {
-  render: () => <ForWhoSection />,
-};
+export const Default: Story = {};
