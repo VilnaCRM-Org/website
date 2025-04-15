@@ -14,6 +14,7 @@ NEXT_BUILD = $(NEXT_BIN) build
 IMG_OPTIMIZE = ./node_modules/.bin/next-export-optimize-images
 NEXT_BUILD_CMD = $(NEXT_BUILD) && $(IMG_OPTIMIZE)
 TS_BIN = ./node_modules/.bin/tsc
+STRYKER_CMD=$(PNPM_BIN) stryker run
 
 SERVE_CMD = --collect.startServerCommand="npx serve out"
 LHCI = pnpm lhci autorun
@@ -23,7 +24,7 @@ EXEC_DEV	= $(DOCKER_COMPOSE) exec dev
 PNPM_CMD    = $(PNPM_BIN)
 BUILD       = $(NEXT_BUILD)
 EXEC_DEV_TTYLESS =
-UNIT_TESTS =
+JEST_CMD =
 PLAYWRIGHT_TEST = $(DOCKER_COMPOSE) -f docker-compose.test.yml exec playwright pnpm exec playwright test
 
 # Executables
@@ -53,7 +54,8 @@ else
 	BUILD = $(EXEC_DEV) $(NEXT_BUILD)
 	EXEC_DEV_TTYLESS = $(DOCKER_COMPOSE) exec -T dev
 	PNPM_CMD = $(DOCKER_COMPOSE) exec -T dev
-	UNIT_TESTS = $(EXEC_DEV) env
+	JEST_CMD = make start && $(EXEC_DEV) env
+	STRYKER_CMD = $(EXEC_DEV) pnpm stryker run
 endif
 
 # To Run in CI mode specify CI variable. Example: make lint-md CI=1
@@ -127,16 +129,16 @@ wait-for-prod: ## Wait for the prod service to be ready on port 3001.
 test-unit-all: test-unit-client test-unit-server ## This command executes unit tests for both client and server environments.
 
 test-unit-client: ## This command executes unit tests using Jest library.
-	$(UNIT_TESTS) TEST_ENV=client ./node_modules/.bin/jest --verbose
+	$(JEST_CMD) TEST_ENV=client ./node_modules/.bin/jest --verbose
 
 test-unit-server: ## This command executes unit tests using Jest library.
-	$(UNIT_TESTS) TEST_ENV=server ./node_modules/.bin/jest --verbose ./src/test/apollo-server
+	$(JEST_CMD) TEST_ENV=server ./node_modules/.bin/jest --verbose ./src/test/apollo-server
 
 test-memory-leak: start-prod wait-for-prod ## This command executes memory leaks tests using Memlab library.
 	$(DOCKER_COMPOSE) -f docker-compose.memory-leak.yml up -d || (echo "Failed to start memory leak container" && exit 1)
 
 test-mutation:
-	./node_modules/.bin/stryker run
+	$(STRYKER_CMD)
 
 build-k6-docker: ## This command build K6 image
 	$(DOCKER) build -t k6 -f ./src/test/load/Dockerfile .
@@ -152,7 +154,7 @@ lighthouse-mobile: ## Run a Lighthouse audit using the mobile configuration
 	$(LHCI_MOBILE)
 
 install: ## Install node modules according to the current pnpm-lock.yaml file
-	$(PNPM_BIN) install --frozen-lockfile
+	$(PNPM_EXEC) pnpm install --frozen-lockfile
 
 update: ## Update node modules according to the current package.json file
 	$(PNPM_BIN) update

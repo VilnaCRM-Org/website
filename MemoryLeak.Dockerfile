@@ -17,7 +17,7 @@ ENV PUPPETEER_CONFIG_FILE="/app/.puppeteerrc.cjs" \
     PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
     PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
-RUN make install
+RUN pnpm install --frozen-lockfile
 
 RUN rm -rf /tmp/chromium/Singleton* /tmp/chromium/Lock /tmp/chromium/Default/Singleton* && \
     mkdir -p /tmp/chromium && chown -R root:root /tmp/chromium

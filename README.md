@@ -40,8 +40,7 @@ Use `make install` to install all dependencies and `make start` to run the appli
 
 ## Usage
 
-We recommend installing
-[docker](https://docs.docker.com/engine/install/) and
+We recommend installing [docker](https://docs.docker.com/engine/install/) and
 [docker compose](https://docs.docker.com/compose/install/)
 to have the same setup across dev, sandbox and production environments.
 
@@ -133,6 +132,7 @@ Note: The following commands do not require the `CI=1` prefix:
   make test-visual: runs visual tests inside the prod container
   make test-e2e-ui: runs end-to-end tests with UI inside the prod container
   make test-visual-ui: runs visual tests with UI inside the prod container
+  make test-memory-leak: runs memory leak tests using Memlab inside the prod container
 
   make git-hooks-install: installs husky Git hooks locally
 ```
