@@ -6,4 +6,4 @@ make format
 make lint-next
 make lint-tsc TSC_FLAGS="--noEmit"
 make lint-md
-make test-unit
+make test-unit-all
