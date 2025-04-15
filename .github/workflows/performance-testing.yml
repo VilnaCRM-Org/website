@@ -34,7 +34,7 @@ jobs:
         run: pnpm install --frozen-lockfile
         if: |
           steps.cache-pnpm-dependencies.outputs.cache-hit != 'true' ||
-          steps.cache-pnpm-packages.outputs.cache-hit != 'true'
+          false
 
       - name: Run desktop performance test
         run: make lighthouse-desktop
