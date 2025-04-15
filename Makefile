@@ -27,8 +27,8 @@ EXEC_DEV_TTYLESS =
 JEST_CMD =
 PLAYWRIGHT_SERVICE = playwright
 PLAYWRIGHT_BASE_CMD = pnpm exec playwright test
-PLAYWRIGHT_DOCKER_RUN = $(DOCKER_COMPOSE) -f docker-compose.test.yml exec $(PLAYWRIGHT_SERVICE) sh -c
-PLAYWRIGHT_TEST_UI = $(DOCKER_COMPOSE) -f docker-compose.test.yml exec playwright pnpm exec playwright test
+PLAYWRIGHT_TEST = $(DOCKER_COMPOSE) -f docker-compose.test.yml exec playwright $(PLAYWRIGHT_BASE_CMD)
+# PLAYWRIGHT_TEST_UI = $(DOCKER_COMPOSE) -f docker-compose.test.yml exec playwright $(PLAYWRIGHT_BASE_CMD)
 
 # Executables
 PNPM      	= $(EXEC_DEV) pnpm
@@ -107,16 +107,16 @@ storybook-build: ## Build Storybook UI. Storybook is a frontend workshop for bui
 	$(PNPM_EXEC) ./node_modules/.bin/storybook build
 
 test-e2e: start-prod wait-for-prod  ## Start production and run E2E tests
-	$(PLAYWRIGHT_DOCKER_RUN) '$(PLAYWRIGHT_BASE_CMD) ./src/test/e2e'
+	$(PLAYWRIGHT_TEST) ./src/test/e2e
 
 test-e2e-ui: start-prod wait-for-prod  ## Start the production environment and run E2E tests with the UI available at http://localhost:9324
-	$(PLAYWRIGHT_TEST_UI) ./src/test/e2e --ui-port=9324 --ui-host=0.0.0.0
+	$(PLAYWRIGHT_TEST) ./src/test/e2e --ui-port=9324 --ui-host=0.0.0.0
 
 test-visual: start-prod wait-for-prod  ## Start production and run visual tests
-	$(PLAYWRIGHT_DOCKER_RUN) '$(PLAYWRIGHT_BASE_CMD) ./src/test/visual'
+	$(PLAYWRIGHT_TEST) ./src/test/visual
 
 test-visual-ui: start-prod wait-for-prod  ## Start the production environment and run visual tests with the UI available at http://localhost:9324
-	$(PLAYWRIGHT_TEST_UI) ./src/test/visual --ui-port=9324 --ui-host=0.0.0.0
+	$(PLAYWRIGHT_TEST) ./src/test/visual --ui-port=9324 --ui-host=0.0.0.0
 
 test-visual-update:
 	$(PLAYWRIGHT_TEST) ./src/test/visual --update-snapshots
