@@ -25,9 +25,9 @@ PNPM_CMD    = $(PNPM_BIN)
 BUILD       = $(NEXT_BUILD)
 EXEC_DEV_TTYLESS =
 JEST_CMD =
-PLAYWRIGHT_CONTAINER = website-playwright-1
+PLAYWRIGHT_CONTAINER = playwright
 PLAYWRIGHT_BASE_CMD = pnpm exec playwright test
-PLAYWRIGHT_DOCKER_RUN = docker exec -it $(PLAYWRIGHT_CONTAINER) sh -c
+PLAYWRIGHT_DOCKER_RUN = $(DOCKER_COMPOSE) exec -T $(PLAYWRIGHT_CONTAINER) sh -c
 PLAYWRIGHT_TEST_UI = $(DOCKER_COMPOSE) -f docker-compose.test.yml exec playwright pnpm exec playwright test
 
 # Executables
