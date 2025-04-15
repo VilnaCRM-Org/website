@@ -28,8 +28,6 @@ services:
       context: .
       dockerfile: Apollo.Dockerfile
     restart: unless-stopped
-    volumes:
-      - .:/app
     ports:
       - '4000:4000'
 
