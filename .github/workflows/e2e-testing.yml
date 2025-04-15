@@ -16,9 +16,6 @@ jobs:
       - name: Install pnpm
         run: npm install -g pnpm
 
-      - name: Install dependencies
-        run: make install
-
       - name: Run Playwright tests
         run: make test-e2e
 

@@ -21,9 +21,6 @@ jobs:
       - name: Install pnpm
         run: npm install -g pnpm
 
-      - name: Install dependencies
-        run: make install
-
       - name: Run visual tests
         run: make test-visual
 
