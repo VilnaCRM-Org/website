@@ -57,7 +57,7 @@ else
 	BUILD = $(EXEC_DEV) $(NEXT_BUILD)
 	EXEC_DEV_TTYLESS = $(DOCKER_COMPOSE) exec -T dev
 	PNPM_CMD = $(DOCKER_COMPOSE) exec -T dev
-	JEST_CMD = make start && $(EXEC_DEV) env
+	JEST_CMD = make start && $(DOCKER_COMPOSE) exec -T dev env
 	STRYKER_CMD = $(EXEC_DEV) pnpm stryker run
 endif
 
