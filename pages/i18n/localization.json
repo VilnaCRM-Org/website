@@ -166,8 +166,7 @@
           "retry_button": "Try again",
           "button": "Go back",
           "images": { "error": "Red triangle with a warning about an error." }
-        },
-        "unknown": { "title": "Unknown notification type", "button": "Go back" }
+        }
       },
       "footer": {
         "logo_alt": "Vilna logo",
@@ -356,8 +355,7 @@
           "retry_button": "Спробувати ще раз",
           "button": "Назад",
           "images": { "error": "Червоний трикутник з попередженням про помилку." }
-        },
-        "unknown": { "title": "Невідомий тип сповіщення", "button": "Назад" }
+        }
       },
       "footer": {
         "logo_alt": "Vilna логотип",

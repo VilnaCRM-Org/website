@@ -42,14 +42,3 @@ export const NotificationDefault: Story = {
     </div>
   ),
 };
-export const NotificationFallback: Story = {
-  args: {
-    type: 'unknown' as NotificationStatus,
-    isOpen: true,
-  },
-  render: args => (
-    <div style={storyContainerStyle}>
-      <Notification {...args} />
-    </div>
-  ),
-};

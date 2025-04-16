@@ -15,7 +15,6 @@ import { checkElementsInDocument, SetIsOpenType } from './utils';
 
 const successTitleText: string = t('notifications.success.title');
 const errorTitleText: string = t('notifications.error.title');
-const fallbackTitleText: string = t('notifications.unknown.title');
 const successDescriptionText: string = t('notifications.success.description');
 const confettiImgAltText: string = t('notifications.success.images.confetti');
 const gearsImgAltText: string = t('notifications.success.images.gears');
@@ -105,7 +104,7 @@ describe('Notification', () => {
     expect(screen.getByText(successTitleText)).toBeInTheDocument();
   });
 
-  it('should fallback to NotificationSuccess when no matching type is found', () => {
+  it('should show success by default', () => {
     const type: NotificationStatus = 'unknown' as NotificationStatus;
     const setIsOpen: jest.Mock = jest.fn();
     const retrySubmit: jest.Mock = jest.fn();
@@ -115,10 +114,7 @@ describe('Notification', () => {
       <Notification type={type} setIsOpen={setIsOpen} onRetry={retrySubmit} isOpen={isOpen} />
     );
 
-    const fallbackComponent: HTMLElement = screen.getByText(fallbackTitleText);
-
-    expect(fallbackComponent).toBeInTheDocument();
-    expect(fallbackComponent).toHaveRole('alert');
+    expect(screen.getByText(errorTitleText)).toBeInTheDocument();
   });
   it('renders "success" notification by default when type is empty', () => {
     renderNotification({ type: '' as NotificationStatus, isOpen: false, setIsOpen: mockSetIsOpen });
