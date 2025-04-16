@@ -104,7 +104,7 @@ describe('Notification', () => {
     expect(screen.getByText(successTitleText)).toBeInTheDocument();
   });
 
-  it('should show success by default', () => {
+  it('should show error notification as fallback for unknown types', () => {
     const type: NotificationStatus = 'unknown' as NotificationStatus;
     const setIsOpen: jest.Mock = jest.fn();
     const retrySubmit: jest.Mock = jest.fn();

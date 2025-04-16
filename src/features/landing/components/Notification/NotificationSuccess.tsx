@@ -21,7 +21,7 @@ function NotificationSuccess({ setIsOpen }: NotificationToggleProps): React.Reac
       <Box sx={styles.successTopImgBox}>
         <Image src={Confetti} alt={t('notifications.success.images.confetti')} />
       </Box>
-      <Box sx={styles.imgWrapperSuccess}>
+      <Box sx={styles.gears}>
         <Image
           src={Settings}
           alt={t('notifications.success.images.gears')}

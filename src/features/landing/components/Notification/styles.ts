@@ -8,16 +8,17 @@ export default {
     position: 'absolute',
     width: '100%',
     height: '100%',
+    border: `1px solid ${colorTheme.palette.grey500.main} `,
+    borderRadius: '2rem 2rem 0 0',
+    boxShadow: '1px 1px 41px 0px rgba(59, 68, 80, 0.05)',
+    overflow: 'hidden',
+
+    maxHeight: '40.438rem',
+    maxWidth: '31.375rem',
+
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
-    flexDirection: 'column',
-
-    borderRadius: '2rem 2rem 0 0',
-    border: `1px solid ${colorTheme.palette.grey500.main} `,
-    backgroundColor: colorTheme.palette.white.main,
-    overflow: 'hidden',
-    zIndex: 100,
 
     [`@media (max-width: ${BREAKPOINTS.SM})`]: {
       maxWidth: DIMENSIONS.MIN_WIDTH.XS,
@@ -47,14 +48,13 @@ export default {
   // success box
   contentBox: {
     zIndex: 3,
-    display: 'flex',
   },
 
   successTopImgBox: {
     position: 'absolute',
     top: '-0.78rem',
     left: '-8.5rem',
-    zIndex: -1,
+    zIndex: 5,
 
     [`@media (max-width: ${BREAKPOINTS.SM})`]: {
       transform: 'scale(0.91)',
@@ -87,10 +87,12 @@ export default {
       bottom: '0.6rem',
       transform: 'rotate(-180deg) scale(1.07)',
     },
+    [`@media (min-width: ${BREAKPOINTS.MD})`]: {
+      bottom: '-1.8rem',
+    },
 
     [`@media (min-width: ${BREAKPOINTS.LG})`]: {
       left: '1.3rem',
-      bottom: '0.6rem',
     },
     [`@media (min-width: 1131px)`]: {
       left: '0rem',
@@ -109,11 +111,12 @@ export default {
       top: '3rem',
     },
   },
-  imgWrapperSuccess: {
+  gears: {
     position: 'absolute',
     left: '50%',
     transform: 'translateX(-50%)',
     top: '2rem',
+    zIndex: 5,
 
     [`@media (max-width: ${BREAKPOINTS.SM})`]: {
       transform: 'translateX(-50%) scale(0.8)',
@@ -125,21 +128,15 @@ export default {
 
   messageContainer: {
     height: '100%',
-    width: '100%',
     display: 'flex',
     justifyContent: 'center',
     flexDirection: 'column',
     alignItems: 'center',
-    paddingBottom: '1.7rem',
     background: `${colorTheme.palette.white.main}`,
-    zIndex: 3,
+    zIndex: 100,
 
     [`@media (min-width: ${BREAKPOINTS.LG})`]: {
-      padding: '0rem',
-    },
-
-    [`@media (min-width: 1131px)`]: {
-      padding: '3rem',
+      width: '100%',
     },
   },
 
@@ -149,6 +146,7 @@ export default {
     lineHeight: '1.65rem',
     fontFamily: golos.style.fontFamily,
     color: colorTheme.palette.darkPrimary.main,
+    zIndex: 100,
 
     [`@media (min-width: 641px)`]: {
       fontWeight: 600,

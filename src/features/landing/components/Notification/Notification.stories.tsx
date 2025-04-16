@@ -25,20 +25,10 @@ export default meta;
 
 type Story = StoryObj<typeof Notification>;
 
-const storyContainerStyle: React.CSSProperties = {
-  width: '31.375rem',
-  minHeight: '46.6rem',
-  position: 'relative',
-};
-
 export const NotificationDefault: Story = {
   args: {
     type: NotificationStatus.SUCCESS,
     isOpen: true,
   },
-  render: args => (
-    <div style={storyContainerStyle}>
-      <Notification {...args} />
-    </div>
-  ),
+  render: args => <Notification {...args} />,
 };
