@@ -19,7 +19,7 @@ STRYKER_CMD=$(PNPM_BIN) stryker run
 SERVE_CMD = --collect.startServerCommand="npx serve out"
 LHCI = pnpm lhci autorun
 
-DEV_ENV     = $(DOCKER_COMPOSE) up -d
+DEV_ENV     = $(DOCKER_COMPOSE) up -d && make wait-for-dev
 EXEC_DEV	= $(DOCKER_COMPOSE) exec dev
 PNPM_CMD    = $(PNPM_BIN)
 BUILD       = $(NEXT_BUILD)
@@ -28,7 +28,7 @@ JEST_CMD =
 PLAYWRIGHT_SERVICE = playwright
 PLAYWRIGHT_BASE_CMD = pnpm exec playwright test
 PLAYWRIGHT_TEST = $(DOCKER_COMPOSE) -f docker-compose.test.yml exec playwright $(PLAYWRIGHT_BASE_CMD)
-# PLAYWRIGHT_TEST_UI = $(DOCKER_COMPOSE) -f docker-compose.test.yml exec playwright $(PLAYWRIGHT_BASE_CMD)
+UPDATE =
 
 # Executables
 PNPM      	= $(EXEC_DEV) pnpm
@@ -59,6 +59,7 @@ else
 	PNPM_CMD = $(DOCKER_COMPOSE) exec -T dev
 	JEST_CMD = make start && $(DOCKER_COMPOSE) exec -T dev env
 	STRYKER_CMD = $(EXEC_DEV) pnpm stryker run
+	UPDATE = $(EXEC_DEV)
 endif
 
 # To Run in CI mode specify CI variable. Example: make lint-md CI=1
@@ -78,6 +79,11 @@ help:
 
 start: ## Start the application
 	$(DEV_ENV)
+
+wait-for-dev: ## Wait for the prod service to be ready on port 3001.
+	@echo "Waiting for prod service to be ready on port 3000..."
+	npx wait-on -v http://localhost:3000
+	@echo "Prod service is up and running!"
 
 build: ## A tool build the project
 	${BUILD}
@@ -106,23 +112,23 @@ storybook-start: ## Start Storybook UI. Storybook is a frontend workshop for bui
 storybook-build: ## Build Storybook UI. Storybook is a frontend workshop for building UI components and pages in isolation.
 	$(PNPM_EXEC) ./node_modules/.bin/storybook build
 
-test-e2e: start-prod wait-for-prod  ## Start production and run E2E tests
+test-e2e: start-prod  ## Start production and run E2E tests
 	$(PLAYWRIGHT_TEST) ./src/test/e2e
 
-test-e2e-ui: start-prod wait-for-prod  ## Start the production environment and run E2E tests with the UI available at http://localhost:9324
+test-e2e-ui: start-prod ## Start the production environment and run E2E tests with the UI available at http://localhost:9324
 	$(PLAYWRIGHT_TEST) ./src/test/e2e --ui-port=9324 --ui-host=0.0.0.0
 
-test-visual: start-prod wait-for-prod  ## Start production and run visual tests
+test-visual: start-prod  ## Start production and run visual tests
 	$(PLAYWRIGHT_TEST) ./src/test/visual
 
-test-visual-ui: start-prod wait-for-prod  ## Start the production environment and run visual tests with the UI available at http://localhost:9324
+test-visual-ui: start-prod ## Start the production environment and run visual tests with the UI available at http://localhost:9324
 	$(PLAYWRIGHT_TEST) ./src/test/visual --ui-port=9324 --ui-host=0.0.0.0
 
 test-visual-update:
 	$(PLAYWRIGHT_TEST) ./src/test/visual --update-snapshots
 
 start-prod: ## Build image and start container in production mode
-	$(DOCKER_COMPOSE) -f docker-compose.test.yml up -d
+	$(DOCKER_COMPOSE) -f docker-compose.test.yml up -d && make wait-for-prod
 
 wait-for-prod: ## Wait for the prod service to be ready on port 3001.
 	@echo "Waiting for prod service to be ready on port 3001..."
@@ -137,7 +143,7 @@ test-unit-client: ## This command executes unit tests using Jest library.
 test-unit-server: ## This command executes unit tests using Jest library.
 	$(JEST_CMD) TEST_ENV=server ./node_modules/.bin/jest --verbose ./src/test/apollo-server
 
-test-memory-leak: start-prod wait-for-prod ## This command executes memory leaks tests using Memlab library.
+test-memory-leak: start-prod ## This command executes memory leaks tests using Memlab library.
 	$(DOCKER_COMPOSE) -f docker-compose.memory-leak.yml up -d || (echo "Failed to start memory leak container" && exit 1)
 
 test-mutation:
@@ -146,7 +152,7 @@ test-mutation:
 build-k6-docker: ## This command build K6 image
 	$(DOCKER) build -t k6 -f ./src/test/load/Dockerfile .
 
-load-tests: start-prod wait-for-prod ## This command executes load tests using K6 library.
+load-tests: start-prod ## This command executes load tests using K6 library.
 	$(BUILD_K6_DOCKER)
 	$(LOAD_TESTS_RUN)
 
@@ -157,10 +163,10 @@ lighthouse-mobile: ## Run a Lighthouse audit using the mobile configuration
 	$(LHCI_MOBILE)
 
 install: ## Install node modules according to the current pnpm-lock.yaml file
-	$(PNPM_EXEC) pnpm install --frozen-lockfile
+	$(PNPM_EXEC) pnpm install
 
 update: ## Update node modules according to the current package.json file
-	$(PNPM_BIN) update
+	 $(UPDATE) pnpm update
 
 down: ## Stop the docker hub
 	$(DOCKER_COMPOSE) down --remove-orphans
@@ -172,7 +178,7 @@ ps: ## Log to the docker container
 	@$(DOCKER_COMPOSE) ps
 
 logs: ## Show all logs
-	@$(DOCKER_COMPOSE) logs --follow
+	@$(DOCKER_COMPOSE) logs --follow dev
 
 new-logs: ## Show live logs of the dev container
 	@$(DOCKER_COMPOSE) logs --tail=0 --follow
@@ -180,6 +186,9 @@ new-logs: ## Show live logs of the dev container
 stop: ## Stop docker
 	$(DOCKER_COMPOSE) stop
 
+build-dev: ## Build dev container
+	$(DOCKER_COMPOSE) up --build
 
 check-node-version: ## Check if the correct Node.js version is installed
 	$(EXEC_DEV) node checkNodeVersion.js
+

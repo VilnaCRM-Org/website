@@ -5,10 +5,14 @@ services:
     restart: unless-stopped
     volumes:
       - .:/app
-      - /app/node_modules
     ports:
       - '3000:3000'
     environment:
       - NODE_ENV=development
       - CHOKIDAR_USEPOLLING=true
       - WATCHPACK_POLLING=true
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:3000" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5

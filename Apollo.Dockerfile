@@ -11,7 +11,7 @@ COPY tsconfig.server.json tsconfig.server.json
 COPY docker docker
 COPY .env .env
 
-RUN pnpm install --frozen-lockfile && tsc --project tsconfig.server.json
+RUN pnpm install && tsc --project tsconfig.server.json
 
 EXPOSE 4000
 

@@ -30,19 +30,49 @@ This software is distributed under the
 Please read [LICENSE](https://github.com/VilnaCRM-Org/frontend-ssr-template/blob/main/LICENSE) for information
 on the software availability and distribution.
 
-### Minimal installation
+### 🚀 Minimal Installation Guide
 
-Clone the repository locally or use GitHub’s `Use this template` feature.
+#### 1. Clone the Repository
+
+You can either clone the repository locally or use GitHub’s `Use this template`
+feature to create your own copy.
+
+#### 2. Install Prerequisites
+
+Before running the application, make sure the following tools are installed on your machine:
 
 Install [Node.js](https://nodejs.org/en/) version 20 or higher.
+You can download and install Node.js from the official website, or use a version manager like
+nvm (Node Version Manager) to easily manage versions.
 
-Use `make install` to install all dependencies and `make start` to run the application.
+[Docker](https://docs.docker.com/engine/install/) is required for containerization and managing
+isolated environments. Install Docker according to the instructions
+for your operating system. Follow the guide to ensure Docker is properly
+configured and running on your machine.
 
-## Usage
+[Docker compose](https://docs.docker.com/compose/install/) is needed to manage multi-container
+Docker applications.Docker Compose is essential for starting up the
+development environment and running the services defined in docker-compose.yml.
 
-We recommend installing [docker](https://docs.docker.com/engine/install/) and
-[docker compose](https://docs.docker.com/compose/install/)
-to have the same setup across dev, sandbox and production environments.
+#### 3. Run the Application
+
+After installing all prerequisites, you can start the application inside a Docker container:
+
+```bash
+   make start
+```
+
+**What Happens When You Run make start**:
+
+The command will:
+
+- Build and start the project inside a Docker container named `dev`.
+- Install all the necessary dependencies (including Node.js dependencies) inside the container.
+- The application will be up and running.
+
+Access the application at <http://localhost:3000>.
+
+## Project Commands
 
 To view all available commands, run `make help`:
 
