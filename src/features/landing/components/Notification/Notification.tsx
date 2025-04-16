@@ -4,7 +4,6 @@ import React from 'react';
 import { animationTimeout } from '../../constants';
 
 import NotificationError from './NotificationError';
-import NotificationFallback from './NotificationFallback';
 import NotificationSuccess from './NotificationSuccess';
 import styles from './styles';
 import {
@@ -12,11 +11,11 @@ import {
   NotificationComponentProps,
   NotificationComponentType,
   NotificationControlProps,
-  NotificationSuccessProps,
+  NotificationToggleProps,
 } from './types';
 
 export const notificationComponents: NotificationComponentMap = {
-  success: ({ setIsOpen }: NotificationSuccessProps) => (
+  success: ({ setIsOpen }: NotificationToggleProps) => (
     <NotificationSuccess setIsOpen={setIsOpen} />
   ),
   error: ({ setIsOpen, onRetry }: NotificationComponentProps) => (
@@ -26,7 +25,7 @@ export const notificationComponents: NotificationComponentMap = {
 
 function getNotificationComponent(type: keyof NotificationComponentMap): NotificationComponentType {
   if (!notificationComponents[type]) {
-    return NotificationFallback;
+    return NotificationError;
   }
   return notificationComponents[type];
 }
