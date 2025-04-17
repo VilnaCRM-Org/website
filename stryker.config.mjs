@@ -8,8 +8,11 @@ const config = {
   tsconfigFile: 'tsconfig.json',
   mutate: [
     './src/features/landing/components/**/*.tsx',
+    '!src/features/landing/components/**/*.stories.tsx',
+    '!src/features/landing/components/**/*.stories.ts',
     '!src/features/landing/components/Landing/Landing.tsx',
   ],
+  ignorePatterns: ['**/*.stories.tsx', '**/*.stories.ts', 'dist', 'coverage'],
   thresholds: { high: 100, break: 99 },
 };
 
