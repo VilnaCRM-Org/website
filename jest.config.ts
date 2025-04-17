@@ -17,6 +17,7 @@ const config: Config = {
   preset: 'ts-jest',
   testEnvironment: process.env.TEST_ENV === 'server' ? 'node' : 'jsdom',
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
+  modulePathIgnorePatterns: ['<rootDir>/.stryker-tmp/'],
 };
 
 export default createJestConfig(config);

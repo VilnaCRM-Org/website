@@ -24,14 +24,5 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-dependencies-
 
-      - name: Install pnpm
-        run: npm install -g pnpm
-
-      - name: Install dependencies
-        run: make install
-        if: |
-          steps.cache-pnpm-dependencies.outputs.cache-hit != 'true' ||
-          steps.cache-pnpm-packages.outputs.cache-hit != 'true'
-
       - name: Run unit tests
-        run: pnpm run test:unit:all
+        run: make test-unit-all
