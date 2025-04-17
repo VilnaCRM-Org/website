@@ -14,7 +14,7 @@ NEXT_BUILD = $(NEXT_BIN) build
 IMG_OPTIMIZE = ./node_modules/.bin/next-export-optimize-images
 NEXT_BUILD_CMD = $(NEXT_BUILD) && $(IMG_OPTIMIZE)
 TS_BIN = ./node_modules/.bin/tsc
-STRYKER_CMD=$(PNPM_BIN) stryker run
+STRYKER_CMD = $(PNPM_BIN) stryker run
 
 SERVE_CMD = --collect.startServerCommand="npx serve out"
 LHCI = pnpm lhci autorun
@@ -22,13 +22,10 @@ LHCI = pnpm lhci autorun
 DEV_ENV     = $(DOCKER_COMPOSE) up -d && make wait-for-dev
 EXEC_DEV	= $(DOCKER_COMPOSE) exec dev
 PNPM_CMD    = $(PNPM_BIN)
-BUILD       = $(NEXT_BUILD)
 EXEC_DEV_TTYLESS =
-JEST_CMD =
 PLAYWRIGHT_SERVICE = playwright
 PLAYWRIGHT_BASE_CMD = pnpm exec playwright test
 PLAYWRIGHT_TEST = $(DOCKER_COMPOSE) -f docker-compose.test.yml exec playwright $(PLAYWRIGHT_BASE_CMD)
-UPDATE =
 
 # Executables
 PNPM      	= $(EXEC_DEV) pnpm
@@ -54,12 +51,9 @@ else
     LHCI_MOBILE = make start-prod && make wait-for-prod && $(LHCI) --config=lighthouserc.mobile.js
 	LOAD_TESTS_RUN = $(K6) --out 'web-dashboard=period=1s&export=/loadTests/results/homepage.html' /loadTests/homepage.js
 	BUILD_K6_DOCKER = $(MAKE) build-k6-docker
-	BUILD = $(EXEC_DEV) $(NEXT_BUILD)
 	EXEC_DEV_TTYLESS = $(DOCKER_COMPOSE) exec -T dev
 	PNPM_CMD = $(DOCKER_COMPOSE) exec -T dev
-	JEST_CMD = make start && $(DOCKER_COMPOSE) exec -T dev env
 	STRYKER_CMD = $(EXEC_DEV) pnpm stryker run
-	UPDATE = $(EXEC_DEV)
 endif
 
 # To Run in CI mode specify CI variable. Example: make lint-md CI=1
@@ -80,15 +74,15 @@ help:
 start: ## Start the application
 	$(DEV_ENV)
 
-wait-for-dev: ## Wait for the prod service to be ready on port 3001.
-	@echo "Waiting for prod service to be ready on port 3000..."
+wait-for-dev: ## Wait for the dev service to be ready on port 3000.
+	@echo "Waiting for dev service to be ready on port 3000..."
 	npx wait-on -v http://localhost:3000
-	@echo "Prod service is up and running!"
+	@echo "Dev service is up and running!"
 
 build: ## A tool build the project
-	${BUILD}
+	$(DOCKER_COMPOSE) build
 
-build-analyze:
+build-analyze: ## Build with bundle analyzer enabled (ANALYZE=true)
 	ANALYZE=true $(NEXT_BUILD_CMD)
 
 format: ## This command executes Prettier Formating
@@ -138,10 +132,10 @@ wait-for-prod: ## Wait for the prod service to be ready on port 3001.
 test-unit-all: test-unit-client test-unit-server ## This command executes unit tests for both client and server environments.
 
 test-unit-client: ## This command executes unit tests using Jest library.
-	$(JEST_CMD) TEST_ENV=client ./node_modules/.bin/jest --verbose
+	$(EXEC_DEV_TTYLESS) env TEST_ENV=client ./node_modules/.bin/jest --verbose
 
 test-unit-server: ## This command executes unit tests using Jest library.
-	$(JEST_CMD) TEST_ENV=server ./node_modules/.bin/jest --verbose ./src/test/apollo-server
+	$(EXEC_DEV_TTYLESS) env TEST_ENV=server ./node_modules/.bin/jest --verbose ./src/test/apollo-server
 
 test-memory-leak: start-prod ## This command executes memory leaks tests using Memlab library.
 	$(DOCKER_COMPOSE) -f docker-compose.memory-leak.yml up -d || (echo "Failed to start memory leak container" && exit 1)
@@ -162,11 +156,11 @@ lighthouse-desktop: ## Run a Lighthouse audit using the desktop configuration
 lighthouse-mobile: ## Run a Lighthouse audit using the mobile configuration
 	$(LHCI_MOBILE)
 
-install: ## Install node modules according to the current pnpm-lock.yaml file
-	$(PNPM_EXEC) pnpm install
+install: ## Install node modules (frozen lockfile)
+	$(PNPM_EXEC) pnpm install --frozen-lockfile
 
 update: ## Update node modules according to the current package.json file
-	 $(UPDATE) pnpm update
+	 pnpm update
 
 down: ## Stop the docker hub
 	$(DOCKER_COMPOSE) down --remove-orphans
@@ -186,9 +180,6 @@ new-logs: ## Show live logs of the dev container
 stop: ## Stop docker
 	$(DOCKER_COMPOSE) stop
 
-build-dev: ## Build dev container
-	$(DOCKER_COMPOSE) up --build
-
 check-node-version: ## Check if the correct Node.js version is installed
-	$(EXEC_DEV) node checkNodeVersion.js
+	$(EXEC_DEV_TTYLESS) node checkNodeVersion.js
 

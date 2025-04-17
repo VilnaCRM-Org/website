@@ -51,7 +51,7 @@ for your operating system. Follow the guide to ensure Docker is properly
 configured and running on your machine.
 
 [Docker compose](https://docs.docker.com/compose/install/) is needed to manage multi-container
-Docker applications.Docker Compose is essential for starting up the
+Docker applications. Docker Compose is essential for starting up the
 development environment and running the services defined in docker-compose.yml.
 
 #### 3. Run the Application
