@@ -13,10 +13,5 @@ COPY .env .env
 
 RUN pnpm install && tsc --project tsconfig.server.json
 
-EXPOSE 4000
-
-HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
-  CMD curl -f http://localhost:4000/health || exit 1
-
 CMD node ./out/docker/apollo-server/schemaFetcher.js && \
     node ./out/docker/apollo-server/server.mjs

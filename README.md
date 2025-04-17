@@ -62,7 +62,7 @@ After installing all prerequisites, you can start the application inside a Docke
    make start
 ```
 
-**What Happens When You Run make start**:
+**What Happens When You Run `make start`**:
 
 The command will:
 

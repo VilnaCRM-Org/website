@@ -15,9 +15,10 @@ IMG_OPTIMIZE = ./node_modules/.bin/next-export-optimize-images
 NEXT_BUILD_CMD = $(NEXT_BUILD) && $(IMG_OPTIMIZE)
 TS_BIN = ./node_modules/.bin/tsc
 STRYKER_CMD = $(PNPM_BIN) stryker run
+UNIT_TESTS =
 
 SERVE_CMD = --collect.startServerCommand="npx serve out"
-LHCI = pnpm lhci autorun
+LHCI = $(PNPM_BIN) lhci autorun
 
 DEV_ENV     = $(DOCKER_COMPOSE) up -d && make wait-for-dev
 EXEC_DEV	= $(DOCKER_COMPOSE) exec dev
@@ -47,13 +48,14 @@ ifeq ($(CI), 1)
 else
     PNPM_EXEC = $(EXEC_DEV)
 	PLAYWRIGHT_EXEC = $(DOCKER) exec website-playwright-1 pnpm run
-	LHCI_DESKTOP = make start-prod && make wait-for-prod && $(LHCI) --config=lighthouserc.desktop.js
-    LHCI_MOBILE = make start-prod && make wait-for-prod && $(LHCI) --config=lighthouserc.mobile.js
+	LHCI_DESKTOP = make start-prod && $(LHCI) --config=lighthouserc.desktop.js
+    LHCI_MOBILE = make start-prod && $(LHCI) --config=lighthouserc.mobile.js
 	LOAD_TESTS_RUN = $(K6) --out 'web-dashboard=period=1s&export=/loadTests/results/homepage.html' /loadTests/homepage.js
 	BUILD_K6_DOCKER = $(MAKE) build-k6-docker
 	EXEC_DEV_TTYLESS = $(DOCKER_COMPOSE) exec -T dev
 	PNPM_CMD = $(DOCKER_COMPOSE) exec -T dev
 	STRYKER_CMD = $(EXEC_DEV) pnpm stryker run
+	UNIT_TESTS =  make start && $(DOCKER_COMPOSE) exec -T dev env
 endif
 
 # To Run in CI mode specify CI variable. Example: make lint-md CI=1
@@ -110,13 +112,16 @@ test-e2e: start-prod  ## Start production and run E2E tests
 	$(PLAYWRIGHT_TEST) ./src/test/e2e
 
 test-e2e-ui: start-prod ## Start the production environment and run E2E tests with the UI available at http://localhost:9324
-	$(PLAYWRIGHT_TEST) ./src/test/e2e --ui-port=9324 --ui-host=0.0.0.0
+	@echo "🚀 Starting Playwright UI tests..."
+	$(PLAYWRIGHT_TEST) ./src/test/e2e --ui-port=9324 --ui-host=0.0.0.0 && \
+	npx wait-on -v http://localhost:9324
 
 test-visual: start-prod  ## Start production and run visual tests
 	$(PLAYWRIGHT_TEST) ./src/test/visual
 
 test-visual-ui: start-prod ## Start the production environment and run visual tests with the UI available at http://localhost:9324
-	$(PLAYWRIGHT_TEST) ./src/test/visual --ui-port=9324 --ui-host=0.0.0.0
+	$(PLAYWRIGHT_TEST) ./src/test/visual --ui-port=9324 --ui-host=0.0.0.0 && \
+	npx wait-on -v http://localhost:9324
 
 test-visual-update:
 	$(PLAYWRIGHT_TEST) ./src/test/visual --update-snapshots
@@ -132,10 +137,10 @@ wait-for-prod: ## Wait for the prod service to be ready on port 3001.
 test-unit-all: test-unit-client test-unit-server ## This command executes unit tests for both client and server environments.
 
 test-unit-client: ## This command executes unit tests using Jest library.
-	$(EXEC_DEV_TTYLESS) env TEST_ENV=client ./node_modules/.bin/jest --verbose
+	$(UNIT_TESTS) TEST_ENV=client ./node_modules/.bin/jest --verbose
 
 test-unit-server: ## This command executes unit tests using Jest library.
-	$(EXEC_DEV_TTYLESS) env TEST_ENV=server ./node_modules/.bin/jest --verbose ./src/test/apollo-server
+	$(UNIT_TESTS) TEST_ENV=server ./node_modules/.bin/jest --verbose ./src/test/apollo-server
 
 test-memory-leak: start-prod ## This command executes memory leaks tests using Memlab library.
 	$(DOCKER_COMPOSE) -f docker-compose.memory-leak.yml up -d || (echo "Failed to start memory leak container" && exit 1)
