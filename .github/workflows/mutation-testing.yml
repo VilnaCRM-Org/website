@@ -29,4 +29,4 @@ jobs:
             ${{ runner.os }}-dependencies-
 
       - name: Run mutation testing
-        run: npx stryker run
+        run: make test-mutation

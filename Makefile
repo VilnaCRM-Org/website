@@ -56,7 +56,7 @@ else
     PNPM_EXEC = $(EXEC_DEV)
 	PLAYWRIGHT_EXEC = $(DOCKER) exec website-playwright-1 pnpm run
 	EXEC_DEV_TTYLESS = $(DOCKER_COMPOSE) exec -T dev
-	STRYKER_CMD = $(EXEC_DEV) pnpm stryker run
+	STRYKER_CMD = make start && $(EXEC_DEV) pnpm stryker run
 	UNIT_TESTS =  make start && $(DOCKER_COMPOSE) exec -T dev env
 
     BUILD_SERVE_CMD = make start-prod && $(LHCI)

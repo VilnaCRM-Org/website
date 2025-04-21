@@ -10,6 +10,9 @@ const config = {
     './src/features/landing/components/**/*.tsx',
     '!src/features/landing/components/Landing/Landing.tsx',
   ],
+  ignorePatterns: [
+    'src/test/memory-leak/results/**',
+  ],
   thresholds: { high: 100, break: 99 },
 };
 
