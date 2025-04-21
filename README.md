@@ -134,13 +134,6 @@ Storybook
   make storybook-build: builds Storybook UI
 ```
 
-Load Testing
-
-```bash
-  make load-tests: executes load tests using the K6 library
-  make build-k6-docker: builds a Docker image for K6
-```
-
 Docker
 
 ```bash
@@ -162,6 +155,9 @@ Note: The following commands do not require the `CI=1` prefix:
   make test-e2e-ui: runs end-to-end tests with UI inside the prod container
   make test-visual-ui: runs visual tests with UI inside the prod container
   make test-memory-leak: runs memory leak tests using Memlab inside the prod container
+
+  make load-tests: executes load tests using the K6 library
+  make build-k6-docker: builds a Docker image for K6
 
   make git-hooks-install: installs husky Git hooks locally
 ```

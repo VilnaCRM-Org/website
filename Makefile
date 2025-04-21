@@ -17,7 +17,7 @@ NEXT_BUILD = $(NEXT_BIN) build
 IMG_OPTIMIZE = ./node_modules/.bin/next-export-optimize-images
 NEXT_BUILD_CMD = $(NEXT_BUILD) && $(IMG_OPTIMIZE)
 TS_BIN = ./node_modules/.bin/tsc
-STRYKER_CMD = $(PNPM_EXEC) stryker run
+STRYKER_CMD = $(PNPM_BIN) stryker run
 
 SERVE_CMD = --collect.startServerCommand="npx serve out"
 LHCI = $(PNPM_BIN) lhci autorun
@@ -25,7 +25,6 @@ LHCI = $(PNPM_BIN) lhci autorun
 NEXT_DEV_CMD     = $(DOCKER_COMPOSE) up -d && make wait-for-dev
 EXEC_DEV	= $(DOCKER_COMPOSE) exec -T dev
 EXEC_DEV_TTYLESS =
-PLAYWRIGHT_SERVICE = playwright
 PLAYWRIGHT_BASE_CMD = pnpm exec playwright test
 PLAYWRIGHT_TEST = $(DOCKER_COMPOSE) -f docker-compose.test.yml exec playwright $(PLAYWRIGHT_BASE_CMD)
 BUILD_K6_DOCKER = $(MAKE) build-k6-docker
@@ -57,7 +56,7 @@ else
     PNPM_EXEC = $(EXEC_DEV)
 	PLAYWRIGHT_EXEC = $(DOCKER) exec website-playwright-1 pnpm run
 	EXEC_DEV_TTYLESS = $(DOCKER_COMPOSE) exec -T dev
-	STRYKER_CMD = $(PNPM_EXEC) pnpm stryker run
+	STRYKER_CMD = $(EXEC_DEV) pnpm stryker run
 	UNIT_TESTS =  make start && $(DOCKER_COMPOSE) exec -T dev env
 
     BUILD_SERVE_CMD = make start-prod && $(LHCI)

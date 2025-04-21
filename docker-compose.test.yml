@@ -16,8 +16,8 @@ services:
     ports:
       - '3001:3001'
     healthcheck:
-        <<: *default-healthcheck
-        test: ["CMD", "curl", "-f", "http://localhost:3001"]
+      <<: *default-healthcheck
+      test: ["CMD","curl","-f","http://localhost:3001"]
 
   playwright:
     build:
@@ -31,8 +31,8 @@ services:
     environment:
       - NEXT_PUBLIC_PRODUCTION_API_URL=http://prod:3001
     healthcheck:
-        <<: *default-healthcheck
-        test: ["CMD", "curl", "-f", "http://localhost:9324"]
+      <<: *default-healthcheck
+      test: ["CMD","curl","-f","http://localhost:9324"]
 
 
   apollo:
@@ -43,8 +43,8 @@ services:
     ports:
       - '4000:4000'
     healthcheck:
-        <<: *default-healthcheck
-        test: ["CMD", "curl", "-f", "http://localhost:4000/graphql"]
+      <<: *default-healthcheck
+      test: ["CMD","curl","-f","http://localhost:4000/graphql"]
 
   mockoon:
     build:
@@ -55,4 +55,4 @@ services:
     restart: unless-stopped
     healthcheck:
       <<: *default-healthcheck
-      test: ["CMD", "curl", "-f", "http://localhost:8080"]
+      test: ["CMD","curl","-f","http://localhost:8080"]
