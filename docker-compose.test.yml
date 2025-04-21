@@ -29,7 +29,7 @@ services:
     ports:
       - '9324:9324'
     environment:
-      - NEXT_PUBLIC_PRODUCTION_API_URL=http://prod:3001
+      - NEXT_PUBLIC_PROD_HOST_API_URL=http://prod:3001
     healthcheck:
       <<: *default-healthcheck
       test: ["CMD","curl","-f","http://localhost:9324"]

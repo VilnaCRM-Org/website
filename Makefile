@@ -17,6 +17,8 @@ NEXT_BUILD = $(NEXT_BIN) build
 IMG_OPTIMIZE = ./node_modules/.bin/next-export-optimize-images
 NEXT_BUILD_CMD = $(NEXT_BUILD) && $(IMG_OPTIMIZE)
 TS_BIN = ./node_modules/.bin/tsc
+PRETTIER_BIN = $(PNPM_EXEC) ./node_modules/.bin/prettier
+MARKDOWNLINT_BIN = $(PNPM_EXEC) ./node_modules/.bin/markdownlint
 STRYKER_CMD = $(PNPM_BIN) stryker run
 
 SERVE_CMD = --collect.startServerCommand="npx serve out"
@@ -30,10 +32,11 @@ PLAYWRIGHT_TEST = $(DOCKER_COMPOSE) -f docker-compose.test.yml exec playwright $
 BUILD_K6_DOCKER = $(MAKE) build-k6-docker
 LOAD_TESTS_RUN = $(K6) --out "web-dashboard=period=1s&export=$(K6_RESULTS_FILE)" $(K6_TEST_SCRIPT)
 
-UI_PORT=9324
-UI_HOST=0.0.0.0
-UI_FLAGS=--ui-port=$(UI_PORT) --ui-host=$(UI_HOST)
-WAIT_ON=http://localhost:$(UI_PORT)
+DEV_PORT = 3000
+UI_PORT = 9324
+UI_HOST = 0.0.0.0
+UI_FLAGS = --ui-port=$(UI_PORT) --ui-host=$(UI_HOST)
+UI_MODE_URL = http://localhost:$(UI_PORT)
 
 # Executables
 PNPM      	= $(EXEC_DEV) pnpm
@@ -83,8 +86,8 @@ start: ## Start the application
 	$(NEXT_DEV_CMD)
 
 wait-for-dev: ## Wait for the dev service to be ready on port 3000.
-	@echo "Waiting for dev service to be ready on port 3000..."
-	npx wait-on -v http://localhost:3000
+	@echo "Waiting for dev service to be ready on port $(DEV_PORT).."
+	npx wait-on -v http://localhost:$(DEV_PORT)
 	@echo "Dev service is up and running!"
 
 build: ## A tool build the project
@@ -93,8 +96,8 @@ build: ## A tool build the project
 build-analyze: ## Build with bundle analyzer enabled (ANALYZE=true)
 	ANALYZE=true $(NEXT_BUILD_CMD)
 
-format: ## This command executes Prettier Formating
-	$(PNPM_EXEC) ./node_modules/.bin/prettier "**/*.{js,jsx,ts,tsx,json,css,scss,md}" --write --ignore-path .prettierignore
+format: ## This command executes Prettier formatting
+	$(PRETTIER_BIN) "**/*.{js,jsx,ts,tsx,json,css,scss,md}" --write --ignore-path .prettierignore
 
 lint-next: ## This command executes ESLint
 	$(EXEC_DEV_TTYLESS) $(NEXT_BIN) lint
@@ -103,15 +106,15 @@ lint-tsc: ## This command executes Typescript linter
 	$(PNPM_EXEC) $(TS_BIN) $(TSC_FLAGS)
 
 lint-md: ## This command executes Markdown linter
-	$(PNPM_EXEC) ./node_modules/.bin/markdownlint -i CHANGELOG.md **/*.md
+	$(MARKDOWNLINT_BIN) -i CHANGELOG.md **/*.md
 
 git-hooks-install: ## Install git hooks
 	 $(PNPM_BIN) husky install
 
-storybook-start: ## Start Storybook UI. Storybook is a frontend workshop for building UI components and pages in isolation.
+storybook-start: ## Start Storybook UI.
 	$(PNPM_EXEC) ./node_modules/.bin/storybook dev -p 6006
 
-storybook-build: ## Build Storybook UI. Storybook is a frontend workshop for building UI components and pages in isolation.
+storybook-build: ## Build Storybook UI.
 	$(PNPM_EXEC) ./node_modules/.bin/storybook build
 
 test-e2e: start-prod  ## Start production and run E2E tests
@@ -119,15 +122,16 @@ test-e2e: start-prod  ## Start production and run E2E tests
 
 test-e2e-ui: start-prod ## Start the production environment and run E2E tests with the UI available at http://localhost:9324
 	@echo "🚀 Starting Playwright UI tests..."
-	$(PLAYWRIGHT_TEST) ./src/test/e2e $(UI_FLAGS) && \
-	npx wait-on -v $(WAIT_ON)
+	@echo "Test will be run on: $(UI_MODE_URL)"
+	$(PLAYWRIGHT_TEST) ./src/test/e2e $(UI_FLAGS)
 
 test-visual: start-prod  ## Start production and run visual tests
 	$(PLAYWRIGHT_TEST) ./src/test/visual
 
 test-visual-ui: start-prod ## Start the production environment and run visual tests with the UI available at http://localhost:9324
-	$(PLAYWRIGHT_TEST) ./src/test/visual $(UI_FLAGS) && \
-	npx wait-on -v $(WAIT_ON)
+	@echo "🚀 Starting Playwright UI tests..."
+	@echo "Test will be run on: $(UI_MODE_URL)"
+	$(PLAYWRIGHT_TEST) ./src/test/visual $(UI_FLAGS)
 
 test-visual-update:
 	$(PLAYWRIGHT_TEST) ./src/test/visual --update-snapshots
@@ -151,7 +155,7 @@ test-unit-server: ## This command executes unit tests using Jest library.
 test-memory-leak: start-prod ## This command executes memory leaks tests using Memlab library.
 	$(DOCKER_COMPOSE) -f docker-compose.memory-leak.yml up -d || (echo "Failed to start memory leak container" && exit 1)
 
-test-mutation:
+test-mutation:  ## Run mutation tests using Stryker
 	$(STRYKER_CMD)
 
 build-k6-docker: ## This command build K6 image

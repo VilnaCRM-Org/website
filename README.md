@@ -160,6 +160,7 @@ Note: The following commands do not require the `CI=1` prefix:
   make build-k6-docker: builds a Docker image for K6
 
   make git-hooks-install: installs husky Git hooks locally
+  make update: runs locally on the host machine, not in a container
 ```
 
 💡 Tip: To run commands locally without Docker, please prefix each command with CI=1.
