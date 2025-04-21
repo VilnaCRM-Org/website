@@ -14,15 +14,13 @@ NEXT_BUILD = $(NEXT_BIN) build
 IMG_OPTIMIZE = ./node_modules/.bin/next-export-optimize-images
 NEXT_BUILD_CMD = $(NEXT_BUILD) && $(IMG_OPTIMIZE)
 TS_BIN = ./node_modules/.bin/tsc
-STRYKER_CMD = $(PNPM_BIN) stryker run
-UNIT_TESTS =
+STRYKER_CMD = $(PNPM_EXEC) stryker run
 
 SERVE_CMD = --collect.startServerCommand="npx serve out"
 LHCI = $(PNPM_BIN) lhci autorun
 
-DEV_ENV     = $(DOCKER_COMPOSE) up -d && make wait-for-dev
-EXEC_DEV	= $(DOCKER_COMPOSE) exec dev
-PNPM_CMD    = $(PNPM_BIN)
+NEXT_DEV_CMD     = $(DOCKER_COMPOSE) up -d && make wait-for-dev
+EXEC_DEV	= $(DOCKER_COMPOSE) exec -T dev
 EXEC_DEV_TTYLESS =
 PLAYWRIGHT_SERVICE = playwright
 PLAYWRIGHT_BASE_CMD = pnpm exec playwright test
@@ -44,7 +42,7 @@ ifeq ($(CI), 1)
     LHCI_MOBILE = $(NEXT_BUILD_CMD) && $(LHCI) --config=lighthouserc.mobile.js $(SERVE_CMD)
 	LOAD_TESTS_RUN = $(K6_BIN) run --summary-trend-stats="avg,min,med,max,p(95),p(99)" --out "web-dashboard=period=1s&export=./src/test/load/results/index.html" ./src/test/load/homepage.js
 	BUILD_K6_DOCKER =
-	DEV_ENV = $(NEXT_BIN) dev
+	NEXT_DEV_CMD = $(NEXT_BIN) dev
 else
     PNPM_EXEC = $(EXEC_DEV)
 	PLAYWRIGHT_EXEC = $(DOCKER) exec website-playwright-1 pnpm run
@@ -53,7 +51,6 @@ else
 	LOAD_TESTS_RUN = $(K6) --out 'web-dashboard=period=1s&export=/loadTests/results/homepage.html' /loadTests/homepage.js
 	BUILD_K6_DOCKER = $(MAKE) build-k6-docker
 	EXEC_DEV_TTYLESS = $(DOCKER_COMPOSE) exec -T dev
-	PNPM_CMD = $(DOCKER_COMPOSE) exec -T dev
 	STRYKER_CMD = $(EXEC_DEV) pnpm stryker run
 	UNIT_TESTS =  make start && $(DOCKER_COMPOSE) exec -T dev env
 endif
@@ -67,14 +64,14 @@ endif
 
 # Variables
 REPORT_FILENAME ?= default_value
-TSC_FLAGS ?= --newLine LF --strict
+TSC_FLAGS ?= --newLine LF --strict --noUnusedLocals --noUnusedParameters
 
 help:
 	@printf "\033[33mUsage:\033[0m\n  make [target] [arg=\"val\"...]\n\n\033[33mTargets:\033[0m\n"
 	@grep -E '^[-a-zA-Z0-9_\.\/]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[32m%-15s\033[0m %s\n", $$1, $$2}'
 
 start: ## Start the application
-	$(DEV_ENV)
+	$(NEXT_DEV_CMD)
 
 wait-for-dev: ## Wait for the dev service to be ready on port 3000.
 	@echo "Waiting for dev service to be ready on port 3000..."
@@ -88,16 +85,16 @@ build-analyze: ## Build with bundle analyzer enabled (ANALYZE=true)
 	ANALYZE=true $(NEXT_BUILD_CMD)
 
 format: ## This command executes Prettier Formating
-	$(PNPM_CMD) ./node_modules/.bin/prettier "**/*.{js,jsx,ts,tsx,json,css,scss,md}" --write --ignore-path .prettierignore
+	$(PNPM_EXEC) ./node_modules/.bin/prettier "**/*.{js,jsx,ts,tsx,json,css,scss,md}" --write --ignore-path .prettierignore
 
 lint-next: ## This command executes ESLint
 	$(EXEC_DEV_TTYLESS) $(NEXT_BIN) lint
 
 lint-tsc: ## This command executes Typescript linter
-	$(PNPM_CMD) $(TS_BIN) $(TSC_FLAGS)
+	$(PNPM_EXEC) $(TS_BIN) $(TSC_FLAGS)
 
 lint-md: ## This command executes Markdown linter
-	$(PNPM_CMD) ./node_modules/.bin/markdownlint -i CHANGELOG.md **/*.md
+	$(PNPM_EXEC) ./node_modules/.bin/markdownlint -i CHANGELOG.md **/*.md
 
 git-hooks-install: ## Install git hooks
 	 $(PNPM_BIN) husky install

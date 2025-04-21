@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: sh -c "./node_modules/.bin/next build && ./node_modules/.bin/next-export-optimize-images && ./node_modules/.bin/serve -s out -p 3001"
+    command: sh -c "npx next build && npx next-export-optimize-images && npx serve -s out -p 3001"
     restart: unless-stopped
     volumes:
       - .:/app

@@ -11,7 +11,8 @@ COPY tsconfig.server.json tsconfig.server.json
 COPY docker docker
 COPY .env .env
 
-RUN pnpm install && tsc --project tsconfig.server.json
+RUN pnpm install
+RUN tsc --project tsconfig.server.json
 
 CMD node ./out/docker/apollo-server/schemaFetcher.js && \
     node ./out/docker/apollo-server/server.mjs

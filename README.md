@@ -41,18 +41,18 @@ feature to create your own copy.
 
 Before running the application, make sure the following tools are installed on your machine:
 
-Install [Node.js](https://nodejs.org/en/) version 20 or higher.
-You can download and install Node.js from the official website, or use a version manager like
-nvm (Node Version Manager) to easily manage versions.
+- **Install [Node.js](https://nodejs.org/en/)** (version 20 or higher).
+  You can download and install Node.js from the official website, or use a version manager like
+  nvm (Node Version Manager) to easily manage versions.
+  ь
+- **[Docker](https://docs.docker.com/engine/install/)** required for containerization and managing
+  isolated environments. Install Docker according to the instructions
+  for your operating system. Follow the guide to ensure Docker is properly
+  configured and running on your machine.
 
-[Docker](https://docs.docker.com/engine/install/) is required for containerization and managing
-isolated environments. Install Docker according to the instructions
-for your operating system. Follow the guide to ensure Docker is properly
-configured and running on your machine.
-
-[Docker compose](https://docs.docker.com/compose/install/) is needed to manage multi-container
-Docker applications. Docker Compose is essential for starting up the
-development environment and running the services defined in docker-compose.yml.
+- **[Docker compose](https://docs.docker.com/compose/install/)** is needed to manage multi-container
+  Docker applications. Docker Compose is essential for starting up the
+  development environment and running the services defined in docker-compose.yml.
 
 #### 3. Run the Application
 
