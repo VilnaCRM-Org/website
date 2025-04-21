@@ -1,7 +1,10 @@
 # Parameters
 PROJECT	= frontend-ssr-template
 K6 = $(DOCKER) run -v ./src/test/load:/loadTests --net=host --rm k6 run --summary-trend-stats="avg,min,med,max,p(95),p(99)"
-K6_BIN = docker run --rm --net=host -v $(PWD)/src/test/load:/loadTests grafana/k6
+
+K6_TEST_SCRIPT ?= /loadTests/homepage.js
+K6_RESULTS_DIR ?= /loadTests/results
+K6_RESULTS_FILE ?= $(K6_RESULTS_DIR)/homepage.html
 
 # Executables: local only
 PNPM_BIN		= pnpm
@@ -25,7 +28,8 @@ EXEC_DEV_TTYLESS =
 PLAYWRIGHT_SERVICE = playwright
 PLAYWRIGHT_BASE_CMD = pnpm exec playwright test
 PLAYWRIGHT_TEST = $(DOCKER_COMPOSE) -f docker-compose.test.yml exec playwright $(PLAYWRIGHT_BASE_CMD)
-
+BUILD_K6_DOCKER = $(MAKE) build-k6-docker
+LOAD_TESTS_RUN = $(K6) --out "web-dashboard=period=1s&export=$(K6_RESULTS_FILE)" $(K6_TEST_SCRIPT)
 
 UI_PORT=9324
 UI_HOST=0.0.0.0
@@ -44,21 +48,21 @@ CI ?= 0
 ifeq ($(CI), 1)
     PNPM_EXEC = $(PNPM_BIN)
 	PLAYWRIGHT_EXEC = $(PNPM_EXEC)
-	LHCI_DESKTOP = $(NEXT_BUILD_CMD) && $(LHCI) --config=lighthouserc.desktop.js $(SERVE_CMD)
-    LHCI_MOBILE = $(NEXT_BUILD_CMD) && $(LHCI) --config=lighthouserc.mobile.js $(SERVE_CMD)
-    LOAD_TESTS_RUN = $(K6_BIN) run --summary-trend-stats="avg,min,med,max,p(95),p(99)" --out "web-dashboard=period=1s&export=/loadTests/results/index.html" /loadTests/homepage.js
-	BUILD_K6_DOCKER =
 	NEXT_DEV_CMD = $(NEXT_BIN) dev
+
+    BUILD_SERVE_CMD = $(NEXT_BUILD_CMD) && $(LHCI)
+	LHCI_DESKTOP = $(BUILD_SERVE_CMD) --config=lighthouserc.desktop.js $(SERVE_CMD)
+    LHCI_MOBILE = $(BUILD_SERVE_CMD) --config=lighthouserc.mobile.js $(SERVE_CMD)
 else
     PNPM_EXEC = $(EXEC_DEV)
 	PLAYWRIGHT_EXEC = $(DOCKER) exec website-playwright-1 pnpm run
-	LHCI_DESKTOP = make start-prod && $(LHCI) --config=lighthouserc.desktop.js
-    LHCI_MOBILE = make start-prod && $(LHCI) --config=lighthouserc.mobile.js
-	LOAD_TESTS_RUN = $(K6) --out 'web-dashboard=period=1s&export=/loadTests/results/homepage.html' /loadTests/homepage.js
-	BUILD_K6_DOCKER = $(MAKE) build-k6-docker
 	EXEC_DEV_TTYLESS = $(DOCKER_COMPOSE) exec -T dev
 	STRYKER_CMD = $(PNPM_EXEC) pnpm stryker run
 	UNIT_TESTS =  make start && $(DOCKER_COMPOSE) exec -T dev env
+
+    BUILD_SERVE_CMD = make start-prod && $(LHCI)
+	LHCI_DESKTOP = $(BUILD_SERVE_CMD) --config=lighthouserc.desktop.js
+    LHCI_MOBILE = $(BUILD_SERVE_CMD) --config=lighthouserc.mobile.js
 endif
 
 # To Run in CI mode specify CI variable. Example: make lint-md CI=1
