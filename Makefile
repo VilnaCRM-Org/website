@@ -1,7 +1,7 @@
 # Parameters
 PROJECT	= frontend-ssr-template
 K6 = $(DOCKER) run -v ./src/test/load:/loadTests --net=host --rm k6 run --summary-trend-stats="avg,min,med,max,p(95),p(99)"
-K6_BIN = ./k6
+K6_BIN = docker run --rm --net=host -v $(PWD)/src/test/load:/loadTests grafana/k6
 
 # Executables: local only
 PNPM_BIN		= pnpm
@@ -26,6 +26,12 @@ PLAYWRIGHT_SERVICE = playwright
 PLAYWRIGHT_BASE_CMD = pnpm exec playwright test
 PLAYWRIGHT_TEST = $(DOCKER_COMPOSE) -f docker-compose.test.yml exec playwright $(PLAYWRIGHT_BASE_CMD)
 
+
+UI_PORT=9324
+UI_HOST=0.0.0.0
+UI_FLAGS=--ui-port=$(UI_PORT) --ui-host=$(UI_HOST)
+WAIT_ON=http://localhost:$(UI_PORT)
+
 # Executables
 PNPM      	= $(EXEC_DEV) pnpm
 PNPM_RUN    = $(PNPM) run
@@ -40,7 +46,7 @@ ifeq ($(CI), 1)
 	PLAYWRIGHT_EXEC = $(PNPM_EXEC)
 	LHCI_DESKTOP = $(NEXT_BUILD_CMD) && $(LHCI) --config=lighthouserc.desktop.js $(SERVE_CMD)
     LHCI_MOBILE = $(NEXT_BUILD_CMD) && $(LHCI) --config=lighthouserc.mobile.js $(SERVE_CMD)
-	LOAD_TESTS_RUN = $(K6_BIN) run --summary-trend-stats="avg,min,med,max,p(95),p(99)" --out "web-dashboard=period=1s&export=./src/test/load/results/index.html" ./src/test/load/homepage.js
+    LOAD_TESTS_RUN = $(K6_BIN) run --summary-trend-stats="avg,min,med,max,p(95),p(99)" --out "web-dashboard=period=1s&export=/loadTests/results/index.html" /loadTests/homepage.js
 	BUILD_K6_DOCKER =
 	NEXT_DEV_CMD = $(NEXT_BIN) dev
 else
@@ -51,7 +57,7 @@ else
 	LOAD_TESTS_RUN = $(K6) --out 'web-dashboard=period=1s&export=/loadTests/results/homepage.html' /loadTests/homepage.js
 	BUILD_K6_DOCKER = $(MAKE) build-k6-docker
 	EXEC_DEV_TTYLESS = $(DOCKER_COMPOSE) exec -T dev
-	STRYKER_CMD = $(EXEC_DEV) pnpm stryker run
+	STRYKER_CMD = $(PNPM_EXEC) pnpm stryker run
 	UNIT_TESTS =  make start && $(DOCKER_COMPOSE) exec -T dev env
 endif
 
@@ -110,15 +116,15 @@ test-e2e: start-prod  ## Start production and run E2E tests
 
 test-e2e-ui: start-prod ## Start the production environment and run E2E tests with the UI available at http://localhost:9324
 	@echo "🚀 Starting Playwright UI tests..."
-	$(PLAYWRIGHT_TEST) ./src/test/e2e --ui-port=9324 --ui-host=0.0.0.0 && \
-	npx wait-on -v http://localhost:9324
+	$(PLAYWRIGHT_TEST) ./src/test/e2e $(UI_FLAGS) && \
+	npx wait-on -v $(WAIT_ON)
 
 test-visual: start-prod  ## Start production and run visual tests
 	$(PLAYWRIGHT_TEST) ./src/test/visual
 
 test-visual-ui: start-prod ## Start the production environment and run visual tests with the UI available at http://localhost:9324
-	$(PLAYWRIGHT_TEST) ./src/test/visual --ui-port=9324 --ui-host=0.0.0.0 && \
-	npx wait-on -v http://localhost:9324
+	$(PLAYWRIGHT_TEST) ./src/test/visual $(UI_FLAGS) && \
+	npx wait-on -v $(WAIT_ON)
 
 test-visual-update:
 	$(PLAYWRIGHT_TEST) ./src/test/visual --update-snapshots

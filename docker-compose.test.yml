@@ -1,3 +1,8 @@
+x-healthcheck-default: &default-healthcheck
+  interval: 30s
+  timeout: 10s
+  retries: 5
+
 services:
   prod:
     build:
@@ -11,10 +16,8 @@ services:
     ports:
       - '3001:3001'
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3001"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
+        <<: *default-healthcheck
+        test: [ "CMD", "curl", "-f", "http://localhost:3001" ]
 
   playwright:
     build:
@@ -28,10 +31,9 @@ services:
     environment:
       - NEXT_PUBLIC_PRODUCTION_API_URL=http://prod:3001
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9324"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
+        <<: *default-healthcheck
+        test: [ "CMD", "curl", "-f", "http://localhost:9324" ]
+
 
   apollo:
     build:
@@ -41,10 +43,8 @@ services:
     ports:
       - '4000:4000'
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4000/graphql"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
+        <<: *default-healthcheck
+        test: [ "CMD", "curl", "-f", "http://localhost:4000/graphql" ]
 
   mockoon:
     build:
@@ -54,7 +54,5 @@ services:
       - '8080:8080'
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
+      <<: *default-healthcheck
+      test: [ "CMD", "curl", "-f", "http://localhost:8080" ]

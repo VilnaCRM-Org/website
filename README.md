@@ -34,8 +34,7 @@ on the software availability and distribution.
 
 #### 1. Clone the Repository
 
-You can either clone the repository locally or use GitHub’s `Use this template`
-feature to create your own copy.
+Clone locally or use GitHub’s `Use this template` feature.
 
 #### 2. Install Prerequisites
 
@@ -44,7 +43,7 @@ Before running the application, make sure the following tools are installed on y
 - **Install [Node.js](https://nodejs.org/en/)** (version 20 or higher).
   You can download and install Node.js from the official website, or use a version manager like
   nvm (Node Version Manager) to easily manage versions.
-  ь
+
 - **[Docker](https://docs.docker.com/engine/install/)** required for containerization and managing
   isolated environments. Install Docker according to the instructions
   for your operating system. Follow the guide to ensure Docker is properly
