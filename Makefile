@@ -1,5 +1,6 @@
 # Parameters
 PROJECT	= frontend-ssr-template
+
 K6 = $(DOCKER) run -v ./src/test/load:/loadTests --net=host --rm k6 run --summary-trend-stats="avg,min,med,max,p(95),p(99)"
 
 K6_TEST_SCRIPT ?= /loadTests/homepage.js
@@ -13,12 +14,22 @@ DOCKER_COMPOSE	= docker compose
 MAKE 			= make
 
 NEXT_BIN = ./node_modules/.bin/next
-NEXT_BUILD = $(NEXT_BIN) build
 IMG_OPTIMIZE = ./node_modules/.bin/next-export-optimize-images
-NEXT_BUILD_CMD = $(NEXT_BUILD) && $(IMG_OPTIMIZE)
 TS_BIN = ./node_modules/.bin/tsc
+DOCKER_COMPOSE_TEST_FILE = docker-compose.test.yml
+STORYBOOK_BIN = ./node_modules/.bin/storybook
+MD_LINT_IGNORE_PATTERN = -i CHANGELOG.md **/*.md
+JEST_BIN = ./node_modules/.bin/jest
+DOCKER_COMPOSE_FILE = docker-compose.test.yml
+JEST_FLAGS = --verbose
+
+NEXT_BUILD = $(NEXT_BIN) build
+NEXT_BUILD_CMD = $(NEXT_BUILD) && $(IMG_OPTIMIZE)
 PRETTIER_BIN = $(PNPM_EXEC) ./node_modules/.bin/prettier
 MARKDOWNLINT_BIN = $(PNPM_EXEC) ./node_modules/.bin/markdownlint
+TEST_DIR_APOLLO = ./src/test/apollo-server
+TEST_DIR_E2E = ./src/test/e2e
+TEST_DIR_VISUAL = ./src/test/visual
 STRYKER_CMD = $(PNPM_BIN) stryker run
 
 SERVE_CMD = --collect.startServerCommand="npx serve out"
@@ -27,11 +38,12 @@ LHCI = $(PNPM_BIN) lhci autorun
 NEXT_DEV_CMD     = $(DOCKER_COMPOSE) up -d && make wait-for-dev
 EXEC_DEV	= $(DOCKER_COMPOSE) exec -T dev
 PLAYWRIGHT_BASE_CMD = pnpm exec playwright test
-PLAYWRIGHT_TEST = $(DOCKER_COMPOSE) -f docker-compose.test.yml exec playwright $(PLAYWRIGHT_BASE_CMD)
+PLAYWRIGHT_TEST = $(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_FILE) exec playwright $(PLAYWRIGHT_BASE_CMD)
 BUILD_K6_DOCKER = $(MAKE) build-k6-docker
 LOAD_TESTS_RUN = $(K6) --out "web-dashboard=period=1s&export=$(K6_RESULTS_FILE)" $(K6_TEST_SCRIPT)
 
 PROD_PORT = 3001
+STORYBOOK_PORT = 6006
 DEV_PORT = 3000
 UI_PORT = 9324
 UI_HOST = 0.0.0.0
@@ -52,9 +64,11 @@ ifeq ($(CI), 1)
 	PLAYWRIGHT_EXEC = $(PNPM_EXEC)
 	NEXT_DEV_CMD = $(NEXT_BIN) dev
 
-    BUILD_SERVE_CMD = $(NEXT_BUILD_CMD) && $(LHCI)
-	LHCI_DESKTOP = $(BUILD_SERVE_CMD) --config=lighthouserc.desktop.js $(SERVE_CMD)
-    LHCI_MOBILE = $(BUILD_SERVE_CMD) --config=lighthouserc.mobile.js $(SERVE_CMD)
+    STORYBOOK_START = $(STORYBOOK_BIN) dev -p $(STORYBOOK_PORT)
+
+    LHCI_BUILD_CMD = $(NEXT_BUILD_CMD) && $(LHCI)
+	LHCI_DESKTOP = $(LHCI_BUILD_CMD) --config=lighthouserc.desktop.js $(SERVE_CMD)
+    LHCI_MOBILE = $(LHCI_BUILD_CMD) --config=lighthouserc.mobile.js $(SERVE_CMD)
 else
     PNPM_EXEC = $(EXEC_DEV)
 	PLAYWRIGHT_EXEC = $(DOCKER) exec website-playwright-1 pnpm run
@@ -62,9 +76,11 @@ else
 	STRYKER_CMD = make start && $(EXEC_DEV) pnpm stryker run
 	UNIT_TESTS =  make start && $(DOCKER_COMPOSE) exec -T dev env
 
-    BUILD_SERVE_CMD = make start-prod && $(LHCI)
-	LHCI_DESKTOP = $(BUILD_SERVE_CMD) --config=lighthouserc.desktop.js
-    LHCI_MOBILE = $(BUILD_SERVE_CMD) --config=lighthouserc.mobile.js
+	STORYBOOK_START = exec $(STORYBOOK_BIN) dev -p $(STORYBOOK_PORT) --host 0.0.0.0
+
+    LHCI_BUILD_CMD = make start-prod && $(LHCI)
+	LHCI_DESKTOP = $(LHCI_BUILD_CMD) --config=lighthouserc.desktop.js
+    LHCI_MOBILE = $(LHCI_BUILD_CMD) --config=lighthouserc.mobile.js
 endif
 
 # To Run in CI mode specify CI variable. Example: make lint-md CI=1
@@ -85,7 +101,7 @@ help:
 start: ## Start the application
 	$(NEXT_DEV_CMD)
 
-wait-for-dev: ## Wait for the dev service to be ready on port 3000.
+wait-for-dev: ## Wait for the dev service to be ready on port $(DEV_PORT).
 	@echo "Waiting for dev service to be ready on port $(DEV_PORT).."
 	npx wait-on -v http://localhost:$(DEV_PORT)
 	@echo "Dev service is up and running!"
@@ -106,40 +122,40 @@ lint-tsc: ## This command executes Typescript linter
 	$(PNPM_EXEC) $(TS_BIN) $(TSC_FLAGS)
 
 lint-md: ## This command executes Markdown linter
-	$(MARKDOWNLINT_BIN) -i CHANGELOG.md **/*.md
+	$(MARKDOWNLINT_BIN) $(MD_LINT_IGNORE_PATTERN)
 
 git-hooks-install: ## Install git hooks
 	 $(PNPM_BIN) husky install
 
-storybook-start: ## Start Storybook UI.
-	$(PNPM_EXEC) ./node_modules/.bin/storybook dev -p 6006
+storybook-start: ## Start Storybook UI and open in browser
+	$(PNPM_BIN) $(STORYBOOK_START)
 
 storybook-build: ## Build Storybook UI.
-	$(PNPM_EXEC) ./node_modules/.bin/storybook build
+	$(PNPM_EXEC) $(STORYBOOK_BIN) build
 
 test-e2e: start-prod  ## Start production and run E2E tests
-	$(PLAYWRIGHT_TEST) ./src/test/e2e
+	$(PLAYWRIGHT_TEST) $(TEST_DIR_E2E)
 
 test-e2e-ui: start-prod ## Start the production environment and run E2E tests with the UI available at http://localhost:9324
 	@echo "🚀 Starting Playwright UI tests..."
 	@echo "Test will be run on: $(UI_MODE_URL)"
-	$(PLAYWRIGHT_TEST) ./src/test/e2e $(UI_FLAGS)
+	$(PLAYWRIGHT_TEST) $(TEST_DIR_E2E) $(UI_FLAGS)
 
 test-visual: start-prod  ## Start production and run visual tests
-	$(PLAYWRIGHT_TEST) ./src/test/visual
+	$(PLAYWRIGHT_TEST) $(TEST_DIR_VISUAL)
 
 test-visual-ui: start-prod ## Start the production environment and run visual tests with the UI available at http://localhost:9324
 	@echo "🚀 Starting Playwright UI tests..."
 	@echo "Test will be run on: $(UI_MODE_URL)"
-	$(PLAYWRIGHT_TEST) ./src/test/visual $(UI_FLAGS)
+	$(PLAYWRIGHT_TEST) $(TEST_DIR_VISUAL) $(UI_FLAGS)
 
 test-visual-update: ## Update Playwright visual snapshots
-	$(PLAYWRIGHT_TEST) ./src/test/visual --update-snapshots
+	$(PLAYWRIGHT_TEST) $(TEST_DIR_VISUAL) --update-snapshots
 
 start-prod: ## Build image and start container in production mode
-	$(DOCKER_COMPOSE) -f docker-compose.test.yml up -d && make wait-for-prod
+	$(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_TEST_FILE) up -d && make wait-for-prod
 
-wait-for-prod: ## Wait for the prod service to be ready on port 3001.
+wait-for-prod: ## Wait for the prod service to be ready on port $(PROD_PORT).
 	@echo "Waiting for prod service to be ready on port $(PROD_PORT)..."
 	npx wait-on -v http://localhost:$(PROD_PORT)
 	@echo "Prod service is up and running!"
@@ -147,10 +163,10 @@ wait-for-prod: ## Wait for the prod service to be ready on port 3001.
 test-unit-all: test-unit-client test-unit-server ## This command executes unit tests for both client and server environments.
 
 test-unit-client: ## This command executes unit tests using Jest library.
-	$(UNIT_TESTS) TEST_ENV=client ./node_modules/.bin/jest --verbose
+	$(UNIT_TESTS) TEST_ENV=client $(JEST_BIN) $(JEST_FLAGS)
 
 test-unit-server: ## This command executes unit tests using Jest library.
-	$(UNIT_TESTS) TEST_ENV=server ./node_modules/.bin/jest --verbose ./src/test/apollo-server
+	$(UNIT_TESTS) TEST_ENV=server $(JEST_BIN) $(JEST_FLAGS) $(TEST_DIR_APOLLO)
 
 test-memory-leak: start-prod ## This command executes memory leaks tests using Memlab library.
 	@echo "🧪 Starting memory leak test environment..."

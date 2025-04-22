@@ -10,12 +10,8 @@ RUN apk add --no-cache \
     && npm install -g pnpm@10.6.5
 
 WORKDIR /app
-COPY .puppeteerrc.cjs /app/.puppeteerrc.cjs
 COPY package.json pnpm-lock.yaml checkNodeVersion.js ./
 
-ENV PUPPETEER_CONFIG_FILE="/app/.puppeteerrc.cjs" \
-    PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
-    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 RUN pnpm install
 
