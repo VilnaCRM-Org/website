@@ -70,6 +70,10 @@
       "alt_bonus": "Image card of migration"
     }
   },
+  "alts": {
+    "bigScreen": "Large digital screen with a blue background",
+    "smallScreen": "Small digital screen displaying minimal content"
+  },
   "for_who": {
     "heading_main": "For who",
     "text_main": "We created Vilna, focusing on the specifics of the service business, which is not suitable for ordinary e-commerce templates",

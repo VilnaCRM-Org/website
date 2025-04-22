@@ -1,6 +1,7 @@
 import { Box, Container } from '@mui/material';
 import { getOptimizedImageProps } from 'next-export-optimize-images/image';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 import bigScreen from '../../assets/img/about-vilna/desktop.jpg';
 import smallScreen from '../../assets/img/about-vilna/mobile.jpg';
@@ -19,6 +20,8 @@ import MainTitle from './MainTitle/MainTitle';
 import styles from './styles';
 
 function ForWhoSection(): React.ReactElement {
+  const { t } = useTranslation();
+
   const getImageProps: (src: string, alt?: string) => React.ImgHTMLAttributes<HTMLImageElement> = (
     src,
     alt = ''
@@ -33,7 +36,7 @@ function ForWhoSection(): React.ReactElement {
             <Cards />
           </Box>
           <Box sx={styles.container}>
-            <Box sx={styles.svgContainer}>
+            <Box sx={styles.svg}>
               <Box
                 component="img"
                 {...getImageProps(circle)}
@@ -83,13 +86,13 @@ function ForWhoSection(): React.ReactElement {
             <Box sx={styles.square}>
               <Box
                 component="img"
-                {...getImageProps(bigScreen, 'Large digital screen with a blue background')}
+                {...getImageProps(bigScreen, t('alts.bigScreen'))}
                 sx={styles.bigScreen}
                 loading="lazy"
               />
               <Box
                 component="img"
-                {...getImageProps(smallScreen, 'Small digital screen displaying minimal content')}
+                {...getImageProps(smallScreen, t('alts.smallScreen'))}
                 sx={styles.smallScreen}
                 loading="lazy"
               />

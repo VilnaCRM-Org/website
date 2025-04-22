@@ -87,8 +87,7 @@ export default {
     },
   },
 
-  svgContainer: {
-    // The container has elements inside, but no styles are needed except for the tablet layout.
+  svg: {
     [`@media (min-width: 969px)`]: {
       marginTop: '-15rem',
     },
