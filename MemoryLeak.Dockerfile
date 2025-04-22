@@ -11,7 +11,7 @@ RUN apk add --no-cache \
 
 WORKDIR /app
 COPY .puppeteerrc.cjs /app/.puppeteerrc.cjs
-COPY . .
+COPY package.json pnpm-lock.yaml checkNodeVersion.js ./
 
 ENV PUPPETEER_CONFIG_FILE="/app/.puppeteerrc.cjs" \
     PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \

@@ -26,12 +26,12 @@ LHCI = $(PNPM_BIN) lhci autorun
 
 NEXT_DEV_CMD     = $(DOCKER_COMPOSE) up -d && make wait-for-dev
 EXEC_DEV	= $(DOCKER_COMPOSE) exec -T dev
-EXEC_DEV_TTYLESS =
 PLAYWRIGHT_BASE_CMD = pnpm exec playwright test
 PLAYWRIGHT_TEST = $(DOCKER_COMPOSE) -f docker-compose.test.yml exec playwright $(PLAYWRIGHT_BASE_CMD)
 BUILD_K6_DOCKER = $(MAKE) build-k6-docker
 LOAD_TESTS_RUN = $(K6) --out "web-dashboard=period=1s&export=$(K6_RESULTS_FILE)" $(K6_TEST_SCRIPT)
 
+PROD_PORT = 3001
 DEV_PORT = 3000
 UI_PORT = 9324
 UI_HOST = 0.0.0.0
@@ -133,15 +133,15 @@ test-visual-ui: start-prod ## Start the production environment and run visual te
 	@echo "Test will be run on: $(UI_MODE_URL)"
 	$(PLAYWRIGHT_TEST) ./src/test/visual $(UI_FLAGS)
 
-test-visual-update:
+test-visual-update: ## Update Playwright visual snapshots
 	$(PLAYWRIGHT_TEST) ./src/test/visual --update-snapshots
 
 start-prod: ## Build image and start container in production mode
 	$(DOCKER_COMPOSE) -f docker-compose.test.yml up -d && make wait-for-prod
 
 wait-for-prod: ## Wait for the prod service to be ready on port 3001.
-	@echo "Waiting for prod service to be ready on port 3001..."
-	npx wait-on -v http://localhost:3001
+	@echo "Waiting for prod service to be ready on port $(PROD_PORT)..."
+	npx wait-on -v http://localhost:$(PROD_PORT)
 	@echo "Prod service is up and running!"
 
 test-unit-all: test-unit-client test-unit-server ## This command executes unit tests for both client and server environments.
@@ -153,9 +153,10 @@ test-unit-server: ## This command executes unit tests using Jest library.
 	$(UNIT_TESTS) TEST_ENV=server ./node_modules/.bin/jest --verbose ./src/test/apollo-server
 
 test-memory-leak: start-prod ## This command executes memory leaks tests using Memlab library.
+	@echo "🧪 Starting memory leak test environment..."
 	$(DOCKER_COMPOSE) -f docker-compose.memory-leak.yml up -d || (echo "Failed to start memory leak container" && exit 1)
 
-test-mutation:  ## Run mutation tests using Stryker
+test-mutation:  ## Run mutation tests using Stryker after building the app
 	$(STRYKER_CMD)
 
 build-k6-docker: ## This command build K6 image
@@ -181,7 +182,7 @@ down: ## Stop the docker hub
 	$(DOCKER_COMPOSE) down --remove-orphans
 
 sh: ## Log to the docker container
-	@$(EXEC_DEV) sh
+	$(DOCKER_COMPOSE) exec dev sh
 
 ps: ## Log to the docker container
 	@$(DOCKER_COMPOSE) ps
