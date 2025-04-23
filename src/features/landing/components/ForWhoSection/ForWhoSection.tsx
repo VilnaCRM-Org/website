@@ -37,6 +37,18 @@ function ForWhoSection(): React.ReactElement {
     alt: t('alts.smallScreen')
   }).props;
 
+  const decorativeImages = [
+    { src: circle, sx: styles.circle },
+    { src: rhombus, sx: styles.rhombus },
+    { src: pointGroup, sx: styles.pointGroup },
+    { src: point6, sx: styles.point6 },
+    { src: point8, sx: styles.point8 },
+    { src: point10, sx: styles.point10 },
+    { src: waves, sx: styles.waves },
+    { src: hexagon, sx: styles.hexagon },
+    { src: triangle, sx: styles.triangle }
+  ];
+
   return (
     <Box id="forWhoSection" component="section" sx={styles.wrapper}>
       <Container>
@@ -47,86 +59,38 @@ function ForWhoSection(): React.ReactElement {
           </Box>
           <Box sx={styles.container}>
             <Box sx={styles.svg}>
-              <Box
-                component="img"
-                {...getImageProps(circle)}
-                aria-hidden="true"
-                sx={styles.circle}
-                loading="lazy"
-              />
-
-              <Box
-                component="img"
-                {...getImageProps(rhombus)}
-                aria-hidden="true"
-                sx={styles.rhombus}
-                loading="lazy"
-              />
-              <Box sx={styles.pointContainer}>
-                <Box
-                  component="img"
-                  {...getImageProps(pointGroup)}
-                  aria-hidden="true"
-                  sx={styles.pointGroup}
-                  loading="lazy"
-                />
-                <Box
-                  component="img"
-                  {...getImageProps(point6)}
-                  aria-hidden="true"
-                  sx={styles.point6}
-                  loading="lazy"
-                />
-                <Box
-                  component="img"
-                  {...getImageProps(point8)}
-                  aria-hidden="true"
-                  sx={styles.point8}
-                  loading="lazy"
-                />
-                <Box
-                  component="img"
-                  {...getImageProps(point10)}
-                  aria-hidden="true"
-                  sx={styles.point10}
-                  loading="lazy"
-                />
-              </Box>
+              {decorativeImages
+                .filter(({ src }) => 
+                  [circle, rhombus, pointGroup, point6, point8, point10].includes(src)
+                )
+                .map(({ src, sx }) => (
+                  <Box
+                    key={src}
+                    component="img"
+                    {...getImageProps(src)}
+                    aria-hidden="true"
+                    sx={sx}
+                    loading="lazy"
+                  />
+                ))}
             </Box>
             <Box sx={styles.square}>
-              <Box
-                component="img"
-                {...bigScreenProps}
-                sx={styles.bigScreen}
-                loading="lazy"
-              />
-              <Box
-                component="img"
-                {...smallScreenProps}
-                sx={styles.smallScreen}
-                loading="lazy"
-              />
-              <Box
-                component="img"
-                {...getImageProps(waves)}
-                aria-hidden="true"
-                sx={styles.waves}
-                loading="lazy"
-              />
-              <Box
-                component="img"
-                {...getImageProps(hexagon)}
-                aria-hidden="true"
-                sx={styles.hexagon}
-                loading="lazy"
-              />
-              <Box
-                component="img"
-                {...getImageProps(triangle)}
-                aria-hidden="true"
-                sx={styles.triangle}
-                loading="lazy"
-              />
+              <Box component="img" {...bigScreenProps} sx={styles.bigScreen} loading="lazy" />
+              <Box component="img" {...smallScreenProps} sx={styles.smallScreen} loading="lazy" />
+              {decorativeImages
+                .filter(({ src }) => 
+                  [waves, hexagon, triangle].includes(src)
+                )
+                .map(({ src, sx }) => (
+                  <Box
+                    key={src}
+                    component="img"
+                    {...getImageProps(src)}
+                    aria-hidden="true"
+                    sx={sx}
+                    loading="lazy"
+                  />
+                ))}
             </Box>
           </Box>
         </Box>
