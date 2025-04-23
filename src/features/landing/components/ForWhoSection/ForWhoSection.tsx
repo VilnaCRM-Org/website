@@ -1,4 +1,4 @@
-import { Box, Container } from '@mui/material';
+import { Box, Container, SxProps, Theme } from '@mui/material';
 import { getOptimizedImageProps } from 'next-export-optimize-images/image';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -37,7 +37,14 @@ function ForWhoSection(): React.ReactElement {
     alt: t('alts.smallScreen')
   }).props;
 
-  const decorativeImages = [
+  // Тип для декоративних зображень
+  type DecorativeImage = {
+    src: string;
+    sx: SxProps<Theme>;
+  };
+
+  // Масив декоративних зображень
+  const decorativeImages: DecorativeImage[] = [
     { src: circle, sx: styles.circle },
     { src: rhombus, sx: styles.rhombus },
     { src: pointGroup, sx: styles.pointGroup },
