@@ -22,6 +22,17 @@ import styles from './styles';
 function ForWhoSection(): React.ReactElement {
   const { t } = useTranslation();
 
+  const bigScreenProps = getOptimizedImageProps({
+    src: bigScreen,
+    alt: t('alts.bigScreen')
+  }).props;
+
+  const smallScreenProps = getOptimizedImageProps({
+    src: smallScreen,
+    alt: t('alts.smallScreen')
+  }).props;
+
+
   const getImageProps: (src: string, alt?: string) => React.ImgHTMLAttributes<HTMLImageElement> = (
     src,
     alt = ''
@@ -86,13 +97,13 @@ function ForWhoSection(): React.ReactElement {
             <Box sx={styles.square}>
               <Box
                 component="img"
-                {...getImageProps(bigScreen, t('alts.bigScreen'))}
+                {...bigScreenProps}
                 sx={styles.bigScreen}
                 loading="lazy"
               />
               <Box
                 component="img"
-                {...getImageProps(smallScreen, t('alts.smallScreen'))}
+                {...smallScreenProps}
                 sx={styles.smallScreen}
                 loading="lazy"
               />
