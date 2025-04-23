@@ -115,7 +115,7 @@ format: ## This command executes Prettier formatting
 	$(PRETTIER_BIN) "**/*.{js,jsx,ts,tsx,json,css,scss,md}" --write --ignore-path .prettierignore
 
 lint-next: ## This command executes ESLint
-	$(EXEC_DEV_TTYLESS) $(NEXT_BIN) lint
+	$(PNPM_EXEC) $(NEXT_BIN) lint
 
 lint-tsc: ## This command executes Typescript linter
 	$(PNPM_EXEC) $(TS_BIN) $(TSC_FLAGS)

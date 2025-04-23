@@ -170,6 +170,33 @@ Example:
   CI=1 make start
 ```
 
+## Package Management
+
+### PNPM Workspace Configuration
+
+This project uses a `pnpm-workspace.yaml` file to optimize dependency installation and build processes:
+
+onlyBuiltDependencies:
+
+- '@apollo/protobufjs'
+- '@memlab/cli'
+- core-js-pure
+- esbuild
+- memlab
+- puppeteer
+- sharp
+- sleep
+
+The onlyBuiltDependencies setting instructs PNPM to only build these specific packages from
+source during installation, rather than using pre-built binaries. This configuration:
+
+- Ensures consistent behavior across different environments (CI, Docker, local development).
+- Resolves compatibility issues that can occur with pre-built binaries.
+- Improves build reliability at the cost of slightly longer installation times.
+
+When adding new dependencies with native code or complex build requirements,
+consider adding them to this list if you encounter installation issues.
+
 ## Routing
 
 This project includes a routing script for managing URLs.
