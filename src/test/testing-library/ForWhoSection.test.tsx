@@ -14,8 +14,8 @@ describe('ForWhoSection component', () => {
 
   it('should have correct number of decorative images with empty alt', () => {
     const { getAllByAltText } = render(<ForWhoSection />);
-
-    const decorativeImages = getAllByAltText('');
+    
+    const decorativeImages: HTMLElement[] = getAllByAltText('');
     expect(decorativeImages).toHaveLength(12);
   });
 
@@ -28,7 +28,8 @@ describe('ForWhoSection component', () => {
 
   it('should render Cards component twice (for desktop and mobile)', () => {
     const { getAllByTestId } = render(<ForWhoSection />);
-    const cardsComponents = getAllByTestId('cards-component');
+    const cardsComponents: HTMLElement[] = getAllByTestId('cards-component');
     expect(cardsComponents).toHaveLength(2);
   });
 });
+

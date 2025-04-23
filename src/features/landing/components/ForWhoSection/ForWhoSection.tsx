@@ -27,12 +27,12 @@ const getImageProps: (src: string, alt?: string) => React.ImgHTMLAttributes<HTML
 function ForWhoSection(): React.ReactElement {
   const { t } = useTranslation();
 
-  const bigScreenProps = getOptimizedImageProps({
+  const bigScreenProps: React.ImgHTMLAttributes<HTMLImageElement> = getOptimizedImageProps({
     src: bigScreen,
     alt: t('alts.bigScreen')
   }).props;
 
-  const smallScreenProps = getOptimizedImageProps({
+  const smallScreenProps: React.ImgHTMLAttributes<HTMLImageElement> = getOptimizedImageProps({
     src: smallScreen,
     alt: t('alts.smallScreen')
   }).props;
@@ -54,11 +54,11 @@ function ForWhoSection(): React.ReactElement {
     { src: triangle, sx: styles.triangle }
   ];
 
-  const svgGroup = decorativeImages.filter(({ src }) => 
+  const svgGroup: DecorativeImage[] = decorativeImages.filter(({ src }) => 
     [circle, rhombus, pointGroup, point6, point8, point10].includes(src)
   );
   
-  const squareGroup = decorativeImages.filter(({ src }) => 
+  const squareGroup: DecorativeImage[] = decorativeImages.filter(({ src }) => 
     [waves, hexagon, triangle].includes(src)
   );
 
@@ -72,9 +72,9 @@ function ForWhoSection(): React.ReactElement {
           </Box>
           <Box sx={styles.container}>
             <Box sx={styles.svg}>
-              {svgGroup.map(({ src, sx }, index) => (
+              {svgGroup.map(({ src, sx }) => (
                 <Box
-                  key={`decorative-group1-${index}`}
+                  key={`decorative-${src}`} 
                   component="img"
                   {...getImageProps(src)}
                   aria-hidden="true"
@@ -86,9 +86,9 @@ function ForWhoSection(): React.ReactElement {
             <Box sx={styles.square}>
               <Box component="img" {...bigScreenProps} sx={styles.bigScreen} loading="lazy" />
               <Box component="img" {...smallScreenProps} sx={styles.smallScreen} loading="lazy" />
-              {squareGroup.map(({ src, sx }, index) => (
+              {squareGroup.map(({ src, sx }) => (
                 <Box
-                  key={`decorative-group2-${index}`}
+                  key={`decorative-${src}`} 
                   component="img"
                   {...getImageProps(src)}
                   aria-hidden="true"
