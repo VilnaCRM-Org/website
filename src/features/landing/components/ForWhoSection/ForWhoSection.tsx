@@ -22,16 +22,15 @@ import styles from './styles';
 function ForWhoSection(): React.ReactElement {
   const { t } = useTranslation();
 
-  const bigScreenProps = getOptimizedImageProps({
+  const bigScreenProps: React.ImgHTMLAttributes<HTMLImageElement> = getOptimizedImageProps({
     src: bigScreen,
     alt: t('alts.bigScreen')
   }).props;
 
-  const smallScreenProps = getOptimizedImageProps({
+  const smallScreenProps: React.ImgHTMLAttributes<HTMLImageElement> = getOptimizedImageProps({
     src: smallScreen,
     alt: t('alts.smallScreen')
   }).props;
-
 
   const getImageProps: (src: string, alt?: string) => React.ImgHTMLAttributes<HTMLImageElement> = (
     src,
