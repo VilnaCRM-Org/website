@@ -1,97 +1,114 @@
-# Parameters
-PROJECT     	= frontend-ssr-template
-
 # Executables: local only
-PNPM_BIN		= pnpm
-DOCKER			= docker
-DOCKER_COMPOSE	= docker compose
-MAKE 			= make
+PNPM_BIN		    = pnpm
+DOCKER			    = docker
+DOCKER_COMPOSE	    = docker compose
+MAKE 			    = make
 
-NEXT_BIN = ./node_modules/.bin/next
-IMG_OPTIMIZE = ./node_modules/.bin/next-export-optimize-images
-TS_BIN = ./node_modules/.bin/tsc
-DOCKER_COMPOSE_TEST_FILE = docker-compose.test.yml
-STORYBOOK_BIN = ./node_modules/.bin/storybook
-MD_LINT_IGNORE_PATTERN = -i CHANGELOG.md **/*.md
-JEST_BIN = ./node_modules/.bin/jest
-JEST_FLAGS = --verbose
+# ─── Node Binaries ─────────────────────────────────────────────
+NEXT_BIN            = ./node_modules/.bin/next
+IMG_OPTIMIZE        = ./node_modules/.bin/next-export-optimize-images
+TS_BIN              = ./node_modules/.bin/tsc
+STORYBOOK_BIN       =  ./node_modules/.bin/storybook
+JEST_BIN            = ./node_modules/.bin/jest
 
-NEXT_BUILD = $(NEXT_BIN) build
-NEXT_BUILD_CMD = $(NEXT_BUILD) && $(IMG_OPTIMIZE)
+
+# ─── Build Commands ────────────────────────────────────────────
+NEXT_BUILD          = $(NEXT_BIN) build
+NEXT_BUILD_CMD      = $(NEXT_BUILD) && $(IMG_OPTIMIZE)
 STORYBOOK_BUILD_CMD =  $(STORYBOOK_BIN) build
 
-TEST_DIR_APOLLO = ./src/test/apollo-server
-TEST_DIR_E2E = ./src/test/e2e
-TEST_DIR_VISUAL = ./src/test/visual
-STRYKER_CMD = $(PNPM_BIN) stryker run
 
-SERVE_CMD = --collect.startServerCommand="npx serve out"
-LHCI = $(PNPM_BIN) lhci autorun
+# ─── Test Directories ──────────────────────────────────────────
+TEST_DIR_APOLLO     = ./src/test/apollo-server
+TEST_DIR_E2E        = ./src/test/e2e
+TEST_DIR_VISUAL     = ./src/test/visual
+
+# ─── Mutation Testing ──────────────────────────────────────────
+STRYKER_CMD         = $(PNPM_BIN) stryker run
+
+# ─── Serve & Lighthouse ───────────────────────────────────────
+SERVE_CMD           = --collect.startServerCommand="npx serve out"
+LHCI                = $(PNPM_BIN) lhci autorun
 LHCI_CONFIG_DESKTOP = --config=lighthouserc.desktop.js
-LHCI_CONFIG_MOBILE = --config=lighthouserc.mobile.js
-LHCI_DESKTOP_SERVE = $(LHCI_CONFIG_DESKTOP) $(SERVE_CMD)
-LHCI_MOBILE_SERVE = $(LHCI_CONFIG_MOBILE) $(SERVE_CMD)
+LHCI_CONFIG_MOBILE  = --config=lighthouserc.mobile.js
+LHCI_DESKTOP_SERVE  = $(LHCI_CONFIG_DESKTOP) $(SERVE_CMD)
+LHCI_MOBILE_SERVE   = $(LHCI_CONFIG_MOBILE) $(SERVE_CMD)
 
-NEXT_DEV_CMD     = $(DOCKER_COMPOSE) up -d && make wait-for-dev
-EXEC_DEV_TTYLESS = $(DOCKER_COMPOSE) exec -T dev
+# ─── Docker Commands ───────────────────────────────────────────
+DOCKER_COMPOSE_TEST_FILE = -f docker-compose.test.yml
+EXEC_DEV_TTYLESS    = $(DOCKER_COMPOSE) exec -T dev
+NEXT_DEV_CMD        = $(DOCKER_COMPOSE) up -d && make wait-for-dev
 PLAYWRIGHT_BASE_CMD = pnpm exec playwright test
-PLAYWRIGHT_TEST = $(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_TEST_FILE) exec playwright $(PLAYWRIGHT_BASE_CMD)
+PLAYWRIGHT_TEST     = $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_TEST_FILE) exec playwright $(PLAYWRIGHT_BASE_CMD)
 
-K6_TEST_SCRIPT ?= /loadTests/homepage.js
-K6_RESULTS_FILE ?= /loadTests/results/homepage.html
-K6 = $(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_TEST_FILE) --profile load run --rm k6
-LOAD_TESTS_RUN = $(K6) run --summary-trend-stats="avg,min,med,max,p(95),p(99)" --out "web-dashboard=period=1s&export=$(K6_RESULTS_FILE)" $(K6_TEST_SCRIPT)
 
-PROD_PORT = 3001
-STORYBOOK_PORT = 6006
-DEV_PORT = 3000
-UI_PORT = 9324
-UI_HOST = 0.0.0.0
-UI_FLAGS = --ui-port=$(UI_PORT) --ui-host=$(UI_HOST)
-UI_MODE_URL = http://localhost:$(UI_PORT)
+# ─── Load Testing ──────────────────────────────────────────────
+K6_TEST_SCRIPT      ?= /loadTests/homepage.js
+K6_RESULTS_FILE     ?= /loadTests/results/homepage.html
+K6                  = $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_TEST_FILE) --profile load run --rm k6
+LOAD_TESTS_RUN      = $(K6) run --summary-trend-stats="avg,min,med,max,p(95),p(99)" --out "web-dashboard=period=1s&export=$(K6_RESULTS_FILE)" $(K6_TEST_SCRIPT)
 
-# Executables
-GIT         = git
+# ─── Ports & Environment ──────────────────────────────────────
+PROD_PORT           = 3001
+STORYBOOK_PORT      = 6006
+DEV_PORT            = 3000
+UI_PORT             = 9324
+UI_HOST             = 0.0.0.0
+UI_FLAGS            = --ui-port=$(UI_PORT) --ui-host=$(UI_HOST)
+UI_MODE_URL         = http://localhost:$(UI_PORT)
+
+# ─── Linting ──────────────────────────────────────────────────
+MD_LINT_ARGS       = -i CHANGELOG.md
+
+# ─── Jest ─────────────────────────────────────────────────────
+JEST_FLAGS         = --verbose
+
+# ─── Version Control ───────────────────────────────────────────
+GIT                 = git
 
 # CI variable
 CI ?= 0
 
 # Conditional PNPM_EXEC based on CI
 ifeq ($(CI), 1)
-    PNPM_EXEC = $(PNPM_BIN)
-	NEXT_DEV_CMD = $(NEXT_BIN) dev
-	UNIT_TESTS = env
+    PNPM_EXEC       = $(PNPM_BIN)
+	NEXT_DEV_CMD    = $(NEXT_BIN) dev
+	UNIT_TESTS      = env
 
     STORYBOOK_START = $(STORYBOOK_BIN) dev -p $(STORYBOOK_PORT)
 
-    LHCI_BUILD_CMD = $(NEXT_BUILD_CMD) && $(LHCI)
-    LHCI_DESKTOP = $(LHCI_BUILD_CMD) $(LHCI_DESKTOP_SERVE)
-    LHCI_MOBILE = $(LHCI_BUILD_CMD) $(LHCI_MOBILE_SERVE)
+    LHCI_BUILD_CMD  = $(NEXT_BUILD_CMD) && $(LHCI)
+    LHCI_DESKTOP    = $(LHCI_BUILD_CMD) $(LHCI_DESKTOP_SERVE)
+    LHCI_MOBILE     = $(LHCI_BUILD_CMD) $(LHCI_MOBILE_SERVE)
 else
-    PNPM_EXEC = $(EXEC_DEV_TTYLESS)
-	STRYKER_CMD = make start && $(EXEC_DEV_TTYLESS) pnpm stryker run
-	UNIT_TESTS =  make start && $(EXEC_DEV_TTYLESS) env
+    PNPM_EXEC       = $(EXEC_DEV_TTYLESS)
+	STRYKER_CMD     = make start && $(EXEC_DEV_TTYLESS) pnpm stryker run
+	UNIT_TESTS      =  make start && $(EXEC_DEV_TTYLESS) env
 
 	STORYBOOK_START = exec $(STORYBOOK_BIN) dev -p $(STORYBOOK_PORT) --host 0.0.0.0
 
-    LHCI_BUILD_CMD = make start-prod && $(LHCI)
-    LHCI_DESKTOP = $(LHCI_BUILD_CMD) $(LHCI_CONFIG_DESKTOP)
-    LHCI_MOBILE = $(LHCI_BUILD_CMD) $(LHCI_CONFIG_MOBILE)
+    LHCI_BUILD_CMD  = make start-prod && $(LHCI)
+    LHCI_DESKTOP    = $(LHCI_BUILD_CMD) $(LHCI_CONFIG_DESKTOP)
+    LHCI_MOBILE     = $(LHCI_BUILD_CMD) $(LHCI_CONFIG_MOBILE)
 endif
 
-PRETTIER_BIN = $(PNPM_EXEC) ./node_modules/.bin/prettier
-MARKDOWNLINT_BIN = $(PNPM_EXEC) ./node_modules/.bin/markdownlint
+# ─── Code Formatting / Style ───────────────────────────────────
+PRETTIER_BIN        = $(PNPM_EXEC) ./node_modules/.bin/prettier
+MARKDOWNLINT_BIN    = $(PNPM_EXEC) ./node_modules/.bin/markdownlint
 
 # To Run in CI mode specify CI variable. Example: make lint-md CI=1
 
 # Misc
-.DEFAULT_GOAL = help
-.RECIPEPREFIX +=
+.DEFAULT_GOAL       = help
+.RECIPEPREFIX       +=
 .PHONY: $(filter-out node_modules,$(MAKECMDGOALS))
 
 # Variables
-REPORT_FILENAME ?= default_value
-TSC_FLAGS ?= --newLine LF --strict --noUnusedLocals --noUnusedParameters
+REPORT_FILENAME     ?= default_value
+TSC_FLAGS           ?= --strict --noUnusedLocals --noUnusedParameters
+
+run-visual          = $(PLAYWRIGHT_TEST) $(TEST_DIR_VISUAL)
+run-e2e             = $(PLAYWRIGHT_TEST) $(TEST_DIR_E2E)
 
 help:
 	@printf "\033[33mUsage:\033[0m\n  make [target] [arg=\"val\"...]\n\n\033[33mTargets:\033[0m\n"
@@ -121,38 +138,40 @@ lint-tsc: ## This command executes Typescript linter
 	$(PNPM_EXEC) $(TS_BIN) $(TSC_FLAGS)
 
 lint-md: ## This command executes Markdown linter
-	$(MARKDOWNLINT_BIN) $(MD_LINT_IGNORE_PATTERN)
+	$(MARKDOWNLINT_BIN) $(MD_LINT_ARGS) **/*.md
+
+lint: lint-next lint-tsc lint-md ## Runs all linters: ESLint, TypeScript, and Markdown linters in sequence.
 
 git-hooks-install: ## Install git hooks
 	 $(PNPM_BIN) husky install
 
 storybook-start: ## Start Storybook UI and open in browser
-	$(PNPM_BIN) $(STORYBOOK_START)
+	$(PNPM_EXEC) $(STORYBOOK_START)
 
 storybook-build: ## Build Storybook UI.
 	$(PNPM_EXEC) $(STORYBOOK_BUILD_CMD)
 
 test-e2e: start-prod  ## Start production and run E2E tests
-	$(PLAYWRIGHT_TEST) $(TEST_DIR_E2E)
+	$(run-e2e)
 
 test-e2e-ui: start-prod ## Start the production environment and run E2E tests with the UI available at $(UI_MODE_URL)
 	@echo "🚀 Starting Playwright UI tests..."
 	@echo "Test will be run on: $(UI_MODE_URL)"
-	$(PLAYWRIGHT_TEST) $(TEST_DIR_E2E) $(UI_FLAGS)
+	$(run-e2e) $(UI_FLAGS)
 
 test-visual: start-prod  ## Start production and run visual tests
-	$(PLAYWRIGHT_TEST) $(TEST_DIR_VISUAL)
+	$(run-visual)
 
 test-visual-ui: start-prod ## Start the production environment and run visual tests with the UI available at $(UI_MODE_URL)
 	@echo "🚀 Starting Playwright UI tests..."
 	@echo "Test will be run on: $(UI_MODE_URL)"
-	$(PLAYWRIGHT_TEST) $(TEST_DIR_VISUAL) $(UI_FLAGS)
+	$(run-visual) $(UI_FLAGS)
 
-test-visual-update: ## Update Playwright visual snapshots
+test-visual-update: start-prod ## Update Playwright visual snapshots
 	$(PLAYWRIGHT_TEST) $(TEST_DIR_VISUAL) --update-snapshots
 
 start-prod: ## Build image and start container in production mode
-	$(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_TEST_FILE) up -d && make wait-for-prod
+	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_TEST_FILE) up -d && make wait-for-prod
 
 wait-for-prod: ## Wait for the prod service to be ready on port $(PROD_PORT).
 	@echo "Waiting for prod service to be ready on port $(PROD_PORT)..."
@@ -171,10 +190,11 @@ test-memory-leak: start-prod ## This command executes memory leaks tests using M
 	@echo "🧪 Starting memory leak test environment..."
 	$(DOCKER_COMPOSE) -f docker-compose.memory-leak.yml up -d || (echo "Failed to start memory leak container" && exit 1)
 
-test-mutation:  ## Run mutation tests using Stryker after building the app
+test-mutation: build ## Run mutation tests using Stryker after building the app
 	$(STRYKER_CMD)
 
-load-tests: start-prod ## This command executes load tests using K6 library.  Note: The config uses "prod" as host, which maps to the prod service in Docker Compose.
+load-tests: start-prod ## This command executes load tests using K6 library. Note: The target host is determined by the service URL
+                       ## using $(PROD_PORT), which maps to the production service in Docker Compose.
 	$(LOAD_TESTS_RUN)
 
 lighthouse-desktop: ## Run a Lighthouse audit using the desktop configuration
@@ -183,10 +203,10 @@ lighthouse-desktop: ## Run a Lighthouse audit using the desktop configuration
 lighthouse-mobile: ## Run a Lighthouse audit using the mobile configuration
 	$(LHCI_MOBILE)
 
-install: ## Install node modules (frozen lockfile)
+install: ### Install node modules using pnpm (CI=1 runs locally, default runs in container) — uses frozen lockfile and affects node_modules via volumes
 	$(PNPM_EXEC) pnpm install --frozen-lockfile
 
-update: ## Update node modules according to the current package.json file
+update: ## Update node modules to latest allowed versions — always runs locally, updates lockfile (run before committing dependency changes)
 	 $(PNPM_BIN) update
 
 down: ## Stop the docker containers
@@ -208,5 +228,5 @@ stop: ## Stop docker
 	$(DOCKER_COMPOSE) stop
 
 check-node-version: ## Check if the correct Node.js version is installed
-	$(EXEC_DEV_TTYLESS) node checkNodeVersion.js
+	$(PNPM_EXEC) node checkNodeVersion.js
 

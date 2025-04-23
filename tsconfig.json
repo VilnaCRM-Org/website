@@ -18,7 +18,8 @@
     "baseUrl": ".",
     "incremental": true,
     "experimentalDecorators": true,
-    "emitDecoratorMetadata": true
+    "emitDecoratorMetadata": true,
+    "newLine": "lf"
   },
   "include": [
     "./src",
