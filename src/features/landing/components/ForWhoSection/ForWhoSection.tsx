@@ -19,6 +19,11 @@ import { Cards } from './Cards';
 import MainTitle from './MainTitle/MainTitle';
 import styles from './styles';
 
+const getImageProps: (src: string, alt?: string) => React.ImgHTMLAttributes<HTMLImageElement> = (
+  src,
+  alt = ''
+) => getOptimizedImageProps({ src, alt }).props;
+
 function ForWhoSection(): React.ReactElement {
   const { t } = useTranslation();
 
@@ -31,11 +36,6 @@ function ForWhoSection(): React.ReactElement {
     src: smallScreen,
     alt: t('alts.smallScreen')
   }).props;
-
-  const getImageProps: (src: string, alt?: string) => React.ImgHTMLAttributes<HTMLImageElement> = (
-    src,
-    alt = ''
-  ) => getOptimizedImageProps({ src, alt }).props;
 
   return (
     <Box id="forWhoSection" component="section" sx={styles.wrapper}>

@@ -382,6 +382,7 @@ export default {
     visibility: 'hidden', 
     [`@media (min-width: 426px)`]: {
       display: 'flex',
+      visibility: 'visible',
       position: 'relative',
       width: '10rem',
       height: '10rem',
@@ -413,6 +414,7 @@ export default {
     visibility: 'hidden', 
     [`@media (min-width: 426px)`]: {
       display: 'block',
+      visibility: 'visible',
       position: 'relative',
       width: '10rem',
       height: '7rem',
