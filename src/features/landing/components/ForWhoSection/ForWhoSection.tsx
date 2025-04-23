@@ -84,8 +84,8 @@ function ForWhoSection(): React.ReactElement {
               ))}
             </Box>
             <Box sx={styles.square}>
-              <Box component="img" {...bigScreenProps} sx={styles.bigScreen} loading="lazy" />
-              <Box component="img" {...smallScreenProps} sx={styles.smallScreen} loading="lazy" />
+              <Box component="img" {...bigScreenProps} sx={styles.bigScreen} loading="lazy" data-testid="big-screen" />
+              <Box component="img" {...smallScreenProps} sx={styles.smallScreen} loading="lazy" data-testid="small-screen"/>
               {squareGroup.map(({ src, sx }) => (
                 <Box
                   key={`decorative-${src}`} 

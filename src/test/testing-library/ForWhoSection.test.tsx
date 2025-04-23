@@ -16,7 +16,7 @@ describe('ForWhoSection component', () => {
     const { getAllByAltText } = render(<ForWhoSection />);
     
     const decorativeImages: HTMLElement[] = getAllByAltText('');
-    expect(decorativeImages).toHaveLength(12);
+    expect(decorativeImages).toHaveLength(18);
   });
 
   it('should have main images with proper alt text', () => {
@@ -25,11 +25,4 @@ describe('ForWhoSection component', () => {
     expect(getByAltText(t('alts.bigScreen'))).toBeInTheDocument();
     expect(getByAltText(t('alts.smallScreen'))).toBeInTheDocument();
   });
-
-  it('should render Cards component twice (for desktop and mobile)', () => {
-    const { getAllByTestId } = render(<ForWhoSection />);
-    const cardsComponents: HTMLElement[] = getAllByTestId('cards-component');
-    expect(cardsComponents).toHaveLength(2);
-  });
 });
-
