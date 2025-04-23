@@ -9,17 +9,26 @@ const forWhoLabel: string = t('for_who.aria_label');
 describe('ForWhoSection component', () => {
   it('should render the ForWhoSection component without errors', () => {
     const { getAllByLabelText } = render(<ForWhoSection />);
-
     expect(getAllByLabelText(forWhoLabel)[0]).toBeInTheDocument();
   });
 
-  it('should have the correct number of images with empty alt text and images with proper alt text', () => {
+  it('should have correct number of decorative images with empty alt', () => {
     const { getAllByAltText } = render(<ForWhoSection />);
 
-    const imagesWithEmptyAlt: HTMLElement[] = getAllByAltText('');
-    expect(imagesWithEmptyAlt).toHaveLength(9);
+    const decorativeImages = getAllByAltText('');
+    expect(decorativeImages).toHaveLength(12);
+  });
 
-    const imagesWithAltText: HTMLElement[] = getAllByAltText('Vector');
-    expect(imagesWithAltText).toHaveLength(4);
+  it('should have main images with proper alt text', () => {
+    const { getByAltText } = render(<ForWhoSection />);
+    
+    expect(getByAltText(t('alts.bigScreen'))).toBeInTheDocument();
+    expect(getByAltText(t('alts.smallScreen'))).toBeInTheDocument();
+  });
+
+  it('should render Cards component twice (for desktop and mobile)', () => {
+    const { getAllByTestId } = render(<ForWhoSection />);
+    const cardsComponents = getAllByTestId('cards-component');
+    expect(cardsComponents).toHaveLength(2);
   });
 });

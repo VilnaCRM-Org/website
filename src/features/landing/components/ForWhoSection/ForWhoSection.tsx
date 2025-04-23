@@ -27,23 +27,21 @@ const getImageProps: (src: string, alt?: string) => React.ImgHTMLAttributes<HTML
 function ForWhoSection(): React.ReactElement {
   const { t } = useTranslation();
 
-  const bigScreenProps: React.ImgHTMLAttributes<HTMLImageElement> = getOptimizedImageProps({
+  const bigScreenProps = getOptimizedImageProps({
     src: bigScreen,
     alt: t('alts.bigScreen')
   }).props;
 
-  const smallScreenProps: React.ImgHTMLAttributes<HTMLImageElement> = getOptimizedImageProps({
+  const smallScreenProps = getOptimizedImageProps({
     src: smallScreen,
     alt: t('alts.smallScreen')
   }).props;
 
-  // Тип для декоративних зображень
   type DecorativeImage = {
     src: string;
     sx: SxProps<Theme>;
   };
 
-  // Масив декоративних зображень
   const decorativeImages: DecorativeImage[] = [
     { src: circle, sx: styles.circle },
     { src: rhombus, sx: styles.rhombus },
@@ -56,6 +54,14 @@ function ForWhoSection(): React.ReactElement {
     { src: triangle, sx: styles.triangle }
   ];
 
+  const svgGroup = decorativeImages.filter(({ src }) => 
+    [circle, rhombus, pointGroup, point6, point8, point10].includes(src)
+  );
+  
+  const squareGroup = decorativeImages.filter(({ src }) => 
+    [waves, hexagon, triangle].includes(src)
+  );
+
   return (
     <Box id="forWhoSection" component="section" sx={styles.wrapper}>
       <Container>
@@ -66,38 +72,30 @@ function ForWhoSection(): React.ReactElement {
           </Box>
           <Box sx={styles.container}>
             <Box sx={styles.svg}>
-              {decorativeImages
-                .filter(({ src }) => 
-                  [circle, rhombus, pointGroup, point6, point8, point10].includes(src)
-                )
-                .map(({ src, sx }) => (
-                  <Box
-                    key={src}
-                    component="img"
-                    {...getImageProps(src)}
-                    aria-hidden="true"
-                    sx={sx}
-                    loading="lazy"
-                  />
-                ))}
+              {svgGroup.map(({ src, sx }, index) => (
+                <Box
+                  key={`decorative-group1-${index}`}
+                  component="img"
+                  {...getImageProps(src)}
+                  aria-hidden="true"
+                  sx={sx}
+                  loading="lazy"
+                />
+              ))}
             </Box>
             <Box sx={styles.square}>
               <Box component="img" {...bigScreenProps} sx={styles.bigScreen} loading="lazy" />
               <Box component="img" {...smallScreenProps} sx={styles.smallScreen} loading="lazy" />
-              {decorativeImages
-                .filter(({ src }) => 
-                  [waves, hexagon, triangle].includes(src)
-                )
-                .map(({ src, sx }) => (
-                  <Box
-                    key={src}
-                    component="img"
-                    {...getImageProps(src)}
-                    aria-hidden="true"
-                    sx={sx}
-                    loading="lazy"
-                  />
-                ))}
+              {squareGroup.map(({ src, sx }, index) => (
+                <Box
+                  key={`decorative-group2-${index}`}
+                  component="img"
+                  {...getImageProps(src)}
+                  aria-hidden="true"
+                  sx={sx}
+                  loading="lazy"
+                />
+              ))}
             </Box>
           </Box>
         </Box>
