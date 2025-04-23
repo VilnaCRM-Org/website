@@ -1,6 +1,5 @@
 # Parameters
-PROJECT	= frontend-ssr-template
-
+PROJECT     	= frontend-ssr-template
 
 # Executables: local only
 PNPM_BIN		= pnpm
@@ -19,8 +18,8 @@ JEST_FLAGS = --verbose
 
 NEXT_BUILD = $(NEXT_BIN) build
 NEXT_BUILD_CMD = $(NEXT_BUILD) && $(IMG_OPTIMIZE)
-PRETTIER_BIN = $(PNPM_EXEC) ./node_modules/.bin/prettier
-MARKDOWNLINT_BIN = $(PNPM_EXEC) ./node_modules/.bin/markdownlint
+STORYBOOK_BUILD_CMD =  $(STORYBOOK_BIN) build
+
 TEST_DIR_APOLLO = ./src/test/apollo-server
 TEST_DIR_E2E = ./src/test/e2e
 TEST_DIR_VISUAL = ./src/test/visual
@@ -28,9 +27,13 @@ STRYKER_CMD = $(PNPM_BIN) stryker run
 
 SERVE_CMD = --collect.startServerCommand="npx serve out"
 LHCI = $(PNPM_BIN) lhci autorun
+LHCI_CONFIG_DESKTOP = --config=lighthouserc.desktop.js
+LHCI_CONFIG_MOBILE = --config=lighthouserc.mobile.js
+LHCI_DESKTOP_SERVE = $(LHCI_CONFIG_DESKTOP) $(SERVE_CMD)
+LHCI_MOBILE_SERVE = $(LHCI_CONFIG_MOBILE) $(SERVE_CMD)
 
 NEXT_DEV_CMD     = $(DOCKER_COMPOSE) up -d && make wait-for-dev
-EXEC_DEV	= $(DOCKER_COMPOSE) exec -T dev
+EXEC_DEV_TTYLESS = $(DOCKER_COMPOSE) exec -T dev
 PLAYWRIGHT_BASE_CMD = pnpm exec playwright test
 PLAYWRIGHT_TEST = $(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_TEST_FILE) exec playwright $(PLAYWRIGHT_BASE_CMD)
 
@@ -56,27 +59,28 @@ CI ?= 0
 # Conditional PNPM_EXEC based on CI
 ifeq ($(CI), 1)
     PNPM_EXEC = $(PNPM_BIN)
-	PLAYWRIGHT_EXEC = $(PNPM_EXEC)
 	NEXT_DEV_CMD = $(NEXT_BIN) dev
+	UNIT_TESTS = env
 
     STORYBOOK_START = $(STORYBOOK_BIN) dev -p $(STORYBOOK_PORT)
 
     LHCI_BUILD_CMD = $(NEXT_BUILD_CMD) && $(LHCI)
-	LHCI_DESKTOP = $(LHCI_BUILD_CMD) --config=lighthouserc.desktop.js $(SERVE_CMD)
-    LHCI_MOBILE = $(LHCI_BUILD_CMD) --config=lighthouserc.mobile.js $(SERVE_CMD)
+    LHCI_DESKTOP = $(LHCI_BUILD_CMD) $(LHCI_DESKTOP_SERVE)
+    LHCI_MOBILE = $(LHCI_BUILD_CMD) $(LHCI_MOBILE_SERVE)
 else
-    PNPM_EXEC = $(EXEC_DEV)
-	PLAYWRIGHT_EXEC = $(DOCKER) exec website-playwright-1 pnpm run
-	EXEC_DEV_TTYLESS = $(DOCKER_COMPOSE) exec -T dev
-	STRYKER_CMD = make start && $(EXEC_DEV) pnpm stryker run
-	UNIT_TESTS =  make start && $(DOCKER_COMPOSE) exec -T dev env
+    PNPM_EXEC = $(EXEC_DEV_TTYLESS)
+	STRYKER_CMD = make start && $(EXEC_DEV_TTYLESS) pnpm stryker run
+	UNIT_TESTS =  make start && $(EXEC_DEV_TTYLESS) env
 
 	STORYBOOK_START = exec $(STORYBOOK_BIN) dev -p $(STORYBOOK_PORT) --host 0.0.0.0
 
     LHCI_BUILD_CMD = make start-prod && $(LHCI)
-	LHCI_DESKTOP = $(LHCI_BUILD_CMD) --config=lighthouserc.desktop.js
-    LHCI_MOBILE = $(LHCI_BUILD_CMD) --config=lighthouserc.mobile.js
+    LHCI_DESKTOP = $(LHCI_BUILD_CMD) $(LHCI_CONFIG_DESKTOP)
+    LHCI_MOBILE = $(LHCI_BUILD_CMD) $(LHCI_CONFIG_MOBILE)
 endif
+
+PRETTIER_BIN = $(PNPM_EXEC) ./node_modules/.bin/prettier
+MARKDOWNLINT_BIN = $(PNPM_EXEC) ./node_modules/.bin/markdownlint
 
 # To Run in CI mode specify CI variable. Example: make lint-md CI=1
 
@@ -126,7 +130,7 @@ storybook-start: ## Start Storybook UI and open in browser
 	$(PNPM_BIN) $(STORYBOOK_START)
 
 storybook-build: ## Build Storybook UI.
-	$(PNPM_EXEC) $(STORYBOOK_BIN) build
+	$(PNPM_EXEC) $(STORYBOOK_BUILD_CMD)
 
 test-e2e: start-prod  ## Start production and run E2E tests
 	$(PLAYWRIGHT_TEST) $(TEST_DIR_E2E)
@@ -170,7 +174,7 @@ test-memory-leak: start-prod ## This command executes memory leaks tests using M
 test-mutation:  ## Run mutation tests using Stryker after building the app
 	$(STRYKER_CMD)
 
-load-tests: start-prod ## This command executes load tests using K6 library.
+load-tests: start-prod ## This command executes load tests using K6 library.  Note: The config uses "prod" as host, which maps to the prod service in Docker Compose.
 	$(LOAD_TESTS_RUN)
 
 lighthouse-desktop: ## Run a Lighthouse audit using the desktop configuration
@@ -185,7 +189,7 @@ install: ## Install node modules (frozen lockfile)
 update: ## Update node modules according to the current package.json file
 	 $(PNPM_BIN) update
 
-down: ## Stop the docker hub
+down: ## Stop the docker containers
 	$(DOCKER_COMPOSE) down --remove-orphans
 
 sh: ## Log to the docker container
@@ -198,7 +202,7 @@ logs: ## Show all logs
 	@$(DOCKER_COMPOSE) logs --follow dev
 
 new-logs: ## Show live logs of the dev container
-	@$(DOCKER_COMPOSE) logs --tail=0 --follow
+	@$(DOCKER_COMPOSE) logs --tail=0 --follow dev
 
 stop: ## Stop docker
 	$(DOCKER_COMPOSE) stop

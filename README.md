@@ -103,11 +103,11 @@ Linting & Formatting
 Testing
 
 ```bash
-  make test-unit: runs unit tests locally without using Docker
   make test-unit-all: runs unit tests for both client and server environments
   make test-unit-client: runs unit tests for the client using Jest
   make test-unit-server: runs unit tests for the server using Jest
   make test-memory-leak: runs memory leak tests using Memlab
+  make load-tests: executes load tests using the K6 library
   make test-e2e: runs end-to-end tests inside the prod container
   make test-e2e-ui: runs end-to-end tests with UI inside the prod container
   make test-visual: runs visual tests inside the prod container
@@ -137,7 +137,7 @@ Storybook
 Docker
 
 ```bash
-  make down: stops the Docker hub
+  make down: stops the Docker containers and removes orphaned containers
   make stop: stops Docker
   make start-prod: builds image and starts the container in production mode
   make ps: logs into the Docker container
@@ -150,20 +150,20 @@ Docker
 Note: The following commands do not require the `CI=1` prefix:
 
 ```bash
-  make test-e2e: runs end-to-end tests inside the prod container
+  make test-e2e: starts production and runs end-to-end tests inside the prod container
   make test-visual: runs visual tests inside the prod container
   make test-e2e-ui: runs end-to-end tests with UI inside the prod container
   make test-visual-ui: runs visual tests with UI inside the prod container
   make test-memory-leak: runs memory leak tests using Memlab inside the prod container
 
   make load-tests: executes load tests using the K6 library
-  make build-k6-docker: builds a Docker image for K6
+  (uses "prod" as hostname, which maps to the Docker service)
 
   make git-hooks-install: installs husky Git hooks locally
   make update: runs locally on the host machine, not in a container
 ```
 
-💡 Tip: To run commands locally without Docker, please prefix each command with CI=1.
+💡 Tip: To run commands locally without Docker, please prefix command with CI=1.
 Example:
 
 ```bash
