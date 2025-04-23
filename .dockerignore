@@ -2,3 +2,18 @@
 .idea
 .vscode
 .stryker-tmp
+
+# Dependencies
+node_modules
+.pnpm-store
+
+
+# Test and coverage
+coverage
+playwright-report
+stryker.log
+**/test-results
+
+# Cache and logs
+.cache
+*.log

@@ -21,7 +21,7 @@ lhci-reports-desktop/
 lhci-reports-mobile/
 
 # Storybook
-storybook-static
+storybook-static/
 
 # Cache
 .cache

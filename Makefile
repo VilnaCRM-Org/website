@@ -1,11 +1,6 @@
 # Parameters
 PROJECT	= frontend-ssr-template
 
-K6 = $(DOCKER) run -v ./src/test/load:/loadTests --net=host --rm k6 run --summary-trend-stats="avg,min,med,max,p(95),p(99)"
-
-K6_TEST_SCRIPT ?= /loadTests/homepage.js
-K6_RESULTS_DIR ?= /loadTests/results
-K6_RESULTS_FILE ?= $(K6_RESULTS_DIR)/homepage.html
 
 # Executables: local only
 PNPM_BIN		= pnpm
@@ -20,7 +15,6 @@ DOCKER_COMPOSE_TEST_FILE = docker-compose.test.yml
 STORYBOOK_BIN = ./node_modules/.bin/storybook
 MD_LINT_IGNORE_PATTERN = -i CHANGELOG.md **/*.md
 JEST_BIN = ./node_modules/.bin/jest
-DOCKER_COMPOSE_FILE = docker-compose.test.yml
 JEST_FLAGS = --verbose
 
 NEXT_BUILD = $(NEXT_BIN) build
@@ -38,9 +32,12 @@ LHCI = $(PNPM_BIN) lhci autorun
 NEXT_DEV_CMD     = $(DOCKER_COMPOSE) up -d && make wait-for-dev
 EXEC_DEV	= $(DOCKER_COMPOSE) exec -T dev
 PLAYWRIGHT_BASE_CMD = pnpm exec playwright test
-PLAYWRIGHT_TEST = $(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_FILE) exec playwright $(PLAYWRIGHT_BASE_CMD)
-BUILD_K6_DOCKER = $(MAKE) build-k6-docker
-LOAD_TESTS_RUN = $(K6) --out "web-dashboard=period=1s&export=$(K6_RESULTS_FILE)" $(K6_TEST_SCRIPT)
+PLAYWRIGHT_TEST = $(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_TEST_FILE) exec playwright $(PLAYWRIGHT_BASE_CMD)
+
+K6_TEST_SCRIPT ?= /loadTests/homepage.js
+K6_RESULTS_FILE ?= /loadTests/results/homepage.html
+K6 = $(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_TEST_FILE) --profile load run --rm k6
+LOAD_TESTS_RUN = $(K6) run --summary-trend-stats="avg,min,med,max,p(95),p(99)" --out "web-dashboard=period=1s&export=$(K6_RESULTS_FILE)" $(K6_TEST_SCRIPT)
 
 PROD_PORT = 3001
 STORYBOOK_PORT = 6006
@@ -51,8 +48,6 @@ UI_FLAGS = --ui-port=$(UI_PORT) --ui-host=$(UI_HOST)
 UI_MODE_URL = http://localhost:$(UI_PORT)
 
 # Executables
-PNPM      	= $(EXEC_DEV) pnpm
-PNPM_RUN    = $(PNPM) run
 GIT         = git
 
 # CI variable
@@ -136,7 +131,7 @@ storybook-build: ## Build Storybook UI.
 test-e2e: start-prod  ## Start production and run E2E tests
 	$(PLAYWRIGHT_TEST) $(TEST_DIR_E2E)
 
-test-e2e-ui: start-prod ## Start the production environment and run E2E tests with the UI available at http://localhost:9324
+test-e2e-ui: start-prod ## Start the production environment and run E2E tests with the UI available at $(UI_MODE_URL)
 	@echo "🚀 Starting Playwright UI tests..."
 	@echo "Test will be run on: $(UI_MODE_URL)"
 	$(PLAYWRIGHT_TEST) $(TEST_DIR_E2E) $(UI_FLAGS)
@@ -144,7 +139,7 @@ test-e2e-ui: start-prod ## Start the production environment and run E2E tests wi
 test-visual: start-prod  ## Start production and run visual tests
 	$(PLAYWRIGHT_TEST) $(TEST_DIR_VISUAL)
 
-test-visual-ui: start-prod ## Start the production environment and run visual tests with the UI available at http://localhost:9324
+test-visual-ui: start-prod ## Start the production environment and run visual tests with the UI available at $(UI_MODE_URL)
 	@echo "🚀 Starting Playwright UI tests..."
 	@echo "Test will be run on: $(UI_MODE_URL)"
 	$(PLAYWRIGHT_TEST) $(TEST_DIR_VISUAL) $(UI_FLAGS)
@@ -175,11 +170,7 @@ test-memory-leak: start-prod ## This command executes memory leaks tests using M
 test-mutation:  ## Run mutation tests using Stryker after building the app
 	$(STRYKER_CMD)
 
-build-k6-docker: ## This command build K6 image
-	$(DOCKER) build -t k6 -f ./src/test/load/Dockerfile .
-
 load-tests: start-prod ## This command executes load tests using K6 library.
-	$(BUILD_K6_DOCKER)
 	$(LOAD_TESTS_RUN)
 
 lighthouse-desktop: ## Run a Lighthouse audit using the desktop configuration
@@ -192,7 +183,7 @@ install: ## Install node modules (frozen lockfile)
 	$(PNPM_EXEC) pnpm install --frozen-lockfile
 
 update: ## Update node modules according to the current package.json file
-	 pnpm update
+	 $(PNPM_BIN) update
 
 down: ## Stop the docker hub
 	$(DOCKER_COMPOSE) down --remove-orphans

@@ -57,3 +57,15 @@ services:
     healthcheck:
       <<: *default-healthcheck
       test: ["CMD", "curl", "-f", "http://localhost:8080"]
+
+
+  k6:
+    profiles: ["load"]
+    build:
+      context: .
+      dockerfile: ./src/test/load/Dockerfile
+    depends_on:
+      prod:
+        condition: service_healthy
+    volumes:
+      - ./src/test/load:/loadTests
