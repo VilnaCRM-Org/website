@@ -1,4 +1,4 @@
-import { Box, Container, SxProps, Theme } from '@mui/material';
+import { Box, Container } from '@mui/material';
 import { getOptimizedImageProps } from 'next-export-optimize-images/image';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -27,16 +27,9 @@ const getImageProps: (src: string, alt?: string) => React.ImgHTMLAttributes<HTML
 function ForWhoSection(): React.ReactElement {
   const { t } = useTranslation();
 
-  const bigScreenProps: React.ImgHTMLAttributes<HTMLImageElement> = getOptimizedImageProps({
-    src: bigScreen,
-    alt: t('alts.bigScreen')
-  }).props;
-
-  const smallScreenProps: React.ImgHTMLAttributes<HTMLImageElement> = getOptimizedImageProps({
-    src: smallScreen,
-    alt: t('alts.smallScreen')
-  }).props;
-
+  const bigScreenProps: React.ImgHTMLAttributes<HTMLImageElement> = getImageProps(bigScreen, t('alts.bigScreen'));
+  const smallScreenProps: React.ImgHTMLAttributes<HTMLImageElement> = getImageProps(smallScreen, t('alts.smallScreen'));  
+  
   return (
     <Box id="forWhoSection" component="section" sx={styles.wrapper}>
       <Container>
