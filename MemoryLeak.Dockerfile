@@ -10,7 +10,7 @@ RUN apk add --no-cache \
     && npm install -g pnpm@10.6.5
 
 WORKDIR /app
-COPY .puppeteerrc.cjs /app/.puppeteerrc.cjs
+COPY package.json pnpm-lock.yaml checkNodeVersion.js ./
 
 
 RUN make install
