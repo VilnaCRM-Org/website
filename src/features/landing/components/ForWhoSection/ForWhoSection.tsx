@@ -37,31 +37,6 @@ function ForWhoSection(): React.ReactElement {
     alt: t('alts.smallScreen')
   }).props;
 
-  type DecorativeImage = {
-    src: string;
-    sx: SxProps<Theme>;
-  };
-
-  const decorativeImages: DecorativeImage[] = [
-    { src: circle, sx: styles.circle },
-    { src: rhombus, sx: styles.rhombus },
-    { src: pointGroup, sx: styles.pointGroup },
-    { src: point6, sx: styles.point6 },
-    { src: point8, sx: styles.point8 },
-    { src: point10, sx: styles.point10 },
-    { src: waves, sx: styles.waves },
-    { src: hexagon, sx: styles.hexagon },
-    { src: triangle, sx: styles.triangle }
-  ];
-
-  const svgGroup: DecorativeImage[] = decorativeImages.filter(({ src }) => 
-    [circle, rhombus, pointGroup, point6, point8, point10].includes(src)
-  );
-  
-  const squareGroup: DecorativeImage[] = decorativeImages.filter(({ src }) => 
-    [waves, hexagon, triangle].includes(src)
-  );
-
   return (
     <Box id="forWhoSection" component="section" sx={styles.wrapper}>
       <Container>
@@ -71,31 +46,86 @@ function ForWhoSection(): React.ReactElement {
             <Cards />
           </Box>
           <Box sx={styles.container}>
-            <Box sx={styles.svg}>
-              {svgGroup.map(({ src, sx }) => (
+            <Box sx={styles.svgContainer}>
+              <Box
+                component="img"
+                {...getImageProps(circle)}
+                aria-hidden="true"
+                sx={styles.circle}
+                loading="lazy"
+              />
+               <Box
+                component="img"
+                {...getImageProps(rhombus)}
+                aria-hidden="true"
+                sx={styles.rhombus}
+                loading="lazy"
+              />
+              <Box sx={styles.pointContainer}>
                 <Box
-                  key={`decorative-${src}`} 
                   component="img"
-                  {...getImageProps(src)}
+                  {...getImageProps(pointGroup)}
                   aria-hidden="true"
-                  sx={sx}
+                  sx={styles.pointGroup}
                   loading="lazy"
                 />
-              ))}
+                <Box
+                  component="img"
+                  {...getImageProps(point6)}
+                  aria-hidden="true"
+                  sx={styles.point6}
+                  loading="lazy"
+                />
+                <Box
+                  component="img"
+                  {...getImageProps(point8)}
+                  aria-hidden="true"
+                  sx={styles.point8}
+                  loading="lazy"
+                />
+                <Box
+                  component="img"
+                  {...getImageProps(point10)}
+                  aria-hidden="true"
+                  sx={styles.point10}
+                  loading="lazy"
+                />
+              </Box>
             </Box>
             <Box sx={styles.square}>
-              <Box component="img" {...bigScreenProps} sx={styles.bigScreen} loading="lazy" data-testid="big-screen" />
-              <Box component="img" {...smallScreenProps} sx={styles.smallScreen} loading="lazy" data-testid="small-screen"/>
-              {squareGroup.map(({ src, sx }) => (
-                <Box
-                  key={`decorative-${src}`} 
-                  component="img"
-                  {...getImageProps(src)}
-                  aria-hidden="true"
-                  sx={sx}
-                  loading="lazy"
-                />
-              ))}
+              <Box
+                component="img"
+               {...bigScreenProps}
+                sx={styles.bigScreen}
+                loading="lazy"
+              />
+              <Box
+                component="img"
+                {...smallScreenProps}
+                sx={styles.smallScreen}
+                loading="lazy"
+              />
+              <Box
+                component="img"
+                {...getImageProps(waves)}
+                aria-hidden="true"
+                sx={styles.waves}
+                loading="lazy"
+              />
+              <Box
+                component="img"
+                {...getImageProps(hexagon)}
+                aria-hidden="true"
+                sx={styles.hexagon}
+                loading="lazy"
+              />
+               <Box
+                component="img"
+                {...getImageProps(triangle)}
+                aria-hidden="true"
+                sx={styles.triangle}
+                loading="lazy"
+              />
             </Box>
           </Box>
         </Box>

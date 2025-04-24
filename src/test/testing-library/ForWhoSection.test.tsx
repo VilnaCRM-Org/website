@@ -7,20 +7,19 @@ import ForWhoSection from '../../features/landing/components/ForWhoSection/ForWh
 const forWhoLabel: string = t('for_who.aria_label');
 
 describe('ForWhoSection component', () => {
-  it('should render without errors', () => {
-    const { container } = render(<ForWhoSection />);
-    expect(container).toBeInTheDocument();
+  it('should render the ForWhoSection component without errors', () => {
+    const { getAllByLabelText } = render(<ForWhoSection />);
+
+    expect(getAllByLabelText(forWhoLabel)[0]).toBeInTheDocument();
   });
 
-  it('should render all decorative images', () => {
+  it('should have the correct number of images with empty alt text and images with proper alt text', () => {
     const { getAllByAltText } = render(<ForWhoSection />);
-    const decorativeImages = getAllByAltText('');
-    expect(decorativeImages.length).toBeGreaterThanOrEqual(9);
-  });
 
-  it('should render main images with proper alt text', () => {
-    const { getByAltText } = render(<ForWhoSection />);
-    expect(getByAltText(t('alts.bigScreen'))).toBeInTheDocument();
-    expect(getByAltText(t('alts.smallScreen'))).toBeInTheDocument();
+    const imagesWithEmptyAlt: HTMLElement[] = getAllByAltText('');
+    expect(imagesWithEmptyAlt).toHaveLength(9);
+
+    const imagesWithAltText: HTMLElement[] = getAllByAltText('Vector');
+    expect(imagesWithAltText).toHaveLength(4);
   });
 });

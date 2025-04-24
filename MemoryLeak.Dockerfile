@@ -11,11 +11,7 @@ RUN apk add --no-cache \
 
 WORKDIR /app
 COPY .puppeteerrc.cjs /app/.puppeteerrc.cjs
-COPY . .
 
-ENV PUPPETEER_CONFIG_FILE="/app/.puppeteerrc.cjs" \
-    PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
-    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 RUN make install
 

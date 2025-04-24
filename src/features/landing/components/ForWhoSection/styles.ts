@@ -87,7 +87,7 @@ export default {
     },
   },
 
-  svg: {
+  svgContainer: {
     [`@media (min-width: 969px)`]: {
       marginTop: '-15rem',
     },
