@@ -59,7 +59,8 @@ UI_FLAGS            = --ui-port=$(UI_PORT) --ui-host=$(UI_HOST)
 UI_MODE_URL         = http://localhost:$(UI_PORT)
 
 # ─── Linting ──────────────────────────────────────────────────
-MD_LINT_ARGS        = -i CHANGELOG.md
+MD_LINT_ARGS        = -i CHANGELOG.md -i "test-results/**/*.md"
+# -i CHANGELOG.md
 
 # ─── Jest ─────────────────────────────────────────────────────
 JEST_FLAGS          = --verbose
@@ -133,7 +134,7 @@ lint-tsc: ## This command executes Typescript linter
 	$(PNPM_EXEC) $(TS_BIN)
 
 lint-md: ## This command executes Markdown linter
-	$(MARKDOWNLINT_BIN) $(MD_LINT_ARGS) **/*.md
+	$(MARKDOWNLINT_BIN) $(MD_LINT_ARGS) "**/*.md"
 
 lint: lint-next lint-tsc lint-md ## Runs all linters: ESLint, TypeScript, and Markdown linters in sequence.
 
