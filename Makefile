@@ -16,7 +16,7 @@ SERVE_BIN           = ./node_modules/.bin/serve
 # ─── Build Commands ────────────────────────────────────────────
 NEXT_BUILD          = $(NEXT_BIN) build
 NEXT_BUILD_CMD      = $(NEXT_BUILD) && $(IMG_OPTIMIZE)
-STORYBOOK_BUILD_CMD =  $(STORYBOOK_BIN) build
+STORYBOOK_BUILD_CMD = $(STORYBOOK_BIN) build
 
 
 # ─── Test Directories ──────────────────────────────────────────
@@ -192,10 +192,10 @@ load-tests: start-prod ## This command executes load tests using K6 library. Not
                        ## using $(PROD_PORT), which maps to the production service in Docker Compose.
 	$(LOAD_TESTS_RUN)
 
-lighthouse-desktop: ## Run a Lighthouse audit using the desktop configuration
+lighthouse-desktop: ## Run a Lighthouse audit using desktop viewport settings to evaluate performance and best practices
 	$(LHCI_DESKTOP)
 
-lighthouse-mobile: ## Run a Lighthouse audit using the mobile configuration
+lighthouse-mobile: ## Run a Lighthouse audit using mobile viewport settings to evaluate mobile UX and performance
 	$(LHCI_MOBILE)
 
 install: ## Install node modules using pnpm (CI=1 runs locally, default runs in container) — uses frozen lockfile and affects node_modules via volumes

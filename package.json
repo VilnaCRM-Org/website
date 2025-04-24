@@ -9,6 +9,7 @@
     "@mui/system": "^6.4.11",
     "@next/bundle-analyzer": "^15.3.0",
     "@next/env": "^15.3.0",
+    "next": "^15.3.0",
     "dotenv": "^16.5.0",
     "graphql": "^16.10.0",
     "i18next": "^23.16.8",
@@ -76,7 +77,6 @@
     "jsdoc": "^4.0.4",
     "markdownlint-cli": "^0.39.0",
     "memlab": "^1.1.57",
-    "next": "^15.3.0",
     "next-export-optimize-images": "^4.6.2",
     "playwright": "^1.51.1",
     "prettier": "^3.5.3",
@@ -92,6 +92,5 @@
   },
   "engines": {
     "node": ">=20.0.0"
-  },
-  "engineStrict": true
+  }
 }
