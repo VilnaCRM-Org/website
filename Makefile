@@ -1,8 +1,6 @@
 # Executables: local only
 PNPM_BIN		    = pnpm
-DOCKER			    = docker
 DOCKER_COMPOSE	    = docker compose
-MAKE 			    = make
 
 # ─── Node Binaries ─────────────────────────────────────────────
 NEXT_BIN            = ./node_modules/.bin/next
