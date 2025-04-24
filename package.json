@@ -31,7 +31,7 @@
     "@microsoft/api-extractor": "^7.52.3",
     "@next/eslint-plugin-next": "^15.3.0",
     "@next/third-parties": "^15.3.0",
-    "@playwright/test": "^1.51.1",
+    "@playwright/test": "^1.52.0",
     "@sentry/node": "^8.55.0",
     "@sentry/react": "^8.55.0",
     "@storybook/addon-actions": "^8.6.12",

@@ -81,7 +81,7 @@ ifeq ($(CI), 1)
 else
     PNPM_EXEC       = $(EXEC_DEV_TTYLESS)
 	STRYKER_CMD     = make start && $(EXEC_DEV_TTYLESS) pnpm stryker run
-	UNIT_TESTS      =  make start && $(EXEC_DEV_TTYLESS) env
+	UNIT_TESTS      = make start && $(EXEC_DEV_TTYLESS) env
 
 	STORYBOOK_START = exec $(STORYBOOK_BIN) dev -p $(STORYBOOK_PORT) --host 0.0.0.0
 
@@ -198,11 +198,11 @@ lighthouse-desktop: ## Run a Lighthouse audit using the desktop configuration
 lighthouse-mobile: ## Run a Lighthouse audit using the mobile configuration
 	$(LHCI_MOBILE)
 
-install: ### Install node modules using pnpm (CI=1 runs locally, default runs in container) — uses frozen lockfile and affects node_modules via volumes
+install: ## Install node modules using pnpm (CI=1 runs locally, default runs in container) — uses frozen lockfile and affects node_modules via volumes
 	$(PNPM_EXEC) pnpm install --frozen-lockfile
 
 update: ## Update node modules to latest allowed versions — always runs locally, updates lockfile (run before committing dependency changes)
-	 $(PNPM_BIN) update
+	$(PNPM_BIN) update
 
 down: ## Stop the docker containers
 	$(DOCKER_COMPOSE) down --remove-orphans
