@@ -7,6 +7,8 @@
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
     "module": "esnext",
@@ -22,8 +24,8 @@
     "newLine": "lf"
   },
   "include": [
-    "./src",
-    "./pages",
+    "pages/**/*",
+    "src/**/*",
     "./scripts",
     "next-env.d.ts",
     "**/*.ts",
@@ -35,6 +37,6 @@
     "src/components/UiFooter/.stories.tsx",
     "memoryLeak"
   ],
-  "exclude": ["node_modules"],
+  "exclude": ["node_modules", ".next", "out"],
   "extends": "./tsconfig.paths.json"
 }

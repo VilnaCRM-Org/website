@@ -3,16 +3,6 @@
 .vscode
 .stryker-tmp
 
-# Dependencies
-node_modules
-.pnpm-store
-
-# Build outputs
-.next
-out
-dist
-build
-
 # Test and coverage
 coverage
 playwright-report

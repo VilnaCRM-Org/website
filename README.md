@@ -124,7 +124,7 @@ Lighthouse
 Git
 
 ```bash
-  make git-hooks-install: installs husky Git hooks locally
+  make husky: sets up Husky (Git hooks manager) — run once after cloning the repo
 ```
 
 Storybook

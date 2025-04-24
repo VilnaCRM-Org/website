@@ -8,8 +8,9 @@ MAKE 			    = make
 NEXT_BIN            = ./node_modules/.bin/next
 IMG_OPTIMIZE        = ./node_modules/.bin/next-export-optimize-images
 TS_BIN              = ./node_modules/.bin/tsc
-STORYBOOK_BIN       =  ./node_modules/.bin/storybook
+STORYBOOK_BIN       = ./node_modules/.bin/storybook
 JEST_BIN            = ./node_modules/.bin/jest
+SERVE_BIN           = ./node_modules/.bin/serve
 
 
 # ─── Build Commands ────────────────────────────────────────────
@@ -27,7 +28,7 @@ TEST_DIR_VISUAL     = ./src/test/visual
 STRYKER_CMD         = $(PNPM_BIN) stryker run
 
 # ─── Serve & Lighthouse ───────────────────────────────────────
-SERVE_CMD           = --collect.startServerCommand="npx serve out"
+SERVE_CMD           = --collect.startServerCommand="$(SERVE_BIN) out"
 LHCI                = $(PNPM_BIN) lhci autorun
 LHCI_CONFIG_DESKTOP = --config=lighthouserc.desktop.js
 LHCI_CONFIG_MOBILE  = --config=lighthouserc.mobile.js
@@ -58,16 +59,13 @@ UI_FLAGS            = --ui-port=$(UI_PORT) --ui-host=$(UI_HOST)
 UI_MODE_URL         = http://localhost:$(UI_PORT)
 
 # ─── Linting ──────────────────────────────────────────────────
-MD_LINT_ARGS       = -i CHANGELOG.md
+MD_LINT_ARGS        = -i CHANGELOG.md
 
 # ─── Jest ─────────────────────────────────────────────────────
-JEST_FLAGS         = --verbose
-
-# ─── Version Control ───────────────────────────────────────────
-GIT                 = git
+JEST_FLAGS          = --verbose
 
 # CI variable
-CI ?= 0
+CI                  ?= 0
 
 # Conditional PNPM_EXEC based on CI
 ifeq ($(CI), 1)
@@ -104,9 +102,6 @@ MARKDOWNLINT_BIN    = $(PNPM_EXEC) ./node_modules/.bin/markdownlint
 .PHONY: $(filter-out node_modules,$(MAKECMDGOALS))
 
 # Variables
-REPORT_FILENAME     ?= default_value
-TSC_FLAGS           ?= --strict --noUnusedLocals --noUnusedParameters
-
 run-visual          = $(PLAYWRIGHT_TEST) $(TEST_DIR_VISUAL)
 run-e2e             = $(PLAYWRIGHT_TEST) $(TEST_DIR_E2E)
 
@@ -125,7 +120,7 @@ wait-for-dev: ## Wait for the dev service to be ready on port $(DEV_PORT).
 build: ## A tool build the project
 	$(DOCKER_COMPOSE) build
 
-build-analyze: ## Build with bundle analyzer enabled (ANALYZE=true)
+build-analyze: ## Build production bundle and launch bundle-analyzer report (ANALYZE=true)
 	ANALYZE=true $(NEXT_BUILD_CMD)
 
 format: ## This command executes Prettier formatting
@@ -135,15 +130,15 @@ lint-next: ## This command executes ESLint
 	$(PNPM_EXEC) $(NEXT_BIN) lint
 
 lint-tsc: ## This command executes Typescript linter
-	$(PNPM_EXEC) $(TS_BIN) $(TSC_FLAGS)
+	$(PNPM_EXEC) $(TS_BIN)
 
 lint-md: ## This command executes Markdown linter
 	$(MARKDOWNLINT_BIN) $(MD_LINT_ARGS) **/*.md
 
 lint: lint-next lint-tsc lint-md ## Runs all linters: ESLint, TypeScript, and Markdown linters in sequence.
 
-git-hooks-install: ## Install git hooks
-	 $(PNPM_BIN) husky install
+husky: ## One-time Husky setup to enable Git hooks (deprecated if already set)
+	$(PNPM_BIN) husky install
 
 storybook-start: ## Start Storybook UI and open in browser
 	$(PNPM_EXEC) $(STORYBOOK_START)
@@ -151,7 +146,7 @@ storybook-start: ## Start Storybook UI and open in browser
 storybook-build: ## Build Storybook UI.
 	$(PNPM_EXEC) $(STORYBOOK_BUILD_CMD)
 
-test-e2e: start-prod  ## Start production and run E2E tests
+test-e2e: start-prod  ## Start production and run E2E tests (Playwright)
 	$(run-e2e)
 
 test-e2e-ui: start-prod ## Start the production environment and run E2E tests with the UI available at $(UI_MODE_URL)
@@ -159,7 +154,7 @@ test-e2e-ui: start-prod ## Start the production environment and run E2E tests wi
 	@echo "Test will be run on: $(UI_MODE_URL)"
 	$(run-e2e) $(UI_FLAGS)
 
-test-visual: start-prod  ## Start production and run visual tests
+test-visual: start-prod  ## Start production and run visual tests (Playwright)
 	$(run-visual)
 
 test-visual-ui: start-prod ## Start the production environment and run visual tests with the UI available at $(UI_MODE_URL)
@@ -180,10 +175,10 @@ wait-for-prod: ## Wait for the prod service to be ready on port $(PROD_PORT).
 
 test-unit-all: test-unit-client test-unit-server ## This command executes unit tests for both client and server environments.
 
-test-unit-client: ## This command executes unit tests using Jest library.
+test-unit-client: ## Run all client-side unit tests using Jest (Next.js env, TEST_ENV=client)
 	$(UNIT_TESTS) TEST_ENV=client $(JEST_BIN) $(JEST_FLAGS)
 
-test-unit-server: ## This command executes unit tests using Jest library.
+test-unit-server: ## Run server-side unit tests for Apollo using Jest (Node.js env, TEST_ENV=server, target: $(TEST_DIR_APOLLO))
 	$(UNIT_TESTS) TEST_ENV=server $(JEST_BIN) $(JEST_FLAGS) $(TEST_DIR_APOLLO)
 
 test-memory-leak: start-prod ## This command executes memory leaks tests using Memlab library.
