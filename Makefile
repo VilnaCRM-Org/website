@@ -59,8 +59,8 @@ UI_FLAGS            = --ui-port=$(UI_PORT) --ui-host=$(UI_HOST)
 UI_MODE_URL         = http://localhost:$(UI_PORT)
 
 # ─── Linting ──────────────────────────────────────────────────
+# Markdown linter ignore patterns (-i means "ignore")
 MD_LINT_ARGS        = -i CHANGELOG.md -i "test-results/**/*.md"
-# -i CHANGELOG.md
 
 # ─── Jest ─────────────────────────────────────────────────────
 JEST_FLAGS          = --verbose
