@@ -53,9 +53,6 @@ importers:
       swiper:
         specifier: ^11.2.6
         version: 11.2.6
-      terser-webpack-plugin:
-        specifier: ^5.3.14
-        version: 5.3.14(esbuild@0.25.3)(webpack@5.99.6(esbuild@0.25.3))
       winston:
         specifier: ^3.17.0
         version: 3.17.0
@@ -243,6 +240,9 @@ importers:
       storybook:
         specifier: ^8.6.12
         version: 8.6.12(prettier@3.5.3)
+      terser-webpack-plugin:
+        specifier: ^5.3.14
+        version: 5.3.14(esbuild@0.25.3)(webpack@5.99.6(esbuild@0.25.3))
       ts-jest:
         specifier: ^29.3.2
         version: 29.3.2(@babel/core@7.26.10)(@jest/transform@29.7.0)(@jest/types@29.6.3)(babel-jest@29.7.0(@babel/core@7.26.10))(esbuild@0.25.3)(jest@29.7.0(@types/node@22.14.1)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@22.14.1)(typescript@5.8.3)))(typescript@5.8.3)
