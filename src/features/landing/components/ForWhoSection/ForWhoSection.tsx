@@ -24,7 +24,7 @@ const getImageProps: (src: string, alt?: string) => React.ImgHTMLAttributes<HTML
   alt = ''
 ) => getOptimizedImageProps({ src, alt }).props;
 
-function ForWhoSection(): React.ReactElement {
+ const ForWhoSection = (): React.ReactElement => {
   const { t } = useTranslation();
 
   const bigScreenProps: React.ImgHTMLAttributes<HTMLImageElement> = getImageProps(bigScreen, t('alts.bigScreen'));
@@ -91,12 +91,14 @@ function ForWhoSection(): React.ReactElement {
                {...bigScreenProps}
                 sx={styles.bigScreen}
                 loading="lazy"
+                data-testid="for-who-big-screen"
               />
               <Box
                 component="img"
                 {...smallScreenProps}
                 sx={styles.smallScreen}
                 loading="lazy"
+                data-testid="for-who-small-screen"
               />
               <Box
                 component="img"
