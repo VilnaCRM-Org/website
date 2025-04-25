@@ -1,11 +1,9 @@
 include .env
 export
 
-# Executables: local only
-PNPM_BIN		    = pnpm
-DOCKER_COMPOSE	    = docker compose
+DOCKER_COMPOSE		= docker compose
 
-# ─── Node Binaries ─────────────────────────────────────────────
+
 BIN_DIR             = ./node_modules/.bin
 
 NEXT_BIN            = $(BIN_DIR)/next
@@ -14,54 +12,46 @@ TS_BIN              = $(BIN_DIR)/tsc
 STORYBOOK_BIN       = $(BIN_DIR)/storybook
 JEST_BIN            = $(BIN_DIR)/jest
 SERVE_BIN           = $(BIN_DIR)/serve
+PLAYWRIGHT_BIN      = $(BIN_DIR)/playwright
 
-# ─── Build Commands ────────────────────────────────────────────
 NEXT_BUILD          = $(NEXT_BIN) build
 NEXT_BUILD_CMD      = $(NEXT_BUILD) && $(IMG_OPTIMIZE)
 STORYBOOK_BUILD_CMD = $(STORYBOOK_BIN) build
 
 
-# ─── Test Directories ──────────────────────────────────────────
 TEST_DIR_BASE = ./src/test
 
 TEST_DIR_APOLLO     = $(TEST_DIR_BASE)/apollo-server
 TEST_DIR_E2E        = $(TEST_DIR_BASE)/e2e
 TEST_DIR_VISUAL     = $(TEST_DIR_BASE)/visual
 
-# ─── Mutation Testing ──────────────────────────────────────────
-STRYKER_CMD         = $(PNPM_BIN) stryker run
+STRYKER_CMD         = pnpm stryker run
 
-# ─── Serve & Lighthouse ───────────────────────────────────────
 SERVE_CMD           = --collect.startServerCommand="$(SERVE_BIN) out"
-LHCI                = $(PNPM_BIN) lhci autorun
+LHCI                = pnpm lhci autorun
 LHCI_CONFIG_DESKTOP = --config=lighthouserc.desktop.js
 LHCI_CONFIG_MOBILE  = --config=lighthouserc.mobile.js
 LHCI_DESKTOP_SERVE  = $(LHCI_CONFIG_DESKTOP) $(SERVE_CMD)
 LHCI_MOBILE_SERVE   = $(LHCI_CONFIG_MOBILE) $(SERVE_CMD)
 
-# ─── Docker Commands ───────────────────────────────────────────
 DOCKER_COMPOSE_TEST_FILE = -f docker-compose.test.yml
 EXEC_DEV_TTYLESS    = $(DOCKER_COMPOSE) exec -T dev
 NEXT_DEV_CMD        = $(DOCKER_COMPOSE) up -d && make wait-for-dev
-PLAYWRIGHT_BASE_CMD = pnpm exec playwright test
+PLAYWRIGHT_BASE_CMD = $(PLAYWRIGHT_BIN) test
 PLAYWRIGHT_TEST     = $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_TEST_FILE) exec playwright $(PLAYWRIGHT_BASE_CMD)
 
 
-# ─── Load Testing ──────────────────────────────────────────────
 K6_TEST_SCRIPT      ?= /loadTests/homepage.js
 K6_RESULTS_FILE     ?= /loadTests/results/homepage.html
 K6                  = $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_TEST_FILE) --profile load run --rm k6
 LOAD_TESTS_RUN      = $(K6) run --summary-trend-stats="avg,min,med,max,p(95),p(99)" --out "web-dashboard=period=1s&export=$(K6_RESULTS_FILE)" $(K6_TEST_SCRIPT)
 
-# ─── UI Configuration ──────────────────────────────────────
 UI_FLAGS            = --ui-port=$(UI_TEST_PORT) --ui-host=$(UI_HOST)
 UI_MODE_URL         = http://localhost:$(UI_TEST_PORT)
 
-# ─── Linting ──────────────────────────────────────────────────
 # Markdown linter ignore patterns (-i means "ignore")
 MD_LINT_ARGS        = -i CHANGELOG.md -i "test-results/**/*.md"
 
-# ─── Jest ─────────────────────────────────────────────────────
 JEST_FLAGS          = --verbose
 
 # CI variable
@@ -69,7 +59,7 @@ CI                  ?= 0
 
 # Conditional PNPM_EXEC based on CI
 ifeq ($(CI), 1)
-    PNPM_EXEC       = $(PNPM_BIN)
+    PNPM_EXEC       = pnpm
     NEXT_DEV_CMD    = $(NEXT_BIN) dev
     UNIT_TESTS      = env
 
@@ -90,7 +80,6 @@ else
     LHCI_MOBILE     = $(LHCI_BUILD_CMD) $(LHCI_CONFIG_MOBILE)
 endif
 
-# ─── Code Formatting / Style ───────────────────────────────────
 PRETTIER_BIN        = $(PNPM_EXEC) ./node_modules/.bin/prettier
 MARKDOWNLINT_BIN    = $(PNPM_EXEC) ./node_modules/.bin/markdownlint
 
@@ -138,7 +127,7 @@ lint-md: ## This command executes Markdown linter
 lint: lint-next lint-tsc lint-md ## Runs all linters: ESLint, TypeScript, and Markdown linters in sequence.
 
 husky: ## One-time Husky setup to enable Git hooks (deprecated if already set)
-	$(PNPM_BIN) husky install
+	pnpm husky install
 
 storybook-start: ## Start Storybook UI and open in browser
 	$(PNPM_EXEC) $(STORYBOOK_START)
@@ -168,9 +157,9 @@ test-visual-update: start-prod ## Update Playwright visual snapshots
 start-prod: ## Build image and start container in production mode
 	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_TEST_FILE) up -d && make wait-for-prod
 
-wait-for-prod: ## Wait for the prod service to be ready on port $(PROD_PORT).
-	@echo "Waiting for prod service to be ready on port $(PROD_PORT)..."
-	npx wait-on -v http://localhost:$(PROD_PORT)
+wait-for-prod: ## Wait for the prod service to be ready on port $(NEXT_PUBLIC_PROD_PORT).
+	@echo "Waiting for prod service to be ready on port $(NEXT_PUBLIC_PROD_PORT)..."
+	npx wait-on -v http://localhost:$(NEXT_PUBLIC_PROD_PORT)
 	@echo "Prod service is up and running!"
 
 test-unit-all: test-unit-client test-unit-server ## This command executes unit tests for both client and server environments.
@@ -189,7 +178,7 @@ test-mutation: build ## Run mutation tests using Stryker after building the app
 	$(STRYKER_CMD)
 
 load-tests: start-prod ## This command executes load tests using K6 library. Note: The target host is determined by the service URL
-                       ## using $(PROD_PORT), which maps to the production service in Docker Compose.
+                       ## using $(NEXT_PUBLIC_PROD_PORT), which maps to the production service in Docker Compose.
 	$(LOAD_TESTS_RUN)
 
 lighthouse-desktop: ## Run a Lighthouse audit using desktop viewport settings to evaluate performance and best practices
@@ -202,7 +191,7 @@ install: ## Install node modules using pnpm (CI=1 runs locally, default runs in 
 	$(PNPM_EXEC) pnpm install --frozen-lockfile
 
 update: ## Update node modules to latest allowed versions — always runs locally, updates lockfile (run before committing dependency changes)
-	$(PNPM_BIN) update
+	pnpm update
 
 down: ## Stop the docker containers
 	$(DOCKER_COMPOSE) down --remove-orphans
