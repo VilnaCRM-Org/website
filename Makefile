@@ -12,7 +12,7 @@ TS_BIN              = $(BIN_DIR)/tsc
 STORYBOOK_BIN       = $(BIN_DIR)/storybook
 JEST_BIN            = $(BIN_DIR)/jest
 SERVE_BIN           = $(BIN_DIR)/serve
-PLAYWRIGHT_BIN      = $(BIN_DIR)/playwright
+PLAYWRIGHT_BIN      = /app/node_modules/.bin/playwright
 
 NEXT_BUILD          = $(NEXT_BIN) build
 NEXT_BUILD_CMD      = $(NEXT_BUILD) && $(IMG_OPTIMIZE)
@@ -49,7 +49,7 @@ UI_FLAGS            = --ui-port=$(UI_TEST_PORT) --ui-host=$(UI_HOST)
 UI_MODE_URL         = http://localhost:$(UI_TEST_PORT)
 
 # Markdown linter ignore patterns (-i means "ignore")
-MD_LINT_ARGS        = -i CHANGELOG.md -i "test-results/**/*.md"
+MD_LINT_ARGS        = -i CHANGELOG.md -i "test-results/**/*.md" -i "playwright-report/data/**/*.md"
 
 JEST_FLAGS          = --verbose
 
