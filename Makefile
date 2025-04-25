@@ -70,8 +70,8 @@ CI                  ?= 0
 # Conditional PNPM_EXEC based on CI
 ifeq ($(CI), 1)
     PNPM_EXEC       = $(PNPM_BIN)
-	NEXT_DEV_CMD    = $(NEXT_BIN) dev
-	UNIT_TESTS      = env
+    NEXT_DEV_CMD    = $(NEXT_BIN) dev
+    UNIT_TESTS      = env
 
     STORYBOOK_START = $(STORYBOOK_BIN) dev -p $(STORYBOOK_PORT)
 
@@ -80,10 +80,10 @@ ifeq ($(CI), 1)
     LHCI_MOBILE     = $(LHCI_BUILD_CMD) $(LHCI_MOBILE_SERVE)
 else
     PNPM_EXEC       = $(EXEC_DEV_TTYLESS)
-	STRYKER_CMD     = make start && $(EXEC_DEV_TTYLESS) pnpm stryker run
-	UNIT_TESTS      = make start && $(EXEC_DEV_TTYLESS) env
+    STRYKER_CMD     = make start && $(EXEC_DEV_TTYLESS) pnpm stryker run
+    UNIT_TESTS      = make start && $(EXEC_DEV_TTYLESS) env
 
-	STORYBOOK_START = exec $(STORYBOOK_BIN) dev -p $(STORYBOOK_PORT) --host 0.0.0.0
+    STORYBOOK_START = exec $(STORYBOOK_BIN) dev -p $(STORYBOOK_PORT) --host 0.0.0.0
 
     LHCI_BUILD_CMD  = make start-prod && $(LHCI)
     LHCI_DESKTOP    = $(LHCI_BUILD_CMD) $(LHCI_CONFIG_DESKTOP)
