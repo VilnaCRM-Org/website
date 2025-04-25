@@ -37,7 +37,8 @@ LHCI_MOBILE_SERVE   = $(LHCI_CONFIG_MOBILE) $(SERVE_CMD)
 DOCKER_COMPOSE_TEST_FILE = -f docker-compose.test.yml
 EXEC_DEV_TTYLESS    = $(DOCKER_COMPOSE) exec -T dev
 NEXT_DEV_CMD        = $(DOCKER_COMPOSE) up -d && make wait-for-dev
-PLAYWRIGHT_TEST     = $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_TEST_FILE) exec playwright sh -c
+PLAYWRIGHT_BASE_CMD = npx playwright test
+PLAYWRIGHT_TEST     = $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_TEST_FILE) exec playwright $(PLAYWRIGHT_BASE_CMD)
 
 
 K6_TEST_SCRIPT      ?= /loadTests/homepage.js
@@ -90,8 +91,8 @@ MARKDOWNLINT_BIN    = $(PNPM_EXEC) ./node_modules/.bin/markdownlint
 .PHONY: $(filter-out node_modules,$(MAKECMDGOALS))
 
 # Variables
-run-visual          = $(PLAYWRIGHT_TEST) "$(PLAYWRIGHT_BIN) test $(TEST_DIR_VISUAL)"
-run-e2e             = $(PLAYWRIGHT_TEST) "$(PLAYWRIGHT_BIN) test $(TEST_DIR_E2E)"
+run-visual          = $(PLAYWRIGHT_TEST) $(TEST_DIR_VISUAL)
+run-e2e             = $(PLAYWRIGHT_TEST) $(TEST_DIR_E2E)
 
 help:
 	@printf "\033[33mUsage:\033[0m\n  make [target] [arg=\"val\"...]\n\n\033[33mTargets:\033[0m\n"
