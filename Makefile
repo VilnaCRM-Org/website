@@ -1,15 +1,19 @@
+include .env
+export
+
 # Executables: local only
 PNPM_BIN		    = pnpm
 DOCKER_COMPOSE	    = docker compose
 
 # ─── Node Binaries ─────────────────────────────────────────────
-NEXT_BIN            = ./node_modules/.bin/next
-IMG_OPTIMIZE        = ./node_modules/.bin/next-export-optimize-images
-TS_BIN              = ./node_modules/.bin/tsc
-STORYBOOK_BIN       = ./node_modules/.bin/storybook
-JEST_BIN            = ./node_modules/.bin/jest
-SERVE_BIN           = ./node_modules/.bin/serve
+BIN_DIR             = ./node_modules/.bin
 
+NEXT_BIN            = $(BIN_DIR)/next
+IMG_OPTIMIZE        = $(BIN_DIR)/next-export-optimize-images
+TS_BIN              = $(BIN_DIR)/tsc
+STORYBOOK_BIN       = $(BIN_DIR)/storybook
+JEST_BIN            = $(BIN_DIR)/jest
+SERVE_BIN           = $(BIN_DIR)/serve
 
 # ─── Build Commands ────────────────────────────────────────────
 NEXT_BUILD          = $(NEXT_BIN) build
@@ -18,9 +22,11 @@ STORYBOOK_BUILD_CMD = $(STORYBOOK_BIN) build
 
 
 # ─── Test Directories ──────────────────────────────────────────
-TEST_DIR_APOLLO     = ./src/test/apollo-server
-TEST_DIR_E2E        = ./src/test/e2e
-TEST_DIR_VISUAL     = ./src/test/visual
+TEST_DIR_BASE = ./src/test
+
+TEST_DIR_APOLLO     = $(TEST_DIR_BASE)/apollo-server
+TEST_DIR_E2E        = $(TEST_DIR_BASE)/e2e
+TEST_DIR_VISUAL     = $(TEST_DIR_BASE)/visual
 
 # ─── Mutation Testing ──────────────────────────────────────────
 STRYKER_CMD         = $(PNPM_BIN) stryker run
@@ -47,14 +53,9 @@ K6_RESULTS_FILE     ?= /loadTests/results/homepage.html
 K6                  = $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_TEST_FILE) --profile load run --rm k6
 LOAD_TESTS_RUN      = $(K6) run --summary-trend-stats="avg,min,med,max,p(95),p(99)" --out "web-dashboard=period=1s&export=$(K6_RESULTS_FILE)" $(K6_TEST_SCRIPT)
 
-# ─── Ports & Environment ──────────────────────────────────────
-PROD_PORT           = 3001
-STORYBOOK_PORT      = 6006
-DEV_PORT            = 3000
-UI_PORT             = 9324
-UI_HOST             = 0.0.0.0
-UI_FLAGS            = --ui-port=$(UI_PORT) --ui-host=$(UI_HOST)
-UI_MODE_URL         = http://localhost:$(UI_PORT)
+# ─── UI Configuration ──────────────────────────────────────
+UI_FLAGS            = --ui-port=$(UI_TEST_PORT) --ui-host=$(UI_HOST)
+UI_MODE_URL         = http://localhost:$(UI_TEST_PORT)
 
 # ─── Linting ──────────────────────────────────────────────────
 # Markdown linter ignore patterns (-i means "ignore")
