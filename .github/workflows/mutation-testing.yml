@@ -28,8 +28,5 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-dependencies-
 
-      - name: Install pnpm
-        run: npm install -g pnpm
-
       - name: Run mutation testing
         run: make test-mutation

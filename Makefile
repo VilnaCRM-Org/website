@@ -12,7 +12,7 @@ TS_BIN              = $(BIN_DIR)/tsc
 STORYBOOK_BIN       = $(BIN_DIR)/storybook
 JEST_BIN            = $(BIN_DIR)/jest
 SERVE_BIN           = $(BIN_DIR)/serve
-PLAYWRIGHT_BIN      = /app/node_modules/.bin/playwright
+PLAYWRIGHT_BIN      = $(BIN_DIR)/playwright
 
 NEXT_BUILD          = $(NEXT_BIN) build
 NEXT_BUILD_CMD      = $(NEXT_BUILD) && $(IMG_OPTIMIZE)
