@@ -1,9 +1,3 @@
-x-healthcheck-default: &default-healthcheck
-  interval: 30s
-  timeout: 10s
-  retries: 5
-  start_period: 60s
-
 services:
   prod:
     build:
@@ -16,9 +10,11 @@ services:
       - /app/node_modules
     ports:
       - '3001:3001'
+    extends:
+      file: common-healthchecks.yml
+      service: base-service
     healthcheck:
-      <<: *default-healthcheck
-      test: ["CMD", "curl", "-f", "http://localhost:3001"]
+      test: ["CMD", "curl", "-f", "http://${LOCAL_HOST}:${NEXT_PUBLIC_PROD_PORT}"]
 
   playwright:
     build:
@@ -32,9 +28,11 @@ services:
       - '9324:9324'
     environment:
       - NEXT_PUBLIC_PROD_HOST_API_URL=http://prod:3001
+    extends:
+      file: common-healthchecks.yml
+      service: base-service
     healthcheck:
-      <<: *default-healthcheck
-      test: ["CMD", "curl", "-f", "http://localhost:9324"]
+      test: ["CMD", "curl", "-f", "http://${LOCAL_HOST}:${PLAYWRIGHT_TEST_PORT}"]
 
 
   apollo:
@@ -44,9 +42,11 @@ services:
     restart: unless-stopped
     ports:
       - '4000:4000'
+    extends:
+      file: common-healthchecks.yml
+      service: base-service
     healthcheck:
-      <<: *default-healthcheck
-      test: ["CMD", "curl", "-f", "http://localhost:4000/graphql"]
+      test: ["CMD", "curl", "-f", "http://${LOCAL_HOST}:${GRAPHQL_PORT}/${GRAPHQL_API_PATH}"]
 
   mockoon:
     build:
@@ -55,9 +55,11 @@ services:
     ports:
       - '8080:8080'
     restart: unless-stopped
+    extends:
+      file: common-healthchecks.yml
+      service: base-service
     healthcheck:
-      <<: *default-healthcheck
-      test: ["CMD", "curl", "-f", "http://localhost:8080"]
+      test: ["CMD", "curl", "-f", "http://${LOCAL_HOST}:${MOCKOON_PORT}"]
 
 
   k6:

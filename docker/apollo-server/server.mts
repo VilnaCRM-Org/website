@@ -1,4 +1,9 @@
-import dotenv from 'dotenv';
+import dotenv, { DotenvConfigOutput } from 'dotenv';
+import dotenvExpand from 'dotenv-expand';
+
+const env: DotenvConfigOutput = dotenv.config();
+
+dotenvExpand.expand(env);
 
 import { ApolloServer, BaseContext } from '@apollo/server';
 import { startStandaloneServer } from '@apollo/server/standalone';

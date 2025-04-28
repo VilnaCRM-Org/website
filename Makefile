@@ -35,10 +35,9 @@ LHCI_DESKTOP_SERVE          = $(LHCI_CONFIG_DESKTOP) $(SERVE_CMD)
 LHCI_MOBILE_SERVE           = $(LHCI_CONFIG_MOBILE) $(SERVE_CMD)
 
 DOCKER_COMPOSE_TEST_FILE    = -f docker-compose.test.yml
-DOCKER_COMPOSE_BASE_FILE    = -f docker-compose.base.yml
 DOCKER_COMPOSE_DEV_FILE    = -f docker-compose.yml
 EXEC_DEV_TTYLESS            = $(DOCKER_COMPOSE) exec -T dev
-NEXT_DEV_CMD                = $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_BASE_FILE) $(DOCKER_COMPOSE_DEV_FILE) up -d dev && make wait-for-dev
+NEXT_DEV_CMD                = $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) up -d dev && make wait-for-dev
 PLAYWRIGHT_BASE_CMD         = npx playwright test
 PLAYWRIGHT_TEST             = $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_TEST_FILE) exec playwright sh -c
 
@@ -48,8 +47,8 @@ K6_RESULTS_FILE             ?= /loadTests/results/homepage.html
 K6                          = $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_TEST_FILE) --profile load run --rm k6
 LOAD_TESTS_RUN              = $(K6) run --summary-trend-stats="avg,min,med,max,p(95),p(99)" --out "web-dashboard=period=1s&export=$(K6_RESULTS_FILE)" $(K6_TEST_SCRIPT)
 
-UI_FLAGS                    = --ui-port=$(UI_TEST_PORT) --ui-host=$(UI_HOST)
-UI_MODE_URL                 = http://localhost:$(UI_TEST_PORT)
+UI_FLAGS                    = --ui-port=$(PLAYWRIGHT_TEST_PORT) --ui-host=$(UI_HOST)
+UI_MODE_URL                 = http://localhost:$(PLAYWRIGHT_TEST_PORT)
 
 # Markdown linter ignore patterns (-i means "ignore")
 MD_LINT_ARGS                = -i CHANGELOG.md -i "test-results/**/*.md" -i "playwright-report/data/**/*.md"
@@ -157,11 +156,11 @@ test-visual-update: start-prod ## Update Playwright visual snapshots
 	$(PLAYWRIGHT_TEST) $(TEST_DIR_VISUAL) --update-snapshots
 
 start-prod: ## Build image and start container in production mode
-	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_BASE_FILE) $(DOCKER_COMPOSE_TEST_FILE) up -d prod playwright apollo mockoon && make wait-for-prod
+	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_TEST_FILE) up -d prod playwright apollo mockoon && make wait-for-prod
 
-wait-for-prod: ## Wait for the prod service to be ready on port $(PROD_PORT).
-	@echo "Waiting for prod service to be ready on port $(PROD_PORT)..."
-	npx wait-on -v http://localhost:$(PROD_PORT)
+wait-for-prod: ## Wait for the prod service to be ready on port $(NEXT_PUBLIC_PROD_PORT).
+	@echo "Waiting for prod service to be ready on port $(NEXT_PUBLIC_PROD_PORT)..."
+	npx wait-on -v http://localhost:$(NEXT_PUBLIC_PROD_PORT)
 	@echo "Prod service is up and running!"
 
 test-unit-all: test-unit-client test-unit-server ## This command executes unit tests for both client and server environments.
@@ -180,7 +179,7 @@ test-mutation: build ## Run mutation tests using Stryker after building the app
 	$(STRYKER_CMD)
 
 load-tests: start-prod ## This command executes load tests using K6 library. Note: The target host is determined by the service URL
-                       ## using $(PROD_PORT), which maps to the production service in Docker Compose.
+                       ## using $(NEXT_PUBLIC_PROD_PORT), which maps to the production service in Docker Compose.
 	$(LOAD_TESTS_RUN)
 
 lighthouse-desktop: ## Run a Lighthouse audit using desktop viewport settings to evaluate performance and best practices
