@@ -8,11 +8,11 @@ const config = {
   tsconfigFile: 'tsconfig.json',
   mutate: [
     './src/features/landing/components/**/*.tsx',
+    '!src/features/landing/components/**/*.stories.tsx',
+    '!src/features/landing/components/**/*.stories.ts',
     '!src/features/landing/components/Landing/Landing.tsx',
   ],
-  ignorePatterns: [
-    'src/test/memory-leak/results/**',
-  ],
+  ignorePatterns: ['**/*.stories.tsx', '**/*.stories.ts', 'dist', 'coverage', 'src/test/memory-leak/results/**'],
   thresholds: { high: 100, break: 99 },
 };
 

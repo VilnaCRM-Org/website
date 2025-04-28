@@ -91,6 +91,8 @@
       "heading_libraries": "Public <br /> Libraries"
     },
     "image_alt": {
+      "bigScreen": "Large digital screen with a blue background",
+      "smallScreen": "Small digital screen displaying minimal content",
       "google": "Google",
       "facebook": "Facebook",
       "github": "GitHub",
