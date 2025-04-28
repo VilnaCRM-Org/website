@@ -1,98 +1,100 @@
 include .env
 export
 
-DOCKER_COMPOSE      = docker compose
+DOCKER_COMPOSE              = docker compose
 
 
-BIN_DIR             = ./node_modules/.bin
+BIN_DIR                     = ./node_modules/.bin
 
-NEXT_BIN            = $(BIN_DIR)/next
-IMG_OPTIMIZE        = $(BIN_DIR)/next-export-optimize-images
-TS_BIN              = $(BIN_DIR)/tsc
-STORYBOOK_BIN       = $(BIN_DIR)/storybook
-JEST_BIN            = $(BIN_DIR)/jest
-SERVE_BIN           = $(BIN_DIR)/serve
-PLAYWRIGHT_BIN      = $(BIN_DIR)/playwright
+NEXT_BIN                    = $(BIN_DIR)/next
+IMG_OPTIMIZE                = $(BIN_DIR)/next-export-optimize-images
+TS_BIN                      = $(BIN_DIR)/tsc
+STORYBOOK_BIN               = $(BIN_DIR)/storybook
+JEST_BIN                    = $(BIN_DIR)/jest
+SERVE_BIN                   = $(BIN_DIR)/serve
+PLAYWRIGHT_BIN              = $(BIN_DIR)/playwright
 
-NEXT_BUILD          = $(NEXT_BIN) build
-NEXT_BUILD_CMD      = $(NEXT_BUILD) && $(IMG_OPTIMIZE)
-STORYBOOK_BUILD_CMD = $(STORYBOOK_BIN) build
-
-
-TEST_DIR_BASE = ./src/test
-
-TEST_DIR_APOLLO     = $(TEST_DIR_BASE)/apollo-server
-TEST_DIR_E2E        = $(TEST_DIR_BASE)/e2e
-TEST_DIR_VISUAL     = $(TEST_DIR_BASE)/visual
-
-STRYKER_CMD         = pnpm stryker run
-
-SERVE_CMD           = --collect.startServerCommand="$(SERVE_BIN) out"
-LHCI                = pnpm lhci autorun
-LHCI_CONFIG_DESKTOP = --config=lighthouserc.desktop.js
-LHCI_CONFIG_MOBILE  = --config=lighthouserc.mobile.js
-LHCI_DESKTOP_SERVE  = $(LHCI_CONFIG_DESKTOP) $(SERVE_CMD)
-LHCI_MOBILE_SERVE   = $(LHCI_CONFIG_MOBILE) $(SERVE_CMD)
-
-DOCKER_COMPOSE_TEST_FILE = -f docker-compose.test.yml
-EXEC_DEV_TTYLESS    = $(DOCKER_COMPOSE) exec -T dev
-NEXT_DEV_CMD        = $(DOCKER_COMPOSE) up -d && make wait-for-dev
-PLAYWRIGHT_BASE_CMD = npx playwright test
-PLAYWRIGHT_TEST     = $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_TEST_FILE) exec playwright sh -c
+NEXT_BUILD                  = $(NEXT_BIN) build
+NEXT_BUILD_CMD              = $(NEXT_BUILD) && $(IMG_OPTIMIZE)
+STORYBOOK_BUILD_CMD         = $(STORYBOOK_BIN) build
 
 
-K6_TEST_SCRIPT      ?= /loadTests/homepage.js
-K6_RESULTS_FILE     ?= /loadTests/results/homepage.html
-K6                  = $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_TEST_FILE) --profile load run --rm k6
-LOAD_TESTS_RUN      = $(K6) run --summary-trend-stats="avg,min,med,max,p(95),p(99)" --out "web-dashboard=period=1s&export=$(K6_RESULTS_FILE)" $(K6_TEST_SCRIPT)
+TEST_DIR_BASE               = ./src/test
 
-UI_FLAGS            = --ui-port=$(UI_TEST_PORT) --ui-host=$(UI_HOST)
-UI_MODE_URL         = http://localhost:$(UI_TEST_PORT)
+TEST_DIR_APOLLO             = $(TEST_DIR_BASE)/apollo-server
+TEST_DIR_E2E                = $(TEST_DIR_BASE)/e2e
+TEST_DIR_VISUAL             = $(TEST_DIR_BASE)/visual
+
+STRYKER_CMD                 = pnpm stryker run
+
+SERVE_CMD                   = --collect.startServerCommand="$(SERVE_BIN) out"
+LHCI                        = pnpm lhci autorun
+LHCI_CONFIG_DESKTOP         = --config=lighthouserc.desktop.js
+LHCI_CONFIG_MOBILE          = --config=lighthouserc.mobile.js
+LHCI_DESKTOP_SERVE          = $(LHCI_CONFIG_DESKTOP) $(SERVE_CMD)
+LHCI_MOBILE_SERVE           = $(LHCI_CONFIG_MOBILE) $(SERVE_CMD)
+
+DOCKER_COMPOSE_TEST_FILE    = -f docker-compose.test.yml
+DOCKER_COMPOSE_BASE_FILE    = -f docker-compose.base.yml
+DOCKER_COMPOSE_DEV_FILE    = -f docker-compose.yml
+EXEC_DEV_TTYLESS            = $(DOCKER_COMPOSE) exec -T dev
+NEXT_DEV_CMD                = $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_BASE_FILE) $(DOCKER_COMPOSE_DEV_FILE) up -d dev && make wait-for-dev
+PLAYWRIGHT_BASE_CMD         = npx playwright test
+PLAYWRIGHT_TEST             = $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_TEST_FILE) exec playwright sh -c
+
+
+K6_TEST_SCRIPT              ?= /loadTests/homepage.js
+K6_RESULTS_FILE             ?= /loadTests/results/homepage.html
+K6                          = $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_TEST_FILE) --profile load run --rm k6
+LOAD_TESTS_RUN              = $(K6) run --summary-trend-stats="avg,min,med,max,p(95),p(99)" --out "web-dashboard=period=1s&export=$(K6_RESULTS_FILE)" $(K6_TEST_SCRIPT)
+
+UI_FLAGS                    = --ui-port=$(UI_TEST_PORT) --ui-host=$(UI_HOST)
+UI_MODE_URL                 = http://localhost:$(UI_TEST_PORT)
 
 # Markdown linter ignore patterns (-i means "ignore")
-MD_LINT_ARGS        = -i CHANGELOG.md -i "test-results/**/*.md" -i "playwright-report/data/**/*.md"
+MD_LINT_ARGS                = -i CHANGELOG.md -i "test-results/**/*.md" -i "playwright-report/data/**/*.md"
 
-JEST_FLAGS          = --verbose
+JEST_FLAGS                  = --verbose
 
 # CI variable
-CI                  ?= 0
+CI                          ?= 0
 
 # Conditional PNPM_EXEC based on CI
 ifeq ($(CI), 1)
-    PNPM_EXEC       = pnpm
-    NEXT_DEV_CMD    = $(NEXT_BIN) dev
-    UNIT_TESTS      = env
+    PNPM_EXEC               = pnpm
+    NEXT_DEV_CMD            = $(NEXT_BIN) dev
+    UNIT_TESTS              = env
 
-    STORYBOOK_START = $(STORYBOOK_BIN) dev -p $(STORYBOOK_PORT)
+    STORYBOOK_START         = $(STORYBOOK_BIN) dev -p $(STORYBOOK_PORT)
 
-    LHCI_BUILD_CMD  = $(NEXT_BUILD_CMD) && $(LHCI)
-    LHCI_DESKTOP    = $(LHCI_BUILD_CMD) $(LHCI_DESKTOP_SERVE)
-    LHCI_MOBILE     = $(LHCI_BUILD_CMD) $(LHCI_MOBILE_SERVE)
+    LHCI_BUILD_CMD          = $(NEXT_BUILD_CMD) && $(LHCI)
+    LHCI_DESKTOP            = $(LHCI_BUILD_CMD) $(LHCI_DESKTOP_SERVE)
+    LHCI_MOBILE             = $(LHCI_BUILD_CMD) $(LHCI_MOBILE_SERVE)
 else
-    PNPM_EXEC       = $(EXEC_DEV_TTYLESS)
-    STRYKER_CMD     = make start && $(EXEC_DEV_TTYLESS) pnpm stryker run
-    UNIT_TESTS      = make start && $(EXEC_DEV_TTYLESS) env
+    PNPM_EXEC               = $(EXEC_DEV_TTYLESS)
+    STRYKER_CMD             = make start && $(EXEC_DEV_TTYLESS) pnpm stryker run
+    UNIT_TESTS              = make start && $(EXEC_DEV_TTYLESS) env
 
-    STORYBOOK_START = exec $(STORYBOOK_BIN) dev -p $(STORYBOOK_PORT) --host 0.0.0.0
+    STORYBOOK_START         = exec $(STORYBOOK_BIN) dev -p $(STORYBOOK_PORT) --host 0.0.0.0
 
-    LHCI_BUILD_CMD  = make start-prod && $(LHCI)
-    LHCI_DESKTOP    = $(LHCI_BUILD_CMD) $(LHCI_CONFIG_DESKTOP)
-    LHCI_MOBILE     = $(LHCI_BUILD_CMD) $(LHCI_CONFIG_MOBILE)
+    LHCI_BUILD_CMD          = make start-prod && $(LHCI)
+    LHCI_DESKTOP            = $(LHCI_BUILD_CMD) $(LHCI_CONFIG_DESKTOP)
+    LHCI_MOBILE             = $(LHCI_BUILD_CMD) $(LHCI_CONFIG_MOBILE)
 endif
 
-PRETTIER_BIN        = $(PNPM_EXEC) ./node_modules/.bin/prettier
-MARKDOWNLINT_BIN    = $(PNPM_EXEC) ./node_modules/.bin/markdownlint
+PRETTIER_BIN                = $(PNPM_EXEC) ./node_modules/.bin/prettier
+MARKDOWNLINT_BIN            = $(PNPM_EXEC) ./node_modules/.bin/markdownlint
 
 # To Run in CI mode specify CI variable. Example: make lint-md CI=1
 
 # Misc
-.DEFAULT_GOAL       = help
-.RECIPEPREFIX       +=
+.DEFAULT_GOAL               = help
+.RECIPEPREFIX               +=
 .PHONY: $(filter-out node_modules,$(MAKECMDGOALS))
 
 # Variables
-run-visual          = $(PLAYWRIGHT_TEST) "$(PLAYWRIGHT_BIN) test $(TEST_DIR_VISUAL)"
-run-e2e             = $(PLAYWRIGHT_TEST) "$(PLAYWRIGHT_BIN) test $(TEST_DIR_E2E)"
+run-visual                  = $(PLAYWRIGHT_TEST) "$(PLAYWRIGHT_BIN) test $(TEST_DIR_VISUAL)"
+run-e2e                     = $(PLAYWRIGHT_TEST) "$(PLAYWRIGHT_BIN) test $(TEST_DIR_E2E)"
 
 help:
 	@printf "\033[33mUsage:\033[0m\n  make [target] [arg=\"val\"...]\n\n\033[33mTargets:\033[0m\n"
@@ -155,11 +157,11 @@ test-visual-update: start-prod ## Update Playwright visual snapshots
 	$(PLAYWRIGHT_TEST) $(TEST_DIR_VISUAL) --update-snapshots
 
 start-prod: ## Build image and start container in production mode
-	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_TEST_FILE) up -d && make wait-for-prod
+	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_BASE_FILE) $(DOCKER_COMPOSE_TEST_FILE) up -d prod playwright apollo mockoon && make wait-for-prod
 
-wait-for-prod: ## Wait for the prod service to be ready on port $(NEXT_PUBLIC_PROD_PORT).
-	@echo "Waiting for prod service to be ready on port $(NEXT_PUBLIC_PROD_PORT)..."
-	npx wait-on -v http://localhost:$(NEXT_PUBLIC_PROD_PORT)
+wait-for-prod: ## Wait for the prod service to be ready on port $(PROD_PORT).
+	@echo "Waiting for prod service to be ready on port $(PROD_PORT)..."
+	npx wait-on -v http://localhost:$(PROD_PORT)
 	@echo "Prod service is up and running!"
 
 test-unit-all: test-unit-client test-unit-server ## This command executes unit tests for both client and server environments.
@@ -178,7 +180,7 @@ test-mutation: build ## Run mutation tests using Stryker after building the app
 	$(STRYKER_CMD)
 
 load-tests: start-prod ## This command executes load tests using K6 library. Note: The target host is determined by the service URL
-                       ## using $(NEXT_PUBLIC_PROD_PORT), which maps to the production service in Docker Compose.
+                       ## using $(PROD_PORT), which maps to the production service in Docker Compose.
 	$(LOAD_TESTS_RUN)
 
 lighthouse-desktop: ## Run a Lighthouse audit using desktop viewport settings to evaluate performance and best practices
