@@ -9,7 +9,7 @@ const env: DotenvConfigOutput = dotenv.config();
 
 dotenvExpand.expand(env);
 
-const SCHEMA_URL: string = process.env.GRAPHQL_SCHEMA_URL!;
+const SCHEMA_URL: string = process.env.GRAPHQL_SCHEMA_URL || '';
 
 if (!SCHEMA_URL) {
   throw new Error(

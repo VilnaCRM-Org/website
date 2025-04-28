@@ -17,8 +17,6 @@ import fs from 'node:fs';
 import path, { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-dotenv.config();
-
 const GRAPHQL_API_PATH = process.env.GRAPHQL_API_PATH || 'graphql';
 const HEALTH_CHECK_PATH = process.env.HEALTH_CHECK_PATH || 'health';
 
