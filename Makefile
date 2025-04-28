@@ -153,7 +153,7 @@ test-visual-ui: start-prod ## Start the production environment and run visual te
 	$(run-visual) $(UI_FLAGS)
 
 test-visual-update: start-prod ## Update Playwright visual snapshots
-	$(PLAYWRIGHT_TEST) $(TEST_DIR_VISUAL) --update-snapshots
+	$(PLAYWRIGHT_TEST) "npx playwright test $(TEST_DIR_VISUAL) --update-snapshots"
 
 start-prod: ## Build image and start container in production mode
 	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_TEST_FILE) up -d prod playwright apollo mockoon && make wait-for-prod
