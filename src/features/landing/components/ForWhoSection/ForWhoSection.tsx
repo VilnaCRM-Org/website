@@ -24,12 +24,18 @@ const getImageProps: (src: string, alt?: string) => React.ImgHTMLAttributes<HTML
   alt = ''
 ) => getOptimizedImageProps({ src, alt }).props;
 
- function ForWhoSection(): React.ReactElement {
+function ForWhoSection(): React.ReactElement {
   const { t } = useTranslation();
 
-  const bigScreenProps: React.ImgHTMLAttributes<HTMLImageElement> = getImageProps(bigScreen, t('alts.bigScreen'));
-  const smallScreenProps: React.ImgHTMLAttributes<HTMLImageElement> = getImageProps(smallScreen, t('alts.smallScreen'));  
-  
+  const bigScreenProps: React.ImgHTMLAttributes<HTMLImageElement> = getImageProps(
+    bigScreen,
+    t('alts.bigScreen')
+  );
+  const smallScreenProps: React.ImgHTMLAttributes<HTMLImageElement> = getImageProps(
+    smallScreen,
+    t('alts.smallScreen')
+  );
+
   return (
     <Box id="forWhoSection" component="section" sx={styles.wrapper}>
       <Container>
@@ -47,7 +53,7 @@ const getImageProps: (src: string, alt?: string) => React.ImgHTMLAttributes<HTML
                 sx={styles.circle}
                 loading="lazy"
               />
-               <Box
+              <Box
                 component="img"
                 {...getImageProps(rhombus)}
                 aria-hidden="true"
@@ -86,18 +92,8 @@ const getImageProps: (src: string, alt?: string) => React.ImgHTMLAttributes<HTML
               </Box>
             </Box>
             <Box sx={styles.square}>
-              <Box
-                component="img"
-               {...bigScreenProps}
-                sx={styles.bigScreen}
-                loading="lazy"
-              />
-              <Box
-                component="img"
-                {...smallScreenProps}
-                sx={styles.smallScreen}
-                loading="lazy"
-              />
+              <Box component="img" {...bigScreenProps} sx={styles.bigScreen} loading="lazy" />
+              <Box component="img" {...smallScreenProps} sx={styles.smallScreen} loading="lazy" />
               <Box
                 component="img"
                 {...getImageProps(waves)}
@@ -112,7 +108,7 @@ const getImageProps: (src: string, alt?: string) => React.ImgHTMLAttributes<HTML
                 sx={styles.hexagon}
                 loading="lazy"
               />
-               <Box
+              <Box
                 component="img"
                 {...getImageProps(triangle)}
                 aria-hidden="true"
