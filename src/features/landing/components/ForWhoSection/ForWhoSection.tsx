@@ -91,14 +91,12 @@ const getImageProps: (src: string, alt?: string) => React.ImgHTMLAttributes<HTML
                {...bigScreenProps}
                 sx={styles.bigScreen}
                 loading="lazy"
-                data-testid="for-who-big-screen"
               />
               <Box
                 component="img"
                 {...smallScreenProps}
                 sx={styles.smallScreen}
                 loading="lazy"
-                data-testid="for-who-small-screen"
               />
               <Box
                 component="img"
