@@ -1,0 +1,9 @@
+services:
+  memory-leak:
+    build:
+      context: .
+      dockerfile: MemoryLeak.Dockerfile
+    volumes:
+      - .:/app
+    init: true
+    shm_size: '256m'

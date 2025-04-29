@@ -1,7 +1,10 @@
 import { test, expect, Locator } from '@playwright/test';
+import { t } from 'i18next';
 
 import { signUpButton, policyText, userData } from './constants';
 import { fillEmailInput, fillInitialsInput, fillPasswordInput } from './utils';
+
+const confettiAltText: string = t('notifications.success.images.confetti');
 
 test('Should display error messages for invalid inputs', async ({ page }) => {
   await page.goto('/');
@@ -13,8 +16,12 @@ test('Should display error messages for invalid inputs', async ({ page }) => {
 
   await page.getByRole('button', { name: signUpButton }).click();
 
-  const loading: Locator = page.locator('svg').nth(0);
-  await loading.waitFor({ state: 'attached' });
+  const successConfettiImage: Locator = page.getByAltText(confettiAltText);
+  const successConfettiBottomImage: Locator = page.getByAltText(confettiAltText);
 
-  await expect(loading).toBeAttached();
+  await successConfettiImage.waitFor({ state: 'attached' });
+  await successConfettiBottomImage.waitFor({ state: 'attached' });
+
+  await expect(successConfettiImage).toBeAttached();
+  await expect(successConfettiBottomImage).toBeAttached();
 });
