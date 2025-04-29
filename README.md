@@ -170,6 +170,36 @@ Example:
   CI=1 make start
 ```
 
+### Load Testing with K6
+
+This project includes a dedicated load testing service using K6, configured via a Docker Compose profile.
+
+#### What are Docker Compose Profiles?
+
+Docker Compose profiles let you selectively start groups of services. The load testing service is tagged
+with the `load` profile in `docker-compose.test.yml`, so it only runs when you explicitly include
+that profile.
+
+#### Running Load Tests
+
+Using the `make` command (recommended):
+
+```bash
+  make load-tests
+```
+
+The load testing service waits for the production service to become healthy before starting.
+Test results will be streamed to the K6 web dashboard and saved under ./src/test/load/results/.
+
+Available Load Test Scenarios:
+
+- smoke: a quick health check with a small number of virtual users.
+- average: simulates a typical daily traffic load.
+- stress: pushes the system to its limits to identify breaking points.
+- spike: sudden ramp-up of virtual users to test burst handling.
+
+Adjust scenarios and thresholds in ./src/test/load/config.json.dist as needed.
+
 ## Package Management
 
 ### PNPM Workspace Configuration

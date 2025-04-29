@@ -29,11 +29,11 @@ function ForWhoSection(): React.ReactElement {
 
   const bigScreenProps: React.ImgHTMLAttributes<HTMLImageElement> = getImageProps(
     bigScreen,
-    t('alts.bigScreen')
+    t('alts.big_screen')
   );
   const smallScreenProps: React.ImgHTMLAttributes<HTMLImageElement> = getImageProps(
     smallScreen,
-    t('alts.smallScreen')
+    t('alts.small_screen')
   );
 
   return (
