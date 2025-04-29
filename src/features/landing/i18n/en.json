@@ -90,6 +90,8 @@
       "heading_libraries": "Public <br /> Libraries"
     },
     "image_alt": {
+      "bigScreen": "Large digital screen with a blue background",
+      "smallScreen": "Small digital screen displaying minimal content",
       "google": "Google",
       "facebook": "Facebook",
       "github": "GitHub",
@@ -156,6 +158,27 @@
       "button_text": "Sign-Up",
       "error_text": "There was an error. Please check again"
     }
+  },
+  "notifications": {
+    "success": {
+      "title": "Congratulations!",
+      "description": "You have successfully registered",
+      "button": "Go back",
+      "images": {
+        "confetti": "Cheerful and colorful confetti",
+        "gears": "Decorative celebration gears"
+      }
+    },
+    "error": {
+      "title": "An error occurred",
+      "description": "Internal Server Error",
+      "retry_button": "Try again",
+      "button": "Go back",
+      "images": {
+        "error": "Red triangle with a warning about an error."
+      }
+    },
+    "unknown": { "title": "Unknown notification type" }
   },
   "footer": {
     "logo_alt": "Vilna logo",

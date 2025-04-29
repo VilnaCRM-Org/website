@@ -1,18 +1,9 @@
 services:
-  nodejs:
+  dev:
     build: .
+    command: pnpm run dev
     restart: unless-stopped
     volumes:
       - .:/app
     ports:
       - '3000:3000'
-
-  playwright:
-    build:
-      context: .
-      dockerfile: Playwright.Dockerfile
-    restart: unless-stopped
-    volumes:
-      - .:/app
-    ports:
-      - '9323:9323'

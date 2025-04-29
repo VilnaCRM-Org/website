@@ -91,6 +91,8 @@
       "heading_libraries": "Публічні <br /> бібліотеки"
     },
     "image_alt": {
+      "bigScreen": "Великий цифровий екран з синім фоном",
+      "smallScreen": "Малий цифровий екран, що показує мінімальний контент",
       "google": "Google",
       "facebook": "Facebook",
       "github": "GitHub",
@@ -160,6 +162,27 @@
       "button_text": "Реєєстрація",
       "error_text": "Виникла помилка. Перевірте ще раз"
     }
+  },
+  "notifications": {
+    "success": {
+      "title": "Вітаємо!",
+      "description": "Ви успішно зареєструвались",
+      "button": "Назад",
+      "images": {
+        "confetti": "Веселе і барвисте конфеті",
+        "gears": "Святкові шестерні"
+      }
+    },
+    "error": {
+      "title": "Трапилась помилка",
+      "description": "Внутрішня помилка сервера",
+      "retry_button": "Спробувати ще раз",
+      "button": "Назад",
+      "images": {
+        "error": "Червоний трикутник з попередженням про помилку."
+      }
+    },
+    "unknown": { "title": "Невідомий тип сповіщення" }
   },
   "footer": {
     "logo_alt": "Vilna логотип",

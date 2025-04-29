@@ -1,3 +1,5 @@
+import { CSSProperties } from 'react';
+
 import breakpointsTheme from '@/components/UiBreakpoints';
 import colorTheme from '@/components/UiColorTheme';
 
@@ -6,16 +8,16 @@ import Images from '../../../assets/svg/auth-section/image.svg';
 
 export default {
   formWrapper: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
     position: 'relative',
-    mt: '4.063rem',
-    minHeight: '37.5rem',
-    contain: 'layout',
+    marginTop: '4.063rem',
     [`@media (max-width: 1130px)`]: {
-      mt: '3.875rem',
+      marginTop: '3.875rem',
     },
     [`@media (max-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
-      mt: '2.125rem',
-      minHeight: '37.5rem',
+      marginTop: '2.125rem',
     },
   },
 
@@ -44,12 +46,12 @@ export default {
   },
 
   loader: {
-    position: 'fixed',
+    position: 'absolute' as CSSProperties['position'],
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
-    inset: '0',
-    zIndex: '1000',
+    inset: 0,
+    zIndex: 1000,
     backgroundColor: 'rgba(255,255, 255, 0.6)',
     borderRadius: '2rem 2rem 0 0',
   },
@@ -83,7 +85,7 @@ export default {
     zIndex: '5',
     padding: '2.25rem 2.5rem 2.5rem 2.5rem',
     borderRadius: '2rem 2rem 0 0',
-    border: '1px solid  primary.main',
+    border: `1px solid  ${colorTheme.palette.brandGray.main}`,
     background: colorTheme.palette.white.main,
     maxWidth: '31.375rem',
     width: '100%',
@@ -150,15 +152,15 @@ export default {
   },
 
   labelText: {
-    mt: '1.25rem',
-    mb: '2rem',
+    marginTop: '1.25rem',
+    marginBottom: '2rem',
     mx: '0',
     minHeight: '3rem',
     [`@media (max-width: 1130px)`]: {
-      mb: '1.5rem',
+      marginBottom: '1.5rem',
     },
     [`@media (max-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
-      mb: '1.188rem',
+      marginBottom: '1.188rem',
     },
   },
 

@@ -19,9 +19,6 @@ jobs:
       - name: Install dependencies
         run: make install
 
-      - name: Install dependencies
-        run: make start
-
       - name: Run Playwright tests
         run: make test-e2e
 

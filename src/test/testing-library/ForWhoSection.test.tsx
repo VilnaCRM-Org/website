@@ -13,11 +13,13 @@ describe('ForWhoSection component', () => {
     expect(getAllByLabelText(forWhoLabel)[0]).toBeInTheDocument();
   });
 
-  it('should have a proper alt tag', () => {
+  it('should have the correct number of images with empty alt text and images with proper alt text', () => {
     const { getAllByAltText } = render(<ForWhoSection />);
-    const images: HTMLElement[] = getAllByAltText('Vector');
 
-    expect(images).toHaveLength(5);
-    expect(images[0]).toBeInTheDocument();
+    const imagesWithEmptyAlt: HTMLElement[] = getAllByAltText('');
+    expect(imagesWithEmptyAlt).toHaveLength(9);
+
+    const imagesWithAltText: HTMLElement[] = getAllByAltText('Vector');
+    expect(imagesWithAltText).toHaveLength(4);
   });
 });
