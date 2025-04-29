@@ -180,7 +180,12 @@ test-memory-leak: start-prod ## This command executes memory leaks tests using M
 test-mutation: build ## Run mutation tests using Stryker after building the app
 	$(STRYKER_CMD)
 
-load-tests: start-prod ## This command executes load tests using K6 library. Note: The target host is determined by the service URL
+wait-for-prod-health: ## Wait for the prod container to reach a healthy state.
+	@echo "Waiting for prod container to become healthy..."
+	@timeout 60 bash -c 'until docker compose -f docker-compose.test.yml ps | grep -q "prod.*(healthy)"; do sleep 2; done'
+	@echo "Prod container is healthy and ready!"
+
+load-tests: start-prod wait-for-prod-health ## This command executes load tests using K6 library. Note: The target host is determined by the service URL
                        ## using $(NEXT_PUBLIC_PROD_PORT), which maps to the production service in Docker Compose.
 	$(LOAD_TESTS_RUN)
 
