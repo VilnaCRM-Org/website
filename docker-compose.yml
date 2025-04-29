@@ -11,8 +11,5 @@ services:
       - NODE_ENV=development
       - CHOKIDAR_USEPOLLING=true
       - WATCHPACK_POLLING=true
-    extends:
-      file: common-healthchecks.yml
-      service: base-service
     healthcheck:
       test: ["CMD", "curl", "-f", "http://${LOCAL_HOST}:${DEV_PORT}"]

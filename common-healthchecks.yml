@@ -1,5 +1,26 @@
 services:
-  base-service:
+  prod:
+    healthcheck:
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  playwright:
+    healthcheck:
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  apollo:
+    healthcheck:
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  mockoon:
     healthcheck:
       interval: 10s
       timeout: 5s

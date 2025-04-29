@@ -1,3 +1,4 @@
+version: "3.9"
 services:
   prod:
     build:
@@ -10,9 +11,6 @@ services:
       - /app/node_modules
     ports:
       - '3001:3001'
-    extends:
-      file: common-healthchecks.yml
-      service: base-service
     healthcheck:
       test: ["CMD", "curl", "-f", "http://${LOCAL_HOST}:${NEXT_PUBLIC_PROD_PORT}"]
 
@@ -28,9 +26,6 @@ services:
       - '9324:9324'
     environment:
       - NEXT_PUBLIC_PROD_HOST_API_URL=http://prod:3001
-    extends:
-      file: common-healthchecks.yml
-      service: base-service
     healthcheck:
       test: ["CMD", "curl", "-f", "http://${LOCAL_HOST}:${PLAYWRIGHT_TEST_PORT}"]
 
@@ -42,9 +37,6 @@ services:
     restart: unless-stopped
     ports:
       - '4000:4000'
-    extends:
-      file: common-healthchecks.yml
-      service: base-service
     healthcheck:
       test: ["CMD", "curl", "-f", "http://${LOCAL_HOST}:${GRAPHQL_PORT}/${GRAPHQL_API_PATH}"]
 
@@ -55,9 +47,6 @@ services:
     ports:
       - '8080:8080'
     restart: unless-stopped
-    extends:
-      file: common-healthchecks.yml
-      service: base-service
     healthcheck:
       test: ["CMD", "curl", "-f", "http://${LOCAL_HOST}:${MOCKOON_PORT}"]
 
