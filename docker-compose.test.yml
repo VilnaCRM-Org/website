@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: sh /app/scripts/start-prod.sh
+    command: ["sh", "/app/scripts/start-prod.sh"]
     restart: unless-stopped
     volumes:
       - .:/app

@@ -12,6 +12,7 @@ TS_BIN                      = $(BIN_DIR)/tsc
 STORYBOOK_BIN               = $(BIN_DIR)/storybook
 JEST_BIN                    = $(BIN_DIR)/jest
 SERVE_BIN                   = $(BIN_DIR)/serve
+PLAYWRIGHT_BIN              = $(BIN_DIR)/playwright
 
 NEXT_BUILD                  = $(NEXT_BIN) build
 NEXT_BUILD_CMD              = $(NEXT_BUILD) && $(IMG_OPTIMIZE)
@@ -37,10 +38,9 @@ DOCKER_COMPOSE_TEST_FILE    = -f docker-compose.test.yml
 DOCKER_COMPOSE_DEV_FILE     = -f docker-compose.yml
 EXEC_DEV_TTYLESS            = $(DOCKER_COMPOSE) exec -T dev
 NEXT_DEV_CMD                = $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) up -d dev && make wait-for-dev
-PLAYWRIGHT_BASE_CMD         = pnpm exec playwright test
+PLAYWRIGHT_BASE_CMD         = npx playwright test
 PLAYWRIGHT_DOCKER_CMD       = $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_TEST_FILE) exec playwright
-PLAYWRIGHT_TEST             = $(PLAYWRIGHT_DOCKER_CMD) $(PLAYWRIGHT_BASE_CMD)
-
+PLAYWRIGHT_TEST             = $(PLAYWRIGHT_DOCKER_CMD) sh -c
 
 K6_TEST_SCRIPT              ?= /loadTests/homepage.js
 K6_RESULTS_FILE             ?= /loadTests/results/homepage.html
@@ -92,8 +92,9 @@ MARKDOWNLINT_BIN            = $(PNPM_EXEC) ./node_modules/.bin/markdownlint
 .PHONY: $(filter-out node_modules,$(MAKECMDGOALS))
 
 # Variables
-run-visual                  = $(PLAYWRIGHT_TEST) $(TEST_DIR_VISUAL)
+run-visual                  = $(PLAYWRIGHT_TEST) "$(PLAYWRIGHT_BIN) test $(TEST_DIR_VISUAL)"
 run-e2e                     = $(PLAYWRIGHT_TEST) $(TEST_DIR_E2E)
+playwright-test             = $(PLAYWRIGHT_DOCKER_CMD) $(PLAYWRIGHT_BIN) test
 
 help:
 	@printf "\033[33mUsage:\033[0m\n  make [target] [arg=\"val\"...]\n\n\033[33mTargets:\033[0m\n"
@@ -142,7 +143,7 @@ test-e2e: start-prod  ## Start production and run E2E tests (Playwright)
 test-e2e-ui: start-prod ## Start the production environment and run E2E tests with the UI available at $(UI_MODE_URL)
 	@echo "🚀 Starting Playwright UI tests..."
 	@echo "Test will be run on: $(UI_MODE_URL)"
-	$(run-e2e) $(UI_FLAGS)
+	$(playwright-test) $(TEST_DIR_E2E) $(UI_FLAGS)
 
 test-visual: start-prod  ## Start production and run visual tests (Playwright)
 	$(run-visual)
@@ -150,10 +151,10 @@ test-visual: start-prod  ## Start production and run visual tests (Playwright)
 test-visual-ui: start-prod ## Start the production environment and run visual tests with the UI available at $(UI_MODE_URL)
 	@echo "🚀 Starting Playwright UI tests..."
 	@echo "Test will be run on: $(UI_MODE_URL)"
-	$(run-visual) $(UI_FLAGS)
+	$(playwright-test) $(TEST_DIR_VISUAL) $(UI_FLAGS)
 
 test-visual-update: start-prod ## Update Playwright visual snapshots
-	$(run-visual) --update-snapshots
+	$(playwright-test) $(TEST_DIR_VISUAL) --update-snapshots
 
 start-prod: ## Build image and start container in production mode
 	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_TEST_FILE) up -d prod playwright apollo mockoon && make wait-for-prod
