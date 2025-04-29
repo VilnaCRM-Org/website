@@ -40,7 +40,7 @@ Clone locally or use GitHub’s `Use this template` feature.
 
 Before running the application, make sure the following tools are installed on your machine:
 
-- **Install [Node.js](https://nodejs.org/en/)** (version 20 or higher).
+- **[Node.js](https://nodejs.org/en/)** (version 20 or higher).
   You can download and install Node.js from the official website, or use a version manager like
   nvm [Node Version Manager](https://github.com/nvm-sh/nvm) to easily manage versions.
 
