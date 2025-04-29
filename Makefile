@@ -93,7 +93,7 @@ MARKDOWNLINT_BIN            = $(PNPM_EXEC) ./node_modules/.bin/markdownlint
 
 # Variables
 run-visual                  = $(PLAYWRIGHT_TEST) "$(PLAYWRIGHT_BIN) test $(TEST_DIR_VISUAL)"
-run-e2e                     = $(PLAYWRIGHT_TEST) $(TEST_DIR_E2E)
+run-e2e                     = $(PLAYWRIGHT_TEST) "$(PLAYWRIGHT_BIN) test $(TEST_DIR_E2E)"
 playwright-test             = $(PLAYWRIGHT_DOCKER_CMD) $(PLAYWRIGHT_BIN) test
 
 help:

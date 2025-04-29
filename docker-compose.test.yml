@@ -23,6 +23,7 @@ services:
     restart: unless-stopped
     volumes:
       - .:/app
+      - /app/node_modules
     ports:
       - '9324:9324'
     environment:
