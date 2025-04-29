@@ -83,8 +83,7 @@
     "ts-jest": "^29.3.2",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3",
-    "wait-on": "^8.0.3",
-    "webpack": "^5.99.5"
+    "wait-on": "^8.0.3"
   },
   "engines": {
     "node": ">=20.0.0"
