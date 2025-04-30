@@ -2,6 +2,7 @@ import { useMutation } from '@apollo/client';
 import { Box, CircularProgress, Fade } from '@mui/material';
 import React from 'react';
 import { useForm } from 'react-hook-form';
+import { v4 as uuidv4 } from 'uuid';
 
 import SIGNUP_MUTATION from '../../../api/service/userService';
 import { animationTimeout } from '../../../constants';
@@ -14,8 +15,6 @@ import { NotificationStatus } from '../../Notification/types';
 import AuthForm from './AuthForm';
 import styles from './styles';
 import { CreateUserPayload, SignupVariables } from './types';
-
-const clientID: string = '132';
 
 function AuthLayout(): React.ReactElement {
   const [notificationType, setNotificationType] = React.useState<NotificationStatus>(
@@ -43,6 +42,7 @@ function AuthLayout(): React.ReactElement {
     setNotificationType(NotificationStatus.SUCCESS);
   };
   const onSubmit: (userData: RegisterItem) => Promise<void> = async (userData: RegisterItem) => {
+    const clientID: string = uuidv4();
     try {
       await signupMutation({
         variables: {

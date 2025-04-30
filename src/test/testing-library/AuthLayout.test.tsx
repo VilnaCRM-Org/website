@@ -42,6 +42,10 @@ const passwordErrorLength: string = t('sign_up.form.password_input.error_length'
 const passwordErrorNumbers: string = t('sign_up.form.password_input.error_numbers');
 const passwordErrorUppercase: string = t('sign_up.form.password_input.error_uppercase');
 
+jest.mock('uuid', (): { v4: () => string } => ({
+  v4: () => '132',
+}));
+
 const validateCreateUserInput: (variables: { input: CreateUserInput }) => boolean = (variables: {
   input: CreateUserInput;
 }) => {

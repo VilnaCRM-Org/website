@@ -1,7 +1,7 @@
 import colorTheme from '@/components/UiColorTheme';
 import { golos } from '@/config/Fonts/golos';
 
-import { BREAKPOINTS, DIMENSIONS } from './constants';
+import { BREAKPOINTS, DIMENSIONS, Z_INDICES } from './constants';
 
 export default {
   notificationSection: {
@@ -20,7 +20,7 @@ export default {
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 1000,
+    zIndex: Z_INDICES.NOTIFICATION_SECTION,
 
     [`@media (max-width: ${BREAKPOINTS.SM})`]: {
       maxWidth: DIMENSIONS.MIN_WIDTH.XS,
@@ -49,14 +49,14 @@ export default {
 
   // success box
   contentBox: {
-    zIndex: 3,
+    zIndex: Z_INDICES.SUCCESS_BOX,
   },
 
   successTopImgBox: {
     position: 'absolute',
     top: '-0.78rem',
     left: '-8.5rem',
-    zIndex: 5,
+    zIndex: Z_INDICES.GEARS,
 
     [`@media (max-width: ${BREAKPOINTS.SM})`]: {
       transform: 'scale(0.91)',
@@ -77,7 +77,7 @@ export default {
     position: 'absolute',
     bottom: '-0.78rem',
     left: '-11.8rem',
-    zIndex: -1,
+    zIndex: Z_INDICES.BOTTOM_IMG_BOX,
     transform: 'rotate(-180deg)',
 
     [`@media (max-width: ${BREAKPOINTS.SM})`]: {
@@ -118,7 +118,7 @@ export default {
     left: '50%',
     transform: 'translateX(-50%)',
     top: '2rem',
-    zIndex: 5,
+    zIndex: Z_INDICES.GEARS,
 
     [`@media (max-width: ${BREAKPOINTS.SM})`]: {
       transform: 'translateX(-50%) scale(0.8)',
@@ -135,7 +135,7 @@ export default {
     flexDirection: 'column',
     alignItems: 'center',
     background: `${colorTheme.palette.white.main}`,
-    zIndex: 100,
+    zIndex: Z_INDICES.MESSAGE_CONTAINER,
 
     [`@media (min-width: ${BREAKPOINTS.LG})`]: {
       width: '100%',
@@ -148,7 +148,7 @@ export default {
     lineHeight: '1.65rem',
     fontFamily: golos.style.fontFamily,
     color: colorTheme.palette.darkPrimary.main,
-    zIndex: 100,
+    zIndex: Z_INDICES.MESSAGE_TITLE,
 
     [`@media (min-width: 641px)`]: {
       fontWeight: 600,
