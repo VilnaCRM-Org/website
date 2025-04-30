@@ -16,24 +16,6 @@ jobs:
         with:
           node-version: ${{ vars.NODE_VERSION }}
 
-<<<<<<< HEAD
-      - name: Cache pnpm dependencies
-        id: cache-pnpm-store
-        uses: actions/cache@v3
-        with:
-          path: ~/.pnpm-store
-          key: ${{ runner.os }}-dependencies-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-dependencies-
-
-      - name: Install pnpm
-        run: npm install -g pnpm
-
-      - name: Install dependencies
-        run: make install
-
-=======
->>>>>>> origin/main
       - name: Run dev and memory leak testing
         run: make test-memory-leak
 
