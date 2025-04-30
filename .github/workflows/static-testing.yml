@@ -6,6 +6,8 @@ on:
 jobs:
   static:
     runs-on: ubuntu-latest
+    env:
+      CI: 1
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -33,14 +35,5 @@ jobs:
           steps.cache-pnpm-dependencies.outputs.cache-hit != 'true' ||
           steps.cache-pnpm-packages.outputs.cache-hit != 'true'
 
-      - name: Run next linter
-        run: pnpm run lint:next
-
-      - name: Run tsc linter
-        run: pnpm run lint:tsc
-
-      - name: Run markdown linter
-        run: pnpm run lint:md
-
-      - name: Run code formatter
-        run: pnpm run format
+      - name: Run all linters
+        run: make lint

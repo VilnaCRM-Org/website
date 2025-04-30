@@ -16,6 +16,7 @@ jobs:
         with:
           node-version: ${{ vars.NODE_VERSION }}
 
+<<<<<<< HEAD
       - name: Cache pnpm dependencies
         id: cache-pnpm-store
         uses: actions/cache@v3
@@ -31,6 +32,8 @@ jobs:
       - name: Install dependencies
         run: make install
 
+=======
+>>>>>>> origin/main
       - name: Run dev and memory leak testing
         run: make test-memory-leak
 

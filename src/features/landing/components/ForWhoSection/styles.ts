@@ -438,7 +438,7 @@ export default {
 
   waves: {
     // The waves is hidden on mobile but becomes visible on tablet and desktop layouts.
-    visibility: 'hidden', 
+    visibility: 'hidden',
     [`@media (min-width: 426px)`]: {
       display: 'flex',
       visibility: 'visible',
@@ -470,7 +470,7 @@ export default {
 
   hexagon: {
     // The hexagon is hidden on mobile but becomes visible on tablet and desktop layouts.
-    visibility: 'hidden', 
+    visibility: 'hidden',
     [`@media (min-width: 426px)`]: {
       display: 'block',
       visibility: 'visible',

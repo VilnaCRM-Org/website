@@ -41,8 +41,6 @@ describe('AuthLayout Error Handling', () => {
         },
         error: ((): Error => {
           class NetworkError extends Error {
-            private statusCode: number = 500;
-
             constructor(message: string) {
               super(message);
               this.name = 'NetworkError';

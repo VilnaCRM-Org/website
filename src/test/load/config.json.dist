@@ -1,6 +1,6 @@
 {
   "protocol": "http",
-  "host": "localhost",
+  "host": "prod",
   "port": "3001",
   "params": {
     "headers": {
