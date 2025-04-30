@@ -8,7 +8,8 @@ export default {
     position: 'absolute',
     width: '100%',
     height: '100%',
-    border: `1px solid ${colorTheme.palette.grey500.main} `,
+    border: `1px solid ${colorTheme.palette.grey500.main}`,
+    backgroundColor: colorTheme.palette.white.main,
     borderRadius: '2rem 2rem 0 0',
     boxShadow: '1px 1px 41px 0px rgba(59, 68, 80, 0.05)',
     overflow: 'hidden',
@@ -19,6 +20,7 @@ export default {
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 1000,
 
     [`@media (max-width: ${BREAKPOINTS.SM})`]: {
       maxWidth: DIMENSIONS.MIN_WIDTH.XS,
