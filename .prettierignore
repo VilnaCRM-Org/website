@@ -1,16 +1,13 @@
-# Ignore artifacts:
 .lighthouseci
-# Dependencies
+
 node_modules
 .pnpm-store
 
-# Build outputs
 .next
 out
 dist
 build
 
-# Testing
 .stryker-tmp
 **/.stryker-tmp/**
 coverage
@@ -20,17 +17,13 @@ playwright-report/
 lhci-reports-desktop/
 lhci-reports-mobile/
 
-# Storybook
 storybook-static/
 
-# Cache
 .cache
 .eslintcache
 .stylelintcache
 .npm
 
-
-# Misc
 *.log
 *.lock
 yarn-error.log

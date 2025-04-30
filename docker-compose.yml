@@ -12,4 +12,4 @@ services:
       - CHOKIDAR_USEPOLLING=true
       - WATCHPACK_POLLING=true
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://${LOCAL_HOST}:${DEV_PORT}"]
+      test: ["CMD", "curl", "-f", "http://${WEBSITE_DOMAIN}:${DEV_PORT}"]

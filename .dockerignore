@@ -3,13 +3,11 @@
 .vscode
 .stryker-tmp
 
-# Test and coverage
 coverage
 playwright-report
 stryker.log
 **/test-results
 
-# Cache and logs
 .cache
 *.log
 

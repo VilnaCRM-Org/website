@@ -1,11 +1,16 @@
 include .env
+-include .env.local
+-include .env.production
+-include .env.production.local
+-include .env.development
+-include .env.development.local
+-include .env.ci
+
 export
 
 DOCKER_COMPOSE              = docker compose
 
-
 BIN_DIR                     = ./node_modules/.bin
-
 NEXT_BIN                    = $(BIN_DIR)/next
 IMG_OPTIMIZE                = $(BIN_DIR)/next-export-optimize-images
 TS_BIN                      = $(BIN_DIR)/tsc
@@ -18,9 +23,7 @@ NEXT_BUILD                  = $(NEXT_BIN) build
 NEXT_BUILD_CMD              = $(NEXT_BUILD) && $(IMG_OPTIMIZE)
 STORYBOOK_BUILD_CMD         = $(STORYBOOK_BIN) build
 
-
 TEST_DIR_BASE               = ./src/test
-
 TEST_DIR_APOLLO             = $(TEST_DIR_BASE)/apollo-server
 TEST_DIR_E2E                = $(TEST_DIR_BASE)/e2e
 TEST_DIR_VISUAL             = $(TEST_DIR_BASE)/visual
@@ -49,17 +52,14 @@ K6                          = $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_TEST_FILE) --pr
 LOAD_TESTS_RUN              = $(K6) run --summary-trend-stats="avg,min,med,max,p(95),p(99)" --out "web-dashboard=period=1s&export=$(K6_RESULTS_FILE)" $(K6_TEST_SCRIPT)
 
 UI_FLAGS                    = --ui-port=$(PLAYWRIGHT_TEST_PORT) --ui-host=$(UI_HOST)
-UI_MODE_URL                 = http://localhost:$(PLAYWRIGHT_TEST_PORT)
+UI_MODE_URL                 = http://$(WEBSITE_DOMAIN):$(PLAYWRIGHT_TEST_PORT)
 
-# Markdown linter ignore patterns (-i means "ignore")
 MD_LINT_ARGS                = -i CHANGELOG.md -i "test-results/**/*.md" -i "playwright-report/data/**/*.md"
 
 JEST_FLAGS                  = --verbose
 
-# CI variable
 CI                          ?= 0
 
-# Conditional PNPM_EXEC based on CI
 ifeq ($(CI), 1)
     PNPM_EXEC               = pnpm
     NEXT_DEV_CMD            = $(NEXT_BIN) dev
@@ -87,12 +87,10 @@ MARKDOWNLINT_BIN            = $(PNPM_EXEC) ./node_modules/.bin/markdownlint
 
 # To Run in CI mode specify CI variable. Example: make lint-md CI=1
 
-# Misc
 .DEFAULT_GOAL               = help
 .RECIPEPREFIX               +=
 .PHONY: $(filter-out node_modules,$(MAKECMDGOALS))
 
-# Variables
 run-visual                  = $(PLAYWRIGHT_TEST) "$(PLAYWRIGHT_BIN) test $(TEST_DIR_VISUAL)"
 run-e2e                     = $(PLAYWRIGHT_TEST) "$(PLAYWRIGHT_BIN) test $(TEST_DIR_E2E)"
 playwright-test             = $(PLAYWRIGHT_DOCKER_CMD) $(PLAYWRIGHT_BIN) test
@@ -106,7 +104,7 @@ start: ## Start the application
 
 wait-for-dev: ## Wait for the dev service to be ready on port $(DEV_PORT).
 	@echo "Waiting for dev service to be ready on port $(DEV_PORT).."
-	npx wait-on -v http://localhost:$(DEV_PORT)
+	npx wait-on -v http://$(WEBSITE_DOMAIN):$(DEV_PORT)
 	@echo "Dev service is up and running!"
 
 build: ## A tool build the project
@@ -162,7 +160,7 @@ start-prod: ## Build image and start container in production mode
 
 wait-for-prod: ## Wait for the prod service to be ready on port $(NEXT_PUBLIC_PROD_PORT).
 	@echo "Waiting for prod service to be ready on port $(NEXT_PUBLIC_PROD_PORT)..."
-	npx wait-on -v http://localhost:$(NEXT_PUBLIC_PROD_PORT)
+	npx wait-on -v http://$(WEBSITE_DOMAIN):$(NEXT_PUBLIC_PROD_PORT)
 	@echo "Prod service is up and running!"
 
 test-unit-all: test-unit-client test-unit-server ## This command executes unit tests for both client and server environments.
@@ -221,4 +219,3 @@ stop: ## Stop docker
 
 check-node-version: ## Check if the correct Node.js version is installed
 	$(PNPM_EXEC) node checkNodeVersion.js
-
