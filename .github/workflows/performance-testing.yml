@@ -31,13 +31,13 @@ jobs:
         run: npm install -g pnpm
 
       - name: Install dependencies
-        run: make install
+        run: pnpm install --frozen-lockfile
         if: |
           steps.cache-pnpm-dependencies.outputs.cache-hit != 'true' ||
-          steps.cache-pnpm-packages.outputs.cache-hit != 'true'
+          false
 
       - name: Run desktop performance test
-        run: pnpm run lighthouse:desktop
+        run: make lighthouse-desktop
 
       - name: Run mobile performance test
-        run: pnpm run lighthouse:mobile
+        run: make lighthouse-mobile
