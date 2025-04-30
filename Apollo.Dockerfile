@@ -11,12 +11,8 @@ COPY tsconfig.server.json tsconfig.server.json
 COPY docker docker
 COPY .env .env
 
-RUN pnpm install --frozen-lockfile && tsc --project tsconfig.server.json
-
-EXPOSE 4000
-
-HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
-  CMD curl -f http://localhost:4000/health || exit 1
+RUN pnpm install
+RUN tsc --project tsconfig.server.json
 
 CMD node ./out/docker/apollo-server/schemaFetcher.js && \
     node ./out/docker/apollo-server/server.mjs

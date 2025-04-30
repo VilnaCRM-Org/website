@@ -10,14 +10,10 @@ RUN apk add --no-cache \
     && npm install -g pnpm@10.6.5
 
 WORKDIR /app
-COPY .puppeteerrc.cjs /app/.puppeteerrc.cjs
-COPY . .
+COPY package.json pnpm-lock.yaml checkNodeVersion.js ./
 
-ENV PUPPETEER_CONFIG_FILE="/app/.puppeteerrc.cjs" \
-    PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
-    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
-RUN make install
+RUN pnpm install
 
 RUN rm -rf /tmp/chromium/Singleton* /tmp/chromium/Lock /tmp/chromium/Default/Singleton* && \
     mkdir -p /tmp/chromium && chown -R root:root /tmp/chromium

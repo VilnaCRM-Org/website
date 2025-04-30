@@ -1,10 +1,13 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
-import { config } from 'dotenv';
+import dotenv, { DotenvConfigOutput } from 'dotenv';
+import dotenvExpand from 'dotenv-expand';
 import { createLogger, Logger, format, transports } from 'winston';
 
-config();
+const env: DotenvConfigOutput = dotenv.config();
+
+dotenvExpand.expand(env);
 
 const SCHEMA_URL: string = process.env.GRAPHQL_SCHEMA_URL || '';
 

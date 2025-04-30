@@ -3,13 +3,15 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: pnpm run start-prod
+    command: ["sh", "/app/scripts/start-prod.sh"]
     restart: unless-stopped
     volumes:
       - .:/app
       - /app/node_modules
     ports:
       - '3001:3001'
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://${WEBSITE_DOMAIN}:${NEXT_PUBLIC_PROD_PORT}"]
 
   playwright:
     build:
@@ -18,20 +20,23 @@ services:
     restart: unless-stopped
     volumes:
       - .:/app
+      - /app/node_modules
     ports:
       - '9324:9324'
     environment:
-      - NEXT_PUBLIC_PRODUCTION_API_URL=http://prod:3001
+      - NEXT_PUBLIC_PROD_HOST_API_URL=http://${NEXT_PUBLIC_PROD_HOST}:${NEXT_PUBLIC_PROD_PORT}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://${WEBSITE_DOMAIN}:${PLAYWRIGHT_TEST_PORT}"]
 
   apollo:
     build:
       context: .
       dockerfile: Apollo.Dockerfile
     restart: unless-stopped
-    volumes:
-      - .:/app
     ports:
       - '4000:4000'
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://${WEBSITE_DOMAIN}:${GRAPHQL_PORT}/${GRAPHQL_API_PATH}"]
 
   mockoon:
     build:
@@ -40,3 +45,16 @@ services:
     ports:
       - '8080:8080'
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://${WEBSITE_DOMAIN}:${MOCKOON_PORT}"]
+
+  k6:
+    profiles: ["load"]
+    build:
+      context: .
+      dockerfile: ./src/test/load/Dockerfile
+    depends_on:
+      prod:
+        condition: service_healthy
+    volumes:
+      - ./src/test/load:/loadTests

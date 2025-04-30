@@ -90,13 +90,15 @@
       "heading_libraries": "Public <br /> Libraries"
     },
     "image_alt": {
+      "big_screen": "Large digital screen with a blue background",
+      "small_screen": "Small digital screen displaying minimal content",
       "google": "Google",
       "facebook": "Facebook",
       "github": "GitHub",
       "twitter": "Twitter"
     },
     "cards_texts": {
-      "text_for_cases": "For cases when you did not find  the desired ready-made integration ",
+      "text_for_cases": "For cases when you did not find the desired ready-made integration",
       "text_integrate": "Integrate familiar <1 href='/'>services</1> in a few clicks",
       "text_get_data": "Get data about any event in CRM and automate complex business processes",
       "text_for_custom": "For custom integrations  with specific products"
@@ -110,7 +112,8 @@
       "title_for_second": "Image of SmallDiamond",
       "title_for_third": "Image of SmallRuby",
       "title_for_fourth": "Image of Diamond"
-    }
+    },
+    "button": { "try_it_out": "Try it out" }
   },
   "sign_up": {
     "main_heading": "Sign up now and free up your time to grow your business",

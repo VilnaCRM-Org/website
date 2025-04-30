@@ -16,12 +16,6 @@ jobs:
         with:
           node-version: ${{ vars.NODE_VERSION }}
 
-      - name: Install pnpm
-        run: npm install -g pnpm
-
-      - name: Install dependencies
-        run: make install
-
       - name: Run dev and memory leak testing
         run: make test-memory-leak
 
