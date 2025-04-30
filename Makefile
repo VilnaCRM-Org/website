@@ -42,7 +42,6 @@ DOCKER_COMPOSE_DEV_FILE     = -f docker-compose.yml
 COMMON_HEALTHCHECKS_FILE    = -f common-healthchecks.yml
 EXEC_DEV_TTYLESS            = $(DOCKER_COMPOSE) exec -T dev
 NEXT_DEV_CMD                = $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) up -d dev && make wait-for-dev
-PLAYWRIGHT_BASE_CMD         = npx playwright test
 PLAYWRIGHT_DOCKER_CMD       = $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_TEST_FILE) exec playwright
 PLAYWRIGHT_TEST             = $(PLAYWRIGHT_DOCKER_CMD) sh -c
 
@@ -179,9 +178,18 @@ test-mutation: build ## Run mutation tests using Stryker after building the app
 	$(STRYKER_CMD)
 
 wait-for-prod-health: ## Wait for the prod container to reach a healthy state.
-	@echo "Waiting for prod container to become healthy..."
-	@timeout 60 bash -c 'until docker compose -f docker-compose.test.yml ps | grep -q "prod.*(healthy)"; do sleep 2; done'
-	@echo "Prod container is healthy and ready!"
+	@echo "Waiting for prod container to become healthy (timeout: 60s)..."
+	@for i in $$(seq 1 30); do \
+		if $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_TEST_FILE) ps | grep -q "prod.*(healthy)"; then \
+			echo "Prod container is healthy and ready!"; \
+			break; \
+		fi; \
+		sleep 2; \
+		if [ $$i -eq 30 ]; then \
+			echo "❌ Timed out waiting for prod container to become healthy"; \
+			exit 1; \
+		fi; \
+	done
 
 load-tests: start-prod wait-for-prod-health ## This command executes load tests using K6 library. Note: The target host is determined by the service URL
                        ## using $(NEXT_PUBLIC_PROD_PORT), which maps to the production service in Docker Compose.
