@@ -1,9 +1,0 @@
-onlyBuiltDependencies:
-  - '@apollo/protobufjs'
-  - '@memlab/cli'
-  - core-js-pure
-  - esbuild
-  - memlab
-  - puppeteer
-  - sharp
-  - sleep
