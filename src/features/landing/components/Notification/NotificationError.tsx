@@ -16,7 +16,11 @@ const buttonTextStyle: React.CSSProperties = {
   ...styles.errorButtonMessage,
 };
 
-function NotificationError({ setIsOpen, onRetry }: NotificationComponentProps): React.ReactElement {
+function NotificationError({
+  setIsOpen,
+  onRetry,
+  loading,
+}: NotificationComponentProps): React.ReactElement {
   const { t } = useTranslation();
   const onHandleClose: () => void = (): void => setIsOpen(false);
   return (
@@ -46,6 +50,7 @@ function NotificationError({ setIsOpen, onRetry }: NotificationComponentProps): 
             type="button"
             size="medium"
             fullWidth
+            disabled={loading}
             onClick={onRetry}
           >
             <Typography component="span" sx={buttonTextStyle}>

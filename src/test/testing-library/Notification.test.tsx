@@ -35,6 +35,7 @@ function renderNotification({
       setIsOpen={setIsOpen}
       isOpen={isOpen || false}
       onRetry={onRetry}
+      loading={false}
     />
   );
 }
@@ -98,7 +99,13 @@ describe('Notification', () => {
     const isOpen: boolean = true;
 
     render(
-      <Notification type={type} setIsOpen={setIsOpen} onRetry={retrySubmit} isOpen={isOpen} />
+      <Notification
+        type={type}
+        setIsOpen={setIsOpen}
+        onRetry={retrySubmit}
+        isOpen={isOpen}
+        loading={false}
+      />
     );
 
     expect(screen.getByText(successTitleText)).toBeInTheDocument();
@@ -111,7 +118,13 @@ describe('Notification', () => {
     const isOpen: boolean = true;
 
     render(
-      <Notification type={type} setIsOpen={setIsOpen} onRetry={retrySubmit} isOpen={isOpen} />
+      <Notification
+        type={type}
+        setIsOpen={setIsOpen}
+        onRetry={retrySubmit}
+        isOpen={isOpen}
+        loading={false}
+      />
     );
 
     expect(screen.getByText(errorTitleText)).toBeInTheDocument();
@@ -158,6 +171,7 @@ describe('Notification', () => {
         isOpen
         setIsOpen={mockSetIsOpen}
         onRetry={retrySubmitMock}
+        loading={false}
       />
     );
 

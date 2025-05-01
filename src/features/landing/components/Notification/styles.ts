@@ -89,9 +89,6 @@ export default {
       bottom: '0.6rem',
       transform: 'rotate(-180deg) scale(1.07)',
     },
-    [`@media (min-width: ${BREAKPOINTS.MD})`]: {
-      bottom: '-1.8rem',
-    },
 
     [`@media (min-width: ${BREAKPOINTS.LG})`]: {
       left: '1.3rem',

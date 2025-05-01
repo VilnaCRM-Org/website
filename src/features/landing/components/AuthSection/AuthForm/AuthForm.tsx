@@ -27,6 +27,7 @@ function AuthForm({
   handleSubmit,
   control,
   formValidationErrors,
+  loading,
 }: AuthFormProps): React.ReactElement {
   const { t } = useTranslation();
 
@@ -72,7 +73,6 @@ function AuthForm({
             placeholder={t('sign_up.form.email_input.placeholder')}
             type="email"
           />
-          {serverErrorMessage && <FormAlert apiErrorDetails={serverErrorMessage} />}
         </Stack>
         <Stack sx={styles.inputWrapper}>
           <Stack direction="row" alignItems="center" gap="0.25rem">
@@ -138,8 +138,18 @@ function AuthForm({
           />
         )}
       />
+
+      {serverErrorMessage && <FormAlert apiErrorDetails={serverErrorMessage} />}
+
       <Box sx={styles.buttonWrapper}>
-        <UiButton sx={styles.button} variant="contained" size="medium" type="submit" fullWidth>
+        <UiButton
+          sx={styles.button}
+          variant="contained"
+          size="medium"
+          type="submit"
+          fullWidth
+          disabled={loading}
+        >
           {t('sign_up.form.button_text')}
         </UiButton>
       </Box>

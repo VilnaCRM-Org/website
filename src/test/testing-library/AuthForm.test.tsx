@@ -57,6 +57,7 @@ function AuthFormWrapper({
       handleSubmit={handleSubmit}
       formValidationErrors={errors}
       control={control}
+      loading={false}
     />
   );
 }

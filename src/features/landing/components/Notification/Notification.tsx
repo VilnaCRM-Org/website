@@ -18,8 +18,8 @@ export const notificationComponents: NotificationComponentMap = {
   success: ({ setIsOpen }: NotificationToggleProps) => (
     <NotificationSuccess setIsOpen={setIsOpen} />
   ),
-  error: ({ setIsOpen, onRetry }: NotificationComponentProps) => (
-    <NotificationError setIsOpen={setIsOpen} onRetry={onRetry} />
+  error: ({ setIsOpen, onRetry, loading }: NotificationComponentProps) => (
+    <NotificationError setIsOpen={setIsOpen} onRetry={onRetry} loading={loading} />
   ),
 };
 
@@ -35,13 +35,14 @@ function Notification({
   setIsOpen,
   isOpen,
   onRetry,
+  loading,
 }: NotificationControlProps): React.ReactElement {
   const Component: NotificationComponentType = getNotificationComponent(type);
 
   return (
     <Fade in={isOpen} timeout={animationTimeout}>
       <Box sx={styles.notificationSection} role="alert" aria-live="polite">
-        <Component setIsOpen={setIsOpen} onRetry={onRetry} />
+        <Component setIsOpen={setIsOpen} onRetry={onRetry} loading={loading} />
       </Box>
     </Fade>
   );

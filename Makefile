@@ -74,7 +74,7 @@ else
     STRYKER_CMD             = make start && $(EXEC_DEV_TTYLESS) pnpm stryker run
     UNIT_TESTS              = make start && $(EXEC_DEV_TTYLESS) env
 
-    STORYBOOK_START         = exec $(STORYBOOK_BIN) dev -p $(STORYBOOK_PORT) --host 0.0.0.0
+    STORYBOOK_START         = $(STORYBOOK_BIN) dev -p $(STORYBOOK_PORT) --host 0.0.0.0
 
     LHCI_BUILD_CMD          = make start-prod && $(LHCI)
     LHCI_DESKTOP            = $(LHCI_BUILD_CMD) $(LHCI_CONFIG_DESKTOP)

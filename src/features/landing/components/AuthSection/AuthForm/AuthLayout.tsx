@@ -84,6 +84,7 @@ function AuthLayout(): React.ReactElement {
             formValidationErrors={errors}
             handleSubmit={handleSubmit}
             control={control}
+            loading={loading}
           />
         </Box>
       </Fade>
@@ -93,6 +94,7 @@ function AuthLayout(): React.ReactElement {
         setIsOpen={setIsNotificationOpen}
         isOpen={isNotificationOpen}
         onRetry={retrySubmit}
+        loading={loading}
       />
     </Box>
   );

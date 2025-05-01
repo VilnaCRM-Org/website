@@ -23,7 +23,7 @@ describe('NotificationError Component', () => {
   });
 
   it('renders correctly', () => {
-    render(<NotificationError setIsOpen={mockSetIsOpen} onRetry={mockOnRetry} />);
+    render(<NotificationError setIsOpen={mockSetIsOpen} onRetry={mockOnRetry} loading={false} />);
 
     expect(screen.getByText(errorTitleText)).toBeInTheDocument();
     expect(screen.getByRole(buttonRole, { name: retrySubmitButtonText })).toBeInTheDocument();
@@ -31,7 +31,7 @@ describe('NotificationError Component', () => {
   });
 
   it('calls retrySubmit when retry button is clicked', async () => {
-    render(<NotificationError setIsOpen={mockSetIsOpen} onRetry={mockOnRetry} />);
+    render(<NotificationError setIsOpen={mockSetIsOpen} onRetry={mockOnRetry} loading={false} />);
 
     const retryButton: HTMLElement = screen.getByRole(buttonRole, { name: retrySubmitButtonText });
     await userEvent.click(retryButton);
@@ -40,7 +40,7 @@ describe('NotificationError Component', () => {
   });
 
   it('calls setIsOpen(false) when back-to-form button is clicked', async () => {
-    render(<NotificationError setIsOpen={mockSetIsOpen} onRetry={mockOnRetry} />);
+    render(<NotificationError setIsOpen={mockSetIsOpen} onRetry={mockOnRetry} loading={false} />);
 
     const backButton: HTMLElement = screen.getByRole(buttonRole, { name: backToFormButtonText });
     await userEvent.click(backButton);
@@ -48,7 +48,7 @@ describe('NotificationError Component', () => {
     expect(mockSetIsOpen).toHaveBeenCalledWith(false);
   });
   it('renders images with correct alt text', () => {
-    render(<NotificationError setIsOpen={mockSetIsOpen} onRetry={mockOnRetry} />);
+    render(<NotificationError setIsOpen={mockSetIsOpen} onRetry={mockOnRetry} loading={false} />);
 
     const errorImage: HTMLElement = screen.getByRole('img');
     expect(errorImage).toBeVisible();
@@ -56,7 +56,7 @@ describe('NotificationError Component', () => {
   });
 
   it('renders the correct title and description', () => {
-    render(<NotificationError setIsOpen={mockSetIsOpen} onRetry={mockOnRetry} />);
+    render(<NotificationError setIsOpen={mockSetIsOpen} onRetry={mockOnRetry} loading={false} />);
 
     expect(screen.getByText(errorTitleText)).toBeInTheDocument();
     expect(screen.getByText(errorDescription)).toBeInTheDocument();
@@ -64,7 +64,7 @@ describe('NotificationError Component', () => {
 
   it('renders content box with correct styles', () => {
     const { container } = render(
-      <NotificationError setIsOpen={mockSetIsOpen} onRetry={mockOnRetry} />
+      <NotificationError setIsOpen={mockSetIsOpen} onRetry={mockOnRetry} loading={false} />
     );
 
     const errorBox: HTMLElement | null = container.querySelector('[aria-live="polite"]');
@@ -78,7 +78,7 @@ describe('NotificationError Component', () => {
     expect(errorBox).toHaveClass('MuiBox-root');
   });
   it('applies correct styles to button text', () => {
-    render(<NotificationError setIsOpen={mockSetIsOpen} onRetry={mockOnRetry} />);
+    render(<NotificationError setIsOpen={mockSetIsOpen} onRetry={mockOnRetry} loading={false} />);
 
     const backButtonText: HTMLElement = screen.getByText(backToFormButtonText);
     const computedStyle: CSSStyleDeclaration = window.getComputedStyle(backButtonText);
@@ -90,7 +90,7 @@ describe('NotificationError Component', () => {
 
   it('renders message container with correct styles', () => {
     const { container, getByText } = render(
-      <NotificationError setIsOpen={mockSetIsOpen} onRetry={mockOnRetry} />
+      <NotificationError setIsOpen={mockSetIsOpen} onRetry={mockOnRetry} loading={false} />
     );
     const errorBox: HTMLElement | null = container.querySelector('[aria-live="polite"]');
     const errorTitle: HTMLElement = getByText(errorTitleText);
@@ -105,7 +105,7 @@ describe('NotificationError Component', () => {
   });
 
   it('renders button text elements', () => {
-    render(<NotificationError setIsOpen={mockSetIsOpen} onRetry={mockOnRetry} />);
+    render(<NotificationError setIsOpen={mockSetIsOpen} onRetry={mockOnRetry} loading={false} />);
 
     const retryButtonText: HTMLElement = screen.getByText(retrySubmitButtonText);
     const backButtonText: HTMLElement = screen.getByText(backToFormButtonText);
@@ -114,7 +114,7 @@ describe('NotificationError Component', () => {
     expect(backButtonText).toBeInTheDocument();
   });
   it('renders the second button with correct marginTop', () => {
-    render(<NotificationError setIsOpen={mockSetIsOpen} onRetry={mockOnRetry} />);
+    render(<NotificationError setIsOpen={mockSetIsOpen} onRetry={mockOnRetry} loading={false} />);
 
     const backButton: HTMLElement = screen.getByRole(buttonRole, { name: backToFormButtonText });
     expect(backButton).toHaveStyle('marginTop: 0.5rem');
@@ -122,7 +122,7 @@ describe('NotificationError Component', () => {
 
   it('messageContainer should not have previous styles', () => {
     const { container } = render(
-      <NotificationError setIsOpen={mockSetIsOpen} onRetry={mockOnRetry} />
+      <NotificationError setIsOpen={mockSetIsOpen} onRetry={mockOnRetry} loading={false} />
     );
 
     const errorBox: HTMLElement | null = container.querySelector('[aria-invalid="true"]');
@@ -134,7 +134,7 @@ describe('NotificationError Component', () => {
   });
 
   it('button text should not have previous styles applied', () => {
-    render(<NotificationError setIsOpen={mockSetIsOpen} onRetry={mockOnRetry} />);
+    render(<NotificationError setIsOpen={mockSetIsOpen} onRetry={mockOnRetry} loading={false} />);
 
     const retryButton: HTMLElement = screen.getByRole(buttonRole, { name: retrySubmitButtonText });
     const backButton: HTMLElement = screen.getByRole(buttonRole, { name: backToFormButtonText });
@@ -147,7 +147,7 @@ describe('NotificationError Component', () => {
   });
   it('supports keyboard navigation', async () => {
     const user: UserEvent = userEvent.setup();
-    render(<NotificationError setIsOpen={mockSetIsOpen} onRetry={mockOnRetry} />);
+    render(<NotificationError setIsOpen={mockSetIsOpen} onRetry={mockOnRetry} loading={false} />);
 
     await user.tab();
     const retryButton: HTMLElement = screen.getByRole(buttonRole, { name: retrySubmitButtonText });
