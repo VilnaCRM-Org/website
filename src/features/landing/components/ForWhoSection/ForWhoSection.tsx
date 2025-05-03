@@ -3,8 +3,8 @@ import { getOptimizedImageProps } from 'next-export-optimize-images/image';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 
-import bigScreen from '../../assets/img/about-vilna/desktop.jpg';
-import smallScreen from '../../assets/img/about-vilna/mobile.jpg';
+import bigScreen from '../../assets/img/about-vilna/desktop.webp';
+import smallScreen from '../../assets/img/about-vilna/mobile.webp';
 import circle from '../../assets/svg/for-who/circle.svg';
 import hexagon from '../../assets/svg/for-who/hexagon.svg';
 import point10 from '../../assets/svg/for-who/point10.svg';
@@ -28,11 +28,11 @@ function ForWhoSection(): React.ReactElement {
   const { t } = useTranslation();
 
   const bigScreenProps: React.ImgHTMLAttributes<HTMLImageElement> = getImageProps(
-    bigScreen,
+    bigScreen.src,
     t('alts.big_screen')
   );
   const smallScreenProps: React.ImgHTMLAttributes<HTMLImageElement> = getImageProps(
-    smallScreen,
+    smallScreen.src,
     t('alts.small_screen')
   );
 
