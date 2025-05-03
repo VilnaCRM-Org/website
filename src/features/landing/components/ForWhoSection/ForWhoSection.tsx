@@ -48,14 +48,14 @@ function ForWhoSection(): React.ReactElement {
             <Box sx={styles.svgContainer}>
               <Box
                 component="img"
-                {...getImageProps(circle.src)}
+                {...getImageProps(circle)}
                 aria-hidden="true"
                 sx={styles.circle}
                 loading="lazy"
               />
               <Box
                 component="img"
-                {...getImageProps(rhombus.src)}
+                {...getImageProps(rhombus)}
                 aria-hidden="true"
                 sx={styles.rhombus}
                 loading="lazy"
@@ -63,28 +63,28 @@ function ForWhoSection(): React.ReactElement {
               <Box sx={styles.pointContainer}>
                 <Box
                   component="img"
-                  {...getImageProps(pointGroup.src)}
+                  {...getImageProps(pointGroup)}
                   aria-hidden="true"
                   sx={styles.pointGroup}
                   loading="lazy"
                 />
                 <Box
                   component="img"
-                  {...getImageProps(point6.src)}
+                  {...getImageProps(point6)}
                   aria-hidden="true"
                   sx={styles.point6}
                   loading="lazy"
                 />
                 <Box
                   component="img"
-                  {...getImageProps(point8.src)}
+                  {...getImageProps(point8)}
                   aria-hidden="true"
                   sx={styles.point8}
                   loading="lazy"
                 />
                 <Box
                   component="img"
-                  {...getImageProps(point10.src)}
+                  {...getImageProps(point10)}
                   aria-hidden="true"
                   sx={styles.point10}
                   loading="lazy"
@@ -96,21 +96,21 @@ function ForWhoSection(): React.ReactElement {
               <Box component="img" {...smallScreenProps} sx={styles.smallScreen} loading="lazy" />
               <Box
                 component="img"
-                {...getImageProps(waves.src)}
+                {...getImageProps(waves)}
                 aria-hidden="true"
                 sx={styles.waves}
                 loading="lazy"
               />
               <Box
                 component="img"
-                {...getImageProps(hexagon.src)}
+                {...getImageProps(hexagon)}
                 aria-hidden="true"
                 sx={styles.hexagon}
                 loading="lazy"
               />
               <Box
                 component="img"
-                {...getImageProps(triangle.src)}
+                {...getImageProps(triangle)}
                 aria-hidden="true"
                 sx={styles.triangle}
                 loading="lazy"
