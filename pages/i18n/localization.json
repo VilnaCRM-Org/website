@@ -117,24 +117,24 @@
           "name_input": {
             "label": "Your name and surname",
             "placeholder": "Mykhailo Svitskyi",
-            "special_characters_error": "Your name must not contain special characters",
+            "special_characters_error": "Your name should only contain letters",
             "required": "This field is required",
-            "error_text": "Invalid full name format"
+            "error_text": "Please enter your full name in the correct format"
           },
           "email_input": {
             "label": "Email",
             "placeholder": "vilnaCRM@gmail.com",
             "required": "This field is required",
-            "step_error_message": "Must contain the characters '@' and '.'",
-            "invalid_message": "Invalid email address"
+            "step_error_message": "Please make sure your email includes '@' and '.'",
+            "invalid_message": "Please enter a valid email address"
           },
           "password_input": {
             "label": "Password",
             "placeholder": "Create a password",
             "required": "This field is required",
-            "error_length": "Requires 8 to 64 characters",
-            "error_numbers": "At least one number is required",
-            "error_uppercase": "At least one uppercase letter"
+            "error_length": "Please enter a password between 8 and 64 characters",
+            "error_numbers": "Please include at least one number",
+            "error_uppercase": "Please include at least one uppercase letter"
           },
           "password_tip": {
             "alt": "Password tip mark",
@@ -310,24 +310,24 @@
           "name_input": {
             "label": "Ваше ім’я та прізвище",
             "placeholder": "Михайло Светський",
-            "special_characters_error": "Ваше ім'я повинно містити лише літери",
+            "special_characters_error": "Ваше ім'я може містити лише літери",
             "required": "Це поле обов'язкове",
-            "error_text": "Неправильний формат повного імені"
+            "error_text": "Будь ласка, введіть повне ім’я у правильному форматі"
           },
           "email_input": {
             "label": "E-mail",
             "placeholder": "vilnaCRM@gmail.com",
             "required": "Це поле обов'язкове",
-            "step_error_message": "Email має містити символи '@' та '.'",
-            "invalid_message": "Неправильна електронна адреса"
+            "step_error_message": "Будь ласка, переконайтеся, що email містить символи '@' та '.'",
+            "invalid_message": "Будь ласка, введіть коректну електронну адресу"
           },
           "password_input": {
             "label": "Пароль",
             "placeholder": "Створіть пароль",
             "required": "Це поле обов'язкове",
-            "error_length": "Потрібно від 8 до 64 символів",
-            "error_numbers": "Потрібна принаймні одна цифра",
-            "error_uppercase": "Принаймні одна велика літера"
+            "error_length": "Пароль має містити від 8 до 64 символів",
+            "error_numbers": "Будь ласка, додайте принаймні одну цифру",
+            "error_uppercase": "Будь ласка, додайте принаймні одну велику літеру"
           },
           "password_tip": {
             "alt": "Позначка підказки пароля",

@@ -5,6 +5,5 @@ services:
       dockerfile: MemoryLeak.Dockerfile
     volumes:
       - .:/app
-      - /app/node_modules
     init: true
     shm_size: '256m'

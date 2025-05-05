@@ -45,9 +45,11 @@ NEXT_DEV_CMD                = $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) up -d
 PLAYWRIGHT_DOCKER_CMD       = $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_TEST_FILE) exec playwright
 PLAYWRIGHT_TEST             = $(PLAYWRIGHT_DOCKER_CMD) sh -c
 
-MEMLEAK_CONTAINER           = website-memory-leak-1
-MEMLEAK_RESULTS_DIR         = /app/src/test/memory-leak/results
-MEMLEAK_TEST_SCRIPT         = /app/src/test/memory-leak/runMemlabTests
+MEMLEAK_SERVICE             = memory-leak
+DOCKER_COMPOSE_MEMLEAK      = -f docker-compose.memory-leak.yml
+MEMLEAK_BASE_PATH           = ./src/test/memory-leak
+MEMLEAK_RESULTS_DIR         = $(MEMLEAK_BASE_PATH)/results
+MEMLEAK_TEST_SCRIPT         = $(MEMLEAK_BASE_PATH)/runMemlabTests
 
 K6_TEST_SCRIPT              ?= /loadTests/homepage.js
 K6_RESULTS_FILE             ?= /loadTests/results/homepage.html
@@ -176,11 +178,11 @@ test-unit-server: ## Run server-side unit tests for Apollo using Jest (Node.js e
 
 test-memory-leak: start-prod ## This command executes memory leaks tests using Memlab library.
 	@echo "🧪 Starting memory leak test environment..."
-	$(DOCKER_COMPOSE) -f docker-compose.memory-leak.yml up -d
+	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_MEMLEAK) up -d
 	@echo "🧹 Cleaning up previous memory leak results..."
-	docker exec -it $(MEMLEAK_CONTAINER) rm -rf $(MEMLEAK_RESULTS_DIR)
+	$(DOCKER_COMPOSE) -f docker-compose.memory-leak.yml exec -T memory-leak rm -rf $(MEMLEAK_RESULTS_DIR)
 	@echo "🚀 Running memory leak tests..."
-	docker exec -it $(MEMLEAK_CONTAINER) node $(MEMLEAK_TEST_SCRIPT)
+	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_MEMLEAK) exec -T $(MEMLEAK_SERVICE) node $(MEMLEAK_TEST_SCRIPT)
 
 test-mutation: build ## Run mutation tests using Stryker after building the app
 	$(STRYKER_CMD)

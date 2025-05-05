@@ -2,7 +2,6 @@ FROM node:23.10.0-alpine3.21
 
 RUN apk add --no-cache \
     chromium \
-    python3 \
     make \
     g++ \
     ttf-freefont \
