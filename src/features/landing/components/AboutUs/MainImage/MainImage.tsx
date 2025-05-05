@@ -6,8 +6,8 @@ import { useTranslation } from 'react-i18next';
 
 import breakpointsTheme from '@/components/UiBreakpoints';
 
-import MainImageSrc from '../../../assets/img/about-vilna/desktop.webp';
-import PhoneMainImage from '../../../assets/img/about-vilna/mobile.webp';
+import MainImageSrc from '../../../assets/img/about-vilna/desktop.jpg';
+import PhoneMainImage from '../../../assets/img/about-vilna/mobile.jpg';
 import TabletMainImage from '../../../assets/img/about-vilna/tablet.jpg';
 
 import styles from './styles';
