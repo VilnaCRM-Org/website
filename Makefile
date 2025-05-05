@@ -110,7 +110,7 @@ build: ## A tool build the project
 	$(DOCKER_COMPOSE) build
 
 build-out: ## Build and export the site, output will be saved to ./out on host
-	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_TEST) run --rm --entrypoint "" prod sh /app/scripts/build-out.sh
+	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_TEST_FILE) run --rm --entrypoint "" prod sh /app/scripts/build-out.sh
 
 build-analyze: ## Build production bundle and launch bundle-analyzer report (ANALYZE=true)
 	ANALYZE=true $(NEXT_BUILD_CMD)
