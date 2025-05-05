@@ -22,6 +22,7 @@ function AuthLayout(): React.ReactElement {
   );
   const [serverErrorMessage, setServerErrorMessage] = React.useState('');
   const [isNotificationOpen, setIsNotificationOpen] = React.useState<boolean>(false);
+  const [errorText, setErrorText] = React.useState('');
   const {
     handleSubmit,
     control,
@@ -56,7 +57,13 @@ function AuthLayout(): React.ReactElement {
       });
       handleSuccess();
     } catch (err) {
-      handleApolloError({ err, setServerErrorMessage, setNotificationType, setIsNotificationOpen });
+      handleApolloError({
+        err,
+        setServerErrorMessage,
+        setNotificationType,
+        setIsNotificationOpen,
+        setErrorText,
+      });
     }
   };
 
@@ -90,6 +97,7 @@ function AuthLayout(): React.ReactElement {
       </Fade>
 
       <Notification
+        errorText={errorText}
         type={notificationType}
         setIsOpen={setIsNotificationOpen}
         isOpen={isNotificationOpen}

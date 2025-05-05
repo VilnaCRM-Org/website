@@ -155,6 +155,7 @@ export default {
   },
 
   messageDescription: {
+    textAlign: 'center',
     marginTop: '0.5rem',
     fontWeight: 400,
     fontSize: '0.98rem',

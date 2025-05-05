@@ -20,6 +20,7 @@ function NotificationError({
   setIsOpen,
   onRetry,
   loading,
+  errorText,
 }: NotificationComponentProps): React.ReactElement {
   const { t } = useTranslation();
   const onHandleClose: () => void = (): void => setIsOpen(false);
@@ -40,7 +41,7 @@ function NotificationError({
         </UiTypography>
 
         <UiTypography component="span" sx={styles.messageDescription}>
-          {t('notifications.error.description')}
+          {errorText || t('notifications.error.description')}
         </UiTypography>
 
         <Box sx={styles.buttonsBox}>

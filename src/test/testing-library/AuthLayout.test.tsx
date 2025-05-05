@@ -358,7 +358,7 @@ describe('AuthLayout', () => {
     const serverErrorMessage: HTMLElement = await findByRole(alertRole);
     expect(serverErrorMessage).toBeInTheDocument();
     expect(serverErrorMessage).toHaveTextContent(
-      'Something went wrong with the request. Try again later.'
+      t('failure_responses.client_errors.something_went_wrong')
     );
   });
 
