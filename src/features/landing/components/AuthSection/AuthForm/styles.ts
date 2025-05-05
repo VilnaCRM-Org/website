@@ -11,7 +11,6 @@ export default {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-
     position: 'relative',
     marginTop: '4.063rem',
     [`@media (max-width: 1130px)`]: {
@@ -24,15 +23,17 @@ export default {
 
   backgroundBlock: {
     position: 'absolute',
+    minHeight: '18.75rem',
     borderRadius: '0.75rem 0.75rem 0 0',
     top: '16.2%',
     right: '5%',
     width: '31.25rem',
     maxHeight: ' 33.875rem',
-    height: '100dvh',
+    height: '33.875rem',
+    aspectRatio: '312 / 339',
     backgroundColor: colorTheme.palette.brandGray.main,
     [`@media (max-width: 1130px)`]: {
-      maxHeight: ' 39.313rem',
+      height: ' 39.313rem',
       top: '8.3%',
       right: '26%',
     },
@@ -57,9 +58,12 @@ export default {
 
   formTitle: {
     paddingBottom: '2rem',
+    minHeight: '3.5rem',
+    lineHeight: '1.3',
     [`@media (max-width: 1130px)`]: {
       maxWidth: '22.313rem',
       paddingBottom: '1.25rem',
+      minHeight: '2.5rem',
     },
 
     [`@media (max-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
@@ -67,20 +71,25 @@ export default {
       fontSize: '1.375rem',
       fontStyle: 'normal',
       fontWeight: '700',
-      lineHeight: 'normal',
+      lineHeight: '1.4',
       paddingBottom: '1.188rem',
     },
   },
 
   formContent: {
+    minHeight: '40.438rem',
+    height: 'auto',
+    overflow: 'hidden',
+    contain: 'content',
     position: 'relative',
     zIndex: '5',
     padding: '2.25rem 2.5rem 2.5rem 2.5rem',
     borderRadius: '2rem 2rem 0 0',
     border: `1px solid  ${colorTheme.palette.brandGray.main}`,
     background: colorTheme.palette.white.main,
-    minHeight: ' 40.438rem',
     maxWidth: '31.375rem',
+    width: '100%',
+    boxSizing: 'border-box',
     boxShadow: '1px 1px 41px 0px rgba(59, 68, 80, 0.05)',
     [`@media (max-width: 1130px)`]: {
       padding: '2.5rem 2.563rem 3.5rem 2.563rem',
@@ -108,12 +117,17 @@ export default {
     flexDirection: 'column',
     gap: '0.563rem',
     position: 'relative',
+    minHeight: '5rem',
+    contain: 'style',
     [`@media (max-width: ${breakpointsTheme.breakpoints.values.md}px)`]: {
       gap: '0.313rem',
+      minHeight: '4.5rem',
     },
   },
 
   inputTitle: {
+    minHeight: '0.5rem',
+    lineHeight: '1.3',
     [`@media (max-width: 1130px)`]: {
       fontSize: '1rem',
     },
@@ -124,6 +138,8 @@ export default {
 
   buttonWrapper: {
     maxWidth: '10.938rem',
+    height: '4.375rem',
+    width: '100%',
     [`@media (max-width: 1130px)`]: {
       height: '4.375rem',
       maxWidth: '100%',
@@ -139,6 +155,7 @@ export default {
     marginTop: '1.25rem',
     marginBottom: '2rem',
     mx: '0',
+    minHeight: '3rem',
     [`@media (max-width: 1130px)`]: {
       marginBottom: '1.5rem',
     },
@@ -153,11 +170,16 @@ export default {
   },
 
   button: {
-    height: '100%',
+    height: '3.5rem', 
+    minHeight: '3.5rem', 
+    width: '100%',
+    padding: '0.75rem 1.5rem',
   },
 
   privacyText: {
     letterSpacing: '0rem',
+    minHeight: '2.5rem',
+    lineHeight: '1.2',
     [`@media (max-width: 1130px)`]: {
       fontSize: '1rem',
       maxWidth: '25.813rem',
@@ -168,21 +190,24 @@ export default {
   },
 
   backgroundImage: {
+    willChange: 'transform',
     backgroundImage: `url(${Images.src})`,
-    width: '100dvw',
+    width: '49rem',
     maxWidth: '49rem',
     height: '41rem',
     position: 'absolute',
     left: '-40%',
     bottom: '0%',
     zIndex: '1',
-
+    aspectRatio: '49 / 41',
+    backgroundSize: 'cover',
+    backgroundRepeat: 'no-repeat',
     [`@media (max-width: 1130px)`]: {
       backgroundImage: `url(${Imagess.src})`,
       left: '-12%',
       bottom: '16.5%',
-      width: '100dvw',
-      maxWidth: '50.938rem',
+      width: '50.938rem',
+      aspectRatio: '509 / 345',
       height: '34.5rem',
     },
 
@@ -195,6 +220,8 @@ export default {
     top: '100%',
     position: 'absolute',
     color: colorTheme.palette.error.main,
+    minHeight: '1.25rem', 
+    lineHeight: '1.2',
     [`@media (max-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
       fontSize: '0.75rem',
     },

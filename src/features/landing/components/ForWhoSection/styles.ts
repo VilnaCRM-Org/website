@@ -6,10 +6,15 @@ export default {
     background: colorTheme.palette.backgroundGrey100.main,
     maxWidth: '100dvw',
     overflow: 'hidden',
+    position: 'relative',
+    minHeight: '30rem', 
+    contain: 'layout',
   },
 
   lgCardsWrapper: {
     display: 'flex',
+    minHeight: '20rem',
+    contain: 'content', 
     [`@media (max-width: 968px)`]: {
       display: 'none',
     },
@@ -17,6 +22,7 @@ export default {
 
   smCardsWrapper: {
     display: 'none',
+    minHeight: '25rem',
     [`@media (max-width: 968px)`]: {
       display: 'flex',
       justifyContent: 'center',
@@ -26,11 +32,64 @@ export default {
   content: {
     pt: '8.25rem',
     position: 'relative',
+    paddingBottom: '-2rem',
     [`@media (max-width: ${breakpointsTheme.breakpoints.values.lg}px)`]: {
       pt: '7.375rem',
+      paddingBottom: '-2rem',
     },
     [`@media (max-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
       pt: '2rem',
+      paddingBottom: '-2rem',
+    },
+  },
+
+  mainImage: {
+    img: {
+      width: '100%',
+      maxWidth: '51.4rem',
+      height: 'auto',
+      zIndex: '1',
+      position: 'absolute',
+      aspectRatio: '514 / 425',
+      top: '7%',
+      right: '-6%',
+      '@media (max-width: 1130.98px)': {
+        width: '100dvw',
+        maxWidth: '43rem',
+        height: '39.8rem',
+        top: '5%',
+        right: '-2.9%',
+      },
+      [`@media (max-width: 968px)`]: {
+        maxWidth: '43.75rem',
+        height: '39rem',
+        top: '47%',
+        right: '8%',
+      },
+      [`@media (max-width: ${breakpointsTheme.breakpoints.values.md}px)`]: {
+        right: '-10%',
+      },
+      [`@media (max-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
+        height: '28rem',
+        top: '86.5%',
+        width: '29.5rem',
+      },
+      '@media (max-width: 475.98px)': {
+        height: '24.688rem',
+        right: '-18%',
+        width: '26.5rem',
+        top: '110%',
+      },
+      '@media (max-width: 425.98px)': {
+        height: '24.688rem',
+        right: '-14%',
+        width: '27.5rem',
+        top: '100%',
+      },
+      [`@media (max-width: ${breakpointsTheme.breakpoints.values.xs}px)`]: {
+        right: '-32.5%',
+        top: '110%',
+      },
     },
   },
 
