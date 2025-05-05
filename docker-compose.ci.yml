@@ -7,3 +7,4 @@ services:
     volumes:
       - .:/app
       - ./out:/app/out
+      - ./scripts:/app/scripts
