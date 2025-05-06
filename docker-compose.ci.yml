@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    entrypoint: ["sh", "scripts/start-prod.sh"]
+    entrypoint: ["sh", "/app/scripts/start-prod.sh"]
     volumes:
       - .:/app
       - ./out:/app/out

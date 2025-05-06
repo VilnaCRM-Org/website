@@ -8,5 +8,6 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml checkNodeVersion.js ./
 
 COPY scripts ./scripts
+RUN chmod +x ./scripts/start-prod.sh
 
 RUN pnpm install
