@@ -6,10 +6,8 @@ RUN apk add --no-cache python3=3.12.10-r0 make=4.4.1-r2 g++=14.2.0-r4 curl=8.12.
 WORKDIR /app
 
 COPY package.json pnpm-lock.yaml checkNodeVersion.js ./
+RUN pnpm install
 
 COPY ./pages /app/pages
-
 COPY scripts ./scripts
 RUN chmod +x ./scripts/build-out.sh
-
-RUN pnpm install
