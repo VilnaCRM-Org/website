@@ -12,6 +12,7 @@ const backToFormButtonText: string = t('notifications.error.button');
 const errorImgAltText: string = t('notifications.error.images.error');
 const errorTitleText: string = t('notifications.error.title');
 const errorDescription: string = t('notifications.error.description');
+const errorNetworkDescription: string = t('failure_responses.client_errors.network_error');
 
 describe('NotificationError Component', () => {
   let mockSetIsOpen: jest.Mock;
@@ -26,8 +27,11 @@ describe('NotificationError Component', () => {
     render(<NotificationError setIsOpen={mockSetIsOpen} onRetry={mockOnRetry} loading={false} />);
 
     expect(screen.getByText(errorTitleText)).toBeInTheDocument();
+    expect(screen.getByText(errorDescription)).toBeInTheDocument();
     expect(screen.getByRole(buttonRole, { name: retrySubmitButtonText })).toBeInTheDocument();
     expect(screen.getByRole(buttonRole, { name: backToFormButtonText })).toBeInTheDocument();
+
+    expect(screen.queryByText(errorNetworkDescription)).not.toBeInTheDocument();
   });
 
   it('calls retrySubmit when retry button is clicked', async () => {
@@ -53,6 +57,18 @@ describe('NotificationError Component', () => {
     const errorImage: HTMLElement = screen.getByRole('img');
     expect(errorImage).toBeVisible();
     expect(errorImage).toHaveAttribute('alt', errorImgAltText);
+  });
+  it('network error was applied with correct text', () => {
+    render(
+      <NotificationError
+        setIsOpen={mockSetIsOpen}
+        onRetry={mockOnRetry}
+        loading={false}
+        errorText={errorNetworkDescription}
+      />
+    );
+
+    expect(screen.getByText(errorNetworkDescription)).toBeInTheDocument();
   });
 
   it('renders the correct title and description', () => {
