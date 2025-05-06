@@ -7,4 +7,6 @@ WORKDIR /app
 
 COPY package.json pnpm-lock.yaml checkNodeVersion.js ./
 
+COPY scripts ./scripts
+
 RUN pnpm install
