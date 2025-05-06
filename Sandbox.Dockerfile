@@ -7,6 +7,8 @@ WORKDIR /app
 
 COPY package.json pnpm-lock.yaml checkNodeVersion.js ./
 
+COPY ./pages /app/pages
+
 COPY scripts ./scripts
 RUN chmod +x ./scripts/build-out.sh
 
