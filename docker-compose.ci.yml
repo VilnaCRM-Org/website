@@ -2,7 +2,7 @@ services:
   prod:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Sandbox.Dockerfile
     entrypoint: ["sh", "/app/scripts/build-out.sh"]
     volumes:
       - ./out:/app/out
