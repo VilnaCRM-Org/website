@@ -8,6 +8,6 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml checkNodeVersion.js ./
 RUN pnpm install
 
-COPY ./pages /app/pages
-COPY scripts ./scripts
+COPY . . 
+
 RUN chmod +x ./scripts/build-out.sh
