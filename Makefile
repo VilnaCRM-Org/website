@@ -108,10 +108,10 @@ wait-for-dev: ## Wait for the dev service to be ready on port $(DEV_PORT).
 	@echo "Dev service is up and running!"
 
 build: ## A tool build the project
-	$(DOCKER_COMPOSE) build
+	$(DOCKER_COMPOSE) build --no-cache
 
-build-out: ## Build and export the site, output will be saved to ./out
-	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_SANDBOX_FILE) run --rm sandbox
+build-out: build ## Build and export the site, output will be saved to ./out
+	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_SANDBOX_FILE) up -d --build
 
 build-analyze: ## Build production bundle and launch bundle-analyzer report (ANALYZE=true)
 	ANALYZE=true $(NEXT_BUILD_CMD)
