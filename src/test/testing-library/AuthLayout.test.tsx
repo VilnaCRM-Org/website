@@ -41,6 +41,7 @@ const emailValidationText: string = t('sign_up.form.email_input.invalid_message'
 const passwordErrorLength: string = t('sign_up.form.password_input.error_length');
 const passwordErrorNumbers: string = t('sign_up.form.password_input.error_numbers');
 const passwordErrorUppercase: string = t('sign_up.form.password_input.error_uppercase');
+const errorNetworkDescription: string = t('failure_responses.client_errors.network_error');
 
 jest.mock('uuid', (): { v4: () => string } => ({
   v4: () => '132',
@@ -561,5 +562,15 @@ describe('AuthLayout', () => {
     await waitFor(() => {
       expect(getByText(successTitleText)).toBeInTheDocument();
     });
+  });
+  it('should initialize with empty errorText (no error message visible)', () => {
+    const { queryByText } = render(
+      <MockedProvider mocks={[]} addTypename={false}>
+        <AuthLayout />
+      </MockedProvider>
+    );
+
+    const networkErrorElement: HTMLElement | null = queryByText(errorNetworkDescription);
+    expect(networkErrorElement).not.toBeInTheDocument();
   });
 });

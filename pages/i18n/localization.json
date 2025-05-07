@@ -329,7 +329,7 @@
             "label": "E-mail",
             "placeholder": "vilnaCRM@gmail.com",
             "required": "Це поле обов'язкове",
-            "step_error_message": "Будь ласка, переконайтеся, що email містить символи '@' та '.'",
+            "step_error_message": "Будь ласка, переконайтеся, що email містить '@' та '.'",
             "invalid_message": "Будь ласка, введіть коректну електронну адресу"
           },
           "password_input": {

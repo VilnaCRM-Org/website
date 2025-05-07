@@ -11,19 +11,19 @@
   "shortcuts": [
     {
       "name": "Dashboard",
-      "url": "/dashboard"
-    }
-  ],
-  "icons": [
-    {
-      "src": "/layout/favicon/web-app-manifest-192X192.png",
-      "sizes": "192x192",
-      "purpose": "maskable"
-    },
-    {
-      "src": "/layout/favicon/web-app-manifest-512X512.png",
-      "sizes": "512x512",
-      "purpose": "maskable"
+      "url": "/dashboard",
+      "icons": [
+        {
+          "src": "/layout/favicon/web-app-manifest-192X192.png",
+          "sizes": "192x192",
+          "purpose": "any maskable"
+        },
+        {
+          "src": "/layout/favicon/web-app-manifest-512X512.png",
+          "sizes": "512x512",
+          "purpose": "maskable"
+        }
+      ]
     }
   ]
 }

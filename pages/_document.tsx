@@ -7,6 +7,7 @@ export default function Document(): React.ReactElement {
     <Html lang={mainLanguage}>
       <Head>
         <meta charSet="utf-8" />
+        <meta name="description" content="VilnaCRM platform for customer relationship management" />
         <meta name="apple-mobile-web-app-title" content="VilnaCRM" />
         <meta name="application-name" content="VilnaCRM" />
         <meta name="theme-color" content="#ffffff" />
@@ -26,8 +27,10 @@ export default function Document(): React.ReactElement {
         />
 
         <link rel="shortcut icon" type="image/svg+xml" href="/layout/favicon/32x32.svg" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/layout/favicon/32x32.png" />
 
         <link rel="apple-touch-icon" sizes="180x180" href="/layout/favicon/apple-icon.png" />
+        <link rel="mask-icon" href="/layout/favicon/safari-pinned-tab.svg" color="#ffffff" />
 
         <link rel="icon" type="image/x-icon" href="/layout/favicon/favicon.ico" />
 

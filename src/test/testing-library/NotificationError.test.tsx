@@ -70,10 +70,13 @@ describe('NotificationError Component', () => {
 
     expect(screen.getByText('Network error')).toBeInTheDocument();
   });
+  it('should disable the retry button when loading is true', () => {
+    render(<NotificationError setIsOpen={mockSetIsOpen} onRetry={mockOnRetry} loading />);
+
+    expect(screen.getByRole(buttonRole, { name: retrySubmitButtonText })).toBeDisabled();
+  });
   it('should display the default description when errorText is empty or undefined', () => {
-    render(
-      <NotificationError errorText="" setIsOpen={jest.fn()} onRetry={mockOnRetry} loading={false} />
-    );
+    render(<NotificationError setIsOpen={jest.fn()} onRetry={mockOnRetry} loading={false} />);
 
     expect(screen.getByText(errorDescription)).toBeInTheDocument();
   });
