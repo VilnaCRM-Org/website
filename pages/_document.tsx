@@ -1,11 +1,12 @@
 import { Html, Head, Main, NextScript } from 'next/document';
 
-const mainLanguage: string = process.env.NEXT_PUBLIC_MAIN_LANGUAGE as string;
+const mainLanguage: string = process.env.NEXT_PUBLIC_MAIN_LANGUAGE ?? 'en';
 
 export default function Document(): React.ReactElement {
   return (
     <Html lang={mainLanguage}>
       <Head>
+        <meta charSet="utf-8" />
         <meta name="apple-mobile-web-app-title" content="VilnaCRM" />
         <meta name="application-name" content="VilnaCRM" />
         <meta name="theme-color" content="#ffffff" />
@@ -30,7 +31,11 @@ export default function Document(): React.ReactElement {
 
         <link rel="icon" type="image/x-icon" href="/layout/favicon/favicon.ico" />
 
-        <link rel="manifest" href="/layout/favicon/site.webmanifest" />
+        <link
+          rel="manifest"
+          type="application/manifest+json"
+          href="/layout/favicon/site.webmanifest"
+        />
       </Head>
       <body>
         <Main />

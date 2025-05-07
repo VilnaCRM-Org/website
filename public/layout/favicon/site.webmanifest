@@ -2,9 +2,18 @@
   "name": "VilnaCRM",
   "short_name": "VilnaCRM",
   "start_url": "/",
+  "scope": "/",
+  "description": "VilnaCRM platform for customer relationship management",
+  "orientation": "any",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#ffffff",
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "url": "/dashboard"
+    }
+  ],
   "icons": [
     {
       "src": "/layout/favicon/web-app-manifest-192X192.png",

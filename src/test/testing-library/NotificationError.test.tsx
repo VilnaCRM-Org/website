@@ -58,17 +58,24 @@ describe('NotificationError Component', () => {
     expect(errorImage).toBeVisible();
     expect(errorImage).toHaveAttribute('alt', errorImgAltText);
   });
-  it('network error was applied with correct text', () => {
+  it('should display the errorText when it is provided', () => {
     render(
       <NotificationError
         setIsOpen={mockSetIsOpen}
         onRetry={mockOnRetry}
         loading={false}
-        errorText={errorNetworkDescription}
+        errorText="Network error"
       />
     );
 
-    expect(screen.getByText(errorNetworkDescription)).toBeInTheDocument();
+    expect(screen.getByText('Network error')).toBeInTheDocument();
+  });
+  it('should display the default description when errorText is empty or undefined', () => {
+    render(
+      <NotificationError errorText="" setIsOpen={jest.fn()} onRetry={mockOnRetry} loading={false} />
+    );
+
+    expect(screen.getByText(errorDescription)).toBeInTheDocument();
   });
 
   it('renders the correct title and description', () => {
