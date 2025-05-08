@@ -1,6 +1,17 @@
 version: 2
 updates:
-  - package-ecosystem: "npm"
-    directory: "/"
+  - package-ecosystem: 'npm'
+    directory: '/'
     schedule:
-      interval: "weekly"
+      interval: 'weekly'
+    reviewers:
+      - 'Kravalg'
+    groups:
+      all-deps:
+        patterns:
+          - '*'
+    commit-message:
+      prefix: 'feat'
+      prefix-development: 'chore'
+      include: 'scope'
+      
