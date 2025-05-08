@@ -16,7 +16,7 @@ updates:
       include: 'scope'
 
   - package-ecosystem: 'npm'
-    directory: '/tests/Load'
+    directory: '/'
     schedule:
       interval: 'weekly'
     reviewers:
