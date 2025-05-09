@@ -35,6 +35,9 @@ const confettiAltText: string = t('notifications.success.images.confetti');
 const successBackButton: string = t('notifications.success.button');
 const requiredText: string = t('sign_up.form.email_input.required');
 const errorTitleText: string = t('notifications.error.title');
+const defaultErrorDescription: string = t('notifications.error.description');
+const somethingWentWrong: string = t('failure_responses.client_errors.something_went_wrong');
+const networkErrorNotification: string = t('failure_responses.client_errors.network_error');
 const retryTextButton: string = t('notifications.error.retry_button');
 const emailMissingSymbols: string = t('sign_up.form.email_input.step_error_message');
 const emailValidationText: string = t('sign_up.form.email_input.invalid_message');
@@ -147,7 +150,6 @@ describe('AuthLayout', () => {
     expect(getByRole(checkboxRole)).toBeInTheDocument();
     expect(getByRole(buttonRole, { name: submitButtonText })).toBeInTheDocument();
   });
-
   it('displays loader and submits form successfully without errors', async () => {
     const { getByRole, queryByRole, queryByText, getByText } = render(
       <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
@@ -172,7 +174,6 @@ describe('AuthLayout', () => {
       expect(queryByText(errorTitleText)).not.toBeInTheDocument();
     });
   });
-
   it('should pass correct data to the mutation', async () => {
     const mockVariableMatcher: jest.Mock<boolean, [{ input: CreateUserInput }]> = jest
       .fn()
@@ -242,27 +243,6 @@ describe('AuthLayout', () => {
     expect(getByPlaceholderText(emailPlaceholder)).toHaveValue(email);
     expect(getByPlaceholderText(passwordPlaceholder)).toHaveValue(testPassword);
   });
-  it('shows success notification after successful authentication', async () => {
-    const { getByText, getByRole, queryByText } = render(
-      <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
-        <AuthLayout />
-      </MockedProvider>
-    );
-
-    fillForm(testInitials, testEmail, testPassword, true);
-
-    await waitFor(() => {
-      const notificationTitle: HTMLElement = getByText(formTitleText);
-      const notificationBox: HTMLElement | null | undefined =
-        notificationTitle.parentElement?.parentElement?.parentElement;
-
-      expect(notificationBox).toBeInTheDocument();
-      expect(notificationBox).toBeVisible();
-      expect(notificationTitle).toBeInTheDocument();
-      expect(getByRole('heading')).toHaveTextContent(successTitleText);
-      expect(queryByText(errorTitleText)).not.toBeInTheDocument();
-    });
-  });
   it('should successfully submit the form and update state', async () => {
     const { getByRole, queryByText, getByText } = render(
       <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
@@ -318,36 +298,6 @@ describe('AuthLayout', () => {
       expect(queryByRole('status')).toBeInTheDocument();
     });
   });
-  it('should successfully retry submission after a 500 error', async () => {
-    const { findByText, getByText, queryByRole } = render(
-      <MockedProvider mocks={internalServerErrorResponse} addTypename={false}>
-        <AuthLayout />
-      </MockedProvider>
-    );
-
-    fillForm(testInitials, testEmail, testPassword, true);
-
-    await waitFor(() => {
-      expect(queryByRole('status')).toBeInTheDocument();
-    });
-
-    const errorTitle: HTMLElement = await findByText(errorTitleText);
-    expect(errorTitle).toBeInTheDocument();
-
-    const retryButton: HTMLElement = await findByText(retryTextButton);
-    fireEvent.click(retryButton);
-
-    await waitFor(() => {
-      expect(queryByRole('status')).toBeInTheDocument();
-    });
-
-    await waitFor(() => {
-      const successTitle: HTMLElement = getByText(successTitleText);
-
-      expect(successTitle).toBeInTheDocument();
-      expect(successTitle).toBeVisible();
-    });
-  });
   it('should handle alert errors correctly and update state', async () => {
     const { findByRole } = render(
       <MockedProvider mocks={[mockInternalServerErrorResponse]} addTypename={false}>
@@ -358,11 +308,8 @@ describe('AuthLayout', () => {
 
     const serverErrorMessage: HTMLElement = await findByRole(alertRole);
     expect(serverErrorMessage).toBeInTheDocument();
-    expect(serverErrorMessage).toHaveTextContent(
-      t('failure_responses.client_errors.something_went_wrong')
-    );
+    expect(serverErrorMessage).toHaveTextContent(somethingWentWrong);
   });
-
   it('resets the form after successful submit with no errors', async () => {
     const { getByText, getByRole, queryByText } = render(
       <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
@@ -388,7 +335,6 @@ describe('AuthLayout', () => {
       expect(queryByText(errorTitleText)).not.toBeInTheDocument();
     });
   });
-
   it('notification state has success value by default', async () => {
     const { getByText, queryByText } = render(
       <MockedProvider mocks={internalServerErrorResponse} addTypename={false}>
@@ -404,26 +350,6 @@ describe('AuthLayout', () => {
     expect(successButton).toBeInTheDocument();
     expect(successButton).not.toBeVisible();
     expect(errorBox).not.toBeInTheDocument();
-  });
-
-  it('does not reset the form when notification type is error', async () => {
-    const { getByText } = render(
-      <MockedProvider mocks={internalServerErrorResponse} addTypename={false}>
-        <AuthLayout />
-      </MockedProvider>
-    );
-    fillForm(testInitials, testEmail, testPassword, true);
-    const { fullNameInput, emailInput, passwordInput, privacyCheckbox } = getFormElements();
-
-    expect(fullNameInput?.value).not.toBe('');
-    expect(emailInput?.value).not.toBe('');
-    expect(passwordInput?.value).not.toBe('');
-    expect(privacyCheckbox?.checked).toBe(true);
-
-    await waitFor(() => {
-      const errorBox: HTMLElement = getByText(errorTitleText);
-      expect(errorBox).toBeInTheDocument();
-    });
   });
   test.each(inputFields)(
     'displays validation errors only after touching fields when mode is onTouche',
@@ -475,60 +401,6 @@ describe('AuthLayout', () => {
       });
     }
   );
-
-  it('should show success notification after successful form submission and hide it after clicking back', async () => {
-    const { queryByAltText, getByRole } = render(
-      <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
-        <AuthLayout />
-      </MockedProvider>
-    );
-
-    fillForm(testInitials, testEmail, testPassword, true);
-
-    await waitFor(() => {
-      expect(queryByAltText(confettiAltText)).toBeInTheDocument();
-      expect(queryByAltText(confettiAltText)).toBeVisible();
-      expect(queryByAltText('')).toBeInTheDocument();
-      expect(queryByAltText('')).toBeVisible();
-    });
-
-    const backButton: HTMLElement = getByRole('button', { name: successBackButton });
-    expect(backButton).toBeInTheDocument();
-    expect(backButton).toBeVisible();
-
-    backButton.click();
-
-    await waitFor(() => {
-      expect(queryByAltText(confettiAltText)).not.toBeVisible();
-      expect(queryByAltText('')).not.toBeVisible();
-    });
-  });
-
-  it('should have success state by default when notificationType is "success"', async () => {
-    const { getByText } = render(
-      <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
-        <AuthLayout />
-      </MockedProvider>
-    );
-    await waitFor(() => {
-      const successElement: HTMLElement = getByText(successTitleText);
-      expect(successElement).toBeInTheDocument();
-    });
-  });
-
-  it('should initialize with success notification state', () => {
-    const { getByText, queryByText } = render(
-      <MockedProvider mocks={[]} addTypename={false}>
-        <AuthLayout />
-      </MockedProvider>
-    );
-
-    const successTitle: HTMLElement = getByText(successTitleText);
-    expect(successTitle).toBeInTheDocument();
-    expect(successTitle).not.toBeVisible();
-
-    expect(queryByText(errorTitleText)).not.toBeInTheDocument();
-  });
   it('handles maximum length and special character inputs', async () => {
     const longName: string = 'A'.repeat(50);
     const specialCharsEmail: string = 'test.user+special@example.com';
@@ -572,5 +444,161 @@ describe('AuthLayout', () => {
 
     const networkErrorElement: HTMLElement | null = queryByText(errorNetworkDescription);
     expect(networkErrorElement).not.toBeInTheDocument();
+  });
+});
+
+describe('AuthLayoutWithNotification', () => {
+  it('should successfully retry submission after a 500 error', async () => {
+    const { findByText, getByText, queryByRole } = render(
+      <MockedProvider mocks={internalServerErrorResponse} addTypename={false}>
+        <AuthLayout />
+      </MockedProvider>
+    );
+
+    fillForm(testInitials, testEmail, testPassword, true);
+
+    await waitFor(() => {
+      expect(queryByRole('status')).toBeInTheDocument();
+    });
+
+    const errorTitle: HTMLElement = await findByText(errorTitleText);
+    const defaultErrorText: HTMLElement = await findByText(defaultErrorDescription);
+    expect(errorTitle).toBeInTheDocument();
+    expect(defaultErrorText).toBeInTheDocument();
+
+    const retryButton: HTMLElement = await findByText(retryTextButton);
+    fireEvent.click(retryButton);
+
+    await waitFor(() => {
+      expect(queryByRole('status')).toBeInTheDocument();
+    });
+
+    await waitFor(() => {
+      const successTitle: HTMLElement = getByText(successTitleText);
+
+      expect(successTitle).toBeInTheDocument();
+      expect(successTitle).toBeVisible();
+    });
+  });
+  it('should have success state by default when notificationType is "success"', async () => {
+    const { getByText } = render(
+      <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
+        <AuthLayout />
+      </MockedProvider>
+    );
+    await waitFor(() => {
+      const successElement: HTMLElement = getByText(successTitleText);
+      expect(successElement).toBeInTheDocument();
+    });
+  });
+  it('should show success notification after successful form submission and hide it after clicking back', async () => {
+    const { queryByAltText, getByRole } = render(
+      <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
+        <AuthLayout />
+      </MockedProvider>
+    );
+
+    fillForm(testInitials, testEmail, testPassword, true);
+
+    await waitFor(() => {
+      expect(queryByAltText(confettiAltText)).toBeInTheDocument();
+      expect(queryByAltText(confettiAltText)).toBeVisible();
+      expect(queryByAltText('')).toBeInTheDocument();
+      expect(queryByAltText('')).toBeVisible();
+    });
+
+    const backButton: HTMLElement = getByRole('button', { name: successBackButton });
+    expect(backButton).toBeInTheDocument();
+    expect(backButton).toBeVisible();
+
+    backButton.click();
+
+    await waitFor(() => {
+      expect(queryByAltText(confettiAltText)).not.toBeVisible();
+      expect(queryByAltText('')).not.toBeVisible();
+    });
+  });
+  it('does not reset the form when notification type is error', async () => {
+    const { getByText } = render(
+      <MockedProvider mocks={internalServerErrorResponse} addTypename={false}>
+        <AuthLayout />
+      </MockedProvider>
+    );
+    fillForm(testInitials, testEmail, testPassword, true);
+    const { fullNameInput, emailInput, passwordInput, privacyCheckbox } = getFormElements();
+
+    expect(fullNameInput?.value).not.toBe('');
+    expect(emailInput?.value).not.toBe('');
+    expect(passwordInput?.value).not.toBe('');
+    expect(privacyCheckbox?.checked).toBe(true);
+
+    await waitFor(() => {
+      const errorBox: HTMLElement = getByText(errorTitleText);
+      const defaultErrorText: HTMLElement = getByText(defaultErrorDescription);
+
+      expect(errorBox).toBeInTheDocument();
+      expect(defaultErrorText).toBeInTheDocument();
+    });
+  });
+  it('shows success notification after successful authentication', async () => {
+    const { getByText, getByRole, queryByText } = render(
+      <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
+        <AuthLayout />
+      </MockedProvider>
+    );
+
+    fillForm(testInitials, testEmail, testPassword, true);
+
+    await waitFor(() => {
+      const notificationTitle: HTMLElement = getByText(formTitleText);
+      const notificationBox: HTMLElement | null | undefined =
+        notificationTitle.parentElement?.parentElement?.parentElement;
+
+      expect(notificationBox).toBeInTheDocument();
+      expect(notificationBox).toBeVisible();
+      expect(notificationTitle).toBeInTheDocument();
+      expect(getByRole('heading')).toHaveTextContent(successTitleText);
+      expect(queryByText(errorTitleText)).not.toBeInTheDocument();
+    });
+  });
+  it('should initialize with success notification state', () => {
+    const { getByText, queryByText } = render(
+      <MockedProvider mocks={[]} addTypename={false}>
+        <AuthLayout />
+      </MockedProvider>
+    );
+
+    const successTitle: HTMLElement = getByText(successTitleText);
+    expect(successTitle).toBeInTheDocument();
+    expect(successTitle).not.toBeVisible();
+
+    expect(queryByText(errorTitleText)).not.toBeInTheDocument();
+  });
+  it('should display network error text when network error message includes "Failed to fetch"', async () => {
+    const failedToFetchMockResponse: MockedResponse = {
+      request: {
+        query: SIGNUP_MUTATION,
+        variables: {
+          input: {
+            email: testEmail.toLowerCase(),
+            initials: testInitials,
+            password: testPassword,
+            clientMutationId: '132',
+          },
+        },
+      },
+      error: new Error('Failed to fetch'),
+    };
+    const { queryByText } = render(
+      <MockedProvider mocks={[failedToFetchMockResponse]} addTypename={false}>
+        <AuthLayout />
+      </MockedProvider>
+    );
+    fillForm(testInitials, testEmail, testPassword, true);
+
+    await waitFor(async () => {
+      const networkErrorElement: HTMLElement | null = queryByText(networkErrorNotification);
+      expect(networkErrorElement).toBeInTheDocument();
+    });
   });
 });

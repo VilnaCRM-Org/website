@@ -15,6 +15,7 @@ import { checkElementsInDocument, SetIsOpenType } from './utils';
 
 const successTitleText: string = t('notifications.success.title');
 const errorTitleText: string = t('notifications.error.title');
+const errorDescription: string = t('notifications.error.description');
 const successDescriptionText: string = t('notifications.success.description');
 const confettiImgAltText: string = t('notifications.success.images.confetti');
 const gearsImgAltText: string = t('notifications.success.images.gears');
@@ -26,6 +27,7 @@ function renderNotification({
   isOpen,
   setIsOpen,
   onRetry = jest.fn(),
+  errorText,
 }: Partial<NotificationControlProps> & {
   setIsOpen: NotificationControlProps['setIsOpen'];
 }): RenderResult {
@@ -36,6 +38,7 @@ function renderNotification({
       isOpen={isOpen || false}
       onRetry={onRetry}
       loading={false}
+      errorText={errorText}
     />
   );
 }
@@ -237,5 +240,24 @@ describe('Notification', () => {
     images.forEach(img => {
       expect(img).toHaveAttribute('alt');
     });
+  });
+  it('should display the errorText when it is provided', () => {
+    renderNotification({
+      type: NotificationStatus.ERROR,
+      isOpen: true,
+      setIsOpen: mockSetIsOpen,
+      errorText: 'Network error',
+    });
+
+    expect(screen.getByText('Network error')).toBeInTheDocument();
+  });
+  it('should display the default description when errorText is empty or undefined', () => {
+    renderNotification({
+      type: NotificationStatus.ERROR,
+      isOpen: true,
+      setIsOpen: mockSetIsOpen,
+    });
+
+    expect(screen.getByText(errorDescription)).toBeInTheDocument();
   });
 });
