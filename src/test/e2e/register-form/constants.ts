@@ -11,12 +11,14 @@ export const placeholderPassword: string = t('sign_up.form.password_input.placeh
 export const policyText: string = removeHtmlTags('sign_up.form.confidential_text.fullText');
 export const signUpButton: string = t('sign_up.form.button_text');
 
-export const fullNameFormatError: string = t('sign_up.form.name_input.error_text');
+export const requiredNameError: string = t('sign_up.form.name_input.required');
 
 export const graphqlEndpoint: string = process.env.NEXT_PUBLIC_GRAPHQL_API_URL as string;
+const firstName: string = faker.helpers.fromRegExp(/[A-Za-zА-Яа-яІіЇїЄєҐґ]{3,10}/);
+const lastName: string = faker.helpers.fromRegExp(/[A-Za-zА-Яа-яІіЇїЄєҐґ]{3,10}/);
 
 export const userData: User = {
-  fullName: faker.person.fullName(),
+  fullName: `${firstName} ${lastName}`,
   email: faker.internet.email(),
   password: faker.internet.password({ length: 16, prefix: 'Q9' }),
 };

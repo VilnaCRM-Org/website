@@ -51,7 +51,7 @@ export const resolvers = {
       validateCreateUserInput(input);
       try {
         const newUser: User = {
-          id: '1',
+          id: input.clientMutationId,
           confirmed: true,
           email: input.email,
           initials: input.initials,

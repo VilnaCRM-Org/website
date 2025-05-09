@@ -10,7 +10,11 @@ export const testId: string = faker.string.uuid();
 export const testTitle: string = faker.lorem.word(6);
 export const testText: string = faker.lorem.word(6);
 export const testImg: string = faker.image.avatar();
-export const testInitials: string = 'Mykhailo Svitskyi';
+
+const firstName: string = faker.helpers.fromRegExp(/[A-Za-zА-Яа-яІіЇїЄєҐґ]{3,10}/);
+const lastName: string = faker.helpers.fromRegExp(/[A-Za-zА-Яа-яІіЇїЄєҐґ]{3,10}/);
+export const testInitials: string = `${firstName} ${lastName}`;
+
 export const testEmail: string = faker.internet.email();
 export const testPassword: string = faker.internet.password({
   length: 16,
