@@ -7,4 +7,4 @@ services:
     command: ["sh", "./scripts/build-out.sh"]
     volumes:
       - .:/app
-      - ${CODEBUILD_SRC_DIR}/out:/app/out
+      - ./out:/app/out
