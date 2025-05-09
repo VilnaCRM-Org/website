@@ -1,23 +1,16 @@
 FROM node:23.10.0-alpine3.21
 
 RUN apk add --no-cache \
-    udev \
-    ttf-freefont \
-    chromium \
-    python3\
-    make \
-    g++ \
+    chromium=135.0.7049.95-r0 \
+    make=4.4.1-r2 \
+    g++=14.2.0-r4 \
     && npm install -g pnpm@10.6.5
 
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+
 WORKDIR /app
-COPY package.json pnpm-lock.yaml checkNodeVersion.js ./
 
-
+COPY package.json pnpm-lock.yaml ./
 RUN pnpm install
 
-RUN rm -rf /tmp/chromium/Singleton* /tmp/chromium/Lock /tmp/chromium/Default/Singleton* && \
-    mkdir -p /tmp/chromium && chown -R root:root /tmp/chromium
-
-RUN mkdir -p /root/.config/chromium/docker-chromium-profile && chown -R root:root /root/.config/chromium
-
-CMD ["sh", "-c", "pkill -o chromium || true && node src/test/memory-leak/runMemlabTests.js"]
+CMD ["tail", "-f", "/dev/null"]

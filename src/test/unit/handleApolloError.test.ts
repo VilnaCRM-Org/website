@@ -1,4 +1,5 @@
 import { ApolloError, ServerError, ServerParseError } from '@apollo/client';
+import { t } from 'i18next';
 
 import { NotificationStatus } from '../../features/landing/components/Notification/types';
 import {
@@ -6,17 +7,29 @@ import {
   handleNetworkError,
 } from '../../features/landing/helpers/handleApolloError';
 
+type ClientErrorKey = 'network' | 'unknown' | 'unauthorized' | 'denied' | 'unexpected';
+
+const clientErrors: Record<ClientErrorKey, string> = {
+  network: t('failure_responses.client_errors.network_error'),
+  unknown: t('failure_responses.client_errors.something_went_wrong'),
+  unauthorized: t('failure_responses.authentication_errors.unauthorized_access'),
+  denied: t('failure_responses.authentication_errors.access_denied'),
+  unexpected: t('failure_responses.client_errors.unexpected_error'),
+};
+
 type NetworkErrorType = Error | ServerParseError | ServerError | null;
 
 describe('Error Handling', () => {
   let setServerErrorMessageMock: jest.Mock;
   let setNotificationTypeMock: jest.Mock;
   let setIsNotificationOpenMock: jest.Mock;
+  let setErrorTextMock: jest.Mock;
 
   beforeEach(() => {
     setServerErrorMessageMock = jest.fn();
     setNotificationTypeMock = jest.fn();
     setIsNotificationOpenMock = jest.fn();
+    setErrorTextMock = jest.fn();
   });
 
   describe('handleNetworkError', () => {
@@ -26,6 +39,7 @@ describe('Error Handling', () => {
         setServerErrorMessage: setServerErrorMessageMock,
         setNotificationType: setNotificationTypeMock,
         setIsNotificationOpen: setIsNotificationOpenMock,
+        setErrorText: setErrorTextMock,
       });
 
       expect(setServerErrorMessageMock).not.toHaveBeenCalled();
@@ -41,6 +55,7 @@ describe('Error Handling', () => {
         setServerErrorMessage: setServerErrorMessageMock,
         setNotificationType: setNotificationTypeMock,
         setIsNotificationOpen: setIsNotificationOpenMock,
+        setErrorText: setErrorTextMock,
       });
 
       expect(setNotificationTypeMock).toHaveBeenCalledWith(NotificationStatus.ERROR);
@@ -58,11 +73,10 @@ describe('Error Handling', () => {
         setServerErrorMessage: setServerErrorMessageMock,
         setNotificationType: setNotificationTypeMock,
         setIsNotificationOpen: setIsNotificationOpenMock,
+        setErrorText: setErrorTextMock,
       });
 
-      expect(setServerErrorMessageMock).toHaveBeenCalledWith(
-        'Network error. Please check your internet connection.'
-      );
+      expect(setErrorTextMock).toHaveBeenCalledWith(clientErrors.network);
     });
 
     it('should set a generic error message for unknown network errors', () => {
@@ -75,11 +89,10 @@ describe('Error Handling', () => {
         setServerErrorMessage: setServerErrorMessageMock,
         setNotificationType: setNotificationTypeMock,
         setIsNotificationOpen: setIsNotificationOpenMock,
+        setErrorText: setErrorTextMock,
       });
 
-      expect(setServerErrorMessageMock).toHaveBeenCalledWith(
-        'Something went wrong with the request. Try again later.'
-      );
+      expect(setServerErrorMessageMock).toHaveBeenCalledWith(clientErrors.unknown);
     });
 
     it('should set a specific message for 401 Unauthorized errors', () => {
@@ -90,11 +103,10 @@ describe('Error Handling', () => {
         setServerErrorMessage: setServerErrorMessageMock,
         setNotificationType: setNotificationTypeMock,
         setIsNotificationOpen: setIsNotificationOpenMock,
+        setErrorText: setErrorTextMock,
       });
 
-      expect(setServerErrorMessageMock).toHaveBeenCalledWith(
-        'Unauthorized access. Please log in again.'
-      );
+      expect(setServerErrorMessageMock).toHaveBeenCalledWith(clientErrors.unauthorized);
     });
     it('should set a specific message for 403 Forbidden errors', () => {
       const networkError: NetworkErrorType = { statusCode: 403 } as ApolloError['networkError'];
@@ -104,11 +116,10 @@ describe('Error Handling', () => {
         setServerErrorMessage: setServerErrorMessageMock,
         setNotificationType: setNotificationTypeMock,
         setIsNotificationOpen: setIsNotificationOpenMock,
+        setErrorText: setErrorTextMock,
       });
 
-      expect(setServerErrorMessageMock).toHaveBeenCalledWith(
-        'Access denied. You do not have permission to perform this action.'
-      );
+      expect(setServerErrorMessageMock).toHaveBeenCalledWith(clientErrors.denied);
     });
 
     it('should set a generic message for non-500 HTTP errors', () => {
@@ -119,11 +130,10 @@ describe('Error Handling', () => {
         setServerErrorMessage: setServerErrorMessageMock,
         setNotificationType: setNotificationTypeMock,
         setIsNotificationOpen: setIsNotificationOpenMock,
+        setErrorText: setErrorTextMock,
       });
 
-      expect(setServerErrorMessageMock).toHaveBeenCalledWith(
-        'Something went wrong with the request. Try again later.'
-      );
+      expect(setServerErrorMessageMock).toHaveBeenCalledWith(clientErrors.unknown);
     });
 
     it('should handle an empty or unexpected networkError object gracefully', () => {
@@ -134,11 +144,10 @@ describe('Error Handling', () => {
         setServerErrorMessage: setServerErrorMessageMock,
         setNotificationType: setNotificationTypeMock,
         setIsNotificationOpen: setIsNotificationOpenMock,
+        setErrorText: setErrorTextMock,
       });
 
-      expect(setServerErrorMessageMock).toHaveBeenCalledWith(
-        'Something went wrong with the request. Try again later.'
-      );
+      expect(setServerErrorMessageMock).toHaveBeenCalledWith(clientErrors.unknown);
     });
   });
 
@@ -157,14 +166,13 @@ describe('Error Handling', () => {
         setServerErrorMessage: setServerErrorMessageMock,
         setNotificationType: setNotificationTypeMock,
         setIsNotificationOpen: setIsNotificationOpenMock,
+        setErrorText: setErrorTextMock,
       });
 
-      expect(setNotificationTypeMock).not.toHaveBeenCalled();
-      expect(setIsNotificationOpenMock).not.toHaveBeenCalled();
-      expect(setServerErrorMessageMock).toHaveBeenCalled();
-      expect(setServerErrorMessageMock).toHaveBeenCalledWith(
-        'Network error. Please check your internet connection.'
-      );
+      expect(setNotificationTypeMock).toHaveBeenCalled();
+      expect(setIsNotificationOpenMock).toHaveBeenCalled();
+      expect(setServerErrorMessageMock).not.toHaveBeenCalled();
+      expect(setErrorTextMock).toHaveBeenCalledWith(clientErrors.network);
     });
 
     it('should handle GraphQL errors and set the error details properly', () => {
@@ -178,6 +186,7 @@ describe('Error Handling', () => {
         setServerErrorMessage: setServerErrorMessageMock,
         setNotificationType: setNotificationTypeMock,
         setIsNotificationOpen: setIsNotificationOpenMock,
+        setErrorText: setErrorTextMock,
       });
 
       expect(setServerErrorMessageMock).toHaveBeenCalledWith('GraphQL error occurred');
@@ -189,11 +198,10 @@ describe('Error Handling', () => {
         setServerErrorMessage: setServerErrorMessageMock,
         setNotificationType: setNotificationTypeMock,
         setIsNotificationOpen: setIsNotificationOpenMock,
+        setErrorText: setErrorTextMock,
       });
 
-      expect(setServerErrorMessageMock).toHaveBeenCalledWith(
-        'An unexpected error occurred. Please try again.'
-      );
+      expect(setServerErrorMessageMock).toHaveBeenCalledWith(clientErrors.unexpected);
     });
 
     it('should set notification type to error and open notification for GraphQL 500 error', () => {
@@ -206,6 +214,7 @@ describe('Error Handling', () => {
         setServerErrorMessage: setServerErrorMessageMock,
         setNotificationType: setNotificationTypeMock,
         setIsNotificationOpen: setIsNotificationOpenMock,
+        setErrorText: setErrorTextMock,
       });
 
       expect(setNotificationTypeMock).toHaveBeenCalledWith(NotificationStatus.ERROR);
@@ -222,11 +231,10 @@ describe('Error Handling', () => {
         setServerErrorMessage: setServerErrorMessageMock,
         setNotificationType: setNotificationTypeMock,
         setIsNotificationOpen: setIsNotificationOpenMock,
+        setErrorText: setErrorTextMock,
       });
 
-      expect(setServerErrorMessageMock).toHaveBeenCalledWith(
-        'An unexpected error occurred. Please try again.'
-      );
+      expect(setServerErrorMessageMock).toHaveBeenCalledWith(clientErrors.unexpected);
     });
 
     it('should combine multiple GraphQL error messages', () => {
@@ -240,6 +248,7 @@ describe('Error Handling', () => {
         setServerErrorMessage: setServerErrorMessageMock,
         setNotificationType: setNotificationTypeMock,
         setIsNotificationOpen: setIsNotificationOpenMock,
+        setErrorText: setErrorTextMock,
       });
 
       expect(setServerErrorMessageMock).toHaveBeenCalledWith('Error 1, Error 2');

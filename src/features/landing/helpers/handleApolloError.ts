@@ -1,5 +1,6 @@
 import { ApolloError } from '@apollo/client';
 import { GraphQLFormattedError } from 'graphql';
+import { t } from 'i18next';
 
 import { NotificationStatus } from '../components/Notification/types';
 
@@ -7,6 +8,7 @@ interface HandleErrorProps {
   setServerErrorMessage: (message: string) => void;
   setNotificationType: (type: NotificationStatus) => void;
   setIsNotificationOpen: (isOpen: boolean) => void;
+  setErrorText: (message: string) => void;
 }
 
 type HandleNetworkErrorProps = HandleErrorProps & { networkError: ApolloError['networkError'] };
@@ -30,11 +32,12 @@ export const handleNetworkError: HandleNetworkErrorType = ({
   setServerErrorMessage,
   setNotificationType,
   setIsNotificationOpen,
+  setErrorText,
 }: HandleNetworkErrorProps): void => {
   if (networkError === null) return;
 
   if (!isServerError(networkError)) {
-    setServerErrorMessage('Something went wrong with the request. Try again later.');
+    setServerErrorMessage(t('failure_responses.client_errors.something_went_wrong'));
     return;
   }
 
@@ -45,21 +48,22 @@ export const handleNetworkError: HandleNetworkErrorType = ({
   }
 
   if (networkError.statusCode === 401) {
-    setServerErrorMessage('Unauthorized access. Please log in again.');
+    setServerErrorMessage(t('failure_responses.authentication_errors.unauthorized_access'));
     return;
   }
 
   if (networkError.statusCode === 403) {
-    setServerErrorMessage('Access denied. You do not have permission to perform this action.');
+    setServerErrorMessage(t('failure_responses.authentication_errors.access_denied'));
     return;
   }
 
   if (networkError.message?.includes('Failed to fetch')) {
-    setServerErrorMessage('Network error. Please check your internet connection.');
+    setErrorText(t('failure_responses.client_errors.network_error'));
+    setNotificationType(NotificationStatus.ERROR);
+    setIsNotificationOpen(true);
     return;
   }
-
-  setServerErrorMessage('Something went wrong with the request. Try again later.');
+  setServerErrorMessage(t('failure_responses.client_errors.something_went_wrong'));
 };
 export type HandleApolloErrorProps = HandleErrorProps & { err: unknown };
 export type HandleApolloErrorType = (props: HandleApolloErrorProps) => void;
@@ -69,9 +73,10 @@ export const handleApolloError: HandleApolloErrorType = ({
   setServerErrorMessage,
   setNotificationType,
   setIsNotificationOpen,
+  setErrorText,
 }: HandleApolloErrorProps): void => {
   if (!(err instanceof ApolloError)) {
-    setServerErrorMessage('An unexpected error occurred. Please try again.');
+    setServerErrorMessage(t('failure_responses.client_errors.unexpected_error'));
     return;
   }
 
@@ -81,6 +86,7 @@ export const handleApolloError: HandleApolloErrorType = ({
       setServerErrorMessage,
       setNotificationType,
       setIsNotificationOpen,
+      setErrorText,
     });
     return;
   }
@@ -99,5 +105,5 @@ export const handleApolloError: HandleApolloErrorType = ({
     setServerErrorMessage(message);
     return;
   }
-  setServerErrorMessage('An unexpected error occurred. Please try again.');
+  setServerErrorMessage(t('failure_responses.client_errors.unexpected_error'));
 };
