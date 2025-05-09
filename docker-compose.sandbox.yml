@@ -1,8 +1,10 @@
 services:
   sandbox:
+    environment:
+      - CODEBUILD_SRC_DIR=${CODEBUILD_SRC_DIR}
     build:
       context: .
     command: ["sh", "./scripts/build-out.sh"]
     volumes:
       - .:/app
-      - ./out:/app/out 
+      - ${CODEBUILD_SRC_DIR}/out:/app/out
