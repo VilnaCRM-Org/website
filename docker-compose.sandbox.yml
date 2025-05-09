@@ -7,4 +7,4 @@ services:
     command: ["sh", "./scripts/build-out.sh"]
     volumes:
       - .:/app
-      - ./out:/app/out
+      - ${OUT_DIR}:/app/out
