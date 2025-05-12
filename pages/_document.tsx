@@ -28,16 +28,19 @@ export default function Document(): React.ReactElement {
         />
 
         <link rel="shortcut icon" type="image/svg+xml" href="/layout/favicon/32x32.svg" />
-        <link rel="icon" type="image/png" sizes="32x32" href="/layout/favicon/32x32.png" />
 
         <link rel="apple-touch-icon" sizes="180x180" href="/layout/favicon/apple-touch-icon.png" />
         <link rel="mask-icon" href="/layout/favicon/safari-pinned-tab.svg" color="#ffffff" />
 
-        <link rel="icon" sizes="any" href="/layout/favicon/favicon.ico" />
+        <link rel="icon" type="image/x-icon" sizes="any" href="/layout/favicon/favicon.ico" />
         <link rel="icon" type="image/svg+xml" href="/layout/favicon/favicon.svg" />
         <link rel="icon" type="image/png" href="/layout/favicon/favicon-96x96.png" sizes="96x96" />
 
-        <link rel="manifest" href="/layout/favicon/site.webmanifest" />
+        <link
+          rel="manifest"
+          type="application/manifest+json"
+          href="/layout/favicon/site.webmanifest"
+        />
       </Head>
       <body>
         <Main />

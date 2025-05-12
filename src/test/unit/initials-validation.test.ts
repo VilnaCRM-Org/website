@@ -16,10 +16,10 @@ describe('initials Tests', () => {
       expect(validators.isFormatted(`123 ${testFullName}456`)).toBe(false);
       expect(validators.isFormatted(`${testFirstName} ${testSecondName}`)).toBe(true);
 
-      expect(validators.isLettersOnlyError(testFullName)).toBe(true);
-      expect(validators.isLettersOnlyError(`!@${testFullName} #%`)).toBe(false);
-      expect(validators.isLettersOnlyError(`123 ${testFullName}456`)).toBe(false);
-      expect(validators.isLettersOnlyError(`${testFirstName} ${testSecondName}`)).toBe(true);
+      expect(validators.isLettersOnly(testFullName)).toBe(true);
+      expect(validators.isLettersOnly(`!@${testFullName} #%`)).toBe(false);
+      expect(validators.isLettersOnly(`123 ${testFullName}456`)).toBe(false);
+      expect(validators.isLettersOnly(`${testFirstName} ${testSecondName}`)).toBe(true);
     });
   });
 

@@ -11,23 +11,23 @@ export const validationMessages: Record<ValidationMessageKey, string> = {
 };
 
 type ValidationFunction = (value: string) => boolean;
-type ValidationKeys = 'isLettersOnlyError' | 'isFormatted' | 'isExist';
+type ValidationKeys = 'isLettersOnly' | 'isFormatted' | 'isEmpty';
 
 export const validators: Record<ValidationKeys, ValidationFunction> = {
-  isLettersOnlyError: value => /^[A-Za-zА-Яа-яІіЇїЄєҐґ\s]+$/.test(value),
+  isLettersOnly: value => /^[A-Za-zА-Яа-яІіЇїЄєҐґ\s'’-]+$/.test(value),
   isFormatted: value =>
     /^[A-Za-zА-Яа-яІіЇїЄєҐґ]+\s[A-Za-zА-Яа-яІіЇїЄєҐґ]+$/.test(value) &&
     value.length >= 2 &&
     value.length <= MAX_INITIALS_LENGTH,
-  isExist: value => value.length === 0,
+  isEmpty: value => value.trim().length === 0,
 };
 
 const validateFullName: (fullName: string) => string | null = (fullName: string): string | null => {
   const trimmedFullName: string = fullName.trim();
 
-  if (validators.isExist(trimmedFullName)) return validationMessages.required;
+  if (validators.isEmpty(trimmedFullName)) return validationMessages.required;
 
-  if (trimmedFullName.length > 0 && !validators.isLettersOnlyError(trimmedFullName)) {
+  if (trimmedFullName.length > 0 && !validators.isLettersOnly(trimmedFullName)) {
     return validationMessages.lettersOnlyError;
   }
 

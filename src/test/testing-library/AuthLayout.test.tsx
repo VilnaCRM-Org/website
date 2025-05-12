@@ -1,5 +1,5 @@
 import { MockedProvider, MockedResponse } from '@apollo/client/testing';
-import { fireEvent, render, waitFor } from '@testing-library/react';
+import { fireEvent, render, RenderResult, waitFor } from '@testing-library/react';
 import { t } from 'i18next';
 import React, { AriaRole } from 'react';
 
@@ -46,8 +46,8 @@ const passwordErrorNumbers: string = t('sign_up.form.password_input.error_number
 const passwordErrorUppercase: string = t('sign_up.form.password_input.error_uppercase');
 const errorNetworkDescription: string = t('failure_responses.client_errors.network_error');
 
-jest.mock('uuid', (): { v4: () => string } => ({
-  v4: () => '132',
+jest.mock('uuid', () => ({
+  v4: jest.fn(() => '132'),
 }));
 
 const validateCreateUserInput: (variables: { input: CreateUserInput }) => boolean = (variables: {
@@ -131,17 +131,23 @@ const validationInputFields: ValidationFormElement[] = [
   { fieldKey: 'passwordInput', value: 'qwertyui', errorMessage: passwordErrorNumbers },
   { fieldKey: 'passwordInput', value: 'q1wertyui', errorMessage: passwordErrorUppercase },
 ];
+
+function renderAuthLayout(mocks: MockedResponse[]): RenderResult {
+  return render(
+    <MockedProvider mocks={mocks} addTypename={false}>
+      <AuthLayout />
+    </MockedProvider>
+  );
+}
+
 describe('AuthLayout', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
   it('renders AuthComponent component correctly', () => {
-    const { getByText, getByPlaceholderText, getByRole } = render(
-      <MockedProvider mocks={[]} addTypename={false}>
-        <AuthLayout />
-      </MockedProvider>
-    );
+    const { getByText, getByPlaceholderText, getByRole } = renderAuthLayout([]);
+
     const formTitle: HTMLElement = getByText(formTitleText);
     expect(formTitle).toBeInTheDocument();
     expect(getByPlaceholderText(fullNamePlaceholder)).toBeInTheDocument();
@@ -151,11 +157,9 @@ describe('AuthLayout', () => {
     expect(getByRole(buttonRole, { name: submitButtonText })).toBeInTheDocument();
   });
   it('displays loader and submits form successfully without errors', async () => {
-    const { getByRole, queryByRole, queryByText, getByText } = render(
-      <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
-        <AuthLayout />
-      </MockedProvider>
-    );
+    const { getByRole, queryByRole, queryByText, getByText } = renderAuthLayout([
+      fulfilledMockResponse,
+    ]);
 
     fillForm(testInitials, testEmail, testPassword, true);
 
@@ -186,11 +190,7 @@ describe('AuthLayout', () => {
       variableMatcher: mockVariableMatcher,
     };
 
-    render(
-      <MockedProvider mocks={[mockWithVariableCapture]} addTypename={false}>
-        <AuthLayout />
-      </MockedProvider>
-    );
+    renderAuthLayout([mockWithVariableCapture]);
 
     fillForm(testInitials, testEmail, testPassword, true);
 
@@ -207,11 +207,7 @@ describe('AuthLayout', () => {
     });
   });
   it('shows loading spinner during registration and hides it after completion', async () => {
-    const { queryByRole } = render(
-      <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
-        <AuthLayout />
-      </MockedProvider>
-    );
+    const { queryByRole } = renderAuthLayout([fulfilledMockResponse]);
 
     await waitFor(() => {
       expect(queryByRole('status')).not.toBeInTheDocument();
@@ -228,11 +224,7 @@ describe('AuthLayout', () => {
     });
   });
   it('registration with server error: user exist ', async () => {
-    const { findByRole, getByPlaceholderText } = render(
-      <MockedProvider mocks={[rejectedMockResponse]} addTypename={false}>
-        <AuthLayout />
-      </MockedProvider>
-    );
+    const { findByRole, getByPlaceholderText } = renderAuthLayout([rejectedMockResponse]);
 
     const email: string = testEmail.toLowerCase();
     fillForm(testInitials, email, testPassword, true);
@@ -244,11 +236,7 @@ describe('AuthLayout', () => {
     expect(getByPlaceholderText(passwordPlaceholder)).toHaveValue(testPassword);
   });
   it('should successfully submit the form and update state', async () => {
-    const { getByRole, queryByText, getByText } = render(
-      <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
-        <AuthLayout />
-      </MockedProvider>
-    );
+    const { getByRole, queryByText, getByText } = renderAuthLayout([fulfilledMockResponse]);
 
     fillForm(testInitials, testEmail, testPassword, true);
 
@@ -264,11 +252,7 @@ describe('AuthLayout', () => {
     });
   });
   it('registration with server error: status code 500', async () => {
-    const { getByText, queryByRole } = render(
-      <MockedProvider mocks={internalServerErrorResponse} addTypename={false}>
-        <AuthLayout />
-      </MockedProvider>
-    );
+    const { getByText, queryByRole } = renderAuthLayout(internalServerErrorResponse);
 
     const { fullNameInput, emailInput, passwordInput, privacyCheckbox } = fillForm(
       testInitials,
@@ -299,11 +283,8 @@ describe('AuthLayout', () => {
     });
   });
   it('should handle alert errors correctly and update state', async () => {
-    const { findByRole } = render(
-      <MockedProvider mocks={[mockInternalServerErrorResponse]} addTypename={false}>
-        <AuthLayout />
-      </MockedProvider>
-    );
+    const { findByRole } = renderAuthLayout([mockInternalServerErrorResponse]);
+
     fillForm(testInitials, testEmail, testPassword, true);
 
     const serverErrorMessage: HTMLElement = await findByRole(alertRole);
@@ -311,11 +292,8 @@ describe('AuthLayout', () => {
     expect(serverErrorMessage).toHaveTextContent(somethingWentWrong);
   });
   it('resets the form after successful submit with no errors', async () => {
-    const { getByText, getByRole, queryByText } = render(
-      <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
-        <AuthLayout />
-      </MockedProvider>
-    );
+    const { getByText, getByRole, queryByText } = renderAuthLayout([fulfilledMockResponse]);
+
     fillForm(testInitials, testEmail, testPassword, true);
     const { fullNameInput, emailInput, passwordInput, privacyCheckbox } = getFormElements();
 
@@ -336,11 +314,8 @@ describe('AuthLayout', () => {
     });
   });
   it('notification state has success value by default', async () => {
-    const { getByText, queryByText } = render(
-      <MockedProvider mocks={internalServerErrorResponse} addTypename={false}>
-        <AuthLayout />
-      </MockedProvider>
-    );
+    const { getByText, queryByText } = renderAuthLayout(internalServerErrorResponse);
+
     const successTitle: HTMLElement = getByText(successTitleText);
     const successButton: HTMLElement = getByText(successBackButton);
     const errorBox: HTMLElement | null = queryByText(errorTitleText);
@@ -354,11 +329,7 @@ describe('AuthLayout', () => {
   test.each(inputFields)(
     'displays validation errors only after touching fields when mode is onTouche',
     async ({ fieldKey, value }) => {
-      const { queryByText } = render(
-        <MockedProvider mocks={[]} addTypename={false}>
-          <AuthLayout />
-        </MockedProvider>
-      );
+      const { queryByText } = renderAuthLayout([]);
 
       const formElements: GetElementsResult = getFormElements();
       const inputField: HTMLInputElement | null =
@@ -381,11 +352,7 @@ describe('AuthLayout', () => {
   test.each(validationInputFields)(
     'displays validation errors for incorrect input values',
     async ({ fieldKey, value, errorMessage }) => {
-      const { queryByText } = render(
-        <MockedProvider mocks={[]} addTypename={false}>
-          <AuthLayout />
-        </MockedProvider>
-      );
+      const { queryByText } = renderAuthLayout([]);
 
       const formElements: GetElementsResult = getFormElements();
       const inputField: HTMLInputElement | null =
@@ -402,7 +369,7 @@ describe('AuthLayout', () => {
     }
   );
   it('handles maximum length and special character inputs', async () => {
-    const longName: string = 'A'.repeat(50);
+    const longName: string = `${'A'.repeat(25)} ${'B'.repeat(24)}`;
     const specialCharsEmail: string = 'test.user+special@example.com';
     const complexPassword: string = 'P@$$w0rd!*&^%';
 
@@ -423,11 +390,7 @@ describe('AuthLayout', () => {
       }),
     };
 
-    const { getByText } = render(
-      <MockedProvider mocks={[specialCharsMock]} addTypename={false}>
-        <AuthLayout />
-      </MockedProvider>
-    );
+    const { getByText } = renderAuthLayout([specialCharsMock]);
 
     fillForm(longName, specialCharsEmail, complexPassword, true);
 
@@ -436,24 +399,24 @@ describe('AuthLayout', () => {
     });
   });
   it('should initialize with empty errorText (no error message visible)', () => {
-    const { queryByText } = render(
-      <MockedProvider mocks={[]} addTypename={false}>
-        <AuthLayout />
-      </MockedProvider>
-    );
+    const { queryByText } = renderAuthLayout([]);
 
     const networkErrorElement: HTMLElement | null = queryByText(errorNetworkDescription);
     expect(networkErrorElement).not.toBeInTheDocument();
+  });
+  it('should have success state by default when notificationType is "success"', async () => {
+    const { getByText } = renderAuthLayout([fulfilledMockResponse]);
+
+    await waitFor(() => {
+      const successElement: HTMLElement = getByText(successTitleText);
+      expect(successElement).toBeInTheDocument();
+    });
   });
 });
 
 describe('AuthLayoutWithNotification', () => {
   it('should successfully retry submission after a 500 error', async () => {
-    const { findByText, getByText, queryByRole } = render(
-      <MockedProvider mocks={internalServerErrorResponse} addTypename={false}>
-        <AuthLayout />
-      </MockedProvider>
-    );
+    const { findByText, getByText, queryByRole } = renderAuthLayout(internalServerErrorResponse);
 
     fillForm(testInitials, testEmail, testPassword, true);
 
@@ -480,23 +443,9 @@ describe('AuthLayoutWithNotification', () => {
       expect(successTitle).toBeVisible();
     });
   });
-  it('should have success state by default when notificationType is "success"', async () => {
-    const { getByText } = render(
-      <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
-        <AuthLayout />
-      </MockedProvider>
-    );
-    await waitFor(() => {
-      const successElement: HTMLElement = getByText(successTitleText);
-      expect(successElement).toBeInTheDocument();
-    });
-  });
+
   it('should show success notification after successful form submission and hide it after clicking back', async () => {
-    const { queryByAltText, getByRole } = render(
-      <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
-        <AuthLayout />
-      </MockedProvider>
-    );
+    const { queryByAltText, getByRole } = renderAuthLayout([fulfilledMockResponse]);
 
     fillForm(testInitials, testEmail, testPassword, true);
 
@@ -519,11 +468,8 @@ describe('AuthLayoutWithNotification', () => {
     });
   });
   it('does not reset the form when notification type is error', async () => {
-    const { getByText } = render(
-      <MockedProvider mocks={internalServerErrorResponse} addTypename={false}>
-        <AuthLayout />
-      </MockedProvider>
-    );
+    const { getByText } = renderAuthLayout(internalServerErrorResponse);
+
     fillForm(testInitials, testEmail, testPassword, true);
     const { fullNameInput, emailInput, passwordInput, privacyCheckbox } = getFormElements();
 
@@ -541,11 +487,7 @@ describe('AuthLayoutWithNotification', () => {
     });
   });
   it('shows success notification after successful authentication', async () => {
-    const { getByText, getByRole, queryByText } = render(
-      <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
-        <AuthLayout />
-      </MockedProvider>
-    );
+    const { getByText, getByRole, queryByText } = renderAuthLayout([fulfilledMockResponse]);
 
     fillForm(testInitials, testEmail, testPassword, true);
 
@@ -562,11 +504,7 @@ describe('AuthLayoutWithNotification', () => {
     });
   });
   it('should initialize with success notification state', () => {
-    const { getByText, queryByText } = render(
-      <MockedProvider mocks={[]} addTypename={false}>
-        <AuthLayout />
-      </MockedProvider>
-    );
+    const { getByText, queryByText } = renderAuthLayout([]);
 
     const successTitle: HTMLElement = getByText(successTitleText);
     expect(successTitle).toBeInTheDocument();
@@ -589,11 +527,8 @@ describe('AuthLayoutWithNotification', () => {
       },
       error: new Error('Failed to fetch'),
     };
-    const { queryByText } = render(
-      <MockedProvider mocks={[failedToFetchMockResponse]} addTypename={false}>
-        <AuthLayout />
-      </MockedProvider>
-    );
+    const { queryByText } = renderAuthLayout([failedToFetchMockResponse]);
+
     fillForm(testInitials, testEmail, testPassword, true);
 
     await waitFor(async () => {
