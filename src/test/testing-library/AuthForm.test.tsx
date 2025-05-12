@@ -26,7 +26,7 @@ const emailInputText: string = t('sign_up.form.email_input.label');
 const passwordInputText: string = t('sign_up.form.password_input.label');
 
 const requiredText: string = t('sign_up.form.email_input.required');
-const emailMissingSymbols: string = t('sign_up.form.email_input.step_error_message');
+const emailMissingSymbols: string = t('sign_up.form.email_input.email_format_error');
 const passwordErrorLength: string = t('sign_up.form.password_input.error_length');
 const passwordTipAltText: string = t('sign_up.form.password_tip.alt');
 

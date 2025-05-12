@@ -5,7 +5,7 @@ const MAX_INITIALS_LENGTH: number = 255;
 type ValidationMessageKey = 'formatError' | 'lettersOnlyError' | 'required';
 
 export const validationMessages: Record<ValidationMessageKey, string> = {
-  formatError: t('sign_up.form.name_input.error_text'),
+  formatError: t('sign_up.form.name_input.full_name_format_error'),
   lettersOnlyError: t('sign_up.form.name_input.special_characters_error'),
   required: t('sign_up.form.name_input.required'),
 };

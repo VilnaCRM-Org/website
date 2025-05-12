@@ -126,13 +126,13 @@
         "placeholder": "Mykhailo Svitskyi",
         "special_characters_error": "Please use letters only",
         "required": "This field is required",
-        "error_text": "Please enter your full name in the correct format"
+        "full_name_format_error": "Please enter your full name in the correct format"
       },
       "email_input": {
         "label": "Email",
         "placeholder": "vilnaCRM@gmail.com",
         "required": "This field is required",
-        "step_error_message": "Please make sure your email includes '@' and '.'",
+        "email_format_error": "Please make sure your email includes '@' and '.'",
         "invalid_message": "Please enter a valid email address"
       },
       "password_input": {

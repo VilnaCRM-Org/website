@@ -41,7 +41,7 @@ const emailWithoutDot: string = 'test@test';
 const InvalidEmail: string = 'test@test.';
 
 const emailErrorKeys: { stepError: string; invalid: string } = {
-  stepError: t('sign_up.form.email_input.step_error_message'),
+  stepError: t('sign_up.form.email_input.email_format_error'),
   invalid: t('sign_up.form.email_input.invalid_message'),
 };
 

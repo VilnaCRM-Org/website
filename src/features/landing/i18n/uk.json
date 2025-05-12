@@ -126,15 +126,15 @@
       "name_input": {
         "label": "Ваше ім’я та прізвище",
         "placeholder": "Михайло Светський",
-        "special_characters_error": "Будь ласка, викорситовуйте лише літери",
+        "special_characters_error": "Будь ласка, використовуйте лише літери",
         "required": "Це поле обов'язкове",
-        "error_text": "Будь ласка, введіть повне ім’я у правильному форматі"
+        "full_name_format_error": "Будь ласка, введіть повне ім’я у правильному форматі"
       },
       "email_input": {
         "label": "E-mail",
         "placeholder": "vilnaCRM@gmail.com",
         "required": "Це поле обов'язкове",
-        "step_error_message": "Будь ласка, переконайтеся, що email містить '@' та '.'",
+        "email_format_error": "Будь ласка, переконайтеся, що email містить '@' та '.'",
         "invalid_message": "Будь ласка, введіть коректну електронну адресу"
       },
       "password_input": {
