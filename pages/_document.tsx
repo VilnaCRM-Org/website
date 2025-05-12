@@ -11,6 +11,7 @@ export default function Document(): React.ReactElement {
         <meta name="apple-mobile-web-app-title" content="VilnaCRM" />
         <meta name="application-name" content="VilnaCRM" />
         <meta name="theme-color" content="#ffffff" />
+        <meta name="msapplication-config" content="/layout/favicon/browserconfig.xml" />
 
         <link rel="icon" type="image/svg+xml" sizes="16x16" href="/layout/favicon/16x16.svg" />
         <link rel="icon" type="image/svg+xml" sizes="32x32" href="/layout/favicon/32x32.svg" />
@@ -29,16 +30,14 @@ export default function Document(): React.ReactElement {
         <link rel="shortcut icon" type="image/svg+xml" href="/layout/favicon/32x32.svg" />
         <link rel="icon" type="image/png" sizes="32x32" href="/layout/favicon/32x32.png" />
 
-        <link rel="apple-touch-icon" sizes="180x180" href="/layout/favicon/apple-icon.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/layout/favicon/apple-touch-icon.png" />
         <link rel="mask-icon" href="/layout/favicon/safari-pinned-tab.svg" color="#ffffff" />
 
-        <link rel="icon" type="image/x-icon" href="/layout/favicon/favicon.ico" />
+        <link rel="icon" sizes="any" href="/layout/favicon/favicon.ico" />
+        <link rel="icon" type="image/svg+xml" href="/layout/favicon/favicon.svg" />
+        <link rel="icon" type="image/png" href="/layout/favicon/favicon-96x96.png" sizes="96x96" />
 
-        <link
-          rel="manifest"
-          type="application/manifest+json"
-          href="/layout/favicon/site.webmanifest"
-        />
+        <link rel="manifest" href="/layout/favicon/site.webmanifest" />
       </Head>
       <body>
         <Main />

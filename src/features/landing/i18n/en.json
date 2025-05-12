@@ -124,7 +124,7 @@
       "name_input": {
         "label": "Your name and surname",
         "placeholder": "Mykhailo Svitskyi",
-        "special_characters_error": "Your name should only contain letters",
+        "special_characters_error": "Please use letters only",
         "required": "This field is required",
         "error_text": "Please enter your full name in the correct format"
       },
