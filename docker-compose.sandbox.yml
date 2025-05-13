@@ -2,6 +2,6 @@ services:
   sandbox:
     build:
       context: .
-    command: ["sh", "/app/scripts/build-out.sh"]
+    command: ["sh", "-c", "ls -alh / && ls -alh . && ./scripts/build-out.sh"]
     volumes:
       - .:/app
