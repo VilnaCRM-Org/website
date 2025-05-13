@@ -1,4 +1,5 @@
 import { Box, Container } from '@mui/material';
+import Image from 'next/image';
 import { getOptimizedImageProps } from 'next-export-optimize-images/image';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -26,15 +27,6 @@ const getImageProps: (src: string, alt?: string) => React.ImgHTMLAttributes<HTML
 
 function ForWhoSection(): React.ReactElement {
   const { t } = useTranslation();
-
-  const bigScreenProps: React.ImgHTMLAttributes<HTMLImageElement> = getImageProps(
-    bigScreen,
-    t('alts.big_screen')
-  );
-  const smallScreenProps: React.ImgHTMLAttributes<HTMLImageElement> = getImageProps(
-    smallScreen,
-    t('alts.small_screen')
-  );
 
   return (
     <Box id="forWhoSection" component="section" sx={styles.wrapper}>
@@ -92,8 +84,18 @@ function ForWhoSection(): React.ReactElement {
               </Box>
             </Box>
             <Box sx={styles.square}>
-              <Box component="img" {...bigScreenProps} sx={styles.bigScreen} loading="lazy" />
-              <Box component="img" {...smallScreenProps} sx={styles.smallScreen} loading="lazy" />
+            <Image
+                src={bigScreen}
+                alt={t('alts.big_screen')}
+                style={styles.bigScreen}
+                loading="lazy"
+              />
+              <Image
+                src={smallScreen}
+                alt={t('alts.small_screen')}
+                style={styles.smallScreen}
+                loading="lazy"
+              />
               <Box
                 component="img"
                 {...getImageProps(waves)}
