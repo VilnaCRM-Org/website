@@ -4,4 +4,4 @@ services:
       context: .
     command: ["sh", "-c", "ls -alh /app && /app/scripts/build-out.sh"]
     volumes:
-      - .:/app
+      - /codebuild-user/website:/app
