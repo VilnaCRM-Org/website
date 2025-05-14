@@ -2,6 +2,8 @@ import { render, screen } from '@testing-library/react';
 import userEvent, { UserEvent } from '@testing-library/user-event';
 import { t } from 'i18next';
 
+import { clientErrorMessages } from '@/test/shared/clientErrorMessages';
+
 import NotificationError from '../../features/landing/components/Notification/NotificationError';
 
 import { buttonRole } from './constants';
@@ -11,8 +13,8 @@ const backToFormButtonText: string = t('notifications.error.button');
 
 const errorImgAltText: string = t('notifications.error.images.error');
 const errorTitleText: string = t('notifications.error.title');
-const errorDescription: string = t('notifications.error.description');
-const errorNetworkDescription: string = t('failure_responses.client_errors.network_error');
+const errorWentWrong: string = clientErrorMessages.went_wrong;
+const errorNetwork: string = clientErrorMessages.network;
 
 describe('NotificationError Component', () => {
   let mockSetIsOpen: jest.Mock;
@@ -27,11 +29,11 @@ describe('NotificationError Component', () => {
     render(<NotificationError setIsOpen={mockSetIsOpen} onRetry={mockOnRetry} loading={false} />);
 
     expect(screen.getByText(errorTitleText)).toBeInTheDocument();
-    expect(screen.getByText(errorDescription)).toBeInTheDocument();
+    expect(screen.getByText(errorWentWrong)).toBeInTheDocument();
     expect(screen.getByRole(buttonRole, { name: retrySubmitButtonText })).toBeInTheDocument();
     expect(screen.getByRole(buttonRole, { name: backToFormButtonText })).toBeInTheDocument();
 
-    expect(screen.queryByText(errorNetworkDescription)).not.toBeInTheDocument();
+    expect(screen.queryByText(errorNetwork)).not.toBeInTheDocument();
   });
 
   it('calls retrySubmit when retry button is clicked', async () => {
@@ -78,14 +80,14 @@ describe('NotificationError Component', () => {
   it('should display the default description when errorText is empty or undefined', () => {
     render(<NotificationError setIsOpen={jest.fn()} onRetry={mockOnRetry} loading={false} />);
 
-    expect(screen.getByText(errorDescription)).toBeInTheDocument();
+    expect(screen.getByText(errorWentWrong)).toBeInTheDocument();
   });
 
   it('renders the correct title and description', () => {
     render(<NotificationError setIsOpen={mockSetIsOpen} onRetry={mockOnRetry} loading={false} />);
 
     expect(screen.getByText(errorTitleText)).toBeInTheDocument();
-    expect(screen.getByText(errorDescription)).toBeInTheDocument();
+    expect(screen.getByText(errorWentWrong)).toBeInTheDocument();
   });
 
   it('renders content box with correct styles', () => {

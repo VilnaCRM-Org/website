@@ -14,7 +14,6 @@ import {
 } from '@/components';
 
 import QuestionMark from '../../../assets/svg/auth-section/questionMark.svg';
-import FormAlert from '../FormAlert';
 import { PasswordTip } from '../PasswordTip';
 import { validateFullName, validatePassword, validateEmail } from '../Validations';
 
@@ -22,7 +21,6 @@ import styles from './styles';
 import { AuthFormProps } from './types';
 
 function AuthForm({
-  serverErrorMessage,
   onSubmit,
   handleSubmit,
   control,
@@ -138,8 +136,6 @@ function AuthForm({
           />
         )}
       />
-
-      {serverErrorMessage && <FormAlert apiErrorDetails={serverErrorMessage} />}
 
       <Box sx={styles.buttonWrapper}>
         <UiButton

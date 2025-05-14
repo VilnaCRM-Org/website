@@ -3,6 +3,8 @@ import userEvent, { UserEvent } from '@testing-library/user-event';
 import { t } from 'i18next';
 import React from 'react';
 
+import { clientErrorMessages } from '@/test/shared/clientErrorMessages';
+
 import Notification from '../../features/landing/components/Notification';
 import { notificationComponents } from '../../features/landing/components/Notification/Notification';
 import {
@@ -15,7 +17,6 @@ import { checkElementsInDocument, SetIsOpenType } from './utils';
 
 const successTitleText: string = t('notifications.success.title');
 const errorTitleText: string = t('notifications.error.title');
-const errorDescription: string = t('notifications.error.description');
 const successDescriptionText: string = t('notifications.success.description');
 const confettiImgAltText: string = t('notifications.success.images.confetti');
 const gearsImgAltText: string = t('notifications.success.images.gears');
@@ -258,6 +259,6 @@ describe('Notification', () => {
       setIsOpen: mockSetIsOpen,
     });
 
-    expect(screen.getByText(errorDescription)).toBeInTheDocument();
+    expect(screen.getByText(clientErrorMessages.went_wrong)).toBeInTheDocument();
   });
 });

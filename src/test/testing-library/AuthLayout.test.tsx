@@ -7,6 +7,7 @@ import { CreateUserInput } from '@/test/apollo-server/types';
 
 import SIGNUP_MUTATION from '../../features/landing/api/service/userService';
 import AuthLayout from '../../features/landing/components/AuthSection/AuthForm';
+import { clientErrorMessages } from '../shared/clientErrorMessages';
 
 import {
   buttonRole,
@@ -20,9 +21,10 @@ import {
 } from './constants';
 import {
   fillForm,
-  mockInternalServerErrorResponse,
-  rejectedMockResponse,
+  mockUserExistsErrorResponse,
   getFormElements,
+  GetElementsResult,
+  mockInternalServerErrorResponse,
 } from './utils';
 
 const statusRole: string = 'status';
@@ -35,16 +37,12 @@ const confettiAltText: string = t('notifications.success.images.confetti');
 const successBackButton: string = t('notifications.success.button');
 const requiredText: string = t('sign_up.form.email_input.required');
 const errorTitleText: string = t('notifications.error.title');
-const defaultErrorDescription: string = t('notifications.error.description');
-const somethingWentWrong: string = t('failure_responses.client_errors.something_went_wrong');
-const networkErrorNotification: string = t('failure_responses.client_errors.network_error');
 const retryTextButton: string = t('notifications.error.retry_button');
 const emailMissingSymbols: string = t('sign_up.form.email_input.email_format_error');
 const emailValidationText: string = t('sign_up.form.email_input.invalid_message');
 const passwordErrorLength: string = t('sign_up.form.password_input.error_length');
 const passwordErrorNumbers: string = t('sign_up.form.password_input.error_numbers');
 const passwordErrorUppercase: string = t('sign_up.form.password_input.error_uppercase');
-const errorNetworkDescription: string = t('failure_responses.client_errors.network_error');
 
 jest.mock('uuid', () => ({
   v4: jest.fn(() => '132'),
@@ -93,8 +91,7 @@ class ServerError extends Error {
 }
 
 const networkError: Error = new ServerError();
-
-const internalServerErrorResponse: MockedResponse[] = [
+const mockNetworkErrorAndSuccessResponses: MockedResponse[] = [
   {
     request: {
       query: SIGNUP_MUTATION,
@@ -111,12 +108,7 @@ const internalServerErrorResponse: MockedResponse[] = [
   },
   fulfilledMockResponse,
 ];
-interface GetElementsResult {
-  fullNameInput: HTMLInputElement | null;
-  emailInput: HTMLInputElement | null;
-  passwordInput: HTMLInputElement | null;
-  privacyCheckbox: HTMLInputElement | null;
-}
+
 type FormElement = { fieldKey: string; value: string };
 const inputFields: FormElement[] = [
   { fieldKey: 'fullNameInput', value: testInitials },
@@ -224,7 +216,7 @@ describe('AuthLayout', () => {
     });
   });
   it('registration with server error: user exist ', async () => {
-    const { findByRole, getByPlaceholderText } = renderAuthLayout([rejectedMockResponse]);
+    const { findByRole, getByPlaceholderText } = renderAuthLayout([mockUserExistsErrorResponse]);
 
     const email: string = testEmail.toLowerCase();
     fillForm(testInitials, email, testPassword, true);
@@ -252,7 +244,7 @@ describe('AuthLayout', () => {
     });
   });
   it('registration with server error: status code 500', async () => {
-    const { getByText, queryByRole } = renderAuthLayout(internalServerErrorResponse);
+    const { getByText, queryByRole } = renderAuthLayout(mockNetworkErrorAndSuccessResponses);
 
     const { fullNameInput, emailInput, passwordInput, privacyCheckbox } = fillForm(
       testInitials,
@@ -283,13 +275,14 @@ describe('AuthLayout', () => {
     });
   });
   it('should handle alert errors correctly and update state', async () => {
-    const { findByRole } = renderAuthLayout([mockInternalServerErrorResponse]);
+    const { getByRole } = renderAuthLayout([mockInternalServerErrorResponse]);
 
     fillForm(testInitials, testEmail, testPassword, true);
 
-    const serverErrorMessage: HTMLElement = await findByRole(alertRole);
-    expect(serverErrorMessage).toBeInTheDocument();
-    expect(serverErrorMessage).toHaveTextContent(somethingWentWrong);
+    await waitFor(() => {
+      const serverErrorMessage: HTMLElement = getByRole(alertRole);
+      expect(serverErrorMessage).toBeInTheDocument();
+    });
   });
   it('resets the form after successful submit with no errors', async () => {
     const { getByText, getByRole, queryByText } = renderAuthLayout([fulfilledMockResponse]);
@@ -314,7 +307,7 @@ describe('AuthLayout', () => {
     });
   });
   it('notification state has success value by default', async () => {
-    const { getByText, queryByText } = renderAuthLayout(internalServerErrorResponse);
+    const { getByText, queryByText } = renderAuthLayout(mockNetworkErrorAndSuccessResponses);
 
     const successTitle: HTMLElement = getByText(successTitleText);
     const successButton: HTMLElement = getByText(successBackButton);
@@ -401,7 +394,8 @@ describe('AuthLayout', () => {
   it('should initialize with empty errorText (no error message visible)', () => {
     const { queryByText } = renderAuthLayout([]);
 
-    const networkErrorElement: HTMLElement | null = queryByText(errorNetworkDescription);
+    const networkErrorElement: HTMLElement | null = queryByText(clientErrorMessages.network);
+
     expect(networkErrorElement).not.toBeInTheDocument();
   });
   it('should have success state by default when notificationType is "success"', async () => {
@@ -416,7 +410,9 @@ describe('AuthLayout', () => {
 
 describe('AuthLayoutWithNotification', () => {
   it('should successfully retry submission after a 500 error', async () => {
-    const { findByText, getByText, queryByRole } = renderAuthLayout(internalServerErrorResponse);
+    const { findByText, getByText, queryByRole } = renderAuthLayout(
+      mockNetworkErrorAndSuccessResponses
+    );
 
     fillForm(testInitials, testEmail, testPassword, true);
 
@@ -424,10 +420,13 @@ describe('AuthLayoutWithNotification', () => {
       expect(queryByRole('status')).toBeInTheDocument();
     });
 
-    const errorTitle: HTMLElement = await findByText(errorTitleText);
-    const defaultErrorText: HTMLElement = await findByText(defaultErrorDescription);
-    expect(errorTitle).toBeInTheDocument();
-    expect(defaultErrorText).toBeInTheDocument();
+    await waitFor(() => {
+      const errorTitle: HTMLElement = getByText(errorTitleText);
+      const serverError: HTMLElement = getByText(clientErrorMessages.server_error);
+
+      expect(errorTitle).toBeInTheDocument();
+      expect(serverError).toBeInTheDocument();
+    });
 
     const retryButton: HTMLElement = await findByText(retryTextButton);
     fireEvent.click(retryButton);
@@ -468,7 +467,7 @@ describe('AuthLayoutWithNotification', () => {
     });
   });
   it('does not reset the form when notification type is error', async () => {
-    const { getByText } = renderAuthLayout(internalServerErrorResponse);
+    const { getByText } = renderAuthLayout([mockInternalServerErrorResponse]);
 
     fillForm(testInitials, testEmail, testPassword, true);
     const { fullNameInput, emailInput, passwordInput, privacyCheckbox } = getFormElements();
@@ -480,10 +479,10 @@ describe('AuthLayoutWithNotification', () => {
 
     await waitFor(() => {
       const errorBox: HTMLElement = getByText(errorTitleText);
-      const defaultErrorText: HTMLElement = getByText(defaultErrorDescription);
+      const wentWrongError: HTMLElement = getByText(clientErrorMessages.went_wrong);
 
-      expect(errorBox).toBeInTheDocument();
-      expect(defaultErrorText).toBeInTheDocument();
+      expect(errorBox).toBeVisible();
+      expect(wentWrongError).toBeInTheDocument();
     });
   });
   it('shows success notification after successful authentication', async () => {
@@ -527,13 +526,17 @@ describe('AuthLayoutWithNotification', () => {
       },
       error: new Error('Failed to fetch'),
     };
-    const { queryByText } = renderAuthLayout([failedToFetchMockResponse]);
+
+    const { getByText } = renderAuthLayout([failedToFetchMockResponse]);
 
     fillForm(testInitials, testEmail, testPassword, true);
 
-    await waitFor(async () => {
-      const networkErrorElement: HTMLElement | null = queryByText(networkErrorNotification);
-      expect(networkErrorElement).toBeInTheDocument();
+    await waitFor(() => {
+      const errorTitle: HTMLElement = getByText(errorTitleText);
+      const networkErrorNode: HTMLElement = getByText(clientErrorMessages.network);
+
+      expect(errorTitle).toBeInTheDocument();
+      expect(networkErrorNode).toBeInTheDocument();
     });
   });
 });

@@ -165,7 +165,6 @@
         },
         "error": {
           "title": "An error occurred",
-          "description": "Internal Server Error",
           "retry_button": "Try again",
           "button": "Go back",
           "images": { "error": "Red triangle with a warning about an error." }
@@ -173,14 +172,17 @@
       },
       "failure_responses": {
         "authentication_errors": {
-          "unauthorized_access": "Unauthorized access. Please log in again.",
-          "access_denied": "Access denied. You do not have permission to perform this action."
+          "unauthorized_access": "Unauthorized access. Please log in again",
+          "access_denied": "Access denied. You do not have permission to perform this action"
         },
         "client_errors": {
-          "something_went_wrong": "Something went wrong with the request. Try again later.",
-          "unexpected_error": "An unexpected error occurred. Please try again.",
-          "network_error": "Network error. Please check your internet connection."
-        }
+          "something_went_wrong": "Something went wrong with the request. Try again later",
+          "unexpected_error": "An unexpected error occurred. Please try again"
+        },
+        "network_errors": {
+          "network_error": "Network error. Please check your internet connection"
+        },
+        "server_errors": { "server_error": "Internal Server Error" }
       },
       "footer": {
         "logo_alt": "Vilna logo",
@@ -366,7 +368,6 @@
         },
         "error": {
           "title": "Трапилась помилка",
-          "description": "Внутрішня помилка сервера",
           "retry_button": "Спробувати ще раз",
           "button": "Назад",
           "images": { "error": "Червоний трикутник з попередженням про помилку." }
@@ -374,14 +375,15 @@
       },
       "failure_responses": {
         "authentication_errors": {
-          "unauthorized_access": "Неавторизований доступ. Будь ласка, увійдіть знову.",
-          "access_denied": "Доступ заборонено. У вас немає прав для виконання цієї дії."
+          "unauthorized_access": "Неавторизований доступ. Будь ласка, увійдіть знову",
+          "access_denied": "Доступ заборонено. У вас немає прав для виконання цієї дії"
         },
         "client_errors": {
-          "something_went_wrong": "Щось пішло не так із запитом. Спробуйте ще раз пізніше.",
-          "unexpected_error": "Сталася непередбачена помилка. Будь ласка, спробуйте ще раз.",
-          "network_error": "Помилка мережі. Перевірте з’єднання з інтернетом."
-        }
+          "something_went_wrong": "Щось пішло не так із запитом. Спробуйте ще раз пізніше",
+          "unexpected_error": "Сталася непередбачена помилка. Будь ласка, спробуйте ще раз"
+        },
+        "network_errors": { "network_error": "Помилка мережі. Перевірте з’єднання з інтернетом" },
+        "server_errors": { "server_error": "Внутрішня помилка сервера." }
       },
       "footer": {
         "logo_alt": "Vilna логотип",

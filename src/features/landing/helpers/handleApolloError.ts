@@ -2,17 +2,24 @@ import { ApolloError } from '@apollo/client';
 import { GraphQLFormattedError } from 'graphql';
 import { t } from 'i18next';
 
-import { NotificationStatus } from '../components/Notification/types';
+type clientErrorKeys =
+  | 'network'
+  | 'unauthorized'
+  | 'denied'
+  | 'unexpected'
+  | 'went_wrong'
+  | 'server_error';
 
-interface HandleErrorProps {
-  setServerErrorMessage: (message: string) => void;
-  setNotificationType: (type: NotificationStatus) => void;
-  setIsNotificationOpen: (isOpen: boolean) => void;
-  setErrorText: (message: string) => void;
-}
+const clientErrorMessages: Record<clientErrorKeys, string> = {
+  unauthorized: t('failure_responses.authentication_errors.unauthorized_access'),
+  denied: t('failure_responses.authentication_errors.access_denied'),
 
-type HandleNetworkErrorProps = HandleErrorProps & { networkError: ApolloError['networkError'] };
-type HandleNetworkErrorType = (props: HandleNetworkErrorProps) => void;
+  went_wrong: t('failure_responses.client_errors.something_went_wrong'),
+  unexpected: t('failure_responses.client_errors.unexpected_error'),
+
+  network: t('failure_responses.network_errors.network_error'),
+  server_error: t('failure_responses.server_errors.server_error'),
+};
 
 export function isServerError(error: unknown): error is { statusCode?: number; message?: string } {
   if (typeof error !== 'object' || error === null) {
@@ -27,83 +34,64 @@ export function isServerError(error: unknown): error is { statusCode?: number; m
   );
 }
 
-export const handleNetworkError: HandleNetworkErrorType = ({
-  networkError,
-  setServerErrorMessage,
-  setNotificationType,
-  setIsNotificationOpen,
-  setErrorText,
-}: HandleNetworkErrorProps): void => {
-  if (networkError === null) return;
+export type HandleApolloErrorProps = { error: unknown };
+export type HandleApolloErrorType = (props: HandleApolloErrorProps) => string;
 
-  if (!isServerError(networkError)) {
-    setServerErrorMessage(t('failure_responses.client_errors.something_went_wrong'));
-    return;
-  }
+enum HTTPStatusCodes {
+  SERVER_ERROR = 500,
+  UNAUTHORIZED = 401,
+  FORBIDDEN = 403,
+}
+type HandleNetworkErrorProps = { statusCode?: number; message?: string } | unknown;
+type HandleNetworkErrorType = (props: HandleNetworkErrorProps) => string;
 
-  if (networkError.statusCode === 500) {
-    setNotificationType(NotificationStatus.ERROR);
-    setIsNotificationOpen(true);
-    return;
-  }
+export const handleNetworkError: HandleNetworkErrorType = (
+  networkError: HandleNetworkErrorProps
+): string => {
+  if (!isServerError(networkError)) return clientErrorMessages.went_wrong;
 
-  if (networkError.statusCode === 401) {
-    setServerErrorMessage(t('failure_responses.authentication_errors.unauthorized_access'));
-    return;
-  }
+  const { statusCode, message } = networkError;
 
-  if (networkError.statusCode === 403) {
-    setServerErrorMessage(t('failure_responses.authentication_errors.access_denied'));
-    return;
+  switch (statusCode) {
+    case HTTPStatusCodes.UNAUTHORIZED:
+      return clientErrorMessages.unauthorized;
+    case HTTPStatusCodes.FORBIDDEN:
+      return clientErrorMessages.denied;
+    case HTTPStatusCodes.SERVER_ERROR:
+      return clientErrorMessages.server_error;
+    default:
+      if (message?.includes('Failed to fetch')) return clientErrorMessages.network;
+      return clientErrorMessages.went_wrong;
   }
-
-  if (networkError.message?.includes('Failed to fetch')) {
-    setErrorText(t('failure_responses.client_errors.network_error'));
-    setNotificationType(NotificationStatus.ERROR);
-    setIsNotificationOpen(true);
-    return;
-  }
-  setServerErrorMessage(t('failure_responses.client_errors.something_went_wrong'));
 };
-export type HandleApolloErrorProps = HandleErrorProps & { err: unknown };
-export type HandleApolloErrorType = (props: HandleApolloErrorProps) => void;
 
 export const handleApolloError: HandleApolloErrorType = ({
-  err,
-  setServerErrorMessage,
-  setNotificationType,
-  setIsNotificationOpen,
-  setErrorText,
-}: HandleApolloErrorProps): void => {
-  if (!(err instanceof ApolloError)) {
-    setServerErrorMessage(t('failure_responses.client_errors.unexpected_error'));
-    return;
+  error,
+}: HandleApolloErrorProps): string => {
+  if (!(error instanceof ApolloError)) {
+    return clientErrorMessages.unexpected;
   }
+  const { networkError, graphQLErrors } = error;
 
-  if (err.networkError) {
-    handleNetworkError({
-      networkError: err.networkError,
-      setServerErrorMessage,
-      setNotificationType,
-      setIsNotificationOpen,
-      setErrorText,
-    });
-    return;
-  }
-  if (Array.isArray(err.graphQLErrors) && err.graphQLErrors.length > 0) {
-    const hasServerError: boolean = err.graphQLErrors.some(e => e.extensions?.statusCode === 500);
+  if (networkError) return handleNetworkError(networkError);
 
-    if (hasServerError) {
-      setNotificationType(NotificationStatus.ERROR);
-      setIsNotificationOpen(true);
-      return;
+  if (graphQLErrors.length > 0) {
+    const firstError: GraphQLFormattedError = graphQLErrors[0];
+    const { extensions, message } = firstError;
+
+    switch (extensions?.statusCode) {
+      case HTTPStatusCodes.SERVER_ERROR:
+        return clientErrorMessages.server_error;
+      case HTTPStatusCodes.UNAUTHORIZED:
+        return clientErrorMessages.unauthorized;
+      default:
+        if (message.includes('UNAUTHORIZED')) {
+          return clientErrorMessages.unauthorized;
+        }
+
+        return graphQLErrors.map(e => e.message).join(', ');
     }
-
-    const message: string = err.graphQLErrors
-      .map((e: GraphQLFormattedError) => e.message)
-      .join(', ');
-    setServerErrorMessage(message);
-    return;
   }
-  setServerErrorMessage(t('failure_responses.client_errors.unexpected_error'));
+
+  return clientErrorMessages.unexpected;
 };

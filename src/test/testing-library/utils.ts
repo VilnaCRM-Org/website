@@ -1,3 +1,4 @@
+import { TypedDocumentNode } from '@apollo/client';
 import { MockedResponse } from '@apollo/client/testing';
 import { fireEvent, screen } from '@testing-library/react';
 import { t } from 'i18next';
@@ -5,6 +6,7 @@ import { AriaRole } from 'react';
 
 import { CreateUserInput } from '@/test/apollo-server/types';
 
+import { SignUpInput } from '../../features/landing/api/service/types';
 import SIGNUP_MUTATION from '../../features/landing/api/service/userService';
 import { RegisterItem } from '../../features/landing/types/authentication/form';
 
@@ -29,14 +31,16 @@ class FormElementNotFoundError extends Error {
     this.name = 'FormElementNotFoundError';
   }
 }
-
-export const getFormElements: () => {
+export interface GetElementsResult {
   fullNameInput: HTMLInputElement | null;
   emailInput: HTMLInputElement | null;
   passwordInput: HTMLInputElement | null;
   privacyCheckbox: HTMLInputElement | null;
+}
+interface ExtendedGetElementsResult extends GetElementsResult {
   signUpButton: HTMLElement | null;
-} = () => {
+}
+export const getFormElements: () => ExtendedGetElementsResult = () => {
   const getElementSafe: <T extends HTMLInputElement>(
     queryFunction: () => T,
     elementName: string
@@ -91,12 +95,12 @@ export const fillForm: (
   emailValue?: string,
   passwordValue?: string,
   acceptPrivacyPolicy?: boolean
+) => GetElementsResult = (
+  fullNameValue = '',
+  emailValue = '',
+  passwordValue = '',
+  acceptPrivacyPolicy = false
 ) => {
-  fullNameInput: HTMLInputElement | null;
-  emailInput: HTMLInputElement | null;
-  passwordInput: HTMLInputElement | null;
-  privacyCheckbox: HTMLInputElement | null;
-} = (fullNameValue = '', emailValue = '', passwordValue = '', acceptPrivacyPolicy = false) => {
   validateFormInput(fullNameValue, emailValue, passwordValue);
 
   const { fullNameInput, emailInput, passwordInput, privacyCheckbox, signUpButton } =
@@ -137,12 +141,14 @@ const input: CreateUserInput = {
   password: testPassword,
   clientMutationId: '132',
 };
+type RequestType = { query: TypedDocumentNode<SignUpInput>; variables: { input: CreateUserInput } };
+const request: RequestType = {
+  query: SIGNUP_MUTATION,
+  variables: { input },
+};
 
-export const rejectedMockResponse: MockedResponse = {
-  request: {
-    query: SIGNUP_MUTATION,
-    variables: { input },
-  },
+export const mockUserExistsErrorResponse: MockedResponse = {
+  request,
   result: {
     errors: [
       {
@@ -158,10 +164,7 @@ export const rejectedMockResponse: MockedResponse = {
 };
 
 export const mockInternalServerErrorResponse: MockedResponse = {
-  request: {
-    query: SIGNUP_MUTATION,
-    variables: { input },
-  },
+  request,
   result: {
     errors: [
       {
@@ -181,5 +184,4 @@ export type OnSubmitType = jest.Mock<Promise<void>, [RegisterItem]>;
 
 export interface AuthFormWrapperProps {
   onSubmit: OnSubmitType;
-  serverErrorMessage: string;
 }

@@ -41,7 +41,7 @@ function NotificationError({
         </UiTypography>
 
         <UiTypography component="span" sx={styles.messageDescription}>
-          {errorText || t('notifications.error.description')}
+          {errorText || t('failure_responses.client_errors.something_went_wrong')}
         </UiTypography>
 
         <Box sx={styles.buttonsBox}>
