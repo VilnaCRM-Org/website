@@ -75,7 +75,7 @@ export default {
   formContent: {
     position: 'relative',
     zIndex: '5',
-    padding: '2.25rem 2.5rem 1.5rem 2.5rem',
+    padding: '2.25rem 2.5rem 2.5rem 2.5rem',
     borderRadius: '2rem 2rem 0 0',
     border: `1px solid  ${colorTheme.palette.brandGray.main}`,
     background: colorTheme.palette.white.main,
@@ -83,7 +83,7 @@ export default {
     maxWidth: '31.375rem',
     boxShadow: '1px 1px 41px 0px rgba(59, 68, 80, 0.05)',
     [`@media (max-width: 1130px)`]: {
-      padding: '2.5rem 2.563rem 1.8rem 2.563rem',
+      padding: '2.5rem 2.563rem 3.5rem 2.563rem',
       minWidth: '39.75rem',
       maxHeight: '42.875rem',
     },
@@ -91,8 +91,8 @@ export default {
       minHeight: '100%',
       minWidth: '100%',
       maxWidth: '21.563rem',
-      maxHeight: '66rem',
-      padding: '1.5rem 1.5rem 1.8rem',
+      maxHeight: '512px',
+      padding: '1.5rem 1.5rem 2rem 1.5rem',
     },
   },
 
@@ -137,13 +137,13 @@ export default {
 
   labelText: {
     marginTop: '1.25rem',
-    marginBottom: '3rem',
+    marginBottom: '2rem',
     mx: '0',
     [`@media (max-width: 1130px)`]: {
-      marginBottom: '3rem',
+      marginBottom: '1.5rem',
     },
     [`@media (max-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
-      marginBottom: '2.5rem',
+      marginBottom: '1.188rem',
     },
   },
 

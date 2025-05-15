@@ -39,7 +39,7 @@ interface GetElementsResult {
   privacyCheckbox: HTMLInputElement | null;
 }
 
-function AuthFormWrapper({ onSubmit }: AuthFormWrapperProps): React.ReactElement {
+function AuthFormWrapper({ onSubmit, loading }: AuthFormWrapperProps): React.ReactElement {
   const {
     handleSubmit,
     control,
@@ -52,7 +52,7 @@ function AuthFormWrapper({ onSubmit }: AuthFormWrapperProps): React.ReactElement
       handleSubmit={handleSubmit}
       formValidationErrors={errors}
       control={control}
-      loading={false}
+      loading={loading || false}
     />
   );
 }
@@ -282,6 +282,16 @@ describe('AuthForm', () => {
     await waitFor(() => {
       expect(onSubmit).toHaveBeenCalled();
     });
+  });
+  it('disables form submission when loading is true', () => {
+    render(
+      <MockedProvider mocks={[]} addTypename={false}>
+        <AuthFormWrapper onSubmit={onSubmit} loading />
+      </MockedProvider>
+    );
+
+    const { signUpButton } = getFormElements();
+    expect(signUpButton).toBeDisabled();
   });
 
   // checkbox

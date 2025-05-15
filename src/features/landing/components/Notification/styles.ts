@@ -204,11 +204,9 @@ export default {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    paddingTop: '3.0625rem',
-    [`@media (min-width: ${BREAKPOINTS.MD})`]: {
-      paddingTop: '4.25rem',
-    },
-    [`@media (min-width: ${BREAKPOINTS.LG})`]: {
+    paddingTop: '1rem',
+
+    [`@media (min-width: 641px)`]: {
       paddingTop: '4.25rem',
     },
   },
@@ -224,6 +222,13 @@ export default {
     justifyContent: 'center',
     flexDirection: 'column',
     alignItems: 'center',
+
+    [`@media (min-width: 334px) and (max-width: ${BREAKPOINTS.SM})`]: {
+      padding: '0rem 0.6rem',
+    },
+    [`@media (min-width: 1131px)`]: {
+      padding: '0rem 1.2rem',
+    },
   },
 
   buttonsBox: {

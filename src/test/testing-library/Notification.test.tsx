@@ -3,7 +3,7 @@ import userEvent, { UserEvent } from '@testing-library/user-event';
 import { t } from 'i18next';
 import React from 'react';
 
-import { clientErrorMessages } from '@/test/shared/clientErrorMessages';
+import { ClientErrorMessages, getClientErrorMessages } from '@/shared/clientErrorMessages';
 
 import Notification from '../../features/landing/components/Notification';
 import { notificationComponents } from '../../features/landing/components/Notification/Notification';
@@ -253,12 +253,13 @@ describe('Notification', () => {
     expect(screen.getByText('Network error')).toBeInTheDocument();
   });
   it('should display the default description when errorText is empty or undefined', () => {
+    const messages: ClientErrorMessages = getClientErrorMessages();
     renderNotification({
       type: NotificationStatus.ERROR,
       isOpen: true,
       setIsOpen: mockSetIsOpen,
     });
 
-    expect(screen.getByText(clientErrorMessages.went_wrong)).toBeInTheDocument();
+    expect(screen.getByText(messages.went_wrong)).toBeInTheDocument();
   });
 });

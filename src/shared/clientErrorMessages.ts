@@ -8,7 +8,10 @@ type clientErrorKeys =
   | 'went_wrong'
   | 'server_error';
 
-export const clientErrorMessages: Record<clientErrorKeys, string> = {
+type GetClientsErrorMessages = () => Record<clientErrorKeys, string>;
+export type ClientErrorMessages = Record<clientErrorKeys, string>;
+
+export const getClientErrorMessages: GetClientsErrorMessages = (): ClientErrorMessages => ({
   unauthorized: t('failure_responses.authentication_errors.unauthorized_access'),
   denied: t('failure_responses.authentication_errors.access_denied'),
 
@@ -17,7 +20,7 @@ export const clientErrorMessages: Record<clientErrorKeys, string> = {
 
   network: t('failure_responses.network_errors.network_error'),
   server_error: t('failure_responses.server_errors.server_error'),
-};
+});
 
 export enum HTTPStatusCodes {
   SERVER_ERROR = 500,
