@@ -16,7 +16,6 @@ import {
   getFormElements,
   OnSubmitType,
   AuthFormWrapperProps,
-  mockInternalServerErrorResponse,
 } from './utils';
 
 const formTitleText: string = t('sign_up.form.heading_main');
@@ -26,7 +25,7 @@ const emailInputText: string = t('sign_up.form.email_input.label');
 const passwordInputText: string = t('sign_up.form.password_input.label');
 
 const requiredText: string = t('sign_up.form.email_input.required');
-const emailMissingSymbols: string = t('sign_up.form.email_input.step_error_message');
+const emailMissingSymbols: string = t('sign_up.form.email_input.email_format_error');
 const passwordErrorLength: string = t('sign_up.form.password_input.error_length');
 const passwordTipAltText: string = t('sign_up.form.password_tip.alt');
 
@@ -40,10 +39,7 @@ interface GetElementsResult {
   privacyCheckbox: HTMLInputElement | null;
 }
 
-function AuthFormWrapper({
-  serverErrorMessage,
-  onSubmit,
-}: AuthFormWrapperProps): React.ReactElement {
+function AuthFormWrapper({ onSubmit, loading }: AuthFormWrapperProps): React.ReactElement {
   const {
     handleSubmit,
     control,
@@ -52,11 +48,11 @@ function AuthFormWrapper({
 
   return (
     <AuthForm
-      serverErrorMessage={serverErrorMessage}
       onSubmit={onSubmit}
       handleSubmit={handleSubmit}
       formValidationErrors={errors}
       control={control}
+      loading={loading || false}
     />
   );
 }
@@ -93,13 +89,12 @@ const fulfilledMockResponse: MockedResponse = {
 const mockSubmitSuccess: () => OnSubmitType = (): OnSubmitType =>
   jest.fn().mockResolvedValueOnce(undefined);
 
-const renderAuthFormWithSuccess: (
-  onSubmit?: OnSubmitType,
-  serverErrorMessage?: string
-) => RenderResult = (onSubmit = mockSubmitSuccess(), serverErrorMessage = ''): RenderResult =>
+const renderAuthFormWithSuccess: (onSubmit?: OnSubmitType) => RenderResult = (
+  onSubmit = mockSubmitSuccess()
+): RenderResult =>
   render(
     <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
-      <AuthFormWrapper serverErrorMessage={serverErrorMessage} onSubmit={onSubmit} />
+      <AuthFormWrapper onSubmit={onSubmit} />
     </MockedProvider>
   );
 
@@ -120,7 +115,7 @@ describe('AuthForm', () => {
     const passwordInputLabel: HTMLElement = getByText(passwordInputText);
     const passwordTipImage: HTMLElement = getByAltText(passwordTipAltText);
 
-    const serverErrorMessage: HTMLElement | null = queryByRole(alertRole);
+    const error: HTMLElement | null = queryByRole(alertRole);
     const loader: HTMLElement | null = queryByRole(statusRole);
 
     checkElementsInDocument(
@@ -133,7 +128,7 @@ describe('AuthForm', () => {
     );
 
     expect(loader).not.toBeInTheDocument();
-    expect(serverErrorMessage).not.toBeInTheDocument();
+    expect(error).not.toBeInTheDocument();
   });
   it('renders input fields', () => {
     renderAuthFormWithSuccess();
@@ -164,7 +159,7 @@ describe('AuthForm', () => {
     const { fullNameInput, emailInput, passwordInput, privacyCheckbox } = fillForm();
 
     await waitFor(() => {
-      const serverErrorMessage: HTMLElement | null = queryByRole(alertRole);
+      const errorMessage: HTMLElement | null = queryByRole(alertRole);
 
       expect(fullNameInput?.value).toBe('');
       expect(emailInput?.value).toBe('');
@@ -175,7 +170,7 @@ describe('AuthForm', () => {
       expect(requiredError[0]).toBeInTheDocument();
       expect(requiredError.length).toBe(3);
       expect(privacyCheckbox).toHaveAttribute('aria-invalid', 'true');
-      expect(serverErrorMessage).not.toBeInTheDocument();
+      expect(errorMessage).not.toBeInTheDocument();
       expect(onSubmit).not.toHaveBeenCalled();
     });
   });
@@ -249,19 +244,6 @@ describe('AuthForm', () => {
 
     expect(queryByRole('alert')).not.toBeInTheDocument();
   });
-  it('should show error alert', () => {
-    const { queryByRole } = render(
-      <MockedProvider mocks={[mockInternalServerErrorResponse]} addTypename={false}>
-        <AuthFormWrapper serverErrorMessage="Internal Server Error." onSubmit={onSubmit} />
-      </MockedProvider>
-    );
-    fillForm(testInitials, testEmail, testPassword, true);
-
-    const alert: HTMLElement | null = queryByRole('alert');
-
-    expect(alert).toBeInTheDocument();
-    expect(alert).toHaveTextContent('Internal Server Error');
-  });
   it('check onTouched mode', async () => {
     const user: UserEvent = userEvent.setup();
     const { getAllByText } = renderAuthFormWithSuccess();
@@ -280,7 +262,7 @@ describe('AuthForm', () => {
     });
   });
   it('should render privacy policy links with the correct URLs', () => {
-    const { getAllByRole } = renderAuthFormWithSuccess(onSubmit, 'Internal Server Error.');
+    const { getAllByRole } = renderAuthFormWithSuccess(onSubmit);
 
     const privacyPolicyLink: HTMLElement[] = getAllByRole('link');
     const expectedUrl: string =
@@ -291,7 +273,7 @@ describe('AuthForm', () => {
   it('calls onSubmit with form data when form is submitted', async () => {
     render(
       <MockedProvider mocks={[]} addTypename={false}>
-        <AuthFormWrapper serverErrorMessage="" onSubmit={onSubmit} />
+        <AuthFormWrapper onSubmit={onSubmit} />
       </MockedProvider>
     );
 
@@ -300,6 +282,16 @@ describe('AuthForm', () => {
     await waitFor(() => {
       expect(onSubmit).toHaveBeenCalled();
     });
+  });
+  it('disables form submission when loading is true', () => {
+    render(
+      <MockedProvider mocks={[]} addTypename={false}>
+        <AuthFormWrapper onSubmit={onSubmit} loading />
+      </MockedProvider>
+    );
+
+    const { signUpButton } = getFormElements();
+    expect(signUpButton).toBeDisabled();
   });
 
   // checkbox

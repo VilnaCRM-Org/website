@@ -4,7 +4,6 @@ import React from 'react';
 import { animationTimeout } from '../../constants';
 
 import NotificationError from './NotificationError';
-import NotificationFallback from './NotificationFallback';
 import NotificationSuccess from './NotificationSuccess';
 import styles from './styles';
 import {
@@ -12,21 +11,26 @@ import {
   NotificationComponentProps,
   NotificationComponentType,
   NotificationControlProps,
-  NotificationSuccessProps,
+  NotificationToggleProps,
 } from './types';
 
 export const notificationComponents: NotificationComponentMap = {
-  success: ({ setIsOpen }: NotificationSuccessProps) => (
+  success: ({ setIsOpen }: NotificationToggleProps) => (
     <NotificationSuccess setIsOpen={setIsOpen} />
   ),
-  error: ({ setIsOpen, onRetry }: NotificationComponentProps) => (
-    <NotificationError setIsOpen={setIsOpen} onRetry={onRetry} />
+  error: ({ setIsOpen, onRetry, loading, errorText }: NotificationComponentProps) => (
+    <NotificationError
+      setIsOpen={setIsOpen}
+      onRetry={onRetry}
+      loading={loading}
+      errorText={errorText}
+    />
   ),
 };
 
 function getNotificationComponent(type: keyof NotificationComponentMap): NotificationComponentType {
   if (!notificationComponents[type]) {
-    return NotificationFallback;
+    return NotificationError;
   }
   return notificationComponents[type];
 }
@@ -36,13 +40,20 @@ function Notification({
   setIsOpen,
   isOpen,
   onRetry,
+  loading,
+  errorText,
 }: NotificationControlProps): React.ReactElement {
   const Component: NotificationComponentType = getNotificationComponent(type);
 
   return (
     <Fade in={isOpen} timeout={animationTimeout}>
       <Box sx={styles.notificationSection} role="alert" aria-live="polite">
-        <Component setIsOpen={setIsOpen} onRetry={onRetry} />
+        <Component
+          setIsOpen={setIsOpen}
+          onRetry={onRetry}
+          loading={loading}
+          errorText={errorText}
+        />
       </Box>
     </Fade>
   );

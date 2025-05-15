@@ -6,7 +6,7 @@ export const isValidEmailFormat: (email: string) => boolean = (email: string): b
 const validateEmail: (email: string) => string | boolean = (email: string): string | boolean => {
   if (!isValidEmailFormat(email)) {
     if (!email.includes('@') || !email.includes('.')) {
-      return t('sign_up.form.email_input.step_error_message');
+      return t('sign_up.form.email_input.email_format_error');
     }
     return t('sign_up.form.email_input.invalid_message');
   }

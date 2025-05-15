@@ -1,23 +1,26 @@
 import colorTheme from '@/components/UiColorTheme';
 import { golos } from '@/config/Fonts/golos';
 
-import { BREAKPOINTS, DIMENSIONS } from './constants';
+import { BREAKPOINTS, DIMENSIONS, Z_INDICES } from './constants';
 
 export default {
   notificationSection: {
     position: 'absolute',
     width: '100%',
     height: '100%',
+    border: `1px solid ${colorTheme.palette.grey500.main}`,
+    backgroundColor: colorTheme.palette.white.main,
+    borderRadius: '2rem 2rem 0 0',
+    boxShadow: '1px 1px 41px 0px rgba(59, 68, 80, 0.05)',
+    overflow: 'hidden',
+
+    maxHeight: '40.438rem',
+    maxWidth: '31.375rem',
+
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
-    flexDirection: 'column',
-
-    borderRadius: '2rem 2rem 0 0',
-    border: `1px solid ${colorTheme.palette.grey500.main} `,
-    backgroundColor: colorTheme.palette.white.main,
-    overflow: 'hidden',
-    zIndex: 100,
+    zIndex: Z_INDICES.NOTIFICATION_SECTION,
 
     [`@media (max-width: ${BREAKPOINTS.SM})`]: {
       maxWidth: DIMENSIONS.MIN_WIDTH.XS,
@@ -46,14 +49,14 @@ export default {
 
   // success box
   contentBox: {
-    zIndex: 3,
+    zIndex: Z_INDICES.SUCCESS_BOX,
   },
 
   successTopImgBox: {
     position: 'absolute',
     top: '-0.78rem',
     left: '-8.5rem',
-    zIndex: -1,
+    zIndex: Z_INDICES.GEARS,
 
     [`@media (max-width: ${BREAKPOINTS.SM})`]: {
       transform: 'scale(0.91)',
@@ -74,7 +77,7 @@ export default {
     position: 'absolute',
     bottom: '-0.78rem',
     left: '-11.8rem',
-    zIndex: -1,
+    zIndex: Z_INDICES.BOTTOM_IMG_BOX,
     transform: 'rotate(-180deg)',
 
     [`@media (max-width: ${BREAKPOINTS.SM})`]: {
@@ -89,7 +92,6 @@ export default {
 
     [`@media (min-width: ${BREAKPOINTS.LG})`]: {
       left: '1.3rem',
-      bottom: '0.6rem',
     },
     [`@media (min-width: 1131px)`]: {
       left: '0rem',
@@ -108,11 +110,12 @@ export default {
       top: '3rem',
     },
   },
-  imgWrapperSuccess: {
+  gears: {
     position: 'absolute',
     left: '50%',
     transform: 'translateX(-50%)',
     top: '2rem',
+    zIndex: Z_INDICES.GEARS,
 
     [`@media (max-width: ${BREAKPOINTS.SM})`]: {
       transform: 'translateX(-50%) scale(0.8)',
@@ -124,21 +127,15 @@ export default {
 
   messageContainer: {
     height: '100%',
-    width: '100%',
     display: 'flex',
     justifyContent: 'center',
     flexDirection: 'column',
     alignItems: 'center',
-    paddingBottom: '1.7rem',
     background: `${colorTheme.palette.white.main}`,
-    zIndex: 3,
+    zIndex: Z_INDICES.MESSAGE_CONTAINER,
 
     [`@media (min-width: ${BREAKPOINTS.LG})`]: {
-      padding: '0rem',
-    },
-
-    [`@media (min-width: 1131px)`]: {
-      padding: '3rem',
+      width: '100%',
     },
   },
 
@@ -148,6 +145,7 @@ export default {
     lineHeight: '1.65rem',
     fontFamily: golos.style.fontFamily,
     color: colorTheme.palette.darkPrimary.main,
+    zIndex: Z_INDICES.MESSAGE_TITLE,
 
     [`@media (min-width: 641px)`]: {
       fontWeight: 600,
@@ -157,6 +155,7 @@ export default {
   },
 
   messageDescription: {
+    textAlign: 'center',
     marginTop: '0.5rem',
     fontWeight: 400,
     fontSize: '0.98rem',
@@ -205,11 +204,9 @@ export default {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    paddingTop: '3.0625rem',
-    [`@media (min-width: ${BREAKPOINTS.MD})`]: {
-      paddingTop: '4.25rem',
-    },
-    [`@media (min-width: ${BREAKPOINTS.LG})`]: {
+    paddingTop: '1rem',
+
+    [`@media (min-width: 641px)`]: {
       paddingTop: '4.25rem',
     },
   },
@@ -225,6 +222,13 @@ export default {
     justifyContent: 'center',
     flexDirection: 'column',
     alignItems: 'center',
+
+    [`@media (min-width: 334px) and (max-width: ${BREAKPOINTS.SM})`]: {
+      padding: '0rem 0.6rem',
+    },
+    [`@media (min-width: 1131px)`]: {
+      padding: '0rem 1.2rem',
+    },
   },
 
   buttonsBox: {
