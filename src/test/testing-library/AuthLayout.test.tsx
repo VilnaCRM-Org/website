@@ -132,6 +132,8 @@ function renderAuthLayout(mocks: MockedResponse[]): RenderResult {
   );
 }
 
+const NETWORK_FAILURE: Error = new Error('Failed to fetch');
+
 describe('AuthLayout', () => {
   let messages: ClientErrorMessages;
 
@@ -161,7 +163,6 @@ describe('AuthLayout', () => {
     await waitFor(() => {
       const loader: HTMLElement = getByRole(statusRole);
       expect(loader).toBeInTheDocument();
-      expect(getByRole(statusRole)).toBeInTheDocument();
     });
 
     const serverErrorMessage: HTMLElement | null = queryByRole(alertRole);
@@ -247,7 +248,9 @@ describe('AuthLayout', () => {
     });
   });
   it('registration with server error: status code 500', async () => {
-    const { getByText, queryByRole } = renderAuthLayout(mockNetworkErrorAndSuccessResponses);
+    const { findByRole, getByText, queryByRole } = renderAuthLayout(
+      mockNetworkErrorAndSuccessResponses
+    );
 
     const { fullNameInput, emailInput, passwordInput, privacyCheckbox } = fillForm(
       testInitials,
@@ -255,9 +258,7 @@ describe('AuthLayout', () => {
       testPassword,
       true
     );
-    await waitFor(() => {
-      expect(queryByRole('status')).toBeInTheDocument();
-    });
+    await findByRole(statusRole);
 
     await waitFor(() => {
       const errorTitle: HTMLElement = getByText(errorTitleText);
@@ -291,9 +292,10 @@ describe('AuthLayout', () => {
     const { getByText, getByRole, queryByText } = renderAuthLayout([fulfilledMockResponse]);
 
     fillForm(testInitials, testEmail, testPassword, true);
-    const { fullNameInput, emailInput, passwordInput, privacyCheckbox } = getFormElements();
 
     await waitFor(() => {
+      const { fullNameInput, emailInput, passwordInput, privacyCheckbox } = getFormElements();
+
       expect(fullNameInput?.value).toBe('');
       expect(emailInput?.value).toBe('');
       expect(passwordInput?.value).toBe('');
@@ -535,7 +537,7 @@ describe('AuthLayoutWithNotification', () => {
           },
         },
       },
-      error: new Error('Failed to fetch'),
+      error: NETWORK_FAILURE,
     };
 
     const { getByText } = renderAuthLayout([failedToFetchMockResponse]);

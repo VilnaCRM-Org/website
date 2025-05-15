@@ -43,7 +43,7 @@ export const handleNetworkError: HandleNetworkErrorType = (
     case HTTPStatusCodes.SERVER_ERROR:
       return messages.server_error;
     default:
-      if (message?.includes('Failed to fetch')) return messages.network;
+      if (message?.toLowerCase?.().includes('failed to fetch')) return messages.network;
       return messages.went_wrong;
   }
 };
@@ -70,11 +70,16 @@ export const handleApolloError: HandleApolloErrorType = ({
       case HTTPStatusCodes.UNAUTHORIZED:
         return messages.unauthorized;
       default:
-        if (message.includes('UNAUTHORIZED')) {
+        if (message?.includes('UNAUTHORIZED')) {
           return messages.unauthorized;
         }
 
-        return graphQLErrors.map(e => e.message).join(', ');
+        return (
+          graphQLErrors
+            .map(e => e.message || '')
+            .filter(Boolean)
+            .join(', ') || messages.unexpected
+        );
     }
   }
 
