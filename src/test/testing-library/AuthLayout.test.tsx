@@ -1,13 +1,12 @@
-import { MockedProvider, MockedResponse } from '@apollo/client/testing';
-import { fireEvent, render, RenderResult, waitFor } from '@testing-library/react';
+import { MockedResponse } from '@apollo/client/testing';
+import { fireEvent, waitFor } from '@testing-library/react';
 import { t } from 'i18next';
-import React, { AriaRole } from 'react';
+import { AriaRole } from 'react';
 
 import { ClientErrorMessages, getClientErrorMessages } from '@/shared/clientErrorMessages';
 import { CreateUserInput } from '@/test/apollo-server/types';
 
 import SIGNUP_MUTATION from '../../features/landing/api/service/userService';
-import AuthLayout from '../../features/landing/components/AuthSection/AuthForm';
 
 import {
   buttonRole,
@@ -20,12 +19,14 @@ import {
   testPassword,
 } from './constants';
 import {
-  fillForm,
-  mockUserExistsErrorResponse,
-  getFormElements,
-  GetElementsResult,
+  fulfilledMockResponse,
   mockInternalServerErrorResponse,
-} from './utils';
+  mockNetworkErrorAndSuccessResponses,
+  mockUserExistsErrorResponse,
+  renderAuthLayout,
+} from './fixtures/auth-test-helpers';
+import { NETWORK_FAILURE } from './fixtures/erros';
+import { fillForm, getFormElements, GetElementsResult } from './utils';
 
 const statusRole: string = 'status';
 const alertRole: string = 'alert';
@@ -48,67 +49,6 @@ jest.mock('uuid', () => ({
   v4: jest.fn(() => '132'),
 }));
 
-const validateCreateUserInput: (variables: { input: CreateUserInput }) => boolean = (variables: {
-  input: CreateUserInput;
-}) => {
-  const { input } = variables;
-  return !!input?.email && !!input?.initials && !!input?.password;
-};
-
-const fulfilledMockResponse: MockedResponse = {
-  request: {
-    query: SIGNUP_MUTATION,
-  },
-  variableMatcher: validateCreateUserInput,
-
-  result: variables => {
-    const { input } = variables;
-    const { initials, email, clientMutationId } = input;
-
-    return {
-      data: {
-        createUser: {
-          user: {
-            email,
-            initials,
-            id: 0,
-            confirmed: true,
-          },
-          clientMutationId,
-        },
-      },
-    };
-  },
-};
-
-class ServerError extends Error {
-  public statusCode: number = 500;
-
-  constructor(message = 'Network error') {
-    super(message);
-    this.name = 'ServerError';
-  }
-}
-
-const networkError: Error = new ServerError();
-const mockNetworkErrorAndSuccessResponses: MockedResponse[] = [
-  {
-    request: {
-      query: SIGNUP_MUTATION,
-      variables: {
-        input: {
-          email: testEmail.toLowerCase(),
-          initials: testInitials,
-          password: testPassword,
-          clientMutationId: '132',
-        },
-      },
-    },
-    error: networkError,
-  },
-  fulfilledMockResponse,
-];
-
 type FormElement = { fieldKey: string; value: string };
 const inputFields: FormElement[] = [
   { fieldKey: 'fullNameInput', value: testInitials },
@@ -124,15 +64,14 @@ const validationInputFields: ValidationFormElement[] = [
   { fieldKey: 'passwordInput', value: 'q1wertyui', errorMessage: passwordErrorUppercase },
 ];
 
-function renderAuthLayout(mocks: MockedResponse[]): RenderResult {
-  return render(
-    <MockedProvider mocks={mocks} addTypename={false}>
-      <AuthLayout />
-    </MockedProvider>
-  );
-}
-
-const NETWORK_FAILURE: Error = new Error('Failed to fetch');
+type EdgeCases = { initials: string; email: string; password: string }[];
+const edgeCases: EdgeCases = [
+  {
+    initials: `${'A'.repeat(25)} ${'B'.repeat(24)}`,
+    email: 'test.user+special@example.com',
+    password: 'P@$$w0rd!*&^%',
+  },
+];
 
 describe('AuthLayout', () => {
   let messages: ClientErrorMessages;
@@ -143,7 +82,7 @@ describe('AuthLayout', () => {
   });
 
   it('renders AuthComponent component correctly', () => {
-    const { getByText, getByPlaceholderText, getByRole } = renderAuthLayout([]);
+    const { getByText, getByPlaceholderText, getByRole } = renderAuthLayout();
 
     const formTitle: HTMLElement = getByText(formTitleText);
     expect(formTitle).toBeInTheDocument();
@@ -366,36 +305,16 @@ describe('AuthLayout', () => {
       });
     }
   );
-  it('handles maximum length and special character inputs', async () => {
-    const longName: string = `${'A'.repeat(25)} ${'B'.repeat(24)}`;
-    const specialCharsEmail: string = 'test.user+special@example.com';
-    const complexPassword: string = 'P@$$w0rd!*&^%';
+  test.each(edgeCases)(
+    'submits successfully with edge-case inputs',
+    async ({ initials, email, password }) => {
+      const mocks: MockedResponse[] = [{ ...fulfilledMockResponse, variableMatcher: jest.fn() }];
+      const { findByText } = renderAuthLayout(mocks);
+      fillForm(initials, email, password, true);
+      expect(await findByText(successTitleText)).toBeInTheDocument();
+    }
+  );
 
-    const specialCharsMock: MockedResponse = {
-      ...fulfilledMockResponse,
-      result: () => ({
-        data: {
-          createUser: {
-            user: {
-              email: specialCharsEmail,
-              initials: longName,
-              id: 0,
-              confirmed: true,
-            },
-            clientMutationId: '132',
-          },
-        },
-      }),
-    };
-
-    const { getByText } = renderAuthLayout([specialCharsMock]);
-
-    fillForm(longName, specialCharsEmail, complexPassword, true);
-
-    await waitFor(() => {
-      expect(getByText(successTitleText)).toBeInTheDocument();
-    });
-  });
   it('should initialize with empty errorText (no error message visible)', () => {
     const { queryByText } = renderAuthLayout([]);
 
@@ -491,10 +410,10 @@ describe('AuthLayoutWithNotification', () => {
 
     await waitFor(() => {
       const errorBox: HTMLElement = getByText(errorTitleText);
-      const wentWrongError: HTMLElement = getByText(messages.went_wrong);
+      const serverError: HTMLElement = getByText('Internal Server Error.');
 
       expect(errorBox).toBeVisible();
-      expect(wentWrongError).toBeInTheDocument();
+      expect(serverError).toBeInTheDocument();
     });
   });
   it('shows success notification after successful authentication', async () => {
@@ -551,5 +470,13 @@ describe('AuthLayoutWithNotification', () => {
       expect(errorTitle).toBeInTheDocument();
       expect(networkErrorNode).toBeInTheDocument();
     });
+  });
+  it('should initialize with Notification closed and empty errorText', () => {
+    const { queryByText, queryByLabelText } = renderAuthLayout([]);
+
+    expect(queryByText(messages.went_wrong)).not.toBeInTheDocument();
+
+    expect(queryByLabelText('error')).not.toBeInTheDocument();
+    expect(queryByLabelText('success')).toBeInTheDocument();
   });
 });

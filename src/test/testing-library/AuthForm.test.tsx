@@ -1,22 +1,21 @@
-import { MockedProvider, MockedResponse } from '@apollo/client/testing';
-import { fireEvent, render, RenderResult, waitFor } from '@testing-library/react';
+import { MockedResponse } from '@apollo/client/testing';
+import { fireEvent, RenderResult, waitFor } from '@testing-library/react';
 import { UserEvent, userEvent } from '@testing-library/user-event';
 import { t } from 'i18next';
 import React from 'react';
 import { useForm } from 'react-hook-form';
+
+import {
+  AuthFormWrapperProps,
+  OnSubmitType,
+} from '@/test/testing-library/fixtures/auth-test-helpers';
 
 import SIGNUP_MUTATION from '../../features/landing/api/service/userService';
 import AuthForm from '../../features/landing/components/AuthSection/AuthForm/AuthForm';
 import { RegisterItem } from '../../features/landing/types/authentication/form';
 
 import { testInitials, testEmail, testPassword } from './constants';
-import {
-  checkElementsInDocument,
-  fillForm,
-  getFormElements,
-  OnSubmitType,
-  AuthFormWrapperProps,
-} from './utils';
+import { checkElementsInDocument, fillForm, getFormElements, renderWithProviders } from './utils';
 
 const formTitleText: string = t('sign_up.form.heading_main');
 
@@ -25,6 +24,7 @@ const emailInputText: string = t('sign_up.form.email_input.label');
 const passwordInputText: string = t('sign_up.form.password_input.label');
 
 const requiredText: string = t('sign_up.form.email_input.required');
+const nameRequired: string = t('sign_up.form.name_input.required');
 const emailMissingSymbols: string = t('sign_up.form.email_input.email_format_error');
 const passwordErrorLength: string = t('sign_up.form.password_input.error_length');
 const passwordTipAltText: string = t('sign_up.form.password_tip.alt');
@@ -44,7 +44,10 @@ function AuthFormWrapper({ onSubmit, loading }: AuthFormWrapperProps): React.Rea
     handleSubmit,
     control,
     formState: { errors },
-  } = useForm<RegisterItem>({ mode: 'onTouched' });
+  } = useForm<RegisterItem>({
+    mode: 'onTouched',
+    defaultValues: { Email: '', FullName: '', Password: '', Privacy: false },
+  });
 
   return (
     <AuthForm
@@ -89,14 +92,18 @@ const fulfilledMockResponse: MockedResponse = {
 const mockSubmitSuccess: () => OnSubmitType = (): OnSubmitType =>
   jest.fn().mockResolvedValueOnce(undefined);
 
-const renderAuthFormWithSuccess: (onSubmit?: OnSubmitType) => RenderResult = (
-  onSubmit = mockSubmitSuccess()
-): RenderResult =>
-  render(
-    <MockedProvider mocks={[fulfilledMockResponse]} addTypename={false}>
-      <AuthFormWrapper onSubmit={onSubmit} />
-    </MockedProvider>
-  );
+interface RenderAuthFormOptions extends Partial<AuthFormWrapperProps> {
+  mocks?: MockedResponse[];
+}
+export function renderAuthForm({
+  onSubmit = mockSubmitSuccess(),
+  mocks = [fulfilledMockResponse],
+  loading = false,
+}: RenderAuthFormOptions = {}): RenderResult {
+  return renderWithProviders(<AuthFormWrapper onSubmit={onSubmit} loading={loading} />, {
+    apolloMocks: mocks,
+  });
+}
 
 describe('AuthForm', () => {
   let onSubmit: OnSubmitType;
@@ -106,7 +113,7 @@ describe('AuthForm', () => {
   });
 
   it('renders AuthForm component', () => {
-    const { queryByRole, getByAltText, getByText, getByRole } = renderAuthFormWithSuccess();
+    const { queryByRole, getByAltText, getByText, getByRole } = renderAuthForm();
 
     const authForm: HTMLElement = getByRole('form');
     const formTitle: HTMLElement = getByText(formTitleText);
@@ -131,13 +138,13 @@ describe('AuthForm', () => {
     expect(error).not.toBeInTheDocument();
   });
   it('renders input fields', () => {
-    renderAuthFormWithSuccess();
+    renderAuthForm();
     const { fullNameInput, emailInput, passwordInput } = getFormElements();
 
     checkElementsInDocument(fullNameInput, emailInput, passwordInput);
   });
   it('correct linkage between inputs and values', async () => {
-    renderAuthFormWithSuccess();
+    renderAuthForm();
 
     const { fullNameInput, emailInput, passwordInput, privacyCheckbox } = fillForm(
       testInitials,
@@ -153,8 +160,17 @@ describe('AuthForm', () => {
       expect(privacyCheckbox).toBeChecked();
     });
   });
+  it('renders inputs with correct default values', () => {
+    renderAuthForm();
+    const { fullNameInput, emailInput, passwordInput, privacyCheckbox } = getFormElements();
+
+    expect(emailInput?.value).toBe('');
+    expect(fullNameInput?.value).toBe('');
+    expect(passwordInput?.value).toBe('');
+    expect(privacyCheckbox?.checked).toBe(false);
+  });
   it('displays "required" validation message when the input fields are left empty', async () => {
-    const { queryByRole, queryAllByText } = renderAuthFormWithSuccess();
+    const { queryByRole, queryAllByText } = renderAuthForm();
 
     const { fullNameInput, emailInput, passwordInput, privacyCheckbox } = fillForm();
 
@@ -182,7 +198,7 @@ describe('AuthForm', () => {
   ])(
     'should display and remove required validation message for %s',
     async ({ fieldKey, value }) => {
-      const { queryByText, getByText } = renderAuthFormWithSuccess();
+      const { queryByText, getByText } = renderAuthForm();
 
       const formElements: GetElementsResult = getFormElements();
       const inputField: HTMLInputElement | null =
@@ -203,7 +219,7 @@ describe('AuthForm', () => {
   );
 
   it('should have default values', () => {
-    renderAuthFormWithSuccess();
+    renderAuthForm();
 
     const { fullNameInput, emailInput, passwordInput, privacyCheckbox } = getFormElements();
 
@@ -213,7 +229,7 @@ describe('AuthForm', () => {
     expect(privacyCheckbox).not.toBeChecked();
   });
   it('should have correct values', () => {
-    renderAuthFormWithSuccess();
+    renderAuthForm();
 
     const { fullNameInput, emailInput, passwordInput, privacyCheckbox } = getFormElements();
 
@@ -228,7 +244,7 @@ describe('AuthForm', () => {
     expect(privacyCheckbox).toBeChecked();
   });
   it('onSubmit have been called after registration', async () => {
-    const { queryByRole } = renderAuthFormWithSuccess(onSubmit);
+    const { queryByRole } = renderAuthForm({ onSubmit });
 
     fillForm(testInitials, testEmail, testPassword, true);
 
@@ -246,7 +262,7 @@ describe('AuthForm', () => {
   });
   it('check onTouched mode', async () => {
     const user: UserEvent = userEvent.setup();
-    const { getAllByText } = renderAuthFormWithSuccess();
+    const { getAllByText } = renderAuthForm();
 
     const { fullNameInput, emailInput, passwordInput } = getFormElements();
 
@@ -262,7 +278,7 @@ describe('AuthForm', () => {
     });
   });
   it('should render privacy policy links with the correct URLs', () => {
-    const { getAllByRole } = renderAuthFormWithSuccess(onSubmit);
+    const { getAllByRole } = renderAuthForm({ onSubmit });
 
     const privacyPolicyLink: HTMLElement[] = getAllByRole('link');
     const expectedUrl: string =
@@ -271,11 +287,7 @@ describe('AuthForm', () => {
     expect(privacyPolicyLink[1]).toHaveAttribute('href', expectedUrl);
   });
   it('calls onSubmit with form data when form is submitted', async () => {
-    render(
-      <MockedProvider mocks={[]} addTypename={false}>
-        <AuthFormWrapper onSubmit={onSubmit} />
-      </MockedProvider>
-    );
+    renderAuthForm({ onSubmit, mocks: [] });
 
     fillForm(testInitials, testEmail, testPassword, true);
 
@@ -284,11 +296,7 @@ describe('AuthForm', () => {
     });
   });
   it('disables form submission when loading is true', () => {
-    render(
-      <MockedProvider mocks={[]} addTypename={false}>
-        <AuthFormWrapper onSubmit={onSubmit} loading />
-      </MockedProvider>
-    );
+    renderAuthForm({ onSubmit, mocks: [], loading: true });
 
     const { signUpButton } = getFormElements();
     expect(signUpButton).toBeDisabled();
@@ -296,7 +304,7 @@ describe('AuthForm', () => {
 
   // checkbox
   it('should not set error on Privacy checkbox when there are no validation errors', async () => {
-    renderAuthFormWithSuccess();
+    renderAuthForm();
     const { privacyCheckbox } = fillForm(testInitials, testEmail, testPassword, true);
 
     await waitFor(() => {
@@ -304,7 +312,7 @@ describe('AuthForm', () => {
     });
   });
   it('should mark Privacy checkbox as invalid if other fields are filled, but checkbox is not checked', async () => {
-    const { queryByText } = renderAuthFormWithSuccess();
+    const { queryByText } = renderAuthForm();
     const { privacyCheckbox, passwordInput, emailInput, fullNameInput } = fillForm(
       testInitials,
       testEmail,
@@ -323,7 +331,7 @@ describe('AuthForm', () => {
     });
   });
   it('should not mark Privacy checkbox as invalid if other fields are invalid but checkbox was checked', async () => {
-    const { getAllByText } = renderAuthFormWithSuccess();
+    const { getAllByText } = renderAuthForm();
     const { privacyCheckbox } = fillForm('', '', '', true);
 
     await waitFor(() => {
@@ -335,7 +343,7 @@ describe('AuthForm', () => {
     });
   });
   it('should have isInvalid true for checkbox if it is not checked and other fields are empty', async () => {
-    const { getAllByText } = renderAuthFormWithSuccess();
+    const { getAllByText } = renderAuthForm();
     const { privacyCheckbox } = fillForm('', '', '', false);
 
     await waitFor(() => {
@@ -348,7 +356,7 @@ describe('AuthForm', () => {
     });
   });
   it('should have isInvalid true when Privacy checkbox is not checked on submit', async () => {
-    const { getAllByText } = renderAuthFormWithSuccess();
+    const { getAllByText } = renderAuthForm();
     const { signUpButton, privacyCheckbox } = getFormElements();
 
     if (signUpButton) fireEvent.click(signUpButton);
@@ -365,7 +373,7 @@ describe('AuthForm', () => {
   });
 
   it('should pass validation when Privacy checkbox is checked after failing validation', async () => {
-    renderAuthFormWithSuccess();
+    renderAuthForm();
     const { privacyCheckbox } = fillForm(testInitials, testEmail, testPassword, false);
 
     await waitFor(() => {
@@ -379,7 +387,7 @@ describe('AuthForm', () => {
     });
   });
   it('displays validation errors for incorrect input values and correct for checkbox', async () => {
-    const { queryByText } = renderAuthFormWithSuccess();
+    const { queryByText } = renderAuthForm();
     const { privacyCheckbox, passwordInput, emailInput, fullNameInput } = getFormElements();
 
     if (fullNameInput) {
@@ -403,6 +411,7 @@ describe('AuthForm', () => {
       expect(queryByText(emailMissingSymbols)).toBeInTheDocument();
       expect(queryByText(passwordErrorLength)).toBeInTheDocument();
       expect(queryByText(requiredText)).toBeInTheDocument();
+      expect(queryByText(nameRequired)).toBeInTheDocument();
     });
   });
 });

@@ -13,7 +13,8 @@ import {
 } from '../../features/landing/components/Notification/types';
 
 import { buttonRole } from './constants';
-import { checkElementsInDocument, SetIsOpenType } from './utils';
+import { SetIsOpenType } from './fixtures/auth-test-helpers';
+import { checkElementsInDocument } from './utils';
 
 const successTitleText: string = t('notifications.success.title');
 const errorTitleText: string = t('notifications.error.title');

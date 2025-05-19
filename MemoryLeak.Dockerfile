@@ -1,4 +1,4 @@
-FROM node:23.10.0-alpine3.21
+FROM node:23.11.1-alpine3.21
 
 RUN apk add --no-cache \
     chromium=135.0.7049.95-r0 \
@@ -20,5 +20,8 @@ WORKDIR /app
 
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install
+
+RUN addgroup -S appuser && adduser -S appuser -G appuser
+USER appuser
 
 CMD ["tail", "-f", "/dev/null"]

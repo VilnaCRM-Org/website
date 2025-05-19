@@ -21,9 +21,3 @@ export const getClientErrorMessages: GetClientsErrorMessages = (): ClientErrorMe
   network: t('failure_responses.network_errors.network_error'),
   server_error: t('failure_responses.server_errors.server_error'),
 });
-
-export enum HTTPStatusCodes {
-  SERVER_ERROR = 500,
-  UNAUTHORIZED = 401,
-  FORBIDDEN = 403,
-}

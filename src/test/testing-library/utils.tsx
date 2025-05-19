@@ -1,14 +1,7 @@
-import { TypedDocumentNode } from '@apollo/client';
-import { MockedResponse } from '@apollo/client/testing';
-import { fireEvent, screen } from '@testing-library/react';
+import { MockedProvider, MockedResponse } from '@apollo/client/testing';
+import { fireEvent, render, RenderResult, screen } from '@testing-library/react';
 import { t } from 'i18next';
-import { AriaRole } from 'react';
-
-import { CreateUserInput } from '@/test/apollo-server/types';
-
-import { SignUpInput } from '../../features/landing/api/service/types';
-import SIGNUP_MUTATION from '../../features/landing/api/service/userService';
-import { RegisterItem } from '../../features/landing/types/authentication/form';
+import React, { AriaRole } from 'react';
 
 import {
   fullNamePlaceholder,
@@ -16,9 +9,6 @@ import {
   passwordPlaceholder,
   submitButtonText,
   buttonRole,
-  testEmail,
-  testInitials,
-  testPassword,
 } from './constants';
 
 const checkboxRole: AriaRole = 'checkbox';
@@ -135,54 +125,13 @@ export const checkElementsInDocument: (...elements: (HTMLElement | null)[]) => v
   elements.forEach(element => expect(element).toBeInTheDocument());
 };
 
-const input: CreateUserInput = {
-  email: testEmail,
-  initials: testInitials,
-  password: testPassword,
-  clientMutationId: '132',
-};
-type RequestType = { query: TypedDocumentNode<SignUpInput>; variables: { input: CreateUserInput } };
-const request: RequestType = {
-  query: SIGNUP_MUTATION,
-  variables: { input },
-};
-
-export const mockUserExistsErrorResponse: MockedResponse = {
-  request,
-  result: {
-    errors: [
-      {
-        message: 'A user with this email already exists.',
-        locations: [{ line: 1, column: 1 }],
-        path: ['createUser'],
-        extensions: {
-          code: 'BAD_USER_INPUT',
-        },
-      },
-    ],
-  },
-};
-
-export const mockInternalServerErrorResponse: MockedResponse = {
-  request,
-  result: {
-    errors: [
-      {
-        message: 'Internal Server Error.',
-        locations: [{ line: 1, column: 1 }],
-        path: ['createUser'],
-        extensions: {
-          code: 'INTERNAL_SERVER_ERROR',
-        },
-      },
-    ],
-  },
-};
-
-export type SetIsOpenType = jest.Mock<(isOpen: boolean) => void>;
-export type OnSubmitType = jest.Mock<Promise<void>, [RegisterItem]>;
-
-export interface AuthFormWrapperProps {
-  onSubmit: OnSubmitType;
-  loading?: boolean;
+export function renderWithProviders(
+  ui: React.ReactElement,
+  { apolloMocks = [] }: { apolloMocks?: MockedResponse[] } = {}
+): RenderResult {
+  return render(
+    <MockedProvider mocks={apolloMocks} addTypename={false}>
+      {ui}
+    </MockedProvider>
+  );
 }

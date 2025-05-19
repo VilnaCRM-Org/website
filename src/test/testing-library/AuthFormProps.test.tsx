@@ -1,12 +1,13 @@
-import { MockedProvider } from '@apollo/client/testing';
-import { render } from '@testing-library/react';
+import { MockedResponse } from '@apollo/client/testing';
+import { RenderResult } from '@testing-library/react';
 import React from 'react';
 import { useForm } from 'react-hook-form';
 
 import AuthForm from '../../features/landing/components/AuthSection/AuthForm/AuthForm';
 import { RegisterItem } from '../../features/landing/types/authentication/form';
 
-import { AuthFormWrapperProps, OnSubmitType } from './utils';
+import { AuthFormWrapperProps, OnSubmitType } from './fixtures/auth-test-helpers';
+import { renderWithProviders } from './utils';
 
 function AuthFormWrapper({ onSubmit }: AuthFormWrapperProps): React.ReactElement {
   const {
@@ -28,6 +29,15 @@ function AuthFormWrapper({ onSubmit }: AuthFormWrapperProps): React.ReactElement
     />
   );
 }
+function renderAuthForm({
+  onSubmit,
+  mocks,
+}: {
+  mocks?: MockedResponse[];
+  onSubmit: OnSubmitType;
+}): RenderResult {
+  return renderWithProviders(<AuthFormWrapper onSubmit={onSubmit} />, { apolloMocks: mocks });
+}
 
 jest.mock('../../features/landing/components/AuthSection/AuthForm/AuthForm', () => ({
   __esModule: true,
@@ -42,11 +52,7 @@ describe('AuthFormWrapper - Props Forwarding', () => {
   });
 
   it('forwards props correctly to AuthForm', () => {
-    render(
-      <MockedProvider mocks={[]} addTypename={false}>
-        <AuthFormWrapper onSubmit={onSubmit} />
-      </MockedProvider>
-    );
+    renderAuthForm({ onSubmit, mocks: [] });
 
     expect(AuthForm).toHaveBeenCalledWith(
       expect.objectContaining({

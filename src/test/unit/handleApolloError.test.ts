@@ -1,17 +1,15 @@
 import { ApolloError } from '@apollo/client';
 import { GraphQLFormattedError } from 'graphql';
 
-import {
-  ClientErrorMessages,
-  getClientErrorMessages,
-  HTTPStatusCodes,
-} from '@/shared/clientErrorMessages';
+import { ClientErrorMessages, getClientErrorMessages } from '@/shared/clientErrorMessages';
+import { HTTPStatusCodes } from '@/shared/httpStatusCodes';
 
 import {
   handleApolloError,
   HandleApolloErrorProps,
   handleNetworkError,
 } from '../../features/landing/helpers/handleApolloError';
+import { networkMessage } from '../testing-library/fixtures/erros';
 
 interface StatusCode {
   statusCode: number;
@@ -30,7 +28,7 @@ describe('Error Handling', () => {
     });
 
     it('should return network error for "Failed to fetch" message', () => {
-      const error: ErrorType = { statusCode: 400, message: 'Failed to fetch' };
+      const error: ErrorType = { statusCode: 400, message: networkMessage };
       expect(handleNetworkError(error)).toBe(messages.network);
     });
 
@@ -56,6 +54,34 @@ describe('Error Handling', () => {
 
     it('should return unexpected error for non-object input', () => {
       expect(handleNetworkError(null)).toBe(messages.went_wrong);
+    });
+
+    it('should return server error for 502 status', () => {
+      const error: StatusCode = { statusCode: 502 };
+      expect(handleNetworkError(error)).toBe(messages.server_error);
+    });
+
+    it('should return server error for 504 status', () => {
+      const error: StatusCode = { statusCode: 504 };
+      expect(handleNetworkError(error)).toBe(messages.server_error);
+    });
+
+    it('should return "went wrong" error for undefined statusCode', () => {
+      const error: ErrorType = {
+        statusCode: undefined as unknown as number,
+        message: 'Some error',
+      };
+      expect(handleNetworkError(error)).toBe(messages.went_wrong);
+    });
+
+    it('should return network error for "network request failed" message', () => {
+      const error: ErrorType = { statusCode: 400, message: 'Network request failed' };
+      expect(handleNetworkError(error)).toBe(messages.network);
+    });
+
+    it('should return network error for "fetch failed" message', () => {
+      const error: ErrorType = { statusCode: 400, message: 'Fetch failed' };
+      expect(handleNetworkError(error)).toBe(messages.network);
     });
   });
 
@@ -116,6 +142,16 @@ describe('Error Handling', () => {
 
       const notApolloError: HandleApolloErrorProps = { error: {} as ApolloError };
       expect(handleApolloError(notApolloError)).toBe(messages.unexpected);
+    });
+    it('should handle graphQLErrors with FORBIDDEN statusCode', () => {
+      const graphQLError: GraphQLFormattedError = {
+        message: 'Forbidden Access',
+        extensions: { statusCode: HTTPStatusCodes.FORBIDDEN },
+      };
+      const error: HandleApolloErrorProps = {
+        error: new ApolloError({ graphQLErrors: [graphQLError] }),
+      };
+      expect(handleApolloError(error)).toBe(messages.denied);
     });
   });
 });

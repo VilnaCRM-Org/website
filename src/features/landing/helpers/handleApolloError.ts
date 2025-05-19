@@ -1,11 +1,8 @@
 import { ApolloError } from '@apollo/client';
 import { GraphQLFormattedError } from 'graphql';
 
-import {
-  ClientErrorMessages,
-  getClientErrorMessages,
-  HTTPStatusCodes,
-} from '@/shared/clientErrorMessages';
+import { ClientErrorMessages, getClientErrorMessages } from '@/shared/clientErrorMessages';
+import { HTTPStatusCodes } from '@/shared/httpStatusCodes';
 
 export function isServerError(error: unknown): error is { statusCode?: number; message?: string } {
   if (typeof error !== 'object' || error === null) {
@@ -34,18 +31,24 @@ export const handleNetworkError: HandleNetworkErrorType = (
   if (!isServerError(networkError)) return messages.went_wrong;
 
   const { statusCode, message } = networkError;
+  const loweredMessage: string = message?.toLowerCase() ?? '';
 
-  switch (statusCode) {
-    case HTTPStatusCodes.UNAUTHORIZED:
-      return messages.unauthorized;
-    case HTTPStatusCodes.FORBIDDEN:
-      return messages.denied;
-    case HTTPStatusCodes.SERVER_ERROR:
-      return messages.server_error;
-    default:
-      if (message?.toLowerCase?.().includes('failed to fetch')) return messages.network;
-      return messages.went_wrong;
+  if (statusCode === HTTPStatusCodes.UNAUTHORIZED) return messages.unauthorized;
+  if (statusCode === HTTPStatusCodes.FORBIDDEN) return messages.denied;
+
+  if (statusCode !== undefined && statusCode >= 500 && statusCode < 600) {
+    return messages.server_error;
   }
+
+  if (
+    loweredMessage.includes('failed to fetch') ||
+    loweredMessage.includes('network request failed') ||
+    loweredMessage.includes('fetch failed')
+  ) {
+    return messages.network;
+  }
+
+  return messages.went_wrong;
 };
 
 export const handleApolloError: HandleApolloErrorType = ({
@@ -69,6 +72,8 @@ export const handleApolloError: HandleApolloErrorType = ({
         return messages.server_error;
       case HTTPStatusCodes.UNAUTHORIZED:
         return messages.unauthorized;
+      case HTTPStatusCodes.FORBIDDEN:
+        return messages.denied;
       default:
         if (message?.includes('UNAUTHORIZED')) {
           return messages.unauthorized;
