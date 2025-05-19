@@ -25,7 +25,7 @@ import {
   mockUserExistsErrorResponse,
   renderAuthLayout,
 } from './fixtures/auth-test-helpers';
-import { NETWORK_FAILURE } from './fixtures/erros';
+import { NETWORK_FAILURE } from './fixtures/errors';
 import { fillForm, getFormElements, GetElementsResult } from './utils';
 
 const statusRole: string = 'status';
@@ -91,6 +91,16 @@ describe('AuthLayout', () => {
     expect(getByPlaceholderText(passwordPlaceholder)).toBeInTheDocument();
     expect(getByRole(checkboxRole)).toBeInTheDocument();
     expect(getByRole(buttonRole, { name: submitButtonText })).toBeInTheDocument();
+  });
+
+  it('renders inputs with correct default values', () => {
+    renderAuthLayout();
+    const { fullNameInput, emailInput, passwordInput, privacyCheckbox } = getFormElements();
+
+    expect(emailInput?.value).toBe('');
+    expect(fullNameInput?.value).toBe('');
+    expect(passwordInput?.value).toBe('');
+    expect(privacyCheckbox?.checked).toBe(false);
   });
   it('displays loader and submits form successfully without errors', async () => {
     const { getByRole, queryByRole, queryByText, getByText } = renderAuthLayout([

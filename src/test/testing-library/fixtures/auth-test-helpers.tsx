@@ -4,7 +4,7 @@ import { RenderResult } from '@testing-library/react';
 
 import { CreateUserInput } from '@/test/apollo-server/types';
 import { testEmail, testInitials, testPassword } from '@/test/testing-library/constants';
-import { ServerError } from '@/test/testing-library/fixtures/erros';
+import { ServerError } from '@/test/testing-library/fixtures/errors';
 import { renderWithProviders } from '@/test/testing-library/utils';
 
 import { SignUpInput } from '../../../features/landing/api/service/types';
@@ -105,7 +105,7 @@ export const mockInternalServerErrorResponse: MockedResponse = {
   },
 };
 
-export type SetIsOpenType = jest.Mock<(isOpen: boolean) => void>;
+export type SetIsOpenType = jest.Mock<void, [boolean]>;
 export type OnSubmitType = jest.Mock<Promise<void>, [RegisterItem]>;
 
 export interface AuthFormWrapperProps {

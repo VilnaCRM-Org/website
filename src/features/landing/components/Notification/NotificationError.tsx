@@ -25,7 +25,7 @@ function NotificationError({
   const { t } = useTranslation();
   const onHandleClose: () => void = (): void => setIsOpen(false);
   return (
-    <Box sx={styles.contentBoxError} aria-invalid="true" ari-label="error" aria-live="polite">
+    <Box sx={styles.contentBoxError} aria-invalid="true" aria-label="error" aria-live="polite">
       <Box sx={styles.imageWrapperError}>
         <Image
           src={ErrorImg}

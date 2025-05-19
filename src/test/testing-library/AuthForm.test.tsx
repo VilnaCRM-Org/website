@@ -39,15 +39,12 @@ interface GetElementsResult {
   privacyCheckbox: HTMLInputElement | null;
 }
 
-function AuthFormWrapper({ onSubmit, loading }: AuthFormWrapperProps): React.ReactElement {
+function AuthFormWrapper({ onSubmit, loading = false }: AuthFormWrapperProps): React.ReactElement {
   const {
     handleSubmit,
     control,
     formState: { errors },
-  } = useForm<RegisterItem>({
-    mode: 'onTouched',
-    defaultValues: { Email: '', FullName: '', Password: '', Privacy: false },
-  });
+  } = useForm<RegisterItem>({ mode: 'onTouched' });
 
   return (
     <AuthForm
@@ -55,7 +52,7 @@ function AuthFormWrapper({ onSubmit, loading }: AuthFormWrapperProps): React.Rea
       handleSubmit={handleSubmit}
       formValidationErrors={errors}
       control={control}
-      loading={loading || false}
+      loading={loading}
     />
   );
 }
@@ -159,15 +156,6 @@ describe('AuthForm', () => {
       expect(fullNameInput?.value).toBe(testInitials);
       expect(privacyCheckbox).toBeChecked();
     });
-  });
-  it('renders inputs with correct default values', () => {
-    renderAuthForm();
-    const { fullNameInput, emailInput, passwordInput, privacyCheckbox } = getFormElements();
-
-    expect(emailInput?.value).toBe('');
-    expect(fullNameInput?.value).toBe('');
-    expect(passwordInput?.value).toBe('');
-    expect(privacyCheckbox?.checked).toBe(false);
   });
   it('displays "required" validation message when the input fields are left empty', async () => {
     const { queryByRole, queryAllByText } = renderAuthForm();

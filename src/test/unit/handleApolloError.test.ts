@@ -9,7 +9,7 @@ import {
   HandleApolloErrorProps,
   handleNetworkError,
 } from '../../features/landing/helpers/handleApolloError';
-import { networkMessage } from '../testing-library/fixtures/erros';
+import { networkMessage } from '../testing-library/fixtures/errors';
 
 interface StatusCode {
   statusCode: number;
