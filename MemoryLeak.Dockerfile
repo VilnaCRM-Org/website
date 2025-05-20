@@ -21,8 +21,4 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install
 
-RUN addgroup -S appuser && adduser -S appuser -G appuser
-RUN chown -R appuser:appuser /app
-USER appuser
-
 CMD ["sleep","infinity"]
