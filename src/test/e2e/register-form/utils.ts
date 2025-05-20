@@ -51,6 +51,7 @@ export function responseFilter(resp: Response): boolean {
 interface GraphQLResponse {
   errors: { message: string }[];
 }
+
 const logger: Logger = winston.createLogger({
   level: 'info',
   format: winston.format.simple(),
