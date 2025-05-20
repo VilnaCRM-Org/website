@@ -1,9 +1,9 @@
 FROM node:23.11.1-alpine3.21
 
 RUN apk add --no-cache \
-    chromium=135.0.7049.95-r0 \
-    make=4.4.1-r2 \
-    g++=14.2.0-r4 \
+    chromium=136.0.7103.113-r0 \
+    make=4.4.1-r0 \
+    g++=14.2.0_git20240414-r0 \
     xvfb-run \
     libstdc++ \
     nss \
@@ -11,7 +11,7 @@ RUN apk add --no-cache \
     harfbuzz \
     ca-certificates \
     ttf-freefont \
-    && npm install -g pnpm@10.6.5
+    && npm install -g pnpm@10.11.0 \
 
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
