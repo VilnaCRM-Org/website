@@ -20,6 +20,5 @@ FROM base AS build
     
 COPY . .
     
-RUN pnpm install && \
-    npx next build && \
+RUN npx next build && \
     npx next export-optimize-images
