@@ -1,3 +1,5 @@
+import { CSSProperties } from 'react';
+
 import breakpointsTheme from '@/components/UiBreakpoints';
 import colorTheme from '@/components/UiColorTheme';
 
@@ -45,7 +47,7 @@ export default {
   },
 
   loader: {
-    position: 'fixed',
+    position: 'absolute' as CSSProperties['position'],
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
