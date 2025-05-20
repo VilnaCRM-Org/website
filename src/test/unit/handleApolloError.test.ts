@@ -1,22 +1,22 @@
 import { ApolloError } from '@apollo/client';
 import { GraphQLFormattedError } from 'graphql';
 
-import { ClientErrorMessages, getClientErrorMessages } from '@/shared/clientErrorMessages';
-import { HTTPStatusCodes } from '@/shared/httpStatusCodes';
+import {
+  CLIENT_ERROR_KEYS,
+  ClientErrorMessages,
+  getClientErrorMessages,
+} from '@/shared/clientErrorMessages';
+import HTTPStatusCodes from '@/shared/httpStatusCodes';
 
 import {
   handleApolloError,
   HandleApolloErrorProps,
   handleNetworkError,
+  ServerErrorShape,
 } from '../../features/landing/helpers/handleApolloError';
 import { networkMessage } from '../testing-library/fixtures/errors';
 
-interface StatusCode {
-  statusCode: number;
-}
-interface ErrorType extends StatusCode {
-  message: string;
-}
+type StatusCode = Pick<ServerErrorShape, 'statusCode'>;
 
 describe('Error Handling', () => {
   describe('handleNetworkError', () => {
@@ -28,60 +28,60 @@ describe('Error Handling', () => {
     });
 
     it('should return network error for "Failed to fetch" message', () => {
-      const error: ErrorType = { statusCode: 400, message: networkMessage };
-      expect(handleNetworkError(error)).toBe(messages.network);
+      const error: ServerErrorShape = { statusCode: 400, message: networkMessage };
+      expect(handleNetworkError(error)).toBe(messages[CLIENT_ERROR_KEYS.NETWORK]);
     });
 
     it('should return unauthorized error for 401 status', () => {
       const error: StatusCode = { statusCode: HTTPStatusCodes.UNAUTHORIZED };
-      expect(handleNetworkError(error)).toBe(messages.unauthorized);
+      expect(handleNetworkError(error)).toBe(messages[CLIENT_ERROR_KEYS.UNAUTHORIZED]);
     });
 
     it('should return forbidden error for 403 status', () => {
       const error: StatusCode = { statusCode: HTTPStatusCodes.FORBIDDEN };
-      expect(handleNetworkError(error)).toBe(messages.denied);
+      expect(handleNetworkError(error)).toBe(messages[CLIENT_ERROR_KEYS.DENIED]);
     });
 
     it('should return server error for 500 status', () => {
-      const error: StatusCode = { statusCode: HTTPStatusCodes.SERVER_ERROR };
-      expect(handleNetworkError(error)).toBe(messages.server_error);
+      const error: StatusCode = { statusCode: HTTPStatusCodes.INTERNAL_SERVER_ERROR };
+      expect(handleNetworkError(error)).toBe(messages[CLIENT_ERROR_KEYS.SERVER_ERROR]);
     });
 
     it('should return "went wrong" error for unknown status', () => {
       const error: StatusCode = { statusCode: 999 };
-      expect(handleNetworkError(error)).toBe(messages.went_wrong);
+      expect(handleNetworkError(error)).toBe(messages[CLIENT_ERROR_KEYS.WENT_WRONG]);
     });
 
     it('should return unexpected error for non-object input', () => {
-      expect(handleNetworkError(null)).toBe(messages.went_wrong);
+      expect(handleNetworkError(null)).toBe(messages[CLIENT_ERROR_KEYS.WENT_WRONG]);
     });
 
     it('should return server error for 502 status', () => {
       const error: StatusCode = { statusCode: 502 };
-      expect(handleNetworkError(error)).toBe(messages.server_error);
+      expect(handleNetworkError(error)).toBe(messages[CLIENT_ERROR_KEYS.SERVER_ERROR]);
     });
 
     it('should return server error for 504 status', () => {
       const error: StatusCode = { statusCode: 504 };
-      expect(handleNetworkError(error)).toBe(messages.server_error);
+      expect(handleNetworkError(error)).toBe(messages[CLIENT_ERROR_KEYS.SERVER_ERROR]);
     });
 
     it('should return "went wrong" error for undefined statusCode', () => {
-      const error: ErrorType = {
+      const error: ServerErrorShape = {
         statusCode: undefined as unknown as number,
         message: 'Some error',
       };
-      expect(handleNetworkError(error)).toBe(messages.went_wrong);
+      expect(handleNetworkError(error)).toBe(messages[CLIENT_ERROR_KEYS.WENT_WRONG]);
     });
 
     it('should return network error for "network request failed" message', () => {
-      const error: ErrorType = { statusCode: 400, message: 'Network request failed' };
-      expect(handleNetworkError(error)).toBe(messages.network);
+      const error: ServerErrorShape = { statusCode: 400, message: 'Network request failed' };
+      expect(handleNetworkError(error)).toBe(messages[CLIENT_ERROR_KEYS.NETWORK]);
     });
 
     it('should return network error for "fetch failed" message', () => {
-      const error: ErrorType = { statusCode: 400, message: 'Fetch failed' };
-      expect(handleNetworkError(error)).toBe(messages.network);
+      const error: ServerErrorShape = { statusCode: 400, message: 'Fetch failed' };
+      expect(handleNetworkError(error)).toBe(messages[CLIENT_ERROR_KEYS.NETWORK]);
     });
   });
 
@@ -103,18 +103,18 @@ describe('Error Handling', () => {
       });
 
       const props: HandleApolloErrorProps = { error };
-      expect(handleApolloError(props)).toBe(messages.unauthorized);
+      expect(handleApolloError(props)).toBe(messages[CLIENT_ERROR_KEYS.UNAUTHORIZED]);
     });
 
     it('should handle graphQLErrors with statusCode', () => {
       const graphQLError: GraphQLFormattedError = {
         message: 'Server Error',
-        extensions: { statusCode: HTTPStatusCodes.SERVER_ERROR },
+        extensions: { statusCode: HTTPStatusCodes.INTERNAL_SERVER_ERROR },
       };
       const error: HandleApolloErrorProps = {
         error: new ApolloError({ graphQLErrors: [graphQLError] }),
       };
-      expect(handleApolloError(error)).toBe(messages.server_error);
+      expect(handleApolloError(error)).toBe(messages[CLIENT_ERROR_KEYS.SERVER_ERROR]);
     });
 
     it('should handle graphQLErrors without statusCode but with UNAUTHORIZED message', () => {
@@ -124,7 +124,7 @@ describe('Error Handling', () => {
       const error: HandleApolloErrorProps = {
         error: new ApolloError({ graphQLErrors: [graphQLError] }),
       };
-      expect(handleApolloError(error)).toBe(messages.unauthorized);
+      expect(handleApolloError(error)).toBe(messages[CLIENT_ERROR_KEYS.UNAUTHORIZED]);
     });
 
     it('should handle multiple graphQLErrors and join messages', () => {
@@ -138,10 +138,10 @@ describe('Error Handling', () => {
 
     it('should return unexpected error for non-ApolloError', () => {
       const error: HandleApolloErrorProps = { error: null };
-      expect(handleApolloError(error)).toBe(messages.unexpected);
+      expect(handleApolloError(error)).toBe(messages[CLIENT_ERROR_KEYS.UNEXPECTED]);
 
       const notApolloError: HandleApolloErrorProps = { error: {} as ApolloError };
-      expect(handleApolloError(notApolloError)).toBe(messages.unexpected);
+      expect(handleApolloError(notApolloError)).toBe(messages[CLIENT_ERROR_KEYS.UNEXPECTED]);
     });
     it('should handle graphQLErrors with FORBIDDEN statusCode', () => {
       const graphQLError: GraphQLFormattedError = {
@@ -151,7 +151,7 @@ describe('Error Handling', () => {
       const error: HandleApolloErrorProps = {
         error: new ApolloError({ graphQLErrors: [graphQLError] }),
       };
-      expect(handleApolloError(error)).toBe(messages.denied);
+      expect(handleApolloError(error)).toBe(messages[CLIENT_ERROR_KEYS.DENIED]);
     });
   });
 });

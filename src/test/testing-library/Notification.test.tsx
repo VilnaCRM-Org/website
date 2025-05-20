@@ -3,7 +3,11 @@ import userEvent, { UserEvent } from '@testing-library/user-event';
 import { t } from 'i18next';
 import React from 'react';
 
-import { ClientErrorMessages, getClientErrorMessages } from '@/shared/clientErrorMessages';
+import {
+  ClientErrorMessages,
+  getClientErrorMessages,
+  CLIENT_ERROR_KEYS,
+} from '@/shared/clientErrorMessages';
 
 import Notification from '../../features/landing/components/Notification';
 import { notificationComponents } from '../../features/landing/components/Notification/Notification';
@@ -261,6 +265,6 @@ describe('Notification', () => {
       setIsOpen: mockSetIsOpen,
     });
 
-    expect(screen.getByText(messages.went_wrong)).toBeInTheDocument();
+    expect(screen.getByText(messages[CLIENT_ERROR_KEYS.WENT_WRONG])).toBeInTheDocument();
   });
 });

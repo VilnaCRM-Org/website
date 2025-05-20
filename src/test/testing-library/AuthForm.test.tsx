@@ -1,21 +1,12 @@
-import { MockedResponse } from '@apollo/client/testing';
-import { fireEvent, RenderResult, waitFor } from '@testing-library/react';
+import { fireEvent, waitFor } from '@testing-library/react';
 import { UserEvent, userEvent } from '@testing-library/user-event';
 import { t } from 'i18next';
-import React from 'react';
-import { useForm } from 'react-hook-form';
 
-import {
-  AuthFormWrapperProps,
-  OnSubmitType,
-} from '@/test/testing-library/fixtures/auth-test-helpers';
-
-import SIGNUP_MUTATION from '../../features/landing/api/service/userService';
-import AuthForm from '../../features/landing/components/AuthSection/AuthForm/AuthForm';
-import { RegisterItem } from '../../features/landing/types/authentication/form';
+import { OnSubmitType } from '@/test/testing-library/fixtures/auth-test-helpers';
 
 import { testInitials, testEmail, testPassword } from './constants';
-import { checkElementsInDocument, fillForm, getFormElements, renderWithProviders } from './utils';
+import { renderAuthForm } from './fixtures/auth-form-helper';
+import { checkElementsInDocument, fillForm, getFormElements } from './utils';
 
 const formTitleText: string = t('sign_up.form.heading_main');
 
@@ -39,68 +30,8 @@ interface GetElementsResult {
   privacyCheckbox: HTMLInputElement | null;
 }
 
-function AuthFormWrapper({ onSubmit, loading = false }: AuthFormWrapperProps): React.ReactElement {
-  const {
-    handleSubmit,
-    control,
-    formState: { errors },
-  } = useForm<RegisterItem>({ mode: 'onTouched' });
-
-  return (
-    <AuthForm
-      onSubmit={onSubmit}
-      handleSubmit={handleSubmit}
-      formValidationErrors={errors}
-      control={control}
-      loading={loading}
-    />
-  );
-}
-const fulfilledMockResponse: MockedResponse = {
-  request: {
-    query: SIGNUP_MUTATION,
-  },
-  variableMatcher: () => true,
-  result: variables => {
-    const { input } = variables;
-    const { initials, email, password, clientMutationId } = input;
-
-    expect(input).not.toBeUndefined();
-    expect(initials).toBe(testInitials);
-    expect(email).toBe(testEmail);
-    expect(password).toBe(testPassword);
-    expect(clientMutationId).toBe('132');
-
-    return {
-      data: {
-        createUser: {
-          user: {
-            email,
-            initials,
-            id: 0,
-            confirmed: true,
-          },
-          clientMutationId: '132',
-        },
-      },
-    };
-  },
-};
 const mockSubmitSuccess: () => OnSubmitType = (): OnSubmitType =>
   jest.fn().mockResolvedValueOnce(undefined);
-
-interface RenderAuthFormOptions extends Partial<AuthFormWrapperProps> {
-  mocks?: MockedResponse[];
-}
-export function renderAuthForm({
-  onSubmit = mockSubmitSuccess(),
-  mocks = [fulfilledMockResponse],
-  loading = false,
-}: RenderAuthFormOptions = {}): RenderResult {
-  return renderWithProviders(<AuthFormWrapper onSubmit={onSubmit} loading={loading} />, {
-    apolloMocks: mocks,
-  });
-}
 
 describe('AuthForm', () => {
   let onSubmit: OnSubmitType;

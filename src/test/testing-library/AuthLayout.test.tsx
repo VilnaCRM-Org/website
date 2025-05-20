@@ -3,7 +3,11 @@ import { fireEvent, waitFor } from '@testing-library/react';
 import { t } from 'i18next';
 import { AriaRole } from 'react';
 
-import { ClientErrorMessages, getClientErrorMessages } from '@/shared/clientErrorMessages';
+import {
+  ClientErrorMessages,
+  getClientErrorMessages,
+  CLIENT_ERROR_KEYS,
+} from '@/shared/clientErrorMessages';
 import { CreateUserInput } from '@/test/apollo-server/types';
 
 import SIGNUP_MUTATION from '../../features/landing/api/service/userService';
@@ -274,7 +278,7 @@ describe('AuthLayout', () => {
     expect(errorBox).not.toBeInTheDocument();
   });
   test.each(inputFields)(
-    'displays validation errors only after touching fields when mode is onTouche',
+    'displays validation errors only after touching fields when mode is onTouched',
     async ({ fieldKey, value }) => {
       const { queryByText } = renderAuthLayout([]);
 
@@ -328,7 +332,9 @@ describe('AuthLayout', () => {
   it('should initialize with empty errorText (no error message visible)', () => {
     const { queryByText } = renderAuthLayout([]);
 
-    const networkErrorElement: HTMLElement | null = queryByText(messages.network);
+    const networkErrorElement: HTMLElement | null = queryByText(
+      messages[CLIENT_ERROR_KEYS.NETWORK]
+    );
 
     expect(networkErrorElement).not.toBeInTheDocument();
   });
@@ -363,7 +369,7 @@ describe('AuthLayoutWithNotification', () => {
 
     await waitFor(() => {
       const errorTitle: HTMLElement = getByText(errorTitleText);
-      const serverError: HTMLElement = getByText(messages.server_error);
+      const serverError: HTMLElement = getByText(messages[CLIENT_ERROR_KEYS.SERVER_ERROR]);
 
       expect(errorTitle).toBeInTheDocument();
       expect(serverError).toBeInTheDocument();
@@ -475,7 +481,7 @@ describe('AuthLayoutWithNotification', () => {
 
     await waitFor(() => {
       const errorTitle: HTMLElement = getByText(errorTitleText);
-      const networkErrorNode: HTMLElement = getByText(messages.network);
+      const networkErrorNode: HTMLElement = getByText(messages[CLIENT_ERROR_KEYS.NETWORK]);
 
       expect(errorTitle).toBeInTheDocument();
       expect(networkErrorNode).toBeInTheDocument();
@@ -484,7 +490,7 @@ describe('AuthLayoutWithNotification', () => {
   it('should initialize with Notification closed and empty errorText', () => {
     const { queryByText, queryByLabelText } = renderAuthLayout([]);
 
-    expect(queryByText(messages.went_wrong)).not.toBeInTheDocument();
+    expect(queryByText(messages[CLIENT_ERROR_KEYS.WENT_WRONG])).not.toBeInTheDocument();
 
     expect(queryByLabelText('error')).not.toBeInTheDocument();
     expect(queryByLabelText('success')).toBeInTheDocument();

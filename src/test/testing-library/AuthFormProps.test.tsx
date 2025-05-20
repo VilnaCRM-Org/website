@@ -52,9 +52,14 @@ function renderAuthForm({
   mocks,
 }: {
   mocks?: MockedResponse[];
-  onSubmit: OnSubmitType;
+  onSubmit?: OnSubmitType;
 }): RenderResult {
-  return renderWithProviders(<AuthFormWrapper onSubmit={onSubmit} />, { apolloMocks: mocks });
+  const submitHandler: OnSubmitType =
+    onSubmit ?? jest.fn<Promise<void>, [RegisterItem]>().mockResolvedValue(undefined);
+
+  return renderWithProviders(<AuthFormWrapper onSubmit={submitHandler} />, {
+    apolloMocks: mocks || [],
+  });
 }
 type DefaultValue = { FullName: ''; Password: ''; Email: ''; Privacy: false };
 

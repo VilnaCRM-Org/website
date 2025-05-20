@@ -2,7 +2,11 @@ import { render, screen } from '@testing-library/react';
 import userEvent, { UserEvent } from '@testing-library/user-event';
 import { t } from 'i18next';
 
-import { ClientErrorMessages, getClientErrorMessages } from '@/shared/clientErrorMessages';
+import {
+  ClientErrorMessages,
+  getClientErrorMessages,
+  CLIENT_ERROR_KEYS,
+} from '@/shared/clientErrorMessages';
 
 import NotificationError from '../../features/landing/components/Notification/NotificationError';
 
@@ -29,11 +33,11 @@ describe('NotificationError Component', () => {
     render(<NotificationError setIsOpen={mockSetIsOpen} onRetry={mockOnRetry} loading={false} />);
 
     expect(screen.getByText(errorTitleText)).toBeInTheDocument();
-    expect(screen.getByText(messages.went_wrong)).toBeInTheDocument();
+    expect(screen.getByText(messages[CLIENT_ERROR_KEYS.WENT_WRONG])).toBeInTheDocument();
     expect(screen.getByRole(buttonRole, { name: retrySubmitButtonText })).toBeInTheDocument();
     expect(screen.getByRole(buttonRole, { name: backToFormButtonText })).toBeInTheDocument();
 
-    expect(screen.queryByText(messages.network)).not.toBeInTheDocument();
+    expect(screen.queryByText(messages[CLIENT_ERROR_KEYS.NETWORK])).not.toBeInTheDocument();
   });
 
   it('calls retrySubmit when retry button is clicked', async () => {
@@ -80,14 +84,14 @@ describe('NotificationError Component', () => {
   it('should display the default description when errorText is empty or undefined', () => {
     render(<NotificationError setIsOpen={jest.fn()} onRetry={mockOnRetry} loading={false} />);
 
-    expect(screen.getByText(messages.went_wrong)).toBeInTheDocument();
+    expect(screen.getByText(messages[CLIENT_ERROR_KEYS.WENT_WRONG])).toBeInTheDocument();
   });
 
   it('renders the correct title and description', () => {
     render(<NotificationError setIsOpen={mockSetIsOpen} onRetry={mockOnRetry} loading={false} />);
 
     expect(screen.getByText(errorTitleText)).toBeInTheDocument();
-    expect(screen.getByText(messages.went_wrong)).toBeInTheDocument();
+    expect(screen.getByText(messages[CLIENT_ERROR_KEYS.WENT_WRONG])).toBeInTheDocument();
   });
 
   it('renders content box with correct styles', () => {

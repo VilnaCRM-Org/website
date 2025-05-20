@@ -9,7 +9,7 @@ import { renderWithProviders } from '@/test/testing-library/utils';
 
 import { SignUpInput } from '../../../features/landing/api/service/types';
 import SIGNUP_MUTATION from '../../../features/landing/api/service/userService';
-import AuthLayout from '../../../features/landing/components/AuthSection/AuthForm';
+import AuthLayout from '../../../features/landing/components/AuthSection/AuthForm/AuthLayout';
 import { RegisterItem } from '../../../features/landing/types/authentication/form';
 
 export function renderAuthLayout(mocks: MockedResponse[] = []): RenderResult {
@@ -29,7 +29,7 @@ export const fulfilledMockResponse: MockedResponse = {
   },
   variableMatcher: validateCreateUserInput,
 
-  result: variables => {
+  newData: variables => {
     const { input } = variables;
     const { initials, email, clientMutationId } = input;
 
