@@ -2,8 +2,8 @@ FROM node:23.11.1-alpine3.21
 
 RUN apk add --no-cache \
     chromium=136.0.7103.113-r0 \
-    make=4.4.1-r0 \
-    g++=14.2.0_git20240414-r0 \
+    make-4.4.1-r2 \
+    g++=14.2.0-r4 \
     xvfb-run \
     libstdc++ \
     nss \
