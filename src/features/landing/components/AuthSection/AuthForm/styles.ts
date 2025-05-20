@@ -1,5 +1,3 @@
-import { CSSProperties } from 'react';
-
 import breakpointsTheme from '@/components/UiBreakpoints';
 import colorTheme from '@/components/UiColorTheme';
 
@@ -11,9 +9,10 @@ export default {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-
     position: 'relative',
     marginTop: '4.063rem',
+    minHeight: '37.5rem',
+    contain: 'layout',
     [`@media (max-width: 1130px)`]: {
       marginTop: '3.875rem',
     },
@@ -24,6 +23,7 @@ export default {
 
   backgroundBlock: {
     position: 'absolute',
+    minHeight: '18.75rem',
     borderRadius: '0.75rem 0.75rem 0 0',
     top: '16.2%',
     right: '5%',
@@ -45,7 +45,7 @@ export default {
   },
 
   loader: {
-    position: 'absolute' as CSSProperties['position'],
+    position: 'fixed',
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
@@ -73,13 +73,15 @@ export default {
   },
 
   formContent: {
+    minHeight: '40.438rem',
+    overflow: 'hidden',
+    contain: 'content',
     position: 'relative',
     zIndex: '5',
     padding: '2.25rem 2.5rem 2.5rem 2.5rem',
     borderRadius: '2rem 2rem 0 0',
     border: `1px solid  ${colorTheme.palette.brandGray.main}`,
     background: colorTheme.palette.white.main,
-    minHeight: ' 40.438rem',
     maxWidth: '31.375rem',
     boxShadow: '1px 1px 41px 0px rgba(59, 68, 80, 0.05)',
     [`@media (max-width: 1130px)`]: {
@@ -168,6 +170,7 @@ export default {
   },
 
   backgroundImage: {
+    willChange: 'transform',
     backgroundImage: `url(${Images.src})`,
     width: '100dvw',
     maxWidth: '49rem',
