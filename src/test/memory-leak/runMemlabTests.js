@@ -23,6 +23,8 @@ const consoleMode = 'VERBOSE';
       scenario,
       consoleMode,
       workDir,
+      skipWarmup: true,
+      debug: true,
     });
 
     const analyzer = new StringAnalysis();
