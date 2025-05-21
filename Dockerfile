@@ -8,12 +8,11 @@ RUN apk add --no-cache \
     npm install -g pnpm@10.6.5
    
 WORKDIR /app
-    
+
 COPY package.json pnpm-lock.yaml checkNodeVersion.js ./
     
 RUN pnpm install
-    
-   
+
 # ---------- Build Stage ----------
 FROM base AS build
     
