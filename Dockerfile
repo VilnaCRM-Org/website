@@ -20,4 +20,4 @@ FROM base AS build
 COPY . .
     
 RUN npx next build && \
-    npx next export-optimize-images
+    npx next-export-optimize-images
