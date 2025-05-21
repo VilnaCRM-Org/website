@@ -1,5 +1,4 @@
-# ---------- Base Stage ----------
-FROM node:23.10.0-alpine3.21 AS base
+FROM node:23.11.1-alpine3.21
 
 RUN apk add --no-cache \
     python3=3.12.10-r0 \
