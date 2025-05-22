@@ -23,8 +23,8 @@ const consoleMode = 'VERBOSE';
       scenario,
       consoleMode,
       workDir,
-      skipWarmup: true,
-      debug: true,
+      skipWarmup: process.env.MEMLAB_SKIP_WARMUP === 'true',
+      debug: process.env.MEMLAB_DEBUG === 'true',
     });
 
     const analyzer = new StringAnalysis();

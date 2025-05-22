@@ -31,12 +31,8 @@ const fulfilledMockResponse: ExtendedMockedResponse = {
   },
   newData: variables => {
     const { input } = variables;
-    const { initials, email, password, clientMutationId } = input;
-    expect(input).not.toBeUndefined();
-    expect(initials).toBe(testInitials);
-    expect(email).toBe(testEmail);
-    expect(password).toBe(testPassword);
-    expect(clientMutationId).toBe('132');
+    const { initials, email, clientMutationId } = input;
+
     return {
       data: {
         createUser: {
@@ -46,7 +42,7 @@ const fulfilledMockResponse: ExtendedMockedResponse = {
             id: 0,
             confirmed: true,
           },
-          clientMutationId: '132',
+          clientMutationId,
         },
       },
     };

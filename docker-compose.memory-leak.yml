@@ -13,6 +13,8 @@ services:
       - PUPPETEER_DISABLE_HEADLESS_WARNING=1
       - NEXT_PUBLIC_PROD_CONTAINER_API_URL=http://prod:3001
       - MEMLAB_DEBUG=1
+      - MEMLAB_SKIP_WARMUP=true
+      - MEMLAB_DEBUG=true
     init: true
     shm_size: '1gb'
     healthcheck:

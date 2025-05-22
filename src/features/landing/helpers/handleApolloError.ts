@@ -19,7 +19,8 @@ export function isServerError(error: unknown): error is ServerErrorShape {
 
   return (
     (statusCode === undefined || typeof statusCode === 'number') &&
-    (message === undefined || typeof message === 'string')
+    (message === undefined || typeof message === 'string') &&
+    (statusCode !== undefined || message !== undefined)
   );
 }
 
