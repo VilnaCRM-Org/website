@@ -22,8 +22,10 @@ const validateCreateUserInput: (variables: { input: CreateUserInput }) => boolea
   const { input } = variables;
   return !!input?.email && !!input?.initials && !!input?.password;
 };
-
-export const fulfilledMockResponse: MockedResponse = {
+export interface ExtendedMockedResponse extends MockedResponse {
+  variableMatcher: (variables: { input: CreateUserInput }) => boolean;
+}
+export const fulfilledMockResponse: ExtendedMockedResponse = {
   request: {
     query: SIGNUP_MUTATION,
   },

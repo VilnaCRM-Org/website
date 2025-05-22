@@ -4,8 +4,6 @@ import { t } from 'i18next';
 
 import { OnSubmitType } from '@/test/testing-library/fixtures/auth-test-helpers';
 
-import { CreateUserInput } from '../apollo-server/types';
-
 import { testInitials, testEmail, testPassword } from './constants';
 import renderAuthForm from './fixtures/auth-form-helper';
 import { checkElementsInDocument, fillForm, getFormElements } from './utils';
@@ -220,6 +218,8 @@ describe('AuthForm', () => {
     renderAuthForm({ onSubmit, mocks: [], loading: true });
 
     const { signUpButton } = getFormElements();
+
+    expect(signUpButton).toBeInTheDocument();
     expect(signUpButton).toBeDisabled();
   });
 
@@ -334,43 +334,5 @@ describe('AuthForm', () => {
       expect(queryByText(requiredText)).toBeInTheDocument();
       expect(queryByText(nameRequired)).toBeInTheDocument();
     });
-  });
-});
-
-describe('createUser mutation input validation', () => {
-  const testInput: CreateUserInput = {
-    email: testEmail,
-    initials: testInitials,
-    password: testPassword,
-    clientMutationId: '132',
-  };
-
-  let variables: { input: CreateUserInput };
-
-  beforeEach(() => {
-    variables = { input: testInput };
-  });
-
-  it('should validate input fields match expected values', () => {
-    expect(variables.input).toBeDefined();
-
-    expect(variables.input.initials).toBe(testInitials);
-    expect(variables.input.email).toBe(testEmail);
-    expect(variables.input.password).toBe(testPassword);
-    expect(variables.input.clientMutationId).toBe('132');
-  });
-
-  it('should validate required fields are present', () => {
-    expect(variables.input).toHaveProperty('email');
-    expect(variables.input).toHaveProperty('initials');
-    expect(variables.input).toHaveProperty('password');
-    expect(variables.input).toHaveProperty('clientMutationId');
-  });
-
-  it('should validate input types are correct', () => {
-    expect(typeof variables.input.email).toBe('string');
-    expect(typeof variables.input.initials).toBe('string');
-    expect(typeof variables.input.password).toBe('string');
-    expect(typeof variables.input.clientMutationId).toBe('string');
   });
 });
