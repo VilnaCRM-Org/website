@@ -29,7 +29,7 @@ export default {
   content: {
     pt: '8.25rem',
     position: 'relative',
-    paddingBottom: '-2rem',
+    marginBottom: '-2rem',
     [`@media (max-width: ${breakpointsTheme.breakpoints.values.lg}px)`]: {
       pt: '7.375rem',
       paddingBottom: '-2rem',
