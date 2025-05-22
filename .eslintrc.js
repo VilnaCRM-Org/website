@@ -98,7 +98,7 @@ module.exports = {
         'import/no-unresolved': 'off',
         'import/extensions': 'off',
         'react/prop-types': 'off',
-        "import/prefer-default-export": "off"
+        "import/prefer-default-export": "off",
         'react/react-in-jsx-scope': 'off',
 
         'react/jsx-filename-extension': ['error', { extensions: ['.jsx', '.tsx'] }],

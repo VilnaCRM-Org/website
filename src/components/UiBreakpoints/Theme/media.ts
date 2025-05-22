@@ -36,3 +36,21 @@ export const media: {
     max320: '@media (max-width: 320px)',  
   },  
 };  
+
+export const mq: {  
+  max968: string;  
+  max1131: string;  
+  min426: string;  
+  min468: string;  
+  min641: string;  
+  min969: string;  
+  min1131: string;   
+} = {  
+  max968: '@media (max-width: 968px)',
+  max1131: '@media (max-width: 1130.98px)',
+  min426: '@media (min-width: 426px)',
+  min468: '@media (min-width: 468px)',
+  min641: '@media (min-width: 641px)',
+  min969: '@media (min-width: 969px)',
+  min1131: '@media (min-width: 1131px)',
+};
