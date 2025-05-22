@@ -20,7 +20,7 @@ const validateCreateUserInput: (variables: { input: CreateUserInput }) => boolea
   input: CreateUserInput;
 }) => {
   const { input } = variables;
-  return !!input?.email && !!input?.initials && !!input?.password;
+  return !!input.email && !!input.initials && !!input.password && !!input.clientMutationId;
 };
 export interface ExtendedMockedResponse extends MockedResponse {
   variableMatcher: (variables: { input: CreateUserInput }) => boolean;
@@ -51,12 +51,18 @@ export const fulfilledMockResponse: ExtendedMockedResponse = {
   },
 };
 
-const input: CreateUserInput = {
+type CreateTestInputFn = (overrides?: Partial<CreateUserInput>) => CreateUserInput;
+
+const createTestInput: CreateTestInputFn = (overrides = {}) => ({
   email: testEmail.toLowerCase(),
   initials: testInitials,
   password: testPassword,
   clientMutationId: '132',
-};
+  ...overrides,
+});
+
+const input: CreateUserInput = createTestInput();
+
 const networkError: Error = new ServerError();
 export const mockNetworkErrorAndSuccessResponses: MockedResponse[] = [
   {

@@ -16,19 +16,22 @@ RUN apk add --no-cache \
     libxext=1.3.6-r2 \
     && npm install -g pnpm@10.11.0
 
-ENV DISPLAY=:99
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-ENV NEXT_PUBLIC_MAIN_LANGUAGE=uk
-ENV NEXT_PUBLIC_FALLBACK_LANGUAGE=en
+ENV DISPLAY=:99 \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser \
+    PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
+    NEXT_PUBLIC_MAIN_LANGUAGE=uk \
+    NEXT_PUBLIC_FALLBACK_LANGUAGE=en
 
 WORKDIR /app
 
 COPY package.json pnpm-lock.yaml checkNodeVersion.js ./
 RUN pnpm install
 
-RUN addgroup -S appuser && adduser -S appuser -G appuser \
-     && chown -R appuser:appuser /app
+RUN addgroup -S appuser && adduser -S appuser -G appuser
+
+RUN mkdir -p /app/src/test/memory-leak/results && \
+    chown -R appuser:appuser /app
+
 USER appuser
 
 CMD ["sh", "-c", "rm -f /tmp/.X99-lock && Xvfb :99 -screen 0 1024x768x16 & sleep infinity"]

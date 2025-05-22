@@ -40,7 +40,7 @@ describe('AuthForm', () => {
     onSubmit = mockSubmitSuccess();
   });
 
-  it('renders AuthForm component', () => {
+  it('renders AuthForm component', async () => {
     const { queryByRole, getByAltText, getByText, getByRole } = renderAuthForm();
 
     const authForm: HTMLElement = getByRole('form');
@@ -61,9 +61,10 @@ describe('AuthForm', () => {
       passwordInputLabel,
       passwordTipImage
     );
-
-    expect(loader).not.toBeInTheDocument();
-    expect(error).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(loader).not.toBeInTheDocument();
+      expect(error).not.toBeInTheDocument();
+    });
   });
   it('renders input fields', () => {
     renderAuthForm();
