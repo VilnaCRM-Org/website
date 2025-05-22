@@ -6,6 +6,9 @@ export default {
     background: colorTheme.palette.backgroundGrey100.main,
     maxWidth: '100dvw',
     overflow: 'hidden',
+    position: 'relative',
+    minHeight: '30rem', 
+    contain: 'layout',
   },
 
   lgCardsWrapper: {
@@ -26,11 +29,14 @@ export default {
   content: {
     pt: '8.25rem',
     position: 'relative',
+    paddingBottom: '-2rem',
     [`@media (max-width: ${breakpointsTheme.breakpoints.values.lg}px)`]: {
       pt: '7.375rem',
+      paddingBottom: '-2rem',
     },
     [`@media (max-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
       pt: '2rem',
+      paddingBottom: '-2rem',
     },
   },
 

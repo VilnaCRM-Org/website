@@ -7,7 +7,8 @@ export default {
     overflow: 'hidden',
     width: '100%',
     zIndex: 2,
-     minHeight: '30.813rem', 
+    minHeight: '30.813rem', 
+    contain: 'layout paint',
     [`@media (max-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
       minHeight: '17.75rem',
     }
@@ -24,6 +25,7 @@ export default {
     top: '9%',
     left: '0',
     borderRadius: '3rem',
+    willChange: 'transform',
     [`@media (max-width: ${breakpointsTheme.breakpoints.values.lg}px)`]: {
       top: '28%',
     },
@@ -42,10 +44,12 @@ export default {
     borderTopLeftRadius: '1.875rem',
     overflow: 'hidden',
      margin: '0 auto', 
+     minHeight: '25rem',
     [`@media (max-width: ${breakpointsTheme.breakpoints.values.lg}px)`]: {
       borderRadius: '1.875rem',
       borderBottom: 'none',
       border: 'none',
+      minHeight: 'auto',
     },
     [`@media (max-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
       border: 'none',
@@ -63,6 +67,8 @@ export default {
     overflow: 'hidden',
     width: '100%',
     height: 'auto',
+    minHeight: '20rem', 
+    contain: 'content',
     [`@media (max-width: ${breakpointsTheme.breakpoints.values.lg}px)`]: {
       borderRadius: '1.563rem',
     },
@@ -73,6 +79,7 @@ export default {
       backgroundColor: colorTheme.palette.darkPrimary.main,
       margin: '0 auto',
       overflow: 'hidden',
+      minHeight: '15rem',
     },
   },
 };
