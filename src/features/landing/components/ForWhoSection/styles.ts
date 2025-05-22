@@ -1,11 +1,20 @@
 import breakpointsTheme from '@/components/UiBreakpoints';
-import colorTheme from '@/components/UiColorTheme';
 import { media } from '@/components/UiBreakpoints/Theme/media';
+import colorTheme from '@/components/UiColorTheme';
 
-const bp = breakpointsTheme.breakpoints.values;
+
+const bp: { xs: number; sm: number; md: number; lg: number; xl: number } = breakpointsTheme.breakpoints.values; 
 
 
-const mq = {
+const mq: {  
+  max968: string;  
+  max1131: string;  
+  min426: string;  
+  min468: string;  
+  min641: string;  
+  min969: string;  
+  min1131: string;   
+} = {  
   max968: '@media (max-width: 968px)',
   max1131: '@media (max-width: 1130.98px)',
   min426: '@media (min-width: 426px)',
@@ -15,12 +24,16 @@ const mq = {
   min1131: '@media (min-width: 1131px)',
 };
 
-
-const pointBase = (width: string, height: string) => ({
-  width,
-  height,
-  [media.md]: { width: '0.45rem' },
-});
+type PointBaseReturn = {  
+  width: string;  
+  height: string;  
+  [key: string]: any;  
+};  
+const pointBase: (width: string, height: string) => PointBaseReturn = (width: string, height: string): PointBaseReturn => ({  
+  width,  
+  height,  
+  [media.md]: { width: '0.45rem' },  
+});  
 
 
 const arrowCommon = {
@@ -39,19 +52,19 @@ export default {
 
   lgCardsWrapper: {
     display: 'flex',
-    [mq.max968]: { display: 'none' },
+    [media.custom.max968]: { display: 'none' },  
   },
 
   smCardsWrapper: {
     display: 'none',
-    [mq.max968]: { display: 'flex', justifyContent: 'center' },
+  [media.custom.max968]: { display: 'flex', justifyContent: 'center' },  
   },
 
   content: {
     pt: '8.25rem',
     position: 'relative',
-    [`@media (max-width: ${bp.lg}px)`]: { pt: '7.375rem' },
-    [`@media (max-width: ${bp.sm}px)`]: { pt: '2rem' },
+  [media.lg]: { pt: '7.375rem' },  
+  [media.sm]: { pt: '2rem' },
   },
 
   line: {
@@ -59,9 +72,10 @@ export default {
     background: colorTheme.palette.white.main,
     minHeight: '6.25rem',
     zIndex: 1,
-    marginTop: '-3.75rem',
-    [mq.max1131]: { minHeight: '11.188rem', marginTop: '-8.625rem' },
-    [mq.max968]: { display: 'none' },
+    [media.custom.max1130]: { minHeight: '11.188rem', marginTop: '-8.625rem' },  
+    [media.custom.max968]:   { display: 'none' },  
+    [media.custom.max968]:   { display: 'none' },  
+    [media.custom.max968]:   { display: 'none' },  
   },
 
   container: {
@@ -192,8 +206,7 @@ export default {
     marginLeft: '1.2rem',
     zIndex: 1,
     borderRadius: '0.6rem',
-    boxShadow:
-      '0px 24px 48px rgba(0, 0, 0, 0.15), 0px 12px 24px rgba(0, 0, 0, 0.1)',
+    boxShadow: '0px 24px 48px rgba(0, 0, 0, 0.15), 0px 12px 24px rgba(0, 0, 0, 0.1)', 
     [media.sm]: { width: '22rem', height: '16rem', marginTop: '-4.3rem' },
     [media.md]: { width: '31.6rem', height: '20.5rem', marginTop: '-5rem', marginLeft: '1.5rem' },
     [mq.min969]: { width: '31.6rem', height: '21.7rem', marginTop: '-4.4rem', marginLeft: '1.5rem' },
