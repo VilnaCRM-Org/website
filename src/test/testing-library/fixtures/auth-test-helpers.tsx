@@ -20,7 +20,19 @@ const validateCreateUserInput: (variables: { input: CreateUserInput }) => boolea
   input: CreateUserInput;
 }) => {
   const { input } = variables;
-  return !!input.email && !!input.initials && !!input.password && !!input.clientMutationId;
+  return (
+    !!input.email &&
+    typeof input.email === 'string' &&
+    input.email.includes('@') &&
+    !!input.initials &&
+    typeof input.initials === 'string' &&
+    input.initials.trim() !== '' &&
+    !!input.password &&
+    typeof input.password === 'string' &&
+    input.password.length >= 8 &&
+    !!input.clientMutationId &&
+    typeof input.clientMutationId === 'string'
+  );
 };
 export interface ExtendedMockedResponse extends MockedResponse {
   variableMatcher: (variables: { input: CreateUserInput }) => boolean;

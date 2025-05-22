@@ -1,15 +1,21 @@
 require('./utils/initializeLocalization');
 
 const fs = require('node:fs');
+const path = require('node:path');
 
 const { run, analyze } = require('@memlab/api');
 const { StringAnalysis } = require('@memlab/heap-analysis');
 
-const memoryLeakDir = './src/test/memory-leak';
+const memoryLeakDir = path.resolve('./src/test/memory-leak');
 const testsDir = './tests';
-
-const workDir = './src/test/memory-leak/results';
+const workDir = path.resolve(memoryLeakDir, 'results');
 const consoleMode = 'VERBOSE';
+
+try {
+  fs.mkdirSync(workDir, { recursive: true, mode: 0o777 });
+} catch (error) {
+  process.exit(1);
+}
 
 (async function () {
   const testFilePaths = fs

@@ -27,10 +27,11 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml checkNodeVersion.js ./
 RUN pnpm install
 
-RUN addgroup -S appuser && adduser -S appuser -G appuser
 
-RUN mkdir -p /app/src/test/memory-leak/results && \
-    chown -R appuser:appuser /app
+RUN addgroup -S appuser \
+    && adduser -S appuser -G appuser \
+    && mkdir -p /app/src/test/memory-leak/results \
+    && chown -R appuser:appuser /app
 
 USER appuser
 
