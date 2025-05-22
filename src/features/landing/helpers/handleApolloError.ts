@@ -29,13 +29,13 @@ export type HandleApolloErrorType = (props: HandleApolloErrorProps) => string;
 type HandleNetworkErrorProps = ServerErrorShape | unknown;
 
 type HandleNetworkErrorType = (props: HandleNetworkErrorProps) => string;
-const NETWORK_ERROR_PATTERNS: string[] = [
+export const NETWORK_ERROR_PATTERNS: readonly string[] = Object.freeze([
   'failed to fetch',
   'network request failed',
   'fetch failed',
   'network error',
   'request to',
-];
+] as const);
 export const handleNetworkError: HandleNetworkErrorType = (
   networkError: HandleNetworkErrorProps
 ): string => {
@@ -76,25 +76,30 @@ export const handleApolloError: HandleApolloErrorType = ({
     const firstError: GraphQLFormattedError = graphQLErrors[0];
     const { extensions, message } = firstError;
 
-    switch (extensions?.statusCode) {
-      case HTTPStatusCodes.INTERNAL_SERVER_ERROR:
-        return messages[CLIENT_ERROR_KEYS.SERVER_ERROR];
-      case HTTPStatusCodes.UNAUTHORIZED:
-        return messages[CLIENT_ERROR_KEYS.UNAUTHORIZED];
-      case HTTPStatusCodes.FORBIDDEN:
-        return messages[CLIENT_ERROR_KEYS.DENIED];
-      default:
-        if (message?.includes('UNAUTHORIZED')) {
-          return messages[CLIENT_ERROR_KEYS.UNAUTHORIZED];
-        }
+    const statusCode: number | undefined = extensions?.statusCode as number | undefined;
+    const isServerErrorStatus: boolean =
+      typeof statusCode === 'number' && statusCode >= 500 && statusCode < 600;
 
-        return (
-          graphQLErrors
-            .map(e => e.message || '')
-            .filter(Boolean)
-            .join(', ') || messages[CLIENT_ERROR_KEYS.UNEXPECTED]
-        );
+    if (isServerErrorStatus) {
+      return messages[CLIENT_ERROR_KEYS.SERVER_ERROR];
     }
+    if (statusCode === HTTPStatusCodes.UNAUTHORIZED) {
+      return messages[CLIENT_ERROR_KEYS.UNAUTHORIZED];
+    }
+    if (statusCode === HTTPStatusCodes.FORBIDDEN) {
+      return messages[CLIENT_ERROR_KEYS.DENIED];
+    }
+
+    if (message?.toUpperCase?.().includes('UNAUTHORIZED')) {
+      return messages[CLIENT_ERROR_KEYS.UNAUTHORIZED];
+    }
+
+    return (
+      graphQLErrors
+        .map(e => e.message || '')
+        .filter(Boolean)
+        .join(', ') || messages[CLIENT_ERROR_KEYS.UNEXPECTED]
+    );
   }
 
   return messages[CLIENT_ERROR_KEYS.UNEXPECTED];

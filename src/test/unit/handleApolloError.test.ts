@@ -67,10 +67,7 @@ describe('Error Handling', () => {
     });
 
     it('should return "went wrong" error for undefined statusCode', () => {
-      const error: ServerErrorShape = {
-        statusCode: undefined as unknown as number,
-        message: 'Some error',
-      };
+      const error: ServerErrorShape = { message: 'Some error' };
       expect(handleNetworkError(error)).toBe(messages[CLIENT_ERROR_KEYS.WENT_WRONG]);
     });
 

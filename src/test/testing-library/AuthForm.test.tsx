@@ -5,7 +5,7 @@ import { t } from 'i18next';
 import { OnSubmitType } from '@/test/testing-library/fixtures/auth-test-helpers';
 
 import { testInitials, testEmail, testPassword } from './constants';
-import { renderAuthForm } from './fixtures/auth-form-helper';
+import renderAuthForm from './fixtures/auth-form-helper';
 import { checkElementsInDocument, fillForm, getFormElements } from './utils';
 
 const formTitleText: string = t('sign_up.form.heading_main');
