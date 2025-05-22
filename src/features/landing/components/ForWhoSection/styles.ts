@@ -1,9 +1,9 @@
 import breakpointsTheme from '@/components/UiBreakpoints';
-import { media } from '@/components/UiBreakpoints/Theme/media';
-import colorTheme from '@/components/UiColorTheme';
+import { media } from '@/components/UiBreakpoints/Theme/media';  
+import colorTheme from '@/components/UiColorTheme';  
 
 
-const bp: { xs: number; sm: number; md: number; lg: number; xl: number } = breakpointsTheme.breakpoints.values; 
+
 
 
 const mq: {  
@@ -73,9 +73,7 @@ export default {
     minHeight: '6.25rem',
     zIndex: 1,
     [media.custom.max1130]: { minHeight: '11.188rem', marginTop: '-8.625rem' },  
-    [media.custom.max968]:   { display: 'none' },  
-    [media.custom.max968]:   { display: 'none' },  
-    [media.custom.max968]:   { display: 'none' },  
+    [media.custom.max968]: { display: 'none' },  
   },
 
   container: {
