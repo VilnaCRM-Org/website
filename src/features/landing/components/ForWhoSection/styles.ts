@@ -1,17 +1,13 @@
+import { SxProps, Theme } from '@mui/material';
 
 import { media, mq } from '@/components/UiBreakpoints/Theme/media';  
-import colorTheme from '@/components/UiColorTheme';  
-
-
-
-
-
-
-
+import colorTheme from '@/components/UiColorTheme'; 
+ 
 type PointBaseReturn = {  
+  [key: string]: unknown;  
   width: string;  
   height: string;  
-  [key: string]: unknown;  
+  
 };  
 const pointBase: (width: string, height: string) => PointBaseReturn = (width: string, height: string): PointBaseReturn => ({  
   width,  
@@ -20,7 +16,7 @@ const pointBase: (width: string, height: string) => PointBaseReturn = (width: st
 });  
 
 
-const arrowCommon = {
+const arrowCommon: SxProps<Theme> = {
   position: 'absolute',
   marginTop: '4.2rem',
   [media.sm]: { marginTop: '4.4rem' },
