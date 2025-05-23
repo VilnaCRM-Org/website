@@ -20,10 +20,20 @@ FROM base AS build
 COPY . .
 
 RUN npx next build && \
-    npx next-export-optimize-images
+    npx next-export-optimize-images && \
+    echo "=== Build Stage Output ===" && \
+    ls -la /app/out && \
+    echo "=== End Build Stage Output ==="
 
 
 # ---------- Production Stage ----------
 FROM base AS production
 
 COPY --from=build /app/out ./out
+
+RUN echo "=== Production Stage Output ===" && \
+    pwd && \
+    ls -la && \
+    echo "=== Contents of out directory ===" && \
+    ls -la out && \
+    echo "=== End Production Stage Output ==="
