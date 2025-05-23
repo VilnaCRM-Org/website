@@ -14,7 +14,7 @@ COPY package.json pnpm-lock.yaml checkNodeVersion.js ./
 RUN pnpm install
 
 
-
+# ---------- Build Stage ----------
 FROM base AS build
 
 COPY . .
@@ -22,4 +22,14 @@ COPY . .
 RUN npx next build && \
     npx next-export-optimize-images
 
-WORKDIR /app
+
+# ---------- Production Stage ----------
+FROM base AS production
+
+COPY --from=build /app/out ./out
+
+RUN npm install -g serve
+
+EXPOSE 3001
+
+CMD ["serve", "-s", "out", "-p", "3001"]

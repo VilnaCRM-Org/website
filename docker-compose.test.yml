@@ -3,7 +3,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: ["npx", "serve", "-s", "out", "-p", "3001"]
     restart: unless-stopped
     volumes:
       - .:/app
@@ -11,7 +10,7 @@ services:
     ports:
       - '3001:3001'
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://${WEBSITE_DOMAIN}:${NEXT_PUBLIC_PROD_PORT}"]
+      test: [ "CMD", "curl", "-f", "http://${WEBSITE_DOMAIN}:${NEXT_PUBLIC_PROD_PORT}" ]
 
   playwright:
     build:
@@ -26,7 +25,7 @@ services:
     environment:
       - NEXT_PUBLIC_PROD_HOST_API_URL=http://${NEXT_PUBLIC_PROD_HOST}:${NEXT_PUBLIC_PROD_PORT}
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://${WEBSITE_DOMAIN}:${PLAYWRIGHT_TEST_PORT}"]
+      test: [ "CMD", "curl", "-f", "http://${WEBSITE_DOMAIN}:${PLAYWRIGHT_TEST_PORT}" ]
 
   apollo:
     build:
@@ -36,7 +35,7 @@ services:
     ports:
       - '4000:4000'
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://${WEBSITE_DOMAIN}:${GRAPHQL_PORT}/${GRAPHQL_API_PATH}"]
+      test: [ "CMD", "curl", "-f", "http://${WEBSITE_DOMAIN}:${GRAPHQL_PORT}/${GRAPHQL_API_PATH}" ]
 
   mockoon:
     build:
@@ -46,10 +45,10 @@ services:
       - '8080:8080'
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://${WEBSITE_DOMAIN}:${MOCKOON_PORT}"]
+      test: [ "CMD", "curl", "-f", "http://${WEBSITE_DOMAIN}:${MOCKOON_PORT}" ]
 
   k6:
-    profiles: ["load"]
+    profiles: [ "load" ]
     build:
       context: .
       dockerfile: ./src/test/load/Dockerfile
