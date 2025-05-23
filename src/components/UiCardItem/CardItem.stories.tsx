@@ -14,7 +14,8 @@ const meta: Meta<typeof UiCardList> = {
 export default meta;
 
 function CardItem(args: CardList): React.ReactElement {
-  return <UiCardList {...args} />;
+  const { cardList } = args;
+   return <UiCardList cardList={cardList} />;
 }
 
 type Story = StoryObj<typeof CardItem>;
