@@ -3,11 +3,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: ["sh", "/app/scripts/start-prod.sh"]
+      target: production
     restart: unless-stopped
-    volumes:
-      - .:/app
-      - /app/node_modules
     ports:
       - '3001:3001'
     healthcheck:

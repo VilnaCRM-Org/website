@@ -45,3 +45,11 @@ export const DIMENSIONS: DimensionsType = {
     LG: '40.45rem',
   },
 };
+export const Z_INDICES: Record<string, number> = {
+  NOTIFICATION_SECTION: 1000,
+  MESSAGE_CONTAINER: 100,
+  MESSAGE_TITLE: 100,
+  GEARS: 5,
+  BOTTOM_IMG_BOX: -1,
+  SUCCESS_BOX: 3,
+};

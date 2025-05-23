@@ -126,24 +126,24 @@
       "name_input": {
         "label": "Ваше ім’я та прізвище",
         "placeholder": "Михайло Светський",
-        "special_characters_error": "Ваше ім'я повинно містити лише літери",
+        "special_characters_error": "Будь ласка, використовуйте лише літери",
         "required": "Це поле обов'язкове",
-        "error_text": "Неправильний формат повного імені"
+        "full_name_format_error": "Будь ласка, введіть повне ім’я у правильному форматі"
       },
       "email_input": {
         "label": "E-mail",
         "placeholder": "vilnaCRM@gmail.com",
         "required": "Це поле обов'язкове",
-        "step_error_message": "Email має містити символи '@' та '.'",
-        "invalid_message": "Неправильна електронна адреса"
+        "email_format_error": "Будь ласка, переконайтеся, що email містить '@' та '.'",
+        "invalid_message": "Будь ласка, введіть коректну електронну адресу"
       },
       "password_input": {
         "label": "Пароль",
         "placeholder": "Створіть пароль",
         "required": "Це поле обов'язкове",
-        "error_length": "Потрібно від 8 до 64 символів",
-        "error_numbers": "Потрібна принаймні одна цифра",
-        "error_uppercase": "Принаймні одна велика літера"
+        "error_length": "Будь ласка, введіть від 8 до 64 символів",
+        "error_numbers": "Будь ласка, додайте принаймні одну цифру",
+        "error_uppercase": "Будь ласка, додайте принаймні одну велику літеру"
       },
       "password_tip": {
         "alt": "Позначка підказки пароля",
@@ -174,14 +174,28 @@
     },
     "error": {
       "title": "Трапилась помилка",
-      "description": "Внутрішня помилка сервера",
       "retry_button": "Спробувати ще раз",
       "button": "Назад",
       "images": {
         "error": "Червоний трикутник з попередженням про помилку."
       }
+    }
+  },
+  "failure_responses": {
+    "authentication_errors": {
+      "unauthorized_access": "Неавторизований доступ. Будь ласка, увійдіть знову",
+      "access_denied": "Доступ заборонено. У вас немає прав для виконання цієї дії"
     },
-    "unknown": { "title": "Невідомий тип сповіщення" }
+    "client_errors": {
+      "something_went_wrong": "Щось пішло не так із запитом. Спробуйте ще раз пізніше",
+      "unexpected_error": "Сталася непередбачена помилка. Будь ласка, спробуйте ще раз"
+    },
+    "network_errors": {
+      "network_error": "Помилка мережі. Перевірте з’єднання з інтернетом"
+    },
+    "server_errors": {
+      "server_error": "Внутрішня помилка сервера."
+    }
   },
   "footer": {
     "logo_alt": "Vilna логотип",

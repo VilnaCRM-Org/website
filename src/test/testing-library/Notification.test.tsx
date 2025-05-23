@@ -3,6 +3,12 @@ import userEvent, { UserEvent } from '@testing-library/user-event';
 import { t } from 'i18next';
 import React from 'react';
 
+import {
+  ClientErrorMessages,
+  getClientErrorMessages,
+  CLIENT_ERROR_KEYS,
+} from '@/shared/clientErrorMessages';
+
 import Notification from '../../features/landing/components/Notification';
 import { notificationComponents } from '../../features/landing/components/Notification/Notification';
 import {
@@ -11,11 +17,11 @@ import {
 } from '../../features/landing/components/Notification/types';
 
 import { buttonRole } from './constants';
-import { checkElementsInDocument, SetIsOpenType } from './utils';
+import { SetIsOpenType } from './fixtures/auth-test-helpers';
+import { checkElementsInDocument } from './utils';
 
 const successTitleText: string = t('notifications.success.title');
 const errorTitleText: string = t('notifications.error.title');
-const fallbackTitleText: string = t('notifications.unknown.title');
 const successDescriptionText: string = t('notifications.success.description');
 const confettiImgAltText: string = t('notifications.success.images.confetti');
 const gearsImgAltText: string = t('notifications.success.images.gears');
@@ -27,6 +33,7 @@ function renderNotification({
   isOpen,
   setIsOpen,
   onRetry = jest.fn(),
+  errorText,
 }: Partial<NotificationControlProps> & {
   setIsOpen: NotificationControlProps['setIsOpen'];
 }): RenderResult {
@@ -36,6 +43,8 @@ function renderNotification({
       setIsOpen={setIsOpen}
       isOpen={isOpen || false}
       onRetry={onRetry}
+      loading={false}
+      errorText={errorText}
     />
   );
 }
@@ -99,26 +108,35 @@ describe('Notification', () => {
     const isOpen: boolean = true;
 
     render(
-      <Notification type={type} setIsOpen={setIsOpen} onRetry={retrySubmit} isOpen={isOpen} />
+      <Notification
+        type={type}
+        setIsOpen={setIsOpen}
+        onRetry={retrySubmit}
+        isOpen={isOpen}
+        loading={false}
+      />
     );
 
     expect(screen.getByText(successTitleText)).toBeInTheDocument();
   });
 
-  it('should fallback to NotificationSuccess when no matching type is found', () => {
+  it('should show error notification as fallback for unknown types', () => {
     const type: NotificationStatus = 'unknown' as NotificationStatus;
     const setIsOpen: jest.Mock = jest.fn();
     const retrySubmit: jest.Mock = jest.fn();
     const isOpen: boolean = true;
 
     render(
-      <Notification type={type} setIsOpen={setIsOpen} onRetry={retrySubmit} isOpen={isOpen} />
+      <Notification
+        type={type}
+        setIsOpen={setIsOpen}
+        onRetry={retrySubmit}
+        isOpen={isOpen}
+        loading={false}
+      />
     );
 
-    const fallbackComponent: HTMLElement = screen.getByText(fallbackTitleText);
-
-    expect(fallbackComponent).toBeInTheDocument();
-    expect(fallbackComponent).toHaveRole('alert');
+    expect(screen.getByText(errorTitleText)).toBeInTheDocument();
   });
   it('renders "success" notification by default when type is empty', () => {
     renderNotification({ type: '' as NotificationStatus, isOpen: false, setIsOpen: mockSetIsOpen });
@@ -162,6 +180,7 @@ describe('Notification', () => {
         isOpen
         setIsOpen={mockSetIsOpen}
         onRetry={retrySubmitMock}
+        loading={false}
       />
     );
 
@@ -227,5 +246,25 @@ describe('Notification', () => {
     images.forEach(img => {
       expect(img).toHaveAttribute('alt');
     });
+  });
+  it('should display the errorText when it is provided', () => {
+    renderNotification({
+      type: NotificationStatus.ERROR,
+      isOpen: true,
+      setIsOpen: mockSetIsOpen,
+      errorText: 'Network error',
+    });
+
+    expect(screen.getByText('Network error')).toBeInTheDocument();
+  });
+  it('should display the default description when errorText is empty or undefined', () => {
+    const messages: ClientErrorMessages = getClientErrorMessages();
+    renderNotification({
+      type: NotificationStatus.ERROR,
+      isOpen: true,
+      setIsOpen: mockSetIsOpen,
+    });
+
+    expect(screen.getByText(messages[CLIENT_ERROR_KEYS.WENT_WRONG])).toBeInTheDocument();
   });
 });

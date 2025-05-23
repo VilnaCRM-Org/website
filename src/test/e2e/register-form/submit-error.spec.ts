@@ -58,6 +58,8 @@ test('Submit the registration form, verify error notification, and return to fil
   await expect(passwordInput).toHaveValue(userData.password);
   await expect(policyTextCheckbox).toBeChecked();
 
+  await page.unroute(graphqlEndpoint);
+
   await page.route(graphqlEndpoint, successResponse);
   const successResponsePromise: Promise<Response> = page.waitForResponse(responseFilter);
 
@@ -96,12 +98,16 @@ test('Submit the registration form, get error, retry submission, and succeed', a
   await expect(passwordInput).toHaveValue(userData.password);
   await expect(policyTextCheckbox).toBeChecked();
 
+  await page.unroute(graphqlEndpoint);
+
   await page.route(graphqlEndpoint, serverErrorResponse);
   const responsePromise2: Promise<Response> = page.waitForResponse(responseErrorFilter);
   await signupButton.click();
   await responsePromise2;
 
   await errorTitle.waitFor({ state: 'visible' });
+
+  await page.unroute(graphqlEndpoint);
 
   await page.route(graphqlEndpoint, successResponse);
   const successResponsePromise: Promise<Response> = page.waitForResponse(responseFilter);

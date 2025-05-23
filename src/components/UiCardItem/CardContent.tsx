@@ -20,6 +20,7 @@ function CardContent({ item, isSmallCard }: CardContentProps): React.ReactElemen
       <UiTypography
         variant={isSmallCard ? 'bodyText16' : 'bodyText18'}
         sx={isSmallCard ? styles.smallText : styles.largeText}
+        id={item.text.includes('text_integrate') ? 'services-label' : undefined}
       >
         {isSmallCard ? (
           <Trans i18nKey={item.text}>

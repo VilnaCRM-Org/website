@@ -5,7 +5,7 @@ import { buttonRole } from '@/test/testing-library/constants';
 
 import NotificationSuccess from '../../features/landing/components/Notification/NotificationSuccess';
 
-import { SetIsOpenType } from './utils';
+import { SetIsOpenType } from './fixtures/auth-test-helpers';
 
 const successTitleText: string = t('notifications.success.title');
 const successDescriptionText: string = t('notifications.success.description');

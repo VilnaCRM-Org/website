@@ -8,6 +8,8 @@ import AuthSection from '../../features/landing/components/AuthSection/AuthSecti
 import { socialLinks } from '../../features/landing/components/AuthSection/constants';
 import { SocialLink } from '../../features/landing/types/authentication/social';
 
+import { renderWithProviders } from './utils';
+
 const authSectionSelector: string = 'section';
 
 const signupHeading: string = t('sign_up.vilna_text');
@@ -15,22 +17,14 @@ const successTitleText: string = t('notifications.success.title');
 
 describe('AuthSection', () => {
   it('renders without crashing', () => {
-    const { container } = render(
-      <MockedProvider mocks={[]} addTypename={false}>
-        <AuthSection />
-      </MockedProvider>
-    );
+    const { container } = renderWithProviders(<AuthSection />);
 
     const authSection: HTMLElement | null = container.querySelector(authSectionSelector);
     expect(authSection).toBeInTheDocument();
   });
 
   test('renders SignUpText component and AuthForm components', () => {
-    const { getByText } = render(
-      <MockedProvider mocks={[]} addTypename={false}>
-        <AuthSection />
-      </MockedProvider>
-    );
+    const { getByText } = renderWithProviders(<AuthSection />);
 
     const signUpText: HTMLElement = getByText(signupHeading);
 
@@ -38,24 +32,14 @@ describe('AuthSection', () => {
     expect(screen.getByRole('form')).toBeInTheDocument();
   });
   test('renders AuthForm, and don`t render Notification component', () => {
-    render(
-      <MockedProvider mocks={[]} addTypename={false}>
-        <AuthSection />
-      </MockedProvider>
-    );
+    renderWithProviders(<AuthSection />);
 
     expect(screen.getByText(signupHeading)).toBeVisible();
     expect(screen.getByText(successTitleText)).not.toBeVisible();
   });
 
   test('renders all social links', () => {
-    render(
-      <I18nextProvider i18n={i18n}>
-        <MockedProvider mocks={[]} addTypename={false}>
-          <AuthSection />
-        </MockedProvider>
-      </I18nextProvider>
-    );
+    renderWithProviders(<AuthSection />);
 
     socialLinks.forEach(({ title }: SocialLink) => {
       expect(screen.getByText(i18n.t(title))).toBeInTheDocument();

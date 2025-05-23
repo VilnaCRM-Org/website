@@ -2,7 +2,7 @@ const ScenarioBuilder = require('../utils/ScenarioBuilder');
 
 const scenarioBuilder = new ScenarioBuilder();
 
-const servicesButtonSelector = 'span.css-tna3e5-MuiTypography-root';
+const servicesButtonSelector = 'p#services-label > span';
 const tooltipSelector = '.MuiTooltip-popper';
 
 const coordinateX = 100;
