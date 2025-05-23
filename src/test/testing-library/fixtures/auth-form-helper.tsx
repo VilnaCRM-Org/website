@@ -1,3 +1,4 @@
+import { MockedResponse } from '@apollo/client/testing';
 import { RenderResult } from '@testing-library/react';
 import React from 'react';
 import { useForm } from 'react-hook-form';
@@ -6,12 +7,7 @@ import AuthForm from '../../../features/landing/components/AuthSection/AuthForm/
 import { RegisterItem } from '../../../features/landing/types/authentication/form';
 import { renderWithProviders } from '../utils';
 
-import {
-  AuthFormWrapperProps,
-  ExtendedMockedResponse,
-  fulfilledMockResponse,
-  OnSubmitType,
-} from './auth-test-helpers';
+import { AuthFormWrapperProps, fulfilledMockResponse, OnSubmitType } from './auth-test-helpers';
 
 function AuthFormWrapper({ onSubmit, loading = false }: AuthFormWrapperProps): React.ReactElement {
   const {
@@ -31,7 +27,7 @@ function AuthFormWrapper({ onSubmit, loading = false }: AuthFormWrapperProps): R
   );
 }
 interface RenderAuthFormOptions extends Partial<AuthFormWrapperProps> {
-  mocks?: ExtendedMockedResponse[];
+  mocks?: MockedResponse[];
 }
 const mockSubmitSuccess: () => OnSubmitType = (): OnSubmitType =>
   jest.fn().mockResolvedValueOnce(undefined);

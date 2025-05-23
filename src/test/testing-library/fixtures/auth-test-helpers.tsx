@@ -34,10 +34,8 @@ const validateCreateUserInput: (variables: { input: CreateUserInput }) => boolea
     typeof input.clientMutationId === 'string'
   );
 };
-export interface ExtendedMockedResponse extends MockedResponse {
-  variableMatcher: (variables: { input: CreateUserInput }) => boolean;
-}
-export const fulfilledMockResponse: ExtendedMockedResponse = {
+
+export const fulfilledMockResponse: MockedResponse = {
   request: {
     query: SIGNUP_MUTATION,
   },
@@ -87,7 +85,10 @@ export const mockNetworkErrorAndSuccessResponses: MockedResponse[] = [
   fulfilledMockResponse,
 ];
 
-type RequestType = { query: TypedDocumentNode<SignUpInput>; variables: { input: CreateUserInput } };
+export type RequestType = {
+  query: TypedDocumentNode<SignUpInput>;
+  variables: { input: CreateUserInput };
+};
 const request: RequestType = {
   query: SIGNUP_MUTATION,
   variables: { input },
