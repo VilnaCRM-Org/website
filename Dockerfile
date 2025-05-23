@@ -27,9 +27,3 @@ RUN npx next build && \
 FROM base AS production
 
 COPY --from=build /app/out ./out
-
-RUN npm install -g serve
-
-EXPOSE 3001
-
-CMD ["serve", "-s", "out", "-p", "3001"]
