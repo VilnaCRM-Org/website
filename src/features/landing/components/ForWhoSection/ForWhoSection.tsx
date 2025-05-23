@@ -46,49 +46,54 @@ function ForWhoSection(): React.ReactElement {
           </Box>
           <Box sx={styles.container}>
             <Box sx={styles.svgContainer}>
+             <Box
+  component="img"
+  src={circle.src}
+  alt={circle.alt}
+  aria-hidden="true"
+  sx={styles.circle}
+  loading="lazy"
+/>
               <Box
-                component="img"
-                {...getImageProps(circle)}
-                aria-hidden="true"
-                sx={styles.circle}
-                loading="lazy"
-              />
+  component="img"
+  src={circle.src}
+  alt={circle.alt}
+  aria-hidden="true"
+  sx={styles.circle}
+  loading="lazy"
+/>
               <Box
-                component="img"
-                {...getImageProps(rhombus)}
-                aria-hidden="true"
-                sx={styles.rhombus}
-                loading="lazy"
-              />
-              <Box sx={styles.pointContainer}>
+  component="img"
+  src={circle.src}
+  alt={circle.alt}
+  aria-hidden="true"
+  sx={styles.circle}
+  loading="lazy"
+/>
                 <Box
-                  component="img"
-                  {...getImageProps(pointGroup)}
-                  aria-hidden="true"
-                  sx={styles.pointGroup}
-                  loading="lazy"
-                />
+  component="img"
+  src={circle.src}
+  alt={circle.alt}
+  aria-hidden="true"
+  sx={styles.circle}
+  loading="lazy"
+/>
                 <Box
-                  component="img"
-                  {...getImageProps(point6)}
-                  aria-hidden="true"
-                  sx={styles.point6}
-                  loading="lazy"
-                />
+  component="img"
+  src={circle.src}
+  alt={circle.alt}
+  aria-hidden="true"
+  sx={styles.circle}
+  loading="lazy"
+/>
                 <Box
-                  component="img"
-                  {...getImageProps(point8)}
-                  aria-hidden="true"
-                  sx={styles.point8}
-                  loading="lazy"
-                />
-                <Box
-                  component="img"
-                  {...getImageProps(point10)}
-                  aria-hidden="true"
-                  sx={styles.point10}
-                  loading="lazy"
-                />
+  component="img"
+  src={circle.src}
+  alt={circle.alt}
+  aria-hidden="true"
+  sx={styles.circle}
+  loading="lazy"
+/>
               </Box>
             </Box>
             <Box sx={styles.square}>

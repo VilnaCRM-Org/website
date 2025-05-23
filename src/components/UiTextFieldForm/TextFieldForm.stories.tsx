@@ -71,7 +71,12 @@ function TextFieldFormStory<T extends FieldValues>(args: CustomTextField<T>): Re
 }
 
 export const TextFieldForm: Story = {
-  render: args => <TextFieldFormStory {...args} />,
+  render: args => <TextFieldFormStory
+      rules={args.rules}
+      placeholder={args.placeholder}
+      type={args.type}
+      fullWidth={args.fullWidth}
+    />,
   args: {
     rules: {
       required: t('This field is required'),
