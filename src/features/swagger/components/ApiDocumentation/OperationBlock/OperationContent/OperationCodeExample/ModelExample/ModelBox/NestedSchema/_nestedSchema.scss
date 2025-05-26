@@ -1,4 +1,4 @@
-@use "@swagger/global" as *;
+@use '@swagger/global' as *;
 
 %nestedSchema {
   & > .model {
@@ -15,7 +15,7 @@
             }
           }
         }
-        &[aria-expanded="true"] {
+        &[aria-expanded='true'] {
           margin-bottom: 0.625rem;
         }
         span {
@@ -30,7 +30,8 @@
         }
       }
     }
-    .brace-open, .brace-close {
+    .brace-open,
+    .brace-close {
       @include demiBold14($darkPrimary);
     }
     .brace-close {

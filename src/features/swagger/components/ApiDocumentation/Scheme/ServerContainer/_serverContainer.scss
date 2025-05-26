@@ -1,6 +1,6 @@
-@use "@swagger/global" as *;
+@use '@swagger/global' as *;
 
-@use "ServerSelect/serverSelect";
+@use 'ServerSelect/serverSelect';
 
 @mixin flex-container {
   display: flex;

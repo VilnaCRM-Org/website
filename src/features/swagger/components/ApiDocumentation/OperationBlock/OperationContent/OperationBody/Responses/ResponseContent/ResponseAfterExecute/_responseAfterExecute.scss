@@ -1,6 +1,6 @@
-@use "@swagger/global" as *;
+@use '@swagger/global' as *;
 
-@use "InnerContent/innerContent";
+@use 'InnerContent/innerContent';
 
 %responseAfterExecute {
   & > div {

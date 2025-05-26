@@ -1,4 +1,4 @@
-@use "@swagger/global" as *;
+@use '@swagger/global' as *;
 
 %operationModels {
   .models {
@@ -55,7 +55,7 @@
                 @include medium15($darkPrimary);
               }
             }
-            &[aria-expanded="true"] {
+            &[aria-expanded='true'] {
               span.model-toggle {
                 margin-left: 1.25rem;
               }
@@ -140,7 +140,8 @@
             }
           }
         }
-        &:hover, &:focus-within {
+        &:hover,
+        &:focus-within {
           background-color: $white;
           border: 1px solid $brandGrey;
         }

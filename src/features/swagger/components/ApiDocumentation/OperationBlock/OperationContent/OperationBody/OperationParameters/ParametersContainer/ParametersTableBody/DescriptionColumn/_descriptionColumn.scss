@@ -1,8 +1,8 @@
-@use "@swagger/global" as *;
+@use '@swagger/global' as *;
 
-@use "DescriptionCheckbox/descriptionCheckbox";
-@use "DescriptionInput/descriptionInput";
-@use "Markdown/markdown";
+@use 'DescriptionCheckbox/descriptionCheckbox';
+@use 'DescriptionInput/descriptionInput';
+@use 'Markdown/markdown';
 
 %descriptionColumn {
   .parameters-col_description {

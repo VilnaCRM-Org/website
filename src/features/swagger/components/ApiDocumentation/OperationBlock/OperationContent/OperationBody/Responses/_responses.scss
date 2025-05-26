@@ -1,7 +1,7 @@
-@use "@swagger/global" as *;
+@use '@swagger/global' as *;
 
-@use "ResponseHeader/responseHeader";
-@use "ResponseContent/responseContent";
+@use 'ResponseHeader/responseHeader';
+@use 'ResponseContent/responseContent';
 
 %responses {
   .responses-wrapper {

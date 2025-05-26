@@ -1,7 +1,8 @@
-@use "@swagger/global" as *;
+@use '@swagger/global' as *;
 
 %markdown {
-  .renderedMarkdown, .markdown {
+  .renderedMarkdown,
+  .markdown {
     p {
       margin-bottom: 0.25rem;
       @include medium12($grey200);

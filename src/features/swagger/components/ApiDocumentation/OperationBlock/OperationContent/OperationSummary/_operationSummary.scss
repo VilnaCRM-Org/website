@@ -1,9 +1,9 @@
-@use "@swagger/global" as *;
+@use '@swagger/global' as *;
 
-@use "SummaryControl/summaryControl";
-@use "ControlArrow/controlArrow";
-@use "LockButton/lockButton";
-@use "CopyButton/copyButton";
+@use 'SummaryControl/summaryControl';
+@use 'ControlArrow/controlArrow';
+@use 'LockButton/lockButton';
+@use 'CopyButton/copyButton';
 
 @mixin interactive-state {
   .view-line-link svg {

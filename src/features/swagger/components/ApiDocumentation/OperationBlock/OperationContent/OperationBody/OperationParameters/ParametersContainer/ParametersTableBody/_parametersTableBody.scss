@@ -1,7 +1,7 @@
-@use "@swagger/global" as *;
+@use '@swagger/global' as *;
 
-@use "NameColumn/nameColumn";
-@use "DescriptionColumn/descriptionColumn";
+@use 'NameColumn/nameColumn';
+@use 'DescriptionColumn/descriptionColumn';
 
 %parametersTableBody {
   tbody {

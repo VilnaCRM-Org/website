@@ -1,12 +1,12 @@
-@use "@swagger/global" as *;
+@use '@swagger/global' as *;
 
-@use "OperationParameters/operationParameters";
-@use "Responses/responses";
-@use "ExecuteButtons/executeButtons";
-@use "Description/description";
-@use "SectionRequestBody/sectionRequestBody";
-@use "Error/error";
-@use "Loading/loading";
+@use 'OperationParameters/operationParameters';
+@use 'Responses/responses';
+@use 'ExecuteButtons/executeButtons';
+@use 'Description/description';
+@use 'SectionRequestBody/sectionRequestBody';
+@use 'Error/error';
+@use 'Loading/loading';
 
 %operationBody {
   .opblock-body {

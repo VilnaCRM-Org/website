@@ -1,8 +1,8 @@
-@use "@swagger/global" as *;
+@use '@swagger/global' as *;
 
-@use "ParameterName/parameterName";
-@use "ParameterType/parameterType";
-@use "ParameterIn/parameterIn";
+@use 'ParameterName/parameterName';
+@use 'ParameterType/parameterType';
+@use 'ParameterIn/parameterIn';
 
 %nameColumn {
   .parameters-col_name {

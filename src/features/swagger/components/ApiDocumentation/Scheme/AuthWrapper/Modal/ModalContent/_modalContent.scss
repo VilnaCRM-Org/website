@@ -1,7 +1,7 @@
-@use "@swagger/global" as *;
+@use '@swagger/global' as *;
 
-@use "ModalHeader/modalHeader";
-@use "ModalBody/modalBody";
+@use 'ModalHeader/modalHeader';
+@use 'ModalBody/modalBody';
 
 %modalContent {
   .modal-ux {

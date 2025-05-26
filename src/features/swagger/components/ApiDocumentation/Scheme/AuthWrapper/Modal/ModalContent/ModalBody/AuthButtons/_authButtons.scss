@@ -1,4 +1,4 @@
-@use "@swagger/global" as *;
+@use '@swagger/global' as *;
 
 @mixin modal-button($variant, $text-color) {
   @include uiButton($variant, 0 1.5rem) {

@@ -1,8 +1,8 @@
-@use "@swagger/global" as *;
+@use '@swagger/global' as *;
 
-@use "AuthButtons/authButtons";
-@use "AuthInput/authInput";
-@use "AuthContainer/authContainer";
+@use 'AuthButtons/authButtons';
+@use 'AuthInput/authInput';
+@use 'AuthContainer/authContainer';
 
 @mixin modal-h4() {
   margin-top: 0 !important;

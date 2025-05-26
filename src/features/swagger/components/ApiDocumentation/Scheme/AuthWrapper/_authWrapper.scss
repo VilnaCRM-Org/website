@@ -1,6 +1,6 @@
-@use "@swagger/global" as *;
+@use '@swagger/global' as *;
 
-@use "Modal/modal";
+@use 'Modal/modal';
 
 %authWrapper {
   .auth-wrapper {

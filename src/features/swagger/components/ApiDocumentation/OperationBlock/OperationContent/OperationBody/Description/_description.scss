@@ -1,4 +1,4 @@
-@use "@swagger/global" as *;
+@use '@swagger/global' as *;
 
 %description {
   & > .opblock-description-wrapper {
@@ -8,7 +8,8 @@
       padding: 1rem 1rem 1rem 0.75rem;
     }
     .opblock-description {
-      .renderedMarkdown, .markdown {
+      .renderedMarkdown,
+      .markdown {
         p {
           margin: 0;
           @include medium14($grey200);

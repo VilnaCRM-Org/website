@@ -1,20 +1,20 @@
-@use "@swagger/global" as *;
+@use '@swagger/global' as *;
 
 %preformattedText {
   pre {
-    padding: 1rem 1rem!important;
-    background-color: $darkSecondary!important;
+    padding: 1rem 1rem !important;
+    background-color: $darkSecondary !important;
     border-radius: 0.5rem;
     max-height: none;
     min-height: auto;
     @include demiBold14($white);
     @include for-large-screens {
-      padding: 1rem!important;
+      padding: 1rem !important;
       @include demi18($white);
       line-height: 1.32rem;
     }
     @include for-small-screens {
-      padding: 0.75rem!important;
+      padding: 0.75rem !important;
       @include medium15($white);
       line-height: 1.125rem;
     }

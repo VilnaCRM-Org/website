@@ -1,4 +1,4 @@
-@use "@swagger/global" as *;
+@use '@swagger/global' as *;
 
 %descriptionInput {
   input[type='text'] {
@@ -10,7 +10,7 @@
         max-width: 21.5rem;
         @include medium16($darkPrimary);
       }
-      @include for-medium-screens{
+      @include for-medium-screens {
         min-width: auto;
         max-width: none;
         width: 100%;

@@ -1,4 +1,4 @@
-@use "../../Variables/variables" as *;
+@use '../../Variables/variables' as *;
 
 @mixin uiSelect($height, $padding-right: 5.5rem) {
   cursor: pointer;
@@ -10,7 +10,8 @@
   border-radius: 0.5rem;
   box-shadow: 0 8px 27px 0 $selectShadow;
   min-width: auto;
-  &:hover, &:active {
+  &:hover,
+  &:active {
     border-color: $grey400;
   }
   @content;

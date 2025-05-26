@@ -1,6 +1,6 @@
-@use "@swagger/global" as *;
+@use '@swagger/global' as *;
 
-@use "DeprecatedMethod/deprecatedMethod";
+@use 'DeprecatedMethod/deprecatedMethod';
 
 $postColorTheme: #38b386;
 $putColorTheme: #ffc01e;
@@ -30,7 +30,8 @@ $methodColors: (
       }
     }
     .opblock-body {
-      .opblock-section, .responses-wrapper {
+      .opblock-section,
+      .responses-wrapper {
         .opblock-section-header {
           background: $white;
         }

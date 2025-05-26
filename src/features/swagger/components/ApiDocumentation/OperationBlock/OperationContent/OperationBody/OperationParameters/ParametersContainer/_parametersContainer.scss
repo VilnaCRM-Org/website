@@ -1,8 +1,8 @@
-@use "@swagger/global" as *;
+@use '@swagger/global' as *;
 
-@use "ParametersDescription/parametersDescription";
-@use "ParametersTableHead/parametersTableHead";
-@use "ParametersTableBody/parametersTableBody";
+@use 'ParametersDescription/parametersDescription';
+@use 'ParametersTableHead/parametersTableHead';
+@use 'ParametersTableBody/parametersTableBody';
 
 %parametersContainer {
   .parameters-container {

@@ -1,12 +1,14 @@
-@use "@swagger/global" as *;
+@use '@swagger/global' as *;
 
 %description {
   .description {
     display: block;
     margin: 0;
-    .markdown, .renderedMarkdown {
+    .markdown,
+    .renderedMarkdown {
       max-width: 43.5rem;
-      p, a {
+      p,
+      a {
         margin: 0;
         @include bodyText18($grey250);
         @include for-small-screens {

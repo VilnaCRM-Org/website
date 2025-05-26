@@ -1,4 +1,4 @@
-@use "../Breakpoints/breakpoints";
+@use '../Breakpoints/breakpoints';
 
 @mixin for-large-screens {
   @media screen and (max-width: breakpoints.$lg) {

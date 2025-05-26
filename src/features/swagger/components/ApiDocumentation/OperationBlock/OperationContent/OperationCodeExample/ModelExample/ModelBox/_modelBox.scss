@@ -1,7 +1,7 @@
-@use "@swagger/global" as *;
+@use '@swagger/global' as *;
 
-@use "UserSchema/_userSchema";
-@use "NestedSchema/_nestedSchema";
+@use 'UserSchema/_userSchema';
+@use 'NestedSchema/_nestedSchema';
 
 %modelBox {
   .model-box {

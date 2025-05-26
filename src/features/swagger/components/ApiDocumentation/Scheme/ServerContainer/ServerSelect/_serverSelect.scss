@@ -1,7 +1,8 @@
-@use "@swagger/global" as *;
+@use '@swagger/global' as *;
 
 %serverSelect {
-  #schemes, #servers {
+  #schemes,
+  #servers {
     @include uiSelect(2.625rem) {
       @include typography($darkPrimary, 1rem, 600, 1.625rem);
       @include for-large-screens {

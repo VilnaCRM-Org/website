@@ -1,6 +1,6 @@
-@use "@swagger/global" as *;
+@use '@swagger/global' as *;
 
-@use "RequestBodyHeader/requestBodyHeader";
+@use 'RequestBodyHeader/requestBodyHeader';
 
 %sectionRequestBody {
   .opblock-section-request-body {

@@ -1,4 +1,4 @@
-@use "@swagger/global" as *;
+@use '@swagger/global' as *;
 
 @mixin modal-h4() {
   margin-top: 0 !important;
@@ -19,7 +19,7 @@
       gap: 0.5rem;
     }
     &::after {
-      content: "";
+      content: '';
       position: absolute;
       bottom: 0;
       height: 1px;

@@ -1,6 +1,6 @@
-@use "@swagger/global" as *;
+@use '@swagger/global' as *;
 
-@use "Checkbox/checkbox";
+@use 'Checkbox/checkbox';
 
 @mixin modal-h4() {
   margin-top: 0 !important;

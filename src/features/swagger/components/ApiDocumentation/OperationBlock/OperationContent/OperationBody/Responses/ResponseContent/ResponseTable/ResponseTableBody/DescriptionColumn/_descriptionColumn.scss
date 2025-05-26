@@ -1,6 +1,6 @@
-@use "@swagger/global" as *;
+@use '@swagger/global' as *;
 
-@use "ResponseControls/responseControls";
+@use 'ResponseControls/responseControls';
 
 @mixin responseMarkdown() {
   @include medium16($grey200);

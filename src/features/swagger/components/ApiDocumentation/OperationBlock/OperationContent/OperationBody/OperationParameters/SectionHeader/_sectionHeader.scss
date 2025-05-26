@@ -1,6 +1,6 @@
-@use "@swagger/global" as *;
+@use '@swagger/global' as *;
 
-@use "TryOutButton/tryOutButton";
+@use 'TryOutButton/tryOutButton';
 
 @mixin responsiveFontSize() {
   @include medium15($grey200);

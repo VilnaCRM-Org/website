@@ -1,4 +1,4 @@
-@use "@swagger/global" as *;
+@use '@swagger/global' as *;
 
 %checkbox {
   .checkbox {
@@ -6,7 +6,7 @@
     input {
       appearance: none;
     }
-    input[type="checkbox"]:checked + label > .item {
+    input[type='checkbox']:checked + label > .item {
       background-image: $checkIcon;
       background-color: $primary;
       background-repeat: no-repeat;

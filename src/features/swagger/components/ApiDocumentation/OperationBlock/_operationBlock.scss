@@ -1,7 +1,7 @@
-@use "@swagger/global" as *;
+@use '@swagger/global' as *;
 
-@use "OperationHeader/operationHeader";
-@use "OperationContent/operationContent";
+@use 'OperationHeader/operationHeader';
+@use 'OperationContent/operationContent';
 
 %operationBlock {
   .opblock-tag-section {

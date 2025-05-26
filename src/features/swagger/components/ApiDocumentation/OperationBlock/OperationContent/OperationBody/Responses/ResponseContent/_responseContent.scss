@@ -1,7 +1,7 @@
-@use "@swagger/global" as *;
+@use '@swagger/global' as *;
 
-@use "ResponseAfterExecute/responseAfterExecute";
-@use "ResponseTable/responseTable";
+@use 'ResponseAfterExecute/responseAfterExecute';
+@use 'ResponseTable/responseTable';
 
 %responseContent {
   .responses-inner {

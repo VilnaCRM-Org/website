@@ -1,4 +1,4 @@
-@use "@swagger/global" as *;
+@use '@swagger/global' as *;
 
 @mixin btn-group($variant, $text-color) {
   display: flex;
@@ -49,7 +49,8 @@
       flex-direction: column;
       padding: 0 0.375rem 0.75rem;
     }
-    .execute, .btn-clear {
+    .execute,
+    .btn-clear {
       @include for-small-screens {
         width: 100%;
       }

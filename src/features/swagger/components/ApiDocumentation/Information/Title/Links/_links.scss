@@ -1,14 +1,14 @@
-@use "@swagger/global" as *;
+@use '@swagger/global' as *;
 
 $linksBreakPoint: 52.5rem;
 
 %links {
   .base-url {
     display: inline-block;
-    font-weight: 500!important;
+    font-weight: 500 !important;
     @include medium15;
     @include for-large-screens {
-      font-weight: 600!important;
+      font-weight: 600 !important;
       @include demi18($grey250);
     }
     @media screen and (max-width: $linksBreakPoint) {

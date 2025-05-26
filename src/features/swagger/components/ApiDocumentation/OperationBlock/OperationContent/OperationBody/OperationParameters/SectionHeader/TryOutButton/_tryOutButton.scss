@@ -1,4 +1,4 @@
-@use "@swagger/global" as *;
+@use '@swagger/global' as *;
 
 @mixin responsiveButton($type, $color) {
   @include uiButton($type, 0.75rem 1.5rem) {
