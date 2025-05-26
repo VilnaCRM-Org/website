@@ -3,15 +3,12 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      target: build
-    command: ["npx", "serve", "-s", "out", "-p", "3001"]
+      target: production
     restart: unless-stopped
-    volumes:
-      - .:/app
     ports:
       - '3001:3001'
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://${WEBSITE_DOMAIN}:${NEXT_PUBLIC_PROD_PORT}"]
+      test: [ "CMD", "curl", "-f", "http://${WEBSITE_DOMAIN}:${NEXT_PUBLIC_PROD_PORT}" ]
 
   playwright:
     build:

@@ -95,8 +95,8 @@ run-e2e                     = $(PLAYWRIGHT_TEST) "$(PLAYWRIGHT_BIN) test $(TEST_
 playwright-test             = $(PLAYWRIGHT_DOCKER_CMD) $(PLAYWRIGHT_BIN) test
 
 help:
-	@echo -e "\033[33mUsage:\033[0m make [target] [arg=\"val\"...]\n"
-	@echo -e "\033[33mTargets:\033[0m"
+	@printf "\033[33mUsage:\033[0m make [target] [arg=\"val\"...]\n"
+	@printf "\033[33mTargets:\033[0m\n"
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' Makefile | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[32m%-20s\033[0m %s\n", $$1, $$2}'
 
 start: ## Start the application

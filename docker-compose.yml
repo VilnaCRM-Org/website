@@ -2,7 +2,7 @@ services:
   dev:
     build:
       context: .
-      target: build
+      target: base
     command: pnpm exec next dev
     restart: unless-stopped
     volumes:
