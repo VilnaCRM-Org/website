@@ -108,7 +108,7 @@ wait-for-dev: ## Wait for the dev service to be ready on port $(DEV_PORT).
 	@echo "Dev service is up and running!"
 
 build: ## A tool build the project
-	$(DOCKER_COMPOSE) build --no-cache
+	$(DOCKER_COMPOSE) build
 
 build-analyze: ## Build production bundle and launch bundle-analyzer report (ANALYZE=true)
 	ANALYZE=true $(NEXT_BUILD_CMD)
