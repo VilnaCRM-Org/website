@@ -3,12 +3,16 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      target: production
+    command: ["sh", "/app/scripts/start-prod.sh"]
     restart: unless-stopped
+    volumes:
+      - .:/app
     ports:
       - '3001:3001'
     healthcheck:
       test: ["CMD", "curl", "-f", "http://${WEBSITE_DOMAIN}:${NEXT_PUBLIC_PROD_PORT}"]
+    networks:
+      - app-net
 
   playwright:
     build:
@@ -17,13 +21,14 @@ services:
     restart: unless-stopped
     volumes:
       - .:/app
-      - /app/node_modules
     ports:
       - '9324:9324'
     environment:
       - NEXT_PUBLIC_PROD_HOST_API_URL=http://${NEXT_PUBLIC_PROD_HOST}:${NEXT_PUBLIC_PROD_PORT}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://${WEBSITE_DOMAIN}:${PLAYWRIGHT_TEST_PORT}"]
+    networks:
+      - app-net
 
   apollo:
     build:
@@ -34,6 +39,8 @@ services:
       - '4000:4000'
     healthcheck:
       test: ["CMD", "curl", "-f", "http://${WEBSITE_DOMAIN}:${GRAPHQL_PORT}/${GRAPHQL_API_PATH}"]
+    networks:
+      - app-net
 
   mockoon:
     build:
@@ -44,6 +51,8 @@ services:
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://${WEBSITE_DOMAIN}:${MOCKOON_PORT}"]
+    networks:
+      - app-net
 
   k6:
     profiles: ["load"]
@@ -55,3 +64,5 @@ services:
         condition: service_healthy
     volumes:
       - ./src/test/load:/loadTests
+    networks:
+      - app-net
