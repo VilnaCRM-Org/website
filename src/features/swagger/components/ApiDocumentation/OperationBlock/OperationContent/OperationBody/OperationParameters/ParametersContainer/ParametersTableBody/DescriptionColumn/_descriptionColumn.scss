@@ -15,8 +15,7 @@
       align-items: center;
       opacity: 1;
       pointer-events: none;
-      padding-top: 0.5rem;
-      padding-bottom: 0;
+      padding: 0.5rem 0;
       @include medium14($grey200);
       @include for-small-screens {
         gap: 0.375rem;
