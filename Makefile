@@ -74,7 +74,7 @@ else
     STRYKER_CMD             = make start && $(EXEC_DEV_TTYLESS) pnpm stryker run
     UNIT_TESTS              = make start && $(EXEC_DEV_TTYLESS) env
 
-    STORYBOOK_START         = exec $(STORYBOOK_BIN) dev -p $(STORYBOOK_PORT) --host 0.0.0.0
+    STORYBOOK_START         = $(STORYBOOK_BIN) dev -p $(STORYBOOK_PORT) --host 0.0.0.0
 
     LHCI_BUILD_CMD          = make start-prod && $(LHCI)
     LHCI_DESKTOP            = $(LHCI_BUILD_CMD) $(LHCI_CONFIG_DESKTOP)
@@ -95,8 +95,9 @@ run-e2e                     = $(PLAYWRIGHT_TEST) "$(PLAYWRIGHT_BIN) test $(TEST_
 playwright-test             = $(PLAYWRIGHT_DOCKER_CMD) $(PLAYWRIGHT_BIN) test
 
 help:
-	@printf "\033[33mUsage:\033[0m\n  make [target] [arg=\"val\"...]\n\n\033[33mTargets:\033[0m\n"
-	@grep -E '^[-a-zA-Z0-9_\.\/]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[32m%-15s\033[0m %s\n", $$1, $$2}'
+	@echo -e "\033[33mUsage:\033[0m make [target] [arg=\"val\"...]\n"
+	@echo -e "\033[33mTargets:\033[0m"
+	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' Makefile | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[32m%-20s\033[0m %s\n", $$1, $$2}'
 
 start: ## Start the application
 	$(NEXT_DEV_CMD)
