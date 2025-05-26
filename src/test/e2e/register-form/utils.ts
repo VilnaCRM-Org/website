@@ -1,5 +1,5 @@
 import { Locator, Page, Response, expect, Route } from '@playwright/test';
-import winston, {Logger} from 'winston';
+import winston, { Logger } from 'winston';
 
 import {
   expectationsEmail,
