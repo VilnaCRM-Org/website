@@ -6,7 +6,9 @@ module.exports = {
     jest: true,
     browser: true,
   },
-  parserOptions: { ecmaVersion: 2022, sourceType: 'module' },
+  parser: '@typescript-eslint/parser',
+  parserOptions: { ecmaVersion: 2022, sourceType: 'module', project: './tsconfig.json' },
+  plugins: ['@typescript-eslint'],
   ignorePatterns: [
     'node_modules/*',
     'docker-compose.yml',
@@ -21,12 +23,16 @@ module.exports = {
     'plugin:storybook/recommended',
     'airbnb',
     'airbnb/hooks',
+    'plugin:@next/next/recommended',
+    'plugin:@typescript-eslint/recommended',
+    'plugin:react/recommended',
     'prettier',
   ],
   overrides: [
     {
-      files: ['**/*.ts', '**/*.tsx', '**/*.spec.js', '**/*.spec.jsx'],
+      files: ['**/*.ts', '**/*.tsx'],
       parser: '@typescript-eslint/parser',
+      plugins: ['@typescript-eslint'],
       settings: {
         react: { version: 'detect' },
         'import/resolver': {
@@ -52,6 +58,7 @@ module.exports = {
         'plugin:jsx-a11y/recommended',
         'plugin:jest-dom/recommended',
         'plugin:eslint-comments/recommended',
+        'plugin:@typescript-eslint/eslint-recommended',
       ],
       rules: {
         'eslint-comments/no-use': ['error', { allow: [] }],
@@ -70,6 +77,8 @@ module.exports = {
         ],
         'no-extra-semi': 'off',
         'class-methods-use-this': 'off',
+        'no-shadow': 'off',
+        '@typescript-eslint/no-shadow': 'error',
         quotes: ['error', 'single', { avoidEscape: true, allowTemplateLiterals: true }],
         'no-multiple-empty-lines': [2, { max: 2, maxEOF: 0 }],
         'linebreak-style': ['error', 'unix'],
@@ -140,7 +149,14 @@ module.exports = {
       },
     },
     {
-      files: ['src/test/load/**/*.js', 'src/test/memory-leak/**/*.js'],
+      files: [
+        '**/*.spec.js',
+        '**/*.spec.jsx',
+        'src/test/load/**/*.js',
+        'src/test/memory-leak/**/*.js',
+      ],
+      parser: 'espree',
+      extends: ['eslint:recommended', 'plugin:react/recommended', 'plugin:react-hooks/recommended'],
       rules: {
         'no-console': 'error',
         'import/extensions': ['off', 'never', { js: 'never', jsx: 'never' }],
@@ -155,6 +171,7 @@ module.exports = {
         'import/no-dynamic-require': 'off',
         'global-require': 'off',
         'no-await-in-loop': 'off',
+        '@typescript-eslint/no-var-requires': 'off',
       },
     },
   ],

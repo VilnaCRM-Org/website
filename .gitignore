@@ -46,7 +46,7 @@ next-env.d.ts
 
 .vscode
 
-./storybook-static
+storybook-static/
 /test-results/
 /playwright-report/
 /blob-report/
@@ -62,3 +62,6 @@ next-env.d.ts
 
 # memlab
 /src/test/memory-leak/results
+
+app.log
+*.log

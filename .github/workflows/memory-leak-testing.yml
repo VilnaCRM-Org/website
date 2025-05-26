@@ -4,11 +4,9 @@ on:
   pull_request:
     branches:
       - main
-
 jobs:
   memory-leak-testing:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -18,27 +16,8 @@ jobs:
         with:
           node-version: ${{ vars.NODE_VERSION }}
 
-      - name: Cache pnpm dependencies
-        id: cache-pnpm-store
-        uses: actions/cache@v3.4.0
-        with:
-          path: ~/.pnpm-store
-          key: ${{ runner.os }}-dependencies-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-dependencies-
-
-      - name: Install pnpm
-        run: npm install -g pnpm
-
-      - name: Install dependencies
-        run: make install
-        if: |
-          steps.cache-pnpm-store.outputs.cache-hit != 'true'
-
       - name: Run dev and memory leak testing
-        run: |
-          pnpm run dev &
-          npx wait-on http://localhost:3000
-          node ./src/test/memory-leak/runMemlabTests.js
+        run: make test-memory-leak
+
         env:
           CI: true

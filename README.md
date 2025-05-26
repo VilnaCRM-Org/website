@@ -8,11 +8,12 @@
 
 ## Possibilities
 
-- Modern JavaScript stack for services: [React](https://react.dev/), [Next.js](https://nextjs.org/)
-- A lot of CI checks to ensure the highest code quality that can be
-  (Security checks, Code style fixer, static linters, DeepScan, Snyk)
-- Configured testing tools: [Playwright](https://playwright.dev/), [Jest](https://jestjs.io/)
-- This template is based on [bulletproof-react](https://github.com/alan2207/bulletproof-react/tree/master)
+- A modern JavaScript-based stack for services: [React](https://react.dev/), [Next.js](https://nextjs.org/).
+- Extensive CI checks (including security checks, code style fixing, static linters, DeepScan, and Snyk)
+  ensure the highest code quality.
+- Configured testing tools: [Playwright](https://playwright.dev/), [Jest](https://jestjs.io/).
+- This template is based on [bulletproof-react](https://github.com/alan2207/bulletproof-react/tree/master),
+  but has been adapted to meet the specific needs of this project and may differ from the original implementation.
 - Much more!
 
 ## Why you might need it
@@ -29,40 +30,217 @@ This software is distributed under the
 Please read [LICENSE](https://github.com/VilnaCRM-Org/frontend-ssr-template/blob/main/LICENSE) for information
 on the software availability and distribution.
 
-### Minimal installation
+### 🚀 Minimal Installation Guide
 
-You can clone this repository locally or use Github functionality "Use this template"
+#### 1. Clone the Repository
 
-Install [node.js](https://nodejs.org/en/) 20 version or higher and [pnpm](https://pnpm.io/)
+Clone locally or use GitHub’s `Use this template` feature.
 
-Use pnpm install for installing all dependencies and pnpm run dev for running application
+#### 2. Install Prerequisites
 
-## Usage
+Before running the application, make sure the following tools are installed on your machine:
 
-We recommend to install
-[docker](https://docs.docker.com/engine/install/) and
-[docker compose](https://docs.docker.com/compose/install/)
-to have the same setup across dev, sandbox and production environments
+- **[Node.js](https://nodejs.org/en/)** (version 20 or higher).
+  You can download and install Node.js from the official website, or use a version manager like
+  nvm [Node Version Manager](https://github.com/nvm-sh/nvm) to easily manage versions.
 
-To see the list of possible commands throught the make command
+- **[Docker](https://docs.docker.com/engine/install/)** required for containerization and managing
+  isolated environments. Install Docker according to the instructions
+  for your operating system. Follow the guide to ensure Docker is properly
+  configured and running on your machine.
+
+- **[Docker Compose](https://docs.docker.com/compose/install/)** is needed to manage multi-container
+  Docker applications. Docker Compose is essential for starting up the
+  development environment and running the services defined in docker-compose.yml.
+
+#### 3. Run the Application
+
+After installing all prerequisites, you can start the application inside a Docker container:
 
 ```bash
-make help
+   make start
 ```
 
-The list of possibilities if project installed locally
+**What Happens When You Run `make start`**:
+
+The command will:
+
+- Build and start the project inside a Docker container named `dev`.
+- Install all the necessary dependencies (including Node.js dependencies) inside the container.
+- The application will be up and running.
+
+Access the application at <http://localhost:3000>.
+
+## Project Commands
+
+To view all available commands, run `make help`:
 
 ```bash
-pnpm run dev - starts application
-pnpm run build - build application
-pnpm lint:next - static next lint
-pnpm lint:tsc - static TypeScript lint
-pnpm test:e2e - end-to-end testing
-pnpm test:e2e:local - open GUI with list of end-to-end test
-pnpm test:unit - unit testing
-pnpm lighthouse:desktop - lighthouse desktop testing
-pnpm lighthouse:mobile - lighthouse mobile tesitng
+  make help
 ```
+
+The following commands are available when the project is installed locally.
+
+General
+
+```bash
+  make start: starts the application
+  make build: builds the application
+  make format: formats the codebase to ensure consistent style across all files
+  make update: updates node modules according to the current package.json file
+  make install: installs node modules according to the current pnpm-lock.yaml file
+  make check-node-version: checks if the correct Node.js version is installed
+```
+
+Linting & Formatting
+
+```bash
+  make lint-next: lints the codebase using Next.js rules
+  make lint-tsc: runs static type checking with TypeScript
+  make lint-md: lints all markdown files (excluding CHANGELOG.md) using markdownlint
+```
+
+Testing
+
+```bash
+  make test-unit-all: runs unit tests for both client and server environments
+  make test-unit-client: runs unit tests for the client using Jest
+  make test-unit-server: runs unit tests for the server using Jest
+  make test-memory-leak: runs memory leak tests using Memlab
+  make load-tests: executes load tests using the K6 library
+  make test-e2e: runs end-to-end tests inside the prod container
+  make test-e2e-ui: runs end-to-end tests with UI inside the prod container
+  make test-visual: runs visual tests inside the prod container
+  make test-visual-ui: runs visual tests with UI inside the prod container
+```
+
+Lighthouse
+
+```bash
+  make lighthouse-desktop: runs Lighthouse audits in desktop mode
+  make lighthouse-mobile: runs Lighthouse audits in mobile mode
+```
+
+Git
+
+```bash
+  make husky: sets up Husky (Git hooks manager) — run once after cloning the repo
+```
+
+Storybook
+
+```bash
+  make storybook-start: starts Storybook UI
+  make storybook-build: builds Storybook UI
+```
+
+Docker
+
+```bash
+  make down: stops the Docker containers and removes orphaned containers
+  make stop: stops Docker
+  make start-prod: builds image and starts the container in production mode
+  make ps: logs into the Docker container
+  make sh: logs into the Docker container
+  make logs: shows all logs
+  make new-logs: shows live logs of the dev container
+  make wait-for-prod: waits for the prod service to be ready on port 3001
+```
+
+Note: The following commands do not require the `CI=1` prefix:
+
+```bash
+  make test-e2e: starts production and runs end-to-end tests inside the prod container
+  make test-visual: runs visual tests inside the prod container
+  make test-e2e-ui: runs end-to-end tests with UI inside the prod container
+  make test-visual-ui: runs visual tests with UI inside the prod container
+  make test-memory-leak: runs memory leak tests using Memlab inside the prod container
+
+  make load-tests: executes load tests using the K6 library
+  (uses "prod" as hostname, which maps to the Docker service)
+
+  make git-hooks-install: installs husky Git hooks locally
+  make update: runs locally on the host machine, not in a container
+```
+
+💡 Tip: To run commands locally without Docker, please prefix command with CI=1.
+Example:
+
+```bash
+  CI=1 make start
+```
+
+### Load Testing with K6
+
+This project includes a dedicated load testing service using K6, configured via a Docker Compose profile.
+
+#### What are Docker Compose Profiles?
+
+Docker Compose profiles let you selectively start groups of services. The load testing service is tagged
+with the `load` profile in `docker-compose.test.yml`, so it only runs when you explicitly include
+that profile.
+
+#### Running Load Tests
+
+Using the `make` command (recommended):
+
+```bash
+  make load-tests
+```
+
+The load testing service waits for the production service to become healthy before starting.
+Test results will be streamed to the K6 web dashboard and saved under ./src/test/load/results/.
+
+Available Load Test Scenarios:
+
+- smoke: a quick health check with a small number of virtual users.
+- average: simulates a typical daily traffic load.
+- stress: pushes the system to its limits to identify breaking points.
+- spike: sudden ramp-up of virtual users to test burst handling.
+
+Adjust scenarios and thresholds in ./src/test/load/config.json.dist as needed.
+
+## Package Management
+
+### PNPM Workspace Configuration
+
+This project uses a `pnpm-workspace.yaml` file to optimize dependency installation and build processes:
+
+onlyBuiltDependencies:
+
+- '@apollo/protobufjs'
+- '@memlab/cli'
+- core-js-pure
+- esbuild
+- memlab
+- puppeteer
+- sharp
+- sleep
+
+The onlyBuiltDependencies setting instructs PNPM to only build these specific packages from
+source during installation, rather than using pre-built binaries. This configuration:
+
+- Ensures consistent behavior across different environments (CI, Docker, local development).
+- Resolves compatibility issues that can occur with pre-built binaries.
+- Improves build reliability at the cost of slightly longer installation times.
+
+When adding new dependencies with native code or complex build requirements,
+consider adding them to this list if you encounter installation issues.
+
+## Routing
+
+This project includes a routing script for managing URLs.
+The routing script maps requests to the correct HTML files, ensuring proper navigation.
+For detailed information, check the [routing script](scripts/cloudfront_routing.js).
+
+### How It Works
+
+- Mapping: Specific URL paths are mapped to corresponding HTML files.
+- Fallback Logic: For undefined routes, the script appends /index.html to handle directory-like paths.
+- Error Handling: If an error occurs, the script logs it and returns the original request.
+
+This routing logic is useful for SSR (Server-Side Rendered) applications,
+particularly when hosted on platforms like AWS CloudFront.
 
 ## Documentation
 

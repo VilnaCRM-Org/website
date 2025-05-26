@@ -1,7 +1,10 @@
 import { defineConfig, devices } from '@playwright/test';
-import dotenv from 'dotenv';
+import dotenv, { DotenvConfigOutput } from 'dotenv';
+import dotenvExpand from 'dotenv-expand';
 
-dotenv.config();
+const env: DotenvConfigOutput = dotenv.config();
+
+dotenvExpand.expand(env);
 
 export default defineConfig({
   testMatch: ['**/*.spec.ts'],
@@ -13,7 +16,7 @@ export default defineConfig({
   use: {
     trace: 'on-first-retry',
     ignoreHTTPSErrors: true,
-    baseURL: process.env.NEXT_PUBLIC_WEBSITE_URL,
+    baseURL: process.env.NEXT_PUBLIC_PROD_CONTAINER_API_URL,
     extraHTTPHeaders: {
       [`aws-cf-cd-${process.env.NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_NAME}`]:
         process.env.NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_VALUE!,

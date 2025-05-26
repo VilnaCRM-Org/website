@@ -1,1 +1,3 @@
-export { default as AuthForm } from './AuthForm';
+import AuthLayout from './AuthLayout';
+
+export default AuthLayout;

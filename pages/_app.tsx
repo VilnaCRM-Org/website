@@ -20,7 +20,7 @@ Sentry.init({
   dsn: process.env.SENTRY_DSN_KEY,
   integrations: [Sentry.browserTracingIntegration(), Sentry.replayIntegration()],
   tracePropagationTargets: [
-    process.env.NEXT_PUBLIC_LOCALHOST || '',
+    process.env.NEXT_PUBLIC_DEVELOPMENT_API_URL || '',
     process.env.NEXT_PUBLIC_API_URL || '',
   ],
   tracesSampleRate: 1.0,

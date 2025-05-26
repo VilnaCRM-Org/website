@@ -1,14 +1,10 @@
-FROM node:20-alpine3.17
+FROM node:23.11.1-alpine3.21
 
-RUN apk add --no-cache python3 make g++  \
-    && npm install -g pnpm
+RUN apk add --no-cache python3=3.12.10-r0 make=4.4.1-r2 g++=14.2.0-r4 curl=8.12.1-r1 \
+    && npm install -g pnpm@10.6.5
 
 WORKDIR /app
 
-COPY . .
+COPY package.json pnpm-lock.yaml checkNodeVersion.js ./
 
-RUN make install
-
-EXPOSE 3000
-
-CMD ["pnpm", "run", "dev"]
+RUN pnpm install
