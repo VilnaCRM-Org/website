@@ -66,3 +66,8 @@ services:
       - ./src/test/load:/loadTests
     networks:
       - app-net
+
+networks:
+  app-net:
+    driver: bridge
+    name: app-net
