@@ -1,6 +1,8 @@
 services:
   dev:
-    build: .
+    build:
+      context: .
+      target: build
     command: pnpm exec next dev
     restart: unless-stopped
     volumes:

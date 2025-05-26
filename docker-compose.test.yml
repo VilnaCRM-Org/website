@@ -3,7 +3,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: ["sh", "/app/scripts/start-prod.sh"]
+      target: build
+    command: ["npx", "serve", "-s", "out", "-p", "3001"]
     restart: unless-stopped
     volumes:
       - .:/app
