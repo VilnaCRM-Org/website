@@ -5,15 +5,21 @@
 @use 'ParametersTableBody/parametersTableBody';
 
 %parametersContainer {
+  $desktop-padding: 0.75rem 1.5rem;
+  $tablet-padding: 0.75rem 1.563rem;
+  $mobile-padding: 0.75rem 1rem;
+
   .parameters-container {
     @extend %parametersDescription;
+
     .table-container {
-      padding: 0.75rem 1.563rem;
+      padding: $tablet-padding;
+
       @include for-large-screens {
-        padding: 0.75rem 1.5rem;
+        padding: $desktop-padding;
       }
       @include for-small-screens {
-        padding: 0.75rem 1rem;
+        padding: $mobile-padding;
       }
       @extend %parametersTableHead;
       @extend %parametersTableBody;

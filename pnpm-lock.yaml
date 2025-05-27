@@ -60,7 +60,7 @@ importers:
         specifier: ^15.4.1
         version: 15.5.1(i18next@23.16.8)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.8.3)
       sass:
-        specifier: ^1.83.4
+        specifier: ^1.89.0
         version: 1.89.0
       swagger-ui-react:
         specifier: ^5.18.3
