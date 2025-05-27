@@ -49,7 +49,7 @@ MEMLEAK_SERVICE             = memory-leak
 DOCKER_COMPOSE_MEMLEAK_FILE = -f docker-compose.memory-leak.yml
 MEMLEAK_BASE_PATH           = ./src/test/memory-leak
 MEMLEAK_RESULTS_DIR         = $(MEMLEAK_BASE_PATH)/results
-MEMLEAK_TEST_SCRIPT         = $(MEMLEAK_BASE_PATH)/runMemlabTests
+MEMLEAK_TEST_SCRIPT         = $(MEMLEAK_BASE_PATH)/runMemlabTests.js
 
 K6_TEST_SCRIPT              ?= /loadTests/homepage.js
 K6_RESULTS_FILE             ?= /loadTests/results/homepage.html
@@ -181,7 +181,7 @@ test-memory-leak: start-prod ## This command executes memory leaks tests using M
 	@echo "🧪 Starting memory leak test environment..."
 	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_MEMLEAK_FILE) up -d
 	@echo "🧹 Cleaning up previous memory leak results..."
-	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_MEMLEAK_FILE) exec -T memory-leak rm -rf $(MEMLEAK_RESULTS_DIR)
+	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_MEMLEAK_FILE) exec -T $(MEMLEAK_SERVICE) rm -rf $(MEMLEAK_RESULTS_DIR)
 	@echo "🚀 Running memory leak tests..."
 	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_MEMLEAK_FILE) exec -T $(MEMLEAK_SERVICE) node $(MEMLEAK_TEST_SCRIPT)
 
