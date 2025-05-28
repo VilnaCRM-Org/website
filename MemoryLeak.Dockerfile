@@ -24,13 +24,13 @@ ENV DISPLAY=:99 \
 
 WORKDIR /app
 
-# ---------- Build Stage ----------
+
 FROM base AS build
 
 COPY package.json pnpm-lock.yaml checkNodeVersion.js ./
 RUN pnpm install
 
-# ---------- Final Stage ----------
+
 FROM base AS final
 
 WORKDIR /app
