@@ -32,7 +32,7 @@ export default {
 
   lgCardsWrapper: {
     display: 'flex',
-    [media.custom.max968]: { display: 'none' },  
+  [mq.max968]: { display: 'none' },  
   },
 
   smCardsWrapper: {
@@ -53,7 +53,7 @@ export default {
     minHeight: '6.25rem',
     zIndex: 1,
     [media.custom.max1131]: { minHeight: '11.188rem', marginTop: '-8.625rem' },  
-    [media.custom.max968]: { display: 'none' },  
+    [mq.max968]: { display: 'none' },  
   },
 
   container: {
