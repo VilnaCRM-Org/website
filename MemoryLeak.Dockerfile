@@ -40,4 +40,4 @@ COPY src/test/memory-leak ./src/test/memory-leak
 COPY src/config/i18nConfig.js ./src/config/i18nConfig.js
 COPY pages/i18n/localization.json ./pages/i18n/localization.json
 
-CMD ["tail", "-f", "/dev/null"]
+CMD ["sleep","infinity"]
