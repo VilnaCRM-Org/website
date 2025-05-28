@@ -27,4 +27,4 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml checkNodeVersion.js ./
 RUN pnpm install
 
-CMD ["sh", "-c", "rm -f /tmp/.X99-lock && Xvfb :99 -screen 0 1024x768x16 & sleep infinity"]
+CMD ["tail", "-f", "/dev/null"]

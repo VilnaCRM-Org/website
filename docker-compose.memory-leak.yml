@@ -5,7 +5,6 @@ services:
       dockerfile: MemoryLeak.Dockerfile
     volumes:
       - .:/app
-      - memleak_node_modules:/app/node_modules
     environment:
       - DISPLAY=:99
       - PUPPETEER_DISABLE_HEADLESS_WARNING=1
