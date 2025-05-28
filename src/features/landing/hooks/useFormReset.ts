@@ -9,7 +9,6 @@ interface FormState {
 interface UseFormResetProps {
   formState: FormState;
   reset: (values: RegisterItem) => void;
-  serverErrorMessage: string;
   notificationType?: string;
 }
 
@@ -20,18 +19,13 @@ const initialFormValues: RegisterItem = { Email: '', FullName: '', Password: '',
 const useFormReset: UseFormResetHook = ({
   formState,
   reset,
-  serverErrorMessage,
   notificationType,
 }: UseFormResetProps) => {
   useEffect(() => {
-    if (
-      formState.isSubmitSuccessful &&
-      !serverErrorMessage.length &&
-      notificationType !== 'error'
-    ) {
+    if (formState.isSubmitSuccessful && notificationType !== 'error') {
       reset(initialFormValues);
     }
-  }, [formState, reset, serverErrorMessage, notificationType]);
+  }, [formState, reset, notificationType]);
 };
 
 export default useFormReset;
