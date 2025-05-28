@@ -1,4 +1,4 @@
-FROM node:23.11.1-alpine3.21
+FROM node:23.11.1-alpine3.21 AS base
 
 RUN apk add --no-cache \
     chromium=136.0.7103.113-r0 \
@@ -24,7 +24,20 @@ ENV DISPLAY=:99 \
 
 WORKDIR /app
 
+# ---------- Build Stage ----------
+FROM base AS build
+
 COPY package.json pnpm-lock.yaml checkNodeVersion.js ./
 RUN pnpm install
+
+# ---------- Final Stage ----------
+FROM base AS final
+
+WORKDIR /app
+COPY --from=build /app/node_modules ./node_modules
+
+COPY src/test/memory-leak ./src/test/memory-leak
+COPY src/config/i18nConfig.js ./src/config/i18nConfig.js
+COPY pages/i18n/localization.json ./pages/i18n/localization.json
 
 CMD ["tail", "-f", "/dev/null"]
