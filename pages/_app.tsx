@@ -5,6 +5,7 @@ import * as Sentry from '@sentry/react';
 import React, { useEffect } from 'react';
 
 import { theme } from '@/components/AppTheme';
+import Layout from '@/components/Layout';
 import { golos } from '@/config/Fonts/golos';
 
 import 'swagger-ui-react/swagger-ui.css';
@@ -37,7 +38,9 @@ function MyApp({ Component }: { Component: React.ComponentType }): React.ReactEl
     <ThemeProvider theme={theme}>
       <ApolloProvider client={client}>
         <main className={golos.className}>
-          <Component />
+          <Layout>
+            <Component />
+          </Layout>
           <GoogleAnalytics gaId="G-XYZ" />
         </main>
       </ApolloProvider>

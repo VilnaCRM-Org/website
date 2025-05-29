@@ -34,9 +34,6 @@ jest.mock('next/dynamic', () => ({
   },
 }));
 
-jest.mock('../../features/landing/components/Header/Header', () =>
-  jest.fn(() => <div data-testid="header">Header</div>)
-);
 jest.mock('../../features/landing/components/BackgroundImages/BackgroundImages', () =>
   jest.fn(() => <div data-testid="background-images">BackgroundImages</div>)
 );
@@ -55,28 +52,20 @@ jest.mock('../../features/landing/components/Possibilities/Possibilities', () =>
 jest.mock('../../features/landing/components/AuthSection/AuthSection', () =>
   jest.fn(() => <div data-testid="auth-section">AuthSection</div>)
 );
-jest.mock('../../components/UiFooter/UiFooter', () =>
-  jest.fn(() => <div data-testid="ui-footer">UiFooter</div>)
-);
 
-const metaAttributesSelector: string =
-  'meta[name="description"][content="The first Ukrainian open source CRM"]';
 const boxElementClass: string = '.MuiBox-root';
-const logoName: string = 'VilnaCRM';
 const positionRelativeStyle: string = 'position: relative';
 
 describe('Landing', () => {
   it('render all components', () => {
     const { getByTestId } = render(<Landing />);
 
-    expect(getByTestId('header')).toBeInTheDocument();
     expect(getByTestId('background-images')).toBeInTheDocument();
     expect(getByTestId('about-us')).toBeInTheDocument();
     expect(getByTestId('why-us')).toBeInTheDocument();
     expect(getByTestId('for-who-section')).toBeInTheDocument();
     expect(getByTestId('possibilities')).toBeInTheDocument();
     expect(getByTestId('auth-section')).toBeInTheDocument();
-    expect(getByTestId('ui-footer')).toBeInTheDocument();
   });
 
   it('render container correctly', () => {
@@ -87,13 +76,4 @@ describe('Landing', () => {
     expect(mainContainer).toHaveStyle(positionRelativeStyle);
   });
 
-  it('render right title and metadata', async () => {
-    const { getByText, container } = render(<Landing />);
-
-    const titleElement: HTMLElement = getByText(logoName);
-    const metaElement: HTMLElement | null = container.querySelector(metaAttributesSelector);
-
-    expect(titleElement).toHaveTextContent(logoName);
-    expect(metaElement).toBeInTheDocument();
-  });
 });
