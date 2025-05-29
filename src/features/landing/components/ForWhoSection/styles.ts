@@ -241,4 +241,35 @@ export default {
     [mq.min969]: { marginTop: '4.7rem', marginLeft: '18.4rem' },
     [mq.min1131]: { marginLeft: '13rem' },
   },
+  waves: {
+    position: 'absolute',
+    width: '100%',
+    height: 'auto',
+    top: 0,
+    left: 0,
+    zIndex: 0,
+  },
+  hexagon: {
+    width: '3rem',
+    height: '3rem',
+    backgroundColor: colorTheme.palette.primary.main,
+    clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)',
+    [media.sm]: {
+      width: '4rem',
+      height: '4rem',
+    },
+    
+  },
+  triangle: {
+    width: 0,
+    height: 0,
+    borderLeft: '1.5rem solid transparent',
+    borderRight: '1.5rem solid transparent',
+    borderBottom: `2.5rem solid ${colorTheme.palette.primary.main}`,
+    [media.sm]: {
+      borderLeft: '2rem solid transparent',
+      borderRight: '2rem solid transparent',
+      borderBottom: `3rem solid ${colorTheme.palette.primary.main}`,
+    },
+  },
 };
