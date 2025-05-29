@@ -9,7 +9,7 @@ import {
   placeholderPassword,
   signUpButton,
   graphqlEndpoint,
-  fullNameFormatError,
+  requiredNameError,
   userData,
   policyText,
 } from './constants';
@@ -19,7 +19,7 @@ export async function fillInitialsInput(page: Page, user: User): Promise<void> {
   const initialsInput: Locator = page.getByPlaceholder(placeholderInitials);
   await page.getByRole('button', { name: signUpButton }).click();
   await initialsInput.fill(' ');
-  await expect(page.getByText(fullNameFormatError)).toBeVisible();
+  await expect(page.getByText(requiredNameError).first()).toBeVisible();
   await initialsInput.fill(user.fullName);
 }
 
@@ -51,9 +51,7 @@ export function responseFilter(resp: Response): boolean {
 interface GraphQLResponse {
   errors: { message: string }[];
 }
-interface GraphQLResponse {
-  errors: { message: string }[];
-}
+
 const logger: Logger = winston.createLogger({
   level: 'info',
   format: winston.format.simple(),

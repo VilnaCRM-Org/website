@@ -4,7 +4,7 @@ import { t } from 'i18next';
 import { validateEmail } from '../../features/landing/components/AuthSection/Validations';
 import { isValidEmailFormat } from '../../features/landing/components/AuthSection/Validations/email';
 
-const emailStepError: string = t('sign_up.form.email_input.step_error_message');
+const emailStepError: string = t('sign_up.form.email_input.email_format_error');
 const emailInvalidError: string = t('sign_up.form.email_input.invalid_message');
 const invalidTestEmailWithoutDot: string = 'test@example';
 const invalidTestEmailWithDot: string = 'test@example.';
