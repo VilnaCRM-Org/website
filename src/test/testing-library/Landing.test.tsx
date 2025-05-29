@@ -75,5 +75,4 @@ describe('Landing', () => {
 
     expect(mainContainer).toHaveStyle(positionRelativeStyle);
   });
-
 });

@@ -7,9 +7,16 @@ const DynamicUiFooter: ComponentType = dynamic(() => import('../UiFooter'), {
   ssr: false,
 });
 
-const DynamicHeader: ComponentType = dynamic(() => import('../../features/landing/components/Header'), { ssr: false });
+const DynamicHeader: ComponentType = dynamic(
+  () => import('../../features/landing/components/Header'),
+  { ssr: false }
+);
 
-export default function Layout({ children }: { children: Array<React.ReactNode> | React.ReactNode}): React.ReactElement {
+export default function Layout({
+  children,
+}: {
+  children: Array<React.ReactNode> | React.ReactNode;
+}): React.ReactElement {
   const { t } = useTranslation();
   return (
     <>

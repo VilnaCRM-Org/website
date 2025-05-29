@@ -4,37 +4,47 @@ import '@testing-library/jest-dom';
 
 import Layout from '@/components/Layout';
 
-
 jest.mock('next/head', () => ({
   __esModule: true,
-  default: ({ children }: { children: Array<React.ReactElement> }): React.ReactElement => <div>{children}</div>,
+  default: ({ children }: { children: Array<React.ReactElement> }): React.ReactElement => (
+    <div>{children}</div>
+  ),
 }));
 
-jest.mock('../../features/landing/components/Header', () => function Header(): React.ReactElement {
-  return <header data-testid="header" />;
-});
+jest.mock(
+  '../../features/landing/components/Header',
+  () =>
+    function Header(): React.ReactElement {
+      return <header data-testid="header" />;
+    }
+);
 
-jest.mock('../../components/UiFooter', () => function Footer(): React.ReactElement {
-  return <footer data-testid="footer" />;
-});
+jest.mock(
+  '../../components/UiFooter',
+  () =>
+    function Footer(): React.ReactElement {
+      return <footer data-testid="footer" />;
+    }
+);
 
 jest.mock('react-i18next', () => ({
   useTranslation: (): { t: (key: string) => string } => ({
     t: (key: string): string => {
       const translations: { [key: string]: string } = {
         'VilnaCRM API': 'VilnaCRM API',
-        'The first Ukrainian open source CRM': 'The first Ukrainian open source CRM'
+        'The first Ukrainian open source CRM': 'The first Ukrainian open source CRM',
       };
       return translations[key] || key;
-    }
-  })
+    },
+  }),
 }));
 
 interface CustomRenderOptions extends RenderOptions {
   children?: React.ReactNode;
 }
 
-const metaAttributesSelector: string = 'meta[name="description"][content="The first Ukrainian open source CRM"]';
+const metaAttributesSelector: string =
+  'meta[name="description"][content="The first Ukrainian open source CRM"]';
 const logoName: string = 'VilnaCRM API';
 
 const customRender: (ui: React.ReactElement, options?: CustomRenderOptions) => RenderResult = (
@@ -48,10 +58,10 @@ const customRender: (ui: React.ReactElement, options?: CustomRenderOptions) => R
   return render(ui, { wrapper: AllProviders, ...options });
 };
 
-
 describe('Layout component', () => {
-  const renderLayout: (children?: React.ReactNode) => RenderResult = (children?: React.ReactNode): RenderResult =>
-    customRender(<Layout>{children || <div>Default content</div>}</Layout>);
+  const renderLayout: (children?: React.ReactNode) => RenderResult = (
+    children?: React.ReactNode
+  ): RenderResult => customRender(<Layout>{children || <div>Default content</div>}</Layout>);
 
   it('renders children content', () => {
     const testContent: string = 'Test child content';
@@ -79,10 +89,7 @@ describe('Layout component', () => {
     renderLayout();
 
     const metaDescription: Element | null = document.querySelector('meta[name="description"]');
-    expect(metaDescription).toHaveAttribute(
-      'content',
-      'The first Ukrainian open source CRM'
-    );
+    expect(metaDescription).toHaveAttribute('content', 'The first Ukrainian open source CRM');
   });
 
   it('includes apple-touch-icon link', () => {
