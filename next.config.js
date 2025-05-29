@@ -9,12 +9,31 @@ const nextConfig = withExportImages({
   reactStrictMode: true,
   swcMinify: true,
 
+
+ experimental: {
+    modern: true, 
+    legacyBrowsers: false, 
+  },
+
+  compiler: {
+    styledComponents: true,
+    reactRemoveProperties: true,
+    removeConsole: process.env.NODE_ENV === 'production',
+  },
+
   webpack: config => {
     const localizationGenerator = new LocalizationGenerator();
     localizationGenerator.generateLocalizationFile();
+
+     config.optimization.splitChunks = {
+      chunks: 'all',
+      maxSize: 244 * 1024, 
+    };
 
     return config;
   },
 });
 
-module.exports = process.env.ANALYZE === 'true' ? withBundleAnalyzer(nextConfig) : nextConfig;
+module.exports = process.env.ANALYZE === 'true' 
+  ? withBundleAnalyzer(nextConfig) 
+  : nextConfig;
