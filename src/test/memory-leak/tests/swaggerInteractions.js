@@ -3,8 +3,24 @@ const ScenarioBuilder = require('../utils/ScenarioBuilder');
 const scenarioBuilder = new ScenarioBuilder('swagger');
 
 async function setup(page) {
+  await page.setRequestInterception(true);
+
   page.on('request', request => {
-    if (request.url().includes('spec.yaml')) {
+    const url = request.url();
+    const method = request.method();
+
+    if (method === 'OPTIONS') {
+      return request.respond({
+        status: 200,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+          'Access-Control-Allow-Headers': '*',
+        },
+      });
+    }
+
+    if (url.includes('spec.yaml')) {
       const mockedResponse = {
         name: 'spec.yaml',
         path: '.github/openapi-spec/spec.yaml',
@@ -17,7 +33,7 @@ async function setup(page) {
         url: 'https://api.github.com/repos/VilnaCRM-Org/user-service/contents/.github/openapi-spec/spec.yaml',
       };
 
-      request.respond({
+      return request.respond({
         status: 200,
         contentType: 'application/json',
         headers: {
@@ -28,7 +44,16 @@ async function setup(page) {
         body: JSON.stringify(mockedResponse),
       });
     }
+
+    return request.continue();
   });
+
+  await page.goto(scenarioBuilder.url(), { waitUntil: 'networkidle0', timeout: 0 });
+
+  const currentUrl = page.url();
+  if (!currentUrl.includes('/swagger')) {
+    throw new Error('Page was not redirected to /swagger as expected');
+  }
 }
 
 async function action(page) {
@@ -47,19 +72,24 @@ async function action(page) {
   const operationButtons = await page.$$('.opblock-summary');
   for (const button of operationButtons) {
     await button.click();
-    await page.waitForTimeout(500);
+    await new Promise(resolve => {
+      setTimeout(resolve, 500);
+    });
   }
-
   const executeButtons = await page.$$('.opblock-control');
   for (const button of executeButtons) {
     await button.click();
-    await page.waitForTimeout(1000);
+    await new Promise(resolve => {
+      setTimeout(resolve, 1000);
+    });
   }
 
   const curlButtons = await page.$$('.copy-to-clipboard');
   for (const button of curlButtons) {
     await button.click();
-    await page.waitForTimeout(500);
+    await new Promise(resolve => {
+      setTimeout(resolve, 500);
+    });
   }
 
   const responseStatusElements = await page.$$('.response-col_status');
@@ -79,12 +109,24 @@ async function back(page) {
   await page.select('#servers', 'https://mocked.api.com');
   await page.click('button[aria-expanded="true"]');
 
-  await page.click('.opblock-summary-control');
+  const operationBlocks = await page.$$('.opblock');
 
-  await page.click('.copy-to-clipboard button');
+  for (const block of operationBlocks) {
+    const summaryButton = await block.$('.opblock-summary-control');
+    if (summaryButton) {
+      await summaryButton.click();
+    }
 
-  await page.waitForSelector('.responses-table');
-  await page.$eval('.response-col_status', el => el.textContent);
+    const copyButton = await block.$('.copy-to-clipboard button');
+    if (copyButton) {
+      await copyButton.click();
+    }
+
+    const responseStatus = await block.$('.response-col_status');
+    if (responseStatus) {
+      await page.evaluate(el => el.textContent, responseStatus);
+    }
+  }
 }
 
 module.exports = scenarioBuilder.createScenario({ setup, action, back });
