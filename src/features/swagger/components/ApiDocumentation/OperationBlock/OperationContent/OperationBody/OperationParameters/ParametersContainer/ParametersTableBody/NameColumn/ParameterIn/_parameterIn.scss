@@ -1,0 +1,11 @@
+@use '@swagger/global' as *;
+
+%parameterIn {
+  .parameter__in {
+    font-style: normal;
+    @include medium12($grey300);
+    @include from-small-to-large-screens {
+      @include demiBold14($grey300);
+    }
+  }
+}

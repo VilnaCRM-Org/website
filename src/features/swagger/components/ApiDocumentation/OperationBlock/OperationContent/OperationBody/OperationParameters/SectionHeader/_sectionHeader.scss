@@ -1,0 +1,49 @@
+@use '@swagger/global' as *;
+
+@use 'TryOutButton/tryOutButton';
+
+@mixin responsiveFontSize() {
+  @include medium15($grey200);
+  @include for-large-screens {
+    @include demi18($grey200);
+  }
+  @include for-small-screens {
+    @include medium15($grey200);
+  }
+}
+
+%sectionHeader {
+  .opblock-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: none;
+    height: 3.375rem;
+    padding: 0 1.25rem 0 1.563rem;
+
+    @include for-large-screens {
+      height: 4.125rem;
+      padding: 0 1.5rem 0 1.5rem;
+    }
+    @include for-small-screens {
+      height: 3.125rem;
+      padding: 0 1rem 0 0.75rem;
+    }
+    .tab-header {
+      flex: initial;
+      .opblock-title {
+        @include responsiveFontSize;
+      }
+      .tab-item {
+        padding: 0;
+        span {
+          @include responsiveFontSize;
+          &::after {
+            display: none;
+          }
+        }
+      }
+    }
+    @extend %tryOutButton;
+  }
+}

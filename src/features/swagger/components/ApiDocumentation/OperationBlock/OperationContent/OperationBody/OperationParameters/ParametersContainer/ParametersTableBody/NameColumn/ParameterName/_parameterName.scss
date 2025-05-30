@@ -1,0 +1,37 @@
+@use '@swagger/global' as *;
+
+$requiredLabelText: '*required';
+
+%parameterName {
+  .parameter__name {
+    margin-right: 0;
+    @include buttonText($darkPrimary);
+    @include for-small-screens {
+      @include medium15($darkPrimary);
+    }
+    &.required {
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+      @include for-small-screens {
+        flex-direction: column;
+        gap: 0.125rem;
+        align-items: normal;
+      }
+      span {
+        display: none;
+      }
+      &::after {
+        content: $requiredLabelText;
+        position: static;
+        background-color: $errorBackground;
+        border-radius: 0.25rem;
+        padding: 0.125rem 0.375rem;
+        @include medium12($error);
+        @include for-small-screens {
+          width: max-content;
+        }
+      }
+    }
+  }
+}

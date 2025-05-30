@@ -1,0 +1,30 @@
+@use '@swagger/global' as *;
+
+@use 'InnerContent/innerContent';
+
+%responseAfterExecute {
+  & > div {
+    margin-bottom: 0.75rem;
+    @include for-large-screens {
+      margin-bottom: 1rem;
+    }
+    @include for-small-screens {
+      margin-bottom: 0.75rem;
+    }
+    @extend %innerContent;
+    & > h4 {
+      margin-top: 0.75rem;
+      margin-bottom: 0.75rem;
+      @include medium15($grey200);
+      @include for-large-screens {
+        margin-top: 1.438rem;
+        margin-bottom: 1rem;
+        @include demi18($grey200);
+      }
+      @include for-small-screens {
+        margin-top: 1rem;
+        margin-bottom: 0.75rem;
+      }
+    }
+  }
+}

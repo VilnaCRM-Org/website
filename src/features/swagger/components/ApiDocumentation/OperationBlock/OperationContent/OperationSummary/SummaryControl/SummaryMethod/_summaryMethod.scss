@@ -1,0 +1,21 @@
+@use '@swagger/global' as *;
+
+%summaryMethod {
+  .opblock-summary-method {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-width: initial;
+    width: 7.087rem;
+    background-color: $white;
+    border-radius: 0.5rem;
+    padding: 0.5rem 0;
+    text-shadow: none;
+    @include typography($darkPrimary, 1rem, 600, 1.625rem);
+    @include for-small-screens {
+      min-width: 5rem;
+      @include demiBold14;
+      line-height: normal;
+    }
+  }
+}

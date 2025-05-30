@@ -1,0 +1,60 @@
+@use '@swagger/global' as *;
+
+@use 'DeprecatedMethod/deprecatedMethod';
+
+$postColorTheme: #38b386;
+$putColorTheme: #ffc01e;
+$getColorTheme: #1eaeff;
+$deleteColorTheme: #dc3939;
+$patchColorTheme: #9b59b6;
+
+$methodColors: (
+  'post': $postColorTheme,
+  'put': $putColorTheme,
+  'get': $getColorTheme,
+  'delete': $deleteColorTheme,
+  'patch': $patchColorTheme,
+);
+
+@mixin opblockMethod($method, $color) {
+  &.opblock-#{$method} {
+    border-color: $color;
+    background-color: rgba($color, 0.1);
+    .opblock-summary-#{$method} {
+      border-color: $color;
+      background-color: transparent;
+      .opblock-summary-control {
+        .opblock-summary-method {
+          color: $color;
+        }
+      }
+    }
+    .opblock-body {
+      .opblock-section,
+      .responses-wrapper {
+        .opblock-section-header {
+          background: $white;
+        }
+      }
+      .opblock-section-header,
+      & > .opblock-description-wrapper {
+        border-bottom: 1px solid $color;
+      }
+      .opblock-section-request-body {
+        border-top: 1px solid $color;
+      }
+      .responses-wrapper {
+        .opblock-section-header {
+          border-top: 1px solid $color;
+        }
+      }
+    }
+  }
+}
+
+%operationMethodsTheme {
+  @each $method, $color in $methodColors {
+    @include opblockMethod($method, $color);
+  }
+  @extend %deprecatedMethod;
+}

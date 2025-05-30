@@ -27,4 +27,4 @@ COPY --from=build /app/out ./out
 
 EXPOSE 3001
 
-CMD ["serve", "-s", "out", "-p", "3001"]
+CMD ["serve", "out", "-p", "3001"]

@@ -1,0 +1,101 @@
+@use '../../Variables/variables' as *;
+
+@mixin typography(
+  $color,
+  $fontSize,
+  $fontWeight,
+  $lineHeight,
+  $letterSpacing: normal,
+  $fontFamily: $golos
+) {
+  color: $color;
+  font-size: $fontSize;
+  font-weight: $fontWeight;
+  line-height: $lineHeight;
+  font-family: $fontFamily;
+  letter-spacing: $letterSpacing;
+}
+
+@mixin medium12($color: $grey250) {
+  @include typography($color, 0.75rem, 500, 1.125rem, normal, $inter);
+}
+
+@mixin medium14($color: $grey200) {
+  @include typography($color, 0.875rem, 500, 1.125rem, normal, $inter);
+}
+
+@mixin medium15($color: $grey250) {
+  @include typography($color, 0.9375rem, 500, 1.125rem);
+}
+
+@mixin medium16($color: $grey300) {
+  @include typography($color, 1rem, 500, 1.125rem, normal, $inter);
+}
+
+@mixin regular16($color: $grey300) {
+  @include typography($color, 1rem, 500, 1.125rem);
+}
+
+@mixin regular18($color: $grey300) {
+  @include typography($color, 1.125rem, 400, 1.125rem, normal, $inter);
+}
+
+@mixin bodyText16($color: $darkPrimary) {
+  @include typography($color, 1rem, 400, 1.625rem);
+}
+
+@mixin bodyText18($color: $darkPrimary) {
+  @include typography($color, 1.125rem, 400, 1.875rem);
+}
+
+@mixin bodyTextMobile($color: $darkPrimary) {
+  @include typography($color, 0.9375rem, 400, 1.563rem);
+}
+
+@mixin buttonText($color: $white) {
+  @include typography($color, 1.125rem, 600, normal);
+}
+
+@mixin demi18($color: $darkPrimary) {
+  @include typography($color, 1.125rem, 600, 1.05rem);
+}
+
+@mixin demi16($color: $darkPrimary) {
+  @include typography($color, 1rem, 600, 1.05rem);
+}
+
+@mixin demiBold14($color: $darkPrimary) {
+  @include typography($color, 0.875rem, 600, 1.05rem);
+}
+
+@mixin bold22($color: $grey250) {
+  @include typography($color, 1.375rem, 700, 1.05rem);
+}
+
+@mixin link14($color: $primary) {
+  @include typography($color, 0.875rem, 700, 1.125rem);
+}
+
+@mixin link16($color: $primary) {
+  @include typography($color, 1.125rem, 700, 1.125rem);
+}
+
+@mixin h2MobileText($color: $darkPrimary) {
+  @include typography($color, 1.75rem, 700, 2.1rem);
+}
+
+@mixin h2Text($color: $darkPrimary) {
+  @include typography($color, 2.875rem, 700, 3.45rem);
+}
+
+@mixin h3Text($color: $darkPrimary) {
+  @include typography($color, 2.25rem, 600, normal);
+}
+
+@mixin h4Text($color: $darkPrimary) {
+  @include typography($color, 1.875rem, 600, normal);
+}
+
+@mixin h5Text($color: $darkPrimary) {
+  @include typography($color, 1.75rem, 700, normal);
+}

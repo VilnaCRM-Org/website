@@ -1,0 +1,41 @@
+@use '@swagger/global' as *;
+
+@use 'SummaryControl/summaryControl';
+@use 'ControlArrow/controlArrow';
+@use 'LockButton/lockButton';
+@use 'CopyButton/copyButton';
+
+@mixin interactive-state {
+  .view-line-link svg {
+    width: 1.5rem;
+    @include for-small-screens {
+      width: 1.25rem;
+    }
+  }
+}
+
+%operationSummary {
+  .opblock-summary {
+    padding: 0.25rem 0.875rem 0.25rem 0.313rem;
+    @include for-large-screens {
+      padding-right: 1.5rem;
+    }
+    @include for-small-screens {
+      padding: 0.375rem 1rem 0.375rem 0.75rem;
+    }
+    @extend %summaryControl;
+    @extend %controlArrow;
+    @extend %lockButton;
+    @extend %copyButton;
+    @media (hover: hover) {
+      &:hover {
+        @include interactive-state;
+      }
+    }
+    @media (hover: none) {
+      &:focus-within {
+        @include interactive-state;
+      }
+    }
+  }
+}

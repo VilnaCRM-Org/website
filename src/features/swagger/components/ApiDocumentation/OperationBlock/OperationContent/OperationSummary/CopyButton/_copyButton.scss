@@ -1,0 +1,21 @@
+@use '@swagger/global' as *;
+
+%copyButton {
+  .view-line-link {
+    margin: 0 0.625rem;
+    transition: none;
+    height: auto;
+    width: auto;
+    @include uiIcon($copy, 0);
+    @include for-small-screens {
+      @include uiIcon($copySmall, 0, 1.25rem);
+    }
+    svg {
+      position: static;
+      transition: 0.5s all ease;
+    }
+    path {
+      fill: transparent;
+    }
+  }
+}

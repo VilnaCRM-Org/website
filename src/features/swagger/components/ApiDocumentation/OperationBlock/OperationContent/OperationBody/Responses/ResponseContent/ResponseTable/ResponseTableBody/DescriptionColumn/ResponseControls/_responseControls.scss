@@ -1,0 +1,35 @@
+@use '@swagger/global' as *;
+
+@mixin acceptMessage() {
+  @include medium12($accept);
+  @include for-small-screens {
+    @include medium14($accept);
+  }
+}
+
+%responseControls {
+  section.response-controls {
+    display: block;
+    padding-top: 0.688rem;
+    @include for-small-screens {
+      padding-top: 0.813rem;
+    }
+    div.response-control-media-type {
+      margin-right: 0;
+    }
+    small.response-control-media-type__title {
+      margin-bottom: 0.5rem;
+      @include medium14($grey200);
+      @include for-small-screens {
+        margin-bottom: 0.25rem;
+        @include bodyTextMobile($grey200);
+      }
+    }
+    small.response-control-media-type__accept-message {
+      @include acceptMessage;
+      code {
+        @include acceptMessage;
+      }
+    }
+  }
+}

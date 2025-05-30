@@ -1,0 +1,24 @@
+@use '@swagger/global' as *;
+
+@use 'Information/information';
+@use 'Scheme/scheme';
+@use 'OperationBlock/operationBlock';
+@use 'OperationModels/operationModels';
+
+.swagger-ui {
+  font-family: $golos;
+  padding-bottom: 1.438rem;
+  @include for-small-screens {
+    padding-bottom: 0.875rem;
+  }
+  @extend %informationContainer;
+  @extend %scheme;
+  .wrapper {
+    padding: 0;
+    @extend %operationBlock;
+    @extend %operationModels;
+  }
+}
+.swagger-ui * {
+  font-family: 'golos', 'golos Fallback', sans-serif !important;
+}

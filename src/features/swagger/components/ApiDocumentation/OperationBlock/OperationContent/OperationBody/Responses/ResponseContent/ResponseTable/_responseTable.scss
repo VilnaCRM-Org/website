@@ -1,0 +1,11 @@
+@use '@swagger/global' as *;
+
+@use 'ResponseTableHead/responseTableHead';
+@use 'ResponseTableBody/responseTableBody';
+
+%responseTable {
+  table.responses-table {
+    @extend %responseTableHead;
+    @extend %responseTableBody;
+  }
+}

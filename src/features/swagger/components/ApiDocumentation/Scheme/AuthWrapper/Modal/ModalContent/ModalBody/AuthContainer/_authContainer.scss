@@ -1,0 +1,13 @@
+@use '@swagger/global' as *;
+
+@use 'AuthForm/authForm';
+@use 'AuthInfo/authInfo';
+
+%authContainer {
+  .auth-container {
+    padding: 0;
+    border-bottom: none;
+    @extend %authForm;
+    @extend %authInfo;
+  }
+}

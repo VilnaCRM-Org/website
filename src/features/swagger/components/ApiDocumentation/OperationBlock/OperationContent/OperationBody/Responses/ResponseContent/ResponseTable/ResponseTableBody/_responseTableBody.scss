@@ -1,0 +1,33 @@
+@use '@swagger/global' as *;
+
+@use 'StatusColumn/statusColumn';
+@use 'DescriptionColumn/descriptionColumn';
+
+%responseTableBody {
+  tbody {
+    tr.response:first-child {
+      td.response-col_status,
+      td.response-col_description {
+        padding-top: 0.625rem;
+        @include for-small-screens {
+          padding-top: 0.438rem;
+        }
+      }
+    }
+    tr:last-child {
+      td {
+        padding-bottom: 0;
+      }
+    }
+    td.response-col_status,
+    td.response-col_description {
+      padding-top: 0;
+      padding-bottom: 1rem;
+      @include for-small-screens {
+        padding-bottom: 0.375rem;
+      }
+    }
+    @extend %statusColumn;
+    @extend %descriptionColumn;
+  }
+}

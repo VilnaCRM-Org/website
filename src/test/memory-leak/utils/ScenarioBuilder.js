@@ -4,8 +4,12 @@ const projectDir = process.cwd();
 loadEnvConfig(projectDir);
 
 class ScenarioBuilder {
-  constructor() {
-    this.url = () => process.env.NEXT_PUBLIC_PROD_CONTAINER_API_URL;
+  constructor(path) {
+    this.path = path;
+    this.url = () => {
+      const baseUrl = process.env.NEXT_PUBLIC_PROD_CONTAINER_API_URL;
+      return this.path ? `${baseUrl}/${this.path}` : baseUrl;
+    };
     this.beforeInitialPageLoad = async page => {
       await page.setExtraHTTPHeaders({
         [`aws-cf-cd-${process.env.NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_NAME}`]:

@@ -1,0 +1,93 @@
+@use '@swagger/global' as *;
+
+%nestedSchema {
+  & > .model {
+    & > span {
+      & > button.model-box-control {
+        display: inline-flex;
+        align-items: center;
+        outline: none;
+        .pointer {
+          vertical-align: middle;
+          .model-title {
+            .model-hint {
+              display: none;
+            }
+          }
+        }
+        &[aria-expanded='true'] {
+          margin-bottom: 0.625rem;
+        }
+        span {
+          @include demiBold14($darkPrimary);
+        }
+        .model-toggle {
+          margin: 0;
+          top: 0;
+          &::after {
+            background-image: $arrowRight;
+          }
+        }
+      }
+    }
+    .brace-open,
+    .brace-close {
+      @include demiBold14($darkPrimary);
+    }
+    .brace-close {
+      display: inline-block;
+      margin-top: 0.625rem;
+    }
+    .inner-object {
+      .model {
+        td {
+          padding: 0;
+          min-height: 22px;
+        }
+        td:first-child {
+          width: min-content;
+          min-width: 5.375rem;
+          @include medium14($grey200);
+        }
+        td:nth-child(2) {
+          display: flex;
+          justify-content: flex-end;
+          .model {
+            vertical-align: top;
+            span {
+              button {
+                vertical-align: top;
+                outline: none;
+                @include demiBold14($grey200);
+                .pointer {
+                  .model-hint {
+                    display: none;
+                  }
+                  .model-title__text {
+                    @include demiBold14($grey200);
+                  }
+                }
+                .model-toggle {
+                  top: 0;
+                  margin: 0;
+                  &::after {
+                    background-image: $arrowRight;
+                  }
+                }
+                span:nth-child(2) {
+                  vertical-align: top;
+                }
+              }
+              .prop-type {
+                @include demiBold14($primary);
+              }
+              .prop-format {
+                @include medium14($grey300);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
