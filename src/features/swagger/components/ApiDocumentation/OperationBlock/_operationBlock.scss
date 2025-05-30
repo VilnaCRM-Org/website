@@ -3,6 +3,8 @@
 @use 'OperationHeader/operationHeader';
 @use 'OperationContent/operationContent';
 
+$spacing-sm: 0.5rem;
+
 %operationBlock {
   .opblock-tag-section {
     @extend %operationHeader;
@@ -20,12 +22,12 @@
     }
   }
   .opblock-tag-section:not(:last-child) {
-    margin-bottom: 0.5rem;
+    margin-bottom: $spacing-sm;
     @include for-large-screens {
       margin-bottom: 1rem;
     }
     @include for-small-screens {
-      margin-bottom: 0.5rem;
+      margin-bottom: $spacing-sm;
     }
   }
 }

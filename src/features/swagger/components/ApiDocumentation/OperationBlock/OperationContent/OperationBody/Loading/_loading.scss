@@ -1,5 +1,7 @@
 @use '@swagger/global' as *;
 
+$loading-spinner-size: 1.625rem;
+
 %loading {
   .loading-container {
     margin: 0;
@@ -10,8 +12,8 @@
         margin: 0;
         border-width: 3px;
         border-top-color: $darkPrimary;
-        height: 1.625rem;
-        width: 1.625rem;
+        height: $loading-spinner-size;
+        width: $loading-spinner-size;
       }
       &::after {
         display: none;
