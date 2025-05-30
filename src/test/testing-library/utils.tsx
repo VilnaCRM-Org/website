@@ -1,12 +1,7 @@
-import { MockedResponse } from '@apollo/client/testing';
-import { fireEvent, screen } from '@testing-library/react';
+import { MockedProvider, MockedResponse } from '@apollo/client/testing';
+import { fireEvent, render, RenderResult, screen } from '@testing-library/react';
 import { t } from 'i18next';
-import { AriaRole } from 'react';
-
-import { CreateUserInput } from '@/test/apollo-server/types';
-
-import SIGNUP_MUTATION from '../../features/landing/api/service/userService';
-import { RegisterItem } from '../../features/landing/types/authentication/form';
+import React, { AriaRole } from 'react';
 
 import {
   fullNamePlaceholder,
@@ -14,9 +9,6 @@ import {
   passwordPlaceholder,
   submitButtonText,
   buttonRole,
-  testEmail,
-  testInitials,
-  testPassword,
 } from './constants';
 
 const checkboxRole: AriaRole = 'checkbox';
@@ -29,14 +21,16 @@ class FormElementNotFoundError extends Error {
     this.name = 'FormElementNotFoundError';
   }
 }
-
-export const getFormElements: () => {
+export interface GetElementsResult {
   fullNameInput: HTMLInputElement | null;
   emailInput: HTMLInputElement | null;
   passwordInput: HTMLInputElement | null;
   privacyCheckbox: HTMLInputElement | null;
+}
+interface ExtendedGetElementsResult extends GetElementsResult {
   signUpButton: HTMLElement | null;
-} = () => {
+}
+export const getFormElements: () => ExtendedGetElementsResult = () => {
   const getElementSafe: <T extends HTMLInputElement>(
     queryFunction: () => T,
     elementName: string
@@ -91,12 +85,12 @@ export const fillForm: (
   emailValue?: string,
   passwordValue?: string,
   acceptPrivacyPolicy?: boolean
+) => GetElementsResult = (
+  fullNameValue = '',
+  emailValue = '',
+  passwordValue = '',
+  acceptPrivacyPolicy = false
 ) => {
-  fullNameInput: HTMLInputElement | null;
-  emailInput: HTMLInputElement | null;
-  passwordInput: HTMLInputElement | null;
-  privacyCheckbox: HTMLInputElement | null;
-} = (fullNameValue = '', emailValue = '', passwordValue = '', acceptPrivacyPolicy = false) => {
   validateFormInput(fullNameValue, emailValue, passwordValue);
 
   const { fullNameInput, emailInput, passwordInput, privacyCheckbox, signUpButton } =
@@ -131,55 +125,13 @@ export const checkElementsInDocument: (...elements: (HTMLElement | null)[]) => v
   elements.forEach(element => expect(element).toBeInTheDocument());
 };
 
-const input: CreateUserInput = {
-  email: testEmail,
-  initials: testInitials,
-  password: testPassword,
-  clientMutationId: '132',
-};
-
-export const rejectedMockResponse: MockedResponse = {
-  request: {
-    query: SIGNUP_MUTATION,
-    variables: { input },
-  },
-  result: {
-    errors: [
-      {
-        message: 'A user with this email already exists.',
-        locations: [{ line: 1, column: 1 }],
-        path: ['createUser'],
-        extensions: {
-          code: 'BAD_USER_INPUT',
-        },
-      },
-    ],
-  },
-};
-
-export const mockInternalServerErrorResponse: MockedResponse = {
-  request: {
-    query: SIGNUP_MUTATION,
-    variables: { input },
-  },
-  result: {
-    errors: [
-      {
-        message: 'Internal Server Error.',
-        locations: [{ line: 1, column: 1 }],
-        path: ['createUser'],
-        extensions: {
-          code: 'INTERNAL_SERVER_ERROR',
-        },
-      },
-    ],
-  },
-};
-
-export type SetIsOpenType = jest.Mock<(isOpen: boolean) => void>;
-export type OnSubmitType = jest.Mock<Promise<void>, [RegisterItem]>;
-
-export interface AuthFormWrapperProps {
-  onSubmit: OnSubmitType;
-  serverErrorMessage: string;
+export function renderWithProviders(
+  ui: React.ReactElement,
+  { apolloMocks = [] }: { apolloMocks?: MockedResponse[] } = {}
+): RenderResult {
+  return render(
+    <MockedProvider mocks={apolloMocks} addTypename={false}>
+      {ui}
+    </MockedProvider>
+  );
 }

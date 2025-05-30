@@ -2,6 +2,7 @@ import { useMutation } from '@apollo/client';
 import { Box, CircularProgress, Fade } from '@mui/material';
 import React from 'react';
 import { useForm } from 'react-hook-form';
+import { v4 as uuidv4 } from 'uuid';
 
 import SIGNUP_MUTATION from '../../../api/service/userService';
 import { animationTimeout } from '../../../constants';
@@ -15,31 +16,32 @@ import AuthForm from './AuthForm';
 import styles from './styles';
 import { CreateUserPayload, SignupVariables } from './types';
 
-const clientID: string = '132';
-
 function AuthLayout(): React.ReactElement {
   const [notificationType, setNotificationType] = React.useState<NotificationStatus>(
     NotificationStatus.SUCCESS
   );
-  const [serverErrorMessage, setServerErrorMessage] = React.useState('');
   const [isNotificationOpen, setIsNotificationOpen] = React.useState<boolean>(false);
+  const [errorText, setErrorText] = React.useState('');
   const {
     handleSubmit,
     control,
     reset,
     formState,
     formState: { errors },
-  } = useForm<RegisterItem>({ mode: 'onTouched' });
+  } = useForm<RegisterItem>({
+    mode: 'onTouched',
+    defaultValues: { FullName: '', Password: '', Email: '', Privacy: false },
+  });
   const [signupMutation, { loading }] = useMutation<CreateUserPayload, SignupVariables>(
     SIGNUP_MUTATION
   );
 
   const handleSuccess: () => void = (): void => {
-    setServerErrorMessage('');
     setIsNotificationOpen(true);
     setNotificationType(NotificationStatus.SUCCESS);
   };
   const onSubmit: (userData: RegisterItem) => Promise<void> = async (userData: RegisterItem) => {
+    const clientID: string = uuidv4();
     try {
       await signupMutation({
         variables: {
@@ -52,12 +54,14 @@ function AuthLayout(): React.ReactElement {
         },
       });
       handleSuccess();
-    } catch (err) {
-      handleApolloError({ err, setServerErrorMessage, setNotificationType, setIsNotificationOpen });
+    } catch (error) {
+      setErrorText(handleApolloError({ error }));
+      setNotificationType(NotificationStatus.ERROR);
+      setIsNotificationOpen(true);
     }
   };
 
-  useFormReset({ formState, reset, serverErrorMessage, notificationType });
+  useFormReset({ formState, reset, notificationType });
 
   const retrySubmit: () => void = (): void => {
     handleSubmit(onSubmit)();
@@ -76,20 +80,22 @@ function AuthLayout(): React.ReactElement {
       <Fade in={!isNotificationOpen} timeout={animationTimeout}>
         <Box sx={styles.formContent}>
           <AuthForm
-            serverErrorMessage={serverErrorMessage}
             onSubmit={onSubmit}
             formValidationErrors={errors}
             handleSubmit={handleSubmit}
             control={control}
+            loading={loading}
           />
         </Box>
       </Fade>
 
       <Notification
+        errorText={errorText}
         type={notificationType}
         setIsOpen={setIsNotificationOpen}
         isOpen={isNotificationOpen}
         onRetry={retrySubmit}
+        loading={loading}
       />
     </Box>
   );
