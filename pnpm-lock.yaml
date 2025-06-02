@@ -5,7 +5,7 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
-  refractor>prismjs: 1.30.0
+  prismjs: 1.30.0
 
 importers:
 
