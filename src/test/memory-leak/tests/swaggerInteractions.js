@@ -55,20 +55,7 @@ async function setup(page) {
     throw new Error('Page was not redirected to /swagger as expected');
   }
 }
-
 async function action(page) {
-  const buttons = await page.$$('button.opblock-summary-control[aria-expanded="false"]');
-
-  for (const button of buttons) {
-    await button.click();
-
-    await page.waitForSelector('button.btn.try-out__btn', { visible: true });
-    await page.click('button.btn.try-out__btn');
-
-    await page.waitForSelector('button.btn.execute.opblock-control__btn', { visible: true });
-    await page.click('button.btn.execute.opblock-control__btn');
-  }
-
   await page.waitForSelector('.swagger-ui');
 
   const hasServers = await page.$('#servers');
@@ -76,21 +63,25 @@ async function action(page) {
     await page.select('#servers', 'https://mocked.api.com');
   }
 
-  const operationButtons = await page.$$('.opblock-summary');
-  for (const button of operationButtons) {
+  const buttons = await page.$$('button.opblock-summary-control[aria-expanded="false"]');
+
+  for (const button of buttons) {
     await button.click();
-    await new Promise(resolve => {
-      setTimeout(resolve, 500);
-    });
+    await page.waitForSelector('.opblock-body', { visible: true });
+  }
+
+  const tryOutButtons = await page.$$('button.btn.try-out__btn');
+  for (const button of tryOutButtons) {
+    await button.click();
+
+    await page.waitForSelector('button.btn.execute.opblock-control__btn', { visible: true });
+    await page.click('button.btn.execute.opblock-control__btn');
   }
   const executeButtons = await page.$$('.opblock-control');
   for (const button of executeButtons) {
     await button.click();
-    await new Promise(resolve => {
-      setTimeout(resolve, 1000);
-    });
+    await page.waitForResponse(response => response.status() >= 200);
   }
-
   const curlButtons = await page.$$('.copy-to-clipboard');
   for (const button of curlButtons) {
     await button.click();
@@ -98,12 +89,10 @@ async function action(page) {
       setTimeout(resolve, 500);
     });
   }
-
   const responseStatusElements = await page.$$('.response-col_status');
   for (const statusElement of responseStatusElements) {
     await statusElement.evaluate(el => el.textContent);
   }
-
   const responseTexts = await page.$$('.response-col_description');
   for (const textElement of responseTexts) {
     await textElement.evaluate(el => el.textContent);
@@ -113,11 +102,7 @@ async function action(page) {
 async function back(page) {
   await page.waitForSelector('.swagger-ui');
 
-  const hasServers = await page.$('#servers');
-  if (hasServers) {
-    await page.select('#servers', 'https://mocked.api.com');
-  }
-
+  await page.select('#servers', 'https://mocked.api.com');
   await page.click('button[aria-expanded="true"]');
 
   const operationBlocks = await page.$$('.opblock');
