@@ -13,6 +13,57 @@ export default function Document(): React.ReactElement {
         <meta name="theme-color" content="#ffffff" />
         <meta name="msapplication-config" content="/layout/favicon/browserconfig.xml" />
 
+        {/* Font preloading */}
+        <link
+          rel="preload"
+          href="/assets/fonts/Golos/GolosText-Regular.ttf"
+          as="font"
+          type="font/ttf"
+          crossOrigin="anonymous"
+        />
+        <link
+          rel="preload"
+          href="/assets/fonts/Golos/GolosText-Medium.ttf"
+          as="font"
+          type="font/ttf"
+          crossOrigin="anonymous"
+        />
+        <link
+          rel="preload"
+          href="/assets/fonts/Golos/GolosText-SemiBold.ttf"
+          as="font"
+          type="font/ttf"
+          crossOrigin="anonymous"
+        />
+        <link
+          rel="preload"
+          href="/assets/fonts/Golos/GolosText-Bold.ttf"
+          as="font"
+          type="font/ttf"
+          crossOrigin="anonymous"
+        />
+        <link
+          rel="preload"
+          href="/assets/fonts/Inter/Inter-Regular.ttf"
+          as="font"
+          type="font/ttf"
+          crossOrigin="anonymous"
+        />
+        <link
+          rel="preload"
+          href="/assets/fonts/Inter/Inter-Medium.ttf"
+          as="font"
+          type="font/ttf"
+          crossOrigin="anonymous"
+        />
+        <link
+          rel="preload"
+          href="/assets/fonts/Inter/Inter-Bold.ttf"
+          as="font"
+          type="font/ttf"
+          crossOrigin="anonymous"
+        />
+
         <link rel="icon" type="image/svg+xml" sizes="16x16" href="/layout/favicon/16x16.svg" />
         <link rel="icon" type="image/svg+xml" sizes="32x32" href="/layout/favicon/32x32.svg" />
         <link rel="icon" type="image/svg+xml" sizes="64x64" href="/layout/favicon/64x64.svg" />
