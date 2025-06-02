@@ -91,7 +91,10 @@
   },
   "pnpm": {
     "overrides": {
-      "prismjs": "1.30.0"
+      "prismjs": "1.30.0",
+      "refractor>prismjs": "1.30.0",
+      "react-syntax-highlighter>prismjs": "1.30.0",
+      "react-syntax-highlighter>refractor>prismjs": "1.30.0"
     }
   },
   "engines": {

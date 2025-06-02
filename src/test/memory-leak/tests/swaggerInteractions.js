@@ -72,7 +72,7 @@ async function action(page) {
   await page.waitForSelector('.swagger-ui');
 
   await page.waitForSelector('#servers', { visible: true });
-  await page.select('#servers', 'https://api.vilnacrm.com');
+  await page.select('#servers', 'https://mocked.api.com');
 
   const operationButtons = await page.$$('.opblock-summary');
   for (const button of operationButtons) {
@@ -112,7 +112,7 @@ async function back(page) {
   await page.waitForSelector('.swagger-ui');
 
   await page.waitForSelector('#servers', { visible: true });
-  await page.select('#servers', 'https://api.vilnacrm.com');
+  await page.select('#servers', 'https://mocked.api.com');
 
   await page.click('button[aria-expanded="true"]');
 
