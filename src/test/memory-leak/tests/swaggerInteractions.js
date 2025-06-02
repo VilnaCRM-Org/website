@@ -94,12 +94,16 @@ async function action(page) {
     await button.click();
   }
   const responseStatusElements = await page.$$('.response-col_status');
+  const statuses = [];
   for (const statusElement of responseStatusElements) {
-    await statusElement.evaluate(el => el.textContent);
+    const status = await statusElement.evaluate(el => el.textContent.trim());
+    statuses.push(status);
   }
   const responseTexts = await page.$$('.response-col_description');
+  const descriptions = [];
   for (const textElement of responseTexts) {
-    await textElement.evaluate(el => el.textContent);
+    const description = await textElement.evaluate(el => el.textContent.trim());
+    descriptions.push(description);
   }
 }
 
@@ -132,7 +136,8 @@ async function back(page) {
 
     const responseStatus = await block.$('.response-col_status');
     if (responseStatus) {
-      await page.evaluate(el => el.textContent, responseStatus);
+      const status = await page.evaluate(el => el.textContent, responseStatus);
+      expect(status).toBe('200');
     }
   }
 }
