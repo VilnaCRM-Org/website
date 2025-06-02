@@ -74,19 +74,27 @@ async function action(page) {
   for (const button of tryOutButtons) {
     await button.click();
 
-    await page.waitForSelector('button.btn.execute.opblock-control__btn', { visible: true });
-    await page.click('button.btn.execute.opblock-control__btn');
+    const parentBlock = await button.evaluateHandle(el => el.closest('.opblock'));
+
+    const executeButton = await parentBlock.waitForSelector(
+      'button.btn.execute.opblock-control__btn',
+      { visible: true }
+    );
+
+    if (executeButton) {
+      await executeButton.click();
+      await page.waitForResponse(response => response.status() >= 200);
+    }
+
+    await parentBlock.dispose();
   }
 
   const curlButtons = await page.$$('.copy-to-clipboard');
   for (const button of curlButtons) {
     await button.click();
-    await new Promise(resolve => {
-      setTimeout(resolve, 500);
-    });
   }
   const responseStatusElements = await page.$$('.response-col_status');
-    for (const statusElement of responseStatusElements) {
+  for (const statusElement of responseStatusElements) {
     await statusElement.evaluate(el => el.textContent);
   }
   const responseTexts = await page.$$('.response-col_description');
@@ -98,16 +106,15 @@ async function action(page) {
 async function back(page) {
   await page.waitForSelector('.swagger-ui');
 
-  const serverSelect = await page.$('#servers');
-  if (serverSelect){
-     await page.$$eval('#servers option', opts =>
-       opts.some(o => o.value === 'https://mocked.api.com')
-    );
+  const hasServers = await page.$('#servers');
+  if (hasServers) {
+    await page.select('#servers', 'https://mocked.api.com');
   }
+
   const expandedButtons = await page.$$('button[aria-expanded="true"]');
   for (const button of expandedButtons) {
     const isConnected = await button.evaluate(el => el.isConnected);
-    if(isConnected) await button.click();
+    if (isConnected) await button.click();
   }
 
   const operationBlocks = await page.$$('.opblock');
