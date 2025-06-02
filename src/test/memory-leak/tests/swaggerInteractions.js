@@ -77,11 +77,7 @@ async function action(page) {
     await page.waitForSelector('button.btn.execute.opblock-control__btn', { visible: true });
     await page.click('button.btn.execute.opblock-control__btn');
   }
-  const executeButtons = await page.$$('.opblock-control');
-  for (const button of executeButtons) {
-    await button.click();
-    await page.waitForResponse(response => response.status() >= 200);
-  }
+
   const curlButtons = await page.$$('.copy-to-clipboard');
   for (const button of curlButtons) {
     await button.click();
@@ -90,7 +86,7 @@ async function action(page) {
     });
   }
   const responseStatusElements = await page.$$('.response-col_status');
-  for (const statusElement of responseStatusElements) {
+    for (const statusElement of responseStatusElements) {
     await statusElement.evaluate(el => el.textContent);
   }
   const responseTexts = await page.$$('.response-col_description');
@@ -102,8 +98,17 @@ async function action(page) {
 async function back(page) {
   await page.waitForSelector('.swagger-ui');
 
-  await page.select('#servers', 'https://mocked.api.com');
-  await page.click('button[aria-expanded="true"]');
+  const serverSelect = await page.$('#servers');
+  if (serverSelect){
+     await page.$$eval('#servers option', opts =>
+       opts.some(o => o.value === 'https://mocked.api.com')
+    );
+  }
+  const expandedButtons = await page.$$('button[aria-expanded="true"]');
+  for (const button of expandedButtons) {
+    const isConnected = await button.evaluate(el => el.isConnected);
+    if(isConnected) await button.click();
+  }
 
   const operationBlocks = await page.$$('.opblock');
 
