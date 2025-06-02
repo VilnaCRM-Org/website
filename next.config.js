@@ -9,12 +9,6 @@ const nextConfig = withExportImages({
   reactStrictMode: true,
   swcMinify: true,
 
-
- experimental: {
-    modern: true, 
-    legacyBrowsers: false, 
-  },
-
   compiler: {
     styledComponents: true,
     reactRemoveProperties: true,
