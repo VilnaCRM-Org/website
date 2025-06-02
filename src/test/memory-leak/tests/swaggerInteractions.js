@@ -57,13 +57,17 @@ async function setup(page) {
 }
 
 async function action(page) {
-  await page.click('button.opblock-summary-control[aria-expanded="false"]');
+  const buttons = await page.$$('button.opblock-summary-control[aria-expanded="false"]');
 
-  await page.waitForSelector('button.btn.try-out__btn', { visible: true });
-  await page.click('button.btn.try-out__btn');
+  for (const button of buttons) {
+    await button.click();
 
-  await page.waitForSelector('button.btn.execute.opblock-control__btn', { visible: true });
-  await page.click('button.btn.execute.opblock-control__btn');
+    await page.waitForSelector('button.btn.try-out__btn', { visible: true });
+    await page.click('button.btn.try-out__btn');
+
+    await page.waitForSelector('button.btn.execute.opblock-control__btn', { visible: true });
+    await page.click('button.btn.execute.opblock-control__btn');
+  }
 
   await page.waitForSelector('.swagger-ui');
 
