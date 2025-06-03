@@ -11,6 +11,8 @@ test.describe('Visual Tests', () => {
 
       await page.waitForLoadState('networkidle');
       await page.evaluateHandle('document.fonts.ready');
+      
+     await page.waitForTimeout(500);
 
       await page.waitForTimeout(timeoutDuration);
 
