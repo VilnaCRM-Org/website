@@ -89,9 +89,5 @@
   "engines": {
     "node": ">=20.0.0"
   },
-  "scripts": {
-  "test-visual": "playwright test",
-  "test-visual-update": "playwright test --update-snapshots"
-
-}
+  
 }
