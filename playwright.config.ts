@@ -13,10 +13,10 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
   reporter: [['html', { open: 'never' }]],
-  use: {
+use: {
     trace: 'on-first-retry',
     ignoreHTTPSErrors: true,
-    baseURL: process.env.NEXT_PUBLIC_PROD_CONTAINER_API_URL,
+    baseURL: process.env.NEXT_PUBLIC_PROD_CONTAINER_API_URL || 'http://127.0.0.1:3001',
     extraHTTPHeaders: {
       [`aws-cf-cd-${process.env.NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_NAME}`]:
         process.env.NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_VALUE!,
