@@ -16,7 +16,10 @@ export default defineConfig({
 use: {
     trace: 'on-first-retry',
     ignoreHTTPSErrors: true,
-    baseURL: process.env.NEXT_PUBLIC_PROD_CONTAINER_API_URL || 'http://127.0.0.1:3001',
+    baseURL: process.env.NEXT_PUBLIC_PROD_CONTAINER_API_URL
+
+    || process.env.NEXT_PUBLIC_WEBSITE_URL
+    || 'http://127.0.0.1:3001',
     extraHTTPHeaders: {
       [`aws-cf-cd-${process.env.NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_NAME}`]:
         process.env.NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_VALUE!,
