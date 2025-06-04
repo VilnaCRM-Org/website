@@ -113,6 +113,8 @@ test.describe('Swagger UI Header', () => {
 
     test('server select should work correctly', async ({ page }) => {
       const serverSelect: Locator = page.locator('#servers');
+      await expect(serverSelect).toBeVisible();
+
       await serverSelect.click();
       await expect(serverSelect.locator('option')).toHaveCount(1);
     });
