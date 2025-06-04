@@ -1,0 +1,25 @@
+@use '../Breakpoints/breakpoints';
+
+@mixin for-large-screens {
+  @media screen and (max-width: breakpoints.$lg) {
+    @content;
+  }
+}
+
+@mixin for-medium-screens {
+  @media screen and (max-width: breakpoints.$md) {
+    @content;
+  }
+}
+
+@mixin for-small-screens {
+  @media screen and (max-width: breakpoints.$sm) {
+    @content;
+  }
+}
+
+@mixin from-small-to-large-screens {
+  @media screen and (min-width: breakpoints.$sm) and (max-width: breakpoints.$lg) {
+    @content;
+  }
+}

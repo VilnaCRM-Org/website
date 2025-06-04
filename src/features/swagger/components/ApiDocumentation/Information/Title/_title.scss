@@ -1,0 +1,36 @@
+@use '@swagger/global' as *;
+
+@use 'Links/links';
+@use 'Stamps/stamps';
+
+$spacing-sm: 0.75rem;
+$spacing-md: 1.5rem;
+
+%title {
+  .main {
+    margin-bottom: $spacing-sm;
+    @include for-large-screens {
+      margin-bottom: $spacing-md;
+    }
+    @include for-small-screens {
+      margin-bottom: $spacing-sm;
+    }
+    @extend %links;
+    .title {
+      display: flex;
+      align-items: center;
+      gap: $spacing-md;
+      margin-bottom: 0.625rem;
+      @include h2Text();
+      @include for-large-screens {
+        margin-bottom: $spacing-sm;
+      }
+      @include for-small-screens {
+        gap: 0.5rem;
+        margin-bottom: 0.75rem;
+        @include h2MobileText();
+      }
+      @extend %stamps;
+    }
+  }
+}

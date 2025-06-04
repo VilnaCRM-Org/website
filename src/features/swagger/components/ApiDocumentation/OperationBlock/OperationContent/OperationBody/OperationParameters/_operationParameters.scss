@@ -1,0 +1,21 @@
+@use '@swagger/global' as *;
+
+@use 'SectionHeader/sectionHeader';
+@use '../SectionRequestBody/sectionRequestBody';
+@use 'ParametersContainer/parametersContainer';
+
+%parameters {
+  .opblock-section {
+    @extend %sectionHeader;
+    @extend %parametersContainer;
+    &.operation-servers {
+      .opblock-description-wrapper {
+        margin-bottom: 0;
+        h4.message {
+          margin-bottom: 0.5rem;
+          @include medium14($grey200);
+        }
+      }
+    }
+  }
+}

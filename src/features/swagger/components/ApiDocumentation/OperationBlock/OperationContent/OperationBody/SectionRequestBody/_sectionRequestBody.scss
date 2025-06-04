@@ -1,0 +1,16 @@
+@use '@swagger/global' as *;
+
+@use 'RequestBodyHeader/requestBodyHeader';
+
+%sectionRequestBody {
+  .opblock-section-request-body {
+    @extend %requestBodyHeader;
+    & > .opblock-description-wrapper {
+      margin-bottom: 0;
+      padding: 0 1.25rem 0.75rem 1.5rem;
+      .body-param {
+        margin-top: 0.75rem;
+      }
+    }
+  }
+}
