@@ -1,0 +1,14 @@
+.git
+.idea
+.vscode
+.stryker-tmp
+
+coverage
+playwright-report
+stryker.log
+**/test-results
+
+.cache
+*.log
+
+storybook-static

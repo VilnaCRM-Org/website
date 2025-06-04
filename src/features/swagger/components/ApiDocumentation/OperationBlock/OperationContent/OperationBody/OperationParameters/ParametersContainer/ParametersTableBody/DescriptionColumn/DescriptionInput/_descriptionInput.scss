@@ -1,0 +1,30 @@
+@use '@swagger/global' as *;
+
+%descriptionInput {
+  input[type='text'] {
+    @include uiInput(2.875rem, 100%, 1rem) {
+      max-width: 19rem;
+      padding-right: 0.5rem;
+      @include medium14($darkPrimary);
+      @include for-large-screens {
+        max-width: 21.5rem;
+        @include medium16($darkPrimary);
+      }
+      @include for-medium-screens {
+        min-width: auto;
+        max-width: none;
+        width: 100%;
+      }
+      @include for-small-screens {
+        padding-left: 0.625rem;
+        height: 2.5rem;
+      }
+      &::placeholder {
+        @include medium14($grey300);
+        @include from-small-to-large-screens {
+          @include medium16($grey300);
+        }
+      }
+    }
+  }
+}

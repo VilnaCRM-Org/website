@@ -1,0 +1,48 @@
+@use '@swagger/global' as *;
+
+@use 'ServerSelect/serverSelect';
+
+@mixin flex-container {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.938rem;
+  @include for-small-screens {
+    flex-direction: column;
+    align-items: normal;
+    gap: 0.25rem;
+  }
+}
+
+%serverContainer {
+  .schemes-server-container {
+    display: block;
+    flex-shrink: 0;
+    @media screen and (max-width: 374px) {
+      flex-shrink: 0.5;
+    }
+    @extend %serverSelect;
+    label {
+      margin: 0;
+      @include flex-container;
+      .schemes-title {
+        @include bodyText16($grey250);
+        @include for-large-screens {
+          @include bodyText18($grey250);
+        }
+      }
+    }
+    & > div {
+      @include for-large-screens {
+        gap: 1rem;
+      }
+      @include flex-container;
+      .servers-title {
+        @include bodyText16($grey250);
+        @include for-large-screens {
+          @include bodyText18($grey250);
+        }
+      }
+    }
+  }
+}
