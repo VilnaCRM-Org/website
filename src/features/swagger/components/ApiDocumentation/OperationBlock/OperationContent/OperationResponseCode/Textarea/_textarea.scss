@@ -1,0 +1,21 @@
+@use '@swagger/global' as *;
+
+%textarea {
+  textarea.body-param__text {
+    padding: 1rem;
+    margin: 0;
+    border-radius: 0.5rem;
+    min-height: 16.875rem;
+    background-color: $white;
+    border: 1px solid $brandGrey;
+    outline: none;
+    resize: vertical;
+    @include medium14();
+    @include for-large-screens {
+      @include regular16($darkPrimary);
+    }
+    &.invalid {
+      border-color: $errorBorder;
+    }
+  }
+}

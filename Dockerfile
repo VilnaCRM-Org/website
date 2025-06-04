@@ -1,4 +1,4 @@
-FROM public.ecr.aws/docker/library/node:23.11.1-alpine3.21 AS base
+FROM node:23.11.1-alpine3.21 AS base
 
 RUN apk add --no-cache \
     python3=3.12.10-r1 \
@@ -27,4 +27,4 @@ COPY --from=build /app/out ./out
 
 EXPOSE 3001
 
-CMD ["serve", "-s", "out", "-p", "3001"]
+CMD ["serve", "out", "-p", "3001"]
