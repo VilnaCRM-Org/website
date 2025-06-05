@@ -1,0 +1,42 @@
+@use '@swagger/global' as *;
+
+@use 'AuthButtons/authButtons';
+@use 'AuthInput/authInput';
+@use 'AuthContainer/authContainer';
+
+@mixin modal-h4() {
+  margin-top: 0 !important;
+  margin-bottom: 0.75rem !important;
+  @include demi18($darkPrimary);
+}
+
+@mixin modal-button($variant, $text-color) {
+  @include uiButton($variant) {
+    display: block;
+    margin: 0;
+    @include medium15($text-color);
+    @include for-large-screens {
+      padding: 1rem 1.4rem;
+      @include buttonText($text-color);
+    }
+    @include for-small-screens {
+      width: 100%;
+      height: auto;
+      padding: 0.938rem 0;
+      @include medium15($text-color);
+    }
+  }
+}
+
+%modalBody {
+  .modal-ux-content {
+    scrollbar-width: none;
+    max-height: none;
+    max-width: none;
+    overflow-y: auto;
+    padding: 1rem 1.25rem 0.125rem 1.5rem;
+    @extend %authButtons;
+    @extend %authInput;
+    @extend %authContainer;
+  }
+}

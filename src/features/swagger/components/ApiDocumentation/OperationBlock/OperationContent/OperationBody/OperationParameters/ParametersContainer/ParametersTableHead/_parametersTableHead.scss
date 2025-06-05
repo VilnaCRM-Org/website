@@ -1,0 +1,15 @@
+@use '@swagger/global' as *;
+
+%parametersTableHead {
+  thead {
+    th {
+      padding: 0 0 0.688rem 0;
+      border-bottom: 1px solid $grey300;
+      @include medium15($grey200);
+      @include for-small-screens {
+        padding: 0 0 0.5rem;
+        @include medium12($grey200);
+      }
+    }
+  }
+}

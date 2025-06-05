@@ -1,0 +1,22 @@
+@use '@swagger/global' as *;
+
+%statusColumn {
+  td.response-col_status {
+    min-width: 5rem;
+    padding-right: 1rem;
+    @include medium15($darkPrimary);
+    @include for-small-screens {
+      @include medium12($darkPrimary);
+    }
+    .response-undocumented {
+      margin-top: 0;
+      @include for-small-screens {
+        margin-top: 0.125rem;
+      }
+      i {
+        font-style: normal;
+        @include medium12($grey300);
+      }
+    }
+  }
+}

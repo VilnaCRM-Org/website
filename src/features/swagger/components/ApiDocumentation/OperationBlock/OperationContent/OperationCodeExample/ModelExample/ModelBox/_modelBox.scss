@@ -1,0 +1,31 @@
+@use '@swagger/global' as *;
+
+@use 'UserSchema/_userSchema';
+@use 'NestedSchema/_nestedSchema';
+
+%modelBox {
+  .model-box {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.625rem;
+    padding: 0.688rem 0.938rem 0.625rem;
+    background-color: $white;
+    border: 1px solid $grey400;
+    @extend %userSchema;
+    @extend %nestedSchema;
+    &:focus-within {
+      @media screen and (max-width: $xs-sm) {
+        justify-content: flex-start;
+        position: absolute;
+        z-index: 1000;
+        left: 4rem;
+        right: 4rem;
+      }
+      @media screen and (max-width: $xs) {
+        left: 3.25rem;
+        right: 3.25rem;
+      }
+    }
+  }
+}

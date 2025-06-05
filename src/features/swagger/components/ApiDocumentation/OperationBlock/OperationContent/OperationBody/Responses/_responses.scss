@@ -1,0 +1,11 @@
+@use '@swagger/global' as *;
+
+@use 'ResponseHeader/responseHeader';
+@use 'ResponseContent/responseContent';
+
+%responses {
+  .responses-wrapper {
+    @extend %responseHeader;
+    @extend %responseContent;
+  }
+}

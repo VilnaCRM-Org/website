@@ -1,0 +1,37 @@
+@use '@swagger/global' as *;
+
+@use 'ServerContainer/serverContainer';
+@use 'AuthWrapper/authWrapper';
+
+%scheme {
+  .scheme-container {
+    padding: 0;
+    background: transparent;
+    box-shadow: none;
+    margin-bottom: 1rem;
+    @include for-large-screens {
+      margin-bottom: 1.438rem;
+    }
+    @include for-small-screens {
+      margin-bottom: 0.875rem;
+    }
+    .schemes {
+      @extend %serverContainer;
+      @extend %authWrapper;
+      flex-wrap: nowrap;
+      gap: normal;
+      @include for-large-screens {
+        gap: 1rem;
+        align-items: center;
+      }
+      @include for-small-screens {
+        align-items: flex-end;
+        gap: 0.4rem;
+      }
+      @media screen and (max-width: 374px) {
+        flex-direction: column;
+        align-items: initial;
+      }
+    }
+  }
+}
