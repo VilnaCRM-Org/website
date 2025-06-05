@@ -16,51 +16,51 @@ export default function Document(): React.ReactElement {
         {/* Font preloading */}
         <link
           rel="preload"
-          href="/assets/fonts/Golos/GolosText-Regular.ttf"
+          href="/assets/fonts/Golos/GolosText-Regular.woff2"
           as="font"
-          type="font/ttf"
+          type="font/woff2"
           crossOrigin="anonymous"
         />
         <link
           rel="preload"
-          href="/assets/fonts/Golos/GolosText-Medium.ttf"
+          href="/assets/fonts/Golos/GolosText-Medium.woff2"
           as="font"
-          type="font/ttf"
+          type="font/woff2"
           crossOrigin="anonymous"
         />
         <link
           rel="preload"
-          href="/assets/fonts/Golos/GolosText-SemiBold.ttf"
+          href="/assets/fonts/Golos/GolosText-SemiBold.woff2"
           as="font"
-          type="font/ttf"
+          type="font/woff2"
           crossOrigin="anonymous"
         />
         <link
           rel="preload"
-          href="/assets/fonts/Golos/GolosText-Bold.ttf"
+          href="/assets/fonts/Golos/GolosText-Bold.woff2"
           as="font"
-          type="font/ttf"
+          type="font/woff2"
           crossOrigin="anonymous"
         />
         <link
           rel="preload"
-          href="/assets/fonts/Inter/Inter-Regular.ttf"
+          href="/assets/fonts/Inter/Inter-Regular.woff2"
           as="font"
-          type="font/ttf"
+          type="font/woff2"
           crossOrigin="anonymous"
         />
         <link
           rel="preload"
-          href="/assets/fonts/Inter/Inter-Medium.ttf"
+          href="/assets/fonts/Inter/Inter-Medium.woff2"
           as="font"
-          type="font/ttf"
+          type="font/woff2"
           crossOrigin="anonymous"
         />
         <link
           rel="preload"
-          href="/assets/fonts/Inter/Inter-Bold.ttf"
+          href="/assets/fonts/Inter/Inter-Bold.woff2"
           as="font"
-          type="font/ttf"
+          type="font/woff2"
           crossOrigin="anonymous"
         />
 
