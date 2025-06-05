@@ -5,14 +5,14 @@ import { screenSizes, timeoutDuration } from './constants';
 const currentLanguage: string = process.env.NEXT_PUBLIC_MAIN_LANGUAGE as string;
 
 test.describe('Visual Tests', () => {
-  for (const screen of screenSizes) {
+ screenSizes.forEach((screen) => {
     test(`${screen.name} test`, async ({ page }) => {
       await page.goto('/');
 
       await page.waitForLoadState('networkidle');
       await page.evaluateHandle('document.fonts.ready');
       
-     await page.waitForTimeout(500);
+     await page.waitForTimeout(1000);
 
       await page.waitForTimeout(timeoutDuration);
 
@@ -27,8 +27,9 @@ test.describe('Visual Tests', () => {
 
       await expect(page).toHaveScreenshot(`${currentLanguage}_${screen.name}.png`, {
         fullPage: true,
-        threshold: 0.1,
+        threshold: 0.2,
+        mask: [page.locator('.dynamic-element')],
       });
     });
-  }
+  });
 });

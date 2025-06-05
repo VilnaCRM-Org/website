@@ -11,7 +11,7 @@ interface CommonSettings {
   extraHTTPHeaders: { [key: string]: string };
 }
 const baseURL: string =
-  process.env.NEXT_PUBLIC_PROD_CONTAINER_API_URL ||
+ process.env.NEXT_PUBLIC_PROD_CONTAINER_API_URL ||
   process.env.NEXT_PUBLIC_WEBSITE_URL ||
   'http://127.0.0.1:3001';
 
@@ -21,8 +21,8 @@ const commonSettings:CommonSettings = {
   trace: 'on-first-retry' as const,
   extraHTTPHeaders: process.env.NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_NAME
     ? {
-        [`aws-cf-cd-${process.env.NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_NAME}`]:
-          process.env.NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_VALUE!,
+         [`aws-cf-cd-${process.env.NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_NAME}`]:
+          process.env.NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_VALUE || '',
       }
     : {},
 };
