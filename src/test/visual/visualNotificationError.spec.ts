@@ -13,8 +13,7 @@ const serverErrorResponse: ErrorResponseProps = {
 test.describe('Form Submission Server Error Test', () => {
   screenSizes.forEach((screen) => {
     test(`Server error notification - ${screen.name}`, async ({ page }) => {
-     await page.goto('/', { waitUntil: 'load', timeout: 30000  });
-
+      await page.goto('/', { waitUntil: 'load', timeout: 30000 });
       await page.waitForLoadState('networkidle');
       await page.evaluate(async () => {
         await document.fonts.ready;
