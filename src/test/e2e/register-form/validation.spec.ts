@@ -14,7 +14,8 @@ import {
 const confettiAltText: string = t('notifications.success.images.confetti');
 
 test('Should display error messages for invalid inputs', async ({ page }) => {
- await page.goto('/', { waitUntil: 'load', timeout: 60000 });
+ await page.goto('/', { waitUntil: 'load', timeout: 30000 });
+
 
   await fillInitialsInput(page, userData);
   await fillEmailInput(page, userData);

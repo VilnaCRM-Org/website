@@ -8,7 +8,7 @@ test('Should display the correct image size based on viewport', async ({
 }: {
   page: Page;
 }) => {
- await page.goto('/', { waitUntil: 'load', timeout: 60000 });
+ await page.goto('/', { waitUntil: 'load', timeout: 3000 });
 
   const mobile: NullableImgSize = await setImageAndViewport(page, 375, 667);
   const desktop: NullableImgSize = await setImageAndViewport(page, 1200, 800);
