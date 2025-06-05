@@ -1,3 +1,12 @@
+# [0.1.0](https://github.com/VilnaCRM-Org/website/compare/v1.6.0...v0.1.0) (2025-06-04)
+
+
+### Features
+
+* **#29:** add swagger page ([#195](https://github.com/VilnaCRM-Org/website/issues/195)) ([ccebf1a](https://github.com/VilnaCRM-Org/website/commit/ccebf1a8e835b2ba2a7b02a3ae379f14b2f5815d)), closes [#29](https://github.com/VilnaCRM-Org/website/issues/29)
+
+
+
 # [1.6.0](https://github.com/VilnaCRM-Org/website/compare/v1.5.1...v1.6.0) (2025-06-02)
 
 
@@ -36,15 +45,6 @@
 ### Features
 
 * **#28:** redesign "For Whom" block  ([#171](https://github.com/VilnaCRM-Org/website/issues/171)) ([cd224fe](https://github.com/VilnaCRM-Org/website/commit/cd224fed3a45a086dc8db1ec89cb6be4d62640fb)), closes [#28](https://github.com/VilnaCRM-Org/website/issues/28) [#28](https://github.com/VilnaCRM-Org/website/issues/28) [#28](https://github.com/VilnaCRM-Org/website/issues/28) [#28](https://github.com/VilnaCRM-Org/website/issues/28) [#28](https://github.com/VilnaCRM-Org/website/issues/28) [#28](https://github.com/VilnaCRM-Org/website/issues/28) [#28](https://github.com/VilnaCRM-Org/website/issues/28) [#28](https://github.com/VilnaCRM-Org/website/issues/28) [#28](https://github.com/VilnaCRM-Org/website/issues/28) [#28](https://github.com/VilnaCRM-Org/website/issues/28) [#28](https://github.com/VilnaCRM-Org/website/issues/28)
-
-
-
-# [1.3.0](https://github.com/VilnaCRM-Org/website/compare/v1.2.2...v1.3.0) (2025-03-08)
-
-
-### Features
-
-* **#133:** add cloudfront routing ([#134](https://github.com/VilnaCRM-Org/website/issues/134)) ([88aacbf](https://github.com/VilnaCRM-Org/website/commit/88aacbfc71810c9f19c7a24e0b3ae16e43293507)), closes [#133](https://github.com/VilnaCRM-Org/website/issues/133) [#133](https://github.com/VilnaCRM-Org/website/issues/133) [#133](https://github.com/VilnaCRM-Org/website/issues/133) [#133](https://github.com/VilnaCRM-Org/website/issues/133) [#133](https://github.com/VilnaCRM-Org/website/issues/133) [#133](https://github.com/VilnaCRM-Org/website/issues/133) [#133](https://github.com/VilnaCRM-Org/website/issues/133) [#133](https://github.com/VilnaCRM-Org/website/issues/133) [#133](https://github.com/VilnaCRM-Org/website/issues/133) [#133](https://github.com/VilnaCRM-Org/website/issues/133) [#133](https://github.com/VilnaCRM-Org/website/issues/133) [#133](https://github.com/VilnaCRM-Org/website/issues/133) [#133](https://github.com/VilnaCRM-Org/website/issues/133) [#133](https://github.com/VilnaCRM-Org/website/issues/133) [#133](https://github.com/VilnaCRM-Org/website/issues/133) [#133](https://github.com/VilnaCRM-Org/website/issues/133) [#133](https://github.com/VilnaCRM-Org/website/issues/133)
 
 
 

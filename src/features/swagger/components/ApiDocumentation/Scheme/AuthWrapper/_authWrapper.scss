@@ -1,0 +1,42 @@
+@use '@swagger/global' as *;
+
+@use 'Modal/modal';
+
+%authWrapper {
+  .auth-wrapper {
+    @include for-large-screens {
+      flex-shrink: 1;
+      flex-basis: 10.75rem;
+    }
+    @include for-small-screens {
+      flex-basis: 9.813rem;
+    }
+    @media screen and (max-width: 374px) {
+      flex-basis: unset;
+    }
+    @extend %modal;
+    .authorize {
+      @include uiButton('primary') {
+        @include medium15($white);
+        @include for-large-screens {
+          height: 3.875rem;
+          width: 100%;
+          padding: 0;
+          justify-content: center;
+          align-items: center;
+          @include buttonText;
+        }
+        @include for-small-screens {
+          height: 3.375rem;
+          @include medium15($white);
+        }
+      }
+      span {
+        padding: 0;
+      }
+    }
+    svg {
+      display: none;
+    }
+  }
+}

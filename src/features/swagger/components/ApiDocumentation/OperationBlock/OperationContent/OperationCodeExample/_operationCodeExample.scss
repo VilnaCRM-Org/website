@@ -1,0 +1,9 @@
+@use '@swagger/global' as *;
+
+@use 'ModelExample/modelExample';
+@use 'HeadersTable/headersTable';
+
+%operationCodeExample {
+  @extend %modelExample;
+  @extend %headersTable;
+}
