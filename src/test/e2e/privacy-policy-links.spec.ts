@@ -32,7 +32,7 @@ async function navigateToPrivacyPolicy(
 
 test.describe('Checking if the links to privacy policy are working', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+   await page.goto('/', { waitUntil: 'load', timeout: 60000 });
   });
 
   test('Links to privacy policy', async ({ page }) => {

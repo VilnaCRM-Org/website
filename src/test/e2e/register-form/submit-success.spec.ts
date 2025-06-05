@@ -16,7 +16,7 @@ test('Submit the registration form and verify success notification', async ({ pa
   const { initialsInput, emailInput, passwordInput, policyTextCheckbox, signupButton } =
     getFormFields(page);
 
-  await page.goto('/');
+ await page.goto('/', { waitUntil: 'load', timeout: 60000 });
 
   await fillInput(initialsInput, userData.fullName);
   await fillInput(emailInput, userData.email);

@@ -48,7 +48,7 @@ async function setup(page) {
     return request.continue();
   });
 
-  await page.goto(scenarioBuilder.url(), { waitUntil: 'networkidle0', timeout: 0 });
+  await page.goto('/', { waitUntil: 'load', timeout: 60000 });(scenarioBuilder.url(), { waitUntil: 'networkidle0', timeout: 0 });
 
   const currentUrl = page.url();
   if (!currentUrl.includes('/swagger')) {

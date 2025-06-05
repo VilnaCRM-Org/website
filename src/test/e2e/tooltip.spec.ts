@@ -20,7 +20,7 @@ async function handleTooltip(
   const closeLocator: Locator = page.getByRole('heading', { name });
   const elementLocator: Locator = element;
 
-  await page.goto('/');
+ await page.goto('/', { waitUntil: 'load', timeout: 60000 });
   await elementLocator.click();
   await expect(tooltip).toBeVisible();
 

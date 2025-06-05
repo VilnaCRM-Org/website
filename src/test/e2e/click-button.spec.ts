@@ -23,7 +23,7 @@ const clickTryItNowButtonByFilteredSection: (
 
 test.describe('Buttons navigation tests', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+   await page.goto('/', { waitUntil: 'load', timeout: 60000 });
   });
 
   test('Desktop buttons navigation', async ({ page }) => {

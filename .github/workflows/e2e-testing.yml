@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - main
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -13,8 +14,23 @@ jobs:
         with:
           node-version: ${{ vars.NODE_VERSION }}
 
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Start the server
+        run: pnpm start &
+
+      - name: Wait for server to be ready
+        run: |
+          for i in {1..10}; do
+            curl -s http://localhost:3001 && break || sleep 5
+          done
+
       - name: Run Playwright tests
-        run: make test-e2e
+        run: pnpm make test-e2e
 
       - uses: actions/upload-artifact@v4
         if: always()

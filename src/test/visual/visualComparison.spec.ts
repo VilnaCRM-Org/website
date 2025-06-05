@@ -7,7 +7,7 @@ const currentLanguage: string = process.env.NEXT_PUBLIC_MAIN_LANGUAGE as string;
 test.describe('Visual Tests', () => {
  screenSizes.forEach((screen) => {
     test(`${screen.name} test`, async ({ page }) => {
-      await page.goto('/');
+     await page.goto('/', { waitUntil: 'load', timeout: 60000 });
 
       await page.waitForLoadState('networkidle');
       await page.evaluateHandle('document.fonts.ready');

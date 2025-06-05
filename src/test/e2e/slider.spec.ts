@@ -20,7 +20,7 @@ async function performSliderTest(
   firstSlideLocator: Locator,
   secondSlideLocator: Locator
 ): Promise<void> {
-  await page.goto('/');
+ await page.goto('/', { waitUntil: 'load', timeout: 60000 });
   await page.setViewportSize({ width: 375, height: 812 });
 
   const sliderOffsetWidth: number = await firstSlideLocator.evaluate(
