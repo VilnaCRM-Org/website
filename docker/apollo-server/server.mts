@@ -1,4 +1,8 @@
-import dotenv from 'dotenv';
+import dotenv, { DotenvConfigOutput } from 'dotenv';
+import dotenvExpand from 'dotenv-expand';
+const env: DotenvConfigOutput = dotenv.config();
+
+dotenvExpand.expand(env);
 
 import { ApolloServer, BaseContext } from '@apollo/server';
 import { startStandaloneServer } from '@apollo/server/standalone';
@@ -11,8 +15,7 @@ import { CreateUserInput, CreateUserResponse, User } from './type.ts';
 import fs from 'node:fs';
 import path, { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-
-dotenv.config();
+import {v4 as uuidv4} from "uuid";
 
 const GRAPHQL_API_PATH = process.env.GRAPHQL_API_PATH || 'graphql';
 const HEALTH_CHECK_PATH = process.env.HEALTH_CHECK_PATH || 'health';
@@ -48,7 +51,7 @@ export const resolvers = {
       validateCreateUserInput(input);
       try {
         const newUser: User = {
-          id: '1',
+          id: input.clientMutationId || uuidv4(),
           confirmed: true,
           email: input.email,
           initials: input.initials,

@@ -3,11 +3,11 @@ import { Meta, StoryObj } from '@storybook/react';
 import MainTitle from './MainTitle';
 
 const meta: Meta<typeof MainTitle> = {
-  title: 'Components/ForWhoSection/MainTitle',  
+  title: 'Components/ForWhoSection/MainTitle',
   component: MainTitle,
   tags: ['autodocs'],
   parameters: {
-    layout: '',  
+    layout: '',
   },
 };
 

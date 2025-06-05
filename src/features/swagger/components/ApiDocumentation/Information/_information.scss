@@ -1,0 +1,24 @@
+@use '@swagger/global' as *;
+
+@use 'Title/title';
+@use 'Description/description';
+
+%informationContainer {
+  .information-container {
+    margin-bottom: 1.063rem;
+    @include for-large-screens {
+      margin-bottom: 1.5rem;
+    }
+    @include for-small-screens {
+      margin-bottom: 0.75rem;
+    }
+    .info {
+      margin: 0;
+      @extend %title;
+      @extend %description;
+      [class^='info_']:not(.description) {
+        display: none;
+      }
+    }
+  }
+}

@@ -1,9 +1,17 @@
 services:
   dev:
-    build: .
-    command: pnpm run dev
+    build:
+      context: .
+      target: base
+    command: pnpm exec next dev
     restart: unless-stopped
     volumes:
       - .:/app
     ports:
       - '3000:3000'
+    environment:
+      - NODE_ENV=development
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://${WEBSITE_DOMAIN}:${DEV_PORT}"]

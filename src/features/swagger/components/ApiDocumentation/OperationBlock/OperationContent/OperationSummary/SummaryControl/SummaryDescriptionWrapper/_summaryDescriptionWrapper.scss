@@ -1,0 +1,30 @@
+@use '@swagger/global' as *;
+
+%summaryDescriptionWrapper {
+  .opblock-summary-path-description-wrapper {
+    padding: 0;
+    gap: 0.3rem 1rem;
+    @include for-small-screens {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.125rem;
+    }
+    .opblock-summary-path {
+      a {
+        span {
+          text-decoration: none;
+          @include buttonText($darkPrimary);
+          @include for-small-screens {
+            @include medium16($darkPrimary);
+          }
+        }
+      }
+    }
+    .opblock-summary-description {
+      @include medium15($grey200);
+      @include for-small-screens {
+        @include medium12($grey200);
+      }
+    }
+  }
+}

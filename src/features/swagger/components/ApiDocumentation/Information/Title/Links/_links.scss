@@ -1,0 +1,48 @@
+@use '@swagger/global' as *;
+
+$linksBreakPoint: 52.5rem;
+
+%links {
+  .base-url {
+    display: inline-block;
+    font-weight: 500 !important;
+    @include medium15;
+    @include for-large-screens {
+      font-weight: 600 !important;
+      @include demi18($grey250);
+    }
+    @media screen and (max-width: $linksBreakPoint) {
+      display: block;
+      margin-bottom: 0.625rem;
+    }
+    @include for-small-screens {
+      @include demiBold14($grey250);
+    }
+    &::after {
+      content: '';
+      display: inline-block;
+      width: 0.25rem;
+      height: 0.25rem;
+      background-color: $darkPrimary;
+      border-radius: 50%;
+      vertical-align: middle;
+      margin: 0 0.625rem;
+      @media screen and (max-width: $linksBreakPoint) {
+        display: none;
+      }
+    }
+  }
+  .link {
+    display: inline-block;
+    @include medium15($primary);
+    @include for-large-screens {
+      @include demi18($primary);
+    }
+    @media screen and (max-width: $linksBreakPoint) {
+      display: block;
+    }
+    @include for-small-screens {
+      @include demiBold14($primary);
+    }
+  }
+}

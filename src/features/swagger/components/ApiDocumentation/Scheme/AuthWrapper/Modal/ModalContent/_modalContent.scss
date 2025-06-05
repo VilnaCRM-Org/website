@@ -1,0 +1,61 @@
+@use '@swagger/global' as *;
+
+@use 'ModalHeader/modalHeader';
+@use 'ModalBody/modalBody';
+
+%modalContent {
+  .modal-ux {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    z-index: 1000;
+    background: transparent;
+    border: none;
+    border-radius: unset;
+    min-width: unset;
+    box-shadow: none;
+    max-width: none;
+    max-height: none;
+    width: unset;
+    transform: translate(-50%, -50%);
+    @include for-small-screens {
+      width: 100%;
+      top: 1.5rem;
+      transform: translate(-50%, 0);
+    }
+    @media screen and (max-width: $xs-sm) {
+      top: 0;
+      width: 100%;
+    }
+    .modal-dialog-ux {
+      width: 100%;
+      .modal-ux-inner {
+        border-radius: 1rem;
+        background-color: $white;
+        border: 1px solid $grey500;
+        box-shadow: 0 15px 40px 0 $shadowDarkGreyOpacity;
+        width: 38.5rem;
+        height: 79vh;
+        max-height: 50.875rem;
+        display: flex;
+        flex-direction: column;
+        padding-bottom: 1.375rem;
+        @include for-large-screens {
+          padding-bottom: 1.25rem;
+          width: 39.875rem;
+        }
+        @include for-small-screens {
+          height: auto;
+          max-height: none;
+          width: 100%;
+        }
+        @media screen and (max-width: $xs-sm) {
+          height: 100dvh;
+          border-radius: 0;
+        }
+        @extend %modalHeader;
+        @extend %modalBody;
+      }
+    }
+  }
+}

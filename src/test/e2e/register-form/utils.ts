@@ -1,4 +1,5 @@
 import { Locator, Page, Response, expect, Route } from '@playwright/test';
+import winston, { Logger } from 'winston';
 
 import {
   expectationsEmail,
@@ -8,7 +9,7 @@ import {
   placeholderPassword,
   signUpButton,
   graphqlEndpoint,
-  fullNameFormatError,
+  requiredNameError,
   userData,
   policyText,
 } from './constants';
@@ -18,7 +19,7 @@ export async function fillInitialsInput(page: Page, user: User): Promise<void> {
   const initialsInput: Locator = page.getByPlaceholder(placeholderInitials);
   await page.getByRole('button', { name: signUpButton }).click();
   await initialsInput.fill(' ');
-  await expect(page.getByText(fullNameFormatError)).toBeVisible();
+  await expect(page.getByText(requiredNameError).first()).toBeVisible();
   await initialsInput.fill(user.fullName);
 }
 
@@ -51,9 +52,29 @@ interface GraphQLResponse {
   errors: { message: string }[];
 }
 
+const logger: Logger = winston.createLogger({
+  level: 'info',
+  format: winston.format.simple(),
+  transports: [new winston.transports.Console()],
+});
+
 export async function responseErrorFilter(resp: Response): Promise<boolean> {
-  const json: GraphQLResponse = await resp.json();
-  return resp.url().includes(graphqlEndpoint) && json.errors?.length > 0;
+  const contentType: string = resp.headers()['content-type'] || '';
+
+  if (!contentType.includes('application/json')) {
+    logger.warn(`Unexpected content type: ${contentType} for URL: ${resp.url()}`);
+    return false;
+  }
+  try {
+    const json: GraphQLResponse = await resp.json();
+    const hasErrors: boolean = json.errors?.length > 0;
+
+    logger.info(`Response URL: ${resp.url()}, Has Errors: ${hasErrors}`);
+    return resp.url().includes(graphqlEndpoint) && hasErrors;
+  } catch (error) {
+    logger.warn(`Failed to parse JSON response from ${resp.url()}:`, error);
+    return false;
+  }
 }
 
 type GetFormFields = {

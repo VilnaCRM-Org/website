@@ -1,6 +1,6 @@
 import { test, expect, Locator, Route } from '@playwright/test';
 
-import { screenSizes, currentLanguage, timeoutDuration, placeholders } from './constants';
+import { screenSizes, currentLanguage, placeholders } from './constants';
 import { successResponse } from './graphqlMocks';
 
 test.describe('Form Submission Visual Test', () => {
@@ -9,7 +9,7 @@ test.describe('Form Submission Visual Test', () => {
       await page.goto('/');
 
       await page.waitForLoadState('networkidle');
-      await page.evaluateHandle('document.fonts.ready');
+      await page.evaluate(() => document.fonts.ready);
 
       await page.setViewportSize({ width: screen.width, height: screen.height });
 
@@ -32,19 +32,15 @@ test.describe('Form Submission Visual Test', () => {
       const submitButton: Locator = page.locator('button[type="submit"]');
       await submitButton.click();
 
-      const successBox: Locator = page
-        .locator('[aria-label="success"]')
-        .filter({ has: page.locator('img') });
-
+      const successBox: Locator = page.locator('[aria-label="success"]');
       await expect(successBox).toBeVisible();
 
-      try {
-        await page.evaluate(() =>
-          Promise.all(document.getAnimations().map(animation => animation.finished))
-        );
-      } catch (error) {
-        await page.waitForTimeout(timeoutDuration);
-      }
+      const imagesWithAlt: Locator = successBox.locator('img[alt]');
+      await expect(imagesWithAlt).toHaveCount(3);
+
+      await page.evaluate(() =>
+        Promise.all(document.getAnimations().map(animation => animation.finished.catch(() => null)))
+      );
 
       await expect(page).toHaveScreenshot(`${currentLanguage}_${screen.name}_success.png`);
 
