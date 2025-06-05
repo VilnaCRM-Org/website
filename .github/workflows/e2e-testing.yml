@@ -20,8 +20,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps
+
       - name: Start the server
-        run: pnpm start &
+        run: nohup pnpm start > server.log 2>&1 &
+        env:
+          NODE_ENV: test
+          PORT: 3001
 
       - name: Wait for server to be ready
         run: |
