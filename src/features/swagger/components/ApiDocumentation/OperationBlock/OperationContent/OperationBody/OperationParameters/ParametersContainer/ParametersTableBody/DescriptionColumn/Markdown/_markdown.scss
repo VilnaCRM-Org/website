@@ -1,0 +1,17 @@
+@use '@swagger/global' as *;
+
+%markdown {
+  .renderedMarkdown,
+  .markdown {
+    p {
+      margin-bottom: 0.25rem;
+      @include medium12($grey200);
+      @include from-small-to-large-screens {
+        @include medium14($grey200);
+      }
+      i {
+        font-style: normal;
+      }
+    }
+  }
+}

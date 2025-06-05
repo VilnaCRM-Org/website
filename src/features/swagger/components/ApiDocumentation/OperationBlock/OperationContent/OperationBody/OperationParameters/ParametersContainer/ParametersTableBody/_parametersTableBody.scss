@@ -1,0 +1,27 @@
+@use '@swagger/global' as *;
+
+@use 'NameColumn/nameColumn';
+@use 'DescriptionColumn/descriptionColumn';
+
+%parametersTableBody {
+  tbody {
+    tr {
+      td:first-child {
+        padding: 0.563rem 2.813rem 0.563rem 0;
+        @include for-small-screens {
+          padding: 0.438rem 0.875rem 1.125rem 0;
+        }
+      }
+      td:nth-child(2) {
+        padding: 0.563rem 0 0.563rem 0;
+      }
+      @extend %nameColumn;
+      @extend %descriptionColumn;
+    }
+    tr:last-child {
+      td {
+        padding-bottom: 0;
+      }
+    }
+  }
+}

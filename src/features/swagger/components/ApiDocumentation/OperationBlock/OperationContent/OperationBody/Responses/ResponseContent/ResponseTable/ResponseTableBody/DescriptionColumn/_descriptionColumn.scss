@@ -1,0 +1,50 @@
+@use '@swagger/global' as *;
+
+@use 'ResponseControls/responseControls';
+
+@mixin responseMarkdown() {
+  @include medium16($grey200);
+  @include for-small-screens {
+    @include medium12($grey200);
+  }
+}
+
+%descriptionColumn {
+  td.response-col_description {
+    @extend %responseControls;
+    div.response-col_description__inner {
+      div.renderedMarkdown {
+        p {
+          @include responseMarkdown;
+        }
+      }
+    }
+    div:not([class]) {
+      h5 {
+        margin-top: 0;
+        margin-bottom: 0.5rem;
+        @include medium15($grey200);
+      }
+    }
+    div:not([class]):not(:last-child) {
+      margin-bottom: 1rem;
+    }
+    & > .renderedMarkdown {
+      & > p {
+        margin-bottom: 0.625rem;
+        strong {
+          @include medium16($grey200);
+          @include for-small-screens {
+            @include medium14($grey200);
+          }
+        }
+      }
+      ul {
+        list-style: none;
+        li {
+          @include responseMarkdown;
+        }
+      }
+    }
+  }
+}
