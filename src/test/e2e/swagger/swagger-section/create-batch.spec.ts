@@ -1,17 +1,8 @@
 import { expect, type Locator, test } from '@playwright/test';
 
-import clearEndpoint from '../utils/clear-endpoint';
-import initSwaggerPage from '../utils/init-swagger-page';
+import { BatchUserData } from '../utils';
+import { initSwaggerPage, clearEndpoint, getAndCheckExecuteBtn } from '../utils/helpers';
 
-interface User {
-  email: string;
-  password: string;
-  initials: string;
-}
-
-interface BatchUserData {
-  users: User[];
-}
 const batchUserData: BatchUserData = {
   users: [
     {
@@ -34,8 +25,7 @@ test('createBatch: try it out interaction', async ({ page }) => {
   await createBatchEndpoint.click();
   await elements.tryItOutButton.click();
 
-  const executeBtn: Locator = createBatchEndpoint.locator('.btn.execute.opblock-control__btn');
-  await expect(executeBtn).toBeVisible();
+  const executeBtn: Locator = await getAndCheckExecuteBtn(createBatchEndpoint);
 
   const requestBodySection: Locator = createBatchEndpoint.locator('.opblock-section-request-body');
   await expect(requestBodySection).toBeVisible();

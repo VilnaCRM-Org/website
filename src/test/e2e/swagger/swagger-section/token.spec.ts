@@ -1,8 +1,8 @@
 import { expect, type Locator, test } from '@playwright/test';
 
 import { getSystemEndpoints, GetSystemEndpoints } from '../utils';
-import clearEndpoint from '../utils/clear-endpoint';
-import initSwaggerPage from '../utils/init-swagger-page';
+import { TEST_OAUTH_DATA } from '../utils/constants';
+import { initSwaggerPage, clearEndpoint, getAndCheckExecuteBtn } from '../utils/helpers';
 
 interface OAuthRequest {
   grant_type: string;
@@ -21,12 +21,10 @@ test('token: try it out interaction', async ({ page }) => {
   await tokenEndpoint.click();
   await elements.tryItOutButton.click();
 
-  const executeBtn: Locator = tokenEndpoint.locator('.btn.execute.opblock-control__btn');
-  await expect(executeBtn).toBeVisible();
+  const executeBtn: Locator = await getAndCheckExecuteBtn(tokenEndpoint);
 
   const requestBodySection: Locator = tokenEndpoint.locator('.opblock-section-request-body');
-  await expect(requestBodySection).toBeVisible();
-
+  await requestBodySection.waitFor({ state: 'visible' });
   const contentTypeSelect: Locator = requestBodySection.locator(
     'select[aria-label="Request content type"]'
   );
@@ -37,12 +35,17 @@ test('token: try it out interaction', async ({ page }) => {
   await expect(grantTypeInput).toBeVisible();
 
   const rawValue: string = await grantTypeInput.inputValue();
+  let json: OAuthRequest;
 
-  const json: OAuthRequest = JSON.parse(rawValue);
+  try {
+    json = JSON.parse(rawValue);
+  } catch (error) {
+    throw new Error(`Failed to parse OAuth request JSON: ${error}`);
+  }
 
-  json.grant_type = 'new_authorization_code';
-  json.client_id = 'new_client_id_123';
-  json.code = 'new_code_456';
+  json.grant_type = TEST_OAUTH_DATA.GRANT_TYPE;
+  json.client_id = TEST_OAUTH_DATA.CLIENT_ID;
+  json.code = TEST_OAUTH_DATA.CODE;
 
   await grantTypeInput.fill(JSON.stringify(json, null, 2));
 

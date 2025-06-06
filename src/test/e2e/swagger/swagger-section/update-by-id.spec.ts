@@ -1,12 +1,7 @@
 import { expect, type Locator, test } from '@playwright/test';
 
-import clearEndpoint from '../utils/clear-endpoint';
-import initSwaggerPage from '../utils/init-swagger-page';
-
-const updateData: { email: string; initials: string } = {
-  email: 'updated@example.com',
-  initials: 'UP',
-};
+import { testUserId } from '../utils/constants';
+import { initSwaggerPage, clearEndpoint, getAndCheckExecuteBtn } from '../utils/helpers';
 
 test('updateById: try it out interaction', async ({ page }) => {
   const { userEndpoints, elements } = await initSwaggerPage(page);
@@ -15,15 +10,14 @@ test('updateById: try it out interaction', async ({ page }) => {
   await updateEndpoint.click();
   await elements.tryItOutButton.click();
 
-  const executeBtn: Locator = updateEndpoint.locator('.btn.execute.opblock-control__btn');
-  await expect(executeBtn).toBeVisible();
+  const executeBtn: Locator = await getAndCheckExecuteBtn(updateEndpoint);
 
   const parametersSection: Locator = updateEndpoint.locator('.parameters-container');
   await expect(parametersSection).toBeVisible();
 
   const idInput: Locator = updateEndpoint.locator('input[placeholder="id"]');
   await expect(idInput).toBeVisible();
-  await idInput.fill('test-user-id');
+  await idInput.fill(testUserId);
 
   const requestBodySection: Locator = updateEndpoint.locator('.opblock-section-request-body');
   await expect(requestBodySection).toBeVisible();
@@ -31,6 +25,10 @@ test('updateById: try it out interaction', async ({ page }) => {
   const jsonEditor: Locator = requestBodySection.locator('.body-param__text');
   await expect(jsonEditor).toBeVisible();
 
+  const updateData: { email: string; initials: string } = {
+    email: 'updated@example.com',
+    initials: 'UP',
+  };
   await jsonEditor.fill(JSON.stringify(updateData, null, 2));
   await executeBtn.click();
 
@@ -39,7 +37,7 @@ test('updateById: try it out interaction', async ({ page }) => {
 
   const requestUrl: Locator = updateEndpoint.locator('.request-url .microlight');
   await expect(requestUrl).toBeVisible();
-  await expect(requestUrl).toContainText('test-user-id');
+  await expect(requestUrl).toContainText(testUserId);
 
   await clearEndpoint(updateEndpoint);
 });

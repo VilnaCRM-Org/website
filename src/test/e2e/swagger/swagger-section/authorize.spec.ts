@@ -1,8 +1,7 @@
 import { expect, type Locator, test } from '@playwright/test';
 
 import { getSystemEndpoints, GetSystemEndpoints } from '../utils';
-import clearEndpoint from '../utils/clear-endpoint';
-import initSwaggerPage from '../utils/init-swagger-page';
+import { initSwaggerPage, clearEndpoint, getAndCheckExecuteBtn } from '../utils/helpers';
 
 test('authorize: try it out interaction', async ({ page }) => {
   const { elements } = await initSwaggerPage(page);
@@ -12,8 +11,7 @@ test('authorize: try it out interaction', async ({ page }) => {
   await authorizeEndpoint.click();
   await elements.tryItOutButton.click();
 
-  const executeBtn: Locator = authorizeEndpoint.locator('.btn.execute.opblock-control__btn');
-  await expect(executeBtn).toBeVisible();
+  const executeBtn: Locator = await getAndCheckExecuteBtn(authorizeEndpoint);
 
   const parametersSection: Locator = authorizeEndpoint.locator('.parameters-container');
   await expect(parametersSection).toBeVisible();
@@ -42,7 +40,4 @@ test('authorize: try it out interaction', async ({ page }) => {
   await expect(requestUrl).toContainText('/oauth/authorize');
 
   await clearEndpoint(authorizeEndpoint);
-  // const clearButton: Locator = authorizeEndpoint.locator('button.btn-clear');
-  // await clearButton.click();
-  // await expect(curl).not.toBeVisible();
 });

@@ -1,6 +1,6 @@
-export const fetchSwaggerYaml: (url: string) => Promise<string> = async url => {
+const fetchSwaggerYaml: (url: string) => Promise<string> = async url => {
   try {
-    const response: Response = await fetch(url);
+    const response: Response = await fetch(url, { headers: {} });
     if (!response.ok) {
       throw new Error(`Failed to fetch Swagger YAML: ${response.status} ${response.statusText}`);
     }
@@ -17,3 +17,5 @@ export const fetchSwaggerYaml: (url: string) => Promise<string> = async url => {
     throw new Error('Unknown error occurred while fetching Swagger YAML');
   }
 };
+
+export default fetchSwaggerYaml;

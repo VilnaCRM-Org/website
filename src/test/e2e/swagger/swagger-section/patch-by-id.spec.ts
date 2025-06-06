@@ -1,12 +1,11 @@
 import { expect, type Locator, test } from '@playwright/test';
 
-import clearEndpoint from '../utils/clear-endpoint';
-import initSwaggerPage from '../utils/init-swagger-page';
+import { testUserId, userInitials } from '../utils/constants';
+import { initSwaggerPage, clearEndpoint, getAndCheckExecuteBtn } from '../utils/helpers';
 
 const patchData: { initials: string } = {
-  initials: 'PA',
+  initials: userInitials,
 };
-const testUserId: string = 'test-user-id';
 
 test('patchById: try it out interaction', async ({ page }) => {
   const { userEndpoints, elements } = await initSwaggerPage(page);
@@ -16,8 +15,7 @@ test('patchById: try it out interaction', async ({ page }) => {
   await patchEndpoint.click();
   await elements.tryItOutButton.click();
 
-  const executeBtn: Locator = patchEndpoint.locator('.btn.execute.opblock-control__btn');
-  await expect(executeBtn).toBeVisible();
+  const executeBtn: Locator = await getAndCheckExecuteBtn(patchEndpoint);
 
   const parametersSection: Locator = patchEndpoint.locator('.parameters-container');
   await expect(parametersSection).toBeVisible();
@@ -32,7 +30,7 @@ test('patchById: try it out interaction', async ({ page }) => {
   const jsonEditor: Locator = requestBodySection.locator('.body-param__text');
   await expect(jsonEditor).toBeVisible();
 
-  await jsonEditor.fill(JSON.stringify(patchData, null, 2));
+  await jsonEditor.fill(JSON.stringify(patchData));
   await executeBtn.click();
 
   const curl: Locator = patchEndpoint.locator('.curl-command');

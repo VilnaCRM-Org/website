@@ -98,7 +98,6 @@ export type Selectors = {
   EXECUTE_BUTTON: string;
   RESPONSE_SECTION: string;
   REQUEST_BODY: string;
-  USER_ENDPOINTS: UserEndpoints;
 };
 export const SELECTORS: Selectors = {
   API_DOCUMENTATION: '.swagger-ui',
@@ -111,7 +110,6 @@ export const SELECTORS: Selectors = {
   EXECUTE_BUTTON: '.execute',
   RESPONSE_SECTION: '.responses-wrapper',
   REQUEST_BODY: '.opblock-section-request-body',
-  USER_ENDPOINTS,
 } as const;
 
 export type TestConstants = {
@@ -135,3 +133,12 @@ export const getLocators: (page: Page) => SwaggerLocators = (page: Page): Swagge
   responseSection: page.locator(TEST_CONSTANTS.SELECTORS.RESPONSE_SECTION),
   requestBody: page.locator(TEST_CONSTANTS.SELECTORS.REQUEST_BODY),
 });
+
+export interface User {
+  email: string;
+  password: string;
+  initials: string;
+}
+export interface BatchUserData {
+  users: User[];
+}

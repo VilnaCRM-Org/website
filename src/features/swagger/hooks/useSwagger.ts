@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import { fetchSwaggerYaml } from '../api/fetchSwaggerYaml';
+import fetchSwaggerYaml from '../api/fetchSwaggerYaml';
 
 type UseSwaggerReturn = {
   yamlContent: string | null;

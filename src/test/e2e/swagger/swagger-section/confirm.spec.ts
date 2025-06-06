@@ -1,10 +1,9 @@
 import { expect, type Locator, test } from '@playwright/test';
 
-import clearEndpoint from '../utils/clear-endpoint';
-import initSwaggerPage from '../utils/init-swagger-page';
+import { testConfirmationToken } from '../utils/constants';
+import { initSwaggerPage, clearEndpoint, getAndCheckExecuteBtn } from '../utils/helpers';
 
-const testToken: string = 'test-confirmation-token';
-const apiUrl: string = 'https://api.vilnacrm.com/api/users/confirm';
+const apiUrl: string = `${process.env.API_BASE_URL || 'https://api.vilnacrm.com'}/api/users/confirm`;
 
 test('confirm: try it out interaction', async ({ page }) => {
   const { userEndpoints, elements } = await initSwaggerPage(page);
@@ -13,15 +12,14 @@ test('confirm: try it out interaction', async ({ page }) => {
   await confirmEndpoint.click();
   await elements.tryItOutButton.click();
 
-  const executeBtn: Locator = confirmEndpoint.locator('.btn.execute.opblock-control__btn');
-  await expect(executeBtn).toBeVisible();
+  const executeBtn: Locator = await getAndCheckExecuteBtn(confirmEndpoint);
 
   const parametersSection: Locator = confirmEndpoint.locator('.parameters-container');
   await expect(parametersSection).toBeVisible();
 
   const tokenInput: Locator = confirmEndpoint.locator('.body-param textarea.body-param__text');
   await expect(tokenInput).toBeVisible();
-  await tokenInput.fill(testToken);
+  await tokenInput.fill(testConfirmationToken);
 
   await executeBtn.click();
 
@@ -29,7 +27,7 @@ test('confirm: try it out interaction', async ({ page }) => {
   await expect(curl).toBeVisible();
 
   const curlBody: Locator = confirmEndpoint.locator('.curl .language-bash');
-  await expect(curlBody).toContainText(testToken);
+  await expect(curlBody).toContainText(testConfirmationToken);
 
   const requestUrl: Locator = confirmEndpoint.locator('.request-url .microlight');
   await expect(requestUrl).toBeVisible();

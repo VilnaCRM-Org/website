@@ -1,6 +1,6 @@
 import { expect, type Locator, test } from '@playwright/test';
 
-import initSwaggerPage from '../utils/init-swagger-page';
+import { initSwaggerPage, getAndCheckExecuteBtn } from '../utils/helpers';
 
 type UserData = {
   email: string;
@@ -30,8 +30,7 @@ test('create user: try it out interaction', async ({ page }) => {
   await createEndpoint.click();
   await elements.tryItOutButton.click();
 
-  const executeBtn: Locator = createEndpoint.locator('.btn.execute.opblock-control__btn');
-  await expect(executeBtn).toBeVisible();
+  const executeBtn: Locator = await getAndCheckExecuteBtn(createEndpoint);
 
   const requestBodySection: Locator = createEndpoint.locator('.opblock-section-request-body');
   await expect(requestBodySection).toBeVisible();
