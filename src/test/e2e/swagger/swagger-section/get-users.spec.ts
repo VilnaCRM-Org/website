@@ -35,11 +35,7 @@ test('get user: try it out interaction', async ({ page }) => {
   await expect(requestUrl).toContainText(`page=${initialPageNumber}`);
   await expect(requestUrl).toContainText(`itemsPerPage=${initialPerPageNumber}`);
 
-  const clearButton: Locator = getEndpoint.locator('button.btn-clear');
-  await expect(clearButton).toBeVisible();
-
-  await clearButton.click();
-  await expect(curl).not.toBeVisible();
+  await clearEndpoint(getEndpoint);
 
   const changedNumberPage: string = '2';
   const changedPerPageNumber: string = '15';

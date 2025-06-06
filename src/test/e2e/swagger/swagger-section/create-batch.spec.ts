@@ -1,22 +1,7 @@
 import { expect, type Locator, test } from '@playwright/test';
 
-import { BatchUserData } from '../utils';
+import { batchUserData } from '../utils/constants';
 import { initSwaggerPage, clearEndpoint, getAndCheckExecuteBtn } from '../utils/helpers';
-
-const batchUserData: BatchUserData = {
-  users: [
-    {
-      email: 'test1@example.com',
-      password: 'TestPassword123',
-      initials: 'T1',
-    },
-    {
-      email: 'test2@example.com',
-      password: 'TestPassword456',
-      initials: 'T2',
-    },
-  ],
-};
 
 test('createBatch: try it out interaction', async ({ page }) => {
   const { userEndpoints, elements } = await initSwaggerPage(page);

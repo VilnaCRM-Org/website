@@ -1,6 +1,7 @@
 import { expect, type Locator, test } from '@playwright/test';
 
 import { getSystemEndpoints, GetSystemEndpoints } from '../utils';
+import { testOAuthParams } from '../utils/constants';
 import { initSwaggerPage, clearEndpoint, getAndCheckExecuteBtn } from '../utils/helpers';
 
 test('authorize: try it out interaction', async ({ page }) => {
@@ -20,15 +21,15 @@ test('authorize: try it out interaction', async ({ page }) => {
     'input[placeholder="response_type"]'
   );
   await expect(responseTypeInput).toBeVisible();
-  await responseTypeInput.fill('code');
+  await responseTypeInput.fill(testOAuthParams.responseType);
 
   const clientIdInput: Locator = authorizeEndpoint.locator('input[placeholder="client_id"]');
   await expect(clientIdInput).toBeVisible();
-  await clientIdInput.fill('test-client');
+  await clientIdInput.fill(testOAuthParams.clientId);
 
   const redirectUriInput: Locator = authorizeEndpoint.locator('input[placeholder="redirect_uri"]');
   await expect(redirectUriInput).toBeVisible();
-  await redirectUriInput.fill('http://localhost:3000/callback');
+  await redirectUriInput.fill(testOAuthParams.redirectUri);
 
   await executeBtn.click();
 

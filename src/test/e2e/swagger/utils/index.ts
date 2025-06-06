@@ -133,12 +133,3 @@ export const getLocators: (page: Page) => SwaggerLocators = (page: Page): Swagge
   responseSection: page.locator(TEST_CONSTANTS.SELECTORS.RESPONSE_SECTION),
   requestBody: page.locator(TEST_CONSTANTS.SELECTORS.REQUEST_BODY),
 });
-
-export interface User {
-  email: string;
-  password: string;
-  initials: string;
-}
-export interface BatchUserData {
-  users: User[];
-}

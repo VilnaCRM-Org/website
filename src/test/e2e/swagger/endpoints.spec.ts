@@ -9,6 +9,7 @@ import {
   getSystemEndpoints,
   SwaggerLocators,
 } from './utils';
+import { UI_INTERACTION_DELAY } from './utils/constants';
 
 test.describe('Swagger Section', () => {
   let elements: SwaggerLocators;
@@ -78,7 +79,7 @@ test.describe('User Section', () => {
       const currentEndpoint: Locator = systemEndpoints[endpoint];
       await currentEndpoint.click();
 
-      await page.waitForTimeout(100);
+      await page.waitForTimeout(UI_INTERACTION_DELAY);
 
       const { body, sectionHeader, responses } = getBlocksInsideEndpoints(currentEndpoint);
 
@@ -88,7 +89,7 @@ test.describe('User Section', () => {
 
       await currentEndpoint.locator('.opblock-summary').click();
 
-      await page.waitForTimeout(100);
+      await page.waitForTimeout(UI_INTERACTION_DELAY);
 
       await expect(body).not.toBeVisible();
     }
@@ -122,7 +123,7 @@ test.describe('User Section', () => {
 
       await currentEndpoint.locator('.opblock-summary').click();
 
-      await page.waitForTimeout(100);
+      await page.waitForTimeout(UI_INTERACTION_DELAY);
 
       await expect(body).not.toBeVisible();
     }

@@ -8,6 +8,8 @@ import {
   TEST_CONSTANTS,
 } from '@/test/e2e/swagger/utils/index';
 
+import { executeBtnSelector } from './constants';
+
 export async function clearEndpoint(endpoint: Locator): Promise<void> {
   const clearButton: Locator = endpoint.locator('button.btn-clear');
   const curl: Locator = endpoint.locator('.curl-command');
@@ -34,7 +36,7 @@ export async function initSwaggerPage(page: Page): Promise<SwaggerPageObjects> {
 export const getAndCheckExecuteBtn: (element: Locator) => Promise<Locator> = async (
   element: Locator
 ): Promise<Locator> => {
-  const executeBtn: Locator = element.locator('.btn.execute.opblock-control__btn');
+  const executeBtn: Locator = element.locator(executeBtnSelector);
   await executeBtn.waitFor({ state: 'visible' });
 
   return executeBtn;

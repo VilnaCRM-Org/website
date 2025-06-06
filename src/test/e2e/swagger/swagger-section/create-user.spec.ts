@@ -1,26 +1,7 @@
 import { expect, type Locator, test } from '@playwright/test';
 
-import { initSwaggerPage, getAndCheckExecuteBtn } from '../utils/helpers';
-
-type UserData = {
-  email: string;
-  password: string;
-  initials: string;
-  clientMutationId: string;
-};
-const testUserData: UserData = {
-  email: 'test@example.com',
-  password: 'TestPassword123',
-  initials: 'TE',
-  clientMutationId: 'test-mutation-1',
-};
-
-const updatedUserData: UserData = {
-  email: 'another@example.com',
-  password: 'AnotherPass456',
-  initials: 'AN',
-  clientMutationId: 'test-mutation-2',
-};
+import { testUserData, updatedUserData } from '../utils/constants';
+import { initSwaggerPage, getAndCheckExecuteBtn, clearEndpoint } from '../utils/helpers';
 
 test('create user: try it out interaction', async ({ page }) => {
   const { userEndpoints, elements } = await initSwaggerPage(page);
@@ -41,9 +22,7 @@ test('create user: try it out interaction', async ({ page }) => {
   await expect(contentTypeSelect).toBeVisible();
   await expect(contentTypeSelect).toHaveValue('application/json');
 
-  const jsonEditor: Locator = requestBodySection.locator(
-    '.opblock-description-wrapper .body-param .body-param__text'
-  );
+  const jsonEditor: Locator = requestBodySection.locator('.body-param__text');
   await expect(jsonEditor).toBeVisible();
   await expect(jsonEditor).toBeEditable();
 
@@ -65,9 +44,7 @@ test('create user: try it out interaction', async ({ page }) => {
   await expect(jsonEditor).toContainText(testUserData.email);
   await expect(jsonEditor).toContainText(testUserData.initials);
 
-  const clearButton: Locator = createEndpoint.locator('button.btn-clear');
-  await expect(clearButton).toBeVisible();
-  await clearButton.click();
+  await clearEndpoint(createEndpoint);
 
   await expect(curl).not.toBeVisible();
 
