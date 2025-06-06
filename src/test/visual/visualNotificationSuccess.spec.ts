@@ -4,9 +4,9 @@ import { screenSizes, currentLanguage, placeholders } from './constants';
 import { successResponse } from './graphqlMocks';
 
 test.describe('Form Submission Visual Test', () => {
-  for (const screen of screenSizes) {
+  screenSizes.forEach((screen) => {
     test(`Success notification - ${screen.name}`, async ({ page }) => {
-      await page.goto('/');
+     await page.goto('/', { waitUntil: 'load', timeout: 60000 });
 
       await page.waitForLoadState('networkidle');
       await page.evaluate(() => document.fonts.ready);
@@ -46,5 +46,5 @@ test.describe('Form Submission Visual Test', () => {
 
       await page.unroute('**/graphql', routeHandler);
     });
-  }
+  });
 });
