@@ -19,7 +19,7 @@ jobs:
         run: npm ci
 
       - name: Run E2E tests with Playwright
-        uses: bahmutov/start-server-and-test@v1
+        uses: bahmutov/start-server-and-test@v1.14.0
         with:
           command: npm run start
           url: http://localhost:3001
