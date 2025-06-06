@@ -4,29 +4,17 @@ on:
   pull_request:
     branches:
       - main
-
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-
       - uses: actions/setup-node@v3
         with:
           node-version: ${{ vars.NODE_VERSION }}
 
-      - name: Install Dependencies
-        run: npm ci
-
-      - name: Run E2E tests with Playwright
-        uses: bahmutov/start-server-and-test@v1
-        with:
-          command: npm run start
-          url: http://localhost:3001
-          wait-on-timeout: 60
-          script: npm run test:e2e
-        env:
-          PORT: 3001
+      - name: Run Playwright tests
+        run: make test-e2e
 
       - uses: actions/upload-artifact@v4
         if: always()
