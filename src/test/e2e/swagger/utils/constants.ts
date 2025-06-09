@@ -11,7 +11,8 @@ export const TEST_OAUTH_DATA: OAuthData = {
   CODE: 'new_code_456',
 } as const;
 
-export const executeBtnSelector: string = '.btn.execute.opblock-control__btn';
+export const executeBtnSelector: string =
+  '[data-testid="execute-btn"], .btn.execute.opblock-control__btn, .execute';
 
 export const UI_INTERACTION_DELAY: number = 100;
 
@@ -21,9 +22,21 @@ type UserData = {
   initials: string;
   clientMutationId: string;
 };
+
+type TestsPasswords = {
+  STRONG: string;
+  WEAK: string;
+  SPECIAL_CHARS: string;
+};
+export const TEST_PASSWORDS: TestsPasswords = {
+  STRONG: 'TestPassword123!@#',
+  WEAK: '123456',
+  SPECIAL_CHARS: 'Test@Pass#123',
+} as const;
+
 export const testUserData: UserData = {
   email: 'test@example.com',
-  password: 'TestPassword123',
+  password: TEST_PASSWORDS.STRONG,
   initials: 'TE',
   clientMutationId: 'test-mutation-1',
 };
@@ -59,12 +72,13 @@ export const batchUserData: BatchUserData = {
   ],
 };
 
-export const testOAuthParams: {
+type OAuthParams = {
   responseType: string;
   clientId: string;
   redirectUri: string;
-} = {
+};
+export const testOAuthParams: OAuthParams = {
   responseType: 'code',
   clientId: 'test-client',
   redirectUri: 'http://localhost:3000/callback',
-};
+} as const;

@@ -106,8 +106,8 @@ export const SELECTORS: Selectors = {
   ENDPOINTS: '.opblock',
   SCHEME_CONTAINER: '.scheme-container',
   ENDPOINT_BODY: '.opblock-body',
-  TRY_IT_OUT_BUTTON: '.try-out__btn',
-  EXECUTE_BUTTON: '.execute',
+  TRY_IT_OUT_BUTTON: '[data-testid="try-it-out-button"], .try-out__btn',
+  EXECUTE_BUTTON: '[data-testid="execute-button"], .execute',
   RESPONSE_SECTION: '.responses-wrapper',
   REQUEST_BODY: '.opblock-section-request-body',
 } as const;
@@ -133,3 +133,8 @@ export const getLocators: (page: Page) => SwaggerLocators = (page: Page): Swagge
   responseSection: page.locator(TEST_CONSTANTS.SELECTORS.RESPONSE_SECTION),
   requestBody: page.locator(TEST_CONSTANTS.SELECTORS.REQUEST_BODY),
 });
+
+export interface SwaggerPageObjects {
+  userEndpoints: GetUserEndpoints;
+  elements: SwaggerLocators;
+}

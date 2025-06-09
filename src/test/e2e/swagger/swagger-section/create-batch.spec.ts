@@ -26,6 +26,7 @@ test('createBatch: try it out interaction', async ({ page }) => {
   await expect(jsonEditor).toBeEditable();
 
   await jsonEditor.fill(JSON.stringify(batchUserData, null, 2));
+  await expect(jsonEditor).toHaveValue(JSON.stringify(batchUserData, null, 2));
   await executeBtn.click();
 
   const curl: Locator = createBatchEndpoint.locator('.curl-command');

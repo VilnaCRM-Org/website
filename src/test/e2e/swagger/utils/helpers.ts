@@ -1,14 +1,15 @@
 import { expect, Locator, Page } from '@playwright/test';
 
+import { executeBtnSelector } from './constants';
+
 import {
   getLocators,
   getUserEndpoints,
   GetUserEndpoints,
   SwaggerLocators,
+  SwaggerPageObjects,
   TEST_CONSTANTS,
-} from '@/test/e2e/swagger/utils/index';
-
-import { executeBtnSelector } from './constants';
+} from './index';
 
 export async function clearEndpoint(endpoint: Locator): Promise<void> {
   const clearButton: Locator = endpoint.locator('button.btn-clear');
@@ -17,11 +18,6 @@ export async function clearEndpoint(endpoint: Locator): Promise<void> {
   await expect(clearButton).toBeVisible();
   await clearButton.click();
   await expect(curl).not.toBeVisible();
-}
-
-interface SwaggerPageObjects {
-  userEndpoints: GetUserEndpoints;
-  elements: SwaggerLocators;
 }
 
 export async function initSwaggerPage(page: Page): Promise<SwaggerPageObjects> {
