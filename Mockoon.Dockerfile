@@ -7,4 +7,4 @@ RUN apk add --no-cache curl=8.12.1-r1 && \
 
 RUN curl -o /app/data.yaml "https://raw.githubusercontent.com/VilnaCRM-Org/user-service/main/.github/openapi-spec/spec.yaml"
 
-CMD ["mockoon-cli", "start", "-d", "/app/data.yaml"]
+CMD ["mockoon-cli", "start", "--data", "/app/data.yaml", "--port", "8080"]

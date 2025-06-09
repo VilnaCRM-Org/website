@@ -43,7 +43,7 @@ export const testUserData: UserData = {
 
 export const updatedUserData: UserData = {
   email: 'another@example.com',
-  password: 'AnotherPass456',
+  password: TEST_PASSWORDS.SPECIAL_CHARS,
   initials: 'AN',
   clientMutationId: 'test-mutation-2',
 };
@@ -61,12 +61,12 @@ export const batchUserData: BatchUserData = {
   users: [
     {
       email: 'test1@example.com',
-      password: 'TestPassword123',
+      password: TEST_PASSWORDS.STRONG,
       initials: 'T1',
     },
     {
       email: 'test2@example.com',
-      password: 'TestPassword456',
+      password: TEST_PASSWORDS.SPECIAL_CHARS,
       initials: 'T2',
     },
   ],

@@ -1,22 +1,35 @@
+import YAML from 'js-yaml';
 import { useEffect, useState } from 'react';
 
-import fetchSwaggerYaml from '../api/fetchSwaggerYaml';
-
 type UseSwaggerReturn = {
-  yamlContent: string | null;
+  yamlContent: object | null;
+  error: Error | null;
 };
 
-export const useSwagger: (url: string) => UseSwaggerReturn = url => {
-  const [yamlContent, setYamlContent] = useState<string | null>(null);
+const useSwagger: () => UseSwaggerReturn = () => {
+  const [yamlContent, setYamlContent] = useState<object | null>(null);
+  const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    const fetchData: () => Promise<void> = async () => {
-      const yaml: string = await fetchSwaggerYaml(url);
-      setYamlContent(yaml);
+    const loadSwaggerSchema: () => Promise<void> = async () => {
+      try {
+        const res: Response = await fetch('/swagger-schema.yaml');
+        if (!res.ok) {
+          throw new Error(`Failed to fetch: ${res.status}`);
+        }
+
+        const yamlText: string = await res.text();
+        const parsed: unknown = YAML.load(yamlText);
+        setYamlContent(parsed as object);
+      } catch (err) {
+        setError(err as Error);
+      }
     };
 
-    fetchData();
-  }, [url]);
+    loadSwaggerSchema();
+  }, []);
 
-  return { yamlContent };
+  return { yamlContent, error };
 };
+
+export default useSwagger;

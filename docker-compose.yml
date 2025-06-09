@@ -3,7 +3,7 @@ services:
     build:
       context: .
       target: base
-    command: pnpm exec next dev
+    command: sh -c "node scripts/fetchSwaggerSchema.mjs && pnpm exec next dev"
     restart: unless-stopped
     volumes:
       - .:/app
