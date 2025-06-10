@@ -1,36 +1,56 @@
 import { test, expect } from '@playwright/test';
 
-import { screenSizes } from '../constants';
+import { screenSizes, timeoutDuration } from '../constants';
 
 const currentLanguage: string = process.env.NEXT_PUBLIC_MAIN_LANGUAGE as string;
 
 test.describe('Visual Tests', () => {
   for (const screen of screenSizes) {
     test(`${screen.name} test`, async ({ page }) => {
-      await page.setViewportSize({ width: screen.width, height: screen.height });
       await page.goto('/swagger');
 
-      await page.waitForLoadState('networkidle');
-      await page.evaluateHandle('document.fonts.ready');
-      await page.waitForSelector('.swagger-ui');
-      await page.waitForLoadState('domcontentloaded');
-      await page.waitForSelector('.opblock-summary-control', { state: 'visible' });
-
-      await page.evaluate(() => {
-        const controls: NodeListOf<Element> = document.querySelectorAll('.opblock-summary-control');
-        controls.forEach(el => (el as HTMLElement).click());
+      await test.step('Navigate and wait for initial load', async () => {
+        await page.goto('/swagger', { waitUntil: 'networkidle' });
+        await page.waitForLoadState('domcontentloaded');
       });
-      await page.waitForFunction(() => {
-        const controls: NodeListOf<Element> = document.querySelectorAll('.opblock-summary-control');
-        return (
-          controls.length > 0 &&
-          Array.from(controls).every(el => getComputedStyle(el).display !== 'none')
-        );
-      });
-      await page.waitForLoadState('networkidle');
 
-      await expect(page).toHaveScreenshot(`${currentLanguage}_${screen.name}.png`, {
-        fullPage: true,
+      await test.step('Wait for critical elements', async () => {
+        await Promise.all([
+          page.evaluateHandle('document.fonts.ready'),
+          page.waitForSelector('.swagger-ui', { state: 'attached' }),
+          page.waitForSelector('.opblock-summary-control', { state: 'visible' }),
+        ]);
+      });
+      await test.step('Expand all Swagger operations', async () => {
+        await page.evaluate(() => {
+          const controls: NodeListOf<Element> = document.querySelectorAll(
+            '.opblock-summary-control'
+          );
+          controls.forEach(el => (el as HTMLElement).click());
+        });
+
+        await page.waitForFunction(() => {
+          const controls: NodeListOf<Element> = document.querySelectorAll(
+            '.opblock-summary-control'
+          );
+          const expanded: NodeListOf<Element> = document.querySelectorAll('.opblock-body');
+          return controls.length > 0 && expanded.length === controls.length;
+        });
+      });
+
+      await test.step('Ensure stable state for screenshot', async () => {
+        await page.waitForTimeout(timeoutDuration);
+        await page.waitForLoadState('networkidle');
+      });
+      const scrollHeight: number = await page.evaluate(() => document.documentElement.scrollHeight);
+      await page.setViewportSize({ width: screen.width, height: scrollHeight });
+
+      await page.waitForTimeout(timeoutDuration);
+
+      await test.step('Take screenshot', async () => {
+        await expect(page).toHaveScreenshot(`${currentLanguage}_${screen.name}.png`, {
+          fullPage: true,
+        });
       });
     });
   }

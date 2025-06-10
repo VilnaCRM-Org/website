@@ -3,7 +3,7 @@ import { expect, type Locator, test } from '@playwright/test';
 import { testConfirmationToken } from '../utils/constants';
 import { initSwaggerPage, clearEndpoint, getAndCheckExecuteBtn } from '../utils/helpers';
 
-const apiUrl: string = `${process.env.API_BASE_URL || 'https://api.vilnacrm.com'}/api/users/confirm`;
+const mockoonHost: string = 'http://localhost:8080/';
 
 test('confirm: try it out interaction', async ({ page }) => {
   const { userEndpoints, elements } = await initSwaggerPage(page);
@@ -31,7 +31,7 @@ test('confirm: try it out interaction', async ({ page }) => {
 
   const requestUrl: Locator = confirmEndpoint.locator('.request-url .microlight');
   await expect(requestUrl).toBeVisible();
-  await expect(requestUrl).toContainText(apiUrl);
+  await expect(requestUrl).toContainText(mockoonHost);
 
   await clearEndpoint(confirmEndpoint);
 });
