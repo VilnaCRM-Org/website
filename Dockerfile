@@ -19,6 +19,7 @@ FROM base AS build
 COPY . .
 
 RUN node scripts/fetchSwaggerSchema.mjs && \
+    node scripts/patchSwaggerServer.mjs && \
     npx next build && \
     npx next-export-optimize-images
 

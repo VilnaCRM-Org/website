@@ -109,9 +109,9 @@ start: ## Start the application
 	$(NEXT_DEV_CMD)
 
 wait-for-dev: ## Wait for the dev service to be ready on port $(DEV_PORT).
-	@echo "Waiting for dev service to be ready on port $(DEV_PORT).."
-	npx wait-on -v http://$(WEBSITE_DOMAIN):$(DEV_PORT)
-	@echo "Dev service is up and running!"
+	@echo "Waiting for dev service to be ready on port $(DEV_PORT)..."
+	@while ! npx wait-on -t 1000 http://$(WEBSITE_DOMAIN):$(DEV_PORT) 2>/dev/null; do printf "."; done
+	@echo "\nDev service is up and running!"
 
 build: ## A tool build the project
 	$(DOCKER_COMPOSE) build
@@ -166,8 +166,8 @@ start-prod: ## Build image and start container in production mode
 
 wait-for-prod: ## Wait for the prod service to be ready on port $(NEXT_PUBLIC_PROD_PORT).
 	@echo "Waiting for prod service to be ready on port $(NEXT_PUBLIC_PROD_PORT)..."
-	npx wait-on -v http://$(WEBSITE_DOMAIN):$(NEXT_PUBLIC_PROD_PORT)
-	@echo "Prod service is up and running!"
+	@while ! npx wait-on -t 1000 http://$(WEBSITE_DOMAIN):$(NEXT_PUBLIC_PROD_PORT) 2>/dev/null; do printf "."; done
+	@echo "\nProd service is up and running!"
 
 test-unit-all: test-unit-client test-unit-server ## This command executes unit tests for both client and server environments.
 

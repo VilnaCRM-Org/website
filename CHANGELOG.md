@@ -1,11 +1,8 @@
 ## [0.1.1](https://github.com/VilnaCRM-Org/website/compare/v0.1.0...v0.1.1) (2025-06-07)
 
-
 ### Performance Improvements
 
-* **#35:** improve mobile performance in Lighthouse ([#183](https://github.com/VilnaCRM-Org/website/issues/183)) ([cc714c4](https://github.com/VilnaCRM-Org/website/commit/cc714c4cee6ef1240653266462f452998eb1d27d)), closes [#35](https://github.com/VilnaCRM-Org/website/issues/35) [#35](https://github.com/VilnaCRM-Org/website/issues/35) [#35](https://github.com/VilnaCRM-Org/website/issues/35) [#35](https://github.com/VilnaCRM-Org/website/issues/35) [#35](https://github.com/VilnaCRM-Org/website/issues/35) [#35](https://github.com/VilnaCRM-Org/website/issues/35) [#35](https://github.com/VilnaCRM-Org/website/issues/35) [#35](https://github.com/VilnaCRM-Org/website/issues/35) [#35](https://github.com/VilnaCRM-Org/website/issues/35) [#35](https://github.com/VilnaCRM-Org/website/issues/35)
-
-
+- **#35:** improve mobile performance in Lighthouse ([#183](https://github.com/VilnaCRM-Org/website/issues/183)) ([cc714c4](https://github.com/VilnaCRM-Org/website/commit/cc714c4cee6ef1240653266462f452998eb1d27d)), closes [#35](https://github.com/VilnaCRM-Org/website/issues/35) [#35](https://github.com/VilnaCRM-Org/website/issues/35) [#35](https://github.com/VilnaCRM-Org/website/issues/35) [#35](https://github.com/VilnaCRM-Org/website/issues/35) [#35](https://github.com/VilnaCRM-Org/website/issues/35) [#35](https://github.com/VilnaCRM-Org/website/issues/35) [#35](https://github.com/VilnaCRM-Org/website/issues/35) [#35](https://github.com/VilnaCRM-Org/website/issues/35) [#35](https://github.com/VilnaCRM-Org/website/issues/35) [#35](https://github.com/VilnaCRM-Org/website/issues/35)
 
 # [0.1.0](https://github.com/VilnaCRM-Org/website/compare/v1.6.0...v0.1.0) (2025-06-04)
 
@@ -36,6 +33,5 @@
 - **#178:** dependabot workflow ([#179](https://github.com/VilnaCRM-Org/website/issues/179)) ([bc20712](https://github.com/VilnaCRM-Org/website/commit/bc207126629fda72074a7b5d49d80762bfa0b3b6)), closes [#178](https://github.com/VilnaCRM-Org/website/issues/178) [#178](https://github.com/VilnaCRM-Org/website/issues/178) [#178](https://github.com/VilnaCRM-Org/website/issues/178) [#178](https://github.com/VilnaCRM-Org/website/issues/178) [#178](https://github.com/VilnaCRM-Org/website/issues/178)
 
 # [1.4.0](https://github.com/VilnaCRM-Org/website/compare/v1.3.0...v1.4.0) (2025-04-28)
-
 
 - **#28:** redesign "For Whom" block ([#171](https://github.com/VilnaCRM-Org/website/issues/171)) ([cd224fe](https://github.com/VilnaCRM-Org/website/commit/cd224fed3a45a086dc8db1ec89cb6be4d62640fb)), closes [#28](https://github.com/VilnaCRM-Org/website/issues/28) [#28](https://github.com/VilnaCRM-Org/website/issues/28) [#28](https://github.com/VilnaCRM-Org/website/issues/28) [#28](https://github.com/VilnaCRM-Org/website/issues/28) [#28](https://github.com/VilnaCRM-Org/website/issues/28) [#28](https://github.com/VilnaCRM-Org/website/issues/28) [#28](https://github.com/VilnaCRM-Org/website/issues/28) [#28](https://github.com/VilnaCRM-Org/website/issues/28) [#28](https://github.com/VilnaCRM-Org/website/issues/28) [#28](https://github.com/VilnaCRM-Org/website/issues/28) [#28](https://github.com/VilnaCRM-Org/website/issues/28)

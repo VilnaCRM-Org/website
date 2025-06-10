@@ -3,7 +3,7 @@ services:
     build:
       context: .
       target: base
-    command: sh -c "node scripts/fetchSwaggerSchema.mjs || (echo 'Failed to fetch Swagger schema' && exit 1) && pnpm exec next dev"
+    command: sh -c "node ./scripts/fetchSwaggerSchema.mjs && node scripts/patchSwaggerServer.mjs && pnpm exec next dev"
     restart: unless-stopped
     volumes:
       - .:/app

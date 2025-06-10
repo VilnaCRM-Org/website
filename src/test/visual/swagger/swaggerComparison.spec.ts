@@ -20,7 +20,13 @@ test.describe('Visual Tests', () => {
         const controls: NodeListOf<Element> = document.querySelectorAll('.opblock-summary-control');
         controls.forEach(el => (el as HTMLElement).click());
       });
-      await page.waitForTimeout(500);
+      await page.waitForFunction(() => {
+        const controls: NodeListOf<Element> = document.querySelectorAll('.opblock-summary-control');
+        return (
+          controls.length > 0 &&
+          Array.from(controls).every(el => getComputedStyle(el).display !== 'none')
+        );
+      });
       await page.waitForLoadState('networkidle');
 
       await expect(page).toHaveScreenshot(`${currentLanguage}_${screen.name}.png`, {
