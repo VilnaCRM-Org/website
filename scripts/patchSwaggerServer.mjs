@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import fs from 'fs';
+import fs from 'node:fs';
 import YAML from 'js-yaml';
 
 const path = './public/swagger-schema.yaml';

@@ -5,9 +5,9 @@ import YAML from 'js-yaml';
 const version = process.env.USER_SERVICE_SPEC_VERSION;
 const specUrl = `https://raw.githubusercontent.com/VilnaCRM-Org/user-service/${version}/.github/openapi-spec/spec.yaml`;
 
-if (!specUrl) {
-  console.log('specUrl',specUrl);
-  console.error('❌ NEXT_PUBLIC_USER_SERVICE_OPENAI_SPEC_URL is not set');
+if (!version) {
+  console.log('specUrl:', specUrl);
+  console.error('❌ USER_SERVICE_SPEC_VERSION is not set');
   process.exit(1);
 }
 
@@ -22,7 +22,7 @@ async function fetchAndSaveSwagger() {
     const yamlText = await res.text();
     const parsed = YAML.load(yamlText);
 
-        fs.writeFileSync('./public/swagger-schema.yaml', YAML.dump(parsed));
+    fs.writeFileSync('./public/swagger-schema.yaml', YAML.dump(parsed));
 
     console.log('✅ Swagger schema saved as YAML.');
   } catch (error) {

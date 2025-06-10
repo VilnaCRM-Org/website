@@ -1,7 +1,7 @@
 FROM mcr.microsoft.com/playwright:v1.52.0-jammy
 
 RUN apt-get update && apt-get install -y --no-install-recommends --fix-missing \
-    python3=3.10.12 \
+    python3=3.10.6-1~22.04.1 \
     make=4.3-4.1build1 \
     g++=4:11.2.0-1ubuntu1 \
     curl=7.81.0-* \
