@@ -1,11 +1,11 @@
 import { expect, type Locator, Page, test } from '@playwright/test';
 
-import { ApiUser, BasicEndpointElements } from '../utils/constants';
+import { ApiUser, BASE_API, BasicEndpointElements } from '../utils/constants';
 import {
   initSwaggerPage,
   clearEndpoint,
   getAndCheckExecuteBtn,
-  interceptWithError,
+  interceptWithErrorResponse,
 } from '../utils/helpers';
 
 interface EndpointElements extends BasicEndpointElements {
@@ -86,12 +86,12 @@ async function checkErrorResponse(
 test.describe('get user: try it out interaction', () => {
   test('default values', async ({ page }) => {
     const elements: EndpointElements = await setupEndpoint(page);
-    const initialPageNumber: string = '1';
-    const initialPerPageNumber: string = '30';
 
-    await expect(elements.pageNumberInput).toHaveValue(initialPageNumber);
-    await expect(elements.itemsPerPageInput).toHaveValue(initialPerPageNumber);
+    await expect(elements.pageNumberInput).toHaveValue('1');
+    await expect(elements.itemsPerPageInput).toHaveValue('30');
 
+    const initialPageNumber: string = await elements.pageNumberInput.inputValue();
+    const initialPerPageNumber: string = await elements.itemsPerPageInput.inputValue();
     await executeAndVerifyParams(elements, initialPageNumber, initialPerPageNumber);
 
     const curl: Locator = elements.getEndpoint.locator('.curl-command');
@@ -148,9 +148,10 @@ test.describe('get user: try it out interaction', () => {
   test('error response handling', async ({ page }) => {
     const elements: EndpointElements = await setupEndpoint(page);
 
-    await interceptWithError(page, 400, {
+    await interceptWithErrorResponse(page, `${BASE_API}**`, {
       error: 'Bad Request',
       message: 'Invalid pagination parameters',
+      code: 'INVALID_INPUT',
       details: {
         page: 'Must be a positive number',
         itemsPerPage: 'Must be between 1 and 100',

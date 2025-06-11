@@ -2,7 +2,7 @@ import type { Locator } from '@playwright/test';
 
 export const testUserId: string = 'test-user-id';
 
-export const testConfirmationToken: string = 'test-confirmation-token';
+export const confirmationToken: string = 'test-confirmation-token';
 
 export const userInitials: string = 'PA';
 
@@ -43,7 +43,7 @@ export interface ApiUser {
   initials: string;
   id: string;
 }
-export const batchUserData: BatchUserData = {
+export const validBatchData: BatchUserData = {
   users: [
     {
       email: 'test1@example.com',
@@ -99,3 +99,4 @@ export const errorResponse: { NETWORK: string; LOAD: string; FETCH: string } = {
   FETCH: 'Failed to fetch',
 };
 export type ExpectedError = RegExpMatchArray | null | undefined;
+export const BASE_API: string = '**/api/users';

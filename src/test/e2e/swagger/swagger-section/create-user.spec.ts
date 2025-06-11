@@ -2,6 +2,7 @@ import { expect, type Locator, Page, test } from '@playwright/test';
 
 import {
   ApiUser,
+  BASE_API,
   BasicEndpointElements,
   errorResponse,
   ExpectedError,
@@ -12,7 +13,8 @@ import {
   initSwaggerPage,
   clearEndpoint,
   getAndCheckExecuteBtn,
-  interceptWithError,
+  interceptWithErrorResponse,
+  cancelOperation,
 } from '../utils/helpers';
 
 interface CreateUserEndpointElements extends BasicEndpointElements {
@@ -52,10 +54,7 @@ async function setupCreateUserEndpoint(page: Page): Promise<CreateUserEndpointEl
     downloadButton,
   };
 }
-async function cancelOperation(page: Page): Promise<void> {
-  const cancelBtn: Locator = page.locator('button.btn.try-out__btn.cancel');
-  await cancelBtn.click();
-}
+
 async function fillRequestBody(
   elements: CreateUserEndpointElements,
   userData: Partial<User> | null
@@ -89,6 +88,8 @@ async function verifySuccessResponse(elements: CreateUserEndpointElements): Prom
 }
 
 test.describe('Create user endpoint tests', () => {
+  const API_URL: string = `${BASE_API}**`;
+
   test('successful user creation', async ({ page }) => {
     const elements: CreateUserEndpointElements = await setupCreateUserEndpoint(page);
 
@@ -105,7 +106,7 @@ test.describe('Create user endpoint tests', () => {
   test('empty request body validation', async ({ page }) => {
     const elements: CreateUserEndpointElements = await setupCreateUserEndpoint(page);
 
-    await fillRequestBody(elements, null);
+    await elements.requestBody.fill('');
     await elements.executeBtn.click();
 
     await expect(elements.requestBody).toHaveClass(/invalid/);
@@ -167,7 +168,7 @@ test.describe('Create user endpoint tests', () => {
   test('error response - invalid email', async ({ page }) => {
     const elements: CreateUserEndpointElements = await setupCreateUserEndpoint(page);
 
-    await interceptWithError(page, 400, {
+    await interceptWithErrorResponse(page, API_URL, {
       error: 'Bad Request',
       message: 'Invalid email format',
       code: 'INVALID_EMAIL',
@@ -187,7 +188,7 @@ test.describe('Create user endpoint tests', () => {
   test('error response - weak password', async ({ page }) => {
     const elements: CreateUserEndpointElements = await setupCreateUserEndpoint(page);
 
-    await interceptWithError(page, 400, {
+    await interceptWithErrorResponse(page, API_URL, {
       error: 'Bad Request',
       message: 'Password too weak',
       code: 'WEAK_PASSWORD',
@@ -237,7 +238,7 @@ test.describe('Create user endpoint tests', () => {
 
     await elements.responseBody.waitFor({ state: 'visible' });
 
-    await page.waitForTimeout(1000);
+    await elements.downloadButton?.waitFor({ state: 'attached' });
 
     const downloadButton: Locator = elements.getEndpoint.locator(
       '.responses-wrapper .highlight-code button.download-contents'

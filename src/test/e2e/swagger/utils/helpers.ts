@@ -38,17 +38,31 @@ export const getAndCheckExecuteBtn: (element: Locator) => Promise<Locator> = asy
   return executeBtn;
 };
 
-// negative
-export async function interceptWithError(
+interface ErrorResponse {
+  error: string;
+  message: string;
+  code: string;
+  details?: {
+    [key: string]: string;
+  };
+}
+
+export async function interceptWithErrorResponse(
   page: Page,
-  status: number,
-  errorResponse: object
+  url: string,
+  errorResponse: ErrorResponse,
+  status: number = 400
 ): Promise<void> {
-  await page.route('**/api/users**', async route => {
+  await page.route(url, async route => {
     await route.fulfill({
       status,
       contentType: 'application/json',
       body: JSON.stringify(errorResponse),
     });
   });
+}
+
+export async function cancelOperation(page: Page): Promise<void> {
+  const cancelBtn: Locator = page.locator('button.btn.try-out__btn.cancel');
+  await cancelBtn.click();
 }
