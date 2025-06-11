@@ -37,3 +37,18 @@ export const getAndCheckExecuteBtn: (element: Locator) => Promise<Locator> = asy
 
   return executeBtn;
 };
+
+// negative
+export async function interceptWithError(
+  page: Page,
+  status: number,
+  errorResponse: object
+): Promise<void> {
+  await page.route('**/api/users**', async route => {
+    await route.fulfill({
+      status,
+      contentType: 'application/json',
+      body: JSON.stringify(errorResponse),
+    });
+  });
+}

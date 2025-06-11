@@ -1,3 +1,5 @@
+import type { Locator } from '@playwright/test';
+
 export const testUserId: string = 'test-user-id';
 
 export const testConfirmationToken: string = 'test-confirmation-token';
@@ -16,13 +18,6 @@ export const executeBtnSelector: string =
 
 export const UI_INTERACTION_DELAY: number = 100;
 
-type UserData = {
-  email: string;
-  password: string;
-  initials: string;
-  clientMutationId: string;
-};
-
 type TestsPasswords = {
   STRONG: string;
   WEAK: string;
@@ -34,20 +29,6 @@ export const TEST_PASSWORDS: TestsPasswords = {
   SPECIAL_CHARS: 'Test@Pass#123',
 } as const;
 
-export const testUserData: UserData = {
-  email: 'test@example.com',
-  password: TEST_PASSWORDS.STRONG,
-  initials: 'TE',
-  clientMutationId: 'test-mutation-1',
-};
-
-export const updatedUserData: UserData = {
-  email: 'another@example.com',
-  password: TEST_PASSWORDS.SPECIAL_CHARS,
-  initials: 'AN',
-  clientMutationId: 'test-mutation-2',
-};
-
 export interface User {
   email: string;
   password: string;
@@ -56,7 +37,12 @@ export interface User {
 export interface BatchUserData {
   users: User[];
 }
-
+export interface ApiUser {
+  confirmed: boolean;
+  email: string;
+  initials: string;
+  id: string;
+}
 export const batchUserData: BatchUserData = {
   users: [
     {
@@ -82,3 +68,34 @@ export const testOAuthParams: OAuthParams = {
   clientId: 'test-client',
   redirectUri: 'http://localhost:3000/callback',
 } as const;
+
+export interface BasicEndpointElements {
+  getEndpoint: Locator;
+  executeBtn: Locator;
+  requestUrl: Locator;
+  responseBody: Locator;
+}
+export const TEST_USERS: Record<string, User> = {
+  VALID: {
+    email: 'user@example.com',
+    initials: 'Name Surname',
+    password: TEST_PASSWORDS.STRONG,
+  },
+  INVALID_EMAIL: {
+    email: 'invalid-email',
+    initials: 'Test User',
+    password: TEST_PASSWORDS.STRONG,
+  },
+  WEAK_PASSWORD: {
+    email: 'user@example.com',
+    initials: 'Test User',
+    password: TEST_PASSWORDS.WEAK,
+  },
+} as const;
+
+export const errorResponse: { NETWORK: string; LOAD: string; FETCH: string } = {
+  NETWORK: 'TypeError: NetworkError when attempting to fetch resource.',
+  LOAD: 'TypeError: Load failed',
+  FETCH: 'Failed to fetch',
+};
+export type ExpectedError = RegExpMatchArray | null | undefined;
