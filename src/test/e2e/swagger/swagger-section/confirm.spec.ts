@@ -14,7 +14,7 @@ import {
   getAndCheckExecuteBtn,
 } from '../utils/helpers';
 
-const mockoonHost: string = 'http://localhost:8080/';
+const mockoonHost: string = process.env.MOCK_API_HOST ?? 'http://localhost:8080/';
 const CONFIRM_API_URL: string = `${BASE_API}/confirm`;
 
 interface ConfirmEndpointElements extends BasicEndpointElements {

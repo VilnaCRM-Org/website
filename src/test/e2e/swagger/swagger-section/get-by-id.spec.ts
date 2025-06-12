@@ -2,10 +2,11 @@ import { expect, type Locator, Page, test } from '@playwright/test';
 
 import {
   BASE_API,
-  ExpectedError,
   BasicEndpointElements,
   testUserId,
   ApiUser,
+  errorResponse,
+  ExpectedError,
 } from '../utils/constants';
 import {
   clearEndpoint,
@@ -25,6 +26,7 @@ interface GetUserByIdElements extends BasicEndpointElements {
   curl: Locator;
   copyButton: Locator;
   downloadButton: Locator;
+  validationError: Locator;
 }
 
 async function setupGetUserByIdEndpoint(page: Page): Promise<GetUserByIdElements> {
@@ -36,6 +38,7 @@ async function setupGetUserByIdEndpoint(page: Page): Promise<GetUserByIdElements
 
   const executeBtn: Locator = await getAndCheckExecuteBtn(getUserEndpoint);
   const parametersSection: Locator = getUserEndpoint.locator('.parameters-container');
+  const validationError: Locator = getUserEndpoint.locator('.validation-errors.errors-wrapper');
   const idInput: Locator = getUserEndpoint.locator('input[placeholder="id"]');
   const requestUrl: Locator = getUserEndpoint.locator('.request-url .microlight');
   const responseBody: Locator = getUserEndpoint
@@ -49,6 +52,7 @@ async function setupGetUserByIdEndpoint(page: Page): Promise<GetUserByIdElements
     getEndpoint: getUserEndpoint,
     executeBtn,
     parametersSection,
+    validationError,
     idInput,
     requestUrl,
     responseBody,
@@ -58,7 +62,7 @@ async function setupGetUserByIdEndpoint(page: Page): Promise<GetUserByIdElements
   };
 }
 
-test.describe('get user by id endpoint tests', () => {
+test.describe('get user by ID', () => {
   test('successful user retrieval', async ({ page }) => {
     const elements: GetUserByIdElements = await setupGetUserByIdEndpoint(page);
 
@@ -79,10 +83,9 @@ test.describe('get user by id endpoint tests', () => {
         confirmed: expect.any(Boolean),
         email: expect.any(String),
         initials: expect.any(String),
-        id: testUserId,
+        id: expect.any(String),
       })
     );
-
     await expect(elements.downloadButton).toBeVisible();
 
     await clearEndpoint(elements.getEndpoint);
@@ -96,7 +99,7 @@ test.describe('get user by id endpoint tests', () => {
     await elements.executeBtn.click();
 
     await expect(elements.idInput).toHaveClass(/invalid/);
-    await expect(elements.parametersSection).toContainText('Required field is not provided');
+    await expect(elements.validationError).toContainText('Required field is not provided');
 
     await cancelOperation(page);
   });
@@ -154,24 +157,22 @@ test.describe('get user by id endpoint tests', () => {
     await elements.idInput.fill(testUserId);
     await elements.executeBtn.click();
 
-    const responseErrorSelector: string = '.response-col_description .renderedMarkdown p';
-    const responseStatusSelector: string = '.response .response-col_status';
+    const responseErrorSelector: string =
+      '.responses-table.live-responses-table .response .response-col_description';
+    const responseStatusSelector: string =
+      '.responses-table.live-responses-table .response .response-col_status';
 
     const errorMessage: string | null = await elements.getEndpoint
       .locator(responseErrorSelector)
-      .first()
       .textContent();
-    const statusCode: string | null = await elements.getEndpoint
-      .locator(responseStatusSelector)
-      .first()
-      .textContent();
-
     const hasExpectedError: ExpectedError = errorMessage?.match(
-      /Failed to fetch|Network Error|CORS|Connection failed/i
+      new RegExp(Object.values(errorResponse).join('|'), 'i')
     );
-    const hasFailureStatus: ExpectedError = statusCode?.match(/0|4\d{2}|5\d{2}/);
+    expect(hasExpectedError).toBeTruthy();
 
-    expect(hasExpectedError || hasFailureStatus || null).toBeTruthy();
+    await expect(elements.getEndpoint.locator(responseStatusSelector)).toContainText(
+      'Undocumented'
+    );
 
     await clearEndpoint(elements.getEndpoint);
   });

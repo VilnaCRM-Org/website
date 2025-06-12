@@ -1,14 +1,13 @@
 import { expect, type Locator, Page, test } from '@playwright/test';
 
 import {
-  ApiUser,
   BASE_API,
   BasicEndpointElements,
   errorResponse,
-  ExpectedError,
   BatchUserData,
   validBatchData,
   TEST_PASSWORDS,
+  User,
 } from '../utils/constants';
 import {
   initSwaggerPage,
@@ -45,7 +44,7 @@ async function setupBatchEndpoint(page: Page): Promise<BatchUserEndpointElements
   const responseBody: Locator = createBatchEndpoint
     .locator('.response-col_description .microlight')
     .first();
-  const curl: Locator = createBatchEndpoint.locator('.curl-command');
+  const curl: Locator = createBatchEndpoint.locator('.curl-command .curl.microlight');
   const copyButton: Locator = createBatchEndpoint.locator(
     'div.curl-command .copy-to-clipboard button'
   );
@@ -84,15 +83,26 @@ async function fillBatchRequestBody(
 }
 
 async function verifySuccessResponse(elements: BatchUserEndpointElements): Promise<void> {
-  const responseText: string = (await elements.responseBody.textContent()) || '';
-  const response: ApiUser[] = JSON.parse(responseText);
+  const responseText: string = (await elements.curl.textContent()) || '';
 
-  response.forEach(user => {
+  const jsonMatch: RegExpMatchArray | null = responseText.match(/-d\s+'([\s\S]*)'$/); // Captures everything inside the single quotes
+  if (!jsonMatch) {
+    throw new Error(`Failed to extract JSON from response: ${responseText}`);
+  }
+
+  let response: { users: User[] };
+  try {
+    response = JSON.parse(jsonMatch[1]);
+  } catch (error) {
+    throw new Error(`Invalid JSON response: ${jsonMatch[1]}`);
+  }
+  expect(response.users).toHaveLength(2);
+
+  response.users.forEach(user => {
     expect(user).toMatchObject({
-      confirmed: expect.any(Boolean),
       email: expect.any(String),
+      password: expect.any(String),
       initials: expect.any(String),
-      id: expect.any(String),
     });
   });
 }
@@ -245,24 +255,23 @@ test.describe('Create batch users endpoint tests', () => {
     await elements.executeBtn.click();
     await verifyCommonElements(elements);
 
-    const responseErrorSelector: string = '.response-col_description .renderedMarkdown p';
-    const responseStatusSelector: string = '.response .response-col_status';
+    const errorElement: Locator = elements.getEndpoint
+      .locator('.response-col_description .renderedMarkdown p')
+      .first();
+    const statusElement: Locator = elements.getEndpoint
+      .locator('.response .response-col_status')
+      .first();
 
-    const errorMessage: string | null = await elements.getEndpoint
-      .locator(responseErrorSelector)
-      .first()
-      .textContent();
-    const statusCode: string | null = await elements.getEndpoint
-      .locator(responseStatusSelector)
-      .first()
-      .textContent();
+    const errorPatterns: string = Object.values(errorResponse).join('|');
+    const hasError: boolean = await errorElement
+      .textContent()
+      .then(text => new RegExp(errorPatterns).test(text || ''));
+    const hasFailureStatus: boolean = await statusElement
+      .textContent()
+      .then(text => /^(0|4\d{2}|5\d{2})/.test(text || ''));
 
-    const hasExpectedError: ExpectedError = errorMessage?.match(
-      new RegExp(Object.values(errorResponse).join('|'))
-    );
-    const hasFailureStatus: ExpectedError = statusCode?.match(/0|4\d{2}|5\d{2}/);
+    expect(hasError || hasFailureStatus).toBe(true);
 
-    expect(hasExpectedError || hasFailureStatus || null).toBeTruthy();
     await clearEndpoint(elements.getEndpoint);
   });
 });

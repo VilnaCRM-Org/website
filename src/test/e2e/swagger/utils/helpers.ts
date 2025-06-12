@@ -53,13 +53,17 @@ export async function interceptWithErrorResponse(
   errorResponse: ErrorResponse,
   status: number = 400
 ): Promise<void> {
-  await page.route(url, async route => {
-    await route.fulfill({
-      status,
-      contentType: 'application/json',
-      body: JSON.stringify(errorResponse),
-    });
-  });
+  await page.route(
+    url,
+    async route => {
+      await route.fulfill({
+        status,
+        contentType: 'application/json',
+        body: JSON.stringify(errorResponse),
+      });
+    },
+    { times: 1 }
+  );
 }
 
 export async function cancelOperation(page: Page): Promise<void> {

@@ -37,6 +37,12 @@ export interface User {
 export interface BatchUserData {
   users: User[];
 }
+export type UpdatedUser = Pick<User, 'email' | 'initials'> & {
+  oldPassword: string;
+  newPassword: string;
+};
+
+// Represents a user returned from the API
 export interface ApiUser {
   confirmed: boolean;
   email: string;
@@ -48,12 +54,12 @@ export const validBatchData: BatchUserData = {
     {
       email: 'test1@example.com',
       password: TEST_PASSWORDS.STRONG,
-      initials: 'T1',
+      initials: 'MW',
     },
     {
       email: 'test2@example.com',
       password: TEST_PASSWORDS.SPECIAL_CHARS,
-      initials: 'T2',
+      initials: 'MW',
     },
   ],
 };
@@ -69,6 +75,7 @@ export const testOAuthParams: OAuthParams = {
   redirectUri: 'http://localhost:3000/callback',
 } as const;
 
+// Basic UI elements common to all endpoint tests
 export interface BasicEndpointElements {
   getEndpoint: Locator;
   executeBtn: Locator;
@@ -78,17 +85,17 @@ export interface BasicEndpointElements {
 export const TEST_USERS: Record<string, User> = {
   VALID: {
     email: 'user@example.com',
-    initials: 'Name Surname',
+    initials: 'NS',
     password: TEST_PASSWORDS.STRONG,
   },
   INVALID_EMAIL: {
     email: 'invalid-email',
-    initials: 'Test User',
+    initials: 'TU',
     password: TEST_PASSWORDS.STRONG,
   },
   WEAK_PASSWORD: {
     email: 'user@example.com',
-    initials: 'Test User',
+    initials: 'TU',
     password: TEST_PASSWORDS.WEAK,
   },
 } as const;

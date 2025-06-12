@@ -59,18 +59,11 @@ async function fillRequestBody(
   elements: CreateUserEndpointElements,
   userData: Partial<User> | null
 ): Promise<void> {
-  let requestBodyContent: string;
-
-  if (userData === null) {
-    requestBodyContent = '';
-  } else if (Object.keys(userData).length === 0) {
-    requestBodyContent = '{}';
-  } else {
-    const cleanedData: { [k: string]: string } = Object.fromEntries(
-      Object.entries(userData).filter(([, value]) => value !== undefined)
-    );
-    requestBodyContent = JSON.stringify(cleanedData, null, 2);
-  }
+  const cleaned: { [k: string]: string } | null = userData
+    ? Object.fromEntries(Object.entries(userData).filter(([, v]) => v !== undefined))
+    : null;
+  const requestBodyContent: string =
+    cleaned === null ? '' : JSON.stringify(cleaned, null, 2) || '{}';
 
   await elements.requestBody.fill(requestBodyContent);
 }
@@ -95,6 +88,8 @@ test.describe('Create user endpoint tests', () => {
 
     await fillRequestBody(elements, TEST_USERS.VALID);
     await elements.executeBtn.click();
+
+    await elements.responseBody.waitFor({ state: 'visible' });
 
     await expect(elements.curl).toBeVisible();
     await expect(elements.copyButton).toBeVisible();

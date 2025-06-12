@@ -127,9 +127,9 @@ test.describe('get user: try it out interaction', () => {
     await elements.pageNumberInput.fill('');
     await elements.itemsPerPageInput.fill('');
 
-    const pageCheckbox: Locator = elements.getEndpoint.locator(
-      'tr[data-param-name="page"] input#include_empty_value'
-    );
+    const pageCheckbox: Locator = elements.getEndpoint
+      .locator('tr[data-param-name="page"]')
+      .locator('input#include_empty_value');
     const itemsPerPageCheckbox: Locator = elements.getEndpoint.locator(
       'tr[data-param-name="itemsPerPage"] input#include_empty_value'
     );
