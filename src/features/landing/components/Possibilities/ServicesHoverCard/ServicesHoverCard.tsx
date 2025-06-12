@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { UiTypography } from '@/components/';
 
-import { imageList } from '../constants';
+import { cardList as imageList } from '../constants';
 
 import { ImageItem } from './ImageItem';
 import styles from './styles';
