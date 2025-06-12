@@ -28,6 +28,9 @@ export default {
     background: colorTheme.palette.backgroundGrey100.main,
     maxWidth: '100dvw',
     overflow: 'hidden',
+    position: 'relative',
+    minHeight: '30rem', 
+    contain: 'layout',
   },
 
   lgCardsWrapper: {
