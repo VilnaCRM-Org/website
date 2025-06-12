@@ -114,6 +114,15 @@ Testing
   make test-visual-ui: runs visual tests with UI inside the prod container
 ```
 
+### Important Note About Swagger E2E Tests
+
+For Swagger E2E tests, the application uses Mockoon to handle API requests.
+The API endpoints from the Swagger schema are automatically rewritten during
+both production and development container builds. This means that all API requests
+are currently directed to Mockoon instead of a real backend. Please keep
+this in mind if you plan to integrate with a real backend service in
+the future—you'll need to update the API configuration accordingly.
+
 Lighthouse
 
 ```bash
