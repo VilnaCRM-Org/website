@@ -13,7 +13,7 @@ import { CardList } from './types';
 function CardSwiper({ cardList }: CardList): React.ReactElement {
   const swiperRef = useRef<HTMLElement | null>(null);
 
-  useEffect(() => {
+  useEffect((): (() =>void) => {
     const target: HTMLElement | null = document.querySelector('body');
 
     function isToolTip(node: Element): boolean {
@@ -24,8 +24,8 @@ function CardSwiper({ cardList }: CardList): React.ReactElement {
       childList: true,
     };
 
-    const observer: MutationObserver = new MutationObserver((mutationsList: MutationRecord[]) => {
-      mutationsList.forEach((mutation: MutationRecord) => {
+    const observer: MutationObserver = new MutationObserver((mutationsList: MutationRecord[]): void => {
+      mutationsList.forEach((mutation: MutationRecord): void => {
         if (mutation.type === 'childList') {
           mutation.addedNodes.forEach((node: Node): void => {
             if (node instanceof Element && isToolTip(node)) {

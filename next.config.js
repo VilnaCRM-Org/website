@@ -1,10 +1,10 @@
-const withBundleAnalyzer = require('@next/bundle-analyzer')();
-const withExportImages = require('next-export-optimize-images');
-const LocalizationGenerator = require('./scripts/localizationGenerator');
+import withBundleAnalyzerImport from '@next/bundle-analyzer';
+import withExportImages from 'next-export-optimize-images';
+import LocalizationGenerator from './scripts/localizationGenerator.js'; // додай .js, якщо потрібно
 
-/** @type {import('next').NextConfig} */
+const withBundleAnalyzer = withBundleAnalyzerImport();
 
-const nextConfig = withExportImages({
+const nextConfigBase = withExportImages({
   output: 'export',
   reactStrictMode: true,
   swcMinify: true,
@@ -15,19 +15,21 @@ const nextConfig = withExportImages({
     removeConsole: process.env.NODE_ENV === 'production',
   },
 
-  webpack: config => {
+  webpack: (config) => {
     const localizationGenerator = new LocalizationGenerator();
     localizationGenerator.generateLocalizationFile();
 
-     config.optimization.splitChunks = {
+    config.optimization.splitChunks = {
       chunks: 'all',
-      maxSize: 244 * 1024, 
+      maxSize: 244 * 1024,
     };
 
     return config;
   },
 });
 
-module.exports = process.env.ANALYZE === 'true' 
-  ? withBundleAnalyzer(nextConfig) 
-  : nextConfig;
+const nextConfig = process.env.ANALYZE === 'true'
+  ? withBundleAnalyzer(nextConfigBase)
+  : nextConfigBase;
+
+export default nextConfig;
