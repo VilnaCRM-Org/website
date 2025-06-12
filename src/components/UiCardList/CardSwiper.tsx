@@ -11,7 +11,7 @@ import 'swiper/css/pagination';
 import { CardList } from './types';
 
 function CardSwiper({ cardList }: CardList): React.ReactElement {
-  const swiperRef: React.RefObject<HTMLElement> = useRef(null);
+  const swiperRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     const target: HTMLElement | null = document.querySelector('body');
