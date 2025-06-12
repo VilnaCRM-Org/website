@@ -13,7 +13,7 @@ const meta: Meta<typeof UiCardList> = {
 
 export default meta;
 
-function CardItem(args: CardList): React.ReactElement {
+export function CardItem(args: CardList): React.ReactElement {
   return <UiCardList {...args} />;
 }
 
