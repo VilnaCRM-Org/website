@@ -27,9 +27,9 @@ jobs:
         uses: TriPSs/conventional-changelog-action@v3
         with:
           github-token: ${{ secrets.REPO_GITHUB_TOKEN }}
-          output-file: 'false'
+          output-file: false
           version-file: 'package.json'
-          pre-release: 'true'
+          pre-release: true
 
       - name: Create Release
         uses: actions/create-release@v1
