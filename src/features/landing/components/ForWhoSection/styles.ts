@@ -12,7 +12,7 @@ type PointBaseReturn = {
 const pointBase: (width: string, height: string) => PointBaseReturn = (width: string, height: string): PointBaseReturn => ({  
   width,  
   height,  
-  [media.md]: { width: '0.45rem' },  
+[media.md]: { width: '0.45rem', height: '0.45rem' }, 
 });  
 
 
