@@ -1,5 +1,5 @@
 export interface Card {
-  imageSrc: string;
+  image: string;
   title: string;
   id: string;
   text: string;

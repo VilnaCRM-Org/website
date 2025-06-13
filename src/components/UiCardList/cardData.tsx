@@ -11,7 +11,7 @@ export const getWhyUsCards = (): Card[] => [
   {
     type: 'largeCard',
     id: 'card-item-1',
-    imageSrc: WhyUsCodeIcon,
+    image: WhyUsCodeIcon, 
     title: 'why_us.headers.header_open_source',
     text: 'why_us.texts.text_open_source',
     alt: 'why_us.alt_image.alt_open_source',
@@ -19,7 +19,7 @@ export const getWhyUsCards = (): Card[] => [
   {
     type: 'largeCard',
     id: 'card-item-2',
-    imageSrc: WhyUsSettingsIcon,
+    image: WhyUsSettingsIcon,
     title: 'why_us.headers.header_ease_of_setup',
     text: 'why_us.texts.text_configure_system',
     alt: 'why_us.alt_image.alt_ease_of_setup',
@@ -27,7 +27,7 @@ export const getWhyUsCards = (): Card[] => [
   {
     type: 'largeCard',
     id: 'card-item-3',
-    imageSrc: WhyUsTemplatesIcon,
+    image: WhyUsTemplatesIcon,
     title: 'why_us.headers.header_ready_templates',
     text: 'why_us.texts.text_you_have_store',
     alt: 'why_us.alt_image.alt_ready_templates',
@@ -35,7 +35,7 @@ export const getWhyUsCards = (): Card[] => [
   {
     type: 'largeCard',
     id: 'card-item-4',
-    imageSrc: WhyUsServicesIcon,
+    image: WhyUsServicesIcon,
     title: 'why_us.headers.header_ideal_for_services',
     text: 'why_us.texts.text_we_know_specific_needs',
     alt: 'why_us.alt_image.alt_ideal_for_services',
@@ -43,7 +43,7 @@ export const getWhyUsCards = (): Card[] => [
   {
     type: 'largeCard',
     id: 'card-item-5',
-    imageSrc: WhyUsIntegrationsIcon,
+    image: WhyUsIntegrationsIcon,
     title: 'why_us.headers.header_all_required_integrations',
     text: 'why_us.texts.text_connect_your_cms',
     alt: 'why_us.alt_image.alt_all_required_integrations',
@@ -51,7 +51,7 @@ export const getWhyUsCards = (): Card[] => [
   {
     type: 'largeCard',
     id: 'card-item-6',
-    imageSrc: WhyUsMigrationIcon,
+    image: WhyUsMigrationIcon,
     title: 'why_us.headers.header_bonus',
     text: 'why_us.texts.text_switch_to_vilna',
     alt: 'why_us.alt_image.alt_bonus',
