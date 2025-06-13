@@ -6,7 +6,10 @@ import SmallRuby from '../../features/landing/assets/svg/possibilities/smallRuby
 import { getWhyUsCards } from './cardData';
 import { CardItem } from './types';
 
-export const LARGE_CARDLIST_ARRAY: CardItem[] = getWhyUsCards();
+export const LARGE_CARDLIST_ARRAY: CardItem[] = getWhyUsCards().map(card => ({
+  ...card,
+  imageSrc: card.imageSrc || Diamond 
+}));
 
 export const SMALL_CARDLIST_ARRAY: CardItem[] = [
   {
