@@ -22,8 +22,8 @@ function ServicesHoverCard(): React.ReactElement {
       </UiTypography>
       <Box sx={styles.listWrapper}>
         {imageList.map(item => (
-          <ImageItem item={item} key={item.alt} />
-        ))}
+  <ImageItem item={{ ...item, image: item.image ?? 'default-image.jpg' }} key={item.alt} />
+))}
       </Box>
     </Box>
   );
