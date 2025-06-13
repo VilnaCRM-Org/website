@@ -1,4 +1,4 @@
-import { Card } from '../../features/landing/types/card-item';
+import { Card } from '@/features/landing/types/Card/card-item';
 import WhyUsCodeIcon from '../../assets/svg/why-us/code.svg';
 import WhyUsIntegrationsIcon from '../../assets/svg/why-us/integrations.svg';
 import WhyUsMigrationIcon from '../../assets/svg/why-us/migration.svg';
