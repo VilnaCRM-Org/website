@@ -7,8 +7,8 @@ import { getWhyUsCards } from './cardData';
 import { CardItem } from './types';
 
 export const LARGE_CARDLIST_ARRAY: CardItem[] = getWhyUsCards().map(card => ({
-  ...card,
-  imageSrc: card.imageSrc || Diamond 
+ ...card,
+  imageSrc: (card as unknown as { image?: string }).image || Diamond,
 }));
 
 export const SMALL_CARDLIST_ARRAY: CardItem[] = [
