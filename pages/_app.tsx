@@ -8,6 +8,7 @@ import  theme  from '@/components/AppTheme';
 import Layout from '@/components/Layout';
 import { golos } from '@/config/Fonts/golos';
 
+
 import 'swagger-ui-react/swagger-ui.css';
 
 import '../styles/global.css';
@@ -16,6 +17,7 @@ import 'src/features/swagger/components/ApiDocumentation/styles.scss';
 
 import i18n from '../i18n';
 import client from '../src/features/landing/api/graphql/apollo';
+
 
 Sentry.init({
   dsn: process.env.SENTRY_DSN_KEY,
