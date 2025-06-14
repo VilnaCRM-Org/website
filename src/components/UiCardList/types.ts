@@ -5,6 +5,7 @@ export type CardItem = {
   title: string;
   text: string;
   alt: string;
+  image?: string;
 };
 
 export interface CardList {

@@ -16,7 +16,7 @@ async function closeDrawer(page: Page): Promise<void> {
 }
 
 test('Checking whether the drawer opens and closes', async ({ page }) => {
-  await page.goto('/');
+ await page.goto('/', { waitUntil: 'load', timeout: 60000 });
   await page.setViewportSize({ width: 450, height: 812 });
 
   await openDrawer(page);

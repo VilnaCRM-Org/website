@@ -2,6 +2,7 @@ export type CardItem = {
   type: string;
   id: string;
   imageSrc: string;
+  image: string;
   title: string;
   text: string;
   alt: string;
