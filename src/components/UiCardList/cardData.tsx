@@ -1,4 +1,4 @@
-import { Card } from '@/features/landing/types/Card/card-item';
+import { Card } from '../../features/landing/types/Card/card-item';
 import WhyUsCodeIcon from '../../assets/svg/why-us/code.svg';
 import WhyUsIntegrationsIcon from '../../assets/svg/why-us/integrations.svg';
 import WhyUsMigrationIcon from '../../assets/svg/why-us/migration.svg';
@@ -7,7 +7,7 @@ import WhyUsSettingsIcon from '../../assets/svg/why-us/settings.svg';
 import WhyUsTemplatesIcon from '../../assets/svg/why-us/templates.svg';
 
 
-export const getWhyUsCards: () => Card[] = () => [
+const getWhyUsCards: () => Card[] = () => [
   {
     type: 'largeCard',
     id: 'card-item-1',
@@ -57,3 +57,5 @@ export const getWhyUsCards: () => Card[] = () => [
     alt: 'why_us.alt_image.alt_bonus',
   },
 ];
+
+export default getWhyUsCards;

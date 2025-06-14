@@ -3,7 +3,7 @@ import { Theme, createTheme } from '@mui/material';
 import breakpointsTheme from '../UiBreakpoints';
 import colorTheme from '../UiColorTheme';
 
-export const theme: Theme = createTheme({
+ const theme: Theme = createTheme({
   breakpoints: breakpointsTheme.breakpoints,
   palette: colorTheme.palette,
   components: {
@@ -27,3 +27,4 @@ export const theme: Theme = createTheme({
     },
   },
 });
+export default theme;

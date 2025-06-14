@@ -1,5 +1,5 @@
 export interface Card {
-  image: string;
+  image?: string;
   title: string;
   imageSrc?: string;
   id: string;
@@ -7,4 +7,3 @@ export interface Card {
   alt: string;
   type: string;
 }
-
