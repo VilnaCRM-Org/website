@@ -4,7 +4,7 @@ import { GoogleAnalytics } from '@next/third-parties/google';
 import * as Sentry from '@sentry/react';
 import React, { useEffect } from 'react';
 
-import { theme } from '@/components/AppTheme';
+import  theme  from '@/components/AppTheme';
 import { golos } from '@/config/Fonts/golos';
 
 import 'swagger-ui-react/swagger-ui.css';
