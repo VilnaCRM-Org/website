@@ -2,7 +2,7 @@ import 'dotenv/config';
 import fs from 'node:fs';
 import YAML from 'js-yaml';
 
-const path = './public/swagger-schema.yaml';
+const path = './public/swagger-schema.json';
 const mockUrl = `http://${process.env.WEBSITE_DOMAIN}:${process.env.MOCKOON_PORT}`;
 
 const content = fs.readFileSync(path, 'utf8');
@@ -14,5 +14,5 @@ if (Array.isArray(doc.servers) && doc.servers.length > 0) {
   doc.servers = [{ url: mockUrl }];
 }
 
-fs.writeFileSync(path, YAML.dump(doc));
+fs.writeFileSync('./public/swagger-schema.json', JSON.stringify(doc, null, 2));
 console.log('Swagger server URL patched to:', mockUrl);

@@ -15,17 +15,16 @@ import {
   interceptWithErrorResponse,
   cancelOperation,
 } from '../utils/helpers';
+import { locators } from '../utils/locators';
 
 interface PatchUserEndpointElements extends BasicEndpointElements {
   parametersSection: Locator;
   idInput: Locator;
   requestBodySection: Locator;
   jsonEditor: Locator;
-  responseBody: Locator;
   curl: Locator;
   copyButton: Locator;
   downloadButton: Locator;
-  requestUrl: Locator;
 }
 
 const PATCH_USER_API_URL: (id: string) => string = (id: string): string => `${BASE_API}/${id}`;
@@ -38,17 +37,15 @@ async function setupPatchUserEndpoint(page: Page): Promise<PatchUserEndpointElem
   await elements.tryItOutButton.click();
 
   const executeBtn: Locator = await getAndCheckExecuteBtn(patchEndpoint);
-  const parametersSection: Locator = patchEndpoint.locator('.parameters-container');
-  const idInput: Locator = patchEndpoint.locator('input[placeholder="id"]');
-  const requestBodySection: Locator = patchEndpoint.locator('.opblock-section-request-body');
-  const jsonEditor: Locator = requestBodySection.locator('.body-param__text');
-  const responseBody: Locator = patchEndpoint
-    .locator('.response-col_description .microlight')
-    .first();
-  const curl: Locator = patchEndpoint.locator('.curl-command');
-  const copyButton: Locator = patchEndpoint.locator('div.curl-command .copy-to-clipboard button');
-  const downloadButton: Locator = patchEndpoint.locator('button.download-contents');
-  const requestUrl: Locator = patchEndpoint.locator('.request-url .microlight');
+  const parametersSection: Locator = patchEndpoint.locator(locators.parametersSection);
+  const idInput: Locator = patchEndpoint.locator(locators.idInput);
+  const requestBodySection: Locator = patchEndpoint.locator(locators.requestBodySection);
+  const jsonEditor: Locator = requestBodySection.locator(locators.jsonEditor);
+  const responseBody: Locator = patchEndpoint.locator(locators.responseBody).first();
+  const curl: Locator = patchEndpoint.locator(locators.curl);
+  const copyButton: Locator = patchEndpoint.locator(locators.copyButton);
+  const downloadButton: Locator = patchEndpoint.locator(locators.downloadButton);
+  const requestUrl: Locator = patchEndpoint.locator(locators.requestUrl);
 
   return {
     getEndpoint: patchEndpoint,

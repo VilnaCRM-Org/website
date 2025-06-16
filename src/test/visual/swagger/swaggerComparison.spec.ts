@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-import { screenSizes, timeoutDuration } from '../constants';
+import { screenSizes } from '../constants';
 
 const currentLanguage: string = process.env.NEXT_PUBLIC_MAIN_LANGUAGE as string;
 
@@ -39,13 +39,23 @@ test.describe('Visual Tests', () => {
       });
 
       await test.step('Ensure stable state for screenshot', async () => {
-        await page.waitForTimeout(timeoutDuration);
         await page.waitForLoadState('networkidle');
+        await page.waitForFunction(() => {
+          const opblocks: NodeListOf<Element> = document.querySelectorAll('.opblock');
+          return (
+            opblocks.length > 0 &&
+            Array.from(opblocks).every(
+              block =>
+                (block.querySelector('.opblock-body') && !block.classList.contains('is-open')) ||
+                block.querySelector('.responses-wrapper')
+            )
+          );
+        });
       });
       const scrollHeight: number = await page.evaluate(() => document.documentElement.scrollHeight);
       await page.setViewportSize({ width: screen.width, height: scrollHeight });
 
-      await page.waitForTimeout(timeoutDuration);
+      await page.waitForLoadState('domcontentloaded');
 
       await test.step('Take screenshot', async () => {
         await expect(page).toHaveScreenshot(`${currentLanguage}_${screen.name}.png`, {

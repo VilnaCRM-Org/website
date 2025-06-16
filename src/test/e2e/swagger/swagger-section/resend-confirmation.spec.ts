@@ -14,6 +14,7 @@ import {
   interceptWithErrorResponse,
   cancelOperation,
 } from '../utils/helpers';
+import { locators } from '../utils/locators';
 
 interface ResendConfirmationEndpointElements extends BasicEndpointElements {
   parametersSection: Locator;
@@ -37,14 +38,12 @@ async function setupResendConfirmationEndpoint(
   await elements.tryItOutButton.click();
 
   const executeBtn: Locator = await getAndCheckExecuteBtn(resendEndpoint);
-  const parametersSection: Locator = resendEndpoint.locator('.parameters-container');
-  const idInput: Locator = resendEndpoint.locator('input[placeholder="id"]');
-  const curl: Locator = resendEndpoint.locator('.curl-command');
-  const copyButton: Locator = resendEndpoint.locator('div.curl-command .copy-to-clipboard button');
-  const requestUrl: Locator = resendEndpoint.locator('.request-url .microlight');
-  const responseBody: Locator = resendEndpoint
-    .locator('.response-col_description .microlight')
-    .first();
+  const parametersSection: Locator = resendEndpoint.locator(locators.parametersSection);
+  const idInput: Locator = resendEndpoint.locator(locators.idInput);
+  const requestUrl: Locator = resendEndpoint.locator(locators.requestUrl);
+  const responseBody: Locator = resendEndpoint.locator(locators.responseBody).first();
+  const curl: Locator = resendEndpoint.locator(locators.curl);
+  const copyButton: Locator = resendEndpoint.locator(locators.copyButton);
 
   return {
     getEndpoint: resendEndpoint,

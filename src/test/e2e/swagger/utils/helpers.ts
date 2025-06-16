@@ -70,3 +70,7 @@ export async function cancelOperation(page: Page): Promise<void> {
   const cancelBtn: Locator = page.locator('button.btn.try-out__btn.cancel');
   await cancelBtn.click();
 }
+
+export async function getEndpointCopyButton(endpoint: Locator): Promise<Locator> {
+  return endpoint.locator('.curl-command .copy-to-clipboard button');
+}

@@ -16,6 +16,7 @@ import {
   cancelOperation,
   interceptWithErrorResponse,
 } from '../utils/helpers';
+import { locators } from '../utils/locators';
 
 interface BatchUserEndpointElements extends BasicEndpointElements {
   requestBodySection: Locator;
@@ -36,20 +37,16 @@ async function setupBatchEndpoint(page: Page): Promise<BatchUserEndpointElements
   await elements.tryItOutButton.click();
 
   const executeBtn: Locator = await getAndCheckExecuteBtn(createBatchEndpoint);
-  const requestBodySection: Locator = createBatchEndpoint.locator('.opblock-section-request-body');
+  const requestBodySection: Locator = createBatchEndpoint.locator(locators.requestBodySection);
   const contentTypeSelect: Locator = requestBodySection.locator(
     'select[aria-label="Request content type"]'
   );
-  const jsonEditor: Locator = requestBodySection.locator('.body-param__text');
-  const responseBody: Locator = createBatchEndpoint
-    .locator('.response-col_description .microlight')
-    .first();
-  const curl: Locator = createBatchEndpoint.locator('.curl-command .curl.microlight');
-  const copyButton: Locator = createBatchEndpoint.locator(
-    'div.curl-command .copy-to-clipboard button'
-  );
-  const requestUrl: Locator = createBatchEndpoint.locator('.request-url .microlight');
-  const downloadButton: Locator = createBatchEndpoint.locator('button.download-contents');
+  const jsonEditor: Locator = requestBodySection.locator(locators.jsonEditor);
+  const responseBody: Locator = createBatchEndpoint.locator(locators.responseBody).first();
+  const curl: Locator = createBatchEndpoint.locator(locators.curl);
+  const copyButton: Locator = createBatchEndpoint.locator(locators.copyButton);
+  const requestUrl: Locator = createBatchEndpoint.locator(locators.requestUrl);
+  const downloadButton: Locator = createBatchEndpoint.locator(locators.downloadButton);
 
   return {
     getEndpoint: createBatchEndpoint,

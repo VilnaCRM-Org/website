@@ -1,13 +1,14 @@
 import { expect, type Locator, Page, test } from '@playwright/test';
 
 import { getSystemEndpoints, GetSystemEndpoints } from '../utils';
-import { testOAuthParams, BASE_API, errorResponse, ExpectedError } from '../utils/constants';
+import { testOAuthParams, errorResponse, ExpectedError } from '../utils/constants';
 import {
   initSwaggerPage,
   clearEndpoint,
   getAndCheckExecuteBtn,
   cancelOperation,
 } from '../utils/helpers';
+import { locators } from '../utils/locators';
 
 interface AuthorizeEndpointElements {
   getEndpoint: Locator;
@@ -24,7 +25,7 @@ interface AuthorizeEndpointElements {
   responseBody: Locator;
 }
 
-const AUTHORIZE_API_URL: string = `${BASE_API}/oauth/authorize`;
+const AUTHORIZE_API_URL: string = '**/oauth/authorize';
 
 async function setupAuthorizeEndpoint(page: Page): Promise<AuthorizeEndpointElements> {
   const { elements } = await initSwaggerPage(page);
@@ -33,7 +34,6 @@ async function setupAuthorizeEndpoint(page: Page): Promise<AuthorizeEndpointElem
   await authorizeEndpoint.click();
   await elements.tryItOutButton.click();
   const executeBtn: Locator = await getAndCheckExecuteBtn(authorizeEndpoint);
-  const parametersSection: Locator = authorizeEndpoint.locator('.parameters-container');
   const responseTypeInput: Locator = authorizeEndpoint.locator(
     'input[placeholder="response_type"]'
   );
@@ -42,13 +42,11 @@ async function setupAuthorizeEndpoint(page: Page): Promise<AuthorizeEndpointElem
   const scopeInput: Locator = authorizeEndpoint.locator('input[placeholder="scope"]');
   const stateInput: Locator = authorizeEndpoint.locator('input[placeholder="state"]');
   const curl: Locator = authorizeEndpoint.locator('.curl-command');
-  const copyButton: Locator = authorizeEndpoint.locator(
-    'div.curl-command .copy-to-clipboard button'
-  );
-  const requestUrl: Locator = authorizeEndpoint.locator('.request-url .microlight');
-  const responseBody: Locator = authorizeEndpoint
-    .locator('.response-col_description .microlight')
-    .first();
+  const parametersSection: Locator = authorizeEndpoint.locator(locators.parametersSection);
+  const requestUrl: Locator = authorizeEndpoint.locator(locators.requestUrl);
+  const responseBody: Locator = authorizeEndpoint.locator(locators.responseBody).first();
+  const copyButton: Locator = authorizeEndpoint.locator(locators.copyButton);
+
   return {
     getEndpoint: authorizeEndpoint,
     executeBtn,

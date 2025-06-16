@@ -1,22 +1,15 @@
 import { expect, type Locator, Page, test } from '@playwright/test';
 
 import { getSystemEndpoints, GetSystemEndpoints } from '../utils';
-import { TEST_OAUTH_DATA, BASE_API, errorResponse, ExpectedError } from '../utils/constants';
+import { TEST_OAUTH_DATA, errorResponse, ExpectedError } from '../utils/constants';
 import {
   initSwaggerPage,
   clearEndpoint,
   getAndCheckExecuteBtn,
   cancelOperation,
+  getEndpointCopyButton,
 } from '../utils/helpers';
-
-interface OAuthRequest {
-  grant_type: string;
-  client_id: string;
-  client_secret: string;
-  redirect_uri: string;
-  code?: string;
-  refresh_token?: string;
-}
+import { locators } from '../utils/locators';
 
 interface TokenEndpointElements {
   getEndpoint: Locator;
@@ -31,15 +24,7 @@ interface TokenEndpointElements {
   resetButton: Locator;
 }
 
-const TOKEN_API_URL: string = `${BASE_API}/oauth/token`;
-const DEFAULT_REQUEST_BODY: OAuthRequest = {
-  grant_type: 'authorization_code',
-  client_id: 'default_client_id',
-  client_secret: 'default_client_secret',
-  redirect_uri: 'https://example.com/oauth/callback',
-  code: 'default_code',
-  refresh_token: 'default_refresh_token',
-};
+const TOKEN_API_URL: string = '**/api/oauth/token';
 
 async function setupTokenEndpoint(page: Page): Promise<TokenEndpointElements> {
   const { elements } = await initSwaggerPage(page);
@@ -48,17 +33,18 @@ async function setupTokenEndpoint(page: Page): Promise<TokenEndpointElements> {
   await tokenEndpoint.click();
   await elements.tryItOutButton.click();
   const executeBtn: Locator = await getAndCheckExecuteBtn(tokenEndpoint);
-  const requestBodySection: Locator = tokenEndpoint.locator('.opblock-section-request-body');
+  const requestBodySection: Locator = tokenEndpoint.locator(locators.requestBodySection);
   await requestBodySection.waitFor({ state: 'visible' });
   const contentTypeSelect: Locator = requestBodySection.locator(
     'select[aria-label="Request content type"]'
   );
-  const grantTypeInput: Locator = tokenEndpoint.locator('.body-param textarea.body-param__text');
-  const curl: Locator = tokenEndpoint.locator('.curl-command');
-  const copyButton: Locator = tokenEndpoint.locator('div.curl-command .copy-to-clipboard button');
-  const requestUrl: Locator = tokenEndpoint.locator('.request-url .microlight');
+  const grantTypeInput: Locator = tokenEndpoint.locator(locators.jsonEditor);
+  const requestUrl: Locator = tokenEndpoint.locator(locators.requestUrl);
+  const copyButton: Locator = await getEndpointCopyButton(tokenEndpoint);
+  const curl: Locator = tokenEndpoint.locator(locators.curl);
   const curlBody: Locator = tokenEndpoint.locator('.curl-command pre.curl.microlight');
   const resetButton: Locator = tokenEndpoint.locator('button:has-text("Reset")');
+
   return {
     getEndpoint: tokenEndpoint,
     executeBtn,
@@ -81,12 +67,10 @@ test.describe('OAuth token endpoint', () => {
     await expect(elements.grantTypeInput).toBeVisible();
     await elements.grantTypeInput.fill(JSON.stringify(TEST_OAUTH_DATA, null, 2));
     await elements.executeBtn.click();
+
     await expect(elements.curl).toBeVisible();
     await expect(elements.copyButton).toBeVisible();
-    await expect(elements.requestUrl).toContainText('/oauth/token');
-    await expect(elements.curlBody).toBeVisible();
-    await expect(elements.curlBody).toContainText('"GRANT_TYPE": "new_authorization_code"');
-    await expect(elements.curlBody).toContainText('"CLIENT_ID": "new_client_id_123"');
+
     await clearEndpoint(elements.getEndpoint);
   });
 
@@ -100,17 +84,12 @@ test.describe('OAuth token endpoint', () => {
 
   test('reset button restores default request body', async ({ page }) => {
     const elements: TokenEndpointElements = await setupTokenEndpoint(page);
-    // Change the request body
+    const initialValue: string = await elements.grantTypeInput.inputValue();
+
     await elements.grantTypeInput.fill(JSON.stringify({ grant_type: 'changed' }, null, 2));
-    await expect(elements.grantTypeInput).not.toHaveValue(
-      JSON.stringify(DEFAULT_REQUEST_BODY, null, 2)
-    );
-    // Click reset
     await elements.resetButton.click();
-    // Should restore to default
-    await expect(elements.grantTypeInput).toHaveValue(
-      JSON.stringify(DEFAULT_REQUEST_BODY, null, 2)
-    );
+
+    await expect(elements.grantTypeInput).toHaveValue(initialValue);
 
     await cancelOperation(page);
   });

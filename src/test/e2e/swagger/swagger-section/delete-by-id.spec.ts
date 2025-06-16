@@ -14,6 +14,7 @@ import {
   interceptWithErrorResponse,
   cancelOperation,
 } from '../utils/helpers';
+import { locators } from '../utils/locators';
 
 interface DeleteUserEndpointElements extends BasicEndpointElements {
   parametersSection: Locator;
@@ -34,14 +35,12 @@ async function setupDeleteUserEndpoint(page: Page): Promise<DeleteUserEndpointEl
   await elements.tryItOutButton.click();
 
   const executeBtn: Locator = await getAndCheckExecuteBtn(deleteEndpoint);
-  const parametersSection: Locator = deleteEndpoint.locator('.parameters-container');
-  const idInput: Locator = deleteEndpoint.locator('input[placeholder="id"]');
-  const responseBody: Locator = deleteEndpoint
-    .locator('.response-col_description .microlight')
-    .first();
-  const curl: Locator = deleteEndpoint.locator('.curl.microlight');
-  const copyButton: Locator = deleteEndpoint.locator('div.curl-command .copy-to-clipboard button');
-  const requestUrl: Locator = deleteEndpoint.locator('.request-url .microlight');
+  const parametersSection: Locator = deleteEndpoint.locator(locators.parametersSection);
+  const idInput: Locator = deleteEndpoint.locator(locators.idInput);
+  const responseBody: Locator = deleteEndpoint.locator(locators.responseBody).first();
+  const curl: Locator = deleteEndpoint.locator(locators.curl);
+  const copyButton: Locator = deleteEndpoint.locator(locators.copyButton);
+  const requestUrl: Locator = deleteEndpoint.locator(locators.requestUrl);
 
   return {
     getEndpoint: deleteEndpoint,
@@ -84,10 +83,10 @@ test.describe('delete by ID', () => {
     await elements.executeBtn.click();
 
     await expect(elements.idInput).toHaveClass(/invalid/);
-    const expectedErrorMsg: string = "For 'id': Required field is not provided.";
-    await expect(
-      elements.getEndpoint.locator('.validation-errors.errors-wrapper li')
-    ).toContainText(expectedErrorMsg);
+    const expectedErrorMsg: RegExp = /For 'id':\s*Required field is not provided\./;
+    await expect(elements.getEndpoint.locator('.validation-errors.errors-wrapper li')).toHaveText(
+      expectedErrorMsg
+    );
 
     await cancelOperation(page);
   });

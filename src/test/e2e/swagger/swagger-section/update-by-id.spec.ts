@@ -1,3 +1,5 @@
+import fs from 'fs/promises';
+
 import { expect, type Locator, Page, test } from '@playwright/test';
 
 import {
@@ -7,6 +9,7 @@ import {
   errorResponse,
   ExpectedError,
   UpdatedUser,
+  ApiUser,
 } from '../utils/constants';
 import {
   initSwaggerPage,
@@ -15,6 +18,7 @@ import {
   interceptWithErrorResponse,
   cancelOperation,
 } from '../utils/helpers';
+import { locators } from '../utils/locators';
 
 interface UpdateUserEndpointElements extends BasicEndpointElements {
   parametersSection: Locator;
@@ -38,17 +42,15 @@ async function setupUpdateUserEndpoint(page: Page): Promise<UpdateUserEndpointEl
   await elements.tryItOutButton.click();
 
   const executeBtn: Locator = await getAndCheckExecuteBtn(updateEndpoint);
-  const parametersSection: Locator = updateEndpoint.locator('.parameters-container');
-  const idInput: Locator = updateEndpoint.locator('input[placeholder="id"]');
-  const requestBodySection: Locator = updateEndpoint.locator('.opblock-section-request-body');
-  const jsonEditor: Locator = requestBodySection.locator('.body-param__text');
-  const responseBody: Locator = updateEndpoint
-    .locator('.response-col_description .microlight')
-    .first();
-  const curl: Locator = updateEndpoint.locator('.curl.microlight');
-  const copyButton: Locator = updateEndpoint.locator('div.curl-command .copy-to-clipboard button');
-  const downloadButton: Locator = updateEndpoint.locator('button.download-contents');
-  const requestUrl: Locator = updateEndpoint.locator('.request-url .microlight');
+  const parametersSection: Locator = updateEndpoint.locator(locators.parametersSection);
+  const idInput: Locator = updateEndpoint.locator(locators.idInput);
+  const requestBodySection: Locator = updateEndpoint.locator(locators.requestBodySection);
+  const jsonEditor: Locator = requestBodySection.locator(locators.jsonEditor);
+  const responseBody: Locator = updateEndpoint.locator(locators.responseBody).first();
+  const curl: Locator = updateEndpoint.locator(locators.curl);
+  const copyButton: Locator = updateEndpoint.locator(locators.copyButton);
+  const downloadButton: Locator = updateEndpoint.locator(locators.downloadButton);
+  const requestUrl: Locator = updateEndpoint.locator(locators.requestUrl);
 
   return {
     getEndpoint: updateEndpoint,
@@ -91,7 +93,7 @@ test.describe('updateById', () => {
     await expect(elements.downloadButton).toBeVisible();
 
     const responseText: string | null = await elements.responseBody.textContent();
-    const response: string = JSON.parse(responseText || '{}');
+    const response: ApiUser = JSON.parse(responseText || '{}');
     expect(response).toEqual(
       expect.objectContaining({
         email: expect.any(String),
@@ -176,6 +178,27 @@ test.describe('updateById', () => {
 
     await expect(elements.downloadButton).toBeVisible();
     await expect(elements.downloadButton).toBeEnabled();
+
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      elements.downloadButton.click(),
+    ]);
+
+    const filePath: string = await download.path();
+    expect(filePath).not.toBeNull();
+
+    const buffer: Buffer<ArrayBufferLike> = await fs.readFile(filePath!);
+    const content: string = buffer.toString('utf-8');
+
+    const jsonContent: ApiUser = JSON.parse(content);
+    expect(jsonContent).toEqual(
+      expect.objectContaining({
+        confirmed: expect.any(Boolean),
+        email: expect.any(String),
+        id: expect.any(String),
+        initials: expect.any(String),
+      })
+    );
 
     await clearEndpoint(elements.getEndpoint);
   });

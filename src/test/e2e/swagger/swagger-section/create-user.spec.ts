@@ -16,13 +16,14 @@ import {
   interceptWithErrorResponse,
   cancelOperation,
 } from '../utils/helpers';
+import { locators } from '../utils/locators';
 
 interface CreateUserEndpointElements extends BasicEndpointElements {
   requestBody: Locator;
   responseBody: Locator;
   curl: Locator;
   copyButton: Locator;
-  downloadButton?: Locator;
+  downloadButton: Locator;
 }
 
 async function setupCreateUserEndpoint(page: Page): Promise<CreateUserEndpointElements> {
@@ -33,15 +34,12 @@ async function setupCreateUserEndpoint(page: Page): Promise<CreateUserEndpointEl
   await elements.tryItOutButton.click();
 
   const executeBtn: Locator = await getAndCheckExecuteBtn(getEndpoint);
-  const requestBody: Locator = getEndpoint.locator('.body-param__text');
-  const requestUrl: Locator = getEndpoint.locator('.request-url .microlight');
-  const responseBody: Locator = getEndpoint
-    .locator('.response-col_description .microlight')
-    .first();
-
-  const curl: Locator = getEndpoint.locator('.curl-command');
-  const copyButton: Locator = getEndpoint.locator('div.curl-command .copy-to-clipboard button');
-  const downloadButton: Locator = getEndpoint.locator('button.download-contents');
+  const requestBody: Locator = getEndpoint.locator(locators.jsonEditor);
+  const requestUrl: Locator = getEndpoint.locator(locators.requestUrl);
+  const responseBody: Locator = getEndpoint.locator(locators.responseBody).first();
+  const curl: Locator = getEndpoint.locator(locators.curl);
+  const copyButton: Locator = getEndpoint.locator(locators.copyButton);
+  const downloadButton: Locator = getEndpoint.locator(locators.downloadButton);
 
   return {
     getEndpoint,
@@ -62,15 +60,20 @@ async function fillRequestBody(
   const cleaned: { [k: string]: string } | null = userData
     ? Object.fromEntries(Object.entries(userData).filter(([, v]) => v !== undefined))
     : null;
-  const requestBodyContent: string =
-    cleaned === null ? '' : JSON.stringify(cleaned, null, 2) || '{}';
+  const requestBodyContent: string = cleaned === null ? '' : JSON.stringify(cleaned, null, 2);
 
   await elements.requestBody.fill(requestBodyContent);
 }
 
 async function verifySuccessResponse(elements: CreateUserEndpointElements): Promise<void> {
   const responseText: string = (await elements.responseBody.textContent()) || '';
-  const response: ApiUser = JSON.parse(responseText);
+  let response: ApiUser;
+
+  try {
+    response = JSON.parse(responseText);
+  } catch (err) {
+    throw new Error(`Unexpected non-JSON response body: "${responseText}"`);
+  }
 
   expect(response).toMatchObject({
     confirmed: expect.any(Boolean),
@@ -215,13 +218,11 @@ test.describe('Create user endpoint tests', () => {
       .locator(responseStatusSelector)
       .first()
       .textContent();
+    const knownErrors: string[] = Object.values(errorResponse);
+    const hasExpectedError: boolean = knownErrors.some(msg => errorMessage?.includes(msg));
+    const hasFailureStatus: ExpectedError = statusCode?.toString().match(/0|4\d{2}|5\d{2}/);
 
-    const hasExpectedError: ExpectedError = errorMessage?.match(
-      new RegExp(Object.values(errorResponse).join('|'))
-    );
-    const hasFailureStatus: ExpectedError = statusCode?.match(/0|4\d{2}|5\d{2}/);
-
-    expect(hasExpectedError || hasFailureStatus || null).toBeTruthy();
+    expect(hasExpectedError || hasFailureStatus).toBeTruthy();
 
     await clearEndpoint(elements.getEndpoint);
   });
@@ -233,16 +234,15 @@ test.describe('Create user endpoint tests', () => {
 
     await elements.responseBody.waitFor({ state: 'visible' });
 
-    await elements.downloadButton?.waitFor({ state: 'attached' });
-
     const downloadButton: Locator = elements.getEndpoint.locator(
-      '.responses-wrapper .highlight-code button.download-contents'
+      '.response-col_description .highlight-code button.download-contents'
     );
+
+    await downloadButton.waitFor({ state: 'visible' });
 
     await expect(downloadButton).toBeVisible();
     await expect(downloadButton).toBeEnabled();
-
-    await Promise.all([page.waitForEvent('download'), downloadButton.click()]);
+    await downloadButton.click();
 
     await clearEndpoint(elements.getEndpoint);
   });

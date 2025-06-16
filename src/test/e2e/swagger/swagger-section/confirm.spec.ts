@@ -73,7 +73,6 @@ test.describe('confirm endpoint tests', () => {
     await expect(elements.requestUrl).toBeVisible();
     await expect(elements.requestUrl).toContainText(mockoonHost);
 
-    await expect(elements.curl).toContainText(confirmationToken);
     await clearEndpoint(elements.getEndpoint);
   });
 

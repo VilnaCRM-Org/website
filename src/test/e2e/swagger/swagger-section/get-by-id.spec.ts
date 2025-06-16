@@ -1,20 +1,21 @@
 import { expect, type Locator, Page, test } from '@playwright/test';
 
 import {
+  testUserId,
   BASE_API,
   BasicEndpointElements,
-  testUserId,
-  ApiUser,
   errorResponse,
   ExpectedError,
+  ApiUser,
 } from '../utils/constants';
 import {
+  initSwaggerPage,
   clearEndpoint,
+  getAndCheckExecuteBtn,
   interceptWithErrorResponse,
   cancelOperation,
-  initSwaggerPage,
-  getAndCheckExecuteBtn,
 } from '../utils/helpers';
+import { locators } from '../utils/locators';
 
 const GET_USER_API_URL: (id: string) => string = (id: string): string => `${BASE_API}/${id}`;
 
@@ -37,16 +38,14 @@ async function setupGetUserByIdEndpoint(page: Page): Promise<GetUserByIdElements
   await elements.tryItOutButton.click();
 
   const executeBtn: Locator = await getAndCheckExecuteBtn(getUserEndpoint);
-  const parametersSection: Locator = getUserEndpoint.locator('.parameters-container');
-  const validationError: Locator = getUserEndpoint.locator('.validation-errors.errors-wrapper');
-  const idInput: Locator = getUserEndpoint.locator('input[placeholder="id"]');
-  const requestUrl: Locator = getUserEndpoint.locator('.request-url .microlight');
-  const responseBody: Locator = getUserEndpoint
-    .locator('.response-col_description .microlight')
-    .first();
-  const curl: Locator = getUserEndpoint.locator('.curl-command');
-  const copyButton: Locator = getUserEndpoint.locator('div.curl-command .copy-to-clipboard button');
-  const downloadButton: Locator = getUserEndpoint.locator('button.download-contents');
+  const parametersSection: Locator = getUserEndpoint.locator(locators.parametersSection);
+  const validationError: Locator = getUserEndpoint.locator(locators.validationErrors);
+  const idInput: Locator = getUserEndpoint.locator(locators.idInput);
+  const requestUrl: Locator = getUserEndpoint.locator(locators.requestUrl);
+  const responseBody: Locator = getUserEndpoint.locator(locators.responseBody).first();
+  const curl: Locator = getUserEndpoint.locator(locators.curl);
+  const copyButton: Locator = getUserEndpoint.locator(locators.copyButton);
+  const downloadButton: Locator = getUserEndpoint.locator(locators.downloadButton);
 
   return {
     getEndpoint: getUserEndpoint,

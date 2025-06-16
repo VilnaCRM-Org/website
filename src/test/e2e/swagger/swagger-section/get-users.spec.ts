@@ -7,6 +7,7 @@ import {
   getAndCheckExecuteBtn,
   interceptWithErrorResponse,
 } from '../utils/helpers';
+import { locators } from '../utils/locators';
 
 interface EndpointElements extends BasicEndpointElements {
   pageNumberInput: Locator;
@@ -27,10 +28,8 @@ async function setupEndpoint(page: Page): Promise<EndpointElements> {
   const itemsPerPageInput: Locator = getEndpoint.locator(
     'tr[data-param-name="itemsPerPage"] input[placeholder="itemsPerPage"]'
   );
-  const requestUrl: Locator = getEndpoint.locator('.request-url .microlight');
-  const responseBody: Locator = getEndpoint
-    .locator('.response-col_description .microlight')
-    .first();
+  const requestUrl: Locator = getEndpoint.locator(locators.requestUrl);
+  const responseBody: Locator = getEndpoint.locator(locators.responseBody).first();
 
   return {
     getEndpoint,
