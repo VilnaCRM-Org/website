@@ -1,6 +1,6 @@
 import { expect, Locator, Page } from '@playwright/test';
 
-import { executeBtnSelector } from './constants';
+import { errorMessages, executeBtnSelector } from './constants';
 
 import {
   getLocators,
@@ -73,4 +73,39 @@ export async function cancelOperation(page: Page): Promise<void> {
 
 export async function getEndpointCopyButton(endpoint: Locator): Promise<Locator> {
   return endpoint.locator('.curl-command .copy-to-clipboard button');
+}
+
+export async function expectErrorOrFailureStatus(getEndpoint: Locator): Promise<void> {
+  const errorElement: Locator = getEndpoint
+    .locator('.response-col_description .renderedMarkdown p')
+    .first();
+  const statusElement: Locator = getEndpoint.locator('.response .response-col_status').first();
+
+  const errorPatterns: string = Object.values(errorMessages).join('|');
+
+  const [errorText, statusText] = await Promise.all([
+    errorElement.textContent(),
+    statusElement.textContent(),
+  ]);
+  const hasError: boolean = new RegExp(errorPatterns).test(errorText || '');
+  const hasFailureStatus: boolean = /^(0|4\d{2}|5\d{2})/.test(statusText || '');
+
+  expect(hasError || hasFailureStatus).toBe(true);
+}
+
+export async function mockAuthorizeSuccess(
+  page: Page,
+  authorizeUrl: string,
+  redirectUri: string,
+  state?: string
+): Promise<void> {
+  await page.route(authorizeUrl, route => {
+    route.fulfill({
+      status: 302,
+      headers: {
+        location: `${redirectUri}?code=abc123&state=${state}`,
+      },
+      body: '',
+    });
+  });
 }

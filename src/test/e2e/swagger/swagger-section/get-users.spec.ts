@@ -51,8 +51,16 @@ async function executeAndVerifyParams(
 }
 
 async function verifyResponseBody(elements: EndpointElements): Promise<void> {
-  const responseText: string = (await elements.responseBody?.textContent()) || '';
-  const response: ApiUser[] = JSON.parse(responseText);
+  await elements.responseBody.waitFor({ state: 'visible' });
+
+  const responseText: string = (await elements.responseBody.textContent()) ?? '';
+
+  let response: ApiUser[];
+  try {
+    response = JSON.parse(responseText);
+  } catch {
+    throw new Error(`Invalid JSON response: ${responseText}`);
+  }
 
   expect(response).toEqual(
     expect.arrayContaining([

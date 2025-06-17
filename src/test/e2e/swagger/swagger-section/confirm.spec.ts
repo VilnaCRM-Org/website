@@ -3,8 +3,8 @@ import { expect, type Locator, Page, test } from '@playwright/test';
 import {
   confirmationToken,
   BASE_API,
-  ExpectedError,
   BasicEndpointElements,
+  mockoonHost,
 } from '../utils/constants';
 import {
   clearEndpoint,
@@ -12,9 +12,9 @@ import {
   cancelOperation,
   initSwaggerPage,
   getAndCheckExecuteBtn,
+  expectErrorOrFailureStatus,
 } from '../utils/helpers';
 
-const mockoonHost: string = process.env.MOCK_API_HOST ?? 'http://localhost:8080/';
 const CONFIRM_API_URL: string = `${BASE_API}/confirm`;
 
 interface ConfirmEndpointElements extends BasicEndpointElements {
@@ -55,8 +55,7 @@ async function setupConfirmEndpoint(page: Page): Promise<ConfirmEndpointElements
   };
 }
 async function fillConfirmBody(elements: ConfirmEndpointElements, token: string): Promise<void> {
-  const reqBody: string = JSON.stringify({ token }, null, 2);
-  await elements.tokenInput.fill(reqBody);
+  await elements.tokenInput.fill(token);
 }
 test.describe('confirm endpoint tests', () => {
   test('successful confirmation with valid token', async ({ page }) => {
@@ -134,24 +133,7 @@ test.describe('confirm endpoint tests', () => {
     await fillConfirmBody(elements, confirmationToken);
     await elements.executeBtn.click();
 
-    const responseErrorSelector: string = '.response-col_description .renderedMarkdown p';
-    const responseStatusSelector: string = '.response .response-col_status';
-
-    const errorMessage: string | null = await elements.getEndpoint
-      .locator(responseErrorSelector)
-      .first()
-      .textContent();
-    const statusCode: string | null = await elements.getEndpoint
-      .locator(responseStatusSelector)
-      .first()
-      .textContent();
-
-    const hasExpectedError: ExpectedError = errorMessage?.match(
-      /Failed to fetch|Network Error|CORS|Connection failed/i
-    );
-    const hasFailureStatus: ExpectedError = statusCode?.match(/0|4\d{2}|5\d{2}/);
-
-    expect(hasExpectedError || hasFailureStatus || null).toBeTruthy();
+    await expectErrorOrFailureStatus(elements.getEndpoint);
 
     await clearEndpoint(elements.getEndpoint);
   });

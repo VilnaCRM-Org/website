@@ -3,7 +3,9 @@ import fs from 'node:fs';
 import YAML from 'js-yaml';
 
 const path = './public/swagger-schema.json';
-const mockUrl = `http://${process.env.WEBSITE_DOMAIN}:${process.env.MOCKOON_PORT}`;
+const mockUrl = process.env.NODE_ENV === 'development'
+  ? `http://${process.env.WEBSITE_DOMAIN}:${process.env.MOCKOON_PORT}`
+  : `http://${process.env.MOCKOON_API_PATH}:${process.env.MOCKOON_PORT}`;
 
 const content = fs.readFileSync(path, 'utf8');
 const doc = YAML.load(content);

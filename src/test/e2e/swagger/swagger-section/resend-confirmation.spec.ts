@@ -1,18 +1,13 @@
 import { expect, type Locator, Page, test } from '@playwright/test';
 
-import {
-  testUserId,
-  BASE_API,
-  BasicEndpointElements,
-  errorResponse,
-  ExpectedError,
-} from '../utils/constants';
+import { testUserId, BASE_API, BasicEndpointElements } from '../utils/constants';
 import {
   initSwaggerPage,
   clearEndpoint,
   getAndCheckExecuteBtn,
   interceptWithErrorResponse,
   cancelOperation,
+  expectErrorOrFailureStatus,
 } from '../utils/helpers';
 import { locators } from '../utils/locators';
 
@@ -78,10 +73,11 @@ test.describe('resend confirmation email', () => {
     await elements.idInput.fill('');
     await elements.executeBtn.click();
     await expect(elements.idInput).toHaveClass(/invalid/);
-    const expectedErrorMsg: string = "For 'id': Required field is not provided.";
-    await expect(
-      elements.getEndpoint.locator('.validation-errors.errors-wrapper li')
-    ).toContainText(expectedErrorMsg);
+    const expectedErrorMsg: RegExp = /For 'id':\s*Required field is not provided\./;
+    await expect(elements.getEndpoint.locator('.validation-errors.errors-wrapper li')).toHaveText(
+      expectedErrorMsg
+    );
+
     await cancelOperation(page);
   });
 
@@ -139,20 +135,9 @@ test.describe('resend confirmation email', () => {
     await page.route(RESEND_CONFIRM_API_URL(testUserId), route => route.abort('failed'));
     await elements.idInput.fill(testUserId);
     await elements.executeBtn.click();
-    const responseErrorSelector: string =
-      '.responses-table.live-responses-table .response .response-col_description';
-    const responseStatusSelector: string =
-      '.responses-table.live-responses-table .response .response-col_status';
-    const errorMessage: string | null = await elements.getEndpoint
-      .locator(responseErrorSelector)
-      .textContent();
-    const hasExpectedError: ExpectedError = errorMessage?.match(
-      new RegExp(Object.values(errorResponse).join('|'), 'i')
-    );
-    expect(hasExpectedError).toBeTruthy();
-    await expect(elements.getEndpoint.locator(responseStatusSelector)).toContainText(
-      'Undocumented'
-    );
+
+    await expectErrorOrFailureStatus(elements.getEndpoint);
+
     await clearEndpoint(elements.getEndpoint);
   });
 });

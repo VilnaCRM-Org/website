@@ -1,4 +1,4 @@
-import fs from 'fs/promises';
+import fs from 'node:fs/promises';
 
 import { expect, type Locator, Page, test } from '@playwright/test';
 
@@ -6,8 +6,6 @@ import {
   testUserId,
   BASE_API,
   BasicEndpointElements,
-  errorResponse,
-  ExpectedError,
   UpdatedUser,
   ApiUser,
 } from '../utils/constants';
@@ -17,6 +15,7 @@ import {
   getAndCheckExecuteBtn,
   interceptWithErrorResponse,
   cancelOperation,
+  expectErrorOrFailureStatus,
 } from '../utils/helpers';
 import { locators } from '../utils/locators';
 
@@ -185,11 +184,10 @@ test.describe('updateById', () => {
     ]);
 
     const filePath: string = await download.path();
-    expect(filePath).not.toBeNull();
+    expect(filePath).toBeTruthy();
 
-    const buffer: Buffer<ArrayBufferLike> = await fs.readFile(filePath!);
+    const buffer: Buffer<ArrayBufferLike> = await fs.readFile(filePath as string);
     const content: string = buffer.toString('utf-8');
-
     const jsonContent: ApiUser = JSON.parse(content);
     expect(jsonContent).toEqual(
       expect.objectContaining({
@@ -257,22 +255,7 @@ test.describe('updateById', () => {
     );
     await elements.executeBtn.click();
 
-    const responseErrorSelector: string =
-      '.responses-table.live-responses-table .response .response-col_description';
-    const responseStatusSelector: string =
-      '.responses-table.live-responses-table .response .response-col_status';
-
-    const errorMessage: string | null = await elements.getEndpoint
-      .locator(responseErrorSelector)
-      .textContent();
-    const hasExpectedError: ExpectedError = errorMessage?.match(
-      new RegExp(Object.values(errorResponse).join('|'), 'i')
-    );
-    expect(hasExpectedError).toBeTruthy();
-
-    await expect(elements.getEndpoint.locator(responseStatusSelector)).toContainText(
-      'Undocumented'
-    );
+    await expectErrorOrFailureStatus(elements.getEndpoint);
 
     await clearEndpoint(elements.getEndpoint);
   });

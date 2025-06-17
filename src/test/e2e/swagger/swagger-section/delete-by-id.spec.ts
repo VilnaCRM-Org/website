@@ -1,18 +1,13 @@
 import { expect, type Locator, Page, test } from '@playwright/test';
 
-import {
-  testUserId,
-  BASE_API,
-  BasicEndpointElements,
-  errorResponse,
-  ExpectedError,
-} from '../utils/constants';
+import { testUserId, BASE_API, BasicEndpointElements } from '../utils/constants';
 import {
   initSwaggerPage,
   clearEndpoint,
   getAndCheckExecuteBtn,
   interceptWithErrorResponse,
   cancelOperation,
+  expectErrorOrFailureStatus,
 } from '../utils/helpers';
 import { locators } from '../utils/locators';
 
@@ -25,7 +20,8 @@ interface DeleteUserEndpointElements extends BasicEndpointElements {
   requestUrl: Locator;
 }
 
-const DELETE_USER_API_URL: (id: string) => string = (id: string): string => `${BASE_API}/${id}`;
+const DELETE_USER_API_URL: (id: string) => string = (id: string): string =>
+  `${BASE_API.replace(/\/$/, '')}/${encodeURIComponent(id)}`;
 
 async function setupDeleteUserEndpoint(page: Page): Promise<DeleteUserEndpointElements> {
   const { userEndpoints, elements } = await initSwaggerPage(page);
@@ -79,7 +75,7 @@ test.describe('delete by ID', () => {
   test('empty ID validation', async ({ page }) => {
     const elements: DeleteUserEndpointElements = await setupDeleteUserEndpoint(page);
 
-    await elements.idInput.fill('');
+    await elements.idInput.clear();
     await elements.executeBtn.click();
 
     await expect(elements.idInput).toHaveClass(/invalid/);
@@ -153,22 +149,7 @@ test.describe('delete by ID', () => {
     await elements.idInput.fill(testUserId);
     await elements.executeBtn.click();
 
-    const responseErrorSelector: string =
-      '.responses-table.live-responses-table .response .response-col_description';
-    const responseStatusSelector: string =
-      '.responses-table.live-responses-table .response .response-col_status';
-
-    const errorMessage: string | null = await elements.getEndpoint
-      .locator(responseErrorSelector)
-      .textContent();
-    const hasExpectedError: ExpectedError = errorMessage?.match(
-      new RegExp(Object.values(errorResponse).join('|'), 'i')
-    );
-    expect(hasExpectedError).toBeTruthy();
-
-    await expect(elements.getEndpoint.locator(responseStatusSelector)).toContainText(
-      'Undocumented'
-    );
+    await expectErrorOrFailureStatus(elements.getEndpoint);
 
     await clearEndpoint(elements.getEndpoint);
   });

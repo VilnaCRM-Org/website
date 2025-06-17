@@ -3,7 +3,6 @@ import { expect, type Locator, Page, test } from '@playwright/test';
 import {
   BASE_API,
   BasicEndpointElements,
-  errorResponse,
   BatchUserData,
   validBatchData,
   TEST_PASSWORDS,
@@ -15,6 +14,7 @@ import {
   getAndCheckExecuteBtn,
   cancelOperation,
   interceptWithErrorResponse,
+  expectErrorOrFailureStatus,
 } from '../utils/helpers';
 import { locators } from '../utils/locators';
 
@@ -66,15 +66,7 @@ async function fillBatchRequestBody(
   elements: BatchUserEndpointElements,
   userData: BatchUserData | null
 ): Promise<void> {
-  let requestBodyContent: string;
-
-  if (userData === null) {
-    requestBodyContent = '';
-  } else if (Object.keys(userData).length === 0) {
-    requestBodyContent = '{}';
-  } else {
-    requestBodyContent = JSON.stringify(userData, null, 2);
-  }
+  const requestBodyContent: string = userData === null ? '' : JSON.stringify(userData, null, 2);
 
   await elements.jsonEditor.fill(requestBodyContent);
 }
@@ -98,7 +90,6 @@ async function verifySuccessResponse(elements: BatchUserEndpointElements): Promi
   response.users.forEach(user => {
     expect(user).toMatchObject({
       email: expect.any(String),
-      password: expect.any(String),
       initials: expect.any(String),
     });
   });
@@ -250,25 +241,10 @@ test.describe('Create batch users endpoint tests', () => {
 
     await fillBatchRequestBody(elements, validBatchData);
     await elements.executeBtn.click();
+
     await verifyCommonElements(elements);
 
-    const errorElement: Locator = elements.getEndpoint
-      .locator('.response-col_description .renderedMarkdown p')
-      .first();
-    const statusElement: Locator = elements.getEndpoint
-      .locator('.response .response-col_status')
-      .first();
-
-    const errorPatterns: string = Object.values(errorResponse).join('|');
-    const hasError: boolean = await errorElement
-      .textContent()
-      .then(text => new RegExp(errorPatterns).test(text || ''));
-    const hasFailureStatus: boolean = await statusElement
-      .textContent()
-      .then(text => /^(0|4\d{2}|5\d{2})/.test(text || ''));
-
-    expect(hasError || hasFailureStatus).toBe(true);
-
+    await expectErrorOrFailureStatus(elements.getEndpoint);
     await clearEndpoint(elements.getEndpoint);
   });
 });

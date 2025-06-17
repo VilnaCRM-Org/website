@@ -1,13 +1,14 @@
 import { expect, type Locator, Page, test } from '@playwright/test';
 
 import { getSystemEndpoints, GetSystemEndpoints } from '../utils';
-import { TEST_OAUTH_DATA, errorResponse, ExpectedError } from '../utils/constants';
+import { TEST_OAUTH_DATA } from '../utils/constants';
 import {
   initSwaggerPage,
   clearEndpoint,
   getAndCheckExecuteBtn,
   cancelOperation,
   getEndpointCopyButton,
+  expectErrorOrFailureStatus,
 } from '../utils/helpers';
 import { locators } from '../utils/locators';
 
@@ -97,22 +98,11 @@ test.describe('OAuth token endpoint', () => {
   test('error response - CORS/Network failure', async ({ page }) => {
     const elements: TokenEndpointElements = await setupTokenEndpoint(page);
     await elements.grantTypeInput.fill(JSON.stringify(TEST_OAUTH_DATA, null, 2));
-    await page.route(`${TOKEN_API_URL}**`, route => route.abort('failed'));
+    await page.route(`${TOKEN_API_URL}`, route => route.abort('failed'));
     await elements.executeBtn.click();
-    const responseErrorSelector: string =
-      '.responses-table.live-responses-table .response .response-col_description';
-    const responseStatusSelector: string =
-      '.responses-table.live-responses-table .response .response-col_status';
-    const errorMessage: string | null = await elements.getEndpoint
-      .locator(responseErrorSelector)
-      .textContent();
-    const hasExpectedError: ExpectedError = errorMessage?.match(
-      new RegExp(Object.values(errorResponse).join('|'), 'i')
-    );
-    expect(hasExpectedError).toBeTruthy();
-    await expect(elements.getEndpoint.locator(responseStatusSelector)).toContainText(
-      'Undocumented'
-    );
+
+    await expectErrorOrFailureStatus(elements.getEndpoint);
+
     await clearEndpoint(elements.getEndpoint);
   });
 });

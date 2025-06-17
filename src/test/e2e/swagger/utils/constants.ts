@@ -4,8 +4,6 @@ export const testUserId: string = 'test-user-id';
 
 export const confirmationToken: string = 'test-confirmation-token';
 
-export const userInitials: string = 'PA';
-
 type OAuthData = { GRANT_TYPE: string; CLIENT_ID: string; CODE: string };
 export const TEST_OAUTH_DATA: OAuthData = {
   GRANT_TYPE: 'new_authorization_code',
@@ -100,10 +98,12 @@ export const TEST_USERS: Record<string, User> = {
   },
 } as const;
 
-export const errorResponse: { NETWORK: string; LOAD: string; FETCH: string } = {
+export const errorMessages: { NETWORK: string; LOAD: string; FETCH: string } = {
   NETWORK: 'TypeError: NetworkError when attempting to fetch resource.',
   LOAD: 'TypeError: Load failed',
   FETCH: 'Failed to fetch',
 };
 export type ExpectedError = RegExpMatchArray | null | undefined;
 export const BASE_API: string = '**/api/users';
+
+export const mockoonHost: string = process.env.MOCK_API_HOST ?? 'http://mockoon:8080/';

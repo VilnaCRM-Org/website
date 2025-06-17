@@ -1,20 +1,13 @@
 import { expect, type Locator, Page, test } from '@playwright/test';
 
-import {
-  ApiUser,
-  BASE_API,
-  BasicEndpointElements,
-  errorResponse,
-  ExpectedError,
-  TEST_USERS,
-  User,
-} from '../utils/constants';
+import { ApiUser, BASE_API, BasicEndpointElements, TEST_USERS, User } from '../utils/constants';
 import {
   initSwaggerPage,
   clearEndpoint,
   getAndCheckExecuteBtn,
   interceptWithErrorResponse,
   cancelOperation,
+  expectErrorOrFailureStatus,
 } from '../utils/helpers';
 import { locators } from '../utils/locators';
 
@@ -57,7 +50,7 @@ async function fillRequestBody(
   elements: CreateUserEndpointElements,
   userData: Partial<User> | null
 ): Promise<void> {
-  const cleaned: { [k: string]: string } | null = userData
+  const cleaned: Record<string, unknown> | null = userData
     ? Object.fromEntries(Object.entries(userData).filter(([, v]) => v !== undefined))
     : null;
   const requestBodyContent: string = cleaned === null ? '' : JSON.stringify(cleaned, null, 2);
@@ -116,6 +109,7 @@ test.describe('Create user endpoint tests', () => {
 
     await fillRequestBody(elements, null);
     await elements.executeBtn.click();
+    await elements.responseBody.waitFor({ state: 'visible' });
 
     await expect(elements.requestBody).toHaveClass(/invalid/);
 
@@ -126,6 +120,7 @@ test.describe('Create user endpoint tests', () => {
 
     await fillRequestBody(elements, {});
     await elements.executeBtn.click();
+    await elements.responseBody.waitFor({ state: 'visible' });
 
     await expect(elements.curl).toBeVisible();
     await expect(elements.copyButton).toBeVisible();
@@ -142,6 +137,7 @@ test.describe('Create user endpoint tests', () => {
       initials: '',
     });
     await elements.executeBtn.click();
+    await elements.responseBody.waitFor({ state: 'visible' });
 
     await expect(elements.curl).toBeVisible();
     await expect(elements.copyButton).toBeVisible();
@@ -156,6 +152,7 @@ test.describe('Create user endpoint tests', () => {
       email: 'test@example.com',
     });
     await elements.executeBtn.click();
+    await elements.responseBody.waitFor({ state: 'visible' });
 
     await expect(elements.curl).toBeVisible();
     await expect(elements.copyButton).toBeVisible();
@@ -207,22 +204,7 @@ test.describe('Create user endpoint tests', () => {
     await fillRequestBody(elements, TEST_USERS.VALID);
     await elements.executeBtn.click();
 
-    const responseErrorSelector: string = '.response-col_description .renderedMarkdown p';
-    const responseStatusSelector: string = '.response .response-col_status';
-
-    const errorMessage: string | null = await elements.getEndpoint
-      .locator(responseErrorSelector)
-      .first()
-      .textContent();
-    const statusCode: string | null = await elements.getEndpoint
-      .locator(responseStatusSelector)
-      .first()
-      .textContent();
-    const knownErrors: string[] = Object.values(errorResponse);
-    const hasExpectedError: boolean = knownErrors.some(msg => errorMessage?.includes(msg));
-    const hasFailureStatus: ExpectedError = statusCode?.toString().match(/0|4\d{2}|5\d{2}/);
-
-    expect(hasExpectedError || hasFailureStatus).toBeTruthy();
+    await expectErrorOrFailureStatus(elements.getEndpoint);
 
     await clearEndpoint(elements.getEndpoint);
   });

@@ -1,19 +1,13 @@
 import { expect, type Locator, Page, test } from '@playwright/test';
 
-import {
-  testUserId,
-  BASE_API,
-  BasicEndpointElements,
-  errorResponse,
-  ExpectedError,
-  UpdatedUser,
-} from '../utils/constants';
+import { testUserId, BASE_API, BasicEndpointElements, UpdatedUser } from '../utils/constants';
 import {
   initSwaggerPage,
   clearEndpoint,
   getAndCheckExecuteBtn,
   interceptWithErrorResponse,
   cancelOperation,
+  expectErrorOrFailureStatus,
 } from '../utils/helpers';
 import { locators } from '../utils/locators';
 
@@ -200,20 +194,9 @@ test.describe('patch by ID', () => {
     await elements.idInput.fill(testUserId);
     await elements.jsonEditor.fill(JSON.stringify({ initials: 'NF' }, null, 2));
     await elements.executeBtn.click();
-    const responseErrorSelector: string =
-      '.responses-table.live-responses-table .response .response-col_description';
-    const responseStatusSelector: string =
-      '.responses-table.live-responses-table .response .response-col_status';
-    const errorMessage: string | null = await elements.getEndpoint
-      .locator(responseErrorSelector)
-      .textContent();
-    const hasExpectedError: ExpectedError = errorMessage?.match(
-      new RegExp(Object.values(errorResponse).join('|'), 'i')
-    );
-    expect(hasExpectedError).toBeTruthy();
-    await expect(elements.getEndpoint.locator(responseStatusSelector)).toContainText(
-      'Undocumented'
-    );
+
+    await expectErrorOrFailureStatus(elements.getEndpoint);
+
     await clearEndpoint(elements.getEndpoint);
   });
 });

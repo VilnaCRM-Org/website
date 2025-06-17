@@ -1,12 +1,14 @@
 import { expect, type Locator, Page, test } from '@playwright/test';
 
 import { getSystemEndpoints, GetSystemEndpoints } from '../utils';
-import { testOAuthParams, errorResponse, ExpectedError } from '../utils/constants';
+import { mockoonHost, testOAuthParams } from '../utils/constants';
 import {
   initSwaggerPage,
   clearEndpoint,
   getAndCheckExecuteBtn,
   cancelOperation,
+  expectErrorOrFailureStatus,
+  mockAuthorizeSuccess,
 } from '../utils/helpers';
 import { locators } from '../utils/locators';
 
@@ -75,7 +77,13 @@ test.describe('OAuth authorize endpoint', () => {
     await elements.redirectUriInput.fill(testOAuthParams.redirectUri);
     await elements.scopeInput.fill('profile email');
     await elements.stateInput.fill('teststate');
+
+    const authorizeUrl: string = `${mockoonHost}/api/oauth/authorize`;
+
+    await mockAuthorizeSuccess(page, authorizeUrl, testOAuthParams.redirectUri, 'teststate');
+
     await elements.executeBtn.click();
+
     await expect(elements.curl).toBeVisible();
     await expect(elements.copyButton).toBeVisible();
     await expect(elements.requestUrl).toContainText('/oauth/authorize');
@@ -151,20 +159,9 @@ test.describe('OAuth authorize endpoint', () => {
     await elements.stateInput.fill('teststate');
     await page.route(`${AUTHORIZE_API_URL}**`, route => route.abort('failed'));
     await elements.executeBtn.click();
-    const responseErrorSelector: string =
-      '.responses-table.live-responses-table .response .response-col_description';
-    const responseStatusSelector: string =
-      '.responses-table.live-responses-table .response .response-col_status';
-    const errorMessage: string | null = await elements.getEndpoint
-      .locator(responseErrorSelector)
-      .textContent();
-    const hasExpectedError: ExpectedError = errorMessage?.match(
-      new RegExp(Object.values(errorResponse).join('|'), 'i')
-    );
-    expect(hasExpectedError).toBeTruthy();
-    await expect(elements.getEndpoint.locator(responseStatusSelector)).toContainText(
-      'Undocumented'
-    );
+
+    await expectErrorOrFailureStatus(elements.getEndpoint);
+
     await clearEndpoint(elements.getEndpoint);
   });
 });
