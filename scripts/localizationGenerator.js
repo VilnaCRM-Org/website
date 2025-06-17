@@ -21,7 +21,7 @@ class LocalizationGenerator {
     this.jsonFileType = jsonFileType;
     this.localizationFile = localizationFile;
 
-    this.pathToWriteLocalization = `pages/${i18nPath}`;
+    this.pathToWriteLocalization = path.resolve(process.cwd(), 'pages', this.i18nPath);
     this.pathToI18nFolder = `${featurePath}/{folder}/${i18nPath}`;
     this.pathToI18nFile = `${featurePath}/{folder}/${i18nPath}/{file.name}`;
   }
@@ -47,11 +47,7 @@ class LocalizationGenerator {
       return acc;
     }, {});
 
-    const filePath = path.join(
-      path.dirname(new URL(import.meta.url).pathname),
-      this.pathToWriteLocalization,
-      this.localizationFile
-    );
+    const filePath = path.resolve(this.pathToWriteLocalization, this.localizationFile);
     const fileContent = JSON.stringify(localizationObj);
 
     this.writeLocalizationFile(fileContent, filePath);
