@@ -70,7 +70,7 @@ test.describe('patch by ID', () => {
     await expect(elements.requestBodySection).toBeVisible();
     await expect(elements.jsonEditor).toBeVisible();
     await elements.idInput.fill(testUserId);
-    await elements.jsonEditor.fill(JSON.stringify(defaultRequestBody, null, 2));
+    await elements.jsonEditor.fill(JSON.stringify(defaultRequestBody));
     await elements.executeBtn.click();
     await expect(elements.curl).toBeVisible();
     await expect(elements.copyButton).toBeVisible();
@@ -88,7 +88,7 @@ test.describe('patch by ID', () => {
       newPassword: 'newPatchPass',
     };
     await elements.idInput.fill(testUserId);
-    await elements.jsonEditor.fill(JSON.stringify(customRequestBody, null, 2));
+    await elements.jsonEditor.fill(JSON.stringify(customRequestBody));
     await elements.executeBtn.click();
     await expect(elements.curl).toBeVisible();
     await expect(elements.requestUrl).toContainText(testUserId);
@@ -115,7 +115,7 @@ test.describe('patch by ID', () => {
   test('empty request body', async ({ page }) => {
     const elements: PatchUserEndpointElements = await setupPatchUserEndpoint(page);
     await elements.idInput.fill(testUserId);
-    await elements.jsonEditor.fill('');
+    await elements.jsonEditor.clear();
     await elements.executeBtn.click();
     await expect(elements.jsonEditor).toHaveClass(/invalid/);
     await cancelOperation(page);
@@ -154,7 +154,7 @@ test.describe('patch by ID', () => {
       404
     );
     await elements.idInput.fill(nonExistentId);
-    await elements.jsonEditor.fill(JSON.stringify({ initials: 'NF' }, null, 2));
+    await elements.jsonEditor.fill(JSON.stringify({ initials: 'NF' }));
     await elements.executeBtn.click();
     const responseCode: Locator = elements.getEndpoint
       .locator('.response .response-col_status')
@@ -178,7 +178,7 @@ test.describe('patch by ID', () => {
       400
     );
     await elements.idInput.fill(invalidId);
-    await elements.jsonEditor.fill(JSON.stringify({ initials: 'NF' }, null, 2));
+    await elements.jsonEditor.fill(JSON.stringify({ initials: 'NF' }));
     await elements.executeBtn.click();
     await expect(elements.responseBody).toContainText('Invalid user ID format');
     const responseCode: Locator = elements.getEndpoint
@@ -190,9 +190,11 @@ test.describe('patch by ID', () => {
 
   test('error response - CORS/Network failure', async ({ page }) => {
     const elements: PatchUserEndpointElements = await setupPatchUserEndpoint(page);
+
     await page.route(PATCH_USER_API_URL(testUserId), route => route.abort('failed'));
+
     await elements.idInput.fill(testUserId);
-    await elements.jsonEditor.fill(JSON.stringify({ initials: 'NF' }, null, 2));
+    await elements.jsonEditor.fill(JSON.stringify({ initials: 'NF' }));
     await elements.executeBtn.click();
 
     await expectErrorOrFailureStatus(elements.getEndpoint);

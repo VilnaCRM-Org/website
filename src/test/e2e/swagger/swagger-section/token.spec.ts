@@ -98,7 +98,9 @@ test.describe('OAuth token endpoint', () => {
   test('error response - CORS/Network failure', async ({ page }) => {
     const elements: TokenEndpointElements = await setupTokenEndpoint(page);
     await elements.grantTypeInput.fill(JSON.stringify(TEST_OAUTH_DATA, null, 2));
-    await page.route(`${TOKEN_API_URL}`, route => route.abort('failed'));
+
+    await page.route(TOKEN_API_URL, route => route.abort('failed'));
+
     await elements.executeBtn.click();
 
     await expectErrorOrFailureStatus(elements.getEndpoint);

@@ -20,8 +20,6 @@ const CONFIRM_API_URL: string = `${BASE_API}/confirm`;
 interface ConfirmEndpointElements extends BasicEndpointElements {
   parametersSection: Locator;
   tokenInput: Locator;
-  requestUrl: Locator;
-  responseBody: Locator;
   curl: Locator;
   copyButton: Locator;
 }

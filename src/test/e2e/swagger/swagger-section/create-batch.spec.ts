@@ -22,10 +22,8 @@ interface BatchUserEndpointElements extends BasicEndpointElements {
   requestBodySection: Locator;
   contentTypeSelect: Locator;
   jsonEditor: Locator;
-  responseBody: Locator;
   curl: Locator;
   copyButton: Locator;
-  requestUrl: Locator;
   downloadButton?: Locator;
 }
 
@@ -74,7 +72,9 @@ async function fillBatchRequestBody(
 async function verifySuccessResponse(elements: BatchUserEndpointElements): Promise<void> {
   const responseText: string = (await elements.curl.textContent()) || '';
 
-  const jsonMatch: RegExpMatchArray | null = responseText.match(/-d\s+'([\s\S]*)'$/); // Captures everything inside the single quotes
+  const jsonMatch: RegExpMatchArray | null = responseText.match(
+    /-d\s+['"]([\s\S]*?)['"]\s*(?:\\\s*)?$/
+  );
   if (!jsonMatch) {
     throw new Error(`Failed to extract JSON from response: ${responseText}`);
   }

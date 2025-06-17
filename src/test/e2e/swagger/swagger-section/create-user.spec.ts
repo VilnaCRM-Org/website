@@ -59,6 +59,8 @@ async function fillRequestBody(
 }
 
 async function verifySuccessResponse(elements: CreateUserEndpointElements): Promise<void> {
+  await elements.responseBody.waitFor({ state: 'visible' });
+
   const responseText: string = (await elements.responseBody.textContent()) || '';
   let response: ApiUser;
 

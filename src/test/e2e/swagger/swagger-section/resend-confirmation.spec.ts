@@ -16,8 +16,6 @@ interface ResendConfirmationEndpointElements extends BasicEndpointElements {
   idInput: Locator;
   curl: Locator;
   copyButton: Locator;
-  requestUrl: Locator;
-  responseBody: Locator;
 }
 
 const RESEND_CONFIRM_API_URL: (id: string) => string = (id: string): string =>
@@ -132,7 +130,9 @@ test.describe('resend confirmation email', () => {
   test('error response - CORS/Network failure', async ({ page }) => {
     const elements: ResendConfirmationEndpointElements =
       await setupResendConfirmationEndpoint(page);
+
     await page.route(RESEND_CONFIRM_API_URL(testUserId), route => route.abort('failed'));
+
     await elements.idInput.fill(testUserId);
     await elements.executeBtn.click();
 

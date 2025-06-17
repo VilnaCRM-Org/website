@@ -66,11 +66,15 @@ type OAuthParams = {
   responseType: string;
   clientId: string;
   redirectUri: string;
+  scope: string;
+  state: string;
 };
 export const testOAuthParams: OAuthParams = {
   responseType: 'code',
   clientId: 'test-client',
   redirectUri: 'http://localhost:3000/callback',
+  scope: 'profile email',
+  state: 'teststate',
 } as const;
 
 // Basic UI elements common to all endpoint tests
@@ -99,11 +103,11 @@ export const TEST_USERS: Record<string, User> = {
 } as const;
 
 export const errorMessages: { NETWORK: string; LOAD: string; FETCH: string } = {
-  NETWORK: 'TypeError: NetworkError when attempting to fetch resource.',
+  NETWORK: 'TypeError: NetworkError when attempting to fetch resource',
   LOAD: 'TypeError: Load failed',
   FETCH: 'Failed to fetch',
 };
-export type ExpectedError = RegExpMatchArray | null | undefined;
+
 export const BASE_API: string = '**/api/users';
 
 export const mockoonHost: string = process.env.MOCK_API_HOST ?? 'http://mockoon:8080/';

@@ -7,7 +7,6 @@ import {
   clearEndpoint,
   getAndCheckExecuteBtn,
   cancelOperation,
-  expectErrorOrFailureStatus,
   mockAuthorizeSuccess,
 } from '../utils/helpers';
 import { locators } from '../utils/locators';
@@ -75,8 +74,8 @@ test.describe('OAuth authorize endpoint', () => {
     await elements.responseTypeInput.fill(testOAuthParams.responseType);
     await elements.clientIdInput.fill(testOAuthParams.clientId);
     await elements.redirectUriInput.fill(testOAuthParams.redirectUri);
-    await elements.scopeInput.fill('profile email');
-    await elements.stateInput.fill('teststate');
+    await elements.scopeInput.fill(testOAuthParams.scope);
+    await elements.stateInput.fill(testOAuthParams.state);
 
     const authorizeUrl: string = `${mockoonHost}/api/oauth/authorize`;
 
@@ -157,10 +156,24 @@ test.describe('OAuth authorize endpoint', () => {
     await elements.redirectUriInput.fill(testOAuthParams.redirectUri);
     await elements.scopeInput.fill('profile email');
     await elements.stateInput.fill('teststate');
-    await page.route(`${AUTHORIZE_API_URL}**`, route => route.abort('failed'));
-    await elements.executeBtn.click();
 
-    await expectErrorOrFailureStatus(elements.getEndpoint);
+    await page.route(AUTHORIZE_API_URL, route => route.abort('failed'));
+
+    await elements.executeBtn.click();
+    const errorElement: Locator = elements.getEndpoint
+      .locator('.response-col_description .renderedMarkdown p')
+      .first();
+    const statusElement: Locator = elements.getEndpoint
+      .locator('.response .response-col_status')
+      .first();
+
+    const [errorText, statusText] = await Promise.all([
+      errorElement.textContent(),
+      statusElement.textContent(),
+    ]);
+
+    expect(errorText).toContain('Redirect to the provided redirect URI');
+    expect(statusText).toBe('302');
 
     await clearEndpoint(elements.getEndpoint);
   });

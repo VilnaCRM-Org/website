@@ -141,8 +141,8 @@ test.describe('get user: try it out interaction', () => {
       'tr[data-param-name="itemsPerPage"] input#include_empty_value'
     );
 
-    await pageCheckbox.click();
-    await itemsPerPageCheckbox.click();
+    await pageCheckbox.check();
+    await itemsPerPageCheckbox.check();
     await elements.executeBtn.click();
 
     await expect(elements.requestUrl).toContainText(/page=(&|$)/);

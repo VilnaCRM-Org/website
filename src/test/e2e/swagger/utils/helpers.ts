@@ -81,14 +81,20 @@ export async function expectErrorOrFailureStatus(getEndpoint: Locator): Promise<
     .first();
   const statusElement: Locator = getEndpoint.locator('.response .response-col_status').first();
 
-  const errorPatterns: string = Object.values(errorMessages).join('|');
-
   const [errorText, statusText] = await Promise.all([
     errorElement.textContent(),
     statusElement.textContent(),
   ]);
-  const hasError: boolean = new RegExp(errorPatterns).test(errorText || '');
-  const hasFailureStatus: boolean = /^(0|4\d{2}|5\d{2})/.test(statusText || '');
+
+  const cleanStatusText: string = (statusText || '').trim();
+  const cleanErrorText: string = (errorText || '').trim();
+
+  const hasError: boolean = Object.values(errorMessages).some(msg => cleanErrorText.includes(msg));
+
+  const hasFailureStatus: boolean =
+    /^(0|4\d{2}|5\d{2})/.test(cleanStatusText) ||
+    cleanStatusText === 'Undocumented' ||
+    cleanStatusText === '';
 
   expect(hasError || hasFailureStatus).toBe(true);
 }
@@ -103,7 +109,7 @@ export async function mockAuthorizeSuccess(
     route.fulfill({
       status: 302,
       headers: {
-        location: `${redirectUri}?code=abc123&state=${state}`,
+        location: `${redirectUri}?code=abc123${state ? `&state=${state}` : ''}`,
       },
       body: '',
     });

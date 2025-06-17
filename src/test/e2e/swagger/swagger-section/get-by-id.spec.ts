@@ -88,7 +88,7 @@ test.describe('get user by ID', () => {
     const elements: GetUserByIdElements = await setupGetUserByIdEndpoint(page);
 
     await expect(elements.idInput).toBeVisible();
-    await elements.idInput.fill('');
+    await elements.idInput.clear();
     await elements.executeBtn.click();
 
     await expect(elements.idInput).toHaveClass(/invalid/);

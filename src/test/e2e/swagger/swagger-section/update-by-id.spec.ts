@@ -31,7 +31,8 @@ interface UpdateUserEndpointElements extends BasicEndpointElements {
   requestUrl: Locator;
 }
 
-const UPDATE_USER_API_URL: (id: string) => string = (id: string): string => `${BASE_API}/${id}`;
+const UPDATE_USER_API_URL: (id: string) => string = (id: string): string =>
+  `${BASE_API.replace(/\/$/, '')}/${encodeURIComponent(id)}`;
 
 async function setupUpdateUserEndpoint(page: Page): Promise<UpdateUserEndpointElements> {
   const { userEndpoints, elements } = await initSwaggerPage(page);
@@ -186,7 +187,7 @@ test.describe('updateById', () => {
     const filePath: string = await download.path();
     expect(filePath).toBeTruthy();
 
-    const buffer: Buffer<ArrayBufferLike> = await fs.readFile(filePath as string);
+    const buffer: Buffer = await fs.readFile(filePath as string);
     const content: string = buffer.toString('utf-8');
     const jsonContent: ApiUser = JSON.parse(content);
     expect(jsonContent).toEqual(
@@ -240,7 +241,7 @@ test.describe('updateById', () => {
   test('error response - CORS/Network failure', async ({ page }) => {
     const elements: UpdateUserEndpointElements = await setupUpdateUserEndpoint(page);
 
-    await page.route(UPDATE_USER_API_URL(testUserId), route => route.abort('failed'));
+    await page.route(`**/api/users/${testUserId}`, route => route.abort('failed'));
 
     await elements.idInput.fill(testUserId);
     await elements.jsonEditor.fill(
