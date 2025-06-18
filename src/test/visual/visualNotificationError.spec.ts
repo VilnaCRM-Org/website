@@ -20,9 +20,6 @@ test.describe('Form Submission Server Error Test', () => {
       });
 
      test.use({ viewport: { width: 1280, height: 720 } });
-
-
-
       await page.waitForFunction(() => document.readyState === 'complete');
 
       const routeHandler: (route: Route) => Promise<void> = async (route: Route) => {
