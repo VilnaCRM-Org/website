@@ -1,11 +1,12 @@
- import Diamond from '../../features/landing/assets/svg/possibilities/diamond.svg';
- import Ruby from '../../features/landing/assets/svg/possibilities/ruby.svg';
- import SmallDiamond from '../../features/landing/assets/svg/possibilities/smallDiamond.svg';
- import SmallRuby from '../../features/landing/assets/svg/possibilities/smallRuby.svg';
- 
- import { Card } from '../../features/landing/types/Card/card-item';
- import  getWhyUsCards  from './cardData';
- import { CardItem } from './types';
+import Diamond      from '../../features/landing/assets/svg/possibilities/diamond.svg';
+import Ruby         from '../../features/landing/assets/svg/possibilities/ruby.svg';
+import SmallDiamond from '../../features/landing/assets/svg/possibilities/smallDiamond.svg';
+import SmallRuby    from '../../features/landing/assets/svg/possibilities/smallRuby.svg';
+
+import type { Card } from '../../features/landing/types/Card/card-item';
+
+import  getWhyUsCards  from './cardData';
+import { CardItem } from './types';
 
 const whyUsCards: Card[] = getWhyUsCards();
 
