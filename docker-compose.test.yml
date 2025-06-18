@@ -10,7 +10,7 @@ services:
     healthcheck:
       test: ["CMD", "curl", "-f", "http://${WEBSITE_DOMAIN}:${NEXT_PUBLIC_PROD_PORT}"]
     networks:
-      - app-net
+      - website-network
 
   playwright:
     build:
@@ -26,7 +26,7 @@ services:
     healthcheck:
       test: ["CMD", "curl", "-f", "http://${WEBSITE_DOMAIN}:${PLAYWRIGHT_TEST_PORT}"]
     networks:
-      - app-net
+      - website-network
 
   apollo:
     build:
@@ -38,7 +38,7 @@ services:
     healthcheck:
       test: ["CMD", "curl", "-f", "http://${WEBSITE_DOMAIN}:${GRAPHQL_PORT}/${GRAPHQL_API_PATH}"]
     networks:
-      - app-net
+      - website-network
 
   mockoon:
     build:
@@ -50,7 +50,7 @@ services:
     healthcheck:
       test: ["CMD", "curl", "-f", "http://${WEBSITE_DOMAIN}:${MOCKOON_PORT}"]
     networks:
-      - app-net
+      - website-network
 
   k6:
     profiles: ["load"]
@@ -63,10 +63,9 @@ services:
     volumes:
       - ./src/test/load:/loadTests
     networks:
-      - app-net
+      - website-network
 
 networks:
-  app-net:
+  website-network:
     external: true
-    driver: bridge
-    name: app-net
+    name: website-network
