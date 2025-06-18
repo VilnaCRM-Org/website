@@ -11,7 +11,7 @@ import Navigation from '../Navigation/Navigation';
 
 import styles from './styles';
 
-function Swagger(): React.ReactElement {
+export function Swagger(): React.ReactElement {
   const { t, i18n } = useTranslation();
 
   useEffect(() => {
