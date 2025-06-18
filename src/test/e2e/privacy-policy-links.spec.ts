@@ -1,6 +1,6 @@
 import { test, expect, Page } from '@playwright/test';
 
-import { createLocalizedRegExp } from '@/test/e2e/utils/createLocalizedRegExp';
+import  createLocalizedRegExp  from '@/test/e2e/utils/createLocalizedRegExp';
 
 const vilnaCRMPrivacyPolicyURL: string = process.env
   .NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL as string;

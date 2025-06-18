@@ -3,7 +3,7 @@ import { test, Locator, expect, Page } from '@playwright/test';
 import { createLocalizedRegExp } from '@/test/e2e/utils/createLocalizedRegExp';
 
 import { t } from './utils/initializeLocalization';
-import { removeHtmlTags } from './utils/removeHtmlTags';
+import  removeHtmlTags  from './utils/removeHtmlTags';
 
 const firstSlideTitleWhyUs: string = t('why_us.headers.header_open_source');
 const secondSlideTitleWhyUs: string = removeHtmlTags('why_us.headers.header_ease_of_setup');

@@ -3,7 +3,7 @@ import { t } from 'i18next';
 import { Response } from 'playwright';
 
 import { checkCheckbox } from '../utils/checkCheckbox';
-import { fillInput } from '../utils/fillInput';
+import  fillInput  from '../utils/fillInput';
 
 import { userData, graphqlEndpoint } from './constants';
 import { getFormFields, responseFilter, successResponse } from './utils';
