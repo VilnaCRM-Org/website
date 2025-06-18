@@ -98,7 +98,6 @@ export async function expectErrorOrFailureStatus(getEndpoint: Locator): Promise<
 
   expect(hasError || hasFailureStatus).toBe(true);
 }
-
 export async function mockAuthorizeSuccess(
   page: Page,
   authorizeUrl: string,
@@ -106,12 +105,26 @@ export async function mockAuthorizeSuccess(
   state?: string
 ): Promise<void> {
   await page.route(authorizeUrl, route => {
+    const targetUrl: string = `${redirectUri}?code=abc123${state ? `&state=${state}` : ''}`;
     route.fulfill({
-      status: 302,
-      headers: {
-        location: `${redirectUri}?code=abc123${state ? `&state=${state}` : ''}`,
-      },
-      body: '',
+      status: 200,
+      contentType: 'text/html',
+      body: `
+        <html lang="eng">
+          <head>
+            <meta http-equiv="refresh" content="0; url=${targetUrl}" />
+          </head>
+          <body>
+            <p>Redirecting...</p>
+          </body>
+        </html>
+      `,
     });
   });
+}
+
+export function buildSafeUrl(baseUrl: string, id: string): string {
+  const trimmedBase: string = baseUrl.replace(/\/+$/, '');
+  const encodedId: string = encodeURIComponent(id);
+  return `${trimmedBase}/${encodedId}`;
 }

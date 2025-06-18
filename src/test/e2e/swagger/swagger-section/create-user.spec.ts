@@ -201,7 +201,7 @@ test.describe('Create user endpoint tests', () => {
   test('error response - CORS/Network failure', async ({ page }) => {
     const elements: CreateUserEndpointElements = await setupCreateUserEndpoint(page);
 
-    await page.route('**/api/users', route => route.abort('failed'));
+    await page.route('**/api/users', route => route.abort('failed'), { times: 1 });
 
     await fillRequestBody(elements, TEST_USERS.VALID);
     await elements.executeBtn.click();
@@ -218,9 +218,7 @@ test.describe('Create user endpoint tests', () => {
 
     await elements.responseBody.waitFor({ state: 'visible' });
 
-    const downloadButton: Locator = elements.getEndpoint.locator(
-      '.response-col_description .highlight-code button.download-contents'
-    );
+    const { downloadButton } = elements;
 
     await downloadButton.waitFor({ state: 'visible' });
 

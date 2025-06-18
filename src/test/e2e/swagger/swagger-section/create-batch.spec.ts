@@ -237,7 +237,7 @@ test.describe('Create batch users endpoint tests', () => {
   test('network failure handling', async ({ page }) => {
     const elements: BatchUserEndpointElements = await setupBatchEndpoint(page);
 
-    await page.route('**/api/users/batch', route => route.abort('failed'));
+    await page.route('**/api/users/batch', route => route.abort('failed'), { times: 1 });
 
     await fillBatchRequestBody(elements, validBatchData);
     await elements.executeBtn.click();

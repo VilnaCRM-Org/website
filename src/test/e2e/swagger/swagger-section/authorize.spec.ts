@@ -1,7 +1,7 @@
 import { expect, type Locator, Page, test } from '@playwright/test';
 
 import { getSystemEndpoints, GetSystemEndpoints } from '../utils';
-import { mockoonHost, testOAuthParams } from '../utils/constants';
+import { mockoonHost, testOAuthParams, PARAM_INPUTS } from '../utils/constants';
 import {
   initSwaggerPage,
   clearEndpoint,
@@ -35,14 +35,12 @@ async function setupAuthorizeEndpoint(page: Page): Promise<AuthorizeEndpointElem
   await authorizeEndpoint.click();
   await elements.tryItOutButton.click();
   const executeBtn: Locator = await getAndCheckExecuteBtn(authorizeEndpoint);
-  const responseTypeInput: Locator = authorizeEndpoint.locator(
-    'input[placeholder="response_type"]'
-  );
-  const clientIdInput: Locator = authorizeEndpoint.locator('input[placeholder="client_id"]');
-  const redirectUriInput: Locator = authorizeEndpoint.locator('input[placeholder="redirect_uri"]');
-  const scopeInput: Locator = authorizeEndpoint.locator('input[placeholder="scope"]');
-  const stateInput: Locator = authorizeEndpoint.locator('input[placeholder="state"]');
-  const curl: Locator = authorizeEndpoint.locator('.curl-command');
+  const responseTypeInput: Locator = authorizeEndpoint.locator(PARAM_INPUTS.RESPONSE_TYPE);
+  const clientIdInput: Locator = authorizeEndpoint.locator(PARAM_INPUTS.CLIENT_ID);
+  const redirectUriInput: Locator = authorizeEndpoint.locator(PARAM_INPUTS.REDIRECT_URI);
+  const scopeInput: Locator = authorizeEndpoint.locator(PARAM_INPUTS.SCOPE);
+  const stateInput: Locator = authorizeEndpoint.locator(PARAM_INPUTS.STATE);
+  const curl: Locator = authorizeEndpoint.locator(locators.curl);
   const parametersSection: Locator = authorizeEndpoint.locator(locators.parametersSection);
   const requestUrl: Locator = authorizeEndpoint.locator(locators.requestUrl);
   const responseBody: Locator = authorizeEndpoint.locator(locators.responseBody).first();
@@ -77,8 +75,7 @@ test.describe('OAuth authorize endpoint', () => {
     await elements.scopeInput.fill(testOAuthParams.scope);
     await elements.stateInput.fill(testOAuthParams.state);
 
-    const authorizeUrl: string = `${mockoonHost}/api/oauth/authorize`;
-
+    const authorizeUrl: string = `${mockoonHost}/api/oauth/authorize**`;
     await mockAuthorizeSuccess(page, authorizeUrl, testOAuthParams.redirectUri, 'teststate');
 
     await elements.executeBtn.click();
@@ -154,8 +151,8 @@ test.describe('OAuth authorize endpoint', () => {
     await elements.responseTypeInput.fill(testOAuthParams.responseType);
     await elements.clientIdInput.fill(testOAuthParams.clientId);
     await elements.redirectUriInput.fill(testOAuthParams.redirectUri);
-    await elements.scopeInput.fill('profile email');
-    await elements.stateInput.fill('teststate');
+    await elements.scopeInput.fill(testOAuthParams.scope);
+    await elements.stateInput.fill(testOAuthParams.state);
 
     await page.route(AUTHORIZE_API_URL, route => route.abort('failed'));
 

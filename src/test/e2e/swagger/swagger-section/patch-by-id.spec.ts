@@ -1,4 +1,4 @@
-import { expect, type Locator, Page, test } from '@playwright/test';
+import { expect, type Locator, Page, test, type Download } from '@playwright/test';
 
 import { testUserId, BASE_API, BasicEndpointElements, UpdatedUser } from '../utils/constants';
 import {
@@ -123,20 +123,27 @@ test.describe('patch by ID', () => {
 
   test('download', async ({ page }) => {
     const elements: PatchUserEndpointElements = await setupPatchUserEndpoint(page);
+    const downloadData: { email: string; initials: string } = {
+      email: 'download@example.com',
+      initials: 'DL',
+    };
+
+    const downloadPromise: Promise<Download> = page.waitForEvent('download');
+
     await elements.idInput.fill(testUserId);
-    await elements.jsonEditor.fill(
-      JSON.stringify(
-        {
-          email: 'download@example.com',
-          initials: 'DL',
-        },
-        null,
-        2
-      )
-    );
+    await elements.jsonEditor.fill(JSON.stringify(downloadData));
     await elements.executeBtn.click();
+
     await expect(elements.downloadButton).toBeVisible();
     await expect(elements.downloadButton).toBeEnabled();
+
+    await elements.downloadButton.click();
+    const download: Download = await downloadPromise;
+
+    expect(download.suggestedFilename()).toBeTruthy();
+    const path: string | null = await download.path();
+    expect(path).toBeTruthy();
+
     await clearEndpoint(elements.getEndpoint);
   });
 

@@ -11,19 +11,20 @@ RUN apk add --no-cache \
 
 WORKDIR /app
 
-COPY package.json pnpm-lock.yaml checkNodeVersion.js ./
+COPY package.json pnpm-lock.yaml checkNodeVersion.js scripts/*.mjs  .env ./
+COPY public/ ./public/
 
-RUN pnpm install
+RUN pnpm install \
+ && node fetchSwaggerSchema.mjs \
+ && node patchSwaggerServer.mjs
 
 
 FROM base AS build
 
 COPY . .
 
-RUN node scripts/fetchSwaggerSchema.mjs && \
-    node scripts/patchSwaggerServer.mjs && \
-    npx next build && \
-    npx next-export-optimize-images
+RUN npx next build \
+ && npx next-export-optimize-images
 
 
 FROM base AS production

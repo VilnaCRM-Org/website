@@ -95,6 +95,9 @@ test.describe('resend confirmation email', () => {
     );
     await elements.idInput.fill(nonExistentId);
     await elements.executeBtn.click();
+
+    await elements.responseBody.waitFor({ state: 'visible' });
+
     const responseCode: Locator = elements.getEndpoint
       .locator('.response .response-col_status')
       .first();

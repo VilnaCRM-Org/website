@@ -70,6 +70,9 @@ test.describe('confirm endpoint tests', () => {
     await expect(elements.requestUrl).toBeVisible();
     await expect(elements.requestUrl).toContainText(mockoonHost);
 
+    const status: Locator = elements.getEndpoint.locator('.response .response-col_status').first();
+    await expect(status).toContainText(/20[04]/);
+
     await clearEndpoint(elements.getEndpoint);
   });
 
@@ -126,7 +129,7 @@ test.describe('confirm endpoint tests', () => {
   test('error response - CORS/Network failure', async ({ page }) => {
     const elements: ConfirmEndpointElements = await setupConfirmEndpoint(page);
 
-    await page.route(CONFIRM_API_URL, route => route.abort('failed'));
+    await page.route(CONFIRM_API_URL, route => route.abort('failed'), { times: 1 });
 
     await fillConfirmBody(elements, confirmationToken);
     await elements.executeBtn.click();

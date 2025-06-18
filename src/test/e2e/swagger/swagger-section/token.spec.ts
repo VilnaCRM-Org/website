@@ -1,7 +1,7 @@
 import { expect, type Locator, Page, test } from '@playwright/test';
 
 import { getSystemEndpoints, GetSystemEndpoints } from '../utils';
-import { TEST_OAUTH_DATA } from '../utils/constants';
+import { TEST_OAUTH_DATA, TOKEN_ENDPOINT } from '../utils/constants';
 import {
   initSwaggerPage,
   clearEndpoint,
@@ -28,11 +28,11 @@ interface TokenEndpointElements {
 const TOKEN_API_URL: string = '**/api/oauth/token';
 
 async function setupTokenEndpoint(page: Page): Promise<TokenEndpointElements> {
-  const { elements } = await initSwaggerPage(page);
+  await initSwaggerPage(page);
   const systemEndpoints: GetSystemEndpoints = getSystemEndpoints(page);
   const tokenEndpoint: Locator = systemEndpoints.token;
   await tokenEndpoint.click();
-  await elements.tryItOutButton.click();
+  await tokenEndpoint.locator('button:has-text("Try it out")').click();
   const executeBtn: Locator = await getAndCheckExecuteBtn(tokenEndpoint);
   const requestBodySection: Locator = tokenEndpoint.locator(locators.requestBodySection);
   await requestBodySection.waitFor({ state: 'visible' });
@@ -71,6 +71,13 @@ test.describe('OAuth token endpoint', () => {
 
     await expect(elements.curl).toBeVisible();
     await expect(elements.copyButton).toBeVisible();
+    await expect(elements.requestUrl).toBeVisible();
+    await expect(elements.requestUrl).toContainText(TOKEN_ENDPOINT.PATH);
+    await expect(elements.curlBody).toBeVisible();
+    await expect(elements.curlBody).toContainText(TOKEN_ENDPOINT.CURL.METHOD);
+    await expect(elements.curlBody).toContainText(TOKEN_ENDPOINT.CURL.URL);
+    await expect(elements.curlBody).toContainText(TOKEN_ENDPOINT.CURL.ACCEPT_HEADER);
+    await expect(elements.curlBody).toContainText(TOKEN_ENDPOINT.CURL.CONTENT_TYPE_HEADER);
 
     await clearEndpoint(elements.getEndpoint);
   });
@@ -99,7 +106,7 @@ test.describe('OAuth token endpoint', () => {
     const elements: TokenEndpointElements = await setupTokenEndpoint(page);
     await elements.grantTypeInput.fill(JSON.stringify(TEST_OAUTH_DATA, null, 2));
 
-    await page.route(TOKEN_API_URL, route => route.abort('failed'));
+    await page.route(TOKEN_API_URL, route => route.abort('failed'), { times: 1 });
 
     await elements.executeBtn.click();
 

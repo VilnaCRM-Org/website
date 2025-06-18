@@ -110,4 +110,50 @@ export const errorMessages: { NETWORK: string; LOAD: string; FETCH: string } = {
 
 export const BASE_API: string = '**/api/users';
 
-export const mockoonHost: string = process.env.MOCK_API_HOST ?? 'http://mockoon:8080/';
+const MOCKOON_URL: string = 'http://mockoon:8080';
+
+export const mockoonHost: string = process.env.MOCK_API_HOST ?? MOCKOON_URL;
+
+type TokenEndpointConfig = {
+  PATH: string;
+  BASE_URL: string;
+  HEADERS: {
+    ACCEPT: string;
+    CONTENT_TYPE: string;
+  };
+  CURL: {
+    METHOD: string;
+    URL: string;
+    ACCEPT_HEADER: string;
+    CONTENT_TYPE_HEADER: string;
+  };
+};
+export const TOKEN_ENDPOINT: TokenEndpointConfig = {
+  PATH: '/api/oauth/token',
+  BASE_URL: MOCKOON_URL,
+  HEADERS: {
+    ACCEPT: 'accept: application/json',
+    CONTENT_TYPE: 'Content-Type: application/json',
+  },
+  CURL: {
+    METHOD: "curl -X 'POST'",
+    URL: `${MOCKOON_URL}/api/oauth/token`,
+    ACCEPT_HEADER: "-H 'accept: application/json'",
+    CONTENT_TYPE_HEADER: "-H 'Content-Type: application/json'",
+  },
+} as const;
+
+type ParamInputs = {
+  RESPONSE_TYPE: string;
+  CLIENT_ID: string;
+  REDIRECT_URI: string;
+  SCOPE: string;
+  STATE: string;
+};
+export const PARAM_INPUTS: ParamInputs = {
+  RESPONSE_TYPE: 'input[placeholder="response_type"]',
+  CLIENT_ID: 'input[placeholder="client_id"]',
+  REDIRECT_URI: 'input[placeholder="redirect_uri"]',
+  SCOPE: 'input[placeholder="scope"]',
+  STATE: 'input[placeholder="state"]',
+} as const;

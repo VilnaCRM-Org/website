@@ -1,11 +1,8 @@
 ## [0.1.2](https://github.com/VilnaCRM-Org/website/compare/v0.1.1...v0.1.2) (2025-06-17)
 
-
 ### Bug Fixes
 
-* **#201:** add available packages ([#202](https://github.com/VilnaCRM-Org/website/issues/202)) ([1da3a4d](https://github.com/VilnaCRM-Org/website/commit/1da3a4d1dc05fc3e9e59e4ad12529155466537c6)), closes [#201](https://github.com/VilnaCRM-Org/website/issues/201) [#201](https://github.com/VilnaCRM-Org/website/issues/201) [#201](https://github.com/VilnaCRM-Org/website/issues/201) [#201](https://github.com/VilnaCRM-Org/website/issues/201)
-
-
+- **#201:** add available packages ([#202](https://github.com/VilnaCRM-Org/website/issues/202)) ([1da3a4d](https://github.com/VilnaCRM-Org/website/commit/1da3a4d1dc05fc3e9e59e4ad12529155466537c6)), closes [#201](https://github.com/VilnaCRM-Org/website/issues/201) [#201](https://github.com/VilnaCRM-Org/website/issues/201) [#201](https://github.com/VilnaCRM-Org/website/issues/201) [#201](https://github.com/VilnaCRM-Org/website/issues/201)
 
 ## [0.1.1](https://github.com/VilnaCRM-Org/website/compare/v0.1.0...v0.1.1) (2025-06-07)
 
@@ -44,4 +41,3 @@
 # [1.4.0](https://github.com/VilnaCRM-Org/website/compare/v1.3.0...v1.4.0) (2025-04-28)
 
 - **#28:** redesign "For Whom" block ([#171](https://github.com/VilnaCRM-Org/website/issues/171)) ([cd224fe](https://github.com/VilnaCRM-Org/website/commit/cd224fed3a45a086dc8db1ec89cb6be4d62640fb)), closes [#28](https://github.com/VilnaCRM-Org/website/issues/28) [#28](https://github.com/VilnaCRM-Org/website/issues/28) [#28](https://github.com/VilnaCRM-Org/website/issues/28) [#28](https://github.com/VilnaCRM-Org/website/issues/28) [#28](https://github.com/VilnaCRM-Org/website/issues/28) [#28](https://github.com/VilnaCRM-Org/website/issues/28) [#28](https://github.com/VilnaCRM-Org/website/issues/28) [#28](https://github.com/VilnaCRM-Org/website/issues/28) [#28](https://github.com/VilnaCRM-Org/website/issues/28) [#28](https://github.com/VilnaCRM-Org/website/issues/28) [#28](https://github.com/VilnaCRM-Org/website/issues/28)
-

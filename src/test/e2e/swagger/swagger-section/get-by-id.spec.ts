@@ -8,10 +8,11 @@ import {
   interceptWithErrorResponse,
   cancelOperation,
   expectErrorOrFailureStatus,
+  buildSafeUrl,
 } from '../utils/helpers';
 import { locators } from '../utils/locators';
 
-const GET_USER_API_URL: (id: string) => string = (id: string): string => `${BASE_API}/${id}`;
+const GET_USER_API_URL: (id: string) => string = (id: string): string => buildSafeUrl(BASE_API, id);
 
 interface GetUserByIdElements extends BasicEndpointElements {
   parametersSection: Locator;
