@@ -8,6 +8,7 @@ RUN apk add --no-cache \
     npm install -g pnpm@10.6.5 serve@14.2.0 && \
     pnpm add -D js-yaml@4.1.0
 
+
 WORKDIR /app
 
 COPY package.json pnpm-lock.yaml checkNodeVersion.js ./
