@@ -1,0 +1,34 @@
+@use '@swagger/global' as *;
+
+%descriptionCheckbox {
+  input[type='checkbox'] {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    appearance: none;
+    background: transparent;
+    outline: none;
+    &:before {
+      pointer-events: auto;
+      content: '';
+      display: inline-block;
+      background: transparent;
+      width: 1.5rem;
+      height: 1.5rem;
+      border: 1px solid $grey400;
+      border-radius: 0.5rem;
+      cursor: pointer;
+    }
+    &:checked:before {
+      background-image: $checkIcon;
+      background-color: $primary;
+      background-repeat: no-repeat;
+      background-position: center;
+      border-color: $primary;
+    }
+    &:disabled:before {
+      background-color: $grey500;
+      border-color: $grey500;
+    }
+  }
+}

@@ -1,0 +1,98 @@
+@use '../../Variables/variables' as *;
+@use '../UiTypography/uiTypography' as *;
+
+$selectFileText: 'Select file';
+$chooseFileText: 'Choose file';
+
+@mixin uiInput($height, $width, $padding-left) {
+  margin: 0;
+  height: $height;
+  width: $width;
+  padding: 0 0 0 $padding-left;
+  border-radius: 0.5rem;
+  background-color: $white;
+  border: 1px solid $grey400;
+  outline: none;
+  &:hover,
+  &:focus {
+    border-color: $grey300;
+  }
+  &:disabled {
+    background-color: $brandGrey;
+    border-color: $brandGrey;
+  }
+  &[type='file'] {
+    cursor: pointer;
+    position: relative;
+    color: transparent;
+    @include for-small-screens {
+      height: 5.125rem;
+    }
+    &::after,
+    &::before {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      @include for-small-screens {
+        transform: none;
+      }
+    }
+    &::before {
+      content: $selectFileText;
+      position: absolute;
+      left: 1.75rem;
+      @include medium14($darkPrimary);
+      @include for-large-screens {
+        @include medium16($darkPrimary);
+      }
+      @include for-small-screens {
+        left: 1rem;
+        top: 0.625rem;
+        @include medium14($darkPrimary);
+      }
+    }
+    &:disabled {
+      cursor: not-allowed;
+    }
+    &:disabled::before {
+      color: $grey300;
+    }
+    &::after {
+      content: $chooseFileText;
+      padding: 0.5rem 1.5rem;
+      right: 0.5rem;
+      background-color: $primary;
+      border-radius: 3.5rem;
+      @include medium15($white);
+      @include for-small-screens {
+        left: 1rem;
+        top: 2.25rem;
+        width: min-content;
+      }
+    }
+    &:hover::after {
+      background-color: $containedButtonHover;
+    }
+    &:disabled::after {
+      color: $grey300;
+      background: $grey400;
+    }
+    &:focus::after {
+      background-color: $containedButtonActive;
+    }
+    &::-webkit-file-upload-button {
+      display: none;
+    }
+    &::file-selector-button {
+      display: none;
+    }
+  }
+  &.invalid {
+    border-color: $errorBorder;
+  }
+  &::selection {
+    background: rgba(0, 0, 0, 0.1);
+    color: inherit;
+  }
+  @content;
+}

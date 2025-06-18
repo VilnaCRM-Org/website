@@ -1,0 +1,13 @@
+@use '@swagger/global' as *;
+
+@use 'PreformattedText/preformattedText';
+@use 'CopyButton/copyButton';
+@use 'DownloadButton/downloadButton';
+@use 'Textarea/textarea';
+
+%operationResponseCode {
+  @extend %preformattedText;
+  @extend %textarea;
+  @extend %copyButton;
+  @extend %downloadButton;
+}

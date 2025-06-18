@@ -1,0 +1,22 @@
+@use '@swagger/global' as *;
+
+%downloadButton {
+  .download-contents {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    bottom: 0.75rem;
+    right: 6.563rem;
+    @include uiButton('primary') {
+      height: 3.125rem;
+      @include medium15($white);
+    }
+    @media screen and (max-width: $md) {
+      padding: 0;
+      bottom: 0.29rem;
+      right: 3.8rem;
+      height: 1.75rem;
+      width: 5.4rem;
+    }
+  }
+}

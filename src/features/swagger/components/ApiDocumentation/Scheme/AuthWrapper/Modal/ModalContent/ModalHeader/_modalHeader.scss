@@ -1,0 +1,26 @@
+@use '@swagger/global' as *;
+
+%modalHeader {
+  .modal-ux-header {
+    padding: 1.5rem 1.5rem 1rem;
+    border-bottom: 1px solid $grey500;
+    @include for-small-screens {
+      padding: 1.25rem 1.25rem 1rem;
+    }
+    h3 {
+      padding: 0;
+      @include h4Text;
+      @include for-small-screens {
+        @include bold22($darkPrimary);
+      }
+    }
+    button {
+      padding: 0;
+      align-self: flex-start;
+      @include uiIcon($closeIconUrl);
+      svg {
+        display: block;
+      }
+    }
+  }
+}

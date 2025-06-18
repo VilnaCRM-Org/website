@@ -10,9 +10,9 @@ import Confetti from '../../assets/svg/notification/confetti.svg';
 import Settings from '../../assets/svg/notification/settings.svg';
 
 import styles from './styles';
-import { NotificationSuccessProps } from './types';
+import { NotificationToggleProps } from './types';
 
-function NotificationSuccess({ setIsOpen }: NotificationSuccessProps): React.ReactElement {
+function NotificationSuccess({ setIsOpen }: NotificationToggleProps): React.ReactElement {
   const { t } = useTranslation();
   const handleClick: () => void = (): void => setIsOpen(false);
 
@@ -21,7 +21,7 @@ function NotificationSuccess({ setIsOpen }: NotificationSuccessProps): React.Rea
       <Box sx={styles.successTopImgBox}>
         <Image src={Confetti} alt={t('notifications.success.images.confetti')} />
       </Box>
-      <Box sx={styles.imgWrapperSuccess}>
+      <Box sx={styles.gears}>
         <Image
           src={Settings}
           alt={t('notifications.success.images.gears')}

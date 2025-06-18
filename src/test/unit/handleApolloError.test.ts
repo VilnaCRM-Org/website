@@ -1,248 +1,154 @@
-import { ApolloError, ServerError, ServerParseError } from '@apollo/client';
+import { ApolloError } from '@apollo/client';
+import { GraphQLFormattedError } from 'graphql';
 
-import { NotificationStatus } from '../../features/landing/components/Notification/types';
+import {
+  CLIENT_ERROR_KEYS,
+  ClientErrorMessages,
+  getClientErrorMessages,
+} from '@/shared/clientErrorMessages';
+import HTTPStatusCodes from '@/shared/httpStatusCodes';
+
 import {
   handleApolloError,
+  HandleApolloErrorProps,
   handleNetworkError,
+  ServerErrorShape,
 } from '../../features/landing/helpers/handleApolloError';
+import { networkMessage } from '../testing-library/fixtures/errors';
 
-type NetworkErrorType = Error | ServerParseError | ServerError | null;
+type StatusCode = Pick<ServerErrorShape, 'statusCode'>;
 
 describe('Error Handling', () => {
-  let setServerErrorMessageMock: jest.Mock;
-  let setNotificationTypeMock: jest.Mock;
-  let setIsNotificationOpenMock: jest.Mock;
-
-  beforeEach(() => {
-    setServerErrorMessageMock = jest.fn();
-    setNotificationTypeMock = jest.fn();
-    setIsNotificationOpenMock = jest.fn();
-  });
-
   describe('handleNetworkError', () => {
-    it('should do nothing if networkError is null', () => {
-      handleNetworkError({
-        networkError: null,
-        setServerErrorMessage: setServerErrorMessageMock,
-        setNotificationType: setNotificationTypeMock,
-        setIsNotificationOpen: setIsNotificationOpenMock,
-      });
+    let messages: ClientErrorMessages;
 
-      expect(setServerErrorMessageMock).not.toHaveBeenCalled();
-      expect(setNotificationTypeMock).not.toHaveBeenCalled();
-      expect(setIsNotificationOpenMock).not.toHaveBeenCalled();
+    beforeEach(() => {
+      jest.clearAllMocks();
+      messages = getClientErrorMessages();
     });
 
-    it('should set notification type as error and open notification if statusCode is 500', () => {
-      const networkError: NetworkErrorType = { statusCode: 500 } as ApolloError['networkError'];
-
-      handleNetworkError({
-        networkError,
-        setServerErrorMessage: setServerErrorMessageMock,
-        setNotificationType: setNotificationTypeMock,
-        setIsNotificationOpen: setIsNotificationOpenMock,
-      });
-
-      expect(setNotificationTypeMock).toHaveBeenCalledWith(NotificationStatus.ERROR);
-      expect(setIsNotificationOpenMock).toHaveBeenCalledWith(true);
-      expect(setServerErrorMessageMock).not.toHaveBeenCalled();
+    it('should return network error for "Failed to fetch" message', () => {
+      const error: ServerErrorShape = { statusCode: 400, message: networkMessage };
+      expect(handleNetworkError(error)).toBe(messages[CLIENT_ERROR_KEYS.NETWORK]);
     });
 
-    it('should set error details for network error message "Failed to fetch"', () => {
-      const networkError: NetworkErrorType = {
-        message: 'Failed to fetch',
-      } as ApolloError['networkError'];
-
-      handleNetworkError({
-        networkError,
-        setServerErrorMessage: setServerErrorMessageMock,
-        setNotificationType: setNotificationTypeMock,
-        setIsNotificationOpen: setIsNotificationOpenMock,
-      });
-
-      expect(setServerErrorMessageMock).toHaveBeenCalledWith(
-        'Network error. Please check your internet connection.'
-      );
+    it('should return unauthorized error for 401 status', () => {
+      const error: StatusCode = { statusCode: HTTPStatusCodes.UNAUTHORIZED };
+      expect(handleNetworkError(error)).toBe(messages[CLIENT_ERROR_KEYS.UNAUTHORIZED]);
     });
 
-    it('should set a generic error message for unknown network errors', () => {
-      const networkError: NetworkErrorType = {
-        message: 'Some unknown network error',
-      } as ApolloError['networkError'];
-
-      handleNetworkError({
-        networkError,
-        setServerErrorMessage: setServerErrorMessageMock,
-        setNotificationType: setNotificationTypeMock,
-        setIsNotificationOpen: setIsNotificationOpenMock,
-      });
-
-      expect(setServerErrorMessageMock).toHaveBeenCalledWith(
-        'Something went wrong with the request. Try again later.'
-      );
+    it('should return forbidden error for 403 status', () => {
+      const error: StatusCode = { statusCode: HTTPStatusCodes.FORBIDDEN };
+      expect(handleNetworkError(error)).toBe(messages[CLIENT_ERROR_KEYS.DENIED]);
     });
 
-    it('should set a specific message for 401 Unauthorized errors', () => {
-      const networkError: NetworkErrorType = { statusCode: 401 } as ApolloError['networkError'];
-
-      handleNetworkError({
-        networkError,
-        setServerErrorMessage: setServerErrorMessageMock,
-        setNotificationType: setNotificationTypeMock,
-        setIsNotificationOpen: setIsNotificationOpenMock,
-      });
-
-      expect(setServerErrorMessageMock).toHaveBeenCalledWith(
-        'Unauthorized access. Please log in again.'
-      );
-    });
-    it('should set a specific message for 403 Forbidden errors', () => {
-      const networkError: NetworkErrorType = { statusCode: 403 } as ApolloError['networkError'];
-
-      handleNetworkError({
-        networkError,
-        setServerErrorMessage: setServerErrorMessageMock,
-        setNotificationType: setNotificationTypeMock,
-        setIsNotificationOpen: setIsNotificationOpenMock,
-      });
-
-      expect(setServerErrorMessageMock).toHaveBeenCalledWith(
-        'Access denied. You do not have permission to perform this action.'
-      );
+    it('should return server error for 500 status', () => {
+      const error: StatusCode = { statusCode: HTTPStatusCodes.INTERNAL_SERVER_ERROR };
+      expect(handleNetworkError(error)).toBe(messages[CLIENT_ERROR_KEYS.SERVER_ERROR]);
     });
 
-    it('should set a generic message for non-500 HTTP errors', () => {
-      const networkError: NetworkErrorType = { statusCode: 429 } as ApolloError['networkError'];
-
-      handleNetworkError({
-        networkError,
-        setServerErrorMessage: setServerErrorMessageMock,
-        setNotificationType: setNotificationTypeMock,
-        setIsNotificationOpen: setIsNotificationOpenMock,
-      });
-
-      expect(setServerErrorMessageMock).toHaveBeenCalledWith(
-        'Something went wrong with the request. Try again later.'
-      );
+    it('should return "went wrong" error for unknown status', () => {
+      const error: StatusCode = { statusCode: 999 };
+      expect(handleNetworkError(error)).toBe(messages[CLIENT_ERROR_KEYS.WENT_WRONG]);
     });
 
-    it('should handle an empty or unexpected networkError object gracefully', () => {
-      const networkError: NetworkErrorType = {} as ApolloError['networkError'];
+    it('should return unexpected error for non-object input', () => {
+      expect(handleNetworkError(null)).toBe(messages[CLIENT_ERROR_KEYS.WENT_WRONG]);
+    });
 
-      handleNetworkError({
-        networkError,
-        setServerErrorMessage: setServerErrorMessageMock,
-        setNotificationType: setNotificationTypeMock,
-        setIsNotificationOpen: setIsNotificationOpenMock,
-      });
+    it('should return server error for 502 status', () => {
+      const error: StatusCode = { statusCode: 502 };
+      expect(handleNetworkError(error)).toBe(messages[CLIENT_ERROR_KEYS.SERVER_ERROR]);
+    });
 
-      expect(setServerErrorMessageMock).toHaveBeenCalledWith(
-        'Something went wrong with the request. Try again later.'
-      );
+    it('should return server error for 504 status', () => {
+      const error: StatusCode = { statusCode: 504 };
+      expect(handleNetworkError(error)).toBe(messages[CLIENT_ERROR_KEYS.SERVER_ERROR]);
+    });
+
+    it('should return "went wrong" error for undefined statusCode', () => {
+      const error: ServerErrorShape = { message: 'Some error' };
+      expect(handleNetworkError(error)).toBe(messages[CLIENT_ERROR_KEYS.WENT_WRONG]);
+    });
+
+    it('should return network error for "network request failed" message', () => {
+      const error: ServerErrorShape = { statusCode: 400, message: 'Network request failed' };
+      expect(handleNetworkError(error)).toBe(messages[CLIENT_ERROR_KEYS.NETWORK]);
+    });
+
+    it('should return network error for "fetch failed" message', () => {
+      const error: ServerErrorShape = { statusCode: 400, message: 'Fetch failed' };
+      expect(handleNetworkError(error)).toBe(messages[CLIENT_ERROR_KEYS.NETWORK]);
     });
   });
 
   describe('handleApolloError', () => {
-    it('should call handleNetworkError if networkError is present in ApolloError', () => {
-      const networkError: NetworkErrorType = {
-        message: 'Failed to fetch',
-      } as ApolloError['networkError'];
-      const apolloError: ApolloError = new ApolloError({
-        networkError,
-        graphQLErrors: [],
-      });
+    let messages: ClientErrorMessages;
 
-      handleApolloError({
-        err: apolloError,
-        setServerErrorMessage: setServerErrorMessageMock,
-        setNotificationType: setNotificationTypeMock,
-        setIsNotificationOpen: setIsNotificationOpenMock,
-      });
-
-      expect(setNotificationTypeMock).not.toHaveBeenCalled();
-      expect(setIsNotificationOpenMock).not.toHaveBeenCalled();
-      expect(setServerErrorMessageMock).toHaveBeenCalled();
-      expect(setServerErrorMessageMock).toHaveBeenCalledWith(
-        'Network error. Please check your internet connection.'
-      );
+    beforeEach(() => {
+      jest.clearAllMocks();
+      messages = getClientErrorMessages();
     });
 
-    it('should handle GraphQL errors and set the error details properly', () => {
-      const apolloError: ApolloError = new ApolloError({
-        networkError: null,
-        graphQLErrors: [{ message: 'GraphQL error occurred' }],
+    it('should handle network error', () => {
+      const error: ApolloError = new ApolloError({
+        networkError: {
+          name: 'ServerError',
+          message: 'Network Error',
+          statusCode: HTTPStatusCodes.UNAUTHORIZED,
+        },
       });
 
-      handleApolloError({
-        err: apolloError,
-        setServerErrorMessage: setServerErrorMessageMock,
-        setNotificationType: setNotificationTypeMock,
-        setIsNotificationOpen: setIsNotificationOpenMock,
-      });
-
-      expect(setServerErrorMessageMock).toHaveBeenCalledWith('GraphQL error occurred');
+      const props: HandleApolloErrorProps = { error };
+      expect(handleApolloError(props)).toBe(messages[CLIENT_ERROR_KEYS.UNAUTHORIZED]);
     });
 
-    it('should set a generic error if err is not an instance of ApolloError', () => {
-      handleApolloError({
-        err: new Error('Some unknown error'),
-        setServerErrorMessage: setServerErrorMessageMock,
-        setNotificationType: setNotificationTypeMock,
-        setIsNotificationOpen: setIsNotificationOpenMock,
-      });
-
-      expect(setServerErrorMessageMock).toHaveBeenCalledWith(
-        'An unexpected error occurred. Please try again.'
-      );
+    it('should handle graphQLErrors with statusCode', () => {
+      const graphQLError: GraphQLFormattedError = {
+        message: 'Server Error',
+        extensions: { statusCode: HTTPStatusCodes.INTERNAL_SERVER_ERROR },
+      };
+      const error: HandleApolloErrorProps = {
+        error: new ApolloError({ graphQLErrors: [graphQLError] }),
+      };
+      expect(handleApolloError(error)).toBe(messages[CLIENT_ERROR_KEYS.SERVER_ERROR]);
     });
 
-    it('should set notification type to error and open notification for GraphQL 500 error', () => {
-      const apolloError: ApolloError = new ApolloError({
-        graphQLErrors: [{ message: 'Internal Server Error', extensions: { statusCode: 500 } }],
-      });
-
-      handleApolloError({
-        err: apolloError,
-        setServerErrorMessage: setServerErrorMessageMock,
-        setNotificationType: setNotificationTypeMock,
-        setIsNotificationOpen: setIsNotificationOpenMock,
-      });
-
-      expect(setNotificationTypeMock).toHaveBeenCalledWith(NotificationStatus.ERROR);
-      expect(setIsNotificationOpenMock).toHaveBeenCalledWith(true);
-    });
-    it('should set default error message when no networkError or graphQLErrors are present', () => {
-      const apolloError: ApolloError = new ApolloError({
-        networkError: null,
-        graphQLErrors: [],
-      });
-
-      handleApolloError({
-        err: apolloError,
-        setServerErrorMessage: setServerErrorMessageMock,
-        setNotificationType: setNotificationTypeMock,
-        setIsNotificationOpen: setIsNotificationOpenMock,
-      });
-
-      expect(setServerErrorMessageMock).toHaveBeenCalledWith(
-        'An unexpected error occurred. Please try again.'
-      );
+    it('should handle graphQLErrors without statusCode but with UNAUTHORIZED message', () => {
+      const graphQLError: GraphQLFormattedError = {
+        message: 'UNAUTHORIZED',
+      };
+      const error: HandleApolloErrorProps = {
+        error: new ApolloError({ graphQLErrors: [graphQLError] }),
+      };
+      expect(handleApolloError(error)).toBe(messages[CLIENT_ERROR_KEYS.UNAUTHORIZED]);
     });
 
-    it('should combine multiple GraphQL error messages', () => {
-      const apolloError: ApolloError = new ApolloError({
-        networkError: null,
-        graphQLErrors: [{ message: 'Error 1' }, { message: 'Error 2' }],
-      });
+    it('should handle multiple graphQLErrors and join messages', () => {
+      const graphQLErrors: GraphQLFormattedError[] = [
+        { message: 'Error 1' },
+        { message: 'Error 2' },
+      ];
+      const error: HandleApolloErrorProps = { error: new ApolloError({ graphQLErrors }) };
+      expect(handleApolloError(error)).toBe('Error 1, Error 2');
+    });
 
-      handleApolloError({
-        err: apolloError,
-        setServerErrorMessage: setServerErrorMessageMock,
-        setNotificationType: setNotificationTypeMock,
-        setIsNotificationOpen: setIsNotificationOpenMock,
-      });
+    it('should return unexpected error for non-ApolloError', () => {
+      const error: HandleApolloErrorProps = { error: null };
+      expect(handleApolloError(error)).toBe(messages[CLIENT_ERROR_KEYS.UNEXPECTED]);
 
-      expect(setServerErrorMessageMock).toHaveBeenCalledWith('Error 1, Error 2');
+      const notApolloError: HandleApolloErrorProps = { error: {} as ApolloError };
+      expect(handleApolloError(notApolloError)).toBe(messages[CLIENT_ERROR_KEYS.UNEXPECTED]);
+    });
+    it('should handle graphQLErrors with FORBIDDEN statusCode', () => {
+      const graphQLError: GraphQLFormattedError = {
+        message: 'Forbidden Access',
+        extensions: { statusCode: HTTPStatusCodes.FORBIDDEN },
+      };
+      const error: HandleApolloErrorProps = {
+        error: new ApolloError({ graphQLErrors: [graphQLError] }),
+      };
+      expect(handleApolloError(error)).toBe(messages[CLIENT_ERROR_KEYS.DENIED]);
     });
   });
 });
