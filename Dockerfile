@@ -13,11 +13,13 @@ COPY package.json pnpm-lock.yaml checkNodeVersion.js ./
 
 RUN pnpm install
 
+
 FROM base AS build
 
 COPY . .
 
 RUN npx next build && npx next-export-optimize-images
+
 
 FROM base AS production
 
