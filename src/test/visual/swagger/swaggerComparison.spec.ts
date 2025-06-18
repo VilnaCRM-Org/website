@@ -7,8 +7,6 @@ const currentLanguage: string = process.env.NEXT_PUBLIC_MAIN_LANGUAGE as string;
 test.describe('Visual Tests', () => {
   for (const screen of screenSizes) {
     test(`${screen.name} test`, async ({ page }) => {
-      await page.goto('/swagger');
-
       await test.step('Navigate and wait for initial load', async () => {
         await page.goto('/swagger', { waitUntil: 'networkidle' });
         await page.waitForLoadState('domcontentloaded');

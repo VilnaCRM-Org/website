@@ -1,22 +1,24 @@
 import 'dotenv/config';
-import { writeFile } from 'fs/promises';
+import { writeFile } from 'node:fs/promises';
 import yaml from 'js-yaml';
 
 const version = process.env.USER_SERVICE_SPEC_VERSION;
-const specUrl = `https://raw.githubusercontent.com/VilnaCRM-Org/user-service/${version}/.github/openapi-spec/spec.yaml`;
 
 if (!version) {
-  console.log('specUrl:', specUrl);
   console.error('❌ USER_SERVICE_SPEC_VERSION is not set');
   process.exit(1);
 }
+
+const specUrl = `https://raw.githubusercontent.com/VilnaCRM-Org/user-service/${version}/.github/openapi-spec/spec.yaml`;
+console.log('specUrl:', specUrl);
+
 
 async function fetchAndSaveSwagger() {
  try {
    const response = await fetch(specUrl);
 
    if (!response.ok) {
-     throw new Error(`Failed to fetch swagger schema. HTTP status: ${res.status} ${res.statusText}`);
+     throw new Error(`Failed to fetch swagger schema. HTTP status: ${response.status} ${response.statusText}`);
    }
 
    const yamlText = await response.text();

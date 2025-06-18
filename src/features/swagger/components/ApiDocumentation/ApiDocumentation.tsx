@@ -3,17 +3,17 @@ import SwaggerUI from 'swagger-ui-react';
 import useSwagger from '../../hooks/useSwagger';
 
 function ApiDocumentation(): React.ReactElement | null {
-  const { yamlContent, error } = useSwagger();
+  const { swaggerContent, error } = useSwagger();
 
   if (error) {
     return <div>Error loading API documentation: {error.message}</div>;
   }
 
-  if (!yamlContent) {
+  if (!swaggerContent) {
     return <div>Loading API documentation…</div>;
   }
 
-  return yamlContent ? <SwaggerUI spec={yamlContent} /> : null;
+  return swaggerContent ? <SwaggerUI spec={swaggerContent} /> : null;
 }
 
 export default ApiDocumentation;

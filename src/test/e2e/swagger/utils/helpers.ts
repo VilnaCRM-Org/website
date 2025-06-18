@@ -104,12 +104,14 @@ export async function mockAuthorizeSuccess(
   redirectUri: string,
   state?: string
 ): Promise<void> {
-  await page.route(authorizeUrl, route => {
-    const targetUrl: string = `${redirectUri}?code=abc123${state ? `&state=${state}` : ''}`;
-    route.fulfill({
-      status: 200,
-      contentType: 'text/html',
-      body: `
+  await page.route(
+    authorizeUrl,
+    route => {
+      const targetUrl: string = `${redirectUri}?code=abc123${state ? `&state=${state}` : ''}`;
+      route.fulfill({
+        status: 200,
+        contentType: 'text/html',
+        body: `
         <html lang="eng">
           <head>
             <meta http-equiv="refresh" content="0; url=${targetUrl}" />
@@ -119,8 +121,10 @@ export async function mockAuthorizeSuccess(
           </body>
         </html>
       `,
-    });
-  });
+      });
+    },
+    { times: 1 }
+  );
 }
 
 export function buildSafeUrl(baseUrl: string, id: string): string {

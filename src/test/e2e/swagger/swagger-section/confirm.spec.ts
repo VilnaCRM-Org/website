@@ -21,7 +21,6 @@ interface ConfirmEndpointElements extends BasicEndpointElements {
   parametersSection: Locator;
   tokenInput: Locator;
   curl: Locator;
-  copyButton: Locator;
 }
 
 async function setupConfirmEndpoint(page: Page): Promise<ConfirmEndpointElements> {
@@ -39,7 +38,6 @@ async function setupConfirmEndpoint(page: Page): Promise<ConfirmEndpointElements
     .locator('.response-col_description .microlight')
     .first();
   const curl: Locator = confirmEndpoint.locator('.curl-command');
-  const copyButton: Locator = confirmEndpoint.locator('div.curl-command .copy-to-clipboard button');
 
   return {
     getEndpoint: confirmEndpoint,
@@ -49,7 +47,6 @@ async function setupConfirmEndpoint(page: Page): Promise<ConfirmEndpointElements
     requestUrl,
     responseBody,
     curl,
-    copyButton,
   };
 }
 async function fillConfirmBody(elements: ConfirmEndpointElements, token: string): Promise<void> {
@@ -80,12 +77,14 @@ test.describe('confirm endpoint tests', () => {
     const elements: ConfirmEndpointElements = await setupConfirmEndpoint(page);
 
     await expect(elements.tokenInput).toBeVisible();
-    await elements.tokenInput.fill('');
+    await elements.tokenInput.clear();
     await elements.executeBtn.click();
 
     await expect(elements.tokenInput).toHaveClass(/invalid/);
 
     await cancelOperation(page);
+
+    await page.locator('#operations-User-confirm_http').click();
   });
 
   test('error response - invalid token', async ({ page }) => {

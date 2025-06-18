@@ -71,7 +71,18 @@ test.describe('get user by ID', () => {
     await expect(elements.requestUrl).toContainText(testUserId);
 
     const responseText: string | null = await elements.responseBody.textContent();
-    const response: ApiUser = JSON.parse(responseText || '{}');
+
+    let response: ApiUser;
+    try {
+      if (!responseText) {
+        throw new Error('Response body is empty');
+      }
+      response = JSON.parse(responseText);
+    } catch (err) {
+      throw new Error(
+        `❌ Failed to parse response as JSON:\n${responseText}\n\nError: ${err instanceof Error ? err.message : err}`
+      );
+    }
     expect(response).toEqual(
       expect.objectContaining({
         confirmed: expect.any(Boolean),

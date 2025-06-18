@@ -11,6 +11,7 @@ interface Locators {
   responseStatus: string;
   validationErrors: string;
   idInput: string;
+  contentTypeSelect: string;
 }
 
 export const locators: Readonly<Locators> = {
@@ -22,6 +23,7 @@ export const locators: Readonly<Locators> = {
   copyButton: 'div.curl-command .copy-to-clipboard button',
   downloadButton: '.response-col_description .highlight-code button.download-contents',
   requestUrl: '.request-url .microlight',
+  contentTypeSelect: 'select[aria-label="Request content type"]',
 
   responseError: '.responses-table.live-responses-table .response .response-col_description',
   responseStatus: '.responses-table.live-responses-table .response .response-col_status',

@@ -21,7 +21,7 @@ interface PatchUserEndpointElements extends BasicEndpointElements {
   downloadButton: Locator;
 }
 
-const PATCH_USER_API_URL: (id: string) => string = (id: string): string => `${BASE_API}/${id}`;
+const PATCH_USER_API_URL: (id: string) => string = (id: string): string => `${BASE_API}/${id}**`;
 
 async function setupPatchUserEndpoint(page: Page): Promise<PatchUserEndpointElements> {
   const { userEndpoints, elements } = await initSwaggerPage(page);
@@ -163,6 +163,9 @@ test.describe('patch by ID', () => {
     await elements.idInput.fill(nonExistentId);
     await elements.jsonEditor.fill(JSON.stringify({ initials: 'NF' }));
     await elements.executeBtn.click();
+
+    await elements.responseBody.waitFor({ state: 'visible' });
+
     const responseCode: Locator = elements.getEndpoint
       .locator('.response .response-col_status')
       .first();
@@ -187,6 +190,9 @@ test.describe('patch by ID', () => {
     await elements.idInput.fill(invalidId);
     await elements.jsonEditor.fill(JSON.stringify({ initials: 'NF' }));
     await elements.executeBtn.click();
+
+    await elements.responseBody.waitFor({ state: 'visible' });
+
     await expect(elements.responseBody).toContainText('Invalid user ID format');
     const responseCode: Locator = elements.getEndpoint
       .locator('.response .response-col_status')
@@ -203,6 +209,8 @@ test.describe('patch by ID', () => {
     await elements.idInput.fill(testUserId);
     await elements.jsonEditor.fill(JSON.stringify({ initials: 'NF' }));
     await elements.executeBtn.click();
+
+    await elements.responseBody.waitFor({ state: 'visible' });
 
     await expectErrorOrFailureStatus(elements.getEndpoint);
 

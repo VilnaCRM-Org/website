@@ -19,7 +19,7 @@ interface ResendConfirmationEndpointElements extends BasicEndpointElements {
 }
 
 const RESEND_CONFIRM_API_URL: (id: string) => string = (id: string): string =>
-  `${BASE_API}/${id}/resend-confirmation-email`;
+  `${BASE_API}/${id}/resend-confirmation-email**`;
 
 async function setupResendConfirmationEndpoint(
   page: Page

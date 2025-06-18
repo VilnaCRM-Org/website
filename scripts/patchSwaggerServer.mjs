@@ -15,10 +15,18 @@ const isDev = process.env.NODE_ENV === 'development';
 const path = './public/swagger-schema.json';
 const mockUrl = isDev
   ? `http://${ensureEnv('WEBSITE_DOMAIN')}:${ensureEnv('MOCKOON_PORT')}`
-  : `http://${ensureEnv('MOCKOON_API_PATH')}:${ensureEnv('MOCKOON_PORT')}`;
+  : `http://${ensureEnv('WEBSITE_DOMAIN')}:${ensureEnv('MOCKOON_PORT')}/${ensureEnv('MOCKOON_SERVICE_NAME')}`;
 
-const content = fs.readFileSync(path, 'utf8');
-const doc = JSON.parse(content);
+let content;
+let doc;
+
+try {
+  content = fs.readFileSync(path, 'utf8');
+  doc = JSON.parse(content);
+} catch (error) {
+  console.error(`❌ Failed to read or parse swagger schema at "${path}":`, error.message);
+  process.exit(1);
+}
 
 if (Array.isArray(doc.servers) && doc.servers.length > 0) {
   doc.servers[0].url = mockUrl;

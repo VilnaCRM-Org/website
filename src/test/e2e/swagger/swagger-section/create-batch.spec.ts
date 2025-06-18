@@ -36,9 +36,7 @@ async function setupBatchEndpoint(page: Page): Promise<BatchUserEndpointElements
 
   const executeBtn: Locator = await getAndCheckExecuteBtn(createBatchEndpoint);
   const requestBodySection: Locator = createBatchEndpoint.locator(locators.requestBodySection);
-  const contentTypeSelect: Locator = requestBodySection.locator(
-    'select[aria-label="Request content type"]'
-  );
+  const contentTypeSelect: Locator = requestBodySection.locator(locators.contentTypeSelect);
   const jsonEditor: Locator = requestBodySection.locator(locators.jsonEditor);
   const responseBody: Locator = createBatchEndpoint.locator(locators.responseBody).first();
   const curl: Locator = createBatchEndpoint.locator(locators.curl);
@@ -237,7 +235,7 @@ test.describe('Create batch users endpoint tests', () => {
   test('network failure handling', async ({ page }) => {
     const elements: BatchUserEndpointElements = await setupBatchEndpoint(page);
 
-    await page.route('**/api/users/batch', route => route.abort('failed'), { times: 1 });
+    await page.route(`${BASE_API}/batch`, route => route.abort('failed'), { times: 1 });
 
     await fillBatchRequestBody(elements, validBatchData);
     await elements.executeBtn.click();

@@ -17,7 +17,7 @@ interface TokenEndpointElements {
   executeBtn: Locator;
   requestBodySection: Locator;
   contentTypeSelect: Locator;
-  grantTypeInput: Locator;
+  requestBodyEditor: Locator;
   curl: Locator;
   copyButton: Locator;
   requestUrl: Locator;
@@ -39,7 +39,7 @@ async function setupTokenEndpoint(page: Page): Promise<TokenEndpointElements> {
   const contentTypeSelect: Locator = requestBodySection.locator(
     'select[aria-label="Request content type"]'
   );
-  const grantTypeInput: Locator = tokenEndpoint.locator(locators.jsonEditor);
+  const requestBodyEditor: Locator = tokenEndpoint.locator(locators.jsonEditor);
   const requestUrl: Locator = tokenEndpoint.locator(locators.requestUrl);
   const copyButton: Locator = await getEndpointCopyButton(tokenEndpoint);
   const curl: Locator = tokenEndpoint.locator(locators.curl);
@@ -51,7 +51,7 @@ async function setupTokenEndpoint(page: Page): Promise<TokenEndpointElements> {
     executeBtn,
     requestBodySection,
     contentTypeSelect,
-    grantTypeInput,
+    requestBodyEditor,
     curl,
     copyButton,
     requestUrl,
@@ -65,8 +65,8 @@ test.describe('OAuth token endpoint', () => {
     const elements: TokenEndpointElements = await setupTokenEndpoint(page);
     await expect(elements.contentTypeSelect).toBeVisible();
     await expect(elements.contentTypeSelect).toHaveValue('application/json');
-    await expect(elements.grantTypeInput).toBeVisible();
-    await elements.grantTypeInput.fill(JSON.stringify(TEST_OAUTH_DATA, null, 2));
+    await expect(elements.requestBodyEditor).toBeVisible();
+    await elements.requestBodyEditor.fill(JSON.stringify(TEST_OAUTH_DATA, null, 2));
     await elements.executeBtn.click();
 
     await expect(elements.curl).toBeVisible();
@@ -84,27 +84,27 @@ test.describe('OAuth token endpoint', () => {
 
   test('empty request body validation', async ({ page }) => {
     const elements: TokenEndpointElements = await setupTokenEndpoint(page);
-    await elements.grantTypeInput.fill('');
+    await elements.requestBodyEditor.fill('');
     await elements.executeBtn.click();
-    await expect(elements.grantTypeInput).toHaveClass(/invalid/);
+    await expect(elements.requestBodyEditor).toHaveClass(/invalid/);
     await cancelOperation(page);
   });
 
   test('reset button restores default request body', async ({ page }) => {
     const elements: TokenEndpointElements = await setupTokenEndpoint(page);
-    const initialValue: string = await elements.grantTypeInput.inputValue();
+    const initialValue: string = await elements.requestBodyEditor.inputValue();
 
-    await elements.grantTypeInput.fill(JSON.stringify({ grant_type: 'changed' }, null, 2));
+    await elements.requestBodyEditor.fill(JSON.stringify({ grant_type: 'changed' }, null, 2));
     await elements.resetButton.click();
 
-    await expect(elements.grantTypeInput).toHaveValue(initialValue);
+    await expect(elements.requestBodyEditor).toHaveValue(initialValue);
 
     await cancelOperation(page);
   });
 
   test('error response - CORS/Network failure', async ({ page }) => {
     const elements: TokenEndpointElements = await setupTokenEndpoint(page);
-    await elements.grantTypeInput.fill(JSON.stringify(TEST_OAUTH_DATA, null, 2));
+    await elements.requestBodyEditor.fill(JSON.stringify(TEST_OAUTH_DATA, null, 2));
 
     await page.route(TOKEN_API_URL, route => route.abort('failed'), { times: 1 });
 

@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 
 type UseSwaggerReturn = {
-  yamlContent: object | null;
+  swaggerContent: object | null;
   error: Error | null;
 };
 
 const useSwagger: () => UseSwaggerReturn = () => {
-  const [yamlContent, setYamlContent] = useState<object | null>(null);
+  const [swaggerContent, setSwaggerContent] = useState<object | null>(null);
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
@@ -14,11 +14,11 @@ const useSwagger: () => UseSwaggerReturn = () => {
       try {
         const res: Response = await fetch('/swagger-schema.json');
         if (!res.ok) {
-          throw new Error(`Failed to fetch: ${res.status}`);
+          throw new Error(`Failed to fetch swagger schema – ${res.status} ${res.statusText}`);
         }
 
         const jsonContent: object = await res.json();
-        setYamlContent(jsonContent);
+        setSwaggerContent(jsonContent);
       } catch (err) {
         setError(err as Error);
       }
@@ -27,7 +27,7 @@ const useSwagger: () => UseSwaggerReturn = () => {
     loadSwaggerSchema();
   }, []);
 
-  return { yamlContent, error };
+  return { swaggerContent, error };
 };
 
 export default useSwagger;

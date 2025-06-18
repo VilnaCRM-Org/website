@@ -75,8 +75,12 @@ test.describe('OAuth authorize endpoint', () => {
     await elements.scopeInput.fill(testOAuthParams.scope);
     await elements.stateInput.fill(testOAuthParams.state);
 
-    const authorizeUrl: string = `${mockoonHost}/api/oauth/authorize**`;
-    await mockAuthorizeSuccess(page, authorizeUrl, testOAuthParams.redirectUri, 'teststate');
+    await mockAuthorizeSuccess(
+      page,
+      `${mockoonHost}/${AUTHORIZE_API_URL.replace('**/', '')}`,
+      testOAuthParams.redirectUri,
+      testOAuthParams.state
+    );
 
     await elements.executeBtn.click();
 
