@@ -1,7 +1,7 @@
 import { test, expect, Page } from '@playwright/test';
 
 import { NullableImgSize } from './types/device-image';
-import { setImageAndViewport } from './utils/setImageAndViewport';
+import  setImageAndViewport  from './utils/setImageAndViewport';
 
 test('Should display the correct image size based on viewport', async ({
   page,
