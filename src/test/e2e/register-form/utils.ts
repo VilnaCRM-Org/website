@@ -26,12 +26,13 @@ export async function fillInitialsInput(page: Page, user: User): Promise<void> {
 export async function fillEmailInput(page: Page, user: User): Promise<void> {
   const emailInput: Locator = page.getByPlaceholder(placeholderEmail);
   await page.getByRole('button', { name: signUpButton }).click();
-  await Promise.all(
-  expectationsEmail.map(async (expectation) => {
+ for (const expectation of expectationsEmail) {
+   
+ 
     await emailInput.fill(expectation.email);
     await expect(page.getByText(expectation.errorText)).toBeVisible();
-  })
-);
+  }
+;
 
   await emailInput.fill(user.email);
 }
