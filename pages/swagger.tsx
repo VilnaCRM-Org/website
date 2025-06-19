@@ -1,5 +1,5 @@
-import ReactSwagger from '@/features/swagger';
+import { Swagger as SwaggerComponent } from '@/features/swagger';
 
 export default function Swagger(): React.ReactElement {
-  return <ReactSwagger />;
+  return <SwaggerComponent />;
 }
