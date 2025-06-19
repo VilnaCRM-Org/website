@@ -57,6 +57,8 @@ describe('Localization Configuration', () => {
   afterEach(() => {
     Object.keys(process.env).forEach(key => delete process.env[key]); // Clear all environment variables
     Object.assign(process.env, OLD_ENV); // Restore original values
+    jest.resetModules(); // Clean module cache for each test
+    jest.clearAllMocks(); // Clear any mocks
   });
 
   it('should throw an error if both mainLanguage and fallbackLanguage are missing', async () => {
@@ -67,6 +69,7 @@ describe('Localization Configuration', () => {
       'Missing required environment variables for localization'
     );
   });
+
   it('should throw an error if only fallbackLanguage is missing', async () => {
     process.env.NEXT_PUBLIC_MAIN_LANGUAGE = 'uk';
     delete process.env.NEXT_PUBLIC_FALLBACK_LANGUAGE;
@@ -86,7 +89,9 @@ describe('Localization Configuration', () => {
     expect(i18nConfig.fallbackLng).toBeDefined();
     expect(i18nConfig.fallbackLng).toContain('en');
   });
-  it('should throw an error if localization resources fail to load', async () => {
+
+  it('should throw an error if localization resources fail to load (with doMock)', async () => {
+    jest.resetModules();
     jest.doMock('../../../pages/i18n/localization.json', () => {
       throw new Error('Mocked file not found');
     });
@@ -95,7 +100,9 @@ describe('Localization Configuration', () => {
       'Failed to load localization resources: Mocked file not found'
     );
   });
-  it('should throw an error if localization resources fail to load', async () => {
+
+  it('should throw an error if localization resources fail to load (with require.resolve)', async () => {
+    jest.resetModules();
     jest.spyOn(require, 'resolve').mockImplementation(() => {
       throw new Error('Mocked file not found');
     });

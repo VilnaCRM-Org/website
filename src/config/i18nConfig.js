@@ -5,16 +5,17 @@ if (!mainLanguage || !fallbackLanguage) {
   throw new Error('Missing required environment variables for localization');
 }
 
-const getResources = () => {
-  try {
-    // eslint-disable-next-line global-require
-    return require('../../pages/i18n/localization.json');
-  } catch (error) {
-    throw new Error(`Failed to load localization resources: ${error.message}`);
-  }
-};
+let localization;
 
-module.exports = {
+try {
+  localization = require('../../pages/i18n/localization.json');
+} catch (err) {
+  throw new Error(`Failed to load localization resources: ${err.message}`);
+}
+
+const getResources = () => localization;
+
+export default {
   lng: mainLanguage,
   resources: getResources(),
   fallbackLng: fallbackLanguage,

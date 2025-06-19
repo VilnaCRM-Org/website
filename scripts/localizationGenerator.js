@@ -1,19 +1,13 @@
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
 
 class LocalizationGenerator {
   i18nPath;
-
   featurePath;
-
   jsonFileType;
-
   localizationFile;
-
   pathToWriteLocalization;
-
   pathToI18nFolder;
-
   pathToI18nFile;
 
   constructor(
@@ -27,7 +21,7 @@ class LocalizationGenerator {
     this.jsonFileType = jsonFileType;
     this.localizationFile = localizationFile;
 
-    this.pathToWriteLocalization = `pages/${i18nPath}`;
+    this.pathToWriteLocalization = path.resolve(process.cwd(), 'pages', this.i18nPath);
     this.pathToI18nFolder = `${featurePath}/{folder}/${i18nPath}`;
     this.pathToI18nFile = `${featurePath}/{folder}/${i18nPath}/{file.name}`;
   }
@@ -53,11 +47,7 @@ class LocalizationGenerator {
       return acc;
     }, {});
 
-    const filePath = path.join(
-      path.dirname(__dirname),
-      this.pathToWriteLocalization,
-      this.localizationFile
-    );
+    const filePath = path.resolve(this.pathToWriteLocalization, this.localizationFile);
     const fileContent = JSON.stringify(localizationObj);
 
     this.writeLocalizationFile(fileContent, filePath);
@@ -100,7 +90,6 @@ class LocalizationGenerator {
     }, {});
   }
 
-  // eslint-disable-next-line class-methods-use-this
   writeLocalizationFile(fileContent, filePath) {
     fs.writeFile(filePath, fileContent, err => {
       if (err) {
@@ -110,4 +99,4 @@ class LocalizationGenerator {
   }
 }
 
-module.exports = LocalizationGenerator;
+export default LocalizationGenerator;

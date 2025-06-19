@@ -39,10 +39,12 @@ export const getFormElements: () => ExtendedGetElementsResult = () => {
       return queryFunction();
     } catch (error) {
       throw new FormElementNotFoundError(
-        `Form element "${elementName}" not found using query: ${queryFunction.toString()}`
+        `Form element "${elementName}" not found using query: ${queryFunction.toString()}`,
+        error as Error
       );
     }
   };
+
 
   return {
     fullNameInput: getElementSafe(
