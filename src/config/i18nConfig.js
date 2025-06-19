@@ -5,7 +5,13 @@ if (!mainLanguage || !fallbackLanguage) {
   throw new Error('Missing required environment variables for localization');
 }
 
-import localization from '../../pages/i18n/localization.json';
+let localization;
+
+try {
+  localization = require('../../pages/i18n/localization.json');
+} catch (err) {
+  throw new Error(`Failed to load localization resources: ${err.message}`);
+}
 
 const getResources = () => localization;
 
