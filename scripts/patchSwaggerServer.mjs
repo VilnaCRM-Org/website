@@ -13,9 +13,10 @@ function ensureEnv(name) {
 const isDev = process.env.NODE_ENV === 'development';
 
 const path = './public/swagger-schema.json';
-const mockUrl = isDev
-  ? `http://${ensureEnv('WEBSITE_DOMAIN')}:${ensureEnv('MOCKOON_PORT')}`
-  : `http://${ensureEnv('WEBSITE_DOMAIN')}:${ensureEnv('MOCKOON_PORT')}/${ensureEnv('MOCKOON_SERVICE_NAME')}`;
+
+const mockUrl = ensureEnv(
+  isDev ? 'MOCKOON_LOCAL_API_URL' : 'MOCKOON_CONTAINER_API_URL'
+);
 
 let content;
 let doc;
