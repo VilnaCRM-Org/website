@@ -7,3 +7,4 @@ export interface Card {
   alt: string;
   type: string;
 }
+
