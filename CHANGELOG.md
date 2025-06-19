@@ -1,3 +1,12 @@
+## [0.1.2](https://github.com/VilnaCRM-Org/website/compare/v0.1.1...v0.1.2) (2025-06-17)
+
+
+### Bug Fixes
+
+* **#201:** add available packages ([#202](https://github.com/VilnaCRM-Org/website/issues/202)) ([1da3a4d](https://github.com/VilnaCRM-Org/website/commit/1da3a4d1dc05fc3e9e59e4ad12529155466537c6)), closes [#201](https://github.com/VilnaCRM-Org/website/issues/201) [#201](https://github.com/VilnaCRM-Org/website/issues/201) [#201](https://github.com/VilnaCRM-Org/website/issues/201) [#201](https://github.com/VilnaCRM-Org/website/issues/201)
+
+
+
 ## [0.1.1](https://github.com/VilnaCRM-Org/website/compare/v0.1.0...v0.1.1) (2025-06-07)
 
 
@@ -36,15 +45,6 @@
 ### Bug Fixes
 
 * **#176:** fix sandbox creation ([#177](https://github.com/VilnaCRM-Org/website/issues/177)) ([198cefc](https://github.com/VilnaCRM-Org/website/commit/198cefc01a93fb96aae395c4b1719e8a172f1be6)), closes [#176](https://github.com/VilnaCRM-Org/website/issues/176) [#176](https://github.com/VilnaCRM-Org/website/issues/176) [#176](https://github.com/VilnaCRM-Org/website/issues/176) [#176](https://github.com/VilnaCRM-Org/website/issues/176) [#176](https://github.com/VilnaCRM-Org/website/issues/176) [#176](https://github.com/VilnaCRM-Org/website/issues/176) [#176](https://github.com/VilnaCRM-Org/website/issues/176) [#176](https://github.com/VilnaCRM-Org/website/issues/176) [#176](https://github.com/VilnaCRM-Org/website/issues/176) [#176](https://github.com/VilnaCRM-Org/website/issues/176) [#176](https://github.com/VilnaCRM-Org/website/issues/176) [#176](https://github.com/VilnaCRM-Org/website/issues/176) [#176](https://github.com/VilnaCRM-Org/website/issues/176) [#176](https://github.com/VilnaCRM-Org/website/issues/176) [#176](https://github.com/VilnaCRM-Org/website/issues/176) [#176](https://github.com/VilnaCRM-Org/website/issues/176) [#176](https://github.com/VilnaCRM-Org/website/issues/176) [#176](https://github.com/VilnaCRM-Org/website/issues/176) [#176](https://github.com/VilnaCRM-Org/website/issues/176) [#176](https://github.com/VilnaCRM-Org/website/issues/176) [#176](https://github.com/VilnaCRM-Org/website/issues/176) [#176](https://github.com/VilnaCRM-Org/website/issues/176) [#176](https://github.com/VilnaCRM-Org/website/issues/176) [#176](https://github.com/VilnaCRM-Org/website/issues/176) [#176](https://github.com/VilnaCRM-Org/website/issues/176) [#176](https://github.com/VilnaCRM-Org/website/issues/176) [#176](https://github.com/VilnaCRM-Org/website/issues/176) [#176](https://github.com/VilnaCRM-Org/website/issues/176) [#176](https://github.com/VilnaCRM-Org/website/issues/176) [#176](https://github.com/VilnaCRM-Org/website/issues/176) [#176](https://github.com/VilnaCRM-Org/website/issues/176) [#176](https://github.com/VilnaCRM-Org/website/issues/176) [#176](https://github.com/VilnaCRM-Org/website/issues/176) [#176](https://github.com/VilnaCRM-Org/website/issues/176) [#176](https://github.com/VilnaCRM-Org/website/issues/176) [#176](https://github.com/VilnaCRM-Org/website/issues/176) [#176](https://github.com/VilnaCRM-Org/website/issues/176) [#176](https://github.com/VilnaCRM-Org/website/issues/176) [#176](https://github.com/VilnaCRM-Org/website/issues/176) [#176](https://github.com/VilnaCRM-Org/website/issues/176) [#176](https://github.com/VilnaCRM-Org/website/issues/176) [#176](https://github.com/VilnaCRM-Org/website/issues/176) [#176](https://github.com/VilnaCRM-Org/website/issues/176) [#176](https://github.com/VilnaCRM-Org/website/issues/176) [#176](https://github.com/VilnaCRM-Org/website/issues/176) [#176](https://github.com/VilnaCRM-Org/website/issues/176)
-
-
-
-# [1.5.0](https://github.com/VilnaCRM-Org/website/compare/v1.4.0...v1.5.0) (2025-05-11)
-
-
-### Features
-
-* **#178:** dependabot workflow  ([#179](https://github.com/VilnaCRM-Org/website/issues/179)) ([bc20712](https://github.com/VilnaCRM-Org/website/commit/bc207126629fda72074a7b5d49d80762bfa0b3b6)), closes [#178](https://github.com/VilnaCRM-Org/website/issues/178) [#178](https://github.com/VilnaCRM-Org/website/issues/178) [#178](https://github.com/VilnaCRM-Org/website/issues/178) [#178](https://github.com/VilnaCRM-Org/website/issues/178) [#178](https://github.com/VilnaCRM-Org/website/issues/178)
 
 
 
