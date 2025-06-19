@@ -13,6 +13,7 @@ import {
   initSwaggerPage,
   getAndCheckExecuteBtn,
   expectErrorOrFailureStatus,
+  collapseEndpoint,
 } from '../utils/helpers';
 
 const CONFIRM_API_URL: string = `${BASE_API}/confirm`;
@@ -84,7 +85,7 @@ test.describe('confirm endpoint tests', () => {
 
     await cancelOperation(page);
 
-    await page.locator('#operations-User-confirm_http').click();
+    await collapseEndpoint(elements.getEndpoint);
   });
 
   test('error response - invalid token', async ({ page }) => {

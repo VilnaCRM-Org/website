@@ -15,7 +15,7 @@ const schemaPath = './public/swagger-schema.json';
 const isDev = process.env.NODE_ENV === 'development';
 
 const mockUrl = ensureEnv(
-  isDev ? 'NEXT_MOCKOON_LOCAL_API_URL' : 'NEXT_MOCKOON_CONTAINER_API_URL'
+  isDev ? 'NEXT_PUBLIC_MOCKOON_LOCAL_API_URL' : 'NEXT_PUBLIC_MOCKOON_CONTAINER_API_URL'
 );
 
 let content;

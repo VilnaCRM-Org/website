@@ -20,7 +20,7 @@ const useSwagger: () => UseSwaggerReturn = () => {
         const data: unknown = await res.json();
         setSwaggerContent(data);
       } catch (err: unknown) {
-        if ((error as DOMException).name === 'AbortError') return;
+        if ((err as DOMException).name === 'AbortError') return;
         setError(err as Error);
       }
     };
