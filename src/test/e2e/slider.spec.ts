@@ -1,6 +1,6 @@
 import { test, Locator, expect, Page } from '@playwright/test';
 
-import { createLocalizedRegExp } from '@/test/e2e/utils/createLocalizedRegExp';
+import  createLocalizedRegExp  from '@/test/e2e/utils/createLocalizedRegExp';
 
 import { t } from './utils/initializeLocalization';
 import  removeHtmlTags  from './utils/removeHtmlTags';
