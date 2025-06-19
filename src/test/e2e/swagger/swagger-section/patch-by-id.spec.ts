@@ -3,11 +3,12 @@ import { expect, type Locator, Page, test, type Download } from '@playwright/tes
 import { testUserId, BASE_API, BasicEndpointElements, UpdatedUser } from '../utils/constants';
 import {
   initSwaggerPage,
-  clearEndpoint,
+  clearEndpointResponse,
   getAndCheckExecuteBtn,
   interceptWithErrorResponse,
   cancelOperation,
   expectErrorOrFailureStatus,
+  buildSafeUrl,
 } from '../utils/helpers';
 import { locators } from '../utils/locators';
 
@@ -21,7 +22,8 @@ interface PatchUserEndpointElements extends BasicEndpointElements {
   downloadButton: Locator;
 }
 
-const PATCH_USER_API_URL: (id: string) => string = (id: string): string => `${BASE_API}/${id}**`;
+const PATCH_USER_API_URL: (id: string) => string = (id: string): string =>
+  `${buildSafeUrl(BASE_API, encodeURIComponent(id))}**`;
 
 async function setupPatchUserEndpoint(page: Page): Promise<PatchUserEndpointElements> {
   const { userEndpoints, elements } = await initSwaggerPage(page);
@@ -76,7 +78,7 @@ test.describe('patch by ID', () => {
     await expect(elements.copyButton).toBeVisible();
     await expect(elements.requestUrl).toContainText(testUserId);
     await expect(elements.downloadButton).toBeVisible();
-    await clearEndpoint(elements.getEndpoint);
+    await clearEndpointResponse(elements.getEndpoint);
   });
 
   test('custom values', async ({ page }) => {
@@ -97,7 +99,7 @@ test.describe('patch by ID', () => {
     expect(curlText).toContain('PT');
     expect(curlText).toContain('oldPatchPass');
     expect(curlText).toContain('newPatchPass');
-    await clearEndpoint(elements.getEndpoint);
+    await clearEndpointResponse(elements.getEndpoint);
   });
 
   test('empty ID validation', async ({ page }) => {
@@ -144,7 +146,7 @@ test.describe('patch by ID', () => {
     const path: string | null = await download.path();
     expect(path).toBeTruthy();
 
-    await clearEndpoint(elements.getEndpoint);
+    await clearEndpointResponse(elements.getEndpoint);
   });
 
   test('error response - user not found', async ({ page }) => {
@@ -171,7 +173,7 @@ test.describe('patch by ID', () => {
       .first();
     await expect(responseCode).toContainText('404');
     await expect(elements.responseBody).toContainText('User not found');
-    await clearEndpoint(elements.getEndpoint);
+    await clearEndpointResponse(elements.getEndpoint);
   });
 
   test('error response - invalid id format', async ({ page }) => {
@@ -198,7 +200,7 @@ test.describe('patch by ID', () => {
       .locator('.response .response-col_status')
       .first();
     await expect(responseCode).toContainText('400');
-    await clearEndpoint(elements.getEndpoint);
+    await clearEndpointResponse(elements.getEndpoint);
   });
 
   test('error response - CORS/Network failure', async ({ page }) => {
@@ -214,6 +216,6 @@ test.describe('patch by ID', () => {
 
     await expectErrorOrFailureStatus(elements.getEndpoint);
 
-    await clearEndpoint(elements.getEndpoint);
+    await clearEndpointResponse(elements.getEndpoint);
   });
 });

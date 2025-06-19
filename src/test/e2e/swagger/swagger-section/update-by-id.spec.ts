@@ -11,11 +11,12 @@ import {
 } from '../utils/constants';
 import {
   initSwaggerPage,
-  clearEndpoint,
+  clearEndpointResponse,
   getAndCheckExecuteBtn,
   interceptWithErrorResponse,
   cancelOperation,
   expectErrorOrFailureStatus,
+  parseJsonSafe,
 } from '../utils/helpers';
 import { locators } from '../utils/locators';
 
@@ -93,7 +94,11 @@ test.describe('updateById', () => {
     await expect(elements.downloadButton).toBeVisible();
 
     const responseText: string | null = await elements.responseBody.textContent();
-    const response: ApiUser = JSON.parse(responseText || '{}');
+    if (!responseText) {
+      throw new Error('Response body is empty');
+    }
+    const response: ApiUser = parseJsonSafe(responseText);
+
     expect(response).toEqual(
       expect.objectContaining({
         email: expect.any(String),
@@ -102,7 +107,7 @@ test.describe('updateById', () => {
       })
     );
 
-    await clearEndpoint(elements.getEndpoint);
+    await clearEndpointResponse(elements.getEndpoint);
   });
 
   test('custom values', async ({ page }) => {
@@ -129,7 +134,7 @@ test.describe('updateById', () => {
     expect(responseText).toContain('"oldPassword": "oldPass123!"');
     expect(responseText).toContain('"newPassword": "newPass456!"');
 
-    await clearEndpoint(elements.getEndpoint);
+    await clearEndpointResponse(elements.getEndpoint);
   });
 
   test('empty id validation message', async ({ page }) => {
@@ -189,7 +194,12 @@ test.describe('updateById', () => {
 
     const buffer: Buffer = await fs.readFile(filePath as string);
     const content: string = buffer.toString('utf-8');
-    const jsonContent: ApiUser = JSON.parse(content);
+    if (!content) {
+      throw new Error('Content is empty');
+    }
+
+    const jsonContent: ApiUser = parseJsonSafe(content);
+
     expect(jsonContent).toEqual(
       expect.objectContaining({
         confirmed: expect.any(Boolean),
@@ -199,7 +209,7 @@ test.describe('updateById', () => {
       })
     );
 
-    await clearEndpoint(elements.getEndpoint);
+    await clearEndpointResponse(elements.getEndpoint);
   });
 
   test('error response - invalid password', async ({ page }) => {
@@ -235,7 +245,7 @@ test.describe('updateById', () => {
       .first();
     await expect(responseCode).toContainText('400');
 
-    await clearEndpoint(elements.getEndpoint);
+    await clearEndpointResponse(elements.getEndpoint);
   });
 
   test('error response - CORS/Network failure', async ({ page }) => {
@@ -258,6 +268,6 @@ test.describe('updateById', () => {
 
     await expectErrorOrFailureStatus(elements.getEndpoint);
 
-    await clearEndpoint(elements.getEndpoint);
+    await clearEndpointResponse(elements.getEndpoint);
   });
 });

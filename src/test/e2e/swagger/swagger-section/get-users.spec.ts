@@ -3,9 +3,10 @@ import { expect, type Locator, Page, test } from '@playwright/test';
 import { ApiUser, BASE_API, BasicEndpointElements } from '../utils/constants';
 import {
   initSwaggerPage,
-  clearEndpoint,
+  clearEndpointResponse,
   getAndCheckExecuteBtn,
   interceptWithErrorResponse,
+  parseJsonSafe,
 } from '../utils/helpers';
 import { locators } from '../utils/locators';
 
@@ -55,12 +56,7 @@ async function verifyResponseBody(elements: EndpointElements): Promise<void> {
 
   const responseText: string = (await elements.responseBody.textContent()) ?? '';
 
-  let response: ApiUser[];
-  try {
-    response = JSON.parse(responseText);
-  } catch {
-    throw new Error(`Invalid JSON response: ${responseText}`);
-  }
+  const response: ApiUser[] = parseJsonSafe(responseText);
 
   expect(response).toEqual(
     expect.arrayContaining([
@@ -111,7 +107,7 @@ test.describe('get user: try it out interaction', () => {
 
     await verifyResponseBody(elements);
 
-    await clearEndpoint(elements.getEndpoint);
+    await clearEndpointResponse(elements.getEndpoint);
   });
   test('custom values', async ({ page }) => {
     const elements: EndpointElements = await setupEndpoint(page);
@@ -125,7 +121,7 @@ test.describe('get user: try it out interaction', () => {
 
     await verifyResponseBody(elements);
 
-    await clearEndpoint(elements.getEndpoint);
+    await clearEndpointResponse(elements.getEndpoint);
   });
 
   test('empty values', async ({ page }) => {
@@ -150,7 +146,7 @@ test.describe('get user: try it out interaction', () => {
 
     await verifyResponseBody(elements);
 
-    await clearEndpoint(elements.getEndpoint);
+    await clearEndpointResponse(elements.getEndpoint);
   });
   test('error response handling', async ({ page }) => {
     const elements: EndpointElements = await setupEndpoint(page);
@@ -167,6 +163,6 @@ test.describe('get user: try it out interaction', () => {
 
     await elements.executeBtn.click();
     await checkErrorResponse(elements, '400', 'Invalid pagination parameters');
-    await clearEndpoint(elements.getEndpoint);
+    await clearEndpointResponse(elements.getEndpoint);
   });
 });

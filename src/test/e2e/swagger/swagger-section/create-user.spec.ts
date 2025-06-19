@@ -3,11 +3,12 @@ import { expect, type Locator, Page, test } from '@playwright/test';
 import { ApiUser, BASE_API, BasicEndpointElements, TEST_USERS, User } from '../utils/constants';
 import {
   initSwaggerPage,
-  clearEndpoint,
+  clearEndpointResponse,
   getAndCheckExecuteBtn,
   interceptWithErrorResponse,
   cancelOperation,
   expectErrorOrFailureStatus,
+  parseJsonSafe,
 } from '../utils/helpers';
 import { locators } from '../utils/locators';
 
@@ -62,13 +63,8 @@ async function verifySuccessResponse(elements: CreateUserEndpointElements): Prom
   await elements.responseBody.waitFor({ state: 'visible' });
 
   const responseText: string = (await elements.responseBody.textContent()) || '';
-  let response: ApiUser;
 
-  try {
-    response = JSON.parse(responseText);
-  } catch (err) {
-    throw new Error(`Unexpected non-JSON response body: "${responseText}"`);
-  }
+  const response: ApiUser = parseJsonSafe<ApiUser>(responseText);
 
   expect(response).toMatchObject({
     confirmed: expect.any(Boolean),
@@ -93,7 +89,7 @@ test.describe('Create user endpoint tests', () => {
     await expect(elements.copyButton).toBeVisible();
     await verifySuccessResponse(elements);
 
-    await clearEndpoint(elements.getEndpoint);
+    await clearEndpointResponse(elements.getEndpoint);
   });
 
   test('empty request body validation', async ({ page }) => {
@@ -128,7 +124,7 @@ test.describe('Create user endpoint tests', () => {
     await expect(elements.copyButton).toBeVisible();
     await verifySuccessResponse(elements);
 
-    await clearEndpoint(elements.getEndpoint);
+    await clearEndpointResponse(elements.getEndpoint);
   });
   test('object with empty values', async ({ page }) => {
     const elements: CreateUserEndpointElements = await setupCreateUserEndpoint(page);
@@ -145,7 +141,7 @@ test.describe('Create user endpoint tests', () => {
     await expect(elements.copyButton).toBeVisible();
     await verifySuccessResponse(elements);
 
-    await clearEndpoint(elements.getEndpoint);
+    await clearEndpointResponse(elements.getEndpoint);
   });
   test('partially filled request body', async ({ page }) => {
     const elements: CreateUserEndpointElements = await setupCreateUserEndpoint(page);
@@ -160,7 +156,7 @@ test.describe('Create user endpoint tests', () => {
     await expect(elements.copyButton).toBeVisible();
     await verifySuccessResponse(elements);
 
-    await clearEndpoint(elements.getEndpoint);
+    await clearEndpointResponse(elements.getEndpoint);
   });
   test('error response - invalid email', async ({ page }) => {
     const elements: CreateUserEndpointElements = await setupCreateUserEndpoint(page);
@@ -180,7 +176,7 @@ test.describe('Create user endpoint tests', () => {
     await expect(responseCode).toContainText('400');
     await expect(elements.responseBody).toContainText('Invalid email format');
 
-    await clearEndpoint(elements.getEndpoint);
+    await clearEndpointResponse(elements.getEndpoint);
   });
   test('error response - weak password', async ({ page }) => {
     const elements: CreateUserEndpointElements = await setupCreateUserEndpoint(page);
@@ -196,7 +192,7 @@ test.describe('Create user endpoint tests', () => {
 
     await expect(elements.responseBody).toContainText('Password too weak');
 
-    await clearEndpoint(elements.getEndpoint);
+    await clearEndpointResponse(elements.getEndpoint);
   });
   test('error response - CORS/Network failure', async ({ page }) => {
     const elements: CreateUserEndpointElements = await setupCreateUserEndpoint(page);
@@ -208,7 +204,7 @@ test.describe('Create user endpoint tests', () => {
 
     await expectErrorOrFailureStatus(elements.getEndpoint);
 
-    await clearEndpoint(elements.getEndpoint);
+    await clearEndpointResponse(elements.getEndpoint);
   });
   test('response download functionality', async ({ page }) => {
     const elements: CreateUserEndpointElements = await setupCreateUserEndpoint(page);
@@ -226,6 +222,6 @@ test.describe('Create user endpoint tests', () => {
     await expect(downloadButton).toBeEnabled();
     await downloadButton.click();
 
-    await clearEndpoint(elements.getEndpoint);
+    await clearEndpointResponse(elements.getEndpoint);
   });
 });

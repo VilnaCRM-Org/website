@@ -11,7 +11,7 @@ import {
   TEST_CONSTANTS,
 } from './index';
 
-export async function clearEndpoint(endpoint: Locator): Promise<void> {
+export async function clearEndpointResponse(endpoint: Locator): Promise<void> {
   const clearButton: Locator = endpoint.locator('button.btn-clear');
   const curl: Locator = endpoint.locator('.curl-command');
 
@@ -131,4 +131,25 @@ export function buildSafeUrl(baseUrl: string, id: string): string {
   const trimmedBase: string = baseUrl.replace(/\/+$/, '');
   const encodedId: string = encodeURIComponent(id);
   return `${trimmedBase}/${encodedId}`;
+}
+
+export function parseJsonSafe<T>(text: string): T {
+  try {
+    return JSON.parse(text) as T;
+  } catch (err) {
+    throw new Error(
+      `❌ Failed to parse JSON:\n${text}\n\nError: ${err instanceof Error ? err.message : err}`
+    );
+  }
+}
+
+export async function collapseEndpoint(endpoint: Locator): Promise<void> {
+  const opblockSummary: Locator = endpoint.locator('.opblock-summary');
+  const opblockBody: Locator = endpoint.locator('.opblock-body');
+
+  await expect(opblockBody).toBeVisible();
+
+  await opblockSummary.click();
+
+  await expect(opblockBody).not.toBeVisible();
 }

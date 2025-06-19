@@ -3,7 +3,7 @@ import { expect, type Locator, Page, test } from '@playwright/test';
 import { testUserId, BASE_API, BasicEndpointElements } from '../utils/constants';
 import {
   initSwaggerPage,
-  clearEndpoint,
+  clearEndpointResponse,
   getAndCheckExecuteBtn,
   interceptWithErrorResponse,
   cancelOperation,
@@ -69,7 +69,7 @@ test.describe('delete by ID', () => {
       .first();
     await expect(responseCode).toContainText('204');
 
-    await clearEndpoint(elements.getEndpoint);
+    await clearEndpointResponse(elements.getEndpoint);
   });
 
   test('empty ID validation', async ({ page }) => {
@@ -111,7 +111,7 @@ test.describe('delete by ID', () => {
     await expect(responseCode).toContainText('404');
     await expect(elements.responseBody).toContainText('User not found');
 
-    await clearEndpoint(elements.getEndpoint);
+    await clearEndpointResponse(elements.getEndpoint);
   });
 
   test('error response - invalid id format', async ({ page }) => {
@@ -138,7 +138,7 @@ test.describe('delete by ID', () => {
       .first();
     await expect(responseCode).toContainText('400');
 
-    await clearEndpoint(elements.getEndpoint);
+    await clearEndpointResponse(elements.getEndpoint);
   });
 
   test('error response - CORS/Network failure', async ({ page }) => {
@@ -151,6 +151,6 @@ test.describe('delete by ID', () => {
 
     await expectErrorOrFailureStatus(elements.getEndpoint);
 
-    await clearEndpoint(elements.getEndpoint);
+    await clearEndpointResponse(elements.getEndpoint);
   });
 });

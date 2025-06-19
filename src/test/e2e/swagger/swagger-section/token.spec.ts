@@ -4,11 +4,12 @@ import { getSystemEndpoints, GetSystemEndpoints } from '../utils';
 import { TEST_OAUTH_DATA, TOKEN_ENDPOINT } from '../utils/constants';
 import {
   initSwaggerPage,
-  clearEndpoint,
+  clearEndpointResponse,
   getAndCheckExecuteBtn,
   cancelOperation,
   getEndpointCopyButton,
   expectErrorOrFailureStatus,
+  collapseEndpoint,
 } from '../utils/helpers';
 import { locators } from '../utils/locators';
 
@@ -79,7 +80,7 @@ test.describe('OAuth token endpoint', () => {
     await expect(elements.curlBody).toContainText(TOKEN_ENDPOINT.CURL.ACCEPT_HEADER);
     await expect(elements.curlBody).toContainText(TOKEN_ENDPOINT.CURL.CONTENT_TYPE_HEADER);
 
-    await clearEndpoint(elements.getEndpoint);
+    await clearEndpointResponse(elements.getEndpoint);
   });
 
   test('empty request body validation', async ({ page }) => {
@@ -88,6 +89,8 @@ test.describe('OAuth token endpoint', () => {
     await elements.executeBtn.click();
     await expect(elements.requestBodyEditor).toHaveClass(/invalid/);
     await cancelOperation(page);
+
+    await collapseEndpoint(elements.getEndpoint);
   });
 
   test('reset button restores default request body', async ({ page }) => {
@@ -100,6 +103,8 @@ test.describe('OAuth token endpoint', () => {
     await expect(elements.requestBodyEditor).toHaveValue(initialValue);
 
     await cancelOperation(page);
+
+    await collapseEndpoint(elements.getEndpoint);
   });
 
   test('error response - CORS/Network failure', async ({ page }) => {
@@ -112,6 +117,6 @@ test.describe('OAuth token endpoint', () => {
 
     await expectErrorOrFailureStatus(elements.getEndpoint);
 
-    await clearEndpoint(elements.getEndpoint);
+    await clearEndpointResponse(elements.getEndpoint);
   });
 });

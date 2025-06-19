@@ -10,11 +10,12 @@ import {
 } from '../utils/constants';
 import {
   initSwaggerPage,
-  clearEndpoint,
+  clearEndpointResponse,
   getAndCheckExecuteBtn,
   cancelOperation,
   interceptWithErrorResponse,
   expectErrorOrFailureStatus,
+  parseJsonSafe,
 } from '../utils/helpers';
 import { locators } from '../utils/locators';
 
@@ -24,7 +25,6 @@ interface BatchUserEndpointElements extends BasicEndpointElements {
   jsonEditor: Locator;
   curl: Locator;
   copyButton: Locator;
-  downloadButton?: Locator;
 }
 
 async function setupBatchEndpoint(page: Page): Promise<BatchUserEndpointElements> {
@@ -42,7 +42,6 @@ async function setupBatchEndpoint(page: Page): Promise<BatchUserEndpointElements
   const curl: Locator = createBatchEndpoint.locator(locators.curl);
   const copyButton: Locator = createBatchEndpoint.locator(locators.copyButton);
   const requestUrl: Locator = createBatchEndpoint.locator(locators.requestUrl);
-  const downloadButton: Locator = createBatchEndpoint.locator(locators.downloadButton);
 
   return {
     getEndpoint: createBatchEndpoint,
@@ -54,7 +53,6 @@ async function setupBatchEndpoint(page: Page): Promise<BatchUserEndpointElements
     curl,
     copyButton,
     requestUrl,
-    downloadButton,
   };
 }
 
@@ -77,12 +75,8 @@ async function verifySuccessResponse(elements: BatchUserEndpointElements): Promi
     throw new Error(`Failed to extract JSON from response: ${responseText}`);
   }
 
-  let response: { users: User[] };
-  try {
-    response = JSON.parse(jsonMatch[1]);
-  } catch (error) {
-    throw new Error(`Invalid JSON response: ${jsonMatch[1]}`);
-  }
+  const response: { users: User[] } = parseJsonSafe<{ users: User[] }>(jsonMatch[1]);
+
   expect(response.users).toHaveLength(2);
 
   response.users.forEach(user => {
@@ -116,7 +110,7 @@ test.describe('Create batch users endpoint tests', () => {
     await verifyCommonElements(elements);
 
     await verifySuccessResponse(elements);
-    await clearEndpoint(elements.getEndpoint);
+    await clearEndpointResponse(elements.getEndpoint);
   });
 
   test('empty request body validation', async ({ page }) => {
@@ -145,7 +139,7 @@ test.describe('Create batch users endpoint tests', () => {
     await verifyCommonElements(elements);
 
     await expect(elements.responseBody).toContainText('Users array cannot be empty');
-    await clearEndpoint(elements.getEndpoint);
+    await clearEndpointResponse(elements.getEndpoint);
   });
 
   test('invalid email formats', async ({ page }) => {
@@ -171,7 +165,7 @@ test.describe('Create batch users endpoint tests', () => {
     await verifyCommonElements(elements);
 
     await expect(elements.responseBody).toContainText('Invalid email format');
-    await clearEndpoint(elements.getEndpoint);
+    await clearEndpointResponse(elements.getEndpoint);
   });
 
   test('weak passwords', async ({ page }) => {
@@ -197,7 +191,7 @@ test.describe('Create batch users endpoint tests', () => {
     await verifyCommonElements(elements);
 
     await expect(elements.responseBody).toContainText('Password too weak');
-    await clearEndpoint(elements.getEndpoint);
+    await clearEndpointResponse(elements.getEndpoint);
   });
 
   test('duplicate emails', async ({ page }) => {
@@ -229,7 +223,7 @@ test.describe('Create batch users endpoint tests', () => {
     await verifyCommonElements(elements);
 
     await expect(elements.responseBody).toContainText('Duplicate email addresses found');
-    await clearEndpoint(elements.getEndpoint);
+    await clearEndpointResponse(elements.getEndpoint);
   });
 
   test('network failure handling', async ({ page }) => {
@@ -243,6 +237,6 @@ test.describe('Create batch users endpoint tests', () => {
     await verifyCommonElements(elements);
 
     await expectErrorOrFailureStatus(elements.getEndpoint);
-    await clearEndpoint(elements.getEndpoint);
+    await clearEndpointResponse(elements.getEndpoint);
   });
 });

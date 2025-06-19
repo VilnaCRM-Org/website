@@ -112,7 +112,7 @@ export const BASE_API: string = '**/api/users';
 
 const MOCKOON_URL: string = 'http://mockoon:8080';
 
-export const mockoonHost: string = process.env.MOCKOON_CONTAINER_API_URL ?? MOCKOON_URL;
+export const mockoonHost: string = process.env.NEXT_PUBLIC_PROD_CONTAINER_API_URL ?? MOCKOON_URL;
 
 type TokenEndpointConfig = {
   PATH: string;

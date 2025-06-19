@@ -4,10 +4,11 @@ import { getSystemEndpoints, GetSystemEndpoints } from '../utils';
 import { mockoonHost, testOAuthParams, PARAM_INPUTS } from '../utils/constants';
 import {
   initSwaggerPage,
-  clearEndpoint,
+  clearEndpointResponse,
   getAndCheckExecuteBtn,
   cancelOperation,
   mockAuthorizeSuccess,
+  buildSafeUrl,
 } from '../utils/helpers';
 import { locators } from '../utils/locators';
 
@@ -77,7 +78,7 @@ test.describe('OAuth authorize endpoint', () => {
 
     await mockAuthorizeSuccess(
       page,
-      `${mockoonHost}/${AUTHORIZE_API_URL.replace('**/', '')}`,
+      buildSafeUrl(mockoonHost, 'oauth/authorize'),
       testOAuthParams.redirectUri,
       testOAuthParams.state
     );
@@ -87,7 +88,7 @@ test.describe('OAuth authorize endpoint', () => {
     await expect(elements.curl).toBeVisible();
     await expect(elements.copyButton).toBeVisible();
     await expect(elements.requestUrl).toContainText('/oauth/authorize');
-    await clearEndpoint(elements.getEndpoint);
+    await clearEndpointResponse(elements.getEndpoint);
   });
 
   test('empty response_type validation', async ({ page }) => {
@@ -176,6 +177,6 @@ test.describe('OAuth authorize endpoint', () => {
     expect(errorText).toContain('Redirect to the provided redirect URI');
     expect(statusText).toBe('302');
 
-    await clearEndpoint(elements.getEndpoint);
+    await clearEndpointResponse(elements.getEndpoint);
   });
 });

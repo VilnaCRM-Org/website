@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { writeFile } from 'node:fs/promises';
-import yaml from 'js-yaml';
+import { load } from 'js-yaml';
 
 const version = process.env.USER_SERVICE_SPEC_VERSION;
 
@@ -22,14 +22,14 @@ async function fetchAndSaveSwagger() {
    }
 
    const yamlText = await response.text();
-   const jsonContent = yaml.load(yamlText);
+   const jsonContent = load(yamlText);
 
    await writeFile('./public/swagger-schema.json', JSON.stringify(jsonContent, null, 2));
 
    console.log('✅ Swagger schema saved as JSON');
  }catch (error) {
    console.error('❌ Error fetching swagger schema:', error);
-   process.exit(1);
+   process.exitCode = 1;
  }
 }
 fetchAndSaveSwagger()

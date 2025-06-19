@@ -3,11 +3,12 @@ import { expect, type Locator, Page, test } from '@playwright/test';
 import { testUserId, BASE_API, BasicEndpointElements } from '../utils/constants';
 import {
   initSwaggerPage,
-  clearEndpoint,
+  clearEndpointResponse,
   getAndCheckExecuteBtn,
   interceptWithErrorResponse,
   cancelOperation,
   expectErrorOrFailureStatus,
+  collapseEndpoint,
 } from '../utils/helpers';
 import { locators } from '../utils/locators';
 
@@ -62,7 +63,7 @@ test.describe('resend confirmation email', () => {
     await expect(elements.copyButton).toBeVisible();
     await expect(elements.requestUrl).toContainText(testUserId);
     await expect(elements.requestUrl).toContainText('resend-confirmation-email');
-    await clearEndpoint(elements.getEndpoint);
+    await clearEndpointResponse(elements.getEndpoint);
   });
 
   test('empty ID validation', async ({ page }) => {
@@ -77,6 +78,8 @@ test.describe('resend confirmation email', () => {
     );
 
     await cancelOperation(page);
+
+    await collapseEndpoint(elements.getEndpoint);
   });
 
   test('error response - user not found', async ({ page }) => {
@@ -103,7 +106,7 @@ test.describe('resend confirmation email', () => {
       .first();
     await expect(responseCode).toContainText('404');
     await expect(elements.responseBody).toContainText('User not found');
-    await clearEndpoint(elements.getEndpoint);
+    await clearEndpointResponse(elements.getEndpoint);
   });
 
   test('error response - invalid id format', async ({ page }) => {
@@ -127,20 +130,22 @@ test.describe('resend confirmation email', () => {
       .locator('.response .response-col_status')
       .first();
     await expect(responseCode).toContainText('400');
-    await clearEndpoint(elements.getEndpoint);
+    await clearEndpointResponse(elements.getEndpoint);
   });
 
   test('error response - CORS/Network failure', async ({ page }) => {
     const elements: ResendConfirmationEndpointElements =
       await setupResendConfirmationEndpoint(page);
 
-    await page.route(RESEND_CONFIRM_API_URL(testUserId), route => route.abort('failed'));
+    await page.route(RESEND_CONFIRM_API_URL(testUserId), route => route.abort('failed'), {
+      times: 1,
+    });
 
     await elements.idInput.fill(testUserId);
     await elements.executeBtn.click();
 
     await expectErrorOrFailureStatus(elements.getEndpoint);
 
-    await clearEndpoint(elements.getEndpoint);
+    await clearEndpointResponse(elements.getEndpoint);
   });
 });

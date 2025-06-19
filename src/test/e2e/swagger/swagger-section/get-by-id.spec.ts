@@ -1,14 +1,15 @@
-import { expect, type Locator, Page, test } from '@playwright/test';
+import { Download, expect, type Locator, Page, test } from '@playwright/test';
 
 import { testUserId, BASE_API, BasicEndpointElements, ApiUser } from '../utils/constants';
 import {
   initSwaggerPage,
-  clearEndpoint,
+  clearEndpointResponse,
   getAndCheckExecuteBtn,
   interceptWithErrorResponse,
   cancelOperation,
   expectErrorOrFailureStatus,
   buildSafeUrl,
+  parseJsonSafe,
 } from '../utils/helpers';
 import { locators } from '../utils/locators';
 
@@ -72,17 +73,12 @@ test.describe('get user by ID', () => {
 
     const responseText: string | null = await elements.responseBody.textContent();
 
-    let response: ApiUser;
-    try {
-      if (!responseText) {
-        throw new Error('Response body is empty');
-      }
-      response = JSON.parse(responseText);
-    } catch (err) {
-      throw new Error(
-        `❌ Failed to parse response as JSON:\n${responseText}\n\nError: ${err instanceof Error ? err.message : err}`
-      );
+    if (!responseText) {
+      throw new Error('Response body is empty');
     }
+
+    const response: ApiUser = parseJsonSafe<ApiUser>(responseText);
+
     expect(response).toEqual(
       expect.objectContaining({
         confirmed: expect.any(Boolean),
@@ -92,8 +88,11 @@ test.describe('get user by ID', () => {
       })
     );
     await expect(elements.downloadButton).toBeVisible();
+    const downloadPromise: Promise<Download> = page.waitForEvent('download');
+    await elements.downloadButton.click();
+    await expect(await downloadPromise).toBeDefined();
 
-    await clearEndpoint(elements.getEndpoint);
+    await clearEndpointResponse(elements.getEndpoint);
   });
 
   test('empty id validation', async ({ page }) => {
@@ -133,7 +132,7 @@ test.describe('get user by ID', () => {
     await expect(responseCode).toContainText('404');
     await expect(elements.responseBody).toContainText('User not found');
 
-    await clearEndpoint(elements.getEndpoint);
+    await clearEndpointResponse(elements.getEndpoint);
   });
 
   test('error response - invalid id format', async ({ page }) => {
@@ -151,7 +150,7 @@ test.describe('get user by ID', () => {
 
     await expect(elements.responseBody).toContainText('Invalid user ID format');
 
-    await clearEndpoint(elements.getEndpoint);
+    await clearEndpointResponse(elements.getEndpoint);
   });
 
   test('error response - CORS/Network failure', async ({ page }) => {
@@ -164,6 +163,6 @@ test.describe('get user by ID', () => {
 
     await expectErrorOrFailureStatus(elements.getEndpoint);
 
-    await clearEndpoint(elements.getEndpoint);
+    await clearEndpointResponse(elements.getEndpoint);
   });
 });

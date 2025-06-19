@@ -7,7 +7,7 @@ import {
   mockoonHost,
 } from '../utils/constants';
 import {
-  clearEndpoint,
+  clearEndpointResponse,
   interceptWithErrorResponse,
   cancelOperation,
   initSwaggerPage,
@@ -70,7 +70,7 @@ test.describe('confirm endpoint tests', () => {
     const status: Locator = elements.getEndpoint.locator('.response .response-col_status').first();
     await expect(status).toContainText(/20[04]/);
 
-    await clearEndpoint(elements.getEndpoint);
+    await clearEndpointResponse(elements.getEndpoint);
   });
 
   test('empty token validation', async ({ page }) => {
@@ -106,7 +106,7 @@ test.describe('confirm endpoint tests', () => {
 
     await expect(elements.responseBody).toContainText('Invalid confirmation token');
 
-    await clearEndpoint(elements.getEndpoint);
+    await clearEndpointResponse(elements.getEndpoint);
   });
 
   test('error response - expired token', async ({ page }) => {
@@ -122,7 +122,7 @@ test.describe('confirm endpoint tests', () => {
 
     await expect(elements.responseBody).toContainText('Confirmation token has expired');
 
-    await clearEndpoint(elements.getEndpoint);
+    await clearEndpointResponse(elements.getEndpoint);
   });
 
   test('error response - CORS/Network failure', async ({ page }) => {
@@ -135,6 +135,6 @@ test.describe('confirm endpoint tests', () => {
 
     await expectErrorOrFailureStatus(elements.getEndpoint);
 
-    await clearEndpoint(elements.getEndpoint);
+    await clearEndpointResponse(elements.getEndpoint);
   });
 });

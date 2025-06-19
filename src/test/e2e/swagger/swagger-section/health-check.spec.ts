@@ -1,6 +1,6 @@
 import { expect, type Locator, test } from '@playwright/test';
 
-import { initSwaggerPage, clearEndpoint, getAndCheckExecuteBtn } from '../utils/helpers';
+import { initSwaggerPage, clearEndpointResponse, getAndCheckExecuteBtn } from '../utils/helpers';
 import { getSystemEndpoints, GetSystemEndpoints } from '../utils/index';
 
 test('healthCheck: try it out interaction', async ({ page }) => {
@@ -22,5 +22,5 @@ test('healthCheck: try it out interaction', async ({ page }) => {
   await expect(requestUrl).toBeVisible();
   await expect(requestUrl).toContainText('/health');
 
-  await clearEndpoint(healthEndpoint);
+  await clearEndpointResponse(healthEndpoint);
 });
