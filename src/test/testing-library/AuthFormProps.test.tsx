@@ -85,41 +85,21 @@ describe('AuthFormWrapper - Props Forwarding', () => {
   it('forwards props correctly to AuthForm', () => {
     renderAuthForm({ onSubmit, mocks: [] });
 
-    expect(AuthForm).toHaveBeenCalledWith(
-      expect.objectContaining({
-        onSubmit,
-        handleSubmit: expect.any(Function),
-        control: expect.any(Object),
-        formValidationErrors: expect.any(Object),
-      }),
-      {}
-    );
+    expect(AuthForm).toHaveBeenCalled();
+
+    const callArgs = (AuthForm as jest.Mock).mock.calls[0][0];
+
+    expect(callArgs).toMatchObject({
+      onSubmit,
+      handleSubmit: expect.any(Function),
+      control: expect.any(Object),
+      formValidationErrors: expect.any(Object),
+    });
   });
 });
 
 describe('AuthFormWrapper - Default Values', () => {
-  it('passes correct default values to AuthForm control configuration', () => {
-    const onSubmit: OnSubmitType = jest
-      .fn<Promise<void>, [RegisterItem]>()
-      .mockResolvedValueOnce(undefined);
-    renderAuthForm({ onSubmit, mocks: [] });
 
-    expect(AuthForm).toHaveBeenCalledWith(
-      expect.objectContaining({
-        control: expect.objectContaining({
-          _options: expect.objectContaining({
-            defaultValues: {
-              Email: '',
-              FullName: '',
-              Password: '',
-              Privacy: false,
-            },
-          }),
-        }),
-      }),
-      {}
-    );
-  });
   it('renders form with initial default values in the control object', () => {
     const { getByTestId } = renderAuthLayout();
 
@@ -151,16 +131,15 @@ describe('AuthFormWrapper - Notification props', () => {
   it('should call Notification with correct initial props', () => {
     renderAuthForm({ onSubmit: jest.fn(), mocks: [] });
 
-    expect(Notification).toHaveBeenCalledWith(
-      expect.objectContaining({
-        errorText: '',
-        type: NotificationStatus.SUCCESS,
-        setIsOpen: expect.any(Function),
-        isOpen: false,
-        onRetry: expect.any(Function),
-        loading: false,
-      }),
-      {}
-    );
+    const firstCallArgs = (Notification as jest.Mock).mock.calls[0][0];
+
+      expect(firstCallArgs).toMatchObject({
+      errorText: '',
+      type: NotificationStatus.SUCCESS,
+      setIsOpen: expect.any(Function),
+      isOpen: false,
+      onRetry: expect.any(Function),
+      loading: false,
+    });
   });
 });
