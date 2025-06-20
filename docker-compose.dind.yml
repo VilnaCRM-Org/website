@@ -1,0 +1,25 @@
+# Docker Compose override file for Docker-in-Docker (DIND) mode
+# This file adds:
+# - Predictable container names for DIND container management  
+# - Network configuration for dev service (test services already have it)
+
+services:
+  dev:
+    container_name: website-dev
+    networks:
+      - website-network
+
+  prod:
+    container_name: website-prod
+
+  playwright:
+    container_name: website-playwright
+
+  apollo:
+    container_name: website-apollo
+
+  mockoon:
+    container_name: website-mockoon
+
+  k6:
+    container_name: website-k6 

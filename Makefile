@@ -39,6 +39,7 @@ LHCI_MOBILE_SERVE           = $(LHCI_CONFIG_MOBILE) $(SERVE_CMD)
 
 DOCKER_COMPOSE_TEST_FILE    = -f docker-compose.test.yml
 DOCKER_COMPOSE_DEV_FILE     = -f docker-compose.yml
+DOCKER_COMPOSE_DIND_FILE    = -f docker-compose.dind.yml
 COMMON_HEALTHCHECKS_FILE    = -f common-healthchecks.yml
 EXEC_DEV_TTYLESS            = $(DOCKER_COMPOSE) exec -T dev
 NEXT_DEV_CMD                = $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) up -d dev && make wait-for-dev
@@ -66,6 +67,19 @@ JEST_FLAGS                  = --verbose
 NETWORK_NAME                = website-network
 
 CI                          ?= 0
+DIND                        ?= 0
+
+# DIND-aware configuration for CI/CD
+ifeq ($(DIND), 1)
+    DIND_SCRIPT_PATH        = ./scripts/ci/dind-setup.sh
+    COMPOSE_FILES           = $(DOCKER_COMPOSE_DEV_FILE) $(DOCKER_COMPOSE_DIND_FILE)
+    COMPOSE_TEST_FILES      = $(DOCKER_COMPOSE_TEST_FILE) $(DOCKER_COMPOSE_DIND_FILE)
+    DOCKER_SETUP            = . $(DIND_SCRIPT_PATH) && setup_dind_network
+else
+    COMPOSE_FILES           = $(DOCKER_COMPOSE_DEV_FILE)
+    COMPOSE_TEST_FILES      = $(DOCKER_COMPOSE_TEST_FILE)
+    DOCKER_SETUP            = 
+endif
 
 ifeq ($(CI), 1)
     PNPM_EXEC               = pnpm
@@ -106,6 +120,11 @@ help:
 	@printf "\033[33mUsage:\033[0m make [target] [arg=\"val\"...]\n"
 	@printf "\033[33mTargets:\033[0m\n"
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' Makefile | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[32m%-20s\033[0m %s\n", $$1, $$2}'
+
+# DIND Network Setup (moved from infrastructure)
+setup-dind-network: ## Create Docker network for DIND mode
+	@echo "🐳 Setting up Docker network for DIND mode..."
+	@docker network create website-network 2>/dev/null || echo "Network website-network already exists"
 
 start: ## Start the application
 	$(NEXT_DEV_CMD)
