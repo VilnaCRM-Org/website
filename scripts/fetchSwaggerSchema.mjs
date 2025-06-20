@@ -5,11 +5,6 @@ import { load } from 'js-yaml';
 const swaggerPath = './public/swagger-schema.json';
 const version = process.env.USER_SERVICE_SPEC_VERSION || 'v2.6.0';
 
-if (!version) {
-  console.error('❌ USER_SERVICE_SPEC_VERSION is not set');
-  process.exit(1);
-}
-
 export function buildSpecUrl() {
   return `https://raw.githubusercontent.com/VilnaCRM-Org/user-service/${version}/.github/openapi-spec/spec.yaml`;
 }

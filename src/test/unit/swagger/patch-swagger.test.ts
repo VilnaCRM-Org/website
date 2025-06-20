@@ -110,11 +110,11 @@ describe('patch swagger utils', () => {
       process.env.TEST_VAR = 'test-value';
       const result: string = ensureEnv('TEST_VAR');
       expect(result).toBe('test-value');
-      delete process.env.TEST_VAR;
+      process.env.TEST_VAR = '';
     });
 
     test('throws error and exits when environment variable is missing', () => {
-      delete process.env.MISSING_VAR;
+      process.env.MISSING_VAR = '';
       expect(() => ensureEnv('MISSING_VAR')).toThrow('process.exit was called');
       expect(mockLoggerError).toHaveBeenCalledWith(
         '❌ Missing required environment variable: MISSING_VAR'
@@ -132,7 +132,7 @@ describe('patch swagger utils', () => {
       process.env.NEXT_PUBLIC_MOCKOON_LOCAL_API_URL = MOCKOON_URL;
       const result: string = getMockUrl();
       expect(result).toBe(MOCKOON_URL);
-      delete process.env.NEXT_PUBLIC_MOCKOON_LOCAL_API_URL;
+      process.env.NEXT_PUBLIC_MOCKOON_LOCAL_API_URL = '';
     });
 
     test('returns container URL when NODE_ENV is not development', () => {
@@ -144,7 +144,8 @@ describe('patch swagger utils', () => {
       process.env.NEXT_PUBLIC_MOCKOON_CONTAINER_API_URL = MOCKOON_URL;
       const result: string = getMockUrl();
       expect(result).toBe(MOCKOON_URL);
-      delete process.env.NEXT_PUBLIC_MOCKOON_CONTAINER_API_URL;
+
+      process.env.NEXT_PUBLIC_MOCKOON_CONTAINER_API_URL = '';
     });
   });
 
