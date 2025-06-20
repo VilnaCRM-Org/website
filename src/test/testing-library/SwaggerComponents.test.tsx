@@ -1,0 +1,98 @@
+import { render } from '@testing-library/react';
+import userEvent, { UserEvent } from '@testing-library/user-event';
+import { t } from 'i18next';
+import React from 'react';
+
+import ApiDocumentation from '../../features/swagger/components/ApiDocumentation';
+import Navigation from '../../features/swagger/components/Navigation/Navigation';
+import useSwagger from '../../features/swagger/hooks/useSwagger';
+
+const backToTheHome: string = t('navigation.navigate_to_home_page');
+const arrowAlt: string = t('navigation.back_arrow_description');
+
+describe('Swagger Navigation', () => {
+  const originalLocation: Location = window.location;
+  const mockAssign: jest.Mock = jest.fn();
+
+  beforeAll(() => {
+    delete (window as { location?: Location }).location;
+    Object.defineProperty(window, 'location', {
+      value: {
+        ...originalLocation,
+        assign: mockAssign,
+      },
+      writable: true,
+    });
+  });
+
+  afterAll(() => {
+    Object.defineProperty(window, 'location', {
+      value: originalLocation,
+      writable: true,
+    });
+  });
+
+  beforeEach(() => {
+    mockAssign.mockClear();
+  });
+  it('renders text from translations', () => {
+    const { getByText, getByAltText } = render(<Navigation />);
+
+    expect(getByText(backToTheHome)).toBeInTheDocument();
+    expect(getByAltText(arrowAlt)).toBeInTheDocument();
+  });
+  test('back button', async () => {
+    const { getByText } = render(<Navigation />);
+    const user: UserEvent = userEvent.setup();
+
+    const backButton: HTMLElement = getByText(backToTheHome);
+
+    await user.click(backButton);
+
+    expect(window.location.assign).toHaveBeenCalledWith('/');
+  });
+});
+
+jest.mock('../../features/swagger/hooks/useSwagger', () => ({
+  __esModule: true,
+  default: jest.fn(),
+}));
+
+jest.mock('swagger-ui-react', () => jest.fn(() => <div>SwaggerUI rendered</div>));
+
+describe('ApiDocumentation', () => {
+  const mockUseSwagger: jest.MockedFunction<typeof useSwagger> = useSwagger as jest.MockedFunction<
+    typeof useSwagger
+  >;
+
+  test('renders error message if error is present', () => {
+    mockUseSwagger.mockReturnValue({
+      error: new Error('Failed to fetch'),
+      swaggerContent: null,
+    });
+
+    const { getByText } = render(<ApiDocumentation />);
+    expect(getByText(/Error loading API documentation/i)).toBeInTheDocument();
+    expect(getByText(/Failed to fetch/i)).toBeInTheDocument();
+  });
+
+  test('renders loading message if no swagger content and no error', () => {
+    mockUseSwagger.mockReturnValue({
+      error: null,
+      swaggerContent: null,
+    });
+
+    const { getByText } = render(<ApiDocumentation />);
+    expect(getByText(/Loading API documentation/i)).toBeInTheDocument();
+  });
+
+  test('renders SwaggerUI when swaggerContent is available', () => {
+    mockUseSwagger.mockReturnValue({
+      error: null,
+      swaggerContent: { openapi: '3.0.0', info: { title: 'Test API', version: '1.0.0' } },
+    });
+
+    const { getByText } = render(<ApiDocumentation />);
+    expect(getByText(/SwaggerUI rendered/i)).toBeInTheDocument();
+  });
+});
