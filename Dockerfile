@@ -1,4 +1,4 @@
-FROM node:23.11.1-alpine3.21 AS base
+FROM public.ecr.aws/docker/library/node:23.11.1-alpine3.21 AS base
 
 RUN apk add --no-cache \
     python3=3.12.11-r0 \
@@ -14,17 +14,17 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml checkNodeVersion.js scripts/*.mjs  .env ./
 COPY public/ ./public/
 
-RUN pnpm install \
- && node fetchSwaggerSchema.mjs \
- && node patchSwaggerServer.mjs
+RUN pnpm install
 
 
 FROM base AS build
 
 COPY . .
 
-RUN npx next build \
- && npx next-export-optimize-images
+RUN node scripts/fetchSwaggerSchema.mjs && \
+    node scripts/patchSwaggerServer.mjs && \
+    npx next build && \
+    npx next-export-optimize-images
 
 
 FROM base AS production
