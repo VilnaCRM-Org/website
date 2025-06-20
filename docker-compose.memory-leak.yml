@@ -14,9 +14,16 @@ services:
       - NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_VALUE=no-aws-header-value
     init: true
     shm_size: '1gb'
+    networks:
+      - website-network
     healthcheck:
       interval: 10s
       timeout: 5s
       retries: 3
       start_period: 30s
       test: ["CMD", "chromium-browser", "--version"]
+
+networks:
+  website-network:
+    external: true
+    name: website-network
