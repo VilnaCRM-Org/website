@@ -1,10 +1,12 @@
-import { Card } from '../../../features/landing/types/card-item';
+
 import WhyUsCodeIcon from '../../assets/svg/why-us/code.svg';
 import WhyUsIntegrationsIcon from '../../assets/svg/why-us/integrations.svg';
 import WhyUsMigrationIcon from '../../assets/svg/why-us/migration.svg';
 import WhyUsServicesIcon from '../../assets/svg/why-us/services.svg';
 import WhyUsSettingsIcon from '../../assets/svg/why-us/settings.svg';
 import WhyUsTemplatesIcon from '../../assets/svg/why-us/templates.svg';
+import { Card } from '../../types/Card/card-item';
+
 
 export const cardList: Card[] = [
   {
