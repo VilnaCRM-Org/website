@@ -2,7 +2,7 @@ import { test, Locator, expect } from '@playwright/test';
 import { t } from 'i18next';
 import { Response } from 'playwright';
 
-import { checkCheckbox } from '../utils/checkCheckbox';
+import  checkCheckbox  from '../utils/checkCheckbox';
 import  fillInput  from '../utils/fillInput';
 
 import { userData, graphqlEndpoint } from './constants';
