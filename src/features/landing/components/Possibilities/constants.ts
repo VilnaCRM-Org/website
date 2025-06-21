@@ -1,5 +1,5 @@
 import { CardItem } from '@/components/UiCardItem/types';
-import { getWhyUsCards } from '@/components/UiCardList/cardData';
+import  getWhyUsCards  from '@/components/UiCardList/cardData';
 
 import Diamond from '../../assets/svg/possibilities/diamond.svg';
 
