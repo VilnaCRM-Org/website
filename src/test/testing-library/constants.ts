@@ -42,6 +42,7 @@ export const cardItem: CardItem = {
   type: typeOfCard,
   alt: testText,
   imageSrc: testImg,
+  image: testImg
 };
 export const smallCard: CardItem = {
   id: testId,
