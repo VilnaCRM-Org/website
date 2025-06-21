@@ -16,18 +16,32 @@ const nextConfig = withExportImages({
   },
 
   webpack: config => {
-    const localizationGenerator = new LocalizationGenerator();
-    localizationGenerator.generateLocalizationFile();
+  const localizationGenerator = new LocalizationGenerator();
+  localizationGenerator.generateLocalizationFile();
 
-     config.optimization.splitChunks = {
-      chunks: 'all',
-      maxSize: 244 * 1024, 
-    };
+  
+  config.module.rules.push({
+    test: /\.svg$/,
+    issuer: /\.[jt]sx?$/,
+    use: ['@svgr/webpack'],
+  });
+  
+  config.module.rules.push({
+    test: /\.svg$/,
+    issuer: /\.[jt]sx?$/,
+    resourceQuery: /url/,
+    type: 'asset/resource',
+  });
 
-    return config;
-  },
+  config.optimization.splitChunks = {
+    chunks: 'all',
+    maxSize: 244 * 1024,
+  };
+
+  return config;
+},
+
 });
-
 module.exports = process.env.ANALYZE === 'true' 
   ? withBundleAnalyzer(nextConfig) 
   : nextConfig;

@@ -1,10 +1,10 @@
 import { Locator } from '@playwright/test';
 
-import { fillInput } from '@/test/e2e/utils/fillInput';
+import  fillInput  from '@/test/e2e/utils/fillInput';
 
 import { userData } from '../register-form/constants';
 
-import { checkCheckbox } from './checkCheckbox';
+import  checkCheckbox  from './checkCheckbox';
 
 interface FillFormProps {
   initialsInput: Locator;
