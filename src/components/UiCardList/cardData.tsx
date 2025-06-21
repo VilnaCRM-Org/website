@@ -1,4 +1,4 @@
-import WhyUsCodeIcon from '../../assets/svg/why-us/code.svg';
+import { ReactComponent as WhyUsCodeIcon } from '../../assets/svg/why-us/code.svg';
  import WhyUsIntegrationsIcon from '../../assets/svg/why-us/integrations.svg';
  import WhyUsMigrationIcon from '../../assets/svg/why-us/migration.svg';
  import WhyUsServicesIcon from '../../assets/svg/why-us/services.svg';

@@ -19,9 +19,16 @@ const nextConfig = withExportImages({
     const localizationGenerator = new LocalizationGenerator();
     localizationGenerator.generateLocalizationFile();
 
-     config.optimization.splitChunks = {
+    // === SVG SUPPORT ===
+    config.module.rules.push({
+      test: /\.svg$/,
+      use: ['@svgr/webpack'],
+    });
+    // ===================
+
+    config.optimization.splitChunks = {
       chunks: 'all',
-      maxSize: 244 * 1024, 
+      maxSize: 244 * 1024,
     };
 
     return config;
