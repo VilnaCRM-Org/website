@@ -33,7 +33,7 @@ function Cards(): React.ReactElement {
             component="img"
             loading="lazy"
             decoding="async"
-            src={Vector.src}
+            src={vectorUrl}
             alt={t('for_who.vector_alt')}
             sx={styles.img}
           />
