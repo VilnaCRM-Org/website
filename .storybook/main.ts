@@ -1,4 +1,4 @@
-import type { StorybookConfig } from '@storybook/nextjs';
+﻿import type { StorybookConfig } from '@storybook/nextjs';
 
 const toPath = 'src/assets/fonts';
 const fromPath = `../${toPath}`;

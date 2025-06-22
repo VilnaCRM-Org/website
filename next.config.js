@@ -7,7 +7,7 @@ const LocalizationGenerator = require('./scripts/localizationGenerator');
 const nextConfig = withExportImages({
   output: 'export',
   reactStrictMode: true,
-  swcMinify: true,
+
 
   compiler: {
     styledComponents: true,
@@ -19,18 +19,24 @@ const nextConfig = withExportImages({
   const localizationGenerator = new LocalizationGenerator();
   localizationGenerator.generateLocalizationFile();
 
-  
+
+  config.module.rules = config.module.rules.filter(
+    rule => !(rule.test && rule.test.toString().includes('svg'))
+  );
+
+
   config.module.rules.push({
-    test: /\.svg$/,
+    test: /\.svg$/i,
     issuer: /\.[jt]sx?$/,
-    use: ['@svgr/webpack'],
-  });
-  
-  config.module.rules.push({
-    test: /\.svg$/,
-    issuer: /\.[jt]sx?$/,
-    resourceQuery: /url/,
-    type: 'asset/resource',
+    oneOf: [
+      {
+        resourceQuery: /url/, 
+        type: 'asset/resource',
+      },
+      {
+        use: ['@svgr/webpack'], 
+      },
+    ],
   });
 
   config.optimization.splitChunks = {
@@ -39,7 +45,7 @@ const nextConfig = withExportImages({
   };
 
   return config;
-},
+}
 
 });
 module.exports = process.env.ANALYZE === 'true' 
