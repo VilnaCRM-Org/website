@@ -75,6 +75,8 @@ ifeq ($(DIND), 1)
     COMPOSE_FILES           = $(DOCKER_COMPOSE_DEV_FILE) $(DOCKER_COMPOSE_DIND_FILE)
     COMPOSE_TEST_FILES      = $(DOCKER_COMPOSE_TEST_FILE) $(DOCKER_COMPOSE_DIND_FILE)
     DOCKER_SETUP            = . $(DIND_SCRIPT_PATH) && setup_dind_network
+    PNPM_EXEC               = echo "DIND mode: using containerized execution"
+    UNIT_TESTS              = $(DOCKER_SETUP) && $(DOCKER_COMPOSE) $(COMPOSE_FILES) build dev && bash -c '. $(DIND_SCRIPT_PATH) && run_dind_container "website-dev-unit-$$$$" "website-dev"'
 else
     COMPOSE_FILES           = $(DOCKER_COMPOSE_DEV_FILE)
     COMPOSE_TEST_FILES      = $(DOCKER_COMPOSE_TEST_FILE)
