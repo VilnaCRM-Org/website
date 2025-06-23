@@ -156,13 +156,25 @@ format: ## This command executes Prettier formatting
 	$(PRETTIER_BIN) "**/*.{js,jsx,ts,tsx,json,css,scss,md}" --write --ignore-path .prettierignore
 
 lint-next: ## This command executes ESLint
+ifeq ($(DIND), 1)
+	@. scripts/ci/dind-setup.sh && run_simple_dind_command "website-dev-lint-next" "./node_modules/.bin/next lint" "Running ESLint"
+else
 	$(PNPM_EXEC) $(NEXT_BIN) lint
+endif
 
 lint-tsc: ## This command executes Typescript linter
+ifeq ($(DIND), 1)
+	@. scripts/ci/dind-setup.sh && run_simple_dind_command "website-dev-lint-tsc" "./node_modules/.bin/tsc --noEmit" "Running TypeScript check"
+else
 	$(PNPM_EXEC) $(TS_BIN)
+endif
 
 lint-md: ## This command executes Markdown linter
+ifeq ($(DIND), 1)
+	@. scripts/ci/dind-setup.sh && run_simple_dind_command "website-dev-lint-md" "npx markdownlint-cli2 '**/*.md' '#node_modules' '#.next'" "Running Markdown linting"
+else
 	$(MARKDOWNLINT_BIN) $(MD_LINT_ARGS) "**/*.md"
+endif
 
 lint: lint-next lint-tsc lint-md ## Runs all linters: ESLint, TypeScript, and Markdown linters in sequence.
 
@@ -176,7 +188,11 @@ storybook-build: ## Build Storybook UI.
 	$(PNPM_EXEC) $(STORYBOOK_BUILD_CMD)
 
 test-e2e: start-prod  ## Start production and run E2E tests (Playwright)
+ifeq ($(DIND), 1)
+	@. scripts/ci/dind-setup.sh && run_playwright_dind "e2e"
+else
 	$(run-e2e)
+endif
 
 test-e2e-ui: start-prod ## Start the production environment and run E2E tests with the UI available at $(UI_MODE_URL)
 	@echo "🚀 Starting Playwright UI tests..."
@@ -184,7 +200,11 @@ test-e2e-ui: start-prod ## Start the production environment and run E2E tests wi
 	$(playwright-test) $(TEST_DIR_E2E) $(UI_FLAGS)
 
 test-visual: start-prod  ## Start production and run visual tests (Playwright)
+ifeq ($(DIND), 1)
+	@. scripts/ci/dind-setup.sh && run_playwright_dind "visual"
+else
 	$(run-visual)
+endif
 
 test-visual-ui: start-prod ## Start the production environment and run visual tests with the UI available at $(UI_MODE_URL)
 	@echo "🚀 Starting Playwright UI tests..."
@@ -192,7 +212,12 @@ test-visual-ui: start-prod ## Start the production environment and run visual te
 	$(playwright-test) $(TEST_DIR_VISUAL) $(UI_FLAGS)
 
 test-visual-update: start-prod ## Update Playwright visual snapshots
+ifeq ($(DIND), 1)
+	@echo "🚀 Visual snapshot update not yet implemented for DIND mode"
+	@echo "Please run locally: make test-visual-update"
+else
 	$(playwright-test) $(TEST_DIR_VISUAL) --update-snapshots
+endif
 
 create-network: ## Create the external Docker network if it doesn't exist
 	@docker network ls | grep -q $(NETWORK_NAME) || docker network create $(NETWORK_NAME)
@@ -209,7 +234,13 @@ wait-for-prod: ## Wait for the prod service to be ready on port $(NEXT_PUBLIC_PR
 	npx wait-on -v http://$(WEBSITE_DOMAIN):$(NEXT_PUBLIC_PROD_PORT)
 	@echo "Prod service is up and running!"
 
-test-unit-all: test-unit-client test-unit-server ## This command executes unit tests for both client and server environments.
+test-unit-all: ## Execute all unit tests in DIND-aware mode
+ifeq ($(DIND), 1)
+	@. scripts/ci/dind-setup.sh && run_unit_tests_dind
+else
+	@echo "🐳 Running unit tests with standard Docker Compose"
+	make test-unit-client test-unit-server
+endif
 
 test-unit-client: ## Run all client-side unit tests using Jest (Next.js env, TEST_ENV=client)
 	$(UNIT_TESTS) TEST_ENV=client $(JEST_BIN) $(JEST_FLAGS)
@@ -218,14 +249,10 @@ test-unit-server: ## Run server-side unit tests for Apollo using Jest (Node.js e
 	$(UNIT_TESTS) TEST_ENV=server $(JEST_BIN) $(JEST_FLAGS) $(TEST_DIR_APOLLO)
 
 test-memory-leak: start-prod ## This command executes memory leaks tests using Memlab library.
-	@echo "🧪 Starting memory leak test environment..."
 ifeq ($(DIND), 1)
-	$(DOCKER_SETUP) && $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_MEMLEAK_FILE) $(DOCKER_COMPOSE_DIND_FILE) up -d
-	@echo "🧹 Cleaning up previous memory leak results..."
-	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_MEMLEAK_FILE) $(DOCKER_COMPOSE_DIND_FILE) exec -T $(MEMLEAK_SERVICE) rm -rf $(MEMLEAK_RESULTS_DIR)
-	@echo "🚀 Running memory leak tests..."
-	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_MEMLEAK_FILE) $(DOCKER_COMPOSE_DIND_FILE) exec -T $(MEMLEAK_SERVICE) node $(MEMLEAK_TEST_SCRIPT)
+	@. scripts/ci/dind-setup.sh && run_memory_leak_dind
 else
+	@echo "🧪 Starting memory leak test environment..."
 	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_MEMLEAK_FILE) up -d
 	@echo "🧹 Cleaning up previous memory leak results..."
 	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_MEMLEAK_FILE) exec -T $(MEMLEAK_SERVICE) rm -rf $(MEMLEAK_RESULTS_DIR)
@@ -234,7 +261,11 @@ else
 endif
 
 test-mutation: build ## Run mutation tests using Stryker after building the app
+ifeq ($(DIND), 1)
+	@. scripts/ci/dind-setup.sh && run_mutation_tests_dind
+else
 	$(STRYKER_CMD)
+endif
 
 wait-for-prod-health: ## Wait for the prod container to reach a healthy state.
 	@echo "Waiting for prod container to become healthy (timeout: 60s)..."
@@ -256,13 +287,25 @@ endif
 
 load-tests: start-prod wait-for-prod-health ## This command executes load tests using K6 library. Note: The target host is determined by the service URL
                        ## using $(NEXT_PUBLIC_PROD_PORT), which maps to the production service in Docker Compose.
+ifeq ($(DIND), 1)
+	@. scripts/ci/dind-setup.sh && run_load_tests_dind
+else
 	$(LOAD_TESTS_RUN)
+endif
 
 lighthouse-desktop: ## Run a Lighthouse audit using desktop viewport settings to evaluate performance and best practices
+ifeq ($(DIND), 1)
+	@. scripts/ci/dind-setup.sh && run_lighthouse_dind "desktop"
+else
 	$(LHCI_DESKTOP)
+endif
 
 lighthouse-mobile: ## Run a Lighthouse audit using mobile viewport settings to evaluate mobile UX and performance
+ifeq ($(DIND), 1)
+	@. scripts/ci/dind-setup.sh && run_lighthouse_dind "mobile"
+else
 	$(LHCI_MOBILE)
+endif
 
 install: ## Install node modules using pnpm (CI=1 runs locally, default runs in container) — uses frozen lockfile and affects node_modules via volumes
 	$(PNPM_EXEC) pnpm install --frozen-lockfile
