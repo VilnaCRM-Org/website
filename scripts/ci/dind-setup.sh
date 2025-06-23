@@ -294,18 +294,32 @@ run_memory_leak_dind() {
     echo "🎉 Memory leak tests completed successfully!"
 }
 
-# Load tests
+# Load tests  
 run_load_tests_dind() {
     echo "🐳 Running Load tests in true Docker-in-Docker mode"
     _setup_network
+    
+    # Install K6 in the CodeBuild environment (needed for container builds)
+    echo "📦 Installing K6 binary..."
+    apk add --no-cache curl tar || return 1
+    K6_VERSION="v0.49.0"
+    curl -L "https://github.com/grafana/k6/releases/download/${K6_VERSION}/k6-${K6_VERSION}-linux-amd64.tar.gz" -o k6.tar.gz || return 1
+    tar -xzf k6.tar.gz || return 1
+    mv "k6-${K6_VERSION}-linux-amd64/k6" /usr/local/bin/ || return 1
+    rm -rf k6.tar.gz "k6-${K6_VERSION}-linux-amd64"
+    k6 version || return 1
     
     echo "Building k6 container..."
     docker-compose -f docker-compose.test.yml --profile load build k6
     _cleanup_container "website-k6-temp"
     
+    # Configure load test settings for DIND mode (container networking)
     mkdir -p src/test/load/results
-    docker run -d --name website-k6-temp --network website-network --entrypoint=/bin/sh website-k6 -c "while true; do sleep 60; done"
+    cp src/test/load/config.json.dist src/test/load/config.json
+    sed -i 's/"host": "prod"/"host": "website-prod"/' src/test/load/config.json
+    echo "✅ Configured load tests for DIND mode (targeting website-prod container)"
     
+    docker run -d --name website-k6-temp --network website-network --entrypoint=/bin/sh website-k6 -c "while true; do sleep 60; done"
     docker cp src/test/load/. website-k6-temp:/loadTests/ || return 1
     
     if docker exec -w /loadTests website-k6-temp /bin/k6 run --summary-trend-stats='avg,min,med,max,p(95),p(99)' --out 'web-dashboard=period=1s&export=/loadTests/results/homepage.html' homepage.js; then
