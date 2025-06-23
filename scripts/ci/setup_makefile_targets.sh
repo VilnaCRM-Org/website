@@ -7,16 +7,48 @@ set -e
 
 echo "#### Setting up Makefile targets for DinD environment"
 
+# Add DIND variable if not present
+if ! grep -q "^DIND" Makefile; then
+    echo "📝 Adding DIND variable to Makefile..."
+    sed -i '/^CI[[:space:]]*?= 0$/a DIND                        ?= 0' Makefile
+    echo "✅ DIND variable added"
+else
+    echo "ℹ️  DIND variable already exists"
+fi
+
+# Add missing variables for DIND mode if not present
+echo "📝 Adding missing variables for DIND mode..."
+if ! grep -q "^WEBSITE_DOMAIN" Makefile; then
+    sed -i '/^NETWORK_NAME.*= website-network$/a WEBSITE_DOMAIN              ?= localhost' Makefile
+fi
+if ! grep -q "^DEV_PORT" Makefile; then
+    sed -i '/^WEBSITE_DOMAIN.*?= localhost$/a DEV_PORT                    ?= 3000' Makefile
+fi
+if ! grep -q "^NEXT_PUBLIC_PROD_PORT" Makefile; then
+    sed -i '/^DEV_PORT.*?= 3000$/a NEXT_PUBLIC_PROD_PORT       ?= 3001' Makefile
+fi
+if ! grep -q "^PLAYWRIGHT_TEST_PORT" Makefile; then
+    sed -i '/^NEXT_PUBLIC_PROD_PORT.*?= 3001$/a PLAYWRIGHT_TEST_PORT        ?= 9323' Makefile
+fi
+if ! grep -q "^UI_HOST" Makefile; then
+    sed -i '/^PLAYWRIGHT_TEST_PORT.*?= 9323$/a UI_HOST                     ?= 0.0.0.0' Makefile
+fi
+echo "✅ Variables added successfully"
+
 # Remove existing tests targets
-for t in test-unit-all test-mutation lint-next lint-tsc lint-md test-e2e start-prod wait-for-prod test-visual test-visual-ui test-visual-update load-tests; do
+for t in test-unit-all test-mutation lint-next lint-tsc lint-md test-e2e start-prod wait-for-prod test-visual test-visual-ui test-visual-update load-tests setup-dind-network; do
   sed -i "/^${t}:/,/^[a-zA-Z][a-zA-Z-]*:/d" Makefile
 done
 
 # Add true DinD-aware targets - Part 1
 cat >> Makefile << 'MAKEFILE_PART1'
-setup-dind-network: ## Create Docker network for DinD mode
-	@echo "🐳 Setting up Docker network for DinD mode..."
-	@docker network create website-network 2>/dev/null || echo "Network website-network already exists"
+setup-dind-network: ## Configure Docker Compose files and create network for DIND mode
+ifeq ($(DIND), 1)
+	@echo "🔧 Setting up DIND environment..."
+	@./scripts/ci/configure-dind.sh
+else
+	@echo "ℹ️  DIND mode not enabled, skipping DIND setup"
+endif
 wait-for-dev-dind: ## Wait for dev service in DinD mode using container networking
 	@echo "🐳 Waiting for dev service to be ready via Docker network..."
 	@echo "Debug: Checking if container is running..."
