@@ -1,25 +1,20 @@
 #!/bin/bash
+
 # Production Targets Setup Script
 # Adds start-prod and wait-for-prod targets to Makefile
+
 set -e
+
 echo "#### Adding production targets to Makefile"
+
 cat >> Makefile << 'PROD_TARGETS'
+
 # Production container configuration
 PROD_CONTAINER_NAME ?= website-prod
+
 start-prod: ## Build image and start container in production mode
 ifeq ($(DIND), 1)
 	@echo "🐳 Starting production environment in true Docker-in-Docker mode"
-
-    
-        
-          
-    
-
-        
-        Expand All
-    
-    @@ -97,8 +29,40 @@ endif
-  
 	@echo "Setting up Docker network..."
 	make setup-dind-network
 	@echo "Building production container image..."
@@ -70,18 +65,8 @@ ifeq ($(DIND), 1)
 else
 	@echo "Waiting for prod service to be ready on port $(NEXT_PUBLIC_PROD_PORT)..."
 	npx wait-on -v http://$(WEBSITE_DOMAIN):$(NEXT_PUBLIC_PROD_PORT)
-
-    
-          
-            
-    
-
-          
-          Expand Down
-    
-    
-  
 	@echo "Prod service is up and running!"
 endif
 PROD_TARGETS
-echo "✅ Production targets added successfully"
+
+echo "✅ Production targets added successfully" 

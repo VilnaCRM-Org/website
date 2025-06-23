@@ -143,72 +143,132 @@ MUTATION_TARGET
 
 cat << 'LINT_TARGETS'
 
-# Helper function for DinD lint container operations
-run_dind_lint_command() {
-	local container_suffix=$1
-	local command=$2
-	local description=$3
-	local container_name="website-dev-lint-$container_suffix"
-	
-	echo "🐳 Running $description in true Docker-in-Docker mode"
-	echo "Setting up Docker network..."
-	make setup-dind-network
-	echo "Building container image..."
-	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) build dev
-	echo "🧹 Cleaning up any existing containers..."
-	docker rm -f $container_name 2>/dev/null || true
-	echo "🛠️ Starting container for $description..."
-	docker run -d --name $container_name --network website-network website-dev tail -f /dev/null
-	
-	echo "📂 Copying source files into container..."
-	if docker cp . $container_name:/app/; then
-		echo "✅ Source files copied successfully"
-	else
-		echo "❌ Failed to copy source files"
-		docker rm -f $container_name
-		return 1
-	fi
-	
-	echo "📦 Installing dependencies inside container..."
-	if docker exec $container_name sh -c "cd /app && npm install -g pnpm && pnpm install --frozen-lockfile"; then
-		echo "✅ Dependencies installed successfully"
-	else
-		echo "❌ Failed to install dependencies"
-		docker logs $container_name --tail 20
-		docker rm -f $container_name
-		return 1
-	fi
-	
-	echo "🔍 Running $description..."
-	if docker exec $container_name sh -c "cd /app && $command"; then
-		echo "✅ $description PASSED"
-	else
-		echo "❌ $description FAILED"
-		docker logs $container_name --tail 30
-		docker rm -f $container_name
-		return 1
-	fi
-	
-	echo "🧹 Cleaning up $description container..."
-	docker rm -f $container_name
-	echo "🎉 $description completed successfully in true DinD mode!"
-}
-
 lint-next: ## This command executes ESLint
 ifeq ($(DIND), 1)
-	@run_dind_lint_command "next" "./node_modules/.bin/next lint" "ESLint check"
+	@echo "🐳 Running ESLint in true Docker-in-Docker mode"
+	@echo "Setting up Docker network..."
+	make setup-dind-network
+	@echo "Building container image..."
+	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) build dev
+	@echo "🧹 Cleaning up any existing containers..."
+	@docker rm -f website-dev-lint-next 2>/dev/null || true
+	@echo "🛠️ Starting container for linting..."
+	docker run -d --name website-dev-lint-next --network website-network website-dev tail -f /dev/null
+	@echo "📂 Copying source files into container..."
+	@if docker cp . website-dev-lint-next:/app/; then \
+		echo "✅ Source files copied successfully"; \
+	else \
+		echo "❌ Failed to copy source files"; \
+		docker rm -f website-dev-lint-next; \
+		exit 1; \
+	fi
+	@echo "📦 Installing dependencies inside container..."
+	@if docker exec website-dev-lint-next sh -c "cd /app && npm install -g pnpm && pnpm install --frozen-lockfile"; then \
+		echo "✅ Dependencies installed successfully"; \
+	else \
+		echo "❌ Failed to install dependencies"; \
+		docker logs website-dev-lint-next --tail 20; \
+		docker rm -f website-dev-lint-next; \
+		exit 1; \
+	fi
+	@echo "🔍 Running ESLint..."
+	@if docker exec website-dev-lint-next sh -c "cd /app && ./node_modules/.bin/next lint"; then \
+		echo "✅ ESLint check PASSED"; \
+	else \
+		echo "❌ ESLint check FAILED"; \
+		docker logs website-dev-lint-next --tail 30; \
+		docker rm -f website-dev-lint-next; \
+		exit 1; \
+	fi
+	@echo "🧹 Cleaning up lint container..."
+	@docker rm -f website-dev-lint-next
+	@echo "🎉 ESLint completed successfully in true DinD mode!"
 else
 	$(PNPM_EXEC) $(NEXT_BIN) lint
 endif
 lint-tsc: ## This command executes Typescript linter
 ifeq ($(DIND), 1)
-	@run_dind_lint_command "tsc" "./node_modules/.bin/tsc --noEmit" "TypeScript check"
+	@echo "🐳 Running TypeScript check in true Docker-in-Docker mode"
+	@echo "Setting up Docker network..."
+	make setup-dind-network
+	@echo "Building container image..."
+	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) build dev
+	@echo "🧹 Cleaning up any existing containers..."
+	@docker rm -f website-dev-lint-tsc 2>/dev/null || true
+	@echo "🛠️ Starting container for TypeScript linting..."
+	docker run -d --name website-dev-lint-tsc --network website-network website-dev tail -f /dev/null
+	@echo "📂 Copying source files into container..."
+	@if docker cp . website-dev-lint-tsc:/app/; then \
+		echo "✅ Source files copied successfully"; \
+	else \
+		echo "❌ Failed to copy source files"; \
+		docker rm -f website-dev-lint-tsc; \
+		exit 1; \
+	fi
+	@echo "📦 Installing dependencies inside container..."
+	@if docker exec website-dev-lint-tsc sh -c "cd /app && npm install -g pnpm && pnpm install --frozen-lockfile"; then \
+		echo "✅ Dependencies installed successfully"; \
+	else \
+		echo "❌ Failed to install dependencies"; \
+		docker logs website-dev-lint-tsc --tail 20; \
+		docker rm -f website-dev-lint-tsc; \
+		exit 1; \
+	fi
+	@echo "🔍 Running TypeScript check..."
+	@if docker exec website-dev-lint-tsc sh -c "cd /app && ./node_modules/.bin/tsc --noEmit"; then \
+		echo "✅ TypeScript check PASSED"; \
+	else \
+		echo "❌ TypeScript check FAILED"; \
+		docker logs website-dev-lint-tsc --tail 30; \
+		docker rm -f website-dev-lint-tsc; \
+		exit 1; \
+	fi
+	@echo "🧹 Cleaning up TypeScript lint container..."
+	@docker rm -f website-dev-lint-tsc
+	@echo "🎉 TypeScript check completed successfully in true DinD mode!"
 else
 	$(TSC_CMD)
 endif
 lint-md: ## This command executes markdownlint for .md files
 ifeq ($(DIND), 1)
-	@run_dind_lint_command "md" "npx markdownlint-cli2 '**/*.md' '#node_modules' '#.next'" "Markdown linting"
+	@echo "🐳 Running Markdown linting in true Docker-in-Docker mode"
+	@echo "Setting up Docker network..."
+	make setup-dind-network
+	@echo "Building container image..."
+	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) build dev
+	@echo "🧹 Cleaning up any existing containers..."
+	@docker rm -f website-dev-lint-md 2>/dev/null || true
+	@echo "🛠️ Starting container for Markdown linting..."
+	docker run -d --name website-dev-lint-md --network website-network website-dev tail -f /dev/null
+	@echo "📂 Copying source files into container..."
+	@if docker cp . website-dev-lint-md:/app/; then \
+		echo "✅ Source files copied successfully"; \
+	else \
+		echo "❌ Failed to copy source files"; \
+		docker rm -f website-dev-lint-md; \
+		exit 1; \
+	fi
+	@echo "📦 Installing dependencies inside container..."
+	@if docker exec website-dev-lint-md sh -c "cd /app && npm install -g pnpm && pnpm install --frozen-lockfile"; then \
+		echo "✅ Dependencies installed successfully"; \
+	else \
+		echo "❌ Failed to install dependencies"; \
+		docker logs website-dev-lint-md --tail 20; \
+		docker rm -f website-dev-lint-md; \
+		exit 1; \
+	fi
+	@echo "🔍 Running Markdown linting..."
+	@if docker exec website-dev-lint-md sh -c "cd /app && npx markdownlint-cli2 '**/*.md' '#node_modules' '#.next'"; then \
+		echo "✅ Markdown linting PASSED"; \
+	else \
+		echo "❌ Markdown linting FAILED"; \
+		docker logs website-dev-lint-md --tail 30; \
+		docker rm -f website-dev-lint-md; \
+		exit 1; \
+	fi
+	@echo "🧹 Cleaning up Markdown lint container..."
+	@docker rm -f website-dev-lint-md
+	@echo "🎉 Markdown linting completed successfully in true DinD mode!"
 else
 	$(MARKDOWNLINT_CMD)
 endif
