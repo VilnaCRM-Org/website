@@ -64,17 +64,27 @@ JEST_FLAGS                  = --verbose
 
 NETWORK_NAME                = website-network
 
+# Service configuration
+WEBSITE_DOMAIN              ?= localhost
+DEV_PORT                    ?= 3000
+NEXT_PUBLIC_PROD_PORT       ?= 3001
+PLAYWRIGHT_TEST_PORT        ?= 9323
+UI_HOST                     ?= 0.0.0.0
+
 CI                          ?= 0
 DIND                        ?= 0
 
 # DIND-aware configuration for CI/CD
 ifeq ($(DIND), 1)
-    DIND_SCRIPT_PATH        = ./scripts/ci/dind-setup.sh
+    # DIND functionality now distributed across batch scripts:
+# - batch_unit_mutation_lint_targets.sh (Unit/Mutation/Lint tests)
+# - batch_lhci_targets.sh (Lighthouse/Memory-leak tests)  
+# - batch_pw_load_targets.sh (Playwright/Load tests)
     COMPOSE_FILES           = $(DOCKER_COMPOSE_DEV_FILE)
     COMPOSE_TEST_FILES      = $(DOCKER_COMPOSE_TEST_FILE)
-    DOCKER_SETUP            = . $(DIND_SCRIPT_PATH) && setup_dind_network
+    DOCKER_SETUP            = docker network create website-network 2>/dev/null || echo "Network already exists"
     PNPM_EXEC               = echo "DIND mode: using containerized execution"
-    UNIT_TESTS              = $(DOCKER_SETUP) && $(DOCKER_COMPOSE) $(COMPOSE_FILES) build dev && bash -c '. $(DIND_SCRIPT_PATH) && run_dind_container "website-dev-unit-$$$$" "website-dev"'
+    UNIT_TESTS              = echo "DIND mode: use 'make test-unit-all' instead of individual unit test targets"
 else
     COMPOSE_FILES           = $(DOCKER_COMPOSE_DEV_FILE)
     COMPOSE_TEST_FILES      = $(DOCKER_COMPOSE_TEST_FILE)
@@ -156,21 +166,21 @@ format: ## This command executes Prettier formatting
 
 lint-next: ## This command executes ESLint
 ifeq ($(DIND), 1)
-	@. scripts/ci/dind-setup.sh && run_simple_dind_command "website-dev-lint-next" "./node_modules/.bin/next lint" "Running ESLint"
+	@. scripts/ci/batch_unit_mutation_lint_targets.sh && run_simple_dind_command "website-dev-lint-next" "./node_modules/.bin/next lint" "Running ESLint"
 else
 	$(PNPM_EXEC) $(NEXT_BIN) lint
 endif
 
 lint-tsc: ## This command executes Typescript linter
 ifeq ($(DIND), 1)
-	@. scripts/ci/dind-setup.sh && run_simple_dind_command "website-dev-lint-tsc" "./node_modules/.bin/tsc --noEmit" "Running TypeScript check"
+	@. scripts/ci/batch_unit_mutation_lint_targets.sh && run_simple_dind_command "website-dev-lint-tsc" "./node_modules/.bin/tsc --noEmit" "Running TypeScript check"
 else
 	$(PNPM_EXEC) $(TS_BIN)
 endif
 
 lint-md: ## This command executes Markdown linter
 ifeq ($(DIND), 1)
-	@. scripts/ci/dind-setup.sh && run_simple_dind_command "website-dev-lint-md" "npx markdownlint-cli2 '**/*.md' '#node_modules' '#.next'" "Running Markdown linting"
+	@. scripts/ci/batch_unit_mutation_lint_targets.sh && run_simple_dind_command "website-dev-lint-md" "npx markdownlint-cli2 '**/*.md' '#node_modules' '#.next'" "Running Markdown linting"
 else
 	$(MARKDOWNLINT_BIN) $(MD_LINT_ARGS) "**/*.md"
 endif
@@ -186,11 +196,11 @@ storybook-start: ## Start Storybook UI and open in browser
 storybook-build: ## Build Storybook UI.
 	$(PNPM_EXEC) $(STORYBOOK_BUILD_CMD)
 
-test-e2e: start-prod  ## Start production and run E2E tests (Playwright)
+test-e2e: ## Start production and run E2E tests (Playwright)
 ifeq ($(DIND), 1)
-	@. scripts/ci/dind-setup.sh && run_playwright_dind "e2e"
+	@. scripts/ci/batch_pw_load_targets.sh && run_playwright_dind "e2e"
 else
-	$(run-e2e)
+	@make start-prod && $(run-e2e)
 endif
 
 test-e2e-ui: start-prod ## Start the production environment and run E2E tests with the UI available at $(UI_MODE_URL)
@@ -198,24 +208,28 @@ test-e2e-ui: start-prod ## Start the production environment and run E2E tests wi
 	@echo "Test will be run on: $(UI_MODE_URL)"
 	$(playwright-test) $(TEST_DIR_E2E) $(UI_FLAGS)
 
-test-visual: start-prod  ## Start production and run visual tests (Playwright)
+test-visual: ## Start production and run visual tests (Playwright)
 ifeq ($(DIND), 1)
-	@. scripts/ci/dind-setup.sh && run_playwright_dind "visual"
+	@. scripts/ci/batch_pw_load_targets.sh && run_playwright_dind "visual"
 else
-	$(run-visual)
+	@make start-prod && $(run-visual)
 endif
 
-test-visual-ui: start-prod ## Start the production environment and run visual tests with the UI available at $(UI_MODE_URL)
+test-visual-ui: ## Start the production environment and run visual tests with the UI available at $(UI_MODE_URL)
+ifeq ($(DIND), 1)
+	@. scripts/ci/batch_pw_load_targets.sh && run_playwright_dind "visual" "30000" "true"
+else
+	@make start-prod
 	@echo "🚀 Starting Playwright UI tests..."
 	@echo "Test will be run on: $(UI_MODE_URL)"
 	$(playwright-test) $(TEST_DIR_VISUAL) $(UI_FLAGS)
+endif
 
-test-visual-update: start-prod ## Update Playwright visual snapshots
+test-visual-update: ## Update Playwright visual snapshots
 ifeq ($(DIND), 1)
-	@echo "🚀 Visual snapshot update not yet implemented for DIND mode"
-	@echo "Please run locally: make test-visual-update"
+	@. scripts/ci/batch_pw_load_targets.sh && run_playwright_dind "visual" "30000" "false" "true"
 else
-	$(playwright-test) $(TEST_DIR_VISUAL) --update-snapshots
+	@make start-prod && $(playwright-test) $(TEST_DIR_VISUAL) --update-snapshots
 endif
 
 create-network: ## Create the external Docker network if it doesn't exist
@@ -223,7 +237,7 @@ create-network: ## Create the external Docker network if it doesn't exist
 
 start-prod: create-network ## Build image and start container in production mode
 ifeq ($(DIND), 1)
-	$(DOCKER_SETUP) && $(DOCKER_COMPOSE) $(COMPOSE_TEST_FILES) $(COMMON_HEALTHCHECKS_FILE) up -d && make wait-for-prod
+	$(DOCKER_SETUP) && $(DOCKER_COMPOSE) $(COMPOSE_TEST_FILES) $(COMMON_HEALTHCHECKS_FILE) up -d
 else
 	$(DOCKER_COMPOSE) $(COMMON_HEALTHCHECKS_FILE) $(DOCKER_COMPOSE_TEST_FILE) up -d && make wait-for-prod
 endif
@@ -235,7 +249,7 @@ wait-for-prod: ## Wait for the prod service to be ready on port $(NEXT_PUBLIC_PR
 
 test-unit-all: ## Execute all unit tests in DIND-aware mode
 ifeq ($(DIND), 1)
-	@. scripts/ci/dind-setup.sh && run_unit_tests_dind
+	@. scripts/ci/batch_unit_mutation_lint_targets.sh && run_unit_tests_dind
 else
 	@echo "🐳 Running unit tests with standard Docker Compose"
 	make test-unit-client test-unit-server
@@ -249,7 +263,7 @@ test-unit-server: ## Run server-side unit tests for Apollo using Jest (Node.js e
 
 test-memory-leak: start-prod ## This command executes memory leaks tests using Memlab library.
 ifeq ($(DIND), 1)
-	@. scripts/ci/dind-setup.sh && run_memory_leak_dind
+	@. scripts/ci/batch_lhci_targets.sh && run_memory_leak_dind
 else
 	@echo "🧪 Starting memory leak test environment..."
 	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_MEMLEAK_FILE) up -d
@@ -261,7 +275,7 @@ endif
 
 test-mutation: build ## Run mutation tests using Stryker after building the app
 ifeq ($(DIND), 1)
-	@. scripts/ci/dind-setup.sh && run_mutation_tests_dind
+	@. scripts/ci/batch_unit_mutation_lint_targets.sh && run_mutation_tests_dind
 else
 	$(STRYKER_CMD)
 endif
@@ -287,21 +301,21 @@ endif
 load-tests: start-prod wait-for-prod-health ## This command executes load tests using K6 library. Note: The target host is determined by the service URL
                        ## using $(NEXT_PUBLIC_PROD_PORT), which maps to the production service in Docker Compose.
 ifeq ($(DIND), 1)
-	@. scripts/ci/dind-setup.sh && run_load_tests_dind
+	@. scripts/ci/batch_pw_load_targets.sh && run_load_tests_dind
 else
 	$(LOAD_TESTS_RUN)
 endif
 
 lighthouse-desktop: ## Run a Lighthouse audit using desktop viewport settings to evaluate performance and best practices
 ifeq ($(DIND), 1)
-	@. scripts/ci/dind-setup.sh && run_lighthouse_dind "desktop"
+	@. scripts/ci/batch_lhci_targets.sh && run_lighthouse_dind "desktop"
 else
 	$(LHCI_DESKTOP)
 endif
 
 lighthouse-mobile: ## Run a Lighthouse audit using mobile viewport settings to evaluate mobile UX and performance
 ifeq ($(DIND), 1)
-	@. scripts/ci/dind-setup.sh && run_lighthouse_dind "mobile"
+	@. scripts/ci/batch_lhci_targets.sh && run_lighthouse_dind "mobile"
 else
 	$(LHCI_MOBILE)
 endif
