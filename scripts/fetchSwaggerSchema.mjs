@@ -10,6 +10,9 @@ export function buildSpecUrl() {
 }
 
 export async function fetchSwaggerYaml(url){
+  if (!url || typeof url !== 'string') {
+     throw new Error('URL parameter is required and must be a string');
+  }
   const response = await fetch(url);
   if (!response.ok) {
     throw new Error(`Failed to fetch swagger schema. HTTP status: ${response.status} ${response.statusText}`);
@@ -18,6 +21,12 @@ export async function fetchSwaggerYaml(url){
 }
 
 export async function saveSwaggerJson(yamlText, filePath){
+  if (!yamlText || typeof yamlText !== 'string') {
+    throw new Error('yamlText parameter is required and must be a string');
+  }
+  if (!filePath || typeof filePath !== 'string') {
+    throw new Error('filePath parameter is required and must be a string');
+  }
   const jsonContent = load(yamlText);
   await writeFile(filePath, JSON.stringify(jsonContent, null, 2));
 }

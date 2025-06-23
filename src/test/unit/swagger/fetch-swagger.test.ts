@@ -110,4 +110,36 @@ describe('swagger utils', () => {
       JSON.stringify({ swagger: '2.0' }, null, 2)
     );
   });
+  test('fetchSwaggerYaml throws if url is missing or invalid', async () => {
+    // @ts-expect-error testing runtime type check
+    await expect(fetchSwaggerYaml(undefined)).rejects.toThrow(
+      'URL parameter is required and must be a string'
+    );
+    // @ts-expect-error testing runtime type check
+    await expect(fetchSwaggerYaml(123)).rejects.toThrow(
+      'URL parameter is required and must be a string'
+    );
+  });
+
+  test('saveSwaggerJson throws if yamlText is missing or not a string', async () => {
+    // @ts-expect-error testing runtime type check
+    await expect(saveSwaggerJson(undefined, './swagger.json')).rejects.toThrow(
+      'yamlText parameter is required and must be a string'
+    );
+    // @ts-expect-error testing runtime type check
+    await expect(saveSwaggerJson(123, './swagger.json')).rejects.toThrow(
+      'yamlText parameter is required and must be a string'
+    );
+  });
+
+  test('saveSwaggerJson throws if filePath is missing or not a string', async () => {
+    // @ts-expect-error testing runtime type check
+    await expect(saveSwaggerJson('yamlText', undefined)).rejects.toThrow(
+      'filePath parameter is required and must be a string'
+    );
+    // @ts-expect-error testing runtime type check
+    await expect(saveSwaggerJson('yamlText', 123)).rejects.toThrow(
+      'filePath parameter is required and must be a string'
+    );
+  });
 });

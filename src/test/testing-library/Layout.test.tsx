@@ -92,13 +92,6 @@ describe('Layout component', () => {
     expect(metaDescription).toHaveAttribute('content', 'The first Ukrainian open source CRM');
   });
 
-  it('includes apple-touch-icon link', () => {
-    renderLayout();
-
-    const touchIcon: Element | null = document.querySelector('link[rel="apple-touch-icon"]');
-    expect(touchIcon).toHaveAttribute('href', '../../assets/img/touch.png');
-  });
-
   it('renders in correct order: header -> content -> footer', () => {
     const { container } = renderLayout(<main data-testid="main-content">Content</main>);
 

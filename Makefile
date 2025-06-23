@@ -189,6 +189,8 @@ test-memory-leak: start-prod ## This command executes memory leaks tests using M
 	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_MEMLEAK_FILE) exec -T $(MEMLEAK_SERVICE) rm -rf $(MEMLEAK_RESULTS_DIR)
 	@echo "🚀 Running memory leak tests..."
 	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_MEMLEAK_FILE) exec -T $(MEMLEAK_SERVICE) node $(MEMLEAK_TEST_SCRIPT)
+	@echo "🧹 Cleaning up memory leak test containers..."
+	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_MEMLEAK_FILE) down --remove-orphans
 
 test-mutation: build ## Run mutation tests using Stryker after building the app
 	$(STRYKER_CMD)
@@ -210,6 +212,10 @@ wait-for-prod-health: ## Wait for the prod container to reach a healthy state.
 load-tests: start-prod wait-for-prod-health ## This command executes load tests using K6 library. Note: The target host is determined by the service URL
                        ## using $(NEXT_PUBLIC_PROD_PORT), which maps to the production service in Docker Compose.
 	$(LOAD_TESTS_RUN)
+
+load-tests-swagger: start-prod wait-for-prod-health ## Execute comprehensive load tests for the Swagger page. Use environment variables to run specific scenarios:
+                       ## run_smoke=true, run_average=true, run_stress=true, run_spike=true. If none set, runs all scenarios.
+	$(K6) run --summary-trend-stats="avg,min,med,max,p(95),p(99)" --out "web-dashboard=period=1s&export=/loadTests/results/swagger.html" /loadTests/swagger.js
 
 lighthouse-desktop: ## Run a Lighthouse audit using desktop viewport settings to evaluate performance and best practices
 	$(LHCI_DESKTOP)

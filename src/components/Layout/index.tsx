@@ -23,7 +23,6 @@ export default function Layout({
       <Head>
         <title>{t('VilnaCRM API')}</title>
         <meta name="description" content={t('The first Ukrainian open source CRM')} />
-        <link rel="apple-touch-icon" href="../../assets/img/touch.png" />
       </Head>
       <DynamicHeader />
       {children}
