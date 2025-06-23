@@ -1,8 +1,14 @@
 import { render, RenderOptions, RenderResult, screen } from '@testing-library/react';
+import { t } from 'i18next';
 import React from 'react';
 import '@testing-library/jest-dom';
 
 import Layout from '@/components/Layout';
+
+import createI18nMock from './fixtures/i18n-mock';
+
+const titleText: string = t('header.layout.page_title');
+const description: string = t('header.layout.meta_description');
 
 jest.mock('next/head', () => ({
   __esModule: true,
@@ -27,18 +33,6 @@ jest.mock(
     }
 );
 
-jest.mock('react-i18next', () => ({
-  useTranslation: (): { t: (key: string) => string } => ({
-    t: (key: string): string => {
-      const translations: { [key: string]: string } = {
-        'VilnaCRM API': 'VilnaCRM API',
-        'The first Ukrainian open source CRM': 'The first Ukrainian open source CRM',
-      };
-      return translations[key] || key;
-    },
-  }),
-}));
-
 interface CustomRenderOptions extends RenderOptions {
   children?: React.ReactNode;
 }
@@ -55,6 +49,15 @@ const customRender: (ui: React.ReactElement, options?: CustomRenderOptions) => R
 };
 
 describe('Layout component', () => {
+  beforeAll(() => {
+    jest.mock('react-i18next', () =>
+      createI18nMock({
+        'VilnaCRM API': 'VilnaCRM API',
+        'The first Ukrainian open source CRM': 'The first Ukrainian open source CRM',
+      })
+    );
+  });
+
   const renderLayout: (children?: React.ReactNode) => RenderResult = (
     children?: React.ReactNode
   ): RenderResult => customRender(<Layout>{children || <div>Default content</div>}</Layout>);
@@ -75,17 +78,27 @@ describe('Layout component', () => {
   });
 
   it('sets correct page title', () => {
+    const originalTitle: string = document.title;
     renderLayout();
 
     const title: HTMLElement | null = document.querySelector('title');
-    expect(title?.textContent).toBe('VilnaCRM API');
+    expect(title?.textContent).toBe(titleText);
+
+    document.title = originalTitle;
   });
 
   it('sets correct meta description', () => {
+    const originalMeta: Element | null = document.querySelector('meta[name="description"]');
     renderLayout();
 
     const metaDescription: Element | null = document.querySelector('meta[name="description"]');
-    expect(metaDescription).toHaveAttribute('content', 'The first Ukrainian open source CRM');
+    expect(metaDescription).toHaveAttribute('content', description);
+
+    if (originalMeta) {
+      document.head.appendChild(originalMeta);
+    } else {
+      document.querySelector('meta[name="description"]')?.remove();
+    }
   });
   it('renders in correct order: header -> content -> footer', () => {
     renderLayout(<main data-testid="main-content">Content</main>);

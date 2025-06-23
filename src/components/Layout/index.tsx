@@ -17,8 +17,8 @@ export default function Layout({ children }: { children: React.ReactNode }): Rea
   return (
     <>
       <Head>
-        <title>{t('VilnaCRM API')}</title>
-        <meta name="description" content={t('The first Ukrainian open source CRM')} />
+        <title>{t('header.layout.page_title')}</title>
+        <meta name="description" content={t('header.layout.meta_description')} />
       </Head>
       <DynamicHeader />
       {children}

@@ -3,7 +3,10 @@ require('dotenv').config();
 module.exports = {
   ci: {
     collect: {
-      url: `${process.env.NEXT_PUBLIC_PROD_HOST_API_URL}`,
+      url: [
+        `${process.env.NEXT_PUBLIC_PROD_HOST_API_URL}`,
+        `${process.env.NEXT_PUBLIC_PROD_HOST_API_URL}/swagger`,
+      ],
       psiStrategy: 'mobile',
       settings: {
         chromeFlags: '--no-sandbox',
