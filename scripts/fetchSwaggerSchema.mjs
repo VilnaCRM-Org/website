@@ -40,6 +40,6 @@ export async function saveSwaggerJson(yamlText, filePath){
     console.log('✅ Swagger schema saved as JSON');
   } catch (err) {
     console.error('❌ Failed to fetch/save swagger schema:', err);
-    process.exit(1);
+    process.exitCode = 1;
   }
 })();

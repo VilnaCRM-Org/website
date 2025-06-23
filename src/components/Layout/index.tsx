@@ -12,11 +12,7 @@ const DynamicHeader: ComponentType = dynamic(
   { ssr: false }
 );
 
-export default function Layout({
-  children,
-}: {
-  children: Array<React.ReactNode> | React.ReactNode;
-}): React.ReactElement {
+export default function Layout({ children }: { children: React.ReactNode }): React.ReactElement {
   const { t } = useTranslation();
   return (
     <>

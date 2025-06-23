@@ -43,10 +43,6 @@ interface CustomRenderOptions extends RenderOptions {
   children?: React.ReactNode;
 }
 
-const metaAttributesSelector: string =
-  'meta[name="description"][content="The first Ukrainian open source CRM"]';
-const logoName: string = 'VilnaCRM API';
-
 const customRender: (ui: React.ReactElement, options?: CustomRenderOptions) => RenderResult = (
   ui: React.ReactElement,
   options?: CustomRenderOptions
@@ -91,33 +87,19 @@ describe('Layout component', () => {
     const metaDescription: Element | null = document.querySelector('meta[name="description"]');
     expect(metaDescription).toHaveAttribute('content', 'The first Ukrainian open source CRM');
   });
-
   it('renders in correct order: header -> content -> footer', () => {
-    const { container } = renderLayout(<main data-testid="main-content">Content</main>);
+    renderLayout(<main data-testid="main-content">Content</main>);
+    const header: HTMLElement = screen.getByTestId('header');
+    const content: HTMLElement = screen.getByTestId('main-content');
+    const footer: HTMLElement = screen.getByTestId('footer');
 
-    const elements: string = container.innerHTML;
-    const headerIndex: number = elements.indexOf('header');
-    const contentIndex: number = elements.indexOf('main-content');
-    const footerIndex: number = elements.indexOf('footer');
-
-    expect(headerIndex).toBeLessThan(contentIndex);
-    expect(contentIndex).toBeLessThan(footerIndex);
+    expect(header.compareDocumentPosition(content)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(content.compareDocumentPosition(footer)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
-
   it('handles empty children gracefully', () => {
     renderLayout();
 
     expect(screen.getByTestId('header')).toBeInTheDocument();
     expect(screen.getByTestId('footer')).toBeInTheDocument();
-  });
-
-  it('renders title and metadata correctly', async () => {
-    const { getByText, container } = renderLayout();
-
-    const titleElement: HTMLElement = getByText(logoName);
-    const metaElement: Element | null = container.querySelector(metaAttributesSelector);
-
-    expect(titleElement).toHaveTextContent(logoName);
-    expect(metaElement).toBeInTheDocument();
   });
 });

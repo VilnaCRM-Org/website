@@ -4,6 +4,7 @@ import { sleep } from 'k6';
 
 import ScenarioUtils from './utils/scenarioUtils.js';
 import Utils from './utils/utils.js';
+import TEST_DATA_GENERATORS from './utils/test-data.js';
 
 const scenarioName = 'swagger';
 
@@ -12,21 +13,11 @@ const scenarioUtils = new ScenarioUtils(utils, scenarioName);
 
 export const options = scenarioUtils.getOptions();
 
-function generateTestData() {
-  return {
-    user: {
-      name: `Test User ${Math.floor(Math.random() * 1000)}`,
-      email: `test${Math.floor(Math.random() * 1000)}@example.com`,
-      password: 'TestPassword123!',
-    },
-    userId: Math.floor(Math.random() * 100) + 1,
-  };
-}
-
 export default function swagger() {
   const baseUrl = utils.getBaseUrl();
   const sharedHttpParams = utils.getParams();
-  const testData = generateTestData();
+  const testData = TEST_DATA_GENERATORS.generateUser();
+  const userId = TEST_DATA_GENERATORS.userId();
 
   const swaggerPageResponse = http.get(`${baseUrl}/swagger`, sharedHttpParams);
   utils.checkResponse(swaggerPageResponse, 'swagger page loads', res => res.status === 200);
@@ -39,9 +30,9 @@ export default function swagger() {
   const apiSections = [
     { path: '/api/users', method: 'GET', description: 'Get users list' },
     { path: '/api/users', method: 'POST', description: 'Create new user' },
-    { path: `/api/users/${testData.userId}`, method: 'GET', description: 'Get specific user' },
-    { path: `/api/users/${testData.userId}`, method: 'PUT', description: 'Update user' },
-    { path: `/api/users/${testData.userId}`, method: 'DELETE', description: 'Delete user' },
+    { path: `/api/users/${userId}`, method: 'GET', description: 'Get specific user' },
+    { path: `/api/users/${userId}`, method: 'PUT', description: 'Update user' },
+    { path: `/api/users/${userId}`, method: 'DELETE', description: 'Delete user' },
     { path: '/api/system/health', method: 'GET', description: 'System health check' },
     { path: '/api/system/status', method: 'GET', description: 'System status' },
   ];
@@ -60,18 +51,10 @@ export default function swagger() {
         response = http.get(`${baseUrl}${section.path}`, requestParams);
         break;
       case 'POST':
-        response = http.post(
-          `${baseUrl}${section.path}`,
-          JSON.stringify(testData.user),
-          requestParams
-        );
+        response = http.post(`${baseUrl}${section.path}`, JSON.stringify(testData), requestParams);
         break;
       case 'PUT':
-        response = http.put(
-          `${baseUrl}${section.path}`,
-          JSON.stringify(testData.user),
-          requestParams
-        );
+        response = http.put(`${baseUrl}${section.path}`, JSON.stringify(testData), requestParams);
         break;
       case 'DELETE':
         response = http.del(`${baseUrl}${section.path}`, null, requestParams);
@@ -92,14 +75,14 @@ export default function swagger() {
 
   const authHeaders = Object.assign({}, sharedHttpParams, {
     headers: Object.assign({}, sharedHttpParams.headers, {
-      Authorization: 'Bearer test-token-' + Math.floor(Math.random() * 1000),
-      'X-API-Key': 'test-api-key-' + Math.floor(Math.random() * 1000),
+      Authorization: `Bearer test-token-${userId}`,
+      'X-API-Key': `test-api-key-${userId}`,
     }),
   });
 
   const authenticatedRequests = [
     { url: `${baseUrl}/api/users`, method: 'GET' },
-    { url: `${baseUrl}/api/users/${testData.userId}`, method: 'GET' },
+    { url: `${baseUrl}/api/users/${userId}`, method: 'GET' },
     { url: `${baseUrl}/api/system/health`, method: 'GET' },
   ];
 
@@ -130,12 +113,12 @@ export default function swagger() {
   const contentTypeTests = [
     {
       contentType: 'application/json',
-      body: JSON.stringify(testData.user),
+      body: JSON.stringify(testData),
       description: 'JSON request',
     },
     {
       contentType: 'application/x-www-form-urlencoded',
-      body: `name=${encodeURIComponent(testData.user.name)}&email=${encodeURIComponent(testData.user.email)}`,
+      body: `name=${encodeURIComponent(testData.name)}&email=${encodeURIComponent(testData.email)}`,
       description: 'Form data request',
     },
   ];
