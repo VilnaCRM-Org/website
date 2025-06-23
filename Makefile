@@ -42,7 +42,6 @@ DOCKER_COMPOSE_DEV_FILE     = -f docker-compose.yml
 DOCKER_COMPOSE_DIND_FILE    = -f docker-compose.dind.yml
 COMMON_HEALTHCHECKS_FILE    = -f common-healthchecks.yml
 EXEC_DEV_TTYLESS            = $(DOCKER_COMPOSE) exec -T dev
-NEXT_DEV_CMD                = $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) up -d dev && make wait-for-dev
 PLAYWRIGHT_DOCKER_CMD       = $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_TEST_FILE) exec playwright
 PLAYWRIGHT_TEST             = $(PLAYWRIGHT_DOCKER_CMD) sh -c
 
@@ -103,6 +102,13 @@ else
     LHCI_BUILD_CMD          = make start-prod && $(LHCI)
     LHCI_DESKTOP            = $(LHCI_BUILD_CMD) $(LHCI_CONFIG_DESKTOP)
     LHCI_MOBILE             = $(LHCI_BUILD_CMD) $(LHCI_CONFIG_MOBILE)
+    
+    # DIND-aware NEXT_DEV_CMD - only applies to non-CI mode
+    ifeq ($(DIND), 1)
+        NEXT_DEV_CMD        = $(DOCKER_SETUP) && $(DOCKER_COMPOSE) $(COMPOSE_FILES) up -d dev && make wait-for-dev
+    else
+        NEXT_DEV_CMD        = $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) up -d dev && make wait-for-dev
+    endif
 endif
 
 PRETTIER_BIN                = $(PNPM_EXEC) ./node_modules/.bin/prettier
@@ -137,7 +143,11 @@ wait-for-dev: ## Wait for the dev service to be ready on port $(DEV_PORT).
 	@echo "Dev service is up and running!"
 
 build: ## A tool build the project
+ifeq ($(DIND), 1)
+	$(DOCKER_SETUP) && $(DOCKER_COMPOSE) $(COMPOSE_FILES) build
+else
 	$(DOCKER_COMPOSE) build
+endif
 
 build-analyze: ## Build production bundle and launch bundle-analyzer report (ANALYZE=true)
 	ANALYZE=true $(NEXT_BUILD_CMD)
@@ -188,7 +198,11 @@ create-network: ## Create the external Docker network if it doesn't exist
 	@docker network ls | grep -q $(NETWORK_NAME) || docker network create $(NETWORK_NAME)
 
 start-prod: create-network ## Build image and start container in production mode
+ifeq ($(DIND), 1)
+	$(DOCKER_SETUP) && $(DOCKER_COMPOSE) $(COMPOSE_TEST_FILES) $(COMMON_HEALTHCHECKS_FILE) up -d && make wait-for-prod
+else
 	$(DOCKER_COMPOSE) $(COMMON_HEALTHCHECKS_FILE) $(DOCKER_COMPOSE_TEST_FILE) up -d && make wait-for-prod
+endif
 
 wait-for-prod: ## Wait for the prod service to be ready on port $(NEXT_PUBLIC_PROD_PORT).
 	@echo "Waiting for prod service to be ready on port $(NEXT_PUBLIC_PROD_PORT)..."
@@ -205,11 +219,19 @@ test-unit-server: ## Run server-side unit tests for Apollo using Jest (Node.js e
 
 test-memory-leak: start-prod ## This command executes memory leaks tests using Memlab library.
 	@echo "🧪 Starting memory leak test environment..."
+ifeq ($(DIND), 1)
+	$(DOCKER_SETUP) && $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_MEMLEAK_FILE) $(DOCKER_COMPOSE_DIND_FILE) up -d
+	@echo "🧹 Cleaning up previous memory leak results..."
+	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_MEMLEAK_FILE) $(DOCKER_COMPOSE_DIND_FILE) exec -T $(MEMLEAK_SERVICE) rm -rf $(MEMLEAK_RESULTS_DIR)
+	@echo "🚀 Running memory leak tests..."
+	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_MEMLEAK_FILE) $(DOCKER_COMPOSE_DIND_FILE) exec -T $(MEMLEAK_SERVICE) node $(MEMLEAK_TEST_SCRIPT)
+else
 	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_MEMLEAK_FILE) up -d
 	@echo "🧹 Cleaning up previous memory leak results..."
 	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_MEMLEAK_FILE) exec -T $(MEMLEAK_SERVICE) rm -rf $(MEMLEAK_RESULTS_DIR)
 	@echo "🚀 Running memory leak tests..."
 	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_MEMLEAK_FILE) exec -T $(MEMLEAK_SERVICE) node $(MEMLEAK_TEST_SCRIPT)
+endif
 
 test-mutation: build ## Run mutation tests using Stryker after building the app
 	$(STRYKER_CMD)
@@ -217,7 +239,11 @@ test-mutation: build ## Run mutation tests using Stryker after building the app
 wait-for-prod-health: ## Wait for the prod container to reach a healthy state.
 	@echo "Waiting for prod container to become healthy (timeout: 60s)..."
 	@for i in $$(seq 1 30); do \
+ifeq ($(DIND), 1)
+		if $(DOCKER_COMPOSE) $(COMPOSE_TEST_FILES) ps | grep -q "prod.*(healthy)"; then \
+else
 		if $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_TEST_FILE) ps | grep -q "prod.*(healthy)"; then \
+endif
 			echo "Prod container is healthy and ready!"; \
 			break; \
 		fi; \
@@ -245,22 +271,46 @@ update: ## Update node modules to latest allowed versions — always runs locall
 	pnpm update
 
 down: ## Stop the docker containers
+ifeq ($(DIND), 1)
+	$(DOCKER_COMPOSE) $(COMPOSE_FILES) down --remove-orphans
+else
 	$(DOCKER_COMPOSE) down --remove-orphans
+endif
 
 sh: ## Log to the docker container
+ifeq ($(DIND), 1)
+	$(DOCKER_COMPOSE) $(COMPOSE_FILES) exec dev sh
+else
 	$(DOCKER_COMPOSE) exec dev sh
+endif
 
 ps: ## Log to the docker container
+ifeq ($(DIND), 1)
+	@$(DOCKER_COMPOSE) $(COMPOSE_FILES) ps
+else
 	@$(DOCKER_COMPOSE) ps
+endif
 
 logs: ## Show all logs
+ifeq ($(DIND), 1)
+	@$(DOCKER_COMPOSE) $(COMPOSE_FILES) logs --follow dev
+else
 	@$(DOCKER_COMPOSE) logs --follow dev
+endif
 
 new-logs: ## Show live logs of the dev container
+ifeq ($(DIND), 1)
+	@$(DOCKER_COMPOSE) $(COMPOSE_FILES) logs --tail=0 --follow dev
+else
 	@$(DOCKER_COMPOSE) logs --tail=0 --follow dev
+endif
 
 stop: ## Stop docker
+ifeq ($(DIND), 1)
+	$(DOCKER_COMPOSE) $(COMPOSE_FILES) stop
+else
 	$(DOCKER_COMPOSE) stop
+endif
 
 check-node-version: ## Check if the correct Node.js version is installed
 	$(PNPM_EXEC) node checkNodeVersion.js
