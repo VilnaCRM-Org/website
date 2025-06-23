@@ -39,7 +39,6 @@ LHCI_MOBILE_SERVE           = $(LHCI_CONFIG_MOBILE) $(SERVE_CMD)
 
 DOCKER_COMPOSE_TEST_FILE    = -f docker-compose.test.yml
 DOCKER_COMPOSE_DEV_FILE     = -f docker-compose.yml
-DOCKER_COMPOSE_DIND_FILE    = -f docker-compose.dind.yml
 COMMON_HEALTHCHECKS_FILE    = -f common-healthchecks.yml
 EXEC_DEV_TTYLESS            = $(DOCKER_COMPOSE) exec -T dev
 PLAYWRIGHT_DOCKER_CMD       = $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_TEST_FILE) exec playwright
@@ -71,8 +70,8 @@ DIND                        ?= 0
 # DIND-aware configuration for CI/CD
 ifeq ($(DIND), 1)
     DIND_SCRIPT_PATH        = ./scripts/ci/dind-setup.sh
-    COMPOSE_FILES           = $(DOCKER_COMPOSE_DEV_FILE) $(DOCKER_COMPOSE_DIND_FILE)
-    COMPOSE_TEST_FILES      = $(DOCKER_COMPOSE_TEST_FILE) $(DOCKER_COMPOSE_DIND_FILE)
+    COMPOSE_FILES           = $(DOCKER_COMPOSE_DEV_FILE)
+    COMPOSE_TEST_FILES      = $(DOCKER_COMPOSE_TEST_FILE)
     DOCKER_SETUP            = . $(DIND_SCRIPT_PATH) && setup_dind_network
     PNPM_EXEC               = echo "DIND mode: using containerized execution"
     UNIT_TESTS              = $(DOCKER_SETUP) && $(DOCKER_COMPOSE) $(COMPOSE_FILES) build dev && bash -c '. $(DIND_SCRIPT_PATH) && run_dind_container "website-dev-unit-$$$$" "website-dev"'

@@ -189,11 +189,11 @@ run_lighthouse_dind() {
     _setup_network
     
     echo "Building production environment..."
-    docker-compose -f docker-compose.yml -f docker-compose.healthcheck.yml -f docker-compose.test.yml build
+    docker-compose -f docker-compose.test.yml -f common-healthchecks.yml build
     
     # Start with increased memory for Chrome
     printf 'services:\n  prod:\n    mem_limit: 2g\n    mem_reservation: 1g\n    shm_size: 2gb\n' > docker-compose.memory-override.yml
-    docker-compose -f docker-compose.yml -f docker-compose.healthcheck.yml -f docker-compose.test.yml -f docker-compose.memory-override.yml up -d
+    docker-compose -f docker-compose.test.yml -f common-healthchecks.yml -f docker-compose.memory-override.yml up -d
     rm -f docker-compose.memory-override.yml
     
     _wait_for_prod_ready 3000 || return 1
@@ -259,13 +259,13 @@ run_memory_leak_dind() {
     _cleanup_container "website-memory-leak-temp"
     
     echo "🏗️ Building production environment..."
-    docker-compose -f docker-compose.yml -f docker-compose.healthcheck.yml -f docker-compose.test.yml build
-    docker-compose -f docker-compose.yml -f docker-compose.healthcheck.yml -f docker-compose.test.yml up -d
+    docker-compose -f docker-compose.test.yml -f common-healthchecks.yml build
+    docker-compose -f docker-compose.test.yml -f common-healthchecks.yml up -d
     
     _wait_for_prod_ready 3000 || return 1
     
     echo "🧪 Building memory leak test container..."
-    docker-compose -f docker-compose.test.memlab.yml build memory-leak
+    docker-compose -f docker-compose.memory-leak.yml build memory-leak
     
     echo "🛠️ Starting memory leak test container..."
     docker run -d --name website-memory-leak-temp --network website-network \
