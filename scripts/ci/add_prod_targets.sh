@@ -8,6 +8,78 @@ set -e
 echo "#### Adding production targets to Makefile"
 
 cat >> Makefile << 'PROD_TARGETS'
+
+# Production container configuration
+PROD_CONTAINER_NAME ?= website-prod
+
+# Helper function for retry logic with customizable conditions
+retry_with_timeout() {
+	local max_attempts=$1
+	local sleep_interval=$2
+	local timeout_message=$3
+	local check_command=$4
+	local debug_command=${5:-""}
+	local debug_interval=${6:-10}
+	
+	for i in $(seq 1 $max_attempts); do
+		if eval "$check_command"; then
+			return 0
+		fi
+		echo "Attempt $$i: $timeout_message, waiting..."
+		
+		# Show debug info at intervals
+		if [ -n "$debug_command" ] && [ $$((i % debug_interval)) -eq 0 ]; then
+			echo "Debug info at attempt $$i:"
+			eval "$debug_command" || echo "Debug command failed"
+		fi
+		
+		sleep $sleep_interval
+		
+		if [ $$i -eq $max_attempts ]; then
+			echo "❌ Operation failed after $$((max_attempts * sleep_interval)) seconds"
+			return 1
+		fi
+	done
+}
+
+# Wait for container to be running
+wait_for_container_running() {
+	local container_name=$1
+	echo "Checking if $container_name container is running..."
+	
+	local check_cmd="docker ps --filter \"name=$container_name\" --filter \"status=running\" --format \"{{.Names}}\" | grep -q \"$container_name\""
+	local fail_cmd="docker ps -a --filter \"name=$container_name\""
+	
+	if retry_with_timeout 30 2 "Container not running yet" "$check_cmd"; then
+		echo "✅ Container $container_name is running"
+		return 0
+	else
+		echo "Container status:"
+		eval "$fail_cmd"
+		return 1
+	fi
+}
+
+# Wait for service to respond on specified port
+wait_for_service_health() {
+	local container_name=$1
+	local port=$2
+	echo "🔍 Testing $container_name service connectivity on port $port..."
+	
+	local check_cmd="docker exec $container_name sh -c \"curl -f http://localhost:$port >/dev/null 2>&1\""
+	local debug_cmd="docker exec $container_name ps aux 2>/dev/null; docker exec $container_name netstat -tulpn 2>/dev/null | grep :$port || echo \"Port $port not bound\""
+	local fail_cmd="docker logs $container_name --tail 50"
+	
+	if retry_with_timeout 60 3 "Service not ready, checking container status" "$check_cmd" "$debug_cmd" 10; then
+		echo "✅ Service is responding on port $port!"
+		return 0
+	else
+		echo "Final container logs:"
+		eval "$fail_cmd"
+		return 1
+	fi
+}
+
 start-prod: ## Build image and start container in production mode
 ifeq ($(DIND), 1)
 	@echo "🐳 Starting production environment in true Docker-in-Docker mode"
@@ -21,48 +93,18 @@ ifeq ($(DIND), 1)
 else
 	$(DOCKER_COMPOSE) $(COMMON_HEALTHCHECKS_FILE) $(DOCKER_COMPOSE_TEST_FILE) up -d && make wait-for-prod
 endif
+
 wait-for-prod: ## Wait for the prod service to be ready on port $(NEXT_PUBLIC_PROD_PORT).
 ifeq ($(DIND), 1)
 	@echo "🐳 Waiting for prod service in true DinD mode using container networking..."
-	@echo "Checking if prod container is running..."
-	@for i in $$(seq 1 30); do \
-		if docker ps --filter "name=website-prod" --filter "status=running" --format "{{.Names}}" | grep -q "website-prod"; then \
-			echo "✅ Container website-prod is running"; \
-			break; \
-		fi; \
-		echo "Attempt $$i: Container not running yet, waiting..."; \
-		sleep 2; \
-		if [ $$i -eq 30 ]; then \
-			echo "❌ Container failed to start within 60 seconds"; \
-			docker ps -a --filter "name=website-prod"; \
-			exit 1; \
-		fi; \
-	done
-	@echo "🔍 Testing prod service connectivity..."
-	@for i in $$(seq 1 60); do \
-		if docker exec website-prod sh -c "curl -f http://localhost:$(NEXT_PUBLIC_PROD_PORT) >/dev/null 2>&1"; then \
-			echo "✅ Prod service is responding on port $(NEXT_PUBLIC_PROD_PORT)!"; \
-			break; \
-		fi; \
-		echo "Attempt $$i: Prod service not ready, checking container status..."; \
-		if [ $$((i % 10)) -eq 0 ]; then \
-			echo "Debug info at attempt $$i:"; \
-			docker exec website-prod ps aux 2>/dev/null || echo "Cannot access container processes"; \
-			docker exec website-prod netstat -tulpn 2>/dev/null | grep :$(NEXT_PUBLIC_PROD_PORT) || echo "Port $(NEXT_PUBLIC_PROD_PORT) not bound"; \
-		fi; \
-		sleep 3; \
-		if [ $$i -eq 60 ]; then \
-			echo "❌ Prod service failed to respond within 180 seconds"; \
-			echo "Final container logs:"; \
-			docker logs website-prod --tail 50; \
-			exit 1; \
-		fi; \
-	done
+	@wait_for_container_running $(PROD_CONTAINER_NAME)
+	@wait_for_service_health $(PROD_CONTAINER_NAME) $(NEXT_PUBLIC_PROD_PORT)
 else
 	@echo "Waiting for prod service to be ready on port $(NEXT_PUBLIC_PROD_PORT)..."
 	npx wait-on -v http://$(WEBSITE_DOMAIN):$(NEXT_PUBLIC_PROD_PORT)
 	@echo "Prod service is up and running!"
 endif
+
 PROD_TARGETS
 
 echo "✅ Production targets added successfully" 
