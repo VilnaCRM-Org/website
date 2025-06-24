@@ -5,8 +5,6 @@ import '@testing-library/jest-dom';
 
 import Layout from '@/components/Layout';
 
-import createI18nMock from './fixtures/i18n-mock';
-
 const titleText: string = t('header.layout.page_title');
 const description: string = t('header.layout.meta_description');
 
@@ -49,15 +47,6 @@ const customRender: (ui: React.ReactElement, options?: CustomRenderOptions) => R
 };
 
 describe('Layout component', () => {
-  beforeAll(() => {
-    jest.mock('react-i18next', () =>
-      createI18nMock({
-        'VilnaCRM API': 'VilnaCRM API',
-        'The first Ukrainian open source CRM': 'The first Ukrainian open source CRM',
-      })
-    );
-  });
-
   const renderLayout: (children?: React.ReactNode) => RenderResult = (
     children?: React.ReactNode
   ): RenderResult => customRender(<Layout>{children || <div>Default content</div>}</Layout>);

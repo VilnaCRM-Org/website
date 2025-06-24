@@ -6,6 +6,15 @@ import Header from '../../features/landing/components/Header/Header';
 const logoAltKey: string = 'header.logo_alt';
 const logoAlt: string = i18next.t(logoAltKey);
 
+jest.mock('next/router', () => ({
+  useRouter(): { pathname: string; push: jest.Mock } {
+    return {
+      pathname: '/',
+      push: jest.fn(),
+    };
+  },
+}));
+
 describe('Header component', () => {
   let spy: jest.SpyInstance;
 

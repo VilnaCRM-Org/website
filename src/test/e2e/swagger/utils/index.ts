@@ -115,11 +115,13 @@ export const SELECTORS: Selectors = {
 export type TestConstants = {
   SWAGGER_PATH: string;
   SELECTORS: Selectors;
+  API_RESPONSE_TIMEOUT: number;
 };
 
 export const TEST_CONSTANTS: TestConstants = {
   SWAGGER_PATH: '/swagger',
   SELECTORS,
+  API_RESPONSE_TIMEOUT: 2000,
 };
 export const getLocators: (page: Page) => SwaggerLocators = (page: Page): SwaggerLocators => ({
   apiDocumentation: page.locator(TEST_CONSTANTS.SELECTORS.API_DOCUMENTATION),

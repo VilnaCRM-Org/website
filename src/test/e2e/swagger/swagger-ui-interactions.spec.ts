@@ -195,13 +195,11 @@ test.describe('Swagger UI Enhanced Interactions', () => {
     if (await tryItOutBtn.isVisible()) {
       await tryItOutBtn.click();
 
-      // Look for execute button
       const executeBtn: Locator = firstEndpoint.locator('button:has-text("Execute")');
       if (await executeBtn.isVisible()) {
         await executeBtn.click();
 
-        // Wait for response
-        await page.waitForTimeout(2000);
+        await page.waitForTimeout(TEST_CONSTANTS.API_RESPONSE_TIMEOUT || 2000);
 
         // Check if response time is displayed
         const responseTime: Locator = firstEndpoint.locator('.response-time');
@@ -228,13 +226,11 @@ test.describe('Swagger UI Enhanced Interactions', () => {
         await bodyEditor.fill('{"invalid": "data"}');
       }
 
-      // Execute request
       const executeBtn: Locator = firstEndpoint.locator('button:has-text("Execute")');
       if (await executeBtn.isVisible()) {
         await executeBtn.click();
 
-        // Wait for response
-        await page.waitForTimeout(2000);
+        await page.waitForTimeout(TEST_CONSTANTS.API_RESPONSE_TIMEOUT || 2000);
 
         // Check if error response is handled
         const errorResponse: Locator = firstEndpoint.locator('.response-col_status.error');

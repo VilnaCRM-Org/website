@@ -1,8 +1,15 @@
+import { Box } from '@mui/material';
+import React from 'react';
+
+import { UiTypography } from '@/components';
+
 export default function ApiDocsEnPage(): React.ReactElement {
   return (
-    <div style={{ padding: '2rem' }}>
-      <h1>API Documentation (EN)</h1>
-      <p>This is the English version of the API documentation page.</p>
-    </div>
+    <Box style={{ padding: '2rem' }}>
+      <UiTypography component="h3" variant="h1">
+        API Documentation (EN)
+      </UiTypography>
+      <UiTypography>This is the English version of the API documentation page.</UiTypography>
+    </Box>
   );
 }

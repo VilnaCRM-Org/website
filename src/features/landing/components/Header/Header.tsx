@@ -1,4 +1,5 @@
 import { AppBar } from '@mui/material';
+import { NextRouter, useRouter } from 'next/router';
 import Image from 'next-export-optimize-images/image';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -15,12 +16,25 @@ import styles from './styles';
 
 function Header(): React.ReactElement {
   const { t } = useTranslation();
+  const router: NextRouter = useRouter();
+
+  const handleLinkClick: (link: string) => void = (link: string) => {
+    if (router.pathname !== '/' && link !== 'contacts') {
+      router.push(`/${link}`);
+    } else {
+      const id: string = link.replace('#', '');
+      const el: HTMLElement | null = document.getElementById(id);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  };
 
   return (
     <AppBar sx={styles.headerWrapper}>
       <UiToolbar>
         <Image src={Logo} alt={t('header.logo_alt')} width={131} height={44} />
-        <NavList navItems={headerNavList} />
+        <NavList navItems={headerNavList} handleClick={handleLinkClick} />
         <AuthButtons />
         <Drawer />
       </UiToolbar>
