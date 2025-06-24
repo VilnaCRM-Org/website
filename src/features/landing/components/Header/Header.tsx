@@ -22,7 +22,7 @@ function Header(): React.ReactElement {
     if (router.pathname !== '/' && link !== 'contacts') {
       router.push(`/${link}`);
     } else {
-      const id: string = link.replace('#', '');
+      const id: string = link.startsWith('#') ? link.slice(1) : link;
       const el: HTMLElement | null = document.getElementById(id);
       if (el) {
         el.scrollIntoView({ behavior: 'smooth' });

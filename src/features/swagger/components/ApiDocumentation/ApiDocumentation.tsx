@@ -1,4 +1,7 @@
+import { Container } from '@mui/material';
 import SwaggerUI from 'swagger-ui-react';
+
+import { UiTypography } from '@/components';
 
 import useSwagger from '../../hooks/useSwagger';
 
@@ -6,11 +9,15 @@ function ApiDocumentation(): React.ReactElement | null {
   const { swaggerContent, error } = useSwagger();
 
   if (error) {
-    return <div>Error loading API documentation: {error.message}</div>;
+    return (
+      <Container>
+        <UiTypography>Error loading API documentation: {error.message}</UiTypography>
+      </Container>
+    );
   }
 
   if (!swaggerContent) {
-    return <div>Loading API documentation…</div>;
+    return null;
   }
 
   return swaggerContent ? <SwaggerUI spec={swaggerContent} /> : null;

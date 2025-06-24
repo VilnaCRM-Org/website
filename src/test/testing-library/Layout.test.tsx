@@ -5,9 +5,6 @@ import '@testing-library/jest-dom';
 
 import Layout from '@/components/Layout';
 
-const titleText: string = t('header.layout.page_title');
-const description: string = t('header.layout.meta_description');
-
 jest.mock('next/head', () => ({
   __esModule: true,
   default: ({ children }: { children: Array<React.ReactElement> }): React.ReactElement => (
@@ -67,17 +64,17 @@ describe('Layout component', () => {
   });
 
   it('sets correct page title', () => {
-    const originalTitle: string = document.title;
+    const titleText: string = t('header.layout.page_title');
     renderLayout();
 
     const title: HTMLElement | null = document.querySelector('title');
     expect(title?.textContent).toBe(titleText);
-
-    document.title = originalTitle;
   });
 
   it('sets correct meta description', () => {
     const originalMeta: Element | null = document.querySelector('meta[name="description"]');
+    const description: string = t('header.layout.meta_description');
+
     renderLayout();
 
     const metaDescription: Element | null = document.querySelector('meta[name="description"]');

@@ -75,17 +75,16 @@ describe('ApiDocumentation', () => {
     expect(getByText(/Error loading API documentation/i)).toBeInTheDocument();
     expect(getByText(/Failed to fetch/i)).toBeInTheDocument();
   });
-
-  test('renders loading message if no swagger content and no error', () => {
+  it('renders nothing while Swagger content is loading', () => {
     mockUseSwagger.mockReturnValue({
       error: null,
       swaggerContent: null,
     });
 
-    const { getByText } = render(<ApiDocumentation />);
-    expect(getByText(/Loading API documentation/i)).toBeInTheDocument();
-  });
+    const { container } = render(<ApiDocumentation />);
 
+    expect(container).toBeEmptyDOMElement();
+  });
   test('renders SwaggerUI when swaggerContent is available', () => {
     mockUseSwagger.mockReturnValue({
       error: null,

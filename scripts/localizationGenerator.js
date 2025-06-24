@@ -111,6 +111,9 @@ class LocalizationGenerator {
   }
   deepMerge(target = {}, source = {}) {
     for (const key of Object.keys(source)) {
+      if (key === '__proto__' || key === 'constructor') {
+        continue;
+      }
       if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
         if (!target[key] || typeof target[key] !== 'object') {
           target[key] = {};
