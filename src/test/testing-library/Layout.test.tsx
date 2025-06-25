@@ -5,13 +5,38 @@ import '@testing-library/jest-dom';
 
 import Layout from '@/components/Layout';
 
+function MockHead({ children }: { children: React.ReactNode }): null {
+  React.useEffect(() => {
+    const created: HTMLElement[] = [];
+
+    React.Children.forEach(children, child => {
+      if (React.isValidElement(child)) {
+        const el: HTMLElement = document.createElement(child.type as string);
+
+        Object.entries(child.props ?? {}).forEach(([key, val]) => {
+          if (key !== 'children' && typeof val === 'string') {
+            el.setAttribute(key, val);
+          }
+        });
+
+        if (typeof child.props?.children === 'string') {
+          el.textContent = child.props.children;
+        }
+
+        document.head.appendChild(el);
+        created.push(el);
+      }
+    });
+
+    return () => created.forEach(el => el.remove());
+  }, [children]);
+
+  return null;
+}
 jest.mock('next/head', () => ({
   __esModule: true,
-  default: ({ children }: { children: Array<React.ReactElement> }): React.ReactElement => (
-    <div>{children}</div>
-  ),
+  default: MockHead,
 }));
-
 jest.mock(
   '../../features/landing/components/Header',
   () =>
@@ -100,5 +125,6 @@ describe('Layout component', () => {
 
     expect(screen.getByTestId('header')).toBeInTheDocument();
     expect(screen.getByTestId('footer')).toBeInTheDocument();
+    expect(screen.getByText('Default content')).toBeInTheDocument();
   });
 });

@@ -118,7 +118,7 @@ export async function mockAuthorizeSuccess(
         status: 200,
         contentType: 'text/html',
         body: `
-        <html lang="eng">
+        <html lang="en">
           <head>
             <meta http-equiv="refresh" content="0; url=${targetUrl}" />
           </head>
@@ -154,6 +154,7 @@ export async function collapseEndpoint(endpoint: Locator): Promise<void> {
   const opblockBody: Locator = endpoint.locator('.opblock-body');
 
   await expect(opblockBody).toBeVisible();
+  await expect(opblockSummary).toBeVisible();
 
   await opblockSummary.click();
 

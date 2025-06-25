@@ -1,7 +1,13 @@
-import { render } from '@testing-library/react';
+import { fireEvent, render } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { t } from 'i18next';
 import React from 'react';
 
-import { testDrawerItem, testHeaderItem } from '../../features/landing/components/Header/constants';
+import {
+  headerNavList,
+  testDrawerItem,
+  testHeaderItem,
+} from '../../features/landing/components/Header/constants';
 import NavList from '../../features/landing/components/Header/NavList/NavList';
 import { NavItemProps } from '../../features/landing/types/header/navigation';
 
@@ -45,5 +51,37 @@ describe('NavList component', () => {
 
     expect(container.querySelector(navWrapperClass)).not.toBeInTheDocument();
     expect(container.querySelector(navContentClass)).not.toBeInTheDocument();
+  });
+  it('invokes handleClick with the correct link on item click', async () => {
+    const clickSpy: jest.Mock = jest.fn();
+
+    const { getByText } = render(<NavList navItems={headerNavList} handleClick={clickSpy} />);
+
+    await userEvent.click(getByText(t(headerNavList[0].title)));
+
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+    expect(clickSpy).toHaveBeenCalledWith('#Advantages');
+  });
+  it('invokes handleClick when the link is Contacts', async () => {
+    const clickSpy: jest.Mock = jest.fn();
+
+    const { getByText } = render(<NavList navItems={headerNavList} handleClick={clickSpy} />);
+
+    await userEvent.click(getByText(t('header.contacts')));
+
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+    expect(clickSpy).toHaveBeenCalledWith('#Contacts');
+  });
+  it('does not call handleClick when handleClick is undefined', () => {
+    const { container } = render(<NavList navItems={navItems} handleClick={undefined} />);
+
+    const firstNavItem: Element | null =
+      container.querySelector('[data-testid="nav-item"]') ||
+      container.querySelector('li') ||
+      container.querySelector('a');
+
+    if (firstNavItem) {
+      expect(() => fireEvent.click(firstNavItem)).not.toThrow();
+    }
   });
 });

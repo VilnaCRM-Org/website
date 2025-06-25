@@ -15,7 +15,8 @@ describe('Swagger Navigation', () => {
   const mockAssign: jest.Mock = jest.fn();
 
   beforeAll(() => {
-    delete (window as { location?: Location }).location;
+    (window as { location?: Location }).location = undefined;
+
     Object.defineProperty(window, 'location', {
       value: {
         ...originalLocation,

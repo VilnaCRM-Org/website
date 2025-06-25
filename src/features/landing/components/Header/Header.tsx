@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { UiToolbar } from '@/components';
 
 import Logo from '../../assets/svg/logo/Logo.svg';
+import scrollToAnchor from '../../helpers/scrollToAnchor';
 
 import { AuthButtons } from './AuthButtons';
 import { headerNavList } from './constants';
@@ -18,15 +19,11 @@ function Header(): React.ReactElement {
   const { t } = useTranslation();
   const router: NextRouter = useRouter();
 
-  const handleLinkClick: (link: string) => void = (link: string) => {
-    if (router.pathname !== '/' && link !== 'contacts') {
-      router.push(`/${link}`);
+  const handleLinkClick: (link: string) => void = async (link: string) => {
+    if (router.pathname !== '/' && link.toLowerCase() !== 'contacts') {
+      await router.push(`/${link}`);
     } else {
-      const id: string = link.startsWith('#') ? link.slice(1) : link;
-      const el: HTMLElement | null = document.getElementById(id);
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth' });
-      }
+      scrollToAnchor(link);
     }
   };
 
