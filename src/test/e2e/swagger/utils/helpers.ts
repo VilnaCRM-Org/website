@@ -81,6 +81,9 @@ export async function expectErrorOrFailureStatus(getEndpoint: Locator): Promise<
     .first();
   const statusElement: Locator = getEndpoint.locator('.response .response-col_status').first();
 
+  await expect(errorElement).toBeVisible();
+  await expect(statusElement).toBeVisible();
+
   const [errorText, statusText] = await Promise.all([
     errorElement.textContent(),
     statusElement.textContent(),
@@ -89,14 +92,17 @@ export async function expectErrorOrFailureStatus(getEndpoint: Locator): Promise<
   const cleanStatusText: string = (statusText || '').trim();
   const cleanErrorText: string = (errorText || '').trim();
 
-  const hasError: boolean = Object.values(errorMessages).some(msg => cleanErrorText.includes(msg));
+  const hasErrorMessage: boolean = Object.values(errorMessages).some(msg =>
+    cleanErrorText.includes(msg)
+  );
 
   const hasFailureStatus: boolean =
     /^(0|4\d{2}|5\d{2})/.test(cleanStatusText) ||
     cleanStatusText === 'Undocumented' ||
     cleanStatusText === '';
 
-  expect(hasError || hasFailureStatus).toBe(true);
+  expect(hasFailureStatus).toBe(true);
+  expect(hasErrorMessage).toBe(true);
 }
 export async function mockAuthorizeSuccess(
   page: Page,

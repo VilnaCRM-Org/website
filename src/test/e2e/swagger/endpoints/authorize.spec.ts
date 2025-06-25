@@ -9,6 +9,7 @@ import {
   cancelOperation,
   mockAuthorizeSuccess,
   buildSafeUrl,
+  expectErrorOrFailureStatus,
 } from '../utils/helpers';
 import { locators } from '../utils/locators';
 
@@ -27,7 +28,7 @@ interface AuthorizeEndpointElements {
   responseBody: Locator;
 }
 
-const AUTHORIZE_API_URL: string = '**/oauth/authorize';
+const AUTHORIZE_API_URL: RegExp = /\/api\/oauth\/authorize(\?.*)?$/;
 
 async function setupAuthorizeEndpoint(page: Page): Promise<AuthorizeEndpointElements> {
   const { elements } = await initSwaggerPage(page);
@@ -101,6 +102,7 @@ test.describe('OAuth authorize endpoint', () => {
     await expect(
       elements.getEndpoint.locator('.validation-errors.errors-wrapper li')
     ).toContainText("For 'response_type': Required field is not provided.");
+
     await cancelOperation(page);
   });
 
@@ -123,10 +125,12 @@ test.describe('OAuth authorize endpoint', () => {
     await elements.clientIdInput.fill(testOAuthParams.clientId);
     await elements.redirectUriInput.fill('');
     await elements.executeBtn.click();
+
     await expect(elements.redirectUriInput).toHaveClass(/invalid/);
     await expect(
       elements.getEndpoint.locator('.validation-errors.errors-wrapper li')
     ).toContainText("For 'redirect_uri': Required field is not provided.");
+
     await cancelOperation(page);
   });
 
@@ -159,23 +163,15 @@ test.describe('OAuth authorize endpoint', () => {
     await elements.scopeInput.fill(testOAuthParams.scope);
     await elements.stateInput.fill(testOAuthParams.state);
 
-    await page.route(AUTHORIZE_API_URL, route => route.abort('failed'));
+    await page.route(AUTHORIZE_API_URL, r => r.abort('failed'));
+    const redirectRe: RegExp = new RegExp(
+      `^${testOAuthParams.redirectUri.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}.*`
+    );
 
-    await elements.executeBtn.click();
-    const errorElement: Locator = elements.getEndpoint
-      .locator('.response-col_description .renderedMarkdown p')
-      .first();
-    const statusElement: Locator = elements.getEndpoint
-      .locator('.response .response-col_status')
-      .first();
+    await page.route(redirectRe, r => r.abort('failed'));
+    await Promise.all([page.waitForRequest(AUTHORIZE_API_URL), elements.executeBtn.click()]);
 
-    const [errorText, statusText] = await Promise.all([
-      errorElement.textContent(),
-      statusElement.textContent(),
-    ]);
-
-    expect(errorText).toContain('Redirect to the provided redirect URI');
-    expect(statusText).toBe('302');
+    await expectErrorOrFailureStatus(elements.getEndpoint);
 
     await clearEndpointResponse(elements.getEndpoint);
   });
