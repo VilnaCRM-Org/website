@@ -1,10 +1,8 @@
 import { Box, Container } from '@mui/material';
-import { getOptimizedImageProps } from 'next-export-optimize-images/image';
+import Image from 'next/image';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 
-import bigScreen from '../../assets/img/about-vilna/desktop.jpg';
-import smallScreen from '../../assets/img/about-vilna/mobile.jpg';
 import circle from '../../assets/svg/for-who/circle.svg';
 import hexagon from '../../assets/svg/for-who/hexagon.svg';
 import point10 from '../../assets/svg/for-who/point10.svg';
@@ -19,22 +17,8 @@ import { Cards } from './Cards';
 import MainTitle from './MainTitle/MainTitle';
 import styles from './styles';
 
-const getImageProps: (src: string, alt?: string) => React.ImgHTMLAttributes<HTMLImageElement> = (
-  src,
-  alt = ''
-) => getOptimizedImageProps({ src, alt }).props;
-
 function ForWhoSection(): React.ReactElement {
   const { t } = useTranslation();
-
-  const bigScreenProps: React.ImgHTMLAttributes<HTMLImageElement> = getImageProps(
-    bigScreen,
-    t('alts.big_screen')
-  );
-  const smallScreenProps: React.ImgHTMLAttributes<HTMLImageElement> = getImageProps(
-    smallScreen,
-    t('alts.small_screen')
-  );
 
   return (
     <Box id="forWhoSection" component="section" sx={styles.wrapper}>
@@ -48,14 +32,14 @@ function ForWhoSection(): React.ReactElement {
             <Box sx={styles.svgContainer}>
               <Box
                 component="img"
-                {...getImageProps(circle)}
+                src={circle}
                 aria-hidden="true"
                 sx={styles.circle}
                 loading="lazy"
               />
               <Box
                 component="img"
-                {...getImageProps(rhombus)}
+                src={rhombus}
                 aria-hidden="true"
                 sx={styles.rhombus}
                 loading="lazy"
@@ -63,28 +47,28 @@ function ForWhoSection(): React.ReactElement {
               <Box sx={styles.pointContainer}>
                 <Box
                   component="img"
-                  {...getImageProps(pointGroup)}
+                  src={pointGroup}
                   aria-hidden="true"
                   sx={styles.pointGroup}
                   loading="lazy"
                 />
                 <Box
                   component="img"
-                  {...getImageProps(point6)}
+                  src={point6}
                   aria-hidden="true"
                   sx={styles.point6}
                   loading="lazy"
                 />
                 <Box
                   component="img"
-                  {...getImageProps(point8)}
+                  src={point8}
                   aria-hidden="true"
                   sx={styles.point8}
                   loading="lazy"
                 />
                 <Box
                   component="img"
-                  {...getImageProps(point10)}
+                  src={point10}
                   aria-hidden="true"
                   sx={styles.point10}
                   loading="lazy"
@@ -92,25 +76,37 @@ function ForWhoSection(): React.ReactElement {
               </Box>
             </Box>
             <Box sx={styles.square}>
-              <Box component="img" {...bigScreenProps} sx={styles.bigScreen} loading="lazy" />
-              <Box component="img" {...smallScreenProps} sx={styles.smallScreen} loading="lazy" />
+              <Image
+                src="/assets/img/about-vilna/desktop.jpg"
+                alt={t('alts.big_screen')}
+                width={1920}
+                height={1080}
+                style={styles.bigScreen}
+              />
+              <Image
+                src="/assets/img/about-vilna/mobile.jpg"
+                alt={t('alts.small_screen')}
+                width={375}
+                height={667}
+                style={styles.smallScreen}
+              />
               <Box
                 component="img"
-                {...getImageProps(waves)}
+                src={waves}
                 aria-hidden="true"
                 sx={styles.waves}
                 loading="lazy"
               />
               <Box
                 component="img"
-                {...getImageProps(hexagon)}
+                src={hexagon}
                 aria-hidden="true"
                 sx={styles.hexagon}
                 loading="lazy"
               />
               <Box
                 component="img"
-                {...getImageProps(triangle)}
+                src={triangle}
                 aria-hidden="true"
                 sx={styles.triangle}
                 loading="lazy"

@@ -13,7 +13,7 @@ import { VilnaCRMEmail } from '../VilnaCRMEmail';
 
 import styles from './styles';
 
-function Mobile({ socialLinks }: { socialLinks: SocialMedia[] }): React.ReactElement {
+export function Mobile({ socialLinks }: { socialLinks: SocialMedia[] }): React.ReactElement {
   const { t } = useTranslation();
   const currentDate: Date = useMemo(() => new Date(), []);
   const currentYear: number = useMemo(() => currentDate.getFullYear(), [currentDate]);
@@ -31,5 +31,3 @@ function Mobile({ socialLinks }: { socialLinks: SocialMedia[] }): React.ReactEle
     </Container>
   );
 }
-
-export default Mobile;
