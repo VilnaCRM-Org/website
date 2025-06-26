@@ -20,11 +20,15 @@ function Header(): React.ReactElement {
   const router: NextRouter = useRouter();
 
   const handleLinkClick: (link: string) => void = async (link: string) => {
-    if (router.pathname !== '/' && link.toLowerCase() !== 'contacts') {
-      await router.push(`/${link}`);
-    } else {
+    const normalized: string = link.replace(/^#/, '').toLowerCase();
+    if (normalized === 'contacts') {
       scrollToAnchor(link);
+      return;
     }
+    if (router.pathname !== '/') {
+      await router.push(`/${link}`, undefined, { scroll: true });
+    }
+    scrollToAnchor(link);
   };
 
   return (

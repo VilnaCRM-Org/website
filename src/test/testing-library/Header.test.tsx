@@ -1,7 +1,12 @@
 import { render } from '@testing-library/react';
-import i18next from 'i18next';
+import userEvent, { UserEvent } from '@testing-library/user-event';
+import i18next, { t } from 'i18next';
+import { useRouter } from 'next/router';
 
+import { headerNavList } from '../../features/landing/components/Header/constants';
 import Header from '../../features/landing/components/Header/Header';
+import scrollToAnchor from '../../features/landing/helpers/scrollToAnchor';
+import { NavItemProps } from '../../features/landing/types/header/navigation';
 
 const logoAltKey: string = 'header.logo_alt';
 const logoAlt: string = i18next.t(logoAltKey);
@@ -39,176 +44,68 @@ describe('Header component', () => {
   });
 });
 
-describe('handleLinkClick function scenarios', () => {
-  let mockPush: jest.Mock;
-  let scrollToAnchorMock: jest.Mock;
+jest.mock('next/router', () => ({ useRouter: jest.fn() }));
+
+jest.mock('../../features/landing/helpers/scrollToAnchor', () => ({
+  __esModule: true,
+  default: jest.fn(),
+}));
+const scrollToAnchorMock: jest.MockedFunction<typeof scrollToAnchor> =
+  scrollToAnchor as jest.MockedFunction<typeof scrollToAnchor>;
+
+describe('Header navigation', () => {
+  const user: UserEvent = userEvent.setup();
+
+  let routerMock: { pathname: string; push: jest.Mock };
 
   beforeEach(() => {
-    mockPush = jest.fn();
-    scrollToAnchorMock = jest.fn();
+    jest.clearAllMocks();
 
-    jest.doMock('../../features/landing/helpers/scrollToAnchor', () => ({
-      __esModule: true,
-      default: scrollToAnchorMock,
-    }));
+    routerMock = {
+      pathname: '/swagger',
+      push: jest.fn().mockImplementation(async (url: string) => {
+        routerMock.pathname = url;
+        return Promise.resolve();
+      }),
+    };
+    (useRouter as jest.Mock).mockReturnValue(routerMock);
   });
 
-  describe('when on home page (pathname === "/")', () => {
-    beforeEach(() => {
-      jest.doMock('next/router', () => ({
-        useRouter: (): UserRouterMock => ({
-          pathname: '/',
-          push: mockPush,
-        }),
-      }));
-    });
+  it('should scroll to the correct link on the swagger page', async () => {
+    const { getByText } = render(<Header />);
+    await user.click(getByText(t('header.contacts')));
 
-    it('should call scrollToAnchor for non-contacts links on home page', () => {
-      render(<Header />);
-      expect(scrollToAnchorMock).not.toHaveBeenCalled();
-    });
-
-    it('should call scrollToAnchor for contacts link on home page', () => {
-      render(<Header />);
-      expect(scrollToAnchorMock).not.toHaveBeenCalled();
-    });
+    expect(routerMock.push).not.toHaveBeenCalled();
+    expect(routerMock.pathname).toBe('/swagger');
+    expect(scrollToAnchorMock).toHaveBeenCalledWith('#Contacts');
+    expect(scrollToAnchorMock).toHaveBeenCalledTimes(1);
+    expect(scrollToAnchorMock).toHaveBeenCalledWith('#Contacts');
   });
+  it('should scroll to the correct link and change page to home', async () => {
+    const { getByText } = render(<Header />);
+    const targetElement: NavItemProps = headerNavList[1];
+    const { link } = targetElement;
 
-  describe('when not on home page (pathname !== "/")', () => {
-    beforeEach(() => {
-      jest.doMock('next/router', () => ({
-        useRouter: (): UserRouterMock => ({
-          pathname: '/about',
-          push: mockPush,
-        }),
-      }));
-    });
+    await user.click(getByText(t(targetElement.title)));
 
-    it('should navigate for non-contacts links when not on home page', () => {
-      render(<Header />);
-      expect(mockPush).not.toHaveBeenCalled();
-    });
+    expect(routerMock.push).toHaveBeenCalledWith(`/${link}`, undefined, { scroll: true });
 
-    it('should call scrollToAnchor for contacts link when not on home page', () => {
-      render(<Header />);
-      expect(scrollToAnchorMock).not.toHaveBeenCalled();
-    });
+    expect(routerMock.pathname).toBe(`/${link}`);
+    expect(scrollToAnchorMock).toHaveBeenCalledWith(link);
+    expect(scrollToAnchorMock).toHaveBeenCalledTimes(1);
+    expect(scrollToAnchorMock).toHaveBeenCalledWith(link);
   });
+  it('should scroll to the correct link on the Home page', async () => {
+    routerMock.pathname = '/';
 
-  describe('edge cases for handleLinkClick', () => {
-    it('should handle empty string pathname', () => {
-      jest.doMock('next/router', () => ({
-        useRouter: (): UserRouterMock => ({
-          pathname: '',
-          push: mockPush,
-        }),
-      }));
+    const { getByText } = render(<Header />);
+    const targetElement: NavItemProps = headerNavList[1];
+    const { link } = targetElement;
 
-      render(<Header />);
-      expect(mockPush).not.toHaveBeenCalled();
-    });
+    await user.click(getByText(t(targetElement.title)));
 
-    it('should handle contacts with different casing', () => {
-      jest.doMock('next/router', () => ({
-        useRouter: (): UserRouterMock => ({
-          pathname: '/about',
-          push: mockPush,
-        }),
-      }));
-
-      render(<Header />);
-      expect(scrollToAnchorMock).not.toHaveBeenCalled();
-    });
-
-    it('should handle navigation with empty link', () => {
-      jest.doMock('next/router', () => ({
-        useRouter: (): UserRouterMock => ({
-          pathname: '/about',
-          push: mockPush,
-        }),
-      }));
-
-      render(<Header />);
-      expect(mockPush).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('router.push scenarios', () => {
-    it('should use correct URL format for navigation', () => {
-      jest.doMock('next/router', () => ({
-        useRouter: (): UserRouterMock => ({
-          pathname: '/about',
-          push: mockPush,
-        }),
-      }));
-
-      render(<Header />);
-      expect(mockPush).not.toHaveBeenCalled();
-    });
-
-    it('should handle navigation errors gracefully', async () => {
-      mockPush.mockRejectedValueOnce(new Error('Navigation failed'));
-
-      jest.doMock('next/router', () => ({
-        useRouter: (): UserRouterMock => ({
-          pathname: '/about',
-          push: mockPush,
-        }),
-      }));
-      render(<Header />);
-      expect(mockPush).not.toHaveBeenCalled();
-    });
-  });
-});
-
-describe('handleLinkClick function execution', () => {
-  let mockPush: jest.Mock;
-  let scrollToAnchorMock: jest.Mock;
-
-  beforeEach(() => {
-    mockPush = jest.fn();
-    scrollToAnchorMock = jest.fn();
-
-    jest.doMock('../../features/landing/helpers/scrollToAnchor', () => ({
-      __esModule: true,
-      default: scrollToAnchorMock,
-    }));
-  });
-
-  describe('navigation behavior tests', () => {
-    it('should handle navigation when not on home page and link is not contacts', () => {
-      jest.doMock('next/router', () => ({
-        useRouter: (): UserRouterMock => ({
-          pathname: '/about',
-          push: mockPush,
-        }),
-      }));
-
-      render(<Header />);
-      expect(mockPush).not.toHaveBeenCalled();
-    });
-
-    it('should handle scroll when on home page', () => {
-      jest.doMock('next/router', () => ({
-        useRouter: (): UserRouterMock => ({
-          pathname: '/',
-          push: mockPush,
-        }),
-      }));
-
-      render(<Header />);
-      expect(scrollToAnchorMock).not.toHaveBeenCalled();
-    });
-
-    it('should handle scroll for contacts link regardless of current page', () => {
-      jest.doMock('next/router', () => ({
-        useRouter: (): UserRouterMock => ({
-          pathname: '/about',
-          push: mockPush,
-        }),
-      }));
-      render(<Header />);
-      expect(scrollToAnchorMock).not.toHaveBeenCalled();
-    });
+    expect(routerMock.push).not.toHaveBeenCalled();
+    expect(routerMock.pathname).toBe('/');
+    expect(scrollToAnchorMock).toHaveBeenCalledWith(link);
   });
 });
