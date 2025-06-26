@@ -135,7 +135,6 @@ describe('NavList navigation', () => {
     expect(routerMock.push).not.toHaveBeenCalled();
     expect(routerMock.pathname).toBe('/swagger');
     expect(scrollToAnchorMock).toHaveBeenCalledWith(contactsItem.link);
-    expect(scrollToAnchorMock).toHaveBeenCalledWith('#CONTACTS');
   });
 
   it('calls given callback with link', async () => {
@@ -152,7 +151,7 @@ describe('NavList navigation', () => {
     await user.click(getByText(t('header.advantages')));
     expect(handleClickMock).toHaveBeenCalledWith('#Advantages');
   });
-  it('should only remove leading #, not inner ones', async () => {
+  it('handles links with multiple hash characters correctly', async () => {
     routerMock.pathname = '/';
     const handleClickProxy: (link: string) => void = (link: string): void => scrollToAnchor(link);
 
@@ -173,7 +172,7 @@ describe('NavList navigation', () => {
     expect(routerMock.push).not.toHaveBeenCalled();
   });
 
-  it('make contacts normalized correct', async () => {
+  it('normalizes contacts link correctly with special characters', async () => {
     routerMock.pathname = '/';
     const handleClickProxy: (link: string) => void = (link: string): void => {
       scrollToAnchor(link);

@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { UiToolbar } from '@/components';
 
 import Logo from '../../assets/svg/logo/Logo.svg';
+import normalizeLink from '../../helpers/normalizeLink';
 import scrollToAnchor from '../../helpers/scrollToAnchor';
 
 import { AuthButtons } from './AuthButtons';
@@ -20,15 +21,22 @@ function Header(): React.ReactElement {
   const router: NextRouter = useRouter();
 
   const handleLinkClick: (link: string) => void = async (link: string) => {
-    const normalized: string = link.replace(/^#/, '').toLowerCase();
+    const normalized: string = normalizeLink(link);
     if (normalized === 'contacts') {
       scrollToAnchor(link);
       return;
     }
+
     if (router.pathname !== '/') {
-      await router.push(`/${link}`, undefined, { scroll: true });
+      try {
+        await router.push(`/${link}`, undefined, { scroll: true });
+        scrollToAnchor(link);
+      } catch (error) {
+        window.location.href = `/${link}`;
+      }
+    } else {
+      scrollToAnchor(link);
     }
-    scrollToAnchor(link);
   };
 
   return (

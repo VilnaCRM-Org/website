@@ -79,7 +79,6 @@ describe('Header navigation', () => {
     expect(routerMock.pathname).toBe('/swagger');
     expect(scrollToAnchorMock).toHaveBeenCalledWith('#Contacts');
     expect(scrollToAnchorMock).toHaveBeenCalledTimes(1);
-    expect(scrollToAnchorMock).toHaveBeenCalledWith('#Contacts');
   });
   it('should scroll to the correct link and change page to home', async () => {
     const { getByText } = render(<Header />);
@@ -93,7 +92,6 @@ describe('Header navigation', () => {
     expect(routerMock.pathname).toBe(`/${link}`);
     expect(scrollToAnchorMock).toHaveBeenCalledWith(link);
     expect(scrollToAnchorMock).toHaveBeenCalledTimes(1);
-    expect(scrollToAnchorMock).toHaveBeenCalledWith(link);
   });
   it('should scroll to the correct link on the Home page', async () => {
     routerMock.pathname = '/';

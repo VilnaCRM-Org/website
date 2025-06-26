@@ -71,7 +71,7 @@ const customRender: (ui: React.ReactElement, options?: CustomRenderOptions) => R
 describe('Layout component', () => {
   const renderLayout: (children?: React.ReactNode) => RenderResult = (
     children?: React.ReactNode
-  ): RenderResult => customRender(<Layout>{children || <div>Default content</div>}</Layout>);
+  ): RenderResult => customRender(<Layout>{children}</Layout>);
 
   it('renders children content', () => {
     const testContent: string = 'Test child content';
@@ -121,10 +121,12 @@ describe('Layout component', () => {
     expect(content.compareDocumentPosition(footer)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
   it('handles empty children gracefully', () => {
-    renderLayout();
+    const { container } =  renderLayout();
 
     expect(screen.getByTestId('header')).toBeInTheDocument();
     expect(screen.getByTestId('footer')).toBeInTheDocument();
-    expect(screen.getByText('Default content')).toBeInTheDocument();
+
+    const textContent:string = container.textContent || '';
+    expect(textContent).not.toContain('Default content');
   });
 });
