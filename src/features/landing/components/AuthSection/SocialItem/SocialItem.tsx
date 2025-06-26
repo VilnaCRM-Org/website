@@ -11,7 +11,9 @@ function SocialItem({ item }: { item: SocialLink }): React.ReactElement {
 
   return (
     <UiButton name="socialButton" size="medium" variant="outlined" disabled>
-      <Image src={item.icon} alt={t(item.title)} width={22} height={22} />
+      {item.icon && (
+        <Image src={item.icon} alt={t(item.title)} width={22} height={22} />
+      )}
       <UiTypography variant="demi18" component="div">
         {t(item.title)}
       </UiTypography>

@@ -11,7 +11,6 @@ import point8 from '../../assets/svg/for-who/point8.svg';
 import pointGroup from '../../assets/svg/for-who/pointGroup.svg';
 import rhombus from '../../assets/svg/for-who/rhombus.svg';
 import triangle from '../../assets/svg/for-who/triangle.svg';
-import waves from '../../assets/svg/for-who/waves.svg';
 
 import { Cards } from './Cards';
 import MainTitle from './MainTitle/MainTitle';
@@ -89,13 +88,6 @@ function ForWhoSection(): React.ReactElement {
                 width={375}
                 height={667}
                 style={styles.smallScreen}
-              />
-              <Box
-                component="img"
-                src={waves}
-                aria-hidden="true"
-                sx={styles.waves}
-                loading="lazy"
               />
               <Box
                 component="img"
