@@ -98,11 +98,12 @@
     "node": ">=20.0.0"
   },
 
-  "version": "0.1.4",
+"version": "0.1.5",
   "scripts": {
     "test:e2e": "playwright test",
     "build": "next build",
     "start": "next start"
   }
+
 
 }
