@@ -1,3 +1,12 @@
+## [0.1.5](https://github.com/VilnaCRM-Org/website/compare/v0.1.4...v0.1.5) (2025-06-26)
+
+
+### Bug Fixes
+
+* **#209:** add missing build-out command ([#210](https://github.com/VilnaCRM-Org/website/issues/210)) ([1004ac8](https://github.com/VilnaCRM-Org/website/commit/1004ac896fdc824912633860de164c79c48218dd)), closes [#209](https://github.com/VilnaCRM-Org/website/issues/209)
+
+
+
 ## [0.1.4](https://github.com/VilnaCRM-Org/website/compare/v0.1.3...v0.1.4) (2025-06-23)
 
 
@@ -31,15 +40,6 @@
 ### Performance Improvements
 
 * **#35:** improve mobile performance in Lighthouse ([#183](https://github.com/VilnaCRM-Org/website/issues/183)) ([cc714c4](https://github.com/VilnaCRM-Org/website/commit/cc714c4cee6ef1240653266462f452998eb1d27d)), closes [#35](https://github.com/VilnaCRM-Org/website/issues/35) [#35](https://github.com/VilnaCRM-Org/website/issues/35) [#35](https://github.com/VilnaCRM-Org/website/issues/35) [#35](https://github.com/VilnaCRM-Org/website/issues/35) [#35](https://github.com/VilnaCRM-Org/website/issues/35) [#35](https://github.com/VilnaCRM-Org/website/issues/35) [#35](https://github.com/VilnaCRM-Org/website/issues/35) [#35](https://github.com/VilnaCRM-Org/website/issues/35) [#35](https://github.com/VilnaCRM-Org/website/issues/35) [#35](https://github.com/VilnaCRM-Org/website/issues/35)
-
-
-
-# [0.1.0](https://github.com/VilnaCRM-Org/website/compare/v1.6.0...v0.1.0) (2025-06-04)
-
-
-### Features
-
-* **#29:** add swagger page ([#195](https://github.com/VilnaCRM-Org/website/issues/195)) ([ccebf1a](https://github.com/VilnaCRM-Org/website/commit/ccebf1a8e835b2ba2a7b02a3ae379f14b2f5815d)), closes [#29](https://github.com/VilnaCRM-Org/website/issues/29)
 
 
 
