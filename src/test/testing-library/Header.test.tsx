@@ -106,4 +106,28 @@ describe('Header navigation', () => {
     expect(routerMock.pathname).toBe('/');
     expect(scrollToAnchorMock).toHaveBeenCalledWith(link);
   });
+  it('falls back to window.location.href when router.push fails', async () => {
+    routerMock.push.mockRejectedValueOnce(new Error('push failed'));
+
+    const originalLocation: Location = window.location;
+
+    type MutableWindow = Omit<Window, 'location'> & { location: Location };
+    const mutableWindow: MutableWindow = window as unknown as MutableWindow;
+
+    Object.defineProperty(mutableWindow, 'location', {
+      value: { ...originalLocation, href: originalLocation.href },
+      writable: true,
+    });
+
+    const { getByText } = render(<Header />);
+    const target: NavItemProps = headerNavList[1];
+
+    await user.click(getByText(t(target.title)));
+
+    expect(mutableWindow.location.href.endsWith(`/${target.link}`)).toBe(true);
+    expect(routerMock.push).toHaveBeenCalledTimes(1);
+    expect(scrollToAnchorMock).not.toHaveBeenCalled();
+
+    expect(scrollToAnchorMock).not.toHaveBeenCalled();
+  });
 });

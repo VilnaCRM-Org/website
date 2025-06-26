@@ -121,12 +121,12 @@ describe('Layout component', () => {
     expect(content.compareDocumentPosition(footer)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
   it('handles empty children gracefully', () => {
-    const { container } =  renderLayout();
+    const { container } = renderLayout();
 
     expect(screen.getByTestId('header')).toBeInTheDocument();
     expect(screen.getByTestId('footer')).toBeInTheDocument();
 
-    const textContent:string = container.textContent || '';
+    const textContent: string = container.textContent || '';
     expect(textContent).not.toContain('Default content');
   });
 });
