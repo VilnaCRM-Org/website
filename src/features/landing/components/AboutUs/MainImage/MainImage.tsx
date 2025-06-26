@@ -13,7 +13,7 @@ function MainImage(): React.ReactElement {
   const { t } = useTranslation();
 const MainImageSrc: string = '/img/about-vilna/desktop.jpg';
 const PhoneMainImage: string = '/img/about-vilna/mobile.jpg';
-const TabletMainImage: string = '/img/about-vilna/tablet.jpg';
+
   const imgAltText: string = 'Main image';
 
   const mobileProps: ImageProps = getOptimizedImageProps({
@@ -23,8 +23,10 @@ const TabletMainImage: string = '/img/about-vilna/tablet.jpg';
     height: 100,
   }).props;
   const tabletProps: ImageProps = getOptimizedImageProps({
-    src: TabletMainImage,
-    alt: imgAltText,
+  src: '/img/about-vilna/tablet.jpg',
+  alt: imgAltText,
+  width: 400,
+  height: 300,
   }).props;
   const desktopProps: ImageProps = getOptimizedImageProps({
     src: MainImageSrc,

@@ -82,7 +82,7 @@ function ForWhoSection(): React.ReactElement {
                 height={1080}
                 style={styles.bigScreen}
               />
-             <Image src="/img/about-vilna/mobile.jpg" alt="описание" width={600} height={400} />
+             <Image src="/img/about-vilna/mobile.jpg" alt="" width={600} height={400} />
               <Box
                 component="img"
                 src={hexagon}
