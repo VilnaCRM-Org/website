@@ -31,6 +31,8 @@ const PhoneMainImage: string = '/img/about-vilna/mobile.jpg';
   const desktopProps: ImageProps = getOptimizedImageProps({
     src: MainImageSrc,
     alt: imgAltText,
+    width: 300,
+    height: 300,
   }).props;
 
   return (

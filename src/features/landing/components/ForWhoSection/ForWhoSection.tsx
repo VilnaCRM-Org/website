@@ -78,8 +78,8 @@ function ForWhoSection(): React.ReactElement {
               <Image
                 src="/assets/img/about-vilna/desktop.jpg"
                 alt={t('alts.big_screen')}
-                width={1920}
-                height={1080}
+width={600} // Add the width property here
+      height={400}
                 style={styles.bigScreen}
               />
              <Image src="/img/about-vilna/mobile.jpg" alt="" width={600} height={400} />
