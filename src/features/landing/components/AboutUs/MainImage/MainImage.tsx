@@ -20,6 +20,7 @@ const TabletMainImage: string = '/img/about-vilna/tablet.jpg';
     src: PhoneMainImage,
     alt: imgAltText,
     width: 100,
+    height: 100,
   }).props;
   const tabletProps: ImageProps = getOptimizedImageProps({
     src: TabletMainImage,
