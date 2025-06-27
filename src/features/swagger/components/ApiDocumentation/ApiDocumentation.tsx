@@ -16,10 +16,6 @@ function ApiDocumentation(): React.ReactElement | null {
     );
   }
 
-  if (!swaggerContent) {
-    return null;
-  }
-
   return swaggerContent ? <SwaggerUI spec={swaggerContent} /> : null;
 }
 
