@@ -11,16 +11,7 @@ import { NavItemProps } from '../../features/landing/types/header/navigation';
 const logoAltKey: string = 'header.logo_alt';
 const logoAlt: string = i18next.t(logoAltKey);
 
-type UserRouterMock = { pathname: string; push: jest.Mock };
-
-jest.mock('next/router', () => ({
-  useRouter(): UserRouterMock {
-    return {
-      pathname: '/',
-      push: jest.fn(),
-    };
-  },
-}));
+jest.mock('next/router', () => ({ useRouter: jest.fn() }));
 
 describe('Header component', () => {
   let spy: jest.SpyInstance;
@@ -43,8 +34,6 @@ describe('Header component', () => {
     expect(getByAltText(logoAlt)).toBeInTheDocument();
   });
 });
-
-jest.mock('next/router', () => ({ useRouter: jest.fn() }));
 
 jest.mock('../../features/landing/helpers/scrollToAnchor', () => ({
   __esModule: true,
