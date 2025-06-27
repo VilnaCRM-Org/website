@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-import { screenSizes } from '../constants';
+import { screenSizes, timeoutDuration } from '../constants';
 
 const currentLanguage: string = process.env.NEXT_PUBLIC_MAIN_LANGUAGE as string;
 
@@ -15,6 +15,7 @@ test.describe('Visual Tests', () => {
         await page.waitForSelector('.swagger-ui', { state: 'attached' });
 
         await page.evaluateHandle(() => document.fonts.ready);
+        await page.waitForTimeout(timeoutDuration);
 
         await page.$$eval('.opblock-summary-control', ctrls =>
           ctrls.forEach(el => (el as HTMLElement).click())

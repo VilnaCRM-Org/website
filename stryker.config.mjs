@@ -8,9 +8,7 @@ const config = {
   tsconfigFile: 'tsconfig.json',
   mutate: [
     './src/features/landing/components/**/*.tsx',
-    './src/features/swagger/Swagger/**/*.tsx',
-    './src/features/swagger/ApiDocumentation/**/*.tsx',
-    './src/features/swagger/Navigation/**/*.tsx',
+    './src/features/swagger/components/**/*.tsx',
     '!src/features/landing/components/**/*.stories.tsx',
     '!src/features/landing/components/**/*.stories.ts',
     '!src/features/landing/components/Landing/Landing.tsx',
