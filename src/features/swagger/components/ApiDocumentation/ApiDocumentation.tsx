@@ -1,13 +1,22 @@
+import { Container } from '@mui/material';
 import SwaggerUI from 'swagger-ui-react';
 
-import { useSwagger } from '../../hooks/useSwagger';
+import { UiTypography } from '@/components';
 
-const specUrl: string = process.env.NEXT_PUBLIC_USER_SERVICE_OPENAI_SPEC_URL ?? '';
+import useSwagger from '../../hooks/useSwagger';
 
 function ApiDocumentation(): React.ReactElement | null {
-  const { yamlContent } = useSwagger(specUrl);
+  const { swaggerContent, error } = useSwagger();
 
-  return yamlContent ? <SwaggerUI spec={yamlContent} /> : null;
+  if (error) {
+    return (
+      <Container>
+        <UiTypography>Error loading API documentation: {error.message}</UiTypography>
+      </Container>
+    );
+  }
+
+  return swaggerContent ? <SwaggerUI spec={swaggerContent} /> : null;
 }
 
 export default ApiDocumentation;

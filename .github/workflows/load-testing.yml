@@ -18,5 +18,8 @@ jobs:
         with:
           node-version: ${{ vars.NODE_VERSION }}
 
-      - name: Run load tests
+      - name: Run homepage load tests
         run: make load-tests
+
+      - name: Run Swagger load tests
+        run: make load-tests-swagger

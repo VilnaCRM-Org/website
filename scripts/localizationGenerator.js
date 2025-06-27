@@ -44,10 +44,11 @@ class LocalizationGenerator {
         if (!acc[language]) {
           acc[language] = { translation: {} };
         }
-        acc[language].translation = {
-          ...acc[language].translation,
-          ...parsedLocalizationFromFolder[language].translation,
-        };
+
+        acc[language].translation = this.deepMerge(
+          acc[language].translation,
+          parsedLocalizationFromFolder[language].translation
+        );
       });
 
       return acc;
@@ -107,6 +108,22 @@ class LocalizationGenerator {
         throw new Error(err);
       }
     });
+  }
+  deepMerge(target = {}, source = {}) {
+    for (const key of Object.keys(source)) {
+      if (key === '__proto__' || key === 'constructor') {
+        continue;
+      }
+      if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+        if (!target[key] || typeof target[key] !== 'object') {
+          target[key] = {};
+        }
+        this.deepMerge(target[key], source[key]);
+      } else {
+        target[key] = source[key];
+      }
+    }
+    return target;
   }
 }
 
