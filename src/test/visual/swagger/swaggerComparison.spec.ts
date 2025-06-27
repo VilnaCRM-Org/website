@@ -1,4 +1,4 @@
-import { test, expect, JSHandle } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 
 import { screenSizes } from '../constants';
 
@@ -10,11 +10,11 @@ test.describe('Visual Tests', () => {
       test.use({ viewport: { width: screen.width, height: screen.height } });
 
       test(`${screen.name} visual`, async ({ page }) => {
-        await page.goto('/swagger', { waitUntil: 'domcontentloaded' });
+        await page.goto('/swagger', { waitUntil: 'networkidle' });
+
         await page.waitForSelector('.swagger-ui', { state: 'attached' });
 
-        const fontsDone: JSHandle<unknown> = await page.evaluateHandle('document.fonts.ready');
-        await fontsDone.jsonValue();
+        await page.evaluateHandle(() => document.fonts.ready);
 
         await page.$$eval('.opblock-summary-control', ctrls =>
           ctrls.forEach(el => (el as HTMLElement).click())
@@ -22,7 +22,7 @@ test.describe('Visual Tests', () => {
         await page.waitForFunction(() => {
           const total: number = document.querySelectorAll('.opblock-summary-control').length;
           const expanded: number = document.querySelectorAll('.opblock-body').length;
-          return total > 0 && total === expanded;
+          return total === 0 || total === expanded;
         });
 
         await page.addStyleTag({

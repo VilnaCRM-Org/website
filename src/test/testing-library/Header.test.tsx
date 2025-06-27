@@ -116,7 +116,5 @@ describe('Header navigation', () => {
     expect(mutableWindow.location.href.endsWith(`/${target.link}`)).toBe(true);
     expect(routerMock.push).toHaveBeenCalledTimes(1);
     expect(scrollToAnchorMock).not.toHaveBeenCalled();
-
-    expect(scrollToAnchorMock).not.toHaveBeenCalled();
   });
 });

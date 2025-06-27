@@ -16,9 +16,7 @@ export default defineConfig({
   use: {
     trace: 'on-first-retry',
     ignoreHTTPSErrors: true,
-    baseURL:
-      // 'http://localhost:3001/',
-      process.env.NEXT_PUBLIC_PROD_CONTAINER_API_URL,
+    baseURL: process.env.NEXT_PUBLIC_PROD_CONTAINER_API_URL,
     extraHTTPHeaders: {
       [`aws-cf-cd-${process.env.NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_NAME}`]:
         process.env.NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_VALUE!,
@@ -29,6 +27,7 @@ export default defineConfig({
       name: 'chromium',
       use: {
         ...devices['Desktop Chrome'],
+        // Required for cross-container communication in Docker test environment (for CORS)
         launchOptions: {
           args: [
             '--disable-web-security',
