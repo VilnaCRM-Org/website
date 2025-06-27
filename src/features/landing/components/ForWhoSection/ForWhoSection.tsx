@@ -3,8 +3,7 @@ import { getOptimizedImageProps } from 'next-export-optimize-images/image';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 
-import bigScreen from '../../assets/img/about-vilna/desktop.jpg';
-import smallScreen from '../../assets/img/about-vilna/mobile.jpg';
+
 import circle from '../../assets/svg/for-who/circle.svg';
 import hexagon from '../../assets/svg/for-who/hexagon.svg';
 import point10 from '../../assets/svg/for-who/point10.svg';
@@ -27,14 +26,6 @@ const getImageProps: (src: string, alt?: string) => React.ImgHTMLAttributes<HTML
 function ForWhoSection(): React.ReactElement {
   const { t } = useTranslation();
 
-  const bigScreenProps: React.ImgHTMLAttributes<HTMLImageElement> = getImageProps(
-    bigScreen,
-    t('alts.big_screen')
-  );
-  const smallScreenProps: React.ImgHTMLAttributes<HTMLImageElement> = getImageProps(
-    smallScreen,
-    t('alts.small_screen')
-  );
 
   return (
     <Box id="forWhoSection" component="section" sx={styles.wrapper}>
@@ -92,8 +83,13 @@ function ForWhoSection(): React.ReactElement {
               </Box>
             </Box>
             <Box sx={styles.square}>
-              <Box component="img" {...bigScreenProps} sx={styles.bigScreen} loading="lazy" />
-              <Box component="img" {...smallScreenProps} sx={styles.smallScreen} loading="lazy" />
+            <Box sx={styles.bigScreen}>
+              <Box sx={styles.bigScreen}>
+  <img src="/assets/img/about-vilna/desktop.jpg" alt={t('alts.big_screen')} loading="lazy" />
+</Box>
+  <Box sx={styles.smallScreen}>
+    <img src="/assets/img/about-vilna/mobile.jpg" alt={t('alts.small_screen')} loading="lazy" />
+  </Box>
               <Box
                 component="img"
                 {...getImageProps(waves)}
@@ -117,6 +113,7 @@ function ForWhoSection(): React.ReactElement {
               />
             </Box>
           </Box>
+        </Box>
         </Box>
       </Container>
       <Box sx={styles.smCardsWrapper}>
