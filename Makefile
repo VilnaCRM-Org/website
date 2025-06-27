@@ -121,6 +121,15 @@ build: ## A tool build the project
 build-analyze: ## Build production bundle and launch bundle-analyzer report (ANALYZE=true)
 	ANALYZE=true $(NEXT_BUILD_CMD)
 
+build-out: ## Build production artifacts to ./out directory
+	@echo "🏗️ Building production Docker image..."
+	docker build -t next-build -f Dockerfile --target production .
+	@container_id=$$(docker create next-build) && \
+	rm -rf ./out && \
+	docker cp $$container_id:/app/out ./ && \
+	docker rm $$container_id && \
+	echo "✅ Build artifacts extracted to ./out directory"
+
 format: ## This command executes Prettier formatting
 	$(PRETTIER_BIN) "**/*.{js,jsx,ts,tsx,json,css,scss,md}" --write --ignore-path .prettierignore
 
