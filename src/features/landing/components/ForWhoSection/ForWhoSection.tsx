@@ -85,7 +85,8 @@ function ForWhoSection(): React.ReactElement {
             <Box sx={styles.square}>
             <Box sx={styles.bigScreen}>
               <Box sx={styles.bigScreen}>
-         <img alt={t('alts.big_screen')} {...getImageProps('/assets/img/about-vilna/desktop.jpg')} loading="lazy" />
+         <img alt={t('alts.big_screen')} {...getImageProps('/assets/img/about-vilna/desktop.jpg')} loading="lazy" width={2037}
+  height={1494} />
 </Box>
   <Box sx={styles.smallScreen}>
     <img src="/assets/img/about-vilna/mobile.jpg" alt={t('alts.small_screen')} loading="lazy" />
