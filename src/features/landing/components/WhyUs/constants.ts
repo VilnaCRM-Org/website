@@ -64,4 +64,5 @@ const cardList: Card[] = [
   },
 ];
 
+
 export default cardList;
