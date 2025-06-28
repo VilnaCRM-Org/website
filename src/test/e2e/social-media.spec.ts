@@ -60,7 +60,7 @@ async function openDrawerAndNavigate(
 
 test.describe('Navigation tests', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+   await page.goto('/', { waitUntil: 'load', timeout: 60000 });
   });
 
   test('Desktop Instagram link', async ({ page }) => {

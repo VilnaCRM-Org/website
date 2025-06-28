@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
+import type { ReactElement } from 'react';
 
 import UiCardList from '../UiCardList';
 import { CardList } from '../UiCardList/types';
@@ -13,8 +14,9 @@ const meta: Meta<typeof UiCardList> = {
 
 export default meta;
 
-function CardItem(args: CardList): React.ReactElement {
-  return <UiCardList {...args} />;
+// Используем деструктуризацию аргументов и правильный тип возвращаемого значения
+function CardItem({ cardList }: CardList): ReactElement {
+  return <UiCardList cardList={cardList} />;
 }
 
 type Story = StoryObj<typeof CardItem>;
@@ -24,6 +26,7 @@ export const CardItemLarge: Story = {
     cardList: [LARGE_CARD_ITEM],
   },
 };
+
 export const CardItemSmall: Story = {
   args: {
     cardList: [SMALL_CARD_ITEM],

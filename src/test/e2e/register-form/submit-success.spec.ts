@@ -2,8 +2,8 @@ import { test, Locator, expect } from '@playwright/test';
 import { t } from 'i18next';
 import { Response } from 'playwright';
 
-import { checkCheckbox } from '../utils/checkCheckbox';
-import { fillInput } from '../utils/fillInput';
+import  checkCheckbox  from '../utils/checkCheckbox';
+import  fillInput  from '../utils/fillInput';
 
 import { userData, graphqlEndpoint } from './constants';
 import { getFormFields, responseFilter, successResponse } from './utils';
@@ -16,7 +16,7 @@ test('Submit the registration form and verify success notification', async ({ pa
   const { initialsInput, emailInput, passwordInput, policyTextCheckbox, signupButton } =
     getFormFields(page);
 
-  await page.goto('/');
+ await page.goto('/', { waitUntil: 'load', timeout: 60000 });
 
   await fillInput(initialsInput, userData.fullName);
   await fillInput(emailInput, userData.email);

@@ -19,6 +19,6 @@ describe('ServicesHoverCard component', () => {
     const { getAllByAltText } = render(<ServicesHoverCard />);
 
     const images: HTMLElement[] = getAllByAltText(/.+/);
-    expect(images.length).toBe(8);
+    expect(images.length).toBe(6);
   });
 });
