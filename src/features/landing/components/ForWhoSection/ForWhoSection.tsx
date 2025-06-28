@@ -17,6 +17,7 @@ import waves from '../../assets/svg/for-who/waves.svg';
 import { Cards } from './Cards';
 import MainTitle from './MainTitle/MainTitle';
 import styles from './styles';
+import Image from 'next/image';
 
 const getImageProps: (src: string, alt?: string) => React.ImgHTMLAttributes<HTMLImageElement> = (
   src,
@@ -85,11 +86,21 @@ function ForWhoSection(): React.ReactElement {
             <Box sx={styles.square}>
             <Box sx={styles.bigScreen}>
               <Box sx={styles.bigScreen}>
-         <img alt={t('alts.big_screen')} {...getImageProps('/assets/img/about-vilna/desktop.jpg')} loading="lazy" width={2037}
-  height={1494} />
+        <Image
+  src="/assets/img/about-vilna/desktop.jpg"
+  alt={t('alts.big_screen')}
+  width={2037}  // ширина изображения в пикселях
+  height={1494} // высота изображения в пикселях
+  loading="lazy"
+/>
 </Box>
   <Box sx={styles.smallScreen}>
-    <img src="/assets/img/about-vilna/mobile.jpg" alt={t('alts.small_screen')} loading="lazy" />
+   <img
+  src="/assets/img/about-vilna/mobile.jpg"
+  alt={t('alts.small_screen')}
+  loading="lazy"
+  style={{ width: '100%', height: 'auto' }}
+/>
   </Box>
               <Box
                 component="img"
