@@ -1,9 +1,18 @@
 import { Container } from '@mui/material';
-import SwaggerUI from 'swagger-ui-react';
+import dynamic from 'next/dynamic';
+import type { ComponentType } from 'react';
 
 import { UiTypography } from '@/components';
 
 import useSwagger from '../../hooks/useSwagger';
+
+
+type SwaggerUIProps = { spec?: string | object | undefined };
+
+const SwaggerUI: ComponentType<SwaggerUIProps> = dynamic(
+  () => import('swagger-ui-react'),
+  { ssr: false }
+);
 
 function ApiDocumentation(): React.ReactElement | null {
   const { swaggerContent, error } = useSwagger();
