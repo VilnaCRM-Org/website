@@ -1,8 +1,7 @@
 import { Box, Container } from '@mui/material';
-import { getOptimizedImageProps } from 'next-export-optimize-images/image';
+import Image, { getOptimizedImageProps } from 'next-export-optimize-images/image';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-
 
 import circle from '../../assets/svg/for-who/circle.svg';
 import hexagon from '../../assets/svg/for-who/hexagon.svg';
@@ -14,10 +13,10 @@ import rhombus from '../../assets/svg/for-who/rhombus.svg';
 import triangle from '../../assets/svg/for-who/triangle.svg';
 import waves from '../../assets/svg/for-who/waves.svg';
 
+
 import { Cards } from './Cards';
 import MainTitle from './MainTitle/MainTitle';
 import styles from './styles';
-import Image from 'next/image';
 
 const getImageProps: (src: string, alt?: string) => React.ImgHTMLAttributes<HTMLImageElement> = (
   src,
