@@ -1,4 +1,5 @@
-const normalizeLink: (link: string) => string = (link: string): string =>
-  link.replace(/^#/, '').toLowerCase();
+function normalizeLink(link: string): string {
+  return link.replace(/^#/, '').toLowerCase();
+}
 
 export default normalizeLink;
