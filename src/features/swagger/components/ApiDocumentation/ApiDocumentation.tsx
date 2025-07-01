@@ -4,7 +4,6 @@ import type { ComponentType } from 'react';
 import { useSwagger } from '../../hooks/useSwagger';
 
 
-
 // Явно указываем, что SwaggerUI — компонент с пропсом spec, который может быть string | object | null | undefined
 type SwaggerUIProps = { spec?: string | object | undefined };
 

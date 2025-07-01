@@ -1,5 +1,5 @@
 import { Box, Container } from '@mui/material';
-import Image, { getOptimizedImageProps } from 'next-export-optimize-images/image';
+import  { getOptimizedImageProps } from 'next-export-optimize-images/image';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -85,11 +85,9 @@ function ForWhoSection(): React.ReactElement {
             <Box sx={styles.square}>
             <Box sx={styles.bigScreen}>
               <Box sx={styles.bigScreen}>
-        <Image
-  src="/assets/img/about-vilna/desktop.jpg"
-  alt={t('alts.big_screen')}
-  width={2037}  // ширина изображения в пикселях
-  height={1494} // высота изображения в пикселях
+   <img
+  {...getImageProps('/assets/img/about-vilna/desktop.jpg', t('alts.big_screen'))}
+  alt={t('alts.big_screen')} // Add this line
   loading="lazy"
 />
 </Box>
