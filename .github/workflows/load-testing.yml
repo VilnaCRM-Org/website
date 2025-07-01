@@ -6,7 +6,7 @@ on:
       - main
 
 jobs:
-  load-tests:
+  load-testing:
     runs-on: ubuntu-latest
 
     strategy:
@@ -17,7 +17,7 @@ jobs:
           - make_cmd: load-tests-swagger
             label: swagger
 
-    name: ${{ matrix.label }} load tests
+    name: ${{ matrix.label }} load testing
 
     steps:
       - name: Checkout Repository
