@@ -6,7 +6,6 @@ import { UiTypography } from '@/components';
 
 import useSwagger from '../../hooks/useSwagger';
 
-
 type SwaggerUIProps = { spec?: string | object | undefined };
 
 const SwaggerUI: ComponentType<SwaggerUIProps> = dynamic(
