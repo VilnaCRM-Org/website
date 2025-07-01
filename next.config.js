@@ -19,15 +19,13 @@ const nextConfig = withExportImages({
     const localizationGenerator = new LocalizationGenerator();
     localizationGenerator.generateLocalizationFile();
 
-     config.optimization.splitChunks = {
+    config.optimization.splitChunks = {
       chunks: 'all',
-      maxSize: 244 * 1024, 
+      maxSize: 244 * 1024,
     };
 
     return config;
   },
 });
 
-module.exports = process.env.ANALYZE === 'true' 
-  ? withBundleAnalyzer(nextConfig) 
-  : nextConfig;
+module.exports = process.env.ANALYZE === 'true' ? withBundleAnalyzer(nextConfig) : nextConfig;

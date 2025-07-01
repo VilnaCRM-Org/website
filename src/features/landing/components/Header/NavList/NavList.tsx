@@ -19,7 +19,11 @@ function NavList({ navItems, handleClick }: NavListProps): React.ReactElement {
     <Stack component="nav" sx={wrapperStyle}>
       <List sx={contentStyle}>
         {navItems.map(item => (
-          <NavItem item={item} key={item.id} handleClick={handleClick} />
+          <NavItem
+            item={item}
+            key={item.id}
+            handleClick={handleClick ? (): void => handleClick(item.link) : undefined}
+          />
         ))}
       </List>
     </Stack>
