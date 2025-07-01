@@ -15,6 +15,17 @@ import { locators } from '../utils/locators';
 
 const GET_USER_API_URL: (id: string) => string = (id: string): string => buildSafeUrl(BASE_API, id);
 
+type UserIds = {
+  VALID: string;
+  NON_EXISTENT: string;
+  INVALID_FORMAT: string;
+};
+const TEST_USER_IDS: UserIds = {
+  VALID: testUserId,
+  NON_EXISTENT: '2b10b7a3-67f0-40ea-a367-44263321592z',
+  INVALID_FORMAT: 'invalid-uuid-format',
+} as const;
+
 interface GetUserByIdElements extends BasicEndpointElements {
   parametersSection: Locator;
   idInput: Locator;
@@ -63,13 +74,13 @@ test.describe('get user by ID', () => {
 
     await expect(elements.parametersSection).toBeVisible();
     await expect(elements.idInput).toBeVisible();
-    await elements.idInput.fill(testUserId);
+    await elements.idInput.fill(TEST_USER_IDS.VALID);
 
     await elements.executeBtn.click();
 
     await expect(elements.curl).toBeVisible();
     await expect(elements.copyButton).toBeVisible();
-    await expect(elements.requestUrl).toContainText(testUserId);
+    await expect(elements.requestUrl).toContainText(TEST_USER_IDS.VALID);
 
     const responseText: string | null = await elements.responseBody.textContent();
 
@@ -110,7 +121,7 @@ test.describe('get user by ID', () => {
 
   test('error response - user not found', async ({ page }) => {
     const elements: GetUserByIdElements = await setupGetUserByIdEndpoint(page);
-    const nonExistentId: string = '2b10b7a3-67f0-40ea-a367-44263321592z';
+    const nonExistentId: string = TEST_USER_IDS.NON_EXISTENT;
 
     await interceptWithErrorResponse(
       page,
@@ -137,7 +148,7 @@ test.describe('get user by ID', () => {
 
   test('error response - invalid id format', async ({ page }) => {
     const elements: GetUserByIdElements = await setupGetUserByIdEndpoint(page);
-    const invalidId: string = 'invalid-uuid-format';
+    const invalidId: string = TEST_USER_IDS.INVALID_FORMAT;
 
     await interceptWithErrorResponse(page, GET_USER_API_URL(invalidId), {
       error: 'Bad Request',
@@ -156,9 +167,9 @@ test.describe('get user by ID', () => {
   test('error response - CORS/Network failure', async ({ page }) => {
     const elements: GetUserByIdElements = await setupGetUserByIdEndpoint(page);
 
-    await page.route(GET_USER_API_URL(testUserId), route => route.abort('failed'));
+    await page.route(GET_USER_API_URL(TEST_USER_IDS.VALID), route => route.abort('failed'));
 
-    await elements.idInput.fill(testUserId);
+    await elements.idInput.fill(TEST_USER_IDS.VALID);
     await elements.executeBtn.click();
 
     await expectErrorOrFailureStatus(elements.getEndpoint);

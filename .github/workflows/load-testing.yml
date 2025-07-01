@@ -6,8 +6,18 @@ on:
       - main
 
 jobs:
-  load-testing:
+  load-tests:
     runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        include:
+          - make_cmd: load-tests
+            label: homepage
+          - make_cmd: load-tests-swagger
+            label: swagger
+
+    name: ${{ matrix.label }} load tests
 
     steps:
       - name: Checkout Repository
@@ -18,8 +28,5 @@ jobs:
         with:
           node-version: ${{ vars.NODE_VERSION }}
 
-      - name: Run homepage load tests
-        run: make load-tests
-
-      - name: Run Swagger load tests
-        run: make load-tests-swagger
+      - name: Run ${{ matrix.label }} target
+        run: make ${{ matrix.make_cmd }}

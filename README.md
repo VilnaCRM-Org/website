@@ -123,6 +123,10 @@ are currently directed to Mockoon instead of a real backend. Please keep
 this in mind if you plan to integrate with a real backend service in
 the future—you'll need to update the API configuration accordingly.
 
+To run tests locally, the Mockoon mock server is automatically started via
+`make test-e2e`. For manual setup, see the Mockoon configuration in
+`docker-compose.test.yml`.
+
 Lighthouse
 
 ```bash

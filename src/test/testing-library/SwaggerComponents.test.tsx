@@ -54,17 +54,12 @@ describe('Swagger Navigation', () => {
   });
 });
 
-jest.mock('../../features/swagger/hooks/useSwagger', () => ({
-  __esModule: true,
-  default: jest.fn(),
-}));
+jest.mock('../../features/swagger/hooks/useSwagger');
 
 jest.mock('swagger-ui-react', () => jest.fn(() => <div>SwaggerUI rendered</div>));
 
 describe('ApiDocumentation', () => {
-  const mockUseSwagger: jest.MockedFunction<typeof useSwagger> = useSwagger as jest.MockedFunction<
-    typeof useSwagger
-  >;
+  const mockUseSwagger: jest.Mock = jest.mocked(useSwagger);
 
   test('renders error message if error is present', () => {
     mockUseSwagger.mockReturnValue({

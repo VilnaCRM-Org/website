@@ -17,7 +17,7 @@ test.describe('Visual Tests', () => {
       await page.waitForTimeout(timeoutDuration);
 
       await page.waitForFunction(() => {
-        const swaggerUI:Element |null = document.querySelector('.swagger-ui');
+        const swaggerUI: Element | null = document.querySelector('.swagger-ui');
         return swaggerUI && getComputedStyle(swaggerUI).opacity === '1';
       });
 
