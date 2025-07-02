@@ -3,6 +3,7 @@ import { getOptimizedImageProps } from 'next-export-optimize-images/image';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 
+// SVG импортируются как URL (строки)
 import circle from '../../assets/svg/for-who/circle.svg';
 import hexagon from '../../assets/svg/for-who/hexagon.svg';
 import point10 from '../../assets/svg/for-who/point10.svg';
@@ -27,7 +28,6 @@ function getImageProps(src?: string, alt = ''): ImgProps | undefined {
 
 function ForWhoSection(): React.ReactElement {
   const { t } = useTranslation();
-
 
   const circleProps: ImgProps | undefined = getImageProps(circle);
   const rhombusProps: ImgProps | undefined = getImageProps(rhombus);
