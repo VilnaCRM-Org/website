@@ -18,10 +18,12 @@ import { Cards } from './Cards';
 import MainTitle from './MainTitle/MainTitle';
 import styles from './styles';
 
-const getImageProps: (src: string, alt?: string) => React.ImgHTMLAttributes<HTMLImageElement> = (
-  src,
-  alt = ''
-) => getOptimizedImageProps({ src, alt }).props;
+const getImageProps: (src: string | undefined, alt?: string) => { src: string; alt: string } = (src, alt = '') => {
+  if (!src) {
+    return { src: '', alt }; 
+  }
+  return getOptimizedImageProps({ src, alt }).props;
+};
 
 function ForWhoSection(): React.ReactElement {
   const { t } = useTranslation();
