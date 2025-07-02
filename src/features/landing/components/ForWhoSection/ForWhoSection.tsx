@@ -28,7 +28,6 @@ const getImageProps: (src: string | undefined, alt?: string) => { src: string; a
 function ForWhoSection(): React.ReactElement {
   const { t } = useTranslation();
 
-
   return (
     <Box id="forWhoSection" component="section" sx={styles.wrapper}>
       <Container>
