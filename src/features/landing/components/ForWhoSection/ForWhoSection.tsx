@@ -4,15 +4,15 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 
 // SVG импортируются как URL (строки)
-import circle from '../../assets/svg/for-who/circle.svg';
-import hexagon from '../../assets/svg/for-who/hexagon.svg';
-import point10 from '../../assets/svg/for-who/point10.svg';
-import point6 from '../../assets/svg/for-who/point6.svg';
-import point8 from '../../assets/svg/for-who/point8.svg';
-import pointGroup from '../../assets/svg/for-who/pointGroup.svg';
-import rhombus from '../../assets/svg/for-who/rhombus.svg';
-import triangle from '../../assets/svg/for-who/triangle.svg';
-import waves from '../../assets/svg/for-who/waves.svg';
+import circle from '../../assets/svg/for-who/circle.svg?url';
+import hexagon from '../../assets/svg/for-who/hexagon.svg?url';
+import point10 from '../../assets/svg/for-who/point10.svg?url';
+import point6 from '../../assets/svg/for-who/point6.svg?url';
+import point8 from '../../assets/svg/for-who/point8.svg?url';
+import pointGroup from '../../assets/svg/for-who/pointGroup.svg?url';
+import rhombus from '../../assets/svg/for-who/rhombus.svg?url';
+import triangle from '../../assets/svg/for-who/triangle.svg?url';
+import waves from '../../assets/svg/for-who/waves.svg?url';
 
 import { Cards } from './Cards';
 import MainTitle from './MainTitle/MainTitle';
