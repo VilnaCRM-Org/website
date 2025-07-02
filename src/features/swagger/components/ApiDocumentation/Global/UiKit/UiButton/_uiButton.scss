@@ -1,4 +1,5 @@
 @use '../../Variables/variables' as *;
+@use 'sass:map';
 
 $button-styles: (
   'primary': (
@@ -31,41 +32,45 @@ $button-styles: (
 );
 
 @mixin uiButton($color, $padding: 1rem 1.5rem) {
-  $styles: map-get($button-styles, $color);
+  $styles: map.get($button-styles, $color);
 
   -webkit-tap-highlight-color: transparent;
   box-shadow: none;
   padding: $padding;
   border-radius: 3.563rem;
-  background-color: map-get($styles, 'background-color');
-  border: 1px solid map-get($styles, 'border-color');
+  background-color: map.get($styles, 'background-color');
+  border: 1px solid map.get($styles, 'border-color');
   transition:
     background-color 0.3s,
     border-color 0.3s,
     color 0.3s;
+
   @media (hover: hover) {
     &:hover {
-      background-color: map.get($styles, 'some-key');
-      border-color: map-get($styles, 'border-hover-color');
-      color: map-get($styles, 'text-color');
+      background-color: map.get($styles, 'hover-color');
+      border-color: map.get($styles, 'border-hover-color');
+      color: map.get($styles, 'text-color');
     }
     &:active {
-      background-color: map-get($styles, 'active-color');
-      border-color: map-get($styles, 'border-active-color');
-      color: map-get($styles, 'text-color');
+      background-color: map.get($styles, 'active-color');
+      border-color: map.get($styles, 'border-active-color');
+      color: map.get($styles, 'text-color');
+
       @include for-small-screens {
-        background-color: map.get($styles, 'some-key');
-        border-color: map-get($styles, 'border-hover-color');
-        color: map-get($styles, 'text-color');
+        background-color: map.get($styles, 'hover-color');
+        border-color: map.get($styles, 'border-hover-color');
+        color: map.get($styles, 'text-color');
       }
     }
   }
+
   @media (hover: none) {
     &:active {
-      background-color: map.get($styles, 'some-key');
-      border-color: map-get($styles, 'border-hover-color');
-      color: map-get($styles, 'text-color');
+      background-color: map.get($styles, 'hover-color');
+      border-color: map.get($styles, 'border-hover-color');
+      color: map.get($styles, 'text-color');
     }
   }
+
   @content;
 }
