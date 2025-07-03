@@ -63,6 +63,8 @@ MD_LINT_ARGS                = -i CHANGELOG.md -i "test-results/**/*.md" -i "play
 
 JEST_FLAGS                  = --verbose
 
+NETWORK_NAME                = website-network
+
 CI                          ?= 0
 
 ifeq ($(CI), 1)
@@ -119,6 +121,15 @@ build: ## A tool build the project
 build-analyze: ## Build production bundle and launch bundle-analyzer report (ANALYZE=true)
 	ANALYZE=true $(NEXT_BUILD_CMD)
 
+build-out: ## Build production artifacts to ./out directory
+	@echo "🏗️ Building production Docker image..."
+	docker build -t next-build -f Dockerfile --target production .
+	@container_id=$$(docker create next-build) && \
+	rm -rf ./out && \
+	docker cp $$container_id:/app/out ./ && \
+	docker rm $$container_id && \
+	echo "✅ Build artifacts extracted to ./out directory"
+
 format: ## This command executes Prettier formatting
 	$(PRETTIER_BIN) "**/*.{js,jsx,ts,tsx,json,css,scss,md}" --write --ignore-path .prettierignore
 
@@ -161,7 +172,10 @@ test-visual-ui: start-prod ## Start the production environment and run visual te
 test-visual-update: start-prod ## Update Playwright visual snapshots
 	$(playwright-test) $(TEST_DIR_VISUAL) --update-snapshots
 
-start-prod: ## Build image and start container in production mode
+create-network: ## Create the external Docker network if it doesn't exist
+	@docker network ls | grep -q $(NETWORK_NAME) || docker network create $(NETWORK_NAME)
+
+start-prod: create-network ## Build image and start container in production mode
 	$(DOCKER_COMPOSE) $(COMMON_HEALTHCHECKS_FILE) $(DOCKER_COMPOSE_TEST_FILE) up -d && make wait-for-prod
 
 wait-for-prod: ## Wait for the prod service to be ready on port $(NEXT_PUBLIC_PROD_PORT).
