@@ -175,14 +175,12 @@ build: ## A tool to build the project
 build-analyze: ## Build production bundle and launch bundle-analyzer report (ANALYZE=true)
 	ANALYZE=true $(NEXT_BUILD_CMD)
 
-build-out: ## Build production Docker image and extract artifacts to ./out directory
+build-out: ## Build production artifacts to ./out directory
 	@echo "🏗️ Building production Docker image..."
 	docker build -t next-build -f Dockerfile --target production .
-	@echo "📦 Creating temporary container..."
 	@container_id=$$(docker create next-build) && \
-	echo "📂 Copying artifacts from container..." && \
-	docker cp $$container_id:/app/out ./out && \
-	echo "🧹 Cleaning up temporary container..." && \
+	rm -rf ./out && \
+	docker cp $$container_id:/app/out ./ && \
 	docker rm $$container_id && \
 	echo "✅ Build artifacts extracted to ./out directory"
 
