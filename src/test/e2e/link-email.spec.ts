@@ -12,7 +12,7 @@ async function verifyEmailLink(page: Page, linkName: string): Promise<void> {
 
 test.describe('Verify email', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/', { waitUntil: 'load', timeout: 3000 });
   });
 
   test('Footer email', async ({ page }) => {

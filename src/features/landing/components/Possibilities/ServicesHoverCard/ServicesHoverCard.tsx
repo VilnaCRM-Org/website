@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { UiTypography } from '@/components/';
 
-import { imageList } from '../constants';
+import { cardList as imageList } from '../constants';
 
 import { ImageItem } from './ImageItem';
 import styles from './styles';
@@ -22,8 +22,8 @@ function ServicesHoverCard(): React.ReactElement {
       </UiTypography>
       <Box sx={styles.listWrapper}>
         {imageList.map(item => (
-          <ImageItem item={item} key={item.alt} />
-        ))}
+  <ImageItem item={{ ...item, image: item.image ?? 'default-image.jpg' }} key={item.alt} />
+))}
       </Box>
     </Box>
   );

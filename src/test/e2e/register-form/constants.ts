@@ -1,7 +1,7 @@
 import { faker } from '@faker-js/faker';
 
 import { t } from '../utils/initializeLocalization';
-import { removeHtmlTags } from '../utils/removeHtmlTags';
+import  removeHtmlTags  from '../utils/removeHtmlTags';
 
 import { ExpectationEmail, ExpectationsPassword, User } from './types';
 

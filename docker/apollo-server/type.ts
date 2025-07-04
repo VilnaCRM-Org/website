@@ -1,4 +1,4 @@
-import { GraphQLResolveInfo } from 'graphql';
+﻿import { GraphQLResolveInfo } from 'graphql';
 
 export interface CreateUserInput {
   email: string;

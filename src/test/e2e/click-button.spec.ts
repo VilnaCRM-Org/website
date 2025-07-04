@@ -1,6 +1,6 @@
 import { Locator, Page, test } from '@playwright/test';
 
-import { createLocalizedRegExp } from '@/test/e2e/utils/createLocalizedRegExp';
+import  createLocalizedRegExp  from '@/test/e2e/utils/createLocalizedRegExp';
 
 import { t } from './utils/initializeLocalization';
 
@@ -23,7 +23,7 @@ const clickTryItNowButtonByFilteredSection: (
 
 test.describe('Buttons navigation tests', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+   await page.goto('/', { waitUntil: 'load', timeout: 30000 });
   });
 
   test('Desktop buttons navigation', async ({ page }) => {

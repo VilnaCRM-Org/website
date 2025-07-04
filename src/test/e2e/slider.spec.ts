@@ -1,9 +1,9 @@
 import { test, Locator, expect, Page } from '@playwright/test';
 
-import { createLocalizedRegExp } from '@/test/e2e/utils/createLocalizedRegExp';
+import  createLocalizedRegExp  from '@/test/e2e/utils/createLocalizedRegExp';
 
 import { t } from './utils/initializeLocalization';
-import { removeHtmlTags } from './utils/removeHtmlTags';
+import  removeHtmlTags  from './utils/removeHtmlTags';
 
 const firstSlideTitleWhyUs: string = t('why_us.headers.header_open_source');
 const secondSlideTitleWhyUs: string = removeHtmlTags('why_us.headers.header_ease_of_setup');
@@ -20,7 +20,7 @@ async function performSliderTest(
   firstSlideLocator: Locator,
   secondSlideLocator: Locator
 ): Promise<void> {
-  await page.goto('/');
+  await page.goto('/', { waitUntil: 'load', timeout: 30000 });
   await page.setViewportSize({ width: 375, height: 812 });
 
   const sliderOffsetWidth: number = await firstSlideLocator.evaluate(
