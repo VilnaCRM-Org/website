@@ -100,7 +100,7 @@
   "version": "0.1.5",
   "scripts": {
     "test:e2e": "playwright test",
-    "build": "next build",
+    "build": "next build && next-export-optimize-images",
     "start": "next start"
   }
 }
