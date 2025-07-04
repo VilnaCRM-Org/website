@@ -7,7 +7,7 @@ export default {
     maxWidth: '100dvw',
     overflow: 'hidden',
     position: 'relative',
-    minHeight: '30rem', 
+    minHeight: '30rem',
     contain: 'layout',
   },
 

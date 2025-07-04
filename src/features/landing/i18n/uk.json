@@ -31,6 +31,10 @@
         "facebook": "Facebook Іконка",
         "linkedin": "Linkedin Іконка"
       }
+    },
+    "layout": {
+      "page_title": "VilnaCRM API",
+      "meta_description": "Перша українська CRM з відкритим кодом"
     }
   },
   "about_vilna": {
