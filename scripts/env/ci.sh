@@ -5,7 +5,8 @@
 
 set -e
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Get script directory - works both when sourced and executed in different shells
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
 # Colors for output
@@ -38,15 +39,13 @@ setup_dind() {
     # Configure Docker daemon
     if [ ! -f /etc/docker/daemon.json ]; then
         log_info "Creating Docker daemon configuration"
-        sudo mkdir -p /etc/docker
-        echo '{"hosts": ["tcp://0.0.0.0:2375", "unix:///var/run/docker.sock"]}' | sudo tee /etc/docker/daemon.json
+        mkdir -p /etc/docker
+        echo '{"hosts": ["tcp://0.0.0.0:2375", "unix:///var/run/docker.sock"]}' > /etc/docker/daemon.json
     fi
     
     # Start Docker service if not running
     if ! docker info > /dev/null 2>&1; then
-        log_info "Starting Docker service"
-        sudo service docker start
-        sleep 5
+        log_info "Docker service is already managed by the container"
     fi
     
     # Create network if needed
@@ -62,16 +61,38 @@ setup_dind() {
 install_ci_deps() {
     log_info "Installing CI dependencies"
     
-    # Update package list
-    sudo apt-get update -qq
-    
-    # Install required packages
-    sudo apt-get install -y -qq \
-        curl \
-        gnupg \
-        lsb-release \
-        ca-certificates \
-        software-properties-common
+    # Check if we're in Alpine Linux
+    if [ -f /etc/alpine-release ]; then
+        log_info "Detected Alpine Linux - using apk"
+        
+        # Update package index
+        apk update
+        
+        # Install required packages (most are already installed in the container)
+        apk add --no-cache \
+            curl \
+            git \
+            bash \
+            make \
+            nodejs \
+            npm \
+            python3 \
+            py3-pip \
+            ca-certificates
+    else
+        log_info "Detected Ubuntu/Debian - using apt-get"
+        
+        # Update package list
+        apt-get update -qq
+        
+        # Install required packages
+        apt-get install -y -qq \
+            curl \
+            gnupg \
+            lsb-release \
+            ca-certificates \
+            software-properties-common
+    fi
     
     log_success "CI dependencies installed"
 }
@@ -80,16 +101,18 @@ install_ci_deps() {
 setup_nodejs() {
     log_info "Setting up Node.js environment"
     
-    # Install Node.js if not present
-    if ! command -v node &> /dev/null; then
-        curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-        sudo apt-get install -y nodejs
+    # Node.js should already be installed in the container
+    if command -v node &> /dev/null; then
+        log_info "Node.js version: $(node --version)"
+    else
+        log_error "Node.js not found"
+        return 1
     fi
     
     # Install pnpm if not present
     if ! command -v pnpm &> /dev/null; then
-        curl -fsSL https://get.pnpm.io/install.sh | sh -
-        export PATH="$HOME/.local/share/pnpm:$PATH"
+        log_info "Installing pnpm"
+        npm install -g pnpm
     fi
     
     log_success "Node.js environment ready"
