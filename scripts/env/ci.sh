@@ -109,12 +109,7 @@ setup_nodejs() {
         return 1
     fi
     
-    # Install pnpm if not present
-    if ! command -v pnpm &> /dev/null; then
-        log_info "Installing pnpm"
-        npm install -g pnpm
-    fi
-    
+    # Note: pnpm will be installed in install_project_deps to match legacy script pattern
     log_success "Node.js environment ready"
 }
 
@@ -220,11 +215,24 @@ install_project_deps() {
     
     cd "${PROJECT_ROOT}"
     
-    # Install dependencies with frozen lockfile (pnpm already installed in setup_nodejs)
+    # Exact sequence from legacy script that works
+    log_info "Installing pnpm globally"
+    npm install -g pnpm
+    
     log_info "Installing dependencies with frozen lockfile"
     pnpm install --frozen-lockfile
     
-    log_success "Project dependencies installed"
+    # Verify installation
+    log_info "Verifying installation"
+    if [ -f "./node_modules/.bin/jest" ]; then
+        log_success "✅ Jest found at ./node_modules/.bin/jest"
+    else
+        log_error "❌ Jest not found at ./node_modules/.bin/jest"
+        ls -la ./node_modules/.bin/ || log_error "node_modules/.bin/ directory not found"
+        return 1
+    fi
+    
+    log_success "Project dependencies installed successfully"
 }
 
 # Generate test reports for CI
