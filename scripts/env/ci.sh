@@ -214,6 +214,19 @@ run_lint_ci() {
     log_success "All linting checks passed"
 }
 
+# Install project dependencies (key working logic from legacy scripts)
+install_project_deps() {
+    log_info "Installing project dependencies"
+    
+    cd "${PROJECT_ROOT}"
+    
+    # Install dependencies with frozen lockfile (pnpm already installed in setup_nodejs)
+    log_info "Installing dependencies with frozen lockfile"
+    pnpm install --frozen-lockfile
+    
+    log_success "Project dependencies installed"
+}
+
 # Generate test reports for CI
 generate_reports() {
     log_info "Generating test reports"
@@ -268,22 +281,27 @@ main() {
         "full-setup")
             install_ci_deps
             setup_nodejs
+            install_project_deps
             setup_dind
             ;;
+        "install-project-deps")
+            install_project_deps
+            ;;
         "help"|*)
-            echo "Usage: $0 {setup-dind|install-deps|setup-nodejs|test-unit|test-mutation|lint|reports|full-setup}"
+            echo "Usage: $0 {setup-dind|install-deps|setup-nodejs|install-project-deps|test-unit|test-mutation|lint|reports|full-setup}"
             echo ""
             echo "Commands:"
-            echo "  setup-dind     - Configure Docker-in-Docker environment"
-            echo "  install-deps   - Install system dependencies"
-            echo "  setup-nodejs   - Setup Node.js and pnpm"
-            echo "  test-unit      - Run unit tests in CI mode"
-            echo "  test-mutation  - Run mutation tests in CI mode"
-            echo "  lint           - Run all linting checks"
-            echo "  reports        - Generate and collect test reports"
-            echo "  full-setup     - Run complete CI environment setup"
+            echo "  setup-dind           - Configure Docker-in-Docker environment"
+            echo "  install-deps         - Install system dependencies"
+            echo "  setup-nodejs         - Setup Node.js and pnpm"
+            echo "  install-project-deps - Install project dependencies with pnpm"
+            echo "  test-unit            - Run unit tests in CI mode"
+            echo "  test-mutation        - Run mutation tests in CI mode"
+            echo "  lint                 - Run all linting checks"
+            echo "  reports              - Generate and collect test reports"
+            echo "  full-setup           - Run complete CI environment setup"
             ;;
     esac
 }
 
-main "$@" 
+main "$@"
