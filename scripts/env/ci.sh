@@ -6,7 +6,12 @@
 set -e
 
 # Get script directory - works both when sourced and executed in different shells
-WEBSITE_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+if [ -n "${BASH_SOURCE[0]}" ]; then
+    WEBSITE_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+else
+    WEBSITE_SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+fi
+# PROJECT_ROOT is the website directory (script is in website/scripts/env/)
 PROJECT_ROOT="$(cd "${WEBSITE_SCRIPT_DIR}/../.." && pwd)"
 
 # Colors for output
@@ -59,51 +64,8 @@ setup_dind() {
 
 # Setup Makefile for DIND environment (environment-specific bash setup)
 setup_makefile_for_dind() {
-    log_info "Setting up Makefile targets for DIND environment"
-    
-    cd "${PROJECT_ROOT}"
-    
-    # Add DIND variable if not present
-    if ! grep -q "^DIND" Makefile; then
-        log_info "📝 Adding DIND variable to Makefile..."
-        sed -i '/^CI[[:space:]]*?= 0$/a DIND                        ?= 0' Makefile
-        log_success "✅ DIND variable added"
-    else
-        log_info "ℹ️  DIND variable already exists"
-    fi
-    
-    # Add missing variables for DIND mode if not present
-    log_info "📝 Adding missing variables for DIND mode..."
-    if ! grep -q "^WEBSITE_DOMAIN" Makefile; then
-        sed -i '/^NETWORK_NAME.*= website-network$/a WEBSITE_DOMAIN              ?= localhost' Makefile
-    fi
-    if ! grep -q "^DEV_PORT" Makefile; then
-        sed -i '/^WEBSITE_DOMAIN.*?= localhost$/a DEV_PORT                    ?= 3000' Makefile
-    fi
-    if ! grep -q "^NEXT_PUBLIC_PROD_PORT" Makefile; then
-        sed -i '/^DEV_PORT.*?= 3000$/a NEXT_PUBLIC_PROD_PORT       ?= 3001' Makefile
-    fi
-    if ! grep -q "^PLAYWRIGHT_TEST_PORT" Makefile; then
-        sed -i '/^NEXT_PUBLIC_PROD_PORT.*?= 3001$/a PLAYWRIGHT_TEST_PORT        ?= 9323' Makefile
-    fi
-    if ! grep -q "^UI_HOST" Makefile; then
-        sed -i '/^PLAYWRIGHT_TEST_PORT.*?= 9323$/a UI_HOST                     ?= 0.0.0.0' Makefile
-    fi
-    
-    # Add setup-dind-network target if not present
-    if ! grep -q "setup-dind-network:" Makefile; then
-        log_info "📝 Adding setup-dind-network target..."
-        cat >> Makefile << 'SETUP_DIND_TARGET'
-setup-dind-network: ## Configure Docker Compose files and create network for DIND mode
-ifeq ($(DIND), 1)
-	@./scripts/env/ci.sh setup-dind-environment
-else
-	@echo "ℹ️  DIND mode not enabled, skipping DIND setup"
-endif
-SETUP_DIND_TARGET
-    fi
-    
-    log_success "✅ Makefile setup completed for DIND environment"
+    log_info "Skipping Makefile modifications in DinD mode"
+    log_info "✅ DinD environment uses direct container management instead of Makefile targets"
 }
 
 # Setup DIND environment (called by Makefile, not complex concatenation)
@@ -120,27 +82,8 @@ setup_dind_environment() {
 
 # Add cross-environment test targets to Makefile (environment-specific bash setup)
 add_test_targets() {
-    log_info "Adding cross-environment test targets to Makefile"
-    
-    cd "${PROJECT_ROOT}"
-    
-    # Remove existing test targets to avoid duplicates
-    for t in test-unit-all test-mutation lint-next lint-tsc lint-md; do
-        sed -i "/^${t}:/,/^[a-zA-Z][a-zA-Z-]*:/d" Makefile
-    done
-    
-    # Add simple unit test target that calls bash script
-    cat >> Makefile << 'UNIT_TEST_TARGET'
-test-unit-all: ## Execute all unit tests (supports local, CI, and DIND modes)
-ifeq ($(DIND), 1)
-	@./scripts/env/ci.sh run-unit-dind
-else
-	$(UNIT_TESTS) TEST_ENV=client $(JEST_BIN) $(JEST_FLAGS)
-	$(UNIT_TESTS) TEST_ENV=server $(JEST_BIN) $(JEST_FLAGS) $(TEST_DIR_APOLLO)
-endif
-UNIT_TEST_TARGET
-
-    log_success "✅ Simple test targets added to Makefile"
+    log_info "Skipping Makefile test target modifications in DinD mode"
+    log_info "✅ DinD tests are called directly via buildspec commands instead of Makefile targets"
 }
 
 # Run unit tests in DIND mode (complex logic in bash, not Makefile)
@@ -313,74 +256,320 @@ install_ci_deps() {
     log_success "CI dependencies installed"
 }
 
-# Run mutation tests in CI mode
-run_mutation_tests_ci() {
-    log_info "Running mutation tests in CI mode"
+# Run mutation tests in DIND mode
+run_mutation_tests_dind() {
+    log_info "Running mutation tests in Docker-in-Docker mode"
     
     cd "${PROJECT_ROOT}"
     
-    # Build the project first
-    ./node_modules/.bin/next build
+    log_info "Setting up Docker network..."
+    if ! docker network ls | grep -q website-network; then
+        docker network create website-network
+    fi
     
-    # Start dev server in background
-    ./node_modules/.bin/next dev &
-    DEV_PID=$!
+    log_info "🧹 Cleaning up any existing mutation containers..."
+    docker rm -f website-dev-mutation 2>/dev/null || true
     
-    # Wait for server to be ready
-    log_info "Waiting for dev server to be ready"
+    log_info "Building container image..."
+    docker compose -f docker-compose.yml build dev
+    
+    log_info "🛠️ Starting mutation container..."
+    docker run -d --name website-dev-mutation --network website-network -p 3000:3000 website-dev tail -f /dev/null
+    
+    log_info "📂 Copying source files into container..."
+    if docker cp . website-dev-mutation:/app/; then
+        log_success "✅ Source files copied successfully"
+    else
+        log_error "❌ Failed to copy source files"
+        docker rm -f website-dev-mutation
+        return 1
+    fi
+    
+    log_info "📦 Installing dependencies inside container..."
+    if docker exec website-dev-mutation sh -c "cd /app && npm install -g pnpm && pnpm install --frozen-lockfile"; then
+        log_success "✅ Dependencies installed successfully"
+    else
+        log_error "❌ Failed to install dependencies"
+        docker rm -f website-dev-mutation
+        return 1
+    fi
+    
+    log_info "🔨 Building project inside container..."
+    if docker exec website-dev-mutation sh -c "cd /app && ./node_modules/.bin/next build"; then
+        log_success "✅ Project built successfully"
+    else
+        log_error "❌ Failed to build project"
+        docker rm -f website-dev-mutation
+        return 1
+    fi
+    
+    log_info "🚀 Starting dev server inside container..."
+    docker exec -d website-dev-mutation sh -c "cd /app && ./node_modules/.bin/next dev"
+    
+    log_info "⏳ Waiting for dev server to be ready..."
     for i in {1..60}; do
-        if curl -f http://localhost:3000 >/dev/null 2>&1; then
-            log_success "Dev server is ready"
+        if docker exec website-dev-mutation curl -f http://localhost:3000 >/dev/null 2>&1; then
+            log_success "✅ Dev server is ready"
             break
         fi
         sleep 3
         if [ $i -eq 60 ]; then
-            log_error "Dev server failed to start"
-            kill $DEV_PID 2>/dev/null || true
+            log_error "❌ Dev server failed to start"
+            docker rm -f website-dev-mutation
             return 1
         fi
     done
     
-    # Run mutation tests
-    if ! pnpm stryker run; then
-        log_error "Mutation tests failed"
-        kill $DEV_PID 2>/dev/null || true
+    log_info "🧬 Running mutation tests..."
+    if docker exec website-dev-mutation sh -c "cd /app && pnpm stryker run"; then
+        log_success "✅ Mutation tests PASSED"
+    else
+        log_error "❌ Mutation tests FAILED"
+        docker logs website-dev-mutation --tail 30
+        docker rm -f website-dev-mutation
         return 1
     fi
     
-    # Cleanup
-    kill $DEV_PID 2>/dev/null || true
-    log_success "Mutation tests completed"
+    log_info "📊 Copying mutation reports..."
+    docker cp website-dev-mutation:/app/reports/mutation ./reports/ 2>/dev/null || true
+    
+    log_info "🧹 Cleaning up mutation container..."
+    docker rm -f website-dev-mutation
+    log_success "🎉 Mutation tests completed successfully in DinD mode!"
 }
 
-# Run linting in CI mode
-run_lint_ci() {
-    log_info "Running linting in CI mode"
+# Run E2E tests in DIND mode
+run_e2e_tests_dind() {
+    log_info "Running E2E tests in Docker-in-Docker mode"
     
     cd "${PROJECT_ROOT}"
     
-    # ESLint
-    log_info "Running ESLint"
-    if ! ./node_modules/.bin/next lint; then
-        log_error "ESLint failed"
+    log_info "Setting up Docker network..."
+    if ! docker network ls | grep -q website-network; then
+        docker network create website-network
+    fi
+    
+    log_info "🧹 Cleaning up any existing E2E containers..."
+    docker rm -f website-playwright 2>/dev/null || true
+    
+    log_info "Building container image..."
+    docker compose -f docker-compose.yml build playwright
+    
+    log_info "🛠️ Starting Playwright container..."
+    docker run -d --name website-playwright --network website-network -p 9323:9323 website-playwright tail -f /dev/null
+    
+    log_info "📂 Copying source files into container..."
+    if docker cp . website-playwright:/app/; then
+        log_success "✅ Source files copied successfully"
+    else
+        log_error "❌ Failed to copy source files"
+        docker rm -f website-playwright
         return 1
     fi
     
-    # TypeScript check
-    log_info "Running TypeScript check"
-    if ! ./node_modules/.bin/tsc; then
-        log_error "TypeScript check failed"
+    log_info "📦 Installing dependencies inside container..."
+    if docker exec website-playwright sh -c "cd /app && npm install -g pnpm && pnpm install --frozen-lockfile"; then
+        log_success "✅ Dependencies installed successfully"
+    else
+        log_error "❌ Failed to install dependencies"
+        docker rm -f website-playwright
         return 1
     fi
     
-    # Markdown lint
-    log_info "Running Markdown lint"
-    if ! ./node_modules/.bin/markdownlint -i CHANGELOG.md -i "test-results/**/*.md" -i "playwright-report/data/**/*.md" "**/*.md"; then
-        log_error "Markdown lint failed"
+    log_info "🎭 Running E2E tests..."
+    if docker exec website-playwright sh -c "cd /app && ./node_modules/.bin/playwright test src/test/e2e --reporter=html"; then
+        log_success "✅ E2E tests PASSED"
+    else
+        log_error "❌ E2E tests FAILED"
+        docker logs website-playwright --tail 30
+        docker rm -f website-playwright
         return 1
     fi
     
-    log_success "All linting checks passed"
+    log_info "📊 Copying E2E reports..."
+    docker cp website-playwright:/app/playwright-report ./reports/ 2>/dev/null || true
+    
+    log_info "🧹 Cleaning up E2E container..."
+    docker rm -f website-playwright
+    log_success "🎉 E2E tests completed successfully in DinD mode!"
+}
+
+# Run load tests in DIND mode
+run_load_tests_dind() {
+    log_info "Running load tests in Docker-in-Docker mode"
+    
+    cd "${PROJECT_ROOT}"
+    
+    log_info "Setting up Docker network..."
+    if ! docker network ls | grep -q website-network; then
+        docker network create website-network
+    fi
+    
+    log_info "🧹 Cleaning up any existing load test containers..."
+    docker rm -f website-k6-temp 2>/dev/null || true
+    
+    log_info "Building container image..."
+    docker compose -f docker-compose.yml build k6
+    
+    log_info "🛠️ Starting K6 container..."
+    docker run -d --name website-k6-temp --network website-network website-k6 tail -f /dev/null
+    
+    log_info "📂 Copying K6 test files into container..."
+    if docker cp ./src/test/load/. website-k6-temp:/loadTests/; then
+        log_success "✅ Load test files copied successfully"
+    else
+        log_error "❌ Failed to copy load test files"
+        docker rm -f website-k6-temp
+        return 1
+    fi
+    
+    log_info "⚡ Running load tests..."
+    if docker exec website-k6-temp k6 run /loadTests/load-test.js --summary-trend-stats="avg,min,med,max,p(95),p(99),count"; then
+        log_success "✅ Load tests PASSED"
+    else
+        log_error "❌ Load tests FAILED"
+        docker logs website-k6-temp --tail 30
+        docker rm -f website-k6-temp
+        return 1
+    fi
+    
+    log_info "📊 Copying load test results..."
+    docker cp website-k6-temp:/results ./reports/load/ 2>/dev/null || true
+    
+    log_info "🧹 Cleaning up load test container..."
+    docker rm -f website-k6-temp
+    log_success "🎉 Load tests completed successfully in DinD mode!"
+}
+
+# Run visual tests in DIND mode
+run_visual_tests_dind() {
+    log_info "Running visual regression tests in Docker-in-Docker mode"
+    
+    cd "${PROJECT_ROOT}"
+    
+    log_info "Setting up Docker network..."
+    if ! docker network ls | grep -q website-network; then
+        docker network create website-network
+    fi
+    
+    log_info "🧹 Cleaning up any existing visual test containers..."
+    docker rm -f website-playwright-visual 2>/dev/null || true
+    
+    log_info "Building container image..."
+    docker compose -f docker-compose.yml build playwright
+    
+    log_info "🛠️ Starting Playwright visual container..."
+    docker run -d --name website-playwright-visual --network website-network -p 9324:9324 website-playwright tail -f /dev/null
+    
+    log_info "📂 Copying source files into container..."
+    if docker cp . website-playwright-visual:/app/; then
+        log_success "✅ Source files copied successfully"
+    else
+        log_error "❌ Failed to copy source files"
+        docker rm -f website-playwright-visual
+        return 1
+    fi
+    
+    log_info "📦 Installing dependencies inside container..."
+    if docker exec website-playwright-visual sh -c "cd /app && npm install -g pnpm && pnpm install --frozen-lockfile"; then
+        log_success "✅ Dependencies installed successfully"
+    else
+        log_error "❌ Failed to install dependencies"
+        docker rm -f website-playwright-visual
+        return 1
+    fi
+    
+    log_info "👀 Running visual regression tests..."
+    if docker exec website-playwright-visual sh -c "cd /app && ./node_modules/.bin/playwright test src/test/visual --timeout=60000"; then
+        log_success "✅ Visual tests PASSED"
+    else
+        log_error "❌ Visual tests FAILED"
+        docker logs website-playwright-visual --tail 30
+        docker rm -f website-playwright-visual
+        return 1
+    fi
+    
+    log_info "📊 Copying visual test reports..."
+    docker cp website-playwright-visual:/app/test-results ./reports/visual/ 2>/dev/null || true
+    
+    log_info "🧹 Cleaning up visual test container..."
+    docker rm -f website-playwright-visual
+    log_success "🎉 Visual tests completed successfully in DinD mode!"
+}
+
+# Run lint tests in DIND mode
+run_lint_tests_dind() {
+    log_info "Running lint tests in Docker-in-Docker mode"
+    
+    cd "${PROJECT_ROOT}"
+    
+    log_info "Setting up Docker network..."
+    if ! docker network ls | grep -q website-network; then
+        docker network create website-network
+    fi
+    
+    log_info "🧹 Cleaning up any existing lint containers..."
+    docker rm -f website-lint-eslint website-lint-tsc website-lint-md 2>/dev/null || true
+    
+    log_info "Building container image..."
+    docker compose -f docker-compose.yml build dev
+    
+    # ESLint in parallel
+    log_info "🔍 Running ESLint in container..."
+    docker run -d --name website-lint-eslint --network website-network website-dev tail -f /dev/null
+    docker cp . website-lint-eslint:/app/
+    docker exec website-lint-eslint sh -c "cd /app && npm install -g pnpm && pnpm install --frozen-lockfile" >/dev/null 2>&1
+    
+    # TypeScript in parallel  
+    log_info "🔍 Running TypeScript check in container..."
+    docker run -d --name website-lint-tsc --network website-network website-dev tail -f /dev/null
+    docker cp . website-lint-tsc:/app/
+    docker exec website-lint-tsc sh -c "cd /app && npm install -g pnpm && pnpm install --frozen-lockfile" >/dev/null 2>&1
+    
+    # Markdown in parallel
+    log_info "🔍 Running Markdown lint in container..."
+    docker run -d --name website-lint-md --network website-network website-dev tail -f /dev/null
+    docker cp . website-lint-md:/app/
+    docker exec website-lint-md sh -c "cd /app && npm install -g pnpm && pnpm install --frozen-lockfile" >/dev/null 2>&1
+    
+    # Run all lints in parallel and check results
+    ESLINT_SUCCESS=0
+    TSC_SUCCESS=0
+    MD_SUCCESS=0
+    
+    if docker exec website-lint-eslint sh -c "cd /app && ./node_modules/.bin/next lint"; then
+        log_success "✅ ESLint PASSED"
+        ESLINT_SUCCESS=1
+    else
+        log_error "❌ ESLint FAILED"
+    fi
+    
+    if docker exec website-lint-tsc sh -c "cd /app && ./node_modules/.bin/tsc --noEmit"; then
+        log_success "✅ TypeScript check PASSED"
+        TSC_SUCCESS=1
+    else
+        log_error "❌ TypeScript check FAILED"
+    fi
+    
+    if docker exec website-lint-md sh -c "cd /app && ./node_modules/.bin/markdownlint -i CHANGELOG.md -i 'test-results/**/*.md' -i 'playwright-report/data/**/*.md' '**/*.md'"; then
+        log_success "✅ Markdown lint PASSED"
+        MD_SUCCESS=1
+    else
+        log_error "❌ Markdown lint FAILED"
+    fi
+    
+    # Cleanup containers
+    log_info "🧹 Cleaning up lint containers..."
+    docker rm -f website-lint-eslint website-lint-tsc website-lint-md
+    
+    # Check if all passed
+    if [ $ESLINT_SUCCESS -eq 1 ] && [ $TSC_SUCCESS -eq 1 ] && [ $MD_SUCCESS -eq 1 ]; then
+        log_success "🎉 All lint tests completed successfully in DinD mode!"
+        return 0
+    else
+        log_error "❌ Some lint tests failed"
+        return 1
+    fi
 }
 
 # Generate test reports for CI
@@ -437,14 +626,23 @@ main() {
         "run-unit-dind")
             run_unit_tests_dind
             ;;
+        "run-mutation-dind")
+            run_mutation_tests_dind
+            ;;
+        "run-e2e-dind")
+            run_e2e_tests_dind
+            ;;
+        "run-load-dind")
+            run_load_tests_dind
+            ;;
+        "run-visual-dind")
+            run_visual_tests_dind
+            ;;
+        "run-lint-dind")
+            run_lint_tests_dind
+            ;;
         "test-unit")
             run_unit_tests_ci
-            ;;
-        "test-mutation")
-            run_mutation_tests_ci
-            ;;
-        "lint")
-            run_lint_ci
             ;;
         "reports")
             generate_reports
@@ -453,26 +651,26 @@ main() {
             install_ci_deps
             setup_nodejs
             setup_dind
-            setup_makefile_for_dind
-            add_test_targets
+            log_info "✅ CI environment setup completed (DinD mode ready)"
             ;;
         "help"|*)
-            echo "Usage: $0 {setup-dind|setup-dind-environment|install-deps|setup-nodejs|setup-makefile|add-test-targets|install-project-deps|run-unit-dind|test-unit|test-mutation|lint|reports|full-setup}"
+            echo "Usage: $0 {setup-dind|setup-dind-environment|install-deps|setup-nodejs|install-project-deps|run-unit-dind|run-mutation-dind|run-e2e-dind|run-load-dind|run-visual-dind|run-lint-dind|test-unit|reports|full-setup}"
             echo ""
             echo "Commands:"
             echo "  setup-dind           - Configure Docker-in-Docker environment"
-            echo "  setup-dind-environment - Setup DIND environment (called by Makefile)"
+            echo "  setup-dind-environment - Setup DIND environment (called by buildspec)"
             echo "  install-deps         - Install system dependencies"
             echo "  setup-nodejs         - Setup Node.js and pnpm"
-            echo "  setup-makefile       - Setup Makefile for DIND environment"
-            echo "  add-test-targets     - Add cross-environment test targets to Makefile"
             echo "  install-project-deps - Install project dependencies (simplified for DIND)"
-            echo "  run-unit-dind        - Run unit tests in DIND mode (called by Makefile)"
-            echo "  test-unit            - Run unit tests via Makefile (cross-environment)"
-            echo "  test-mutation        - Run mutation tests in CI mode"
-            echo "  lint                 - Run all linting checks"
+            echo "  run-unit-dind        - Run unit tests in DIND mode (website-dev-temp container)"
+            echo "  run-mutation-dind    - Run mutation tests in DIND mode (website-dev-mutation container)"
+            echo "  run-e2e-dind         - Run E2E tests in DIND mode (website-playwright container)"
+            echo "  run-load-dind        - Run load tests in DIND mode (website-k6-temp container)"
+            echo "  run-visual-dind      - Run visual tests in DIND mode (website-playwright-visual container)"
+            echo "  run-lint-dind        - Run lint tests in DIND mode (parallel containers)"
+            echo "  test-unit            - Run unit tests in CI mode (fallback)"
             echo "  reports              - Generate and collect test reports"
-            echo "  full-setup           - Run complete CI environment setup with Makefile targets"
+            echo "  full-setup           - Run complete CI environment setup for DinD mode"
             ;;
     esac
 }
