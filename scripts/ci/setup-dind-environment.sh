@@ -544,13 +544,43 @@ run_lighthouse_desktop_dind() {
     echo "🚀 Starting production services..."
     docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE up -d
     wait_for_prod_dind
+    
+    echo "📦 Installing Chrome and Lighthouse CLI in container..."
+    if docker exec website-prod sh -c "apk add --no-cache chromium chromium-chromedriver && npm install -g @lhci/cli@0.14.0"; then
+        echo "✅ Chrome and Lighthouse CLI installed successfully"
+    else
+        echo "❌ Failed to install Chrome and Lighthouse CLI"
+        exit 1
+    fi
+
+    echo "📂 Copying Lighthouse config files..."
+    if docker cp lighthouserc.desktop.js website-prod:/app/; then
+        echo "✅ Lighthouse config files copied successfully"
+    else
+        echo "❌ Failed to copy Lighthouse config files"
+        exit 1
+    fi
+
+    echo "🧪 Testing Chrome installation..."
+    if docker exec website-prod /usr/bin/chromium-browser --version; then
+        echo "✅ Chrome is installed and working"
+    else
+        echo "❌ Chrome installation test failed"
+        exit 1
+    fi
+
     echo "🔦 Running Lighthouse Desktop audit..."
-    if docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE run --rm lighthouse npm run lighthouse:desktop; then
+    if docker exec -w /app website-prod lhci autorun --config=lighthouserc.desktop.js --collect.url=http://localhost:3001 --collect.chromePath=/usr/bin/chromium-browser --collect.chromeFlags="--no-sandbox --disable-dev-shm-usage --disable-extensions --disable-gpu --headless --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding"; then
         echo "✅ Lighthouse Desktop tests PASSED"
     else
         echo "❌ Lighthouse Desktop tests FAILED"
+        docker logs website-prod --tail 30
         exit 1
     fi
+
+    echo "📂 Copying lighthouse results..."
+    mkdir -p lhci-reports-desktop
+    docker cp website-prod:/app/lhci-reports-desktop/. lhci-reports-desktop/ 2>/dev/null || echo "No lighthouse desktop results to copy"
     echo "🎉 Lighthouse Desktop tests completed successfully in true DinD mode!"
 }
 
@@ -565,13 +595,43 @@ run_lighthouse_mobile_dind() {
     echo "🚀 Starting production services..."
     docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE up -d
     wait_for_prod_dind
+    
+    echo "📦 Installing Chrome and Lighthouse CLI in container..."
+    if docker exec website-prod sh -c "apk add --no-cache chromium chromium-chromedriver && npm install -g @lhci/cli@0.14.0"; then
+        echo "✅ Chrome and Lighthouse CLI installed successfully"
+    else
+        echo "❌ Failed to install Chrome and Lighthouse CLI"
+        exit 1
+    fi
+
+    echo "📂 Copying Lighthouse config files..."
+    if docker cp lighthouserc.mobile.js website-prod:/app/; then
+        echo "✅ Lighthouse config files copied successfully"
+    else
+        echo "❌ Failed to copy Lighthouse config files"
+        exit 1
+    fi
+
+    echo "🧪 Testing Chrome installation..."
+    if docker exec website-prod /usr/bin/chromium-browser --version; then
+        echo "✅ Chrome is installed and working"
+    else
+        echo "❌ Chrome installation test failed"
+        exit 1
+    fi
+
     echo "📱 Running Lighthouse Mobile audit..."
-    if docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE run --rm lighthouse npm run lighthouse:mobile; then
+    if docker exec -w /app website-prod lhci autorun --config=lighthouserc.mobile.js --collect.url=http://localhost:3001 --collect.chromePath=/usr/bin/chromium-browser --collect.chromeFlags="--no-sandbox --disable-dev-shm-usage --disable-extensions --disable-gpu --headless --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding"; then
         echo "✅ Lighthouse Mobile tests PASSED"
     else
         echo "❌ Lighthouse Mobile tests FAILED"
+        docker logs website-prod --tail 30
         exit 1
     fi
+
+    echo "📂 Copying lighthouse results..."
+    mkdir -p lhci-reports-mobile
+    docker cp website-prod:/app/lhci-reports-mobile/. lhci-reports-mobile/ 2>/dev/null || echo "No lighthouse mobile results to copy"
     echo "🎉 Lighthouse Mobile tests completed successfully in true DinD mode!"
 }
 
