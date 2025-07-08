@@ -19,7 +19,7 @@ PROD_CONTAINER_NAME=${PROD_CONTAINER_NAME:-"website-prod"}
 # Docker Compose files
 DOCKER_COMPOSE_DEV_FILE=${DOCKER_COMPOSE_DEV_FILE:-"-f docker-compose.yml"}
 DOCKER_COMPOSE_TEST_FILE=${DOCKER_COMPOSE_TEST_FILE:-"-f docker-compose.test.yml"}
-COMMON_HEALTHCHECKS_FILE=${COMMON_HEALTHCHECKS_FILE:-"-f docker-compose.common-healthchecks.yml"}
+COMMON_HEALTHCHECKS_FILE=${COMMON_HEALTHCHECKS_FILE:-"-f common-healthchecks.yml"}
 
 echo "🐳 DIND Environment Setup Script"
 echo "================================"
@@ -575,6 +575,27 @@ run_lighthouse_mobile_dind() {
     echo "🎉 Lighthouse Mobile tests completed successfully in true DinD mode!"
 }
 
+# Run Load tests in DIND mode
+run_load_tests_dind() {
+    echo "⚡ Running Load tests in true Docker-in-Docker mode"
+    echo "Setting up Docker network..."
+    setup_docker_network
+    configure_docker_compose
+    echo "Building production container image..."
+    docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE build
+    echo "🚀 Starting production services..."
+    docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE up -d
+    wait_for_prod_dind
+    echo "⚡ Running K6 load tests..."
+    if docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE --profile load run --rm k6 k6 run --summary-trend-stats='avg,min,med,max,p(95),p(99)' --out 'web-dashboard=period=1s&export=/loadTests/results/homepage.html' homepage.js; then
+        echo "✅ Load tests PASSED"
+    else
+        echo "❌ Load tests FAILED"
+        exit 1
+    fi
+    echo "🎉 Load tests completed successfully in true DinD mode!"
+}
+
 # Show usage information
 show_usage() {
     echo "Usage: $0 [COMMAND]"
@@ -589,6 +610,7 @@ show_usage() {
     echo "  test-e2e               Run E2E tests in DIND mode"
     echo "  test-visual            Run Visual tests in DIND mode"
     echo "  test-memory-leak       Run Memory Leak tests in DIND mode"
+    echo "  test-load              Run Load tests in DIND mode"
     echo "  lighthouse-desktop     Run Lighthouse Desktop audit in DIND mode"
     echo "  lighthouse-mobile      Run Lighthouse Mobile audit in DIND mode"
     echo "  lint-next              Run ESLint in DIND mode"
@@ -633,6 +655,9 @@ case "${1:-help}" in
         ;;
     test-memory-leak)
         run_memory_leak_tests_dind
+        ;;
+    test-load)
+        run_load_tests_dind
         ;;
     lighthouse-desktop)
         run_lighthouse_desktop_dind
