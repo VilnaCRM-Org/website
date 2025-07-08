@@ -161,7 +161,7 @@ setup_nodejs() {
     log_info "Setting up Node.js environment"
     
     # Node.js should already be installed in the container
-    if command -v node &> /dev/null; then
+    if command -v node >/dev/null 2>&1; then
         log_info "Node.js version: $(node --version)"
     else
         log_error "Node.js not found"
@@ -169,7 +169,7 @@ setup_nodejs() {
     fi
     
     # Install pnpm if not present
-    if ! command -v pnpm &> /dev/null; then
+    if ! command -v pnpm >/dev/null 2>&1; then
         log_info "Installing pnpm"
         npm install -g pnpm
     fi
@@ -185,12 +185,12 @@ install_project_deps() {
     
     # In DIND mode, dependencies will be installed by test targets as needed
     # In non-DIND mode, install directly
-    if [ "${DIND:-0}" = "1" ]; then
+    if [ "${DIND}" = "1" ]; then
         log_info "DIND mode: Dependencies will be installed by test targets as needed"
         log_success "Ready for DIND operations"
     else
         log_info "Installing dependencies directly (non-DIND mode)"
-        if ! command -v pnpm &> /dev/null; then
+        if ! command -v pnpm >/dev/null 2>&1; then
             npm install -g pnpm
         fi
         pnpm install --frozen-lockfile
@@ -205,7 +205,7 @@ run_unit_tests_ci() {
     cd "${PROJECT_ROOT}"
     
     # Call the Makefile target which handles environment detection
-    if [ "${DIND:-0}" = "1" ]; then
+    if [ "${DIND}" = "1" ]; then
         log_info "Running tests with DIND=1"
         DIND=1 make test-unit-all
     else
@@ -601,7 +601,13 @@ generate_reports() {
 
 # Main function to handle different CI operations
 main() {
-    case "${1:-help}" in
+    # Set default argument if none provided
+    ARG1="${1}"
+    if [ -z "${ARG1}" ]; then
+        ARG1="help"
+    fi
+    
+    case "${ARG1}" in
         "setup-dind")
             setup_dind
             ;;
