@@ -8,13 +8,8 @@ include .env
 
 export
 
-# =============================================================================
-# CORE CONFIGURATION
-# =============================================================================
-
 DOCKER_COMPOSE              = docker compose
 
-# Binary paths
 BIN_DIR                     = ./node_modules/.bin
 NEXT_BIN                    = $(BIN_DIR)/next
 IMG_OPTIMIZE                = $(BIN_DIR)/next-export-optimize-images
@@ -24,64 +19,58 @@ JEST_BIN                    = $(BIN_DIR)/jest
 SERVE_BIN                   = $(BIN_DIR)/serve
 PLAYWRIGHT_BIN              = $(BIN_DIR)/playwright
 
-# Build commands
 NEXT_BUILD                  = $(NEXT_BIN) build
 NEXT_BUILD_CMD              = $(NEXT_BUILD) && $(IMG_OPTIMIZE)
 STORYBOOK_BUILD_CMD         = $(STORYBOOK_BIN) build
 
-# Test directories
 TEST_DIR_BASE               = ./src/test
 TEST_DIR_APOLLO             = $(TEST_DIR_BASE)/apollo-server
 TEST_DIR_E2E                = $(TEST_DIR_BASE)/e2e
 TEST_DIR_VISUAL             = $(TEST_DIR_BASE)/visual
 
-# Docker configuration
+STRYKER_CMD                 = pnpm stryker run
+
+SERVE_CMD                   = --collect.startServerCommand="$(SERVE_BIN) out"
+LHCI                        = pnpm lhci autorun
+LHCI_CONFIG_DESKTOP         = --config=lighthouserc.desktop.js
+LHCI_CONFIG_MOBILE          = --config=lighthouserc.mobile.js
+LHCI_DESKTOP_SERVE          = $(LHCI_CONFIG_DESKTOP) $(SERVE_CMD)
+LHCI_MOBILE_SERVE           = $(LHCI_CONFIG_MOBILE) $(SERVE_CMD)
+
 DOCKER_COMPOSE_TEST_FILE    = -f docker-compose.test.yml
 DOCKER_COMPOSE_DEV_FILE     = -f docker-compose.yml
 COMMON_HEALTHCHECKS_FILE    = -f common-healthchecks.yml
-DOCKER_COMPOSE_MEMLEAK_FILE = -f docker-compose.memory-leak.yml
-NETWORK_NAME                = website-network
-
-# Core docker commands
 EXEC_DEV_TTYLESS            = $(DOCKER_COMPOSE) exec -T dev
 NEXT_DEV_CMD                = $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) up -d dev && make wait-for-dev
 PLAYWRIGHT_DOCKER_CMD       = $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_TEST_FILE) exec playwright
 PLAYWRIGHT_TEST             = $(PLAYWRIGHT_DOCKER_CMD) sh -c
 
-# Memory leak testing
 MEMLEAK_SERVICE             = memory-leak
+DOCKER_COMPOSE_MEMLEAK_FILE = -f docker-compose.memory-leak.yml
 MEMLEAK_BASE_PATH           = ./src/test/memory-leak
 MEMLEAK_RESULTS_DIR         = $(MEMLEAK_BASE_PATH)/results
 MEMLEAK_TEST_SCRIPT         = $(MEMLEAK_BASE_PATH)/runMemlabTests.js
 
-# Load testing
 K6_TEST_SCRIPT              ?= /loadTests/homepage.js
 K6_RESULTS_FILE             ?= /loadTests/results/homepage.html
 K6                          = $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_TEST_FILE) --profile load run --rm k6
 LOAD_TESTS_RUN              = $(K6) run --summary-trend-stats="avg,min,med,max,p(95),p(99)" --out "web-dashboard=period=1s&export=$(K6_RESULTS_FILE)" $(K6_TEST_SCRIPT)
 
-# Lighthouse configuration
-LHCI                        = pnpm lhci autorun
-LHCI_CONFIG_DESKTOP         = --config=lighthouserc.desktop.js
-LHCI_CONFIG_MOBILE          = --config=lighthouserc.mobile.js
-LHCI_DESKTOP_SERVE          = $(LHCI_CONFIG_DESKTOP) --collect.startServerCommand="$(SERVE_BIN) out"
-LHCI_MOBILE_SERVE           = $(LHCI_CONFIG_MOBILE) --collect.startServerCommand="$(SERVE_BIN) out"
-
-# UI and testing flags
 UI_FLAGS                    = --ui-port=$(PLAYWRIGHT_TEST_PORT) --ui-host=$(UI_HOST)
 UI_MODE_URL                 = http://$(WEBSITE_DOMAIN):$(PLAYWRIGHT_TEST_PORT)
+
 MD_LINT_ARGS                = -i CHANGELOG.md -i "test-results/**/*.md" -i "playwright-report/data/**/*.md"
+
 JEST_FLAGS                  = --verbose
 
-# Environment detection - PRESERVE ORIGINAL PATTERN
+NETWORK_NAME                = website-network
+
 CI                          ?= 0
 
-# Environment-specific configuration - PRESERVE ORIGINAL LOGIC
 ifeq ($(CI), 1)
     PNPM_EXEC               = pnpm
     NEXT_DEV_CMD            = $(NEXT_BIN) dev
     UNIT_TESTS              = env
-    STRYKER_CMD             = pnpm stryker run
 
     STORYBOOK_START         = $(STORYBOOK_BIN) dev -p $(STORYBOOK_PORT)
 
@@ -100,13 +89,8 @@ else
     LHCI_MOBILE             = $(LHCI_BUILD_CMD) $(LHCI_CONFIG_MOBILE)
 endif
 
-# Derived commands using environment-specific variables
 PRETTIER_BIN                = $(PNPM_EXEC) ./node_modules/.bin/prettier
 MARKDOWNLINT_BIN            = $(PNPM_EXEC) ./node_modules/.bin/markdownlint
-
-# =============================================================================
-# MAKEFILE CONFIGURATION
-# =============================================================================
 
 # To Run in CI mode specify CI variable. Example: make lint-md CI=1
 
@@ -114,62 +98,24 @@ MARKDOWNLINT_BIN            = $(PNPM_EXEC) ./node_modules/.bin/markdownlint
 .RECIPEPREFIX               +=
 .PHONY: $(filter-out node_modules,$(MAKECMDGOALS))
 
-# Helper functions - PRESERVE ORIGINAL PATTERNS
 run-visual                  = $(PLAYWRIGHT_TEST) "$(PLAYWRIGHT_BIN) test $(TEST_DIR_VISUAL)"
 run-e2e                     = $(PLAYWRIGHT_TEST) "$(PLAYWRIGHT_BIN) test $(TEST_DIR_E2E)"
 playwright-test             = $(PLAYWRIGHT_DOCKER_CMD) $(PLAYWRIGHT_BIN) test
 
-# =============================================================================
-# HELP AND UTILITY
-# =============================================================================
-
 help:
-	@printf "\033[33mUsage:\033[0m make [target] [CI=1 for CI mode]\n"
+	@printf "\033[33mUsage:\033[0m make [target] [arg=\"val\"...]\n"
 	@printf "\033[33mTargets:\033[0m\n"
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' Makefile | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[32m%-20s\033[0m %s\n", $$1, $$2}'
-
-# =============================================================================
-# DEVELOPMENT TARGETS
-# =============================================================================
 
 start: ## Start the application
 	$(NEXT_DEV_CMD)
 
-wait-for-dev: ## Wait for the dev service to be ready on port $(DEV_PORT)
+wait-for-dev: ## Wait for the dev service to be ready on port $(DEV_PORT).
 	@echo "Waiting for dev service to be ready on port $(DEV_PORT).."
 	npx wait-on -v http://$(WEBSITE_DOMAIN):$(DEV_PORT)
 	@echo "Dev service is up and running!"
 
-create-network: ## Create the external Docker network if it doesn't exist
-	@docker network ls | grep -q $(NETWORK_NAME) || docker network create $(NETWORK_NAME)
-
-start-prod: create-network ## Build image and start container in production mode
-	$(DOCKER_COMPOSE) $(COMMON_HEALTHCHECKS_FILE) $(DOCKER_COMPOSE_TEST_FILE) up -d && make wait-for-prod
-
-wait-for-prod: ## Wait for the prod service to be ready on port $(NEXT_PUBLIC_PROD_PORT)
-	@echo "Waiting for prod service to be ready on port $(NEXT_PUBLIC_PROD_PORT)..."
-	npx wait-on -v http://$(WEBSITE_DOMAIN):$(NEXT_PUBLIC_PROD_PORT)
-	@echo "Prod service is up and running!"
-
-wait-for-prod-health: ## Wait for the prod container to reach a healthy state
-	@echo "Waiting for prod container to become healthy (timeout: 60s)..."
-	@for i in $$(seq 1 30); do \
-		if $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_TEST_FILE) ps | grep -q "prod.*(healthy)"; then \
-			echo "Prod container is healthy and ready!"; \
-			break; \
-		fi; \
-		sleep 2; \
-		if [ $$i -eq 30 ]; then \
-			echo "❌ Timed out waiting for prod container to become healthy"; \
-			exit 1; \
-		fi; \
-	done
-
-# =============================================================================
-# BUILD TARGETS
-# =============================================================================
-
-build: ## A tool to build the project
+build: ## A tool build the project
 	$(DOCKER_COMPOSE) build
 
 build-analyze: ## Build production bundle and launch bundle-analyzer report (ANALYZE=true)
@@ -187,8 +133,6 @@ build-out: ## Build production artifacts to ./out directory
 format: ## This command executes Prettier formatting
 	$(PRETTIER_BIN) "**/*.{js,jsx,ts,tsx,json,css,scss,md}" --write --ignore-path .prettierignore
 
-lint: lint-next lint-tsc lint-md ## Runs all linters: ESLint, TypeScript, and Markdown linters in sequence
-
 lint-next: ## This command executes ESLint
 	$(PNPM_EXEC) $(NEXT_BIN) lint
 
@@ -198,22 +142,18 @@ lint-tsc: ## This command executes Typescript linter
 lint-md: ## This command executes Markdown linter
 	$(MARKDOWNLINT_BIN) $(MD_LINT_ARGS) "**/*.md"
 
-# =============================================================================
-# TESTING TARGETS
-# =============================================================================
+lint: lint-next lint-tsc lint-md ## Runs all linters: ESLint, TypeScript, and Markdown linters in sequence.
 
-test-unit-all: test-unit-client test-unit-server ## This command executes unit tests for both client and server environments
+husky: ## One-time Husky setup to enable Git hooks (deprecated if already set)
+	pnpm husky install
 
-test-unit-client: ## Run all client-side unit tests using Jest (Next.js env, TEST_ENV=client)
-	$(UNIT_TESTS) TEST_ENV=client $(JEST_BIN) $(JEST_FLAGS)
+storybook-start: ## Start Storybook UI and open in browser
+	$(PNPM_EXEC) $(STORYBOOK_START)
 
-test-unit-server: ## Run server-side unit tests for Apollo using Jest (Node.js env, TEST_ENV=server, target: $(TEST_DIR_APOLLO))
-	$(UNIT_TESTS) TEST_ENV=server $(JEST_BIN) $(JEST_FLAGS) $(TEST_DIR_APOLLO)
+storybook-build: ## Build Storybook UI.
+	$(PNPM_EXEC) $(STORYBOOK_BUILD_CMD)
 
-test-mutation: build ## Run mutation tests using Stryker after building the app
-	$(STRYKER_CMD)
-
-test-e2e: start-prod ## Start production and run E2E tests (Playwright)
+test-e2e: start-prod  ## Start production and run E2E tests (Playwright)
 	$(run-e2e)
 
 test-e2e-ui: start-prod ## Start the production environment and run E2E tests with the UI available at $(UI_MODE_URL)
@@ -221,7 +161,7 @@ test-e2e-ui: start-prod ## Start the production environment and run E2E tests wi
 	@echo "Test will be run on: $(UI_MODE_URL)"
 	$(playwright-test) $(TEST_DIR_E2E) $(UI_FLAGS)
 
-test-visual: start-prod ## Start production and run visual tests (Playwright)
+test-visual: start-prod  ## Start production and run visual tests (Playwright)
 	$(run-visual)
 
 test-visual-ui: start-prod ## Start the production environment and run visual tests with the UI available at $(UI_MODE_URL)
@@ -232,7 +172,26 @@ test-visual-ui: start-prod ## Start the production environment and run visual te
 test-visual-update: start-prod ## Update Playwright visual snapshots
 	$(playwright-test) $(TEST_DIR_VISUAL) --update-snapshots
 
-test-memory-leak: start-prod ## This command executes memory leaks tests using Memlab library
+create-network: ## Create the external Docker network if it doesn't exist
+	@docker network ls | grep -q $(NETWORK_NAME) || docker network create $(NETWORK_NAME)
+
+start-prod: create-network ## Build image and start container in production mode
+	$(DOCKER_COMPOSE) $(COMMON_HEALTHCHECKS_FILE) $(DOCKER_COMPOSE_TEST_FILE) up -d && make wait-for-prod
+
+wait-for-prod: ## Wait for the prod service to be ready on port $(NEXT_PUBLIC_PROD_PORT).
+	@echo "Waiting for prod service to be ready on port $(NEXT_PUBLIC_PROD_PORT)..."
+	npx wait-on -v http://$(WEBSITE_DOMAIN):$(NEXT_PUBLIC_PROD_PORT)
+	@echo "Prod service is up and running!"
+
+test-unit-all: test-unit-client test-unit-server ## This command executes unit tests for both client and server environments.
+
+test-unit-client: ## Run all client-side unit tests using Jest (Next.js env, TEST_ENV=client)
+	$(UNIT_TESTS) TEST_ENV=client $(JEST_BIN) $(JEST_FLAGS)
+
+test-unit-server: ## Run server-side unit tests for Apollo using Jest (Node.js env, TEST_ENV=server, target: $(TEST_DIR_APOLLO))
+	$(UNIT_TESTS) TEST_ENV=server $(JEST_BIN) $(JEST_FLAGS) $(TEST_DIR_APOLLO)
+
+test-memory-leak: start-prod ## This command executes memory leaks tests using Memlab library.
 	@echo "🧪 Starting memory leak test environment..."
 	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_MEMLEAK_FILE) up -d
 	@echo "🧹 Cleaning up previous memory leak results..."
@@ -240,7 +199,25 @@ test-memory-leak: start-prod ## This command executes memory leaks tests using M
 	@echo "🚀 Running memory leak tests..."
 	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_MEMLEAK_FILE) exec -T $(MEMLEAK_SERVICE) node $(MEMLEAK_TEST_SCRIPT)
 
-load-tests: start-prod wait-for-prod-health ## This command executes load tests using K6 library. Note: The target host is determined by the service URL using $(NEXT_PUBLIC_PROD_PORT), which maps to the production service in Docker Compose
+test-mutation: build ## Run mutation tests using Stryker after building the app
+	$(STRYKER_CMD)
+
+wait-for-prod-health: ## Wait for the prod container to reach a healthy state.
+	@echo "Waiting for prod container to become healthy (timeout: 60s)..."
+	@for i in $$(seq 1 30); do \
+		if $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_TEST_FILE) ps | grep -q "prod.*(healthy)"; then \
+			echo "Prod container is healthy and ready!"; \
+			break; \
+		fi; \
+		sleep 2; \
+		if [ $$i -eq 30 ]; then \
+			echo "❌ Timed out waiting for prod container to become healthy"; \
+			exit 1; \
+		fi; \
+	done
+
+load-tests: start-prod wait-for-prod-health ## This command executes load tests using K6 library. Note: The target host is determined by the service URL
+                       ## using $(NEXT_PUBLIC_PROD_PORT), which maps to the production service in Docker Compose.
 	$(LOAD_TESTS_RUN)
 
 lighthouse-desktop: ## Run a Lighthouse audit using desktop viewport settings to evaluate performance and best practices
@@ -249,32 +226,11 @@ lighthouse-desktop: ## Run a Lighthouse audit using desktop viewport settings to
 lighthouse-mobile: ## Run a Lighthouse audit using mobile viewport settings to evaluate mobile UX and performance
 	$(LHCI_MOBILE)
 
-# =============================================================================
-# STORYBOOK TARGETS
-# =============================================================================
-
-storybook-start: ## Start Storybook UI and open in browser
-	$(PNPM_EXEC) $(STORYBOOK_START)
-
-storybook-build: ## Build Storybook UI
-	$(PNPM_EXEC) $(STORYBOOK_BUILD_CMD)
-
-# =============================================================================
-# PACKAGE MANAGEMENT
-# =============================================================================
-
 install: ## Install node modules using pnpm (CI=1 runs locally, default runs in container) — uses frozen lockfile and affects node_modules via volumes
 	$(PNPM_EXEC) pnpm install --frozen-lockfile
 
 update: ## Update node modules to latest allowed versions — always runs locally, updates lockfile (run before committing dependency changes)
 	pnpm update
-
-# =============================================================================
-# UTILITY TARGETS
-# =============================================================================
-
-husky: ## One-time Husky setup to enable Git hooks (deprecated if already set)
-	pnpm husky install
 
 down: ## Stop the docker containers
 	$(DOCKER_COMPOSE) down --remove-orphans
@@ -282,7 +238,7 @@ down: ## Stop the docker containers
 sh: ## Log to the docker container
 	$(DOCKER_COMPOSE) exec dev sh
 
-ps: ## Show container status
+ps: ## Log to the docker container
 	@$(DOCKER_COMPOSE) ps
 
 logs: ## Show all logs
