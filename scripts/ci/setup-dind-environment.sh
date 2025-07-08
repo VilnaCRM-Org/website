@@ -521,15 +521,63 @@ run_memory_leak_tests_dind() {
     echo "Setting up Docker network..."
     setup_docker_network
     configure_docker_compose
-    echo "Building memory leak container image..."
-    docker-compose -f docker-compose.memory-leak.yml build
-    echo "🚀 Starting memory leak testing..."
-    if docker-compose -f docker-compose.memory-leak.yml up --abort-on-container-exit; then
+    
+    echo "🧹 Cleaning up any existing containers..."
+    docker rm -f website-prod website-memory-leak-temp 2>/dev/null || true
+    
+    echo "🏗️ Building production environment for memory leak testing..."
+    docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE build
+    echo "🚀 Starting production services in background..."
+    docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE up -d
+    
+    echo "⏳ Waiting for production services to be ready..."
+    wait_for_prod_dind
+    
+    echo "🧪 Building memory leak test container..."
+    docker-compose -f docker-compose.memory-leak.yml build memory-leak
+    
+    echo "🛠️ Starting memory leak test container..."
+    docker run -d --name website-memory-leak-temp --network website-network \
+        --env NEXT_PUBLIC_PROD_CONTAINER_API_URL=http://website-prod:3001 \
+        --env MEMLAB_DEBUG=true \
+        --env MEMLAB_SKIP_WARMUP=true \
+        --env DISPLAY=:99 \
+        --shm-size=1gb \
+        website-memory-leak tail -f /dev/null
+    
+    echo "📂 Copying source files into memory leak container..."
+    if docker cp src/test/memory-leak/. website-memory-leak-temp:/app/src/test/memory-leak/; then
+        echo "✅ Memory leak test files copied successfully"
+    else
+        echo "❌ Failed to copy memory leak test files"
+        docker rm -f website-memory-leak-temp
+        exit 1
+    fi
+    
+    echo "📂 Copying required config files..."
+    docker cp src/config/i18nConfig.js website-memory-leak-temp:/app/src/config/ 2>/dev/null || echo "Config file not found"
+    docker cp pages/i18n/localization.json website-memory-leak-temp:/app/pages/i18n/ 2>/dev/null || echo "Localization file not found"
+    
+    echo "🧹 Cleaning up previous memory leak results..."
+    docker exec website-memory-leak-temp sh -c "rm -rf /app/src/test/memory-leak/results"
+    
+    echo "🧠 Running Memlab memory leak tests..."
+    if docker exec website-memory-leak-temp sh -c "cd /app && node src/test/memory-leak/runMemlabTests.js"; then
         echo "✅ Memory leak tests PASSED"
     else
         echo "❌ Memory leak tests FAILED"
+        docker logs website-memory-leak-temp --tail 30
+        docker rm -f website-memory-leak-temp
         exit 1
     fi
+    
+    echo "📂 Copying memory leak test results..."
+    mkdir -p memory-leak-results
+    docker cp website-memory-leak-temp:/app/src/test/memory-leak/results/. memory-leak-results/ 2>/dev/null || echo "No memory leak results to copy"
+    
+    echo "🧹 Cleaning up memory leak test container..."
+    docker rm -f website-memory-leak-temp
+    
     echo "🎉 Memory leak tests completed successfully in true DinD mode!"
 }
 
@@ -570,7 +618,7 @@ run_lighthouse_desktop_dind() {
     fi
 
     echo "🔦 Running Lighthouse Desktop audit..."
-    if docker exec -w /app website-prod lhci autorun --config=lighthouserc.desktop.js --collect.url=http://localhost:3001 --collect.chromePath=/usr/bin/chromium-browser --collect.chromeFlags="--no-sandbox --disable-dev-shm-usage --disable-extensions --disable-gpu --headless --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding"; then
+    if docker exec -w /app website-prod lhci autorun --config=lighthouserc.desktop.js --collect.url=http://localhost:3001 --collect.chromePath=/usr/bin/chromium-browser --collect.chromeFlags="--no-sandbox --disable-dev-shm-usage --disable-extensions --disable-gpu --headless --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-features=VizDisplayCompositor --disable-background-networking --disable-default-apps --disable-sync --disable-translate --hide-scrollbars --metrics-recording-only --mute-audio --no-first-run --safebrowsing-disable-auto-update --disable-ipc-flooding-protection"; then
         echo "✅ Lighthouse Desktop tests PASSED"
     else
         echo "❌ Lighthouse Desktop tests FAILED"
@@ -621,7 +669,7 @@ run_lighthouse_mobile_dind() {
     fi
 
     echo "📱 Running Lighthouse Mobile audit..."
-    if docker exec -w /app website-prod lhci autorun --config=lighthouserc.mobile.js --collect.url=http://localhost:3001 --collect.chromePath=/usr/bin/chromium-browser --collect.chromeFlags="--no-sandbox --disable-dev-shm-usage --disable-extensions --disable-gpu --headless --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding"; then
+    if docker exec -w /app website-prod lhci autorun --config=lighthouserc.mobile.js --collect.url=http://localhost:3001 --collect.chromePath=/usr/bin/chromium-browser --collect.chromeFlags="--no-sandbox --disable-dev-shm-usage --disable-extensions --disable-gpu --headless --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-features=VizDisplayCompositor --disable-background-networking --disable-default-apps --disable-sync --disable-translate --hide-scrollbars --metrics-recording-only --mute-audio --no-first-run --safebrowsing-disable-auto-update --disable-ipc-flooding-protection"; then
         echo "✅ Lighthouse Mobile tests PASSED"
     else
         echo "❌ Lighthouse Mobile tests FAILED"
