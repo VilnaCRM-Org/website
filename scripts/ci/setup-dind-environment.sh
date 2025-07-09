@@ -479,18 +479,57 @@ run_e2e_tests_dind() {
     echo "Setting up Docker network..."
     setup_docker_network
     configure_docker_compose
-    echo "Building production container image..."
+    
+    echo "🧹 Cleaning up any existing containers..."
+    docker rm -f website-prod website-playwright-temp 2>/dev/null || true
+    
+    echo "🏗️ Building production environment for E2E testing..."
     docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE build
     echo "🚀 Starting production services..."
     docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE up -d
     wait_for_prod_dind
+    
+    echo "🧪 Building Playwright test container..."
+    docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE build playwright
+    
+    echo "🛠️ Starting Playwright test container..."
+    docker run -d --name website-playwright-temp --network website-network \
+        --env NEXT_PUBLIC_PROD_HOST_API_URL=http://website-prod:3001 \
+        website-playwright tail -f /dev/null
+    
+    echo "📂 Copying source files into Playwright container..."
+    if docker cp package.json website-playwright-temp:/app/ && \
+       docker cp src/test/e2e/. website-playwright-temp:/app/src/test/e2e/ && \
+       docker cp playwright.config.ts website-playwright-temp:/app/ 2>/dev/null; then
+        echo "✅ E2E test files copied successfully"
+    else
+        echo "❌ Failed to copy E2E test files"
+        docker rm -f website-playwright-temp
+        exit 1
+    fi
+    
+    echo "📂 Copying required config files..."
+    docker cp src/config/i18nConfig.js website-playwright-temp:/app/src/config/ 2>/dev/null || echo "Config file not found"
+    docker cp pages/i18n/localization.json website-playwright-temp:/app/pages/i18n/ 2>/dev/null || echo "Localization file not found"
+    
     echo "🎭 Running Playwright E2E tests..."
-    if docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE run --rm playwright npm run test:e2e; then
+    if docker exec website-playwright-temp sh -c "cd /app && npm run test:e2e"; then
         echo "✅ E2E tests PASSED"
     else
         echo "❌ E2E tests FAILED"
+        docker logs website-playwright-temp --tail 30
+        docker rm -f website-playwright-temp
         exit 1
     fi
+    
+    echo "📂 Copying E2E test results..."
+    mkdir -p playwright-results
+    docker cp website-playwright-temp:/app/test-results/. playwright-results/ 2>/dev/null || echo "No E2E test results to copy"
+    docker cp website-playwright-temp:/app/playwright-report/. playwright-report/ 2>/dev/null || echo "No Playwright report to copy"
+    
+    echo "🧹 Cleaning up Playwright test container..."
+    docker rm -f website-playwright-temp
+    
     echo "🎉 E2E tests completed successfully in true DinD mode!"
 }
 
@@ -500,18 +539,57 @@ run_visual_tests_dind() {
     echo "Setting up Docker network..."
     setup_docker_network
     configure_docker_compose
-    echo "Building production container image..."
+    
+    echo "🧹 Cleaning up any existing containers..."
+    docker rm -f website-prod website-playwright-temp 2>/dev/null || true
+    
+    echo "🏗️ Building production environment for Visual testing..."
     docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE build
     echo "🚀 Starting production services..."
     docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE up -d
     wait_for_prod_dind
+    
+    echo "🧪 Building Playwright test container..."
+    docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE build playwright
+    
+    echo "🛠️ Starting Playwright test container..."
+    docker run -d --name website-playwright-temp --network website-network \
+        --env NEXT_PUBLIC_PROD_HOST_API_URL=http://website-prod:3001 \
+        website-playwright tail -f /dev/null
+    
+    echo "📂 Copying source files into Playwright container..."
+    if docker cp package.json website-playwright-temp:/app/ && \
+       docker cp src/test/visual/. website-playwright-temp:/app/src/test/visual/ && \
+       docker cp playwright.config.ts website-playwright-temp:/app/ 2>/dev/null; then
+        echo "✅ Visual test files copied successfully"
+    else
+        echo "❌ Failed to copy Visual test files"
+        docker rm -f website-playwright-temp
+        exit 1
+    fi
+    
+    echo "📂 Copying required config files..."
+    docker cp src/config/i18nConfig.js website-playwright-temp:/app/src/config/ 2>/dev/null || echo "Config file not found"
+    docker cp pages/i18n/localization.json website-playwright-temp:/app/pages/i18n/ 2>/dev/null || echo "Localization file not found"
+    
     echo "🎨 Running Playwright Visual tests..."
-    if docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE run --rm playwright npm run test:visual; then
+    if docker exec website-playwright-temp sh -c "cd /app && npm run test:visual"; then
         echo "✅ Visual tests PASSED"
     else
         echo "❌ Visual tests FAILED"
+        docker logs website-playwright-temp --tail 30
+        docker rm -f website-playwright-temp
         exit 1
     fi
+    
+    echo "📂 Copying Visual test results..."
+    mkdir -p playwright-results
+    docker cp website-playwright-temp:/app/test-results/. playwright-results/ 2>/dev/null || echo "No Visual test results to copy"
+    docker cp website-playwright-temp:/app/playwright-report/. playwright-report/ 2>/dev/null || echo "No Playwright report to copy"
+    
+    echo "🧹 Cleaning up Playwright test container..."
+    docker rm -f website-playwright-temp
+    
     echo "🎉 Visual tests completed successfully in true DinD mode!"
 }
 
@@ -542,6 +620,8 @@ run_memory_leak_tests_dind() {
         --env MEMLAB_DEBUG=true \
         --env MEMLAB_SKIP_WARMUP=true \
         --env DISPLAY=:99 \
+        --env NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_NAME=no-aws-header-name \
+        --env NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_VALUE=no-aws-header-value \
         --shm-size=1gb \
         website-memory-leak tail -f /dev/null
     
