@@ -495,10 +495,12 @@ run_e2e_tests_dind() {
     echo "🛠️ Starting Playwright test container..."
     docker run -d --name website-playwright-temp --network website-network \
         --env NEXT_PUBLIC_PROD_HOST_API_URL=http://website-prod:3001 \
+        --env NEXT_PUBLIC_MAIN_LANGUAGE=uk \
+        --env NEXT_PUBLIC_FALLBACK_LANGUAGE=en \
         website-playwright tail -f /dev/null
     
     echo "📂 Creating directory structure in Playwright container..."
-    docker exec website-playwright-temp mkdir -p /app/src/test/e2e /app/src/config /app/pages/i18n
+    docker exec website-playwright-temp mkdir -p /app/src/test/e2e /app/src/test/e2e/utils /app/src/config /app/pages/i18n
     
     echo "📂 Copying source files into Playwright container..."
     if docker cp package.json website-playwright-temp:/app/ && \
@@ -507,6 +509,15 @@ run_e2e_tests_dind() {
         echo "✅ E2E test files copied successfully"
     else
         echo "❌ Failed to copy E2E test files"
+        docker rm -f website-playwright-temp
+        exit 1
+    fi
+    
+    echo "📂 Copying E2E utility files..."
+    if docker cp src/test/e2e/utils/. website-playwright-temp:/app/src/test/e2e/utils/; then
+        echo "✅ E2E utility files copied successfully"
+    else
+        echo "❌ Failed to copy E2E utility files"
         docker rm -f website-playwright-temp
         exit 1
     fi
@@ -558,10 +569,12 @@ run_visual_tests_dind() {
     echo "🛠️ Starting Playwright test container..."
     docker run -d --name website-playwright-temp --network website-network \
         --env NEXT_PUBLIC_PROD_HOST_API_URL=http://website-prod:3001 \
+        --env NEXT_PUBLIC_MAIN_LANGUAGE=uk \
+        --env NEXT_PUBLIC_FALLBACK_LANGUAGE=en \
         website-playwright tail -f /dev/null
     
     echo "📂 Creating directory structure in Playwright container..."
-    docker exec website-playwright-temp mkdir -p /app/src/test/visual /app/src/config /app/pages/i18n
+    docker exec website-playwright-temp mkdir -p /app/src/test/visual /app/src/test/e2e/utils /app/src/config /app/pages/i18n
     
     echo "📂 Copying source files into Playwright container..."
     if docker cp package.json website-playwright-temp:/app/ && \
@@ -570,6 +583,15 @@ run_visual_tests_dind() {
         echo "✅ Visual test files copied successfully"
     else
         echo "❌ Failed to copy Visual test files"
+        docker rm -f website-playwright-temp
+        exit 1
+    fi
+    
+    echo "📂 Copying E2E utility files for Visual tests..."
+    if docker cp src/test/e2e/utils/. website-playwright-temp:/app/src/test/e2e/utils/; then
+        echo "✅ E2E utility files copied successfully for Visual tests"
+    else
+        echo "❌ Failed to copy E2E utility files for Visual tests"
         docker rm -f website-playwright-temp
         exit 1
     fi
