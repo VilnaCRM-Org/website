@@ -505,7 +505,9 @@ run_e2e_tests_dind() {
     echo "📂 Copying source files into Playwright container..."
     if docker cp package.json website-playwright-temp:/app/ && \
        docker cp src/test/e2e/. website-playwright-temp:/app/src/test/e2e/ && \
-       docker cp playwright.config.ts website-playwright-temp:/app/ 2>/dev/null; then
+       docker cp playwright.config.ts website-playwright-temp:/app/ && \
+       docker cp tsconfig.json website-playwright-temp:/app/ && \
+       docker cp tsconfig.paths.json website-playwright-temp:/app/ 2>/dev/null; then
         echo "✅ E2E test files copied successfully"
     else
         echo "❌ Failed to copy E2E test files"
@@ -527,7 +529,7 @@ run_e2e_tests_dind() {
     docker cp pages/i18n/localization.json website-playwright-temp:/app/pages/i18n/ 2>/dev/null || echo "Localization file not found"
     
     echo "🎭 Running Playwright E2E tests..."
-    if docker exec website-playwright-temp sh -c "cd /app && npx playwright test"; then
+    if docker exec website-playwright-temp sh -c "cd /app && npx playwright test src/test/e2e --reporter=html"; then
         echo "✅ E2E tests PASSED"
     else
         echo "❌ E2E tests FAILED"
@@ -579,7 +581,9 @@ run_visual_tests_dind() {
     echo "📂 Copying source files into Playwright container..."
     if docker cp package.json website-playwright-temp:/app/ && \
        docker cp src/test/visual/. website-playwright-temp:/app/src/test/visual/ && \
-       docker cp playwright.config.ts website-playwright-temp:/app/ 2>/dev/null; then
+       docker cp playwright.config.ts website-playwright-temp:/app/ && \
+       docker cp tsconfig.json website-playwright-temp:/app/ && \
+       docker cp tsconfig.paths.json website-playwright-temp:/app/ 2>/dev/null; then
         echo "✅ Visual test files copied successfully"
     else
         echo "❌ Failed to copy Visual test files"
@@ -601,7 +605,7 @@ run_visual_tests_dind() {
     docker cp pages/i18n/localization.json website-playwright-temp:/app/pages/i18n/ 2>/dev/null || echo "Localization file not found"
     
     echo "🎨 Running Playwright Visual tests..."
-    if docker exec website-playwright-temp sh -c "cd /app && npx playwright test --config=playwright.config.ts"; then
+    if docker exec website-playwright-temp sh -c "cd /app && npx playwright test src/test/visual --reporter=html --timeout=30000"; then
         echo "✅ Visual tests PASSED"
     else
         echo "❌ Visual tests FAILED"
