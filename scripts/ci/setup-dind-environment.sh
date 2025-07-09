@@ -497,6 +497,9 @@ run_e2e_tests_dind() {
         --env NEXT_PUBLIC_PROD_HOST_API_URL=http://website-prod:3001 \
         website-playwright tail -f /dev/null
     
+    echo "📂 Creating directory structure in Playwright container..."
+    docker exec website-playwright-temp mkdir -p /app/src/test/e2e /app/src/config /app/pages/i18n
+    
     echo "📂 Copying source files into Playwright container..."
     if docker cp package.json website-playwright-temp:/app/ && \
        docker cp src/test/e2e/. website-playwright-temp:/app/src/test/e2e/ && \
@@ -556,6 +559,9 @@ run_visual_tests_dind() {
     docker run -d --name website-playwright-temp --network website-network \
         --env NEXT_PUBLIC_PROD_HOST_API_URL=http://website-prod:3001 \
         website-playwright tail -f /dev/null
+    
+    echo "📂 Creating directory structure in Playwright container..."
+    docker exec website-playwright-temp mkdir -p /app/src/test/visual /app/src/config /app/pages/i18n
     
     echo "📂 Copying source files into Playwright container..."
     if docker cp package.json website-playwright-temp:/app/ && \
