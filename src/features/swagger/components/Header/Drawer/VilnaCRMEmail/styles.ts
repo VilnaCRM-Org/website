@@ -13,4 +13,8 @@ export default {
   emailText: {
     color: colorTheme.palette.darkSecondary.main,
   },
+  at: {
+    position: 'relative' as const,
+    top: 1,
+  },
 };

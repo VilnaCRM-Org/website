@@ -516,7 +516,7 @@ run_e2e_tests_dind() {
     docker cp pages/i18n/localization.json website-playwright-temp:/app/pages/i18n/ 2>/dev/null || echo "Localization file not found"
     
     echo "🎭 Running Playwright E2E tests..."
-    if docker exec website-playwright-temp sh -c "cd /app && npm run test:e2e"; then
+    if docker exec website-playwright-temp sh -c "cd /app && npx playwright test"; then
         echo "✅ E2E tests PASSED"
     else
         echo "❌ E2E tests FAILED"
@@ -579,7 +579,7 @@ run_visual_tests_dind() {
     docker cp pages/i18n/localization.json website-playwright-temp:/app/pages/i18n/ 2>/dev/null || echo "Localization file not found"
     
     echo "🎨 Running Playwright Visual tests..."
-    if docker exec website-playwright-temp sh -c "cd /app && npm run test:visual"; then
+    if docker exec website-playwright-temp sh -c "cd /app && npx playwright test --config=playwright.config.ts"; then
         echo "✅ Visual tests PASSED"
     else
         echo "❌ Visual tests FAILED"
