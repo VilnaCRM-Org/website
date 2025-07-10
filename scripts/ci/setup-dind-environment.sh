@@ -693,7 +693,17 @@ run_lighthouse_desktop_dind() {
     docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE up -d
     wait_for_prod_dind
     
-    echo "📦 Installing Chrome and Lighthouse CLI in prod container..."
+    echo "🔧 Configuring memory and shared memory for Chrome stability..."
+    # Create shared memory directory and set proper permissions
+    docker exec website-prod sh -c "mkdir -p /dev/shm/chrome && chmod 777 /dev/shm/chrome"
+    docker exec website-prod sh -c "mkdir -p /tmp/chrome-user-data && chmod 777 /tmp/chrome-user-data"
+    
+    # Check available memory
+    echo "🔍 Checking container memory availability..."
+    docker exec website-prod sh -c "free -h"
+    docker exec website-prod sh -c "df -h /dev/shm"
+    
+    echo "📦 Installing Chrome and Lighthouse CLI with memory optimizations..."
     if docker exec website-prod sh -c "apk add --no-cache chromium chromium-chromedriver && npm install -g @lhci/cli@0.14.0"; then
         echo "✅ Chrome and Lighthouse CLI installed successfully"
     else
@@ -712,10 +722,18 @@ run_lighthouse_desktop_dind() {
     echo "🧹 Cleaning up previous lighthouse results..."
     docker exec website-prod rm -rf /app/lhci-reports-desktop || true
     
-    echo "🔦 Running Lighthouse Desktop audit (exactly like local)..."
-    # Set environment variables to match local behavior
-    # NEXT_PUBLIC_PROD_HOST_API_URL should point to localhost:3001 for the container
-    if docker exec -e NEXT_PUBLIC_PROD_HOST_API_URL=http://localhost:3001 -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_NAME=no-aws-header-name -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_VALUE=no-aws-header-value -w /app website-prod pnpm lhci autorun --config=lighthouserc.desktop.js; then
+    echo "🔦 Running Lighthouse Desktop audit with memory optimizations..."
+    # Run with memory limits and enhanced Chrome flags
+    if docker exec \
+        -e NEXT_PUBLIC_PROD_HOST_API_URL=http://localhost:3001 \
+        -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_NAME=no-aws-header-name \
+        -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_VALUE=no-aws-header-value \
+        -e NODE_OPTIONS='--max-old-space-size=3072 --gc-interval=100' \
+        -e CHROME_DEVEL_SANDBOX=/dev/null \
+        -e TMPDIR=/dev/shm/chrome \
+        -w /app \
+        website-prod \
+        sh -c "ulimit -n 65536 && ulimit -c 0 && pnpm lhci autorun --config=lighthouserc.desktop.js"; then
         echo "✅ Lighthouse Desktop tests PASSED"
         
         echo "📂 Copying lighthouse results from prod container..."
@@ -723,6 +741,8 @@ run_lighthouse_desktop_dind() {
         docker cp website-prod:/app/lhci-reports-desktop/. lhci-reports-desktop/ 2>/dev/null || echo "No lighthouse desktop results to copy"
     else
         echo "❌ Lighthouse Desktop tests FAILED"
+        echo "🔍 Memory status after failure:"
+        docker exec website-prod sh -c "free -h && echo '---' && df -h /dev/shm" || true
         docker logs website-prod --tail 30
         exit 1
     fi
@@ -742,7 +762,17 @@ run_lighthouse_mobile_dind() {
     docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE up -d
     wait_for_prod_dind
     
-    echo "📦 Installing Chrome and Lighthouse CLI in prod container..."
+    echo "🔧 Configuring memory and shared memory for Chrome stability..."
+    # Create shared memory directory and set proper permissions
+    docker exec website-prod sh -c "mkdir -p /dev/shm/chrome && chmod 777 /dev/shm/chrome"
+    docker exec website-prod sh -c "mkdir -p /tmp/chrome-user-data && chmod 777 /tmp/chrome-user-data"
+    
+    # Check available memory
+    echo "🔍 Checking container memory availability..."
+    docker exec website-prod sh -c "free -h"
+    docker exec website-prod sh -c "df -h /dev/shm"
+    
+    echo "📦 Installing Chrome and Lighthouse CLI with memory optimizations..."
     if docker exec website-prod sh -c "apk add --no-cache chromium chromium-chromedriver && npm install -g @lhci/cli@0.14.0"; then
         echo "✅ Chrome and Lighthouse CLI installed successfully"
     else
@@ -761,10 +791,18 @@ run_lighthouse_mobile_dind() {
     echo "🧹 Cleaning up previous lighthouse results..."
     docker exec website-prod rm -rf /app/lhci-reports-mobile || true
     
-    echo "📱 Running Lighthouse Mobile audit (exactly like local)..."
-    # Set environment variables to match local behavior
-    # NEXT_PUBLIC_PROD_HOST_API_URL should point to localhost:3001 for the container
-    if docker exec -e NEXT_PUBLIC_PROD_HOST_API_URL=http://localhost:3001 -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_NAME=no-aws-header-name -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_VALUE=no-aws-header-value -w /app website-prod pnpm lhci autorun --config=lighthouserc.mobile.js; then
+    echo "📱 Running Lighthouse Mobile audit with memory optimizations..."
+    # Run with memory limits and enhanced Chrome flags
+    if docker exec \
+        -e NEXT_PUBLIC_PROD_HOST_API_URL=http://localhost:3001 \
+        -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_NAME=no-aws-header-name \
+        -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_VALUE=no-aws-header-value \
+        -e NODE_OPTIONS='--max-old-space-size=3072 --gc-interval=100' \
+        -e CHROME_DEVEL_SANDBOX=/dev/null \
+        -e TMPDIR=/dev/shm/chrome \
+        -w /app \
+        website-prod \
+        sh -c "ulimit -n 65536 && ulimit -c 0 && pnpm lhci autorun --config=lighthouserc.mobile.js"; then
         echo "✅ Lighthouse Mobile tests PASSED"
         
         echo "📂 Copying lighthouse mobile results from prod container..."
@@ -772,6 +810,8 @@ run_lighthouse_mobile_dind() {
         docker cp website-prod:/app/lhci-reports-mobile/. lhci-reports-mobile/ 2>/dev/null || echo "No lighthouse mobile results to copy"
     else
         echo "❌ Lighthouse Mobile tests FAILED"
+        echo "🔍 Memory status after failure:"
+        docker exec website-prod sh -c "free -h && echo '---' && df -h /dev/shm" || true
         docker logs website-prod --tail 30
         exit 1
     fi
