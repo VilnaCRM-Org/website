@@ -507,196 +507,68 @@ run_all_lint_dind() {
 
 # Run E2E tests in DIND mode
 run_e2e_tests_dind() {
-    echo "🎭 Running E2E tests in true Docker-in-Docker mode"
+    echo "🎭 Running E2E tests in DIND mode (matching local behavior)"
     echo "Setting up Docker network..."
     setup_docker_network
     configure_docker_compose
-    echo "Building production container image..."
+    echo "Building test services..."
     docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE build
-    echo "🚀 Starting production services..."
+    echo "🚀 Starting test services..."
     docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE up -d
     wait_for_prod_dind
     
-    echo "🧹 Cleaning up any existing E2E containers..."
-    docker stop playwright-e2e 2>/dev/null || true
-    docker rm playwright-e2e 2>/dev/null || true
-    
-    echo "Building E2E container image..."
-    docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE build playwright
-    
-    echo "🎭 Running Playwright E2E container..."
-    docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE run -d --name playwright-e2e playwright sleep infinity
-    
-    echo "📂 Copying source files into E2E container..."
-    docker exec playwright-e2e mkdir -p /app/src/test /app/src/config /app/pages/i18n
-    docker cp src/test/e2e playwright-e2e:/app/src/test/e2e
-    docker cp src/config playwright-e2e:/app/src/config  
-    docker cp pages/i18n playwright-e2e:/app/pages/i18n
-    echo "✅ E2E test files copied successfully"
-    
-    echo "📂 Copying required config files..."
-    docker exec playwright-e2e mkdir -p /app/src/test/e2e/utils
-    cat > /tmp/tsconfig.json << 'EOF'
-{
-  "compilerOptions": {
-    "target": "es5",
-    "lib": ["dom", "dom.iterable", "es6"],
-    "allowJs": true,
-    "skipLibCheck": true,
-    "strict": true,
-    "forceConsistentCasingInFileNames": true,
-    "noEmit": true,
-    "esModuleInterop": true,
-    "module": "esnext",
-    "moduleResolution": "node",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "jsx": "preserve",
-    "incremental": true,
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["src/*"]
-    }
-  },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"],
-  "exclude": ["node_modules"]
-}
-EOF
-    docker cp /tmp/tsconfig.json playwright-e2e:/app/tsconfig.json
-    
-    cat > /tmp/tsconfig.paths.json << 'EOF'
-{
-  "compilerOptions": {
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["src/*"]
-    }
-  }
-}
-EOF
-    docker cp /tmp/tsconfig.paths.json playwright-e2e:/app/tsconfig.paths.json
-    rm -f /tmp/tsconfig.json /tmp/tsconfig.paths.json
-    
     echo "🧹 Cleaning up previous E2E results..."
-    docker exec playwright-e2e rm -rf /app/playwright-e2e-reports /app/test-results || true
+    docker exec website-playwright rm -rf /app/playwright-report /app/test-results || true
     
-    echo "🎭 Running Playwright E2E tests..."
-    if docker exec -e NEXT_PUBLIC_MAIN_LANGUAGE=uk -e NEXT_PUBLIC_FALLBACK_LANGUAGE=en -w /app playwright-e2e npx playwright test src/test/e2e --reporter=json --output-dir=/app/playwright-e2e-reports; then
+    echo "🎭 Running Playwright E2E tests (exactly like local)..."
+    # Use the existing playwright container like locally
+    if docker exec -e NEXT_PUBLIC_MAIN_LANGUAGE=uk -e NEXT_PUBLIC_FALLBACK_LANGUAGE=en -w /app website-playwright npx playwright test src/test/e2e --reporter=json --output-dir=/app/playwright-report; then
         echo "✅ E2E tests PASSED"
+        
+        echo "📂 Copying E2E test results..."
+        mkdir -p playwright-report
+        docker cp website-playwright:/app/playwright-report/. playwright-report/ 2>/dev/null || echo "No E2E results to copy"
+        docker cp website-playwright:/app/test-results/. playwright-report/ 2>/dev/null || echo "No E2E test results to copy"
     else
         echo "❌ E2E tests FAILED"
-        docker logs playwright-e2e --tail 30
-        docker stop playwright-e2e || true
-        docker rm playwright-e2e || true
+        docker logs website-playwright --tail 30
         exit 1
     fi
     
-    echo "📂 Copying E2E test results..."
-    mkdir -p playwright-e2e-reports
-    docker cp playwright-e2e:/app/playwright-e2e-reports/. playwright-e2e-reports/ 2>/dev/null || echo "No E2E results to copy"
-    docker cp playwright-e2e:/app/test-results/. playwright-e2e-reports/ 2>/dev/null || echo "No E2E test results to copy"
-    
-    echo "🧹 Cleaning up E2E container..."
-    docker stop playwright-e2e || true
-    docker rm playwright-e2e || true
-    echo "🎉 E2E tests completed successfully in true DinD mode!"
+    echo "🎉 E2E tests completed successfully in DIND mode!"
 }
 
 # Run Visual tests in DIND mode
 run_visual_tests_dind() {
-    echo "🎨 Running Visual tests in true Docker-in-Docker mode"
+    echo "🎨 Running Visual tests in DIND mode (matching local behavior)"
     echo "Setting up Docker network..."
     setup_docker_network
     configure_docker_compose
-    echo "Building production container image..."
+    echo "Building test services..."
     docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE build
-    echo "🚀 Starting production services..."
+    echo "🚀 Starting test services..."
     docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE up -d
     wait_for_prod_dind
     
-    echo "🧹 Cleaning up any existing Visual containers..."
-    docker stop playwright-visual 2>/dev/null || true
-    docker rm playwright-visual 2>/dev/null || true
-    
-    echo "Building Visual container image..."
-    docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE build playwright
-    
-    echo "🎨 Running Playwright Visual container..."
-    docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE run -d --name playwright-visual playwright sleep infinity
-    
-    echo "📂 Copying source files into Visual container..."
-    docker exec playwright-visual mkdir -p /app/src/test /app/src/config /app/pages/i18n
-    docker cp src/test/visual playwright-visual:/app/src/test/visual
-    docker cp src/config playwright-visual:/app/src/config  
-    docker cp pages/i18n playwright-visual:/app/pages/i18n
-    echo "✅ Visual test files copied successfully"
-    
-    echo "📂 Copying required config files..."
-    docker exec playwright-visual mkdir -p /app/src/test/visual/utils
-    cat > /tmp/tsconfig.json << 'EOF'
-{
-  "compilerOptions": {
-    "target": "es5",
-    "lib": ["dom", "dom.iterable", "es6"],
-    "allowJs": true,
-    "skipLibCheck": true,
-    "strict": true,
-    "forceConsistentCasingInFileNames": true,
-    "noEmit": true,
-    "esModuleInterop": true,
-    "module": "esnext",
-    "moduleResolution": "node",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "jsx": "preserve",
-    "incremental": true,
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["src/*"]
-    }
-  },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"],
-  "exclude": ["node_modules"]
-}
-EOF
-    docker cp /tmp/tsconfig.json playwright-visual:/app/tsconfig.json
-    
-    cat > /tmp/tsconfig.paths.json << 'EOF'
-{
-  "compilerOptions": {
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["src/*"]
-    }
-  }
-}
-EOF
-    docker cp /tmp/tsconfig.paths.json playwright-visual:/app/tsconfig.paths.json
-    rm -f /tmp/tsconfig.json /tmp/tsconfig.paths.json
-    
     echo "🧹 Cleaning up previous Visual results..."
-    docker exec playwright-visual rm -rf /app/playwright-visual-reports /app/test-results || true
+    docker exec website-playwright rm -rf /app/playwright-report /app/test-results || true
     
-    echo "🎨 Running Playwright Visual tests..."
-    if docker exec -e NEXT_PUBLIC_MAIN_LANGUAGE=uk -e NEXT_PUBLIC_FALLBACK_LANGUAGE=en -w /app playwright-visual npx playwright test src/test/visual --reporter=json --output-dir=/app/playwright-visual-reports; then
+    echo "🎨 Running Playwright Visual tests (exactly like local)..."
+    # Use the existing playwright container like locally
+    if docker exec -e NEXT_PUBLIC_MAIN_LANGUAGE=uk -e NEXT_PUBLIC_FALLBACK_LANGUAGE=en -w /app website-playwright npx playwright test src/test/visual --reporter=json --output-dir=/app/playwright-report; then
         echo "✅ Visual tests PASSED"
+        
+        echo "📂 Copying Visual test results..."
+        mkdir -p playwright-report
+        docker cp website-playwright:/app/playwright-report/. playwright-report/ 2>/dev/null || echo "No Visual results to copy"
+        docker cp website-playwright:/app/test-results/. playwright-report/ 2>/dev/null || echo "No Visual test results to copy"
     else
         echo "❌ Visual tests FAILED"
-        docker logs playwright-visual --tail 30
-        docker stop playwright-visual || true
-        docker rm playwright-visual || true
+        docker logs website-playwright --tail 30
         exit 1
     fi
     
-    echo "📂 Copying Visual test results..."
-    mkdir -p playwright-visual-reports
-    docker cp playwright-visual:/app/playwright-visual-reports/. playwright-visual-reports/ 2>/dev/null || echo "No Visual results to copy"
-    docker cp playwright-visual:/app/test-results/. playwright-visual-reports/ 2>/dev/null || echo "No Visual test results to copy"
-    
-    echo "🧹 Cleaning up Visual container..."
-    docker stop playwright-visual || true
-    docker rm playwright-visual || true
-    echo "🎉 Visual tests completed successfully in true DinD mode!"
+    echo "🎉 Visual tests completed successfully in DIND mode!"
 }
 
 # Run Memory Leak tests in DIND mode
@@ -811,7 +683,7 @@ run_load_tests_dind() {
 
 # Run Lighthouse Desktop tests in DIND mode
 run_lighthouse_desktop_dind() {
-    echo "🔦 Running Lighthouse Desktop tests in true Docker-in-Docker mode"
+    echo "🔦 Running Lighthouse Desktop tests in DIND mode (matching local behavior)"
     echo "Setting up Docker network..."
     setup_docker_network
     configure_docker_compose
@@ -821,7 +693,7 @@ run_lighthouse_desktop_dind() {
     docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE up -d
     wait_for_prod_dind
     
-    echo "📦 Installing Chrome and Lighthouse CLI in container..."
+    echo "📦 Installing Chrome and Lighthouse CLI in prod container..."
     if docker exec website-prod sh -c "apk add --no-cache chromium chromium-chromedriver && npm install -g @lhci/cli@0.14.0"; then
         echo "✅ Chrome and Lighthouse CLI installed successfully"
     else
@@ -829,7 +701,7 @@ run_lighthouse_desktop_dind() {
         exit 1
     fi
 
-    echo "📂 Copying Lighthouse config files..."
+    echo "📂 Copying Lighthouse config files to prod container..."
     if docker cp lighthouserc.desktop.js website-prod:/app/; then
         echo "✅ Lighthouse config files copied successfully"
     else
@@ -837,99 +709,30 @@ run_lighthouse_desktop_dind() {
         exit 1
     fi
 
-    echo "🧪 Testing Chrome installation..."
-    if docker exec website-prod /usr/bin/chromium-browser --version; then
-        echo "✅ Chrome is installed and working"
-    else
-        echo "❌ Chrome installation test failed"
-        exit 1
-    fi
-
-    echo "🧪 Creating Docker Compose override for Lighthouse testing..."
-    cat > docker-compose.lighthouse.yml << 'EOF'
-version: '3.8'
-
-services:
-  lighthouse:
-    image: node:23.11.1-alpine3.21
-    container_name: website-lighthouse
-    networks:
-      - website-network
-    volumes:
-      - /tmp:/tmp
-      - /dev/shm:/dev/shm
-    environment:
-      - NODE_ENV=production
-      - LIGHTHOUSE_NO_SANDBOX=true
-      - CHROME_PATH=/usr/bin/chromium-browser
-    depends_on:
-      - prod
-    command: |
-      sh -c "
-        apk add --no-cache chromium chromium-chromedriver &&
-        npm install -g @lhci/cli@0.14.0 &&
-        mkdir -p /tmp/chrome-user-data /tmp/chrome-crash-dumps &&
-        chmod 777 /tmp/chrome-user-data /tmp/chrome-crash-dumps &&
-        tail -f /dev/null
-      "
-    shm_size: '2gb'
-    tmpfs:
-      - /tmp/chrome-user-data:rw,noexec,nosuid,size=100m
-      - /tmp/chrome-crash-dumps:rw,noexec,nosuid,size=100m
-    security_opt:
-      - seccomp:unconfined
-    cap_add:
-      - SYS_ADMIN
-    ulimits:
-      nofile:
-        soft: 65536
-        hard: 65536
-EOF
-
-    echo "🚀 Starting Lighthouse service with override..."
-    docker-compose -f docker-compose.test.yml -f docker-compose.lighthouse.yml up -d lighthouse
-
-    echo "🧪 Setting up Chrome environment for stability..."
-    # Wait for lighthouse container to be ready and installation to complete
-    echo "⏳ Waiting for container setup to complete..."
-    sleep 15
+    echo "🧹 Cleaning up previous lighthouse results..."
+    docker exec website-prod rm -rf /app/lhci-reports-desktop || true
     
-    echo "🔧 Ensuring LHCI installation is complete..."
-    docker exec website-lighthouse sh -c "which lhci || (apk add --no-cache chromium chromium-chromedriver && npm install -g @lhci/cli@0.14.0)"
-    
-    echo "📂 Copying Lighthouse config files..."
-    if docker cp lighthouserc.desktop.js website-lighthouse:/tmp/; then
-        echo "✅ Lighthouse config files copied successfully"
-    else
-        echo "❌ Failed to copy Lighthouse config files"
-        exit 1
-    fi
-
-    echo "🔦 Running Lighthouse Desktop audit with simplified configuration..."
-    if docker exec -w /tmp website-lighthouse lhci autorun --config=lighthouserc.desktop.js --collect.url=http://website-prod:3001 --collect.chromePath=/usr/bin/chromium-browser; then
+    echo "🔦 Running Lighthouse Desktop audit (exactly like local)..."
+    # Set environment variables to match local behavior
+    # NEXT_PUBLIC_PROD_HOST_API_URL should point to localhost:3001 for the container
+    if docker exec -e NEXT_PUBLIC_PROD_HOST_API_URL=http://localhost:3001 -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_NAME=no-aws-header-name -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_VALUE=no-aws-header-value -w /app website-prod pnpm lhci autorun --config=lighthouserc.desktop.js; then
         echo "✅ Lighthouse Desktop tests PASSED"
         
-        echo "📂 Copying lighthouse results from dedicated container..."
+        echo "📂 Copying lighthouse results from prod container..."
         mkdir -p lhci-reports-desktop
-        docker cp website-lighthouse:/tmp/lhci-reports-desktop/. lhci-reports-desktop/ 2>/dev/null || echo "No lighthouse desktop results to copy"
+        docker cp website-prod:/app/lhci-reports-desktop/. lhci-reports-desktop/ 2>/dev/null || echo "No lighthouse desktop results to copy"
     else
         echo "❌ Lighthouse Desktop tests FAILED"
-        docker logs website-lighthouse --tail 30
-        echo "📋 Chrome logs from lighthouse container:"
-        docker exec website-lighthouse ls -la /tmp/chrome-crash-dumps 2>/dev/null || echo "No crash dumps found"
+        docker logs website-prod --tail 30
         exit 1
     fi
-
-    echo "🧹 Cleaning up lighthouse container..."
-    docker stop website-lighthouse || true
-    docker rm website-lighthouse || true
     
-    echo "🎉 Lighthouse Desktop tests completed successfully in true DinD mode!"
+    echo "🎉 Lighthouse Desktop tests completed successfully in DIND mode!"
 }
 
 # Run Lighthouse Mobile tests in DIND mode
 run_lighthouse_mobile_dind() {
-    echo "📱 Running Lighthouse Mobile tests in true Docker-in-Docker mode"
+    echo "📱 Running Lighthouse Mobile tests in DIND mode (matching local behavior)"
     echo "Setting up Docker network..."
     setup_docker_network
     configure_docker_compose
@@ -939,7 +742,7 @@ run_lighthouse_mobile_dind() {
     docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE up -d
     wait_for_prod_dind
     
-    echo "📦 Installing Chrome and Lighthouse CLI in container..."
+    echo "📦 Installing Chrome and Lighthouse CLI in prod container..."
     if docker exec website-prod sh -c "apk add --no-cache chromium chromium-chromedriver && npm install -g @lhci/cli@0.14.0"; then
         echo "✅ Chrome and Lighthouse CLI installed successfully"
     else
@@ -947,7 +750,7 @@ run_lighthouse_mobile_dind() {
         exit 1
     fi
 
-    echo "📂 Copying Lighthouse config files..."
+    echo "📂 Copying Lighthouse config files to prod container..."
     if docker cp lighthouserc.mobile.js website-prod:/app/; then
         echo "✅ Lighthouse config files copied successfully"
     else
@@ -955,94 +758,25 @@ run_lighthouse_mobile_dind() {
         exit 1
     fi
 
-    echo "🧪 Testing Chrome installation..."
-    if docker exec website-prod /usr/bin/chromium-browser --version; then
-        echo "✅ Chrome is installed and working"
-    else
-        echo "❌ Chrome installation test failed"
-        exit 1
-    fi
-
-    echo "🧪 Creating Docker Compose override for Lighthouse Mobile testing..."
-    cat > docker-compose.lighthouse.yml << 'EOF'
-version: '3.8'
-
-services:
-  lighthouse:
-    image: node:23.11.1-alpine3.21
-    container_name: website-lighthouse-mobile
-    networks:
-      - website-network
-    volumes:
-      - /tmp:/tmp
-      - /dev/shm:/dev/shm
-    environment:
-      - NODE_ENV=production
-      - LIGHTHOUSE_NO_SANDBOX=true
-      - CHROME_PATH=/usr/bin/chromium-browser
-    depends_on:
-      - prod
-    command: |
-      sh -c "
-        apk add --no-cache chromium chromium-chromedriver &&
-        npm install -g @lhci/cli@0.14.0 &&
-        mkdir -p /tmp/chrome-user-data /tmp/chrome-crash-dumps &&
-        chmod 777 /tmp/chrome-user-data /tmp/chrome-crash-dumps &&
-        tail -f /dev/null
-      "
-    shm_size: '2gb'
-    tmpfs:
-      - /tmp/chrome-user-data:rw,noexec,nosuid,size=100m
-      - /tmp/chrome-crash-dumps:rw,noexec,nosuid,size=100m
-    security_opt:
-      - seccomp:unconfined
-    cap_add:
-      - SYS_ADMIN
-    ulimits:
-      nofile:
-        soft: 65536
-        hard: 65536
-EOF
-
-    echo "🚀 Starting Lighthouse Mobile service with override..."
-    docker-compose -f docker-compose.test.yml -f docker-compose.lighthouse.yml up -d lighthouse
-
-    echo "🧪 Setting up Chrome environment for stability..."
-    # Wait for lighthouse container to be ready and installation to complete
-    echo "⏳ Waiting for container setup to complete..."
-    sleep 15
+    echo "🧹 Cleaning up previous lighthouse results..."
+    docker exec website-prod rm -rf /app/lhci-reports-mobile || true
     
-    echo "🔧 Ensuring LHCI installation is complete..."
-    docker exec website-lighthouse-mobile sh -c "which lhci || (apk add --no-cache chromium chromium-chromedriver && npm install -g @lhci/cli@0.14.0)"
-    
-    echo "📂 Copying Lighthouse Mobile config files..."
-    if docker cp lighthouserc.mobile.js website-lighthouse-mobile:/tmp/; then
-        echo "✅ Lighthouse Mobile config files copied successfully"
-    else
-        echo "❌ Failed to copy Lighthouse Mobile config files"
-        exit 1
-    fi
-
-    echo "📱 Running Lighthouse Mobile audit with simplified configuration..."
-    if docker exec -w /tmp website-lighthouse-mobile lhci autorun --config=lighthouserc.mobile.js --collect.url=http://website-prod:3001 --collect.chromePath=/usr/bin/chromium-browser; then
+    echo "📱 Running Lighthouse Mobile audit (exactly like local)..."
+    # Set environment variables to match local behavior
+    # NEXT_PUBLIC_PROD_HOST_API_URL should point to localhost:3001 for the container
+    if docker exec -e NEXT_PUBLIC_PROD_HOST_API_URL=http://localhost:3001 -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_NAME=no-aws-header-name -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_VALUE=no-aws-header-value -w /app website-prod pnpm lhci autorun --config=lighthouserc.mobile.js; then
         echo "✅ Lighthouse Mobile tests PASSED"
         
-        echo "📂 Copying lighthouse mobile results from dedicated container..."
+        echo "📂 Copying lighthouse mobile results from prod container..."
         mkdir -p lhci-reports-mobile
-        docker cp website-lighthouse-mobile:/tmp/lhci-reports-mobile/. lhci-reports-mobile/ 2>/dev/null || echo "No lighthouse mobile results to copy"
+        docker cp website-prod:/app/lhci-reports-mobile/. lhci-reports-mobile/ 2>/dev/null || echo "No lighthouse mobile results to copy"
     else
         echo "❌ Lighthouse Mobile tests FAILED"
-        docker logs website-lighthouse-mobile --tail 30
-        echo "📋 Chrome logs from lighthouse mobile container:"
-        docker exec website-lighthouse-mobile ls -la /tmp/chrome-crash-dumps 2>/dev/null || echo "No crash dumps found"
+        docker logs website-prod --tail 30
         exit 1
     fi
-
-    echo "🧹 Cleaning up lighthouse mobile container..."
-    docker stop website-lighthouse-mobile || true
-    docker rm website-lighthouse-mobile || true
     
-    echo "🎉 Lighthouse Mobile tests completed successfully in true DinD mode!"
+    echo "🎉 Lighthouse Mobile tests completed successfully in DIND mode!"
 }
 
 # Show usage information
