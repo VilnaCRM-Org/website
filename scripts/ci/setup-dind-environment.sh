@@ -450,7 +450,7 @@ run_markdown_lint_dind() {
     fi
     
     echo "🔍 Running Markdown linting..."
-    if docker exec website-dev-lint-md sh -c "cd /app && npx markdownlint-cli2 '**/*.md' '#node_modules' '#.next'"; then
+    if docker exec website-dev-lint-md sh -c "cd /app && ./node_modules/.bin/markdownlint \"**/*.md\" -i CHANGELOG.md -i \"test-results/**/*.md\" -i \"playwright-report/data/**/*.md\""; then
         echo "✅ Markdown linting PASSED"
     else
         echo "❌ Markdown linting FAILED"
@@ -524,6 +524,7 @@ run_e2e_tests_dind() {
     docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE run -d --name playwright-e2e playwright sleep infinity
     
     echo "📂 Copying source files into E2E container..."
+    docker exec playwright-e2e mkdir -p /app/src/test /app/src/config /app/pages/i18n
     docker cp src/test/e2e playwright-e2e:/app/src/test/e2e
     docker cp src/config playwright-e2e:/app/src/config  
     docker cp pages/i18n playwright-e2e:/app/pages/i18n
@@ -616,6 +617,7 @@ run_visual_tests_dind() {
     docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE run -d --name playwright-visual playwright sleep infinity
     
     echo "📂 Copying source files into Visual container..."
+    docker exec playwright-visual mkdir -p /app/src/test /app/src/config /app/pages/i18n
     docker cp src/test/visual playwright-visual:/app/src/test/visual
     docker cp src/config playwright-visual:/app/src/config  
     docker cp pages/i18n playwright-visual:/app/pages/i18n
@@ -708,6 +710,7 @@ run_memory_leak_tests_dind() {
     docker-compose -f docker-compose.memory-leak.yml run -d --name memory-leak-test memory-leak sleep infinity
     
     echo "📂 Copying source files into memory leak container..."
+    docker exec memory-leak-test mkdir -p /app/src/test /app/src/config /app/pages/i18n
     docker cp src/test/memory-leak memory-leak-test:/app/src/test/memory-leak
     echo "✅ Memory leak test files copied successfully"
     
@@ -756,7 +759,7 @@ run_load_tests_dind() {
     docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE --profile load build k6
     
     echo "⚡ Running K6 load tests..."
-    if docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE --profile load run --rm k6 --summary-trend-stats="avg,min,med,max,p(95),p(99)" --out "web-dashboard=period=1s&export=/loadTests/results/homepage.html" /loadTests/homepage.js; then
+    if docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE --profile load run --rm k6 run --summary-trend-stats="avg,min,med,max,p(95),p(99)" --out "web-dashboard=period=1s&export=/loadTests/results/homepage.html" /loadTests/homepage.js; then
         echo "✅ Load tests PASSED"
     else
         echo "❌ Load tests FAILED"
@@ -806,7 +809,7 @@ run_lighthouse_desktop_dind() {
     fi
 
     echo "🔦 Running Lighthouse Desktop audit..."
-    if docker exec -w /app website-prod lhci autorun --config=lighthouserc.desktop.js --collect.url=http://localhost:3001 --collect.chromePath=/usr/bin/chromium-browser --collect.chromeFlags="--no-sandbox --disable-dev-shm-usage --disable-extensions --disable-gpu --headless --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-features=VizDisplayCompositor --disable-background-networking --disable-default-apps --disable-sync --disable-translate --hide-scrollbars --metrics-recording-only --mute-audio --no-first-run --safebrowsing-disable-auto-update --disable-ipc-flooding-protection"; then
+    if docker exec -w /app website-prod lhci autorun --config=lighthouserc.desktop.js --collect.url=http://localhost:3001 --collect.chromePath=/usr/bin/chromium-browser --collect.chromeFlags="--no-sandbox --disable-dev-shm-usage --disable-extensions --disable-gpu --headless --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-features=VizDisplayCompositor,AudioServiceOutOfProcess,VizServiceDisplay,TranslateUI,BlinkGenPropertyTrees --disable-background-networking --disable-default-apps --disable-sync --disable-translate --hide-scrollbars --metrics-recording-only --mute-audio --no-first-run --safebrowsing-disable-auto-update --disable-ipc-flooding-protection --memory-pressure-off --max_old_space_size=512 --disable-software-rasterizer --disable-background-media-strategy --disable-renderer-accessibility --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-default-component-extension --disable-breakpad --disable-component-update --single-process --disable-web-security --no-zygote --disable-accelerated-2d-canvas --disable-accelerated-jpeg-decoding --disable-accelerated-mjpeg-decode --disable-accelerated-video-decode --disable-accelerated-video-encode --disable-app-list-dismiss-on-blur"; then
         echo "✅ Lighthouse Desktop tests PASSED"
     else
         echo "❌ Lighthouse Desktop tests FAILED"
@@ -857,7 +860,7 @@ run_lighthouse_mobile_dind() {
     fi
 
     echo "📱 Running Lighthouse Mobile audit..."
-    if docker exec -w /app website-prod lhci autorun --config=lighthouserc.mobile.js --collect.url=http://localhost:3001 --collect.chromePath=/usr/bin/chromium-browser --collect.chromeFlags="--no-sandbox --disable-dev-shm-usage --disable-extensions --disable-gpu --headless --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-features=VizDisplayCompositor --disable-background-networking --disable-default-apps --disable-sync --disable-translate --hide-scrollbars --metrics-recording-only --mute-audio --no-first-run --safebrowsing-disable-auto-update --disable-ipc-flooding-protection"; then
+    if docker exec -w /app website-prod lhci autorun --config=lighthouserc.mobile.js --collect.url=http://localhost:3001 --collect.chromePath=/usr/bin/chromium-browser --collect.chromeFlags="--no-sandbox --disable-dev-shm-usage --disable-extensions --disable-gpu --headless --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-features=VizDisplayCompositor,AudioServiceOutOfProcess,VizServiceDisplay,TranslateUI,BlinkGenPropertyTrees --disable-background-networking --disable-default-apps --disable-sync --disable-translate --hide-scrollbars --metrics-recording-only --mute-audio --no-first-run --safebrowsing-disable-auto-update --disable-ipc-flooding-protection --memory-pressure-off --max_old_space_size=512 --disable-software-rasterizer --disable-background-media-strategy --disable-renderer-accessibility --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-default-component-extension --disable-breakpad --disable-component-update --single-process --disable-web-security --no-zygote --disable-accelerated-2d-canvas --disable-accelerated-jpeg-decoding --disable-accelerated-mjpeg-decode --disable-accelerated-video-decode --disable-accelerated-video-encode --disable-app-list-dismiss-on-blur"; then
         echo "✅ Lighthouse Mobile tests PASSED"
     else
         echo "❌ Lighthouse Mobile tests FAILED"
