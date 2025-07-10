@@ -467,10 +467,42 @@ run_markdown_lint_dind() {
 # Run all lint checks in DIND mode
 run_all_lint_dind() {
     echo "🧹 Running all lint checks in DIND mode..."
-    run_eslint_dind
-    run_typescript_check_dind
-    run_markdown_lint_dind
-    echo "🎉 All lint checks completed successfully!"
+    
+    # Create lint-logs directory for buildspec artifacts
+    mkdir -p lint-logs
+    
+    echo "🔍 Running ESLint with log capture..."
+    if run_eslint_dind > lint-logs/eslint.log 2>&1; then
+        echo "✅ ESLint PASSED" | tee -a lint-logs/summary.log
+    else
+        echo "❌ ESLint FAILED" | tee -a lint-logs/summary.log
+        echo "ESLint failed, but continuing with other checks..."
+    fi
+    
+    echo "🔍 Running TypeScript check with log capture..."
+    if run_typescript_check_dind > lint-logs/typescript.log 2>&1; then
+        echo "✅ TypeScript check PASSED" | tee -a lint-logs/summary.log
+    else
+        echo "❌ TypeScript check FAILED" | tee -a lint-logs/summary.log
+        echo "TypeScript check failed, but continuing with other checks..."
+    fi
+    
+    echo "🔍 Running Markdown linting with log capture..."
+    if run_markdown_lint_dind > lint-logs/markdown.log 2>&1; then
+        echo "✅ Markdown linting PASSED" | tee -a lint-logs/summary.log
+    else
+        echo "❌ Markdown linting FAILED" | tee -a lint-logs/summary.log
+        echo "Markdown linting failed, but continuing..."
+    fi
+    
+    # Check if any tests failed by counting FAILED entries
+    failed_count=$(grep -c "FAILED" lint-logs/summary.log 2>/dev/null || echo "0")
+    if [ "$failed_count" -gt 0 ]; then
+        echo "❌ $failed_count lint check(s) failed. Check lint-logs/ for details."
+        exit 1
+    else
+        echo "🎉 All lint checks completed successfully!"
+    fi
 }
 
 # Run E2E tests in DIND mode
@@ -479,73 +511,89 @@ run_e2e_tests_dind() {
     echo "Setting up Docker network..."
     setup_docker_network
     configure_docker_compose
-    
-    echo "🧹 Cleaning up any existing containers..."
-    docker rm -f website-prod website-playwright-temp 2>/dev/null || true
-    
-    echo "🏗️ Building production environment for E2E testing..."
+    echo "Building production container image..."
     docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE build
     echo "🚀 Starting production services..."
     docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE up -d
     wait_for_prod_dind
     
-    echo "🧪 Building Playwright test container..."
+    echo "Building E2E container image..."
     docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE build playwright
     
-    echo "🛠️ Starting Playwright test container..."
-    docker run -d --name website-playwright-temp --network website-network \
-        --env NEXT_PUBLIC_PROD_HOST_API_URL=http://website-prod:3001 \
-        --env NEXT_PUBLIC_MAIN_LANGUAGE=uk \
-        --env NEXT_PUBLIC_FALLBACK_LANGUAGE=en \
-        website-playwright tail -f /dev/null
+    echo "🎭 Running Playwright E2E container..."
+    docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE run -d --name playwright-e2e playwright sleep infinity
     
-    echo "📂 Creating directory structure in Playwright container..."
-    docker exec website-playwright-temp mkdir -p /app/src/test/e2e /app/src/test/e2e/utils /app/src/config /app/pages/i18n
-    
-    echo "📂 Copying source files into Playwright container..."
-    if docker cp package.json website-playwright-temp:/app/ && \
-       docker cp src/test/e2e/. website-playwright-temp:/app/src/test/e2e/ && \
-       docker cp playwright.config.ts website-playwright-temp:/app/ && \
-       docker cp tsconfig.json website-playwright-temp:/app/ && \
-       docker cp tsconfig.paths.json website-playwright-temp:/app/ 2>/dev/null; then
-        echo "✅ E2E test files copied successfully"
-    else
-        echo "❌ Failed to copy E2E test files"
-        docker rm -f website-playwright-temp
-        exit 1
-    fi
-    
-    echo "📂 Copying E2E utility files..."
-    if docker cp src/test/e2e/utils/. website-playwright-temp:/app/src/test/e2e/utils/; then
-        echo "✅ E2E utility files copied successfully"
-    else
-        echo "❌ Failed to copy E2E utility files"
-        docker rm -f website-playwright-temp
-        exit 1
-    fi
+    echo "📂 Copying source files into E2E container..."
+    docker cp src/test/e2e playwright-e2e:/app/src/test/e2e
+    docker cp src/config playwright-e2e:/app/src/config  
+    docker cp pages/i18n playwright-e2e:/app/pages/i18n
+    echo "✅ E2E test files copied successfully"
     
     echo "📂 Copying required config files..."
-    docker cp src/config/i18nConfig.js website-playwright-temp:/app/src/config/ 2>/dev/null || echo "Config file not found"
-    docker cp pages/i18n/localization.json website-playwright-temp:/app/pages/i18n/ 2>/dev/null || echo "Localization file not found"
+    docker exec playwright-e2e mkdir -p /app/src/test/e2e/utils
+    cat > /tmp/tsconfig.json << 'EOF'
+{
+  "compilerOptions": {
+    "target": "es5",
+    "lib": ["dom", "dom.iterable", "es6"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    }
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"],
+  "exclude": ["node_modules"]
+}
+EOF
+    docker cp /tmp/tsconfig.json playwright-e2e:/app/tsconfig.json
+    
+    cat > /tmp/tsconfig.paths.json << 'EOF'
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    }
+  }
+}
+EOF
+    docker cp /tmp/tsconfig.paths.json playwright-e2e:/app/tsconfig.paths.json
+    rm -f /tmp/tsconfig.json /tmp/tsconfig.paths.json
+    
+    echo "🧹 Cleaning up previous E2E results..."
+    docker exec playwright-e2e rm -rf /app/playwright-e2e-reports /app/test-results || true
     
     echo "🎭 Running Playwright E2E tests..."
-    if docker exec website-playwright-temp sh -c "cd /app && npx playwright test src/test/e2e --reporter=html"; then
+    if docker exec -e NEXT_PUBLIC_MAIN_LANGUAGE=uk -e NEXT_PUBLIC_FALLBACK_LANGUAGE=en -w /app playwright-e2e npx playwright test src/test/e2e --reporter=json --output-dir=/app/playwright-e2e-reports; then
         echo "✅ E2E tests PASSED"
     else
         echo "❌ E2E tests FAILED"
-        docker logs website-playwright-temp --tail 30
-        docker rm -f website-playwright-temp
+        docker logs playwright-e2e --tail 30
+        docker stop playwright-e2e || true
+        docker rm playwright-e2e || true
         exit 1
     fi
     
     echo "📂 Copying E2E test results..."
-    mkdir -p playwright-results
-    docker cp website-playwright-temp:/app/test-results/. playwright-results/ 2>/dev/null || echo "No E2E test results to copy"
-    docker cp website-playwright-temp:/app/playwright-report/. playwright-report/ 2>/dev/null || echo "No Playwright report to copy"
+    mkdir -p playwright-e2e-reports
+    docker cp playwright-e2e:/app/playwright-e2e-reports/. playwright-e2e-reports/ 2>/dev/null || echo "No E2E results to copy"
+    docker cp playwright-e2e:/app/test-results/. playwright-e2e-reports/ 2>/dev/null || echo "No E2E test results to copy"
     
-    echo "🧹 Cleaning up Playwright test container..."
-    docker rm -f website-playwright-temp
-    
+    echo "🧹 Cleaning up E2E container..."
+    docker stop playwright-e2e || true
+    docker rm playwright-e2e || true
     echo "🎉 E2E tests completed successfully in true DinD mode!"
 }
 
@@ -555,142 +603,170 @@ run_visual_tests_dind() {
     echo "Setting up Docker network..."
     setup_docker_network
     configure_docker_compose
-    
-    echo "🧹 Cleaning up any existing containers..."
-    docker rm -f website-prod website-playwright-temp 2>/dev/null || true
-    
-    echo "🏗️ Building production environment for Visual testing..."
+    echo "Building production container image..."
     docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE build
     echo "🚀 Starting production services..."
     docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE up -d
     wait_for_prod_dind
     
-    echo "🧪 Building Playwright test container..."
+    echo "Building Visual container image..."
     docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE build playwright
     
-    echo "🛠️ Starting Playwright test container..."
-    docker run -d --name website-playwright-temp --network website-network \
-        --env NEXT_PUBLIC_PROD_HOST_API_URL=http://website-prod:3001 \
-        --env NEXT_PUBLIC_MAIN_LANGUAGE=uk \
-        --env NEXT_PUBLIC_FALLBACK_LANGUAGE=en \
-        website-playwright tail -f /dev/null
+    echo "🎨 Running Playwright Visual container..."
+    docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE run -d --name playwright-visual playwright sleep infinity
     
-    echo "📂 Creating directory structure in Playwright container..."
-    docker exec website-playwright-temp mkdir -p /app/src/test/visual /app/src/test/e2e/utils /app/src/config /app/pages/i18n
-    
-    echo "📂 Copying source files into Playwright container..."
-    if docker cp package.json website-playwright-temp:/app/ && \
-       docker cp src/test/visual/. website-playwright-temp:/app/src/test/visual/ && \
-       docker cp playwright.config.ts website-playwright-temp:/app/ && \
-       docker cp tsconfig.json website-playwright-temp:/app/ && \
-       docker cp tsconfig.paths.json website-playwright-temp:/app/ 2>/dev/null; then
-        echo "✅ Visual test files copied successfully"
-    else
-        echo "❌ Failed to copy Visual test files"
-        docker rm -f website-playwright-temp
-        exit 1
-    fi
-    
-    echo "📂 Copying E2E utility files for Visual tests..."
-    if docker cp src/test/e2e/utils/. website-playwright-temp:/app/src/test/e2e/utils/; then
-        echo "✅ E2E utility files copied successfully for Visual tests"
-    else
-        echo "❌ Failed to copy E2E utility files for Visual tests"
-        docker rm -f website-playwright-temp
-        exit 1
-    fi
+    echo "📂 Copying source files into Visual container..."
+    docker cp src/test/visual playwright-visual:/app/src/test/visual
+    docker cp src/config playwright-visual:/app/src/config  
+    docker cp pages/i18n playwright-visual:/app/pages/i18n
+    echo "✅ Visual test files copied successfully"
     
     echo "📂 Copying required config files..."
-    docker cp src/config/i18nConfig.js website-playwright-temp:/app/src/config/ 2>/dev/null || echo "Config file not found"
-    docker cp pages/i18n/localization.json website-playwright-temp:/app/pages/i18n/ 2>/dev/null || echo "Localization file not found"
+    docker exec playwright-visual mkdir -p /app/src/test/visual/utils
+    cat > /tmp/tsconfig.json << 'EOF'
+{
+  "compilerOptions": {
+    "target": "es5",
+    "lib": ["dom", "dom.iterable", "es6"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    }
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"],
+  "exclude": ["node_modules"]
+}
+EOF
+    docker cp /tmp/tsconfig.json playwright-visual:/app/tsconfig.json
+    
+    cat > /tmp/tsconfig.paths.json << 'EOF'
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    }
+  }
+}
+EOF
+    docker cp /tmp/tsconfig.paths.json playwright-visual:/app/tsconfig.paths.json
+    rm -f /tmp/tsconfig.json /tmp/tsconfig.paths.json
+    
+    echo "🧹 Cleaning up previous Visual results..."
+    docker exec playwright-visual rm -rf /app/playwright-visual-reports /app/test-results || true
     
     echo "🎨 Running Playwright Visual tests..."
-    if docker exec website-playwright-temp sh -c "cd /app && npx playwright test src/test/visual --reporter=html --timeout=30000"; then
+    if docker exec -e NEXT_PUBLIC_MAIN_LANGUAGE=uk -e NEXT_PUBLIC_FALLBACK_LANGUAGE=en -w /app playwright-visual npx playwright test src/test/visual --reporter=json --output-dir=/app/playwright-visual-reports; then
         echo "✅ Visual tests PASSED"
     else
         echo "❌ Visual tests FAILED"
-        docker logs website-playwright-temp --tail 30
-        docker rm -f website-playwright-temp
+        docker logs playwright-visual --tail 30
+        docker stop playwright-visual || true
+        docker rm playwright-visual || true
         exit 1
     fi
     
     echo "📂 Copying Visual test results..."
-    mkdir -p playwright-results
-    docker cp website-playwright-temp:/app/test-results/. playwright-results/ 2>/dev/null || echo "No Visual test results to copy"
-    docker cp website-playwright-temp:/app/playwright-report/. playwright-report/ 2>/dev/null || echo "No Playwright report to copy"
+    mkdir -p playwright-visual-reports
+    docker cp playwright-visual:/app/playwright-visual-reports/. playwright-visual-reports/ 2>/dev/null || echo "No Visual results to copy"
+    docker cp playwright-visual:/app/test-results/. playwright-visual-reports/ 2>/dev/null || echo "No Visual test results to copy"
     
-    echo "🧹 Cleaning up Playwright test container..."
-    docker rm -f website-playwright-temp
-    
+    echo "🧹 Cleaning up Visual container..."
+    docker stop playwright-visual || true
+    docker rm playwright-visual || true
     echo "🎉 Visual tests completed successfully in true DinD mode!"
 }
 
 # Run Memory Leak tests in DIND mode
 run_memory_leak_tests_dind() {
-    echo "🔍 Running Memory Leak tests in true Docker-in-Docker mode"
+    echo "🧠 Running Memory Leak tests in true Docker-in-Docker mode"
     echo "Setting up Docker network..."
     setup_docker_network
     configure_docker_compose
-    
-    echo "🧹 Cleaning up any existing containers..."
-    docker rm -f website-prod website-memory-leak-temp 2>/dev/null || true
-    
-    echo "🏗️ Building production environment for memory leak testing..."
+    echo "Building production container image..."
     docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE build
-    echo "🚀 Starting production services in background..."
+    echo "🚀 Starting production services..."
     docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE up -d
-    
-    echo "⏳ Waiting for production services to be ready..."
     wait_for_prod_dind
     
-    echo "🧪 Building memory leak test container..."
-    docker-compose -f docker-compose.memory-leak.yml build memory-leak
+    echo "Building memory leak container image..."
+    docker-compose -f docker-compose.memory-leak.yml build
     
-    echo "🛠️ Starting memory leak test container..."
-    docker run -d --name website-memory-leak-temp --network website-network \
-        --env NEXT_PUBLIC_PROD_CONTAINER_API_URL=http://website-prod:3001 \
-        --env MEMLAB_DEBUG=true \
-        --env MEMLAB_SKIP_WARMUP=true \
-        --env DISPLAY=:99 \
-        --env NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_NAME=no-aws-header-name \
-        --env NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_VALUE=no-aws-header-value \
-        --shm-size=1gb \
-        website-memory-leak tail -f /dev/null
+    echo "🧠 Running Memory Leak container..."
+    docker-compose -f docker-compose.memory-leak.yml run -d --name memory-leak-test memory-leak sleep infinity
     
     echo "📂 Copying source files into memory leak container..."
-    if docker cp src/test/memory-leak/. website-memory-leak-temp:/app/src/test/memory-leak/; then
-        echo "✅ Memory leak test files copied successfully"
-    else
-        echo "❌ Failed to copy memory leak test files"
-        docker rm -f website-memory-leak-temp
-        exit 1
-    fi
+    docker cp src/test/memory-leak memory-leak-test:/app/src/test/memory-leak
+    echo "✅ Memory leak test files copied successfully"
     
     echo "📂 Copying required config files..."
-    docker cp src/config/i18nConfig.js website-memory-leak-temp:/app/src/config/ 2>/dev/null || echo "Config file not found"
-    docker cp pages/i18n/localization.json website-memory-leak-temp:/app/pages/i18n/ 2>/dev/null || echo "Localization file not found"
+    docker cp src/config memory-leak-test:/app/src/config  
+    docker cp pages/i18n memory-leak-test:/app/pages/i18n
     
     echo "🧹 Cleaning up previous memory leak results..."
-    docker exec website-memory-leak-temp sh -c "rm -rf /app/src/test/memory-leak/results"
+    docker exec memory-leak-test rm -rf /app/src/test/memory-leak/results || true
     
     echo "🧠 Running Memlab memory leak tests..."
-    if docker exec website-memory-leak-temp sh -c "cd /app && node src/test/memory-leak/runMemlabTests.js"; then
+    if docker exec -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_NAME=no-aws-header-name -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_VALUE=no-aws-header-value -w /app memory-leak-test node src/test/memory-leak/runMemlabTests.js; then
         echo "✅ Memory leak tests PASSED"
     else
         echo "❌ Memory leak tests FAILED"
-        docker logs website-memory-leak-temp --tail 30
-        docker rm -f website-memory-leak-temp
+        docker logs memory-leak-test --tail 30
+        docker stop memory-leak-test || true
+        docker rm memory-leak-test || true
         exit 1
     fi
     
     echo "📂 Copying memory leak test results..."
-    mkdir -p memory-leak-results
-    docker cp website-memory-leak-temp:/app/src/test/memory-leak/results/. memory-leak-results/ 2>/dev/null || echo "No memory leak results to copy"
+    mkdir -p memory-leak-logs
+    docker cp memory-leak-test:/app/src/test/memory-leak/results/. memory-leak-logs/ 2>/dev/null || echo "No memory leak results to copy"
+    docker logs memory-leak-test > memory-leak-logs/test-execution.log 2>&1 || true
     
-    echo "🧹 Cleaning up memory leak test container..."
-    docker rm -f website-memory-leak-temp
-    
+    echo "🧹 Cleaning up memory leak container..."
+    docker stop memory-leak-test || true
+    docker rm memory-leak-test || true
     echo "🎉 Memory leak tests completed successfully in true DinD mode!"
+}
+
+# Run Load tests in DIND mode
+run_load_tests_dind() {
+    echo "⚡ Running K6 Load tests in true Docker-in-Docker mode"
+    echo "Setting up Docker network..."
+    setup_docker_network
+    configure_docker_compose
+    echo "Building production container image..."
+    docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE build
+    echo "🚀 Starting production services..."
+    docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE up -d
+    wait_for_prod_dind
+    
+    echo "Building K6 container image..."
+    docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE --profile load build k6
+    
+    echo "⚡ Running K6 load tests..."
+    if docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE --profile load run --rm k6 --summary-trend-stats="avg,min,med,max,p(95),p(99)" --out "web-dashboard=period=1s&export=/loadTests/results/homepage.html" /loadTests/homepage.js; then
+        echo "✅ Load tests PASSED"
+    else
+        echo "❌ Load tests FAILED"
+        exit 1
+    fi
+    
+    echo "📂 Copying load test results..."
+    mkdir -p src/test/load/reports
+    docker cp website-k6:/loadTests/results/. src/test/load/reports/ 2>/dev/null || echo "No load test results to copy"
+    echo "🎉 Load tests completed successfully in true DinD mode!"
 }
 
 # Run Lighthouse Desktop tests in DIND mode
@@ -795,27 +871,6 @@ run_lighthouse_mobile_dind() {
     echo "🎉 Lighthouse Mobile tests completed successfully in true DinD mode!"
 }
 
-# Run Load tests in DIND mode
-run_load_tests_dind() {
-    echo "⚡ Running Load tests in true Docker-in-Docker mode"
-    echo "Setting up Docker network..."
-    setup_docker_network
-    configure_docker_compose
-    echo "Building production container image..."
-    docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE build
-    echo "🚀 Starting production services..."
-    docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE up -d
-    wait_for_prod_dind
-    echo "⚡ Running K6 load tests..."
-    if docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE --profile load run --rm k6 k6 run --summary-trend-stats='avg,min,med,max,p(95),p(99)' --out 'web-dashboard=period=1s&export=/loadTests/results/homepage.html' homepage.js; then
-        echo "✅ Load tests PASSED"
-    else
-        echo "❌ Load tests FAILED"
-        exit 1
-    fi
-    echo "🎉 Load tests completed successfully in true DinD mode!"
-}
-
 # Show usage information
 show_usage() {
     echo "Usage: $0 [COMMAND]"
@@ -830,7 +885,7 @@ show_usage() {
     echo "  test-e2e               Run E2E tests in DIND mode"
     echo "  test-visual            Run Visual tests in DIND mode"
     echo "  test-memory-leak       Run Memory Leak tests in DIND mode"
-    echo "  test-load              Run Load tests in DIND mode"
+    echo "  test-load              Run K6 Load tests in DIND mode"
     echo "  lighthouse-desktop     Run Lighthouse Desktop audit in DIND mode"
     echo "  lighthouse-mobile      Run Lighthouse Mobile audit in DIND mode"
     echo "  lint-next              Run ESLint in DIND mode"
