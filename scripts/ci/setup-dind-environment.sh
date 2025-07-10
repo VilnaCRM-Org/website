@@ -890,8 +890,12 @@ EOF
     docker-compose -f docker-compose.test.yml -f docker-compose.lighthouse.yml up -d lighthouse
 
     echo "🧪 Setting up Chrome environment for stability..."
-    # Wait for lighthouse container to be ready
-    sleep 10
+    # Wait for lighthouse container to be ready and installation to complete
+    echo "⏳ Waiting for container setup to complete..."
+    sleep 15
+    
+    echo "🔧 Ensuring LHCI installation is complete..."
+    docker exec website-lighthouse sh -c "which lhci || (apk add --no-cache chromium chromium-chromedriver && npm install -g @lhci/cli@0.14.0)"
     
     echo "📂 Copying Lighthouse config files..."
     if docker cp lighthouserc.desktop.js website-lighthouse:/tmp/; then
@@ -901,18 +905,25 @@ EOF
         exit 1
     fi
 
-    echo "🔦 Running Lighthouse Desktop audit with extreme stability flags..."
-    if docker exec -w /app website-prod lhci autorun --config=lighthouserc.desktop.js --collect.url=http://localhost:3001 --collect.chromePath=/usr/bin/chromium-browser --collect.chromeFlags="--no-sandbox --disable-dev-shm-usage --disable-extensions --disable-gpu --headless --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-features=VizDisplayCompositor,AudioServiceOutOfProcess,VizServiceDisplay,TranslateUI,BlinkGenPropertyTrees,WebRtcHideLocalIpsWithMdns,Translate,AcceptCHFrame,MediaRouter,DialMediaRouteProvider,CastMediaRouteProvider,VizServiceDisplay,VizDisplayCompositor,AudioServiceOutOfProcess,AudioServiceSandbox,ExperimentalProductivityFeatures,LazyFrameLoading,GlobalMediaControls,DestroyProfileOnBrowserClose,MediaRoute,DialMediaRouteProvider,CastMediaRouteProvider,ImprovedCookieControls,LazyFrameVisibleLoadTimeMetrics,LazyImageLoading,LazyImageLoadingForIframes,LazyFrameLoading --disable-background-networking --disable-default-apps --disable-sync --disable-translate --hide-scrollbars --metrics-recording-only --mute-audio --no-first-run --safebrowsing-disable-auto-update --disable-ipc-flooding-protection --memory-pressure-off --max_old_space_size=128 --disable-software-rasterizer --disable-background-media-strategy --disable-renderer-accessibility --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-default-component-extension --disable-breakpad --disable-component-update --single-process --disable-web-security --no-zygote --disable-accelerated-2d-canvas --disable-accelerated-jpeg-decoding --disable-accelerated-mjpeg-decode --disable-accelerated-video-decode --disable-accelerated-video-encode --disable-app-list-dismiss-on-blur --disable-domain-reliability --disable-component-cloud-policy --disable-hang-monitor --disable-popup-blocking --disable-prompt-on-repost --force-color-profile=srgb --no-default-browser-check --password-store=basic --use-mock-keychain --disable-crash-reporter --disable-logging --disable-log-file --disable-system-font-check --disable-v8-idle-tasks --disable-threaded-animation --disable-threaded-scrolling --disable-checker-imaging --disable-new-content-rendering-timeout --disable-partial-raster --disable-image-animation-resync --disable-webgl --disable-webgl2 --disable-3d-apis --disable-speech-api --disable-file-system --disable-presentation-api --disable-permissions-api --disable-new-video-renderer --disable-media-session-api --user-data-dir=/tmp/chrome-user-data --crash-dumps-dir=/tmp/chrome-crash-dumps --disable-crash-uploads --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-background-networking --disable-field-trial-config --disable-plugins --disable-plugins-discovery --disable-preconnect --disable-translate --disable-ipc-flooding-protection --js-flags=--max_old_space_size=128 --aggressive-cache-discard --memory-pressure-off --max-gum-fps=15 --disable-blink-features=AutomationControlled --disable-site-isolation-trials --disable-features=site-per-process"; then
+    echo "🔦 Running Lighthouse Desktop audit with simplified configuration..."
+    if docker exec -w /tmp website-lighthouse lhci autorun --config=lighthouserc.desktop.js --collect.url=http://website-prod:3001 --collect.chromePath=/usr/bin/chromium-browser; then
         echo "✅ Lighthouse Desktop tests PASSED"
+        
+        echo "📂 Copying lighthouse results from dedicated container..."
+        mkdir -p lhci-reports-desktop
+        docker cp website-lighthouse:/tmp/lhci-reports-desktop/. lhci-reports-desktop/ 2>/dev/null || echo "No lighthouse desktop results to copy"
     else
         echo "❌ Lighthouse Desktop tests FAILED"
-        docker logs website-prod --tail 30
+        docker logs website-lighthouse --tail 30
+        echo "📋 Chrome logs from lighthouse container:"
+        docker exec website-lighthouse ls -la /tmp/chrome-crash-dumps 2>/dev/null || echo "No crash dumps found"
         exit 1
     fi
 
-    echo "📂 Copying lighthouse results..."
-    mkdir -p lhci-reports-desktop
-    docker cp website-prod:/app/lhci-reports-desktop/. lhci-reports-desktop/ 2>/dev/null || echo "No lighthouse desktop results to copy"
+    echo "🧹 Cleaning up lighthouse container..."
+    docker stop website-lighthouse || true
+    docker rm website-lighthouse || true
+    
     echo "🎉 Lighthouse Desktop tests completed successfully in true DinD mode!"
 }
 
@@ -952,23 +963,85 @@ run_lighthouse_mobile_dind() {
         exit 1
     fi
 
-    echo "🧪 Setting up Chrome environment for stability..."
-    # Create tmpfs for Chrome's temp files to avoid disk I/O issues in DIND
-    docker exec website-prod sh -c "mkdir -p /tmp/chrome-user-data && chmod 777 /tmp/chrome-user-data"
-    docker exec website-prod sh -c "mkdir -p /tmp/chrome-crash-dumps && chmod 777 /tmp/chrome-crash-dumps"
+    echo "🧪 Creating Docker Compose override for Lighthouse Mobile testing..."
+    cat > docker-compose.lighthouse.yml << 'EOF'
+version: '3.8'
 
-    echo "📱 Running Lighthouse Mobile audit with extreme stability flags..."
-    if docker exec -w /app website-prod lhci autorun --config=lighthouserc.mobile.js --collect.url=http://localhost:3001 --collect.chromePath=/usr/bin/chromium-browser --collect.chromeFlags="--no-sandbox --disable-dev-shm-usage --disable-extensions --disable-gpu --headless --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-features=VizDisplayCompositor,AudioServiceOutOfProcess,VizServiceDisplay,TranslateUI,BlinkGenPropertyTrees,WebRtcHideLocalIpsWithMdns,Translate,AcceptCHFrame,MediaRouter,DialMediaRouteProvider,CastMediaRouteProvider,VizServiceDisplay,VizDisplayCompositor,AudioServiceOutOfProcess,AudioServiceSandbox,ExperimentalProductivityFeatures,LazyFrameLoading,GlobalMediaControls,DestroyProfileOnBrowserClose,MediaRoute,DialMediaRouteProvider,CastMediaRouteProvider,ImprovedCookieControls,LazyFrameVisibleLoadTimeMetrics,LazyImageLoading,LazyImageLoadingForIframes,LazyFrameLoading --disable-background-networking --disable-default-apps --disable-sync --disable-translate --hide-scrollbars --metrics-recording-only --mute-audio --no-first-run --safebrowsing-disable-auto-update --disable-ipc-flooding-protection --memory-pressure-off --max_old_space_size=128 --disable-software-rasterizer --disable-background-media-strategy --disable-renderer-accessibility --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-default-component-extension --disable-breakpad --disable-component-update --single-process --disable-web-security --no-zygote --disable-accelerated-2d-canvas --disable-accelerated-jpeg-decoding --disable-accelerated-mjpeg-decode --disable-accelerated-video-decode --disable-accelerated-video-encode --disable-app-list-dismiss-on-blur --disable-domain-reliability --disable-component-cloud-policy --disable-hang-monitor --disable-popup-blocking --disable-prompt-on-repost --force-color-profile=srgb --no-default-browser-check --password-store=basic --use-mock-keychain --disable-crash-reporter --disable-logging --disable-log-file --disable-system-font-check --disable-v8-idle-tasks --disable-threaded-animation --disable-threaded-scrolling --disable-checker-imaging --disable-new-content-rendering-timeout --disable-partial-raster --disable-image-animation-resync --disable-webgl --disable-webgl2 --disable-3d-apis --disable-speech-api --disable-file-system --disable-presentation-api --disable-permissions-api --disable-new-video-renderer --disable-media-session-api --user-data-dir=/tmp/chrome-user-data --crash-dumps-dir=/tmp/chrome-crash-dumps --disable-crash-uploads --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-background-networking --disable-field-trial-config --disable-plugins --disable-plugins-discovery --disable-preconnect --disable-translate --disable-ipc-flooding-protection --js-flags=--max_old_space_size=128 --aggressive-cache-discard --memory-pressure-off --max-gum-fps=15 --disable-blink-features=AutomationControlled --disable-site-isolation-trials --disable-features=site-per-process"; then
-        echo "✅ Lighthouse Mobile tests PASSED"
+services:
+  lighthouse:
+    image: node:23.11.1-alpine3.21
+    container_name: website-lighthouse-mobile
+    networks:
+      - website-network
+    volumes:
+      - /tmp:/tmp
+      - /dev/shm:/dev/shm
+    environment:
+      - NODE_ENV=production
+      - LIGHTHOUSE_NO_SANDBOX=true
+      - CHROME_PATH=/usr/bin/chromium-browser
+    depends_on:
+      - prod
+    command: |
+      sh -c "
+        apk add --no-cache chromium chromium-chromedriver &&
+        npm install -g @lhci/cli@0.14.0 &&
+        mkdir -p /tmp/chrome-user-data /tmp/chrome-crash-dumps &&
+        chmod 777 /tmp/chrome-user-data /tmp/chrome-crash-dumps &&
+        tail -f /dev/null
+      "
+    shm_size: '2gb'
+    tmpfs:
+      - /tmp/chrome-user-data:rw,noexec,nosuid,size=100m
+      - /tmp/chrome-crash-dumps:rw,noexec,nosuid,size=100m
+    security_opt:
+      - seccomp:unconfined
+    cap_add:
+      - SYS_ADMIN
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+EOF
+
+    echo "🚀 Starting Lighthouse Mobile service with override..."
+    docker-compose -f docker-compose.test.yml -f docker-compose.lighthouse.yml up -d lighthouse
+
+    echo "🧪 Setting up Chrome environment for stability..."
+    # Wait for lighthouse container to be ready and installation to complete
+    echo "⏳ Waiting for container setup to complete..."
+    sleep 15
+    
+    echo "🔧 Ensuring LHCI installation is complete..."
+    docker exec website-lighthouse-mobile sh -c "which lhci || (apk add --no-cache chromium chromium-chromedriver && npm install -g @lhci/cli@0.14.0)"
+    
+    echo "📂 Copying Lighthouse Mobile config files..."
+    if docker cp lighthouserc.mobile.js website-lighthouse-mobile:/tmp/; then
+        echo "✅ Lighthouse Mobile config files copied successfully"
     else
-        echo "❌ Lighthouse Mobile tests FAILED"
-        docker logs website-prod --tail 30
+        echo "❌ Failed to copy Lighthouse Mobile config files"
         exit 1
     fi
 
-    echo "📂 Copying lighthouse results..."
-    mkdir -p lhci-reports-mobile
-    docker cp website-prod:/app/lhci-reports-mobile/. lhci-reports-mobile/ 2>/dev/null || echo "No lighthouse mobile results to copy"
+    echo "📱 Running Lighthouse Mobile audit with simplified configuration..."
+    if docker exec -w /tmp website-lighthouse-mobile lhci autorun --config=lighthouserc.mobile.js --collect.url=http://website-prod:3001 --collect.chromePath=/usr/bin/chromium-browser; then
+        echo "✅ Lighthouse Mobile tests PASSED"
+        
+        echo "📂 Copying lighthouse mobile results from dedicated container..."
+        mkdir -p lhci-reports-mobile
+        docker cp website-lighthouse-mobile:/tmp/lhci-reports-mobile/. lhci-reports-mobile/ 2>/dev/null || echo "No lighthouse mobile results to copy"
+    else
+        echo "❌ Lighthouse Mobile tests FAILED"
+        docker logs website-lighthouse-mobile --tail 30
+        echo "📋 Chrome logs from lighthouse mobile container:"
+        docker exec website-lighthouse-mobile ls -la /tmp/chrome-crash-dumps 2>/dev/null || echo "No crash dumps found"
+        exit 1
+    fi
+
+    echo "🧹 Cleaning up lighthouse mobile container..."
+    docker stop website-lighthouse-mobile || true
+    docker rm website-lighthouse-mobile || true
+    
     echo "🎉 Lighthouse Mobile tests completed successfully in true DinD mode!"
 }
 
