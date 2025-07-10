@@ -517,6 +517,10 @@ run_e2e_tests_dind() {
     docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE up -d
     wait_for_prod_dind
     
+    echo "🧹 Cleaning up any existing E2E containers..."
+    docker stop playwright-e2e 2>/dev/null || true
+    docker rm playwright-e2e 2>/dev/null || true
+    
     echo "Building E2E container image..."
     docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE build playwright
     
@@ -609,6 +613,10 @@ run_visual_tests_dind() {
     echo "🚀 Starting production services..."
     docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE up -d
     wait_for_prod_dind
+    
+    echo "🧹 Cleaning up any existing Visual containers..."
+    docker stop playwright-visual 2>/dev/null || true
+    docker rm playwright-visual 2>/dev/null || true
     
     echo "Building Visual container image..."
     docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE build playwright
@@ -703,6 +711,10 @@ run_memory_leak_tests_dind() {
     docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE up -d
     wait_for_prod_dind
     
+    echo "🧹 Cleaning up any existing Memory Leak containers..."
+    docker stop memory-leak-test 2>/dev/null || true
+    docker rm memory-leak-test 2>/dev/null || true
+    
     echo "Building memory leak container image..."
     docker-compose -f docker-compose.memory-leak.yml build
     
@@ -755,20 +767,45 @@ run_load_tests_dind() {
     docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE up -d
     wait_for_prod_dind
     
+    echo "🧹 Cleaning up any existing K6 containers..."
+    docker stop website-k6 2>/dev/null || true
+    docker rm website-k6 2>/dev/null || true
+    
     echo "Building K6 container image..."
     docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE --profile load build k6
     
+    echo "⚡ Running K6 Load container..."
+    docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE --profile load run -d --name website-k6 k6 sleep infinity
+    
+    echo "📂 Copying load test files into K6 container..."
+    docker exec website-k6 mkdir -p /loadTests/utils
+    docker cp src/test/load/homepage.js website-k6:/loadTests/homepage.js
+    docker cp src/test/load/config.json.dist website-k6:/loadTests/config.json.dist
+    docker cp src/test/load/utils/. website-k6:/loadTests/utils/
+    echo "✅ Load test files copied successfully"
+    
+    echo "🧹 Cleaning up previous load test results..."
+    docker exec website-k6 rm -rf /loadTests/results || true
+    docker exec website-k6 mkdir -p /loadTests/results
+    
     echo "⚡ Running K6 load tests..."
-    if docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE --profile load run --rm k6 run --summary-trend-stats="avg,min,med,max,p(95),p(99)" --out "web-dashboard=period=1s&export=/loadTests/results/homepage.html" /loadTests/homepage.js; then
+    if docker exec -w /loadTests website-k6 k6 run --summary-trend-stats="avg,min,med,max,p(95),p(99)" --out "web-dashboard=period=1s&export=/loadTests/results/homepage.html" /loadTests/homepage.js; then
         echo "✅ Load tests PASSED"
     else
         echo "❌ Load tests FAILED"
+        docker logs website-k6 --tail 30
+        docker stop website-k6 || true
+        docker rm website-k6 || true
         exit 1
     fi
     
     echo "📂 Copying load test results..."
     mkdir -p src/test/load/reports
     docker cp website-k6:/loadTests/results/. src/test/load/reports/ 2>/dev/null || echo "No load test results to copy"
+    
+    echo "🧹 Cleaning up K6 container..."
+    docker stop website-k6 || true
+    docker rm website-k6 || true
     echo "🎉 Load tests completed successfully in true DinD mode!"
 }
 
@@ -809,7 +846,7 @@ run_lighthouse_desktop_dind() {
     fi
 
     echo "🔦 Running Lighthouse Desktop audit..."
-    if docker exec -w /app website-prod lhci autorun --config=lighthouserc.desktop.js --collect.url=http://localhost:3001 --collect.chromePath=/usr/bin/chromium-browser --collect.chromeFlags="--no-sandbox --disable-dev-shm-usage --disable-extensions --disable-gpu --headless --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-features=VizDisplayCompositor,AudioServiceOutOfProcess,VizServiceDisplay,TranslateUI,BlinkGenPropertyTrees --disable-background-networking --disable-default-apps --disable-sync --disable-translate --hide-scrollbars --metrics-recording-only --mute-audio --no-first-run --safebrowsing-disable-auto-update --disable-ipc-flooding-protection --memory-pressure-off --max_old_space_size=512 --disable-software-rasterizer --disable-background-media-strategy --disable-renderer-accessibility --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-default-component-extension --disable-breakpad --disable-component-update --single-process --disable-web-security --no-zygote --disable-accelerated-2d-canvas --disable-accelerated-jpeg-decoding --disable-accelerated-mjpeg-decode --disable-accelerated-video-decode --disable-accelerated-video-encode --disable-app-list-dismiss-on-blur"; then
+    if docker exec -w /app website-prod lhci autorun --config=lighthouserc.desktop.js --collect.url=http://localhost:3001 --collect.chromePath=/usr/bin/chromium-browser --collect.chromeFlags="--no-sandbox --disable-dev-shm-usage --disable-extensions --disable-gpu --headless --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-features=VizDisplayCompositor,AudioServiceOutOfProcess,VizServiceDisplay,TranslateUI,BlinkGenPropertyTrees,WebRtcHideLocalIpsWithMdns,Translate,AcceptCHFrame,MediaRouter,DialMediaRouteProvider,CastMediaRouteProvider --disable-background-networking --disable-default-apps --disable-sync --disable-translate --hide-scrollbars --metrics-recording-only --mute-audio --no-first-run --safebrowsing-disable-auto-update --disable-ipc-flooding-protection --memory-pressure-off --max_old_space_size=256 --disable-software-rasterizer --disable-background-media-strategy --disable-renderer-accessibility --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-default-component-extension --disable-breakpad --disable-component-update --single-process --disable-web-security --no-zygote --disable-accelerated-2d-canvas --disable-accelerated-jpeg-decoding --disable-accelerated-mjpeg-decode --disable-accelerated-video-decode --disable-accelerated-video-encode --disable-app-list-dismiss-on-blur --disable-domain-reliability --disable-background-networking --disable-component-cloud-policy --disable-component-update --disable-default-apps --disable-domain-reliability --disable-extensions --disable-features=TranslateUI --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --disable-sync --disable-translate --force-color-profile=srgb --metrics-recording-only --no-default-browser-check --no-first-run --password-store=basic --use-mock-keychain"; then
         echo "✅ Lighthouse Desktop tests PASSED"
     else
         echo "❌ Lighthouse Desktop tests FAILED"
@@ -860,7 +897,7 @@ run_lighthouse_mobile_dind() {
     fi
 
     echo "📱 Running Lighthouse Mobile audit..."
-    if docker exec -w /app website-prod lhci autorun --config=lighthouserc.mobile.js --collect.url=http://localhost:3001 --collect.chromePath=/usr/bin/chromium-browser --collect.chromeFlags="--no-sandbox --disable-dev-shm-usage --disable-extensions --disable-gpu --headless --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-features=VizDisplayCompositor,AudioServiceOutOfProcess,VizServiceDisplay,TranslateUI,BlinkGenPropertyTrees --disable-background-networking --disable-default-apps --disable-sync --disable-translate --hide-scrollbars --metrics-recording-only --mute-audio --no-first-run --safebrowsing-disable-auto-update --disable-ipc-flooding-protection --memory-pressure-off --max_old_space_size=512 --disable-software-rasterizer --disable-background-media-strategy --disable-renderer-accessibility --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-default-component-extension --disable-breakpad --disable-component-update --single-process --disable-web-security --no-zygote --disable-accelerated-2d-canvas --disable-accelerated-jpeg-decoding --disable-accelerated-mjpeg-decode --disable-accelerated-video-decode --disable-accelerated-video-encode --disable-app-list-dismiss-on-blur"; then
+    if docker exec -w /app website-prod lhci autorun --config=lighthouserc.mobile.js --collect.url=http://localhost:3001 --collect.chromePath=/usr/bin/chromium-browser --collect.chromeFlags="--no-sandbox --disable-dev-shm-usage --disable-extensions --disable-gpu --headless --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-features=VizDisplayCompositor,AudioServiceOutOfProcess,VizServiceDisplay,TranslateUI,BlinkGenPropertyTrees,WebRtcHideLocalIpsWithMdns,Translate,AcceptCHFrame,MediaRouter,DialMediaRouteProvider,CastMediaRouteProvider --disable-background-networking --disable-default-apps --disable-sync --disable-translate --hide-scrollbars --metrics-recording-only --mute-audio --no-first-run --safebrowsing-disable-auto-update --disable-ipc-flooding-protection --memory-pressure-off --max_old_space_size=256 --disable-software-rasterizer --disable-background-media-strategy --disable-renderer-accessibility --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-default-component-extension --disable-breakpad --disable-component-update --single-process --disable-web-security --no-zygote --disable-accelerated-2d-canvas --disable-accelerated-jpeg-decoding --disable-accelerated-mjpeg-decode --disable-accelerated-video-decode --disable-accelerated-video-encode --disable-app-list-dismiss-on-blur --disable-domain-reliability --disable-background-networking --disable-component-cloud-policy --disable-component-update --disable-default-apps --disable-domain-reliability --disable-extensions --disable-features=TranslateUI --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --disable-sync --disable-translate --force-color-profile=srgb --metrics-recording-only --no-default-browser-check --no-first-run --password-store=basic --use-mock-keychain"; then
         echo "✅ Lighthouse Mobile tests PASSED"
     else
         echo "❌ Lighthouse Mobile tests FAILED"
