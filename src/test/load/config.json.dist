@@ -46,6 +46,44 @@
           "fall": 10
         }
       }
+    },
+    "swagger": {
+      "setupTimeoutInMinutes": 15,
+      "smoke": {
+        "threshold": 20000,
+        "rps": 3,
+        "vus": 3,
+        "duration": 15
+      },
+      "average": {
+        "threshold": 8000,
+        "rps": 10,
+        "vus": 10,
+        "duration": {
+          "rise": 5,
+          "plateau": 45,
+          "fall": 5
+        }
+      },
+      "stress": {
+        "threshold": 25000,
+        "rps": 50,
+        "vus": 50,
+        "duration": {
+          "rise": 5,
+          "plateau": 45,
+          "fall": 5
+        }
+      },
+      "spike": {
+        "threshold": 60000,
+        "rps": 100,
+        "vus": 100,
+        "duration": {
+          "rise": 30,
+          "fall": 15
+        }
+      }
     }
   }
 }

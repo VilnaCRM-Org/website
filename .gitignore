@@ -66,3 +66,5 @@ storybook-static/
 
 app.log
 *.log
+
+/public/swagger-schema.*

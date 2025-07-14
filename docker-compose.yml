@@ -3,7 +3,7 @@ services:
     build:
       context: .
       target: base
-    command: pnpm exec next dev
+    command: sh -c "node ./scripts/fetchSwaggerSchema.mjs && node ./scripts/patchSwaggerServer.mjs && pnpm exec next dev"
     restart: unless-stopped
     volumes:
       - .:/app
@@ -15,6 +15,10 @@ services:
       - WATCHPACK_POLLING=true
     healthcheck:
       test: ["CMD", "curl", "-f", "http://${WEBSITE_DOMAIN}:${DEV_PORT}"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
 
 networks:
   website-network:
