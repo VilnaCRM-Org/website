@@ -3,15 +3,18 @@ updates:
   - package-ecosystem: 'npm'
     directory: '/'
     schedule:
-      interval: 'weekly'
-    reviewers:
-      - 'Kravalg'
+      interval: 'monthly'
+      day: 'monday'
+      time: '09:00'
+      timezone: 'UTC'
+    open-pull-requests-limit: 2
     groups:
-      all-deps:
+      js-all-updates:
         patterns:
           - '*'
+    labels:
+      - 'dependencies'
+      - 'automated'
     commit-message:
-      prefix: 'feat'
-      prefix-development: 'chore'
+      prefix: 'deps'
       include: 'scope'
-      

@@ -13,12 +13,13 @@ describe('UiCardItem Component', () => {
     const servicesText: string = 'services';
 
     it('renders correctly with large card', () => {
-      const { getAllByText, getByRole } = render(<CardContent item={cardItem} isSmallCard={false} />);
+      const { getAllByText, getByRole } = render(
+        <CardContent item={cardItem} isSmallCard={false} />
+      );
 
       const titleElement: HTMLElement = getByRole(cardTitleRole);
       const textElements: HTMLElement[] = getAllByText(cardItem.text);
       const textElement: HTMLElement | undefined = textElements.find(el => el.tagName === 'P');
-
 
       expect(titleElement).toBeInTheDocument();
       expect(titleElement).toHaveTextContent(cardItem.title);
