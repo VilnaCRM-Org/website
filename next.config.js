@@ -7,6 +7,11 @@ const dotenvExpand = require('dotenv-expand');
 const env = require('dotenv').config();
 dotenvExpand.expand(env);
 
+require('dotenv/config');
+const dotenvExpand = require('dotenv-expand');
+const env = require('dotenv').config();
+dotenvExpand.expand(env);
+
 /** @type {import('next').NextConfig} */
 
 const nextConfig = withExportImages({
@@ -24,35 +29,14 @@ const nextConfig = withExportImages({
   const localizationGenerator = new LocalizationGenerator();
   localizationGenerator.generateLocalizationFile();
 
-
-  config.module.rules = config.module.rules.filter(
-    rule => !(rule.test && rule.test.toString().includes('svg'))
-  );
-
-
-  config.module.rules.push({
-    test: /\.svg$/i,
-    issuer: /\.[jt]sx?$/,
-    oneOf: [
-      {
-        resourceQuery: /url/, 
-        type: 'asset/resource',
-      },
-      {
-        use: ['@svgr/webpack'], 
-      },
-    ],
-  });
-
-  config.optimization.splitChunks = {
-    chunks: 'all',
-    maxSize: 244 * 1024,
-  };
+    config.optimization.splitChunks = {
+      chunks: 'all',
+      maxSize: 244 * 1024,
+    };
 
   return config;
 }
 
 });
-module.exports = process.env.ANALYZE === 'true' 
-  ? withBundleAnalyzer(nextConfig) 
-  : nextConfig;
+
+module.exports = process.env.ANALYZE === 'true' ? withBundleAnalyzer(nextConfig) : nextConfig;

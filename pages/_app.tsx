@@ -4,7 +4,7 @@ import { GoogleAnalytics } from '@next/third-parties/google';
 import * as Sentry from '@sentry/react';
 import React, { useEffect } from 'react';
 
-import  theme  from '@/components/AppTheme';
+import { theme } from '@/components/AppTheme';
 import Layout from '@/components/Layout';
 import { golos } from '@/config/Fonts/golos';
 
@@ -40,6 +40,9 @@ function MyApp({ Component }: { Component: React.ComponentType }): React.ReactEl
     <ThemeProvider theme={theme}>
       <ApolloProvider client={client}>
         <main className={golos.className}>
+          <Layout>
+            <Component />
+          </Layout>
           <Layout>
             <Component />
           </Layout>

@@ -11,27 +11,18 @@ import styles from './styles';
 function Swagger(): React.ReactElement {
   const { i18n } = useTranslation();
 
-
   useEffect(() => {
     i18n.changeLanguage('en');
   }, [i18n]);
 
-return (
-  <div>
+  return (
     <Box sx={styles.wrapper}>
       <Container maxWidth="xl">
         <Navigation />
         <ApiDocumentation />
       </Container>
     </Box>
-    <Box sx={styles.wrapper}>
-      <Container maxWidth="xl">
-        <Navigation />
-        <ApiDocumentation />
-      </Container>
-    </Box>
-  </div>
-);
+  );
 }
 
 export default Swagger;
