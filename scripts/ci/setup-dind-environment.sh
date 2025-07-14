@@ -100,14 +100,11 @@ setup_docker_network() {
         echo "ℹ️  Network $NETWORK_NAME already exists"
     else
         # Try to create the network
-        if docker network create "$NETWORK_NAME"; then
-            echo "✅ Network $NETWORK_NAME created successfully"
-        else
+        if ! docker network create "$NETWORK_NAME"; then
             echo "❌ Failed to create network $NETWORK_NAME"
-            echo "Error details:"
-            docker network create "$NETWORK_NAME" 2>&1 || true
             exit 1
         fi
+        echo "✅ Network $NETWORK_NAME created successfully"
     fi
     
     # Verify network exists and is accessible
@@ -744,7 +741,7 @@ run_memory_leak_tests_dind() {
         fi
         echo "Attempt $i: Container not running yet, waiting..."
         sleep 2
-        if [ $i -eq 30 ]; then
+        if [ "$i" -eq 30 ]; then
             echo "❌ Container failed to start within 60 seconds"
             docker ps -a --filter "name=$PROD_CONTAINER_NAME"
             exit 1
@@ -764,7 +761,7 @@ run_memory_leak_tests_dind() {
         docker exec "$PROD_CONTAINER_NAME" netstat -tulpn 2>/dev/null | grep :"$NEXT_PUBLIC_PROD_PORT" || echo "Port $NEXT_PUBLIC_PROD_PORT not bound"
         fi
         sleep 3
-        if [ $i -eq 60 ]; then
+        if [ "$i" -eq 60 ]; then
             echo "❌ Service failed to respond within 180 seconds"
                     echo "Final container logs:"
         docker logs "$PROD_CONTAINER_NAME" --tail 50
@@ -836,7 +833,7 @@ run_load_tests_dind() {
     docker-compose "$COMMON_HEALTHCHECKS_FILE" "$DOCKER_COMPOSE_TEST_FILE" --profile load build k6
     
     echo "⚡ Running K6 Load container..."
-    docker-compose "$COMMON_HEALTHCHECKS_FILE" "$DOCKER_COMPOSE_TEST_FILE" --profile load run -d --name website-k6 --entrypoint=sh k6 -c "sleep infinity"
+    docker-compose "$COMMON_HEALTHCHECKS_FILE" "$DOCKER_COMPOSE_TEST_FILE" --profile load run -d --name website-k6 --entrypoint sh -- k6 -c "sleep infinity"
     
     echo "📂 Copying load test files into K6 container..."
     docker exec website-k6 mkdir -p /loadTests/utils
@@ -875,6 +872,7 @@ run_lighthouse_desktop_dind() {
     echo "🔦 Running Lighthouse Desktop tests using robust container approach"
     echo "Setting up Docker network..."
     setup_docker_network
+    configure_docker_compose
     
     # Set DIND-specific environment variables
     export WEBSITE_DOMAIN="localhost"
@@ -883,11 +881,11 @@ run_lighthouse_desktop_dind() {
     export SHM_SIZE="2g"
     
     echo "🚀 Starting production services with DIND configuration..."
-    docker compose -f docker-compose.test.yml up -d --build prod
+    docker-compose -f docker-compose.test.yml up -d --build prod
     echo "⏳ Waiting for production service to be ready..."
     timeout=60
     while [ $timeout -gt 0 ]; do
-      if docker compose -f docker-compose.test.yml ps prod | grep -q "Up"; then
+      if docker-compose -f docker-compose.test.yml ps prod | grep -q "Up"; then
         echo "✅ Production service is running"
         break
       fi
@@ -897,7 +895,7 @@ run_lighthouse_desktop_dind() {
     done
     if [ $timeout -le 0 ]; then
       echo "❌ Production service failed to start"
-      docker compose -f docker-compose.test.yml logs prod
+      docker-compose -f docker-compose.test.yml logs prod
       exit 1
     fi
     
@@ -915,7 +913,7 @@ run_lighthouse_desktop_dind() {
     done
     if [ $timeout -le 0 ]; then
       echo "❌ Production service failed to become healthy"
-      docker compose -f docker-compose.test.yml logs prod
+      docker-compose -f docker-compose.test.yml logs prod
       exit 1
     fi
     
@@ -945,7 +943,7 @@ run_lighthouse_desktop_dind() {
     docker cp website-prod:/app/lhci-reports-desktop/. lhci-reports-desktop/ 2>/dev/null || echo "No lighthouse results to copy"
     
     echo "🧹 Cleaning up Docker services..."
-    docker compose -f docker-compose.test.yml down
+    docker-compose -f docker-compose.test.yml down
     
     echo "✅ Lighthouse desktop tests completed"
 }
@@ -955,6 +953,7 @@ run_lighthouse_mobile_dind() {
     echo "📱 Running Lighthouse Mobile tests using robust container approach"
     echo "Setting up Docker network..."
     setup_docker_network
+    configure_docker_compose
     
     # Set DIND-specific environment variables
     export WEBSITE_DOMAIN="localhost"
@@ -963,11 +962,11 @@ run_lighthouse_mobile_dind() {
     export SHM_SIZE="2g"
     
     echo "🚀 Starting production services with DIND configuration..."
-    docker compose -f docker-compose.test.yml up -d --build prod
+    docker-compose -f docker-compose.test.yml up -d --build prod
     echo "⏳ Waiting for production service to be ready..."
     timeout=60
     while [ $timeout -gt 0 ]; do
-      if docker compose -f docker-compose.test.yml ps prod | grep -q "Up"; then
+      if docker-compose -f docker-compose.test.yml ps prod | grep -q "Up"; then
         echo "✅ Production service is running"
         break
       fi
@@ -977,7 +976,7 @@ run_lighthouse_mobile_dind() {
     done
     if [ $timeout -le 0 ]; then
       echo "❌ Production service failed to start"
-      docker compose -f docker-compose.test.yml logs prod
+      docker-compose -f docker-compose.test.yml logs prod
       exit 1
     fi
     
@@ -995,7 +994,7 @@ run_lighthouse_mobile_dind() {
     done
     if [ $timeout -le 0 ]; then
       echo "❌ Production service failed to become healthy"
-      docker compose -f docker-compose.test.yml logs prod
+      docker-compose -f docker-compose.test.yml logs prod
       exit 1
     fi
     
@@ -1025,7 +1024,7 @@ run_lighthouse_mobile_dind() {
     docker cp website-prod:/app/lhci-reports-mobile/. lhci-reports-mobile/ 2>/dev/null || echo "No lighthouse results to copy"
     
     echo "🧹 Cleaning up Docker services..."
-    docker compose -f docker-compose.test.yml down
+    docker-compose -f docker-compose.test.yml down
     
     echo "✅ Lighthouse mobile tests completed"
 }
