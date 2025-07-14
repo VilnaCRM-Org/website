@@ -24,6 +24,18 @@ COMMON_HEALTHCHECKS_FILE=${COMMON_HEALTHCHECKS_FILE:-"-f common-healthchecks.yml
 echo "🐳 DIND Environment Setup Script"
 echo "================================"
 
+# Cleanup function for predictable teardown
+cleanup() {
+    echo "🧹 Cleaning up Docker resources..."
+    docker rm -f website-* 2>/dev/null || true
+    docker network rm "$NETWORK_NAME" 2>/dev/null || true
+    rm -f docker-compose.lighthouse.yml 2>/dev/null || true
+    echo "✅ Cleanup completed"
+}
+
+# Register cleanup trap for predictable teardown
+trap cleanup EXIT
+
 # Function to safely add container name to a service
 add_container_name() {
     local file=$1
@@ -82,8 +94,29 @@ configure_docker_compose() {
 # Setup Docker network for DIND
 setup_docker_network() {
     echo "📡 Setting up Docker network..."
-    docker network create $NETWORK_NAME 2>/dev/null || echo "Network $NETWORK_NAME already exists"
-    echo "✅ Docker network configured"
+    
+    # Check if network already exists
+    if docker network ls --format "{{.Name}}" | grep -q "^${NETWORK_NAME}$"; then
+        echo "ℹ️  Network $NETWORK_NAME already exists"
+    else
+        # Try to create the network
+        if docker network create "$NETWORK_NAME"; then
+            echo "✅ Network $NETWORK_NAME created successfully"
+        else
+            echo "❌ Failed to create network $NETWORK_NAME"
+            echo "Error details:"
+            docker network create "$NETWORK_NAME" 2>&1 || true
+            exit 1
+        fi
+    fi
+    
+    # Verify network exists and is accessible
+    if docker network ls --format "{{.Name}}" | grep -q "^${NETWORK_NAME}$"; then
+        echo "✅ Docker network $NETWORK_NAME is available"
+    else
+        echo "❌ Network $NETWORK_NAME is not available after creation attempt"
+        exit 1
+    fi
 }
 
 # Wait for dev service in DIND mode
@@ -97,7 +130,7 @@ wait_for_dev_dind() {
         fi
         echo "Attempt $i: Container not running yet, waiting..."
         sleep 2
-        if [ $i -eq 30 ]; then
+        if [ "$i" -eq 30 ]; then
             echo "❌ Container failed to start within 60 seconds"
             docker ps -a --filter "name=website-dev"
             exit 1
@@ -114,10 +147,10 @@ wait_for_dev_dind() {
         if [ $((i % 10)) -eq 0 ]; then
             echo "Debug info at attempt $i:"
             docker exec website-dev ps aux 2>/dev/null || echo "Cannot access container processes"
-            docker exec website-dev netstat -tulpn 2>/dev/null | grep :$DEV_PORT || echo "Port $DEV_PORT not bound"
+            docker exec website-dev netstat -tulpn 2>/dev/null | grep :"$DEV_PORT" || echo "Port $DEV_PORT not bound"
         fi
         sleep 3
-        if [ $i -eq 60 ]; then
+        if [ "$i" -eq 60 ]; then
             echo "❌ Dev service failed to respond within 180 seconds"
             echo "Final container logs:"
             docker logs website-dev --tail 50
@@ -131,7 +164,7 @@ start_dev_dind() {
     echo "🐳 Starting development environment in DIND mode..."
     setup_docker_network
     configure_docker_compose
-    docker-compose $DOCKER_COMPOSE_DEV_FILE up -d dev
+    docker-compose "$DOCKER_COMPOSE_DEV_FILE" up -d dev
     wait_for_dev_dind
     echo "🎉 Development environment started successfully!"
 }
@@ -162,7 +195,7 @@ test_container_connectivity() {
     # Test HTTP connectivity
     echo "🔍 Testing HTTP connectivity..."
     docker exec website-playwright-1 curl -f http://website-prod:3001 >/dev/null 2>&1 || echo "⚠️  HTTP connectivity failed for website-prod:3001"
-    docker exec website-playwright-1 curl -f http://$PROD_IP:3001 >/dev/null 2>&1 || echo "⚠️  HTTP connectivity failed for $PROD_IP:3001"
+    docker exec website-playwright-1 curl -f "http://$PROD_IP:3001" >/dev/null 2>&1 || echo "⚠️  HTTP connectivity failed for $PROD_IP:3001"
     docker exec website-playwright-1 curl -f http://apollo:4000/graphql >/dev/null 2>&1 || echo "⚠️  HTTP connectivity failed for apollo:4000/graphql"
     
     echo "✅ Container connectivity testing completed"
@@ -179,7 +212,7 @@ wait_for_prod_dind() {
         fi
         echo "Attempt $i: Container not running yet, waiting..."
         sleep 2
-        if [ $i -eq 30 ]; then
+        if [ "$i" -eq 30 ]; then
             echo "❌ Container failed to start within 60 seconds"
             docker ps -a --filter "name=$PROD_CONTAINER_NAME"
             exit 1
@@ -188,21 +221,21 @@ wait_for_prod_dind() {
     
     echo "🔍 Testing $PROD_CONTAINER_NAME service connectivity on port $NEXT_PUBLIC_PROD_PORT..."
     for i in $(seq 1 60); do
-        if docker exec $PROD_CONTAINER_NAME sh -c "curl -f http://localhost:$NEXT_PUBLIC_PROD_PORT >/dev/null 2>&1"; then
+        if docker exec "$PROD_CONTAINER_NAME" sh -c "curl -f http://localhost:$NEXT_PUBLIC_PROD_PORT >/dev/null 2>&1"; then
             echo "✅ Service is responding on port $NEXT_PUBLIC_PROD_PORT!"
             break
         fi
         echo "Attempt $i: Service not ready, checking container status..."
         if [ $((i % 10)) -eq 0 ]; then
             echo "Debug info at attempt $i:"
-            docker exec $PROD_CONTAINER_NAME ps aux 2>/dev/null || echo "Cannot access container processes"
-            docker exec $PROD_CONTAINER_NAME netstat -tulpn 2>/dev/null | grep :$NEXT_PUBLIC_PROD_PORT || echo "Port $NEXT_PUBLIC_PROD_PORT not bound"
+            docker exec "$PROD_CONTAINER_NAME" ps aux 2>/dev/null || echo "Cannot access container processes"
+            docker exec "$PROD_CONTAINER_NAME" netstat -tulpn 2>/dev/null | grep :"$NEXT_PUBLIC_PROD_PORT" || echo "Port $NEXT_PUBLIC_PROD_PORT not bound"
         fi
         sleep 3
-        if [ $i -eq 60 ]; then
+        if [ "$i" -eq 60 ]; then
             echo "❌ Service failed to respond within 180 seconds"
             echo "Final container logs:"
-            docker logs $PROD_CONTAINER_NAME --tail 50
+            docker logs "$PROD_CONTAINER_NAME" --tail 50
             exit 1
         fi
     done
@@ -218,11 +251,60 @@ start_prod_dind() {
     setup_docker_network
     configure_docker_compose
     echo "Building production container image..."
-    docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE build
+    docker-compose "$COMMON_HEALTHCHECKS_FILE" "$DOCKER_COMPOSE_TEST_FILE" build
     echo "🚀 Starting production services..."
-    docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE up -d
+    docker-compose "$COMMON_HEALTHCHECKS_FILE" "$DOCKER_COMPOSE_TEST_FILE" up -d
     wait_for_prod_dind
     echo "🎉 Production environment started successfully!"
+}
+
+# Helper to run a command in a temp container with source copy and pnpm install
+run_in_temp_container() {
+    local image="$1"
+    local container_name="$2"
+    local run_cmd="$3"
+    local copy_src="${4:-.}"
+    local workdir="${5:-/app}"
+    local install_deps="${6:-1}"
+
+    echo "🧹 Cleaning up any existing $container_name container..."
+    docker rm -f "$container_name" 2>/dev/null || true
+    echo "🛠️ Starting $container_name from $image..."
+    docker run -d --name "$container_name" --network "$NETWORK_NAME" "$image" tail -f /dev/null
+
+    echo "📂 Copying source files into $container_name..."
+    if docker cp "$copy_src" "$container_name":"$workdir"/; then
+        echo "✅ Source files copied successfully"
+    else
+        echo "❌ Failed to copy source files"
+        docker rm -f "$container_name"
+        exit 1
+    fi
+
+    if [ "$install_deps" = "1" ]; then
+        echo "📦 Installing dependencies inside $container_name..."
+        if docker exec "$container_name" sh -c "cd $workdir && npm install -g pnpm && pnpm install --frozen-lockfile"; then
+            echo "✅ Dependencies installed successfully"
+        else
+            echo "❌ Failed to install dependencies"
+            docker logs "$container_name" --tail 20
+            docker rm -f "$container_name"
+            exit 1
+        fi
+    fi
+
+    echo "🚀 Running command in $container_name..."
+    if docker exec "$container_name" sh -c "cd $workdir && $run_cmd"; then
+        echo "✅ Command succeeded in $container_name"
+    else
+        echo "❌ Command failed in $container_name"
+        docker logs "$container_name" --tail 30
+        docker rm -f "$container_name"
+        exit 1
+    fi
+
+    echo "🧹 Cleaning up $container_name..."
+    docker rm -f "$container_name"
 }
 
 # Run unit tests in DIND mode
@@ -232,53 +314,14 @@ run_unit_tests_dind() {
     setup_docker_network
     configure_docker_compose
     echo "Building container image..."
-    docker-compose $DOCKER_COMPOSE_DEV_FILE build dev
-    echo "🧹 Cleaning up any existing temporary containers..."
-    docker rm -f website-dev-temp 2>/dev/null || true
-    echo "🛠️ Starting container in background for file operations..."
-    docker run -d --name website-dev-temp --network $NETWORK_NAME website-dev tail -f /dev/null
-    
-    echo "📂 Copying source files into container..."
-    if docker cp . website-dev-temp:/app/; then
-        echo "✅ Source files copied successfully"
-    else
-        echo "❌ Failed to copy source files"
-        docker rm -f website-dev-temp
-        exit 1
-    fi
-    
-    echo "📦 Installing dependencies inside container..."
-    if docker exec website-dev-temp sh -c "cd /app && npm install -g pnpm && pnpm install --frozen-lockfile"; then
-        echo "✅ Dependencies installed successfully"
-    else
-        echo "❌ Failed to install dependencies"
-        docker logs website-dev-temp --tail 20
-        docker rm -f website-dev-temp
-        exit 1
-    fi
-    
-    echo "🧪 Running client-side tests..."
-    if docker exec website-dev-temp sh -c "cd /app && env TEST_ENV=client ./node_modules/.bin/jest --verbose --passWithNoTests --maxWorkers=2"; then
-        echo "✅ Client-side tests PASSED"
-    else
-        echo "❌ Client-side tests FAILED"
-        docker logs website-dev-temp --tail 30
-        docker rm -f website-dev-temp
-        exit 1
-    fi
-    
-    echo "🧪 Running server-side tests..."
-    if docker exec website-dev-temp sh -c "cd /app && env TEST_ENV=server ./node_modules/.bin/jest --verbose --passWithNoTests --maxWorkers=2"; then
-        echo "✅ Server-side tests PASSED"
-    else
-        echo "❌ Server-side tests FAILED"
-        docker logs website-dev-temp --tail 30
-        docker rm -f website-dev-temp
-        exit 1
-    fi
-    
-    echo "🧹 Cleaning up temporary container..."
-    docker rm -f website-dev-temp
+    docker-compose "$DOCKER_COMPOSE_DEV_FILE" build dev
+
+    # Client-side tests
+    run_in_temp_container "website-dev" "website-dev-temp" "env TEST_ENV=client ./node_modules/.bin/jest --verbose --passWithNoTests --maxWorkers=2"
+
+    # Server-side tests
+    run_in_temp_container "website-dev" "website-dev-temp" "env TEST_ENV=server ./node_modules/.bin/jest --verbose --passWithNoTests --maxWorkers=2"
+
     echo "🎉 All unit tests completed successfully in true DinD mode!"
     echo "📊 Summary: Both client and server tests passed in containerized environment"
 }
@@ -290,11 +333,11 @@ run_mutation_tests_dind() {
     setup_docker_network
     configure_docker_compose
     echo "Building container image..."
-    docker-compose $DOCKER_COMPOSE_DEV_FILE build dev
+    docker-compose "$DOCKER_COMPOSE_DEV_FILE" build dev
     echo "🧹 Cleaning up any existing containers..."
     docker rm -f website-dev-mutation 2>/dev/null || true
     echo "🛠️ Starting container in background for file operations..."
-    docker run -d --name website-dev-mutation --network $NETWORK_NAME website-dev tail -f /dev/null
+    docker run -d --name website-dev-mutation --network "$NETWORK_NAME" website-dev tail -f /dev/null
     
     echo "📂 Copying source files into container..."
     if docker cp . website-dev-mutation:/app/; then
@@ -332,7 +375,7 @@ run_mutation_tests_dind() {
             docker logs website-dev-mutation --tail 10
         fi
         sleep 3
-        if [ $i -eq 60 ]; then
+        if [ "$i" -eq 60 ]; then
             echo "❌ Dev server failed to respond within 180 seconds"
             docker logs website-dev-mutation --tail 50
             docker rm -f website-dev-mutation
@@ -365,11 +408,11 @@ run_eslint_dind() {
     setup_docker_network
     configure_docker_compose
     echo "Building container image..."
-    docker-compose $DOCKER_COMPOSE_DEV_FILE build dev
+    docker-compose "$DOCKER_COMPOSE_DEV_FILE" build dev
     echo "🧹 Cleaning up any existing containers..."
     docker rm -f website-dev-lint-next 2>/dev/null || true
     echo "🛠️ Starting container for linting..."
-    docker run -d --name website-dev-lint-next --network $NETWORK_NAME website-dev tail -f /dev/null
+    docker run -d --name website-dev-lint-next --network "$NETWORK_NAME" website-dev tail -f /dev/null
     
     echo "📂 Copying source files into container..."
     if docker cp . website-dev-lint-next:/app/; then
@@ -412,11 +455,11 @@ run_typescript_check_dind() {
     setup_docker_network
     configure_docker_compose
     echo "Building container image..."
-    docker-compose $DOCKER_COMPOSE_DEV_FILE build dev
+    docker-compose "$DOCKER_COMPOSE_DEV_FILE" build dev
     echo "🧹 Cleaning up any existing containers..."
     docker rm -f website-dev-lint-tsc 2>/dev/null || true
     echo "🛠️ Starting container for TypeScript linting..."
-    docker run -d --name website-dev-lint-tsc --network $NETWORK_NAME website-dev tail -f /dev/null
+    docker run -d --name website-dev-lint-tsc --network "$NETWORK_NAME" website-dev tail -f /dev/null
     
     echo "📂 Copying source files into container..."
     if docker cp . website-dev-lint-tsc:/app/; then
@@ -459,11 +502,11 @@ run_markdown_lint_dind() {
     setup_docker_network
     configure_docker_compose
     echo "Building container image..."
-    docker-compose $DOCKER_COMPOSE_DEV_FILE build dev
+    docker-compose "$DOCKER_COMPOSE_DEV_FILE" build dev
     echo "🧹 Cleaning up any existing containers..."
     docker rm -f website-dev-lint-md 2>/dev/null || true
     echo "🛠️ Starting container for Markdown linting..."
-    docker run -d --name website-dev-lint-md --network $NETWORK_NAME website-dev tail -f /dev/null
+    docker run -d --name website-dev-lint-md --network "$NETWORK_NAME" website-dev tail -f /dev/null
     
     echo "📂 Copying source files into container..."
     if docker cp . website-dev-lint-md:/app/; then
@@ -547,9 +590,9 @@ run_e2e_tests_dind() {
     setup_docker_network
     configure_docker_compose
     echo "Building test services..."
-    docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE build
+    docker-compose "$COMMON_HEALTHCHECKS_FILE" "$DOCKER_COMPOSE_TEST_FILE" build
     echo "🚀 Starting test services..."
-    docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE up -d
+    docker-compose "$COMMON_HEALTHCHECKS_FILE" "$DOCKER_COMPOSE_TEST_FILE" up -d
     wait_for_prod_dind
     
     echo "📂 Copying E2E test files to Playwright container..."
@@ -562,7 +605,7 @@ run_e2e_tests_dind() {
         fi
         echo "Waiting for container to be ready... attempt $i"
         sleep 2
-        if [ $i -eq 30 ]; then
+        if [ "$i" -eq 30 ]; then
             echo "❌ Container not ready after 60 seconds"
             exit 1
         fi
@@ -628,10 +671,10 @@ run_e2e_tests_dind() {
     
     # Test container connectivity
     echo "🔍 Testing container connectivity..."
-    docker exec website-playwright-1 curl -f $PROD_URL >/dev/null 2>&1 || echo "⚠️  Container connectivity test failed"
+    docker exec website-playwright-1 curl -f "$PROD_URL" >/dev/null 2>&1 || echo "⚠️  Container connectivity test failed"
     
     # Run E2E tests with comprehensive environment setup
-    if docker exec -e NEXT_PUBLIC_MAIN_LANGUAGE=uk -e NEXT_PUBLIC_FALLBACK_LANGUAGE=en -e NEXT_PUBLIC_PROD_CONTAINER_API_URL=$PROD_URL -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_NAME=no-aws-header-name -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_VALUE=no-aws-header-value -e NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL=https://github.com/VilnaCRM-Org/ -e NEXT_PUBLIC_GRAPHQL_API_URL=http://apollo:4000/graphql -w /app website-playwright-1 npx playwright test src/test/e2e --timeout=60000; then
+    if docker exec -e NEXT_PUBLIC_MAIN_LANGUAGE=uk -e NEXT_PUBLIC_FALLBACK_LANGUAGE=en -e NEXT_PUBLIC_PROD_CONTAINER_API_URL="$PROD_URL" -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_NAME=no-aws-header-name -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_VALUE=no-aws-header-value -e NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL=https://github.com/VilnaCRM-Org/ -e NEXT_PUBLIC_GRAPHQL_API_URL=http://apollo:4000/graphql -w /app website-playwright-1 npx playwright test src/test/e2e --timeout=60000; then
         echo "✅ E2E tests PASSED"
     else
         echo "❌ E2E tests FAILED"
@@ -645,7 +688,7 @@ run_e2e_tests_dind() {
     docker cp website-playwright-1:/app/test-results/. test-results/ 2>/dev/null || echo "No test-results to copy"
     
     echo "🧹 Cleaning up Docker services..."
-    docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE down
+    docker-compose "$COMMON_HEALTHCHECKS_FILE" "$DOCKER_COMPOSE_TEST_FILE" down
     
     echo "🎉 E2E tests completed successfully in DIND mode!"
 }
@@ -657,9 +700,9 @@ run_visual_tests_dind() {
     setup_docker_network
     configure_docker_compose
     echo "Building test services..."
-    docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE build
+    docker-compose "$COMMON_HEALTHCHECKS_FILE" "$DOCKER_COMPOSE_TEST_FILE" build
     echo "🚀 Starting test services..."
-    docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE up -d
+    docker-compose "$COMMON_HEALTHCHECKS_FILE" "$DOCKER_COMPOSE_TEST_FILE" up -d
     wait_for_prod_dind
     
     echo "📂 Copying Visual test files to Playwright container..."
@@ -672,7 +715,7 @@ run_visual_tests_dind() {
         fi
         echo "Waiting for container to be ready... attempt $i"
         sleep 2
-        if [ $i -eq 30 ]; then
+        if [ "$i" -eq 30 ]; then
             echo "❌ Container not ready after 60 seconds"
             exit 1
         fi
@@ -770,7 +813,44 @@ run_memory_leak_tests_dind() {
     docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE build
     echo "🚀 Starting production services..."
     docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE up -d
-    wait_for_prod_dind
+    
+    # Wait for production service without the problematic connectivity test
+    echo "🐳 Waiting for prod service in true DinD mode using container networking..."
+    echo "Checking if $PROD_CONTAINER_NAME container is running..."
+    for i in $(seq 1 30); do
+        if docker ps --filter "name=$PROD_CONTAINER_NAME" --filter "status=running" --format "{{.Names}}" | grep -q "$PROD_CONTAINER_NAME"; then
+            echo "✅ Container $PROD_CONTAINER_NAME is running"
+            break
+        fi
+        echo "Attempt $i: Container not running yet, waiting..."
+        sleep 2
+        if [ $i -eq 30 ]; then
+            echo "❌ Container failed to start within 60 seconds"
+            docker ps -a --filter "name=$PROD_CONTAINER_NAME"
+            exit 1
+        fi
+    done
+    
+    echo "🔍 Testing $PROD_CONTAINER_NAME service connectivity on port $NEXT_PUBLIC_PROD_PORT..."
+    for i in $(seq 1 60); do
+        if docker exec $PROD_CONTAINER_NAME sh -c "curl -f http://localhost:$NEXT_PUBLIC_PROD_PORT >/dev/null 2>&1"; then
+            echo "✅ Service is responding on port $NEXT_PUBLIC_PROD_PORT!"
+            break
+        fi
+        echo "Attempt $i: Service not ready, checking container status..."
+        if [ $((i % 10)) -eq 0 ]; then
+            echo "Debug info at attempt $i:"
+            docker exec $PROD_CONTAINER_NAME ps aux 2>/dev/null || echo "Cannot access container processes"
+            docker exec $PROD_CONTAINER_NAME netstat -tulpn 2>/dev/null | grep :$NEXT_PUBLIC_PROD_PORT || echo "Port $NEXT_PUBLIC_PROD_PORT not bound"
+        fi
+        sleep 3
+        if [ $i -eq 60 ]; then
+            echo "❌ Service failed to respond within 180 seconds"
+            echo "Final container logs:"
+            docker logs $PROD_CONTAINER_NAME --tail 50
+            exit 1
+        fi
+    done
     
     echo "🧹 Cleaning up any existing Memory Leak containers..."
     docker stop memory-leak-test 2>/dev/null || true
@@ -1058,7 +1138,12 @@ show_usage() {
     echo "  WEBSITE_DOMAIN         Website domain (default: localhost)"
     echo "  DEV_PORT               Development port (default: 3000)"
     echo "  NEXT_PUBLIC_PROD_PORT  Production port (default: 3001)"
+    echo "  PLAYWRIGHT_TEST_PORT   Playwright test port (default: 9323)"
+    echo "  UI_HOST                UI host binding (default: 0.0.0.0)"
     echo "  PROD_CONTAINER_NAME    Production container name (default: website-prod)"
+    echo "  DOCKER_COMPOSE_DEV_FILE     Docker Compose dev file (default: -f docker-compose.yml)"
+    echo "  DOCKER_COMPOSE_TEST_FILE    Docker Compose test file (default: -f docker-compose.test.yml)"
+    echo "  COMMON_HEALTHCHECKS_FILE    Common healthchecks file (default: -f common-healthchecks.yml)"
 }
 
 # Main command dispatcher
