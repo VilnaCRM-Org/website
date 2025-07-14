@@ -1,12 +1,9 @@
 #!/bin/bash
-
 # DIND Environment Setup Script
 # Combines functionality from configure-dind.sh, setup_makefile_targets.sh, 
 # add_prod_targets.sh, and batch_unit_mutation_lint_targets.sh
 # without modifying the Makefile
-
 set -e
-
 # Default configuration
 NETWORK_NAME=${NETWORK_NAME:-"website-network"}
 WEBSITE_DOMAIN=${WEBSITE_DOMAIN:-"localhost"}
@@ -15,27 +12,12 @@ NEXT_PUBLIC_PROD_PORT=${NEXT_PUBLIC_PROD_PORT:-"3001"}
 PLAYWRIGHT_TEST_PORT=${PLAYWRIGHT_TEST_PORT:-"9323"}
 UI_HOST=${UI_HOST:-"0.0.0.0"}
 PROD_CONTAINER_NAME=${PROD_CONTAINER_NAME:-"website-prod"}
-
 # Docker Compose files
 DOCKER_COMPOSE_DEV_FILE=${DOCKER_COMPOSE_DEV_FILE:-"-f docker-compose.yml"}
 DOCKER_COMPOSE_TEST_FILE=${DOCKER_COMPOSE_TEST_FILE:-"-f docker-compose.test.yml"}
 COMMON_HEALTHCHECKS_FILE=${COMMON_HEALTHCHECKS_FILE:-"-f common-healthchecks.yml"}
-
 echo "🐳 DIND Environment Setup Script"
 echo "================================"
-
-# Cleanup function for predictable teardown
-cleanup() {
-    echo "🧹 Cleaning up Docker resources..."
-    docker rm -f website-* 2>/dev/null || true
-    docker network rm "$NETWORK_NAME" 2>/dev/null || true
-    rm -f docker-compose.lighthouse.yml 2>/dev/null || true
-    echo "✅ Cleanup completed"
-}
-
-# Register cleanup trap for predictable teardown
-trap cleanup EXIT
-
 # Function to safely add container name to a service
 add_container_name() {
     local file=$1
@@ -55,7 +37,6 @@ add_container_name() {
         echo "⚠️  File ${file} not found, skipping..."
     fi
 }
-
 # Function to update environment variable references from service names to container names
 update_env_references() {
     local file=$1
@@ -69,53 +50,29 @@ update_env_references() {
         fi
     fi
 }
-
 # Configure Docker Compose files for DIND
 configure_docker_compose() {
     echo "🔧 Configuring Docker Compose files for DIND..."
     
     # Configure docker-compose.yml (development)
     add_container_name "docker-compose.yml" "dev" "website-dev"
-
     # Configure docker-compose.test.yml (testing)
     add_container_name "docker-compose.test.yml" "prod" "website-prod"
     add_container_name "docker-compose.test.yml" "playwright" "website-playwright"
     add_container_name "docker-compose.test.yml" "apollo" "website-apollo"
     add_container_name "docker-compose.test.yml" "mockoon" "website-mockoon"
     add_container_name "docker-compose.test.yml" "k6" "website-k6"
-
     # Configure docker-compose.memory-leak.yml
     add_container_name "docker-compose.memory-leak.yml" "memory-leak" "website-memory-leak"
-
     # Update environment variable references to use container names
     update_env_references "docker-compose.memory-leak.yml" "http://prod:3001" "http://website-prod:3001"
 }
-
 # Setup Docker network for DIND
 setup_docker_network() {
     echo "📡 Setting up Docker network..."
-    
-    # Check if network already exists
-    if docker network ls --format "{{.Name}}" | grep -q "^${NETWORK_NAME}$"; then
-        echo "ℹ️  Network $NETWORK_NAME already exists"
-    else
-        # Try to create the network
-        if ! docker network create "$NETWORK_NAME"; then
-            echo "❌ Failed to create network $NETWORK_NAME"
-            exit 1
-        fi
-        echo "✅ Network $NETWORK_NAME created successfully"
-    fi
-    
-    # Verify network exists and is accessible
-    if docker network ls --format "{{.Name}}" | grep -q "^${NETWORK_NAME}$"; then
-        echo "✅ Docker network $NETWORK_NAME is available"
-    else
-        echo "❌ Network $NETWORK_NAME is not available after creation attempt"
-        exit 1
-    fi
+    docker network create $NETWORK_NAME 2>/dev/null || echo "Network $NETWORK_NAME already exists"
+    echo "✅ Docker network configured"
 }
-
 # Wait for dev service in DIND mode
 wait_for_dev_dind() {
     echo "🐳 Waiting for dev service to be ready via Docker network..."
@@ -127,7 +84,7 @@ wait_for_dev_dind() {
         fi
         echo "Attempt $i: Container not running yet, waiting..."
         sleep 2
-        if [ "$i" -eq 30 ]; then
+        if [ $i -eq 30 ]; then
             echo "❌ Container failed to start within 60 seconds"
             docker ps -a --filter "name=website-dev"
             exit 1
@@ -144,10 +101,10 @@ wait_for_dev_dind() {
         if [ $((i % 10)) -eq 0 ]; then
             echo "Debug info at attempt $i:"
             docker exec website-dev ps aux 2>/dev/null || echo "Cannot access container processes"
-            docker exec website-dev netstat -tulpn 2>/dev/null | grep :"$DEV_PORT" || echo "Port $DEV_PORT not bound"
+            docker exec website-dev netstat -tulpn 2>/dev/null | grep :$DEV_PORT || echo "Port $DEV_PORT not bound"
         fi
         sleep 3
-        if [ "$i" -eq 60 ]; then
+        if [ $i -eq 60 ]; then
             echo "❌ Dev service failed to respond within 180 seconds"
             echo "Final container logs:"
             docker logs website-dev --tail 50
@@ -155,17 +112,15 @@ wait_for_dev_dind() {
         fi
     done
 }
-
 # Start development environment in DIND mode
 start_dev_dind() {
     echo "🐳 Starting development environment in DIND mode..."
     setup_docker_network
     configure_docker_compose
-    docker-compose "$DOCKER_COMPOSE_DEV_FILE" up -d dev
+    docker-compose $DOCKER_COMPOSE_DEV_FILE up -d dev
     wait_for_dev_dind
     echo "🎉 Development environment started successfully!"
 }
-
 # Enhanced container connectivity testing
 test_container_connectivity() {
     echo "🔍 Enhanced container connectivity testing..."
@@ -197,7 +152,6 @@ test_container_connectivity() {
     
     echo "✅ Container connectivity testing completed"
 }
-
 # Wait for production service
 wait_for_prod_dind() {
     echo "🐳 Waiting for prod service in true DinD mode using container networking..."
@@ -240,7 +194,6 @@ wait_for_prod_dind() {
     # Run enhanced connectivity testing
     test_container_connectivity
 }
-
 # Start production environment in DIND mode
 start_prod_dind() {
     echo "🐳 Starting production environment in true Docker-in-Docker mode"
@@ -254,7 +207,6 @@ start_prod_dind() {
     wait_for_prod_dind
     echo "🎉 Production environment started successfully!"
 }
-
 # Helper to run a command in a temp container with volume mount (no dependency reinstall)
 run_in_temp_container() {
     local image="$1"
@@ -287,7 +239,6 @@ run_in_temp_container() {
     echo "🧹 Cleaning up $container_name..."
     docker rm -f "$container_name"
 }
-
 # Run unit tests in DIND mode
 run_unit_tests_dind() {
     echo "🐳 Running unit tests in true Docker-in-Docker mode"
@@ -295,7 +246,8 @@ run_unit_tests_dind() {
     setup_docker_network
     configure_docker_compose
     echo "Building container image..."
-    docker-compose "$DOCKER_COMPOSE_DEV_FILE" build dev
+    echo "🔍 Executing: docker-compose $DOCKER_COMPOSE_DEV_FILE build dev"
+    docker-compose $DOCKER_COMPOSE_DEV_FILE build dev
 
     # Client-side tests
     run_in_temp_container "website-dev" "website-dev-temp" "env TEST_ENV=client ./node_modules/.bin/jest --verbose --passWithNoTests --maxWorkers=2"
@@ -306,7 +258,6 @@ run_unit_tests_dind() {
     echo "🎉 All unit tests completed successfully in true DinD mode!"
     echo "📊 Summary: Both client and server tests passed in containerized environment"
 }
-
 # Run mutation tests in DIND mode
 run_mutation_tests_dind() {
     echo "🐳 Running mutation tests in true Docker-in-Docker mode"
@@ -365,7 +316,6 @@ run_mutation_tests_dind() {
     docker rm -f website-dev-mutation
     echo "🎉 Mutation tests completed successfully in true DinD mode!"
 }
-
 # Run ESLint in DIND mode
 run_eslint_dind() {
     echo "🐳 Running ESLint in true Docker-in-Docker mode"
@@ -396,7 +346,6 @@ run_eslint_dind() {
     docker rm -f website-dev-lint-next
     echo "🎉 ESLint completed successfully in true DinD mode!"
 }
-
 # Run TypeScript check in DIND mode
 run_typescript_check_dind() {
     echo "🐳 Running TypeScript check in true Docker-in-Docker mode"
@@ -427,7 +376,6 @@ run_typescript_check_dind() {
     docker rm -f website-dev-lint-tsc
     echo "🎉 TypeScript check completed successfully in true DinD mode!"
 }
-
 # Run Markdown linting in DIND mode
 run_markdown_lint_dind() {
     echo "🐳 Running Markdown linting in true Docker-in-Docker mode"
@@ -458,7 +406,6 @@ run_markdown_lint_dind() {
     docker rm -f website-dev-lint-md
     echo "🎉 Markdown linting completed successfully in true DinD mode!"
 }
-
 # Run all lint checks in DIND mode
 run_all_lint_dind() {
     echo "🧹 Running all lint checks in DIND mode..."
@@ -499,7 +446,6 @@ run_all_lint_dind() {
         echo "🎉 All lint checks completed successfully!"
     fi
 }
-
 # Run E2E tests in DIND mode
 run_e2e_tests_dind() {
     echo "🎭 Running E2E tests in DIND mode (matching local behavior)"
@@ -609,7 +555,6 @@ run_e2e_tests_dind() {
     
     echo "🎉 E2E tests completed successfully in DIND mode!"
 }
-
 # Run Visual tests in DIND mode
 run_visual_tests_dind() {
     echo "🎨 Running Visual tests in DIND mode (matching local behavior)"
@@ -719,7 +664,6 @@ run_visual_tests_dind() {
     
     echo "🎉 Visual tests completed successfully in DIND mode!"
 }
-
 # Run Memory Leak tests in DIND mode
 run_memory_leak_tests_dind() {
     echo "🧠 Running Memory Leak tests in true Docker-in-Docker mode"
@@ -812,7 +756,6 @@ run_memory_leak_tests_dind() {
     docker rm memory-leak-test || true
     echo "🎉 Memory leak tests completed successfully in true DinD mode!"
 }
-
 # Run Load tests in DIND mode
 run_load_tests_dind() {
     echo "⚡ Running K6 Load tests in true Docker-in-Docker mode"
@@ -866,7 +809,6 @@ run_load_tests_dind() {
     docker rm website-k6 || true
     echo "🎉 Load tests completed successfully in true DinD mode!"
 }
-
 # Run Lighthouse Desktop tests in DIND mode
 run_lighthouse_desktop_dind() {
     echo "🔦 Running Lighthouse Desktop tests using robust container approach"
@@ -947,7 +889,6 @@ run_lighthouse_desktop_dind() {
     
     echo "✅ Lighthouse desktop tests completed"
 }
-
 # Run Lighthouse Mobile tests in DIND mode
 run_lighthouse_mobile_dind() {
     echo "📱 Running Lighthouse Mobile tests using robust container approach"
@@ -1062,7 +1003,7 @@ show_usage() {
     echo "  PROD_CONTAINER_NAME    Production container name (default: website-prod)"
     echo "  DOCKER_COMPOSE_DEV_FILE     Docker Compose dev file (default: -f docker-compose.yml)"
     echo "  DOCKER_COMPOSE_TEST_FILE    Docker Compose test file (default: -f docker-compose.test.yml)"
-    echo "  COMMON_HEALTHCHECKS_FILE    Common healthchecks file (default: -f common-healthchecks.yml)"
+    echo "  COMMON_HEALTHCHECKS_FILE    Common healthchecks file (default: -f common-healthchecks.yml if exists, otherwise empty)"
 }
 
 # Main command dispatcher
