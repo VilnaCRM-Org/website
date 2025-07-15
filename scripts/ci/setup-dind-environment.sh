@@ -84,7 +84,7 @@ wait_for_dev_dind() {
         fi
         echo "Attempt $i: Container not running yet, waiting..."
         sleep 2
-        if [ $i -eq 30 ]; then
+        if [ "$i" -eq 30 ]; then
             echo "❌ Container failed to start within 60 seconds"
             docker ps -a --filter "name=website-dev"
             exit 1
@@ -98,13 +98,13 @@ wait_for_dev_dind() {
             break
         fi
         echo "Attempt $i: Dev service not ready, checking container status..."
-        if [ $((i % 10)) -eq 0 ]; then
+        if [ "$((i % 10))" -eq 0 ]; then
             echo "Debug info at attempt $i:"
             docker exec website-dev ps aux 2>/dev/null || echo "Cannot access container processes"
             docker exec website-dev netstat -tulpn 2>/dev/null | grep :$DEV_PORT || echo "Port $DEV_PORT not bound"
         fi
         sleep 3
-        if [ $i -eq 60 ]; then
+        if [ "$i" -eq 60 ]; then
             echo "❌ Dev service failed to respond within 180 seconds"
             echo "Final container logs:"
             docker logs website-dev --tail 50
@@ -127,7 +127,7 @@ test_container_connectivity() {
     echo "🔍 Enhanced container connectivity testing..."
 
     # Get production container IP
-    PROD_IP=$(docker inspect website-prod-1 --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' 2>/dev/null || echo "")
+    PROD_IP=$(docker inspect website-prod --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' 2>/dev/null || echo "")
     if [ -n "$PROD_IP" ]; then
         echo "✅ Production container IP: $PROD_IP"
     else
@@ -137,19 +137,19 @@ test_container_connectivity() {
 
     # Test DNS resolution
     echo "🔍 Testing DNS resolution..."
-    docker exec website-playwright-1 nslookup website-prod >/dev/null 2>&1 || echo "⚠️  DNS lookup failed for website-prod"
-    docker exec website-playwright-1 nslookup apollo >/dev/null 2>&1 || echo "⚠️  DNS lookup failed for apollo"
+    docker exec website-playwright nslookup website-prod >/dev/null 2>&1 || echo "⚠️  DNS lookup failed for website-prod"
+    docker exec website-playwright nslookup apollo >/dev/null 2>&1 || echo "⚠️  DNS lookup failed for apollo"
 
     # Test ping connectivity
     echo "🔍 Testing ping connectivity..."
-    docker exec website-playwright-1 ping -c 2 website-prod >/dev/null 2>&1 || echo "⚠️  Ping failed for website-prod"
-    docker exec website-playwright-1 ping -c 2 apollo >/dev/null 2>&1 || echo "⚠️  Ping failed for apollo"
+    docker exec website-playwright ping -c 2 website-prod >/dev/null 2>&1 || echo "⚠️  Ping failed for website-prod"
+    docker exec website-playwright ping -c 2 apollo >/dev/null 2>&1 || echo "⚠️  Ping failed for apollo"
 
     # Test HTTP connectivity
     echo "🔍 Testing HTTP connectivity..."
-    docker exec website-playwright-1 curl -f http://website-prod:3001 >/dev/null 2>&1 || echo "⚠️  HTTP connectivity failed for website-prod:3001"
-    docker exec website-playwright-1 curl -f http://$PROD_IP:3001 >/dev/null 2>&1 || echo "⚠️  HTTP connectivity failed for $PROD_IP:3001"
-    docker exec website-playwright-1 curl -f http://apollo:4000/graphql >/dev/null 2>&1 || echo "⚠️  HTTP connectivity failed for apollo:4000/graphql"
+    docker exec website-playwright curl -f http://website-prod:3001 >/dev/null 2>&1 || echo "⚠️  HTTP connectivity failed for website-prod:3001"
+    docker exec website-playwright curl -f "http://$PROD_IP:3001" >/dev/null 2>&1 || echo "⚠️  HTTP connectivity failed for $PROD_IP:3001"
+    docker exec website-playwright curl -f http://apollo:4000/graphql >/dev/null 2>&1 || echo "⚠️  HTTP connectivity failed for apollo:4000/graphql"
 
     echo "✅ Container connectivity testing completed"
 }
@@ -165,7 +165,7 @@ wait_for_prod_dind() {
         fi
         echo "Attempt $i: Container not running yet, waiting..."
         sleep 2
-        if [ $i -eq 30 ]; then
+        if [ "$i" -eq 30 ]; then
             echo "❌ Container failed to start within 60 seconds"
             docker ps -a --filter "name=$PROD_CONTAINER_NAME"
             exit 1
@@ -179,13 +179,13 @@ wait_for_prod_dind() {
             break
         fi
         echo "Attempt $i: Service not ready, checking container status..."
-        if [ $((i % 10)) -eq 0 ]; then
+        if [ "$((i % 10))" -eq 0 ]; then
             echo "Debug info at attempt $i:"
             docker exec $PROD_CONTAINER_NAME ps aux 2>/dev/null || echo "Cannot access container processes"
             docker exec $PROD_CONTAINER_NAME netstat -tulpn 2>/dev/null | grep :$NEXT_PUBLIC_PROD_PORT || echo "Port $NEXT_PUBLIC_PROD_PORT not bound"
         fi
         sleep 3
-        if [ $i -eq 60 ]; then
+        if [ "$i" -eq 60 ]; then
             echo "❌ Service failed to respond within 180 seconds"
             echo "Final container logs:"
             docker logs $PROD_CONTAINER_NAME --tail 50
@@ -307,7 +307,7 @@ run_mutation_tests_dind() {
             break
         fi
         echo "Attempt $i: Dev server not ready yet..."
-        if [ $((i % 10)) -eq 0 ]; then
+        if [ "$((i % 10))" -eq 0 ]; then
             echo "Debug info at attempt $i:"
             docker exec website-dev-mutation ps aux 2>/dev/null | grep -E "(next|node)" || echo "No Next.js processes found"
             docker exec website-dev-mutation netstat -tulpn 2>/dev/null | grep :3000 || echo "Port 3000 not bound"
@@ -315,7 +315,7 @@ run_mutation_tests_dind() {
             docker logs website-dev-mutation --tail 10
         fi
         sleep 3
-        if [ $i -eq 60 ]; then
+        if [ "$i" -eq 60 ]; then
             echo "❌ Dev server failed to respond within 180 seconds"
             docker logs website-dev-mutation --tail 50
             docker rm -f website-dev-mutation
@@ -540,7 +540,7 @@ run_e2e_tests_dind() {
         fi
         echo "Waiting for container to be ready... attempt $i"
         sleep 2
-        if [ $i -eq 30 ]; then
+        if [ "$i" -eq 30 ]; then
             echo "❌ Container not ready after 60 seconds"
             exit 1
         fi
@@ -649,7 +649,7 @@ run_visual_tests_dind() {
         fi
         echo "Waiting for container to be ready... attempt $i"
         sleep 2
-        if [ $i -eq 30 ]; then
+        if [ "$i" -eq 30 ]; then
             echo "❌ Container not ready after 60 seconds"
             exit 1
         fi
@@ -746,7 +746,44 @@ run_memory_leak_tests_dind() {
     docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE build
     echo "🚀 Starting production services..."
     docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE up -d
-    wait_for_prod_dind
+    
+    # Wait for production service without the problematic connectivity test
+    echo "🐳 Waiting for prod service in true DinD mode using container networking..."
+    echo "Checking if $PROD_CONTAINER_NAME container is running..."
+    for i in $(seq 1 30); do
+        if docker ps --filter "name=$PROD_CONTAINER_NAME" --filter "status=running" --format "{{.Names}}" | grep -q "$PROD_CONTAINER_NAME"; then
+            echo "✅ Container $PROD_CONTAINER_NAME is running"
+            break
+        fi
+        echo "Attempt $i: Container not running yet, waiting..."
+        sleep 2
+        if [ "$i" -eq 30 ]; then
+            echo "❌ Container failed to start within 60 seconds"
+            docker ps -a --filter "name=$PROD_CONTAINER_NAME"
+            exit 1
+        fi
+    done
+    
+    echo "🔍 Testing $PROD_CONTAINER_NAME service connectivity on port $NEXT_PUBLIC_PROD_PORT..."
+    for i in $(seq 1 60); do
+        if docker exec $PROD_CONTAINER_NAME sh -c "curl -f http://localhost:$NEXT_PUBLIC_PROD_PORT >/dev/null 2>&1"; then
+            echo "✅ Service is responding on port $NEXT_PUBLIC_PROD_PORT!"
+            break
+        fi
+        echo "Attempt $i: Service not ready, checking container status..."
+        if [ "$((i % 10))" -eq 0 ]; then
+            echo "Debug info at attempt $i:"
+            docker exec $PROD_CONTAINER_NAME ps aux 2>/dev/null || echo "Cannot access container processes"
+            docker exec $PROD_CONTAINER_NAME netstat -tulpn 2>/dev/null | grep :$NEXT_PUBLIC_PROD_PORT || echo "Port $NEXT_PUBLIC_PROD_PORT not bound"
+        fi
+        sleep 3
+        if [ "$i" -eq 60 ]; then
+            echo "❌ Service failed to respond within 180 seconds"
+            echo "Final container logs:"
+            docker logs $PROD_CONTAINER_NAME --tail 50
+            exit 1
+        fi
+    done
     
     echo "🧹 Cleaning up any existing Memory Leak containers..."
     docker stop memory-leak-test 2>/dev/null || true
