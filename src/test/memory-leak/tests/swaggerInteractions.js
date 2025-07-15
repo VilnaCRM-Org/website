@@ -14,7 +14,7 @@ async function setup(page) {
         status: 200,
         headers: {
           'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+          'Access-Control-Allow-Methods': 'GET, POST, PATCH, PUT, DELETE, OPTIONS',
           'Access-Control-Allow-Headers': '*',
         },
       });
@@ -38,7 +38,7 @@ async function setup(page) {
         contentType: 'application/json',
         headers: {
           'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+          'Access-Control-Allow-Methods': 'GET, POST, PATCH, PUT, DELETE, OPTIONS',
           'Access-Control-Allow-Headers': '*',
         },
         body: JSON.stringify(mockedResponse),
@@ -75,6 +75,8 @@ async function action(page) {
     await button.click();
 
     const parentBlock = await button.evaluateHandle(el => el.closest('.opblock'));
+    const idAttribute = await parentBlock.evaluate(el => el.id);
+    const allow404 = idAttribute === 'operations-OAuth-get_api_oauth_authorize';
 
     const executeButton = await parentBlock.waitForSelector(
       'button.btn.execute.opblock-control__btn',
@@ -83,15 +85,24 @@ async function action(page) {
 
     if (executeButton) {
       await executeButton.click();
-      await page.waitForResponse(response => response.status() >= 200);
-    }
 
+      await page.waitForResponse(response => {
+        const status = response.status();
+        return (status >= 200 && status < 300) || (allow404 && status === 404);
+      });
+    }
     await parentBlock.dispose();
   }
 
-  const curlButtons = await page.$$('.copy-to-clipboard');
-  for (const button of curlButtons) {
-    await button.click();
+  const endpoints = await page.$$('.opblock');
+  for (const endpoint of endpoints) {
+    await endpoint.hover();
+
+    const copyButton = await endpoint.$('.copy-to-clipboard button');
+
+    if (copyButton) {
+      await copyButton.click();
+    }
   }
   const responseStatusElements = await page.$$('.response-col_status');
   const statuses = [];

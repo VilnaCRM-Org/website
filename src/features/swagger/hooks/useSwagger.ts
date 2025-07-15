@@ -1,22 +1,36 @@
 import { useEffect, useState } from 'react';
 
-import { fetchSwaggerYaml } from '../api/fetchSwaggerYaml';
-
 type UseSwaggerReturn = {
-  yamlContent: string | null;
+  swaggerContent: unknown | null;
+  error: Error | null;
 };
 
-export const useSwagger: (url: string) => UseSwaggerReturn = url => {
-  const [yamlContent, setYamlContent] = useState<string | null>(null);
+const useSwagger: () => UseSwaggerReturn = () => {
+  const [swaggerContent, setSwaggerContent] = useState<unknown | null>(null);
+  const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    const fetchData: () => Promise<void> = async () => {
-      const yaml: string = await fetchSwaggerYaml(url);
-      setYamlContent(yaml);
+    const controller: AbortController = new AbortController();
+    const loadSwaggerSchema: () => Promise<void> = async (): Promise<void> => {
+      try {
+        const res: Response = await fetch('/swagger-schema.json', { signal: controller.signal });
+        if (!res.ok) {
+          throw new Error(`Failed to fetch swagger schema – ${res.status} ${res.statusText}`);
+        }
+        const data: unknown = await res.json();
+        setSwaggerContent(data);
+      } catch (err: unknown) {
+        if ((err as DOMException).name === 'AbortError') return;
+        setError(err as Error);
+      }
     };
+    loadSwaggerSchema();
+    return () => {
+      controller.abort();
+    };
+  }, []);
 
-    fetchData();
-  }, [url]);
-
-  return { yamlContent };
+  return { swaggerContent, error };
 };
+
+export default useSwagger;

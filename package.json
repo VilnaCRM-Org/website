@@ -35,7 +35,7 @@
     "@next/env": "^15.3.1",
     "@next/eslint-plugin-next": "^15.3.0",
     "@next/third-parties": "^15.3.0",
-    "@playwright/test": "^1.52.0",
+    "@playwright/test": "^1.53.1",
     "@storybook/addon-actions": "^8.6.12",
     "@storybook/addon-essentials": "^8.6.12",
     "@storybook/addon-interactions": "^8.6.12",
@@ -76,7 +76,7 @@
     "markdownlint-cli": "^0.39.0",
     "memlab": "^1.1.57",
     "next-export-optimize-images": "^4.6.2",
-    "playwright": "^1.52.0",
+    "playwright": "1.53.1",
     "prettier": "^3.5.3",
     "sass": "^1.89.0",
     "semver": "^7.7.1",
@@ -96,5 +96,5 @@
   "engines": {
     "node": ">=20.0.0"
   },
-  "version": "0.1.5"
+  "version": "0.2.0"
 }

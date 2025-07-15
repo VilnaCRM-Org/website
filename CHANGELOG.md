@@ -1,3 +1,12 @@
+# [0.2.0](https://github.com/VilnaCRM-Org/website/compare/v0.1.5...v0.2.0) (2025-07-14)
+
+
+### Features
+
+* **#29:** cover swagger tests ([#197](https://github.com/VilnaCRM-Org/website/issues/197)) ([d95bb93](https://github.com/VilnaCRM-Org/website/commit/d95bb93a2f253b6feaf109aadca5697152c58c48)), closes [#29](https://github.com/VilnaCRM-Org/website/issues/29) [#29](https://github.com/VilnaCRM-Org/website/issues/29) [#29](https://github.com/VilnaCRM-Org/website/issues/29) [#29](https://github.com/VilnaCRM-Org/website/issues/29) [#29](https://github.com/VilnaCRM-Org/website/issues/29) [#29](https://github.com/VilnaCRM-Org/website/issues/29) [#29](https://github.com/VilnaCRM-Org/website/issues/29) [#29](https://github.com/VilnaCRM-Org/website/issues/29) [#29](https://github.com/VilnaCRM-Org/website/issues/29) [#29](https://github.com/VilnaCRM-Org/website/issues/29) [#29](https://github.com/VilnaCRM-Org/website/issues/29) [#29](https://github.com/VilnaCRM-Org/website/issues/29) [#29](https://github.com/VilnaCRM-Org/website/issues/29) [#29](https://github.com/VilnaCRM-Org/website/issues/29) [#29](https://github.com/VilnaCRM-Org/website/issues/29) [#29](https://github.com/VilnaCRM-Org/website/issues/29) [#29](https://github.com/VilnaCRM-Org/website/issues/29) [#29](https://github.com/VilnaCRM-Org/website/issues/29) [#29](https://github.com/VilnaCRM-Org/website/issues/29) [#29](https://github.com/VilnaCRM-Org/website/issues/29) [#29](https://github.com/VilnaCRM-Org/website/issues/29) [#29](https://github.com/VilnaCRM-Org/website/issues/29) [#29](https://github.com/VilnaCRM-Org/website/issues/29) [#29](https://github.com/VilnaCRM-Org/website/issues/29) [#29](https://github.com/VilnaCRM-Org/website/issues/29) [#29](https://github.com/VilnaCRM-Org/website/issues/29) [#29](https://github.com/VilnaCRM-Org/website/issues/29) [#29](https://github.com/VilnaCRM-Org/website/issues/29) [#29](https://github.com/VilnaCRM-Org/website/issues/29) [#29](https://github.com/VilnaCRM-Org/website/issues/29) [#29](https://github.com/VilnaCRM-Org/website/issues/29) [#29](https://github.com/VilnaCRM-Org/website/issues/29) [#29](https://github.com/VilnaCRM-Org/website/issues/29) [#29](https://github.com/VilnaCRM-Org/website/issues/29) [#29](https://github.com/VilnaCRM-Org/website/issues/29) [#29](https://github.com/VilnaCRM-Org/website/issues/29) [#29](https://github.com/VilnaCRM-Org/website/issues/29) [#29](https://github.com/VilnaCRM-Org/website/issues/29) [#29](https://github.com/VilnaCRM-Org/website/issues/29) [#29](https://github.com/VilnaCRM-Org/website/issues/29) [#29](https://github.com/VilnaCRM-Org/website/issues/29) [#29](https://github.com/VilnaCRM-Org/website/issues/29) [#29](https://github.com/VilnaCRM-Org/website/issues/29) [#29](https://github.com/VilnaCRM-Org/website/issues/29) [#29](https://github.com/VilnaCRM-Org/website/issues/29) [#29](https://github.com/VilnaCRM-Org/website/issues/29)
+
+
+
 ## [0.1.5](https://github.com/VilnaCRM-Org/website/compare/v0.1.4...v0.1.5) (2025-06-26)
 
 
@@ -31,15 +40,6 @@
 ### Bug Fixes
 
 * **#201:** add available packages ([#202](https://github.com/VilnaCRM-Org/website/issues/202)) ([1da3a4d](https://github.com/VilnaCRM-Org/website/commit/1da3a4d1dc05fc3e9e59e4ad12529155466537c6)), closes [#201](https://github.com/VilnaCRM-Org/website/issues/201) [#201](https://github.com/VilnaCRM-Org/website/issues/201) [#201](https://github.com/VilnaCRM-Org/website/issues/201) [#201](https://github.com/VilnaCRM-Org/website/issues/201)
-
-
-
-## [0.1.1](https://github.com/VilnaCRM-Org/website/compare/v0.1.0...v0.1.1) (2025-06-07)
-
-
-### Performance Improvements
-
-* **#35:** improve mobile performance in Lighthouse ([#183](https://github.com/VilnaCRM-Org/website/issues/183)) ([cc714c4](https://github.com/VilnaCRM-Org/website/commit/cc714c4cee6ef1240653266462f452998eb1d27d)), closes [#35](https://github.com/VilnaCRM-Org/website/issues/35) [#35](https://github.com/VilnaCRM-Org/website/issues/35) [#35](https://github.com/VilnaCRM-Org/website/issues/35) [#35](https://github.com/VilnaCRM-Org/website/issues/35) [#35](https://github.com/VilnaCRM-Org/website/issues/35) [#35](https://github.com/VilnaCRM-Org/website/issues/35) [#35](https://github.com/VilnaCRM-Org/website/issues/35) [#35](https://github.com/VilnaCRM-Org/website/issues/35) [#35](https://github.com/VilnaCRM-Org/website/issues/35) [#35](https://github.com/VilnaCRM-Org/website/issues/35)
 
 
 

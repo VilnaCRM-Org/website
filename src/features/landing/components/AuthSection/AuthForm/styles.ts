@@ -20,7 +20,7 @@ export default {
     },
     [`@media (max-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
       marginTop: '2.125rem',
-       minHeight: '37.5rem'
+      minHeight: '37.5rem',
     },
   },
 
@@ -173,8 +173,8 @@ export default {
   },
 
   button: {
-    height: '3.5rem', 
-    minHeight: '3.5rem', 
+    height: '3.5rem',
+    minHeight: '3.5rem',
     width: '100%',
     padding: '0.75rem 1.5rem',
   },
@@ -223,7 +223,7 @@ export default {
     top: '100%',
     position: 'absolute',
     color: colorTheme.palette.error.main,
-    minHeight: '1.25rem', 
+    minHeight: '1.25rem',
     lineHeight: '1.2',
     [`@media (max-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
       fontSize: '0.75rem',
