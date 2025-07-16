@@ -243,11 +243,11 @@ run_lighthouse_desktop_dind() {
     export SHM_SIZE="2g"
 
     echo "🚀 Starting production services with DIND configuration..."
-    docker-compose -f docker-compose.test.yml up -d --build prod
+    docker compose -f docker-compose.test.yml up -d --build prod
     echo "⏳ Waiting for production service to be ready..."
     timeout=60
     while [ $timeout -gt 0 ]; do
-      if docker-compose -f docker-compose.test.yml ps prod | grep -q "Up"; then
+      if docker compose -f docker-compose.test.yml ps prod | grep -q "Up"; then
         echo "✅ Production service is running"
         break
       fi
@@ -257,7 +257,7 @@ run_lighthouse_desktop_dind() {
     done
     if [ $timeout -le 0 ]; then
       echo "❌ Production service failed to start"
-      docker-compose -f docker-compose.test.yml logs prod
+      docker compose -f docker-compose.test.yml logs prod
       exit 1
     fi
 
@@ -265,7 +265,7 @@ run_lighthouse_desktop_dind() {
     echo "⏳ Waiting for production service to be healthy..."
     timeout=60
     while [ $timeout -gt 0 ]; do
-      if docker exec website-prod curl -f http://localhost:3001 >/dev/null 2>&1; then
+      if docker exec website-prod-1 curl -f http://localhost:3001 >/dev/null 2>&1; then
         echo "✅ Production service is healthy"
         break
       fi
@@ -275,18 +275,18 @@ run_lighthouse_desktop_dind() {
     done
     if [ $timeout -le 0 ]; then
       echo "❌ Production service failed to become healthy"
-      docker-compose -f docker-compose.test.yml logs prod
+      docker compose -f docker-compose.test.yml logs prod
       exit 1
     fi
 
     echo "📦 Installing Chrome and Lighthouse CLI in prod container..."
-    docker exec website-prod sh -c "apk add --no-cache chromium chromium-chromedriver && npm install -g @lhci/cli@0.14.0"
+    docker exec website-prod-1 sh -c "apk add --no-cache chromium chromium-chromedriver && npm install -g @lhci/cli@0.14.0"
 
     echo "📂 Copying Lighthouse config files to prod container..."
-    docker cp lighthouserc.desktop.js website-prod:/app/
+    docker cp lighthouserc.desktop.js website-prod-1:/app/
 
     echo "🧪 Testing Chrome installation..."
-    if docker exec website-prod /usr/bin/chromium-browser --version; then
+    if docker exec website-prod-1 /usr/bin/chromium-browser --version; then
         echo "✅ Chrome is installed and working"
     else
         echo "❌ Chrome installation test failed"
@@ -294,7 +294,7 @@ run_lighthouse_desktop_dind() {
     fi
 
     echo "🔦 Running Lighthouse desktop tests..."
-    docker exec -w /app website-prod lhci autorun \
+    docker exec -w /app website-prod-1 lhci autorun \
       --config=lighthouserc.desktop.js \
       --collect.url=http://localhost:3001 \
       --collect.chromePath=/usr/bin/chromium-browser \
@@ -302,10 +302,10 @@ run_lighthouse_desktop_dind() {
 
     echo "📂 Copying lighthouse results from prod container..."
     mkdir -p lhci-reports-desktop
-    docker cp website-prod:/app/lhci-reports-desktop/. lhci-reports-desktop/ 2>/dev/null || echo "No lighthouse results to copy"
+    docker cp website-prod-1:/app/lhci-reports-desktop/. lhci-reports-desktop/ 2>/dev/null || echo "No lighthouse results to copy"
 
     echo "🧹 Cleaning up Docker services..."
-    docker-compose -f docker-compose.test.yml down
+    docker compose -f docker-compose.test.yml down
 
     echo "✅ Lighthouse desktop tests completed"
 }
@@ -323,11 +323,11 @@ run_lighthouse_mobile_dind() {
     export SHM_SIZE="2g"
 
     echo "🚀 Starting production services with DIND configuration..."
-    docker-compose -f docker-compose.test.yml up -d --build prod
+    docker compose -f docker-compose.test.yml up -d --build prod
     echo "⏳ Waiting for production service to be ready..."
     timeout=60
     while [ $timeout -gt 0 ]; do
-      if docker-compose -f docker-compose.test.yml ps prod | grep -q "Up"; then
+      if docker compose -f docker-compose.test.yml ps prod | grep -q "Up"; then
         echo "✅ Production service is running"
         break
       fi
@@ -337,7 +337,7 @@ run_lighthouse_mobile_dind() {
     done
     if [ $timeout -le 0 ]; then
       echo "❌ Production service failed to start"
-      docker-compose -f docker-compose.test.yml logs prod
+      docker compose -f docker-compose.test.yml logs prod
       exit 1
     fi
 
@@ -345,7 +345,7 @@ run_lighthouse_mobile_dind() {
     echo "⏳ Waiting for production service to be healthy..."
     timeout=60
     while [ $timeout -gt 0 ]; do
-      if docker exec website-prod curl -f http://localhost:3001 >/dev/null 2>&1; then
+      if docker exec website-prod-1 curl -f http://localhost:3001 >/dev/null 2>&1; then
         echo "✅ Production service is healthy"
         break
       fi
@@ -355,18 +355,18 @@ run_lighthouse_mobile_dind() {
     done
     if [ $timeout -le 0 ]; then
       echo "❌ Production service failed to become healthy"
-      docker-compose -f docker-compose.test.yml logs prod
+      docker compose -f docker-compose.test.yml logs prod
       exit 1
     fi
 
     echo "📦 Installing Chrome and Lighthouse CLI in prod container..."
-    docker exec website-prod sh -c "apk add --no-cache chromium chromium-chromedriver && npm install -g @lhci/cli@0.14.0"
+    docker exec website-prod-1 sh -c "apk add --no-cache chromium chromium-chromedriver && npm install -g @lhci/cli@0.14.0"
 
     echo "📂 Copying Lighthouse config files to prod container..."
-    docker cp lighthouserc.mobile.js website-prod:/app/
+    docker cp lighthouserc.mobile.js website-prod-1:/app/
 
     echo "🧪 Testing Chrome installation..."
-    if docker exec website-prod /usr/bin/chromium-browser --version; then
+    if docker exec website-prod-1 /usr/bin/chromium-browser --version; then
         echo "✅ Chrome is installed and working"
     else
         echo "❌ Chrome installation test failed"
@@ -374,7 +374,7 @@ run_lighthouse_mobile_dind() {
     fi
 
     echo "📱 Running Lighthouse mobile tests..."
-    docker exec -w /app website-prod lhci autorun \
+    docker exec -w /app website-prod-1 lhci autorun \
       --config=lighthouserc.mobile.js \
       --collect.url=http://localhost:3001 \
       --collect.chromePath=/usr/bin/chromium-browser \
@@ -382,10 +382,10 @@ run_lighthouse_mobile_dind() {
 
     echo "📂 Copying lighthouse results from prod container..."
     mkdir -p lhci-reports-mobile
-    docker cp website-prod:/app/lhci-reports-mobile/. lhci-reports-mobile/ 2>/dev/null || echo "No lighthouse results to copy"
+    docker cp website-prod-1:/app/lhci-reports-mobile/. lhci-reports-mobile/ 2>/dev/null || echo "No lighthouse results to copy"
 
     echo "🧹 Cleaning up Docker services..."
-    docker-compose -f docker-compose.test.yml down
+    docker compose -f docker-compose.test.yml down
 
     echo "✅ Lighthouse mobile tests completed"
 }
