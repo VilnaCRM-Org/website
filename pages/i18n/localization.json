@@ -27,6 +27,10 @@
             "facebook": "Facebook Icon",
             "linkedin": "Linkedin Icon"
           }
+        },
+        "layout": {
+          "page_title": "VilnaCRM API",
+          "meta_description": "The first Ukrainian open source CRM"
         }
       },
       "about_vilna": {
@@ -237,6 +241,10 @@
             "facebook": "Facebook Іконка",
             "linkedin": "Linkedin Іконка"
           }
+        },
+        "layout": {
+          "page_title": "VilnaCRM API",
+          "meta_description": "Перша українська CRM з відкритим кодом"
         }
       },
       "about_vilna": {

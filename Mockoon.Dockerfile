@@ -5,7 +5,6 @@ WORKDIR /app
 RUN apk add --no-cache curl=8.12.1-r1 && \
     npm install -g @mockoon/cli@9.2.0
 
-RUN curl -o /app/data.json "https://raw.githubusercontent.com/VilnaCRM-Org/user-service/main/.github/openapi-spec/spec.yaml"
+RUN curl -fSL -o /app/data.yaml "https://raw.githubusercontent.com/VilnaCRM-Org/user-service/main/.github/openapi-spec/spec.yaml"
 
-
-CMD ["mockoon-cli", "start", "-d", "/app/data.json"]
+CMD ["mockoon-cli", "start", "--data", "/app/data.yaml", "--port", "8080"]
