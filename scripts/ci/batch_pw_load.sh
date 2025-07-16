@@ -447,55 +447,6 @@ run_load_tests_dind() {
 }
 # --- END: Load Test Functions ---
 
-# Run all tests in batch
-run_batch_tests() {
-    echo "🎭 Running Playwright and Load tests batch..."
-    
-    # Setup environment
-    setup_docker_network
-    configure_docker_compose
-    
-    # Create test logs directory
-    mkdir -p test-logs
-    
-    # Run tests with error handling
-    local failed_tests=()
-    
-    echo "🎭 Running E2E tests..."
-    if run_e2e_tests_dind > test-logs/e2e.log 2>&1; then
-        echo "✅ E2E tests PASSED"
-    else
-        echo "❌ E2E tests FAILED"
-        failed_tests+=("e2e")
-    fi
-    
-    echo "🎨 Running Visual tests..."
-    if run_visual_tests_dind > test-logs/visual.log 2>&1; then
-        echo "✅ Visual tests PASSED"
-    else
-        echo "❌ Visual tests FAILED"
-        failed_tests+=("visual")
-    fi
-    
-    echo "⚡ Running Load tests..."
-    if run_load_tests_dind > test-logs/load.log 2>&1; then
-        echo "✅ Load tests PASSED"
-    else
-        echo "❌ Load tests FAILED"
-        failed_tests+=("load")
-    fi
-    
-    # Report results
-    if [ ${#failed_tests[@]} -eq 0 ]; then
-        echo "🎉 All tests in batch completed successfully!"
-        exit 0
-    else
-        echo "❌ The following tests failed: ${failed_tests[*]}"
-        echo "Check test-logs/ directory for detailed logs"
-        exit 1
-    fi
-}
-
 # Show usage information
 show_usage() {
     echo "Usage: $0 [COMMAND]"

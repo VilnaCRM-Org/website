@@ -391,55 +391,6 @@ run_lighthouse_mobile_dind() {
 }
 # --- END: Lighthouse Test Functions ---
 
-# Run all tests in batch
-run_batch_tests() {
-    echo "🔦 Running Lighthouse and Memory Leak tests batch..."
-    
-    # Setup environment
-    setup_docker_network
-    configure_docker_compose
-    
-    # Create test logs directory
-    mkdir -p test-logs
-    
-    # Run tests with error handling
-    local failed_tests=()
-    
-    echo "🧠 Running Memory Leak tests..."
-    if run_memory_leak_tests_dind > test-logs/memory-leak.log 2>&1; then
-        echo "✅ Memory Leak tests PASSED"
-    else
-        echo "❌ Memory Leak tests FAILED"
-        failed_tests+=("memory-leak")
-    fi
-    
-    echo "🔦 Running Lighthouse Desktop tests..."
-    if run_lighthouse_desktop_dind > test-logs/lighthouse-desktop.log 2>&1; then
-        echo "✅ Lighthouse Desktop tests PASSED"
-    else
-        echo "❌ Lighthouse Desktop tests FAILED"
-        failed_tests+=("lighthouse-desktop")
-    fi
-    
-    echo "📱 Running Lighthouse Mobile tests..."
-    if run_lighthouse_mobile_dind > test-logs/lighthouse-mobile.log 2>&1; then
-        echo "✅ Lighthouse Mobile tests PASSED"
-    else
-        echo "❌ Lighthouse Mobile tests FAILED"
-        failed_tests+=("lighthouse-mobile")
-    fi
-    
-    # Report results
-    if [ ${#failed_tests[@]} -eq 0 ]; then
-        echo "🎉 All tests in batch completed successfully!"
-        exit 0
-    else
-        echo "❌ The following tests failed: ${failed_tests[*]}"
-        echo "Check test-logs/ directory for detailed logs"
-        exit 1
-    fi
-}
-
 # Show usage information
 show_usage() {
     echo "Usage: $0 [COMMAND]"
