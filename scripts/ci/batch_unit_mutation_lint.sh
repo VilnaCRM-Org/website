@@ -202,7 +202,7 @@ start_dev_dind() {
     echo "🐳 Starting development environment in DIND mode..."
     setup_docker_network
     configure_docker_compose
-    docker-compose "$DOCKER_COMPOSE_DEV_FILE" up -d dev
+    docker-compose $DOCKER_COMPOSE_DEV_FILE up -d dev
     wait_for_dev_dind
     echo "🎉 Development environment started successfully!"
 }
@@ -214,9 +214,9 @@ start_prod_dind() {
     setup_docker_network
     configure_docker_compose
     echo "Building production container image..."
-    docker-compose "$COMMON_HEALTHCHECKS_FILE" "$DOCKER_COMPOSE_TEST_FILE" build
+    docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE build
     echo "🚀 Starting production services..."
-    docker-compose "$COMMON_HEALTHCHECKS_FILE" "$DOCKER_COMPOSE_TEST_FILE" up -d
+    docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE up -d
     wait_for_prod_dind
     echo "🎉 Production environment started successfully!"
 }
@@ -229,7 +229,7 @@ run_unit_tests_dind() {
     setup_docker_network
     configure_docker_compose
     echo "Building container image..."
-    docker-compose "$DOCKER_COMPOSE_DEV_FILE" build dev
+    docker-compose $DOCKER_COMPOSE_DEV_FILE build dev
     echo "🧹 Cleaning up any existing temporary containers..."
     docker rm -f website-dev-temp 2>/dev/null || true
     echo "🛠️ Starting container in background for file operations..."
@@ -287,7 +287,7 @@ run_mutation_tests_dind() {
     setup_docker_network
     configure_docker_compose
     echo "Building container image..."
-    docker-compose "$DOCKER_COMPOSE_DEV_FILE" build dev
+    docker-compose $DOCKER_COMPOSE_DEV_FILE build dev
     echo "🧹 Cleaning up any existing containers..."
     docker rm -f website-dev-mutation 2>/dev/null || true
     echo "🛠️ Starting container in background for file operations..."
@@ -364,7 +364,7 @@ run_eslint_dind() {
     setup_docker_network
     configure_docker_compose
     echo "Building container image..."
-    docker-compose "$DOCKER_COMPOSE_DEV_FILE" build dev
+    docker-compose $DOCKER_COMPOSE_DEV_FILE build dev
     echo "🧹 Cleaning up any existing containers..."
     docker rm -f website-dev-lint-next 2>/dev/null || true
     echo "🛠️ Starting container for linting..."
@@ -411,7 +411,7 @@ run_typescript_check_dind() {
     setup_docker_network
     configure_docker_compose
     echo "Building container image..."
-    docker-compose "$DOCKER_COMPOSE_DEV_FILE" build dev
+    docker-compose $DOCKER_COMPOSE_DEV_FILE build dev
     echo "🧹 Cleaning up any existing containers..."
     docker rm -f website-dev-lint-tsc 2>/dev/null || true
     echo "🛠️ Starting container for TypeScript linting..."
@@ -458,7 +458,7 @@ run_markdown_lint_dind() {
     setup_docker_network
     configure_docker_compose
     echo "Building container image..."
-    docker-compose "$DOCKER_COMPOSE_DEV_FILE" build dev
+    docker-compose $DOCKER_COMPOSE_DEV_FILE build dev
     echo "🧹 Cleaning up any existing containers..."
     docker rm -f website-dev-lint-md 2>/dev/null || true
     echo "🛠️ Starting container for Markdown linting..."
