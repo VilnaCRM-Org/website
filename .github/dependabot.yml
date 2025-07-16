@@ -4,6 +4,7 @@ updates:
     directory: '/'
     schedule:
       interval: 'monthly'
+      day: '1'
       time: '09:00'
       timezone: 'UTC'
     open-pull-requests-limit: 2
