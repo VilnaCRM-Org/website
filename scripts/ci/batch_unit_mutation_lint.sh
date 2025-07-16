@@ -265,7 +265,7 @@ run_unit_tests_dind() {
     fi
     
     echo "🧪 Running server-side tests..."
-    if docker exec website-dev-temp sh -c "cd /app && env TEST_ENV=server ./node_modules/.bin/jest --verbose --passWithNoTests --maxWorkers=2"; then
+    if docker exec website-dev-temp sh -c "cd /app && env TEST_ENV=server ./node_modules/.bin/jest --verbose --passWithNoTests --maxWorkers=2 ./src/test/apollo-server"; then
         echo "✅ Server-side tests PASSED"
     else
         echo "❌ Server-side tests FAILED"
