@@ -452,7 +452,6 @@ show_usage() {
     echo "Usage: $0 [COMMAND]"
     echo ""
     echo "Commands:"
-    echo "  run-batch              Run all tests in batch (E2E, Visual, Load)"
     echo "  setup-network          Setup Docker network for DIND"
     echo "  configure-compose      Configure Docker Compose files for DIND"
     echo "  start-prod             Start production environment in DIND mode"
@@ -471,9 +470,6 @@ show_usage() {
 
 # Main command dispatcher
 case "${1:-help}" in
-    run-batch)
-        run_batch_tests
-        ;;
     setup-network)
         setup_docker_network
         ;;
