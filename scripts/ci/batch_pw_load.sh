@@ -95,19 +95,19 @@ test_container_connectivity() {
 
     # Test DNS resolution
     echo "🔍 Testing DNS resolution..."
-    docker exec website-playwright-1 nslookup website-prod >/dev/null 2>&1 || echo "⚠️  DNS lookup failed for website-prod"
-    docker exec website-playwright-1 nslookup apollo >/dev/null 2>&1 || echo "⚠️  DNS lookup failed for apollo"
+    docker exec website-playwright nslookup website-prod >/dev/null 2>&1 || echo "⚠️  DNS lookup failed for website-prod"
+    docker exec website-playwright nslookup apollo >/dev/null 2>&1 || echo "⚠️  DNS lookup failed for apollo"
 
     # Test ping connectivity
     echo "🔍 Testing ping connectivity..."
-    docker exec website-playwright-1 ping -c 2 website-prod >/dev/null 2>&1 || echo "⚠️  Ping failed for website-prod"
-    docker exec website-playwright-1 ping -c 2 apollo >/dev/null 2>&1 || echo "⚠️  Ping failed for apollo"
+    docker exec website-playwright ping -c 2 website-prod >/dev/null 2>&1 || echo "⚠️  Ping failed for website-prod"
+    docker exec website-playwright ping -c 2 apollo >/dev/null 2>&1 || echo "⚠️  Ping failed for apollo"
 
     # Test HTTP connectivity
     echo "🔍 Testing HTTP connectivity..."
-    docker exec website-playwright-1 curl -f http://website-prod:3001 >/dev/null 2>&1 || echo "⚠️  HTTP connectivity failed for website-prod:3001"
-    docker exec website-playwright-1 curl -f "http://$PROD_IP:3001" >/dev/null 2>&1 || echo "⚠️  HTTP connectivity failed for $PROD_IP:3001"
-    docker exec website-playwright-1 curl -f http://apollo:4000/graphql >/dev/null 2>&1 || echo "⚠️  HTTP connectivity failed for apollo:4000/graphql"
+    docker exec website-playwright curl -f http://website-prod:3001 >/dev/null 2>&1 || echo "⚠️  HTTP connectivity failed for website-prod:3001"
+    docker exec website-playwright curl -f "http://$PROD_IP:3001" >/dev/null 2>&1 || echo "⚠️  HTTP connectivity failed for $PROD_IP:3001"
+    docker exec website-playwright curl -f http://apollo:4000/graphql >/dev/null 2>&1 || echo "⚠️  HTTP connectivity failed for apollo:4000/graphql"
 
     echo "✅ Container connectivity testing completed"
 }
@@ -186,8 +186,8 @@ run_e2e_tests_dind() {
 
     # Wait for container to be ready
     for i in $(seq 1 30); do
-        if docker exec website-playwright-1 echo "Container ready" >/dev/null 2>&1; then
-            echo "✅ Container website-playwright-1 is ready"
+        if docker exec website-playwright echo "Container ready" >/dev/null 2>&1; then
+            echo "✅ Container website-playwright is ready"
             break
         fi
         echo "Waiting for container to be ready... attempt $i"
@@ -200,10 +200,10 @@ run_e2e_tests_dind() {
 
     # Create directories and copy files
     echo "Creating directories in container..."
-    docker exec website-playwright-1 mkdir -p /app/src/test /app/src/config /app/pages/i18n
+    docker exec website-playwright mkdir -p /app/src/test /app/src/config /app/pages/i18n
 
     echo "Copying complete test directory..."
-    if docker cp src/test/. website-playwright-1:/app/src/test/; then
+    if docker cp src/test/. website-playwright:/app/src/test/; then
         echo "✅ Complete test directory copied successfully"
     else
         echo "❌ Failed to copy complete test directory"
@@ -211,7 +211,7 @@ run_e2e_tests_dind() {
     fi
 
     echo "Copying config files..."
-    if docker cp src/config website-playwright-1:/app/src/; then
+    if docker cp src/config website-playwright:/app/src/; then
         echo "✅ Config files copied successfully"
     else
         echo "❌ Failed to copy config files"
@@ -219,7 +219,7 @@ run_e2e_tests_dind() {
     fi
 
     echo "Copying i18n files..."
-    if docker cp pages/i18n website-playwright-1:/app/pages/; then
+    if docker cp pages/i18n website-playwright:/app/pages/; then
         echo "✅ i18n files copied successfully"
     else
         echo "❌ Failed to copy i18n files"
@@ -227,27 +227,27 @@ run_e2e_tests_dind() {
     fi
 
     echo "Copying TypeScript configuration files..."
-    docker cp tsconfig.json website-playwright-1:/app/ || echo "⚠️  Failed to copy tsconfig.json"
-    docker cp tsconfig.paths.json website-playwright-1:/app/ || echo "⚠️  Failed to copy tsconfig.paths.json"
-    docker cp next.config.js website-playwright-1:/app/ || echo "⚠️  Failed to copy next.config.js"
-    docker cp playwright.config.ts website-playwright-1:/app/ || echo "⚠️  Failed to copy playwright.config.ts"
+    docker cp tsconfig.json website-playwright:/app/ || echo "⚠️  Failed to copy tsconfig.json"
+    docker cp tsconfig.paths.json website-playwright:/app/ || echo "⚠️  Failed to copy tsconfig.paths.json"
+    docker cp next.config.js website-playwright:/app/ || echo "⚠️  Failed to copy next.config.js"
+    docker cp playwright.config.ts website-playwright:/app/ || echo "⚠️  Failed to copy playwright.config.ts"
 
     echo "🔍 Verifying files were copied correctly..."
-    docker exec website-playwright-1 ls -la /app/src/test/e2e/ || echo "⚠️  E2E files not found in container"
-    docker exec website-playwright-1 ls -la /app/src/test/e2e/utils/ || echo "⚠️  E2E utils not found in container"
-    docker exec website-playwright-1 ls -la /app/src/config/ || echo "⚠️  Config files not found in container"
-    docker exec website-playwright-1 ls -la /app/pages/i18n/ || echo "⚠️  i18n files not found in container"
-    docker exec website-playwright-1 ls -la /app/tsconfig*.json || echo "⚠️  TypeScript config files not found"
-    docker exec website-playwright-1 ls -la /app/next.config.js || echo "⚠️  Next.js config not found"
-    docker exec website-playwright-1 ls -la /app/playwright.config.ts || echo "⚠️  Playwright config not found"
+    docker exec website-playwright ls -la /app/src/test/e2e/ || echo "⚠️  E2E files not found in container"
+    docker exec website-playwright ls -la /app/src/test/e2e/utils/ || echo "⚠️  E2E utils not found in container"
+    docker exec website-playwright ls -la /app/src/config/ || echo "⚠️  Config files not found in container"
+    docker exec website-playwright ls -la /app/pages/i18n/ || echo "⚠️  i18n files not found in container"
+    docker exec website-playwright ls -la /app/tsconfig*.json || echo "⚠️  TypeScript config files not found"
+    docker exec website-playwright ls -la /app/next.config.js || echo "⚠️  Next.js config not found"
+    docker exec website-playwright ls -la /app/playwright.config.ts || echo "⚠️  Playwright config not found"
 
     echo "🧹 Cleaning up previous E2E results..."
-    docker exec website-playwright-1 rm -rf /app/playwright-report /app/test-results || true
+    docker exec website-playwright rm -rf /app/playwright-report /app/test-results || true
 
     echo "🎭 Running Playwright E2E tests with IP-based connectivity..."
 
     # Get production container IP for reliable connectivity
-    PROD_IP=$(docker inspect website-prod-1 --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' 2>/dev/null || echo "")
+    PROD_IP=$(docker inspect website-prod --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' 2>/dev/null || echo "")
     if [ -n "$PROD_IP" ]; then
         echo "✅ Production container IP: $PROD_IP"
         PROD_URL="http://$PROD_IP:3001"
@@ -258,21 +258,21 @@ run_e2e_tests_dind() {
 
     # Test container connectivity
     echo "🔍 Testing container connectivity..."
-    docker exec website-playwright-1 curl -f $PROD_URL >/dev/null 2>&1 || echo "⚠️  Container connectivity test failed"
+    docker exec website-playwright curl -f $PROD_URL >/dev/null 2>&1 || echo "⚠️  Container connectivity test failed"
 
     # Run E2E tests with comprehensive environment setup
-    if docker exec -e NEXT_PUBLIC_MAIN_LANGUAGE=uk -e NEXT_PUBLIC_FALLBACK_LANGUAGE=en -e NEXT_PUBLIC_PROD_CONTAINER_API_URL=$PROD_URL -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_NAME=no-aws-header-name -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_VALUE=no-aws-header-value -e NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL=https://github.com/VilnaCRM-Org/ -e NEXT_PUBLIC_GRAPHQL_API_URL=http://apollo:4000/graphql -w /app website-playwright-1 npx playwright test src/test/e2e --timeout=60000; then
+    if docker exec -e NEXT_PUBLIC_MAIN_LANGUAGE=uk -e NEXT_PUBLIC_FALLBACK_LANGUAGE=en -e NEXT_PUBLIC_PROD_CONTAINER_API_URL=$PROD_URL -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_NAME=no-aws-header-name -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_VALUE=no-aws-header-value -e NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL=https://github.com/VilnaCRM-Org/ -e NEXT_PUBLIC_GRAPHQL_API_URL=http://apollo:4000/graphql -w /app website-playwright npx playwright test src/test/e2e --timeout=60000; then
         echo "✅ E2E tests PASSED"
     else
         echo "❌ E2E tests FAILED"
-        docker logs website-playwright-1 --tail 30
+        docker logs website-playwright --tail 30
         echo "⚠️  E2E tests failed but continuing with build..."
     fi
 
     echo "📂 Copying E2E test results..."
     mkdir -p playwright-report test-results
-    docker cp website-playwright-1:/app/playwright-report/. playwright-report/ 2>/dev/null || echo "No playwright-report to copy"
-    docker cp website-playwright-1:/app/test-results/. test-results/ 2>/dev/null || echo "No test-results to copy"
+    docker cp website-playwright:/app/playwright-report/. playwright-report/ 2>/dev/null || echo "No playwright-report to copy"
+    docker cp website-playwright:/app/test-results/. test-results/ 2>/dev/null || echo "No test-results to copy"
 
     echo "🧹 Cleaning up Docker services..."
     docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE down
@@ -296,8 +296,8 @@ run_visual_tests_dind() {
 
     # Wait for container to be ready
     for i in $(seq 1 30); do
-        if docker exec website-playwright-1 echo "Container ready" >/dev/null 2>&1; then
-            echo "✅ Container website-playwright-1 is ready"
+        if docker exec website-playwright echo "Container ready" >/dev/null 2>&1; then
+            echo "✅ Container website-playwright is ready"
             break
         fi
         echo "Waiting for container to be ready... attempt $i"
@@ -310,10 +310,10 @@ run_visual_tests_dind() {
 
     # Create directories and copy files
     echo "Creating directories in container..."
-    docker exec website-playwright-1 mkdir -p /app/src/test /app/src/config /app/pages/i18n
+    docker exec website-playwright mkdir -p /app/src/test /app/src/config /app/pages/i18n
 
     echo "Copying complete test directory..."
-    if docker cp src/test/. website-playwright-1:/app/src/test/; then
+    if docker cp src/test/. website-playwright:/app/src/test/; then
         echo "✅ Complete test directory copied successfully"
     else
         echo "❌ Failed to copy complete test directory"
@@ -321,7 +321,7 @@ run_visual_tests_dind() {
     fi
 
     echo "Copying config files..."
-    if docker cp src/config website-playwright-1:/app/src/; then
+    if docker cp src/config website-playwright:/app/src/; then
         echo "✅ Config files copied successfully"
     else
         echo "❌ Failed to copy config files"
@@ -329,7 +329,7 @@ run_visual_tests_dind() {
     fi
 
     echo "Copying i18n files..."
-    if docker cp pages/i18n website-playwright-1:/app/pages/; then
+    if docker cp pages/i18n website-playwright:/app/pages/; then
         echo "✅ i18n files copied successfully"
     else
         echo "❌ Failed to copy i18n files"
@@ -337,27 +337,27 @@ run_visual_tests_dind() {
     fi
 
     echo "Copying TypeScript configuration files..."
-    docker cp tsconfig.json website-playwright-1:/app/ || echo "⚠️  Failed to copy tsconfig.json"
-    docker cp tsconfig.paths.json website-playwright-1:/app/ || echo "⚠️  Failed to copy tsconfig.paths.json"
-    docker cp next.config.js website-playwright-1:/app/ || echo "⚠️  Failed to copy next.config.js"
-    docker cp playwright.config.ts website-playwright-1:/app/ || echo "⚠️  Failed to copy playwright.config.ts"
+    docker cp tsconfig.json website-playwright:/app/ || echo "⚠️  Failed to copy tsconfig.json"
+    docker cp tsconfig.paths.json website-playwright:/app/ || echo "⚠️  Failed to copy tsconfig.paths.json"
+    docker cp next.config.js website-playwright:/app/ || echo "⚠️  Failed to copy next.config.js"
+    docker cp playwright.config.ts website-playwright:/app/ || echo "⚠️  Failed to copy playwright.config.ts"
 
     echo "🔍 Verifying files were copied correctly..."
-    docker exec website-playwright-1 ls -la /app/src/test/visual/ || echo "⚠️  Visual files not found in container"
-    docker exec website-playwright-1 ls -la /app/src/test/e2e/utils/ || echo "⚠️  E2E utils not found in container"
-    docker exec website-playwright-1 ls -la /app/src/config/ || echo "⚠️  Config files not found in container"
-    docker exec website-playwright-1 ls -la /app/pages/i18n/ || echo "⚠️  i18n files not found in container"
-    docker exec website-playwright-1 ls -la /app/tsconfig*.json || echo "⚠️  TypeScript config files not found"
-    docker exec website-playwright-1 ls -la /app/next.config.js || echo "⚠️  Next.js config not found"
-    docker exec website-playwright-1 ls -la /app/playwright.config.ts || echo "⚠️  Playwright config not found"
+    docker exec website-playwright ls -la /app/src/test/visual/ || echo "⚠️  Visual files not found in container"
+    docker exec website-playwright ls -la /app/src/test/e2e/utils/ || echo "⚠️  E2E utils not found in container"
+    docker exec website-playwright ls -la /app/src/config/ || echo "⚠️  Config files not found in container"
+    docker exec website-playwright ls -la /app/pages/i18n/ || echo "⚠️  i18n files not found in container"
+    docker exec website-playwright ls -la /app/tsconfig*.json || echo "⚠️  TypeScript config files not found"
+    docker exec website-playwright ls -la /app/next.config.js || echo "⚠️  Next.js config not found"
+    docker exec website-playwright ls -la /app/playwright.config.ts || echo "⚠️  Playwright config not found"
 
     echo "🧹 Cleaning up previous Visual results..."
-    docker exec website-playwright-1 rm -rf /app/playwright-report /app/test-results || true
+    docker exec website-playwright rm -rf /app/playwright-report /app/test-results || true
 
     echo "🎨 Running Playwright Visual tests with IP-based connectivity..."
 
     # Get production container IP for reliable connectivity
-    PROD_IP=$(docker inspect website-prod-1 --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' 2>/dev/null || echo "")
+    PROD_IP=$(docker inspect website-prod --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' 2>/dev/null || echo "")
     if [ -n "$PROD_IP" ]; then
         echo "✅ Production container IP: $PROD_IP"
         PROD_URL="http://$PROD_IP:3001"
@@ -368,21 +368,21 @@ run_visual_tests_dind() {
 
     # Test container connectivity
     echo "🔍 Testing container connectivity..."
-    docker exec website-playwright-1 curl -f $PROD_URL >/dev/null 2>&1 || echo "⚠️  Container connectivity test failed"
+    docker exec website-playwright curl -f $PROD_URL >/dev/null 2>&1 || echo "⚠️  Container connectivity test failed"
 
     # Run Visual tests with comprehensive environment setup
-    if docker exec -e NEXT_PUBLIC_MAIN_LANGUAGE=uk -e NEXT_PUBLIC_FALLBACK_LANGUAGE=en -e NEXT_PUBLIC_PROD_CONTAINER_API_URL=$PROD_URL -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_NAME=no-aws-header-name -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_VALUE=no-aws-header-value -e NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL=https://github.com/VilnaCRM-Org/ -e NEXT_PUBLIC_GRAPHQL_API_URL=http://apollo:4000/graphql -w /app website-playwright-1 npx playwright test src/test/visual --timeout=60000; then
+    if docker exec -e NEXT_PUBLIC_MAIN_LANGUAGE=uk -e NEXT_PUBLIC_FALLBACK_LANGUAGE=en -e NEXT_PUBLIC_PROD_CONTAINER_API_URL=$PROD_URL -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_NAME=no-aws-header-name -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_VALUE=no-aws-header-value -e NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL=https://github.com/VilnaCRM-Org/ -e NEXT_PUBLIC_GRAPHQL_API_URL=http://apollo:4000/graphql -w /app website-playwright npx playwright test src/test/visual --timeout=60000; then
         echo "✅ Visual tests PASSED"
     else
         echo "❌ Visual tests FAILED"
-        docker logs website-playwright-1 --tail 30
+        docker logs website-playwright --tail 30
         echo "⚠️  Visual tests failed but continuing with build..."
     fi
 
     echo "📂 Copying Visual test results..."
     mkdir -p playwright-report test-results
-    docker cp website-playwright-1:/app/playwright-report/. playwright-report/ 2>/dev/null || echo "No playwright-report to copy"
-    docker cp website-playwright-1:/app/test-results/. test-results/ 2>/dev/null || echo "No test-results to copy"
+    docker cp website-playwright:/app/playwright-report/. playwright-report/ 2>/dev/null || echo "No playwright-report to copy"
+    docker cp website-playwright:/app/test-results/. test-results/ 2>/dev/null || echo "No test-results to copy"
 
     echo "🧹 Cleaning up Docker services..."
     docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE down

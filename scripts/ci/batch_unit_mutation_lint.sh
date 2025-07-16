@@ -80,38 +80,7 @@ setup_docker_network() {
     echo "✅ Docker network configured"
 }
 
-# Helper to run a command in a temp container with volume mount (no dependency reinstall)
-run_in_temp_container() {
-    local image="$1"
-    local container_name="$2"
-    local run_cmd="$3"
-    local workdir="${4:-/app}"
-    local mount_src="${5:-.}"
 
-    echo "🧹 Cleaning up any existing $container_name container..."
-    docker rm -f "$container_name" 2>/dev/null || true
-    echo "🛠️ Starting $container_name from $image with volume mount..."
-
-    # Use volume mount instead of docker cp for much faster startup
-    # Dependencies are already installed in the base image
-    docker run -d --name "$container_name" \
-        --network "$NETWORK_NAME" \
-        -v "$(realpath "$mount_src"):$workdir:ro" \
-        "$image" tail -f /dev/null
-
-    echo "🚀 Running command in $container_name..."
-    if docker exec "$container_name" sh -c "cd \"$workdir\" && $run_cmd"; then
-        echo "✅ Command succeeded in $container_name"
-    else
-        echo "❌ Command failed in $container_name"
-        docker logs "$container_name" --tail 30
-        docker rm -f "$container_name"
-        exit 1
-    fi
-
-    echo "🧹 Cleaning up $container_name..."
-    docker rm -f "$container_name"
-}
 
 # Wait for dev service in DIND mode
 wait_for_dev_dind() {
@@ -260,15 +229,53 @@ run_unit_tests_dind() {
     setup_docker_network
     configure_docker_compose
     echo "Building container image..."
-    echo "🔍 Executing: docker-compose $DOCKER_COMPOSE_DEV_FILE build dev"
     docker-compose $DOCKER_COMPOSE_DEV_FILE build dev
-
-    # Client-side tests
-    run_in_temp_container "website-dev" "website-dev-temp" "env TEST_ENV=client ./node_modules/.bin/jest --verbose --passWithNoTests --maxWorkers=2"
-
-    # Server-side tests
-    run_in_temp_container "website-dev" "website-dev-temp" "env TEST_ENV=server ./node_modules/.bin/jest --verbose --passWithNoTests --maxWorkers=2"
-
+    echo "🧹 Cleaning up any existing temporary containers..."
+    docker rm -f website-dev-temp 2>/dev/null || true
+    echo "🛠️ Starting container in background for file operations..."
+    docker run -d --name website-dev-temp --network $NETWORK_NAME website-dev tail -f /dev/null
+    
+    echo "📂 Copying source files into container..."
+    if docker cp . website-dev-temp:/app/; then
+        echo "✅ Source files copied successfully"
+    else
+        echo "❌ Failed to copy source files"
+        docker rm -f website-dev-temp
+        exit 1
+    fi
+    
+    echo "📦 Installing dependencies inside container..."
+    if docker exec website-dev-temp sh -c "cd /app && npm install -g pnpm && pnpm install --frozen-lockfile"; then
+        echo "✅ Dependencies installed successfully"
+    else
+        echo "❌ Failed to install dependencies"
+        docker logs website-dev-temp --tail 20
+        docker rm -f website-dev-temp
+        exit 1
+    fi
+    
+    echo "🧪 Running client-side tests..."
+    if docker exec website-dev-temp sh -c "cd /app && env TEST_ENV=client ./node_modules/.bin/jest --verbose --passWithNoTests --maxWorkers=2"; then
+        echo "✅ Client-side tests PASSED"
+    else
+        echo "❌ Client-side tests FAILED"
+        docker logs website-dev-temp --tail 30
+        docker rm -f website-dev-temp
+        exit 1
+    fi
+    
+    echo "🧪 Running server-side tests..."
+    if docker exec website-dev-temp sh -c "cd /app && env TEST_ENV=server ./node_modules/.bin/jest --verbose --passWithNoTests --maxWorkers=2"; then
+        echo "✅ Server-side tests PASSED"
+    else
+        echo "❌ Server-side tests FAILED"
+        docker logs website-dev-temp --tail 30
+        docker rm -f website-dev-temp
+        exit 1
+    fi
+    
+    echo "🧹 Cleaning up temporary container..."
+    docker rm -f website-dev-temp
     echo "🎉 All unit tests completed successfully in true DinD mode!"
     echo "📊 Summary: Both client and server tests passed in containerized environment"
 }
@@ -280,15 +287,31 @@ run_mutation_tests_dind() {
     setup_docker_network
     configure_docker_compose
     echo "Building container image..."
-    docker-compose "$DOCKER_COMPOSE_DEV_FILE" build dev
+    docker-compose $DOCKER_COMPOSE_DEV_FILE build dev
     echo "🧹 Cleaning up any existing containers..."
     docker rm -f website-dev-mutation 2>/dev/null || true
-    echo "🛠️ Starting container with volume mount for faster startup..."
-    docker run -d --name website-dev-mutation \
-        --network "$NETWORK_NAME" \
-        -v "$(realpath .):/app:ro" \
-        website-dev tail -f /dev/null
-
+    echo "🛠️ Starting container in background for file operations..."
+    docker run -d --name website-dev-mutation --network $NETWORK_NAME website-dev tail -f /dev/null
+    
+    echo "📂 Copying source files into container..."
+    if docker cp . website-dev-mutation:/app/; then
+        echo "✅ Source files copied successfully"
+    else
+        echo "❌ Failed to copy source files"
+        docker rm -f website-dev-mutation
+        exit 1
+    fi
+    
+    echo "📦 Installing dependencies inside container..."
+    if docker exec website-dev-mutation sh -c "cd /app && npm install -g pnpm && pnpm install --frozen-lockfile"; then
+        echo "✅ Dependencies installed successfully"
+    else
+        echo "❌ Failed to install dependencies"
+        docker logs website-dev-mutation --tail 20
+        docker rm -f website-dev-mutation
+        exit 1
+    fi
+    
     echo "🚀 Starting dev server in background..."
     docker exec -d website-dev-mutation sh -c "cd /app && ./node_modules/.bin/next dev"
     echo "⏳ Waiting for dev server to be ready..."
@@ -298,7 +321,7 @@ run_mutation_tests_dind() {
             break
         fi
         echo "Attempt $i: Dev server not ready yet..."
-        if [ $((i % 10)) -eq 0 ]; then
+        if [ "$((i % 10))" -eq 0 ]; then
             echo "Debug info at attempt $i:"
             docker exec website-dev-mutation ps aux 2>/dev/null | grep -E "(next|node)" || echo "No Next.js processes found"
             docker exec website-dev-mutation netstat -tulpn 2>/dev/null | grep :3000 || echo "Port 3000 not bound"
@@ -313,7 +336,7 @@ run_mutation_tests_dind() {
             exit 1
         fi
     done
-
+    
     echo "🧬 Running Stryker mutation tests..."
     if docker exec website-dev-mutation sh -c "cd /app && pnpm stryker run"; then
         echo "✅ Mutation tests PASSED"
@@ -323,7 +346,7 @@ run_mutation_tests_dind() {
         docker rm -f website-dev-mutation
         exit 1
     fi
-
+    
     echo "📂 Copying mutation reports..."
     mkdir -p reports/mutation
     docker cp website-dev-mutation:/app/reports/mutation/. reports/mutation/ 2>/dev/null || echo "No mutation reports to copy"
@@ -341,15 +364,31 @@ run_eslint_dind() {
     setup_docker_network
     configure_docker_compose
     echo "Building container image..."
-    docker-compose "$DOCKER_COMPOSE_DEV_FILE" build dev
+    docker-compose $DOCKER_COMPOSE_DEV_FILE build dev
     echo "🧹 Cleaning up any existing containers..."
     docker rm -f website-dev-lint-next 2>/dev/null || true
-    echo "🛠️ Starting container with volume mount for faster startup..."
-    docker run -d --name website-dev-lint-next \
-        --network "$NETWORK_NAME" \
-        -v "$(realpath .):/app:ro" \
-        website-dev tail -f /dev/null
-
+    echo "🛠️ Starting container for linting..."
+    docker run -d --name website-dev-lint-next --network $NETWORK_NAME website-dev tail -f /dev/null
+    
+    echo "📂 Copying source files into container..."
+    if docker cp . website-dev-lint-next:/app/; then
+        echo "✅ Source files copied successfully"
+    else
+        echo "❌ Failed to copy source files"
+        docker rm -f website-dev-lint-next
+        exit 1
+    fi
+    
+    echo "📦 Installing dependencies inside container..."
+    if docker exec website-dev-lint-next sh -c "cd /app && npm install -g pnpm && pnpm install --frozen-lockfile"; then
+        echo "✅ Dependencies installed successfully"
+    else
+        echo "❌ Failed to install dependencies"
+        docker logs website-dev-lint-next --tail 20
+        docker rm -f website-dev-lint-next
+        exit 1
+    fi
+    
     echo "🔍 Running ESLint..."
     if docker exec website-dev-lint-next sh -c "cd /app && ./node_modules/.bin/next lint"; then
         echo "✅ ESLint check PASSED"
@@ -359,7 +398,7 @@ run_eslint_dind() {
         docker rm -f website-dev-lint-next
         exit 1
     fi
-
+    
     echo "🧹 Cleaning up lint container..."
     docker rm -f website-dev-lint-next
     echo "🎉 ESLint completed successfully in true DinD mode!"
@@ -372,15 +411,31 @@ run_typescript_check_dind() {
     setup_docker_network
     configure_docker_compose
     echo "Building container image..."
-    docker-compose "$DOCKER_COMPOSE_DEV_FILE" build dev
+    docker-compose $DOCKER_COMPOSE_DEV_FILE build dev
     echo "🧹 Cleaning up any existing containers..."
     docker rm -f website-dev-lint-tsc 2>/dev/null || true
-    echo "🛠️ Starting container with volume mount for faster startup..."
-    docker run -d --name website-dev-lint-tsc \
-        --network "$NETWORK_NAME" \
-        -v "$(realpath .):/app:ro" \
-        website-dev tail -f /dev/null
-
+    echo "🛠️ Starting container for TypeScript linting..."
+    docker run -d --name website-dev-lint-tsc --network $NETWORK_NAME website-dev tail -f /dev/null
+    
+    echo "📂 Copying source files into container..."
+    if docker cp . website-dev-lint-tsc:/app/; then
+        echo "✅ Source files copied successfully"
+    else
+        echo "❌ Failed to copy source files"
+        docker rm -f website-dev-lint-tsc
+        exit 1
+    fi
+    
+    echo "📦 Installing dependencies inside container..."
+    if docker exec website-dev-lint-tsc sh -c "cd /app && npm install -g pnpm && pnpm install --frozen-lockfile"; then
+        echo "✅ Dependencies installed successfully"
+    else
+        echo "❌ Failed to install dependencies"
+        docker logs website-dev-lint-tsc --tail 20
+        docker rm -f website-dev-lint-tsc
+        exit 1
+    fi
+    
     echo "🔍 Running TypeScript check..."
     if docker exec website-dev-lint-tsc sh -c "cd /app && ./node_modules/.bin/tsc --noEmit"; then
         echo "✅ TypeScript check PASSED"
@@ -390,7 +445,7 @@ run_typescript_check_dind() {
         docker rm -f website-dev-lint-tsc
         exit 1
     fi
-
+    
     echo "🧹 Cleaning up TypeScript lint container..."
     docker rm -f website-dev-lint-tsc
     echo "🎉 TypeScript check completed successfully in true DinD mode!"
@@ -403,15 +458,31 @@ run_markdown_lint_dind() {
     setup_docker_network
     configure_docker_compose
     echo "Building container image..."
-    docker-compose "$DOCKER_COMPOSE_DEV_FILE" build dev
+    docker-compose $DOCKER_COMPOSE_DEV_FILE build dev
     echo "🧹 Cleaning up any existing containers..."
     docker rm -f website-dev-lint-md 2>/dev/null || true
-    echo "🛠️ Starting container with volume mount for faster startup..."
-    docker run -d --name website-dev-lint-md \
-        --network "$NETWORK_NAME" \
-        -v "$(realpath .):/app:ro" \
-        website-dev tail -f /dev/null
-
+    echo "🛠️ Starting container for Markdown linting..."
+    docker run -d --name website-dev-lint-md --network $NETWORK_NAME website-dev tail -f /dev/null
+    
+    echo "📂 Copying source files into container..."
+    if docker cp . website-dev-lint-md:/app/; then
+        echo "✅ Source files copied successfully"
+    else
+        echo "❌ Failed to copy source files"
+        docker rm -f website-dev-lint-md
+        exit 1
+    fi
+    
+    echo "📦 Installing dependencies inside container..."
+    if docker exec website-dev-lint-md sh -c "cd /app && npm install -g pnpm && pnpm install --frozen-lockfile"; then
+        echo "✅ Dependencies installed successfully"
+    else
+        echo "❌ Failed to install dependencies"
+        docker logs website-dev-lint-md --tail 20
+        docker rm -f website-dev-lint-md
+        exit 1
+    fi
+    
     echo "🔍 Running Markdown linting..."
     if docker exec website-dev-lint-md sh -c "cd /app && ./node_modules/.bin/markdownlint \"**/*.md\" -i CHANGELOG.md -i \"test-results/**/*.md\" -i \"playwright-report/data/**/*.md\""; then
         echo "✅ Markdown linting PASSED"
@@ -421,7 +492,7 @@ run_markdown_lint_dind() {
         docker rm -f website-dev-lint-md
         exit 1
     fi
-
+    
     echo "🧹 Cleaning up Markdown lint container..."
     docker rm -f website-dev-lint-md
     echo "🎉 Markdown linting completed successfully in true DinD mode!"
