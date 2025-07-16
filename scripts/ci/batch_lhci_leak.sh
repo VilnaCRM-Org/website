@@ -76,7 +76,7 @@ configure_docker_compose() {
 # Setup Docker network for DIND
 setup_docker_network() {
     echo "📡 Setting up Docker network..."
-    docker network create $NETWORK_NAME 2>/dev/null || echo "Network $NETWORK_NAME already exists"
+    docker network create "$NETWORK_NAME" 2>/dev/null || echo "Network $NETWORK_NAME already exists"
     echo "✅ Docker network configured"
 }
 
@@ -100,21 +100,21 @@ wait_for_prod_dind() {
 
     echo "🔍 Testing $PROD_CONTAINER_NAME service connectivity on port $NEXT_PUBLIC_PROD_PORT..."
     for i in $(seq 1 60); do
-        if docker exec $PROD_CONTAINER_NAME sh -c "curl -f http://localhost:$NEXT_PUBLIC_PROD_PORT >/dev/null 2>&1"; then
+        if docker exec "$PROD_CONTAINER_NAME" sh -c "curl -f http://localhost:$NEXT_PUBLIC_PROD_PORT >/dev/null 2>&1"; then
             echo "✅ Service is responding on port $NEXT_PUBLIC_PROD_PORT!"
             break
         fi
         echo "Attempt $i: Service not ready, checking container status..."
         if [ "$((i % 10))" -eq 0 ]; then
             echo "Debug info at attempt $i:"
-            docker exec $PROD_CONTAINER_NAME ps aux 2>/dev/null || echo "Cannot access container processes"
-            docker exec $PROD_CONTAINER_NAME netstat -tulpn 2>/dev/null | grep :$NEXT_PUBLIC_PROD_PORT || echo "Port $NEXT_PUBLIC_PROD_PORT not bound"
+            docker exec "$PROD_CONTAINER_NAME" ps aux 2>/dev/null || echo "Cannot access container processes"
+            docker exec "$PROD_CONTAINER_NAME" netstat -tulpn 2>/dev/null | grep ":$NEXT_PUBLIC_PROD_PORT" || echo "Port $NEXT_PUBLIC_PROD_PORT not bound"
         fi
         sleep 3
         if [ "$i" -eq 60 ]; then
             echo "❌ Service failed to respond within 180 seconds"
             echo "Final container logs:"
-            docker logs $PROD_CONTAINER_NAME --tail 50
+            docker logs "$PROD_CONTAINER_NAME" --tail 50
             exit 1
         fi
     done
@@ -127,9 +127,9 @@ start_prod_dind() {
     setup_docker_network
     configure_docker_compose
     echo "Building production container image..."
-    docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE build
+    docker-compose "$COMMON_HEALTHCHECKS_FILE" "$DOCKER_COMPOSE_TEST_FILE" build
     echo "🚀 Starting production services..."
-    docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE up -d
+    docker-compose "$COMMON_HEALTHCHECKS_FILE" "$DOCKER_COMPOSE_TEST_FILE" up -d
     wait_for_prod_dind
     echo "🎉 Production environment started successfully!"
 }
@@ -142,9 +142,9 @@ run_memory_leak_tests_dind() {
     setup_docker_network
     configure_docker_compose
     echo "Building production container image..."
-    docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE build
+    docker-compose "$COMMON_HEALTHCHECKS_FILE" "$DOCKER_COMPOSE_TEST_FILE" build
     echo "🚀 Starting production services..."
-    docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE up -d
+    docker-compose "$COMMON_HEALTHCHECKS_FILE" "$DOCKER_COMPOSE_TEST_FILE" up -d
 
     # Wait for production service without the problematic connectivity test
     echo "🐳 Waiting for prod service in true DinD mode using container networking..."
@@ -165,21 +165,21 @@ run_memory_leak_tests_dind() {
 
     echo "🔍 Testing $PROD_CONTAINER_NAME service connectivity on port $NEXT_PUBLIC_PROD_PORT..."
     for i in $(seq 1 60); do
-        if docker exec $PROD_CONTAINER_NAME sh -c "curl -f http://localhost:$NEXT_PUBLIC_PROD_PORT >/dev/null 2>&1"; then
+        if docker exec "$PROD_CONTAINER_NAME" sh -c "curl -f http://localhost:$NEXT_PUBLIC_PROD_PORT >/dev/null 2>&1"; then
             echo "✅ Service is responding on port $NEXT_PUBLIC_PROD_PORT!"
             break
         fi
         echo "Attempt $i: Service not ready, checking container status..."
         if [ "$((i % 10))" -eq 0 ]; then
             echo "Debug info at attempt $i:"
-            docker exec $PROD_CONTAINER_NAME ps aux 2>/dev/null || echo "Cannot access container processes"
-            docker exec $PROD_CONTAINER_NAME netstat -tulpn 2>/dev/null | grep :$NEXT_PUBLIC_PROD_PORT || echo "Port $NEXT_PUBLIC_PROD_PORT not bound"
+            docker exec "$PROD_CONTAINER_NAME" ps aux 2>/dev/null || echo "Cannot access container processes"
+            docker exec "$PROD_CONTAINER_NAME" netstat -tulpn 2>/dev/null | grep ":$NEXT_PUBLIC_PROD_PORT" || echo "Port $NEXT_PUBLIC_PROD_PORT not bound"
         fi
         sleep 3
         if [ "$i" -eq 60 ]; then
             echo "❌ Service failed to respond within 180 seconds"
             echo "Final container logs:"
-            docker logs $PROD_CONTAINER_NAME --tail 50
+            docker logs "$PROD_CONTAINER_NAME" --tail 50
             exit 1
         fi
     done

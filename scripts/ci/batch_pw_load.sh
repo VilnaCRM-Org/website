@@ -76,7 +76,7 @@ configure_docker_compose() {
 # Setup Docker network for DIND
 setup_docker_network() {
     echo "📡 Setting up Docker network..."
-    docker network create $NETWORK_NAME 2>/dev/null || echo "Network $NETWORK_NAME already exists"
+    docker network create "$NETWORK_NAME" 2>/dev/null || echo "Network $NETWORK_NAME already exists"
     echo "✅ Docker network configured"
 }
 
@@ -132,23 +132,23 @@ wait_for_prod_dind() {
 
     echo "🔍 Testing $PROD_CONTAINER_NAME service connectivity on port $NEXT_PUBLIC_PROD_PORT..."
     for i in $(seq 1 60); do
-        if docker exec $PROD_CONTAINER_NAME sh -c "curl -f http://localhost:$NEXT_PUBLIC_PROD_PORT >/dev/null 2>&1"; then
-            echo "✅ Service is responding on port $NEXT_PUBLIC_PROD_PORT!"
-            break
-        fi
-        echo "Attempt $i: Service not ready, checking container status..."
-        if [ "$((i % 10))" -eq 0 ]; then
-            echo "Debug info at attempt $i:"
-            docker exec $PROD_CONTAINER_NAME ps aux 2>/dev/null || echo "Cannot access container processes"
-            docker exec $PROD_CONTAINER_NAME netstat -tulpn 2>/dev/null | grep :$NEXT_PUBLIC_PROD_PORT || echo "Port $NEXT_PUBLIC_PROD_PORT not bound"
-        fi
-        sleep 3
-        if [ "$i" -eq 60 ]; then
-            echo "❌ Service failed to respond within 180 seconds"
-            echo "Final container logs:"
-            docker logs $PROD_CONTAINER_NAME --tail 50
-            exit 1
-        fi
+            if docker exec "$PROD_CONTAINER_NAME" sh -c "curl -f http://localhost:$NEXT_PUBLIC_PROD_PORT >/dev/null 2>&1"; then
+        echo "✅ Service is responding on port $NEXT_PUBLIC_PROD_PORT!"
+        break
+    fi
+    echo "Attempt $i: Service not ready, checking container status..."
+    if [ "$((i % 10))" -eq 0 ]; then
+        echo "Debug info at attempt $i:"
+        docker exec "$PROD_CONTAINER_NAME" ps aux 2>/dev/null || echo "Cannot access container processes"
+        docker exec "$PROD_CONTAINER_NAME" netstat -tulpn 2>/dev/null | grep ":$NEXT_PUBLIC_PROD_PORT" || echo "Port $NEXT_PUBLIC_PROD_PORT not bound"
+    fi
+    sleep 3
+    if [ "$i" -eq 60 ]; then
+        echo "❌ Service failed to respond within 180 seconds"
+        echo "Final container logs:"
+        docker logs "$PROD_CONTAINER_NAME" --tail 50
+        exit 1
+    fi
     done
 
     # Run enhanced connectivity testing
@@ -162,9 +162,9 @@ start_prod_dind() {
     setup_docker_network
     configure_docker_compose
     echo "Building production container image..."
-    docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE build
+    docker-compose "$COMMON_HEALTHCHECKS_FILE" "$DOCKER_COMPOSE_TEST_FILE" build
     echo "🚀 Starting production services..."
-    docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE up -d
+    docker-compose "$COMMON_HEALTHCHECKS_FILE" "$DOCKER_COMPOSE_TEST_FILE" up -d
     wait_for_prod_dind
     echo "🎉 Production environment started successfully!"
 }
@@ -177,9 +177,9 @@ run_e2e_tests_dind() {
     setup_docker_network
     configure_docker_compose
     echo "Building test services..."
-    docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE build
+    docker-compose "$COMMON_HEALTHCHECKS_FILE" "$DOCKER_COMPOSE_TEST_FILE" build
     echo "🚀 Starting test services..."
-    docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE up -d
+    docker-compose "$COMMON_HEALTHCHECKS_FILE" "$DOCKER_COMPOSE_TEST_FILE" up -d
     wait_for_prod_dind
 
     echo "📂 Copying E2E test files to Playwright container..."
@@ -258,10 +258,10 @@ run_e2e_tests_dind() {
 
     # Test container connectivity
     echo "🔍 Testing container connectivity..."
-    docker exec website-playwright curl -f $PROD_URL >/dev/null 2>&1 || echo "⚠️  Container connectivity test failed"
+    docker exec website-playwright curl -f "$PROD_URL" >/dev/null 2>&1 || echo "⚠️  Container connectivity test failed"
 
     # Run E2E tests with comprehensive environment setup
-    if docker exec -e NEXT_PUBLIC_MAIN_LANGUAGE=uk -e NEXT_PUBLIC_FALLBACK_LANGUAGE=en -e NEXT_PUBLIC_PROD_CONTAINER_API_URL=$PROD_URL -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_NAME=no-aws-header-name -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_VALUE=no-aws-header-value -e NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL=https://github.com/VilnaCRM-Org/ -e NEXT_PUBLIC_GRAPHQL_API_URL=http://apollo:4000/graphql -w /app website-playwright npx playwright test src/test/e2e --timeout=60000; then
+    if docker exec -e NEXT_PUBLIC_MAIN_LANGUAGE=uk -e NEXT_PUBLIC_FALLBACK_LANGUAGE=en -e NEXT_PUBLIC_PROD_CONTAINER_API_URL="$PROD_URL" -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_NAME=no-aws-header-name -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_VALUE=no-aws-header-value -e NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL=https://github.com/VilnaCRM-Org/ -e NEXT_PUBLIC_GRAPHQL_API_URL=http://apollo:4000/graphql -w /app website-playwright npx playwright test src/test/e2e --timeout=60000; then
         echo "✅ E2E tests PASSED"
     else
         echo "❌ E2E tests FAILED"
@@ -275,7 +275,7 @@ run_e2e_tests_dind() {
     docker cp website-playwright:/app/test-results/. test-results/ 2>/dev/null || echo "No test-results to copy"
 
     echo "🧹 Cleaning up Docker services..."
-    docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE down
+    docker-compose "$COMMON_HEALTHCHECKS_FILE" "$DOCKER_COMPOSE_TEST_FILE" down
 
     echo "🎉 E2E tests completed successfully in DIND mode!"
 }

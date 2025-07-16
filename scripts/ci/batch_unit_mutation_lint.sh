@@ -76,7 +76,7 @@ configure_docker_compose() {
 # Setup Docker network for DIND
 setup_docker_network() {
     echo "📡 Setting up Docker network..."
-    docker network create $NETWORK_NAME 2>/dev/null || echo "Network $NETWORK_NAME already exists"
+    docker network create "$NETWORK_NAME" 2>/dev/null || echo "Network $NETWORK_NAME already exists"
     echo "✅ Docker network configured"
 }
 
@@ -110,7 +110,7 @@ wait_for_dev_dind() {
         if [ "$((i % 10))" -eq 0 ]; then
             echo "Debug info at attempt $i:"
             docker exec website-dev ps aux 2>/dev/null || echo "Cannot access container processes"
-            docker exec website-dev netstat -tulpn 2>/dev/null | grep :$DEV_PORT || echo "Port $DEV_PORT not bound"
+            docker exec website-dev netstat -tulpn 2>/dev/null | grep ":$DEV_PORT" || echo "Port $DEV_PORT not bound"
         fi
         sleep 3
         if [ "$i" -eq 60 ]; then
@@ -174,21 +174,21 @@ wait_for_prod_dind() {
 
     echo "🔍 Testing $PROD_CONTAINER_NAME service connectivity on port $NEXT_PUBLIC_PROD_PORT..."
     for i in $(seq 1 60); do
-        if docker exec $PROD_CONTAINER_NAME sh -c "curl -f http://localhost:$NEXT_PUBLIC_PROD_PORT >/dev/null 2>&1"; then
+        if docker exec "$PROD_CONTAINER_NAME" sh -c "curl -f http://localhost:$NEXT_PUBLIC_PROD_PORT >/dev/null 2>&1"; then
             echo "✅ Service is responding on port $NEXT_PUBLIC_PROD_PORT!"
             break
         fi
         echo "Attempt $i: Service not ready, checking container status..."
         if [ "$((i % 10))" -eq 0 ]; then
             echo "Debug info at attempt $i:"
-            docker exec $PROD_CONTAINER_NAME ps aux 2>/dev/null || echo "Cannot access container processes"
-            docker exec $PROD_CONTAINER_NAME netstat -tulpn 2>/dev/null | grep :$NEXT_PUBLIC_PROD_PORT || echo "Port $NEXT_PUBLIC_PROD_PORT not bound"
+            docker exec "$PROD_CONTAINER_NAME" ps aux 2>/dev/null || echo "Cannot access container processes"
+            docker exec "$PROD_CONTAINER_NAME" netstat -tulpn 2>/dev/null | grep ":$NEXT_PUBLIC_PROD_PORT" || echo "Port $NEXT_PUBLIC_PROD_PORT not bound"
         fi
         sleep 3
         if [ "$i" -eq 60 ]; then
             echo "❌ Service failed to respond within 180 seconds"
             echo "Final container logs:"
-            docker logs $PROD_CONTAINER_NAME --tail 50
+            docker logs "$PROD_CONTAINER_NAME" --tail 50
             exit 1
         fi
     done
@@ -202,7 +202,7 @@ start_dev_dind() {
     echo "🐳 Starting development environment in DIND mode..."
     setup_docker_network
     configure_docker_compose
-    docker-compose $DOCKER_COMPOSE_DEV_FILE up -d dev
+    docker-compose "$DOCKER_COMPOSE_DEV_FILE" up -d dev
     wait_for_dev_dind
     echo "🎉 Development environment started successfully!"
 }
@@ -214,9 +214,9 @@ start_prod_dind() {
     setup_docker_network
     configure_docker_compose
     echo "Building production container image..."
-    docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE build
+    docker-compose "$COMMON_HEALTHCHECKS_FILE" "$DOCKER_COMPOSE_TEST_FILE" build
     echo "🚀 Starting production services..."
-    docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE up -d
+    docker-compose "$COMMON_HEALTHCHECKS_FILE" "$DOCKER_COMPOSE_TEST_FILE" up -d
     wait_for_prod_dind
     echo "🎉 Production environment started successfully!"
 }
@@ -229,11 +229,11 @@ run_unit_tests_dind() {
     setup_docker_network
     configure_docker_compose
     echo "Building container image..."
-    docker-compose $DOCKER_COMPOSE_DEV_FILE build dev
+    docker-compose "$DOCKER_COMPOSE_DEV_FILE" build dev
     echo "🧹 Cleaning up any existing temporary containers..."
     docker rm -f website-dev-temp 2>/dev/null || true
     echo "🛠️ Starting container in background for file operations..."
-    docker run -d --name website-dev-temp --network $NETWORK_NAME website-dev tail -f /dev/null
+    docker run -d --name website-dev-temp --network "$NETWORK_NAME" website-dev tail -f /dev/null
     
     echo "📂 Copying source files into container..."
     if docker cp . website-dev-temp:/app/; then
@@ -287,11 +287,11 @@ run_mutation_tests_dind() {
     setup_docker_network
     configure_docker_compose
     echo "Building container image..."
-    docker-compose $DOCKER_COMPOSE_DEV_FILE build dev
+    docker-compose "$DOCKER_COMPOSE_DEV_FILE" build dev
     echo "🧹 Cleaning up any existing containers..."
     docker rm -f website-dev-mutation 2>/dev/null || true
     echo "🛠️ Starting container in background for file operations..."
-    docker run -d --name website-dev-mutation --network $NETWORK_NAME website-dev tail -f /dev/null
+    docker run -d --name website-dev-mutation --network "$NETWORK_NAME" website-dev tail -f /dev/null
     
     echo "📂 Copying source files into container..."
     if docker cp . website-dev-mutation:/app/; then
@@ -364,11 +364,11 @@ run_eslint_dind() {
     setup_docker_network
     configure_docker_compose
     echo "Building container image..."
-    docker-compose $DOCKER_COMPOSE_DEV_FILE build dev
+    docker-compose "$DOCKER_COMPOSE_DEV_FILE" build dev
     echo "🧹 Cleaning up any existing containers..."
     docker rm -f website-dev-lint-next 2>/dev/null || true
     echo "🛠️ Starting container for linting..."
-    docker run -d --name website-dev-lint-next --network $NETWORK_NAME website-dev tail -f /dev/null
+    docker run -d --name website-dev-lint-next --network "$NETWORK_NAME" website-dev tail -f /dev/null
     
     echo "📂 Copying source files into container..."
     if docker cp . website-dev-lint-next:/app/; then
@@ -411,11 +411,11 @@ run_typescript_check_dind() {
     setup_docker_network
     configure_docker_compose
     echo "Building container image..."
-    docker-compose $DOCKER_COMPOSE_DEV_FILE build dev
+    docker-compose "$DOCKER_COMPOSE_DEV_FILE" build dev
     echo "🧹 Cleaning up any existing containers..."
     docker rm -f website-dev-lint-tsc 2>/dev/null || true
     echo "🛠️ Starting container for TypeScript linting..."
-    docker run -d --name website-dev-lint-tsc --network $NETWORK_NAME website-dev tail -f /dev/null
+    docker run -d --name website-dev-lint-tsc --network "$NETWORK_NAME" website-dev tail -f /dev/null
     
     echo "📂 Copying source files into container..."
     if docker cp . website-dev-lint-tsc:/app/; then
@@ -458,11 +458,11 @@ run_markdown_lint_dind() {
     setup_docker_network
     configure_docker_compose
     echo "Building container image..."
-    docker-compose $DOCKER_COMPOSE_DEV_FILE build dev
+    docker-compose "$DOCKER_COMPOSE_DEV_FILE" build dev
     echo "🧹 Cleaning up any existing containers..."
     docker rm -f website-dev-lint-md 2>/dev/null || true
     echo "🛠️ Starting container for Markdown linting..."
-    docker run -d --name website-dev-lint-md --network $NETWORK_NAME website-dev tail -f /dev/null
+    docker run -d --name website-dev-lint-md --network "$NETWORK_NAME" website-dev tail -f /dev/null
     
     echo "📂 Copying source files into container..."
     if docker cp . website-dev-lint-md:/app/; then
