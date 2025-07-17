@@ -9,7 +9,7 @@ import Bars from '../../../assets/svg/header-drawer/menu-04.svg';
 import CloseImage from '../../../assets/svg/header-drawer/x-close.svg';
 import Logo from '../../../assets/svg/logo/Logo.svg';
 import { SocialMediaList } from '../../SocialMedia';
-import { socialMedia } from '../constants';
+import  socialMedia  from '../constants';
 
 import styles from './styles';
 import { VilnaCRMEmail } from './VilnaCRMEmail';

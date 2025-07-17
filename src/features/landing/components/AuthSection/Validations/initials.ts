@@ -22,7 +22,7 @@ export const validators: Record<ValidationKeys, ValidationFunction> = {
   isEmpty: value => value.trim().length === 0,
 };
 
-const validateFullName: (fullName: string) => string | null = (fullName: string): string | null => {
+const validateFullName: (fullName: string) => string | boolean = (fullName: string): string | boolean => {
   const trimmedFullName: string = fullName.trim();
 
   if (validators.isEmpty(trimmedFullName)) return validationMessages.required;
@@ -35,7 +35,7 @@ const validateFullName: (fullName: string) => string | null = (fullName: string)
     return validationMessages.formatError;
   }
 
-  return null;
+  return true;
 };
 
 export default validateFullName;

@@ -17,6 +17,7 @@ import QuestionMark from '../../../assets/svg/auth-section/questionMark.svg';
 import { PasswordTip } from '../PasswordTip';
 import { validateFullName, validatePassword, validateEmail } from '../Validations';
 
+import FormInput from './FormInput';
 import styles from './styles';
 import { AuthFormProps } from './types';
 
@@ -35,42 +36,38 @@ function AuthForm({
         {t('sign_up.form.heading_main')}
       </UiTypography>
       <Stack sx={styles.inputsWrapper}>
-        <Stack sx={styles.inputWrapper}>
-          <UiTypography
-            variant="medium14"
-            sx={styles.inputTitle}
-            component="label"
-            htmlFor="FullName"
-          >
-            {t('sign_up.form.name_input.label')}
-          </UiTypography>
-          <UiTextFieldForm
-            id="FullName"
-            control={control}
-            name="FullName"
-            rules={{
-              required: t('sign_up.form.name_input.required'),
-              validate: validateFullName,
-            }}
-            placeholder={t('sign_up.form.name_input.placeholder')}
-            type="text"
-          />
+        <Stack sx={styles.inputWrapper}>     
+  <FormInput
+    id="FullName"
+    control={control}
+    type="text"
+    component="label"
+    name="FullName"
+    rules={{
+      required: t('sign_up.form.name_input.required'),
+      validate: validateFullName,
+    }}
+    placeholder={t('sign_up.form.name_input.placeholder')}
+    htmlFor="FullName"
+    inputTitle={styles.inputTitle}
+  />
+
         </Stack>
         <Stack sx={styles.inputWrapper}>
-          <UiTypography variant="medium14" sx={styles.inputTitle} component="label" htmlFor="Email">
-            {t('sign_up.form.email_input.label')}
-          </UiTypography>
-          <UiTextFieldForm
-            id="Email"
-            control={control}
-            name="Email"
-            rules={{
-              required: t('sign_up.form.email_input.required'),
-              validate: validateEmail,
-            }}
-            placeholder={t('sign_up.form.email_input.placeholder')}
-            type="email"
-          />
+<FormInput
+    id="Email"
+    control={control}
+    type="email"
+    component="label"
+    name="Email"
+    rules={{
+      required: t('sign_up.form.email_input.required'),
+      validate: validateEmail,
+    }}
+    placeholder={t('sign_up.form.email_input.placeholder')}
+    htmlFor="Email"
+    inputTitle={styles.inputTitle}
+  />
         </Stack>
         <Stack sx={styles.inputWrapper}>
           <Stack direction="row" alignItems="center" gap="0.25rem">
@@ -91,6 +88,8 @@ function AuthForm({
               />
             </UiTooltip>
           </Stack>
+
+
           <UiTextFieldForm
             id="Password"
             control={control}

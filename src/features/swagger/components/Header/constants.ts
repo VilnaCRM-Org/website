@@ -4,7 +4,7 @@ import InstagramDrawerIcon from '../../assets/svg/social-icons/instagram.svg';
 import LinkedinDrawerIcon from '../../assets/svg/social-icons/linked-in.svg';
 import { SocialMedia } from '../../types/social-media';
 
-export const socialMedia: SocialMedia[] = [
+const socialMedia: SocialMedia[] = [
   {
     id: 'instagram-link',
     icon: InstagramDrawerIcon,
@@ -38,3 +38,5 @@ export const socialMedia: SocialMedia[] = [
     type: 'drawer',
   },
 ];
+
+export default socialMedia;
