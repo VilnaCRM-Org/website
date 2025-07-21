@@ -15,14 +15,22 @@ function Swagger(): React.ReactElement {
     i18n.changeLanguage('en');
   }, [i18n]);
 
-  return (
+return (
+  <div>
     <Box sx={styles.wrapper}>
       <Container maxWidth="xl">
         <Navigation />
         <ApiDocumentation />
       </Container>
     </Box>
-  );
+    <Box sx={styles.wrapper}>
+      <Container maxWidth="xl">
+        <Navigation />
+        <ApiDocumentation />
+      </Container>
+    </Box>
+  </div>
+);
 }
 
 export default Swagger;

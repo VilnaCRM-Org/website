@@ -39,7 +39,14 @@ export default defineConfig({
       name: 'chromium',
       use: {
         ...devices['Desktop Chrome'],
-        ...commonSettings,
+        // Required for cross-container communication in Docker test environment (for CORS)
+        launchOptions: {
+          args: [
+            '--disable-web-security',
+            '--disable-features=IsolateOrigins',
+            '--disable-site-isolation-trials',
+          ],
+        },
       },
     },
     {

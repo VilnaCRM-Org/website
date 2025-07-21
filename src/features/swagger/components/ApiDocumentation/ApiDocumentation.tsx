@@ -16,6 +16,7 @@ const SwaggerUI: ComponentType<SwaggerUIProps> = dynamic(
 function ApiDocumentation(): React.ReactElement | null {
   const { swaggerContent, error } = useSwagger();
 
+
   if (error) {
     return (
       <Container>
