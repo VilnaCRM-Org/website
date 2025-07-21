@@ -11,6 +11,7 @@ import styles from './styles';
 function Swagger(): React.ReactElement {
   const { i18n } = useTranslation();
 
+
   useEffect(() => {
     i18n.changeLanguage('en');
   }, [i18n]);
