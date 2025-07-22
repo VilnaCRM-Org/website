@@ -177,130 +177,93 @@ start_dev_dind() {
 
 # Function to run unit tests in DIND mode
 run_unit_tests_dind() {
-    print_status "🐳 Running unit tests in true Docker-in-Docker mode"
-    echo "Setting up Docker network..."
+    print_status "🐳 Running unit tests in DIND mode using Makefile"
+    
+    # Set up DIND environment
     setup_docker_network
     configure_docker_compose
-    echo "Building container image..."
-    docker-compose $DOCKER_COMPOSE_DEV_FILE build dev
-    echo "🧹 Cleaning up any existing temporary containers..."
-    docker rm -f website-dev-temp 2>/dev/null || true
-    echo "🛠️ Starting container in background for file operations..."
-    docker run -d --name website-dev-temp --network "$NETWORK_NAME" website-dev tail -f /dev/null
     
-    echo "📂 Copying source files into container..."
-    if docker cp . website-dev-temp:/app/; then
-        echo "✅ Source files copied successfully"
+    # Set CI=1 to use local pnpm commands instead of docker exec
+    export CI=1
+    
+    # Use Makefile target for unit tests
+    if run_make "test-unit-all" "Unit tests (client + server)"; then
+        print_success "✅ All unit tests completed successfully in DIND mode!"
     else
-        echo "❌ Failed to copy source files"
-        docker rm -f website-dev-temp
+        print_error "❌ Unit tests failed in DIND mode"
         exit 1
     fi
-    
-    echo "📦 Installing dependencies inside container..."
-    if docker exec website-dev-temp sh -c "cd /app && npm install -g pnpm && pnpm install --frozen-lockfile"; then
-        echo "✅ Dependencies installed successfully"
-    else
-        echo "❌ Failed to install dependencies"
-        docker logs website-dev-temp --tail 20
-        docker rm -f website-dev-temp
-        exit 1
-    fi
-    
-    echo "🧪 Running client-side tests..."
-    if docker exec website-dev-temp sh -c "cd /app && env TEST_ENV=client ./node_modules/.bin/jest --verbose --passWithNoTests --maxWorkers=2"; then
-        echo "✅ Client-side tests PASSED"
-    else
-        echo "❌ Client-side tests FAILED"
-        docker logs website-dev-temp --tail 30
-        docker rm -f website-dev-temp
-        exit 1
-    fi
-    
-    echo "🧪 Running server-side tests..."
-    if docker exec website-dev-temp sh -c "cd /app && env TEST_ENV=server ./node_modules/.bin/jest --verbose --passWithNoTests --maxWorkers=2 ./src/test/apollo-server"; then
-        echo "✅ Server-side tests PASSED"
-    else
-        echo "❌ Server-side tests FAILED"
-        docker logs website-dev-temp --tail 30
-        docker rm -f website-dev-temp
-        exit 1
-    fi
-    
-    echo "🧹 Cleaning up temporary container..."
-    docker rm -f website-dev-temp
-    echo "🎉 All unit tests completed successfully in true DinD mode!"
-    echo "📊 Summary: Both client and server tests passed in containerized environment"
 }
 
 # Function to run mutation tests in DIND mode
 run_mutation_tests_dind() {
-    print_status "🧬 Running mutation tests in DIND mode"
+    print_status "🧬 Running mutation tests in DIND mode using Makefile"
     
+    # Set up DIND environment
     setup_docker_network
     configure_docker_compose
     
-    print_status "Building development container..."
-    docker-compose $DOCKER_COMPOSE_DEV_FILE build dev
+    # Set CI=1 to use local pnpm commands instead of docker exec
+    export CI=1
     
-    print_status "Starting development container..."
-    docker-compose $DOCKER_COMPOSE_DEV_FILE up -d dev
-    wait_for_dev_dind
-    
-    print_status "🧪 Running mutation tests..."
-    if docker exec website-dev sh -c "cd /app && pnpm stryker run"; then
-        print_success "✅ Mutation tests PASSED"
+    # Use Makefile target for mutation tests
+    if run_make "test-mutation" "Mutation tests"; then
+        print_success "✅ Mutation tests completed successfully in DIND mode!"
     else
-        print_error "❌ Mutation tests FAILED"
-        docker logs website-dev --tail 30
+        print_error "❌ Mutation tests failed in DIND mode"
         exit 1
     fi
-    
-    print_success "🎉 Mutation tests completed successfully in DIND mode!"
+}
+
+
+# Function to fix Docker file paths for DIND mode
+fix_docker_file_paths() {
+    print_status "🔧 Fixing Docker file paths for DIND mode"
+
+    # Create a temporary directory to store the fixed files
+    local temp_dir="$(mktemp -d)"
+
+    # Copy the .mjs files from scripts to the root directory
+    if [ -f "scripts/fetchSwaggerSchema.mjs" ]; then
+        cp "scripts/fetchSwaggerSchema.mjs" "$temp_dir/"
+        print_status "✅ Copied fetchSwaggerSchema.mjs to temp directory"
+    fi
+
+    if [ -f "scripts/patchSwaggerServer.mjs" ]; then
+        cp "scripts/patchSwaggerServer.mjs" "$temp_dir/"
+        print_status "✅ Copied patchSwaggerServer.mjs to temp directory"
+    fi
+
+    # Copy the files to the container after it's built but before it starts
+    if docker ps -q -f name=website-dev | grep -q .; then
+        docker cp "$temp_dir/fetchSwaggerSchema.mjs" website-dev:/app/ 2>/dev/null || true
+        docker cp "$temp_dir/patchSwaggerServer.mjs" website-dev:/app/ 2>/dev/null || true
+        print_status "✅ Copied .mjs files to container"
+    fi
+
+    # Clean up temp directory
+    rm -rf "$temp_dir"
+    print_success "✅ Docker file paths fixed for DIND mode"
 }
 
 # Function to run linting tests in DIND mode
 run_lint_tests_dind() {
-    print_status "🔍 Running linting tests in DIND mode"
+    print_status "🔍 Running linting tests in DIND mode using Makefile"
     
+    # Set up DIND environment
     setup_docker_network
     configure_docker_compose
     
-    print_status "Building development container..."
-    docker-compose $DOCKER_COMPOSE_DEV_FILE build dev
+    # Set CI=1 to use local pnpm commands instead of docker exec
+    export CI=1
     
-    print_status "Starting development container..."
-    docker-compose $DOCKER_COMPOSE_DEV_FILE up -d dev
-    wait_for_dev_dind
-    
-    print_status "🧪 Running ESLint..."
-    if docker exec website-dev sh -c "cd /app && pnpm next lint"; then
-        print_success "✅ ESLint PASSED"
+    # Use Makefile target for linting tests
+    if run_make "lint" "All linting tests (ESLint, TypeScript, Markdown)"; then
+        print_success "✅ All linting tests completed successfully in DIND mode!"
     else
-        print_error "❌ ESLint FAILED"
-        docker logs website-dev --tail 30
+        print_error "❌ Linting tests failed in DIND mode"
         exit 1
     fi
-    
-    print_status "🧪 Running TypeScript check..."
-    if docker exec website-dev sh -c "cd /app && pnpm tsc"; then
-        print_success "✅ TypeScript check PASSED"
-    else
-        print_error "❌ TypeScript check FAILED"
-        docker logs website-dev --tail 30
-        exit 1
-    fi
-    
-    print_status "🧪 Running Markdown linting..."
-    if docker exec website-dev sh -c "cd /app && pnpm markdownlint **/*.md -i CHANGELOG.md -i 'test-results/**/*.md' -i 'playwright-report/data/**/*.md'"; then
-        print_success "✅ Markdown linting PASSED"
-    else
-        print_error "❌ Markdown linting FAILED"
-        docker logs website-dev --tail 30
-        exit 1
-    fi
-    
-    print_success "🎉 All linting tests completed successfully in DIND mode!"
 }
 
 # Function to run unit tests (wrapper for DIND mode)

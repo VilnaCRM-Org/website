@@ -178,107 +178,62 @@ start_prod_dind() {
 
 # Function to run memory leak tests in DIND mode
 run_memory_leak_tests_dind() {
-    print_status "🧪 Running memory leak tests in DIND mode"
+    print_status "🧪 Running memory leak tests in DIND mode using Makefile"
     
+    # Set up DIND environment
     setup_docker_network
     configure_docker_compose
     
-    print_status "Starting production service..."
-    start_prod_dind
+    # Set CI=1 to use local pnpm commands instead of docker exec
+    export CI=1
     
-    print_status "Starting memory leak test environment..."
-    docker-compose $DOCKER_COMPOSE_MEMLEAK_FILE up -d
-    
-    print_status "🧹 Cleaning up previous memory leak results..."
-    docker-compose $DOCKER_COMPOSE_MEMLEAK_FILE exec -T website-memory-leak rm -rf ./src/test/memory-leak/results
-    
-    print_status "🚀 Running memory leak tests..."
-    if docker-compose $DOCKER_COMPOSE_MEMLEAK_FILE exec -T website-memory-leak node ./src/test/memory-leak/runMemlabTests.js; then
-        print_success "✅ Memory leak tests PASSED"
+    # Use Makefile target for memory leak tests
+    if run_make "test-memory-leak" "Memory leak tests"; then
+        print_success "✅ Memory leak tests completed successfully in DIND mode!"
     else
-        print_error "❌ Memory leak tests FAILED"
-        docker logs website-memory-leak --tail 30
+        print_error "❌ Memory leak tests failed in DIND mode"
         exit 1
     fi
-    
-    print_status "🧹 Cleaning up memory leak test containers..."
-    docker-compose $DOCKER_COMPOSE_MEMLEAK_FILE down --remove-orphans
-    
-    print_success "🎉 Memory leak tests completed successfully in DIND mode!"
 }
 
 # Function to run Lighthouse desktop tests in DIND mode
 run_lighthouse_desktop_tests_dind() {
-    print_status "🔦 Running Lighthouse Desktop tests using robust container approach"
-    echo "Setting up Docker network..."
+    print_status "🖥️ Running Lighthouse desktop tests in DIND mode using Makefile"
+    
+    # Set up DIND environment
     setup_docker_network
-    configure_docker_compose # Added this call
-
-    # Set DIND-specific environment variables
-    export WEBSITE_DOMAIN="localhost"
-    export NEXT_PUBLIC_PROD_PORT="3001"
-    export DIND_MODE="1"
-    export SHM_SIZE="2g"
-
-    echo "🚀 Starting production services with DIND configuration..."
-    docker-compose -f docker-compose.test.yml up -d --build prod # Corrected docker-compose syntax
-    wait_for_prod_dind
-
-    echo "🧪 Verifying application accessibility from host..."
-    if curl -I http://localhost:3001; then
-        echo "✅ Application is accessible from host"
+    configure_docker_compose
+    
+    # Set CI=1 to use local pnpm commands instead of docker exec
+    export CI=1
+    
+    # Use Makefile target for Lighthouse desktop tests
+    if run_make "lighthouse-desktop" "Lighthouse desktop audit"; then
+        print_success "✅ Lighthouse desktop tests completed successfully in DIND mode!"
     else
-        echo "❌ Application is not accessible from host"
-        docker logs website-prod --tail 20
+        print_error "❌ Lighthouse desktop tests failed in DIND mode"
         exit 1
     fi
-
-    echo "🔦 Running Lighthouse Desktop audit from build environment..."
-    if pnpm lhci autorun --config=lighthouserc.desktop.js; then
-        print_success "✅ Lighthouse Desktop tests PASSED"
-    else
-        print_error "❌ Lighthouse Desktop tests FAILED"
-        exit 1
-    fi
-
-    print_success "🎉 Lighthouse Desktop tests completed successfully in DIND mode!"
 }
 
 # Function to run Lighthouse mobile tests in DIND mode
 run_lighthouse_mobile_tests_dind() {
-    print_status "🔦 Running Lighthouse Mobile tests using robust container approach"
-    echo "Setting up Docker network..."
+    print_status "📱 Running Lighthouse mobile tests in DIND mode using Makefile"
+    
+    # Set up DIND environment
     setup_docker_network
-    configure_docker_compose # Added this call
-
-    # Set DIND-specific environment variables
-    export WEBSITE_DOMAIN="localhost"
-    export NEXT_PUBLIC_PROD_PORT="3001"
-    export DIND_MODE="1"
-    export SHM_SIZE="2g"
-
-    echo "🚀 Starting production services with DIND configuration..."
-    docker-compose -f docker-compose.test.yml up -d --build prod # Corrected docker-compose syntax
-    wait_for_prod_dind
-
-    echo "🧪 Verifying application accessibility from host..."
-    if curl -I http://localhost:3001; then
-        echo "✅ Application is accessible from host"
+    configure_docker_compose
+    
+    # Set CI=1 to use local pnpm commands instead of docker exec
+    export CI=1
+    
+    # Use Makefile target for Lighthouse mobile tests
+    if run_make "lighthouse-mobile" "Lighthouse mobile audit"; then
+        print_success "✅ Lighthouse mobile tests completed successfully in DIND mode!"
     else
-        echo "❌ Application is not accessible from host"
-        docker logs website-prod --tail 20
+        print_error "❌ Lighthouse mobile tests failed in DIND mode"
         exit 1
     fi
-
-    echo "🔦 Running Lighthouse Mobile audit from build environment..."
-    if pnpm lhci autorun --config=lighthouserc.mobile.js; then
-        print_success "✅ Lighthouse Mobile tests PASSED"
-    else
-        print_error "❌ Lighthouse Mobile tests FAILED"
-        exit 1
-    fi
-
-    print_success "🎉 Lighthouse Mobile tests completed successfully in DIND mode!"
 }
 
 # Function to run memory leak tests (wrapper for DIND mode)

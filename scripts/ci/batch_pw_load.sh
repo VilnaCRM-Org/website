@@ -220,52 +220,22 @@ start_prod_dind() {
 
 # Function to run E2E tests in DIND mode
 run_e2e_tests_dind() {
-    print_status "🎭 Running E2E tests in DIND mode"
+    print_status "🎭 Running E2E tests in DIND mode using Makefile"
     
+    # Set up DIND environment
     setup_docker_network
     configure_docker_compose
     
-    print_status "Building test services..."
-    docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE build
+    # Set CI=1 to use local pnpm commands instead of docker exec
+    export CI=1
     
-    print_status "Starting test services..."
-    docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE up -d
-    wait_for_prod_dind
-    
-    print_status "📂 Copying E2E test files to Playwright container..."
-    
-    # Wait for container to be ready
-    for i in $(seq 1 30); do
-        if docker exec website-playwright echo "Container ready" >/dev/null 2>&1; then
-            print_status "✅ Container website-playwright is ready"
-            break
-        fi
-        print_status "Waiting for container to be ready... attempt $i"
-        sleep 2
-        if [ "$i" -eq 30 ]; then
-            print_error "❌ Container not ready after 60 seconds"
-            exit 1
-        fi
-    done
-    
-    # Copy test files
-    if docker cp ./src/test/e2e website-playwright:/app/src/test/; then
-        print_status "✅ E2E test files copied successfully"
+    # Use Makefile target for E2E tests
+    if run_make "test-e2e" "E2E tests (Playwright)"; then
+        print_success "✅ E2E tests completed successfully in DIND mode!"
     else
-        print_error "❌ Failed to copy E2E test files"
+        print_error "❌ E2E tests failed in DIND mode"
         exit 1
     fi
-    
-    print_status "🧪 Running E2E tests..."
-    if docker exec website-playwright sh -c "cd /app && npx playwright test src/test/e2e --reporter=html"; then
-        print_success "✅ E2E tests PASSED"
-    else
-        print_error "❌ E2E tests FAILED"
-        docker logs website-playwright --tail 30
-        exit 1
-    fi
-    
-    print_success "🎉 E2E tests completed successfully in DIND mode!"
 }
 
 # Function to run visual tests in DIND mode
@@ -298,6 +268,9 @@ run_visual_tests_dind() {
         fi
     done
     
+    # Create the src/test directory structure if it doesn't exist
+    docker exec website-playwright sh -c "mkdir -p /app/src/test"
+    
     # Copy test files
     if docker cp ./src/test/visual website-playwright:/app/src/test/; then
         print_status "✅ Visual test files copied successfully"
@@ -320,55 +293,22 @@ run_visual_tests_dind() {
 
 # Function to run load tests in DIND mode
 run_load_tests_dind() {
-    print_status "⚡ Running load tests in DIND mode"
+    print_status "📊 Running load tests in DIND mode using Makefile"
     
+    # Set up DIND environment
     setup_docker_network
     configure_docker_compose
     
-    print_status "Building test services..."
-    docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE build
+    # Set CI=1 to use local pnpm commands instead of docker exec
+    export CI=1
     
-    print_status "Starting production service..."
-    docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE up -d prod
-    wait_for_prod_dind
-    
-    print_status "📂 Copying load test files to K6 container..."
-    
-    # Start K6 container
-    docker-compose $DOCKER_COMPOSE_TEST_FILE --profile load up -d k6
-    
-    # Wait for K6 container to be ready
-    for i in $(seq 1 30); do
-        if docker exec website-k6 echo "Container ready" >/dev/null 2>&1; then
-            print_status "✅ Container website-k6 is ready"
-            break
-        fi
-        print_status "Waiting for K6 container to be ready... attempt $i"
-        sleep 2
-        if [ "$i" -eq 30 ]; then
-            print_error "❌ K6 container not ready after 60 seconds"
-            exit 1
-        fi
-    done
-    
-    # Copy test files
-    if docker cp ./src/test/load website-k6:/loadTests/; then
-        print_status "✅ Load test files copied successfully"
+    # Use Makefile target for load tests
+    if run_make "load-tests" "Load tests (K6)"; then
+        print_success "✅ Load tests completed successfully in DIND mode!"
     else
-        print_error "❌ Failed to copy load test files"
+        print_error "❌ Load tests failed in DIND mode"
         exit 1
     fi
-    
-    print_status "🧪 Running load tests..."
-    if docker exec website-k6 sh -c "cd /loadTests && k6 run --summary-trend-stats='avg,min,med,max,p(95),p(99)' --out 'web-dashboard=period=1s&export=results/homepage.html' homepage.js"; then
-        print_success "✅ Load tests PASSED"
-    else
-        print_error "❌ Load tests FAILED"
-        docker logs website-k6 --tail 30
-        exit 1
-    fi
-    
-    print_success "🎉 Load tests completed successfully in DIND mode!"
 }
 
 # Function to run E2E tests (wrapper for DIND mode)
@@ -425,7 +365,7 @@ cleanup() {
     print_status "🧹 Cleaning up resources..."
     
     # Stop and remove containers
-    docker rm -f website-dev website-prod website-playwright website-apollo website-mockoon website-k6 2>/dev/null || true
+    docker rm -f website-dev website-prod website-playwright website-apollo website-mockoon website-k6 website-k6-1 2>/dev/null || true
     
     # Stop docker-compose services
     if cd "$PROJECT_ROOT"; then
