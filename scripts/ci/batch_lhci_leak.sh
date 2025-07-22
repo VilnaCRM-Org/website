@@ -6,12 +6,16 @@
 set -e
 
 # Script configuration
-if [ -n "${BASH_SOURCE[0]}" ]; then
+# Use a more robust approach for script path detection
+if [ -n "${BASH_SOURCE[0]:-}" ]; then
     # Script is being sourced
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-else
+elif [ -n "$0" ]; then
     # Script is being executed directly
     SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+else
+    # Fallback: use current directory
+    SCRIPT_DIR="$(pwd)"
 fi
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 MAKEFILE_PATH="$PROJECT_ROOT/Makefile"
