@@ -51,25 +51,43 @@ run_make() {
     
     print_status "Running: $description"
     print_status "Target: $target"
-    print_status "Project root: $PROJECT_ROOT"
-    print_status "Makefile path: $MAKEFILE_PATH"
-    print_status "Current directory: $(pwd)"
-    print_status "CI environment: $CI"
-    print_status "CODEBUILD_BUILD_ID: $CODEBUILD_BUILD_ID"
     
-    if [ ! -f "$MAKEFILE_PATH" ]; then
-        print_error "Makefile not found at: $MAKEFILE_PATH"
-        print_error "Current directory contents:"
-        ls -la "$PROJECT_ROOT" || true
+    # In DIND environment, we need to find the website directory
+    local website_dir
+    if [ "$DIND" = "1" ] || [ "$CI" = "1" ]; then
+        # Look for the website directory in common locations
+        if [ -d "/codebuild/output/src*/src/website" ]; then
+            website_dir="$(find /codebuild/output/src*/src/website -maxdepth 0 -type d | head -1)"
+        elif [ -d "/codebuild/website" ]; then
+            website_dir="/codebuild/website"
+        elif [ -d "/app" ]; then
+            website_dir="/app"
+        else
+            print_error "Could not find website directory in DIND environment"
+            print_status "Current directory: $(pwd)"
+            print_status "Directory contents:"
+            ls -la
+            exit 1
+        fi
+    else
+        website_dir="$PROJECT_ROOT"
+    fi
+    
+    print_status "Website directory: $website_dir"
+    print_status "Makefile path: $website_dir/Makefile"
+    
+    if [ ! -f "$website_dir/Makefile" ]; then
+        print_error "Makefile not found at: $website_dir/Makefile"
+        print_status "Current directory: $(pwd)"
+        print_status "Directory contents:"
+        ls -la
         exit 1
     fi
     
-    if cd "$PROJECT_ROOT" && make "$target"; then
+    if cd "$website_dir" && make "$target"; then
         print_success "$description completed successfully"
     else
         print_error "$description failed"
-        print_error "Makefile contents:"
-        head -20 "$MAKEFILE_PATH" || true
         exit 1
     fi
 }
