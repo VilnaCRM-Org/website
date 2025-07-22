@@ -6,16 +6,11 @@
 set -e
 
 # Script configuration
-# Use a more robust approach for script path detection
-if [ -n "${BASH_SOURCE[0]:-}" ]; then
-    # Script is being sourced
-    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-elif [ -n "$0" ]; then
-    # Script is being executed directly
+# Shell-agnostic script path detection
+SCRIPT_DIR="$(pwd)"
+if [ -n "$0" ] && [ "$0" != "bash" ] && [ "$0" != "sh" ]; then
+    # Try to get script directory from $0
     SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-else
-    # Fallback: use current directory
-    SCRIPT_DIR="$(pwd)"
 fi
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 MAKEFILE_PATH="$PROJECT_ROOT/Makefile"
@@ -386,19 +381,13 @@ show_help() {
 }
 
 # Main command dispatcher
-# When sourced, we need to handle arguments differently
-if [ -n "${BASH_SOURCE[0]}" ]; then
-    # Script is being sourced - check if we have arguments
-    if [ $# -gt 0 ]; then
-        # We have arguments, execute the command
-        COMMAND="$1"
-    else
-        # No arguments, show help
-        COMMAND="help"
-    fi
+# Simple argument handling that works in all shells
+if [ $# -gt 0 ]; then
+    # We have arguments, execute the command
+    COMMAND="$1"
 else
-    # Script is being executed directly
-    COMMAND="${1:-help}"
+    # No arguments, show help
+    COMMAND="help"
 fi
 
 case "$COMMAND" in
