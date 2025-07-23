@@ -55,8 +55,11 @@ run_make() {
     # In DIND environment, we need to find the website directory
     local website_dir
     if [ "$DIND" = "1" ] || [ "$CI" = "1" ]; then
+        # First check if we're already in the website directory (has Makefile)
+        if [ -f "Makefile" ]; then
+            website_dir="$(pwd)"
         # Look for the website directory in common locations
-        if [ -d "/codebuild/output/src*/src/website" ]; then
+        elif [ -d "/codebuild/output/src*/src/website" ]; then
             website_dir="$(find /codebuild/output/src*/src/website -maxdepth 0 -type d | head -1)"
         elif [ -d "/codebuild/website" ]; then
             website_dir="/codebuild/website"
