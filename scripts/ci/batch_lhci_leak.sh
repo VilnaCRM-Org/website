@@ -1,407 +1,551 @@
 #!/bin/bash
-
-# Batch script for Lighthouse and Memory Leak tests using Makefile
-# This script provides a unified interface for local, GitHub, and AWS CI environments
-
+# Batch Lighthouse and Memory Leak Tests
+# Groups Lighthouse and memory leak tests that can run in parallel
 set -e
 
-# Script configuration
-# Shell-agnostic script path detection
-SCRIPT_DIR="$(pwd)"
-if [ -n "$0" ] && [ "$0" != "bash" ] && [ "$0" != "sh" ]; then
-    # Try to get script directory from $0
-    SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-fi
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-MAKEFILE_PATH="$PROJECT_ROOT/Makefile"
+# Default configuration
+NETWORK_NAME=${NETWORK_NAME:-"website-network"}
+WEBSITE_DOMAIN=${WEBSITE_DOMAIN:-"localhost"}
+DEV_PORT=${DEV_PORT:-"3000"}
+NEXT_PUBLIC_PROD_PORT=${NEXT_PUBLIC_PROD_PORT:-"3001"}
+PLAYWRIGHT_TEST_PORT=${PLAYWRIGHT_TEST_PORT:-"9323"}
+UI_HOST=${UI_HOST:-"0.0.0.0"}
+PROD_CONTAINER_NAME=${PROD_CONTAINER_NAME:-"website-prod"}
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+# Docker Compose files
+DOCKER_COMPOSE_DEV_FILE=${DOCKER_COMPOSE_DEV_FILE:-"-f docker-compose.yml"}
+DOCKER_COMPOSE_TEST_FILE=${DOCKER_COMPOSE_TEST_FILE:-"-f docker-compose.test.yml"}
+COMMON_HEALTHCHECKS_FILE=${COMMON_HEALTHCHECKS_FILE:-"-f common-healthchecks.yml"}
 
-# Function to print colored output
-print_status() {
-    echo -e "${BLUE}[INFO]${NC} $1"
-}
-
-print_success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
-}
-
-print_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
-}
-
-print_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-}
-
-# Function to check if we're in a CI environment
-is_ci_environment() {
-    [ "$CI" = "1" ] || [ "$GITHUB_ACTIONS" = "true" ] || [ "$CODEBUILD_BUILD_ID" != "" ]
-}
-
-# Function to run make command with proper error handling
-run_make() {
-    local target="$1"
-    local description="$2"
-    
-    print_status "Running: $description"
-    print_status "Target: $target"
-    
-    # In DIND environment, we need to find the website directory
-    local website_dir
-    if [ "$DIND" = "1" ] || [ "$CI" = "1" ]; then
-        # First check if we're already in the website directory (has Makefile)
-        if [ -f "Makefile" ]; then
-            website_dir="$(pwd)"
-        # Look for the website directory in common locations
-        elif [ -d "/codebuild/output/src*/src/website" ]; then
-            website_dir="$(find /codebuild/output/src*/src/website -maxdepth 0 -type d | head -1)"
-        elif [ -d "/codebuild/website" ]; then
-            website_dir="/codebuild/website"
-        elif [ -d "/app" ]; then
-            website_dir="/app"
-        else
-            print_error "Could not find website directory in DIND environment"
-            print_status "Current directory: $(pwd)"
-            print_status "Directory contents:"
-            ls -la
-            exit 1
-        fi
-    else
-        website_dir="$PROJECT_ROOT"
-    fi
-    
-    print_status "Website directory: $website_dir"
-    print_status "Makefile path: $website_dir/Makefile"
-    
-    if [ ! -f "$website_dir/Makefile" ]; then
-        print_error "Makefile not found at: $website_dir/Makefile"
-        print_status "Current directory: $(pwd)"
-        print_status "Directory contents:"
-        ls -la
-        exit 1
-    fi
-    
-    if cd "$website_dir" && make "$target"; then
-        print_success "$description completed successfully"
-    else
-        print_error "$description failed"
-        exit 1
-    fi
-}
-
-# DIND Environment Configuration
-NETWORK_NAME="website-network"
-WEBSITE_DOMAIN="localhost"
-DEV_PORT="3000"
-NEXT_PUBLIC_PROD_PORT="3001"
-DOCKER_COMPOSE_DEV_FILE="-f docker-compose.yml"
-DOCKER_COMPOSE_TEST_FILE="-f docker-compose.test.yml"
-COMMON_HEALTHCHECKS_FILE="-f common-healthchecks.yml"
-DOCKER_COMPOSE_MEMLEAK_FILE="-f docker-compose.memory-leak.yml"
+echo "🐳 DIND Environment Setup Script"
+echo "================================"
 
 # Function to safely add container name to a service
 add_container_name() {
-    local service_name="$1"
-    local container_name="$2"
-    local compose_file="$3"
-    
-    if [ -f "$compose_file" ]; then
-        # Check if container_name is already set
-        if ! grep -q "container_name: $container_name" "$compose_file"; then
-            # Add container_name after the service name
-            sed -i "/^  $service_name:/a\    container_name: $container_name" "$compose_file"
+    local file=$1
+    local service=$2
+    local container_name=$3
+    if [ -f "$file" ]; then
+        # Check if container_name already exists for this service
+        if ! grep -A 10 "^  ${service}:" "$file" | grep -q "container_name:"; then
+            # Add container_name after the service declaration
+            sed -i "/^  ${service}:/a\\    container_name: ${container_name}" "$file"
+            echo "✅ Added container_name: ${container_name} to ${service} in ${file}"
+        else
+            echo "ℹ️  Container name already exists for ${service} in ${file}"
+        fi
+    else
+        echo "⚠️  File ${file} not found, skipping..."
+    fi
+}
+
+# Function to update environment variable references from service names to container names
+update_env_references() {
+    local file=$1
+    local old_ref=$2
+    local new_ref=$3
+    if [ -f "$file" ]; then
+        if grep -q "$old_ref" "$file"; then
+            sed -i "s|$old_ref|$new_ref|g" "$file"
+            echo "✅ Updated references from $old_ref to $new_ref in $file"
         fi
     fi
 }
 
-# Function to update environment variable references
-update_env_references() {
-    local compose_file="$1"
-    
-    if [ -f "$compose_file" ]; then
-        # Update environment variable references for DIND mode
-        sed -i 's/\${WEBSITE_DOMAIN}/localhost/g' "$compose_file"
-        sed -i 's/\${NEXT_PUBLIC_PROD_PORT}/3001/g' "$compose_file"
-        sed -i 's/\${DEV_PORT}/3000/g' "$compose_file"
-    fi
-}
-
-# Function to configure Docker Compose files for DIND
+# Configure Docker Compose files for DIND
 configure_docker_compose() {
-    print_status "🔧 Configuring Docker Compose files for DIND mode"
-    
-    # Configure test compose file
-    if [ -f "docker-compose.test.yml" ]; then
-        add_container_name "prod" "website-prod" "docker-compose.test.yml"
-        add_container_name "playwright" "website-playwright" "docker-compose.test.yml"
-        add_container_name "apollo" "website-apollo" "docker-compose.test.yml"
-        add_container_name "mockoon" "website-mockoon" "docker-compose.test.yml"
-        update_env_references "docker-compose.test.yml"
-    fi
-    
-    # Configure memory leak compose file
-    if [ -f "docker-compose.memory-leak.yml" ]; then
-        add_container_name "memory-leak" "website-memory-leak" "docker-compose.memory-leak.yml"
-        update_env_references "docker-compose.memory-leak.yml"
-    fi
-    
-    print_success "✅ Docker Compose files configured for DIND mode"
+    echo "🔧 Configuring Docker Compose files for DIND..."
+    # Configure docker-compose.yml (development)
+    add_container_name "docker-compose.yml" "dev" "website-dev"
+    # Configure docker-compose.test.yml (testing)
+    add_container_name "docker-compose.test.yml" "prod" "website-prod"
+    add_container_name "docker-compose.test.yml" "playwright" "website-playwright"
+    add_container_name "docker-compose.test.yml" "apollo" "website-apollo"
+    add_container_name "docker-compose.test.yml" "mockoon" "website-mockoon"
+    add_container_name "docker-compose.test.yml" "k6" "website-k6"
+    # Configure docker-compose.memory-leak.yml
+    add_container_name "docker-compose.memory-leak.yml" "memory-leak" "website-memory-leak"
+    # Update environment variable references to use container names
+    update_env_references "docker-compose.memory-leak.yml" "http://prod:3001" "http://website-prod:3001"
 }
 
-# Function to setup Docker network for DIND
+# Setup Docker network for DIND
 setup_docker_network() {
-    print_status "🔧 Setting up Docker network for DIND"
-    
-    if ! docker network inspect "$NETWORK_NAME" >/dev/null 2>&1; then
-        if ! docker network create "$NETWORK_NAME"; then
-            print_error "❌ Failed to create network $NETWORK_NAME"
+    echo "📡 Setting up Docker network..."
+    docker network create "$NETWORK_NAME" 2>/dev/null || echo "Network $NETWORK_NAME already exists"
+    echo "✅ Docker network configured"
+}
+
+# Enhanced container connectivity testing
+test_container_connectivity() {
+    echo "🔍 Enhanced container connectivity testing..."
+    # Get production container IP
+    PROD_IP=$(docker inspect website-prod --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' 2>/dev/null || echo "")
+    if [ -n "$PROD_IP" ]; then
+        echo "✅ Production container IP: $PROD_IP"
+    else
+        echo "⚠️  Could not get production container IP"
+        return 1
+    fi
+    # Test DNS resolution
+    echo "🔍 Testing DNS resolution..."
+    docker exec website-playwright nslookup website-prod >/dev/null 2>&1 || echo "⚠️  DNS lookup failed for website-prod"
+    docker exec website-playwright nslookup apollo >/dev/null 2>&1 || echo "⚠️  DNS lookup failed for apollo"
+    # Test ping connectivity
+    echo "🔍 Testing ping connectivity..."
+    docker exec website-playwright ping -c 2 website-prod >/dev/null 2>&1 || echo "⚠️  Ping failed for website-prod"
+    docker exec website-playwright ping -c 2 apollo >/dev/null 2>&1 || echo "⚠️  Ping failed for apollo"
+    # Test HTTP connectivity
+    echo "🔍 Testing HTTP connectivity..."
+    docker exec website-playwright curl -f http://website-prod:3001 >/dev/null 2>&1 || echo "⚠️  HTTP connectivity failed for website-prod:3001"
+    docker exec website-playwright curl -f "http://$PROD_IP:3001" >/dev/null 2>&1 || echo "⚠️  HTTP connectivity failed for $PROD_IP:3001"
+    docker exec website-playwright curl -f http://apollo:4000/graphql >/dev/null 2>&1 || echo "⚠️  HTTP connectivity failed for apollo:4000/graphql"
+    echo "✅ Container connectivity testing completed"
+}
+
+# Wait for production service
+wait_for_prod_dind() {
+    echo "🐳 Waiting for prod service in true DinD mode using container networking..."
+    echo "Checking if $PROD_CONTAINER_NAME container is running..."
+    for i in $(seq 1 30); do
+        if docker ps --filter "name=$PROD_CONTAINER_NAME" --filter "status=running" --format "{{.Names}}" | grep -q "$PROD_CONTAINER_NAME"; then
+            echo "✅ Container $PROD_CONTAINER_NAME is running"
+            break
+        fi
+        echo "Attempt $i: Container not running yet, waiting..."
+        sleep 2
+        if [ "$i" -eq 30 ]; then
+            echo "❌ Container failed to start within 60 seconds"
+            docker ps -a --filter "name=$PROD_CONTAINER_NAME"
             exit 1
         fi
-        print_success "✅ Network $NETWORK_NAME created successfully"
+    done
+    echo "🔍 Testing $PROD_CONTAINER_NAME service connectivity on port $NEXT_PUBLIC_PROD_PORT..."
+    for i in $(seq 1 60); do
+        if docker exec "$PROD_CONTAINER_NAME" sh -c "curl -f http://localhost:$NEXT_PUBLIC_PROD_PORT >/dev/null 2>&1"; then
+            echo "✅ Service is responding on port $NEXT_PUBLIC_PROD_PORT!"
+            break
+        fi
+        echo "Attempt $i: Service not ready, checking container status..."
+        if [ "$((i % 10))" -eq 0 ]; then
+            echo "Debug info at attempt $i:"
+            docker exec "$PROD_CONTAINER_NAME" ps aux 2>/dev/null || echo "Cannot access container processes"
+            docker exec "$PROD_CONTAINER_NAME" netstat -tulpn 2>/dev/null | grep ":$NEXT_PUBLIC_PROD_PORT" || echo "Port $NEXT_PUBLIC_PROD_PORT not bound"
+        fi
+        sleep 3
+        if [ "$i" -eq 60 ]; then
+            echo "❌ Service failed to respond within 180 seconds"
+            echo "Final container logs:"
+            docker logs "$PROD_CONTAINER_NAME" --tail 50
+            exit 1
+        fi
+    done
+    # Run enhanced connectivity testing
+    test_container_connectivity
+}
+
+# Start production environment in DIND mode
+start_prod_dind() {
+    echo "🐳 Starting production environment in true Docker-in-Docker mode"
+    echo "Setting up Docker network..."
+    setup_docker_network
+    configure_docker_compose
+    echo "Building production container image..."
+    docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE build
+    echo "🚀 Starting production services..."
+    docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE up -d
+    wait_for_prod_dind
+    echo "🎉 Production environment started successfully!"
+}
+
+# Function to run make commands with proper Docker setup for production tests
+run_make_with_prod_dind() {
+    local target=$1
+    local description=$2
+    local website_dir=$3
+    
+    echo "🔧 Setting up Docker network for DIND"
+    setup_docker_network
+    configure_docker_compose
+    
+    # Start production environment for tests that need it
+    echo "🚀 Starting production environment for $description"
+    start_prod_dind
+    
+    # Run make command with CI=0 to use Docker container commands (DIND mode)
+    export DIND=1
+    echo "🚀 Running: $description"
+    echo "[INFO] Target: $target"
+    echo "[INFO] Website directory: $website_dir"
+    echo "[INFO] Makefile path: $website_dir/Makefile"
+    
+    if cd "$website_dir" && make "$target" CI=0; then
+        echo "✅ $description completed successfully"
     else
-        print_status "✅ Network $NETWORK_NAME already exists"
+        echo "❌ $description failed"
+        exit 1
     fi
 }
 
-# Function to wait for production service in DIND mode
-wait_for_prod_dind() {
-    print_status "⏳ Waiting for production service to be ready in DIND mode"
+# Function to run memory leak tests in DIND mode using working container setup
+run_memory_leak_tests_dind() {
+    local website_dir=$1
+    echo "🧠 Running Memory Leak tests in true Docker-in-Docker mode"
     
+    echo "🔧 Setting up Docker network for DIND"
+    setup_docker_network
+    configure_docker_compose
+    
+    echo "Building production container image..."
+    docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE build
+    
+    echo "🚀 Starting production services..."
+    docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE up -d
+    
+    # Wait for production service without the problematic connectivity test
+    echo "🐳 Waiting for prod service in true DinD mode using container networking..."
+    echo "Checking if $PROD_CONTAINER_NAME container is running..."
     for i in $(seq 1 30); do
-        if docker exec "website-prod" sh -c "curl -f http://localhost:$NEXT_PUBLIC_PROD_PORT >/dev/null 2>&1"; then
-            print_success "✅ Production service is ready on port $NEXT_PUBLIC_PROD_PORT"
-            return 0
+        if docker ps --filter "name=$PROD_CONTAINER_NAME" --filter "status=running" --format "{{.Names}}" | grep -q "$PROD_CONTAINER_NAME"; then
+            echo "✅ Container $PROD_CONTAINER_NAME is running"
+            break
         fi
-        print_status "Waiting for production service... attempt $i/30"
+        echo "Attempt $i: Container not running yet, waiting..."
         sleep 2
+        if [ "$i" -eq 30 ]; then
+            echo "❌ Container failed to start within 60 seconds"
+            docker ps -a --filter "name=$PROD_CONTAINER_NAME"
+            exit 1
+        fi
     done
     
-    print_error "❌ Production service failed to start within 60 seconds"
-    docker logs "website-prod" --tail 20
-    exit 1
-}
-
-# Function to start production environment in DIND mode
-start_prod_dind() {
-    print_status "🚀 Starting production environment in DIND mode"
+    echo "🔍 Testing $PROD_CONTAINER_NAME service connectivity on port $NEXT_PUBLIC_PROD_PORT..."
+    for i in $(seq 1 60); do
+        if docker exec "$PROD_CONTAINER_NAME" sh -c "curl -f http://localhost:$NEXT_PUBLIC_PROD_PORT >/dev/null 2>&1"; then
+            echo "✅ Service is responding on port $NEXT_PUBLIC_PROD_PORT!"
+            break
+        fi
+        echo "Attempt $i: Service not ready, checking container status..."
+        if [ "$((i % 10))" -eq 0 ]; then
+            echo "Debug info at attempt $i:"
+            docker exec "$PROD_CONTAINER_NAME" ps aux 2>/dev/null || echo "Cannot access container processes"
+            docker exec "$PROD_CONTAINER_NAME" netstat -tulpn 2>/dev/null | grep ":$NEXT_PUBLIC_PROD_PORT" || echo "Port $NEXT_PUBLIC_PROD_PORT not bound"
+        fi
+        sleep 3
+        if [ "$i" -eq 60 ]; then
+            echo "❌ Service failed to respond within 180 seconds"
+            echo "Final container logs:"
+            docker logs "$PROD_CONTAINER_NAME" --tail 50
+            exit 1
+        fi
+    done
     
-    setup_docker_network
-    configure_docker_compose
+    echo "🧹 Cleaning up any existing Memory Leak containers..."
+    docker stop memory-leak-test 2>/dev/null || true
+    docker rm memory-leak-test 2>/dev/null || true
     
-    print_status "Building production container..."
-    docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE build prod
+    echo "Building memory leak container image..."
+    docker-compose -f docker-compose.memory-leak.yml build
     
-    print_status "Starting production container..."
-    docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE up -d prod
+    echo "🧠 Running Memory Leak container..."
+    docker-compose -f docker-compose.memory-leak.yml run -d --name memory-leak-test memory-leak sleep infinity
     
-    wait_for_prod_dind
-    print_success "✅ Production environment started successfully"
-}
-
-# Function to run memory leak tests in DIND mode
-run_memory_leak_tests_dind() {
-    print_status "🧪 Running memory leak tests in DIND mode using Makefile"
+    echo "📂 Copying source files into memory leak container..."
+    docker exec memory-leak-test mkdir -p /app/src/test /app/src/config /app/pages/i18n
+    docker cp src/test/memory-leak memory-leak-test:/app/src/test/memory-leak
+    echo "✅ Memory leak test files copied successfully"
     
-    # Set up DIND environment
-    setup_docker_network
-    configure_docker_compose
+    echo "📂 Copying required config files..."
+    docker cp src/config memory-leak-test:/app/src/config  
+    docker cp pages/i18n memory-leak-test:/app/pages/i18n
     
-    # Set CI=1 to use local pnpm commands instead of docker exec
-    export CI=1
+    echo "🧹 Cleaning up previous memory leak results..."
+    docker exec memory-leak-test rm -rf /app/src/test/memory-leak/results || true
     
-    # Use Makefile target for memory leak tests
-    if run_make "test-memory-leak" "Memory leak tests"; then
-        print_success "✅ Memory leak tests completed successfully in DIND mode!"
+    echo "🧠 Running Memlab memory leak tests..."
+    if docker exec -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_NAME=no-aws-header-name -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_VALUE=no-aws-header-value -w /app memory-leak-test node src/test/memory-leak/runMemlabTests.js; then
+        echo "✅ Memory leak tests PASSED"
     else
-        print_error "❌ Memory leak tests failed in DIND mode"
+        echo "❌ Memory leak tests FAILED"
+        docker logs memory-leak-test --tail 30
+        docker stop memory-leak-test || true
+        docker rm memory-leak-test || true
         exit 1
     fi
+    
+    echo "📂 Copying memory leak test results..."
+    mkdir -p memory-leak-logs
+    docker cp memory-leak-test:/app/src/test/memory-leak/results/. memory-leak-logs/ 2>/dev/null || echo "No memory leak results to copy"
+    docker logs memory-leak-test > memory-leak-logs/test-execution.log 2>&1 || true
+    
+    echo "🧹 Cleaning up memory leak container..."
+    docker stop memory-leak-test || true
+    docker rm memory-leak-test || true
+    
+    echo "🎉 Memory leak tests completed successfully in true DinD mode!"
 }
 
-# Function to run Lighthouse desktop tests in DIND mode
-run_lighthouse_desktop_tests_dind() {
-    print_status "🖥️ Running Lighthouse desktop tests in DIND mode using Makefile"
+# Function to run Lighthouse desktop tests in DIND mode using working container setup
+run_lighthouse_desktop_dind() {
+    local website_dir=$1
+    echo "🔦 Running Lighthouse Desktop tests using robust container approach"
     
-    # Set up DIND environment
+    echo "🔧 Setting up Docker network for DIND"
     setup_docker_network
-    configure_docker_compose
     
-    # Set CI=1 to use local pnpm commands instead of docker exec
-    export CI=1
+    # Set DIND-specific environment variables
+    export WEBSITE_DOMAIN="localhost"
+    export NEXT_PUBLIC_PROD_PORT="3001"
+    export DIND_MODE="1"
+    export SHM_SIZE="2g"
     
-    # Use Makefile target for Lighthouse desktop tests
-    if run_make "lighthouse-desktop" "Lighthouse desktop audit"; then
-        print_success "✅ Lighthouse desktop tests completed successfully in DIND mode!"
+    echo "🚀 Starting production services with DIND configuration..."
+    docker compose -f docker-compose.test.yml up -d --build prod
+    
+    echo "⏳ Waiting for production service to be ready..."
+    timeout=60
+    while [ $timeout -gt 0 ]; do
+      if docker compose -f docker-compose.test.yml ps prod | grep -q "Up"; then
+        echo "✅ Production service is running"
+        break
+      fi
+      echo "⏳ Waiting for production service to start... ($timeout seconds remaining)"
+      sleep 5
+      timeout=$((timeout - 5))
+    done
+    if [ $timeout -le 0 ]; then
+      echo "❌ Production service failed to start"
+      docker compose -f docker-compose.test.yml logs prod
+      exit 1
+    fi
+    
+    # Wait for the service to be actually ready
+    echo "⏳ Waiting for production service to be healthy..."
+    timeout=60
+    while [ $timeout -gt 0 ]; do
+      if docker exec website-prod-1 curl -f http://localhost:3001 >/dev/null 2>&1; then
+        echo "✅ Production service is healthy"
+        break
+      fi
+      echo "⏳ Waiting for production service to be healthy... ($timeout seconds remaining)"
+      sleep 5
+      timeout=$((timeout - 5))
+    done
+    if [ $timeout -le 0 ]; then
+      echo "❌ Production service failed to become healthy"
+      docker compose -f docker-compose.test.yml logs prod
+      exit 1
+    fi
+    
+    echo "📦 Installing Chrome and Lighthouse CLI in prod container..."
+    docker exec website-prod-1 sh -c "apk add --no-cache chromium chromium-chromedriver && npm install -g @lhci/cli@0.14.0"
+    
+    echo "📂 Copying Lighthouse config files to prod container..."
+    docker cp lighthouserc.desktop.js website-prod-1:/app/
+    
+    echo "🧪 Testing Chrome installation..."
+    if docker exec website-prod-1 /usr/bin/chromium-browser --version; then
+        echo "✅ Chrome is installed and working"
     else
-        print_error "❌ Lighthouse desktop tests failed in DIND mode"
+        echo "❌ Chrome installation test failed"
         exit 1
     fi
+    
+    echo "🔦 Running Lighthouse desktop tests..."
+    docker exec -w /app website-prod-1 lhci autorun \
+      --config=lighthouserc.desktop.js \
+      --collect.url=http://localhost:3001 \
+      --collect.chromePath=/usr/bin/chromium-browser \
+      --collect.chromeFlags="--no-sandbox --disable-dev-shm-usage --disable-extensions --disable-gpu --headless --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-software-rasterizer --disable-setuid-sandbox --single-process --no-zygote --js-flags=--max-old-space-size=4096"
+    
+    echo "📂 Copying lighthouse results from prod container..."
+    mkdir -p lhci-reports-desktop
+    docker cp website-prod-1:/app/lhci-reports-desktop/. lhci-reports-desktop/ 2>/dev/null || echo "No lighthouse results to copy"
+    
+    echo "🧹 Cleaning up Docker services..."
+    docker compose -f docker-compose.test.yml down
+    
+    echo "✅ Lighthouse desktop tests completed"
 }
 
-# Function to run Lighthouse mobile tests in DIND mode
-run_lighthouse_mobile_tests_dind() {
-    print_status "📱 Running Lighthouse mobile tests in DIND mode using Makefile"
+# Function to run Lighthouse mobile tests in DIND mode using working container setup
+run_lighthouse_mobile_dind() {
+    local website_dir=$1
+    echo "📱 Running Lighthouse Mobile tests using robust container approach"
     
-    # Set up DIND environment
+    echo "🔧 Setting up Docker network for DIND"
     setup_docker_network
-    configure_docker_compose
     
-    # Set CI=1 to use local pnpm commands instead of docker exec
-    export CI=1
+    # Set DIND-specific environment variables
+    export WEBSITE_DOMAIN="localhost"
+    export NEXT_PUBLIC_PROD_PORT="3001"
+    export DIND_MODE="1"
+    export SHM_SIZE="2g"
     
-    # Use Makefile target for Lighthouse mobile tests
-    if run_make "lighthouse-mobile" "Lighthouse mobile audit"; then
-        print_success "✅ Lighthouse mobile tests completed successfully in DIND mode!"
+    echo "🚀 Starting production services with DIND configuration..."
+    docker compose -f docker-compose.test.yml up -d --build prod
+    
+    echo "⏳ Waiting for production service to be ready..."
+    timeout=60
+    while [ $timeout -gt 0 ]; do
+      if docker compose -f docker-compose.test.yml ps prod | grep -q "Up"; then
+        echo "✅ Production service is running"
+        break
+      fi
+      echo "⏳ Waiting for production service to start... ($timeout seconds remaining)"
+      sleep 5
+      timeout=$((timeout - 5))
+    done
+    if [ $timeout -le 0 ]; then
+      echo "❌ Production service failed to start"
+      docker compose -f docker-compose.test.yml logs prod
+      exit 1
+    fi
+    
+    # Wait for the service to be actually ready
+    echo "⏳ Waiting for production service to be healthy..."
+    timeout=60
+    while [ $timeout -gt 0 ]; do
+      if docker exec website-prod-1 curl -f http://localhost:3001 >/dev/null 2>&1; then
+        echo "✅ Production service is healthy"
+        break
+      fi
+      echo "⏳ Waiting for production service to be healthy... ($timeout seconds remaining)"
+      sleep 5
+      timeout=$((timeout - 5))
+    done
+    if [ $timeout -le 0 ]; then
+      echo "❌ Production service failed to become healthy"
+      docker compose -f docker-compose.test.yml logs prod
+      exit 1
+    fi
+    
+    echo "📦 Installing Chrome and Lighthouse CLI in prod container..."
+    docker exec website-prod-1 sh -c "apk add --no-cache chromium chromium-chromedriver && npm install -g @lhci/cli@0.14.0"
+    
+    echo "📂 Copying Lighthouse config files to prod container..."
+    docker cp lighthouserc.mobile.js website-prod-1:/app/
+    
+    echo "🧪 Testing Chrome installation..."
+    if docker exec website-prod-1 /usr/bin/chromium-browser --version; then
+        echo "✅ Chrome is installed and working"
     else
-        print_error "❌ Lighthouse mobile tests failed in DIND mode"
+        echo "❌ Chrome installation test failed"
         exit 1
     fi
+    
+    echo "📱 Running Lighthouse mobile tests..."
+    docker exec -w /app website-prod-1 lhci autorun \
+      --config=lighthouserc.mobile.js \
+      --collect.url=http://localhost:3001 \
+      --collect.chromePath=/usr/bin/chromium-browser \
+      --collect.chromeFlags="--no-sandbox --disable-dev-shm-usage --disable-extensions --disable-gpu --headless --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-software-rasterizer --disable-setuid-sandbox --single-process --no-zygote --js-flags=--max-old-space-size=4096"
+    
+    echo "📂 Copying lighthouse results from prod container..."
+    mkdir -p lhci-reports-mobile
+    docker cp website-prod-1:/app/lhci-reports-mobile/. lhci-reports-mobile/ 2>/dev/null || echo "No lighthouse results to copy"
+    
+    echo "🧹 Cleaning up Docker services..."
+    docker compose -f docker-compose.test.yml down
+    
+    echo "✅ Lighthouse mobile tests completed"
 }
 
-# Function to run memory leak tests (wrapper for DIND mode)
-run_memory_leak_tests() {
-    if [ "$DIND" = "1" ] || [ "$CI" = "1" ]; then
-        run_memory_leak_tests_dind
-    else
-        print_status "🐳 Running memory leak tests in local mode"
-        run_make "test-memory-leak" "Memory leak tests"
-        print_success "🎉 Memory leak tests completed successfully!"
+# Main execution logic
+main() {
+    local website_dir="${1:-.}"
+    
+    if [ ! -d "$website_dir" ]; then
+        echo "❌ Website directory not found: $website_dir"
+        exit 1
     fi
-}
-
-# Function to run Lighthouse desktop tests (wrapper for DIND mode)
-run_lighthouse_desktop_tests() {
-    if [ "$DIND" = "1" ] || [ "$CI" = "1" ]; then
-        run_lighthouse_desktop_tests_dind
-    else
-        print_status "🐳 Running Lighthouse desktop tests in local mode"
-        run_make "lighthouse-desktop" "Lighthouse desktop audit"
-        print_success "🎉 Lighthouse desktop tests completed successfully!"
+    
+    echo "📁 Working directory: $(pwd)"
+    echo "🌐 Website directory: $website_dir"
+    echo "📋 Makefile path: $website_dir/Makefile"
+    
+    # Check if Makefile exists
+    if [ ! -f "$website_dir/Makefile" ]; then
+        echo "❌ Makefile not found in $website_dir"
+        exit 1
     fi
-}
-
-# Function to run Lighthouse mobile tests (wrapper for DIND mode)
-run_lighthouse_mobile_tests() {
-    if [ "$DIND" = "1" ] || [ "$CI" = "1" ]; then
-        run_lighthouse_mobile_tests_dind
-    else
-        print_status "🐳 Running Lighthouse mobile tests in local mode"
-        run_make "lighthouse-mobile" "Lighthouse mobile audit"
-        print_success "🎉 Lighthouse mobile tests completed successfully!"
-    fi
-}
-
-# Function to run all tests in batch
-run_batch_tests() {
-    print_status "🚀 Starting batch execution: Memory Leak and Lighthouse tests"
     
     # Run memory leak tests
-    run_memory_leak_tests
-    
-    # Run Lighthouse desktop tests
-    run_lighthouse_desktop_tests
-    
-    # Run Lighthouse mobile tests
-    run_lighthouse_mobile_tests
-    
-    print_success "🎉 All batch tests completed successfully!"
-}
-
-# Function to cleanup resources
-cleanup() {
-    print_status "🧹 Cleaning up resources..."
-    
-    # Stop and remove containers
-    docker rm -f website-dev website-prod website-playwright website-apollo website-mockoon website-memory-leak 2>/dev/null || true
-    
-    # Stop docker-compose services
-    if cd "$PROJECT_ROOT"; then
-        docker-compose down --remove-orphans 2>/dev/null || true
-        docker-compose $DOCKER_COMPOSE_TEST_FILE down --remove-orphans 2>/dev/null || true
-        docker-compose $DOCKER_COMPOSE_MEMLEAK_FILE down --remove-orphans 2>/dev/null || true
+    if run_memory_leak_tests_dind "$website_dir"; then
+        echo "✅ Memory leak tests completed successfully in DIND mode!"
+    else
+        echo "❌ Memory leak tests failed in DIND mode"
+        exit 1
     fi
     
-    # Remove network
-    docker network rm "$NETWORK_NAME" 2>/dev/null || true
+    # Run Lighthouse desktop tests
+    if run_lighthouse_desktop_dind "$website_dir"; then
+        echo "✅ Lighthouse desktop tests completed successfully in DIND mode!"
+    else
+        echo "❌ Lighthouse desktop tests failed in DIND mode"
+        exit 1
+    fi
     
-    print_status "✅ Cleanup completed"
+    # Run Lighthouse mobile tests
+    if run_lighthouse_mobile_dind "$website_dir"; then
+        echo "✅ Lighthouse mobile tests completed successfully in DIND mode!"
+    else
+        echo "❌ Lighthouse mobile tests failed in DIND mode"
+        exit 1
+    fi
+    
+    echo "🎉 All Lighthouse and memory leak tests completed successfully!"
 }
 
-# Set up cleanup trap
-trap cleanup EXIT
-
-# Function to show help
-show_help() {
-    echo "Batch Lighthouse and Memory Leak Tests Script"
+# Show usage information
+show_usage() {
+    echo "Usage: $0 [COMMAND|WEBSITE_DIR]"
     echo ""
-    echo "Usage: $0 [COMMAND]"
+    echo "Commands (for backward compatibility):"
+    echo "  test-memory-leak       Run memory leak tests only"
+    echo "  test-lighthouse-desktop Run Lighthouse desktop tests only"
+    echo "  test-lighthouse-mobile Run Lighthouse mobile tests only"
     echo ""
-    echo "Commands:"
-    echo "  test-memory-leak        Run memory leak tests"
-    echo "  test-lighthouse-desktop Run Lighthouse desktop audit"
-    echo "  test-lighthouse-mobile  Run Lighthouse mobile audit"
-    echo "  test-all                Run all tests in batch"
-    echo "  setup-network           Setup Docker network for DIND"
-    echo "  configure-compose       Configure Docker Compose files for DIND"
-    echo "  cleanup                 Clean up Docker resources"
-    echo "  help                    Show this help message"
+    echo "Arguments:"
+    echo "  WEBSITE_DIR            Website directory path (default: current directory)"
     echo ""
-    echo "Environment Variables:"
-    echo "  CI                      Set to 1 for CI environment"
-    echo "  GITHUB_ACTIONS          Set to true for GitHub Actions"
-    echo "  CODEBUILD_BUILD_ID      Set for AWS CodeBuild"
+    echo "This script runs Lighthouse and memory leak tests in Docker-in-Docker mode"
+    echo "using the Makefile commands with proper Docker container setup."
     echo ""
     echo "Examples:"
-    echo "  $0 test-memory-leak     # Run only memory leak tests"
-    echo "  $0 test-all             # Run all tests"
-    echo "  $0 cleanup              # Clean up resources"
+    echo "  $0 test-memory-leak    # Run only memory leak tests (backward compatible)"
+    echo "  $0 .                   # Run all tests in current directory"
+    echo "  $0 /path/to/website    # Run all tests in specified directory"
+    echo ""
+    echo "Environment Variables:"
+    echo "  NETWORK_NAME           Docker network name (default: website-network)"
+    echo "  WEBSITE_DOMAIN         Website domain (default: localhost)"
+    echo "  DEV_PORT               Development port (default: 3000)"
+    echo "  NEXT_PUBLIC_PROD_PORT  Production port (default: 3001)"
+    echo "  PLAYWRIGHT_TEST_PORT   Playwright test port (default: 9323)"
+    echo "  UI_HOST                UI host binding (default: 0.0.0.0)"
+    echo "  PROD_CONTAINER_NAME    Production container name (default: website-prod)"
 }
 
-# Main command dispatcher
-# Simple argument handling that works in all shells
-if [ $# -gt 0 ]; then
-    # We have arguments, execute the command
-    COMMAND="$1"
-else
-    # No arguments, show help
-    COMMAND="help"
-fi
-
-case "$COMMAND" in
+# Command line argument handling
+case "${1:-help}" in
+    help|--help|-h)
+        show_usage
+        exit 0
+        ;;
     test-memory-leak)
-        run_memory_leak_tests
+        echo "🧪 Running memory leak tests only..."
+        main "." && run_memory_leak_tests_dind "."
         ;;
     test-lighthouse-desktop)
-        run_lighthouse_desktop_tests
+        echo "🔍 Running Lighthouse desktop tests only..."
+        main "." && run_lighthouse_desktop_dind "."
         ;;
     test-lighthouse-mobile)
-        run_lighthouse_mobile_tests
-        ;;
-    test-all)
-        run_batch_tests
-        ;;
-    setup-network)
-        run_make "create-network" "Docker network setup"
-        ;;
-    configure-compose)
-        print_status "Docker Compose configuration is handled automatically by the existing Makefile"
-        ;;
-    cleanup)
-        cleanup
-        ;;
-    help|--help|-h)
-        show_help
+        echo "🔍 Running Lighthouse mobile tests only..."
+        main "." && run_lighthouse_mobile_dind "."
         ;;
     *)
-        print_error "Unknown command: $COMMAND"
-        echo ""
-        show_help
-        exit 1
+        main "$@"
         ;;
 esac 

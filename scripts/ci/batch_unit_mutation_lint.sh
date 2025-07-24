@@ -261,13 +261,52 @@ run_make_with_dind() {
     echo "[INFO] Website directory: $website_dir"
     echo "[INFO] Makefile path: $website_dir/Makefile"
     
-    if docker exec "$container_name" sh -c "cd /app && make $target CI=0"; then
+    # For unit tests, run Jest commands directly instead of using make start
+    if [ "$target" = "test-unit-all" ]; then
+        echo "🧪 Running client-side tests..."
+        if docker exec "$container_name" sh -c "cd /app && env TEST_ENV=client ./node_modules/.bin/jest --verbose --passWithNoTests --maxWorkers=2"; then
+            echo "✅ Client-side tests PASSED"
+        else
+            echo "❌ Client-side tests FAILED"
+            docker logs "$container_name" --tail 30
+            docker rm -f "$container_name"
+            exit 1
+        fi
+        
+        echo "🧪 Running server-side tests..."
+        if docker exec "$container_name" sh -c "cd /app && env TEST_ENV=server ./node_modules/.bin/jest --verbose --passWithNoTests --maxWorkers=2 ./src/test/apollo-server"; then
+            echo "✅ Server-side tests PASSED"
+        else
+            echo "❌ Server-side tests FAILED"
+            docker logs "$container_name" --tail 30
+            docker rm -f "$container_name"
+            exit 1
+        fi
+        
+        echo "✅ $description completed successfully"
+    elif [ "$target" = "test-mutation" ]; then
+        # For mutation tests, run Stryker directly
+        echo "🧬 Running Stryker mutation tests..."
+        if docker exec "$container_name" sh -c "cd /app && pnpm stryker run"; then
+            echo "✅ Mutation tests PASSED"
+        else
+            echo "❌ Mutation tests FAILED"
+            docker logs "$container_name" --tail 30
+            docker rm -f "$container_name"
+            exit 1
+        fi
+        
         echo "✅ $description completed successfully"
     else
-        echo "❌ $description failed"
-        docker logs "$container_name" --tail 30
-        docker rm -f "$container_name"
-        exit 1
+        # For other targets, use make command
+        if docker exec "$container_name" sh -c "cd /app && make $target CI=0"; then
+            echo "✅ $description completed successfully"
+        else
+            echo "❌ $description failed"
+            docker logs "$container_name" --tail 30
+            docker rm -f "$container_name"
+            exit 1
+        fi
     fi
     
     echo "🧹 Cleaning up temporary container..."
@@ -439,15 +478,15 @@ case "${1:-help}" in
         ;;
     test-unit)
         echo "🧪 Running unit tests only..."
-        main "." && run_unit_tests_dind "."
+        run_unit_tests_dind "."
         ;;
     test-mutation)
         echo "🧬 Running mutation tests only..."
-        main "." && run_mutation_tests_dind "."
+        run_mutation_tests_dind "."
         ;;
     test-lint)
         echo "🔍 Running lint tests only..."
-        main "." && run_lint_tests_dind "."
+        run_lint_tests_dind "."
         ;;
     *)
         main "$@"
