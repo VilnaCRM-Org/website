@@ -76,6 +76,37 @@ setup_docker_network() {
     echo "✅ Docker network configured"
 }
 
+# Enhanced container connectivity testing
+test_container_connectivity() {
+    echo "🔍 Enhanced container connectivity testing..."
+    # Get production container IP
+    PROD_IP=$(docker inspect website-prod --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' 2>/dev/null || echo "")
+    if [ -n "$PROD_IP" ]; then
+        echo "✅ Production container IP: $PROD_IP"
+    else
+        echo "⚠️  Could not get production container IP"
+        return 1
+    fi
+    
+    # Test DNS resolution
+    echo "🔍 Testing DNS resolution..."
+    docker exec website-playwright nslookup website-prod >/dev/null 2>&1 || echo "⚠️  DNS lookup failed for website-prod"
+    docker exec website-playwright nslookup apollo >/dev/null 2>&1 || echo "⚠️  DNS lookup failed for apollo"
+    
+    # Test ping connectivity
+    echo "🔍 Testing ping connectivity..."
+    docker exec website-playwright ping -c 2 website-prod >/dev/null 2>&1 || echo "⚠️  Ping failed for website-prod"
+    docker exec website-playwright ping -c 2 apollo >/dev/null 2>&1 || echo "⚠️  Ping failed for apollo"
+    
+    # Test HTTP connectivity
+    echo "🔍 Testing HTTP connectivity..."
+    docker exec website-playwright curl -f http://website-prod:3001 >/dev/null 2>&1 || echo "⚠️  HTTP connectivity failed for website-prod:3001"
+    docker exec website-playwright curl -f "http://$PROD_IP:3001" >/dev/null 2>&1 || echo "⚠️  HTTP connectivity failed for $PROD_IP:3001"
+    docker exec website-playwright curl -f http://apollo:4000/graphql >/dev/null 2>&1 || echo "⚠️  HTTP connectivity failed for apollo:4000/graphql"
+    
+    echo "✅ Container connectivity testing completed"
+}
+
 # Wait for dev service in DIND mode
 wait_for_dev_dind() {
     echo "🐳 Waiting for dev service to be ready via Docker network..."
@@ -93,6 +124,7 @@ wait_for_dev_dind() {
             exit 1
         fi
     done
+    
     echo "🔍 Testing container connectivity..."
     for i in $(seq 1 60); do
         if docker exec website-dev sh -c "curl -f http://localhost:$DEV_PORT/api/health >/dev/null 2>&1 || curl -f http://127.0.0.1:$DEV_PORT >/dev/null 2>&1"; then
@@ -115,7 +147,74 @@ wait_for_dev_dind() {
     done
 }
 
-# Function to run make commands with proper Docker setup
+# Wait for production service
+wait_for_prod_dind() {
+    echo "🐳 Waiting for prod service in true DinD mode using container networking..."
+    echo "Checking if $PROD_CONTAINER_NAME container is running..."
+    for i in $(seq 1 30); do
+        if docker ps --filter "name=$PROD_CONTAINER_NAME" --filter "status=running" --format "{{.Names}}" | grep -q "$PROD_CONTAINER_NAME"; then
+            echo "✅ Container $PROD_CONTAINER_NAME is running"
+            break
+        fi
+        echo "Attempt $i: Container not running yet, waiting..."
+        sleep 2
+        if [ "$i" -eq 30 ]; then
+            echo "❌ Container failed to start within 60 seconds"
+            docker ps -a --filter "name=$PROD_CONTAINER_NAME"
+            exit 1
+        fi
+    done
+    
+    echo "🔍 Testing $PROD_CONTAINER_NAME service connectivity on port $NEXT_PUBLIC_PROD_PORT..."
+    for i in $(seq 1 60); do
+        if docker exec "$PROD_CONTAINER_NAME" sh -c "curl -f http://localhost:$NEXT_PUBLIC_PROD_PORT >/dev/null 2>&1"; then
+            echo "✅ Service is responding on port $NEXT_PUBLIC_PROD_PORT!"
+            break
+        fi
+        echo "Attempt $i: Service not ready, checking container status..."
+        if [ "$((i % 10))" -eq 0 ]; then
+            echo "Debug info at attempt $i:"
+            docker exec "$PROD_CONTAINER_NAME" ps aux 2>/dev/null || echo "Cannot access container processes"
+            docker exec "$PROD_CONTAINER_NAME" netstat -tulpn 2>/dev/null | grep ":$NEXT_PUBLIC_PROD_PORT" || echo "Port $NEXT_PUBLIC_PROD_PORT not bound"
+        fi
+        sleep 3
+        if [ "$i" -eq 60 ]; then
+            echo "❌ Service failed to respond within 180 seconds"
+            echo "Final container logs:"
+            docker logs "$PROD_CONTAINER_NAME" --tail 50
+            exit 1
+        fi
+    done
+    
+    # Run enhanced connectivity testing
+    test_container_connectivity
+}
+
+# Start development environment in DIND mode
+start_dev_dind() {
+    echo "🐳 Starting development environment in DIND mode..."
+    setup_docker_network
+    configure_docker_compose
+    docker-compose $DOCKER_COMPOSE_DEV_FILE up -d dev
+    wait_for_dev_dind
+    echo "🎉 Development environment started successfully!"
+}
+
+# Start production environment in DIND mode
+start_prod_dind() {
+    echo "🐳 Starting production environment in true Docker-in-Docker mode"
+    echo "Setting up Docker network..."
+    setup_docker_network
+    configure_docker_compose
+    echo "Building production container image..."
+    docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE build
+    echo "🚀 Starting production services..."
+    docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE up -d
+    wait_for_prod_dind
+    echo "🎉 Production environment started successfully!"
+}
+
+# Function to run make commands with proper Docker setup using temporary containers
 run_make_with_dind() {
     local target=$1
     local description=$2
@@ -125,24 +224,54 @@ run_make_with_dind() {
     setup_docker_network
     configure_docker_compose
     
-    # Start the development container
-    echo "🔧 Starting development container"
-    if ! docker compose up -d dev; then
-        echo "❌ Failed to start development container"
+    echo "Building container image..."
+    docker-compose $DOCKER_COMPOSE_DEV_FILE build dev
+    
+    # Create unique container name based on target
+    local container_name="website-dev-${target//[^a-zA-Z0-9]/}"
+    echo "🧹 Cleaning up any existing temporary containers..."
+    docker rm -f "$container_name" 2>/dev/null || true
+    
+    echo "🛠️ Starting container in background for file operations..."
+    docker run -d --name "$container_name" --network "$NETWORK_NAME" website-dev tail -f /dev/null
+    
+    echo "📂 Copying source files into container..."
+    if docker cp . "$container_name:/app/"; then
+        echo "✅ Source files copied successfully"
+    else
+        echo "❌ Failed to copy source files"
+        docker rm -f "$container_name"
         exit 1
     fi
     
-    # Wait for container to be ready
-    wait_for_dev_dind
+    echo "📦 Installing dependencies inside container..."
+    if docker exec "$container_name" sh -c "cd /app && npm install -g pnpm && pnpm install --frozen-lockfile"; then
+        echo "✅ Dependencies installed successfully"
+    else
+        echo "❌ Failed to install dependencies"
+        docker logs "$container_name" --tail 20
+        docker rm -f "$container_name"
+        exit 1
+    fi
     
     # Run make command with CI=0 to use Docker container commands (DIND mode)
     export DIND=1
-    if cd "$website_dir" && make "$target" CI=0; then
+    echo "🚀 Running: $description"
+    echo "[INFO] Target: $target"
+    echo "[INFO] Website directory: $website_dir"
+    echo "[INFO] Makefile path: $website_dir/Makefile"
+    
+    if docker exec "$container_name" sh -c "cd /app && make $target CI=0"; then
         echo "✅ $description completed successfully"
     else
         echo "❌ $description failed"
+        docker logs "$container_name" --tail 30
+        docker rm -f "$container_name"
         exit 1
     fi
+    
+    echo "🧹 Cleaning up temporary container..."
+    docker rm -f "$container_name"
 }
 
 # Function to run unit tests in DIND mode using Makefile
