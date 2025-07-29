@@ -1,7 +1,8 @@
 #!/bin/bash
 # Batch Unit, Mutation, and Lint Tests
 # Groups unit, mutation, and lint tests that can run in parallel
-set -e
+
+set -euo pipefail
 
 # Default configuration
 NETWORK_NAME=${NETWORK_NAME:-"website-network"}
@@ -370,37 +371,37 @@ run_markdown_lint_dind() {
 run_all_lint_dind() {
     local website_dir=$1
     echo "🧹 Running all lint checks in DIND mode..."
-    # Create lint-logs directory for buildspec artifacts
-    mkdir -p lint-logs
+    # Create lint-logs directory for buildspec artifacts in the website directory
+    mkdir -p "$website_dir/lint-logs"
     
     echo "🔍 Running ESLint with log capture..."
-    if run_eslint_dind "$website_dir" > lint-logs/eslint.log 2>&1; then
-        echo "✅ ESLint PASSED" | tee -a lint-logs/summary.log
+    if run_eslint_dind "$website_dir" > "$website_dir/lint-logs/eslint.log" 2>&1; then
+        echo "✅ ESLint PASSED" | tee -a "$website_dir/lint-logs/summary.log"
     else
-        echo "❌ ESLint FAILED" | tee -a lint-logs/summary.log
+        echo "❌ ESLint FAILED" | tee -a "$website_dir/lint-logs/summary.log"
         echo "ESLint failed, but continuing with other checks..."
     fi
     
     echo "🔍 Running TypeScript check with log capture..."
-    if run_typescript_check_dind "$website_dir" > lint-logs/typescript.log 2>&1; then
-        echo "✅ TypeScript check PASSED" | tee -a lint-logs/summary.log
+    if run_typescript_check_dind "$website_dir" > "$website_dir/lint-logs/typescript.log" 2>&1; then
+        echo "✅ TypeScript check PASSED" | tee -a "$website_dir/lint-logs/summary.log"
     else
-        echo "❌ TypeScript check FAILED" | tee -a lint-logs/summary.log
+        echo "❌ TypeScript check FAILED" | tee -a "$website_dir/lint-logs/summary.log"
         echo "TypeScript check failed, but continuing with other checks..."
     fi
     
     echo "🔍 Running Markdown linting with log capture..."
-    if run_markdown_lint_dind "$website_dir" > lint-logs/markdown.log 2>&1; then
-        echo "✅ Markdown linting PASSED" | tee -a lint-logs/summary.log
+    if run_markdown_lint_dind "$website_dir" > "$website_dir/lint-logs/markdown.log" 2>&1; then
+        echo "✅ Markdown linting PASSED" | tee -a "$website_dir/lint-logs/summary.log"
     else
-        echo "❌ Markdown linting FAILED" | tee -a lint-logs/summary.log
+        echo "❌ Markdown linting FAILED" | tee -a "$website_dir/lint-logs/summary.log"
         echo "Markdown linting failed, but continuing..."
     fi
     
     # Check if any tests failed by counting FAILED entries
-    failed_count=$(grep -c "FAILED" lint-logs/summary.log 2>/dev/null || echo "0")
+    failed_count=$(grep -c "FAILED" "$website_dir/lint-logs/summary.log" 2>/dev/null || echo "0")
     if [ "$failed_count" -gt 0 ]; then
-        echo "❌ $failed_count lint check(s) failed. Check lint-logs/ for details."
+        echo "❌ $failed_count lint check(s) failed. Check $website_dir/lint-logs/ for details."
         exit 1
     else
         echo "🎉 All lint checks completed successfully!"
@@ -442,8 +443,8 @@ main() {
         exit 1
     fi
     
-    # Run linting tests
-    if run_lint_tests_dind "$website_dir"; then
+    # Run linting tests with individual error handling and log capture
+    if run_all_lint_dind "$website_dir"; then
         echo "✅ All linting tests completed successfully in DIND mode!"
     else
         echo "❌ Linting tests failed in DIND mode"
@@ -499,7 +500,7 @@ case "${1:-help}" in
         ;;
     test-lint)
         echo "🔍 Running lint tests only..."
-        run_lint_tests_dind "."
+        run_all_lint_dind "."
         ;;
     *)
         main "$@"
