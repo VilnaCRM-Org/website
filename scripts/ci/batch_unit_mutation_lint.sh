@@ -13,9 +13,9 @@ UI_HOST=${UI_HOST:-"0.0.0.0"}
 PROD_CONTAINER_NAME=${PROD_CONTAINER_NAME:-"website-prod"}
 
 # Docker Compose files
-DOCKER_COMPOSE_DEV_FILE=${DOCKER_COMPOSE_DEV_FILE:-"-f docker-compose.yml"}
-DOCKER_COMPOSE_TEST_FILE=${DOCKER_COMPOSE_TEST_FILE:-"-f docker-compose.test.yml"}
-COMMON_HEALTHCHECKS_FILE=${COMMON_HEALTHCHECKS_FILE:-"-f common-healthchecks.yml"}
+DOCKER_COMPOSE_DEV_FILE=${DOCKER_COMPOSE_DEV_FILE:-"docker-compose.yml"}
+DOCKER_COMPOSE_TEST_FILE=${DOCKER_COMPOSE_TEST_FILE:-"docker-compose.test.yml"}
+COMMON_HEALTHCHECKS_FILE=${COMMON_HEALTHCHECKS_FILE:-"common-healthchecks.yml"}
 
 echo "🐳 DIND Environment Setup Script"
 echo "================================"
@@ -195,7 +195,7 @@ start_dev_dind() {
     echo "🐳 Starting development environment in DIND mode..."
     setup_docker_network
     configure_docker_compose
-    docker-compose $DOCKER_COMPOSE_DEV_FILE up -d dev
+    docker-compose -f "$DOCKER_COMPOSE_DEV_FILE" up -d dev
     wait_for_dev_dind
     echo "🎉 Development environment started successfully!"
 }
@@ -207,9 +207,9 @@ start_prod_dind() {
     setup_docker_network
     configure_docker_compose
     echo "Building production container image..."
-    docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE build
+    docker-compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" build
     echo "🚀 Starting production services..."
-    docker-compose $COMMON_HEALTHCHECKS_FILE $DOCKER_COMPOSE_TEST_FILE up -d
+    docker-compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d
     wait_for_prod_dind
     echo "🎉 Production environment started successfully!"
 }
@@ -225,7 +225,7 @@ run_make_with_dind() {
     configure_docker_compose
     
     echo "Building container image..."
-    docker-compose $DOCKER_COMPOSE_DEV_FILE build dev
+    docker-compose -f "$DOCKER_COMPOSE_DEV_FILE" build dev
     
     # Create unique container name based on target
     local container_name="website-dev-${target//[^a-zA-Z0-9]/}"
@@ -298,14 +298,27 @@ run_make_with_dind() {
         
         echo "✅ $description completed successfully"
     else
-        # For other targets, use make command
-        if docker exec "$container_name" sh -c "cd /app && make $target CI=0"; then
-            echo "✅ $description completed successfully"
+        # For lint targets, use Makefile with CI=1 to avoid Docker commands
+        if [ "$target" = "lint" ] || [ "$target" = "lint-next" ] || [ "$target" = "lint-tsc" ] || [ "$target" = "lint-md" ]; then
+            # Use CI=1 to make the Makefile use direct pnpm commands instead of Docker
+            if docker exec "$container_name" sh -c "cd /app && make $target CI=1"; then
+                echo "✅ $description completed successfully"
+            else
+                echo "❌ $description failed"
+                docker logs "$container_name" --tail 30
+                docker rm -f "$container_name"
+                exit 1
+            fi
         else
-            echo "❌ $description failed"
-            docker logs "$container_name" --tail 30
-            docker rm -f "$container_name"
-            exit 1
+            # For other targets, use make command with CI=0 (Docker mode)
+            if docker exec "$container_name" sh -c "cd /app && make $target CI=0"; then
+                echo "✅ $description completed successfully"
+            else
+                echo "❌ $description failed"
+                docker logs "$container_name" --tail 30
+                docker rm -f "$container_name"
+                exit 1
+            fi
         fi
     fi
     
