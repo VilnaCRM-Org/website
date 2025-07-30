@@ -196,7 +196,7 @@ start_dev_dind() {
     echo "🐳 Starting development environment in DIND mode..."
     setup_docker_network
     configure_docker_compose
-    docker-compose -f "$DOCKER_COMPOSE_DEV_FILE" up -d dev
+    docker compose -f "$DOCKER_COMPOSE_DEV_FILE" up -d dev
     wait_for_dev_dind
     echo "🎉 Development environment started successfully!"
 }
@@ -208,9 +208,9 @@ start_prod_dind() {
     setup_docker_network
     configure_docker_compose
     echo "Building production container image..."
-    docker-compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" build
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" build
     echo "🚀 Starting production services..."
-    docker-compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d
     wait_for_prod_dind
     echo "🎉 Production environment started successfully!"
 }
@@ -226,7 +226,7 @@ run_make_with_dind() {
     configure_docker_compose
     
     echo "Building container image..."
-    docker-compose -f "$DOCKER_COMPOSE_DEV_FILE" build dev
+    docker compose -f "$DOCKER_COMPOSE_DEV_FILE" build dev
     
     # Create unique container name based on target
     local container_name="website-dev-${target//[^a-zA-Z0-9]/}"

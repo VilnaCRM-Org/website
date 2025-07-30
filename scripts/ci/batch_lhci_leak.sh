@@ -154,9 +154,9 @@ wait_for_prod_dind() {
             # Final check
             if ! docker exec "$PROD_CONTAINER_NAME" sh -c "curl -f http://localhost:$NEXT_PUBLIC_PROD_PORT >/dev/null 2>&1"; then
                 echo "❌ Service failed to respond after retries"
-                echo "Final container logs:"
-                docker logs "$PROD_CONTAINER_NAME" --tail 50
-                exit 1
+            echo "Final container logs:"
+            docker logs "$PROD_CONTAINER_NAME" --tail 50
+            exit 1
             fi
         fi
     done
@@ -172,9 +172,9 @@ start_prod_dind() {
     setup_docker_network
     configure_docker_compose
     echo "Building production container image..."
-    docker-compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" build
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" build
     echo "🚀 Starting production services..."
-    docker-compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d
     wait_for_prod_dind
     echo "🎉 Production environment started successfully!"
 }
@@ -190,10 +190,10 @@ run_memory_leak_tests_dind() {
     configure_docker_compose
     
     echo "Building production container image..."
-    docker-compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" build
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" build
     
     echo "🚀 Starting production services..."
-    docker-compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d
     
     # Wait for production service without the problematic connectivity test
     echo "🐳 Waiting for prod service in true DinD mode using container networking..."
@@ -239,9 +239,9 @@ run_memory_leak_tests_dind() {
             # Final check
             if ! docker exec "$PROD_CONTAINER_NAME" sh -c "curl -f http://localhost:$NEXT_PUBLIC_PROD_PORT >/dev/null 2>&1"; then
                 echo "❌ Service failed to respond after retries"
-                echo "Final container logs:"
-                docker logs "$PROD_CONTAINER_NAME" --tail 50
-                exit 1
+            echo "Final container logs:"
+            docker logs "$PROD_CONTAINER_NAME" --tail 50
+            exit 1
             fi
         fi
     done
@@ -251,10 +251,10 @@ run_memory_leak_tests_dind() {
     docker rm memory-leak-test 2>/dev/null || true
     
     echo "Building memory leak container image..."
-    docker-compose -f docker-compose.memory-leak.yml build
+    docker compose -f docker-compose.memory-leak.yml build
     
     echo "🧠 Running Memory Leak container..."
-    docker-compose -f docker-compose.memory-leak.yml run -d --name memory-leak-test memory-leak sleep infinity
+    docker compose -f docker-compose.memory-leak.yml run -d --name memory-leak-test memory-leak sleep infinity
     
     echo "📂 Copying source files into memory leak container..."
     docker exec memory-leak-test mkdir -p /app/src/test /app/src/config /app/pages/i18n
@@ -353,8 +353,8 @@ run_lighthouse_desktop_dind() {
       # Final check
       if ! docker exec website-prod-1 curl -f http://localhost:3001 >/dev/null 2>&1; then
         echo "❌ Production service failed to become healthy after retries"
-        docker compose -f docker-compose.test.yml logs prod
-        exit 1
+      docker compose -f docker-compose.test.yml logs prod
+      exit 1
       fi
     fi
     
@@ -449,8 +449,8 @@ run_lighthouse_mobile_dind() {
       # Final check
       if ! docker exec website-prod-1 curl -f http://localhost:3001 >/dev/null 2>&1; then
         echo "❌ Production service failed to become healthy after retries"
-        docker compose -f docker-compose.test.yml logs prod
-        exit 1
+      docker compose -f docker-compose.test.yml logs prod
+      exit 1
       fi
     fi
     
