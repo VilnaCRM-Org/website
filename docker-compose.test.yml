@@ -1,5 +1,6 @@
 services:
   prod:
+    container_name: website-prod
     build:
       context: .
       dockerfile: Dockerfile
@@ -14,6 +15,7 @@ services:
       - website-network
 
   playwright:
+    container_name: website-playwright
     build:
       context: .
       dockerfile: Playwright.Dockerfile
@@ -31,6 +33,7 @@ services:
       - website-network
 
   apollo:
+    container_name: website-apollo
     build:
       context: .
       dockerfile: Apollo.Dockerfile
@@ -43,6 +46,7 @@ services:
       - website-network
 
   mockoon:
+    container_name: website-mockoon
     build:
       context: .
       dockerfile: Mockoon.Dockerfile
@@ -56,6 +60,7 @@ services:
 
 
   k6:
+    container_name: website-k6
     profiles: ["load"]
     build:
       context: .
