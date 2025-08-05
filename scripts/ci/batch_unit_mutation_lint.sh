@@ -129,8 +129,8 @@ wait_for_prod_dind() {
 
 start_dev_dind() {
     echo "🐳 Starting development environment in DIND mode..."
-    setup_docker_network
-    docker compose -f "$DOCKER_COMPOSE_DEV_FILE" up -d dev
+    make create-network
+    make start
     wait_for_dev_dind
     echo "🎉 Development environment started successfully!"
 }
@@ -138,11 +138,11 @@ start_dev_dind() {
 start_prod_dind() {
     echo "🐳 Starting production environment in true Docker-in-Docker mode"
     echo "Setting up Docker network..."
-    setup_docker_network
+    make create-network
     echo "Building production container image..."
     docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" build
     echo "🚀 Starting production services..."
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d
+    make start-prod
     wait_for_prod_dind
     echo "🎉 Production environment started successfully!"
 }
