@@ -4,7 +4,7 @@ import { GoogleAnalytics } from '@next/third-parties/google';
 import * as Sentry from '@sentry/react';
 import React, { useEffect } from 'react';
 
-import { theme } from '@/components/AppTheme';
+import  theme  from '@/components/AppTheme';
 import Layout from '@/components/Layout';
 import { golos } from '@/config/Fonts/golos';
 

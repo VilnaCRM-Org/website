@@ -7,10 +7,7 @@ const dotenvExpand = require('dotenv-expand');
 const env = require('dotenv').config();
 dotenvExpand.expand(env);
 
-require('dotenv/config');
-const dotenvExpand = require('dotenv-expand');
-const env = require('dotenv').config();
-dotenvExpand.expand(env);
+
 
 /** @type {import('next').NextConfig} */
 
