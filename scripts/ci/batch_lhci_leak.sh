@@ -4,8 +4,8 @@ set -euo pipefail
 
 NETWORK_NAME=${NETWORK_NAME:-"website-network"}
 NEXT_PUBLIC_PROD_PORT=${NEXT_PUBLIC_PROD_PORT:-"3001"}
-PROD_CONTAINER_NAME=${PROD_CONTAINER_NAME:-"$PROD_CONTAINER_NAME"}
-PLAYWRIGHT_CONTAINER_NAME=${PLAYWRIGHT_CONTAINER_NAME:-"$PLAYWRIGHT_CONTAINER_NAME"}
+PROD_CONTAINER_NAME=${PROD_CONTAINER_NAME:-"website-prod"}
+PLAYWRIGHT_CONTAINER_NAME=${PLAYWRIGHT_CONTAINER_NAME:-"website-playwright"}
 
 DOCKER_COMPOSE_DEV_FILE=${DOCKER_COMPOSE_DEV_FILE:-"docker-compose.yml"}
 DOCKER_COMPOSE_TEST_FILE=${DOCKER_COMPOSE_TEST_FILE:-"docker-compose.test.yml"}
@@ -28,7 +28,7 @@ setup_docker_network() {
 
 test_container_connectivity() {
     echo "🔍 Enhanced container connectivity testing..."
-    PROD_IP=$(docker inspect $PROD_CONTAINER_NAME --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' 2>/dev/null || echo "")
+    PROD_IP=$(docker inspect "$PROD_CONTAINER_NAME" --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' 2>/dev/null || echo "")
     if [ -n "$PROD_IP" ]; then
         echo "✅ Production container IP: $PROD_IP"
     else
@@ -37,23 +37,24 @@ test_container_connectivity() {
     fi
     
     echo "🔍 Testing DNS resolution..."
-    docker exec $PLAYWRIGHT_CONTAINER_NAME nslookup $PROD_CONTAINER_NAME >/dev/null 2>&1 || echo "⚠️  DNS lookup failed for $PROD_CONTAINER_NAME"
-    docker exec $PLAYWRIGHT_CONTAINER_NAME nslookup apollo >/dev/null 2>&1 || echo "⚠️  DNS lookup failed for apollo"
+    docker exec "$PLAYWRIGHT_CONTAINER_NAME" nslookup $PROD_CONTAINER_NAME >/dev/null 2>&1 || echo "⚠️  DNS lookup failed for $PROD_CONTAINER_NAME"
+    docker exec "$PLAYWRIGHT_CONTAINER_NAME" nslookup apollo >/dev/null 2>&1 || echo "⚠️  DNS lookup failed for apollo"
     
     echo "🔍 Testing ping connectivity..."
-    docker exec $PLAYWRIGHT_CONTAINER_NAME ping -c 2 $PROD_CONTAINER_NAME >/dev/null 2>&1 || echo "⚠️  Ping failed for $PROD_CONTAINER_NAME"
-    docker exec $PLAYWRIGHT_CONTAINER_NAME ping -c 2 apollo >/dev/null 2>&1 || echo "⚠️  Ping failed for apollo"
+    docker exec "$PLAYWRIGHT_CONTAINER_NAME" ping -c 2 $PROD_CONTAINER_NAME >/dev/null 2>&1 || echo "⚠️  Ping failed for $PROD_CONTAINER_NAME"
+    docker exec "$PLAYWRIGHT_CONTAINER_NAME" ping -c 2 apollo >/dev/null 2>&1 || echo "⚠️  Ping failed for apollo"
     
     echo "🔍 Testing HTTP connectivity..."
-    docker exec $PLAYWRIGHT_CONTAINER_NAME curl -f http://$PROD_CONTAINER_NAME:3001 >/dev/null 2>&1 || echo "⚠️  HTTP connectivity failed for $PROD_CONTAINER_NAME:3001"
-    docker exec $PLAYWRIGHT_CONTAINER_NAME curl -f "http://$PROD_IP:3001" >/dev/null 2>&1 || echo "⚠️  HTTP connectivity failed for $PROD_IP:3001"
-    docker exec $PLAYWRIGHT_CONTAINER_NAME curl -f http://apollo:4000/graphql >/dev/null 2>&1 || echo "⚠️  HTTP connectivity failed for apollo:4000/graphql"
+    docker exec "$PLAYWRIGHT_CONTAINER_NAME" curl -f http://$PROD_CONTAINER_NAME:3001 >/dev/null 2>&1 || echo "⚠️  HTTP connectivity failed for $PROD_CONTAINER_NAME:3001"
+    docker exec "$PLAYWRIGHT_CONTAINER_NAME" curl -f "http://$PROD_IP:3001" >/dev/null 2>&1 || echo "⚠️  HTTP connectivity failed for $PROD_IP:3001"
+    docker exec "$PLAYWRIGHT_CONTAINER_NAME" curl -f http://apollo:4000/graphql >/dev/null 2>&1 || echo "⚠️  HTTP connectivity failed for apollo:4000/graphql"
     
     echo "✅ Container connectivity testing completed"
 }
 
 start_prod_dind() {
     echo "🐳 Starting production environment in true Docker-in-Docker mode"
+    setup_docker_network
     echo "Building production container image..."
     make build-prod
     echo "🚀 Starting production services..."
@@ -65,6 +66,7 @@ run_memory_leak_tests_dind() {
     local website_dir=$1
     echo "🧠 Running Memory Leak tests using Makefile approach"
     
+    setup_docker_network
     echo "🚀 Starting production environment with health checks..."
     make start-prod
     
@@ -117,17 +119,18 @@ run_lighthouse_desktop_dind() {
     local website_dir=$1
     echo "🔦 Running Lighthouse Desktop tests using Makefile approach"
     
+    setup_docker_network
     echo "🚀 Starting production environment with health checks..."
     make start-prod
     
     echo "📦 Installing Chrome and Lighthouse CLI in prod container..."
-    docker exec $PROD_CONTAINER_NAME sh -c "apk add --no-cache chromium chromium-chromedriver && npm install -g @lhci/cli@0.14.0"
+    docker exec "$PROD_CONTAINER_NAME" sh -c "apk add --no-cache chromium chromium-chromedriver && npm install -g @lhci/cli@0.14.0"
     
     echo "📂 Copying Lighthouse config files to prod container..."
-    docker cp lighthouserc.desktop.js $PROD_CONTAINER_NAME:/app/
+    docker cp lighthouserc.desktop.js "$PROD_CONTAINER_NAME:/app/"
     
     echo "🧪 Testing Chrome installation..."
-    if docker exec $PROD_CONTAINER_NAME /usr/bin/chromium-browser --version; then
+    if docker exec "$PROD_CONTAINER_NAME" /usr/bin/chromium-browser --version; then
         echo "✅ Chrome is installed and working"
     else
         echo "❌ Chrome installation test failed"
@@ -143,7 +146,7 @@ run_lighthouse_desktop_dind() {
     
     echo "📂 Copying lighthouse results from prod container..."
     mkdir -p lhci-reports-desktop
-    docker cp $PROD_CONTAINER_NAME:/app/lhci-reports-desktop/. lhci-reports-desktop/ 2>/dev/null || echo "No lighthouse results to copy"
+    docker cp "$PROD_CONTAINER_NAME:/app/lhci-reports-desktop/." lhci-reports-desktop/ 2>/dev/null || echo "No lighthouse results to copy"
     
     echo "🧹 Cleaning up Docker services..."
     docker compose -f docker-compose.test.yml down
@@ -155,17 +158,18 @@ run_lighthouse_mobile_dind() {
     local website_dir=$1
     echo "📱 Running Lighthouse Mobile tests using Makefile approach"
     
+    setup_docker_network
     echo "🚀 Starting production environment with health checks..."
     make start-prod
     
     echo "📦 Installing Chrome and Lighthouse CLI in prod container..."
-    docker exec $PROD_CONTAINER_NAME sh -c "apk add --no-cache chromium chromium-chromedriver && npm install -g @lhci/cli@0.14.0"
+    docker exec "$PROD_CONTAINER_NAME" sh -c "apk add --no-cache chromium chromium-chromedriver && npm install -g @lhci/cli@0.14.0"
     
     echo "📂 Copying Lighthouse config files to prod container..."
-    docker cp lighthouserc.mobile.js $PROD_CONTAINER_NAME:/app/
+    docker cp lighthouserc.mobile.js "$PROD_CONTAINER_NAME:/app/"
     
     echo "🧪 Testing Chrome installation..."
-    if docker exec $PROD_CONTAINER_NAME /usr/bin/chromium-browser --version; then
+    if docker exec "$PROD_CONTAINER_NAME" /usr/bin/chromium-browser --version; then
         echo "✅ Chrome is installed and working"
     else
         echo "❌ Chrome installation test failed"
@@ -181,7 +185,7 @@ run_lighthouse_mobile_dind() {
     
     echo "📂 Copying lighthouse results from prod container..."
     mkdir -p lhci-reports-mobile
-    docker cp $PROD_CONTAINER_NAME:/app/lhci-reports-mobile/. lhci-reports-mobile/ 2>/dev/null || echo "No lighthouse results to copy"
+    docker cp "$PROD_CONTAINER_NAME:/app/lhci-reports-mobile/." lhci-reports-mobile/ 2>/dev/null || echo "No lighthouse results to copy"
     
     echo "🧹 Cleaning up Docker services..."
     docker compose -f docker-compose.test.yml down

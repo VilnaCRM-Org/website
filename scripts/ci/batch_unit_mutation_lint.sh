@@ -8,9 +8,9 @@ DEV_PORT=${DEV_PORT:-"3000"}
 NEXT_PUBLIC_PROD_PORT=${NEXT_PUBLIC_PROD_PORT:-"3001"}
 PLAYWRIGHT_TEST_PORT=${PLAYWRIGHT_TEST_PORT:-"9323"}
 UI_HOST=${UI_HOST:-"0.0.0.0"}
-PROD_CONTAINER_NAME=${PROD_CONTAINER_NAME:-"$PROD_CONTAINER_NAME"}
-PLAYWRIGHT_CONTAINER_NAME=${PLAYWRIGHT_CONTAINER_NAME:-"$PLAYWRIGHT_CONTAINER_NAME"}
-DEV_CONTAINER_NAME=${DEV_CONTAINER_NAME:-"$DEV_CONTAINER_NAME"}
+PROD_CONTAINER_NAME=${PROD_CONTAINER_NAME:-"website-prod"}
+PLAYWRIGHT_CONTAINER_NAME=${PLAYWRIGHT_CONTAINER_NAME:-"website-playwright"}
+DEV_CONTAINER_NAME=${DEV_CONTAINER_NAME:-"website-dev"}
 
 DOCKER_COMPOSE_DEV_FILE=${DOCKER_COMPOSE_DEV_FILE:-"docker-compose.yml"}
 DOCKER_COMPOSE_TEST_FILE=${DOCKER_COMPOSE_TEST_FILE:-"docker-compose.test.yml"}
@@ -29,7 +29,7 @@ setup_docker_network() {
 
 test_container_connectivity() {
     echo "🔍 Enhanced container connectivity testing..."
-    PROD_IP=$(docker inspect $PROD_CONTAINER_NAME --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' 2>/dev/null || echo "")
+    PROD_IP=$(docker inspect "$PROD_CONTAINER_NAME" --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' 2>/dev/null || echo "")
     if [ -n "$PROD_IP" ]; then
         echo "✅ Production container IP: $PROD_IP"
     else
@@ -38,17 +38,17 @@ test_container_connectivity() {
     fi
     
     echo "🔍 Testing DNS resolution..."
-    docker exec $PLAYWRIGHT_CONTAINER_NAME nslookup $PROD_CONTAINER_NAME >/dev/null 2>&1 || echo "⚠️  DNS lookup failed for $PROD_CONTAINER_NAME"
-    docker exec $PLAYWRIGHT_CONTAINER_NAME nslookup apollo >/dev/null 2>&1 || echo "⚠️  DNS lookup failed for apollo"
+    docker exec "$PLAYWRIGHT_CONTAINER_NAME" nslookup $PROD_CONTAINER_NAME >/dev/null 2>&1 || echo "⚠️  DNS lookup failed for $PROD_CONTAINER_NAME"
+    docker exec "$PLAYWRIGHT_CONTAINER_NAME" nslookup apollo >/dev/null 2>&1 || echo "⚠️  DNS lookup failed for apollo"
     
     echo "🔍 Testing ping connectivity..."
-    docker exec $PLAYWRIGHT_CONTAINER_NAME ping -c 2 $PROD_CONTAINER_NAME >/dev/null 2>&1 || echo "⚠️  Ping failed for $PROD_CONTAINER_NAME"
-    docker exec $PLAYWRIGHT_CONTAINER_NAME ping -c 2 apollo >/dev/null 2>&1 || echo "⚠️  Ping failed for apollo"
+    docker exec "$PLAYWRIGHT_CONTAINER_NAME" ping -c 2 $PROD_CONTAINER_NAME >/dev/null 2>&1 || echo "⚠️  Ping failed for $PROD_CONTAINER_NAME"
+    docker exec "$PLAYWRIGHT_CONTAINER_NAME" ping -c 2 apollo >/dev/null 2>&1 || echo "⚠️  Ping failed for apollo"
     
     echo "🔍 Testing HTTP connectivity..."
-    docker exec $PLAYWRIGHT_CONTAINER_NAME curl -f http://$PROD_CONTAINER_NAME:3001 >/dev/null 2>&1 || echo "⚠️  HTTP connectivity failed for $PROD_CONTAINER_NAME:3001"
-    docker exec $PLAYWRIGHT_CONTAINER_NAME curl -f "http://$PROD_IP:3001" >/dev/null 2>&1 || echo "⚠️  HTTP connectivity failed for $PROD_IP:3001"
-    docker exec $PLAYWRIGHT_CONTAINER_NAME curl -f http://apollo:4000/graphql >/dev/null 2>&1 || echo "⚠️  HTTP connectivity failed for apollo:4000/graphql"
+    docker exec "$PLAYWRIGHT_CONTAINER_NAME" curl -f http://$PROD_CONTAINER_NAME:3001 >/dev/null 2>&1 || echo "⚠️  HTTP connectivity failed for $PROD_CONTAINER_NAME:3001"
+    docker exec "$PLAYWRIGHT_CONTAINER_NAME" curl -f "http://$PROD_IP:3001" >/dev/null 2>&1 || echo "⚠️  HTTP connectivity failed for $PROD_IP:3001"
+    docker exec "$PLAYWRIGHT_CONTAINER_NAME" curl -f http://apollo:4000/graphql >/dev/null 2>&1 || echo "⚠️  HTTP connectivity failed for apollo:4000/graphql"
     
     echo "✅ Container connectivity testing completed"
 }
@@ -107,7 +107,7 @@ run_make_with_dind() {
     docker rm -f "$container_name" 2>/dev/null || true
     
     echo "🛠️ Starting container in background for file operations..."
-    docker run -d --name "$container_name" --network "$NETWORK_NAME" $DEV_CONTAINER_NAME tail -f /dev/null
+    docker run -d --name "$container_name" --network "$NETWORK_NAME" "$DEV_CONTAINER_NAME" tail -f /dev/null
     
     echo "📂 Copying source files into container..."
     if docker cp . "$container_name:/app/"; then
@@ -170,7 +170,7 @@ run_make_with_dind() {
         echo "✅ $description completed successfully"
     else
         if [ "$target" = "lint" ] || [ "$target" = "lint-next" ] || [ "$target" = "lint-tsc" ] || [ "$target" = "lint-md" ]; then
-            if docker exec "$container_name" sh -c "cd /app && make $target CI=1"; then
+            if docker exec "$container_name" sh -c "cd /app && make \"$target\" CI=1"; then
                 echo "✅ $description completed successfully"
             else
                 echo "❌ $description failed"
@@ -179,7 +179,7 @@ run_make_with_dind() {
                 exit 1
             fi
         else
-            if docker exec "$container_name" sh -c "cd /app && make $target CI=0"; then
+            if docker exec "$container_name" sh -c "cd /app && make \"$target\" CI=0"; then
                 echo "✅ $description completed successfully"
             else
                 echo "❌ $description failed"
