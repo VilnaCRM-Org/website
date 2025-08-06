@@ -3,6 +3,7 @@
 set -euo pipefail
 
 NETWORK_NAME=${NETWORK_NAME:-"website-network"}
+WEBSITE_DOMAIN=${WEBSITE_DOMAIN:-"localhost"}
 NEXT_PUBLIC_PROD_PORT=${NEXT_PUBLIC_PROD_PORT:-"3001"}
 PROD_CONTAINER_NAME=${PROD_CONTAINER_NAME:-"website-prod"}
 PLAYWRIGHT_CONTAINER_NAME=${PLAYWRIGHT_CONTAINER_NAME:-"website-playwright"}
@@ -58,7 +59,7 @@ start_prod_dind() {
     echo "Building production container image..."
     make build-prod
     echo "🚀 Starting production services..."
-    make start-prod
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d
     echo "🎉 Production environment started successfully!"
 }
 
@@ -67,8 +68,10 @@ run_memory_leak_tests_dind() {
     echo "🧠 Running Memory Leak tests using Makefile approach"
     
     setup_docker_network
-    echo "🚀 Starting production environment with health checks..."
-    make start-prod
+    echo "Building production container image..."
+    make build-prod
+    echo "🚀 Starting production services..."
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d
     
     echo "🧹 Cleaning up any existing Memory Leak containers..."
     docker stop memory-leak-test 2>/dev/null || true
@@ -120,8 +123,10 @@ run_lighthouse_desktop_dind() {
     echo "🔦 Running Lighthouse Desktop tests using Makefile approach"
     
     setup_docker_network
-    echo "🚀 Starting production environment with health checks..."
-    make start-prod
+    echo "Building production container image..."
+    make build-prod
+    echo "🚀 Starting production services..."
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d
     
     echo "📦 Installing Chrome and Lighthouse CLI in prod container..."
     docker exec "$PROD_CONTAINER_NAME" sh -c "apk add --no-cache chromium chromium-chromedriver && npm install -g @lhci/cli@0.14.0"
@@ -159,8 +164,10 @@ run_lighthouse_mobile_dind() {
     echo "📱 Running Lighthouse Mobile tests using Makefile approach"
     
     setup_docker_network
-    echo "🚀 Starting production environment with health checks..."
-    make start-prod
+    echo "Building production container image..."
+    make build-prod
+    echo "🚀 Starting production services..."
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d
     
     echo "📦 Installing Chrome and Lighthouse CLI in prod container..."
     docker exec "$PROD_CONTAINER_NAME" sh -c "apk add --no-cache chromium chromium-chromedriver && npm install -g @lhci/cli@0.14.0"
@@ -249,6 +256,7 @@ show_usage() {
     echo ""
     echo "Environment Variables:"
     echo "  NETWORK_NAME           Docker network name (default: website-network)"
+    echo "  WEBSITE_DOMAIN         Website domain (default: localhost)"
     echo "  NEXT_PUBLIC_PROD_PORT  Production port (default: 3001)"
     echo "  PROD_CONTAINER_NAME    Production container name (default: $PROD_CONTAINER_NAME)"
 }
