@@ -131,6 +131,9 @@ run_lighthouse_desktop_dind() {
     echo "📦 Installing Chrome and Lighthouse CLI in prod container..."
     docker exec "$PROD_CONTAINER_NAME" sh -c "apk add --no-cache chromium chromium-chromedriver && npm install -g @lhci/cli@0.14.0"
     
+    echo "🔧 Setting up Chrome workspace with increased memory..."
+    docker exec "$PROD_CONTAINER_NAME" sh -c "mkdir -p /tmp/chrome-workspace && chmod 777 /tmp/chrome-workspace"
+    
     echo "📂 Copying Lighthouse config files to prod container..."
     docker cp lighthouserc.desktop.js "$PROD_CONTAINER_NAME:/app/"
     
@@ -142,12 +145,19 @@ run_lighthouse_desktop_dind() {
         exit 1
     fi
     
+    echo "🧪 Testing Chrome startup with DIND flags..."
+    if docker exec "$PROD_CONTAINER_NAME" timeout 10 /usr/bin/chromium-browser --no-sandbox --disable-dev-shm-usage --headless --disable-gpu --single-process --no-zygote --dump-dom about:blank >/dev/null 2>&1; then
+        echo "✅ Chrome can start successfully with DIND flags"
+    else
+        echo "⚠️ Chrome startup test failed, but continuing (this may indicate potential issues)"
+    fi
+    
     echo "🔦 Running Lighthouse desktop tests..."
-    docker exec -w /app $PROD_CONTAINER_NAME lhci autorun \
+    docker exec -w /app "$PROD_CONTAINER_NAME" lhci autorun \
       --config=lighthouserc.desktop.js \
       --collect.url=http://localhost:3001 \
       --collect.chromePath=/usr/bin/chromium-browser \
-      --collect.chromeFlags="--no-sandbox --disable-dev-shm-usage --disable-extensions --disable-gpu --headless --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-software-rasterizer --disable-setuid-sandbox --single-process --no-zygote --js-flags=--max-old-space-size=4096"
+      --collect.chromeFlags="--no-sandbox --disable-dev-shm-usage --disable-extensions --disable-gpu --headless --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-software-rasterizer --disable-setuid-sandbox --single-process --no-zygote --disable-web-security --disable-features=TranslateUI --disable-ipc-flooding-protection --disable-crash-reporter --disable-breakpad --disable-component-extensions-with-background-pages --memory-pressure-off --max_old_space_size=4096 --js-flags=--max-old-space-size=4096 --user-data-dir=/tmp/chrome-workspace --data-path=/tmp/chrome-workspace --disk-cache-dir=/tmp/chrome-workspace/cache"
     
     echo "📂 Copying lighthouse results from prod container..."
     mkdir -p lhci-reports-desktop
@@ -172,6 +182,9 @@ run_lighthouse_mobile_dind() {
     echo "📦 Installing Chrome and Lighthouse CLI in prod container..."
     docker exec "$PROD_CONTAINER_NAME" sh -c "apk add --no-cache chromium chromium-chromedriver && npm install -g @lhci/cli@0.14.0"
     
+    echo "🔧 Setting up Chrome workspace with increased memory..."
+    docker exec "$PROD_CONTAINER_NAME" sh -c "mkdir -p /tmp/chrome-workspace && chmod 777 /tmp/chrome-workspace"
+    
     echo "📂 Copying Lighthouse config files to prod container..."
     docker cp lighthouserc.mobile.js "$PROD_CONTAINER_NAME:/app/"
     
@@ -183,12 +196,19 @@ run_lighthouse_mobile_dind() {
         exit 1
     fi
     
+    echo "🧪 Testing Chrome startup with DIND flags..."
+    if docker exec "$PROD_CONTAINER_NAME" timeout 10 /usr/bin/chromium-browser --no-sandbox --disable-dev-shm-usage --headless --disable-gpu --single-process --no-zygote --dump-dom about:blank >/dev/null 2>&1; then
+        echo "✅ Chrome can start successfully with DIND flags"
+    else
+        echo "⚠️ Chrome startup test failed, but continuing (this may indicate potential issues)"
+    fi
+    
     echo "📱 Running Lighthouse mobile tests..."
-    docker exec -w /app $PROD_CONTAINER_NAME lhci autorun \
+    docker exec -w /app "$PROD_CONTAINER_NAME" lhci autorun \
       --config=lighthouserc.mobile.js \
       --collect.url=http://localhost:3001 \
       --collect.chromePath=/usr/bin/chromium-browser \
-      --collect.chromeFlags="--no-sandbox --disable-dev-shm-usage --disable-extensions --disable-gpu --headless --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-software-rasterizer --disable-setuid-sandbox --single-process --no-zygote --js-flags=--max-old-space-size=4096"
+      --collect.chromeFlags="--no-sandbox --disable-dev-shm-usage --disable-extensions --disable-gpu --headless --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-software-rasterizer --disable-setuid-sandbox --single-process --no-zygote --disable-web-security --disable-features=TranslateUI --disable-ipc-flooding-protection --disable-crash-reporter --disable-breakpad --disable-component-extensions-with-background-pages --memory-pressure-off --max_old_space_size=4096 --js-flags=--max-old-space-size=4096 --user-data-dir=/tmp/chrome-workspace --data-path=/tmp/chrome-workspace --disk-cache-dir=/tmp/chrome-workspace/cache"
     
     echo "📂 Copying lighthouse results from prod container..."
     mkdir -p lhci-reports-mobile
