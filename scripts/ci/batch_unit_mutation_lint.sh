@@ -8,7 +8,9 @@ DEV_PORT=${DEV_PORT:-"3000"}
 NEXT_PUBLIC_PROD_PORT=${NEXT_PUBLIC_PROD_PORT:-"3001"}
 PLAYWRIGHT_TEST_PORT=${PLAYWRIGHT_TEST_PORT:-"9323"}
 UI_HOST=${UI_HOST:-"0.0.0.0"}
-PROD_CONTAINER_NAME=${PROD_CONTAINER_NAME:-"website-prod"}
+PROD_CONTAINER_NAME=${PROD_CONTAINER_NAME:-"$PROD_CONTAINER_NAME"}
+PLAYWRIGHT_CONTAINER_NAME=${PLAYWRIGHT_CONTAINER_NAME:-"$PLAYWRIGHT_CONTAINER_NAME"}
+DEV_CONTAINER_NAME=${DEV_CONTAINER_NAME:-"$DEV_CONTAINER_NAME"}
 
 DOCKER_COMPOSE_DEV_FILE=${DOCKER_COMPOSE_DEV_FILE:-"docker-compose.yml"}
 DOCKER_COMPOSE_TEST_FILE=${DOCKER_COMPOSE_TEST_FILE:-"docker-compose.test.yml"}
@@ -27,7 +29,7 @@ setup_docker_network() {
 
 test_container_connectivity() {
     echo "🔍 Enhanced container connectivity testing..."
-    PROD_IP=$(docker inspect website-prod --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' 2>/dev/null || echo "")
+    PROD_IP=$(docker inspect $PROD_CONTAINER_NAME --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' 2>/dev/null || echo "")
     if [ -n "$PROD_IP" ]; then
         echo "✅ Production container IP: $PROD_IP"
     else
@@ -36,17 +38,17 @@ test_container_connectivity() {
     fi
     
     echo "🔍 Testing DNS resolution..."
-    docker exec website-playwright nslookup website-prod >/dev/null 2>&1 || echo "⚠️  DNS lookup failed for website-prod"
-    docker exec website-playwright nslookup apollo >/dev/null 2>&1 || echo "⚠️  DNS lookup failed for apollo"
+    docker exec $PLAYWRIGHT_CONTAINER_NAME nslookup $PROD_CONTAINER_NAME >/dev/null 2>&1 || echo "⚠️  DNS lookup failed for $PROD_CONTAINER_NAME"
+    docker exec $PLAYWRIGHT_CONTAINER_NAME nslookup apollo >/dev/null 2>&1 || echo "⚠️  DNS lookup failed for apollo"
     
     echo "🔍 Testing ping connectivity..."
-    docker exec website-playwright ping -c 2 website-prod >/dev/null 2>&1 || echo "⚠️  Ping failed for website-prod"
-    docker exec website-playwright ping -c 2 apollo >/dev/null 2>&1 || echo "⚠️  Ping failed for apollo"
+    docker exec $PLAYWRIGHT_CONTAINER_NAME ping -c 2 $PROD_CONTAINER_NAME >/dev/null 2>&1 || echo "⚠️  Ping failed for $PROD_CONTAINER_NAME"
+    docker exec $PLAYWRIGHT_CONTAINER_NAME ping -c 2 apollo >/dev/null 2>&1 || echo "⚠️  Ping failed for apollo"
     
     echo "🔍 Testing HTTP connectivity..."
-    docker exec website-playwright curl -f http://website-prod:3001 >/dev/null 2>&1 || echo "⚠️  HTTP connectivity failed for website-prod:3001"
-    docker exec website-playwright curl -f "http://$PROD_IP:3001" >/dev/null 2>&1 || echo "⚠️  HTTP connectivity failed for $PROD_IP:3001"
-    docker exec website-playwright curl -f http://apollo:4000/graphql >/dev/null 2>&1 || echo "⚠️  HTTP connectivity failed for apollo:4000/graphql"
+    docker exec $PLAYWRIGHT_CONTAINER_NAME curl -f http://$PROD_CONTAINER_NAME:3001 >/dev/null 2>&1 || echo "⚠️  HTTP connectivity failed for $PROD_CONTAINER_NAME:3001"
+    docker exec $PLAYWRIGHT_CONTAINER_NAME curl -f "http://$PROD_IP:3001" >/dev/null 2>&1 || echo "⚠️  HTTP connectivity failed for $PROD_IP:3001"
+    docker exec $PLAYWRIGHT_CONTAINER_NAME curl -f http://apollo:4000/graphql >/dev/null 2>&1 || echo "⚠️  HTTP connectivity failed for apollo:4000/graphql"
     
     echo "✅ Container connectivity testing completed"
 }
@@ -54,78 +56,20 @@ test_container_connectivity() {
 wait_for_dev_dind() {
     echo "🐳 Waiting for dev service to be ready via Docker network..."
     echo "Debug: Checking if container is running..."
-    for i in $(seq 1 30); do
-        if docker ps --filter "name=website-dev" --filter "status=running" --format "{{.Names}}" | grep -q "website-dev"; then
-            echo "✅ Container website-dev is running"
-            break
-        fi
-        echo "Attempt $i: Container not running yet, waiting..."
-        if [ "$i" -eq 30 ]; then
-            echo "❌ Container failed to start within 60 seconds"
-            docker ps -a --filter "name=website-dev"
-            exit 1
-        fi
-    done
+    echo "⏳ Checking if dev container is running..."
+    if ! docker ps --filter "name=$DEV_CONTAINER_NAME" --filter "status=running" --format "{{.Names}}" | grep -q "$DEV_CONTAINER_NAME"; then
+        echo "❌ Container $DEV_CONTAINER_NAME is not running"
+        docker ps -a --filter "name=$DEV_CONTAINER_NAME"
+        exit 1
+    fi
+    echo "✅ Container $DEV_CONTAINER_NAME is running"
     
     echo "🔍 Testing container connectivity..."
-    for i in $(seq 1 60); do
-        if docker exec website-dev sh -c "curl -f http://localhost:$DEV_PORT/api/health >/dev/null 2>&1 || curl -f http://127.0.0.1:$DEV_PORT >/dev/null 2>&1"; then
-            echo "✅ Dev service is responding on port $DEV_PORT!"
-            break
-        fi
-        echo "Attempt $i: Dev service not ready, checking container status..."
-        if [ "$((i % 10))" -eq 0 ]; then
-            echo "Debug info at attempt $i:"
-            docker exec website-dev ps aux 2>/dev/null || echo "Cannot access container processes"
-            docker exec website-dev netstat -tulpn 2>/dev/null | grep ":$DEV_PORT" || echo "Port $DEV_PORT not bound"
-        fi
-        if [ "$i" -eq 60 ]; then
-            echo "❌ Dev service failed to respond within 180 seconds"
-            echo "Final container logs:"
-            docker logs website-dev --tail 50
-            exit 1
-        fi
-    done
+    echo "⏳ Waiting for dev service to be ready on port $DEV_PORT..."
+    make wait-for-dev
 }
 
-wait_for_prod_dind() {
-    echo "🐳 Waiting for prod service in true DinD mode using container networking..."
-    echo "Checking if $PROD_CONTAINER_NAME container is running..."
-    for i in $(seq 1 30); do
-        if docker ps --filter "name=$PROD_CONTAINER_NAME" --filter "status=running" --format "{{.Names}}" | grep -q "$PROD_CONTAINER_NAME"; then
-            echo "✅ Container $PROD_CONTAINER_NAME is running"
-            break
-        fi
-        echo "Attempt $i: Container not running yet, waiting..."
-        if [ "$i" -eq 30 ]; then
-            echo "❌ Container failed to start within 60 seconds"
-            docker ps -a --filter "name=$PROD_CONTAINER_NAME"
-            exit 1
-        fi
-    done
-    
-    echo "🔍 Testing $PROD_CONTAINER_NAME service connectivity on port $NEXT_PUBLIC_PROD_PORT..."
-    for i in $(seq 1 60); do
-        if docker exec "$PROD_CONTAINER_NAME" sh -c "curl -f http://localhost:$NEXT_PUBLIC_PROD_PORT >/dev/null 2>&1"; then
-            echo "✅ Service is responding on port $NEXT_PUBLIC_PROD_PORT!"
-            break
-        fi
-        echo "Attempt $i: Service not ready, checking container status..."
-        if [ "$((i % 10))" -eq 0 ]; then
-            echo "Debug info at attempt $i:"
-            docker exec "$PROD_CONTAINER_NAME" ps aux 2>/dev/null || echo "Cannot access container processes"
-            docker exec "$PROD_CONTAINER_NAME" netstat -tulpn 2>/dev/null | grep ":$NEXT_PUBLIC_PROD_PORT" || echo "Port $NEXT_PUBLIC_PROD_PORT not bound"
-        fi
-        if [ "$i" -eq 60 ]; then
-            echo "❌ Service failed to respond within 180 seconds"
-            echo "Final container logs:"
-            docker logs "$PROD_CONTAINER_NAME" --tail 50
-            exit 1
-        fi
-    done
-    
-    test_container_connectivity
-}
+
 
 start_dev_dind() {
     echo "🐳 Starting development environment in DIND mode..."
@@ -140,10 +84,10 @@ start_prod_dind() {
     echo "Setting up Docker network..."
     make create-network
     echo "Building production container image..."
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" build
+    make build-prod
     echo "🚀 Starting production services..."
     make start-prod
-    wait_for_prod_dind
+
     echo "🎉 Production environment started successfully!"
 }
 
@@ -158,12 +102,12 @@ run_make_with_dind() {
     echo "Building container image..."
     docker compose -f "$DOCKER_COMPOSE_DEV_FILE" build dev
     
-    local container_name="website-dev-${target//[^a-zA-Z0-9]/}"
+    local container_name="$DEV_CONTAINER_NAME-${target//[^a-zA-Z0-9]/}"
     echo "🧹 Cleaning up any existing temporary containers..."
     docker rm -f "$container_name" 2>/dev/null || true
     
     echo "🛠️ Starting container in background for file operations..."
-    docker run -d --name "$container_name" --network "$NETWORK_NAME" website-dev tail -f /dev/null
+    docker run -d --name "$container_name" --network "$NETWORK_NAME" $DEV_CONTAINER_NAME tail -f /dev/null
     
     echo "📂 Copying source files into container..."
     if docker cp . "$container_name:/app/"; then
@@ -391,7 +335,9 @@ show_usage() {
     echo "  NEXT_PUBLIC_PROD_PORT  Production port (default: 3001)"
     echo "  PLAYWRIGHT_TEST_PORT   Playwright test port (default: 9323)"
     echo "  UI_HOST                UI host binding (default: 0.0.0.0)"
-    echo "  PROD_CONTAINER_NAME    Production container name (default: website-prod)"
+    echo "  PROD_CONTAINER_NAME    Production container name (default: $PROD_CONTAINER_NAME)"
+echo "  PLAYWRIGHT_CONTAINER_NAME Playwright container name (default: $PLAYWRIGHT_CONTAINER_NAME)"
+echo "  DEV_CONTAINER_NAME     Development container name (default: $DEV_CONTAINER_NAME)"
 }
 
 case "${1:-help}" in

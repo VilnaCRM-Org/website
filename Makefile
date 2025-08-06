@@ -121,6 +121,9 @@ wait-for-dev: ## Wait for the dev service to be ready on port $(DEV_PORT).
 build: ## A tool build the project
 	$(DOCKER_COMPOSE) build
 
+build-prod: ## Build production containers with health checks
+	$(DOCKER_COMPOSE) $(COMMON_HEALTHCHECKS_FILE) $(DOCKER_COMPOSE_TEST_FILE) build
+
 build-analyze: ## Build production bundle and launch bundle-analyzer report (ANALYZE=true)
 	ANALYZE=true $(NEXT_BUILD_CMD)
 
