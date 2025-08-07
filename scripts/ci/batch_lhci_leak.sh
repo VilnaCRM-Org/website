@@ -55,54 +55,169 @@ test_container_connectivity() {
 
 start_prod_dind() {
     echo "🐳 Starting production environment in true Docker-in-Docker mode"
+    setup_docker_network
     echo "Building production container image..."
     make build-prod
     echo "🚀 Starting production services..."
-    make start-prod
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d
     echo "🎉 Production environment started successfully!"
-}
-
-run_make_with_prod_dind() {
-    local target=$1
-    local description=$2
-    local website_dir=$3
-    
-    echo "🔧 Setting up Docker network for DIND"
-    setup_docker_network
-    
-    echo "🚀 Starting production environment for $description"
-    start_prod_dind
-    
-    export DIND=1
-    echo "🚀 Running: $description"
-    echo "[INFO] Target: $target"
-    echo "[INFO] Website directory: $website_dir"
-    echo "[INFO] Makefile path: $website_dir/Makefile"
-    
-    if cd "$website_dir" && make "$target" CI=0; then
-        echo "✅ $description completed successfully"
-    else
-        echo "❌ $description failed"
-        exit 1
-    fi
 }
 
 run_memory_leak_tests_dind() {
     local website_dir=$1
     echo "🧠 Running Memory Leak tests using Makefile approach"
-    run_make_with_prod_dind "test-memory-leak" "Memory leak tests" "$website_dir"
+    
+    setup_docker_network
+    echo "Building production container image..."
+    make build-prod
+    echo "🚀 Starting production services..."
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d
+    
+    echo "🧹 Cleaning up any existing Memory Leak containers..."
+    docker stop memory-leak-test 2>/dev/null || true
+    docker rm memory-leak-test 2>/dev/null || true
+    
+    echo "Building memory leak container image..."
+    docker compose -f docker-compose.memory-leak.yml build
+    
+    echo "🧠 Running Memory Leak container..."
+    docker compose -f docker-compose.memory-leak.yml run -d --name memory-leak-test memory-leak sleep infinity
+    
+    echo "📂 Copying source files into memory leak container..."
+    docker exec memory-leak-test mkdir -p /app/src/test /app/src/config /app/pages/i18n
+    docker cp src/test/memory-leak memory-leak-test:/app/src/test/memory-leak
+    echo "✅ Memory leak test files copied successfully"
+    
+    echo "📂 Copying required config files..."
+    docker cp src/config memory-leak-test:/app/src/config  
+    docker cp pages/i18n memory-leak-test:/app/pages/i18n
+    
+    echo "🧹 Cleaning up previous memory leak results..."
+    docker exec memory-leak-test rm -rf /app/src/test/memory-leak/results || true
+    
+    echo "🧠 Running Memlab memory leak tests..."
+    if docker exec -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_NAME=no-aws-header-name -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_VALUE=no-aws-header-value -w /app memory-leak-test node src/test/memory-leak/runMemlabTests.js; then
+        echo "✅ Memory leak tests PASSED"
+    else
+        echo "❌ Memory leak tests FAILED"
+        docker logs memory-leak-test --tail 30
+        docker stop memory-leak-test || true
+        docker rm memory-leak-test || true
+        exit 1
+    fi
+    
+    echo "📂 Copying memory leak test results..."
+    mkdir -p memory-leak-logs
+    docker cp memory-leak-test:/app/src/test/memory-leak/results/. memory-leak-logs/ 2>/dev/null || echo "No memory leak results to copy"
+    docker logs memory-leak-test > memory-leak-logs/test-execution.log 2>&1 || true
+    
+    echo "🧹 Cleaning up memory leak container..."
+    docker stop memory-leak-test || true
+    docker rm memory-leak-test || true
+    
+    echo "🎉 Memory leak tests completed successfully in true DinD mode!"
 }
 
 run_lighthouse_desktop_dind() {
     local website_dir=$1
     echo "🔦 Running Lighthouse Desktop tests using Makefile approach"
-    run_make_with_prod_dind "lighthouse-desktop" "Lighthouse desktop tests" "$website_dir"
+    
+    setup_docker_network
+    echo "Building production container image..."
+    make build-prod
+    echo "🚀 Starting production services..."
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d
+    
+    echo "📦 Installing Chrome and Lighthouse CLI in prod container..."
+    docker exec "$PROD_CONTAINER_NAME" sh -c "apk add --no-cache chromium chromium-chromedriver && npm install -g @lhci/cli@0.14.0"
+    
+    echo "🔧 Setting up Chrome workspace with increased memory..."
+    docker exec "$PROD_CONTAINER_NAME" sh -c "mkdir -p /tmp/chrome-workspace && chmod 777 /tmp/chrome-workspace"
+    
+    echo "📂 Copying Lighthouse config files to prod container..."
+    docker cp lighthouserc.desktop.js "$PROD_CONTAINER_NAME:/app/"
+    
+    echo "🧪 Testing Chrome installation..."
+    if docker exec "$PROD_CONTAINER_NAME" /usr/bin/chromium-browser --version; then
+        echo "✅ Chrome is installed and working"
+    else
+        echo "❌ Chrome installation test failed"
+        exit 1
+    fi
+    
+    echo "🧪 Testing Chrome startup with DIND flags..."
+    if docker exec "$PROD_CONTAINER_NAME" timeout 10 /usr/bin/chromium-browser --no-sandbox --disable-dev-shm-usage --headless --disable-gpu --single-process --no-zygote --dump-dom about:blank >/dev/null 2>&1; then
+        echo "✅ Chrome can start successfully with DIND flags"
+    else
+        echo "⚠️ Chrome startup test failed, but continuing (this may indicate potential issues)"
+    fi
+    
+    echo "🔦 Running Lighthouse desktop tests..."
+    docker exec -w /app "$PROD_CONTAINER_NAME" lhci autorun \
+      --config=lighthouserc.desktop.js \
+      --collect.url=http://localhost:3001 \
+      --collect.chromePath=/usr/bin/chromium-browser \
+      --collect.chromeFlags="--no-sandbox --disable-dev-shm-usage --disable-extensions --disable-gpu --headless --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-software-rasterizer --disable-setuid-sandbox --single-process --no-zygote --disable-web-security --disable-features=TranslateUI --disable-ipc-flooding-protection --disable-crash-reporter --disable-breakpad --disable-component-extensions-with-background-pages --memory-pressure-off --max_old_space_size=4096 --js-flags=--max-old-space-size=4096 --user-data-dir=/tmp/chrome-workspace --data-path=/tmp/chrome-workspace --disk-cache-dir=/tmp/chrome-workspace/cache"
+    
+    echo "📂 Copying lighthouse results from prod container..."
+    mkdir -p lhci-reports-desktop
+    docker cp "$PROD_CONTAINER_NAME:/app/lhci-reports-desktop/." lhci-reports-desktop/ 2>/dev/null || echo "No lighthouse results to copy"
+    
+    echo "🧹 Cleaning up Docker services..."
+    docker compose -f docker-compose.test.yml down
+    
+    echo "✅ Lighthouse desktop tests completed"
 }
 
 run_lighthouse_mobile_dind() {
     local website_dir=$1
     echo "📱 Running Lighthouse Mobile tests using Makefile approach"
-    run_make_with_prod_dind "lighthouse-mobile" "Lighthouse mobile tests" "$website_dir"
+    
+    setup_docker_network
+    echo "Building production container image..."
+    make build-prod
+    echo "🚀 Starting production services..."
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d
+    
+    echo "📦 Installing Chrome and Lighthouse CLI in prod container..."
+    docker exec "$PROD_CONTAINER_NAME" sh -c "apk add --no-cache chromium chromium-chromedriver && npm install -g @lhci/cli@0.14.0"
+    
+    echo "🔧 Setting up Chrome workspace with increased memory..."
+    docker exec "$PROD_CONTAINER_NAME" sh -c "mkdir -p /tmp/chrome-workspace && chmod 777 /tmp/chrome-workspace"
+    
+    echo "📂 Copying Lighthouse config files to prod container..."
+    docker cp lighthouserc.mobile.js "$PROD_CONTAINER_NAME:/app/"
+    
+    echo "🧪 Testing Chrome installation..."
+    if docker exec "$PROD_CONTAINER_NAME" /usr/bin/chromium-browser --version; then
+        echo "✅ Chrome is installed and working"
+    else
+        echo "❌ Chrome installation test failed"
+        exit 1
+    fi
+    
+    echo "🧪 Testing Chrome startup with DIND flags..."
+    if docker exec "$PROD_CONTAINER_NAME" timeout 10 /usr/bin/chromium-browser --no-sandbox --disable-dev-shm-usage --headless --disable-gpu --single-process --no-zygote --dump-dom about:blank >/dev/null 2>&1; then
+        echo "✅ Chrome can start successfully with DIND flags"
+    else
+        echo "⚠️ Chrome startup test failed, but continuing (this may indicate potential issues)"
+    fi
+    
+    echo "📱 Running Lighthouse mobile tests..."
+    docker exec -w /app "$PROD_CONTAINER_NAME" lhci autorun \
+      --config=lighthouserc.mobile.js \
+      --collect.url=http://localhost:3001 \
+      --collect.chromePath=/usr/bin/chromium-browser \
+      --collect.chromeFlags="--no-sandbox --disable-dev-shm-usage --disable-extensions --disable-gpu --headless --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-software-rasterizer --disable-setuid-sandbox --single-process --no-zygote --disable-web-security --disable-features=TranslateUI --disable-ipc-flooding-protection --disable-crash-reporter --disable-breakpad --disable-component-extensions-with-background-pages --memory-pressure-off --max_old_space_size=4096 --js-flags=--max-old-space-size=4096 --user-data-dir=/tmp/chrome-workspace --data-path=/tmp/chrome-workspace --disk-cache-dir=/tmp/chrome-workspace/cache"
+    
+    echo "📂 Copying lighthouse results from prod container..."
+    mkdir -p lhci-reports-mobile
+    docker cp "$PROD_CONTAINER_NAME:/app/lhci-reports-mobile/." lhci-reports-mobile/ 2>/dev/null || echo "No lighthouse results to copy"
+    
+    echo "🧹 Cleaning up Docker services..."
+    docker compose -f docker-compose.test.yml down
+    
+    echo "✅ Lighthouse mobile tests completed"
 }
 
 main() {
