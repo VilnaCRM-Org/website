@@ -1,11 +1,7 @@
 #!/bin/bash
 
-# Batch Lighthouse and Memory Leak Tests
-# Groups Lighthouse and memory leak tests that can run in parallel
-
 set -e
 
-# Default configuration
 NETWORK_NAME=${NETWORK_NAME:-"website-network"}
 WEBSITE_DOMAIN=${WEBSITE_DOMAIN:-"localhost"}
 DEV_PORT=${DEV_PORT:-"3000"}
@@ -14,7 +10,6 @@ PLAYWRIGHT_TEST_PORT=${PLAYWRIGHT_TEST_PORT:-"9323"}
 UI_HOST=${UI_HOST:-"0.0.0.0"}
 PROD_CONTAINER_NAME=${PROD_CONTAINER_NAME:-"website-prod"}
 
-# Docker Compose files
 DOCKER_COMPOSE_DEV_FILE=${DOCKER_COMPOSE_DEV_FILE:-"docker-compose.yml"}
 DOCKER_COMPOSE_TEST_FILE=${DOCKER_COMPOSE_TEST_FILE:-"docker-compose.test.yml"}
 COMMON_HEALTHCHECKS_FILE=${COMMON_HEALTHCHECKS_FILE:-"common-healthchecks.yml"}
@@ -24,7 +19,6 @@ echo "================================"
 
 
 
-# Setup Docker network for DIND
 setup_docker_network() {
     echo "📡 Setting up Docker network..."
     docker network create "$NETWORK_NAME" 2>/dev/null || echo "Network $NETWORK_NAME already exists"
