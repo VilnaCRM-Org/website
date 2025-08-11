@@ -25,32 +25,6 @@ setup_docker_network() {
     echo "✅ Docker network configured"
 }
 
-test_container_connectivity() {
-    echo "🔍 Enhanced container connectivity testing..."
-    PROD_IP=$(docker inspect "$PROD_CONTAINER_NAME" --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' 2>/dev/null || echo "")
-    if [ -n "$PROD_IP" ]; then
-        echo "✅ Production container IP: $PROD_IP"
-    else
-        echo "⚠️  Could not get production container IP"
-        return 1
-    fi
-    
-    echo "🔍 Testing DNS resolution..."
-    docker exec "$PLAYWRIGHT_CONTAINER_NAME" nslookup $PROD_CONTAINER_NAME >/dev/null 2>&1 || echo "⚠️  DNS lookup failed for $PROD_CONTAINER_NAME"
-    docker exec "$PLAYWRIGHT_CONTAINER_NAME" nslookup apollo >/dev/null 2>&1 || echo "⚠️  DNS lookup failed for apollo"
-    
-    echo "🔍 Testing ping connectivity..."
-    docker exec "$PLAYWRIGHT_CONTAINER_NAME" ping -c 2 $PROD_CONTAINER_NAME >/dev/null 2>&1 || echo "⚠️  Ping failed for $PROD_CONTAINER_NAME"
-    docker exec "$PLAYWRIGHT_CONTAINER_NAME" ping -c 2 apollo >/dev/null 2>&1 || echo "⚠️  Ping failed for apollo"
-    
-    echo "🔍 Testing HTTP connectivity..."
-    docker exec "$PLAYWRIGHT_CONTAINER_NAME" curl -f http://$PROD_CONTAINER_NAME:3001 >/dev/null 2>&1 || echo "⚠️  HTTP connectivity failed for $PROD_CONTAINER_NAME:3001"
-    docker exec "$PLAYWRIGHT_CONTAINER_NAME" curl -f "http://$PROD_IP:3001" >/dev/null 2>&1 || echo "⚠️  HTTP connectivity failed for $PROD_IP:3001"
-    docker exec "$PLAYWRIGHT_CONTAINER_NAME" curl -f http://apollo:4000/graphql >/dev/null 2>&1 || echo "⚠️  HTTP connectivity failed for apollo:4000/graphql"
-    
-    echo "✅ Container connectivity testing completed"
-}
-
 start_prod_dind() {
     echo "🐳 Starting production environment in true Docker-in-Docker mode"
     echo "Setting up Docker network..."
@@ -58,8 +32,7 @@ start_prod_dind() {
     echo "Building production container image..."
     make build-prod
     echo "🚀 Starting production services..."
-    docker-compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d
-    wait_for_prod_dind
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d --wait prod
     echo "🎉 Production environment started successfully!"
 }
 
@@ -71,7 +44,7 @@ run_memory_leak_tests_dind() {
     echo "Building production container image..."
     make build-prod
     echo "🚀 Starting production services..."
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d --wait prod
     
     echo "🧹 Cleaning up any existing Memory Leak containers..."
     docker stop memory-leak-test 2>/dev/null || true
@@ -131,16 +104,16 @@ run_lighthouse_desktop_dind() {
     export SHM_SIZE="2g"
 
     echo "🚀 Starting production services with DIND configuration..."
-    docker compose -f "$DOCKER_COMPOSE_TEST_FILE" up -d --build prod
+    docker compose -f "$DOCKER_COMPOSE_TEST_FILE" up -d --build --wait prod
 
     echo "📦 Installing Chrome and Lighthouse CLI in prod container..."
-    docker exec "$PROD_CONTAINER_NAME" sh -c "apk add --no-cache chromium chromium-chromedriver && npm install -g @lhci/cli@0.14.0"
+    docker compose -f "$DOCKER_COMPOSE_TEST_FILE" exec -T prod sh -lc "apk add --no-cache chromium chromium-chromedriver && npm install -g @lhci/cli@0.14.0"
 
     echo "📂 Copying Lighthouse config files to prod container..."
     docker cp lighthouserc.desktop.js "$PROD_CONTAINER_NAME:/app/"
 
     echo "🧪 Testing Chrome installation..."
-    if docker exec "$PROD_CONTAINER_NAME" /usr/bin/chromium-browser --version; then
+    if docker compose -f "$DOCKER_COMPOSE_TEST_FILE" exec -T prod /usr/bin/chromium-browser --version; then
         echo "✅ Chrome is installed and working"
     else
         echo "❌ Chrome installation test failed"
@@ -148,7 +121,7 @@ run_lighthouse_desktop_dind() {
     fi
 
     echo "🔦 Running Lighthouse desktop tests..."
-    docker exec -w /app "$PROD_CONTAINER_NAME" lhci autorun \
+    docker compose -f "$DOCKER_COMPOSE_TEST_FILE" exec -T -w /app prod lhci autorun \
       --config=lighthouserc.desktop.js \
       --collect.url=http://localhost:"$NEXT_PUBLIC_PROD_PORT" \
       --collect.chromePath=/usr/bin/chromium-browser \
@@ -177,16 +150,16 @@ run_lighthouse_mobile_dind() {
     export SHM_SIZE="2g"
 
     echo "🚀 Starting production services with DIND configuration..."
-    docker compose -f "$DOCKER_COMPOSE_TEST_FILE" up -d --build prod
+    docker compose -f "$DOCKER_COMPOSE_TEST_FILE" up -d --build --wait prod
 
     echo "📦 Installing Chrome and Lighthouse CLI in prod container..."
-    docker exec "$PROD_CONTAINER_NAME" sh -c "apk add --no-cache chromium chromium-chromedriver && npm install -g @lhci/cli@0.14.0"
+    docker compose -f "$DOCKER_COMPOSE_TEST_FILE" exec -T prod sh -lc "apk add --no-cache chromium chromium-chromedriver && npm install -g @lhci/cli@0.14.0"
 
     echo "📂 Copying Lighthouse config files to prod container..."
     docker cp lighthouserc.mobile.js "$PROD_CONTAINER_NAME:/app/"
 
     echo "🧪 Testing Chrome installation..."
-    if docker exec "$PROD_CONTAINER_NAME" /usr/bin/chromium-browser --version; then
+    if docker compose -f "$DOCKER_COMPOSE_TEST_FILE" exec -T prod /usr/bin/chromium-browser --version; then
         echo "✅ Chrome is installed and working"
     else
         echo "❌ Chrome installation test failed"
@@ -194,7 +167,7 @@ run_lighthouse_mobile_dind() {
     fi
 
     echo "📱 Running Lighthouse mobile tests..."
-    docker exec -w /app "$PROD_CONTAINER_NAME" lhci autorun \
+    docker compose -f "$DOCKER_COMPOSE_TEST_FILE" exec -T -w /app prod lhci autorun \
       --config=lighthouserc.mobile.js \
       --collect.url=http://localhost:"$NEXT_PUBLIC_PROD_PORT" \
       --collect.chromePath=/usr/bin/chromium-browser \
@@ -220,29 +193,11 @@ main() {
     
     echo "📁 Working directory: $(pwd)"
     echo "🌐 Website directory: $website_dir"
-    
-    if run_memory_leak_tests_dind "$website_dir"; then
-        echo "✅ Memory leak tests completed successfully in DIND mode!"
-    else
-        echo "❌ Memory leak tests failed in DIND mode"
-        exit 1
-    fi
-    
-    if run_lighthouse_desktop_dind "$website_dir"; then
-        echo "✅ Lighthouse desktop tests completed successfully in DIND mode!"
-    else
-        echo "❌ Lighthouse desktop tests failed in DIND mode"
-        exit 1
-    fi
-    
-    if run_lighthouse_mobile_dind "$website_dir"; then
-        echo "✅ Lighthouse mobile tests completed successfully in DIND mode!"
-    else
-        echo "❌ Lighthouse mobile tests failed in DIND mode"
-        exit 1
-    fi
-    
-    echo "🎉 All Lighthouse and memory leak tests completed successfully!"
+
+    # Run sequentially; stop on first failure via set -e
+    run_memory_leak_tests_dind "$website_dir"
+    run_lighthouse_desktop_dind "$website_dir"
+    run_lighthouse_mobile_dind "$website_dir"
 }
 
 show_usage() {

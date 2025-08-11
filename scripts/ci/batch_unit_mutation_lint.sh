@@ -27,31 +27,7 @@ setup_docker_network() {
     echo "✅ Docker network configured"
 }
 
-test_container_connectivity() {
-    echo "🔍 Enhanced container connectivity testing..."
-    PROD_IP=$(docker inspect "$PROD_CONTAINER_NAME" --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' 2>/dev/null || echo "")
-    if [ -n "$PROD_IP" ]; then
-        echo "✅ Production container IP: $PROD_IP"
-    else
-        echo "⚠️  Could not get production container IP"
-        return 1
-    fi
-    
-    echo "🔍 Testing DNS resolution..."
-    docker exec "$PLAYWRIGHT_CONTAINER_NAME" nslookup $PROD_CONTAINER_NAME >/dev/null 2>&1 || echo "⚠️  DNS lookup failed for $PROD_CONTAINER_NAME"
-    docker exec "$PLAYWRIGHT_CONTAINER_NAME" nslookup apollo >/dev/null 2>&1 || echo "⚠️  DNS lookup failed for apollo"
-    
-    echo "🔍 Testing ping connectivity..."
-    docker exec "$PLAYWRIGHT_CONTAINER_NAME" ping -c 2 $PROD_CONTAINER_NAME >/dev/null 2>&1 || echo "⚠️  Ping failed for $PROD_CONTAINER_NAME"
-    docker exec "$PLAYWRIGHT_CONTAINER_NAME" ping -c 2 apollo >/dev/null 2>&1 || echo "⚠️  Ping failed for apollo"
-    
-    echo "🔍 Testing HTTP connectivity..."
-    docker exec "$PLAYWRIGHT_CONTAINER_NAME" curl -f http://$PROD_CONTAINER_NAME:3001 >/dev/null 2>&1 || echo "⚠️  HTTP connectivity failed for $PROD_CONTAINER_NAME:3001"
-    docker exec "$PLAYWRIGHT_CONTAINER_NAME" curl -f "http://$PROD_IP:3001" >/dev/null 2>&1 || echo "⚠️  HTTP connectivity failed for $PROD_IP:3001"
-    docker exec "$PLAYWRIGHT_CONTAINER_NAME" curl -f http://apollo:4000/graphql >/dev/null 2>&1 || echo "⚠️  HTTP connectivity failed for apollo:4000/graphql"
-    
-    echo "✅ Container connectivity testing completed"
-}
+## Connectivity checks not needed here; tests run in a single dev container
 
 wait_for_dev_dind() {
     echo "🐳 Waiting for dev service to be ready via Docker network..."
@@ -279,34 +255,16 @@ main() {
     echo "📁 Working directory: $(pwd)"
     echo "🌐 Website directory: $website_dir"
     echo "📋 Makefile path: $website_dir/Makefile"
-    
+
     if [ ! -f "$website_dir/Makefile" ]; then
         echo "❌ Makefile not found in $website_dir"
         exit 1
     fi
-    
-    if run_unit_tests_dind "$website_dir"; then
-        echo "✅ All unit tests completed successfully in DIND mode!"
-    else
-        echo "❌ Unit tests failed in DIND mode"
-        exit 1
-    fi
-    
-    if run_mutation_tests_dind "$website_dir"; then
-        echo "✅ Mutation tests completed successfully in DIND mode!"
-    else
-        echo "❌ Mutation tests failed in DIND mode"
-        exit 1
-    fi
-    
-    if run_all_lint_dind "$website_dir"; then
-        echo "✅ All linting tests completed successfully in DIND mode!"
-    else
-        echo "❌ Linting tests failed in DIND mode"
-        exit 1
-    fi
-    
-    echo "🎉 All tests completed successfully!"
+
+    # Run sequentially; rely on set -e to stop on failure
+    run_unit_tests_dind "$website_dir"
+    run_mutation_tests_dind "$website_dir"
+    run_all_lint_dind "$website_dir"
 }
 
 show_usage() {

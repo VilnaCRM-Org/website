@@ -30,31 +30,7 @@ setup_docker_network() {
     echo "✅ Docker network configured"
 }
 
-test_container_connectivity() {
-    echo "🔍 Enhanced container connectivity testing..."
-    PROD_IP=$(docker inspect "$PROD_CONTAINER_NAME" --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' 2>/dev/null || echo "")
-    if [ -n "$PROD_IP" ]; then
-        echo "✅ Production container IP: $PROD_IP"
-    else
-        echo "⚠️  Could not get production container IP"
-        return 1
-    fi
-    
-    echo "🔍 Testing DNS resolution..."
-    docker exec "$PLAYWRIGHT_CONTAINER_NAME" nslookup $PROD_CONTAINER_NAME >/dev/null 2>&1 || echo "⚠️  DNS lookup failed for $PROD_CONTAINER_NAME"
-    docker exec "$PLAYWRIGHT_CONTAINER_NAME" nslookup apollo >/dev/null 2>&1 || echo "⚠️  DNS lookup failed for apollo"
-    
-    echo "🔍 Testing ping connectivity..."
-    docker exec "$PLAYWRIGHT_CONTAINER_NAME" ping -c 2 $PROD_CONTAINER_NAME >/dev/null 2>&1 || echo "⚠️  Ping failed for $PROD_CONTAINER_NAME"
-    docker exec "$PLAYWRIGHT_CONTAINER_NAME" ping -c 2 apollo >/dev/null 2>&1 || echo "⚠️  Ping failed for apollo"
-    
-    echo "🔍 Testing HTTP connectivity..."
-    docker exec "$PLAYWRIGHT_CONTAINER_NAME" curl -f http://$PROD_CONTAINER_NAME:3001 >/dev/null 2>&1 || echo "⚠️  HTTP connectivity failed for $PROD_CONTAINER_NAME:3001"
-    docker exec "$PLAYWRIGHT_CONTAINER_NAME" curl -f "http://$PROD_IP:3001" >/dev/null 2>&1 || echo "⚠️  HTTP connectivity failed for $PROD_IP:3001"
-    docker exec "$PLAYWRIGHT_CONTAINER_NAME" curl -f http://apollo:4000/graphql >/dev/null 2>&1 || echo "⚠️  HTTP connectivity failed for apollo:4000/graphql"
-    
-    echo "✅ Container connectivity testing completed"
-}
+## Connectivity checks removed; using docker compose healthchecks with --wait
 
 
 
@@ -63,7 +39,7 @@ start_prod_dind() {
     echo "Building production container image..."
     make build-prod
     echo "🚀 Starting production services..."
-    make start-prod
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d --wait prod
     echo "🎉 Production environment started successfully!"
 }
 
@@ -102,22 +78,18 @@ run_e2e_tests_dind() {
     echo "Building test services..."
     make build-prod
     
-    echo "🚀 Starting test services..."
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d
+    echo "🚀 Starting core test services (prod, apollo, mockoon) and waiting for health..."
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d --wait prod apollo mockoon
     
 
     
     echo "📂 Copying E2E test files to Playwright container..."
     
-    echo "⏳ Waiting for Playwright container to be ready..."
-    if ! docker exec "$PLAYWRIGHT_CONTAINER_NAME" echo "Container ready" >/dev/null 2>&1; then
-        echo "❌ Playwright container not accessible"
-        exit 1
-    fi
-    echo "✅ Container $PLAYWRIGHT_CONTAINER_NAME is ready"
+    echo "🚀 Starting playwright container"
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d playwright
     
     echo "Creating directories in container..."
-    docker exec "$PLAYWRIGHT_CONTAINER_NAME" mkdir -p /app/src/test /app/src/config /app/pages/i18n
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T playwright mkdir -p /app/src/test /app/src/config /app/pages/i18n
     
     echo "Copying complete test directory..."
     if docker cp src/test/. "$PLAYWRIGHT_CONTAINER_NAME:/app/src/test/"; then
@@ -150,16 +122,16 @@ run_e2e_tests_dind() {
     docker cp playwright.config.ts "$PLAYWRIGHT_CONTAINER_NAME:/app/" || echo "⚠️  Failed to copy playwright.config.ts"
     
     echo "🔍 Verifying files were copied correctly..."
-    docker exec "$PLAYWRIGHT_CONTAINER_NAME" ls -la /app/src/test/e2e/ || echo "⚠️  E2E files not found in container"
-    docker exec "$PLAYWRIGHT_CONTAINER_NAME" ls -la /app/src/test/e2e/utils/ || echo "⚠️  E2E utils not found in container"
-    docker exec "$PLAYWRIGHT_CONTAINER_NAME" ls -la /app/src/config/ || echo "⚠️  Config files not found in container"
-    docker exec "$PLAYWRIGHT_CONTAINER_NAME" ls -la /app/pages/i18n/ || echo "⚠️  i18n files not found in container"
-    docker exec "$PLAYWRIGHT_CONTAINER_NAME" ls -la /app/tsconfig*.json || echo "⚠️  TypeScript config files not found"
-    docker exec "$PLAYWRIGHT_CONTAINER_NAME" ls -la /app/next.config.js || echo "⚠️  Next.js config not found"
-    docker exec "$PLAYWRIGHT_CONTAINER_NAME" ls -la /app/playwright.config.ts || echo "⚠️  Playwright config not found"
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T playwright ls -la /app/src/test/e2e/ || echo "⚠️  E2E files not found in container"
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T playwright ls -la /app/src/test/e2e/utils/ || echo "⚠️  E2E utils not found in container"
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T playwright ls -la /app/src/config/ || echo "⚠️  Config files not found in container"
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T playwright ls -la /app/pages/i18n/ || echo "⚠️  i18n files not found in container"
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T playwright sh -lc 'ls -la /app/tsconfig*.json' || echo "⚠️  TypeScript config files not found"
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T playwright ls -la /app/next.config.js || echo "⚠️  Next.js config not found"
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T playwright ls -la /app/playwright.config.ts || echo "⚠️  Playwright config not found"
     
     echo "🧹 Cleaning up previous E2E results..."
-    docker exec "$PLAYWRIGHT_CONTAINER_NAME" rm -rf /app/playwright-report /app/test-results || true
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T playwright rm -rf /app/playwright-report /app/test-results || true
     
     echo "🎭 Running Playwright E2E tests with IP-based connectivity..."
     
@@ -175,11 +147,11 @@ run_e2e_tests_dind() {
     echo "🔍 Testing container connectivity..."
     docker exec "$PLAYWRIGHT_CONTAINER_NAME" curl -f "$PROD_URL" >/dev/null 2>&1 || echo "⚠️  Container connectivity test failed"
     
-    if docker exec -e NEXT_PUBLIC_MAIN_LANGUAGE=uk -e NEXT_PUBLIC_FALLBACK_LANGUAGE=en -e NEXT_PUBLIC_PROD_CONTAINER_API_URL="$PROD_URL" -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_NAME=no-aws-header-name -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_VALUE=no-aws-header-value -e NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL=https://github.com/VilnaCRM-Org/ -e NEXT_PUBLIC_GRAPHQL_API_URL=http://apollo:4000/graphql -w /app $PLAYWRIGHT_CONTAINER_NAME npx playwright test src/test/e2e --timeout=60000; then
+    if docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T -e NEXT_PUBLIC_MAIN_LANGUAGE=uk -e NEXT_PUBLIC_FALLBACK_LANGUAGE=en -e NEXT_PUBLIC_PROD_CONTAINER_API_URL="$PROD_URL" -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_NAME=no-aws-header-name -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_VALUE=no-aws-header-value -e NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL=https://github.com/VilnaCRM-Org/ -e NEXT_PUBLIC_GRAPHQL_API_URL=http://apollo:4000/graphql -w /app playwright npx playwright test src/test/e2e --timeout=60000; then
         echo "✅ E2E tests PASSED"
     else
         echo "❌ E2E tests FAILED"
-        docker logs "$PLAYWRIGHT_CONTAINER_NAME" --tail 30
+        docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" logs --tail=30 playwright || true
         echo "⚠️  E2E tests failed but continuing with build..."
     fi
     
@@ -205,7 +177,7 @@ run_visual_tests_dind() {
     make build-prod
     
     echo "🚀 Starting test services..."
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d --wait prod apollo mockoon
     
 
     
@@ -370,36 +342,12 @@ main() {
     
     echo "📁 Working directory: $(pwd)"
     echo "🌐 Website directory: $website_dir"
-    
-    if run_e2e_tests_dind "$website_dir"; then
-        echo "✅ E2E tests completed successfully in DIND mode!"
-    else
-        echo "❌ E2E tests failed in DIND mode"
-        exit 1
-    fi
-    
-    if run_visual_tests_dind "$website_dir"; then
-        echo "✅ Visual tests completed successfully in DIND mode!"
-    else
-        echo "❌ Visual tests failed in DIND mode"
-        exit 1
-    fi
-    
-    if run_load_tests_dind "$website_dir"; then
-        echo "✅ Load tests completed successfully in DIND mode!"
-    else
-        echo "❌ Load tests failed in DIND mode"
-        exit 1
-    fi
-    
-    if run_load_tests_swagger_dind "$website_dir"; then
-        echo "✅ Swagger load tests completed successfully in DIND mode!"
-    else
-        echo "❌ Swagger load tests failed in DIND mode"
-        exit 1
-    fi
-    
-    echo "🎉 All Playwright E2E, visual, and load tests completed successfully!"
+
+    # Run sequentially; rely on set -e to stop on failure
+    run_e2e_tests_dind "$website_dir"
+    run_visual_tests_dind "$website_dir"
+    run_load_tests_dind "$website_dir"
+    run_load_tests_swagger_dind "$website_dir"
 }
 
 show_usage() {
