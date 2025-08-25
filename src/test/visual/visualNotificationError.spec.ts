@@ -1,4 +1,4 @@
-import { test, Locator, expect, Route } from '@playwright/test';
+import { test, expect, Locator, Route } from '@playwright/test';
 
 import { currentLanguage, placeholders, screenSizes } from '@/test/visual/constants';
 
@@ -11,22 +11,20 @@ const serverErrorResponse: ErrorResponseProps = {
 };
 
 test.describe('Form Submission Server Error Test', () => {
-  for (const screen of screenSizes) {
+  screenSizes.forEach((screen) => {
     test(`Server error notification - ${screen.name}`, async ({ page }) => {
-      await page.goto('/');
-
+      await page.goto('/', { waitUntil: 'load', timeout: 30000 });
       await page.waitForLoadState('networkidle');
       await page.evaluate(async () => {
         await document.fonts.ready;
       });
 
-      await page.setViewportSize({ width: screen.width, height: screen.height });
-
+     test.use({ viewport: { width: 1280, height: 720 } });
       await page.waitForFunction(() => document.readyState === 'complete');
 
-      const routeHandler: (route: Route) => Promise<void> = async (route: Route): Promise<void> =>
-        errorResponse(route, serverErrorResponse);
-
+      const routeHandler: (route: Route) => Promise<void> = async (route: Route) => {
+        await errorResponse(route, serverErrorResponse);
+      };
       await page.route('**/graphql', routeHandler);
 
       const nameInput: Locator = page.getByPlaceholder(placeholders.name);
@@ -43,7 +41,6 @@ test.describe('Form Submission Server Error Test', () => {
 
       const errorBox: Locator = page.locator('[aria-invalid="true"]');
       await expect(errorBox).toBeVisible();
-
       await expect(submitButton).toBeEnabled();
 
       await page.waitForFunction(
@@ -52,7 +49,7 @@ test.describe('Form Submission Server Error Test', () => {
 
       await expect(page).toHaveScreenshot(`${currentLanguage}_${screen.name}_error.png`);
 
-      await page.unroute('**/graphql', routeHandler);
+      await page.context().unroute('**/graphql', routeHandler);
     });
-  }
+  });
 });

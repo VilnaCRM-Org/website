@@ -40,7 +40,7 @@ async function openDrawerAndNavigate(
 
 test.describe('Checking if the navigation links are working', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+   await page.goto('/', { waitUntil: 'load', timeout: 30000 });
   });
 
   test('Header links', async ({ page }) => {

@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { UiButton } from '@/components';
 import UiCardList from '@/components/UiCardList';
 
-import { cardList } from './constants';
+import  cardList  from './constants';
 import { Heading } from './Heading';
 import styles from './styles';
 

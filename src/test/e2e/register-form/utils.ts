@@ -26,10 +26,13 @@ export async function fillInitialsInput(page: Page, user: User): Promise<void> {
 export async function fillEmailInput(page: Page, user: User): Promise<void> {
   const emailInput: Locator = page.getByPlaceholder(placeholderEmail);
   await page.getByRole('button', { name: signUpButton }).click();
-  for (const expectation of expectationsEmail) {
+ for (const expectation of expectationsEmail) {
+   
+ 
     await emailInput.fill(expectation.email);
     await expect(page.getByText(expectation.errorText)).toBeVisible();
   }
+;
 
   await emailInput.fill(user.email);
 }
@@ -37,10 +40,12 @@ export async function fillEmailInput(page: Page, user: User): Promise<void> {
 export async function fillPasswordInput(page: Page, user: User): Promise<void> {
   const passwordInput: Locator = page.getByPlaceholder(placeholderPassword);
   await page.getByRole('button', { name: signUpButton }).click();
-  for (const expectation of expectationsPassword) {
+  await Promise.all(
+  expectationsPassword.map(async (expectation) => {
     await passwordInput.fill(expectation.password);
     await expect(page.getByText(expectation.errorText)).toBeVisible();
-  }
+  })
+);
 
   await passwordInput.fill(user.password);
 }

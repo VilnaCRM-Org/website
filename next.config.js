@@ -7,12 +7,14 @@ const dotenvExpand = require('dotenv-expand');
 const env = require('dotenv').config();
 dotenvExpand.expand(env);
 
+
+
 /** @type {import('next').NextConfig} */
 
 const nextConfig = withExportImages({
   output: 'export',
   reactStrictMode: true,
-  swcMinify: true,
+
 
   compiler: {
     styledComponents: true,
@@ -21,16 +23,17 @@ const nextConfig = withExportImages({
   },
 
   webpack: config => {
-    const localizationGenerator = new LocalizationGenerator();
-    localizationGenerator.generateLocalizationFile();
+  const localizationGenerator = new LocalizationGenerator();
+  localizationGenerator.generateLocalizationFile();
 
     config.optimization.splitChunks = {
       chunks: 'all',
       maxSize: 244 * 1024,
     };
 
-    return config;
-  },
+  return config;
+}
+
 });
 
 module.exports = process.env.ANALYZE === 'true' ? withBundleAnalyzer(nextConfig) : nextConfig;

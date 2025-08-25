@@ -3,7 +3,7 @@ name: Trigger Sandbox Deletion
 on:
   pull_request:
     types:
-      - closed
+      - [closed]
 
 env:
   AWS_REGION: ${{ vars.AWS_REGION }}

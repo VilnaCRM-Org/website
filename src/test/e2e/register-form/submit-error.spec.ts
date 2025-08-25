@@ -2,8 +2,8 @@ import { test, Locator, Route, expect } from '@playwright/test';
 import { t } from 'i18next';
 import { Response } from 'playwright';
 
-import { checkCheckbox } from '../utils/checkCheckbox';
-import { fillInput } from '../utils/fillInput';
+import  checkCheckbox  from '../utils/checkCheckbox';
+import  fillInput  from '../utils/fillInput';
 
 import { userData, graphqlEndpoint } from './constants';
 import { getFormFields, responseErrorFilter, responseFilter, successResponse } from './utils';
@@ -34,7 +34,7 @@ test('Submit the registration form, verify error notification, and return to fil
   const { initialsInput, emailInput, passwordInput, policyTextCheckbox, signupButton } =
     getFormFields(page);
 
-  await page.goto('/');
+ await page.goto('/', { waitUntil: 'load', timeout: 60000 });
 
   await fillInput(initialsInput, userData.fullName);
   await fillInput(emailInput, userData.email);
@@ -74,7 +74,7 @@ test('Submit the registration form, get error, retry submission, and succeed', a
   const { initialsInput, emailInput, passwordInput, policyTextCheckbox, signupButton } =
     getFormFields(page);
 
-  await page.goto('/');
+ await page.goto('/', { waitUntil: 'load', timeout: 60000 });
 
   await fillInput(initialsInput, userData.fullName);
   await fillInput(emailInput, userData.email);

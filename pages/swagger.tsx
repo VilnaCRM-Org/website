@@ -24,5 +24,5 @@ const ReactSwagger: ComponentType = dynamic(
 );
 
 export default function Swagger(): React.ReactElement {
-  return <ReactSwagger />;
+  return <SwaggerComponent />;
 }

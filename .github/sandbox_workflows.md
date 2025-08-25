@@ -1,4 +1,4 @@
-# Documentation for GitHub Actions Pipelines: Sandbox Creation and Sandbox Deletion
+﻿# Documentation for GitHub Actions Pipelines: Sandbox Creation and Sandbox Deletion
 
 This documentation provides an overview of two GitHub Actions workflows used for managing AWS CodePipeline executions: Sandbox Creation and Sandbox Deletion. It includes instructions on the required secrets and how to add them to your GitHub repository.
 

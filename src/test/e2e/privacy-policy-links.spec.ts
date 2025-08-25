@@ -1,6 +1,6 @@
 import { test, expect, Page } from '@playwright/test';
 
-import { createLocalizedRegExp } from '@/test/e2e/utils/createLocalizedRegExp';
+import  createLocalizedRegExp  from '@/test/e2e/utils/createLocalizedRegExp';
 
 const vilnaCRMPrivacyPolicyURL: string = process.env
   .NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL as string;
@@ -32,7 +32,7 @@ async function navigateToPrivacyPolicy(
 
 test.describe('Checking if the links to privacy policy are working', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+   await page.goto('/', { waitUntil: 'load', timeout: 30000 });
   });
 
   test('Links to privacy policy', async ({ page }) => {

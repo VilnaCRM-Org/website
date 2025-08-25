@@ -1,4 +1,4 @@
-# GitHub Actions Workflow: Website Deployment
+﻿# GitHub Actions Workflow: Website Deployment
 
 This GitHub Actions workflow is designed to automate the deployment of a website. The workflow is triggered by a push event to the `main` branch and interacts with AWS services, including assuming an IAM role and triggering an AWS CodePipeline execution.
 

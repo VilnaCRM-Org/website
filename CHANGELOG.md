@@ -36,6 +36,17 @@
 
 ## [0.1.2](https://github.com/VilnaCRM-Org/website/compare/v0.1.1...v0.1.2) (2025-06-17)
 
+### Bug Fixes
+
+* **#201:** add available packages ([#202](https://github.com/VilnaCRM-Org/website/issues/202)) ([1da3a4d](https://github.com/VilnaCRM-Org/website/commit/1da3a4d1dc05fc3e9e59e4ad12529155466537c6)), closes [#201](https://github.com/VilnaCRM-Org/website/issues/201) [#201](https://github.com/VilnaCRM-Org/website/issues/201) [#201](https://github.com/VilnaCRM-Org/website/issues/201) [#201](https://github.com/VilnaCRM-Org/website/issues/201)
+
+## [0.1.0](https://github.com/VilnaCRM-Org/website/compare/v1.6.0...v0.1.0) (2025-06-04)
+
+### Features
+
+- **#29:** add swagger page ([#195](https://github.com/VilnaCRM-Org/website/issues/195)) ([ccebf1a](https://github.com/VilnaCRM-Org/website/commit/ccebf1a8e835b2ba2a7b02a3ae379f14b2f5815d)), closes [#29](https://github.com/VilnaCRM-Org/website/issues/29)
+
+## [1.6.0](https://github.com/VilnaCRM-Org/website/compare/v1.5.1...v1.6.0) (2025-06-02)
 
 ### Bug Fixes
 

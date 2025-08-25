@@ -6,28 +6,33 @@ import { useTranslation } from 'react-i18next';
 
 import breakpointsTheme from '@/components/UiBreakpoints';
 
-import MainImageSrc from '../../../assets/img/about-vilna/desktop.jpg';
-import PhoneMainImage from '../../../assets/img/about-vilna/mobile.jpg';
-import TabletMainImage from '../../../assets/img/about-vilna/tablet.jpg';
 
 import styles from './styles';
 
 function MainImage(): React.ReactElement {
   const { t } = useTranslation();
+const MainImageSrc: string = '/img/about-vilna/desktop.jpg';
+const PhoneMainImage: string = '/img/about-vilna/mobile.jpg';
 
   const imgAltText: string = 'Main image';
 
   const mobileProps: ImageProps = getOptimizedImageProps({
     src: PhoneMainImage,
     alt: imgAltText,
+    width: 100,
+    height: 100,
   }).props;
   const tabletProps: ImageProps = getOptimizedImageProps({
-    src: TabletMainImage,
-    alt: imgAltText,
+  src: '/img/about-vilna/tablet.jpg',
+  alt: imgAltText,
+  width: 400,
+  height: 300,
   }).props;
   const desktopProps: ImageProps = getOptimizedImageProps({
     src: MainImageSrc,
     alt: imgAltText,
+    width: 300,
+    height: 300,
   }).props;
 
   return (

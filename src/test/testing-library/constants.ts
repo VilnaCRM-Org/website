@@ -42,6 +42,7 @@ export const cardItem: CardItem = {
   type: typeOfCard,
   alt: testText,
   imageSrc: testImg,
+  image: testImg
 };
 export const smallCard: CardItem = {
   id: testId,
@@ -50,6 +51,7 @@ export const smallCard: CardItem = {
   type: 'smallCard',
   alt: testText,
   imageSrc: testImg,
+  image: testImg
 };
 export const largeCard: CardItem = {
   id: testId,
@@ -58,6 +60,7 @@ export const largeCard: CardItem = {
   type: 'largeCard',
   alt: testText,
   imageSrc: testImg,
+  image: testImg
 };
 
 export const cardList: CardItem[] = [
@@ -68,6 +71,7 @@ export const cardList: CardItem[] = [
     type: typeOfCard,
     alt: testText,
     imageSrc: testImg,
+    image: testImg
   },
 ];
 export const smallCardList: CardItem[] = [
@@ -78,6 +82,7 @@ export const smallCardList: CardItem[] = [
     type: 'smallCard',
     alt: testText,
     imageSrc: testImg,
+    image: testImg
   },
 ];
 export const largeCardList: CardItem[] = [
@@ -88,6 +93,7 @@ export const largeCardList: CardItem[] = [
     type: 'largeCard',
     alt: testText,
     imageSrc: testImg,
+    image: testImg
   },
 ];
 

@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { UiButton, UiTypography } from '@/components';
 
-import Vector from '../../../assets/svg/for-who/yellowVector.svg';
+import vectorUrl  from '../../../assets/svg/for-who/yellowVector.svg';
 
 import styles from './styles';
 
@@ -20,7 +20,7 @@ function Cards(): React.ReactElement {
             component="img"
             loading="lazy"
             decoding="async"
-            src={Vector.src}
+            src={vectorUrl}
             alt={t('for_who.vector_alt')}
             sx={styles.img}
           />
@@ -33,7 +33,7 @@ function Cards(): React.ReactElement {
             component="img"
             loading="lazy"
             decoding="async"
-            src={Vector.src}
+            src={vectorUrl}
             alt={t('for_who.vector_alt')}
             sx={styles.img}
           />
@@ -50,5 +50,6 @@ function Cards(): React.ReactElement {
     </Stack>
   );
 }
+
 
 export default Cards;

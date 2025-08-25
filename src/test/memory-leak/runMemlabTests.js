@@ -11,7 +11,7 @@ const testsDir = './tests';
 const workDir = './src/test/memory-leak/results';
 const consoleMode = 'VERBOSE';
 
-(async function () {
+(async function runMemoryLeakTests () {
   const testFilePaths = fs
     .readdirSync(`${memoryLeakDir}/${testsDir}`)
     .map(test => `${testsDir}/${test}`);
