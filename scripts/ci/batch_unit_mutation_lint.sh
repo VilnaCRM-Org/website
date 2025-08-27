@@ -156,3 +156,18 @@ main() {
     run_mutation_tests_dind "$website_dir"
     run_all_lint_dind "$website_dir"
 }
+
+case "${1:-all}" in
+    test-unit)
+        run_unit_tests_dind "."
+        ;;
+    test-mutation)
+        run_mutation_tests_dind "."
+        ;;
+    test-lint)
+        run_all_lint_dind "."
+        ;;
+    all|*)
+        main "$@"
+        ;;
+esac

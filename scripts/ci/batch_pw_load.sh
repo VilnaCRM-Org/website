@@ -111,3 +111,21 @@ main() {
     run_load_tests_dind "$website_dir"
     run_load_tests_swagger_dind "$website_dir"
 }
+
+case "${1:-all}" in
+    test-e2e)
+        run_e2e_tests_dind "."
+        ;;
+    test-visual)
+        run_visual_tests_dind "."
+        ;;
+    test-load)
+        run_load_tests_dind "."
+        ;;
+    test-load-swagger)
+        run_load_tests_swagger_dind "."
+        ;;
+    all|*)
+        main "$@"
+        ;;
+esac

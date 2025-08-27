@@ -77,3 +77,18 @@ main() {
     run_lighthouse_desktop_dind "$website_dir"
     run_lighthouse_mobile_dind "$website_dir"
 }
+
+case "${1:-all}" in
+    test-memory-leak)
+        run_memory_leak_tests_dind "."
+        ;;
+    test-lighthouse-desktop)
+        run_lighthouse_desktop_dind "."
+        ;;
+    test-lighthouse-mobile)
+        run_lighthouse_mobile_dind "."
+        ;;
+    all|*)
+        main "$@"
+        ;;
+esac
