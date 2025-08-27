@@ -28,40 +28,22 @@ setup_docker_network() {
 }
 
 wait_for_dev_dind() {
-    echo "🐳 Waiting for dev service to be ready via Docker network..."
-    echo "Debug: Checking if container is running..."
-    echo "⏳ Checking if dev container is running..."
-    docker compose -f "$DOCKER_COMPOSE_DEV_FILE" up -d --wait dev || true
-    if ! docker compose -f "$DOCKER_COMPOSE_DEV_FILE" ps dev | grep -q Up; then
-        echo "❌ Service dev is not running"
-        docker compose -f "$DOCKER_COMPOSE_DEV_FILE" ps
-        exit 1
-    fi
-    echo "✅ Container $DEV_CONTAINER_NAME is running"
-    
-    echo "🔍 Testing container connectivity..."
-    echo "⏳ Waiting for dev service to be ready on port $DEV_PORT..."
+    echo "🐳 Waiting for dev service via Make"
     make wait-for-dev
 }
 
 
 
 start_dev_dind() {
-    echo "🐳 Starting development environment in DIND mode..."
+    echo "🐳 Starting development environment via Make..."
     make start
     wait_for_dev_dind
     echo "🎉 Development environment started successfully!"
 }
 
 start_prod_dind() {
-    echo "🐳 Starting production environment in true Docker-in-Docker mode"
-    echo "Setting up Docker network..."
-    make create-network
-    echo "Building production container image..."
-    make build-prod
-    echo "🚀 Starting production services..."
+    echo "🐳 Starting production environment via Make"
     make start-prod
-
     echo "🎉 Production environment started successfully!"
 }
 
@@ -69,80 +51,12 @@ run_make_with_dind() {
     local target=$1
     local description=$2
     local website_dir=$3
-    
-    echo "🔧 Setting up Docker network for DIND"
-    setup_docker_network
-    
-    echo "Building container image..."
-    docker compose -f "$DOCKER_COMPOSE_DEV_FILE" build dev
-
-    echo "🛠️ Ensuring dev service is up"
-    docker compose -f "$DOCKER_COMPOSE_DEV_FILE" up -d --wait dev
-
-    echo "📦 Installing dependencies inside dev service..."
-    if docker compose -f "$DOCKER_COMPOSE_DEV_FILE" exec -T dev sh -lc "cd /app && npm install -g pnpm && pnpm install --frozen-lockfile"; then
-        echo "✅ Dependencies installed successfully"
+    echo "🚀 Running: $description via Make"
+    if cd "$website_dir" && make "$target" CI=0; then
+        echo "✅ $description completed successfully"
     else
-        echo "❌ Failed to install dependencies"
-        docker compose -f "$DOCKER_COMPOSE_DEV_FILE" logs --tail=50 dev
+        echo "❌ $description failed"
         exit 1
-    fi
-    
-    export DIND=1
-    echo "🚀 Running: $description"
-    echo "[INFO] Target: $target"
-    echo "[INFO] Website directory: $website_dir"
-    echo "[INFO] Makefile path: $website_dir/Makefile"
-    
-    if [ "$target" = "test-unit-all" ]; then
-        echo "🧪 Running client-side tests..."
-        if docker compose -f "$DOCKER_COMPOSE_DEV_FILE" exec -T dev sh -lc "cd /app && env TEST_ENV=client ./node_modules/.bin/jest --verbose --passWithNoTests --maxWorkers=2"; then
-            echo "✅ Client-side tests PASSED"
-        else
-            echo "❌ Client-side tests FAILED"
-            docker compose -f "$DOCKER_COMPOSE_DEV_FILE" logs --tail=30 dev
-            exit 1
-        fi
-        
-        echo "🧪 Running server-side tests..."
-        if docker compose -f "$DOCKER_COMPOSE_DEV_FILE" exec -T dev sh -lc "cd /app && env TEST_ENV=server ./node_modules/.bin/jest --verbose --passWithNoTests --maxWorkers=2 ./src/test/apollo-server"; then
-            echo "✅ Server-side tests PASSED"
-        else
-            echo "❌ Server-side tests FAILED"
-            docker compose -f "$DOCKER_COMPOSE_DEV_FILE" logs --tail=30 dev
-            exit 1
-        fi
-        
-        echo "✅ $description completed successfully"
-    elif [ "$target" = "test-mutation" ]; then
-        echo "🧬 Running Stryker mutation tests..."
-        if docker compose -f "$DOCKER_COMPOSE_DEV_FILE" exec -T dev sh -lc "cd /app && pnpm stryker run"; then
-            echo "✅ Mutation tests PASSED"
-        else
-            echo "❌ Mutation tests FAILED"
-            docker compose -f "$DOCKER_COMPOSE_DEV_FILE" logs --tail=30 dev
-            exit 1
-        fi
-        
-        echo "✅ $description completed successfully"
-    else
-        if [ "$target" = "lint" ] || [ "$target" = "lint-next" ] || [ "$target" = "lint-tsc" ] || [ "$target" = "lint-md" ]; then
-            if docker compose -f "$DOCKER_COMPOSE_DEV_FILE" exec -T dev sh -lc "cd /app && make \"$target\" CI=1"; then
-                echo "✅ $description completed successfully"
-            else
-                echo "❌ $description failed"
-                docker compose -f "$DOCKER_COMPOSE_DEV_FILE" logs --tail=30 dev
-                exit 1
-            fi
-        else
-            if docker compose -f "$DOCKER_COMPOSE_DEV_FILE" exec -T dev sh -lc "cd /app && make \"$target\" CI=0"; then
-                echo "✅ $description completed successfully"
-            else
-                echo "❌ $description failed"
-                docker compose -f "$DOCKER_COMPOSE_DEV_FILE" logs --tail=30 dev
-                exit 1
-            fi
-        fi
     fi
 }
 
@@ -188,7 +102,7 @@ run_all_lint_dind() {
     mkdir -p "$website_dir/lint-logs"
     
     echo "🔍 Running ESLint with log capture..."
-    if run_eslint_dind "$website_dir" > "$website_dir/lint-logs/eslint.log" 2>&1; then
+    if (cd "$website_dir" && make lint-next CI=1) > "$website_dir/lint-logs/eslint.log" 2>&1; then
         echo "✅ ESLint PASSED" | tee -a "$website_dir/lint-logs/summary.log"
     else
         echo "❌ ESLint FAILED" | tee -a "$website_dir/lint-logs/summary.log"
@@ -196,7 +110,7 @@ run_all_lint_dind() {
     fi
     
     echo "🔍 Running TypeScript check with log capture..."
-    if run_typescript_check_dind "$website_dir" > "$website_dir/lint-logs/typescript.log" 2>&1; then
+    if (cd "$website_dir" && make lint-tsc CI=1) > "$website_dir/lint-logs/typescript.log" 2>&1; then
         echo "✅ TypeScript check PASSED" | tee -a "$website_dir/lint-logs/summary.log"
     else
         echo "❌ TypeScript check FAILED" | tee -a "$website_dir/lint-logs/summary.log"
@@ -204,7 +118,7 @@ run_all_lint_dind() {
     fi
     
     echo "🔍 Running Markdown linting with log capture..."
-    if run_markdown_lint_dind "$website_dir" > "$website_dir/lint-logs/markdown.log" 2>&1; then
+    if (cd "$website_dir" && make lint-md CI=1) > "$website_dir/lint-logs/markdown.log" 2>&1; then
         echo "✅ Markdown linting PASSED" | tee -a "$website_dir/lint-logs/summary.log"
     else
         echo "❌ Markdown linting FAILED" | tee -a "$website_dir/lint-logs/summary.log"
