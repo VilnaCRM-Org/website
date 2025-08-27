@@ -47,46 +47,46 @@ run_memory_leak_tests_dind() {
     docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d --wait prod
     
     echo "🧹 Cleaning up any existing Memory Leak containers..."
-    docker stop memory-leak-test 2>/dev/null || true
-    docker rm memory-leak-test 2>/dev/null || true
+    docker compose -f docker-compose.memory-leak.yml stop memory-leak 2>/dev/null || true
+    docker compose -f docker-compose.memory-leak.yml rm -f memory-leak 2>/dev/null || true
     
     echo "Building memory leak container image..."
     docker compose -f docker-compose.memory-leak.yml build
     
     echo "🧠 Running Memory Leak container..."
-    docker compose -f docker-compose.memory-leak.yml run -d --name memory-leak-test memory-leak sleep infinity
+    docker compose -f docker-compose.memory-leak.yml up -d --wait memory-leak
     
     echo "📂 Copying source files into memory leak container..."
-    docker exec memory-leak-test mkdir -p /app/src/test /app/src/config /app/pages/i18n
-    docker cp src/test/memory-leak memory-leak-test:/app/src/test/memory-leak
+    docker compose -f docker-compose.memory-leak.yml exec -T memory-leak mkdir -p /app/src/test /app/src/config /app/pages/i18n
+    docker compose -f docker-compose.memory-leak.yml cp src/test/memory-leak memory-leak:/app/src/test/memory-leak
     echo "✅ Memory leak test files copied successfully"
     
     echo "📂 Copying required config files..."
-    docker cp src/config memory-leak-test:/app/src/config  
-    docker cp pages/i18n memory-leak-test:/app/pages/i18n
+    docker compose -f docker-compose.memory-leak.yml cp src/config memory-leak:/app/src/config  
+    docker compose -f docker-compose.memory-leak.yml cp pages/i18n memory-leak:/app/pages/i18n
     
     echo "🧹 Cleaning up previous memory leak results..."
-    docker exec memory-leak-test rm -rf /app/src/test/memory-leak/results || true
+    docker compose -f docker-compose.memory-leak.yml exec -T memory-leak rm -rf /app/src/test/memory-leak/results || true
     
     echo "🧠 Running Memlab memory leak tests..."
-    if docker exec -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_NAME=no-aws-header-name -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_VALUE=no-aws-header-value -w /app memory-leak-test node src/test/memory-leak/runMemlabTests.js; then
+    if docker compose -f docker-compose.memory-leak.yml exec -T -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_NAME=no-aws-header-name -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_VALUE=no-aws-header-value -w /app memory-leak node src/test/memory-leak/runMemlabTests.js; then
         echo "✅ Memory leak tests PASSED"
     else
         echo "❌ Memory leak tests FAILED"
-        docker logs memory-leak-test --tail 30
-        docker stop memory-leak-test || true
-        docker rm memory-leak-test || true
+        docker compose -f docker-compose.memory-leak.yml logs --tail=30 memory-leak
+        docker compose -f docker-compose.memory-leak.yml stop memory-leak || true
+        docker compose -f docker-compose.memory-leak.yml rm -f memory-leak || true
         exit 1
     fi
     
     echo "📂 Copying memory leak test results..."
     mkdir -p memory-leak-logs
-    docker cp memory-leak-test:/app/src/test/memory-leak/results/. memory-leak-logs/ 2>/dev/null || echo "No memory leak results to copy"
-    docker logs memory-leak-test > memory-leak-logs/test-execution.log 2>&1 || true
+    docker compose -f docker-compose.memory-leak.yml cp memory-leak:/app/src/test/memory-leak/results/. memory-leak-logs/ 2>/dev/null || echo "No memory leak results to copy"
+    docker compose -f docker-compose.memory-leak.yml logs memory-leak > memory-leak-logs/test-execution.log 2>&1 || true
     
     echo "🧹 Cleaning up memory leak container..."
-    docker stop memory-leak-test || true
-    docker rm memory-leak-test || true
+    docker compose -f docker-compose.memory-leak.yml stop memory-leak || true
+    docker compose -f docker-compose.memory-leak.yml rm -f memory-leak || true
     
     echo "🎉 Memory leak tests completed successfully in true DinD mode!"
 }
@@ -110,9 +110,9 @@ run_lighthouse_desktop_dind() {
     docker compose -f "$DOCKER_COMPOSE_TEST_FILE" exec -T prod sh -lc "apk add --no-cache chromium chromium-chromedriver && npm install -g @lhci/cli@0.14.0"
 
     echo "📂 Copying Lighthouse config files to prod container..."
-    docker cp lighthouserc.desktop.js "$PROD_CONTAINER_NAME:/app/"
+    docker compose -f "$DOCKER_COMPOSE_TEST_FILE" cp lighthouserc.desktop.js prod:/app/
 
-    echo "🧪 Testing Chrome installation..."
+echo "🧪 Testing Chrome installation..."
     if docker compose -f "$DOCKER_COMPOSE_TEST_FILE" exec -T prod /usr/bin/chromium-browser --version; then
         echo "✅ Chrome is installed and working"
     else
@@ -129,7 +129,7 @@ run_lighthouse_desktop_dind() {
 
     echo "📂 Copying lighthouse results from prod container..."
     mkdir -p lhci-reports-desktop
-    docker cp "$PROD_CONTAINER_NAME:/app/lhci-reports-desktop/." lhci-reports-desktop/ 2>/dev/null || echo "No lighthouse results to copy"
+    docker compose -f "$DOCKER_COMPOSE_TEST_FILE" cp prod:/app/lhci-reports-desktop/. lhci-reports-desktop/ 2>/dev/null || echo "No lighthouse results to copy"
 
     echo "🧹 Cleaning up Docker services..."
     docker compose -f "$DOCKER_COMPOSE_TEST_FILE" down
@@ -156,7 +156,7 @@ run_lighthouse_mobile_dind() {
     docker compose -f "$DOCKER_COMPOSE_TEST_FILE" exec -T prod sh -lc "apk add --no-cache chromium chromium-chromedriver && npm install -g @lhci/cli@0.14.0"
 
     echo "📂 Copying Lighthouse config files to prod container..."
-    docker cp lighthouserc.mobile.js "$PROD_CONTAINER_NAME:/app/"
+    docker compose -f "$DOCKER_COMPOSE_TEST_FILE" cp lighthouserc.mobile.js prod:/app/
 
     echo "🧪 Testing Chrome installation..."
     if docker compose -f "$DOCKER_COMPOSE_TEST_FILE" exec -T prod /usr/bin/chromium-browser --version; then
@@ -175,7 +175,7 @@ run_lighthouse_mobile_dind() {
 
     echo "📂 Copying lighthouse results from prod container..."
     mkdir -p lhci-reports-mobile
-    docker cp "$PROD_CONTAINER_NAME:/app/lhci-reports-mobile/." lhci-reports-mobile/ 2>/dev/null || echo "No lighthouse results to copy"
+    docker compose -f "$DOCKER_COMPOSE_TEST_FILE" cp prod:/app/lhci-reports-mobile/. lhci-reports-mobile/ 2>/dev/null || echo "No lighthouse results to copy"
 
     echo "🧹 Cleaning up Docker services..."
     docker compose -f "$DOCKER_COMPOSE_TEST_FILE" down
@@ -199,51 +199,3 @@ main() {
     run_lighthouse_desktop_dind "$website_dir"
     run_lighthouse_mobile_dind "$website_dir"
 }
-
-show_usage() {
-    echo "Usage: $0 [COMMAND|WEBSITE_DIR]"
-    echo ""
-    echo "Commands (for backward compatibility):"
-    echo "  test-memory-leak       Run memory leak tests only"
-    echo "  test-lighthouse-desktop Run Lighthouse desktop tests only"
-    echo "  test-lighthouse-mobile Run Lighthouse mobile tests only"
-    echo ""
-    echo "Arguments:"
-    echo "  WEBSITE_DIR            Website directory path (default: current directory)"
-    echo ""
-    echo "This script runs Lighthouse and memory leak tests in Docker-in-Docker mode"
-    echo "using the working Docker setup approach."
-    echo ""
-    echo "Examples:"
-    echo "  $0 test-memory-leak"
-    echo "  $0 ."
-    echo "  $0 /path/to/website"
-    echo ""
-    echo "Environment Variables:"
-    echo "  NETWORK_NAME           Docker network name (default: website-network)"
-    echo "  WEBSITE_DOMAIN         Website domain (default: localhost)"
-    echo "  NEXT_PUBLIC_PROD_PORT  Production port (default: 3001)"
-    echo "  PROD_CONTAINER_NAME    Production container name (default: $PROD_CONTAINER_NAME)"
-}
-
-case "${1:-help}" in
-    help|--help|-h)
-        show_usage
-        exit 0
-        ;;
-    test-memory-leak)
-        echo "🧪 Running memory leak tests only..."
-        run_memory_leak_tests_dind "."
-        ;;
-    test-lighthouse-desktop)
-        echo "🔍 Running Lighthouse desktop tests only..."
-        run_lighthouse_desktop_dind "."
-        ;;
-    test-lighthouse-mobile)
-        echo "🔍 Running Lighthouse mobile tests only..."
-        run_lighthouse_mobile_dind "."
-        ;;
-    *)
-        main "$@"
-        ;;
-esac 

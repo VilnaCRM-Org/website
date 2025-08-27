@@ -27,15 +27,14 @@ setup_docker_network() {
     echo "✅ Docker network configured"
 }
 
-## Connectivity checks not needed here; tests run in a single dev container
-
 wait_for_dev_dind() {
     echo "🐳 Waiting for dev service to be ready via Docker network..."
     echo "Debug: Checking if container is running..."
     echo "⏳ Checking if dev container is running..."
-    if ! docker ps --filter "name=$DEV_CONTAINER_NAME" --filter "status=running" --format "{{.Names}}" | grep -q "$DEV_CONTAINER_NAME"; then
-        echo "❌ Container $DEV_CONTAINER_NAME is not running"
-        docker ps -a --filter "name=$DEV_CONTAINER_NAME"
+    docker compose -f "$DOCKER_COMPOSE_DEV_FILE" up -d --wait dev || true
+    if ! docker compose -f "$DOCKER_COMPOSE_DEV_FILE" ps dev | grep -q Up; then
+        echo "❌ Service dev is not running"
+        docker compose -f "$DOCKER_COMPOSE_DEV_FILE" ps
         exit 1
     fi
     echo "✅ Container $DEV_CONTAINER_NAME is running"
@@ -49,7 +48,6 @@ wait_for_dev_dind() {
 
 start_dev_dind() {
     echo "🐳 Starting development environment in DIND mode..."
-    make create-network
     make start
     wait_for_dev_dind
     echo "🎉 Development environment started successfully!"
@@ -77,30 +75,16 @@ run_make_with_dind() {
     
     echo "Building container image..."
     docker compose -f "$DOCKER_COMPOSE_DEV_FILE" build dev
-    
-    local container_name="$DEV_CONTAINER_NAME-${target//[^a-zA-Z0-9]/}"
-    echo "🧹 Cleaning up any existing temporary containers..."
-    docker rm -f "$container_name" 2>/dev/null || true
-    
-    echo "🛠️ Starting container in background for file operations..."
-    docker run -d --name "$container_name" --network "$NETWORK_NAME" "$DEV_CONTAINER_NAME" tail -f /dev/null
-    
-    echo "📂 Copying source files into container..."
-    if docker cp . "$container_name:/app/"; then
-        echo "✅ Source files copied successfully"
-    else
-        echo "❌ Failed to copy source files"
-        docker rm -f "$container_name"
-        exit 1
-    fi
-    
-    echo "📦 Installing dependencies inside container..."
-    if docker exec "$container_name" sh -c "cd /app && npm install -g pnpm && pnpm install --frozen-lockfile"; then
+
+    echo "🛠️ Ensuring dev service is up"
+    docker compose -f "$DOCKER_COMPOSE_DEV_FILE" up -d --wait dev
+
+    echo "📦 Installing dependencies inside dev service..."
+    if docker compose -f "$DOCKER_COMPOSE_DEV_FILE" exec -T dev sh -lc "cd /app && npm install -g pnpm && pnpm install --frozen-lockfile"; then
         echo "✅ Dependencies installed successfully"
     else
         echo "❌ Failed to install dependencies"
-        docker logs "$container_name" --tail 20
-        docker rm -f "$container_name"
+        docker compose -f "$DOCKER_COMPOSE_DEV_FILE" logs --tail=50 dev
         exit 1
     fi
     
@@ -112,62 +96,54 @@ run_make_with_dind() {
     
     if [ "$target" = "test-unit-all" ]; then
         echo "🧪 Running client-side tests..."
-        if docker exec "$container_name" sh -c "cd /app && env TEST_ENV=client ./node_modules/.bin/jest --verbose --passWithNoTests --maxWorkers=2"; then
+        if docker compose -f "$DOCKER_COMPOSE_DEV_FILE" exec -T dev sh -lc "cd /app && env TEST_ENV=client ./node_modules/.bin/jest --verbose --passWithNoTests --maxWorkers=2"; then
             echo "✅ Client-side tests PASSED"
         else
             echo "❌ Client-side tests FAILED"
-            docker logs "$container_name" --tail 30
-            docker rm -f "$container_name"
+            docker compose -f "$DOCKER_COMPOSE_DEV_FILE" logs --tail=30 dev
             exit 1
         fi
         
         echo "🧪 Running server-side tests..."
-        if docker exec "$container_name" sh -c "cd /app && env TEST_ENV=server ./node_modules/.bin/jest --verbose --passWithNoTests --maxWorkers=2 ./src/test/apollo-server"; then
+        if docker compose -f "$DOCKER_COMPOSE_DEV_FILE" exec -T dev sh -lc "cd /app && env TEST_ENV=server ./node_modules/.bin/jest --verbose --passWithNoTests --maxWorkers=2 ./src/test/apollo-server"; then
             echo "✅ Server-side tests PASSED"
         else
             echo "❌ Server-side tests FAILED"
-            docker logs "$container_name" --tail 30
-            docker rm -f "$container_name"
+            docker compose -f "$DOCKER_COMPOSE_DEV_FILE" logs --tail=30 dev
             exit 1
         fi
         
         echo "✅ $description completed successfully"
     elif [ "$target" = "test-mutation" ]; then
         echo "🧬 Running Stryker mutation tests..."
-        if docker exec "$container_name" sh -c "cd /app && pnpm stryker run"; then
+        if docker compose -f "$DOCKER_COMPOSE_DEV_FILE" exec -T dev sh -lc "cd /app && pnpm stryker run"; then
             echo "✅ Mutation tests PASSED"
         else
             echo "❌ Mutation tests FAILED"
-            docker logs "$container_name" --tail 30
-            docker rm -f "$container_name"
+            docker compose -f "$DOCKER_COMPOSE_DEV_FILE" logs --tail=30 dev
             exit 1
         fi
         
         echo "✅ $description completed successfully"
     else
         if [ "$target" = "lint" ] || [ "$target" = "lint-next" ] || [ "$target" = "lint-tsc" ] || [ "$target" = "lint-md" ]; then
-            if docker exec "$container_name" sh -c "cd /app && make \"$target\" CI=1"; then
+            if docker compose -f "$DOCKER_COMPOSE_DEV_FILE" exec -T dev sh -lc "cd /app && make \"$target\" CI=1"; then
                 echo "✅ $description completed successfully"
             else
                 echo "❌ $description failed"
-                docker logs "$container_name" --tail 30
-                docker rm -f "$container_name"
+                docker compose -f "$DOCKER_COMPOSE_DEV_FILE" logs --tail=30 dev
                 exit 1
             fi
         else
-            if docker exec "$container_name" sh -c "cd /app && make \"$target\" CI=0"; then
+            if docker compose -f "$DOCKER_COMPOSE_DEV_FILE" exec -T dev sh -lc "cd /app && make \"$target\" CI=0"; then
                 echo "✅ $description completed successfully"
             else
                 echo "❌ $description failed"
-                docker logs "$container_name" --tail 30
-                docker rm -f "$container_name"
+                docker compose -f "$DOCKER_COMPOSE_DEV_FILE" logs --tail=30 dev
                 exit 1
             fi
         fi
     fi
-    
-    echo "🧹 Cleaning up temporary container..."
-    docker rm -f "$container_name"
 }
 
 run_unit_tests_dind() {
@@ -266,56 +242,3 @@ main() {
     run_mutation_tests_dind "$website_dir"
     run_all_lint_dind "$website_dir"
 }
-
-show_usage() {
-    echo "Usage: $0 [COMMAND|WEBSITE_DIR]"
-    echo ""
-    echo "Commands (for backward compatibility):"
-    echo "  test-unit              Run unit tests only"
-    echo "  test-mutation          Run mutation tests only"
-    echo "  test-lint              Run lint tests only"
-    echo ""
-    echo "Arguments:"
-    echo "  WEBSITE_DIR            Website directory path (default: current directory)"
-    echo ""
-    echo "This script runs unit tests, mutation tests, and linting tests in Docker-in-Docker mode"
-    echo "using the Makefile commands with proper Docker container setup."
-    echo ""
-    echo "Examples:"
-    echo "  $0 test-unit"
-    echo "  $0 ."
-    echo "  $0 /path/to/website"
-    echo ""
-    echo "Environment Variables:"
-    echo "  NETWORK_NAME           Docker network name (default: website-network)"
-    echo "  WEBSITE_DOMAIN         Website domain (default: localhost)"
-    echo "  DEV_PORT               Development port (default: 3000)"
-    echo "  NEXT_PUBLIC_PROD_PORT  Production port (default: 3001)"
-    echo "  PLAYWRIGHT_TEST_PORT   Playwright test port (default: 9323)"
-    echo "  UI_HOST                UI host binding (default: 0.0.0.0)"
-    echo "  PROD_CONTAINER_NAME    Production container name (default: $PROD_CONTAINER_NAME)"
-echo "  PLAYWRIGHT_CONTAINER_NAME Playwright container name (default: $PLAYWRIGHT_CONTAINER_NAME)"
-echo "  DEV_CONTAINER_NAME     Development container name (default: $DEV_CONTAINER_NAME)"
-}
-
-case "${1:-help}" in
-    help|--help|-h)
-        show_usage
-        exit 0
-        ;;
-    test-unit)
-        echo "🧪 Running unit tests only..."
-        run_unit_tests_dind "."
-        ;;
-    test-mutation)
-        echo "🧬 Running mutation tests only..."
-        run_mutation_tests_dind "."
-        ;;
-    test-lint)
-        echo "🔍 Running lint tests only..."
-        run_all_lint_dind "."
-        ;;
-    *)
-        main "$@"
-        ;;
-esac 
