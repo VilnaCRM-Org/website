@@ -63,7 +63,9 @@ run_make_with_dind() {
     echo "🔧 Ensuring network and dev service via Make"
     setup_docker_network
     # Use compose health, not host wait-on, by overriding NEXT_DEV_CMD
-    if ! make start NEXT_DEV_CMD='$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) up -d --wait dev'; then
+    export WEBSITE_DOMAIN="${WEBSITE_DOMAIN:-localhost}"
+    export DEV_PORT="${DEV_PORT:-3000}"
+    if ! make start NEXT_DEV_CMD='$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) up -d --wait --remove-orphans dev'; then
         echo "❌ Failed to start dev service"
         exit 1
     fi
@@ -81,14 +83,14 @@ run_make_with_dind() {
     echo "[INFO] Makefile path: $website_dir/Makefile"
 
     if [ "$target" = "test-unit-all" ]; then
-        if make test-unit-all CI=0 NEXT_DEV_CMD='$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) up -d --wait dev'; then
+        if make test-unit-all CI=0 NEXT_DEV_CMD='$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) up -d --wait --remove-orphans dev'; then
             echo "✅ $description completed successfully"
         else
             echo "❌ $description failed"
             exit 1
         fi
     elif [ "$target" = "test-mutation" ]; then
-        if make test-mutation CI=0 NEXT_DEV_CMD='$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) up -d --wait dev'; then
+        if make test-mutation CI=0 NEXT_DEV_CMD='$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) up -d --wait --remove-orphans dev'; then
             echo "✅ $description completed successfully"
         else
             echo "❌ $description failed"
@@ -103,7 +105,7 @@ run_make_with_dind() {
                 exit 1
             fi
         else
-            if make "$target" CI=0 NEXT_DEV_CMD='$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) up -d --wait dev'; then
+            if make "$target" CI=0 NEXT_DEV_CMD='$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) up -d --wait --remove-orphans dev'; then
                 echo "✅ $description completed successfully"
             else
                 echo "❌ $description failed"

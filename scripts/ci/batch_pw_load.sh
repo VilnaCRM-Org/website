@@ -54,14 +54,20 @@ run_e2e_tests_dind() {
     echo "🎭 Running E2E tests with working approach + Make"
     
     setup_docker_network
+    export WEBSITE_DOMAIN="${WEBSITE_DOMAIN:-localhost}"
+    export NEXT_PUBLIC_PROD_PORT="${NEXT_PUBLIC_PROD_PORT:-3001}"
     echo "🏗️ Building test services..."
     make build-prod
     
     echo "🚀 Starting core services (prod, apollo, mockoon) with health waits..."
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d --wait prod apollo mockoon
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d --wait --remove-orphans prod apollo mockoon || {
+        echo "❌ Failed to start core services"; \
+        docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" ps | cat; \
+        exit 1; \
+    }
     
     echo "📂 Ensuring Playwright container is up"
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d playwright
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d --remove-orphans playwright
     
     echo "Creating directories in Playwright container..."
     docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T playwright mkdir -p /app/src/test /app/src/config /app/pages/i18n
@@ -87,7 +93,8 @@ run_e2e_tests_dind() {
         echo "✅ E2E tests PASSED"
     else
         echo "❌ E2E tests FAILED"
-        docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" logs --tail=60 playwright || true
+        docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" ps | cat
+        docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" logs --tail=60 prod playwright apollo mockoon || true
         echo "⚠️ Continuing pipeline"
     fi
     
@@ -105,14 +112,20 @@ run_visual_tests_dind() {
     echo "🎨 Running Visual tests with working approach + Make"
     
     setup_docker_network
+    export WEBSITE_DOMAIN="${WEBSITE_DOMAIN:-localhost}"
+    export NEXT_PUBLIC_PROD_PORT="${NEXT_PUBLIC_PROD_PORT:-3001}"
     echo "🏗️ Building test services..."
     make build-prod
     
     echo "🚀 Starting services with health waits..."
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d --wait prod apollo mockoon
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d --wait --remove-orphans prod apollo mockoon || {
+        echo "❌ Failed to start services"; \
+        docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" ps | cat; \
+        exit 1; \
+    }
     
     echo "📂 Ensuring Playwright container is up"
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d playwright
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d --remove-orphans playwright
     
     echo "Creating directories in Playwright container..."
     docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T playwright mkdir -p /app/src/test /app/src/config /app/pages/i18n
@@ -138,7 +151,8 @@ run_visual_tests_dind() {
         echo "✅ Visual tests PASSED"
     else
         echo "❌ Visual tests FAILED"
-        docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" logs --tail=60 playwright || true
+        docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" ps | cat
+        docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" logs --tail=60 prod playwright apollo mockoon || true
         echo "⚠️ Continuing pipeline"
     fi
     
@@ -160,12 +174,16 @@ run_load_tests_dind() {
     make build-prod
     
     echo "🚀 Starting prod with health waits..."
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d --wait prod
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d --wait --remove-orphans prod || {
+        echo "❌ Failed to start prod"; \
+        docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" ps | cat; \
+        exit 1; \
+    }
     
     echo "🏗️ Building K6 image..."
     docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load build k6
     echo "🚀 Starting K6 service..."
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load up -d k6
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load up -d --remove-orphans k6
     echo "📂 Prepare K6 directories..."
     docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load exec -T k6 sh -lc 'mkdir -p /loadTests/results && rm -rf /loadTests/results/* || true'
     
@@ -201,7 +219,7 @@ run_load_tests_swagger_dind() {
     echo "🏗️ Building K6 image (swagger)..."
     docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load build k6
     echo "🚀 Starting K6 service..."
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load up -d k6
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load up -d --remove-orphans k6
     echo "📂 Prepare K6 directories..."
     docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load exec -T k6 sh -lc 'mkdir -p /loadTests/results && rm -rf /loadTests/results/* || true'
     

@@ -28,7 +28,13 @@ start_prod_dind() {
     echo "🐳 Building prod image via Make"
     make build-prod
     echo "🚀 Starting prod with health waits via compose"
-    docker compose -f "$DOCKER_COMPOSE_TEST_FILE" up -d --wait prod
+    export WEBSITE_DOMAIN="${WEBSITE_DOMAIN:-localhost}"
+    export NEXT_PUBLIC_PROD_PORT="${NEXT_PUBLIC_PROD_PORT:-3001}"
+    docker compose -f "$DOCKER_COMPOSE_TEST_FILE" up -d --wait --remove-orphans prod || {
+        echo "❌ Failed to start prod"; \
+        docker compose -f "$DOCKER_COMPOSE_TEST_FILE" ps | cat; \
+        exit 1; \
+    }
 }
 
 run_memory_leak_tests_dind() {
