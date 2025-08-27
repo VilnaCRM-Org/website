@@ -22,14 +22,22 @@ echo "================================"
 
 
 setup_docker_network() {
-    echo "📡 Setting up Docker network..."
-    docker network create "$NETWORK_NAME" 2>/dev/null || echo "Network $NETWORK_NAME already exists"
-    echo "✅ Docker network configured"
+    echo "📡 Ensuring Docker network via Make..."
+    make create-network
 }
 
 wait_for_dev_dind() {
-    echo "🐳 Waiting for dev service via Make"
-    make wait-for-dev
+    echo "🐳 Waiting for dev service to be ready via Docker network..."
+    echo "⏳ Ensuring dev service is up and healthy..."
+    docker compose -f "$DOCKER_COMPOSE_DEV_FILE" up -d --wait dev || true
+    if ! docker compose -f "$DOCKER_COMPOSE_DEV_FILE" ps dev | grep -q Up; then
+        echo "❌ Service dev is not running"
+        docker compose -f "$DOCKER_COMPOSE_DEV_FILE" ps
+        exit 1
+    fi
+    echo "✅ Container $DEV_CONTAINER_NAME is running"
+    echo "🔍 Verifying readiness on port $DEV_PORT (best-effort)..."
+    make wait-for-dev || true
 }
 
 
@@ -51,12 +59,57 @@ run_make_with_dind() {
     local target=$1
     local description=$2
     local website_dir=$3
-    echo "🚀 Running: $description via Make"
-    if cd "$website_dir" && make "$target" CI=0; then
-        echo "✅ $description completed successfully"
-    else
-        echo "❌ $description failed"
+
+    echo "🔧 Ensuring network and dev service via Make"
+    setup_docker_network
+    # Use compose health, not host wait-on, by overriding NEXT_DEV_CMD
+    if ! make start NEXT_DEV_CMD='$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) up -d --wait dev'; then
+        echo "❌ Failed to start dev service"
         exit 1
+    fi
+
+    echo "📦 Installing dependencies inside dev (Make)"
+    if ! make install CI=0; then
+        echo "❌ Dependency installation failed"
+        exit 1
+    fi
+
+    export DIND=1
+    echo "🚀 Running: $description"
+    echo "[INFO] Target: $target"
+    echo "[INFO] Website directory: $website_dir"
+    echo "[INFO] Makefile path: $website_dir/Makefile"
+
+    if [ "$target" = "test-unit-all" ]; then
+        if make test-unit-all CI=0 NEXT_DEV_CMD='$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) up -d --wait dev'; then
+            echo "✅ $description completed successfully"
+        else
+            echo "❌ $description failed"
+            exit 1
+        fi
+    elif [ "$target" = "test-mutation" ]; then
+        if make test-mutation CI=0 NEXT_DEV_CMD='$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) up -d --wait dev'; then
+            echo "✅ $description completed successfully"
+        else
+            echo "❌ $description failed"
+            exit 1
+        fi
+    else
+        if [ "$target" = "lint" ] || [ "$target" = "lint-next" ] || [ "$target" = "lint-tsc" ] || [ "$target" = "lint-md" ]; then
+            if (cd "$website_dir" && make "$target" CI=1); then
+                echo "✅ $description completed successfully"
+            else
+                echo "❌ $description failed"
+                exit 1
+            fi
+        else
+            if make "$target" CI=0 NEXT_DEV_CMD='$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) up -d --wait dev'; then
+                echo "✅ $description completed successfully"
+            else
+                echo "❌ $description failed"
+                exit 1
+            fi
+        fi
     fi
 }
 
