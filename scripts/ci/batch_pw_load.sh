@@ -1,7 +1,5 @@
 #!/bin/bash
-
 set -euo pipefail
-
 NETWORK_NAME=${NETWORK_NAME:-"website-network"}
 WEBSITE_DOMAIN=${WEBSITE_DOMAIN:-"localhost"}
 DEV_PORT=${DEV_PORT:-"3000"}
@@ -10,37 +8,63 @@ PLAYWRIGHT_TEST_PORT=${PLAYWRIGHT_TEST_PORT:-"9323"}
 UI_HOST=${UI_HOST:-"0.0.0.0"}
 PROD_CONTAINER_NAME=${PROD_CONTAINER_NAME:-"website-prod"}
 PLAYWRIGHT_CONTAINER_NAME=${PLAYWRIGHT_CONTAINER_NAME:-"website-playwright"}
-
 DOCKER_COMPOSE_DEV_FILE=${DOCKER_COMPOSE_DEV_FILE:-"docker-compose.yml"}
 DOCKER_COMPOSE_TEST_FILE=${DOCKER_COMPOSE_TEST_FILE:-"docker-compose.test.yml"}
 COMMON_HEALTHCHECKS_FILE=${COMMON_HEALTHCHECKS_FILE:-"common-healthchecks.yml"}
-
 if [ ! -f "common-healthchecks.yml" ]; then
     COMMON_HEALTHCHECKS_FILE=""
 fi
-
 echo "🐳 DIND Environment Setup Script"
 echo "================================"
 
 setup_docker_network() {
-    echo "📡 Ensuring Docker network via Make..."
-    make create-network
+    echo "📡 Setting up Docker network..."
+    docker network create "$NETWORK_NAME" 2>/dev/null || echo "Network $NETWORK_NAME already exists"
+    echo "✅ Docker network configured"
 }
 
 start_prod_dind() {
     echo "🐳 Starting production environment in true Docker-in-Docker mode"
     echo "Building production container image..."
+
+    
+          
+            
+    
+
+          
+          Expand Down
+          
+            
+    
+
+          
+          Expand Up
+    
+    @@ -83,43 +77,41 @@ run_e2e_tests_dind() {
+  
     make build-prod
     echo "🚀 Starting production services..."
     docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d --wait prod
     echo "🎉 Production environment started successfully!"
 }
-
 run_make_with_prod_dind() {
     local target=$1
     local description=$2
     local website_dir=$3
-    echo "🚀 Running: $description via Make"
+    
+    echo "🔧 Setting up Docker network for DIND"
+    setup_docker_network
+    
+    echo "🚀 Starting production environment for $description"
+    start_prod_dind
+    
+    export DIND=1
+    echo "🚀 Running: $description"
+    echo "[INFO] Target: $target"
+    echo "[INFO] Website directory: $website_dir"
+    echo "[INFO] Makefile path: $website_dir/Makefile"
+    
     if cd "$website_dir" && make "$target" CI=0; then
         echo "✅ $description completed successfully"
     else
@@ -48,199 +72,299 @@ run_make_with_prod_dind() {
         exit 1
     fi
 }
-
 run_e2e_tests_dind() {
     local website_dir=$1
-    echo "🎭 Running E2E tests with working approach + Make"
+    echo "🎭 Running E2E tests in DIND mode (matching local behavior)"
     
+    echo "🔧 Setting up Docker network for DIND"
     setup_docker_network
-    export WEBSITE_DOMAIN="${WEBSITE_DOMAIN:-localhost}"
-    export NEXT_PUBLIC_PROD_PORT="${NEXT_PUBLIC_PROD_PORT:-3001}"
-    echo "🏗️ Building test services..."
+    
+    echo "Building test services..."
     make build-prod
     
-    echo "🚀 Starting core services (prod, apollo, mockoon) with health waits..."
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d --wait --remove-orphans prod apollo mockoon || {
-        echo "❌ Failed to start core services"; \
-        docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" ps | cat; \
-        exit 1; \
-    }
-    
+    echo "🚀 Starting core test services (prod, apollo, mockoon) and waiting for health..."
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d --wait prod apollo mockoon
+
+
+
     echo "📂 Ensuring Playwright container is up"
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d --remove-orphans playwright
-    
-    echo "Creating directories in Playwright container..."
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d playwright
+
+    echo "Creating directories in container..."
     docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T playwright mkdir -p /app/src/test /app/src/config /app/pages/i18n
+
+    echo "Copying complete test directory..."
+    if docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp src/test/. playwright:/app/src/test/; then
+        echo "✅ Complete test directory copied successfully"
+    else
+        echo "❌ Failed to copy complete test directory"
+        exit 1
+    fi
+
+    echo "Copying config files..."
+    if docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp src/config playwright:/app/src/; then
+        echo "✅ Config files copied successfully"
+    else
+        echo "❌ Failed to copy config files"
+        exit 1
+    fi
+
+    echo "Copying i18n files..."
+    if docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp pages/i18n playwright:/app/pages/; then
+        echo "✅ i18n files copied successfully"
+    else
+        echo "❌ Failed to copy i18n files"
+        exit 1
+    fi
+
+    echo "Copying TypeScript configuration files..."
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp tsconfig.json playwright:/app/ || echo "⚠️  Failed to copy tsconfig.json"
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp tsconfig.paths.json playwright:/app/ || echo "⚠️  Failed to copy tsconfig.paths.json"
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp next.config.js playwright:/app/ || echo "⚠️  Failed to copy next.config.js"
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp playwright.config.ts playwright:/app/ || echo "⚠️  Failed to copy playwright.config.ts"
+
+    echo "🔍 Verifying files were copied correctly..."
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T playwright ls -la /app/src/test/e2e/ || echo "⚠️  E2E files not found in container"
+
     
-    echo "Copying test files into Playwright container..."
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp src/test/. playwright:/app/src/test/ || true
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp src/config playwright:/app/src/ || true
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp pages/i18n playwright:/app/pages/ || true
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp tsconfig.json playwright:/app/ || true
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp tsconfig.paths.json playwright:/app/ || true
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp next.config.js playwright:/app/ || true
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp playwright.config.ts playwright:/app/ || true
+        
+          
     
-    echo "🧹 Cleaning previous E2E results..."
+
+        
+        Expand All
+    
+    @@ -133,19 +125,10 @@ run_e2e_tests_dind() {
+  
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T playwright ls -la /app/src/test/e2e/utils/ || echo "⚠️  E2E utils not found in container"
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T playwright ls -la /app/src/config/ || echo "⚠️  Config files not found in container"
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T playwright ls -la /app/pages/i18n/ || echo "⚠️  i18n files not found in container"
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T playwright sh -lc 'ls -la /app/tsconfig*.json' || echo "⚠️  TypeScript config files not found"
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T playwright ls -la /app/next.config.js || echo "⚠️  Next.js config not found"
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T playwright ls -la /app/playwright.config.ts || echo "⚠️  Playwright config not found"
+    
+    echo "🧹 Cleaning up previous E2E results..."
     docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T playwright rm -rf /app/playwright-report /app/test-results || true
-    
-    local PROD_URL="http://prod:3001"
-    echo "🔍 Sanity check prod URL from Playwright..."
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T playwright curl -fsS "$PROD_URL" >/dev/null || true
-    
-    echo "🎭 Executing Playwright E2E..."
+
+    echo "🎭 Running Playwright E2E tests with service-based connectivity..."
+    PROD_URL="http://prod:3001"
+    echo "🔍 Testing container connectivity..."
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T playwright curl -f "$PROD_URL" >/dev/null 2>&1 || echo "⚠️  Container connectivity test failed"
+
     if docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T -e NEXT_PUBLIC_MAIN_LANGUAGE=uk -e NEXT_PUBLIC_FALLBACK_LANGUAGE=en -e NEXT_PUBLIC_PROD_CONTAINER_API_URL="$PROD_URL" -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_NAME=no-aws-header-name -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_VALUE=no-aws-header-value -e NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL=https://github.com/VilnaCRM-Org/ -e NEXT_PUBLIC_GRAPHQL_API_URL=http://apollo:4000/graphql -w /app playwright npx playwright test src/test/e2e --timeout=60000; then
         echo "✅ E2E tests PASSED"
+
+    
+        
+          
+    
+
+        
+        Expand All
+    
+    @@ -157,8 +140,8 @@ run_e2e_tests_dind() {
+  
     else
         echo "❌ E2E tests FAILED"
-        docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" ps | cat
-        docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" logs --tail=60 prod playwright apollo mockoon || true
-        echo "⚠️ Continuing pipeline"
+        docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" logs --tail=30 playwright || true
+        echo "⚠️  E2E tests failed but continuing with build..."
     fi
-    
-    echo "📂 Collecting E2E artifacts..."
-    mkdir -p playwright-report test-results
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp playwright:/app/playwright-report/. playwright-report/ 2>/dev/null || true
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp playwright:/app/test-results/. test-results/ 2>/dev/null || true
-    
-    echo "🧹 Tearing down test stack"
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" down
-}
 
+    echo "📂 Copying E2E test results..."
+    mkdir -p playwright-report test-results
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp playwright:/app/playwright-report/. playwright-report/ 2>/dev/null || echo "No playwright-report to copy"
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp playwright:/app/test-results/. test-results/ 2>/dev/null || echo "No test-results to copy"
+
+    echo "🧹 Cleaning up Docker services..."
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" down
+
+    
+        
+          
+    
+
+        
+        Expand All
+    
+    @@ -183,45 +166,41 @@ run_visual_tests_dind() {
+  
+    
+    echo "🎉 E2E tests completed successfully in DIND mode!"
+}
 run_visual_tests_dind() {
     local website_dir=$1
-    echo "🎨 Running Visual tests with working approach + Make"
+    echo "🎨 Running Visual tests in DIND mode (matching local behavior)"
     
+    echo "🔧 Setting up Docker network for DIND"
     setup_docker_network
-    export WEBSITE_DOMAIN="${WEBSITE_DOMAIN:-localhost}"
-    export NEXT_PUBLIC_PROD_PORT="${NEXT_PUBLIC_PROD_PORT:-3001}"
-    echo "🏗️ Building test services..."
+    
+    echo "Building test services..."
     make build-prod
     
-    echo "🚀 Starting services with health waits..."
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d --wait --remove-orphans prod apollo mockoon || {
-        echo "❌ Failed to start services"; \
-        docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" ps | cat; \
-        exit 1; \
-    }
+    echo "🚀 Starting test services..."
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d --wait prod apollo mockoon
     
+
+    echo "📂 Copying Visual test files to Playwright container..."
+
     echo "📂 Ensuring Playwright container is up"
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d --remove-orphans playwright
-    
-    echo "Creating directories in Playwright container..."
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d playwright
+
+    echo "Creating directories in container..."
     docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T playwright mkdir -p /app/src/test /app/src/config /app/pages/i18n
+
+    echo "Copying complete test directory..."
+    if docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp src/test/. playwright:/app/src/test/; then
+        echo "✅ Complete test directory copied successfully"
+    else
+        echo "❌ Failed to copy complete test directory"
+        exit 1
+    fi
+
+    echo "Copying config files..."
+    if docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp src/config playwright:/app/src/; then
+        echo "✅ Config files copied successfully"
+    else
+        echo "❌ Failed to copy config files"
+        exit 1
+    fi
+
+    echo "Copying i18n files..."
+    if docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp pages/i18n playwright:/app/pages/; then
+        echo "✅ i18n files copied successfully"
+    else
+        echo "❌ Failed to copy i18n files"
+        exit 1
+    fi
+
+    echo "Copying TypeScript configuration files..."
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp tsconfig.json playwright:/app/ || echo "⚠️  Failed to copy tsconfig.json"
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp tsconfig.paths.json playwright:/app/ || echo "⚠️  Failed to copy tsconfig.paths.json"
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp next.config.js playwright:/app/ || echo "⚠️  Failed to copy next.config.js"
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp playwright.config.ts playwright:/app/ || echo "⚠️  Failed to copy playwright.config.ts"
+
+    echo "🔍 Verifying files were copied correctly..."
+    docker exec "$PLAYWRIGHT_CONTAINER_NAME" ls -la /app/src/test/visual/ || echo "⚠️  Visual files not found in container"
+
     
-    echo "Copying test files into Playwright container..."
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp src/test/. playwright:/app/src/test/ || true
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp src/config playwright:/app/src/ || true
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp pages/i18n playwright:/app/pages/ || true
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp tsconfig.json playwright:/app/ || true
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp tsconfig.paths.json playwright:/app/ || true
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp next.config.js playwright:/app/ || true
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp playwright.config.ts playwright:/app/ || true
+        
+          
     
-    echo "🧹 Cleaning previous Visual results..."
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T playwright rm -rf /app/playwright-report /app/test-results || true
+
+        
+        Expand All
     
-    local PROD_URL="http://prod:3001"
-    echo "🔍 Sanity check prod URL from Playwright..."
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T playwright curl -fsS "$PROD_URL" >/dev/null || true
+    @@ -235,32 +214,23 @@ run_visual_tests_dind() {
+  
+    docker exec "$PLAYWRIGHT_CONTAINER_NAME" ls -la /app/src/test/e2e/utils/ || echo "⚠️  E2E utils not found in container"
+    docker exec "$PLAYWRIGHT_CONTAINER_NAME" ls -la /app/src/config/ || echo "⚠️  Config files not found in container"
+    docker exec "$PLAYWRIGHT_CONTAINER_NAME" ls -la /app/pages/i18n/ || echo "⚠️  i18n files not found in container"
+    docker exec "$PLAYWRIGHT_CONTAINER_NAME" ls -la /app/tsconfig*.json || echo "⚠️  TypeScript config files not found"
+    docker exec "$PLAYWRIGHT_CONTAINER_NAME" ls -la /app/next.config.js || echo "⚠️  Next.js config not found"
+    docker exec "$PLAYWRIGHT_CONTAINER_NAME" ls -la /app/playwright.config.ts || echo "⚠️  Playwright config not found"
     
-    echo "🎨 Executing Playwright Visual..."
+    echo "🧹 Cleaning up previous Visual results..."
+    docker exec "$PLAYWRIGHT_CONTAINER_NAME" rm -rf /app/playwright-report /app/test-results || true
+
+    echo "🎨 Running Playwright Visual tests with service-based connectivity..."
+    PROD_URL="http://prod:3001"
+    echo "🔍 Testing container connectivity..."
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T playwright curl -f "$PROD_URL" >/dev/null 2>&1 || echo "⚠️  Container connectivity test failed"
+
     if docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T -e NEXT_PUBLIC_MAIN_LANGUAGE=uk -e NEXT_PUBLIC_FALLBACK_LANGUAGE=en -e NEXT_PUBLIC_PROD_CONTAINER_API_URL="$PROD_URL" -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_NAME=no-aws-header-name -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_VALUE=no-aws-header-value -e NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL=https://github.com/VilnaCRM-Org/ -e NEXT_PUBLIC_GRAPHQL_API_URL=http://apollo:4000/graphql -w /app playwright npx playwright test src/test/visual --timeout=60000; then
         echo "✅ Visual tests PASSED"
     else
         echo "❌ Visual tests FAILED"
-        docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" ps | cat
-        docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" logs --tail=60 prod playwright apollo mockoon || true
-        echo "⚠️ Continuing pipeline"
+        docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" logs --tail=30 playwright
+        echo "⚠️  Visual tests failed but continuing with build..."
     fi
-    
-    echo "📂 Collecting Visual artifacts..."
-    mkdir -p playwright-report test-results
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp playwright:/app/playwright-report/. playwright-report/ 2>/dev/null || true
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp playwright:/app/test-results/. test-results/ 2>/dev/null || true
-    
-    echo "🧹 Tearing down test stack"
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" down
-}
 
+    echo "📂 Copying Visual test results..."
+    mkdir -p playwright-report test-results
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp playwright:/app/playwright-report/. playwright-report/ 2>/dev/null || echo "No playwright-report to copy"
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp playwright:/app/test-results/. test-results/ 2>/dev/null || echo "No test-results to copy"
+
+    echo "🧹 Cleaning up Docker services..."
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" down
+
+    
+        
+          
+    
+
+        
+        Expand All
+    
+    @@ -279,49 +249,41 @@ run_load_tests_dind() {
+  
+    
+    echo "🎉 Visual tests completed successfully in DIND mode!"
+}
 run_load_tests_dind() {
     local website_dir=$1
-    echo "⚡ Running K6 Load tests with working approach + Make"
+    echo "⚡ Running K6 Load tests in true Docker-in-Docker mode"
     
+    echo "🔧 Setting up Docker network for DIND"
     setup_docker_network
-    echo "🏗️ Building production container image..."
-    make build-prod
     
-    echo "🚀 Starting prod with health waits..."
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d --wait --remove-orphans prod || {
-        echo "❌ Failed to start prod"; \
-        docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" ps | cat; \
-        exit 1; \
-    }
-    
-    echo "🏗️ Building K6 image..."
+    echo "Building production container image..."
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" build
+
+    echo "🚀 Starting production services..."
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d --wait prod
+
+
+
+    echo "Building K6 container image..."
     docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load build k6
-    echo "🚀 Starting K6 service..."
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load up -d --remove-orphans k6
-    echo "📂 Prepare K6 directories..."
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load exec -T k6 sh -lc 'mkdir -p /loadTests/results && rm -rf /loadTests/results/* || true'
-    
-    echo "⚡ Executing K6 homepage scenario..."
+
+    echo "⚡ Starting K6 service..."
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load up -d k6
+
+    echo "📂 Preparing K6 directories..."
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load exec -T k6 mkdir -p /loadTests/results
+    echo "✅ Load test files copied successfully"
+
+    echo "🧹 Cleaning up previous load test results..."
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load exec -T k6 sh -lc 'rm -rf /loadTests/results || true && mkdir -p /loadTests/results'
+
+    echo "⚡ Running K6 load tests..."
     if docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load exec -T -w /loadTests k6 k6 run --summary-trend-stats="avg,min,med,max,p(95),p(99)" --out "web-dashboard=period=1s&export=/loadTests/results/homepage.html" /loadTests/homepage.js; then
         echo "✅ Load tests PASSED"
     else
         echo "❌ Load tests FAILED"
-        docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load logs --tail=60 k6 || true
+        docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load logs --tail=30 k6
+        docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load stop k6 || true
+        docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load rm -f k6 || true
         exit 1
     fi
-    
-    echo "📂 Collecting K6 artifacts..."
+
+    echo "📂 Copying load test results..."
     mkdir -p src/test/load/reports
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load cp k6:/loadTests/results/. src/test/load/reports/ 2>/dev/null || true
-    
-    echo "🧹 Clean up K6"
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load cp k6:/loadTests/results/. src/test/load/reports/ 2>/dev/null || echo "No load test results to copy"
+
+    echo "🧹 Cleaning up K6 container..."
     docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load stop k6 || true
     docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load rm -f k6 || true
+
+    echo "🎉 Load tests completed successfully in true DinD mode!"
 }
 
+    
+        
+          
+    
+
+        
+        Expand All
+    
+    @@ -348,62 +310,4 @@ main() {
+  
 run_load_tests_swagger_dind() {
     local website_dir=$1
-    echo "📊 Running Swagger load tests with working approach + Make"
-    
-    setup_docker_network
-    echo "🏗️ Building production container image..."
-    make build-prod
-    
-    echo "🚀 Starting prod with health waits..."
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d --wait prod
-    
-    echo "🏗️ Building K6 image (swagger)..."
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load build k6
-    echo "🚀 Starting K6 service..."
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load up -d --remove-orphans k6
-    echo "📂 Prepare K6 directories..."
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load exec -T k6 sh -lc 'mkdir -p /loadTests/results && rm -rf /loadTests/results/* || true'
-    
-    echo "⚡ Executing K6 swagger scenario..."
-    if docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load exec -T -w /loadTests k6 k6 run --summary-trend-stats="avg,min,med,max,p(95),p(99)" --out "web-dashboard=period=1s&export=/loadTests/results/swagger.html" /loadTests/swagger.js; then
-        echo "✅ Swagger load tests PASSED"
-    else
-        echo "❌ Swagger load tests FAILED"
-        docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load logs --tail=60 k6 || true
-        exit 1
-    fi
-    
-    echo "📂 Collecting Swagger artifacts..."
-    mkdir -p src/test/load/reports
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load cp k6:/loadTests/results/. src/test/load/reports/ 2>/dev/null || true
-    
-    echo "🧹 Clean up K6"
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load stop k6 || true
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load rm -f k6 || true
+    echo "📊 Running Swagger load tests in DIND mode using Makefile"
+    run_make_with_prod_dind "load-tests-swagger" "Swagger load tests" "$website_dir"
 }
-
 main() {
     local website_dir="${1:-.}"
     
@@ -252,7 +376,6 @@ main() {
     echo "📁 Working directory: $(pwd)"
     echo "🌐 Website directory: $website_dir"
 
-    # Run sequentially; rely on set -e to stop on failure
     run_e2e_tests_dind "$website_dir"
     run_visual_tests_dind "$website_dir"
     run_load_tests_dind "$website_dir"
@@ -261,18 +384,22 @@ main() {
 
 case "${1:-all}" in
     test-e2e)
+        echo "🧪 Running E2E tests only..."
         run_e2e_tests_dind "."
         ;;
     test-visual)
+        echo "🎨 Running visual tests only..."
         run_visual_tests_dind "."
         ;;
     test-load)
+        echo "📊 Running load tests only..."
         run_load_tests_dind "."
         ;;
-    test-load-swagger)
+    test-swagger)
+        echo "📊 Running Swagger load tests only..."
         run_load_tests_swagger_dind "."
         ;;
-    all|*)
+    *)
         main "$@"
         ;;
-esac
+esac 
