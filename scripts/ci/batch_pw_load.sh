@@ -26,23 +26,6 @@ setup_docker_network() {
 start_prod_dind() {
     echo "🐳 Starting production environment in true Docker-in-Docker mode"
     echo "Building production container image..."
-
-    
-          
-            
-    
-
-          
-          Expand Down
-          
-            
-    
-
-          
-          Expand Up
-    
-    @@ -83,43 +77,41 @@ run_e2e_tests_dind() {
-  
     make build-prod
     echo "🚀 Starting production services..."
     docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d --wait prod
@@ -85,8 +68,6 @@ run_e2e_tests_dind() {
     echo "🚀 Starting core test services (prod, apollo, mockoon) and waiting for health..."
     docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d --wait prod apollo mockoon
 
-
-
     echo "📂 Ensuring Playwright container is up"
     docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d playwright
 
@@ -124,18 +105,7 @@ run_e2e_tests_dind() {
     docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp playwright.config.ts playwright:/app/ || echo "⚠️  Failed to copy playwright.config.ts"
 
     echo "🔍 Verifying files were copied correctly..."
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T playwright ls -la /app/src/test/e2e/ || echo "⚠️  E2E files not found in container"
-
-    
-        
-          
-    
-
-        
-        Expand All
-    
-    @@ -133,19 +125,10 @@ run_e2e_tests_dind() {
-  
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T playwright ls -la /app/src/test/visual/ || echo "⚠️  Visual files not found in container"
     docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T playwright ls -la /app/src/test/e2e/utils/ || echo "⚠️  E2E utils not found in container"
     docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T playwright ls -la /app/src/config/ || echo "⚠️  Config files not found in container"
     docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T playwright ls -la /app/pages/i18n/ || echo "⚠️  i18n files not found in container"
@@ -153,17 +123,6 @@ run_e2e_tests_dind() {
 
     if docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T -e NEXT_PUBLIC_MAIN_LANGUAGE=uk -e NEXT_PUBLIC_FALLBACK_LANGUAGE=en -e NEXT_PUBLIC_PROD_CONTAINER_API_URL="$PROD_URL" -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_NAME=no-aws-header-name -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_VALUE=no-aws-header-value -e NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL=https://github.com/VilnaCRM-Org/ -e NEXT_PUBLIC_GRAPHQL_API_URL=http://apollo:4000/graphql -w /app playwright npx playwright test src/test/e2e --timeout=60000; then
         echo "✅ E2E tests PASSED"
-
-    
-        
-          
-    
-
-        
-        Expand All
-    
-    @@ -157,8 +140,8 @@ run_e2e_tests_dind() {
-  
     else
         echo "❌ E2E tests FAILED"
         docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" logs --tail=30 playwright || true
@@ -177,19 +136,6 @@ run_e2e_tests_dind() {
 
     echo "🧹 Cleaning up Docker services..."
     docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" down
-
-    
-        
-          
-    
-
-        
-        Expand All
-    
-    @@ -183,45 +166,41 @@ run_visual_tests_dind() {
-  
-    
-    echo "🎉 E2E tests completed successfully in DIND mode!"
 }
 run_visual_tests_dind() {
     local website_dir=$1
@@ -244,7 +190,7 @@ run_visual_tests_dind() {
     docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp playwright.config.ts playwright:/app/ || echo "⚠️  Failed to copy playwright.config.ts"
 
     echo "🔍 Verifying files were copied correctly..."
-    docker exec "$PLAYWRIGHT_CONTAINER_NAME" ls -la /app/src/test/visual/ || echo "⚠️  Visual files not found in container"
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T playwright ls -la /app/src/test/visual/ || echo "⚠️  Visual files not found in container"
 
     
         
@@ -252,19 +198,18 @@ run_visual_tests_dind() {
     
 
         
-        Expand All
     
-    @@ -235,32 +214,23 @@ run_visual_tests_dind() {
+    run_visual_tests_dind() {
   
-    docker exec "$PLAYWRIGHT_CONTAINER_NAME" ls -la /app/src/test/e2e/utils/ || echo "⚠️  E2E utils not found in container"
-    docker exec "$PLAYWRIGHT_CONTAINER_NAME" ls -la /app/src/config/ || echo "⚠️  Config files not found in container"
-    docker exec "$PLAYWRIGHT_CONTAINER_NAME" ls -la /app/pages/i18n/ || echo "⚠️  i18n files not found in container"
-    docker exec "$PLAYWRIGHT_CONTAINER_NAME" ls -la /app/tsconfig*.json || echo "⚠️  TypeScript config files not found"
-    docker exec "$PLAYWRIGHT_CONTAINER_NAME" ls -la /app/next.config.js || echo "⚠️  Next.js config not found"
-    docker exec "$PLAYWRIGHT_CONTAINER_NAME" ls -la /app/playwright.config.ts || echo "⚠️  Playwright config not found"
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T playwright ls -la /app/src/test/e2e/utils/ || echo "⚠️  E2E utils not found in container"
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T playwright ls -la /app/src/config/ || echo "⚠️  Config files not found in container"
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T playwright ls -la /app/pages/i18n/ || echo "⚠️  i18n files not found in container"
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T playwright sh -lc 'ls -la /app/tsconfig*.json' || echo "⚠️  TypeScript config files not found"
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T playwright ls -la /app/next.config.js || echo "⚠️  Next.js config not found"
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T playwright ls -la /app/playwright.config.ts || echo "⚠️  Playwright config not found"
     
     echo "🧹 Cleaning up previous Visual results..."
-    docker exec "$PLAYWRIGHT_CONTAINER_NAME" rm -rf /app/playwright-report /app/test-results || true
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T playwright rm -rf /app/playwright-report /app/test-results || true
 
     echo "🎨 Running Playwright Visual tests with service-based connectivity..."
     PROD_URL="http://prod:3001"
@@ -293,9 +238,8 @@ run_visual_tests_dind() {
     
 
         
-        Expand All
     
-    @@ -279,49 +249,41 @@ run_load_tests_dind() {
+    run_load_tests_dind() {
   
     
     echo "🎉 Visual tests completed successfully in DIND mode!"
@@ -356,12 +300,9 @@ run_load_tests_dind() {
     
 
         
-        Expand All
     
-    @@ -348,62 +310,4 @@ main() {
+    run_load_tests_swagger_dind() {
   
-run_load_tests_swagger_dind() {
-    local website_dir=$1
     echo "📊 Running Swagger load tests in DIND mode using Makefile"
     run_make_with_prod_dind "load-tests-swagger" "Swagger load tests" "$website_dir"
 }

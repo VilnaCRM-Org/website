@@ -82,16 +82,6 @@ run_memory_leak_tests_dind() {
     echo "🎉 Memory leak tests completed successfully in true DinD mode!"
 }
 
-    
-        
-          
-    
-
-        
-        Expand All
-    
-    @@ -110,9 +110,9 @@ run_lighthouse_desktop_dind() {
-  
 run_lighthouse_desktop_dind() {
     local website_dir=$1
     echo "🔦 Running Lighthouse Desktop tests using robust container approach"
@@ -109,21 +99,10 @@ run_lighthouse_desktop_dind() {
     echo "📂 Copying Lighthouse config files to prod container..."
     docker compose -f "$DOCKER_COMPOSE_TEST_FILE" cp lighthouserc.desktop.js prod:/app/
 
-echo "🧪 Testing Chrome installation..."
+    echo "🧪 Testing Chrome installation..."
     if docker compose -f "$DOCKER_COMPOSE_TEST_FILE" exec -T prod /usr/bin/chromium-browser --version; then
         echo "✅ Chrome is installed and working"
     else
-
-    
-        
-          
-    
-
-        
-        Expand All
-    
-    @@ -129,7 +129,7 @@ run_lighthouse_desktop_dind() {
-  
         echo "❌ Chrome installation test failed"
         exit 1
     fi
@@ -140,19 +119,8 @@ echo "🧪 Testing Chrome installation..."
 
     echo "🧹 Cleaning up Docker services..."
     docker compose -f "$DOCKER_COMPOSE_TEST_FILE" down
-
-    
-        
-          
-    
-
-        
-        Expand All
-    
-    @@ -156,7 +156,7 @@ run_lighthouse_mobile_dind() {
-  
-    echo "✅ Lighthouse desktop tests completed"
 }
+
 run_lighthouse_mobile_dind() {
     local website_dir=$1
     echo "📱 Running Lighthouse Mobile tests using robust container approach"
@@ -172,17 +140,6 @@ run_lighthouse_mobile_dind() {
 
     echo "🧪 Testing Chrome installation..."
     if docker compose -f "$DOCKER_COMPOSE_TEST_FILE" exec -T prod /usr/bin/chromium-browser --version; then
-
-    
-        
-          
-    
-
-        
-        Expand All
-    
-    @@ -175,7 +175,7 @@ run_lighthouse_mobile_dind() {
-  
         echo "✅ Chrome is installed and working"
     else
         echo "❌ Chrome installation test failed"
@@ -201,19 +158,8 @@ run_lighthouse_mobile_dind() {
 
     echo "🧹 Cleaning up Docker services..."
     docker compose -f "$DOCKER_COMPOSE_TEST_FILE" down
-
-    
-        
-          
-    
-
-        
-        Expand All
-    
-    @@ -198,52 +198,4 @@ main() {
-  
-    echo "✅ Lighthouse mobile tests completed"
 }
+
 main() {
     local website_dir="${1:-.}"
     
@@ -224,6 +170,7 @@ main() {
     
     echo "📁 Working directory: $(pwd)"
     echo "🌐 Website directory: $website_dir"
+
     # Run sequentially; stop on first failure via set -e
     run_memory_leak_tests_dind "$website_dir"
     run_lighthouse_desktop_dind "$website_dir"
@@ -246,4 +193,4 @@ case "${1:-all}" in
     *)
         main "$@"
         ;;
-esac 
+	esac 

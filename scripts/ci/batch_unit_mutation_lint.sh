@@ -32,17 +32,6 @@ wait_for_dev_dind() {
     fi
     echo "✅ Container $DEV_CONTAINER_NAME is running"
 
-    
-        
-          
-    
-
-        
-        Expand All
-    
-    @@ -49,7 +48,6 @@ wait_for_dev_dind() {
-  
-    
     echo "🔍 Testing container connectivity..."
     echo "⏳ Waiting for dev service to be ready on port $DEV_PORT..."
     make wait-for-dev
@@ -53,24 +42,8 @@ start_dev_dind() {
     make start
     wait_for_dev_dind
     echo "🎉 Development environment started successfully!"
-
-    
-          
-            
-    
-
-          
-          Expand Down
-          
-            
-    
-
-          
-          Expand Up
-    
-    @@ -77,30 +75,16 @@ run_make_with_dind() {
-  
 }
+
 start_prod_dind() {
     echo "🐳 Starting production environment in true Docker-in-Docker mode"
     echo "Setting up Docker network..."
@@ -104,17 +77,6 @@ run_make_with_dind() {
         exit 1
     fi
 
-
-    
-        
-          
-    
-
-        
-        Expand All
-    
-    @@ -112,62 +96,54 @@ run_make_with_dind() {
-  
     export DIND=1
     echo "🚀 Running: $description"
     echo "[INFO] Target: $target"
@@ -174,23 +136,6 @@ run_make_with_dind() {
 }
 
 run_unit_tests_dind() {
-
-    
-          
-            
-    
-
-          
-          Expand Down
-          
-            
-    
-
-          
-          Expand Up
-    
-    @@ -265,57 +241,4 @@ main() {
-  
     local website_dir=$1
     echo "🧪 Running unit tests in DIND mode using Makefile"
     run_make_with_dind "test-unit-all" "Unit tests (client + server)" "$website_dir"
@@ -294,4 +239,4 @@ case "${1:-all}" in
     *)
         main "$@"
         ;;
-esac 
+	esac 
