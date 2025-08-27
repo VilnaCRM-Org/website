@@ -24,7 +24,7 @@ wait_for_dev_dind() {
     echo "🐳 Waiting for dev service to be ready via Docker network..."
     echo "Debug: Checking if container is running..."
     echo "⏳ Checking if dev container is running..."
-    docker compose -f "$DOCKER_COMPOSE_DEV_FILE" up -d --wait dev || true
+    docker compose -f "$DOCKER_COMPOSE_DEV_FILE" up -d --remove-orphans dev || true
     if ! docker compose -f "$DOCKER_COMPOSE_DEV_FILE" ps dev | grep -q Up; then
         echo "❌ Service dev is not running"
         docker compose -f "$DOCKER_COMPOSE_DEV_FILE" ps
@@ -32,9 +32,8 @@ wait_for_dev_dind() {
     fi
     echo "✅ Container $DEV_CONTAINER_NAME is running"
 
-    echo "🔍 Testing container connectivity..."
-    echo "⏳ Waiting for dev service to be ready on port $DEV_PORT..."
-    make wait-for-dev
+    echo "⏳ Waiting for dev readiness from inside container"
+    docker compose -f "$DOCKER_COMPOSE_DEV_FILE" exec -T dev sh -lc "npx wait-on http://localhost:$DEV_PORT --timeout 180000" || true
 }
 
 start_dev_dind() {
@@ -66,7 +65,14 @@ run_make_with_dind() {
     docker compose -f "$DOCKER_COMPOSE_DEV_FILE" build dev
 
     echo "🛠️ Ensuring dev service is up"
-    docker compose -f "$DOCKER_COMPOSE_DEV_FILE" up -d --wait dev
+    docker compose -f "$DOCKER_COMPOSE_DEV_FILE" up -d --remove-orphans dev
+    echo "⏳ Waiting for dev readiness from inside container (no host polling)"
+    if ! docker compose -f "$DOCKER_COMPOSE_DEV_FILE" exec -T dev sh -lc "npx wait-on http://localhost:$DEV_PORT --timeout 180000"; then
+        echo "❌ Dev service failed readiness check"
+        docker compose -f "$DOCKER_COMPOSE_DEV_FILE" ps | cat
+        docker compose -f "$DOCKER_COMPOSE_DEV_FILE" logs --tail=100 dev || true
+        exit 1
+    fi
 
     echo "📦 Installing dependencies inside dev service..."
     if docker compose -f "$DOCKER_COMPOSE_DEV_FILE" exec -T dev sh -lc "cd /app && npm install -g pnpm && pnpm install --frozen-lockfile"; then

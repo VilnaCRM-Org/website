@@ -1,4 +1,5 @@
 #!/bin/bash
+
 set -euo pipefail
 NETWORK_NAME=${NETWORK_NAME:-"website-network"}
 WEBSITE_DOMAIN=${WEBSITE_DOMAIN:-"localhost"}
@@ -55,6 +56,7 @@ run_make_with_prod_dind() {
         exit 1
     fi
 }
+
 run_e2e_tests_dind() {
     local website_dir=$1
     echo "🎭 Running E2E tests in DIND mode (matching local behavior)"
@@ -137,6 +139,7 @@ run_e2e_tests_dind() {
     echo "🧹 Cleaning up Docker services..."
     docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" down
 }
+
 run_visual_tests_dind() {
     local website_dir=$1
     echo "🎨 Running Visual tests in DIND mode (matching local behavior)"
@@ -191,13 +194,6 @@ run_visual_tests_dind() {
 
     echo "🔍 Verifying files were copied correctly..."
     docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T playwright ls -la /app/src/test/visual/ || echo "⚠️  Visual files not found in container"
-
-    
-        
-          
-    
-
-        
     
     run_visual_tests_dind() {
   
@@ -231,19 +227,11 @@ run_visual_tests_dind() {
 
     echo "🧹 Cleaning up Docker services..."
     docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" down
-
     
-        
-          
-    
-
-        
-    
-    run_load_tests_dind() {
-  
-    
+    run_load_tests_dind() {  
     echo "🎉 Visual tests completed successfully in DIND mode!"
 }
+
 run_load_tests_dind() {
     local website_dir=$1
     echo "⚡ Running K6 Load tests in true Docker-in-Docker mode"
@@ -256,8 +244,6 @@ run_load_tests_dind() {
 
     echo "🚀 Starting production services..."
     docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d --wait prod
-
-
 
     echo "Building K6 container image..."
     docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load build k6
@@ -294,13 +280,6 @@ run_load_tests_dind() {
     echo "🎉 Load tests completed successfully in true DinD mode!"
 }
 
-    
-        
-          
-    
-
-        
-    
     run_load_tests_swagger_dind() {
   
     echo "📊 Running Swagger load tests in DIND mode using Makefile"
@@ -343,4 +322,4 @@ case "${1:-all}" in
     *)
         main "$@"
         ;;
-esac 
+esac
