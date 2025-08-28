@@ -195,8 +195,6 @@ run_visual_tests_dind() {
     echo "🔍 Verifying files were copied correctly..."
     docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T playwright ls -la /app/src/test/visual/ || echo "⚠️  Visual files not found in container"
     
-    run_visual_tests_dind() {
-  
     docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T playwright ls -la /app/src/test/e2e/utils/ || echo "⚠️  E2E utils not found in container"
     docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T playwright ls -la /app/src/config/ || echo "⚠️  Config files not found in container"
     docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T playwright ls -la /app/pages/i18n/ || echo "⚠️  i18n files not found in container"
@@ -228,7 +226,6 @@ run_visual_tests_dind() {
     echo "🧹 Cleaning up Docker services..."
     docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" down
     
-    run_load_tests_dind() {  
     echo "🎉 Visual tests completed successfully in DIND mode!"
 }
 
@@ -281,7 +278,7 @@ run_load_tests_dind() {
 }
 
     run_load_tests_swagger_dind() {
-  
+    local website_dir=$1
     echo "📊 Running Swagger load tests in DIND mode using Makefile"
     run_make_with_prod_dind "load-tests-swagger" "Swagger load tests" "$website_dir"
 }

@@ -64,25 +64,6 @@ run_make_with_dind() {
     echo "Building container image..."
     docker compose -f "$DOCKER_COMPOSE_DEV_FILE" build dev
 
-    echo "🛠️ Ensuring dev service is up"
-    docker compose -f "$DOCKER_COMPOSE_DEV_FILE" up -d --remove-orphans dev
-    echo "⏳ Waiting for dev readiness from inside container (no host polling)"
-    if ! docker compose -f "$DOCKER_COMPOSE_DEV_FILE" exec -T dev sh -lc "npx wait-on http://localhost:$DEV_PORT --timeout 180000"; then
-        echo "❌ Dev service failed readiness check"
-        docker compose -f "$DOCKER_COMPOSE_DEV_FILE" ps | cat
-        docker compose -f "$DOCKER_COMPOSE_DEV_FILE" logs --tail=100 dev || true
-        exit 1
-    fi
-
-    echo "📦 Installing dependencies inside dev service..."
-    if docker compose -f "$DOCKER_COMPOSE_DEV_FILE" exec -T dev sh -lc "cd /app && npm install -g pnpm && pnpm install --frozen-lockfile"; then
-        echo "✅ Dependencies installed successfully"
-    else
-        echo "❌ Failed to install dependencies"
-        docker compose -f "$DOCKER_COMPOSE_DEV_FILE" logs --tail=50 dev
-        exit 1
-    fi
-
     export DIND=1
     echo "🚀 Running: $description"
     echo "[INFO] Target: $target"
@@ -90,34 +71,61 @@ run_make_with_dind() {
     echo "[INFO] Makefile path: $website_dir/Makefile"
 
     if [ "$target" = "test-unit-all" ]; then
+        local temp_dev_container="website-dev-test"
+        echo "🧹 Cleaning old temp container..."
+        docker rm -f "$temp_dev_container" 2>/dev/null || true
+        echo "🚀 Starting temp dev container..."
+        docker compose -f "$DOCKER_COMPOSE_DEV_FILE" run -d --name "$temp_dev_container" --entrypoint sh dev -lc 'sleep infinity'
+        echo "📂 Copying source into temp container..."
+        docker cp "$website_dir/." "$temp_dev_container:/app/"
+        echo "📦 Installing deps..."
+        docker exec -T "$temp_dev_container" sh -lc "cd /app && npm install -g pnpm && pnpm install --frozen-lockfile"
         echo "🧪 Running client-side tests..."
-        if docker compose -f "$DOCKER_COMPOSE_DEV_FILE" exec -T dev sh -lc "cd /app && env TEST_ENV=client ./node_modules/.bin/jest --verbose --passWithNoTests --maxWorkers=2"; then
+        if docker exec -T "$temp_dev_container" sh -lc "cd /app && env TEST_ENV=client ./node_modules/.bin/jest --verbose --passWithNoTests --maxWorkers=2"; then
             echo "✅ Client-side tests PASSED"
         else
             echo "❌ Client-side tests FAILED"
-            docker compose -f "$DOCKER_COMPOSE_DEV_FILE" logs --tail=30 dev
+            docker logs "$temp_dev_container" --tail=100 || true
+            docker rm -f "$temp_dev_container" || true
             exit 1
         fi
 
         echo "🧪 Running server-side tests..."
-        if docker compose -f "$DOCKER_COMPOSE_DEV_FILE" exec -T dev sh -lc "cd /app && env TEST_ENV=server ./node_modules/.bin/jest --verbose --passWithNoTests --maxWorkers=2 ./src/test/apollo-server"; then
+        if docker exec -T "$temp_dev_container" sh -lc "cd /app && env TEST_ENV=server ./node_modules/.bin/jest --verbose --passWithNoTests --maxWorkers=2 ./src/test/apollo-server"; then
             echo "✅ Server-side tests PASSED"
         else
             echo "❌ Server-side tests FAILED"
-            docker compose -f "$DOCKER_COMPOSE_DEV_FILE" logs --tail=30 dev
+            docker logs "$temp_dev_container" --tail=100 || true
+            docker rm -f "$temp_dev_container" || true
             exit 1
         fi
 
+        echo "🧹 Cleaning temp container..."
+        docker rm -f "$temp_dev_container" || true
+
         echo "✅ $description completed successfully"
     elif [ "$target" = "test-mutation" ]; then
+        local temp_dev_container="website-dev-test"
+        echo "🧹 Cleaning old temp container..."
+        docker rm -f "$temp_dev_container" 2>/dev/null || true
+        echo "🚀 Starting temp dev container..."
+        docker compose -f "$DOCKER_COMPOSE_DEV_FILE" run -d --name "$temp_dev_container" --entrypoint sh dev -lc 'sleep infinity'
+        echo "📂 Copying source into temp container..."
+        docker cp "$website_dir/." "$temp_dev_container:/app/"
+        echo "📦 Installing deps..."
+        docker exec -T "$temp_dev_container" sh -lc "cd /app && npm install -g pnpm && pnpm install --frozen-lockfile"
         echo "🧬 Running Stryker mutation tests..."
-        if docker compose -f "$DOCKER_COMPOSE_DEV_FILE" exec -T dev sh -lc "cd /app && pnpm stryker run"; then
+        if docker exec -T "$temp_dev_container" sh -lc "cd /app && pnpm stryker run"; then
             echo "✅ Mutation tests PASSED"
         else
             echo "❌ Mutation tests FAILED"
-            docker compose -f "$DOCKER_COMPOSE_DEV_FILE" logs --tail=30 dev
+            docker logs "$temp_dev_container" --tail=100 || true
+            docker rm -f "$temp_dev_container" || true
             exit 1
         fi
+
+        echo "🧹 Cleaning temp container..."
+        docker rm -f "$temp_dev_container" || true
 
         echo "✅ $description completed successfully"
     else
