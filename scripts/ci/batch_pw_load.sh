@@ -18,6 +18,15 @@ fi
 echo "🐳 DIND Environment Setup Script"
 echo "================================"
 
+PLAYWRIGHT_ENV_FLAGS=(
+    -e NEXT_PUBLIC_MAIN_LANGUAGE=uk
+    -e NEXT_PUBLIC_FALLBACK_LANGUAGE=en
+    -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_NAME=no-aws-header-name
+    -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_VALUE=no-aws-header-value
+    -e NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL=https://github.com/VilnaCRM-Org/
+    -e NEXT_PUBLIC_GRAPHQL_API_URL=http://apollo:4000/graphql
+)
+
 setup_docker_network() {
     echo "📡 Setting up Docker network..."
     docker network create "$NETWORK_NAME" 2>/dev/null || echo "Network $NETWORK_NAME already exists"
@@ -26,6 +35,8 @@ setup_docker_network() {
 
 start_prod_dind() {
     echo "🐳 Starting production environment in true Docker-in-Docker mode"
+    echo "🔧 Setting up Docker network for DIND"
+    setup_docker_network
     echo "Building production container image..."
     make build-prod
     echo "🚀 Starting production services..."
@@ -36,9 +47,6 @@ run_make_with_prod_dind() {
     local target=$1
     local description=$2
     local website_dir=$3
-    
-    echo "🔧 Setting up Docker network for DIND"
-    setup_docker_network
     
     echo "🚀 Starting production environment for $description"
     start_prod_dind
@@ -58,7 +66,6 @@ run_make_with_prod_dind() {
 }
 
 run_e2e_tests_dind() {
-    local website_dir=$1
     echo "🎭 Running E2E tests in DIND mode (matching local behavior)"
     
     echo "🔧 Setting up Docker network for DIND"
@@ -77,7 +84,7 @@ run_e2e_tests_dind() {
     docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T playwright mkdir -p /app/src/test /app/src/config /app/pages/i18n
 
     echo "Copying complete test directory..."
-    if docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp src/test/. playwright:/app/src/test/; then
+    if docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp "src/test/." "playwright:/app/src/test/"; then
         echo "✅ Complete test directory copied successfully"
     else
         echo "❌ Failed to copy complete test directory"
@@ -85,7 +92,7 @@ run_e2e_tests_dind() {
     fi
 
     echo "Copying config files..."
-    if docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp src/config playwright:/app/src/; then
+    if docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp "src/config" "playwright:/app/src/"; then
         echo "✅ Config files copied successfully"
     else
         echo "❌ Failed to copy config files"
@@ -93,7 +100,7 @@ run_e2e_tests_dind() {
     fi
 
     echo "Copying i18n files..."
-    if docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp pages/i18n playwright:/app/pages/; then
+    if docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp "pages/i18n" "playwright:/app/pages/"; then
         echo "✅ i18n files copied successfully"
     else
         echo "❌ Failed to copy i18n files"
@@ -101,10 +108,10 @@ run_e2e_tests_dind() {
     fi
 
     echo "Copying TypeScript configuration files..."
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp tsconfig.json playwright:/app/ || echo "⚠️  Failed to copy tsconfig.json"
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp tsconfig.paths.json playwright:/app/ || echo "⚠️  Failed to copy tsconfig.paths.json"
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp next.config.js playwright:/app/ || echo "⚠️  Failed to copy next.config.js"
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp playwright.config.ts playwright:/app/ || echo "⚠️  Failed to copy playwright.config.ts"
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp "tsconfig.json" "playwright:/app/" || echo "⚠️  Failed to copy tsconfig.json"
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp "tsconfig.paths.json" "playwright:/app/" || echo "⚠️  Failed to copy tsconfig.paths.json"
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp "next.config.js" "playwright:/app/" || echo "⚠️  Failed to copy next.config.js"
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp "playwright.config.ts" "playwright:/app/" || echo "⚠️  Failed to copy playwright.config.ts"
 
     echo "🔍 Verifying files were copied correctly..."
     docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T playwright ls -la /app/src/test/visual/ || echo "⚠️  Visual files not found in container"
@@ -123,7 +130,7 @@ run_e2e_tests_dind() {
     echo "🔍 Testing container connectivity..."
     docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T playwright curl -f "$PROD_URL" >/dev/null 2>&1 || echo "⚠️  Container connectivity test failed"
 
-    if docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T -e NEXT_PUBLIC_MAIN_LANGUAGE=uk -e NEXT_PUBLIC_FALLBACK_LANGUAGE=en -e NEXT_PUBLIC_PROD_CONTAINER_API_URL="$PROD_URL" -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_NAME=no-aws-header-name -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_VALUE=no-aws-header-value -e NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL=https://github.com/VilnaCRM-Org/ -e NEXT_PUBLIC_GRAPHQL_API_URL=http://apollo:4000/graphql -w /app playwright npx playwright test src/test/e2e --timeout=60000; then
+    if docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T "${PLAYWRIGHT_ENV_FLAGS[@]}" -e NEXT_PUBLIC_PROD_CONTAINER_API_URL="$PROD_URL" -w /app playwright npx playwright test src/test/e2e --timeout=60000; then
         echo "✅ E2E tests PASSED"
     else
         echo "❌ E2E tests FAILED"
@@ -133,15 +140,14 @@ run_e2e_tests_dind() {
 
     echo "📂 Copying E2E test results..."
     mkdir -p playwright-report test-results
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp playwright:/app/playwright-report/. playwright-report/ 2>/dev/null || echo "No playwright-report to copy"
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp playwright:/app/test-results/. test-results/ 2>/dev/null || echo "No test-results to copy"
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp "playwright:/app/playwright-report/." "playwright-report/" 2>/dev/null || echo "No playwright-report to copy"
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp "playwright:/app/test-results/." "test-results/" 2>/dev/null || echo "No test-results to copy"
 
     echo "🧹 Cleaning up Docker services..."
     docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" down
 }
 
 run_visual_tests_dind() {
-    local website_dir=$1
     echo "🎨 Running Visual tests in DIND mode (matching local behavior)"
     
     echo "🔧 Setting up Docker network for DIND"
@@ -171,7 +177,7 @@ run_visual_tests_dind() {
     fi
 
     echo "Copying config files..."
-    if docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp src/config playwright:/app/src/; then
+    if docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp "src/config" "playwright:/app/src/"; then
         echo "✅ Config files copied successfully"
     else
         echo "❌ Failed to copy config files"
@@ -179,7 +185,7 @@ run_visual_tests_dind() {
     fi
 
     echo "Copying i18n files..."
-    if docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp pages/i18n playwright:/app/pages/; then
+    if docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp "pages/i18n" "playwright:/app/pages/"; then
         echo "✅ i18n files copied successfully"
     else
         echo "❌ Failed to copy i18n files"
@@ -187,10 +193,10 @@ run_visual_tests_dind() {
     fi
 
     echo "Copying TypeScript configuration files..."
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp tsconfig.json playwright:/app/ || echo "⚠️  Failed to copy tsconfig.json"
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp tsconfig.paths.json playwright:/app/ || echo "⚠️  Failed to copy tsconfig.paths.json"
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp next.config.js playwright:/app/ || echo "⚠️  Failed to copy next.config.js"
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp playwright.config.ts playwright:/app/ || echo "⚠️  Failed to copy playwright.config.ts"
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp "tsconfig.json" "playwright:/app/" || echo "⚠️  Failed to copy tsconfig.json"
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp "tsconfig.paths.json" "playwright:/app/" || echo "⚠️  Failed to copy tsconfig.paths.json"
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp "next.config.js" "playwright:/app/" || echo "⚠️  Failed to copy next.config.js"
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp "playwright.config.ts" "playwright:/app/" || echo "⚠️  Failed to copy playwright.config.ts"
 
     echo "🔍 Verifying files were copied correctly..."
     docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T playwright ls -la /app/src/test/visual/ || echo "⚠️  Visual files not found in container"
@@ -210,7 +216,7 @@ run_visual_tests_dind() {
     echo "🔍 Testing container connectivity..."
     docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T playwright curl -f "$PROD_URL" >/dev/null 2>&1 || echo "⚠️  Container connectivity test failed"
 
-    if docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T -e NEXT_PUBLIC_MAIN_LANGUAGE=uk -e NEXT_PUBLIC_FALLBACK_LANGUAGE=en -e NEXT_PUBLIC_PROD_CONTAINER_API_URL="$PROD_URL" -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_NAME=no-aws-header-name -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_VALUE=no-aws-header-value -e NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL=https://github.com/VilnaCRM-Org/ -e NEXT_PUBLIC_GRAPHQL_API_URL=http://apollo:4000/graphql -w /app playwright npx playwright test src/test/visual --timeout=60000; then
+    if docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T "${PLAYWRIGHT_ENV_FLAGS[@]}" -e NEXT_PUBLIC_PROD_CONTAINER_API_URL="$PROD_URL" -w /app playwright npx playwright test src/test/visual --timeout=60000; then
         echo "✅ Visual tests PASSED"
     else
         echo "❌ Visual tests FAILED"
@@ -230,7 +236,6 @@ run_visual_tests_dind() {
 }
 
 run_load_tests_dind() {
-    local website_dir=$1
     echo "⚡ Running K6 Load tests in true Docker-in-Docker mode"
     
     echo "🔧 Setting up Docker network for DIND"

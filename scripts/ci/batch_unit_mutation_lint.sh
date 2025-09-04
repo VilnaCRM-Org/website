@@ -43,16 +43,6 @@ start_dev_dind() {
     echo "🎉 Development environment started successfully!"
 }
 
-start_prod_dind() {
-    echo "🐳 Starting production environment in true Docker-in-Docker mode"
-    echo "Setting up Docker network..."
-    make create-network
-    echo "Building production container image..."
-    make build-prod
-    echo "🚀 Starting production services..."
-    make start-prod
-    echo "🎉 Production environment started successfully!"
-}
 run_make_with_dind() {
     local target=$1
     local description=$2
@@ -79,9 +69,9 @@ run_make_with_dind() {
         echo "📂 Copying source into temp container..."
         docker cp "$website_dir/." "$temp_dev_container:/app/"
         echo "📦 Installing deps..."
-        docker exec -T "$temp_dev_container" sh -lc "cd /app && npm install -g pnpm && pnpm install --frozen-lockfile"
+        docker exec "$temp_dev_container" sh -lc "cd /app && npm install -g pnpm && pnpm install --frozen-lockfile"
         echo "🧪 Running client-side tests..."
-        if docker exec -T "$temp_dev_container" sh -lc "cd /app && env TEST_ENV=client ./node_modules/.bin/jest --verbose --passWithNoTests --maxWorkers=2"; then
+        if docker exec "$temp_dev_container" sh -lc "cd /app && env TEST_ENV=client ./node_modules/.bin/jest --verbose --passWithNoTests --maxWorkers=2"; then
             echo "✅ Client-side tests PASSED"
         else
             echo "❌ Client-side tests FAILED"
@@ -91,7 +81,7 @@ run_make_with_dind() {
         fi
 
         echo "🧪 Running server-side tests..."
-        if docker exec -T "$temp_dev_container" sh -lc "cd /app && env TEST_ENV=server ./node_modules/.bin/jest --verbose --passWithNoTests --maxWorkers=2 ./src/test/apollo-server"; then
+        if docker exec "$temp_dev_container" sh -lc "cd /app && env TEST_ENV=server ./node_modules/.bin/jest --verbose --passWithNoTests --maxWorkers=2 ./src/test/apollo-server"; then
             echo "✅ Server-side tests PASSED"
         else
             echo "❌ Server-side tests FAILED"
@@ -113,9 +103,9 @@ run_make_with_dind() {
         echo "📂 Copying source into temp container..."
         docker cp "$website_dir/." "$temp_dev_container:/app/"
         echo "📦 Installing deps..."
-        docker exec -T "$temp_dev_container" sh -lc "cd /app && npm install -g pnpm && pnpm install --frozen-lockfile"
+        docker exec "$temp_dev_container" sh -lc "cd /app && npm install -g pnpm && pnpm install --frozen-lockfile"
         echo "🧬 Running Stryker mutation tests..."
-        if docker exec -T "$temp_dev_container" sh -lc "cd /app && pnpm stryker run"; then
+        if docker exec "$temp_dev_container" sh -lc "cd /app && pnpm stryker run"; then
             echo "✅ Mutation tests PASSED"
         else
             echo "❌ Mutation tests FAILED"

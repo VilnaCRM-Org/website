@@ -17,18 +17,7 @@ setup_docker_network() {
     docker network create "$NETWORK_NAME" 2>/dev/null || echo "Network $NETWORK_NAME already exists"
     echo "✅ Docker network configured"
 }
-start_prod_dind() {
-    echo "🐳 Starting production environment in true Docker-in-Docker mode"
-    echo "Setting up Docker network..."
-    setup_docker_network
-    echo "Building production container image..."
-    make build-prod
-    echo "🚀 Starting production services..."
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d --wait prod
-    echo "🎉 Production environment started successfully!"
-}
 run_memory_leak_tests_dind() {
-    local website_dir=$1
     echo "🧠 Running Memory Leak tests using Makefile approach"
     
     setup_docker_network
@@ -49,12 +38,12 @@ run_memory_leak_tests_dind() {
 
     echo "📂 Copying source files into memory leak container..."
     docker compose -f docker-compose.memory-leak.yml exec -T memory-leak mkdir -p /app/src/test /app/src/config /app/pages/i18n
-    docker compose -f docker-compose.memory-leak.yml cp src/test/memory-leak memory-leak:/app/src/test/memory-leak
+    docker compose -f docker-compose.memory-leak.yml cp "src/test/memory-leak" "memory-leak:/app/src/test/memory-leak"
     echo "✅ Memory leak test files copied successfully"
 
     echo "📂 Copying required config files..."
-    docker compose -f docker-compose.memory-leak.yml cp src/config memory-leak:/app/src/config  
-    docker compose -f docker-compose.memory-leak.yml cp pages/i18n memory-leak:/app/pages/i18n
+    docker compose -f docker-compose.memory-leak.yml cp "src/config" "memory-leak:/app/src/config"  
+    docker compose -f docker-compose.memory-leak.yml cp "pages/i18n" "memory-leak:/app/pages/i18n"
 
     echo "🧹 Cleaning up previous memory leak results..."
     docker compose -f docker-compose.memory-leak.yml exec -T memory-leak rm -rf /app/src/test/memory-leak/results || true
@@ -83,7 +72,6 @@ run_memory_leak_tests_dind() {
 }
 
 run_lighthouse_desktop_dind() {
-    local website_dir=$1
     echo "🔦 Running Lighthouse Desktop tests using robust container approach"
     echo "🔧 Setting up Docker network for DIND"
     setup_docker_network
@@ -109,7 +97,7 @@ run_lighthouse_desktop_dind() {
     echo "🔦 Running Lighthouse desktop tests..."
     docker compose -f "$DOCKER_COMPOSE_TEST_FILE" exec -T -w /app prod lhci autorun \
       --config=lighthouserc.desktop.js \
-      --collect.url=http://localhost:"$NEXT_PUBLIC_PROD_PORT" \
+      --collect.url="http://localhost:${NEXT_PUBLIC_PROD_PORT}" \
       --collect.chromePath=/usr/bin/chromium-browser \
       --collect.chromeFlags="--no-sandbox --disable-dev-shm-usage --disable-extensions --disable-gpu --headless --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-software-rasterizer --disable-setuid-sandbox --single-process --no-zygote --js-flags=--max-old-space-size=4096"
 
@@ -122,7 +110,6 @@ run_lighthouse_desktop_dind() {
 }
 
 run_lighthouse_mobile_dind() {
-    local website_dir=$1
     echo "📱 Running Lighthouse Mobile tests using robust container approach"
     echo "🔧 Setting up Docker network for DIND"
     setup_docker_network
@@ -148,7 +135,7 @@ run_lighthouse_mobile_dind() {
     echo "📱 Running Lighthouse mobile tests..."
     docker compose -f "$DOCKER_COMPOSE_TEST_FILE" exec -T -w /app prod lhci autorun \
       --config=lighthouserc.mobile.js \
-      --collect.url=http://localhost:"$NEXT_PUBLIC_PROD_PORT" \
+      --collect.url="http://localhost:${NEXT_PUBLIC_PROD_PORT}" \
       --collect.chromePath=/usr/bin/chromium-browser \
       --collect.chromeFlags="--no-sandbox --disable-dev-shm-usage --disable-extensions --disable-gpu --headless --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-software-rasterizer --disable-setuid-sandbox --single-process --no-zygote --js-flags=--max-old-space-size=4096"
 
