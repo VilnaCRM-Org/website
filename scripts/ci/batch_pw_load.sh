@@ -144,7 +144,7 @@ run_e2e_tests_dind() {
     docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp "playwright:/app/test-results/." "test-results/" 2>/dev/null || echo "No test-results to copy"
 
     echo "🧹 Cleaning up Docker services..."
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" down
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" down --volumes --remove-orphans || true
 }
 
 run_visual_tests_dind() {
@@ -169,7 +169,7 @@ run_visual_tests_dind() {
     docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T playwright mkdir -p /app/src/test /app/src/config /app/pages/i18n
 
     echo "Copying complete test directory..."
-    if docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp src/test/. playwright:/app/src/test/; then
+    if docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp "src/test/." "playwright:/app/src/test/"; then
         echo "✅ Complete test directory copied successfully"
     else
         echo "❌ Failed to copy complete test directory"
@@ -226,11 +226,11 @@ run_visual_tests_dind() {
 
     echo "📂 Copying Visual test results..."
     mkdir -p playwright-report test-results
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp playwright:/app/playwright-report/. playwright-report/ 2>/dev/null || echo "No playwright-report to copy"
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp playwright:/app/test-results/. test-results/ 2>/dev/null || echo "No test-results to copy"
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp "playwright:/app/playwright-report/." "playwright-report/" 2>/dev/null || echo "No playwright-report to copy"
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp "playwright:/app/test-results/." "test-results/" 2>/dev/null || echo "No test-results to copy"
 
     echo "🧹 Cleaning up Docker services..."
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" down
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" down --volumes --remove-orphans || true
     
     echo "🎉 Visual tests completed successfully in DIND mode!"
 }
@@ -255,29 +255,33 @@ run_load_tests_dind() {
 
     echo "📂 Preparing K6 directories..."
     docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load exec -T k6 mkdir -p /loadTests/results
+    echo "📂 Copying K6 test files..."
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load cp "src/test/load/." "k6:/loadTests/"
     echo "✅ Load test files copied successfully"
 
     echo "🧹 Cleaning up previous load test results..."
     docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load exec -T k6 sh -lc 'rm -rf /loadTests/results || true && mkdir -p /loadTests/results'
 
     echo "⚡ Running K6 load tests..."
-    if docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load exec -T -w /loadTests k6 k6 run --summary-trend-stats="avg,min,med,max,p(95),p(99)" --out "web-dashboard=period=1s&export=/loadTests/results/homepage.html" /loadTests/homepage.js; then
+    ok=0
+    if docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load exec -T -w /loadTests k6 \
+       k6 run --summary-trend-stats="avg,min,med,max,p(95),p(99)" \
+       --out "web-dashboard=period=1s&export=/loadTests/results/homepage.html" /loadTests/homepage.js; then
         echo "✅ Load tests PASSED"
     else
         echo "❌ Load tests FAILED"
-        docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load logs --tail=30 k6
-        docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load stop k6 || true
-        docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load rm -f k6 || true
-        exit 1
+        docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load logs --tail=30 k6 || true
+        ok=1
     fi
 
     echo "📂 Copying load test results..."
     mkdir -p src/test/load/reports
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load cp k6:/loadTests/results/. src/test/load/reports/ 2>/dev/null || echo "No load test results to copy"
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load cp "k6:/loadTests/results/." "src/test/load/reports/" 2>/dev/null || echo "No load test results to copy"
 
-    echo "🧹 Cleaning up K6 container..."
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load stop k6 || true
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load rm -f k6 || true
+    echo "🧹 Cleaning up K6 services..."
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load down --volumes --remove-orphans || true
+
+    [ "$ok" -eq 0 ] || exit 1
 
     echo "🎉 Load tests completed successfully in true DinD mode!"
 }

@@ -106,7 +106,7 @@ run_lighthouse_desktop_dind() {
     docker compose -f "$DOCKER_COMPOSE_TEST_FILE" cp prod:/app/lhci-reports-desktop/. lhci-reports-desktop/ 2>/dev/null || echo "No lighthouse results to copy"
 
     echo "🧹 Cleaning up Docker services..."
-    docker compose -f "$DOCKER_COMPOSE_TEST_FILE" down
+    docker compose -f "$DOCKER_COMPOSE_TEST_FILE" down --volumes --remove-orphans || true
 }
 
 run_lighthouse_mobile_dind() {
@@ -144,7 +144,7 @@ run_lighthouse_mobile_dind() {
     docker compose -f "$DOCKER_COMPOSE_TEST_FILE" cp prod:/app/lhci-reports-mobile/. lhci-reports-mobile/ 2>/dev/null || echo "No lighthouse results to copy"
 
     echo "🧹 Cleaning up Docker services..."
-    docker compose -f "$DOCKER_COMPOSE_TEST_FILE" down
+    docker compose -f "$DOCKER_COMPOSE_TEST_FILE" down --volumes --remove-orphans || true
 }
 
 main() {
