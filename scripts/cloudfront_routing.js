@@ -15,7 +15,8 @@ function handler(event) {
     var request = event.request;
 
     if (!request.uri || typeof request.uri !== 'string') {
-        console.log('cloudfront_routing: missing/invalid request.uri');
+        var host = (request.headers && request.headers.host && request.headers.host.value) || '';
+        console.log('cloudfront_routing: missing/invalid request.uri', 'host=', host, 'uri=', request.uri);
         return request;
     }
 
@@ -32,6 +33,7 @@ function handler(event) {
         var lastChar = (typeof uri === 'string') ? uri.charAt(uri.length - 1) : '';
         if (lastChar === '/') {
             request.uri = uri + 'index.html';
+            return request;
         }
 
         else if (lastSegment.indexOf('.') === -1 && segments.length > 2) {
@@ -40,7 +42,7 @@ function handler(event) {
 
         return request;
     } catch (error) {
-        console.log('CloudFront Function error:', error);
+        console.log('cloudfront_routing: error', error);
         return request;
     }
 }
