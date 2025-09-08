@@ -3,35 +3,38 @@
  * Avoid ES6+ syntax (e.g., `let`, `const`, arrow functions).
  */
 'use strict';
+var ROUTE_MAP = Object.freeze({
+    '/': '/index.html',
+    '/about': '/about/index.html',
+    '/about/': '/about/index.html',
+    '/en': '/en/index.html',
+    '/en/': '/en/index.html',
+    '/swagger': '/swagger.html',
+});
 function handler(event) {
     var request = event.request;
 
     if (!request.uri || typeof request.uri !== 'string') {
+        console.log('cloudfront_routing: missing/invalid request.uri');
         return request;
     }
 
     try {
         var uri = request.uri;
+        var segments = uri.split('/');
+        var lastSegment = segments[segments.length - 1];
 
-        var routeMap = {
-            '/': '/index.html',
-            '/about': '/about/index.html',
-            '/about/': '/about/index.html',
-            '/en': '/en/index.html',
-            '/en/': '/en/index.html',
-            '/swagger': '/swagger.html',
-        };
-
-        if (routeMap[uri] !== undefined) {
-            request.uri = routeMap[uri];
+        if (Object.prototype.hasOwnProperty.call(ROUTE_MAP, uri)) {
+            request.uri = ROUTE_MAP[uri];
             return request;
         }
 
-        if (uri.endsWith('/')) {
+        var lastChar = (typeof uri === 'string') ? uri.charAt(uri.length - 1) : '';
+        if (lastChar === '/') {
             request.uri = uri + 'index.html';
         }
 
-        else if (uri.indexOf('.') === -1 && uri.split('/').length > 2) {
+        else if (lastSegment.indexOf('.') === -1 && segments.length > 2) {
             request.uri = uri + '/index.html';
         }
 
