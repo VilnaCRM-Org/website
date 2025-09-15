@@ -37,6 +37,10 @@ function handler(event) {
         }
 
         else if (lastSegment.indexOf('.') === -1 && segments.length > 2) {
+            // Bypass rewrites for well-known challenges or other explicit files without extensions
+            if (uri.indexOf('/.well-known/') === 0) {
+                return request;
+            }
             request.uri = uri + '/index.html';
         }
 
