@@ -261,10 +261,3 @@ stop: ## Stop docker
 
 check-node-version: ## Check if the correct Node.js version is installed
 	$(PNPM_EXEC) node checkNodeVersion.js
-
-pr-comments: ## Retrieve unresolved PR review comments (FORMAT=text|json|markdown, PR=<number>)
-	@PR_ARG=""; \
-	if [ -n "$$PR" ]; then PR_ARG="$$PR"; fi; \
-	FORMAT_ARG=""; \
-	if [ -n "$$FORMAT" ]; then FORMAT_ARG="$$FORMAT"; fi; \
-	./scripts/get-pr-comments.sh $$PR_ARG $$FORMAT_ARG
