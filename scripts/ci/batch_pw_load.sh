@@ -20,6 +20,8 @@ fi
 NEXT_PUBLIC_MOCKOON_PORT=${NEXT_PUBLIC_MOCKOON_PORT:-"8080"}
 GRAPHQL_PORT=${GRAPHQL_PORT:-"4000"}
 GRAPHQL_API_PATH=${GRAPHQL_API_PATH:-"graphql"}
+export NEXT_PUBLIC_MOCKOON_PORT GRAPHQL_PORT GRAPHQL_API_PATH NEXT_PUBLIC_PROD_PORT
+
 echo "🐳 DIND Environment Setup Script"
 echo "================================"
 
@@ -78,15 +80,12 @@ run_e2e_tests_dind() {
     echo "Building test services..."
     make build-prod
     
-    echo "🚀 Starting core test services (prod, apollo, mockoon) and waiting for health..."
-    if ! docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d --wait prod apollo mockoon; then
-        echo "❌ One or more services failed healthcheck. Dumping statuses and logs..."
-        docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" ps || true
-        docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" logs --tail=200 mockoon || true
-        docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" logs --tail=200 apollo || true
-        docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" logs --tail=200 prod || true
-        exit 1
-    fi
+    echo "🚀 Starting core test services (prod, apollo, mockoon) and waiting for readiness..."
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d prod apollo mockoon || true
+    # Wait using explicit endpoints to avoid compose healthcheck false negatives
+    wait_for_http "http://localhost:$NEXT_PUBLIC_PROD_PORT" "prod" || { docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" logs --tail=200 prod; exit 1; }
+    wait_for_http "http://localhost:$GRAPHQL_PORT/health" "apollo health" || { docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" logs --tail=200 apollo; exit 1; }
+    wait_for_http "http://localhost:$NEXT_PUBLIC_MOCKOON_PORT/api/users" "mockoon" || { docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" logs --tail=200 mockoon; exit 1; }
 
     echo "📂 Ensuring Playwright container is up"
     docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d playwright
@@ -168,7 +167,10 @@ run_visual_tests_dind() {
     make build-prod
     
     echo "🚀 Starting test services..."
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d --wait prod apollo mockoon
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d prod apollo mockoon || true
+    wait_for_http "http://localhost:$NEXT_PUBLIC_PROD_PORT" "prod" || { docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" logs --tail=200 prod; exit 1; }
+    wait_for_http "http://localhost:$GRAPHQL_PORT/health" "apollo health" || { docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" logs --tail=200 apollo; exit 1; }
+    wait_for_http "http://localhost:$NEXT_PUBLIC_MOCKOON_PORT/api/users" "mockoon" || { docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" logs --tail=200 mockoon; exit 1; }
     
 
     echo "📂 Copying Visual test files to Playwright container..."
@@ -276,7 +278,7 @@ run_load_tests_dind() {
     echo "⚡ Running K6 load tests..."
     ok=0
     if docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load exec -T -w /loadTests k6 \
-       k6 run --summary-trend-stats="avg,min,med,max,p(95),p(99)" \
+       run --summary-trend-stats="avg,min,med,max,p(95),p(99)" \
        --out "web-dashboard=period=1s&export=/loadTests/results/homepage.html" /loadTests/homepage.js; then
         echo "✅ Load tests PASSED"
     else
