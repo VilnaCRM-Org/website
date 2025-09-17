@@ -120,11 +120,25 @@ run_make_with_dind() {
         echo "✅ $description completed successfully"
     else
         if [ "$target" = "lint" ] || [ "$target" = "lint-next" ] || [ "$target" = "lint-tsc" ] || [ "$target" = "lint-md" ]; then
-            if docker compose -f "$DOCKER_COMPOSE_DEV_FILE" exec -T dev sh -lc "cd /app && make \"$target\" CI=1"; then
+            # Run lint in an isolated temp container with copied source to avoid bind-mount/startup issues
+            local temp_dev_container="website-dev-lint"
+            echo "🧹 Cleaning old temp container..."
+            docker rm -f "$temp_dev_container" 2>/dev/null || true
+            echo "🚀 Starting temp dev container for lint..."
+            docker compose -f "$DOCKER_COMPOSE_DEV_FILE" run -d --name "$temp_dev_container" --entrypoint sh dev -lc 'sleep infinity'
+            echo "📂 Copying source into temp container..."
+            docker cp "$website_dir/." "$temp_dev_container:/app/"
+            echo "📦 Installing deps in temp container..."
+            docker exec "$temp_dev_container" sh -lc "cd /app && npm install -g pnpm && pnpm install --frozen-lockfile"
+            echo "🔍 Running make $target (CI=1) inside temp container..."
+            if docker exec "$temp_dev_container" sh -lc "cd /app && make \"$target\" CI=1"; then
                 echo "✅ $description completed successfully"
+                echo "🧹 Cleaning temp container..."
+                docker rm -f "$temp_dev_container" || true
             else
                 echo "❌ $description failed"
-                docker compose -f "$DOCKER_COMPOSE_DEV_FILE" logs --tail=30 dev
+                docker logs "$temp_dev_container" --tail=100 || true
+                docker rm -f "$temp_dev_container" || true
                 exit 1
             fi
         else

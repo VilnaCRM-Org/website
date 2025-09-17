@@ -18,14 +18,13 @@ fi
 echo "🐳 DIND Environment Setup Script"
 echo "================================"
 
-PLAYWRIGHT_ENV_FLAGS=(
-    -e NEXT_PUBLIC_MAIN_LANGUAGE=uk
-    -e NEXT_PUBLIC_FALLBACK_LANGUAGE=en
-    -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_NAME=no-aws-header-name
-    -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_VALUE=no-aws-header-value
-    -e NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL=https://github.com/VilnaCRM-Org/
-    -e NEXT_PUBLIC_GRAPHQL_API_URL=http://apollo:4000/graphql
-)
+PLAYWRIGHT_ENV_FLAGS="\
+    -e NEXT_PUBLIC_MAIN_LANGUAGE=uk \
+    -e NEXT_PUBLIC_FALLBACK_LANGUAGE=en \
+    -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_NAME=no-aws-header-name \
+    -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_VALUE=no-aws-header-value \
+    -e NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL=https://github.com/VilnaCRM-Org/ \
+    -e NEXT_PUBLIC_GRAPHQL_API_URL=http://apollo:4000/graphql"
 
 setup_docker_network() {
     echo "📡 Setting up Docker network..."
@@ -130,7 +129,7 @@ run_e2e_tests_dind() {
     echo "🔍 Testing container connectivity..."
     docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T playwright curl -f "$PROD_URL" >/dev/null 2>&1 || echo "⚠️  Container connectivity test failed"
 
-    if docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T "${PLAYWRIGHT_ENV_FLAGS[@]}" -e NEXT_PUBLIC_PROD_CONTAINER_API_URL="$PROD_URL" -w /app playwright npx playwright test src/test/e2e --timeout=60000; then
+    if docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T $PLAYWRIGHT_ENV_FLAGS -e NEXT_PUBLIC_PROD_CONTAINER_API_URL="$PROD_URL" -w /app playwright npx playwright test src/test/e2e --timeout=60000; then
         echo "✅ E2E tests PASSED"
     else
         echo "❌ E2E tests FAILED"
@@ -216,7 +215,7 @@ run_visual_tests_dind() {
     echo "🔍 Testing container connectivity..."
     docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T playwright curl -f "$PROD_URL" >/dev/null 2>&1 || echo "⚠️  Container connectivity test failed"
 
-    if docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T "${PLAYWRIGHT_ENV_FLAGS[@]}" -e NEXT_PUBLIC_PROD_CONTAINER_API_URL="$PROD_URL" -w /app playwright npx playwright test src/test/visual --timeout=60000; then
+    if docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T $PLAYWRIGHT_ENV_FLAGS -e NEXT_PUBLIC_PROD_CONTAINER_API_URL="$PROD_URL" -w /app playwright npx playwright test src/test/visual --timeout=60000; then
         echo "✅ Visual tests PASSED"
     else
         echo "❌ Visual tests FAILED"
