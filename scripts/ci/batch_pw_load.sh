@@ -82,11 +82,7 @@ run_e2e_tests_dind() {
     
     echo "🚀 Starting core test services (prod, apollo, mockoon) and waiting for readiness..."
     docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d prod apollo mockoon || true
-    # Wait using explicit endpoints to avoid compose healthcheck false negatives
-    wait_for_http "http://localhost:$NEXT_PUBLIC_PROD_PORT" "prod" || { docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" logs --tail=200 prod; exit 1; }
-    wait_for_http "http://localhost:$GRAPHQL_PORT/health" "apollo health" || { docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" logs --tail=200 apollo; exit 1; }
-    wait_for_http "http://localhost:$NEXT_PUBLIC_MOCKOON_PORT/api/users" "mockoon" || { docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" logs --tail=200 mockoon; exit 1; }
-
+   
     echo "📂 Ensuring Playwright container is up"
     docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d playwright
 
@@ -168,10 +164,6 @@ run_visual_tests_dind() {
     
     echo "🚀 Starting test services..."
     docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d prod apollo mockoon || true
-    wait_for_http "http://localhost:$NEXT_PUBLIC_PROD_PORT" "prod" || { docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" logs --tail=200 prod; exit 1; }
-    wait_for_http "http://localhost:$GRAPHQL_PORT/health" "apollo health" || { docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" logs --tail=200 apollo; exit 1; }
-    wait_for_http "http://localhost:$NEXT_PUBLIC_MOCKOON_PORT/api/users" "mockoon" || { docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" logs --tail=200 mockoon; exit 1; }
-    
 
     echo "📂 Copying Visual test files to Playwright container..."
 
