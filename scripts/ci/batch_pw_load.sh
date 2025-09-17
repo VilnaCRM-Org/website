@@ -15,6 +15,11 @@ COMMON_HEALTHCHECKS_FILE=${COMMON_HEALTHCHECKS_FILE:-"common-healthchecks.yml"}
 if [ ! -f "common-healthchecks.yml" ]; then
     COMMON_HEALTHCHECKS_FILE=""
 fi
+
+# Ensure required compose env vars have sane defaults for healthchecks
+NEXT_PUBLIC_MOCKOON_PORT=${NEXT_PUBLIC_MOCKOON_PORT:-"8080"}
+GRAPHQL_PORT=${GRAPHQL_PORT:-"4000"}
+GRAPHQL_API_PATH=${GRAPHQL_API_PATH:-"graphql"}
 echo "🐳 DIND Environment Setup Script"
 echo "================================"
 
@@ -74,7 +79,14 @@ run_e2e_tests_dind() {
     make build-prod
     
     echo "🚀 Starting core test services (prod, apollo, mockoon) and waiting for health..."
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d --wait prod apollo mockoon
+    if ! docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d --wait prod apollo mockoon; then
+        echo "❌ One or more services failed healthcheck. Dumping statuses and logs..."
+        docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" ps || true
+        docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" logs --tail=200 mockoon || true
+        docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" logs --tail=200 apollo || true
+        docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" logs --tail=200 prod || true
+        exit 1
+    fi
 
     echo "📂 Ensuring Playwright container is up"
     docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d playwright

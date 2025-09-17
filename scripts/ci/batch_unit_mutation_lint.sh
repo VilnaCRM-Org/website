@@ -1,5 +1,6 @@
 #!/bin/bash
-set -euo pipefail
+set -e
+
 NETWORK_NAME=${NETWORK_NAME:-"website-network"}
 WEBSITE_DOMAIN=${WEBSITE_DOMAIN:-"localhost"}
 DEV_PORT=${DEV_PORT:-"3000"}
@@ -44,9 +45,9 @@ start_dev_dind() {
 }
 
 run_make_with_dind() {
-    local target=$1
-    local description=$2
-    local website_dir=$3
+    target=$1
+    description=$2
+    website_dir=$3
     
     echo "🔧 Setting up Docker network for DIND"
     setup_docker_network
@@ -61,7 +62,7 @@ run_make_with_dind() {
     echo "[INFO] Makefile path: $website_dir/Makefile"
 
     if [ "$target" = "test-unit-all" ]; then
-        local temp_dev_container="website-dev-test"
+        temp_dev_container="website-dev-test"
         echo "🧹 Cleaning old temp container..."
         docker rm -f "$temp_dev_container" 2>/dev/null || true
         echo "🚀 Starting temp dev container..."
@@ -95,7 +96,7 @@ run_make_with_dind() {
 
         echo "✅ $description completed successfully"
     elif [ "$target" = "test-mutation" ]; then
-        local temp_dev_container="website-dev-test"
+        temp_dev_container="website-dev-test"
         echo "🧹 Cleaning old temp container..."
         docker rm -f "$temp_dev_container" 2>/dev/null || true
         echo "🚀 Starting temp dev container..."
@@ -121,7 +122,7 @@ run_make_with_dind() {
     else
         if [ "$target" = "lint" ] || [ "$target" = "lint-next" ] || [ "$target" = "lint-tsc" ] || [ "$target" = "lint-md" ]; then
             # Run lint in an isolated temp container with copied source to avoid bind-mount/startup issues
-            local temp_dev_container="website-dev-lint"
+            temp_dev_container="website-dev-lint"
             echo "🧹 Cleaning old temp container..."
             docker rm -f "$temp_dev_container" 2>/dev/null || true
             echo "🚀 Starting temp dev container for lint..."
@@ -154,32 +155,32 @@ run_make_with_dind() {
 }
 
 run_unit_tests_dind() {
-    local website_dir=$1
+    website_dir=$1
     echo "🧪 Running unit tests in DIND mode using Makefile"
     run_make_with_dind "test-unit-all" "Unit tests (client + server)" "$website_dir"
 }
 run_mutation_tests_dind() {
-    local website_dir=$1
+    website_dir=$1
     echo "🧬 Running mutation tests in DIND mode using Makefile"
     run_make_with_dind "test-mutation" "Mutation tests" "$website_dir"
 }
 run_lint_tests_dind() {
-    local website_dir=$1
+    website_dir=$1
     echo "🔍 Running linting tests in DIND mode using Makefile"
     run_make_with_dind "lint" "All linting tests (ESLint, TypeScript, Markdown)" "$website_dir"
 }
 run_eslint_dind() {
-    local website_dir=$1
+    website_dir=$1
     echo "🔍 Running ESLint in DIND mode using Makefile"
     run_make_with_dind "lint-next" "ESLint check" "$website_dir"
 }
 run_typescript_check_dind() {
-    local website_dir=$1
+    website_dir=$1
     echo "🔍 Running TypeScript check in DIND mode using Makefile"
     run_make_with_dind "lint-tsc" "TypeScript check" "$website_dir"
 }
 run_markdown_lint_dind() {
-    local website_dir=$1
+    website_dir=$1
     echo "🔍 Running Markdown linting in DIND mode using Makefile"
     run_make_with_dind "lint-md" "Markdown linting" "$website_dir"
 }
@@ -221,7 +222,7 @@ run_all_lint_dind() {
     fi
 }
 main() {
-    local website_dir="${1:-.}"
+    website_dir="${1:-.}"
     
     if [ ! -d "$website_dir" ]; then
         echo "❌ Website directory not found: $website_dir"
