@@ -48,79 +48,55 @@ run_memory_leak_tests_dind() {
 }
 
 run_lighthouse_desktop_dind() {
-    echo "🔦 Running Lighthouse Desktop tests using robust container approach"
-    echo "🔧 Setting up Docker network for DIND"
-    setup_docker_network
+    echo "🔦 Running Lighthouse Desktop tests using Makefile approach"
+    
+    # Set DIND-specific environment variables
     export WEBSITE_DOMAIN="localhost"
     export NEXT_PUBLIC_PROD_PORT="3001"
     export DIND_MODE="1"
     export SHM_SIZE="2g"
-    echo "🚀 Starting production services with DIND configuration..."
-    docker compose -f "$DOCKER_COMPOSE_TEST_FILE" up -d --build --wait prod
-    echo "📦 Installing Chrome and Lighthouse CLI in prod container..."
-    docker compose -f "$DOCKER_COMPOSE_TEST_FILE" exec -T prod sh -lc "apk add --no-cache chromium chromium-chromedriver && npm install -g @lhci/cli@0.14.0"
-
-    echo "📂 Copying Lighthouse config files to prod container..."
-    docker compose -f "$DOCKER_COMPOSE_TEST_FILE" cp lighthouserc.desktop.js prod:/app/
-
-    echo "🧪 Testing Chrome installation..."
-    if docker compose -f "$DOCKER_COMPOSE_TEST_FILE" exec -T prod /usr/bin/chromium-browser --version; then
-        echo "✅ Chrome is installed and working"
+    
+    # Use Makefile target for complete lighthouse desktop workflow
+    echo "🚀 Running lighthouse desktop tests..."
+    if make lighthouse-desktop; then
+        echo "✅ Lighthouse desktop tests PASSED"
     else
-        echo "❌ Chrome installation test failed"
+        echo "❌ Lighthouse desktop tests FAILED"
         exit 1
     fi
-    echo "🔦 Running Lighthouse desktop tests..."
-    docker compose -f "$DOCKER_COMPOSE_TEST_FILE" exec -T -w /app prod lhci autorun \
-      --config=lighthouserc.desktop.js \
-      --collect.url="http://localhost:${NEXT_PUBLIC_PROD_PORT}" \
-      --collect.chromePath=/usr/bin/chromium-browser \
-      --collect.chromeFlags="--no-sandbox --disable-dev-shm-usage --disable-extensions --disable-gpu --headless --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-software-rasterizer --disable-setuid-sandbox --single-process --no-zygote --js-flags=--max-old-space-size=4096"
 
-    echo "📂 Copying lighthouse results from prod container..."
+    # Copy results to lhci-reports-desktop directory for CI artifacts
+    echo "📂 Copying lighthouse desktop results..."
     mkdir -p lhci-reports-desktop
     docker compose -f "$DOCKER_COMPOSE_TEST_FILE" cp prod:/app/lhci-reports-desktop/. lhci-reports-desktop/ 2>/dev/null || echo "No lighthouse results to copy"
 
-    echo "🧹 Cleaning up Docker services..."
-    docker compose -f "$DOCKER_COMPOSE_TEST_FILE" down --volumes --remove-orphans || true
+    echo "🎉 Lighthouse desktop tests completed successfully!"
 }
 
 run_lighthouse_mobile_dind() {
-    echo "📱 Running Lighthouse Mobile tests using robust container approach"
-    echo "🔧 Setting up Docker network for DIND"
-    setup_docker_network
+    echo "📱 Running Lighthouse Mobile tests using Makefile approach"
+    
+    # Set DIND-specific environment variables
     export WEBSITE_DOMAIN="localhost"
     export NEXT_PUBLIC_PROD_PORT="3001"
     export DIND_MODE="1"
     export SHM_SIZE="2g"
-    echo "🚀 Starting production services with DIND configuration..."
-    docker compose -f "$DOCKER_COMPOSE_TEST_FILE" up -d --build --wait prod
-    echo "📦 Installing Chrome and Lighthouse CLI in prod container..."
-    docker compose -f "$DOCKER_COMPOSE_TEST_FILE" exec -T prod sh -lc "apk add --no-cache chromium chromium-chromedriver && npm install -g @lhci/cli@0.14.0"
-
-    echo "📂 Copying Lighthouse config files to prod container..."
-    docker compose -f "$DOCKER_COMPOSE_TEST_FILE" cp lighthouserc.mobile.js prod:/app/
-
-    echo "🧪 Testing Chrome installation..."
-    if docker compose -f "$DOCKER_COMPOSE_TEST_FILE" exec -T prod /usr/bin/chromium-browser --version; then
-        echo "✅ Chrome is installed and working"
+    
+    # Use Makefile target for complete lighthouse mobile workflow
+    echo "🚀 Running lighthouse mobile tests..."
+    if make lighthouse-mobile; then
+        echo "✅ Lighthouse mobile tests PASSED"
     else
-        echo "❌ Chrome installation test failed"
+        echo "❌ Lighthouse mobile tests FAILED"
         exit 1
     fi
-    echo "📱 Running Lighthouse mobile tests..."
-    docker compose -f "$DOCKER_COMPOSE_TEST_FILE" exec -T -w /app prod lhci autorun \
-      --config=lighthouserc.mobile.js \
-      --collect.url="http://localhost:${NEXT_PUBLIC_PROD_PORT}" \
-      --collect.chromePath=/usr/bin/chromium-browser \
-      --collect.chromeFlags="--no-sandbox --disable-dev-shm-usage --disable-extensions --disable-gpu --headless --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-software-rasterizer --disable-setuid-sandbox --single-process --no-zygote --js-flags=--max-old-space-size=4096"
 
-    echo "📂 Copying lighthouse results from prod container..."
+    # Copy results to lhci-reports-mobile directory for CI artifacts
+    echo "📂 Copying lighthouse mobile results..."
     mkdir -p lhci-reports-mobile
     docker compose -f "$DOCKER_COMPOSE_TEST_FILE" cp prod:/app/lhci-reports-mobile/. lhci-reports-mobile/ 2>/dev/null || echo "No lighthouse results to copy"
 
-    echo "🧹 Cleaning up Docker services..."
-    docker compose -f "$DOCKER_COMPOSE_TEST_FILE" down --volumes --remove-orphans || true
+    echo "🎉 Lighthouse mobile tests completed successfully!"
 }
 
 main() {
