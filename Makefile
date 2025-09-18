@@ -115,7 +115,7 @@ start: ## Start the application
 
 wait-for-dev: ## Wait for the dev service to be ready on port $(DEV_PORT).
 	@echo "Waiting for dev service to be ready on port $(DEV_PORT)..."
-	@while ! npx wait-on http://$(WEBSITE_DOMAIN):$(DEV_PORT) 2>/dev/null; do printf "."; done
+	@while ! curl -s -f http://$(WEBSITE_DOMAIN):$(DEV_PORT) >/dev/null 2>&1; do printf "."; sleep 1; done
 	@printf '\nDev service is up and running!\n'
 
 build: ## A tool build the project
@@ -183,7 +183,7 @@ start-prod: create-network ## Build image and start container in production mode
 
 wait-for-prod: ## Wait for the prod service to be ready on port $(NEXT_PUBLIC_PROD_PORT).
 	@echo "Waiting for prod service to be ready on port $(NEXT_PUBLIC_PROD_PORT)..."
-	@while ! npx wait-on http://$(WEBSITE_DOMAIN):$(NEXT_PUBLIC_PROD_PORT) 2>/dev/null; do printf "."; done
+	@while ! curl -s -f http://$(WEBSITE_DOMAIN):$(NEXT_PUBLIC_PROD_PORT) >/dev/null 2>&1; do printf "."; sleep 1; done
 	@printf '\nProd service is up and running!\n'
 
 test-unit-all: test-unit-client test-unit-server ## This command executes unit tests for both client and server environments.

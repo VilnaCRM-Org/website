@@ -20,53 +20,29 @@ setup_docker_network() {
 run_memory_leak_tests_dind() {
     echo "🧠 Running Memory Leak tests using Makefile approach"
     
-    setup_docker_network
-    echo "Building production container image..."
-    make build-prod
+    # Use Makefile target to start production services with network setup
     echo "🚀 Starting production services..."
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d --wait prod
-
-    echo "🧹 Cleaning up any existing Memory Leak containers..."
-    docker compose -f docker-compose.memory-leak.yml stop memory-leak 2>/dev/null || true
-    docker compose -f docker-compose.memory-leak.yml rm -f memory-leak 2>/dev/null || true
-
-    echo "Building memory leak container image..."
-    docker compose -f docker-compose.memory-leak.yml build
-
-    echo "🧠 Running Memory Leak container..."
-    docker compose -f docker-compose.memory-leak.yml up -d --wait memory-leak
-
-    echo "📂 Copying source files into memory leak container..."
-    docker compose -f docker-compose.memory-leak.yml exec -T memory-leak mkdir -p /app/src/test /app/src/config /app/pages/i18n
-    docker compose -f docker-compose.memory-leak.yml cp "src/test/memory-leak" "memory-leak:/app/src/test/memory-leak"
-    echo "✅ Memory leak test files copied successfully"
-
-    echo "📂 Copying required config files..."
-    docker compose -f docker-compose.memory-leak.yml cp "src/config" "memory-leak:/app/src/config"  
-    docker compose -f docker-compose.memory-leak.yml cp "pages/i18n" "memory-leak:/app/pages/i18n"
-
-    echo "🧹 Cleaning up previous memory leak results..."
-    docker compose -f docker-compose.memory-leak.yml exec -T memory-leak rm -rf /app/src/test/memory-leak/results || true
-
-    echo "🧠 Running Memlab memory leak tests..."
-    if docker compose -f docker-compose.memory-leak.yml exec -T -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_NAME=no-aws-header-name -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_VALUE=no-aws-header-value -w /app memory-leak node src/test/memory-leak/runMemlabTests.js; then
-        echo "✅ Memory leak tests PASSED"
+    make start-prod
+    
+    # Set environment variables for the memory leak tests
+    export NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_NAME=no-aws-header-name
+    export NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_VALUE=no-aws-header-value
+    
+    # Use Makefile target for complete memory leak testing workflow
+    echo "🧠 Running memory leak tests..."
+    if make test-memory-leak; then
+        echo "✅ Memory leak tests PASSED" 
     else
         echo "❌ Memory leak tests FAILED"
-        docker compose -f docker-compose.memory-leak.yml logs --tail=30 memory-leak
-        docker compose -f docker-compose.memory-leak.yml stop memory-leak || true
-        docker compose -f docker-compose.memory-leak.yml rm -f memory-leak || true
+        docker compose -f docker-compose.memory-leak.yml logs --tail=30 memory-leak || true
         exit 1
     fi
 
+    # Copy results to memory-leak-logs directory for CI artifacts
     echo "📂 Copying memory leak test results..."
     mkdir -p memory-leak-logs
     docker compose -f docker-compose.memory-leak.yml cp memory-leak:/app/src/test/memory-leak/results/. memory-leak-logs/ 2>/dev/null || echo "No memory leak results to copy"
     docker compose -f docker-compose.memory-leak.yml logs memory-leak > memory-leak-logs/test-execution.log 2>&1 || true
-
-    echo "🧹 Cleaning up memory leak container..."
-    docker compose -f docker-compose.memory-leak.yml stop memory-leak || true
-    docker compose -f docker-compose.memory-leak.yml rm -f memory-leak || true
 
     echo "🎉 Memory leak tests completed successfully in true DinD mode!"
 }
