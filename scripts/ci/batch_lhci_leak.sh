@@ -56,6 +56,14 @@ run_lighthouse_desktop_dind() {
     export DIND_MODE="1"
     export SHM_SIZE="2g"
     
+    # Ensure dependencies are installed and lhci is available
+    echo "📦 Installing dependencies..."
+    pnpm install --frozen-lockfile
+    
+    # Install lhci globally for DinD environment
+    echo "📦 Installing Lighthouse CLI..."
+    npm install -g @lhci/cli@0.14.0
+    
     # Use Makefile target for complete lighthouse desktop workflow
     echo "🚀 Running lighthouse desktop tests..."
     if make lighthouse-desktop; then
@@ -68,7 +76,7 @@ run_lighthouse_desktop_dind() {
     # Copy results to lhci-reports-desktop directory for CI artifacts
     echo "📂 Copying lighthouse desktop results..."
     mkdir -p lhci-reports-desktop
-    docker compose -f "$DOCKER_COMPOSE_TEST_FILE" cp prod:/app/lhci-reports-desktop/. lhci-reports-desktop/ 2>/dev/null || echo "No lighthouse results to copy"
+    cp -r lhci-reports-desktop/. lhci-reports-desktop/ 2>/dev/null || echo "No lighthouse results to copy"
 
     echo "🎉 Lighthouse desktop tests completed successfully!"
 }
@@ -82,6 +90,14 @@ run_lighthouse_mobile_dind() {
     export DIND_MODE="1"
     export SHM_SIZE="2g"
     
+    # Ensure dependencies are installed and lhci is available
+    echo "📦 Installing dependencies..."
+    pnpm install --frozen-lockfile
+    
+    # Install lhci globally for DinD environment
+    echo "📦 Installing Lighthouse CLI..."
+    npm install -g @lhci/cli@0.14.0
+    
     # Use Makefile target for complete lighthouse mobile workflow
     echo "🚀 Running lighthouse mobile tests..."
     if make lighthouse-mobile; then
@@ -94,7 +110,7 @@ run_lighthouse_mobile_dind() {
     # Copy results to lhci-reports-mobile directory for CI artifacts
     echo "📂 Copying lighthouse mobile results..."
     mkdir -p lhci-reports-mobile
-    docker compose -f "$DOCKER_COMPOSE_TEST_FILE" cp prod:/app/lhci-reports-mobile/. lhci-reports-mobile/ 2>/dev/null || echo "No lighthouse results to copy"
+    cp -r lhci-reports-mobile/. lhci-reports-mobile/ 2>/dev/null || echo "No lighthouse results to copy"
 
     echo "🎉 Lighthouse mobile tests completed successfully!"
 }
