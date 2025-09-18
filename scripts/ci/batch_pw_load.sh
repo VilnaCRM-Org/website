@@ -262,17 +262,17 @@ run_load_tests_dind() {
       --name "$k6_helper_container" --entrypoint sh k6 -lc 'tail -f /dev/null'
 
     echo "📂 Preparing K6 directories..."
-    docker exec -T "$k6_helper_container" mkdir -p /loadTests/results
+    docker exec "$k6_helper_container" mkdir -p /loadTests/results
     echo "📂 Copying K6 test files..."
     docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load cp "src/test/load/." "$k6_helper_container:/loadTests/"
     echo "✅ Load test files copied successfully"
 
     echo "🧹 Cleaning up previous load test results..."
-    docker exec -T "$k6_helper_container" sh -lc 'rm -rf /loadTests/results || true && mkdir -p /loadTests/results'
+    docker exec "$k6_helper_container" sh -lc 'rm -rf /loadTests/results || true && mkdir -p /loadTests/results'
 
     echo "⚡ Running K6 load tests..."
     ok=0
-    if docker exec -T -w /loadTests "$k6_helper_container" k6 run \
+    if docker exec -w /loadTests "$k6_helper_container" k6 run \
        --summary-trend-stats="avg,min,med,max,p(95),p(99)" \
        --out "web-dashboard=period=1s&export=/loadTests/results/homepage.html" /loadTests/homepage.js; then
         echo "✅ Load tests PASSED"
