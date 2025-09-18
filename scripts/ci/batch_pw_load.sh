@@ -264,7 +264,7 @@ run_load_tests_dind() {
     echo "📂 Preparing K6 directories..."
     docker exec "$k6_helper_container" mkdir -p /loadTests/results
     echo "📂 Copying K6 test files..."
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load cp "src/test/load/." "$k6_helper_container:/loadTests/"
+    docker cp "src/test/load/." "$k6_helper_container:/loadTests/"
     echo "✅ Load test files copied successfully"
 
     echo "🧹 Cleaning up previous load test results..."
