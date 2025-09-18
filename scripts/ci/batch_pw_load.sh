@@ -255,36 +255,39 @@ run_load_tests_dind() {
     echo "Building K6 container image..."
     docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load build k6
 
-    echo "⚡ Starting K6 service..."
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load up -d k6
+    echo "⚡ Starting K6 helper container..."
+    k6_helper_container="website-k6-helper"
+    docker rm -f "$k6_helper_container" 2>/dev/null || true
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load run -d \
+      --name "$k6_helper_container" --entrypoint sh k6 -lc 'tail -f /dev/null'
 
     echo "📂 Preparing K6 directories..."
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load exec -T k6 mkdir -p /loadTests/results
+    docker exec -T "$k6_helper_container" mkdir -p /loadTests/results
     echo "📂 Copying K6 test files..."
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load cp "src/test/load/." "k6:/loadTests/"
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load cp "src/test/load/." "$k6_helper_container:/loadTests/"
     echo "✅ Load test files copied successfully"
 
     echo "🧹 Cleaning up previous load test results..."
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load exec -T k6 sh -lc 'rm -rf /loadTests/results || true && mkdir -p /loadTests/results'
+    docker exec -T "$k6_helper_container" sh -lc 'rm -rf /loadTests/results || true && mkdir -p /loadTests/results'
 
     echo "⚡ Running K6 load tests..."
     ok=0
-    if docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load exec -T -w /loadTests k6 \
-       run --summary-trend-stats="avg,min,med,max,p(95),p(99)" \
+    if docker exec -T -w /loadTests "$k6_helper_container" k6 run \
+       --summary-trend-stats="avg,min,med,max,p(95),p(99)" \
        --out "web-dashboard=period=1s&export=/loadTests/results/homepage.html" /loadTests/homepage.js; then
         echo "✅ Load tests PASSED"
     else
         echo "❌ Load tests FAILED"
-        docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load logs --tail=30 k6 || true
+        docker logs --tail=200 "$k6_helper_container" || true
         ok=1
     fi
 
     echo "📂 Copying load test results..."
     mkdir -p src/test/load/reports
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load cp "k6:/loadTests/results/." "src/test/load/reports/" 2>/dev/null || echo "No load test results to copy"
+    docker cp "$k6_helper_container:/loadTests/results/." "src/test/load/reports/" 2>/dev/null || echo "No load test results to copy"
 
-    echo "🧹 Cleaning up K6 services..."
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load down --volumes --remove-orphans || true
+    echo "🧹 Cleaning up K6 helper container..."
+    docker rm -f "$k6_helper_container" || true
 
     [ "$ok" -eq 0 ] || exit 1
 
