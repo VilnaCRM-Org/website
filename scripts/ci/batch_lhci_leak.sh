@@ -60,9 +60,13 @@ run_lighthouse_desktop_dind() {
     echo "📦 Installing dependencies..."
     pnpm install --frozen-lockfile
     
-    # Install lhci globally for DinD environment
-    echo "📦 Installing Lighthouse CLI..."
+    # Install Chrome and Lighthouse CLI for DinD environment
+    echo "📦 Installing Chrome and Lighthouse CLI..."
+    apk add --no-cache chromium chromium-chromedriver
     npm install -g @lhci/cli@0.14.0
+    
+    # Set Chrome path for Lighthouse
+    export CHROME_PATH=/usr/bin/chromium-browser
     
     # Use Makefile target for complete lighthouse desktop workflow
     echo "🚀 Running lighthouse desktop tests..."
@@ -94,9 +98,13 @@ run_lighthouse_mobile_dind() {
     echo "📦 Installing dependencies..."
     pnpm install --frozen-lockfile
     
-    # Install lhci globally for DinD environment
-    echo "📦 Installing Lighthouse CLI..."
+    # Install Chrome and Lighthouse CLI for DinD environment
+    echo "📦 Installing Chrome and Lighthouse CLI..."
+    apk add --no-cache chromium chromium-chromedriver
     npm install -g @lhci/cli@0.14.0
+    
+    # Set Chrome path for Lighthouse
+    export CHROME_PATH=/usr/bin/chromium-browser
     
     # Use Makefile target for complete lighthouse mobile workflow
     echo "🚀 Running lighthouse mobile tests..."
