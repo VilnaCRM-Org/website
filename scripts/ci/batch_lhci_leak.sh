@@ -55,6 +55,7 @@ run_lighthouse_desktop_dind() {
     export NEXT_PUBLIC_PROD_PORT="3001"
     export DIND_MODE="1"
     export SHM_SIZE="2g"
+    export NEXT_PUBLIC_PROD_HOST_API_URL="http://localhost:3001"
     
     # Ensure dependencies are installed and lhci is available
     echo "📦 Installing dependencies..."
@@ -65,12 +66,19 @@ run_lighthouse_desktop_dind() {
     apk add --no-cache chromium chromium-chromedriver
     npm install -g @lhci/cli@0.14.0
     
-    # Set Chrome path for Lighthouse
+    # Set Chrome path and flags for Lighthouse in DinD environment
     export CHROME_PATH=/usr/bin/chromium-browser
+    export LIGHTHOUSE_CHROME_FLAGS="--no-sandbox --disable-dev-shm-usage --disable-extensions --disable-gpu --headless --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-software-rasterizer --disable-setuid-sandbox --single-process --no-zygote --js-flags=--max-old-space-size=4096"
     
-    # Use Makefile target for complete lighthouse desktop workflow
-    echo "🚀 Running lighthouse desktop tests..."
-    if make lighthouse-desktop; then
+    # Use Makefile target for production setup, then run lighthouse with DinD-compatible flags
+    echo "🚀 Starting production services..."
+    make start-prod
+    
+    echo "🚀 Running lighthouse desktop tests with DinD configuration..."
+    if pnpm lhci autorun \
+        --config=lighthouserc.desktop.js \
+        --collect.chromePath=/usr/bin/chromium-browser \
+        --collect.chromeFlags="--no-sandbox --disable-dev-shm-usage --disable-extensions --disable-gpu --headless --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-software-rasterizer --disable-setuid-sandbox --single-process --no-zygote --js-flags=--max-old-space-size=4096"; then
         echo "✅ Lighthouse desktop tests PASSED"
     else
         echo "❌ Lighthouse desktop tests FAILED"
@@ -93,6 +101,7 @@ run_lighthouse_mobile_dind() {
     export NEXT_PUBLIC_PROD_PORT="3001"
     export DIND_MODE="1"
     export SHM_SIZE="2g"
+    export NEXT_PUBLIC_PROD_HOST_API_URL="http://localhost:3001"
     
     # Ensure dependencies are installed and lhci is available
     echo "📦 Installing dependencies..."
@@ -103,12 +112,19 @@ run_lighthouse_mobile_dind() {
     apk add --no-cache chromium chromium-chromedriver
     npm install -g @lhci/cli@0.14.0
     
-    # Set Chrome path for Lighthouse
+    # Set Chrome path and flags for Lighthouse in DinD environment
     export CHROME_PATH=/usr/bin/chromium-browser
+    export LIGHTHOUSE_CHROME_FLAGS="--no-sandbox --disable-dev-shm-usage --disable-extensions --disable-gpu --headless --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-software-rasterizer --disable-setuid-sandbox --single-process --no-zygote --js-flags=--max-old-space-size=4096"
     
-    # Use Makefile target for complete lighthouse mobile workflow
-    echo "🚀 Running lighthouse mobile tests..."
-    if make lighthouse-mobile; then
+    # Use Makefile target for production setup, then run lighthouse with DinD-compatible flags
+    echo "🚀 Starting production services..."
+    make start-prod
+    
+    echo "🚀 Running lighthouse mobile tests with DinD configuration..."
+    if pnpm lhci autorun \
+        --config=lighthouserc.mobile.js \
+        --collect.chromePath=/usr/bin/chromium-browser \
+        --collect.chromeFlags="--no-sandbox --disable-dev-shm-usage --disable-extensions --disable-gpu --headless --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-software-rasterizer --disable-setuid-sandbox --single-process --no-zygote --js-flags=--max-old-space-size=4096"; then
         echo "✅ Lighthouse mobile tests PASSED"
     else
         echo "❌ Lighthouse mobile tests FAILED"
