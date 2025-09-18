@@ -41,7 +41,7 @@ DOCKER_COMPOSE_TEST_FILE    = -f docker-compose.test.yml
 DOCKER_COMPOSE_DEV_FILE     = -f docker-compose.yml
 COMMON_HEALTHCHECKS_FILE    = -f common-healthchecks.yml
 EXEC_DEV_TTYLESS            = $(DOCKER_COMPOSE) exec -T dev
-NEXT_DEV_CMD                = $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) up -d dev && make wait-for-dev
+NEXT_DEV_CMD                = $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) up -d dev && make wait-for-dev-health
 PLAYWRIGHT_DOCKER_CMD       = $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_TEST_FILE) exec playwright
 PLAYWRIGHT_TEST             = $(PLAYWRIGHT_DOCKER_CMD) sh -c
 
@@ -117,6 +117,20 @@ wait-for-dev: ## Wait for the dev service to be ready on port $(DEV_PORT).
 	@echo "Waiting for dev service to be ready on port $(DEV_PORT)..."
 	@while ! curl -s -f http://$(WEBSITE_DOMAIN):$(DEV_PORT) >/dev/null 2>&1; do printf "."; sleep 1; done
 	@printf '\nDev service is up and running!\n'
+
+wait-for-dev-health: ## Wait for the dev container to reach a healthy state.
+	@echo "Waiting for dev container to become healthy (timeout: 60s)..."
+	@for i in $$(seq 1 30); do \
+		if $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) ps | grep -q "dev.*(healthy)"; then \
+			echo "Dev container is healthy and ready!"; \
+			break; \
+		fi; \
+		sleep 2; \
+		if [ $$i -eq 30 ]; then \
+			echo "❌ Timed out waiting for dev container to become healthy"; \
+			exit 1; \
+		fi; \
+	done
 
 build: ## A tool build the project
 	$(DOCKER_COMPOSE) build
