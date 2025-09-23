@@ -96,44 +96,39 @@ run_lighthouse_desktop_dind() {
 
 run_lighthouse_mobile_dind() {
     echo "📱 Running Lighthouse Mobile tests using Makefile approach"
-    
+
     export WEBSITE_DOMAIN="localhost"
     export NEXT_PUBLIC_PROD_PORT="3001"
     export DIND_MODE="1"
     export SHM_SIZE="2g"
     export NEXT_PUBLIC_PROD_HOST_API_URL="http://website-prod:3001"
 
-    echo "📦 Installing dependencies..."
-    pnpm install --frozen-lockfile
+    echo "📦 Installing dependencies via Make (CI-aware)..."
+    CI=1 make install
 
-    echo "📦 Installing Chrome and Lighthouse CLI..."
-    apk add --no-cache chromium chromium-chromedriver
-    npm install -g @lhci/cli@0.14.0
+    # Install Chromium only if missing (DinD, non-interactive)
+    if ! command -v chromium-browser >/dev/null 2>&1 && ! command -v chromium >/dev/null 2>&1; then
+        echo "📦 Installing Chromium (DinD)..."
+        apk add --no-cache chromium chromium-chromedriver
+    fi
 
-    export CHROME_PATH=/usr/bin/chromium-browser
-    export LIGHTHOUSE_CHROME_FLAGS="--no-sandbox --disable-dev-shm-usage --disable-extensions --disable-gpu --headless --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-software-rasterizer --disable-setuid-sandbox --single-process --no-zygote --disable-web-security --disable-features=TranslateUI --disable-ipc-flooding-protection --js-flags=--max-old-space-size=4096"
+    # LHCI environment overrides for DinD Chrome path/flags
+    export LHCI_COLLECT__CHROME_PATH="/usr/bin/chromium-browser"
+    export LHCI_COLLECT__CHROME_FLAGS="--no-sandbox --disable-dev-shm-usage --disable-extensions --disable-gpu --headless --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-software-rasterizer --disable-setuid-sandbox --single-process --no-zygote --js-flags=--max-old-space-size=4096"
 
     echo "🚀 Starting production services..."
     make start-prod
 
-    echo "🌐 Connecting DinD host to Docker network..."
-    docker network connect website-network $(hostname) 2>/dev/null || echo "Already connected or connection not needed"
-    
-    echo "🚀 Running lighthouse mobile tests with DinD configuration..."
-    if pnpm lhci autorun \
-        --config=lighthouserc.mobile.js \
-        --collect.chromePath=/usr/bin/chromium-browser \
-        --collect.chromeFlags="--no-sandbox --disable-dev-shm-usage --disable-extensions --disable-gpu --headless --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-software-rasterizer --disable-setuid-sandbox --single-process --no-zygote --js-flags=--max-old-space-size=4096"; then
+    # Ensure artifacts directory exists; LHCI will write into it
+    mkdir -p lhci-reports-mobile
+
+    echo "🚀 Running Lighthouse mobile tests (via Make)..."
+    if CI=1 make lighthouse-mobile; then
         echo "✅ Lighthouse mobile tests PASSED"
     else
         echo "❌ Lighthouse mobile tests FAILED"
         exit 1
     fi
-
-    # Copy results to lhci-reports-mobile directory for CI artifacts
-    echo "📂 Copying lighthouse mobile results..."
-    mkdir -p lhci-reports-mobile
-    cp -r lhci-reports-mobile/. lhci-reports-mobile/ 2>/dev/null || echo "No lighthouse results to copy"
 
     echo "🎉 Lighthouse mobile tests completed successfully!"
 }

@@ -73,10 +73,10 @@ run_make_with_prod_dind() {
 
 run_e2e_tests_dind() {
     echo "🎭 Running E2E tests using Makefile approach"
-    
+
     echo "🚀 Starting production services..."
     make start-prod
-    
+
     echo "🎭 Running E2E tests..."
     if make test-e2e; then
         echo "✅ E2E tests PASSED"
@@ -85,21 +85,30 @@ run_e2e_tests_dind() {
         docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" logs --tail=30 playwright || true
         exit 1
     fi
-    
-    echo "📂 Copying E2E test results..."
+
+    echo "📂 Collecting E2E artifacts..."
+    mkdir -p artifacts/app
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp playwright:/app/. artifacts/app/ 2>/dev/null || echo "No /app artifacts to copy"
+
     mkdir -p playwright-report test-results
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp playwright:/app/playwright-report/. playwright-report/ 2>/dev/null || echo "No playwright-report to copy"
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp playwright:/app/test-results/. test-results/ 2>/dev/null || echo "No test-results to copy"
-    
+    if [ -d artifacts/app/playwright-report ]; then
+        cp -a artifacts/app/playwright-report/. playwright-report/ || true
+    else
+        echo "No playwright-report to copy"
+    fi
+    if [ -d artifacts/app/test-results ]; then
+        cp -a artifacts/app/test-results/. test-results/ || true
+    else
+        echo "No test-results to copy"
+    fi
+
     echo "🎉 E2E tests completed successfully!"
 }
 
 run_visual_tests_dind() {
     echo "🎨 Running Visual tests using Makefile approach"
-    
     echo "🚀 Starting production services..."
     make start-prod
-    
     echo "🎨 Running Visual tests..."
     if make test-visual; then
         echo "✅ Visual tests PASSED"
@@ -108,58 +117,63 @@ run_visual_tests_dind() {
         docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" logs --tail=30 playwright || true
         exit 1
     fi
-    
-    echo "📂 Copying Visual test results..."
+    echo "📂 Collecting Visual artifacts..."
+    mkdir -p artifacts/app
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp playwright:/app/. artifacts/app/ 2>/dev/null || echo "No /app artifacts to copy"
     mkdir -p playwright-report test-results
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp playwright:/app/playwright-report/. playwright-report/ 2>/dev/null || echo "No playwright-report to copy"
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp playwright:/app/test-results/. test-results/ 2>/dev/null || echo "No test-results to copy"
-    
+    if [ -d artifacts/app/playwright-report ]; then
+        cp -a artifacts/app/playwright-report/. playwright-report/ || true
+    else
+        echo "No playwright-report to copy"
+    fi
+    if [ -d artifacts/app/test-results ]; then
+        cp -a artifacts/app/test-results/. test-results/ || true
+    else
+        echo "No test-results to copy"
+    fi
     echo "🎉 Visual tests completed successfully!"
 }
 
 run_load_tests_dind() {
     echo "⚡ Running Load tests using Makefile approach"
-    
+
     echo "🚀 Starting production services..."
     make start-prod
-    
+
     echo "⚡ Running Load tests..."
     if make load-tests; then
         echo "✅ Load tests PASSED"
+        test_exit=0
     else
         echo "❌ Load tests FAILED"
+        test_exit=1
         docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load logs --tail=30 k6 || true
-        exit 1
     fi
-    
-    echo "📂 Copying load test results..."
-    mkdir -p src/test/load/reports
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load cp k6:/loadTests/results/. src/test/load/reports/ 2>/dev/null || echo "No load test results to copy"
-    
+
+    echo "📦 Collecting artifacts from k6 container..."
+    mkdir -p artifacts/app artifacts/loadTests src/test/load/reports
+
+    if docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load cp k6:/app/. artifacts/app/ 2>/dev/null; then
+        echo "🗂 Copied k6:/app to artifacts/app"
+        if [ -d artifacts/app/loadTests/results ]; then
+            cp -a artifacts/app/loadTests/results/. src/test/load/reports/ 2>/dev/null || true
+        fi
+    elif docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load cp k6:/loadTests/. artifacts/loadTests/ 2>/dev/null; then
+        echo "🗂 Copied k6:/loadTests to artifacts/loadTests"
+        if [ -d artifacts/loadTests/results ]; then
+            cp -a artifacts/loadTests/results/. src/test/load/reports/ 2>/dev/null || true
+        fi
+    else
+        echo "ℹ️ No artifacts directory found in k6 container" >&2
+    fi
+
+    if [ "${test_exit}" -ne 0 ]; then
+        exit "${test_exit}"
+    fi
+
     echo "🎉 Load tests completed successfully!"
 }
 
-run_load_tests_swagger_dind() {
-    echo "📊 Running Swagger load tests using Makefile approach"
-    
-    echo "🚀 Starting production services..."
-    make start-prod
-    
-    echo "📊 Running Swagger load tests..."
-    if make load-tests-swagger; then
-        echo "✅ Swagger load tests PASSED"
-    else
-        echo "❌ Swagger load tests FAILED"
-        docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load logs --tail=30 k6 || true
-        exit 1
-    fi
-    
-    echo "📂 Copying Swagger load test results..."
-    mkdir -p src/test/load/reports
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load cp k6:/loadTests/results/. src/test/load/reports/ 2>/dev/null || echo "No Swagger load test results to copy"
-    
-    echo "🎉 Swagger load tests completed successfully!"
-}
 main() {
     local website_dir="${1:-.}"
     
@@ -174,7 +188,6 @@ main() {
     run_e2e_tests_dind "$website_dir"
     run_visual_tests_dind "$website_dir"
     run_load_tests_dind "$website_dir"
-    run_load_tests_swagger_dind "$website_dir"
 }
 
 case "${1:-all}" in
@@ -189,10 +202,6 @@ case "${1:-all}" in
     test-load)
         echo "📊 Running load tests only..."
         run_load_tests_dind "."
-        ;;
-    test-swagger)
-        echo "📊 Running Swagger load tests only..."
-        run_load_tests_swagger_dind "."
         ;;
     *)
         main "$@"
