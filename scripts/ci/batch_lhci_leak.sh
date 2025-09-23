@@ -65,7 +65,7 @@ run_lighthouse_desktop_dind() {
     
     # Set Chrome path and flags for Lighthouse in DinD environment
     export CHROME_PATH=/usr/bin/chromium-browser
-    export LIGHTHOUSE_CHROME_FLAGS="--no-sandbox --disable-dev-shm-usage --disable-extensions --disable-gpu --headless --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-software-rasterizer --disable-setuid-sandbox --single-process --no-zygote --js-flags=--max-old-space-size=4096"
+    export LIGHTHOUSE_CHROME_FLAGS="--no-sandbox --disable-dev-shm-usage --disable-extensions --disable-gpu --headless --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-software-rasterizer --disable-setuid-sandbox --single-process --no-zygote --disable-web-security --disable-features=TranslateUI --disable-ipc-flooding-protection --js-flags=--max-old-space-size=4096"
     
     # Use Makefile target for production setup, then run lighthouse with DinD-compatible flags
     echo "🚀 Starting production services..."
@@ -111,7 +111,7 @@ run_lighthouse_mobile_dind() {
     npm install -g @lhci/cli@0.14.0
 
     export CHROME_PATH=/usr/bin/chromium-browser
-    export LIGHTHOUSE_CHROME_FLAGS="--no-sandbox --disable-dev-shm-usage --disable-extensions --disable-gpu --headless --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-software-rasterizer --disable-setuid-sandbox --single-process --no-zygote --js-flags=--max-old-space-size=4096"
+    export LIGHTHOUSE_CHROME_FLAGS="--no-sandbox --disable-dev-shm-usage --disable-extensions --disable-gpu --headless --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-software-rasterizer --disable-setuid-sandbox --single-process --no-zygote --disable-web-security --disable-features=TranslateUI --disable-ipc-flooding-protection --js-flags=--max-old-space-size=4096"
 
     echo "🚀 Starting production services..."
     make start-prod

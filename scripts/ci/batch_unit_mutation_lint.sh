@@ -14,114 +14,69 @@ setup_docker_network() {
     echo "✅ Docker network configured"
 }
 
-run_unit_tests_dind() {
-    echo "🧪 Running unit tests using Makefile approach"
-    setup_docker_network
+run_make_target_dind() {
+    local target="$1"
+    local description="$2"
+    local log_file="$3"
     
-    # Use Makefile target for complete unit testing workflow
-    echo "🚀 Running unit tests..."
-    if make test-unit-all; then
-        echo "✅ Unit tests PASSED"
+    echo "🚀 Running $description using Makefile approach"
+    echo "🔧 Executing: make $target CI=0"
+    
+    if [ -n "$log_file" ]; then
+        if make "$target" CI=0 > "$log_file" 2>&1; then
+            echo "✅ $description PASSED"
+        else
+            echo "❌ $description FAILED. Check $log_file for details."
+            exit 1
+        fi
     else
-        echo "❌ Unit tests FAILED"
-        exit 1
+        if make "$target" CI=0; then
+            echo "✅ $description PASSED"
+        else
+            echo "❌ $description FAILED"
+            exit 1
+        fi
     fi
     
-    echo "🎉 Unit tests completed successfully!"
+    echo "🎉 $description completed successfully!"
+}
+
+# Simplified wrapper functions
+run_unit_tests_dind() {
+    run_make_target_dind "test-unit-all" "Unit tests (client + server)"
 }
 
 run_mutation_tests_dind() {
-    echo "🧬 Running mutation tests using Makefile approach"
-    setup_docker_network
-    
-    # Use Makefile target for complete mutation testing workflow
-    echo "🚀 Running mutation tests..."
-    if make test-mutation; then
-        echo "✅ Mutation tests PASSED"
-    else
-        echo "❌ Mutation tests FAILED"
-        exit 1
-    fi
-    
-    echo "🎉 Mutation tests completed successfully!"
+    run_make_target_dind "test-mutation" "Mutation tests"
 }
 
 run_lint_tests_dind() {
-    echo "🔍 Running linting tests using Makefile approach"
-    setup_docker_network
-    
-    # Use Makefile target for complete linting workflow
-    echo "🚀 Running all linting tests..."
-    if make lint; then
-        echo "✅ All linting tests PASSED"
-    else
-        echo "❌ Some linting tests FAILED"
-        exit 1
-    fi
-    
-    echo "🎉 Linting tests completed successfully!"
+    run_make_target_dind "lint" "All linting tests"
 }
 
 run_eslint_dind() {
-    echo "🔍 Running ESLint using Makefile approach"
-    setup_docker_network
-    
-    echo "🚀 Running ESLint..."
-    if make lint-next; then
-        echo "✅ ESLint PASSED"
-    else
-        echo "❌ ESLint FAILED"
-        exit 1
-    fi
-    
-    echo "🎉 ESLint completed successfully!"
+    run_make_target_dind "lint-next" "ESLint check"
 }
 
 run_typescript_check_dind() {
-    echo "🔍 Running TypeScript check using Makefile approach"
-    setup_docker_network
-    
-    echo "🚀 Running TypeScript check..."
-    if make lint-tsc; then
-        echo "✅ TypeScript check PASSED"
-    else
-        echo "❌ TypeScript check FAILED"
-        exit 1
-    fi
-    
-    echo "🎉 TypeScript check completed successfully!"
+    run_make_target_dind "lint-tsc" "TypeScript check"
 }
 
 run_markdown_lint_dind() {
-    echo "🔍 Running Markdown linting using Makefile approach"
-    setup_docker_network
-    
-    echo "🚀 Running Markdown linting..."
-    if make lint-md; then
-        echo "✅ Markdown linting PASSED"
-    else
-        echo "❌ Markdown linting FAILED"
-        exit 1
-    fi
-    
-    echo "🎉 Markdown linting completed successfully!"
+    run_make_target_dind "lint-md" "Markdown linting"
 }
 
 run_all_lint_dind() {
     local website_dir="${1:-.}"
-    echo "🧹 Running all lint checks using Makefile approach..."
     mkdir -p "$website_dir/lint-logs"
+    run_make_target_dind "lint" "All lint checks" "$website_dir/lint-logs/all-lint.log"
     
-    # Run make lint and capture output for CI artifacts
-    echo "🔍 Running all linting tests with log capture..."
-    if make lint > "$website_dir/lint-logs/all-lint.log" 2>&1; then
-        echo "✅ All lint checks PASSED" | tee "$website_dir/lint-logs/summary.log"
-        echo "🎉 All lint checks completed successfully!"
-    else
-        echo "❌ Some lint checks FAILED" | tee "$website_dir/lint-logs/summary.log"
+    # Additional summary log for CI artifacts
+    echo "✅ All lint checks PASSED" > "$website_dir/lint-logs/summary.log" || {
+        echo "❌ Some lint checks FAILED" > "$website_dir/lint-logs/summary.log"
         echo "❌ Lint failures detected. Check $website_dir/lint-logs/ for details."
         exit 1
-    fi
+    }
 }
 
 main() {
@@ -135,6 +90,9 @@ main() {
     echo "📁 Working directory: $(pwd)"
     echo "🌐 Website directory: $website_dir"
     
+    # Setup network once at the beginning
+    setup_docker_network
+    
     # Run sequentially; stop on first failure via set -e
     run_unit_tests_dind "$website_dir"
     run_mutation_tests_dind "$website_dir"
@@ -144,26 +102,32 @@ main() {
 case "${1:-all}" in
     test-unit)
         echo "🧪 Running unit tests only..."
+        setup_docker_network
         run_unit_tests_dind "."
         ;;
     test-mutation)
         echo "🧬 Running mutation tests only..."
+        setup_docker_network
         run_mutation_tests_dind "."
         ;;
     test-lint)
         echo "🔍 Running lint tests only..."
+        setup_docker_network
         run_all_lint_dind "."
         ;;
     lint-eslint)
         echo "🔍 Running ESLint only..."
+        setup_docker_network
         run_eslint_dind "."
         ;;
     lint-typescript)
         echo "🔍 Running TypeScript check only..."
+        setup_docker_network
         run_typescript_check_dind "."
         ;;
     lint-markdown)
         echo "🔍 Running Markdown linting only..."
+        setup_docker_network
         run_markdown_lint_dind "."
         ;;
     *)
