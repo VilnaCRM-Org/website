@@ -45,63 +45,72 @@ run_memory_leak_tests_dind() {
 
 run_lighthouse_desktop_dind() {
     echo "🔦 Running Lighthouse Desktop tests using Makefile approach"
-    
+
     # Set DIND-specific environment variables
     export WEBSITE_DOMAIN="localhost"
     export NEXT_PUBLIC_PROD_PORT="3001"
     export DIND_MODE="1"
     export SHM_SIZE="2g"
-    # Use container name instead of localhost for DinD networking
-    export NEXT_PUBLIC_PROD_HOST_API_URL="http://website-prod:3001"
-    
-    # Ensure dependencies are installed and lhci is available
+
+    # Resolve target URL depending on DinD or not (DinD -> localhost)
+    if [ "${DIND_MODE}" = "1" ]; then
+        export NEXT_PUBLIC_PROD_HOST_API_URL="http://localhost:${NEXT_PUBLIC_PROD_PORT}"
+    else
+        export NEXT_PUBLIC_PROD_HOST_API_URL="http://website-prod:${NEXT_PUBLIC_PROD_PORT}"
+    fi
+
+    # Optional headers used by LHCI config; safe defaults for local runs
+    export NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_NAME=${NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_NAME:-no-aws-header-name}
+    export NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_VALUE=${NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_VALUE:-no-aws-header-value}
+
+    # Ensure dependencies are installed via Makefile (CI-aware)
     echo "📦 Installing dependencies..."
-    pnpm install --frozen-lockfile
-    
-    # Install Chrome and Lighthouse CLI for DinD environment
-    echo "📦 Installing Chrome and Lighthouse CLI..."
-    apk add --no-cache chromium chromium-chromedriver
-    npm install -g @lhci/cli@0.14.0
-    
-    # Set Chrome path and flags for Lighthouse in DinD environment
-    export CHROME_PATH=/usr/bin/chromium-browser
-    export LIGHTHOUSE_CHROME_FLAGS="--no-sandbox --disable-dev-shm-usage --disable-extensions --disable-gpu --headless --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-software-rasterizer --disable-setuid-sandbox --single-process --no-zygote --disable-web-security --disable-features=TranslateUI --disable-ipc-flooding-protection --js-flags=--max-old-space-size=4096"
-    
-    # Use Makefile target for production setup, then run lighthouse with DinD-compatible flags
+    CI=1 make install
+
+    # Install Chromium only if missing (DinD-friendly, non-interactive)
+    if ! command -v chromium-browser >/dev/null 2>&1 && ! command -v chromium >/dev/null 2>&1; then
+        echo "📦 Installing Chromium (DinD)..."
+        if command -v apk >/dev/null 2>&1; then
+            apk add --no-cache chromium chromium-chromedriver || true
+        fi
+    fi
+
+    # Start production services via Makefile (handles network + health)
     echo "🚀 Starting production services..."
     make start-prod
-    
-    # Connect the DinD host to the website-network to allow Chrome to reach containers
-    echo "🌐 Connecting DinD host to Docker network..."
-    docker network connect website-network $(hostname) 2>/dev/null || echo "Already connected or connection not needed"
-    
+
+    # LHCI configuration via env vars for Chrome path/flags in DinD
+    export LHCI_COLLECT__CHROME_PATH="/usr/bin/chromium-browser"
+    export LHCI_COLLECT__CHROME_FLAGS="--no-sandbox --disable-dev-shm-usage --disable-extensions --disable-gpu --headless --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-software-rasterizer --disable-setuid-sandbox --single-process --no-zygote --js-flags=--max-old-space-size=4096"
+
+    # Run Lighthouse via Makefile target
     echo "🚀 Running lighthouse desktop tests with DinD configuration..."
-    if pnpm lhci autorun \
-        --config=lighthouserc.desktop.js \
-        --collect.chromePath=/usr/bin/chromium-browser \
-        --collect.chromeFlags="--no-sandbox --disable-dev-shm-usage --disable-extensions --disable-gpu --headless --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-software-rasterizer --disable-setuid-sandbox --single-process --no-zygote --js-flags=--max-old-space-size=4096"; then
+    if CI=1 make lighthouse-desktop; then
         echo "✅ Lighthouse desktop tests PASSED"
     else
         echo "❌ Lighthouse desktop tests FAILED"
         exit 1
     fi
 
-    # Copy results to lhci-reports-desktop directory for CI artifacts
-    echo "📂 Copying lighthouse desktop results..."
+    # Ensure artifacts directory exists (reports are written by LHCI)
+    echo "📂 Ensuring lighthouse desktop reports directory exists..."
     mkdir -p lhci-reports-desktop
-    cp -r lhci-reports-desktop/. lhci-reports-desktop/ 2>/dev/null || echo "No lighthouse results to copy"
 
     echo "🎉 Lighthouse desktop tests completed successfully!"
 }
 
 run_lighthouse_mobile_dind() {
     echo "📱 Running Lighthouse Mobile tests using Makefile approach"
-
+    
     export WEBSITE_DOMAIN="localhost"
     export NEXT_PUBLIC_PROD_PORT="3001"
     export DIND_MODE="1"
     export SHM_SIZE="2g"
-    export NEXT_PUBLIC_PROD_HOST_API_URL="http://website-prod:3001"
+    if [ "${DIND_MODE}" = "1" ]; then
+        export NEXT_PUBLIC_PROD_HOST_API_URL="http://localhost:${NEXT_PUBLIC_PROD_PORT}"
+    else
+        export NEXT_PUBLIC_PROD_HOST_API_URL="http://website-prod:${NEXT_PUBLIC_PROD_PORT}"
+    fi
 
     echo "📦 Installing dependencies via Make (CI-aware)..."
     CI=1 make install
@@ -118,6 +127,7 @@ run_lighthouse_mobile_dind() {
 
     echo "🚀 Starting production services..."
     make start-prod
+    make wait-for-prod
 
     # Ensure artifacts directory exists; LHCI will write into it
     mkdir -p lhci-reports-mobile
