@@ -253,11 +253,43 @@ load-tests-swagger: start-prod wait-for-prod-health ## Execute comprehensive loa
 lighthouse-desktop: ## Run a Lighthouse audit using desktop viewport settings to evaluate performance and best practices
 	$(LHCI_DESKTOP)
 
+lighthouse-desktop-dind: ## Run Lighthouse desktop audit in DIND mode using prod container with explicit Chrome configuration
+	@echo "🔦 Running Lighthouse desktop tests in DIND mode..."
+	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_TEST_FILE) exec -T -w /app prod lhci autorun \
+		--config=lighthouserc.desktop.js \
+		--collect.url="http://localhost:$(NEXT_PUBLIC_PROD_PORT)" \
+		--collect.chromePath=/usr/bin/chromium-browser \
+		--collect.chromeFlags="--no-sandbox --disable-dev-shm-usage --disable-extensions --disable-gpu --headless --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-software-rasterizer --disable-setuid-sandbox --single-process --no-zygote --js-flags=--max-old-space-size=4096"
+	@echo "✅ Lighthouse desktop DIND tests completed"
+
 lighthouse-mobile: ## Run a Lighthouse audit using mobile viewport settings to evaluate mobile UX and performance
 	$(LHCI_MOBILE)
 
+lighthouse-mobile-dind: ## Run Lighthouse mobile audit in DIND mode using prod container with explicit Chrome configuration
+	@echo "📱 Running Lighthouse mobile tests in DIND mode..."
+	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_TEST_FILE) exec -T -w /app prod lhci autorun \
+		--config=lighthouserc.mobile.js \
+		--collect.url="http://localhost:$(NEXT_PUBLIC_PROD_PORT)" \
+		--collect.chromePath=/usr/bin/chromium-browser \
+		--collect.chromeFlags="--no-sandbox --disable-dev-shm-usage --disable-extensions --disable-gpu --headless --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-software-rasterizer --disable-setuid-sandbox --single-process --no-zygote --js-flags=--max-old-space-size=4096"
+	@echo "✅ Lighthouse mobile DIND tests completed"
+
 install: ## Install node modules using pnpm (CI=1 runs locally, default runs in container) — uses frozen lockfile and affects node_modules via volumes
 	$(PNPM_EXEC) pnpm install --frozen-lockfile
+
+install-chromium-lhci: ## Install Chromium and Lighthouse CLI in the prod container for DIND testing
+	@echo "📦 Installing Chromium and Lighthouse CLI in prod container..."
+	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_TEST_FILE) exec -T prod sh -lc "apk add --no-cache chromium chromium-chromedriver && npm install -g @lhci/cli@0.14.0"
+	@echo "✅ Chromium and Lighthouse CLI installation completed"
+
+test-chromium: ## Test Chromium browser installation and version in the prod container
+	@echo "🧪 Testing Chromium browser installation..."
+	@if $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_TEST_FILE) exec -T prod /usr/bin/chromium-browser --version; then \
+		echo "✅ Chromium is installed and working"; \
+	else \
+		echo "❌ Chromium installation test failed"; \
+		exit 1; \
+	fi
 
 update: ## Update node modules to latest allowed versions — always runs locally, updates lockfile (run before committing dependency changes)
 	pnpm update
