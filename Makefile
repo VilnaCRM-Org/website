@@ -41,7 +41,7 @@ DOCKER_COMPOSE_TEST_FILE    = -f docker-compose.test.yml
 DOCKER_COMPOSE_DEV_FILE     = -f docker-compose.yml
 COMMON_HEALTHCHECKS_FILE    = -f common-healthchecks.yml
 EXEC_DEV_TTYLESS            = $(DOCKER_COMPOSE) exec -T dev
-NEXT_DEV_CMD                = $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) up -d dev && make wait-for-dev-health
+NEXT_DEV_CMD                = $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) up -d dev && make wait-for-dev
 PLAYWRIGHT_DOCKER_CMD       = $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_TEST_FILE) exec playwright
 PLAYWRIGHT_TEST             = $(PLAYWRIGHT_DOCKER_CMD) sh -c
 
@@ -118,20 +118,6 @@ wait-for-dev: ## Wait for the dev service to be ready on port $(DEV_PORT).
 	@while ! curl -s -f http://$(WEBSITE_DOMAIN):$(DEV_PORT) >/dev/null 2>&1; do printf "."; sleep 1; done
 	@printf '\nDev service is up and running!\n'
 
-wait-for-dev-health: ## Wait for the dev container to reach a healthy state.
-	@echo "Waiting for dev container to become healthy (timeout: 60s)..."
-	@for i in $$(seq 1 30); do \
-		if $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) ps | grep -q "dev.*(healthy)"; then \
-			echo "Dev container is healthy and ready!"; \
-			break; \
-		fi; \
-		sleep 2; \
-		if [ $$i -eq 30 ]; then \
-			echo "❌ Timed out waiting for dev container to become healthy"; \
-			exit 1; \
-		fi; \
-	done
-
 create-temp-dev-container-dind: ## Create a temporary dev container for DIND testing (TEMP_CONTAINER_NAME required)
 	@if [ -z "$(TEMP_CONTAINER_NAME)" ]; then \
 		echo "Error: TEMP_CONTAINER_NAME is required. Usage: make create-temp-dev-container-dind TEMP_CONTAINER_NAME=my-container"; \
@@ -164,9 +150,9 @@ run-unit-tests-dind: ## Run unit tests in DIND container (TEMP_CONTAINER_NAME re
 		exit 1; \
 	fi
 	@echo "🧪 Running client-side tests in container $(TEMP_CONTAINER_NAME)..."
-	docker exec "$(TEMP_CONTAINER_NAME)" sh -lc "cd /app && make test-unit-client"
+	docker exec "$(TEMP_CONTAINER_NAME)" sh -lc "cd /app && make test-unit-client CI=1"
 	@echo "🧪 Running server-side tests in container $(TEMP_CONTAINER_NAME)..."
-	docker exec "$(TEMP_CONTAINER_NAME)" sh -lc "cd /app && make test-unit-server"
+	docker exec "$(TEMP_CONTAINER_NAME)" sh -lc "cd /app && make test-unit-server CI=1"
 
 run-mutation-tests-dind: ## Run mutation tests in DIND container (TEMP_CONTAINER_NAME required)
 	@if [ -z "$(TEMP_CONTAINER_NAME)" ]; then \
@@ -174,7 +160,7 @@ run-mutation-tests-dind: ## Run mutation tests in DIND container (TEMP_CONTAINER
 		exit 1; \
 	fi
 	@echo "🧬 Running Stryker mutation tests in container $(TEMP_CONTAINER_NAME)..."
-	docker exec "$(TEMP_CONTAINER_NAME)" sh -lc "cd /app && pnpm stryker run"
+	docker exec "$(TEMP_CONTAINER_NAME)" sh -lc "cd /app && make test-mutation CI=1"
 
 run-eslint-tests-dind: ## Run ESLint tests in DIND container (TEMP_CONTAINER_NAME required)
 	@if [ -z "$(TEMP_CONTAINER_NAME)" ]; then \
