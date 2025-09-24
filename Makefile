@@ -132,6 +132,75 @@ wait-for-dev-health: ## Wait for the dev container to reach a healthy state.
 		fi; \
 	done
 
+create-temp-dev-container-dind: ## Create a temporary dev container for DIND testing (TEMP_CONTAINER_NAME required)
+	@if [ -z "$(TEMP_CONTAINER_NAME)" ]; then \
+		echo "Error: TEMP_CONTAINER_NAME is required. Usage: make create-temp-dev-container-dind TEMP_CONTAINER_NAME=my-container"; \
+		exit 1; \
+	fi
+	@echo "🧹 Cleaning old temp container $(TEMP_CONTAINER_NAME)..."
+	@docker rm -f "$(TEMP_CONTAINER_NAME)" 2>/dev/null || true
+	@echo "🚀 Starting temp dev container $(TEMP_CONTAINER_NAME)..."
+	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) run -d --name "$(TEMP_CONTAINER_NAME)" --entrypoint sh dev -lc 'sleep infinity'
+
+copy-source-to-container-dind: ## Copy source code to container for DIND testing (TEMP_CONTAINER_NAME required)
+	@if [ -z "$(TEMP_CONTAINER_NAME)" ]; then \
+		echo "Error: TEMP_CONTAINER_NAME is required. Usage: make copy-source-to-container-dind TEMP_CONTAINER_NAME=my-container"; \
+		exit 1; \
+	fi
+	@echo "📂 Copying source into temp container $(TEMP_CONTAINER_NAME)..."
+	docker cp "./." "$(TEMP_CONTAINER_NAME):/app/"
+
+install-deps-in-container-dind: ## Install dependencies in container for DIND testing (TEMP_CONTAINER_NAME required)
+	@if [ -z "$(TEMP_CONTAINER_NAME)" ]; then \
+		echo "Error: TEMP_CONTAINER_NAME is required. Usage: make install-deps-in-container-dind TEMP_CONTAINER_NAME=my-container"; \
+		exit 1; \
+	fi
+	@echo "📦 Installing deps in container $(TEMP_CONTAINER_NAME)..."
+	docker exec "$(TEMP_CONTAINER_NAME)" sh -lc "cd /app && npm install -g pnpm && pnpm install --frozen-lockfile"
+
+run-unit-tests-dind: ## Run unit tests in DIND container (TEMP_CONTAINER_NAME required)
+	@if [ -z "$(TEMP_CONTAINER_NAME)" ]; then \
+		echo "Error: TEMP_CONTAINER_NAME is required. Usage: make run-unit-tests-dind TEMP_CONTAINER_NAME=my-container"; \
+		exit 1; \
+	fi
+	@echo "🧪 Running client-side tests in container $(TEMP_CONTAINER_NAME)..."
+	docker exec "$(TEMP_CONTAINER_NAME)" sh -lc "cd /app && make test-unit-client"
+	@echo "🧪 Running server-side tests in container $(TEMP_CONTAINER_NAME)..."
+	docker exec "$(TEMP_CONTAINER_NAME)" sh -lc "cd /app && make test-unit-server"
+
+run-mutation-tests-dind: ## Run mutation tests in DIND container (TEMP_CONTAINER_NAME required)
+	@if [ -z "$(TEMP_CONTAINER_NAME)" ]; then \
+		echo "Error: TEMP_CONTAINER_NAME is required. Usage: make run-mutation-tests-dind TEMP_CONTAINER_NAME=my-container"; \
+		exit 1; \
+	fi
+	@echo "🧬 Running Stryker mutation tests in container $(TEMP_CONTAINER_NAME)..."
+	docker exec "$(TEMP_CONTAINER_NAME)" sh -lc "cd /app && pnpm stryker run"
+
+run-eslint-tests-dind: ## Run ESLint tests in DIND container (TEMP_CONTAINER_NAME required)
+	@if [ -z "$(TEMP_CONTAINER_NAME)" ]; then \
+		echo "Error: TEMP_CONTAINER_NAME is required. Usage: make run-eslint-tests-dind TEMP_CONTAINER_NAME=my-container"; \
+		exit 1; \
+	fi
+	@echo "🔍 Running ESLint in container $(TEMP_CONTAINER_NAME)..."
+	docker exec "$(TEMP_CONTAINER_NAME)" sh -lc "cd /app && make lint-next CI=1"
+
+run-typescript-tests-dind: ## Run TypeScript tests in DIND container (TEMP_CONTAINER_NAME required)
+	@if [ -z "$(TEMP_CONTAINER_NAME)" ]; then \
+		echo "Error: TEMP_CONTAINER_NAME is required. Usage: make run-typescript-tests-dind TEMP_CONTAINER_NAME=my-container"; \
+		exit 1; \
+	fi
+	@echo "🔍 Running TypeScript check in container $(TEMP_CONTAINER_NAME)..."
+	docker exec "$(TEMP_CONTAINER_NAME)" sh -lc "cd /app && make lint-tsc CI=1"
+
+run-markdown-lint-tests-dind: ## Run Markdown linting tests in DIND container (TEMP_CONTAINER_NAME required)
+	@if [ -z "$(TEMP_CONTAINER_NAME)" ]; then \
+		echo "Error: TEMP_CONTAINER_NAME is required. Usage: make run-markdown-lint-tests-dind TEMP_CONTAINER_NAME=my-container"; \
+		exit 1; \
+	fi
+	@echo "🔍 Running Markdown linting in container $(TEMP_CONTAINER_NAME)..."
+	docker exec "$(TEMP_CONTAINER_NAME)" sh -lc "cd /app && make lint-md CI=1"
+
+
 build: ## A tool build the project
 	$(DOCKER_COMPOSE) build
 
