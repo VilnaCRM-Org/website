@@ -72,160 +72,100 @@ run_make_with_prod_dind() {
 }
 
 run_e2e_tests_dind() {
-    echo "🎭 Running E2E tests using Makefile approach"
+    echo "🎭 Running E2E tests in DIND mode (matching local behavior)"
 
-    echo "🚀 Starting production services..."
+    echo "🔧 Setting up Docker network for DIND"
+    setup_docker_network
+      
+    echo "🚀 Starting production services and waiting for readiness..."
     make start-prod
 
-    echo "🎭 Running E2E tests..."
-    test_exit=0
-    if make test-e2e; then
-        echo "✅ E2E tests PASSED"
+    echo "📂 Copying all project files to Playwright container..."
+    if docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp "." "playwright:/app/"; then
+        echo "✅ All project files copied successfully"
     else
-        echo "❌ E2E tests FAILED"
-        test_exit=1
-        # Show recent Playwright container logs and a quick test dir listing for debugging
-        docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" logs --tail=30 playwright || true
-        docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T playwright sh -lc 'pwd; ls -la src/test/e2e 2>/dev/null || echo "src/test/e2e not found"' || true
-
-        echo "🔁 Retrying E2E tests with direct Playwright exec (no shell wrapper)..."
-        if make e2e-direct; then
-            echo "✅ E2E tests PASSED on retry"
-            test_exit=0
-        else
-            echo "❌ E2E tests FAILED on retry"
-            test_exit=1
-        fi
+        echo "❌ Failed to copy project files"
+        exit 1
     fi
 
-    echo "📂 Collecting E2E artifacts..."
-    mkdir -p artifacts/app
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp playwright:/app/. artifacts/app/ 2>/dev/null || echo "No /app artifacts to copy"
+    echo "🎭 Running Playwright E2E tests with service-based connectivity..."
+    PROD_URL="http://prod:3001"
+    echo "🔍 Running E2E tests..."
+    make test-e2e
 
+    echo "📂 Copying E2E test results..."
     mkdir -p playwright-report test-results
-    if [ -d artifacts/app/playwright-report ]; then
-        cp -a artifacts/app/playwright-report/. playwright-report/ || true
-    else
-        echo "No playwright-report to copy"
-    fi
-    if [ -d artifacts/app/test-results ]; then
-        cp -a artifacts/app/test-results/. test-results/ || true
-    else
-        echo "No test-results to copy"
-    fi
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp "playwright:/app/playwright-report/." "playwright-report/" 2>/dev/null || echo "No playwright-report to copy"
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp "playwright:/app/test-results/." "test-results/" 2>/dev/null || echo "No test-results to copy"
 
-    if [ "$test_exit" -ne 0 ]; then
-        exit "$test_exit"
-    fi
-
-    echo "🎉 E2E tests completed successfully!"
 }
 
 run_visual_tests_dind() {
-    echo "🎨 Running Visual tests using Makefile approach"
+    echo "🎨 Running Visual tests in DIND mode (matching local behavior)"
+
+    echo "🔧 Setting up Docker network for DIND"
+    setup_docker_network
+
     echo "🚀 Starting production services..."
     make start-prod
-    echo "🎨 Running Visual tests..."
-	test_exit=0
-	if make test-visual; then
-        echo "✅ Visual tests PASSED"
-    else
-        echo "❌ Visual tests FAILED"
-		test_exit=1
-        docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" logs --tail=30 playwright || true
-		docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T playwright sh -lc 'pwd; ls -la src/test/visual 2>/dev/null || echo "src/test/visual not found"' || true
 
-        echo "🔁 Retrying Visual tests with direct Playwright exec (no shell wrapper)..."
-        if make visual-direct; then
-            echo "✅ Visual tests PASSED on retry"
-            test_exit=0
-        else
-            echo "❌ Visual tests FAILED on retry"
-            test_exit=1
-        fi
+    echo "Creating directories in container..."
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T playwright mkdir -p /app/src/test /app/src/config /app/pages/i18n
+
+    echo "📂 Copying all project files to Playwright container..."
+    if docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp "." "playwright:/app/"; then
+        echo "✅ All project files copied successfully"
+    else
+        echo "❌ Failed to copy project files"
+        exit 1
     fi
-	echo "📂 Collecting Visual artifacts..."
-    mkdir -p artifacts/app
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp playwright:/app/. artifacts/app/ 2>/dev/null || echo "No /app artifacts to copy"
+
+    echo "🎨 Running Playwright Visual tests with service-based connectivity..."
+    PROD_URL="http://prod:3001"
+    echo "🔍 Running Visual tests..."
+    make test-visual
+
+    echo "📂 Copying Visual test results..."
     mkdir -p playwright-report test-results
-    if [ -d artifacts/app/playwright-report ]; then
-        cp -a artifacts/app/playwright-report/. playwright-report/ || true
-    else
-        echo "No playwright-report to copy"
-    fi
-    if [ -d artifacts/app/test-results ]; then
-        cp -a artifacts/app/test-results/. test-results/ || true
-    else
-        echo "No test-results to copy"
-    fi
-	if [ "$test_exit" -ne 0 ]; then
-		exit "$test_exit"
-	fi
-    echo "🎉 Visual tests completed successfully!"
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp "playwright:/app/playwright-report/." "playwright-report/" 2>/dev/null || echo "No playwright-report to copy"
+    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp "playwright:/app/test-results/." "test-results/" 2>/dev/null || echo "No test-results to copy"
+
+    echo "🎉 Visual tests completed successfully in DIND mode!"
 }
 
 run_load_tests_dind() {
-    echo "⚡ Running Load tests using Makefile approach"
+    echo "⚡ Running K6 Load tests in true Docker-in-Docker mode"
+    
+    echo "🔧 Setting up Docker network for DIND"
+    setup_docker_network
 
     echo "🚀 Starting production services..."
     make start-prod
 
-    echo "⚡ Running Load tests..."
-    test_exit=0
-    # First, verify whether the k6 container sees the mounted /loadTests directory in this DinD context
-    echo "🧪 Verifying k6 test volume mount..."
-    if docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load run --rm k6 sh -lc 'test -f /loadTests/homepage.js'; then
-        # Happy path: volume is mounted correctly, use Make target
-        if make load-tests; then
-            echo "✅ Load tests PASSED"
-            test_exit=0
-        else
-            echo "❌ Load tests FAILED"
-            test_exit=1
-            docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load logs --tail=30 k6 || true
-        fi
+    make build-k6
+
+    echo "⚡ Starting K6 helper container..."
+    k6_helper_container="website-k6-helper"
+    make create-k6-helper-container-dind K6_HELPER_NAME="$k6_helper_container"
+
+    echo "📂 Preparing K6 directories..."
+    docker exec "$k6_helper_container" mkdir -p /loadTests/results
+    echo "📂 Copying K6 test files..."
+    docker cp "src/test/load/." "$k6_helper_container:/loadTests/"
+    echo "✅ Load test files copied successfully"
+
+    if make run-load-tests-dind K6_HELPER_NAME="$k6_helper_container"; then
+        echo "✅ Load tests PASSED"
     else
-        echo "⚠️ k6 test volume not visible via standard Compose mount in DinD. Falling back to explicit bind mount."
-        HOST_LOAD_DIR="$(pwd)/src/test/load"
-        K6_TEST_SCRIPT_PATH="${K6_TEST_SCRIPT:-/loadTests/homepage.js}"
-        K6_RESULTS_FILE_PATH="${K6_RESULTS_FILE:-/loadTests/results/homepage.html}"
-        if [ -d "$HOST_LOAD_DIR" ]; then
-            if docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load run --rm -v "$HOST_LOAD_DIR:/loadTests" k6 run --summary-trend-stats="avg,min,med,max,p(95),p(99)" --out "web-dashboard=period=1s&export=$K6_RESULTS_FILE_PATH" "$K6_TEST_SCRIPT_PATH"; then
-                echo "✅ Load tests PASSED (fallback mode)"
-                test_exit=0
-            else
-                echo "❌ Load tests FAILED (fallback mode)"
-                test_exit=1
-                docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load logs --tail=30 k6 || true
-            fi
-        else
-            echo "❌ Host load test directory not found: $HOST_LOAD_DIR"
-            test_exit=1
-        fi
+        echo "❌ Load tests FAILED"
+        exit 1
     fi
 
-    echo "📦 Collecting artifacts from k6 container..."
-    mkdir -p artifacts/app artifacts/loadTests src/test/load/reports
+    echo "📂 Copying load test results..."
+    mkdir -p src/test/load/reports
+    docker cp "$k6_helper_container:/loadTests/results/." "src/test/load/reports/" 2>/dev/null || echo "No load test results to copy"
 
-    if docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load cp k6:/app/. artifacts/app/ 2>/dev/null; then
-        echo "🗂 Copied k6:/app to artifacts/app"
-        if [ -d artifacts/app/loadTests/results ]; then
-            cp -a artifacts/app/loadTests/results/. src/test/load/reports/ 2>/dev/null || true
-        fi
-    elif docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" --profile load cp k6:/loadTests/. artifacts/loadTests/ 2>/dev/null; then
-        echo "🗂 Copied k6:/loadTests to artifacts/loadTests"
-        if [ -d artifacts/loadTests/results ]; then
-            cp -a artifacts/loadTests/results/. src/test/load/reports/ 2>/dev/null || true
-        fi
-    else
-        echo "ℹ️ No artifacts directory found in k6 container" >&2
-    fi
-
-    if [ "${test_exit}" -ne 0 ]; then
-        exit "${test_exit}"
-    fi
-
-    echo "🎉 Load tests completed successfully!"
+    echo "🎉 Load tests completed successfully in true DinD mode!"
 }
 
 main() {

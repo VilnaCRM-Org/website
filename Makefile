@@ -160,7 +160,7 @@ run-mutation-tests-dind: ## Run mutation tests in DIND container (TEMP_CONTAINER
 		exit 1; \
 	fi
 	@echo "🧬 Running Stryker mutation tests in container $(TEMP_CONTAINER_NAME)..."
-	docker exec "$(TEMP_CONTAINER_NAME)" sh -lc "cd /app && make test-mutation CI=1"
+	docker exec "$(TEMP_CONTAINER_NAME)" sh -lc "cd /app && pnpm stryker run"
 
 run-eslint-tests-dind: ## Run ESLint tests in DIND container (TEMP_CONTAINER_NAME required)
 	@if [ -z "$(TEMP_CONTAINER_NAME)" ]; then \
@@ -185,6 +185,31 @@ run-markdown-lint-tests-dind: ## Run Markdown linting tests in DIND container (T
 	fi
 	@echo "🔍 Running Markdown linting in container $(TEMP_CONTAINER_NAME)..."
 	docker exec "$(TEMP_CONTAINER_NAME)" sh -lc "cd /app && make lint-md CI=1"
+
+create-k6-helper-container-dind: ## Create a detached K6 helper container for DIND testing (K6_HELPER_NAME required)
+	@if [ -z "$(K6_HELPER_NAME)" ]; then \
+		echo "Error: K6_HELPER_NAME is required. Usage: make create-k6-helper-container-dind K6_HELPER_NAME=my-k6-helper"; \
+		exit 1; \
+	fi
+	@echo "🧹 Cleaning old K6 helper container $(K6_HELPER_NAME)..."
+	@docker rm -f "$(K6_HELPER_NAME)" 2>/dev/null || true
+	@echo "🚀 Starting K6 helper container $(K6_HELPER_NAME)..."
+	$(DOCKER_COMPOSE) $(COMMON_HEALTHCHECKS_FILE) $(DOCKER_COMPOSE_TEST_FILE) --profile load run -d \
+		--name "$(K6_HELPER_NAME)" --entrypoint sh k6 -lc 'tail -f /dev/null'
+
+build-k6: ## Build K6 load testing container
+	@echo "🔨 Building K6 container image..."
+	$(DOCKER_COMPOSE) $(COMMON_HEALTHCHECKS_FILE) $(DOCKER_COMPOSE_TEST_FILE) --profile load build k6
+
+run-load-tests-dind: ## Run K6 load tests in DIND container without starting services (K6_HELPER_NAME required)
+	@if [ -z "$(K6_HELPER_NAME)" ]; then \
+		echo "Error: K6_HELPER_NAME is required. Usage: make run-load-tests-dind K6_HELPER_NAME=my-k6-helper"; \
+		exit 1; \
+	fi
+	@echo "⚡ Running K6 load tests in container $(K6_HELPER_NAME)..."
+	docker exec -w /loadTests "$(K6_HELPER_NAME)" k6 run \
+		--summary-trend-stats="avg,min,med,max,p(95),p(99)" \
+		--out "web-dashboard=period=1s&export=/loadTests/results/homepage.html" /loadTests/homepage.js
 
 
 build: ## A tool build the project
