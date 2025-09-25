@@ -13,17 +13,18 @@ var ROUTE_MAP = Object.freeze({
 });
 // Build allowed base segments from ROUTE_MAP to avoid manual maintenance
 var ALLOWED_BASES = (function () {
-    var bases = { '': true };
-    for (var key in ROUTE_MAP) {
-        if (Object.prototype.hasOwnProperty.call(ROUTE_MAP, key)) {
-            var parts = key.split('/');
-            var base = parts[1] || '';
-            if (base) {
-                bases[base] = true;
-            }
+    var bases = Object.create(null);
+    bases[''] = true;
+    var keys = Object.keys(ROUTE_MAP);
+    for (var i = 0; i < keys.length; i++) {
+        var key = keys[i];
+        var parts = key.split('/');
+        var base = parts[1] || '';
+        if (base) {
+            bases[base] = true;
         }
     }
-    return bases;
+    return Object.freeze(bases);
 }());
 function handler(event) {
     var request = event.request;
