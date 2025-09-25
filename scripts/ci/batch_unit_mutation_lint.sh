@@ -94,6 +94,7 @@ run_lint_tests_dind() {
     make install-deps-in-container-dind TEMP_CONTAINER_NAME="$temp_dev_container"
     
     mkdir -p "lint-logs"
+    : > "lint-logs/summary.log"
     
     if make run-eslint-tests-dind TEMP_CONTAINER_NAME="$temp_dev_container"; then
         echo "✅ ESLint PASSED" | tee -a "lint-logs/summary.log"
