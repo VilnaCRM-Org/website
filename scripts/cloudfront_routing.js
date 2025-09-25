@@ -47,7 +47,8 @@ function handler(event) {
 
         var base = segments[1] || '';
         var hasExtension = lastSegment.indexOf('.') !== -1;
-        if (!hasExtension) {
+        var isSingleSegment = (segments.length === 2) || (segments.length === 3 && lastSegment === '');
+        if (!hasExtension && isSingleSegment) {
             var isAllowedBase = Object.prototype.hasOwnProperty.call(ALLOWED_BASES, base);
             if (!isAllowedBase) {
                 return {
