@@ -11,6 +11,20 @@ var ROUTE_MAP = Object.freeze({
     '/en/': '/en/index.html',
     '/swagger': '/swagger.html',
 });
+// Build allowed base segments from ROUTE_MAP to avoid manual maintenance
+var ALLOWED_BASES = (function () {
+    var bases = { '': true };
+    for (var key in ROUTE_MAP) {
+        if (Object.prototype.hasOwnProperty.call(ROUTE_MAP, key)) {
+            var parts = key.split('/');
+            var base = parts[1] || '';
+            if (base) {
+                bases[base] = true;
+            }
+        }
+    }
+    return bases;
+}());
 function handler(event) {
     var request = event.request;
 
@@ -28,6 +42,21 @@ function handler(event) {
         if (Object.prototype.hasOwnProperty.call(ROUTE_MAP, uri)) {
             request.uri = ROUTE_MAP[uri];
             return request;
+        }
+
+        var base = segments[1] || '';
+        var hasExtension = lastSegment.indexOf('.') !== -1;
+        if (!hasExtension) {
+            var isAllowedBase = Object.prototype.hasOwnProperty.call(ALLOWED_BASES, base);
+            if (!isAllowedBase) {
+                return {
+                    statusCode: 404,
+                    statusDescription: 'Not Found',
+                    headers: {
+                        'cache-control': { value: 'public, max-age=60' }
+                    }
+                };
+            }
         }
 
         var lastChar = (typeof uri === 'string') ? uri.charAt(uri.length - 1) : '';
