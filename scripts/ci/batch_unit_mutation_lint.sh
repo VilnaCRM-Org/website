@@ -13,123 +13,70 @@ DEV_CONTAINER_NAME=${DEV_CONTAINER_NAME:-"website-dev"}
 DOCKER_COMPOSE_DEV_FILE=${DOCKER_COMPOSE_DEV_FILE:-"docker-compose.yml"}
 DOCKER_COMPOSE_TEST_FILE=${DOCKER_COMPOSE_TEST_FILE:-"docker-compose.test.yml"}
 COMMON_HEALTHCHECKS_FILE=${COMMON_HEALTHCHECKS_FILE:-"common-healthchecks.yml"}
-echo "🐳 DIND Environment Setup Script"
-echo "================================"
+:
 setup_docker_network() {
-    echo "📡 Setting up Docker network..."
-    docker network create "$NETWORK_NAME" 2>/dev/null || echo "Network $NETWORK_NAME already exists"
-    echo "✅ Docker network configured"
+    docker network create "$NETWORK_NAME" 2>/dev/null || :
 }
 
 run_unit_tests_dind() {
-    echo "🧪 Running Unit tests using Makefile approach"
-
-    echo "🔧 Setting up Docker network for DIND"
     setup_docker_network
-
-    echo "Building container image..."
     make build
- 
     temp_dev_container="website-dev-test"
-    
     make create-temp-dev-container-dind TEMP_CONTAINER_NAME="$temp_dev_container"
     make copy-source-to-container-dind TEMP_CONTAINER_NAME="$temp_dev_container"
     make install-deps-in-container-dind TEMP_CONTAINER_NAME="$temp_dev_container"
-    
-    if make run-unit-tests-dind TEMP_CONTAINER_NAME="$temp_dev_container"; then
-        echo "✅ Unit tests PASSED"
-    else
-        echo "❌ Unit tests FAILED"
+    if ! make run-unit-tests-dind TEMP_CONTAINER_NAME="$temp_dev_container"; then
         exit 1
     fi
-
-    echo "🎉 Unit tests completed successfully!"
 }
 
 run_mutation_tests_dind() {
-    echo "🧬 Running Mutation tests using Makefile approach"
-
-    echo "🔧 Setting up Docker network for DIND"
     setup_docker_network
-
-    echo "Building container image..."
     make build
-
     temp_dev_container="website-dev-test"
-    
     make create-temp-dev-container-dind TEMP_CONTAINER_NAME="$temp_dev_container"
     make copy-source-to-container-dind TEMP_CONTAINER_NAME="$temp_dev_container"
     make install-deps-in-container-dind TEMP_CONTAINER_NAME="$temp_dev_container"
-    
-    if make run-mutation-tests-dind TEMP_CONTAINER_NAME="$temp_dev_container"; then
-        echo "✅ Mutation tests PASSED"
-    else
-        echo "❌ Mutation tests FAILED"
+    if ! make run-mutation-tests-dind TEMP_CONTAINER_NAME="$temp_dev_container"; then
         exit 1
     fi
-
-    echo "🎉 Mutation tests completed successfully!"
 }
 
 run_lint_tests_dind() {
-    echo "🔍 Running All linting tests using Makefile approach"
-
-    echo "🔧 Setting up Docker network for DIND"
     setup_docker_network
-
-    echo "Building container image..."
     make build
-  
     temp_dev_container="website-dev-lint"
-    
     make create-temp-dev-container-dind TEMP_CONTAINER_NAME="$temp_dev_container"
     make copy-source-to-container-dind TEMP_CONTAINER_NAME="$temp_dev_container"
     make install-deps-in-container-dind TEMP_CONTAINER_NAME="$temp_dev_container"
-    
     mkdir -p "lint-logs"
     : > "lint-logs/summary.log"
-    
     if make run-eslint-tests-dind TEMP_CONTAINER_NAME="$temp_dev_container"; then
-        echo "✅ ESLint PASSED" | tee -a "lint-logs/summary.log"
+        printf "ESLint PASSED\n" | tee -a "lint-logs/summary.log" >/dev/null
     else
-        echo "❌ ESLint FAILED" | tee -a "lint-logs/summary.log"
-        echo "ESLint failed, but continuing with other checks..."
+        printf "ESLint FAILED\n" | tee -a "lint-logs/summary.log" >/dev/null
     fi
-    
     if make run-typescript-tests-dind TEMP_CONTAINER_NAME="$temp_dev_container"; then
-        echo "✅ TypeScript check PASSED" | tee -a "lint-logs/summary.log"
+        printf "TypeScript check PASSED\n" | tee -a "lint-logs/summary.log" >/dev/null
     else
-        echo "❌ TypeScript check FAILED" | tee -a "lint-logs/summary.log"
-        echo "TypeScript check failed, but continuing with other checks..."
+        printf "TypeScript check FAILED\n" | tee -a "lint-logs/summary.log" >/dev/null
     fi
-    
     if make run-markdown-lint-tests-dind TEMP_CONTAINER_NAME="$temp_dev_container"; then
-        echo "✅ Markdown linting PASSED" | tee -a "lint-logs/summary.log"
+        printf "Markdown linting PASSED\n" | tee -a "lint-logs/summary.log" >/dev/null
     else
-        echo "❌ Markdown linting FAILED" | tee -a "lint-logs/summary.log"
-        echo "Markdown linting failed, but continuing..."
+        printf "Markdown linting FAILED\n" | tee -a "lint-logs/summary.log" >/dev/null
     fi
-
     failed_count=$(grep -c "FAILED" "lint-logs/summary.log" 2>/dev/null || echo "0")
     if [ "$failed_count" -gt 0 ]; then
-        echo "❌ $failed_count lint check(s) failed. Check lint-logs/ for details."
         exit 1
-    else
-        echo "🎉 All lint checks completed successfully!"
     fi
 }
 
 main() {
     local website_dir="${1:-.}"
-    
     if [ ! -d "$website_dir" ]; then
-        echo "❌ Website directory not found: $website_dir"
         exit 1
     fi
-    
-    echo "📁 Working directory: $(pwd)"
-    echo "🌐 Website directory: $website_dir"
-
     run_unit_tests_dind
     run_mutation_tests_dind
     run_lint_tests_dind
@@ -137,15 +84,12 @@ main() {
 
 case "${1:-all}" in
     test-unit)
-        echo "🧪 Running unit tests only..."
         run_unit_tests_dind
         ;;
     test-mutation)
-        echo "🧬 Running mutation tests only..."
         run_mutation_tests_dind
         ;;
     test-lint)
-        echo "🔍 Running lint tests only..."
         run_lint_tests_dind
         ;;
     *)
