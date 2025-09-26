@@ -156,7 +156,19 @@ create-temp-dev-container-dind: ## Create a temporary dev container for DIND tes
 copy-source-to-container-dind: ## Copy source code to container for DIND testing (TEMP_CONTAINER_NAME required)
 	$(call REQUIRE_ENV_VAR,TEMP_CONTAINER_NAME,my-container)
 	@echo "📂 Copying source into temp container $(TEMP_CONTAINER_NAME)..."
-	docker cp "./." "$(TEMP_CONTAINER_NAME):/app/"
+	# Use tar streaming with excludes to avoid docker cp EOF/tar issues on macOS
+	$(call EXEC_IN_CONTAINER,TEMP_CONTAINER_NAME,mkdir -p /app)
+	@echo "   ↪️  Creating archive stream (excluding heavy/transient dirs)..."
+	@tar --no-mac-metadata -cf - \
+		--exclude="./.git" \
+		--exclude="./node_modules" \
+		--exclude="./.next" \
+		--exclude="./out" \
+		--exclude="./coverage" \
+		--exclude="./playwright-report" \
+		--exclude="./test-results" \
+		./ \
+		| docker exec -i "$(TEMP_CONTAINER_NAME)" sh -lc 'tar -xf - -C /app'
 
 install-deps-in-container-dind: ## Install dependencies in container for DIND testing (TEMP_CONTAINER_NAME required)
 	$(call REQUIRE_ENV_VAR,TEMP_CONTAINER_NAME,my-container)
