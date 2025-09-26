@@ -159,7 +159,7 @@ copy-source-to-container-dind: ## Copy source code to container for DIND testing
 	# Use tar streaming with excludes to avoid docker cp EOF/tar issues on macOS
 	$(call EXEC_IN_CONTAINER,TEMP_CONTAINER_NAME,mkdir -p /app)
 	@echo "   ↪️  Creating archive stream (excluding heavy/transient dirs)..."
-	@tar --no-mac-metadata -cf - \
+	@tar -cf - \
 		--exclude="./.git" \
 		--exclude="./node_modules" \
 		--exclude="./.next" \
