@@ -1,79 +1,62 @@
 /**
- * This script follows ES5.1 rules for compatibility.
- * Avoid ES6+ syntax (e.g., `let`, `const`, arrow functions).
+ * ES5.1 compatible (no let/const/arrow functions).
  */
 'use strict';
+
 var ROUTE_MAP = Object.freeze({
     '/': '/index.html',
     '/about': '/about/index.html',
     '/about/': '/about/index.html',
     '/en': '/en/index.html',
     '/en/': '/en/index.html',
-    '/swagger': '/swagger.html',
+    '/swagger': '/swagger.html'
 });
-// Build allowed base segments from ROUTE_MAP to avoid manual maintenance
-var ALLOWED_BASES = (function () {
-    var bases = Object.create(null);
-    bases[''] = true;
-    var keys = Object.keys(ROUTE_MAP);
-    for (var i = 0; i < keys.length; i++) {
-        var key = keys[i];
-        var parts = key.split('/');
-        var base = parts[1] || '';
-        if (base) {
-            bases[base] = true;
-        }
-    }
-    return Object.freeze(bases);
-}());
+
+/**
+ * 1) Single source of truth: allowed paths are simply the keys of ROUTE_MAP.
+ * 2) We use the array to check existence; the map to resolve the target file.
+ */
+var ALLOWED_PATHS = Object.freeze(Object.keys(ROUTE_MAP));
+
 function handler(event) {
     var request = event.request;
 
-    if (!request.uri || typeof request.uri !== 'string') {
-        var host = (request.headers && request.headers.host && request.headers.host.value) || '';
-        console.log('cloudfront_routing: missing/invalid request.uri', 'host=', host, 'uri=', request.uri);
+    if (!request || typeof request.uri !== 'string') {
+        var host = (request && request.headers && request.headers.host && request.headers.host.value) || '';
+        console.log('cloudfront_routing: missing/invalid request.uri', 'host=', host, 'uri=', request && request.uri);
         return request;
     }
 
     try {
         var uri = request.uri;
-        var segments = uri.split('/');
-        var lastSegment = segments[segments.length - 1];
 
+        // Fast-path: explicitly allowed -> rewrite via ROUTE_MAP.
         if (Object.prototype.hasOwnProperty.call(ROUTE_MAP, uri)) {
             request.uri = ROUTE_MAP[uri];
             return request;
         }
 
-        var base = segments[1] || '';
-        var hasExtension = lastSegment.indexOf('.') !== -1;
-        var isSingleSegment = (segments.length === 2) || (segments.length === 3 && lastSegment === '');
-        if (!hasExtension && isSingleSegment) {
-            var isAllowedBase = Object.prototype.hasOwnProperty.call(ALLOWED_BASES, base);
-            if (!isAllowedBase) {
-                return {
-                    statusCode: 404,
-                    statusDescription: 'Not Found',
-                    headers: {
-                        'cache-control': { value: 'public, max-age=60' }
-                    }
-                };
-            }
-        }
-
-        var lastChar = (typeof uri === 'string') ? uri.charAt(uri.length - 1) : '';
-        if (lastChar === '/') {
-            request.uri = uri + 'index.html';
+        // Optional: allow static assets (anything with an extension) to pass through.
+        // Remove this block if you want strict allowlist-only behavior.
+        var lastSlash = uri.lastIndexOf('/');
+        var lastSegment = uri.substring(lastSlash + 1);
+        if (lastSegment.indexOf('.') !== -1) {
             return request;
         }
 
-        else if (lastSegment.indexOf('.') === -1 && segments.length > 2) {
-            request.uri = uri + '/index.html';
+        // Not in allowlist -> 404.
+        if (ALLOWED_PATHS.indexOf(uri) === -1) {
+            return {
+                statusCode: 404,
+                statusDescription: 'Not Found',
+                headers: { 'cache-control': { value: 'public, max-age=60' } }
+            };
         }
 
+        // (Shouldn’t get here; kept as a safe default.)
         return request;
-    } catch (error) {
-        console.log('cloudfront_routing: error', error);
+    } catch (err) {
+        console.log('cloudfront_routing: error', err);
         return request;
     }
 }
