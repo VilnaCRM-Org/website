@@ -310,12 +310,16 @@ wait-for-prod-health: ## Wait for the prod container to reach a healthy state.
 		fi; \
 	done
 
-.PHONY: visual-direct e2e-direct
+.PHONY: visual-direct e2e-direct all clean
 visual-direct: start-prod ## Start production and run visual tests directly (no shell wrapper)
 	$(playwright-test) $(TEST_DIR_VISUAL)
 
 e2e-direct: start-prod ## Start production and run E2E tests directly (no shell wrapper)
 	$(playwright-test) $(TEST_DIR_E2E)
+
+all: build ## Default aggregate target to build the project
+
+clean: down ## Clean up running containers and artifacts
 
 load-tests: start-prod wait-for-prod-health ## This command executes load tests using K6 library. Note: The target host is determined by the service URL
                        ## using $(NEXT_PUBLIC_PROD_PORT), which maps to the production service in Docker Compose.
