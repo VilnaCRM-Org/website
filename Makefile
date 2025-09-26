@@ -37,6 +37,31 @@ LHCI_CONFIG_MOBILE          = --config=lighthouserc.mobile.js
 LHCI_DESKTOP_SERVE          = $(LHCI_CONFIG_DESKTOP) $(SERVE_CMD)
 LHCI_MOBILE_SERVE           = $(LHCI_CONFIG_MOBILE) $(SERVE_CMD)
 
+# ===== DRY helpers (macros/vars) =====
+# Chrome/LHCI DIND common pieces
+CHROMIUM_BIN_PATH           = /usr/bin/chromium-browser
+LHCI_DIND_CHROME_FLAGS      = --no-sandbox --disable-dev-shm-usage --disable-extensions --disable-gpu --headless --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-software-rasterizer --disable-setuid-sandbox --single-process --no-zygote --js-flags=--max-old-space-size=4096
+LHCI_DIND_BIN               = $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_TEST_FILE) exec -T -w /app prod lhci autorun
+LHCI_DIND_COMMON            = --collect.url="http://localhost:$(NEXT_PUBLIC_PROD_PORT)" \
+                              --collect.chromePath=$(CHROMIUM_BIN_PATH) \
+                              --collect.chromeFlags="$(LHCI_DIND_CHROME_FLAGS)"
+
+# Exec helpers
+EXEC_PROD_TTYLESS           = $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_TEST_FILE) exec -T prod
+
+# Macro: require env var with example usage value
+define REQUIRE_ENV_VAR
+	@if [ -z "$($(1))" ]; then \
+		echo "Error: $(1) is required. Usage: make $(MAKECMDGOALS) $(1)=$(2)"; \
+		exit 1; \
+	fi
+endef
+
+# Macro: exec a command inside named container env var (e.g., TEMP_CONTAINER_NAME)
+define EXEC_IN_CONTAINER
+	docker exec "$($(1))" sh -lc "$(2)"
+endef
+
 DOCKER_COMPOSE_TEST_FILE    = -f docker-compose.test.yml
 DOCKER_COMPOSE_DEV_FILE     = -f docker-compose.yml
 COMMON_HEALTHCHECKS_FILE    = -f common-healthchecks.yml
@@ -119,78 +144,51 @@ wait-for-dev: ## Wait for the dev service to be ready on port $(DEV_PORT).
 	@printf '\nDev service is up and running!\n'
 
 create-temp-dev-container-dind: ## Create a temporary dev container for DIND testing (TEMP_CONTAINER_NAME required)
-	@if [ -z "$(TEMP_CONTAINER_NAME)" ]; then \
-		echo "Error: TEMP_CONTAINER_NAME is required. Usage: make create-temp-dev-container-dind TEMP_CONTAINER_NAME=my-container"; \
-		exit 1; \
-	fi
+	$(call REQUIRE_ENV_VAR,TEMP_CONTAINER_NAME,my-container)
 	@echo "🧹 Cleaning old temp container $(TEMP_CONTAINER_NAME)..."
 	@docker rm -f "$(TEMP_CONTAINER_NAME)" 2>/dev/null || true
 	@echo "🚀 Starting temp dev container $(TEMP_CONTAINER_NAME)..."
 	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) run -d --name "$(TEMP_CONTAINER_NAME)" --entrypoint sh dev -lc 'sleep infinity'
 
 copy-source-to-container-dind: ## Copy source code to container for DIND testing (TEMP_CONTAINER_NAME required)
-	@if [ -z "$(TEMP_CONTAINER_NAME)" ]; then \
-		echo "Error: TEMP_CONTAINER_NAME is required. Usage: make copy-source-to-container-dind TEMP_CONTAINER_NAME=my-container"; \
-		exit 1; \
-	fi
+	$(call REQUIRE_ENV_VAR,TEMP_CONTAINER_NAME,my-container)
 	@echo "📂 Copying source into temp container $(TEMP_CONTAINER_NAME)..."
 	docker cp "./." "$(TEMP_CONTAINER_NAME):/app/"
 
 install-deps-in-container-dind: ## Install dependencies in container for DIND testing (TEMP_CONTAINER_NAME required)
-	@if [ -z "$(TEMP_CONTAINER_NAME)" ]; then \
-		echo "Error: TEMP_CONTAINER_NAME is required. Usage: make install-deps-in-container-dind TEMP_CONTAINER_NAME=my-container"; \
-		exit 1; \
-	fi
+	$(call REQUIRE_ENV_VAR,TEMP_CONTAINER_NAME,my-container)
 	@echo "📦 Installing deps in container $(TEMP_CONTAINER_NAME)..."
-	docker exec "$(TEMP_CONTAINER_NAME)" sh -lc "cd /app && npm install -g pnpm && pnpm install --frozen-lockfile"
+	$(call EXEC_IN_CONTAINER,TEMP_CONTAINER_NAME,cd /app && npm install -g pnpm && pnpm install --frozen-lockfile)
 
 run-unit-tests-dind: ## Run unit tests in DIND container (TEMP_CONTAINER_NAME required)
-	@if [ -z "$(TEMP_CONTAINER_NAME)" ]; then \
-		echo "Error: TEMP_CONTAINER_NAME is required. Usage: make run-unit-tests-dind TEMP_CONTAINER_NAME=my-container"; \
-		exit 1; \
-	fi
+	$(call REQUIRE_ENV_VAR,TEMP_CONTAINER_NAME,my-container)
 	@echo "🧪 Running client-side tests in container $(TEMP_CONTAINER_NAME)..."
-	docker exec "$(TEMP_CONTAINER_NAME)" sh -lc "cd /app && make test-unit-client CI=1"
+	$(call EXEC_IN_CONTAINER,TEMP_CONTAINER_NAME,cd /app && make test-unit-client CI=1)
 	@echo "🧪 Running server-side tests in container $(TEMP_CONTAINER_NAME)..."
-	docker exec "$(TEMP_CONTAINER_NAME)" sh -lc "cd /app && make test-unit-server CI=1"
+	$(call EXEC_IN_CONTAINER,TEMP_CONTAINER_NAME,cd /app && make test-unit-server CI=1)
 
 run-mutation-tests-dind: ## Run mutation tests in DIND container (TEMP_CONTAINER_NAME required)
-	@if [ -z "$(TEMP_CONTAINER_NAME)" ]; then \
-		echo "Error: TEMP_CONTAINER_NAME is required. Usage: make run-mutation-tests-dind TEMP_CONTAINER_NAME=my-container"; \
-		exit 1; \
-	fi
+	$(call REQUIRE_ENV_VAR,TEMP_CONTAINER_NAME,my-container)
 	@echo "🧬 Running Stryker mutation tests in container $(TEMP_CONTAINER_NAME)..."
-	docker exec "$(TEMP_CONTAINER_NAME)" sh -lc "cd /app && pnpm stryker run"
+	$(call EXEC_IN_CONTAINER,TEMP_CONTAINER_NAME,cd /app && pnpm stryker run)
 
 run-eslint-tests-dind: ## Run ESLint tests in DIND container (TEMP_CONTAINER_NAME required)
-	@if [ -z "$(TEMP_CONTAINER_NAME)" ]; then \
-		echo "Error: TEMP_CONTAINER_NAME is required. Usage: make run-eslint-tests-dind TEMP_CONTAINER_NAME=my-container"; \
-		exit 1; \
-	fi
+	$(call REQUIRE_ENV_VAR,TEMP_CONTAINER_NAME,my-container)
 	@echo "🔍 Running ESLint in container $(TEMP_CONTAINER_NAME)..."
-	docker exec "$(TEMP_CONTAINER_NAME)" sh -lc "cd /app && make lint-next CI=1"
+	$(call EXEC_IN_CONTAINER,TEMP_CONTAINER_NAME,cd /app && make lint-next CI=1)
 
 run-typescript-tests-dind: ## Run TypeScript tests in DIND container (TEMP_CONTAINER_NAME required)
-	@if [ -z "$(TEMP_CONTAINER_NAME)" ]; then \
-		echo "Error: TEMP_CONTAINER_NAME is required. Usage: make run-typescript-tests-dind TEMP_CONTAINER_NAME=my-container"; \
-		exit 1; \
-	fi
+	$(call REQUIRE_ENV_VAR,TEMP_CONTAINER_NAME,my-container)
 	@echo "🔍 Running TypeScript check in container $(TEMP_CONTAINER_NAME)..."
-	docker exec "$(TEMP_CONTAINER_NAME)" sh -lc "cd /app && make lint-tsc CI=1"
+	$(call EXEC_IN_CONTAINER,TEMP_CONTAINER_NAME,cd /app && make lint-tsc CI=1)
 
 run-markdown-lint-tests-dind: ## Run Markdown linting tests in DIND container (TEMP_CONTAINER_NAME required)
-	@if [ -z "$(TEMP_CONTAINER_NAME)" ]; then \
-		echo "Error: TEMP_CONTAINER_NAME is required. Usage: make run-markdown-lint-tests-dind TEMP_CONTAINER_NAME=my-container"; \
-		exit 1; \
-	fi
+	$(call REQUIRE_ENV_VAR,TEMP_CONTAINER_NAME,my-container)
 	@echo "🔍 Running Markdown linting in container $(TEMP_CONTAINER_NAME)..."
-	docker exec "$(TEMP_CONTAINER_NAME)" sh -lc "cd /app && make lint-md CI=1"
+	$(call EXEC_IN_CONTAINER,TEMP_CONTAINER_NAME,cd /app && make lint-md CI=1)
 
 create-k6-helper-container-dind: ## Create a detached K6 helper container for DIND testing (K6_HELPER_NAME required)
-	@if [ -z "$(K6_HELPER_NAME)" ]; then \
-		echo "Error: K6_HELPER_NAME is required. Usage: make create-k6-helper-container-dind K6_HELPER_NAME=my-k6-helper"; \
-		exit 1; \
-	fi
+	$(call REQUIRE_ENV_VAR,K6_HELPER_NAME,my-k6-helper)
 	@echo "🧹 Cleaning old K6 helper container $(K6_HELPER_NAME)..."
 	@docker rm -f "$(K6_HELPER_NAME)" 2>/dev/null || true
 	@echo "🚀 Starting K6 helper container $(K6_HELPER_NAME)..."
@@ -202,10 +200,7 @@ build-k6: ## Build K6 load testing container
 	$(DOCKER_COMPOSE) $(COMMON_HEALTHCHECKS_FILE) $(DOCKER_COMPOSE_TEST_FILE) --profile load build k6
 
 run-load-tests-dind: ## Run K6 load tests in DIND container without starting services (K6_HELPER_NAME required)
-	@if [ -z "$(K6_HELPER_NAME)" ]; then \
-		echo "Error: K6_HELPER_NAME is required. Usage: make run-load-tests-dind K6_HELPER_NAME=my-k6-helper"; \
-		exit 1; \
-	fi
+	$(call REQUIRE_ENV_VAR,K6_HELPER_NAME,my-k6-helper)
 	@echo "⚡ Running K6 load tests in container $(K6_HELPER_NAME)..."
 	docker exec -w /loadTests "$(K6_HELPER_NAME)" k6 run \
 		--summary-trend-stats="avg,min,med,max,p(95),p(99)" \
@@ -335,11 +330,7 @@ lighthouse-desktop: ## Run a Lighthouse audit using desktop viewport settings to
 
 lighthouse-desktop-dind: ## Run Lighthouse desktop audit in DIND mode using prod container with explicit Chrome configuration
 	@echo "🔦 Running Lighthouse desktop tests in DIND mode..."
-	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_TEST_FILE) exec -T -w /app prod lhci autorun \
-		--config=lighthouserc.desktop.js \
-		--collect.url="http://localhost:$(NEXT_PUBLIC_PROD_PORT)" \
-		--collect.chromePath=/usr/bin/chromium-browser \
-		--collect.chromeFlags="--no-sandbox --disable-dev-shm-usage --disable-extensions --disable-gpu --headless --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-software-rasterizer --disable-setuid-sandbox --single-process --no-zygote --js-flags=--max-old-space-size=4096"
+	$(LHCI_DIND_BIN) --config=lighthouserc.desktop.js $(LHCI_DIND_COMMON)
 	@echo "✅ Lighthouse desktop DIND tests completed"
 
 lighthouse-mobile: ## Run a Lighthouse audit using mobile viewport settings to evaluate mobile UX and performance
@@ -347,11 +338,7 @@ lighthouse-mobile: ## Run a Lighthouse audit using mobile viewport settings to e
 
 lighthouse-mobile-dind: ## Run Lighthouse mobile audit in DIND mode using prod container with explicit Chrome configuration
 	@echo "📱 Running Lighthouse mobile tests in DIND mode..."
-	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_TEST_FILE) exec -T -w /app prod lhci autorun \
-		--config=lighthouserc.mobile.js \
-		--collect.url="http://localhost:$(NEXT_PUBLIC_PROD_PORT)" \
-		--collect.chromePath=/usr/bin/chromium-browser \
-		--collect.chromeFlags="--no-sandbox --disable-dev-shm-usage --disable-extensions --disable-gpu --headless --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-software-rasterizer --disable-setuid-sandbox --single-process --no-zygote --js-flags=--max-old-space-size=4096"
+	$(LHCI_DIND_BIN) --config=lighthouserc.mobile.js $(LHCI_DIND_COMMON)
 	@echo "✅ Lighthouse mobile DIND tests completed"
 
 install: ## Install node modules using pnpm (CI=1 runs locally, default runs in container) — uses frozen lockfile and affects node_modules via volumes
@@ -359,12 +346,12 @@ install: ## Install node modules using pnpm (CI=1 runs locally, default runs in 
 
 install-chromium-lhci: ## Install Chromium and Lighthouse CLI in the prod container for DIND testing
 	@echo "📦 Installing Chromium and Lighthouse CLI in prod container..."
-	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_TEST_FILE) exec -T prod sh -lc "apk add --no-cache chromium chromium-chromedriver && npm install -g @lhci/cli@0.14.0"
+	$(EXEC_PROD_TTYLESS) sh -lc "apk add --no-cache chromium chromium-chromedriver && npm install -g @lhci/cli@0.14.0"
 	@echo "✅ Chromium and Lighthouse CLI installation completed"
 
 test-chromium: ## Test Chromium browser installation and version in the prod container
 	@echo "🧪 Testing Chromium browser installation..."
-	@if $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_TEST_FILE) exec -T prod /usr/bin/chromium-browser --version; then \
+	@if $(EXEC_PROD_TTYLESS) $(CHROMIUM_BIN_PATH) --version; then \
 		echo "✅ Chromium is installed and working"; \
 	else \
 		echo "❌ Chromium installation test failed"; \
