@@ -11,7 +11,6 @@ DOCKER_COMPOSE_DEV_FILE=${DOCKER_COMPOSE_DEV_FILE:-"docker-compose.yml"}
 DOCKER_COMPOSE_TEST_FILE=${DOCKER_COMPOSE_TEST_FILE:-"docker-compose.test.yml"}
 COMMON_HEALTHCHECKS_FILE=${COMMON_HEALTHCHECKS_FILE:-"common-healthchecks.yml"}
 
-# Build guarded docker compose args array shared by all compose calls
 COMPOSE_ARGS=()
 if [ -n "$COMMON_HEALTHCHECKS_FILE" ] && [ -s "$COMMON_HEALTHCHECKS_FILE" ]; then
     COMPOSE_ARGS+=( -f "$COMMON_HEALTHCHECKS_FILE" )
@@ -44,11 +43,11 @@ run_lighthouse_desktop_dind() {
         set -e
         make start-prod
         make install-chromium-lhci
-        docker compose "${COMPOSE_ARGS[@]}" cp lighthouserc.desktop.js prod:/app/
+        docker compose "${COMPOSE_ARGS[@]}" cp "lighthouserc.desktop.js" "prod:/app/"
         make test-chromium
         make lighthouse-desktop-dind
         mkdir -p lhci-reports-desktop
-        docker compose "${COMPOSE_ARGS[@]}" cp prod:/app/lhci-reports-desktop/. lhci-reports-desktop/ 2>/dev/null || :
+        docker compose "${COMPOSE_ARGS[@]}" cp "prod:/app/lhci-reports-desktop/." "lhci-reports-desktop/" 2>/dev/null || :
     ); then
         :
     else
@@ -72,11 +71,11 @@ run_lighthouse_mobile_dind() {
         set -e
         make start-prod
         make install-chromium-lhci
-        docker compose "${COMPOSE_ARGS[@]}" cp lighthouserc.mobile.js prod:/app/
+        docker compose "${COMPOSE_ARGS[@]}" cp "lighthouserc.mobile.js" "prod:/app/"
         make test-chromium
         make lighthouse-mobile-dind    
         mkdir -p lhci-reports-mobile
-        docker compose "${COMPOSE_ARGS[@]}" cp prod:/app/lhci-reports-mobile/. lhci-reports-mobile/ 2>/dev/null || :
+        docker compose "${COMPOSE_ARGS[@]}" cp "prod:/app/lhci-reports-mobile/." "lhci-reports-mobile/" 2>/dev/null || :
     ); then
         :
     else
