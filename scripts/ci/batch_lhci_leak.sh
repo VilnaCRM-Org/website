@@ -56,7 +56,7 @@ run_lighthouse_desktop_dind() {
     fi
 
     docker compose "${COMPOSE_ARGS[@]}" exec -T prod sh -lc 'rm -rf /app/lhci-reports-mobile /app/lhci-reports-desktop /app/lighthouserc.mobile.js /app/lighthouserc.desktop.js' 2>/dev/null || :
-    docker compose "${COMPOSE_ARGS[@]}" down --remove-orphans || true
+    docker compose "${COMPOSE_ARGS[@]}" down --volumes --remove-orphans || true
     docker network rm "$NETWORK_NAME" 2>/dev/null || :
 
     if [ "$exit_code" -ne 0 ]; then
@@ -84,7 +84,7 @@ run_lighthouse_mobile_dind() {
     fi
 
     docker compose "${COMPOSE_ARGS[@]}" exec -T prod sh -lc 'rm -rf /app/lhci-reports-mobile /app/lhci-reports-desktop /app/lighthouserc.mobile.js /app/lighthouserc.desktop.js' 2>/dev/null || :
-    docker compose "${COMPOSE_ARGS[@]}" down --remove-orphans || true
+    docker compose "${COMPOSE_ARGS[@]}" down --volumes --remove-orphans || true
     docker network rm "$NETWORK_NAME" 2>/dev/null || :
     if [ "$exit_code" -ne 0 ]; then
         exit "$exit_code"
