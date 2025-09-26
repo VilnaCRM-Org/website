@@ -8,6 +8,9 @@ include .env
 
 export
 
+WEBSITE_DOMAIN              ?= localhost
+NEXT_PUBLIC_PROD_PORT       ?= 3001
+
 DOCKER_COMPOSE              = docker compose
 
 BIN_DIR                     = ./node_modules/.bin
