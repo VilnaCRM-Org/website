@@ -12,10 +12,11 @@ DOCKER_COMPOSE_TEST_FILE=${DOCKER_COMPOSE_TEST_FILE:-"docker-compose.test.yml"}
 COMMON_HEALTHCHECKS_FILE=${COMMON_HEALTHCHECKS_FILE:-"common-healthchecks.yml"}
 
 # Build guarded docker compose args array shared by all compose calls
-COMPOSE_ARGS=( -f "$DOCKER_COMPOSE_TEST_FILE" )
+COMPOSE_ARGS=()
 if [ -n "$COMMON_HEALTHCHECKS_FILE" ] && [ -s "$COMMON_HEALTHCHECKS_FILE" ]; then
     COMPOSE_ARGS+=( -f "$COMMON_HEALTHCHECKS_FILE" )
 fi
+COMPOSE_ARGS+=( -f "$DOCKER_COMPOSE_TEST_FILE" )
 setup_docker_network() {
     docker network create "$NETWORK_NAME" 2>/dev/null || :
 }
@@ -102,13 +103,13 @@ main() {
 
 case "${1:-all}" in
     test-memory-leak)
-        run_memory_leak_tests_dind "."
+        run_memory_leak_tests_dind
         ;;
     test-lighthouse-desktop)
-        run_lighthouse_desktop_dind "."
+        run_lighthouse_desktop_dind
         ;;
     test-lighthouse-mobile)
-        run_lighthouse_mobile_dind "."
+        run_lighthouse_mobile_dind
         ;;
     *)
         main "$@"
