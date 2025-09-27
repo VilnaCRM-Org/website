@@ -308,6 +308,16 @@ test-memory-leak: start-prod ## This command executes memory leaks tests using M
 	@echo "🧹 Cleaning up memory leak test containers..."
 	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_MEMLEAK_FILE) down --remove-orphans
 
+memory-leak-dind: start-prod ## Run Memlab tests in isolated compose project (DIND safe)
+	@echo "🧪 Starting memory leak test environment (isolated project)..."
+	$(DOCKER_COMPOSE) -p memleak $(DOCKER_COMPOSE_MEMLEAK_FILE) up -d --wait $(MEMLEAK_SERVICE)
+	@echo "🧹 Cleaning up previous memory leak results..."
+ 	$(DOCKER_COMPOSE) -p memleak $(DOCKER_COMPOSE_MEMLEAK_FILE) exec -T $(MEMLEAK_SERVICE) rm -rf $(MEMLEAK_RESULTS_DIR)
+	@echo "🚀 Running memory leak tests..."
+	$(DOCKER_COMPOSE) -p memleak $(DOCKER_COMPOSE_MEMLEAK_FILE) exec -T $(MEMLEAK_SERVICE) node $(MEMLEAK_TEST_SCRIPT)
+	@echo "🧹 Cleaning up memory leak test containers..."
+	$(DOCKER_COMPOSE) -p memleak $(DOCKER_COMPOSE_MEMLEAK_FILE) down
+
 test-mutation: build ## Run mutation tests using Stryker after building the app
 	$(STRYKER_CMD)
 

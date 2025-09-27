@@ -25,14 +25,14 @@ run_memory_leak_tests_dind() {
     export NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_NAME=no-aws-header-name
     export NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_VALUE=no-aws-header-value
 
-    if ! make test-memory-leak; then
-        docker compose -f docker-compose.memory-leak.yml logs --tail=30 memory-leak || true
+    if ! make memory-leak-dind; then
+        docker compose -p memleak -f docker-compose.memory-leak.yml logs --tail=30 memory-leak || true
         exit 1
     fi
 
     mkdir -p memory-leak-logs
-    docker compose -f docker-compose.memory-leak.yml cp memory-leak:/app/src/test/memory-leak/results/. memory-leak-logs/ 2>/dev/null || :
-    docker compose -f docker-compose.memory-leak.yml logs memory-leak > memory-leak-logs/test-execution.log 2>&1 || true
+    docker compose -p memleak -f docker-compose.memory-leak.yml cp memory-leak:/app/src/test/memory-leak/results/. memory-leak-logs/ 2>/dev/null || :
+    docker compose -p memleak -f docker-compose.memory-leak.yml logs memory-leak > memory-leak-logs/test-execution.log 2>&1 || true
 }
 
 run_lighthouse_desktop_dind() {
