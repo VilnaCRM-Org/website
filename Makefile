@@ -313,8 +313,10 @@ memory-leak-dind: start-prod ## Run Memlab tests in isolated compose project (DI
 	$(DOCKER_COMPOSE) -p memleak $(DOCKER_COMPOSE_MEMLEAK_FILE) up -d --wait $(MEMLEAK_SERVICE)
 	@echo "🧹 Cleaning up previous memory leak results..."
 	$(DOCKER_COMPOSE) -p memleak $(DOCKER_COMPOSE_MEMLEAK_FILE) exec -T $(MEMLEAK_SERVICE) rm -rf $(MEMLEAK_RESULTS_DIR)
+	@echo "🖥️  Starting Xvfb in memory-leak container..."
+	$(DOCKER_COMPOSE) -p memleak $(DOCKER_COMPOSE_MEMLEAK_FILE) exec -T $(MEMLEAK_SERVICE) sh -lc "Xvfb :99 -screen 0 1280x1024x24 & sleep 1"
 	@echo "🚀 Running memory leak tests..."
-	$(DOCKER_COMPOSE) -p memleak $(DOCKER_COMPOSE_MEMLEAK_FILE) exec -T $(MEMLEAK_SERVICE) node $(MEMLEAK_TEST_SCRIPT)
+	$(DOCKER_COMPOSE) -p memleak $(DOCKER_COMPOSE_MEMLEAK_FILE) exec -T $(MEMLEAK_SERVICE) sh -lc "PUPPETEER_PROTOCOL_TIMEOUT=180000 node $(MEMLEAK_TEST_SCRIPT)"
 	@echo "🧹 Cleaning up memory leak test containers..."
 	$(DOCKER_COMPOSE) -p memleak $(DOCKER_COMPOSE_MEMLEAK_FILE) down
 
