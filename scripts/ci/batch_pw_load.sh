@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -euo pipefail
+set -eu
 NETWORK_NAME=${NETWORK_NAME:-"website-network"}
 WEBSITE_DOMAIN=${WEBSITE_DOMAIN:-"localhost"}
 DEV_PORT=${DEV_PORT:-"3000"}
@@ -15,6 +15,13 @@ COMMON_HEALTHCHECKS_FILE=${COMMON_HEALTHCHECKS_FILE:-"common-healthchecks.yml"}
 if [ ! -f "common-healthchecks.yml" ]; then
     COMMON_HEALTHCHECKS_FILE=""
 fi
+
+# Build docker compose args safely for POSIX sh
+COMPOSE_ARGS=""
+if [ -n "$COMMON_HEALTHCHECKS_FILE" ] && [ -s "$COMMON_HEALTHCHECKS_FILE" ]; then
+    COMPOSE_ARGS="$COMPOSE_ARGS -f $COMMON_HEALTHCHECKS_FILE"
+fi
+COMPOSE_ARGS="$COMPOSE_ARGS -f $DOCKER_COMPOSE_TEST_FILE"
 
 # Ensure required compose env vars have sane defaults for healthchecks
 NEXT_PUBLIC_MOCKOON_PORT=${NEXT_PUBLIC_MOCKOON_PORT:-"8080"}
@@ -39,12 +46,12 @@ setup_docker_network() {
 start_prod_dind() {
     setup_docker_network
     make build-prod
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" up -d --wait prod
+    docker compose ${COMPOSE_ARGS} up -d --wait prod
 }
 run_make_with_prod_dind() {
-    local target=$1
-    local description=$2
-    local website_dir=$3
+    target=$1
+    description=$2
+    website_dir=$3
     start_prod_dind
     export DIND=1
     if ! cd "$website_dir" || ! make "$target" CI=0; then
@@ -55,28 +62,28 @@ run_make_with_prod_dind() {
 run_e2e_tests_dind() {
     setup_docker_network
     make start-prod
-    if ! docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp "." "playwright:/app/"; then
+    if ! docker compose ${COMPOSE_ARGS} cp "." "playwright:/app/"; then
         exit 1
     fi
     PROD_URL="http://prod:3001"
     make test-e2e
     mkdir -p playwright-report test-results
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp "playwright:/app/playwright-report/." "playwright-report/" 2>/dev/null || :
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp "playwright:/app/test-results/." "test-results/" 2>/dev/null || :
+    docker compose ${COMPOSE_ARGS} cp "playwright:/app/playwright-report/." "playwright-report/" 2>/dev/null || :
+    docker compose ${COMPOSE_ARGS} cp "playwright:/app/test-results/." "test-results/" 2>/dev/null || :
 }
 
 run_visual_tests_dind() {
     setup_docker_network
     make start-prod
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" exec -T playwright mkdir -p /app/src/test /app/src/config /app/pages/i18n
-    if ! docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp "." "playwright:/app/"; then
+    docker compose ${COMPOSE_ARGS} exec -T playwright mkdir -p /app/src/test /app/src/config /app/pages/i18n
+    if ! docker compose ${COMPOSE_ARGS} cp "." "playwright:/app/"; then
         exit 1
     fi
     PROD_URL="http://prod:3001"
     make test-visual
     mkdir -p playwright-report test-results
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp "playwright:/app/playwright-report/." "playwright-report/" 2>/dev/null || :
-    docker compose -f "$COMMON_HEALTHCHECKS_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" cp "playwright:/app/test-results/." "test-results/" 2>/dev/null || :
+    docker compose ${COMPOSE_ARGS} cp "playwright:/app/playwright-report/." "playwright-report/" 2>/dev/null || :
+    docker compose ${COMPOSE_ARGS} cp "playwright:/app/test-results/." "test-results/" 2>/dev/null || :
 }
 
 run_load_tests_dind() {
@@ -95,7 +102,7 @@ run_load_tests_dind() {
 }
 
 main() {
-    local website_dir="${1:-.}"
+    website_dir="${1:-.}"
     if [ ! -d "$website_dir" ]; then
         exit 1
     fi
