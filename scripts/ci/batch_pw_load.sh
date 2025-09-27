@@ -62,7 +62,18 @@ run_make_with_prod_dind() {
 run_e2e_tests_dind() {
     setup_docker_network
     make start-prod
-    if ! docker compose ${COMPOSE_ARGS} cp "." "playwright:/app/"; then
+    # Stream source using tar to avoid docker cp EOF/tar issues; exclude heavy/transient dirs
+    docker compose ${COMPOSE_ARGS} exec -T playwright mkdir -p /app
+    if ! tar -cf - \
+        --exclude="./.git" \
+        --exclude="./node_modules" \
+        --exclude="./.next" \
+        --exclude="./out" \
+        --exclude="./coverage" \
+        --exclude="./playwright-report" \
+        --exclude="./test-results" \
+        ./ \
+        | docker compose ${COMPOSE_ARGS} exec -T playwright sh -lc 'tar -xf - -C /app'; then
         exit 1
     fi
     PROD_URL="http://prod:3001"
@@ -76,7 +87,18 @@ run_visual_tests_dind() {
     setup_docker_network
     make start-prod
     docker compose ${COMPOSE_ARGS} exec -T playwright mkdir -p /app/src/test /app/src/config /app/pages/i18n
-    if ! docker compose ${COMPOSE_ARGS} cp "." "playwright:/app/"; then
+    # Stream source using tar to avoid docker cp EOF/tar issues; exclude heavy/transient dirs
+    docker compose ${COMPOSE_ARGS} exec -T playwright mkdir -p /app
+    if ! tar -cf - \
+        --exclude="./.git" \
+        --exclude="./node_modules" \
+        --exclude="./.next" \
+        --exclude="./out" \
+        --exclude="./coverage" \
+        --exclude="./playwright-report" \
+        --exclude="./test-results" \
+        ./ \
+        | docker compose ${COMPOSE_ARGS} exec -T playwright sh -lc 'tar -xf - -C /app'; then
         exit 1
     fi
     PROD_URL="http://prod:3001"
