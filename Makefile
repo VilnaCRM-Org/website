@@ -304,7 +304,25 @@ test-memory-leak: start-prod ## This command executes memory leaks tests using M
 	@echo "🧹 Cleaning up previous memory leak results..."
 	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_MEMLEAK_FILE) exec -T $(MEMLEAK_SERVICE) rm -rf $(MEMLEAK_RESULTS_DIR)
 	@echo "🔧 Preparing Chromium wrapper with CI-safe flags..."
-	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_MEMLEAK_FILE) exec -T $(MEMLEAK_SERVICE) sh -lc 'printf "#!/bin/sh\nexec /usr/bin/chromium-browser \\\n+  --no-sandbox \\\n+  --disable-setuid-sandbox \\\n+  --disable-dev-shm-usage \\\n+  --disable-extensions \\\n+  --disable-gpu \\\n+  --disable-background-timer-throttling \\\n+  --disable-backgrounding-occluded-windows \\\n+  --disable-renderer-backgrounding \\\n+  --disable-software-rasterizer \\\n+  --single-process \\\n+  --no-zygote \\\n+  \"$@\"\n" > /usr/local/bin/chromium-ci && chmod +x /usr/local/bin/chromium-ci'
+	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_MEMLEAK_FILE) \
+		exec -T $(MEMLEAK_SERVICE) sh -lc 'cat >/usr/local/bin/chromium-ci <<"EOF"
+#!/bin/sh
+exec /usr/bin/chromium-browser \
+  --no-sandbox \
+  --disable-setuid-sandbox \
+  --disable-dev-shm-usage \
+  --disable-extensions \
+  --disable-gpu \
+  --disable-background-timer-throttling \
+  --disable-backgrounding-occluded-windows \
+  --disable-renderer-backgrounding \
+  --disable-software-rasterizer \
+  --single-process \
+  --no-zygote \
+  --headless=new \
+  "$@"
+EOF
+chmod +x /usr/local/bin/chromium-ci'
 	@echo "🚀 Running memory leak tests..."
 	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_MEMLEAK_FILE) exec -T -e PUPPETEER_EXECUTABLE_PATH=/usr/local/bin/chromium-ci $(MEMLEAK_SERVICE) node $(MEMLEAK_TEST_SCRIPT)
 	@echo "🧹 Cleaning up memory leak test containers..."
