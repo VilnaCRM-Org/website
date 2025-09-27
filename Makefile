@@ -303,28 +303,8 @@ test-memory-leak: start-prod ## This command executes memory leaks tests using M
 	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_MEMLEAK_FILE) up -d
 	@echo "🧹 Cleaning up previous memory leak results..."
 	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_MEMLEAK_FILE) exec -T $(MEMLEAK_SERVICE) rm -rf $(MEMLEAK_RESULTS_DIR)
-	@echo "🔧 Preparing Chromium wrapper with CI-safe flags..."
-	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_MEMLEAK_FILE) \
-		exec -T $(MEMLEAK_SERVICE) sh -lc 'cat >/usr/local/bin/chromium-ci <<"EOF"
-#!/bin/sh
-exec /usr/bin/chromium-browser \
-  --no-sandbox \
-  --disable-setuid-sandbox \
-  --disable-dev-shm-usage \
-  --disable-extensions \
-  --disable-gpu \
-  --disable-background-timer-throttling \
-  --disable-backgrounding-occluded-windows \
-  --disable-renderer-backgrounding \
-  --disable-software-rasterizer \
-  --single-process \
-  --no-zygote \
-  --headless=new \
-  "$@"
-EOF
-chmod +x /usr/local/bin/chromium-ci'
 	@echo "🚀 Running memory leak tests..."
-	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_MEMLEAK_FILE) exec -T -e PUPPETEER_EXECUTABLE_PATH=/usr/local/bin/chromium-ci $(MEMLEAK_SERVICE) node $(MEMLEAK_TEST_SCRIPT)
+	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_MEMLEAK_FILE) exec -T $(MEMLEAK_SERVICE) node $(MEMLEAK_TEST_SCRIPT)
 	@echo "🧹 Cleaning up memory leak test containers..."
 	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_MEMLEAK_FILE) down --remove-orphans
 
