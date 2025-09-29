@@ -1,4 +1,4 @@
-name: Mutation Testing
+name: mutation testing
 
 on:
   pull_request:
@@ -15,7 +15,6 @@ jobs:
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
-
         with:
           node-version: ${{ vars.NODE_VERSION }}
 
@@ -27,6 +26,14 @@ jobs:
           key: ${{ runner.os }}-dependencies-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
             ${{ runner.os }}-dependencies-
+
+      - name: Enable repo pnpm version
+        run: |
+          corepack enable
+          corepack prepare $(node -p "require('./package.json').packageManager") --activate
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
       - name: Run mutation testing
         run: make test-mutation

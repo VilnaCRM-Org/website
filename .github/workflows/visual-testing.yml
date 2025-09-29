@@ -1,4 +1,4 @@
-name: Visual Tests
+name: visual tests
 
 on:
   pull_request:
