@@ -116,7 +116,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::${{vars.PROD_AWS_ACCOUNT_ID}}:role/github-actions-role
+          role-to-assume: arn:aws:iam::${{vars.TEST_AWS_ACCOUNT_ID}}:role/github-actions-role
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Retrieve GitHub Token from Secrets Manager
@@ -161,7 +161,7 @@ jobs:
       - name: Configure AWS Credentials (Sandbox Creation Trigger Role)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::${{vars.PROD_AWS_ACCOUNT_ID}}:role/sandbox-creation-trigger-role
+          role-to-assume: arn:aws:iam::${{vars.TEST_AWS_ACCOUNT_ID}}:role/sandbox-creation-trigger-role
           role-session-name: GitHub_to_AWS_via_FederatedOIDC
           aws-region: ${{ env.AWS_REGION }}
 
@@ -169,3 +169,4 @@ jobs:
         run: |
           aws codepipeline start-pipeline-execution --name "sandbox-creation" \
             --variables "name=BRANCH_NAME,value=${BRANCH_NAME}" "name=PR_NUMBER,value=${PR_NUMBER}" "name=IS_PULL_REQUEST,value=1"
+
