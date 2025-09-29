@@ -20,9 +20,7 @@ setup_docker_network() {
     docker network create "$NETWORK_NAME" 2>/dev/null || :
 }
 run_memory_leak_tests_dind() {
-    # TODO: Remove this CodeBuild workaround once we fix the Chrome/CDP timeout issues
-    # The memory leak tests work fine locally and in GitHub Actions, but fail in CodeBuild
-    # due to constrained container environment causing Page.addScriptToEvaluateOnNewDocument timeouts
+    # TODO: Remove CodeBuild skip once Chrome/CDP timeout issues are resolved
     if [ -n "$CODEBUILD_BUILD_ID" ] || [ -n "$AWS_REGION" ]; then
         echo "🚧 CodeBuild detected - skipping memory leak tests due to known Chrome/CDP issues"
         echo "📝 TODO: Re-enable once CodeBuild container constraints are resolved"
@@ -42,9 +40,9 @@ run_memory_leak_tests_dind() {
         exit 1
     fi
 
-    mkdir -p memory-leak-logs
-    docker compose -p memleak -f docker-compose.memory-leak.yml cp memory-leak:/app/src/test/memory-leak/results/. memory-leak-logs/ 2>/dev/null || :
-    docker compose -p memleak -f docker-compose.memory-leak.yml logs memory-leak > memory-leak-logs/test-execution.log 2>&1 || true
+    mkdir -p "memory-leak-logs"
+    docker compose -p memleak -f docker-compose.memory-leak.yml cp "memory-leak:/app/src/test/memory-leak/results/." "memory-leak-logs/" 2>/dev/null || :
+    docker compose -p memleak -f docker-compose.memory-leak.yml logs memory-leak > "memory-leak-logs/test-execution.log" 2>&1 || true
 }
 
 run_lighthouse_desktop_dind() {
