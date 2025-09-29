@@ -15,6 +15,9 @@ services:
       - NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_VALUE=no-aws-header-value
     init: true
     shm_size: '1gb'
+    ipc: host
+    tmpfs:
+      - /dev/shm:size=1g
     networks:
       - website-network
     healthcheck:

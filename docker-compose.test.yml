@@ -8,7 +8,7 @@ services:
     restart: unless-stopped
     ports:
       - '3001:3001'
-    shm_size: ${SHM_SIZE:-64m}
+    shm_size: ${SHM_SIZE:-1g}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://${WEBSITE_DOMAIN}:${NEXT_PUBLIC_PROD_PORT}"]
     networks:

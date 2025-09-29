@@ -314,7 +314,11 @@ memory-leak-dind: start-prod ## Run Memlab tests in isolated compose project (DI
 	@echo "🧹 Cleaning up previous memory leak results..."
 	$(DOCKER_COMPOSE) -p memleak $(DOCKER_COMPOSE_MEMLEAK_FILE) exec -T $(MEMLEAK_SERVICE) rm -rf $(MEMLEAK_RESULTS_DIR)
 	@echo "🚀 Running memory leak tests..."
-	$(DOCKER_COMPOSE) -p memleak $(DOCKER_COMPOSE_MEMLEAK_FILE) exec -T $(MEMLEAK_SERVICE) sh -lc "unset DISPLAY; PUPPETEER_PROTOCOL_TIMEOUT=180000 PUPPETEER_ARGS='--no-sandbox --disable-dev-shm-usage --disable-gpu --single-process' CHROME_ARGS='--no-sandbox --disable-dev-shm-usage --disable-gpu --single-process' node $(MEMLEAK_TEST_SCRIPT)"
+	$(DOCKER_COMPOSE) -p memleak $(DOCKER_COMPOSE_MEMLEAK_FILE) exec -T $(MEMLEAK_SERVICE) sh -lc "unset DISPLAY; \
+    export PUPPETEER_PROTOCOL_TIMEOUT=240000; \
+    export PUPPETEER_ARGS='--no-sandbox --disable-dev-shm-usage --disable-gpu --single-process --no-zygote --disable-setuid-sandbox'; \
+    export CHROME_ARGS='--no-sandbox --disable-dev-shm-usage --disable-gpu --single-process --no-zygote --disable-setuid-sandbox'; \
+    node $(MEMLEAK_TEST_SCRIPT)"
 	@echo "🧹 Cleaning up memory leak test containers..."
 	$(DOCKER_COMPOSE) -p memleak $(DOCKER_COMPOSE_MEMLEAK_FILE) down
 
