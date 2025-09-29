@@ -1,14 +1,21 @@
-import { test, expect, Page } from '@playwright/test';
+import { test, expect, Page, Locator } from '@playwright/test';
 
 import { t } from './utils/initializeLocalization';
 
-const socialLinks: { url: string }[] = [
+enum SocialNetwork {
   // TODO: correct the url to our social networks
-  { url: 'https://www.instagram.com/' },
-  { url: 'https://github.com/VilnaCRM-Org/' },
-  { url: 'https://www.facebook.com/' },
-  { url: 'https://www.linkedin.com/' },
-];
+  INSTAGRAM = 'instagram',
+  GITHUB = 'github',
+  FACEBOOK = 'facebook',
+  LINKEDIN = 'linkedin',
+}
+
+const socialLinks: Record<SocialNetwork, { url: string }> = {
+  [SocialNetwork.INSTAGRAM]: { url: 'https://www.instagram.com/' },
+  [SocialNetwork.GITHUB]: { url: 'https://github.com/VilnaCRM-Org/' },
+  [SocialNetwork.FACEBOOK]: { url: 'https://www.facebook.com/' },
+  [SocialNetwork.LINKEDIN]: { url: 'https://www.linkedin.com/' },
+};
 
 const linkToInstagramRole: string = t('header.drawer.aria_labels_social_images.instagram');
 const linkToGithubRole: string = t('header.drawer.aria_labels_social_images.github');
@@ -37,7 +44,12 @@ async function navigateAndVerifyURL(
   url: string
 ): Promise<void> {
   await mockSocialLinkUrlRoute(page, url);
-  await page.getByRole('link', { name: linkName }).click();
+
+  const socialLink: Locator = page.getByRole('link', { name: linkName });
+  await socialLink.waitFor({ state: 'visible' });
+  await socialLink.isEnabled();
+
+  await socialLink.click();
   await page.goto(url);
   await page.waitForURL(expectedURL);
   await expect(page).toHaveURL(expectedURL);
@@ -64,30 +76,30 @@ test.describe('Navigation tests', () => {
   });
 
   test('Desktop Instagram link', async ({ page }) => {
-    await navigateAndVerifyURL(page, linkToInstagramRole, /instagram/, socialLinks[0].url);
+    await navigateAndVerifyURL(page, linkToInstagramRole, /instagram/, socialLinks.instagram.url);
   });
   test('Mobile Instagram link', async ({ page }) => {
-    await openDrawerAndNavigate(page, linkToInstagramRole, /instagram/, socialLinks[0].url);
+    await openDrawerAndNavigate(page, linkToInstagramRole, /instagram/, socialLinks.instagram.url);
   });
 
   test('Desktop GitHub link', async ({ page }) => {
-    await navigateAndVerifyURL(page, linkToGithubRole, /github/, socialLinks[1].url);
+    await navigateAndVerifyURL(page, linkToGithubRole, /github/, socialLinks.github.url);
   });
   test('Mobile GitHub link', async ({ page }) => {
-    await openDrawerAndNavigate(page, linkToGithubRole, /github/, socialLinks[1].url);
+    await openDrawerAndNavigate(page, linkToGithubRole, /github/, socialLinks.github.url);
   });
 
   test('Desktop Facebook link', async ({ page }) => {
-    await navigateAndVerifyURL(page, linkToFacebookRole, /facebook/, socialLinks[2].url);
+    await navigateAndVerifyURL(page, linkToFacebookRole, /facebook/, socialLinks.facebook.url);
   });
   test('Mobile Facebook link', async ({ page }) => {
-    await openDrawerAndNavigate(page, linkToFacebookRole, /facebook/, socialLinks[2].url);
+    await openDrawerAndNavigate(page, linkToFacebookRole, /facebook/, socialLinks.facebook.url);
   });
 
   test('Desktop Linkedin link', async ({ page }) => {
-    await navigateAndVerifyURL(page, linkToLinkedinRole, /link/, socialLinks[3].url);
+    await navigateAndVerifyURL(page, linkToLinkedinRole, /link/, socialLinks.linkedin.url);
   });
   test('Mobile Linkedin link', async ({ page }) => {
-    await openDrawerAndNavigate(page, linkToLinkedinRole, /link/, socialLinks[3].url);
+    await openDrawerAndNavigate(page, linkToLinkedinRole, /link/, socialLinks.linkedin.url);
   });
 });

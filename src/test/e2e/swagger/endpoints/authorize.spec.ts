@@ -85,8 +85,9 @@ test.describe('OAuth authorize endpoint', () => {
     );
 
     await elements.executeBtn.click();
+    const curlLocator: Locator = elements.curl;
+    await expect(curlLocator).toBeVisible();
 
-    await expect(elements.curl).toBeVisible();
     await expect(elements.copyButton).toBeVisible();
     await expect(elements.requestUrl).toContainText('/oauth/authorize');
     await clearEndpointResponse(elements.getEndpoint);
