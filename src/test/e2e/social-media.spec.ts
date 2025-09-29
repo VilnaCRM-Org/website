@@ -47,7 +47,7 @@ async function navigateAndVerifyURL(
 
   const socialLink: Locator = page.getByRole('link', { name: linkName });
   await socialLink.waitFor({ state: 'visible' });
-  await socialLink.isEnabled();
+  await expect(socialLink).toBeEnabled();
 
   await socialLink.click();
   await page.goto(url);

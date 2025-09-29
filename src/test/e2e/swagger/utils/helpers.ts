@@ -158,5 +158,6 @@ export async function collapseEndpoint(endpoint: Locator): Promise<void> {
 
   await opblockSummary.click();
 
+  await opblockBody.waitFor({ state: 'hidden' });
   await expect(opblockBody).not.toBeVisible();
 }

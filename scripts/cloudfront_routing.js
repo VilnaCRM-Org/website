@@ -10,6 +10,7 @@ var ROUTE_MAP = Object.freeze({
   '/en': '/en/index.html',
   '/en/': '/en/index.html',
   '/swagger': '/swagger.html',
+  '/swagger/': '/swagger.html',
 });
 function handler(event) {
   var request = event.request;
@@ -42,6 +43,7 @@ function handler(event) {
       return request;
     } else if (lastSegment.indexOf('.') === -1 && segments.length > 2) {
       request.uri = uri + '/index.html';
+      return request;
     }
 
     return request;
