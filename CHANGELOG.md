@@ -1,3 +1,12 @@
+## [0.2.3](https://github.com/VilnaCRM-Org/website/compare/v0.2.2...v0.2.3) (2025-09-30)
+
+
+### Bug Fixes
+
+* **#229:** add if statment to return 404 ([#230](https://github.com/VilnaCRM-Org/website/issues/230)) ([ab8bf94](https://github.com/VilnaCRM-Org/website/commit/ab8bf94a91eeddb288ada3bafdbcf651269cf684)), closes [#229](https://github.com/VilnaCRM-Org/website/issues/229) [#229](https://github.com/VilnaCRM-Org/website/issues/229) [#229](https://github.com/VilnaCRM-Org/website/issues/229) [#229](https://github.com/VilnaCRM-Org/website/issues/229) [#229](https://github.com/VilnaCRM-Org/website/issues/229) [#229](https://github.com/VilnaCRM-Org/website/issues/229)
+
+
+
 ## [0.2.2](https://github.com/VilnaCRM-Org/website/compare/v0.2.1...v0.2.2) (2025-09-30)
 
 
@@ -31,15 +40,6 @@
 ### Bug Fixes
 
 * **#209:** add missing build-out command ([#210](https://github.com/VilnaCRM-Org/website/issues/210)) ([1004ac8](https://github.com/VilnaCRM-Org/website/commit/1004ac896fdc824912633860de164c79c48218dd)), closes [#209](https://github.com/VilnaCRM-Org/website/issues/209)
-
-
-
-## [0.1.4](https://github.com/VilnaCRM-Org/website/compare/v0.1.3...v0.1.4) (2025-06-23)
-
-
-### Bug Fixes
-
-* **#206:** add public ecr usage ([#207](https://github.com/VilnaCRM-Org/website/issues/207)) ([13feccc](https://github.com/VilnaCRM-Org/website/commit/13feccc973a472b0da4dd727f89a637deb2f59b4)), closes [#206](https://github.com/VilnaCRM-Org/website/issues/206)
 
 
 
