@@ -12,10 +12,6 @@ var ROUTE_MAP = Object.freeze({
     '/swagger': '/swagger.html'
 });
 
-/**
- * 1) Single source of truth: allowed paths are simply the keys of ROUTE_MAP.
- * 2) We use the array to check existence; the map to resolve the target file.
- */
 var ALLOWED_PATHS = Object.freeze(Object.keys(ROUTE_MAP));
 
 function handler(event) {
@@ -30,27 +26,21 @@ function handler(event) {
     try {
         var uri = request.uri;
 
-        // Fast-path: explicitly allowed -> rewrite via ROUTE_MAP.
         if (Object.prototype.hasOwnProperty.call(ROUTE_MAP, uri)) {
             request.uri = ROUTE_MAP[uri];
             return request;
         }
 
-        // Allow static assets (anything with an extension) to pass through.
         var lastSlash = uri.lastIndexOf('/');
         var lastSegment = uri.substring(lastSlash + 1);
         if (lastSegment.indexOf('.') !== -1) {
             return request;
         }
 
-        // Narrow guard: only 404 unknown single-segment, extension-less paths.
-        // Multi-segment paths (e.g., /en/docs) fall back to origin so S3 can decide.
         var parts = uri.split('/');
-        // ES5.1 short form
         var segmentCount = parts.filter(Boolean).length;
 
         if (segmentCount === 1) {
-            // Unknown single-segment base -> issue CloudFront-level 404.
             return {
                 statusCode: 404,
                 statusDescription: 'Not Found',
@@ -58,7 +48,6 @@ function handler(event) {
             };
         }
 
-        // Multi-segment or other cases: let origin handle (S3 may 404 if unknown).
         return request;
     } catch (err) {
         console.log('cloudfront_routing: error', err);
