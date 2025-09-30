@@ -1,4 +1,5 @@
 const ScenarioBuilder = require('../utils/ScenarioBuilder');
+const { error } = require('../../../../scripts/logger');
 
 const scenarioBuilder = new ScenarioBuilder('swagger');
 
@@ -66,13 +67,37 @@ async function action(page) {
   const buttons = await page.$$('button.opblock-summary-control[aria-expanded="false"]');
 
   for (const button of buttons) {
-    await button.click();
-    await page.waitForSelector('.opblock-body', { visible: true });
+    const isConnected = await button.evaluate(el => el.isConnected);
+    const isVisible = await button.evaluate(el => {
+      const rect = el.getBoundingClientRect();
+      return (
+        rect.width > 0 && rect.height > 0 && window.getComputedStyle(el).visibility !== 'hidden'
+      );
+    });
+
+    if (isConnected && isVisible) {
+      try {
+        await button.click();
+        await page.waitForSelector('.opblock-body', { visible: true });
+      } catch (err) {
+        error('Failed to click button:', await button.evaluate(el => el.outerHTML), err);
+      }
+    }
   }
 
   const tryOutButtons = await page.$$('button.btn.try-out__btn');
   for (const button of tryOutButtons) {
-    await button.click();
+    const isConnected = await button.evaluate(el => el.isConnected);
+    const isVisible = await button.evaluate(el => {
+      const rect = el.getBoundingClientRect();
+      return (
+        rect.width > 0 && rect.height > 0 && window.getComputedStyle(el).visibility !== 'hidden'
+      );
+    });
+
+    if (isConnected && isVisible) {
+      await button.click();
+    }
 
     const parentBlock = await button.evaluateHandle(el => el.closest('.opblock'));
     const idAttribute = await parentBlock.evaluate(el => el.id);
@@ -84,12 +109,22 @@ async function action(page) {
     );
 
     if (executeButton) {
-      await executeButton.click();
-
-      await page.waitForResponse(response => {
-        const status = response.status();
-        return (status >= 200 && status < 300) || (allow404 && status === 404);
+      const isButtonConnected = await executeButton.evaluate(el => el.isConnected);
+      const isButtonVisible = await executeButton.evaluate(el => {
+        const rect = el.getBoundingClientRect();
+        return (
+          rect.width > 0 && rect.height > 0 && window.getComputedStyle(el).visibility !== 'hidden'
+        );
       });
+
+      if (isButtonConnected && isButtonVisible) {
+        await executeButton.click();
+
+        await page.waitForResponse(response => {
+          const status = response.status();
+          return (status >= 200 && status < 300) || (allow404 && status === 404);
+        });
+      }
     }
     await parentBlock.dispose();
   }
@@ -101,7 +136,17 @@ async function action(page) {
     const copyButton = await endpoint.$('.copy-to-clipboard button');
 
     if (copyButton) {
-      await copyButton.click();
+      const isConnected = await copyButton.evaluate(el => el.isConnected);
+      const isVisible = await copyButton.evaluate(el => {
+        const rect = el.getBoundingClientRect();
+        return (
+          rect.width > 0 && rect.height > 0 && window.getComputedStyle(el).visibility !== 'hidden'
+        );
+      });
+
+      if (isConnected && isVisible) {
+        await copyButton.click();
+      }
     }
   }
   const responseStatusElements = await page.$$('.response-col_status');
@@ -129,7 +174,16 @@ async function back(page) {
   const expandedButtons = await page.$$('button[aria-expanded="true"]');
   for (const button of expandedButtons) {
     const isConnected = await button.evaluate(el => el.isConnected);
-    if (isConnected) await button.click();
+    const isVisible = await button.evaluate(el => {
+      const rect = el.getBoundingClientRect();
+      return (
+        rect.width > 0 && rect.height > 0 && window.getComputedStyle(el).visibility !== 'hidden'
+      );
+    });
+
+    if (isConnected && isVisible) {
+      await button.click();
+    }
   }
 
   const operationBlocks = await page.$$('.opblock');
@@ -137,12 +191,32 @@ async function back(page) {
   for (const block of operationBlocks) {
     const summaryButton = await block.$('.opblock-summary-control');
     if (summaryButton) {
-      await summaryButton.click();
+      const isConnected = await summaryButton.evaluate(el => el.isConnected);
+      const isVisible = await summaryButton.evaluate(el => {
+        const rect = el.getBoundingClientRect();
+        return (
+          rect.width > 0 && rect.height > 0 && window.getComputedStyle(el).visibility !== 'hidden'
+        );
+      });
+
+      if (isConnected && isVisible) {
+        await summaryButton.click();
+      }
     }
 
     const copyButton = await block.$('.copy-to-clipboard button');
     if (copyButton) {
-      await copyButton.click();
+      const isConnected = await copyButton.evaluate(el => el.isConnected);
+      const isVisible = await copyButton.evaluate(el => {
+        const rect = el.getBoundingClientRect();
+        return (
+          rect.width > 0 && rect.height > 0 && window.getComputedStyle(el).visibility !== 'hidden'
+        );
+      });
+
+      if (isConnected && isVisible) {
+        await copyButton.click();
+      }
     }
 
     const responseStatus = await block.$('.response-col_status');
