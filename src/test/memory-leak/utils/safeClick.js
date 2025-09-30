@@ -1,4 +1,4 @@
-import { error } from 'winston';
+const winston = require('winston');
 
 async function isElementInteractable(element) {
   const isConnected = await element.evaluate(el => el.isConnected);
@@ -15,7 +15,7 @@ async function safeClick(element, elementDescription = 'element') {
       await element.click();
       return true;
     } catch (err) {
-      error(
+      winston.error(
         `Failed to click ${elementDescription}:`,
         await element.evaluate(el => el.outerHTML),
         err
@@ -26,4 +26,4 @@ async function safeClick(element, elementDescription = 'element') {
   return false;
 }
 
-export default safeClick;
+module.exports = safeClick;

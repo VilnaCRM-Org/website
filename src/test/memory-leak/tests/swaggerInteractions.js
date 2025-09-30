@@ -1,5 +1,5 @@
 const ScenarioBuilder = require('../utils/ScenarioBuilder');
-const safeClick = require('@/test/memory-leak/utils/safeClick');
+const safeClick = require('../utils/safeClick');
 
 const scenarioBuilder = new ScenarioBuilder('swagger');
 
