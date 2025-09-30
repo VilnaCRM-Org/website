@@ -29,19 +29,16 @@ function handler(event) {
 
   try {
     var uri = request.uri;
+
     if (Object.prototype.hasOwnProperty.call(ROUTE_MAP, uri)) {
       request.uri = ROUTE_MAP[uri];
       return request;
-    } else {
-      var segments = uri.split('/');
-      var lastSegment = segments[segments.length - 1];
-      if (lastSegment.indexOf('.') === -1 && segments.length > 2) {
-        request.uri = uri + '/index.html';
-        return request;
-      }
     }
 
+    var segments = uri.split('/');
+    var lastSegment = segments[segments.length - 1];
     var lastChar = typeof uri === 'string' ? uri.charAt(uri.length - 1) : '';
+
     if (lastChar === '/') {
       request.uri = uri + 'index.html';
       return request;

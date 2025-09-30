@@ -36,4 +36,3 @@ jobs:
 
       - name: Run mutation testing
         run: make test-mutation
-
