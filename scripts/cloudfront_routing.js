@@ -46,13 +46,8 @@ function handler(event) {
         // Narrow guard: only 404 unknown single-segment, extension-less paths.
         // Multi-segment paths (e.g., /en/docs) fall back to origin so S3 can decide.
         var parts = uri.split('/');
-        var i = 0;
-        var segmentCount = 0;
-        for (i = 0; i < parts.length; i++) {
-            if (parts[i]) {
-                segmentCount++;
-            }
-        }
+        // ES5.1 short form
+        var segmentCount = parts.filter(Boolean).length;
 
         if (segmentCount === 1) {
             // Unknown single-segment base -> issue CloudFront-level 404.
