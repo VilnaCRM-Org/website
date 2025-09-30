@@ -1,6 +1,10 @@
-import { test, expect, Page, Locator } from '@playwright/test';
+import { test, expect } from '@playwright/test';
+import type { Page, Locator } from '@playwright/test';
+import dotenv from 'dotenv';
 
 import { t } from './utils/initializeLocalization';
+
+dotenv.config();
 
 enum SocialNetwork {
   // TODO: correct the url to our social networks
@@ -11,11 +15,11 @@ enum SocialNetwork {
 }
 
 const socialLinks: Record<SocialNetwork, { url: string }> = {
-  [SocialNetwork.INSTAGRAM]: { url: 'https://www.instagram.com/' },
-  [SocialNetwork.GITHUB]: { url: 'https://github.com/VilnaCRM-Org/' },
-  [SocialNetwork.FACEBOOK]: { url: 'https://www.facebook.com/' },
-  [SocialNetwork.LINKEDIN]: { url: 'https://www.linkedin.com/' },
-};
+  [SocialNetwork.INSTAGRAM]: { url: process.env.INSTAGRAM_URL || 'https://www.instagram.com/' },
+  [SocialNetwork.GITHUB]: { url: process.env.GITHUB_URL || 'https://github.com/VilnaCRM-Org/' },
+  [SocialNetwork.FACEBOOK]: { url: process.env.FACEBOOK_URL || 'https://www.facebook.com/' },
+  [SocialNetwork.LINKEDIN]: { url: process.env.LINKEDIN_URL || 'https://www.linkedin.com/' },
+} as const;
 
 const linkToInstagramRole: string = t('header.drawer.aria_labels_social_images.instagram');
 const linkToGithubRole: string = t('header.drawer.aria_labels_social_images.github');
@@ -26,7 +30,9 @@ const buttonToOpenDrawerLabel: string = t('header.drawer.button_aria_labels.bars
 const mockedPageBodyContent: string = 'Mocked Page';
 
 async function mockSocialLinkUrlRoute(page: Page, url: string): Promise<void> {
-  await page.route(url, route => {
+  const { origin } = new URL(url);
+  const pattern: string = `${origin}/**`;
+  await page.context().route(pattern, route => {
     route.fulfill({
       status: 200,
       body: mockedPageBodyContent,
@@ -49,10 +55,16 @@ async function navigateAndVerifyURL(
   await socialLink.waitFor({ state: 'visible' });
   await expect(socialLink).toBeEnabled();
 
-  await socialLink.click();
-  await page.goto(url);
-  await page.waitForURL(expectedURL);
-  await expect(page).toHaveURL(expectedURL);
+  const [popup] = await Promise.all([
+    page.waitForEvent('popup').catch(() => null),
+    socialLink.click(),
+  ]);
+  if (popup) {
+    await expect(popup).toHaveURL(expectedURL);
+    await popup.close();
+  } else {
+    await expect(page).toHaveURL(expectedURL);
+  }
 }
 
 async function openDrawerAndNavigate(
@@ -64,10 +76,16 @@ async function openDrawerAndNavigate(
   await mockSocialLinkUrlRoute(page, url);
   await page.setViewportSize({ width: 375, height: 812 });
   await page.getByLabel(buttonToOpenDrawerLabel).click();
-  await page.getByRole('presentation').getByLabel(linkName).click();
-  await page.goto(url);
-  await page.waitForURL(expectedURL);
-  await expect(page).toHaveURL(expectedURL);
+  const link: Locator = page.getByRole('presentation').getByLabel(linkName);
+  await expect(link).toBeVisible();
+  await expect(link).toBeEnabled();
+  const [popup] = await Promise.all([page.waitForEvent('popup').catch(() => null), link.click()]);
+  if (popup) {
+    await expect(popup).toHaveURL(expectedURL);
+    await popup.close();
+  } else {
+    await expect(page).toHaveURL(expectedURL);
+  }
 }
 
 test.describe('Navigation tests', () => {
@@ -97,9 +115,9 @@ test.describe('Navigation tests', () => {
   });
 
   test('Desktop Linkedin link', async ({ page }) => {
-    await navigateAndVerifyURL(page, linkToLinkedinRole, /link/, socialLinks.linkedin.url);
+    await navigateAndVerifyURL(page, linkToLinkedinRole, /linkedin/, socialLinks.linkedin.url);
   });
   test('Mobile Linkedin link', async ({ page }) => {
-    await openDrawerAndNavigate(page, linkToLinkedinRole, /link/, socialLinks.linkedin.url);
+    await openDrawerAndNavigate(page, linkToLinkedinRole, /linkedin/, socialLinks.linkedin.url);
   });
 });

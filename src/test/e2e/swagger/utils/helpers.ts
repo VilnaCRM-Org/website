@@ -68,6 +68,10 @@ export async function interceptWithErrorResponse(
 
 export async function cancelOperation(page: Page): Promise<void> {
   const cancelBtn: Locator = page.locator('button.btn.try-out__btn.cancel');
+
+  await expect(cancelBtn).toBeVisible();
+  await expect(cancelBtn).toBeEnabled();
+
   await cancelBtn.click();
 }
 
@@ -112,9 +116,10 @@ export async function mockAuthorizeSuccess(
 ): Promise<void> {
   await page.route(
     authorizeUrl,
-    route => {
-      const targetUrl: string = `${redirectUri}?code=abc123${state ? `&state=${state}` : ''}`;
-      route.fulfill({
+    async route => {
+      const stateSuffix: string = state ? `&state=${encodeURIComponent(state)}` : '';
+      const targetUrl: string = `${redirectUri}?code=abc123${stateSuffix}`;
+      await route.fulfill({
         status: 200,
         contentType: 'text/html',
         body: `
@@ -158,6 +163,5 @@ export async function collapseEndpoint(endpoint: Locator): Promise<void> {
 
   await opblockSummary.click();
 
-  await opblockBody.waitFor({ state: 'hidden' });
-  await expect(opblockBody).not.toBeVisible();
+  await expect(opblockBody).toBeHidden();
 }
