@@ -67,7 +67,7 @@ async function action(page) {
   const summaryButtons = await page.$$('button.opblock-summary-control[aria-expanded="false"]');
 
   for (const summaryButton of summaryButtons) {
-    await safeClick(summaryButton, '.opblock-body');
+    await safeClick(summaryButton, 'button.opblock-summary-control');
   }
 
   const tryOutButtons = await page.$$('button.btn.try-out__btn');

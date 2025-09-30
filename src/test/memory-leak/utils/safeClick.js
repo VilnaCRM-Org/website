@@ -4,7 +4,15 @@ async function isElementInteractable(element) {
   const isConnected = await element.evaluate(el => el.isConnected);
   const isVisible = await element.evaluate(el => {
     const rect = el.getBoundingClientRect();
-    return rect.width > 0 && rect.height > 0 && window.getComputedStyle(el).visibility !== 'hidden';
+    const style = window.getComputedStyle(el);
+    return (
+      rect.width > 0 &&
+      rect.height > 0 &&
+      style.visibility !== 'hidden' &&
+      style.display !== 'none' &&
+      style.pointerEvents !== 'none' &&
+      !el.disabled
+    );
   });
   return isConnected && isVisible;
 }
@@ -15,12 +23,13 @@ async function safeClick(element, elementDescription = 'element') {
       await element.click();
       return true;
     } catch (err) {
-      winston.error(
-        `Failed to click ${elementDescription}:`,
-        await element.evaluate(el => el.outerHTML),
-        err
-      );
-      return false;
+      const outerHTML = await element.evaluate(el => el.outerHTML);
+      winston.error(`Failed to click ${elementDescription}`, {
+        element: outerHTML,
+        error: err.message,
+        stack: err.stack,
+      });
+      throw err;
     }
   }
   return false;
