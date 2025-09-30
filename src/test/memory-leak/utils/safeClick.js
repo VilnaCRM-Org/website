@@ -1,8 +1,8 @@
 const winston = require('winston');
 
 async function isElementInteractable(element) {
-  const isConnected = await element.evaluate(el => el.isConnected);
-  const isVisible = await element.evaluate(el => {
+  return element.evaluate(el => {
+    if (!el.isConnected) return false;
     const rect = el.getBoundingClientRect();
     const style = window.getComputedStyle(el);
     return (
@@ -15,7 +15,6 @@ async function isElementInteractable(element) {
       style.opacity !== '0'
     );
   });
-  return isConnected && isVisible;
 }
 
 async function safeClick(element, elementDescription = 'element') {
@@ -30,7 +29,7 @@ async function safeClick(element, elementDescription = 'element') {
         error: err.message,
         stack: err.stack,
       });
-      throw err;
+      return false;
     }
   }
   return false;
