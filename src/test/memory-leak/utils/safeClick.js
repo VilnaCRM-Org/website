@@ -11,7 +11,8 @@ async function isElementInteractable(element) {
       style.visibility !== 'hidden' &&
       style.display !== 'none' &&
       style.pointerEvents !== 'none' &&
-      !el.disabled
+      !el.disabled &&
+      style.opacity !== '0'
     );
   });
   return isConnected && isVisible;
