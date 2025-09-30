@@ -1,5 +1,6 @@
 services:
   memory-leak:
+    container_name: website-memory-leak
     build:
       context: .
       dockerfile: MemoryLeak.Dockerfile
@@ -7,13 +8,16 @@ services:
     environment:
       - DISPLAY=:99
       - PUPPETEER_DISABLE_HEADLESS_WARNING=1
-      - NEXT_PUBLIC_PROD_CONTAINER_API_URL=http://prod:3001
+      - NEXT_PUBLIC_PROD_CONTAINER_API_URL=http://website-prod:3001
       - MEMLAB_DEBUG=true
       - MEMLAB_SKIP_WARMUP=true
       - NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_NAME=no-aws-header-name
       - NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_VALUE=no-aws-header-value
     init: true
     shm_size: '1gb'
+    ipc: host
+    tmpfs:
+      - /dev/shm:size=1g
     networks:
       - website-network
     healthcheck:
