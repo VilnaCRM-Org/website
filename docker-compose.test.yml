@@ -1,5 +1,6 @@
 services:
   prod:
+    container_name: website-prod
     build:
       context: .
       dockerfile: Dockerfile
@@ -7,12 +8,14 @@ services:
     restart: unless-stopped
     ports:
       - '3001:3001'
+    shm_size: ${SHM_SIZE:-1g}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://${WEBSITE_DOMAIN}:${NEXT_PUBLIC_PROD_PORT}"]
     networks:
       - website-network
 
   playwright:
+    container_name: website-playwright
     build:
       context: .
       dockerfile: Playwright.Dockerfile
@@ -30,6 +33,7 @@ services:
       - website-network
 
   apollo:
+    container_name: website-apollo
     build:
       context: .
       dockerfile: Apollo.Dockerfile
@@ -42,6 +46,7 @@ services:
       - website-network
 
   mockoon:
+    container_name: website-mockoon
     build:
       context: .
       dockerfile: Mockoon.Dockerfile
@@ -55,6 +60,7 @@ services:
 
 
   k6:
+    container_name: website-k6
     profiles: ["load"]
     build:
       context: .

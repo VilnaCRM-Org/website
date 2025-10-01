@@ -1,8 +1,8 @@
 /**
- * This script follows ES5.1 rules for compatibility.
- * Avoid ES6+ syntax (e.g., `let`, `const`, arrow functions).
+ * ES5.1 compatible (no let/const/arrow functions).
  */
 'use strict';
+
 var ROUTE_MAP = Object.freeze({
   '/': '/index.html',
   '/about': '/about/index.html',
@@ -12,17 +12,21 @@ var ROUTE_MAP = Object.freeze({
   '/swagger': '/swagger.html',
   '/swagger/': '/swagger.html',
 });
+
+var ALLOWED_PATHS = Object.freeze(Object.keys(ROUTE_MAP));
+
 function handler(event) {
   var request = event.request;
 
-  if (!request.uri || typeof request.uri !== 'string') {
-    var host = (request.headers && request.headers.host && request.headers.host.value) || '';
+  if (!request || typeof request.uri !== 'string') {
+    var host =
+      (request && request.headers && request.headers.host && request.headers.host.value) || '';
     console.log(
       'cloudfront_routing: missing/invalid request.uri',
       'host=',
       host,
       'uri=',
-      request.uri
+      request && request.uri
     );
     return request;
   }
@@ -35,21 +39,26 @@ function handler(event) {
       return request;
     }
 
-    var segments = uri.split('/');
-    var lastSegment = segments[segments.length - 1];
-    var lastChar = typeof uri === 'string' ? uri.charAt(uri.length - 1) : '';
-
-    if (lastChar === '/') {
-      request.uri = uri + 'index.html';
-      return request;
-    } else if (lastSegment.indexOf('.') === -1 && segments.length > 2) {
-      request.uri = uri + '/index.html';
+    var lastSlash = uri.lastIndexOf('/');
+    var lastSegment = uri.substring(lastSlash + 1);
+    if (lastSegment.indexOf('.') !== -1) {
       return request;
     }
 
+    var parts = uri.split('/');
+    var segmentCount = parts.filter(Boolean).length;
+
+    if (segmentCount === 1) {
+      return {
+        statusCode: 404,
+        statusDescription: 'Not Found',
+        headers: { 'cache-control': { value: 'public, max-age=60' } },
+      };
+    }
+
     return request;
-  } catch (error) {
-    console.log('cloudfront_routing: error', error);
+  } catch (err) {
+    console.log('cloudfront_routing: error', err);
     return request;
   }
 }

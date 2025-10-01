@@ -8,6 +8,9 @@ include .env
 
 export
 
+WEBSITE_DOMAIN              ?= localhost
+NEXT_PUBLIC_PROD_PORT       ?= 3001
+
 DOCKER_COMPOSE              = docker compose
 
 BIN_DIR                     = ./node_modules/.bin
@@ -36,6 +39,31 @@ LHCI_CONFIG_DESKTOP         = --config=lighthouserc.desktop.js
 LHCI_CONFIG_MOBILE          = --config=lighthouserc.mobile.js
 LHCI_DESKTOP_SERVE          = $(LHCI_CONFIG_DESKTOP) $(SERVE_CMD)
 LHCI_MOBILE_SERVE           = $(LHCI_CONFIG_MOBILE) $(SERVE_CMD)
+
+# ===== DRY helpers (macros/vars) =====
+# Chrome/LHCI DIND common pieces
+CHROMIUM_BIN_PATH           = /usr/bin/chromium-browser
+LHCI_DIND_CHROME_FLAGS      = --no-sandbox --disable-dev-shm-usage --disable-extensions --disable-gpu --headless --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-software-rasterizer --disable-setuid-sandbox --single-process --no-zygote --js-flags=--max-old-space-size=4096
+LHCI_DIND_BIN               = $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_TEST_FILE) exec -T -w /app prod lhci autorun
+LHCI_DIND_COMMON            = --collect.url="http://localhost:$(NEXT_PUBLIC_PROD_PORT)" \
+                              --collect.chromePath=$(CHROMIUM_BIN_PATH) \
+                              --collect.chromeFlags="$(LHCI_DIND_CHROME_FLAGS)"
+
+# Exec helpers
+EXEC_PROD_TTYLESS           = $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_TEST_FILE) exec -T prod
+
+# Macro: require env var with example usage value
+define REQUIRE_ENV_VAR
+	@if [ -z "$($(1))" ]; then \
+		echo "Error: $(1) is required. Usage: make $(MAKECMDGOALS) $(1)=$(2)"; \
+		exit 1; \
+	fi
+endef
+
+# Macro: exec a command inside named container env var (e.g., TEMP_CONTAINER_NAME)
+define EXEC_IN_CONTAINER
+	docker exec "$($(1))" sh -lc "$(2)"
+endef
 
 DOCKER_COMPOSE_TEST_FILE    = -f docker-compose.test.yml
 DOCKER_COMPOSE_DEV_FILE     = -f docker-compose.yml
@@ -115,8 +143,84 @@ start: ## Start the application
 
 wait-for-dev: ## Wait for the dev service to be ready on port $(DEV_PORT).
 	@echo "Waiting for dev service to be ready on port $(DEV_PORT)..."
-	@while ! npx wait-on http://$(WEBSITE_DOMAIN):$(DEV_PORT) 2>/dev/null; do printf "."; done
+	@while ! curl -s -f http://$(WEBSITE_DOMAIN):$(DEV_PORT) >/dev/null 2>&1; do printf "."; sleep 1; done
 	@printf '\nDev service is up and running!\n'
+
+create-temp-dev-container-dind: ## Create a temporary dev container for DIND testing (TEMP_CONTAINER_NAME required)
+	$(call REQUIRE_ENV_VAR,TEMP_CONTAINER_NAME,my-container)
+	@echo "🧹 Cleaning old temp container $(TEMP_CONTAINER_NAME)..."
+	@docker rm -f "$(TEMP_CONTAINER_NAME)" 2>/dev/null || true
+	@echo "🚀 Starting temp dev container $(TEMP_CONTAINER_NAME)..."
+	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) run -d --name "$(TEMP_CONTAINER_NAME)" --entrypoint sh dev -lc 'sleep infinity'
+
+copy-source-to-container-dind: ## Copy source code to container for DIND testing (TEMP_CONTAINER_NAME required)
+	$(call REQUIRE_ENV_VAR,TEMP_CONTAINER_NAME,my-container)
+	@echo "📂 Copying source into temp container $(TEMP_CONTAINER_NAME)..."
+	# Use tar streaming with excludes to avoid docker cp EOF/tar issues on macOS
+	$(call EXEC_IN_CONTAINER,TEMP_CONTAINER_NAME,mkdir -p /app)
+	@echo "   ↪️  Creating archive stream (excluding heavy/transient dirs)..."
+	@tar -cf - \
+		--exclude="./.git" \
+		--exclude="./node_modules" \
+		--exclude="./.next" \
+		--exclude="./out" \
+		--exclude="./coverage" \
+		--exclude="./playwright-report" \
+		--exclude="./test-results" \
+		./ \
+		| docker exec -i "$(TEMP_CONTAINER_NAME)" sh -lc 'tar -xf - -C /app'
+
+install-deps-in-container-dind: ## Install dependencies in container for DIND testing (TEMP_CONTAINER_NAME required)
+	$(call REQUIRE_ENV_VAR,TEMP_CONTAINER_NAME,my-container)
+	@echo "📦 Installing deps in container $(TEMP_CONTAINER_NAME)..."
+	$(call EXEC_IN_CONTAINER,TEMP_CONTAINER_NAME,cd /app && npm install -g pnpm && pnpm install --frozen-lockfile)
+
+run-unit-tests-dind: ## Run unit tests in DIND container (TEMP_CONTAINER_NAME required)
+	$(call REQUIRE_ENV_VAR,TEMP_CONTAINER_NAME,my-container)
+	@echo "🧪 Running client-side tests in container $(TEMP_CONTAINER_NAME)..."
+	$(call EXEC_IN_CONTAINER,TEMP_CONTAINER_NAME,cd /app && make test-unit-client CI=1)
+	@echo "🧪 Running server-side tests in container $(TEMP_CONTAINER_NAME)..."
+	$(call EXEC_IN_CONTAINER,TEMP_CONTAINER_NAME,cd /app && make test-unit-server CI=1)
+
+run-mutation-tests-dind: ## Run mutation tests in DIND container (TEMP_CONTAINER_NAME required)
+	$(call REQUIRE_ENV_VAR,TEMP_CONTAINER_NAME,my-container)
+	@echo "🧬 Running Stryker mutation tests in container $(TEMP_CONTAINER_NAME)..."
+	$(call EXEC_IN_CONTAINER,TEMP_CONTAINER_NAME,cd /app && pnpm stryker run)
+
+run-eslint-tests-dind: ## Run ESLint tests in DIND container (TEMP_CONTAINER_NAME required)
+	$(call REQUIRE_ENV_VAR,TEMP_CONTAINER_NAME,my-container)
+	@echo "🔍 Running ESLint in container $(TEMP_CONTAINER_NAME)..."
+	$(call EXEC_IN_CONTAINER,TEMP_CONTAINER_NAME,cd /app && make lint-next CI=1)
+
+run-typescript-tests-dind: ## Run TypeScript tests in DIND container (TEMP_CONTAINER_NAME required)
+	$(call REQUIRE_ENV_VAR,TEMP_CONTAINER_NAME,my-container)
+	@echo "🔍 Running TypeScript check in container $(TEMP_CONTAINER_NAME)..."
+	$(call EXEC_IN_CONTAINER,TEMP_CONTAINER_NAME,cd /app && make lint-tsc CI=1)
+
+run-markdown-lint-tests-dind: ## Run Markdown linting tests in DIND container (TEMP_CONTAINER_NAME required)
+	$(call REQUIRE_ENV_VAR,TEMP_CONTAINER_NAME,my-container)
+	@echo "🔍 Running Markdown linting in container $(TEMP_CONTAINER_NAME)..."
+	$(call EXEC_IN_CONTAINER,TEMP_CONTAINER_NAME,cd /app && make lint-md CI=1)
+
+create-k6-helper-container-dind: ## Create a detached K6 helper container for DIND testing (K6_HELPER_NAME required)
+	$(call REQUIRE_ENV_VAR,K6_HELPER_NAME,my-k6-helper)
+	@echo "🧹 Cleaning old K6 helper container $(K6_HELPER_NAME)..."
+	@docker rm -f "$(K6_HELPER_NAME)" 2>/dev/null || true
+	@echo "🚀 Starting K6 helper container $(K6_HELPER_NAME)..."
+	$(DOCKER_COMPOSE) $(COMMON_HEALTHCHECKS_FILE) $(DOCKER_COMPOSE_TEST_FILE) --profile load run -d \
+		--name "$(K6_HELPER_NAME)" --entrypoint sh k6 -lc 'tail -f /dev/null'
+
+build-k6: ## Build K6 load testing container
+	@echo "🔨 Building K6 container image..."
+	$(DOCKER_COMPOSE) $(COMMON_HEALTHCHECKS_FILE) $(DOCKER_COMPOSE_TEST_FILE) --profile load build k6
+
+run-load-tests-dind: ## Run K6 load tests in DIND container without starting services (K6_HELPER_NAME required)
+	$(call REQUIRE_ENV_VAR,K6_HELPER_NAME,my-k6-helper)
+	@echo "⚡ Running K6 load tests in container $(K6_HELPER_NAME)..."
+	docker exec -w /loadTests "$(K6_HELPER_NAME)" k6 run \
+		--summary-trend-stats="avg,min,med,max,p(95),p(99)" \
+		--out "web-dashboard=period=1s&export=/loadTests/results/homepage.html" /loadTests/homepage.js
+
 
 build: ## A tool build the project
 	$(DOCKER_COMPOSE) build
@@ -179,11 +283,11 @@ create-network: ## Create the external Docker network if it doesn't exist
 	@docker network ls | grep -q $(NETWORK_NAME) || docker network create $(NETWORK_NAME)
 
 start-prod: create-network ## Build image and start container in production mode
-	$(DOCKER_COMPOSE) $(COMMON_HEALTHCHECKS_FILE) $(DOCKER_COMPOSE_TEST_FILE) up -d && make wait-for-prod
+	$(DOCKER_COMPOSE) $(COMMON_HEALTHCHECKS_FILE) $(DOCKER_COMPOSE_TEST_FILE) up -d && make wait-for-prod-health
 
 wait-for-prod: ## Wait for the prod service to be ready on port $(NEXT_PUBLIC_PROD_PORT).
 	@echo "Waiting for prod service to be ready on port $(NEXT_PUBLIC_PROD_PORT)..."
-	@while ! npx wait-on http://$(WEBSITE_DOMAIN):$(NEXT_PUBLIC_PROD_PORT) 2>/dev/null; do printf "."; done
+	@while ! curl -s -f http://$(WEBSITE_DOMAIN):$(NEXT_PUBLIC_PROD_PORT) >/dev/null 2>&1; do printf "."; sleep 1; done
 	@printf '\nProd service is up and running!\n'
 
 test-unit-all: test-unit-client test-unit-server ## This command executes unit tests for both client and server environments.
@@ -204,6 +308,20 @@ test-memory-leak: start-prod ## This command executes memory leaks tests using M
 	@echo "🧹 Cleaning up memory leak test containers..."
 	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_MEMLEAK_FILE) down --remove-orphans
 
+memory-leak-dind: start-prod ## Run Memlab tests in isolated compose project (DIND safe)
+	@echo "🧪 Starting memory leak test environment (isolated project)..."
+	$(DOCKER_COMPOSE) -p memleak $(DOCKER_COMPOSE_MEMLEAK_FILE) up -d --wait $(MEMLEAK_SERVICE)
+	@echo "🧹 Cleaning up previous memory leak results..."
+	$(DOCKER_COMPOSE) -p memleak $(DOCKER_COMPOSE_MEMLEAK_FILE) exec -T $(MEMLEAK_SERVICE) rm -rf $(MEMLEAK_RESULTS_DIR)
+	@echo "🚀 Running memory leak tests..."
+	$(DOCKER_COMPOSE) -p memleak $(DOCKER_COMPOSE_MEMLEAK_FILE) exec -T $(MEMLEAK_SERVICE) sh -lc "unset DISPLAY; \
+    export PUPPETEER_PROTOCOL_TIMEOUT=240000; \
+    export PUPPETEER_ARGS='--no-sandbox --disable-dev-shm-usage --disable-gpu --single-process --no-zygote --disable-setuid-sandbox'; \
+    export CHROME_ARGS='--no-sandbox --disable-dev-shm-usage --disable-gpu --single-process --no-zygote --disable-setuid-sandbox'; \
+    node $(MEMLEAK_TEST_SCRIPT)"
+	@echo "🧹 Cleaning up memory leak test containers..."
+	$(DOCKER_COMPOSE) -p memleak $(DOCKER_COMPOSE_MEMLEAK_FILE) down
+
 test-mutation: build ## Run mutation tests using Stryker after building the app
 	$(STRYKER_CMD)
 
@@ -221,6 +339,17 @@ wait-for-prod-health: ## Wait for the prod container to reach a healthy state.
 		fi; \
 	done
 
+.PHONY: visual-direct e2e-direct all clean
+visual-direct: start-prod ## Start production and run visual tests directly (no shell wrapper)
+	$(playwright-test) $(TEST_DIR_VISUAL)
+
+e2e-direct: start-prod ## Start production and run E2E tests directly (no shell wrapper)
+	$(playwright-test) $(TEST_DIR_E2E)
+
+all: build ## Default aggregate target to build the project
+
+clean: down ## Clean up running containers and artifacts
+
 load-tests: start-prod wait-for-prod-health ## This command executes load tests using K6 library. Note: The target host is determined by the service URL
                        ## using $(NEXT_PUBLIC_PROD_PORT), which maps to the production service in Docker Compose.
 	$(LOAD_TESTS_RUN)
@@ -232,11 +361,35 @@ load-tests-swagger: start-prod wait-for-prod-health ## Execute comprehensive loa
 lighthouse-desktop: ## Run a Lighthouse audit using desktop viewport settings to evaluate performance and best practices
 	$(LHCI_DESKTOP)
 
+lighthouse-desktop-dind: ## Run Lighthouse desktop audit in DIND mode using prod container with explicit Chrome configuration
+	@echo "🔦 Running Lighthouse desktop tests in DIND mode..."
+	$(LHCI_DIND_BIN) --config=lighthouserc.desktop.js $(LHCI_DIND_COMMON)
+	@echo "✅ Lighthouse desktop DIND tests completed"
+
 lighthouse-mobile: ## Run a Lighthouse audit using mobile viewport settings to evaluate mobile UX and performance
 	$(LHCI_MOBILE)
 
+lighthouse-mobile-dind: ## Run Lighthouse mobile audit in DIND mode using prod container with explicit Chrome configuration
+	@echo "📱 Running Lighthouse mobile tests in DIND mode..."
+	$(LHCI_DIND_BIN) --config=lighthouserc.mobile.js $(LHCI_DIND_COMMON)
+	@echo "✅ Lighthouse mobile DIND tests completed"
+
 install: ## Install node modules using pnpm (CI=1 runs locally, default runs in container) — uses frozen lockfile and affects node_modules via volumes
 	$(PNPM_EXEC) pnpm install --frozen-lockfile
+
+install-chromium-lhci: ## Install Chromium and Lighthouse CLI in the prod container for DIND testing
+	@echo "📦 Installing Chromium and Lighthouse CLI in prod container..."
+	$(EXEC_PROD_TTYLESS) sh -lc "apk add --no-cache chromium chromium-chromedriver && npm install -g @lhci/cli@0.14.0"
+	@echo "✅ Chromium and Lighthouse CLI installation completed"
+
+test-chromium: ## Test Chromium browser installation and version in the prod container
+	@echo "🧪 Testing Chromium browser installation..."
+	@if $(EXEC_PROD_TTYLESS) $(CHROMIUM_BIN_PATH) --version; then \
+		echo "✅ Chromium is installed and working"; \
+	else \
+		echo "❌ Chromium installation test failed"; \
+		exit 1; \
+	fi
 
 update: ## Update node modules to latest allowed versions — always runs locally, updates lockfile (run before committing dependency changes)
 	pnpm update
@@ -260,4 +413,5 @@ stop: ## Stop docker
 	$(DOCKER_COMPOSE) stop
 
 check-node-version: ## Check if the correct Node.js version is installed
-	$(PNPM_EXEC) node checkNodeVersion.js
+	$(PNPM_EXEC) exec node checkNodeVersion.js
+
