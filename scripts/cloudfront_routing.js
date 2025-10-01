@@ -13,8 +13,6 @@ var ROUTE_MAP = Object.freeze({
   '/swagger/': '/swagger.html',
 });
 
-var ALLOWED_PATHS = Object.freeze(Object.keys(ROUTE_MAP));
-
 function handler(event) {
   var request = event.request;
 
