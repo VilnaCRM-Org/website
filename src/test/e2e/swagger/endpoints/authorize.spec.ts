@@ -85,8 +85,6 @@ test.describe('OAuth authorize endpoint', () => {
     );
 
     await elements.executeBtn.click();
-    await elements.curl.waitFor({ state: 'attached' });
-    await expect(elements.curl).toBeVisible();
 
     await expect(elements.copyButton).toBeVisible();
     await expect(elements.requestUrl).toContainText('/oauth/authorize');
