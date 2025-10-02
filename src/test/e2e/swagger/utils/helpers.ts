@@ -109,6 +109,31 @@ export async function expectErrorOrFailureStatus(getEndpoint: Locator): Promise<
   expect(hasErrorMessage).toBe(true);
 }
 
+function buildRedirectUrl(redirectUri: string, code: string, state?: string): string {
+  const [redirectWithoutHash, hashFragment = ''] = redirectUri.split('#', 2);
+
+  let needsQuerySeparator: string;
+  if (!redirectWithoutHash.includes('?')) {
+    needsQuerySeparator = '?';
+  } else if (redirectWithoutHash.endsWith('?') || redirectWithoutHash.endsWith('&')) {
+    needsQuerySeparator = '';
+  } else {
+    needsQuerySeparator = '&';
+  }
+
+  let targetUrl: string = `${redirectWithoutHash}${needsQuerySeparator}code=${encodeURIComponent(code)}`;
+
+  if (state !== undefined) {
+    targetUrl += `&state=${encodeURIComponent(state)}`;
+  }
+
+  if (hashFragment) {
+    targetUrl += `#${hashFragment}`;
+  }
+
+  return targetUrl;
+}
+
 export async function mockAuthorizeSuccess(
   page: Page,
   authorizeUrl: string,
@@ -118,8 +143,7 @@ export async function mockAuthorizeSuccess(
   await page.route(
     authorizeUrl,
     async route => {
-      const stateSuffix: string = state ? `&state=${encodeURIComponent(state)}` : '';
-      const targetUrl: string = `${redirectUri}?code=abc123${stateSuffix}`;
+      const targetUrl: string = buildRedirectUrl(redirectUri, 'abc123', state);
 
       await route.fulfill({
         status: 302,
