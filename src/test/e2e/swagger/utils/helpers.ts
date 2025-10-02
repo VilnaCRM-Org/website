@@ -108,6 +108,7 @@ export async function expectErrorOrFailureStatus(getEndpoint: Locator): Promise<
   expect(hasFailureStatus).toBe(true);
   expect(hasErrorMessage).toBe(true);
 }
+
 export async function mockAuthorizeSuccess(
   page: Page,
   authorizeUrl: string,
@@ -119,19 +120,13 @@ export async function mockAuthorizeSuccess(
     async route => {
       const stateSuffix: string = state ? `&state=${encodeURIComponent(state)}` : '';
       const targetUrl: string = `${redirectUri}?code=abc123${stateSuffix}`;
+
       await route.fulfill({
-        status: 200,
-        contentType: 'text/html',
-        body: `
-        <html lang="en">
-          <head>
-            <meta http-equiv="refresh" content="0; url=${targetUrl}" />
-          </head>
-          <body>
-            <p>Redirecting...</p>
-          </body>
-        </html>
-      `,
+        status: 302,
+        headers: {
+          Location: targetUrl,
+        },
+        body: '',
       });
     },
     { times: 1 }
