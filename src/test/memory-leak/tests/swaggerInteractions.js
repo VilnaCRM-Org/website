@@ -1,4 +1,5 @@
 const ScenarioBuilder = require('../utils/ScenarioBuilder');
+const safeClick = require('../utils/safeClick');
 
 const scenarioBuilder = new ScenarioBuilder('swagger');
 
@@ -63,33 +64,24 @@ async function action(page) {
     await page.select('#servers', 'https://mocked.api.com');
   }
 
-  const buttons = await page.$$('button.opblock-summary-control[aria-expanded="false"]');
+  const summaryButtons = await page.$$('button.opblock-summary-control[aria-expanded="false"]');
 
-  for (const button of buttons) {
-    await button.click();
-    await page.waitForSelector('.opblock-body', { visible: true });
+  for (const summaryButton of summaryButtons) {
+    await safeClick(summaryButton, '.opblock-body');
   }
 
   const tryOutButtons = await page.$$('button.btn.try-out__btn');
-  for (const button of tryOutButtons) {
-    await button.click();
+  for (const tryOutButton of tryOutButtons) {
+    await safeClick(tryOutButton, 'button.btn.try-out__btn');
 
-    const parentBlock = await button.evaluateHandle(el => el.closest('.opblock'));
-    const idAttribute = await parentBlock.evaluate(el => el.id);
-    const allow404 = idAttribute === 'operations-OAuth-get_api_oauth_authorize';
-
+    const parentBlock = await tryOutButton.evaluateHandle(el => el.closest('.opblock'));
     const executeButton = await parentBlock.waitForSelector(
       'button.btn.execute.opblock-control__btn',
       { visible: true }
     );
 
     if (executeButton) {
-      await executeButton.click();
-
-      await page.waitForResponse(response => {
-        const status = response.status();
-        return (status >= 200 && status < 300) || (allow404 && status === 404);
-      });
+      await safeClick(executeButton, 'button.btn.execute.opblock-control__btn');
     }
     await parentBlock.dispose();
   }
@@ -101,7 +93,7 @@ async function action(page) {
     const copyButton = await endpoint.$('.copy-to-clipboard button');
 
     if (copyButton) {
-      await copyButton.click();
+      await safeClick(copyButton, '.copy-to-clipboard button');
     }
   }
   const responseStatusElements = await page.$$('.response-col_status');
@@ -127,9 +119,8 @@ async function back(page) {
   }
 
   const expandedButtons = await page.$$('button[aria-expanded="true"]');
-  for (const button of expandedButtons) {
-    const isConnected = await button.evaluate(el => el.isConnected);
-    if (isConnected) await button.click();
+  for (const expandedButton of expandedButtons) {
+    await safeClick(expandedButton, 'button[aria-expanded="true"]');
   }
 
   const operationBlocks = await page.$$('.opblock');
@@ -137,12 +128,12 @@ async function back(page) {
   for (const block of operationBlocks) {
     const summaryButton = await block.$('.opblock-summary-control');
     if (summaryButton) {
-      await summaryButton.click();
+      await safeClick(summaryButton, '.opblock-summary-control');
     }
 
     const copyButton = await block.$('.copy-to-clipboard button');
     if (copyButton) {
-      await copyButton.click();
+      await safeClick(copyButton, '.copy-to-clipboard button');
     }
 
     const responseStatus = await block.$('.response-col_status');

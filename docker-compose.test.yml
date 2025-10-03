@@ -54,7 +54,7 @@ services:
       - '8080:8080'
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://${WEBSITE_DOMAIN}:${NEXT_PUBLIC_MOCKOON_PORT}/api/users"]
+      test: ["CMD", "curl", "-f", "http://${WEBSITE_DOMAIN}:${MOCKOON_PORT}/api/users"]
     networks:
       - website-network
 
