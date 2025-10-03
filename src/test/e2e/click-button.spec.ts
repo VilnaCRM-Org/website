@@ -1,4 +1,4 @@
-import { Locator, Page, test } from '@playwright/test';
+import { Locator, Page, test, expect } from '@playwright/test';
 
 import { createLocalizedRegExp } from '@/test/e2e/utils/createLocalizedRegExp';
 
@@ -18,7 +18,13 @@ const clickTryItNowButtonByFilteredSection: (
   page: Page,
   uniqueSectionText: string | RegExp
 ) => Promise<void> = async (page, uniqueSectionText) => {
-  await page.locator('section').filter({ hasText: uniqueSectionText }).getByRole('button').click();
+  const button: Locator = page
+    .locator('section')
+    .filter({ hasText: uniqueSectionText })
+    .getByRole('button');
+
+  await expect(button).toHaveCount(1);
+  await button.click();
 };
 
 test.describe('Buttons navigation tests', () => {

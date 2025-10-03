@@ -1,6 +1,7 @@
 {
   "name": "website",
   "private": true,
+  "packageManager": "pnpm@10.6.5",
   "dependencies": {
     "@apollo/client": "^3.13.8",
     "@apollo/server": "^4.12.0",

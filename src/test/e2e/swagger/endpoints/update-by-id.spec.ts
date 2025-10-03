@@ -122,7 +122,10 @@ test.describe('updateById', () => {
 
     await elements.idInput.fill(testUserId);
     await elements.jsonEditor.fill(JSON.stringify(customRequestBody, null, 2));
-    await elements.executeBtn.click();
+
+    const executeButton: Locator = elements.executeBtn;
+    await expect(executeButton).toBeVisible();
+    await executeButton.click();
 
     await expect(elements.curl).toBeVisible();
     await expect(elements.requestUrl).toContainText(testUserId);
