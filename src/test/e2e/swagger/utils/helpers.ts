@@ -176,11 +176,57 @@ export function parseJsonSafe<T>(text: string): T {
 export async function collapseEndpoint(endpoint: Locator): Promise<void> {
   const opblockSummary: Locator = endpoint.locator('.opblock-summary');
   const opblockBody: Locator = endpoint.locator('.opblock-body');
+  const tryItOutButton: Locator = endpoint.locator('button:has-text("Try it out")');
 
-  await expect(opblockBody).toBeVisible();
   await expect(opblockSummary).toBeVisible();
 
-  await opblockSummary.click();
+  const isTryItOutVisible: boolean = await tryItOutButton.isVisible();
+  if (!isTryItOutVisible) {
+    await tryItOutButton.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
+  }
 
-  await expect(opblockBody).toBeHidden();
+  // Check if the endpoint is already collapsed
+  const isAlreadyCollapsed: boolean = !(await opblockBody.isVisible());
+  if (isAlreadyCollapsed) {
+    return;
+  }
+
+  await expect(opblockBody).toBeVisible();
+
+  // Wait for any ongoing animations/transitions to complete before clicking
+  await opblockBody.evaluate(
+    el =>
+      new Promise<void>(resolve => {
+        const animations: Animation[] = el.getAnimations();
+        if (animations.length === 0) {
+          resolve();
+        } else {
+          Promise.all(animations.map(a => a.finished)).then(() => resolve());
+        }
+      })
+  );
+
+  let collapsed: boolean = false;
+  for (let attempt: number = 0; attempt < 3 && !collapsed; attempt += 1) {
+    await opblockSummary.click();
+
+    // Check if it actually collapsed
+    try {
+      await opblockBody.waitFor({ state: 'hidden', timeout: 3000 });
+      collapsed = true;
+    } catch {
+      if (attempt < 2) {
+        await opblockSummary.evaluate(
+          () =>
+            new Promise(resolve => {
+              setTimeout(resolve, 500);
+            })
+        );
+      }
+    }
+  }
+
+  if (!collapsed) {
+    await opblockBody.waitFor({ state: 'hidden' });
+  }
 }
