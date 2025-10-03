@@ -8,7 +8,7 @@
 
 ### Bug Fixes
 
-- **#229:** add if statment to return 404 ([#230](https://github.com/VilnaCRM-Org/website/issues/230)) ([ab8bf94](https://github.com/VilnaCRM-Org/website/commit/ab8bf94a91eeddb288ada3bafdbcf651269cf684)), closes [#229](https://github.com/VilnaCRM-Org/website/issues/229)
+- **#229:** add if statement to return 404 ([#230](https://github.com/VilnaCRM-Org/website/issues/230)) ([ab8bf94](https://github.com/VilnaCRM-Org/website/commit/ab8bf94a91eeddb288ada3bafdbcf651269cf684)), closes [#229](https://github.com/VilnaCRM-Org/website/issues/229)
 
 ## [0.2.2](https://github.com/VilnaCRM-Org/website/compare/v0.2.1...v0.2.2) (2025-09-30)
 

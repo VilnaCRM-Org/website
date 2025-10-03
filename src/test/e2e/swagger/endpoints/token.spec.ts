@@ -99,8 +99,6 @@ test.describe('OAuth token endpoint', () => {
 
     await elements.requestBodyEditor.fill(JSON.stringify({ grant_type: 'changed' }, null, 2));
 
-    await page.waitForTimeout(100);
-
     await expect(elements.resetButton).toBeVisible();
     await expect(elements.resetButton).toBeEnabled();
 
