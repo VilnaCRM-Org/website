@@ -1,3 +1,12 @@
+## [0.2.4](https://github.com/VilnaCRM-Org/website/compare/v0.2.3...v0.2.4) (2025-10-03)
+
+
+### Bug Fixes
+
+* **#233:** curl version in Dockerfile ([#233](https://github.com/VilnaCRM-Org/website/issues/233)) ([29af265](https://github.com/VilnaCRM-Org/website/commit/29af265742382c549062975ae7e83dad894de05b)), closes [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0)
+
+
+
 ## [0.2.3](https://github.com/VilnaCRM-Org/website/compare/v0.2.2...v0.2.3) (2025-09-30)
 
 ### Bug Fixes

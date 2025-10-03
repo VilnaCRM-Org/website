@@ -1,6 +1,6 @@
 FROM node:23.11.1-alpine3.21
 
-RUN apk add --no-cache curl=8.12.1-r1
+RUN apk add --no-cache curl=8.14.1-r2
 
 RUN npm install -g pnpm@10.6.5 typescript@5.8.2
 
