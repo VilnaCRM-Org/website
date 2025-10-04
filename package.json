@@ -18,7 +18,7 @@
     "react-dom": "^18.3.1",
     "react-hook-form": "^7.56.4",
     "react-i18next": "^15.4.1",
-    "swagger-ui-react": "^5.22.0",
+    "swagger-ui-react": "^5.29.0",
     "swiper": "^11.2.6",
     "uuid": "^11.1.0",
     "winston": "^3.17.0"
