@@ -102,7 +102,7 @@ test.describe('OAuth token endpoint', () => {
     await expect(elements.resetButton).toBeVisible();
     await expect(elements.resetButton).toBeEnabled();
 
-    await elements.resetButton.evaluate((btn: HTMLElement) => btn.click());
+    await elements.resetButton.click();
 
     await expect(elements.requestBodyEditor).toHaveValue(initialValue);
 

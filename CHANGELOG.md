@@ -20,7 +20,7 @@
 
 ### Bug Fixes
 
-- **#226:** resolve error response ([#227](https://github.com/VilnaCRM-Org/website/issues/227)) ([4474073](https://github.com/VilnaCRM-Org/website/commit/44740739491b0f638ffeda22f770ad570d5d8d9d))
+- **#226:** resolve error response ([#227](https://github.com/VilnaCRM-Org/website/issues/227)) ([4474073](https://github.com/VilnaCRM-Org/website/commit/44740739491b0f638ffeda22f770ad570d5d8d9d)), closes [#226](https://github.com/VilnaCRM-Org/website/issues/226)
 
 ## [0.2.0](https://github.com/VilnaCRM-Org/website/compare/v0.1.5...v0.2.0) (2025-07-14)
 
