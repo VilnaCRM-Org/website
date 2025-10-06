@@ -98,6 +98,10 @@ test.describe('OAuth token endpoint', () => {
     const initialValue: string = await elements.requestBodyEditor.inputValue();
 
     await elements.requestBodyEditor.fill(JSON.stringify({ grant_type: 'changed' }, null, 2));
+
+    await expect(elements.resetButton).toBeVisible();
+    await expect(elements.resetButton).toBeEnabled();
+
     await elements.resetButton.click();
 
     await expect(elements.requestBodyEditor).toHaveValue(initialValue);
