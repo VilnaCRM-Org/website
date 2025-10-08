@@ -10,9 +10,8 @@ var ROUTE_MAP = Object.freeze({
   '/en': '/en/index.html',
   '/en/': '/en/index.html',
   '/swagger': '/swagger.html',
+  '/swagger/': '/swagger.html',
 });
-
-var ALLOWED_PATHS = Object.freeze(Object.keys(ROUTE_MAP));
 
 function handler(event) {
   var request = event.request;
