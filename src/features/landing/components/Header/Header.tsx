@@ -1,7 +1,7 @@
 import { AppBar } from '@mui/material';
 import { NextRouter, useRouter } from 'next/router';
 import Image from 'next-export-optimize-images/image';
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { UiToolbar } from '@/components';
@@ -20,8 +20,23 @@ function Header(): React.ReactElement {
   const { t } = useTranslation();
   const router: NextRouter = useRouter();
 
+  useEffect(() => {
+    const handleScroll: (url: string) => void = (url: string): void => {
+      if (url.includes('#')) {
+        const id: string = url.split('#')[1];
+        scrollToAnchor(`#${id}`);
+      }
+    };
+
+    router.events.on('routeChangeComplete', handleScroll);
+    handleScroll(router.asPath);
+
+    return () => router.events.off('routeChangeComplete', handleScroll);
+  }, [router]);
+
   const handleLinkClick: (link: string) => void = async (link: string) => {
     const normalized: string = normalizeLink(link);
+
     if (normalized === 'contacts') {
       scrollToAnchor(link);
       return;
@@ -31,7 +46,7 @@ function Header(): React.ReactElement {
       try {
         await router.push(`/${link}`, undefined, { scroll: true });
         scrollToAnchor(link);
-      } catch (error) {
+      } catch {
         window.location.href = `/${link}`;
       }
     } else {
@@ -45,7 +60,7 @@ function Header(): React.ReactElement {
         <Image src={Logo} alt={t('header.logo_alt')} width={131} height={44} />
         <NavList navItems={headerNavList} handleClick={handleLinkClick} />
         <AuthButtons />
-        <Drawer />
+        <Drawer handleLinkClick={handleLinkClick} />
       </UiToolbar>
     </AppBar>
   );

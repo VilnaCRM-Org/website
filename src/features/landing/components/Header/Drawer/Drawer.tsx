@@ -15,7 +15,11 @@ import NavList from '../NavList/NavList';
 import styles from './styles';
 import { VilnaCRMEmail } from './VilnaCRMEmail';
 
-function CustomDrawer(): React.ReactElement {
+function CustomDrawer({
+  handleLinkClick,
+}: {
+  handleLinkClick: (link: string) => void;
+}): React.ReactElement {
   const { t } = useTranslation();
   const [isDrawerOpen, setIsDrawerOpen] = React.useState(false);
 
@@ -80,7 +84,13 @@ function CustomDrawer(): React.ReactElement {
               </UiButton>
             </Link>
           </Stack>
-          <NavList navItems={drawerNavList} handleClick={handleCloseDrawer} />
+          <NavList
+            navItems={drawerNavList}
+            handleClick={(link: string) => {
+              handleLinkClick(link);
+              handleCloseDrawer();
+            }}
+          />
           <VilnaCRMEmail />
           <SocialMediaList socialLinks={socialMedia} />
         </Box>
