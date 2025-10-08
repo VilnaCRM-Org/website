@@ -204,4 +204,53 @@ describe('Header navigation', () => {
 
     expect(scrollToAnchorMock).toHaveBeenCalledTimes(callsBeforeMount);
   });
+
+  it('should extract correct hash ID from URL with multiple # characters', () => {
+    render(<Header />);
+
+    const handleScroll: (url: string) => void = routerMock.events.on.mock.calls[0][1];
+
+    handleScroll('/page#Section#subsection');
+
+    expect(scrollToAnchorMock).toHaveBeenCalledWith('#Section');
+  });
+
+  it('should handle URL with hash at the end', () => {
+    render(<Header />);
+
+    const handleScroll: (url: string) => void = routerMock.events.on.mock.calls[0][1];
+
+    handleScroll('/page#');
+
+    expect(scrollToAnchorMock).toHaveBeenCalledWith('#');
+  });
+
+  it('should re-register event listener when router changes', () => {
+    const { rerender } = render(<Header />);
+
+    expect(routerMock.events.on).toHaveBeenCalledTimes(1);
+    expect(routerMock.events.off).toHaveBeenCalledTimes(0);
+
+    const newRouterMock: {
+      pathname: string;
+      asPath: string;
+      push: jest.Mock;
+      events: { on: jest.Mock; off: jest.Mock };
+    } = {
+      pathname: '/',
+      asPath: '/',
+      push: jest.fn(),
+      events: {
+        on: jest.fn(),
+        off: jest.fn(),
+      },
+    };
+
+    (useRouter as jest.Mock).mockReturnValue(newRouterMock);
+
+    rerender(<Header />);
+
+    expect(routerMock.events.off).toHaveBeenCalledTimes(1);
+    expect(newRouterMock.events.on).toHaveBeenCalledTimes(1);
+  });
 });
