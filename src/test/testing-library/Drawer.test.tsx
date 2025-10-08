@@ -92,4 +92,38 @@ describe('Drawer', () => {
       expect(queryByRole(drawerContentRole)).not.toBeInTheDocument();
     });
   });
+
+  it('calls handleLinkClick when nav item link is clicked', async () => {
+    const { getByLabelText, getByText, queryByRole } = render(
+      <Drawer handleLinkClick={handleLinkClick} />
+    );
+
+    const drawerButton: HTMLElement = getByLabelText(buttonToOpenDrawer);
+    fireEvent.click(drawerButton);
+
+    const advantagesLink: HTMLElement = getByText(t('header.advantages'));
+    fireEvent.click(advantagesLink);
+
+    expect(handleLinkClick).toHaveBeenCalledWith('#Advantages');
+    await waitFor(() => {
+      expect(queryByRole(drawerContentRole)).not.toBeInTheDocument();
+    });
+  });
+
+  it('calls handleLinkClick and closes drawer when nav item is clicked', async () => {
+    const { getByLabelText, getByText, queryByRole } = render(
+      <Drawer handleLinkClick={handleLinkClick} />
+    );
+
+    const drawerButton: HTMLElement = getByLabelText(buttonToOpenDrawer);
+    fireEvent.click(drawerButton);
+
+    const contactsLink: HTMLElement = getByText(t('header.contacts'));
+    fireEvent.click(contactsLink);
+
+    expect(handleLinkClick).toHaveBeenCalledWith('#Contacts');
+    await waitFor(() => {
+      expect(queryByRole(drawerContentRole)).not.toBeInTheDocument();
+    });
+  });
 });
