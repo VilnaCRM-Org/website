@@ -13,14 +13,16 @@ const logoAlt: string = i18next.t(logoAltKey);
 
 jest.mock('next/router', () => ({ useRouter: jest.fn() }));
 
+type RouterMock = {
+  pathname: string;
+  asPath: string;
+  push: jest.Mock;
+  events: { on: jest.Mock; off: jest.Mock };
+};
+
 describe('Header component', () => {
   let spy: jest.SpyInstance;
-  let routerMock: {
-    pathname: string;
-    asPath: string;
-    push: jest.Mock;
-    events: { on: jest.Mock; off: jest.Mock };
-  };
+  let routerMock: RouterMock;
 
   beforeEach(() => {
     routerMock = {
@@ -64,12 +66,7 @@ const scrollToAnchorMock: jest.MockedFunction<typeof scrollToAnchor> =
 describe('Header navigation', () => {
   const user: UserEvent = userEvent.setup();
 
-  let routerMock: {
-    pathname: string;
-    asPath: string;
-    push: jest.Mock;
-    events: { on: jest.Mock; off: jest.Mock };
-  };
+  let routerMock: RouterMock;
 
   const originalLocation: Location = window.location;
 
@@ -140,13 +137,11 @@ describe('Header navigation', () => {
   it('falls back to window.location.href when router.push fails', async () => {
     routerMock.push.mockRejectedValueOnce(new Error('push failed'));
 
-    const testLocation: Location = window.location;
-
     type MutableWindow = Omit<Window, 'location'> & { location: Location };
     const mutableWindow: MutableWindow = window as unknown as MutableWindow;
 
     Object.defineProperty(mutableWindow, 'location', {
-      value: { ...testLocation, href: testLocation.href },
+      value: { ...window.location, href: window.location.href },
       writable: true,
     });
 
@@ -210,6 +205,8 @@ describe('Header navigation', () => {
 
     const handleScroll: (url: string) => void = routerMock.events.on.mock.calls[0][1];
 
+    // URL has multiple # characters, but only the first segment is extracted
+    // Implementation splits by '#', takes [1] to get 'Section'
     handleScroll('/page#Section#subsection');
 
     expect(scrollToAnchorMock).toHaveBeenCalledWith('#Section');
