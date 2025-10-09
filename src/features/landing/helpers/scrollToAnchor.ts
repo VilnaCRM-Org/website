@@ -9,9 +9,17 @@ export const scrollToElement: (id: string) => boolean = (id: string): boolean =>
 export const waitForElement: (id: string) => void = (id: string): void => {
   if (scrollToElement(id)) return;
 
-  const observer: MutationObserver = new MutationObserver(() => {
+  const MAX_WAIT_TIME: number = 10000;
+  let timeoutId: number | undefined;
+  let observer: MutationObserver | null = null;
+
+  observer = new MutationObserver(() => {
     if (scrollToElement(id)) {
-      observer.disconnect();
+      if (timeoutId !== undefined) {
+        clearTimeout(timeoutId);
+      }
+      observer?.disconnect();
+      observer = null;
     }
   });
 
@@ -19,6 +27,12 @@ export const waitForElement: (id: string) => void = (id: string): void => {
     childList: true,
     subtree: true,
   });
+
+  // schedule fallback to avoid leaking the observer forever
+  timeoutId = window.setTimeout(() => {
+    observer?.disconnect();
+    observer = null;
+  }, MAX_WAIT_TIME);
 };
 
 export default function scrollToAnchor(link: string): void {

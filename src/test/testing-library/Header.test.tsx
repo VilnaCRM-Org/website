@@ -228,12 +228,7 @@ describe('Header navigation', () => {
     expect(routerMock.events.on).toHaveBeenCalledTimes(1);
     expect(routerMock.events.off).toHaveBeenCalledTimes(0);
 
-    const newRouterMock: {
-      pathname: string;
-      asPath: string;
-      push: jest.Mock;
-      events: { on: jest.Mock; off: jest.Mock };
-    } = {
+    const newRouterMock: RouterMock = {
       pathname: '/',
       asPath: '/',
       push: jest.fn(),
