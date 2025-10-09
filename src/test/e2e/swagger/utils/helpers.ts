@@ -17,7 +17,9 @@ export async function clearEndpointResponse(endpoint: Locator): Promise<void> {
 
   await expect(clearButton).toBeVisible();
   await clearButton.click();
-  await expect(curl).not.toBeVisible();
+
+  // Wait for curl to be detached from DOM (not just hidden)
+  await curl.waitFor({ state: 'detached' });
 }
 
 export async function initSwaggerPage(page: Page): Promise<SwaggerPageObjects> {
@@ -171,6 +173,17 @@ export function parseJsonSafe<T>(text: string): T {
       `❌ Failed to parse JSON:\n${text}\n\nError: ${err instanceof Error ? err.message : err}`
     );
   }
+}
+
+export async function waitForResponseSection(endpoint: Locator): Promise<void> {
+  const responseBody: Locator = endpoint.locator('.response-col_description');
+  await responseBody.waitFor({ state: 'visible' });
+
+  const curlContent: Locator = endpoint.locator('.curl.microlight');
+  await curlContent.waitFor({ state: 'visible' });
+
+  const copyButton: Locator = endpoint.locator('div.curl-command .copy-to-clipboard button');
+  await copyButton.waitFor({ state: 'visible' });
 }
 
 export async function collapseEndpoint(endpoint: Locator): Promise<void> {

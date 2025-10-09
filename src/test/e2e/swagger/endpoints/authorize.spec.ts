@@ -10,6 +10,7 @@ import {
   mockAuthorizeSuccess,
   buildSafeUrl,
   expectErrorOrFailureStatus,
+  waitForResponseSection,
 } from '../utils/helpers';
 import { locators } from '../utils/locators';
 
@@ -89,10 +90,9 @@ test.describe('OAuth authorize endpoint', () => {
       elements.executeBtn.click(),
     ]);
 
-    await elements.curl.waitFor({ state: 'attached' });
-    await expect(elements.curl).toBeVisible();
+    await page.waitForLoadState('networkidle');
+    await waitForResponseSection(elements.getEndpoint);
 
-    await expect(elements.copyButton).toBeVisible();
     await expect(elements.requestUrl).toContainText('/oauth/authorize');
     await clearEndpointResponse(elements.getEndpoint);
   });
