@@ -177,8 +177,10 @@ export function parseJsonSafe<T>(text: string): T {
 
 export async function waitForResponseSection(endpoint: Locator): Promise<void> {
   const responseBody: Locator = endpoint.locator('.response-col_description').first();
-  const curlContent: Locator = endpoint.locator('.curl.microlight');
-  const copyButton: Locator = endpoint.locator('div.curl-command .copy-to-clipboard button');
+  const curlContent: Locator = endpoint.locator('.curl.microlight').first();
+  const copyButton: Locator = endpoint
+    .locator('div.curl-command .copy-to-clipboard button')
+    .first();
 
   await Promise.all([
     responseBody.waitFor({ state: 'visible' }),

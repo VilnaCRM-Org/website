@@ -91,6 +91,11 @@ test.describe('OAuth authorize endpoint', () => {
     ]);
 
     await page.waitForLoadState('networkidle');
+    const responseWrapper = endpoint.locator('.responses-wrapper');
+    await responseWrapper.waitFor({ state: 'visible', timeout: 30000 });
+
+    await page.waitForTimeout(1000);
+
     await waitForResponseSection(elements.getEndpoint);
 
     await expect(elements.requestUrl).toContainText('/oauth/authorize');
