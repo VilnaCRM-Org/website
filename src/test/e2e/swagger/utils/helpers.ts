@@ -176,14 +176,15 @@ export function parseJsonSafe<T>(text: string): T {
 }
 
 export async function waitForResponseSection(endpoint: Locator): Promise<void> {
-  const responseBody: Locator = endpoint.locator('.response-col_description');
-  await responseBody.waitFor({ state: 'visible' });
-
+  const responseBody: Locator = endpoint.locator('.response-col_description').first();
   const curlContent: Locator = endpoint.locator('.curl.microlight');
-  await curlContent.waitFor({ state: 'visible' });
-
   const copyButton: Locator = endpoint.locator('div.curl-command .copy-to-clipboard button');
-  await copyButton.waitFor({ state: 'visible' });
+
+  await Promise.all([
+    responseBody.waitFor({ state: 'visible' }),
+    curlContent.waitFor({ state: 'visible' }),
+    copyButton.waitFor({ state: 'visible' }),
+  ]);
 }
 
 export async function collapseEndpoint(endpoint: Locator): Promise<void> {
