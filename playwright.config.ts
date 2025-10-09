@@ -6,6 +6,11 @@ const env: DotenvConfigOutput = dotenv.config();
 
 dotenvExpand.expand(env);
 
+const VILNA_CRM: string = 'https://api.vilnacrm.com';
+const PROD_CONTAINER: string =
+  process.env.NEXT_PUBLIC_PROD_CONTAINER_API_URL || 'http://prod:3001/';
+const BASE_URL: string = process.env.NODE_ENV === 'production' ? VILNA_CRM : PROD_CONTAINER;
+
 export default defineConfig({
   testMatch: ['**/*.spec.ts'],
   fullyParallel: true,
@@ -16,7 +21,7 @@ export default defineConfig({
   use: {
     trace: 'on-first-retry',
     ignoreHTTPSErrors: true,
-    baseURL: process.env.NEXT_PUBLIC_PROD_CONTAINER_API_URL,
+    baseURL: BASE_URL,
     extraHTTPHeaders: {
       [`aws-cf-cd-${process.env.NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_NAME}`]:
         process.env.NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_VALUE!,
