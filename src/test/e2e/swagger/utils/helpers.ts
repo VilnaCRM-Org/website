@@ -111,54 +111,6 @@ export async function expectErrorOrFailureStatus(getEndpoint: Locator): Promise<
   expect(hasErrorMessage).toBe(true);
 }
 
-function buildRedirectUrl(redirectUri: string, code: string, state?: string): string {
-  const [redirectWithoutHash, hashFragment = ''] = redirectUri.split('#', 2);
-
-  let needsQuerySeparator: string;
-  if (!redirectWithoutHash.includes('?')) {
-    needsQuerySeparator = '?';
-  } else if (redirectWithoutHash.endsWith('?') || redirectWithoutHash.endsWith('&')) {
-    needsQuerySeparator = '';
-  } else {
-    needsQuerySeparator = '&';
-  }
-
-  let targetUrl: string = `${redirectWithoutHash}${needsQuerySeparator}code=${encodeURIComponent(code)}`;
-
-  if (state !== undefined) {
-    targetUrl += `&state=${encodeURIComponent(state)}`;
-  }
-
-  if (hashFragment) {
-    targetUrl += `#${hashFragment}`;
-  }
-
-  return targetUrl;
-}
-
-export async function mockAuthorizeSuccess(
-  page: Page,
-  authorizeUrl: string,
-  redirectUri: string,
-  state?: string
-): Promise<void> {
-  await page.route(
-    authorizeUrl,
-    async route => {
-      const targetUrl: string = buildRedirectUrl(redirectUri, 'abc123', state);
-
-      await route.fulfill({
-        status: 302,
-        headers: {
-          Location: targetUrl,
-        },
-        body: '',
-      });
-    },
-    { times: 1 }
-  );
-}
-
 export function buildSafeUrl(baseUrl: string, id: string): string {
   const trimmedBase: string = baseUrl.replace(/\/+$/, '');
   const encodedId: string = encodeURIComponent(id);
@@ -173,20 +125,6 @@ export function parseJsonSafe<T>(text: string): T {
       `❌ Failed to parse JSON:\n${text}\n\nError: ${err instanceof Error ? err.message : err}`
     );
   }
-}
-
-export async function waitForResponseSection(endpoint: Locator): Promise<void> {
-  const responseBody: Locator = endpoint.locator('.response-col_description').first();
-  const curlContent: Locator = endpoint.locator('.curl.microlight').first();
-  const copyButton: Locator = endpoint
-    .locator('div.curl-command .copy-to-clipboard button')
-    .first();
-
-  await Promise.all([
-    responseBody.waitFor({ state: 'visible' }),
-    curlContent.waitFor({ state: 'visible' }),
-    copyButton.waitFor({ state: 'visible' }),
-  ]);
 }
 
 export async function collapseEndpoint(endpoint: Locator): Promise<void> {
