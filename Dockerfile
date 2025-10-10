@@ -21,7 +21,9 @@ FROM base AS build
 COPY . .
 
 RUN node scripts/fetchSwaggerSchema.mjs && \
-    node scripts/patchSwaggerServer.mjs
+    if [ "$NODE_ENV" != "production" ]; then \
+      node scripts/patchSwaggerServer.mjs; \
+    fi
 
 RUN npx next build && \
     npx next-export-optimize-images

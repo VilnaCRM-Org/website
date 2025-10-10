@@ -5,8 +5,6 @@ import { getAndCheckExecuteBtn, initSwaggerPage } from '@/test/e2e/swagger/utils
 interface EndpointElements {
   tryItOutButton: Locator;
   executeButton?: Locator;
-  pageNumberInput?: Locator;
-  itemsPerPageInput?: Locator;
 }
 
 test.describe('Swagger /users endpoint (production with mocks)', () => {

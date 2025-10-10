@@ -6,9 +6,8 @@ const env: DotenvConfigOutput = dotenv.config();
 
 dotenvExpand.expand(env);
 
-const VILNA_CRM: string = 'https://api.vilnacrm.com';
-const PROD_CONTAINER: string =
-  process.env.NEXT_PUBLIC_PROD_CONTAINER_API_URL || 'http://prod:3001/';
+const VILNA_CRM: string = process.env.NEXT_PUBLIC_PROD_API_URL || 'https://api.vilnacrm.com';
+const PROD_CONTAINER: string = process.env.NEXT_PUBLIC_PROD_CONTAINER_API_URL || 'http://prod:3001';
 const BASE_URL: string = process.env.NODE_ENV === 'production' ? VILNA_CRM : PROD_CONTAINER;
 
 export default defineConfig({
