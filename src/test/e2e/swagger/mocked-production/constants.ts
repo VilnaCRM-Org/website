@@ -1,4 +1,4 @@
-interface User {
+interface MockUser {
   id: number;
   name: string;
 }
@@ -6,7 +6,7 @@ interface User {
 interface UsersResponse {
   page: number;
   itemsPerPage: number;
-  data: User[];
+  data: MockUser[];
 }
 
 interface ErrorResponse {
