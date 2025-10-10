@@ -2,7 +2,7 @@
 
 ### Bug Fixes
 
-- **#242:** fix styles for methods in swagger ([#242](https://github.com/VilnaCRM-Org/website/issues/242)) ([1804fe8](https://github.com/VilnaCRM-Org/website/commit/1804fe83846c62dc242ceee107bb87ef8d773a65)), closes [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0)
+- **#242:** fix styles for methods in swagger ([#242](https://github.com/VilnaCRM-Org/website/issues/242)) ([1804fe8](https://github.com/VilnaCRM-Org/website/commit/1804fe83846c62dc242ceee107bb87ef8d773a65))
 
 ## [0.2.5](https://github.com/VilnaCRM-Org/website/compare/v0.2.4...v0.2.5) (2025-10-06)
 
@@ -14,13 +14,13 @@
 
 ### Bug Fixes
 
-- **#233:** curl version in Dockerfile ([#233](https://github.com/VilnaCRM-Org/website/issues/233)) ([29af265](https://github.com/VilnaCRM-Org/website/commit/29af265742382c549062975ae7e83dad894de05b)), closes [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0)
+- **#233:** curl version in Dockerfile ([#233](https://github.com/VilnaCRM-Org/website/issues/233)) ([29af265](https://github.com/VilnaCRM-Org/website/commit/29af265742382c549062975ae7e83dad894de05b))
 
 ## [0.2.3](https://github.com/VilnaCRM-Org/website/compare/v0.2.2...v0.2.3) (2025-09-30)
 
 ### Bug Fixes
 
-- **#229:** add if statment to return 404 ([#230](https://github.com/VilnaCRM-Org/website/issues/230)) ([ab8bf94](https://github.com/VilnaCRM-Org/website/commit/ab8bf94a91eeddb288ada3bafdbcf651269cf684)), closes [#229](https://github.com/VilnaCRM-Org/website/issues/229) [#229](https://github.com/VilnaCRM-Org/website/issues/229) [#229](https://github.com/VilnaCRM-Org/website/issues/229) [#229](https://github.com/VilnaCRM-Org/website/issues/229) [#229](https://github.com/VilnaCRM-Org/website/issues/229) [#229](https://github.com/VilnaCRM-Org/website/issues/229)
+- **#229:** add if statment to return 404 ([#230](https://github.com/VilnaCRM-Org/website/issues/230)) ([ab8bf94](https://github.com/VilnaCRM-Org/website/commit/ab8bf94a91eeddb288ada3bafdbcf651269cf684)), closes [#229](https://github.com/VilnaCRM-Org/website/issues/229)
 
 ## [0.2.2](https://github.com/VilnaCRM-Org/website/compare/v0.2.1...v0.2.2) (2025-09-30)
 

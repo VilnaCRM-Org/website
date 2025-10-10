@@ -14,7 +14,7 @@ test.describe('Swagger /users endpoint (production with mocks)', () => {
       status: number,
       response: object
     ): Promise<void> => {
-      await page.route('**/users*', async route => {
+      await page.route('**/users?*', async route => {
         await route.fulfill({
           status,
           contentType: 'application/json',
