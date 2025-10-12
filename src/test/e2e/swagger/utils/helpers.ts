@@ -17,7 +17,9 @@ export async function clearEndpointResponse(endpoint: Locator): Promise<void> {
 
   await expect(clearButton).toBeVisible();
   await clearButton.click();
-  await expect(curl).not.toBeVisible();
+
+  // Wait for curl to be detached from DOM (not just hidden)
+  await curl.waitFor({ state: 'detached' });
 }
 
 export async function initSwaggerPage(page: Page): Promise<SwaggerPageObjects> {
@@ -107,54 +109,6 @@ export async function expectErrorOrFailureStatus(getEndpoint: Locator): Promise<
 
   expect(hasFailureStatus).toBe(true);
   expect(hasErrorMessage).toBe(true);
-}
-
-function buildRedirectUrl(redirectUri: string, code: string, state?: string): string {
-  const [redirectWithoutHash, hashFragment = ''] = redirectUri.split('#', 2);
-
-  let needsQuerySeparator: string;
-  if (!redirectWithoutHash.includes('?')) {
-    needsQuerySeparator = '?';
-  } else if (redirectWithoutHash.endsWith('?') || redirectWithoutHash.endsWith('&')) {
-    needsQuerySeparator = '';
-  } else {
-    needsQuerySeparator = '&';
-  }
-
-  let targetUrl: string = `${redirectWithoutHash}${needsQuerySeparator}code=${encodeURIComponent(code)}`;
-
-  if (state !== undefined) {
-    targetUrl += `&state=${encodeURIComponent(state)}`;
-  }
-
-  if (hashFragment) {
-    targetUrl += `#${hashFragment}`;
-  }
-
-  return targetUrl;
-}
-
-export async function mockAuthorizeSuccess(
-  page: Page,
-  authorizeUrl: string,
-  redirectUri: string,
-  state?: string
-): Promise<void> {
-  await page.route(
-    authorizeUrl,
-    async route => {
-      const targetUrl: string = buildRedirectUrl(redirectUri, 'abc123', state);
-
-      await route.fulfill({
-        status: 302,
-        headers: {
-          Location: targetUrl,
-        },
-        body: '',
-      });
-    },
-    { times: 1 }
-  );
 }
 
 export function buildSafeUrl(baseUrl: string, id: string): string {
