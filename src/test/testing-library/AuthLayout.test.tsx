@@ -495,4 +495,44 @@ describe('AuthLayoutWithNotification', () => {
     expect(queryByLabelText('error')).not.toBeInTheDocument();
     expect(queryByLabelText('success')).toBeInTheDocument();
   });
+
+  it('should convert email to lowercase before submitting', async () => {
+    const uppercaseEmail: string = 'TEST.USER@EXAMPLE.COM';
+    const mockVariableMatcher: jest.Mock<boolean, [{ input: CreateUserInput }]> = jest
+      .fn()
+      .mockReturnValue(true);
+
+    const mockWithVariableCapture: typeof fulfilledMockResponse & {
+      variableMatcher: jest.Mock<boolean, [{ input: CreateUserInput }]>;
+    } = {
+      ...fulfilledMockResponse,
+      variableMatcher: mockVariableMatcher,
+    };
+
+    renderAuthLayout([mockWithVariableCapture]);
+
+    fillForm(testInitials, uppercaseEmail, testPassword, true);
+
+    await waitFor(() => {
+      expect(mockVariableMatcher).toHaveBeenCalled();
+      const capturedVariables: { input: CreateUserInput } = mockVariableMatcher.mock.calls[0][0];
+      const { input } = capturedVariables;
+
+      expect(input.email).toBe(uppercaseEmail.toLowerCase());
+      expect(input.email).not.toBe(uppercaseEmail);
+    });
+  });
+
+  it('should render success notification hidden and no client error messages initially', () => {
+    const { queryByText, getByText } = renderAuthLayout([]);
+
+    const successTitle: HTMLElement = getByText(successTitleText);
+    expect(successTitle).toBeInTheDocument();
+    expect(successTitle).not.toBeVisible();
+
+    Object.values(CLIENT_ERROR_KEYS).forEach(key => {
+      const errorMessage: string = messages[key];
+      expect(queryByText(errorMessage)).not.toBeInTheDocument();
+    });
+  });
 });

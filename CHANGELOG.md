@@ -1,3 +1,9 @@
+## [0.2.7](https://github.com/VilnaCRM-Org/website/compare/v0.2.6...v0.2.7) (2025-10-12)
+
+### Bug Fixes
+
+- **#244:** navigation from swagger page ([#244](https://github.com/VilnaCRM-Org/website/issues/244)) ([9323b09](https://github.com/VilnaCRM-Org/website/commit/9323b0984ec9c4a1ae52d1328a3ec6827079c848)), closes [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0)
+
 ## [0.2.6](https://github.com/VilnaCRM-Org/website/compare/v0.2.5...v0.2.6) (2025-10-06)
 
 ### Bug Fixes
