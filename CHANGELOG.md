@@ -1,3 +1,12 @@
+## [0.2.8](https://github.com/VilnaCRM-Org/website/compare/v0.2.7...v0.2.8) (2025-10-13)
+
+
+### Bug Fixes
+
+* **#235:** add headers to resolve safari error ([#248](https://github.com/VilnaCRM-Org/website/issues/248)) ([47b5321](https://github.com/VilnaCRM-Org/website/commit/47b5321e93f7cdd9307403abfe9469c3f0961fa6))
+
+
+
 ## [0.2.7](https://github.com/VilnaCRM-Org/website/compare/v0.2.6...v0.2.7) (2025-10-12)
 
 
@@ -31,15 +40,6 @@
 ### Bug Fixes
 
 * **#233:** curl version in Dockerfile ([#233](https://github.com/VilnaCRM-Org/website/issues/233)) ([29af265](https://github.com/VilnaCRM-Org/website/commit/29af265742382c549062975ae7e83dad894de05b)), closes [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0)
-
-
-
-## [0.2.3](https://github.com/VilnaCRM-Org/website/compare/v0.2.2...v0.2.3) (2025-09-30)
-
-
-### Bug Fixes
-
-* **#229:** add if statment to return 404 ([#230](https://github.com/VilnaCRM-Org/website/issues/230)) ([ab8bf94](https://github.com/VilnaCRM-Org/website/commit/ab8bf94a91eeddb288ada3bafdbcf651269cf684)), closes [#229](https://github.com/VilnaCRM-Org/website/issues/229) [#229](https://github.com/VilnaCRM-Org/website/issues/229) [#229](https://github.com/VilnaCRM-Org/website/issues/229) [#229](https://github.com/VilnaCRM-Org/website/issues/229) [#229](https://github.com/VilnaCRM-Org/website/issues/229) [#229](https://github.com/VilnaCRM-Org/website/issues/229)
 
 
 
