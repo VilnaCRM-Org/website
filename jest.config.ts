@@ -14,6 +14,11 @@ const config: Config = {
       : '<rootDir>/src/test/testing-library**/*.test.tsx',
     '<rootDir>/src/test/unit/**/*.test.ts',
   ],
+  testPathIgnorePatterns: [
+    '/node_modules/',
+    '/.next/',
+    '<rootDir>/src/test/testing-library/.*\\/utils\\.tsx$',
+  ],
   preset: 'ts-jest',
   testEnvironment: process.env.TEST_ENV === 'server' ? 'node' : 'jsdom',
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],

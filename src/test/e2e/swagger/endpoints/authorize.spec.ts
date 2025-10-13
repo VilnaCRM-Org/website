@@ -1,14 +1,12 @@
 import { expect, type Locator, Page, test } from '@playwright/test';
 
 import { getSystemEndpoints, GetSystemEndpoints } from '../utils';
-import { mockoonHost, testOAuthParams, PARAM_INPUTS } from '../utils/constants';
+import { testOAuthParams, PARAM_INPUTS } from '../utils/constants';
 import {
   initSwaggerPage,
   clearEndpointResponse,
   getAndCheckExecuteBtn,
   cancelOperation,
-  mockAuthorizeSuccess,
-  buildSafeUrl,
   expectErrorOrFailureStatus,
 } from '../utils/helpers';
 import { locators } from '../utils/locators';
@@ -63,32 +61,54 @@ async function setupAuthorizeEndpoint(page: Page): Promise<AuthorizeEndpointElem
     responseBody,
   };
 }
+async function fillAuthorizeForm(
+  page: Page,
+  params: typeof testOAuthParams = testOAuthParams
+): Promise<AuthorizeEndpointElements> {
+  const elements: AuthorizeEndpointElements = await setupAuthorizeEndpoint(page);
 
+  await expect(elements.parametersSection).toBeVisible();
+
+  await elements.responseTypeInput.fill(params.responseType);
+  await elements.clientIdInput.fill(params.clientId);
+  await elements.redirectUriInput.fill(params.redirectUri);
+  await elements.scopeInput.fill(params.scope);
+  await elements.stateInput.fill(params.state);
+
+  return elements;
+}
 test.describe('OAuth authorize endpoint', () => {
-  test('success scenario', async ({ page }) => {
-    const elements: AuthorizeEndpointElements = await setupAuthorizeEndpoint(page);
-    await expect(elements.parametersSection).toBeVisible();
-    await expect(elements.responseTypeInput).toBeVisible();
-    await expect(elements.clientIdInput).toBeVisible();
-    await expect(elements.redirectUriInput).toBeVisible();
-    await elements.responseTypeInput.fill(testOAuthParams.responseType);
-    await elements.clientIdInput.fill(testOAuthParams.clientId);
-    await elements.redirectUriInput.fill(testOAuthParams.redirectUri);
-    await elements.scopeInput.fill(testOAuthParams.scope);
-    await elements.stateInput.fill(testOAuthParams.state);
+  test('GET /oauth/authorize should be interactive with mocked success', async ({ page }) => {
+    const elements: AuthorizeEndpointElements = await fillAuthorizeForm(page);
 
-    await mockAuthorizeSuccess(
-      page,
-      buildSafeUrl(mockoonHost, 'oauth/authorize'),
-      testOAuthParams.redirectUri,
-      testOAuthParams.state
-    );
+    await page.route('**/oauth/authorize**', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          code: 'mock_auth_code_123',
+          state: testOAuthParams.state,
+          message: 'Mocked OAuth authorization success',
+        }),
+      });
+    });
 
     await elements.executeBtn.click();
 
-    await expect(elements.curl).toBeVisible();
-    await expect(elements.copyButton).toBeVisible();
+    const responseWrapper: Locator = elements.getEndpoint.locator('.responses-wrapper');
+    await expect(responseWrapper).toBeVisible({ timeout: 10000 });
+    await expect(responseWrapper).toContainText('mock_auth_code_123');
+    await expect(responseWrapper).toContainText('Mocked OAuth authorization success');
+
+    const curlSection: Locator = elements.getEndpoint.locator('.curl-command');
+    const copyButton: Locator = elements.getEndpoint.locator(
+      '.curl-command .copy-to-clipboard button'
+    );
+    await expect(curlSection).toBeVisible();
+    await expect(copyButton).toBeVisible();
+
     await expect(elements.requestUrl).toContainText('/oauth/authorize');
+
     await clearEndpointResponse(elements.getEndpoint);
   });
 
