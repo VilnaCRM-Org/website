@@ -50,7 +50,10 @@ function handler(event) {
       return {
         statusCode: 404,
         statusDescription: 'Not Found',
-        headers: { 'cache-control': { value: 'public, max-age=60' } },
+        headers: { 
+          'cache-control': { value: 'public, max-age=60' },
+          'content-type': { value: 'text/html; charset=utf-8' }
+        },
       };
     }
 
