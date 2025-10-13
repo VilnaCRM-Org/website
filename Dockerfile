@@ -23,6 +23,8 @@ COPY . .
 RUN node scripts/fetchSwaggerSchema.mjs && \
     if [ "$NODE_ENV" != "production" ]; then \
       node scripts/patchSwaggerServer.mjs; \
+    else \
+      echo "Skipping patchSwaggerServer.mjs for production build"; \
     fi
 
 RUN npx next build && \
