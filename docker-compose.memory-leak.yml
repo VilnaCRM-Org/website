@@ -8,7 +8,7 @@ services:
     environment:
       - DISPLAY=:99
       - PUPPETEER_DISABLE_HEADLESS_WARNING=1
-      - NEXT_PUBLIC_PROD_CONTAINER_API_URL=http://website-prod:3001
+      - NEXT_PUBLIC_API_BASE_URL=http://website-prod:3001
       - MEMLAB_DEBUG=true
       - MEMLAB_SKIP_WARMUP=true
       - NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_NAME=no-aws-header-name

@@ -7,7 +7,7 @@ class ScenarioBuilder {
   constructor(path) {
     this.path = path;
     this.url = () => {
-      const baseUrl = process.env.NEXT_PUBLIC_PROD_CONTAINER_API_URL;
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
       return this.path ? `${baseUrl}/${this.path}` : baseUrl;
     };
     this.beforeInitialPageLoad = async page => {
