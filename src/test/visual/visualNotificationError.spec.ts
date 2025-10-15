@@ -46,8 +46,8 @@ test.describe('Form Submission Server Error Test', () => {
 
       await expect(submitButton).toBeEnabled();
 
-      await page.waitForFunction(
-        () => !document.querySelector('[aria-invalid="true"]')?.classList.contains('animating')
+      await page.evaluate(() =>
+        Promise.all(document.getAnimations().map(animation => animation.finished.catch(() => null)))
       );
 
       await expect(page).toHaveScreenshot(`${currentLanguage}_${screen.name}_error.png`);

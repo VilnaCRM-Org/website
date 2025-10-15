@@ -16,11 +16,8 @@ function ensureEnv(name) {
   return value;
 }
 
-function getMockUrl() {
-  const isDev = process.env.NODE_ENV === 'development';
-  return ensureEnv(
-    isDev ? 'NEXT_PUBLIC_MOCKOON_LOCAL_API_URL' : 'NEXT_PUBLIC_MOCKOON_CONTAINER_API_URL'
-  );
+function getApiBaseUrl() {
+  return ensureEnv('NEXT_PUBLIC_API_BASE_URL');
 }
 
 function readSwaggerSchema(path) {
@@ -52,7 +49,7 @@ function writeSwaggerSchema(path, doc) {
 }
 
 const schemaPath = './public/swagger-schema.json';
-const mockUrl = getMockUrl();
+const apiBaseUrl = getApiBaseUrl();
 const doc = readSwaggerSchema(schemaPath);
-const updatedDoc = patchSwaggerServerUrl(doc, mockUrl);
+const updatedDoc = patchSwaggerServerUrl(doc, apiBaseUrl);
 writeSwaggerSchema(schemaPath, updatedDoc);
