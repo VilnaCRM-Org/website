@@ -1,3 +1,12 @@
+## [0.2.10](https://github.com/VilnaCRM-Org/website/compare/v0.2.9...v0.2.10) (2025-10-15)
+
+
+### Bug Fixes
+
+* **#249:** add body to error response to prevent 5xx error ([#250](https://github.com/VilnaCRM-Org/website/issues/250)) ([a10b478](https://github.com/VilnaCRM-Org/website/commit/a10b4784814c3e746c23e8eb93c13d4e459e5891)), closes [#249](https://github.com/VilnaCRM-Org/website/issues/249)
+
+
+
 ## [0.2.9](https://github.com/VilnaCRM-Org/website/compare/v0.2.8...v0.2.9) (2025-10-15)
 
 
@@ -31,15 +40,6 @@
 ### Bug Fixes
 
 * **#242:** fix styles for methods in swagger ([#242](https://github.com/VilnaCRM-Org/website/issues/242)) ([1804fe8](https://github.com/VilnaCRM-Org/website/commit/1804fe83846c62dc242ceee107bb87ef8d773a65)), closes [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0)
-
-
-
-## [0.2.5](https://github.com/VilnaCRM-Org/website/compare/v0.2.4...v0.2.5) (2025-10-06)
-
-
-### Bug Fixes
-
-* **#231:** fix tests for swagger ([#231](https://github.com/VilnaCRM-Org/website/issues/231)) ([b097d1d](https://github.com/VilnaCRM-Org/website/commit/b097d1d3763f899db71e11b8b98bf763f2ae5e94)), closes [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0)
 
 
 
