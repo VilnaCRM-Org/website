@@ -3,6 +3,8 @@
  */
 'use strict';
 
+var NOT_FOUND_BODY = '<!DOCTYPE html><html><head><title>404 Not Found</title></head><body><h1>404 - Page Not Found</h1></body></html>';
+
 var ROUTE_MAP = Object.freeze({
   '/': '/index.html',
   '/about': '/about/index.html',
@@ -54,6 +56,7 @@ function handler(event) {
           'cache-control': { value: 'public, max-age=60' },
           'content-type': { value: 'text/html; charset=utf-8' },
         },
+        body: NOT_FOUND_BODY
       };
     }
 
