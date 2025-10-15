@@ -54,6 +54,7 @@ function handler(event) {
           'cache-control': { value: 'public, max-age=60' },
           'content-type': { value: 'text/html; charset=utf-8' }
         },
+        body: '<!DOCTYPE html><html><head><title>404 Not Found</title></head><body><h1>404 - Page Not Found</h1></body></html>'
       };
     }
 
