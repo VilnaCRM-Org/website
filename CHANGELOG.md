@@ -1,3 +1,12 @@
+## [0.2.11](https://github.com/VilnaCRM-Org/website/compare/v0.2.10...v0.2.11) (2025-10-16)
+
+
+### Bug Fixes
+
+* **#251:** add public ecr usage to resolve 429 error in the Apollo.Dockerfile ([#252](https://github.com/VilnaCRM-Org/website/issues/252)) ([0319963](https://github.com/VilnaCRM-Org/website/commit/03199634edaee9132aead84e3d94305ff4ccb9aa))
+
+
+
 ## [0.2.10](https://github.com/VilnaCRM-Org/website/compare/v0.2.9...v0.2.10) (2025-10-15)
 
 
@@ -31,15 +40,6 @@
 ### Bug Fixes
 
 * **#244:** navigation from swagger page ([#244](https://github.com/VilnaCRM-Org/website/issues/244)) ([9323b09](https://github.com/VilnaCRM-Org/website/commit/9323b0984ec9c4a1ae52d1328a3ec6827079c848)), closes [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0)
-
-
-
-## [0.2.6](https://github.com/VilnaCRM-Org/website/compare/v0.2.5...v0.2.6) (2025-10-06)
-
-
-### Bug Fixes
-
-* **#242:** fix styles for methods in swagger ([#242](https://github.com/VilnaCRM-Org/website/issues/242)) ([1804fe8](https://github.com/VilnaCRM-Org/website/commit/1804fe83846c62dc242ceee107bb87ef8d773a65)), closes [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0)
 
 
 
