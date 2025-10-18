@@ -1,3 +1,12 @@
+## [0.2.12](https://github.com/VilnaCRM-Org/website/compare/v0.2.11...v0.2.12) (2025-10-18)
+
+
+### Bug Fixes
+
+* **#253:** add public ecr usage into the dockerfiles ([#254](https://github.com/VilnaCRM-Org/website/issues/254)) ([259c1eb](https://github.com/VilnaCRM-Org/website/commit/259c1eba2a037f1f9e9a56997d058036a4837997)), closes [#253](https://github.com/VilnaCRM-Org/website/issues/253)
+
+
+
 ## [0.2.11](https://github.com/VilnaCRM-Org/website/compare/v0.2.10...v0.2.11) (2025-10-16)
 
 
@@ -31,15 +40,6 @@
 ### Bug Fixes
 
 * **#235:** add headers to resolve safari error ([#248](https://github.com/VilnaCRM-Org/website/issues/248)) ([47b5321](https://github.com/VilnaCRM-Org/website/commit/47b5321e93f7cdd9307403abfe9469c3f0961fa6))
-
-
-
-## [0.2.7](https://github.com/VilnaCRM-Org/website/compare/v0.2.6...v0.2.7) (2025-10-12)
-
-
-### Bug Fixes
-
-* **#244:** navigation from swagger page ([#244](https://github.com/VilnaCRM-Org/website/issues/244)) ([9323b09](https://github.com/VilnaCRM-Org/website/commit/9323b0984ec9c4a1ae52d1328a3ec6827079c848)), closes [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0)
 
 
 
