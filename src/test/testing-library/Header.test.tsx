@@ -2,6 +2,7 @@ import { render } from '@testing-library/react';
 import userEvent, { UserEvent } from '@testing-library/user-event';
 import i18next, { t } from 'i18next';
 import { useRouter } from 'next/router';
+import React from 'react';
 
 import { headerNavList } from '../../features/landing/components/Header/constants';
 import Header from '../../features/landing/components/Header/Header';
@@ -10,6 +11,28 @@ import { NavItemProps } from '../../features/landing/types/header/navigation';
 
 const logoAltKey: string = 'header.logo_alt';
 const logoAlt: string = i18next.t(logoAltKey);
+
+type MockLinkProps = {
+  href: string | { pathname?: string };
+  children: React.ReactNode;
+} & Omit<React.AnchorHTMLAttributes<HTMLAnchorElement>, 'href'>;
+
+jest.mock('next/link', () => {
+  const MockNextLink: React.ForwardRefExoticComponent<
+    MockLinkProps & React.RefAttributes<HTMLAnchorElement>
+  > = React.forwardRef<HTMLAnchorElement, MockLinkProps>(({ href, children, ...rest }, ref) => {
+    const resolvedHref: string = typeof href === 'string' ? href : href?.pathname ?? '/';
+
+    return React.createElement('a', { ...rest, ref, href: resolvedHref }, children);
+  });
+
+  MockNextLink.displayName = 'MockNextLink';
+
+  return {
+    __esModule: true,
+    default: MockNextLink,
+  };
+});
 
 jest.mock('next/router', () => ({ useRouter: jest.fn() }));
 
@@ -53,6 +76,13 @@ describe('Header component', () => {
   it('renders logo', () => {
     const { getByAltText } = render(<Header />);
     expect(getByAltText(logoAlt)).toBeInTheDocument();
+  });
+
+  it('renders logo link pointing to home', () => {
+    const { getByRole } = render(<Header />);
+    const logoLink: HTMLElement = getByRole('link', { name: logoAlt });
+
+    expect(logoLink).toHaveAttribute('href', '/');
   });
 });
 

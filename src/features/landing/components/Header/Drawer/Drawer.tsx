@@ -1,4 +1,5 @@
 import { Drawer, Box, Stack, Button, Link } from '@mui/material';
+import NextLink from 'next/link';
 import Image from 'next-export-optimize-images/image';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -44,8 +45,15 @@ function CustomDrawer({
       >
         <Box width="23.4375rem" textAlign="center" role="presentation" sx={styles.drawerContent}>
           <Stack direction="row" justifyContent="space-between" alignItems="center">
-            <Link href="/">
-              <Image src={Logo} alt={t('header.logo_alt')} width={131} height={44} />
+            <Link
+              href="/"
+              component={NextLink}
+              sx={styles.logoLink}
+              aria-label={t('header.logo_alt') as string}
+            >
+              <Box component="span" sx={styles.logo}>
+                <Image src={Logo} alt={t('header.logo_alt')} width={131} height={44} />
+              </Box>
             </Link>
             <Button
               aria-label={t('header.drawer.button_aria_labels.exit') as string}
