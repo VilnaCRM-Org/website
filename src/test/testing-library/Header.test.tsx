@@ -83,6 +83,7 @@ describe('Header component', () => {
     const logoLink: HTMLElement = getByRole('link', { name: logoAlt });
 
     expect(logoLink).toHaveAttribute('href', '/');
+    expect(logoLink).toHaveAttribute('aria-label', logoAlt);
   });
 });
 
