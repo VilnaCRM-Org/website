@@ -9,9 +9,16 @@ export default {
     zIndex: 3000,
   },
 
+  logoLink: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    cursor: 'pointer',
+  },
+
   logo: {
     width: '8.188rem',
     height: '2.75rem',
+    cursor: 'pointer',
     [`@media (min-width: ${breakpointsTheme.breakpoints.values.md}px)`]: {
       width: '9.313rem',
       height: '3.125rem',

@@ -67,6 +67,18 @@ describe('Drawer', () => {
     expect(logo).toBeInTheDocument();
   });
 
+  it('renders logo link pointing to home with aria-label', () => {
+    const { getByLabelText, getByRole } = render(<Drawer handleLinkClick={handleLinkClick} />);
+    const drawerButton: HTMLElement = getByLabelText(buttonToOpenDrawer);
+
+    fireEvent.click(drawerButton);
+
+    const logoLink: HTMLElement = getByRole('link', { name: logoAlt });
+
+    expect(logoLink).toHaveAttribute('href', '/');
+    expect(logoLink).toHaveAttribute('aria-label', logoAlt);
+  });
+
   it('renders nav items', () => {
     const { getByLabelText, getAllByRole } = render(<Drawer handleLinkClick={handleLinkClick} />);
     const drawerButton: HTMLElement = getByLabelText(buttonToOpenDrawer);
