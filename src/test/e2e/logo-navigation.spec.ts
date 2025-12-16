@@ -1,37 +1,36 @@
 import { expect, Locator, test } from '@playwright/test';
 
-import swaggerEnTranslations from '../../features/swagger/i18n/en.json';
+import headerEnTranslations from '../../features/landing/i18n/en.json';
 
-type SwaggerNavigationTranslation = {
-  navigation: {
-    navigate_to_home_page: string;
+type HeaderTranslation = {
+  header: {
+    logo_alt: string;
   };
 };
 
 const BASE_URL: string = process.env.NEXT_PUBLIC_WEBSITE_URL ?? 'http://prod:3001';
-const navigateHomeText: string = (swaggerEnTranslations as SwaggerNavigationTranslation).navigation
-  .navigate_to_home_page;
+const logoAlt: string = (headerEnTranslations as HeaderTranslation).header.logo_alt;
 
-test.describe('Swagger navigation', () => {
-  test('back navigation navigates home from a deep link', async ({ page }) => {
+test.describe('Logo navigation', () => {
+  test('logo navigates home from a deep link', async ({ page }) => {
     await page.goto('/swagger');
 
-    const navigationButton: Locator = page.getByText(navigateHomeText, { exact: true });
-    await expect(navigationButton).toBeVisible();
+    const logoLink: Locator = page.getByRole('link', { name: logoAlt });
+    await expect(logoLink).toBeVisible();
 
-    await navigationButton.click();
+    await logoLink.click();
 
     await expect(page).toHaveURL(`${BASE_URL}/`);
   });
 
-  test('back navigation works on mobile viewport', async ({ page }) => {
+  test('logo navigation works on mobile viewport', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto('/swagger');
 
-    const navigationButton: Locator = page.getByText(navigateHomeText, { exact: true });
-    await expect(navigationButton).toBeVisible();
+    const logoLink: Locator = page.getByRole('link', { name: logoAlt });
+    await expect(logoLink).toBeVisible();
 
-    await navigationButton.click();
+    await logoLink.click();
 
     await expect(page).toHaveURL(`${BASE_URL}/`);
   });
