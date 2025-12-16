@@ -19,8 +19,8 @@ if (headerLogoLabels.length === 0) {
 
 const headerLogoSelectors = [
   'header a[href="/"]',
-  'a[aria-label*="logo" i]',
-  ...headerLogoLabels.flatMap(label => [`a[aria-label="${label}"]`, `header img[alt="${label}"]`]),
+  'header a[aria-label*="logo" i]',
+  ...headerLogoLabels.flatMap(label => [`header a[aria-label="${label}"]`, `header img[alt="${label}"]`]),
 ].join(', ');
 
 async function getHeaderLogoLink(page) {
@@ -65,7 +65,9 @@ async function action(page) {
     headerLogoLink.click(),
   ]);
 
-  await new Promise(resolve => setTimeout(resolve, 500));
+  await new Promise(resolve => {
+    setTimeout(resolve, 500);
+  });
 }
 
 async function back(page) {
@@ -78,7 +80,9 @@ async function back(page) {
     page.goBack().catch(() => null),
   ]);
 
-  await new Promise(resolve => setTimeout(resolve, 500));
+  await new Promise(resolve => {
+    setTimeout(resolve, 500);
+  });
 }
 
 module.exports = scenarioBuilder.createScenario({ action, back });
