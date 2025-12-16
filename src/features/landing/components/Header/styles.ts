@@ -17,6 +17,5 @@ export default {
   logo: {
     width: '8.188rem',
     height: '2.75rem',
-    cursor: 'pointer',
   },
 };
