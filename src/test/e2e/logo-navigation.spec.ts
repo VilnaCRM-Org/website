@@ -1,29 +1,38 @@
-import { expect, test } from '@playwright/test';
+import { expect, Locator, test } from '@playwright/test';
 
-import { t } from './utils/initializeLocalization';
+import swaggerEnTranslations from '../../features/swagger/i18n/en.json';
 
-const BASE_URL: string = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://prod:3001';
-const logoLabel = t('header.logo_alt');
-const drawerToggleLabel = t('header.drawer.button_aria_labels.bars');
-const drawerTestId = 'drawer';
+type SwaggerNavigationTranslation = {
+  navigation: {
+    navigate_to_home_page: string;
+  };
+};
 
-test.describe('Logo navigation', () => {
-  test('header logo navigates home from a deep link', async ({ page }) => {
+const BASE_URL: string = process.env.NEXT_PUBLIC_WEBSITE_URL ?? 'http://prod:3001';
+const navigateHomeText: string = (swaggerEnTranslations as SwaggerNavigationTranslation).navigation
+  .navigate_to_home_page;
+
+test.describe('Swagger navigation', () => {
+  test('back navigation navigates home from a deep link', async ({ page }) => {
     await page.goto('/swagger');
 
-    await page.getByRole('link', { name: logoLabel }).click();
+    const navigationButton: Locator = page.getByText(navigateHomeText, { exact: true });
+    await expect(navigationButton).toBeVisible();
+
+    await navigationButton.click();
 
     await expect(page).toHaveURL(`${BASE_URL}/`);
   });
 
-  test('drawer logo navigates home and closes the drawer', async ({ page }) => {
+  test('back navigation works on mobile viewport', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto('/swagger');
 
-    await page.getByLabel(drawerToggleLabel).click();
-    await page.getByRole('link', { name: logoLabel }).click();
+    const navigationButton: Locator = page.getByText(navigateHomeText, { exact: true });
+    await expect(navigationButton).toBeVisible();
+
+    await navigationButton.click();
 
     await expect(page).toHaveURL(`${BASE_URL}/`);
-    await expect(page.getByTestId(drawerTestId)).toBeHidden();
   });
 });
