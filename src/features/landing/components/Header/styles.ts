@@ -1,4 +1,3 @@
-import breakpointsTheme from '@/components/UiBreakpoints';
 import colorTheme from '@/components/UiColorTheme';
 
 export default {

@@ -1,5 +1,3 @@
-import breakpointsTheme from '@/components/UiBreakpoints';
-
 export default {
   wrapper: {
     display: 'inline-block',
