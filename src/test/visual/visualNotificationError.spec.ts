@@ -1,3 +1,4 @@
+/* eslint-disable no-restricted-syntax */
 import { test, Locator, expect, Route } from '@playwright/test';
 
 import { currentLanguage, placeholders, screenSizes } from '@/test/visual/constants';

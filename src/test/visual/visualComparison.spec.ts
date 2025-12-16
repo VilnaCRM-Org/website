@@ -1,3 +1,4 @@
+/* eslint-disable no-restricted-syntax */
 import { test, expect } from '@playwright/test';
 
 import { screenSizes, timeoutDuration } from './constants';
