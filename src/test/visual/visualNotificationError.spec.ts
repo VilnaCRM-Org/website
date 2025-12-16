@@ -1,4 +1,3 @@
-/* eslint-disable no-restricted-syntax */
 import { test, Locator, expect, Route } from '@playwright/test';
 
 import { currentLanguage, placeholders, screenSizes } from '@/test/visual/constants';
@@ -12,7 +11,7 @@ const serverErrorResponse: ErrorResponseProps = {
 };
 
 test.describe('Form Submission Server Error Test', () => {
-  for (const screen of screenSizes) {
+  screenSizes.forEach(screen => {
     test(`Server error notification - ${screen.name}`, async ({ page }) => {
       await page.goto('/');
 
@@ -55,5 +54,5 @@ test.describe('Form Submission Server Error Test', () => {
 
       await page.unroute('**/graphql', routeHandler);
     });
-  }
+  });
 });
