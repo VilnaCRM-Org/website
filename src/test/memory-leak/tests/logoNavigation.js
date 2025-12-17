@@ -20,7 +20,7 @@ if (headerLogoLabels.length === 0) {
 const headerLogoSelectors = [
   'header a[href="/"]',
   'header a[aria-label*="logo" i]',
-  ...headerLogoLabels.flatMap(label => [`header a[aria-label="${label}"]`, `header img[alt="${label}"]`]),
+  ...headerLogoLabels.flatMap(label => [`header a[aria-label="${label}"]`, `header a img[alt="${label}"]`]),
 ].join(', ');
 
 async function getHeaderLogoLink(page) {
