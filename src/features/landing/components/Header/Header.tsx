@@ -1,4 +1,5 @@
-import { AppBar } from '@mui/material';
+import { AppBar, Box } from '@mui/material';
+import Link from 'next/link';
 import { NextRouter, useRouter } from 'next/router';
 import Image from 'next-export-optimize-images/image';
 import React, { useEffect } from 'react';
@@ -57,7 +58,11 @@ function Header(): React.ReactElement {
   return (
     <AppBar sx={styles.headerWrapper}>
       <UiToolbar>
-        <Image src={Logo} alt={t('header.logo_alt')} width={131} height={44} />
+        <Link href="/" aria-label={t('header.logo_alt')} style={styles.logoLink}>
+          <Box component="span" sx={styles.logo}>
+            <Image src={Logo} alt={t('header.logo_alt')} width={131} height={44} />
+          </Box>
+        </Link>
         <NavList navItems={headerNavList} handleClick={handleLinkClick} />
         <AuthButtons />
         <Drawer handleLinkClick={handleLinkClick} />

@@ -54,6 +54,14 @@ describe('Header component', () => {
     const { getByAltText } = render(<Header />);
     expect(getByAltText(logoAlt)).toBeInTheDocument();
   });
+
+  it('renders logo link pointing to home with aria-label', () => {
+    const { getByRole } = render(<Header />);
+    const logoLink: HTMLElement = getByRole('link', { name: logoAlt });
+
+    expect(logoLink).toHaveAttribute('href', '/');
+    expect(logoLink).toHaveAttribute('aria-label', logoAlt);
+  });
 });
 
 jest.mock('../../features/landing/helpers/scrollToAnchor', () => ({
