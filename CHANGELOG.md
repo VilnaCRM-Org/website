@@ -1,3 +1,12 @@
+## [0.2.13](https://github.com/VilnaCRM-Org/website/compare/v0.2.12...v0.2.13) (2025-12-17)
+
+
+### Bug Fixes
+
+* add home navigation via navbar logo ([#265](https://github.com/VilnaCRM-Org/website/issues/265)) ([40dd08a](https://github.com/VilnaCRM-Org/website/commit/40dd08a01d41b678b20f42b5e8854710f5dac145))
+
+
+
 ## [0.2.12](https://github.com/VilnaCRM-Org/website/compare/v0.2.11...v0.2.12) (2025-10-18)
 
 
@@ -31,15 +40,6 @@
 ### Bug Fixes
 
 * **#243:** Add Swagger E2E Tests for GET /users Endpoint (Production Mode) ([#245](https://github.com/VilnaCRM-Org/website/issues/245)) ([3ef72ea](https://github.com/VilnaCRM-Org/website/commit/3ef72eac1f24b363dac7e62d922cc7267b04c08e)), closes [#243](https://github.com/VilnaCRM-Org/website/issues/243) [#243](https://github.com/VilnaCRM-Org/website/issues/243) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#243](https://github.com/VilnaCRM-Org/website/issues/243)
-
-
-
-## [0.2.8](https://github.com/VilnaCRM-Org/website/compare/v0.2.7...v0.2.8) (2025-10-13)
-
-
-### Bug Fixes
-
-* **#235:** add headers to resolve safari error ([#248](https://github.com/VilnaCRM-Org/website/issues/248)) ([47b5321](https://github.com/VilnaCRM-Org/website/commit/47b5321e93f7cdd9307403abfe9469c3f0961fa6))
 
 
 
