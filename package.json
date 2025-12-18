@@ -82,7 +82,7 @@
     "sass": "^1.89.0",
     "semver": "^7.7.1",
     "serve": "^14.2.4",
-    "storybook": "^8.6.12",
+    "storybook": "^8.6.15",
     "terser-webpack-plugin": "^5.3.14",
     "ts-jest": "^29.3.2",
     "ts-node": "^10.9.2",
