@@ -322,7 +322,7 @@ describe('AuthLayout', () => {
   test.each(edgeCases)(
     'submits successfully with edge-case inputs',
     async ({ initials, email, password }) => {
-      const mocks: MockedResponse[] = [{ ...fulfilledMockResponse, variableMatcher: jest.fn() }];
+      const mocks: MockedResponse[] = [{ ...fulfilledMockResponse }];
       const { findByText } = renderAuthLayout(mocks);
       fillForm(initials, email, password, true);
       expect(await findByText(successTitleText)).toBeInTheDocument();

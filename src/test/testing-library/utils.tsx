@@ -1,4 +1,5 @@
-import { MockedProvider, MockedResponse } from '@apollo/client/testing';
+import { MockedProvider } from '@apollo/client/testing/react';
+import { MockedResponse } from '@apollo/client/testing';
 import { fireEvent, render, RenderResult, screen } from '@testing-library/react';
 import { t } from 'i18next';
 import React, { AriaRole } from 'react';
@@ -129,9 +130,5 @@ export function renderWithProviders(
   ui: React.ReactElement,
   { apolloMocks = [] }: { apolloMocks?: MockedResponse[] } = {}
 ): RenderResult {
-  return render(
-    <MockedProvider mocks={apolloMocks} addTypename={false}>
-      {ui}
-    </MockedProvider>
-  );
+  return render(<MockedProvider mocks={apolloMocks}>{ui}</MockedProvider>);
 }

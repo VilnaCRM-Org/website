@@ -1,4 +1,4 @@
-import { useMutation } from '@apollo/client';
+import { useMutation } from '@apollo/client/react';
 import { Box, CircularProgress, Fade } from '@mui/material';
 import React from 'react';
 import { useForm } from 'react-hook-form';

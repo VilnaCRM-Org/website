@@ -38,10 +38,10 @@ const validateCreateUserInput: (variables: { input: CreateUserInput }) => boolea
 export const fulfilledMockResponse: MockedResponse = {
   request: {
     query: SIGNUP_MUTATION,
+    variables: validateCreateUserInput,
   },
-  variableMatcher: validateCreateUserInput,
 
-  newData: variables => {
+  result: variables => {
     const { input } = variables;
     const { initials, email, clientMutationId } = input;
 
@@ -53,8 +53,10 @@ export const fulfilledMockResponse: MockedResponse = {
             initials,
             id: 0,
             confirmed: true,
+            __typename: 'User',
           },
           clientMutationId,
+          __typename: 'CreateUserPayload',
         },
       },
     };
