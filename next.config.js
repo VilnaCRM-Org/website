@@ -1,7 +1,5 @@
 const withBundleAnalyzer = require('@next/bundle-analyzer')();
-const identity = config => config;
-const withExportImages =
-  process.env.NODE_ENV === 'test' ? identity : require('next-export-optimize-images');
+const withExportImages = require('next-export-optimize-images');
 const LocalizationGenerator = require('./scripts/localizationGenerator');
 
 require('dotenv/config');

@@ -32,6 +32,12 @@ importers:
       '@sentry/react':
         specifier: ^10.32.1
         version: 10.32.1(react@19.2.3)
+      '@storybook/nextjs':
+        specifier: ^10.1.11
+        version: 10.1.11(babel-plugin-macros@3.1.0)(esbuild@0.27.2)(next@16.1.1(@babel/core@7.28.5)(@opentelemetry/api@1.9.0)(@playwright/test@1.57.0)(babel-plugin-macros@3.1.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(sass@1.97.1))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(sass@1.97.1)(storybook@10.1.11(@testing-library/dom@10.4.0)(prettier@3.7.4)(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(type-fest@4.41.0)(typescript@5.9.3)(webpack-hot-middleware@2.26.1)(webpack@5.104.1(esbuild@0.27.2))
+      '@storybook/react':
+        specifier: ^10.1.11
+        version: 10.1.11(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(storybook@10.1.11(@testing-library/dom@10.4.0)(prettier@3.7.4)(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(typescript@5.9.3)
       dotenv:
         specifier: ^17.2.3
         version: 17.2.3
@@ -59,6 +65,9 @@ importers:
       react-i18next:
         specifier: ^16.5.1
         version: 16.5.1(i18next@25.7.3(typescript@5.9.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(typescript@5.9.3)
+      storybook:
+        specifier: ^10.1.11
+        version: 10.1.11(@testing-library/dom@10.4.0)(prettier@3.7.4)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       swagger-ui-react:
         specifier: ^5.31.0
         version: 5.31.0(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -126,12 +135,6 @@ importers:
       '@storybook/blocks':
         specifier: ^8.6.12
         version: 8.6.14(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(storybook@10.1.11(@testing-library/dom@10.4.0)(prettier@3.7.4)(react-dom@19.2.3(react@19.2.3))(react@19.2.3))
-      '@storybook/nextjs':
-        specifier: ^10.1.11
-        version: 10.1.11(babel-plugin-macros@3.1.0)(esbuild@0.27.2)(next@16.1.1(@babel/core@7.28.5)(@opentelemetry/api@1.9.0)(@playwright/test@1.57.0)(babel-plugin-macros@3.1.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(sass@1.97.1))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(sass@1.97.1)(storybook@10.1.11(@testing-library/dom@10.4.0)(prettier@3.7.4)(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(type-fest@4.41.0)(typescript@5.9.3)(webpack-hot-middleware@2.26.1)(webpack@5.104.1(esbuild@0.27.2))
-      '@storybook/react':
-        specifier: ^10.1.11
-        version: 10.1.11(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(storybook@10.1.11(@testing-library/dom@10.4.0)(prettier@3.7.4)(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(typescript@5.9.3)
       '@storybook/test':
         specifier: ^8.6.15
         version: 8.6.15(storybook@10.1.11(@testing-library/dom@10.4.0)(prettier@3.7.4)(react-dom@19.2.3(react@19.2.3))(react@19.2.3))
@@ -243,9 +246,6 @@ importers:
       serve:
         specifier: ^14.2.5
         version: 14.2.5
-      storybook:
-        specifier: ^10.1.11
-        version: 10.1.11(@testing-library/dom@10.4.0)(prettier@3.7.4)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       terser-webpack-plugin:
         specifier: ^5.3.16
         version: 5.3.16(esbuild@0.27.2)(webpack@5.104.1(esbuild@0.27.2))

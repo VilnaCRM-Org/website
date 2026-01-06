@@ -1,6 +1,5 @@
 import 'dotenv/config';
-import { access, writeFile } from 'node:fs/promises';
-import { constants as fsConstants } from 'node:fs';
+import { writeFile } from 'node:fs/promises';
 import { load } from 'js-yaml';
 
 const swaggerPath = './public/swagger-schema.json';
@@ -34,15 +33,6 @@ export async function saveSwaggerJson(yamlText, filePath) {
   await writeFile(filePath, JSON.stringify(jsonContent, null, 2));
 }
 
-async function localSchemaExists() {
-  try {
-    await access(swaggerPath, fsConstants.F_OK);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 (async () => {
   try {
     const swaggerUrl = buildSpecUrl();
@@ -50,13 +40,7 @@ async function localSchemaExists() {
     await saveSwaggerJson(swaggerSchema, swaggerPath);
     console.log('✅ Swagger schema saved as JSON');
   } catch (err) {
-    if (await localSchemaExists()) {
-      console.warn('⚠️ Network fetch failed, using existing swagger schema cache');
-      process.exitCode = 0;
-      return;
-    }
-
-    console.error('❌ Failed to fetch/save swagger schema and no local cache found:', err);
+    console.error('❌ Failed to fetch/save swagger schema:', err);
     process.exitCode = 1;
   }
 })();
