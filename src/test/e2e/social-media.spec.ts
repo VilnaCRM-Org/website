@@ -76,7 +76,8 @@ async function openDrawerAndNavigate(
   await mockSocialLinkUrlRoute(page, url);
   await page.setViewportSize({ width: 375, height: 812 });
   await page.getByLabel(buttonToOpenDrawerLabel).click();
-  const link: Locator = page.getByRole('presentation').getByLabel(linkName);
+  const drawer: Locator = page.getByRole('presentation');
+  const link: Locator = drawer.getByRole('link', { name: linkName });
   await expect(link).toBeVisible();
   await expect(link).toBeEnabled();
   const [popup] = await Promise.all([page.waitForEvent('popup').catch(() => null), link.click()]);

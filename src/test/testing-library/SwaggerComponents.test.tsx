@@ -15,14 +15,13 @@ describe('Swagger Navigation', () => {
   const mockAssign: jest.Mock = jest.fn();
 
   beforeAll(() => {
-    (window as { location?: Location }).location = undefined;
-
     Object.defineProperty(window, 'location', {
       value: {
         ...originalLocation,
         assign: mockAssign,
       },
       writable: true,
+      configurable: true,
     });
   });
 
@@ -30,6 +29,7 @@ describe('Swagger Navigation', () => {
     Object.defineProperty(window, 'location', {
       value: originalLocation,
       writable: true,
+      configurable: true,
     });
   });
 
@@ -56,7 +56,10 @@ describe('Swagger Navigation', () => {
 
 jest.mock('../../features/swagger/hooks/useSwagger');
 
-jest.mock('swagger-ui-react', () => jest.fn(() => <div>SwaggerUI rendered</div>));
+jest.mock('swagger-ui-react', () => {
+  const SwaggerUI: React.FC = () => <div>SwaggerUI rendered</div>;
+  return SwaggerUI;
+});
 
 describe('ApiDocumentation', () => {
   const mockUseSwagger: jest.Mock = jest.mocked(useSwagger);

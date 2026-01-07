@@ -23,6 +23,9 @@ const config: Config = {
   testEnvironment: process.env.TEST_ENV === 'server' ? 'node' : 'jsdom',
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
   modulePathIgnorePatterns: ['<rootDir>/.stryker-tmp/'],
+  moduleNameMapper: {
+    '^@faker-js/faker$': '<rootDir>/src/test/__mocks__/faker.ts',
+  },
 };
 
 export default createJestConfig(config);

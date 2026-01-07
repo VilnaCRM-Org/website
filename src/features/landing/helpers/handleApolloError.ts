@@ -1,5 +1,4 @@
 import { GraphQLFormattedError } from 'graphql';
-
 import {
   ClientErrorMessages,
   getClientErrorMessages,
@@ -65,13 +64,14 @@ export const handleApolloError: HandleApolloErrorType = ({
 }: HandleApolloErrorProps): string => {
   const messages: ClientErrorMessages = getClientErrorMessages();
 
-  const apolloError = error as {
+  if (!error || typeof error !== 'object') {
+    return messages[CLIENT_ERROR_KEYS.UNEXPECTED];
+  }
+
+  const { networkError, graphQLErrors = [] } = error as {
     networkError?: unknown;
     graphQLErrors?: GraphQLFormattedError[];
   };
-
-  const networkError = apolloError.networkError;
-  const graphQLErrors = apolloError.graphQLErrors || [];
 
   if (networkError) return handleNetworkError(networkError);
 

@@ -1,4 +1,3 @@
-import { ApolloError } from '@apollo/client';
 import { GraphQLFormattedError } from 'graphql';
 
 import {
@@ -91,13 +90,13 @@ describe('Error Handling', () => {
     });
 
     it('should handle network error', () => {
-      const error: ApolloError = new ApolloError({
+      const error: HandleApolloErrorProps['error'] = {
         networkError: {
           name: 'ServerError',
           message: 'Network Error',
           statusCode: HTTPStatusCodes.UNAUTHORIZED,
         },
-      });
+      };
 
       const props: HandleApolloErrorProps = { error };
       expect(handleApolloError(props)).toBe(messages[CLIENT_ERROR_KEYS.UNAUTHORIZED]);
@@ -109,7 +108,7 @@ describe('Error Handling', () => {
         extensions: { statusCode: HTTPStatusCodes.INTERNAL_SERVER_ERROR },
       };
       const error: HandleApolloErrorProps = {
-        error: new ApolloError({ graphQLErrors: [graphQLError] }),
+        error: { graphQLErrors: [graphQLError] },
       };
       expect(handleApolloError(error)).toBe(messages[CLIENT_ERROR_KEYS.SERVER_ERROR]);
     });
@@ -119,7 +118,7 @@ describe('Error Handling', () => {
         message: 'UNAUTHORIZED',
       };
       const error: HandleApolloErrorProps = {
-        error: new ApolloError({ graphQLErrors: [graphQLError] }),
+        error: { graphQLErrors: [graphQLError] },
       };
       expect(handleApolloError(error)).toBe(messages[CLIENT_ERROR_KEYS.UNAUTHORIZED]);
     });
@@ -129,7 +128,7 @@ describe('Error Handling', () => {
         { message: 'Error 1' },
         { message: 'Error 2' },
       ];
-      const error: HandleApolloErrorProps = { error: new ApolloError({ graphQLErrors }) };
+      const error: HandleApolloErrorProps = { error: { graphQLErrors } };
       expect(handleApolloError(error)).toBe('Error 1, Error 2');
     });
 
@@ -137,7 +136,7 @@ describe('Error Handling', () => {
       const error: HandleApolloErrorProps = { error: null };
       expect(handleApolloError(error)).toBe(messages[CLIENT_ERROR_KEYS.UNEXPECTED]);
 
-      const notApolloError: HandleApolloErrorProps = { error: {} as ApolloError };
+      const notApolloError: HandleApolloErrorProps = { error: {} };
       expect(handleApolloError(notApolloError)).toBe(messages[CLIENT_ERROR_KEYS.UNEXPECTED]);
     });
     it('should handle graphQLErrors with FORBIDDEN statusCode', () => {
@@ -146,7 +145,7 @@ describe('Error Handling', () => {
         extensions: { statusCode: HTTPStatusCodes.FORBIDDEN },
       };
       const error: HandleApolloErrorProps = {
-        error: new ApolloError({ graphQLErrors: [graphQLError] }),
+        error: { graphQLErrors: [graphQLError] },
       };
       expect(handleApolloError(error)).toBe(messages[CLIENT_ERROR_KEYS.DENIED]);
     });

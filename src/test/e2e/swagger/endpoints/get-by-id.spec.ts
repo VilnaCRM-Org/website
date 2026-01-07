@@ -35,6 +35,7 @@ interface GetUserByIdElements extends BasicEndpointElements {
   copyButton: Locator;
   downloadButton: Locator;
   validationError: Locator;
+  validationErrorBlock: Locator;
 }
 
 async function setupGetUserByIdEndpoint(page: Page): Promise<GetUserByIdElements> {
@@ -47,6 +48,7 @@ async function setupGetUserByIdEndpoint(page: Page): Promise<GetUserByIdElements
   const executeBtn: Locator = await getAndCheckExecuteBtn(getUserEndpoint);
   const parametersSection: Locator = getUserEndpoint.locator(locators.parametersSection);
   const validationError: Locator = getUserEndpoint.locator(locators.validationErrors);
+  const validationErrorBlock: Locator = getUserEndpoint.locator(locators.validationErrorText);
   const idInput: Locator = getUserEndpoint.locator(locators.idInput);
   const requestUrl: Locator = getUserEndpoint.locator(locators.requestUrl);
   const responseBody: Locator = getUserEndpoint.locator(locators.responseBody).first();
@@ -59,6 +61,7 @@ async function setupGetUserByIdEndpoint(page: Page): Promise<GetUserByIdElements
     executeBtn,
     parametersSection,
     validationError,
+    validationErrorBlock,
     idInput,
     requestUrl,
     responseBody,
@@ -114,7 +117,7 @@ test.describe('get user by ID', () => {
     await elements.executeBtn.click();
 
     await expect(elements.idInput).toHaveClass(/invalid/);
-    await expect(elements.validationError).toContainText('Required field is not provided');
+    await expect(elements.validationErrorBlock).toContainText('Required field is not provided');
 
     await cancelOperation(page);
   });
