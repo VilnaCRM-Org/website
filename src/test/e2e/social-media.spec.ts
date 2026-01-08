@@ -89,9 +89,12 @@ async function openDrawerAndNavigate(
   }
 }
 
+const BASE_URL: string =
+  process.env.NEXT_PUBLIC_WEBSITE_URL || process.env.NEXT_PUBLIC_API_BASE_URL || 'http://prod:3001';
+
 test.describe('Navigation tests', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+    await page.goto(BASE_URL);
   });
 
   test('Desktop Instagram link', async ({ page }) => {

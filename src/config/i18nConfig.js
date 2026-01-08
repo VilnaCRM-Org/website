@@ -7,7 +7,7 @@ if (!mainLanguage || !fallbackLanguage) {
 
 const getResources = () => {
   try {
-    // eslint-disable-next-line global-require
+    // eslint-disable-next-line @typescript-eslint/no-require-imports, global-require
     return require('../../pages/i18n/localization.json');
   } catch (error) {
     throw new Error(`Failed to load localization resources: ${error.message}`);

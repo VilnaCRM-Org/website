@@ -1,7 +1,7 @@
-const { loadEnvConfig } = require('@next/env');
+import { scenario } from '@memlab/core';
+import { loadEnvConfig } from '@next/env';
 
-const projectDir = process.cwd();
-loadEnvConfig(projectDir);
+loadEnvConfig(process.cwd());
 
 class ScenarioBuilder {
   constructor(path) {
@@ -19,8 +19,12 @@ class ScenarioBuilder {
   }
 
   createScenario(scenarioOptions) {
-    return { url: this.url, beforeInitialPageLoad: this.beforeInitialPageLoad, ...scenarioOptions };
+    return scenario({
+      url: this.url,
+      beforeInitialPageLoad: this.beforeInitialPageLoad,
+      ...scenarioOptions,
+    });
   }
 }
 
-module.exports = ScenarioBuilder;
+export default ScenarioBuilder;

@@ -57,8 +57,11 @@ describe('Swagger Navigation', () => {
 jest.mock('../../features/swagger/hooks/useSwagger');
 
 jest.mock('swagger-ui-react', () => {
-  const SwaggerUI: React.FC = () => <div>SwaggerUI rendered</div>;
-  return SwaggerUI;
+  function SwaggerUI(): React.ReactElement {
+    return <div>SwaggerUI rendered</div>;
+  }
+
+  return { __esModule: true, default: SwaggerUI };
 });
 
 describe('ApiDocumentation', () => {

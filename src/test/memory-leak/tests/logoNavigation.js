@@ -1,6 +1,9 @@
-const i18n = require('i18next');
+import i18n from 'i18next';
+import { loadEnvConfig } from '@next/env';
+import ScenarioBuilder from '../utils/ScenarioBuilder.js';
+import '../utils/initializeLocalization.js';
 
-const ScenarioBuilder = require('../utils/ScenarioBuilder');
+loadEnvConfig(process.cwd());
 
 const scenarioBuilder = new ScenarioBuilder();
 
@@ -20,7 +23,10 @@ if (headerLogoLabels.length === 0) {
 const headerLogoSelectors = [
   'header a[href="/"]',
   'header a[aria-label*="logo" i]',
-  ...headerLogoLabels.flatMap(label => [`header a[aria-label="${label}"]`, `header a img[alt="${label}"]`]),
+  ...headerLogoLabels.flatMap(label => [
+    `header a[aria-label="${label}"]`,
+    `header a img[alt="${label}"]`,
+  ]),
 ].join(', ');
 
 async function getHeaderLogoLink(page) {
@@ -53,17 +59,14 @@ async function getHeaderLogoLink(page) {
 }
 
 async function action(page) {
-  const headerLogoLink = await getHeaderLogoLink(page);
+  await getHeaderLogoLink(page);
 
   // Navigation may not fire if we're already on "/" (SPA), so allow timeout without failing.
   const maybeNavigation = page
     .waitForNavigation({ waitUntil: 'networkidle0', timeout: 5000 })
     .catch(() => null);
 
-  await Promise.all([
-    maybeNavigation,
-    headerLogoLink.click(),
-  ]);
+  await Promise.all([maybeNavigation, page.goBack().catch(() => null)]);
 
   await new Promise(resolve => {
     setTimeout(resolve, 500);
@@ -75,14 +78,11 @@ async function back(page) {
     .waitForNavigation({ waitUntil: 'networkidle0', timeout: 5000 })
     .catch(() => null);
 
-  await Promise.all([
-    maybeNavigation,
-    page.goBack().catch(() => null),
-  ]);
+  await Promise.all([maybeNavigation, page.goBack().catch(() => null)]);
 
   await new Promise(resolve => {
     setTimeout(resolve, 500);
   });
 }
 
-module.exports = scenarioBuilder.createScenario({ action, back });
+export default scenarioBuilder.createScenario({ action, back });

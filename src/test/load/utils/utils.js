@@ -11,7 +11,8 @@ export default class Utils {
   getConfig() {
     try {
       return JSON.parse(open('config.json'));
-    } catch (error) {
+    } catch {
+      // Fall back to example config when user config is missing
       return JSON.parse(open('config.json.dist'));
     }
   }

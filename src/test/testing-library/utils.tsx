@@ -1,5 +1,5 @@
-import { MockedProvider } from '@apollo/client/testing/react';
 import { MockedResponse } from '@apollo/client/testing';
+import { MockedProvider } from '@apollo/client/testing/react';
 import { fireEvent, render, RenderResult, screen } from '@testing-library/react';
 import { t } from 'i18next';
 import React, { AriaRole } from 'react';
@@ -40,7 +40,8 @@ export const getFormElements: () => ExtendedGetElementsResult = () => {
       return queryFunction();
     } catch (error) {
       throw new FormElementNotFoundError(
-        `Form element "${elementName}" not found using query: ${queryFunction.toString()}`
+        `Form element "${elementName}" not found using query: ${queryFunction.toString()}`,
+        error as Error
       );
     }
   };
@@ -78,6 +79,10 @@ export const validateFormInput: (
 
   if (passwordValue && passwordValue.length < 8) {
     throw new Error('Password must be at least 8 characters');
+  }
+
+  if (!fullNameValue && !emailValue && !passwordValue) {
+    throw new Error('At least one field must be provided');
   }
 };
 

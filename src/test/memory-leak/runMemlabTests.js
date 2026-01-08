@@ -1,9 +1,8 @@
-require('./utils/initializeLocalization');
+import fs from 'node:fs';
 
-const fs = require('node:fs');
-
-const { run, analyze } = require('@memlab/api');
-const { StringAnalysis } = require('@memlab/heap-analysis');
+import './utils/initializeLocalization.js';
+import { run, analyze } from '@memlab/api';
+import { StringAnalysis } from '@memlab/heap-analysis';
 
 const memoryLeakDir = './src/test/memory-leak';
 const testsDir = './tests';
@@ -11,13 +10,14 @@ const testsDir = './tests';
 const workDir = './src/test/memory-leak/results';
 const consoleMode = 'VERBOSE';
 
-(async function () {
+(async function runMemlab() {
   const testFilePaths = fs
     .readdirSync(`${memoryLeakDir}/${testsDir}`)
     .map(test => `${testsDir}/${test}`);
 
   for (const testFilePath of testFilePaths) {
-    const scenario = require(testFilePath);
+    const scenarioModule = await import(new URL(testFilePath, import.meta.url).href);
+    const scenario = scenarioModule.default ?? scenarioModule;
 
     const { runResult } = await run({
       scenario,

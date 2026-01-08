@@ -15,6 +15,7 @@ DOCKER_COMPOSE              = docker compose
 
 BIN_DIR                     = ./node_modules/.bin
 NEXT_BIN                    = $(BIN_DIR)/next
+ESLINT_BIN                  = $(BIN_DIR)/eslint
 IMG_OPTIMIZE                = $(BIN_DIR)/next-export-optimize-images
 TS_BIN                      = $(BIN_DIR)/tsc
 STORYBOOK_BIN               = $(BIN_DIR)/storybook
@@ -97,6 +98,11 @@ JEST_FLAGS                  = --verbose
 NETWORK_NAME                = website-network
 
 CI                          ?= 0
+
+# Treat common truthy CI values the same (e.g., CI=true from GitHub Actions/act)
+ifneq (,$(filter 1 true TRUE,$(CI)))
+    CI := 1
+endif
 
 ifeq ($(CI), 1)
     PNPM_EXEC               = pnpm
@@ -241,7 +247,7 @@ format: ## This command executes Prettier formatting
 	$(PRETTIER_BIN) "**/*.{js,jsx,ts,tsx,json,css,scss,md}" --write --ignore-path .prettierignore
 
 lint-next: ## This command executes ESLint
-	$(PNPM_EXEC) $(NEXT_BIN) lint
+	$(PNPM_EXEC) $(ESLINT_BIN)
 
 lint-tsc: ## This command executes Typescript linter
 	$(PNPM_EXEC) $(TS_BIN)

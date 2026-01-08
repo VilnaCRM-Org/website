@@ -1,4 +1,7 @@
-const ScenarioBuilder = require('../utils/ScenarioBuilder');
+import { loadEnvConfig } from '@next/env';
+import ScenarioBuilder from '../utils/ScenarioBuilder.js';
+
+loadEnvConfig(process.cwd());
 
 const scenarioBuilder = new ScenarioBuilder();
 
@@ -20,4 +23,4 @@ async function back(page) {
   await page.waitForSelector(tooltipSelector, { hidden: true });
 }
 
-module.exports = scenarioBuilder.createScenario({ action, back });
+export default scenarioBuilder.createScenario({ action, back });

@@ -1,6 +1,9 @@
-const { t } = require('i18next');
+import { t } from 'i18next';
+import { loadEnvConfig } from '@next/env';
+import ScenarioBuilder from '../utils/ScenarioBuilder.js';
+import '../utils/initializeLocalization.js';
 
-const ScenarioBuilder = require('../utils/ScenarioBuilder');
+loadEnvConfig(process.cwd());
 
 const scenarioBuilder = new ScenarioBuilder();
 
@@ -28,4 +31,4 @@ async function back(page) {
   await page.waitForSelector(closeIconSelector, { hidden: true });
 }
 
-module.exports = scenarioBuilder.createScenario({ setup, action, back });
+export default scenarioBuilder.createScenario({ setup, action, back });
