@@ -76,13 +76,8 @@ describe('Header navigation', () => {
 
   let routerMock: RouterMock;
 
-  const originalLocation: Location = window.location;
-
   beforeEach(() => {
-    Object.defineProperty(window, 'location', {
-      writable: true,
-      value: { ...originalLocation, href: 'http://localhost:3000/' },
-    });
+    window.history.pushState({}, 'Test Page', '/');
 
     routerMock = {
       pathname: '/swagger',
@@ -98,13 +93,6 @@ describe('Header navigation', () => {
     };
     (useRouter as jest.Mock).mockReturnValue(routerMock);
     scrollToAnchorMock.mockClear();
-  });
-
-  afterEach(() => {
-    Object.defineProperty(window, 'location', {
-      writable: true,
-      value: originalLocation,
-    });
   });
 
   it('should scroll to the correct link on the swagger page', async () => {
@@ -147,11 +135,6 @@ describe('Header navigation', () => {
 
     type MutableWindow = Omit<Window, 'location'> & { location: Location };
     const mutableWindow: MutableWindow = window as unknown as MutableWindow;
-
-    Object.defineProperty(mutableWindow, 'location', {
-      value: { ...window.location, href: window.location.href },
-      writable: true,
-    });
 
     const { getByText } = render(<Header />);
     const target: NavItemProps = headerNavList[1];

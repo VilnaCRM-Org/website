@@ -21,11 +21,17 @@ const config: Config = {
   ],
   preset: 'ts-jest',
   testEnvironment: process.env.TEST_ENV === 'server' ? 'node' : 'jsdom',
+  transform: {
+    '^.+\\.(js|jsx|mjs|cjs|ts|tsx)$': [
+      'babel-jest',
+      { configFile: '<rootDir>/babel-jest.config.js' },
+    ],
+  },
+  transformIgnorePatterns: [
+    '[/\\\\]node_modules[/\\\\](?!.*(?:uuid|@faker-js[/\\\\]faker)[/\\\\])',
+  ],
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
   modulePathIgnorePatterns: ['<rootDir>/.stryker-tmp/'],
-  moduleNameMapper: {
-    '^@faker-js/faker$': '<rootDir>/src/test/__mocks__/faker.ts',
-  },
 };
 
 export default createJestConfig(config);

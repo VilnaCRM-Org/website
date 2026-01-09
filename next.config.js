@@ -12,7 +12,7 @@ dotenvExpand.expand(env);
 const nextConfig = withExportImages({
   output: 'export',
   reactStrictMode: true,
-  swcMinify: true,
+  transpilePackages: ['@faker-js/faker'],
 
   compiler: {
     styledComponents: true,

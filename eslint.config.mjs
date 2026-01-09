@@ -110,6 +110,7 @@ export default [
       'build/**',
       'coverage/**',
       'storybook-static/**',
+      'storybook-static-ci/**',
       'scripts/**',
       'playwright-report/**',
       'test-results/**',

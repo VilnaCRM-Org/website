@@ -25,7 +25,7 @@ PLAYWRIGHT_BIN              = $(BIN_DIR)/playwright
 
 NEXT_BUILD                  = $(NEXT_BIN) build
 NEXT_BUILD_CMD              = $(NEXT_BUILD) && $(IMG_OPTIMIZE)
-STORYBOOK_BUILD_CMD         = $(STORYBOOK_BIN) build
+STORYBOOK_BUILD_CMD         = $(STORYBOOK_BIN) build --output-dir storybook-static-ci
 
 TEST_DIR_BASE               = ./src/test
 TEST_DIR_APOLLO             = $(TEST_DIR_BASE)/apollo-server

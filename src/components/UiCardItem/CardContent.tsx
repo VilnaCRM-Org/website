@@ -31,7 +31,9 @@ function CardContent({ item, isSmallCard }: CardContentProps): React.ReactElemen
               sx={styles.hoveredCard}
               title={<ServicesHoverCard />}
             >
-              <UiTypography variant="bodyText16">services</UiTypography>
+              <UiTypography variant="bodyText16" component="span">
+                services
+              </UiTypography>
             </UiTooltip>
           </Trans>
         ) : (
