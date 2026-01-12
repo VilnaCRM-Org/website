@@ -34,7 +34,8 @@ TEST_DIR_VISUAL             = $(TEST_DIR_BASE)/visual
 
 STRYKER_CMD                 = pnpm stryker run
 
-SERVE_CMD                   = --collect.startServerCommand="$(SERVE_BIN) out"
+SERVE_CMD                   = --collect.startServerCommand="$(SERVE_BIN) -l $(NEXT_PUBLIC_PROD_PORT) out" \
+                              --collect.startServerReadyPattern="Accepting connections"
 LHCI                        = pnpm lhci autorun
 LHCI_CONFIG_DESKTOP         = --config=lighthouserc.desktop.js
 LHCI_CONFIG_MOBILE          = --config=lighthouserc.mobile.js
@@ -420,4 +421,3 @@ stop: ## Stop docker
 
 check-node-version: ## Check if the correct Node.js version is installed
 	$(PNPM_EXEC) exec node checkNodeVersion.js
-

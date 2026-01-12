@@ -5,6 +5,7 @@ import { useRouter } from 'next/router';
 
 import { headerNavList } from '../../features/landing/components/Header/constants';
 import Header from '../../features/landing/components/Header/Header';
+import fallbackNavigate from '../../features/landing/helpers/fallbackNavigate';
 import scrollToAnchor from '../../features/landing/helpers/scrollToAnchor';
 import { NavItemProps } from '../../features/landing/types/header/navigation';
 
@@ -68,8 +69,14 @@ jest.mock('../../features/landing/helpers/scrollToAnchor', () => ({
   __esModule: true,
   default: jest.fn(),
 }));
+jest.mock('../../features/landing/helpers/fallbackNavigate', () => ({
+  __esModule: true,
+  default: jest.fn(),
+}));
 const scrollToAnchorMock: jest.MockedFunction<typeof scrollToAnchor> =
   scrollToAnchor as jest.MockedFunction<typeof scrollToAnchor>;
+const fallbackNavigateMock: jest.MockedFunction<typeof fallbackNavigate> =
+  fallbackNavigate as jest.MockedFunction<typeof fallbackNavigate>;
 
 describe('Header navigation', () => {
   const user: UserEvent = userEvent.setup();
@@ -133,15 +140,12 @@ describe('Header navigation', () => {
   it('falls back to window.location.href when router.push fails', async () => {
     routerMock.push.mockRejectedValueOnce(new Error('push failed'));
 
-    type MutableWindow = Omit<Window, 'location'> & { location: Location };
-    const mutableWindow: MutableWindow = window as unknown as MutableWindow;
-
     const { getByText } = render(<Header />);
     const target: NavItemProps = headerNavList[1];
 
     await user.click(getByText(t(target.title)));
 
-    expect(mutableWindow.location.href.endsWith(`/${target.link}`)).toBe(true);
+    expect(fallbackNavigateMock).toHaveBeenCalledWith(`/${target.link}`);
     expect(routerMock.push).toHaveBeenCalledTimes(1);
     expect(scrollToAnchorMock).not.toHaveBeenCalled();
   });
