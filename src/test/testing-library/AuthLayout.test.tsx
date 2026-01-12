@@ -1,4 +1,4 @@
-import { MockedResponse } from '@apollo/client/testing';
+import { MockLink } from '@apollo/client/testing';
 import { fireEvent, waitFor } from '@testing-library/react';
 import { t } from 'i18next';
 import { AriaRole } from 'react';
@@ -132,11 +132,13 @@ describe('AuthLayout', () => {
       .fn()
       .mockReturnValue(true);
 
-    const mockWithVariableCapture: typeof fulfilledMockResponse & {
-      variableMatcher: jest.Mock<boolean, [{ input: CreateUserInput }]>;
-    } = {
-      ...fulfilledMockResponse,
-      variableMatcher: mockVariableMatcher,
+    // Apollo Client 4: variableMatcher moved to request.variables as a callback
+    const mockWithVariableCapture: MockLink.MockedResponse = {
+      request: {
+        query: fulfilledMockResponse.request.query,
+        variables: mockVariableMatcher,
+      },
+      result: fulfilledMockResponse.result,
     };
 
     renderAuthLayout([mockWithVariableCapture]);
@@ -322,7 +324,7 @@ describe('AuthLayout', () => {
   test.each(edgeCases)(
     'submits successfully with edge-case inputs',
     async ({ initials, email, password }) => {
-      const mocks: MockedResponse[] = [{ ...fulfilledMockResponse }];
+      const mocks: MockLink.MockedResponse[] = [{ ...fulfilledMockResponse }];
       const { findByText } = renderAuthLayout(mocks);
       fillForm(initials, email, password, true);
       expect(await findByText(successTitleText)).toBeInTheDocument();
@@ -460,7 +462,7 @@ describe('AuthLayoutWithNotification', () => {
     expect(queryByText(errorTitleText)).not.toBeInTheDocument();
   });
   it('should display network error text when network error message includes "Failed to fetch"', async () => {
-    const failedToFetchMockResponse: MockedResponse = {
+    const failedToFetchMockResponse: MockLink.MockedResponse = {
       request: {
         query: SIGNUP_MUTATION,
         variables: {
@@ -502,11 +504,13 @@ describe('AuthLayoutWithNotification', () => {
       .fn()
       .mockReturnValue(true);
 
-    const mockWithVariableCapture: typeof fulfilledMockResponse & {
-      variableMatcher: jest.Mock<boolean, [{ input: CreateUserInput }]>;
-    } = {
-      ...fulfilledMockResponse,
-      variableMatcher: mockVariableMatcher,
+    // Apollo Client 4: variableMatcher moved to request.variables as a callback
+    const mockWithVariableCapture: MockLink.MockedResponse = {
+      request: {
+        query: fulfilledMockResponse.request.query,
+        variables: mockVariableMatcher,
+      },
+      result: fulfilledMockResponse.result,
     };
 
     renderAuthLayout([mockWithVariableCapture]);

@@ -67,8 +67,14 @@ export const getFormElements: () => ExtendedGetElementsResult = () => {
 export const validateFormInput: (
   fullNameValue: string,
   emailValue: string,
-  passwordValue: string
-) => void = (fullNameValue: string, emailValue: string, passwordValue: string): void => {
+  passwordValue: string,
+  allowEmpty?: boolean
+) => void = (
+  fullNameValue: string,
+  emailValue: string,
+  passwordValue: string,
+  allowEmpty = false
+): void => {
   if (fullNameValue && fullNameValue.length < 2) {
     throw new Error('Full name must be at least 2 characters');
   }
@@ -81,7 +87,7 @@ export const validateFormInput: (
     throw new Error('Password must be at least 8 characters');
   }
 
-  if (!fullNameValue && !emailValue && !passwordValue) {
+  if (!allowEmpty && !fullNameValue && !emailValue && !passwordValue) {
     throw new Error('At least one field must be provided');
   }
 };
@@ -97,7 +103,9 @@ export const fillForm: (
   passwordValue = '',
   acceptPrivacyPolicy = false
 ) => {
-  validateFormInput(fullNameValue, emailValue, passwordValue);
+  // Allow empty form testing when all fields are intentionally empty
+  const allowEmpty = !fullNameValue && !emailValue && !passwordValue;
+  validateFormInput(fullNameValue, emailValue, passwordValue, allowEmpty);
 
   const { fullNameInput, emailInput, passwordInput, privacyCheckbox, signUpButton } =
     getFormElements();

@@ -1,3 +1,4 @@
+import { CombinedGraphQLErrors } from '@apollo/client';
 import { GraphQLFormattedError } from 'graphql';
 
 import {
@@ -69,41 +70,50 @@ export const handleApolloError: HandleApolloErrorType = ({
     return messages[CLIENT_ERROR_KEYS.UNEXPECTED];
   }
 
-  const { networkError, graphQLErrors = [] } = error as {
-    networkError?: unknown;
-    graphQLErrors?: GraphQLFormattedError[];
-  };
+  // Apollo Client 4: GraphQL errors are now CombinedGraphQLErrors
+  if (CombinedGraphQLErrors.is(error)) {
+    const graphQLErrors: readonly GraphQLFormattedError[] = error.errors;
+    if (graphQLErrors.length > 0) {
+      const firstError: GraphQLFormattedError = graphQLErrors[0];
+      const { extensions, message } = firstError;
 
-  if (networkError) return handleNetworkError(networkError);
+      const statusCode: number | undefined = extensions?.statusCode as number | undefined;
+      const isServerErrorStatus: boolean =
+        typeof statusCode === 'number' && statusCode >= 500 && statusCode < 600;
 
-  if (graphQLErrors.length > 0) {
-    const firstError: GraphQLFormattedError = graphQLErrors[0];
-    const { extensions, message } = firstError;
+      if (isServerErrorStatus) {
+        return messages[CLIENT_ERROR_KEYS.SERVER_ERROR];
+      }
+      if (statusCode === HTTPStatusCodes.UNAUTHORIZED) {
+        return messages[CLIENT_ERROR_KEYS.UNAUTHORIZED];
+      }
+      if (statusCode === HTTPStatusCodes.FORBIDDEN) {
+        return messages[CLIENT_ERROR_KEYS.DENIED];
+      }
 
-    const statusCode: number | undefined = extensions?.statusCode as number | undefined;
-    const isServerErrorStatus: boolean =
-      typeof statusCode === 'number' && statusCode >= 500 && statusCode < 600;
+      if (message?.toUpperCase?.().includes('UNAUTHORIZED')) {
+        return messages[CLIENT_ERROR_KEYS.UNAUTHORIZED];
+      }
 
-    if (isServerErrorStatus) {
-      return messages[CLIENT_ERROR_KEYS.SERVER_ERROR];
+      return (
+        graphQLErrors
+          .map((e: GraphQLFormattedError) => e.message || '')
+          .filter(Boolean)
+          .join(', ') || messages[CLIENT_ERROR_KEYS.UNEXPECTED]
+      );
     }
-    if (statusCode === HTTPStatusCodes.UNAUTHORIZED) {
-      return messages[CLIENT_ERROR_KEYS.UNAUTHORIZED];
-    }
-    if (statusCode === HTTPStatusCodes.FORBIDDEN) {
-      return messages[CLIENT_ERROR_KEYS.DENIED];
-    }
+  }
 
-    if (message?.toUpperCase?.().includes('UNAUTHORIZED')) {
-      return messages[CLIENT_ERROR_KEYS.UNAUTHORIZED];
-    }
+  // Apollo Client 4: Network errors are returned directly as the error itself
+  // Check if it's a network/server error by inspecting the error properties
+  if (isServerError(error)) {
+    return handleNetworkError(error);
+  }
 
-    return (
-      graphQLErrors
-        .map((e: GraphQLFormattedError) => e.message || '')
-        .filter(Boolean)
-        .join(', ') || messages[CLIENT_ERROR_KEYS.UNEXPECTED]
-    );
+  // Check error message for network error patterns
+  const errorMessage: string = (error as Error).message?.toLowerCase() ?? '';
+  if (NETWORK_ERROR_PATTERNS.some(pattern => errorMessage.includes(pattern))) {
+    return messages[CLIENT_ERROR_KEYS.NETWORK];
   }
 
   return messages[CLIENT_ERROR_KEYS.UNEXPECTED];
