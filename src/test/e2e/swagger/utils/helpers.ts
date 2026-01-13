@@ -31,6 +31,19 @@ export async function initSwaggerPage(page: Page): Promise<SwaggerPageObjects> {
   return { userEndpoints, elements };
 }
 
+export async function enableTryItOut(endpoint: Locator): Promise<void> {
+  const summary: Locator = endpoint.locator('.opblock-summary');
+  await summary.waitFor({ state: 'visible' });
+  await summary.click();
+
+  const opblockBody: Locator = endpoint.locator('.opblock-body');
+  await opblockBody.waitFor({ state: 'visible' });
+
+  const tryItOutButton: Locator = endpoint.locator(TEST_CONSTANTS.SELECTORS.TRY_IT_OUT_BUTTON);
+  await tryItOutButton.first().waitFor({ state: 'visible' });
+  await tryItOutButton.first().click();
+}
+
 export const getAndCheckExecuteBtn: (element: Locator) => Promise<Locator> = async (
   element: Locator
 ): Promise<Locator> => {

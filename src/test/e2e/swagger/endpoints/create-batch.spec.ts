@@ -16,6 +16,7 @@ import {
   interceptWithErrorResponse,
   expectErrorOrFailureStatus,
   parseJsonSafe,
+  enableTryItOut,
 } from '../utils/helpers';
 import { locators } from '../utils/locators';
 
@@ -28,11 +29,10 @@ interface BatchUserEndpointElements extends BasicEndpointElements {
 }
 
 async function setupBatchEndpoint(page: Page): Promise<BatchUserEndpointElements> {
-  const { userEndpoints, elements } = await initSwaggerPage(page);
+  const { userEndpoints } = await initSwaggerPage(page);
   const createBatchEndpoint: Locator = userEndpoints.createBatch;
 
-  await createBatchEndpoint.click();
-  await elements.tryItOutButton.click();
+  await enableTryItOut(createBatchEndpoint);
 
   const executeBtn: Locator = await getAndCheckExecuteBtn(createBatchEndpoint);
   const requestBodySection: Locator = createBatchEndpoint.locator(locators.requestBodySection);

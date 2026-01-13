@@ -9,6 +9,7 @@ import {
   cancelOperation,
   expectErrorOrFailureStatus,
   buildSafeUrl,
+  enableTryItOut,
 } from '../utils/helpers';
 import { locators } from '../utils/locators';
 
@@ -26,11 +27,10 @@ const PATCH_USER_API_URL: (id: string) => string = (id: string): string =>
   `${buildSafeUrl(BASE_API, encodeURIComponent(id))}**`;
 
 async function setupPatchUserEndpoint(page: Page): Promise<PatchUserEndpointElements> {
-  const { userEndpoints, elements } = await initSwaggerPage(page);
+  const { userEndpoints } = await initSwaggerPage(page);
   const patchEndpoint: Locator = userEndpoints.patchById;
 
-  await patchEndpoint.click();
-  await elements.tryItOutButton.click();
+  await enableTryItOut(patchEndpoint);
 
   const executeBtn: Locator = await getAndCheckExecuteBtn(patchEndpoint);
   const parametersSection: Locator = patchEndpoint.locator(locators.parametersSection);

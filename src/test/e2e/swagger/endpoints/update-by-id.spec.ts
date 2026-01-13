@@ -17,6 +17,7 @@ import {
   cancelOperation,
   expectErrorOrFailureStatus,
   parseJsonSafe,
+  enableTryItOut,
 } from '../utils/helpers';
 import { locators } from '../utils/locators';
 
@@ -36,11 +37,10 @@ const UPDATE_USER_API_URL: (id: string) => string = (id: string): string =>
   `${BASE_API.replace(/\/$/, '')}/${encodeURIComponent(id)}`;
 
 async function setupUpdateUserEndpoint(page: Page): Promise<UpdateUserEndpointElements> {
-  const { userEndpoints, elements } = await initSwaggerPage(page);
+  const { userEndpoints } = await initSwaggerPage(page);
   const updateEndpoint: Locator = userEndpoints.updateById;
 
-  await updateEndpoint.click();
-  await elements.tryItOutButton.click();
+  await enableTryItOut(updateEndpoint);
 
   const executeBtn: Locator = await getAndCheckExecuteBtn(updateEndpoint);
   const parametersSection: Locator = updateEndpoint.locator(locators.parametersSection);

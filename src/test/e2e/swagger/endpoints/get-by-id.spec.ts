@@ -10,6 +10,7 @@ import {
   expectErrorOrFailureStatus,
   buildSafeUrl,
   parseJsonSafe,
+  enableTryItOut,
 } from '../utils/helpers';
 import { locators } from '../utils/locators';
 
@@ -39,11 +40,10 @@ interface GetUserByIdElements extends BasicEndpointElements {
 }
 
 async function setupGetUserByIdEndpoint(page: Page): Promise<GetUserByIdElements> {
-  const { userEndpoints, elements } = await initSwaggerPage(page);
+  const { userEndpoints } = await initSwaggerPage(page);
   const getUserEndpoint: Locator = userEndpoints.getById;
 
-  await getUserEndpoint.click();
-  await elements.tryItOutButton.click();
+  await enableTryItOut(getUserEndpoint);
 
   const executeBtn: Locator = await getAndCheckExecuteBtn(getUserEndpoint);
   const parametersSection: Locator = getUserEndpoint.locator(locators.parametersSection);

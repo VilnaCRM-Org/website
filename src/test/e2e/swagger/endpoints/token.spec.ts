@@ -10,6 +10,7 @@ import {
   getEndpointCopyButton,
   expectErrorOrFailureStatus,
   collapseEndpoint,
+  enableTryItOut,
 } from '../utils/helpers';
 import { locators } from '../utils/locators';
 
@@ -32,8 +33,7 @@ async function setupTokenEndpoint(page: Page): Promise<TokenEndpointElements> {
   await initSwaggerPage(page);
   const systemEndpoints: GetSystemEndpoints = getSystemEndpoints(page);
   const tokenEndpoint: Locator = systemEndpoints.token;
-  await tokenEndpoint.click();
-  await tokenEndpoint.locator('button:has-text("Try it out")').click();
+  await enableTryItOut(tokenEndpoint);
   const executeBtn: Locator = await getAndCheckExecuteBtn(tokenEndpoint);
   const requestBodySection: Locator = tokenEndpoint.locator(locators.requestBodySection);
   await requestBodySection.waitFor({ state: 'visible' });

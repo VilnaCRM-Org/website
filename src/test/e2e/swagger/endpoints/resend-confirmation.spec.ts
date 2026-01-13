@@ -9,6 +9,7 @@ import {
   cancelOperation,
   expectErrorOrFailureStatus,
   collapseEndpoint,
+  enableTryItOut,
 } from '../utils/helpers';
 import { locators } from '../utils/locators';
 
@@ -25,11 +26,10 @@ const RESEND_CONFIRM_API_URL: (id: string) => string = (id: string): string =>
 async function setupResendConfirmationEndpoint(
   page: Page
 ): Promise<ResendConfirmationEndpointElements> {
-  const { userEndpoints, elements } = await initSwaggerPage(page);
+  const { userEndpoints } = await initSwaggerPage(page);
   const resendEndpoint: Locator = userEndpoints.resendConfirmation;
 
-  await resendEndpoint.click();
-  await elements.tryItOutButton.click();
+  await enableTryItOut(resendEndpoint);
 
   const executeBtn: Locator = await getAndCheckExecuteBtn(resendEndpoint);
   const parametersSection: Locator = resendEndpoint.locator(locators.parametersSection);

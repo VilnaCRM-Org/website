@@ -7,6 +7,7 @@ import {
   getAndCheckExecuteBtn,
   interceptWithErrorResponse,
   parseJsonSafe,
+  enableTryItOut,
 } from '../utils/helpers';
 import { locators } from '../utils/locators';
 
@@ -16,11 +17,10 @@ interface EndpointElements extends BasicEndpointElements {
 }
 
 async function setupEndpoint(page: Page): Promise<EndpointElements> {
-  const { userEndpoints, elements } = await initSwaggerPage(page);
+  const { userEndpoints } = await initSwaggerPage(page);
   const getEndpoint: Locator = userEndpoints.getCollection;
 
-  await getEndpoint.click();
-  await elements.tryItOutButton.click();
+  await enableTryItOut(getEndpoint);
 
   const executeBtn: Locator = await getAndCheckExecuteBtn(getEndpoint);
   const pageNumberInput: Locator = getEndpoint.locator(

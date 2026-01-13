@@ -1,15 +1,19 @@
 import { expect, type Locator, test } from '@playwright/test';
 
-import { initSwaggerPage, clearEndpointResponse, getAndCheckExecuteBtn } from '../utils/helpers';
+import {
+  initSwaggerPage,
+  clearEndpointResponse,
+  getAndCheckExecuteBtn,
+  enableTryItOut,
+} from '../utils/helpers';
 import { getSystemEndpoints, GetSystemEndpoints } from '../utils/index';
 
 test('healthCheck: try it out interaction', async ({ page }) => {
-  const { elements } = await initSwaggerPage(page);
+  await initSwaggerPage(page);
 
   const systemEndpoints: GetSystemEndpoints = getSystemEndpoints(page);
   const healthEndpoint: Locator = systemEndpoints.healthCheck;
-  await healthEndpoint.click();
-  await elements.tryItOutButton.click();
+  await enableTryItOut(healthEndpoint);
 
   const executeBtn: Locator = await getAndCheckExecuteBtn(healthEndpoint);
 

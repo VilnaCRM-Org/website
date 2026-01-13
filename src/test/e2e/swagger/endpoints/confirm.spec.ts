@@ -14,6 +14,7 @@ import {
   getAndCheckExecuteBtn,
   expectErrorOrFailureStatus,
   collapseEndpoint,
+  enableTryItOut,
 } from '../utils/helpers';
 
 const CONFIRM_API_URL: string = `${BASE_API}/confirm`;
@@ -25,11 +26,10 @@ interface ConfirmEndpointElements extends BasicEndpointElements {
 }
 
 async function setupConfirmEndpoint(page: Page): Promise<ConfirmEndpointElements> {
-  const { userEndpoints, elements } = await initSwaggerPage(page);
+  const { userEndpoints } = await initSwaggerPage(page);
   const confirmEndpoint: Locator = userEndpoints.confirm;
 
-  await confirmEndpoint.click();
-  await elements.tryItOutButton.click();
+  await enableTryItOut(confirmEndpoint);
 
   const executeBtn: Locator = await getAndCheckExecuteBtn(confirmEndpoint);
   const parametersSection: Locator = confirmEndpoint.locator('.parameters-container');

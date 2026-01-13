@@ -9,6 +9,7 @@ import {
   cancelOperation,
   expectErrorOrFailureStatus,
   parseJsonSafe,
+  enableTryItOut,
 } from '../utils/helpers';
 import { locators } from '../utils/locators';
 
@@ -21,11 +22,10 @@ interface CreateUserEndpointElements extends BasicEndpointElements {
 }
 
 async function setupCreateUserEndpoint(page: Page): Promise<CreateUserEndpointElements> {
-  const { userEndpoints, elements } = await initSwaggerPage(page);
+  const { userEndpoints } = await initSwaggerPage(page);
   const getEndpoint: Locator = userEndpoints.create;
 
-  await getEndpoint.click();
-  await elements.tryItOutButton.click();
+  await enableTryItOut(getEndpoint);
 
   const executeBtn: Locator = await getAndCheckExecuteBtn(getEndpoint);
   const requestBody: Locator = getEndpoint.locator(locators.jsonEditor);

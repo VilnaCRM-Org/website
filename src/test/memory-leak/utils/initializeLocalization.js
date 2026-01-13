@@ -1,7 +1,9 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import { loadEnvConfig } from '@next/env';
+import nextEnv from '@next/env';
 import i18nConfig from '../../../config/i18nConfig.js';
+
+const { loadEnvConfig } = nextEnv;
 
 loadEnvConfig(process.cwd());
 

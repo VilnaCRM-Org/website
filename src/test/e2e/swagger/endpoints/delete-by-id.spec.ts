@@ -8,6 +8,7 @@ import {
   interceptWithErrorResponse,
   cancelOperation,
   expectErrorOrFailureStatus,
+  enableTryItOut,
 } from '../utils/helpers';
 import { locators } from '../utils/locators';
 
@@ -24,11 +25,10 @@ const DELETE_USER_API_URL: (id: string) => string = (id: string): string =>
   `${BASE_API.replace(/\/$/, '')}/${encodeURIComponent(id)}`;
 
 async function setupDeleteUserEndpoint(page: Page): Promise<DeleteUserEndpointElements> {
-  const { userEndpoints, elements } = await initSwaggerPage(page);
+  const { userEndpoints } = await initSwaggerPage(page);
   const deleteEndpoint: Locator = userEndpoints.deleteById;
 
-  await deleteEndpoint.click();
-  await elements.tryItOutButton.click();
+  await enableTryItOut(deleteEndpoint);
 
   const executeBtn: Locator = await getAndCheckExecuteBtn(deleteEndpoint);
   const parametersSection: Locator = deleteEndpoint.locator(locators.parametersSection);

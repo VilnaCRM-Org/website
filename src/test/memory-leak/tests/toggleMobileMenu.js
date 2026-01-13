@@ -1,8 +1,9 @@
 import { t } from 'i18next';
-import { loadEnvConfig } from '@next/env';
+import nextEnv from '@next/env';
 import ScenarioBuilder from '../utils/ScenarioBuilder.js';
 import '../utils/initializeLocalization.js';
 
+const { loadEnvConfig } = nextEnv;
 loadEnvConfig(process.cwd());
 
 const scenarioBuilder = new ScenarioBuilder();
