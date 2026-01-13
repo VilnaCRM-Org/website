@@ -12,6 +12,19 @@ export type UserEndpoints = {
   RESEND_CONFIRMATION: string;
 };
 
+const escapeForRegex: (value: string) => string = (value: string): string =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const getEndpointByMethodPath = (page: Page, method: string, path: string): Locator =>
+  page
+    .locator('.opblock')
+    .filter({ has: page.locator('.opblock-summary-method', { hasText: method }) })
+    .filter({
+      has: page.locator('.opblock-summary-path', {
+        hasText: new RegExp(`^${escapeForRegex(path)}$`),
+      }),
+    });
+
 export const USER_ENDPOINTS: UserEndpoints = {
   GET_COLLECTION: '#operations-User-api_users_get_collection',
   CREATE: '#operations-User-create_http',
@@ -44,9 +57,9 @@ export interface GetSystemEndpoints {
 export const getSystemEndpoints: (page: Page) => GetSystemEndpoints = (
   page: Page
 ): GetSystemEndpoints => ({
-  healthCheck: page.locator(SYSTEM_ENDPOINTS.HEALTH),
-  authorize: page.locator(SYSTEM_ENDPOINTS.AUTHORIZE),
-  token: page.locator(SYSTEM_ENDPOINTS.TOKEN),
+  healthCheck: getEndpointByMethodPath(page, 'GET', '/api/health'),
+  authorize: getEndpointByMethodPath(page, 'GET', '/api/oauth/authorize'),
+  token: getEndpointByMethodPath(page, 'POST', '/api/oauth/token'),
 });
 
 export type SwaggerLocators = {
@@ -76,15 +89,15 @@ export interface GetUserEndpoints {
 export const getUserEndpoints: (page: Page) => GetUserEndpoints = (
   page: Page
 ): GetUserEndpoints => ({
-  getCollection: page.locator(USER_ENDPOINTS.GET_COLLECTION),
-  create: page.locator(USER_ENDPOINTS.CREATE),
-  createBatch: page.locator(USER_ENDPOINTS.CREATE_BATCH),
-  confirm: page.locator(USER_ENDPOINTS.CONFIRM),
-  getById: page.locator(USER_ENDPOINTS.GET_BY_ID),
-  updateById: page.locator(USER_ENDPOINTS.UPDATE_BY_ID),
-  deleteById: page.locator(USER_ENDPOINTS.DELETE_BY_ID),
-  patchById: page.locator(USER_ENDPOINTS.PATCH_BY_ID),
-  resendConfirmation: page.locator(USER_ENDPOINTS.RESEND_CONFIRMATION),
+  getCollection: getEndpointByMethodPath(page, 'GET', '/api/users'),
+  create: getEndpointByMethodPath(page, 'POST', '/api/users'),
+  createBatch: getEndpointByMethodPath(page, 'POST', '/api/users/batch'),
+  confirm: getEndpointByMethodPath(page, 'PATCH', '/api/users/confirm'),
+  getById: getEndpointByMethodPath(page, 'GET', '/api/users/{id}'),
+  updateById: getEndpointByMethodPath(page, 'PUT', '/api/users/{id}'),
+  deleteById: getEndpointByMethodPath(page, 'DELETE', '/api/users/{id}'),
+  patchById: getEndpointByMethodPath(page, 'PATCH', '/api/users/{id}'),
+  resendConfirmation: getEndpointByMethodPath(page, 'POST', '/api/users/{id}/resend-confirmation-email'),
 });
 
 export type Selectors = {
@@ -106,7 +119,8 @@ export const SELECTORS: Selectors = {
   ENDPOINTS: '.opblock',
   SCHEME_CONTAINER: '.scheme-container',
   ENDPOINT_BODY: '.opblock-body',
-  TRY_IT_OUT_BUTTON: '[data-testid="try-it-out-button"], .try-out__btn',
+  TRY_IT_OUT_BUTTON:
+    '[data-testid="try-it-out-button"], .try-out__btn, button:has-text("Try it out")',
   EXECUTE_BUTTON: '[data-testid="execute-button"], .execute',
   RESPONSE_SECTION: '.responses-wrapper',
   REQUEST_BODY: '.opblock-section-request-body',

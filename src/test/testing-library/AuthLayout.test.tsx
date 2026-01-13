@@ -118,12 +118,11 @@ describe('AuthLayout', () => {
       expect(loader).toBeInTheDocument();
     });
 
-    const serverErrorMessage: HTMLElement | null = queryByRole(alertRole);
-    expect(serverErrorMessage).not.toHaveAttribute('aria-live', 'assertive');
-
     await waitFor(() => {
       expect(queryByRole(statusRole)).not.toBeInTheDocument();
       expect(getByText(successTitleText)).toBeInTheDocument();
+      const alertBox: HTMLElement = getByRole(alertRole);
+      expect(alertBox).not.toHaveAttribute('aria-live', 'assertive');
       expect(queryByText(errorTitleText)).not.toBeInTheDocument();
     });
   });
@@ -448,7 +447,7 @@ describe('AuthLayoutWithNotification', () => {
       expect(notificationBox).toBeInTheDocument();
       expect(notificationBox).toBeVisible();
       expect(notificationTitle).toBeInTheDocument();
-      expect(getByRole('heading')).toHaveTextContent(successTitleText);
+      expect(getByRole('heading', { name: successTitleText })).toBeInTheDocument();
       expect(queryByText(errorTitleText)).not.toBeInTheDocument();
     });
   });
