@@ -8,7 +8,6 @@ import {
   getAndCheckExecuteBtn,
   cancelOperation,
   expectErrorOrFailureStatus,
-  enableTryItOut,
 } from '../utils/helpers';
 import { locators } from '../utils/locators';
 
@@ -30,10 +29,11 @@ interface AuthorizeEndpointElements {
 const AUTHORIZE_API_URL: RegExp = /\/api\/oauth\/authorize(\?.*)?$/;
 
 async function setupAuthorizeEndpoint(page: Page): Promise<AuthorizeEndpointElements> {
-  await initSwaggerPage(page);
+  const { elements } = await initSwaggerPage(page);
   const systemEndpoints: GetSystemEndpoints = getSystemEndpoints(page);
   const authorizeEndpoint: Locator = systemEndpoints.authorize;
-  await enableTryItOut(authorizeEndpoint);
+  await authorizeEndpoint.click();
+  await elements.tryItOutButton.click();
   const executeBtn: Locator = await getAndCheckExecuteBtn(authorizeEndpoint);
   const responseTypeInput: Locator = authorizeEndpoint.locator(PARAM_INPUTS.RESPONSE_TYPE);
   const clientIdInput: Locator = authorizeEndpoint.locator(PARAM_INPUTS.CLIENT_ID);

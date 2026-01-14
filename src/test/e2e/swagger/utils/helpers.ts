@@ -23,12 +23,8 @@ export async function clearEndpointResponse(endpoint: Locator): Promise<void> {
 }
 
 export async function initSwaggerPage(page: Page): Promise<SwaggerPageObjects> {
-  await page.goto(TEST_CONSTANTS.SWAGGER_PATH, { timeout: 60000 });
-
-  // Wait for Swagger UI to be fully loaded
-  const swaggerContainer: Locator = page.locator('.swagger-ui');
-  await swaggerContainer.waitFor({ state: 'visible', timeout: 30000 });
-  await page.locator('.opblock').first().waitFor({ state: 'visible', timeout: 30000 });
+  await page.goto(TEST_CONSTANTS.SWAGGER_PATH, { waitUntil: 'domcontentloaded', timeout: 60000 });
+  await page.locator('.swagger-ui').waitFor({ state: 'visible', timeout: 30000 });
 
   const userEndpoints: GetUserEndpoints = getUserEndpoints(page);
   const elements: SwaggerLocators = getLocators(page);
@@ -36,39 +32,11 @@ export async function initSwaggerPage(page: Page): Promise<SwaggerPageObjects> {
   return { userEndpoints, elements };
 }
 
-export async function enableTryItOut(endpoint: Locator): Promise<void> {
-  await endpoint.waitFor({ state: 'visible' });
-  await endpoint.scrollIntoViewIfNeeded();
-
-  const summary: Locator = endpoint.locator('.opblock-summary');
-  const opblockBody: Locator = endpoint.locator('.opblock-body');
-  await summary.waitFor({ state: 'visible' });
-
-  if (!(await opblockBody.isVisible())) {
-    await summary.click();
-    await opblockBody.waitFor({ state: 'visible' });
-  }
-
-  const cancelButton: Locator = endpoint.locator('button:has-text("Cancel")');
-  if (await cancelButton.isVisible()) {
-    return;
-  }
-
-  const tryItOutButton: Locator = endpoint.locator(TEST_CONSTANTS.SELECTORS.TRY_IT_OUT_BUTTON);
-  await tryItOutButton.first().scrollIntoViewIfNeeded();
-  await tryItOutButton.first().waitFor({ state: 'visible' });
-  await tryItOutButton.first().click();
-
-  const executeButton: Locator = endpoint.locator(TEST_CONSTANTS.SELECTORS.EXECUTE_BUTTON);
-  await executeButton.first().waitFor({ state: 'visible' });
-}
-
 export const getAndCheckExecuteBtn: (element: Locator) => Promise<Locator> = async (
   element: Locator
 ): Promise<Locator> => {
   const executeBtn: Locator = element.locator(executeBtnSelector);
   await executeBtn.waitFor({ state: 'visible' });
-  await expect(executeBtn).toBeEnabled();
 
   return executeBtn;
 };

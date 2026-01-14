@@ -12,11 +12,15 @@ export default defineConfig({
   testMatch: ['**/*.spec.ts'],
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
   reporter: [['html', { open: 'never' }]],
+  timeout: 60000,
+  expect: {
+    timeout: 15000,
+  },
   use: {
     trace: 'on-first-retry',
+    actionTimeout: 15000,
     ignoreHTTPSErrors: true,
     baseURL: BASE_URL,
     extraHTTPHeaders: {

@@ -49,9 +49,10 @@ test('Submit the registration form, verify error notification, and return to fil
   await responsePromise;
 
   const errorTitle: Locator = page.getByText(errorTitleText);
-  await errorTitle.waitFor({ state: 'visible' });
+  await expect(errorTitle).toBeVisible({ timeout: 10000 });
 
   const backButton: Locator = page.getByRole('button', { name: backToFormButton });
+  await expect(backButton).toBeEnabled({ timeout: 10000 });
   await backButton.click();
   await expect(initialsInput).toHaveValue(userData.fullName);
   await expect(emailInput).toHaveValue(userData.email);
@@ -67,7 +68,7 @@ test('Submit the registration form, verify error notification, and return to fil
   await successResponsePromise;
 
   const successTitle: Locator = page.getByText(successTitleText);
-  await successTitle.waitFor({ state: 'visible' });
+  await expect(successTitle).toBeVisible({ timeout: 10000 });
 });
 
 test('Submit the registration form, get error, retry submission, and succeed', async ({ page }) => {
@@ -81,16 +82,22 @@ test('Submit the registration form, get error, retry submission, and succeed', a
   await fillInput(passwordInput, userData.password);
   await checkCheckbox(policyTextCheckbox);
 
-  await page.route(graphqlEndpoint, serverErrorResponse);
-  const responsePromise: Promise<Response> = page.waitForResponse(responseErrorFilter);
+  let requestCount: number = 0;
+  await page.route(graphqlEndpoint, async route => {
+    requestCount += 1;
+    if (requestCount <= 2) {
+      await serverErrorResponse(route);
+      return;
+    }
+    await successResponse(route);
+  });
 
   await signupButton.click();
-  await responsePromise;
-
   const errorTitle: Locator = page.getByText(errorTitleText);
-  await errorTitle.waitFor({ state: 'visible' });
+  await expect(errorTitle).toBeVisible({ timeout: 15000 });
 
   const backButton: Locator = page.getByRole('button', { name: backToFormButton });
+  await expect(backButton).toBeEnabled({ timeout: 10000 });
   await backButton.click();
 
   await expect(initialsInput).toHaveValue(userData.fullName);
@@ -98,25 +105,14 @@ test('Submit the registration form, get error, retry submission, and succeed', a
   await expect(passwordInput).toHaveValue(userData.password);
   await expect(policyTextCheckbox).toBeChecked();
 
-  await page.unroute(graphqlEndpoint);
-
-  await page.route(graphqlEndpoint, serverErrorResponse);
-  const responsePromise2: Promise<Response> = page.waitForResponse(responseErrorFilter);
   await signupButton.click();
-  await responsePromise2;
-
-  await errorTitle.waitFor({ state: 'visible' });
-
-  await page.unroute(graphqlEndpoint);
-
-  await page.route(graphqlEndpoint, successResponse);
-  const successResponsePromise: Promise<Response> = page.waitForResponse(responseFilter);
+  await expect(errorTitle).toBeVisible({ timeout: 15000 });
 
   const retryButton: Locator = page.getByRole('button', { name: retryButtonText });
   await retryButton.click();
 
-  await successResponsePromise;
-
   const successNotification: Locator = page.getByText(successTitleText);
-  await successNotification.waitFor({ state: 'visible' });
+  await expect(successNotification).toBeVisible({ timeout: 10000 });
+
+  await page.unroute(graphqlEndpoint);
 });

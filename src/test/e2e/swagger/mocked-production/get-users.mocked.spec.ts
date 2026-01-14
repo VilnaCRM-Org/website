@@ -1,13 +1,13 @@
 import { expect, type Locator, Page, test } from '@playwright/test';
 
-import {
-  getAndCheckExecuteBtn,
-  initSwaggerPage,
-  enableTryItOut,
-} from '@/test/e2e/swagger/utils/helpers';
+import { getAndCheckExecuteBtn, initSwaggerPage } from '@/test/e2e/swagger/utils/helpers';
 
 import { mockUsersError, mockUsersSuccess } from './constants';
 
+interface EndpointElements {
+  tryItOutButton: Locator;
+  executeButton?: Locator;
+}
 const mockGetUsers: (page: Page, status: number, response: object) => Promise<void> = async (
   page: Page,
   status: number,
@@ -22,10 +22,12 @@ const mockGetUsers: (page: Page, status: number, response: object) => Promise<vo
   });
 };
 
-const executeEndpoint: (getEndpoint: Locator) => Promise<void> = async (
-  getEndpoint: Locator
+const executeEndpoint: (getEndpoint: Locator, elements: EndpointElements) => Promise<void> = async (
+  getEndpoint: Locator,
+  elements: EndpointElements
 ): Promise<void> => {
-  await enableTryItOut(getEndpoint);
+  await getEndpoint.click();
+  await elements.tryItOutButton.click();
   const executeBtn: Locator = await getAndCheckExecuteBtn(getEndpoint);
   await executeBtn.click();
 };
@@ -43,12 +45,12 @@ test.describe('Swagger /users endpoint (production with mocks)', () => {
   });
 
   test('GET /users should be interactive with mocked success', async ({ page }) => {
-    const { userEndpoints } = await initSwaggerPage(page);
+    const { userEndpoints, elements } = await initSwaggerPage(page);
     const getEndpoint: Locator = userEndpoints.getCollection;
 
     await mockGetUsers(page, 200, mockUsersSuccess);
 
-    await executeEndpoint(getEndpoint);
+    await executeEndpoint(getEndpoint, elements);
 
     const curl: Locator = page.locator('.curl-command');
     await expect(curl).toBeVisible();
@@ -59,12 +61,12 @@ test.describe('Swagger /users endpoint (production with mocks)', () => {
   });
 
   test('GET /users should handle mocked error response', async ({ page }) => {
-    const { userEndpoints } = await initSwaggerPage(page);
+    const { userEndpoints, elements } = await initSwaggerPage(page);
     const getEndpoint: Locator = userEndpoints.getCollection;
 
     await mockGetUsers(page, 500, mockUsersError);
 
-    await executeEndpoint(getEndpoint);
+    await executeEndpoint(getEndpoint, elements);
 
     const curl: Locator = page.locator('.curl-command');
     await expect(curl).toBeVisible();

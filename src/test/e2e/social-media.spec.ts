@@ -76,8 +76,7 @@ async function openDrawerAndNavigate(
   await mockSocialLinkUrlRoute(page, url);
   await page.setViewportSize({ width: 375, height: 812 });
   await page.getByLabel(buttonToOpenDrawerLabel).click();
-  const drawer: Locator = page.getByRole('presentation');
-  const link: Locator = drawer.getByRole('link', { name: linkName });
+  const link: Locator = page.getByRole('presentation').getByLabel(linkName);
   await expect(link).toBeVisible();
   await expect(link).toBeEnabled();
   const [popup] = await Promise.all([page.waitForEvent('popup').catch(() => null), link.click()]);
@@ -89,12 +88,9 @@ async function openDrawerAndNavigate(
   }
 }
 
-const BASE_URL: string =
-  process.env.NEXT_PUBLIC_WEBSITE_URL || process.env.NEXT_PUBLIC_API_BASE_URL || 'http://prod:3001';
-
 test.describe('Navigation tests', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto(BASE_URL);
+    await page.goto('/');
   });
 
   test('Desktop Instagram link', async ({ page }) => {

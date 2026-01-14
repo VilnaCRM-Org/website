@@ -2,8 +2,7 @@ import { test, expect, Page } from '@playwright/test';
 
 import { t } from './utils/initializeLocalization';
 
-const BASE_URL: string =
-  process.env.NEXT_PUBLIC_WEBSITE_URL || process.env.NEXT_PUBLIC_API_BASE_URL || 'http://prod:3001';
+const BASE_URL: string = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://prod:3001';
 const links: Record<string, string> = {
   advantages: `${BASE_URL}/#Advantages`,
   forWho: `${BASE_URL}/#forWhoSection`,
