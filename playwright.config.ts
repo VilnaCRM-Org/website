@@ -14,13 +14,8 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   workers: process.env.CI ? 1 : undefined,
   reporter: [['html', { open: 'never' }]],
-  timeout: 60000,
-  expect: {
-    timeout: 15000,
-  },
   use: {
     trace: 'on-first-retry',
-    actionTimeout: 15000,
     ignoreHTTPSErrors: true,
     baseURL: BASE_URL,
     extraHTTPHeaders: {

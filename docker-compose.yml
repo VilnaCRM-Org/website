@@ -4,7 +4,7 @@ services:
     build:
       context: .
       target: base
-    command: sh -c "node ./scripts/fetchSwaggerSchema.mjs && node ./scripts/patchSwaggerServer.mjs && pnpm exec next dev"
+    command: sh -c "node ./scripts/fetchSwaggerSchema.mjs && node ./scripts/patchSwaggerServer.mjs && pnpm exec next dev --webpack"
     restart: unless-stopped
     volumes:
       - .:/app

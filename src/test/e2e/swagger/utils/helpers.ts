@@ -23,8 +23,8 @@ export async function clearEndpointResponse(endpoint: Locator): Promise<void> {
 }
 
 export async function initSwaggerPage(page: Page): Promise<SwaggerPageObjects> {
-  await page.goto(TEST_CONSTANTS.SWAGGER_PATH, { waitUntil: 'domcontentloaded', timeout: 60000 });
-  await page.locator('.swagger-ui').waitFor({ state: 'visible', timeout: 30000 });
+  await page.goto(TEST_CONSTANTS.SWAGGER_PATH, { waitUntil: 'domcontentloaded' });
+  await page.locator('.swagger-ui').waitFor({ state: 'visible' });
 
   const userEndpoints: GetUserEndpoints = getUserEndpoints(page);
   const elements: SwaggerLocators = getLocators(page);

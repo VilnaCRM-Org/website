@@ -49,10 +49,10 @@ test('Submit the registration form, verify error notification, and return to fil
   await responsePromise;
 
   const errorTitle: Locator = page.getByText(errorTitleText);
-  await expect(errorTitle).toBeVisible({ timeout: 10000 });
+  await expect(errorTitle).toBeVisible();
 
   const backButton: Locator = page.getByRole('button', { name: backToFormButton });
-  await expect(backButton).toBeEnabled({ timeout: 10000 });
+  await expect(backButton).toBeEnabled();
   await backButton.click();
   await expect(initialsInput).toHaveValue(userData.fullName);
   await expect(emailInput).toHaveValue(userData.email);
@@ -68,7 +68,7 @@ test('Submit the registration form, verify error notification, and return to fil
   await successResponsePromise;
 
   const successTitle: Locator = page.getByText(successTitleText);
-  await expect(successTitle).toBeVisible({ timeout: 10000 });
+  await expect(successTitle).toBeVisible();
 });
 
 test('Submit the registration form, get error, retry submission, and succeed', async ({ page }) => {
@@ -94,10 +94,10 @@ test('Submit the registration form, get error, retry submission, and succeed', a
 
   await signupButton.click();
   const errorTitle: Locator = page.getByText(errorTitleText);
-  await expect(errorTitle).toBeVisible({ timeout: 15000 });
+  await expect(errorTitle).toBeVisible();
 
   const backButton: Locator = page.getByRole('button', { name: backToFormButton });
-  await expect(backButton).toBeEnabled({ timeout: 10000 });
+  await expect(backButton).toBeEnabled();
   await backButton.click();
 
   await expect(initialsInput).toHaveValue(userData.fullName);
@@ -106,13 +106,13 @@ test('Submit the registration form, get error, retry submission, and succeed', a
   await expect(policyTextCheckbox).toBeChecked();
 
   await signupButton.click();
-  await expect(errorTitle).toBeVisible({ timeout: 15000 });
+  await expect(errorTitle).toBeVisible();
 
   const retryButton: Locator = page.getByRole('button', { name: retryButtonText });
   await retryButton.click();
 
   const successNotification: Locator = page.getByText(successTitleText);
-  await expect(successNotification).toBeVisible({ timeout: 10000 });
+  await expect(successNotification).toBeVisible();
 
   await page.unroute(graphqlEndpoint);
 });

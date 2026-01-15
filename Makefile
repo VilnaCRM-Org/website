@@ -23,7 +23,7 @@ JEST_BIN                    = $(BIN_DIR)/jest
 SERVE_BIN                   = $(BIN_DIR)/serve
 PLAYWRIGHT_BIN              = $(BIN_DIR)/playwright
 
-NEXT_BUILD                  = $(NEXT_BIN) build
+NEXT_BUILD                  = $(NEXT_BIN) build --webpack
 NEXT_BUILD_CMD              = $(NEXT_BUILD) && $(IMG_OPTIMIZE)
 STORYBOOK_BUILD_CMD         = $(STORYBOOK_BIN) build --output-dir storybook-static-ci
 
@@ -107,7 +107,7 @@ endif
 
 ifeq ($(CI), 1)
     PNPM_EXEC               = pnpm
-    NEXT_DEV_CMD            = $(NEXT_BIN) dev
+    NEXT_DEV_CMD            = $(NEXT_BIN) dev --webpack
     UNIT_TESTS              = env
 
     STORYBOOK_START         = $(STORYBOOK_BIN) dev -p $(STORYBOOK_PORT)
