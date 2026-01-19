@@ -11,7 +11,8 @@ export default class Utils {
   getConfig() {
     try {
       return JSON.parse(open('config.json'));
-    } catch {
+      // eslint-disable-next-line no-unused-vars, @typescript-eslint/no-unused-vars
+    } catch (_) {
       // Fall back to example config when user config is missing
       return JSON.parse(open('config.json.dist'));
     }
