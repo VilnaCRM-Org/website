@@ -15,6 +15,7 @@ DOCKER_COMPOSE              = docker compose
 
 BIN_DIR                     = ./node_modules/.bin
 NEXT_BIN                    = $(BIN_DIR)/next
+ESLINT_BIN                  = $(BIN_DIR)/eslint
 IMG_OPTIMIZE                = $(BIN_DIR)/next-export-optimize-images
 TS_BIN                      = $(BIN_DIR)/tsc
 STORYBOOK_BIN               = $(BIN_DIR)/storybook
@@ -22,9 +23,9 @@ JEST_BIN                    = $(BIN_DIR)/jest
 SERVE_BIN                   = $(BIN_DIR)/serve
 PLAYWRIGHT_BIN              = $(BIN_DIR)/playwright
 
-NEXT_BUILD                  = $(NEXT_BIN) build
+NEXT_BUILD                  = $(NEXT_BIN) build --webpack
 NEXT_BUILD_CMD              = $(NEXT_BUILD) && $(IMG_OPTIMIZE)
-STORYBOOK_BUILD_CMD         = $(STORYBOOK_BIN) build
+STORYBOOK_BUILD_CMD         = $(STORYBOOK_BIN) build --output-dir storybook-static-ci
 
 TEST_DIR_BASE               = ./src/test
 TEST_DIR_APOLLO             = $(TEST_DIR_BASE)/apollo-server
@@ -33,7 +34,8 @@ TEST_DIR_VISUAL             = $(TEST_DIR_BASE)/visual
 
 STRYKER_CMD                 = pnpm stryker run
 
-SERVE_CMD                   = --collect.startServerCommand="$(SERVE_BIN) out"
+SERVE_CMD                   = --collect.startServerCommand="$(SERVE_BIN) -l $(NEXT_PUBLIC_PROD_PORT) out" \
+                              --collect.startServerReadyPattern="Accepting connections"
 LHCI                        = pnpm lhci autorun
 LHCI_CONFIG_DESKTOP         = --config=lighthouserc.desktop.js
 LHCI_CONFIG_MOBILE          = --config=lighthouserc.mobile.js
@@ -90,7 +92,7 @@ LOAD_TESTS_RUN_SWAGGER      = $(K6) run --summary-trend-stats="avg,min,med,max,p
 UI_FLAGS                    = --ui-port=$(PLAYWRIGHT_TEST_PORT) --ui-host=$(UI_HOST)
 UI_MODE_URL                 = http://$(WEBSITE_DOMAIN):$(PLAYWRIGHT_TEST_PORT)
 
-MD_LINT_ARGS                = -i CHANGELOG.md -i "test-results/**/*.md" -i "playwright-report/data/**/*.md"
+MD_LINT_ARGS                = -i CHANGELOG.md -i "test-results/**/*.md" -i "playwright-report/data/**/*.md" -i "node_modules/**/*.md"
 
 JEST_FLAGS                  = --verbose
 
@@ -98,9 +100,14 @@ NETWORK_NAME                = website-network
 
 CI                          ?= 0
 
+# Treat common truthy CI values the same (e.g., CI=true from GitHub Actions/act)
+ifneq (,$(filter 1 true TRUE,$(CI)))
+    CI := 1
+endif
+
 ifeq ($(CI), 1)
     PNPM_EXEC               = pnpm
-    NEXT_DEV_CMD            = $(NEXT_BIN) dev
+    NEXT_DEV_CMD            = $(NEXT_BIN) dev --webpack
     UNIT_TESTS              = env
 
     STORYBOOK_START         = $(STORYBOOK_BIN) dev -p $(STORYBOOK_PORT)
@@ -241,7 +248,7 @@ format: ## This command executes Prettier formatting
 	$(PRETTIER_BIN) "**/*.{js,jsx,ts,tsx,json,css,scss,md}" --write --ignore-path .prettierignore
 
 lint-next: ## This command executes ESLint
-	$(PNPM_EXEC) $(NEXT_BIN) lint
+	$(PNPM_EXEC) $(ESLINT_BIN)
 
 lint-tsc: ## This command executes Typescript linter
 	$(PNPM_EXEC) $(TS_BIN)
@@ -414,4 +421,3 @@ stop: ## Stop docker
 
 check-node-version: ## Check if the correct Node.js version is installed
 	$(PNPM_EXEC) exec node checkNodeVersion.js
-

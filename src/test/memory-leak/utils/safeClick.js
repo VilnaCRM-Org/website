@@ -1,5 +1,3 @@
-const winston = require('winston');
-
 async function isElementInteractable(element) {
   return element.evaluate(el => {
     if (!el.isConnected) return false;
@@ -24,15 +22,17 @@ async function safeClick(element, elementDescription = 'element') {
       return true;
     } catch (err) {
       const outerHTML = await element.evaluate(el => el.outerHTML);
-      winston.error(`Failed to click ${elementDescription}`, {
+      // eslint-disable-next-line no-console
+      console.error(`Failed to click ${elementDescription}`, {
         element: outerHTML,
         error: err.message,
         stack: err.stack,
       });
+
       return false;
     }
   }
   return false;
 }
 
-module.exports = safeClick;
+export default safeClick;

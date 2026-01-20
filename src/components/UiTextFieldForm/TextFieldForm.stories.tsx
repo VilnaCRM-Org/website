@@ -1,5 +1,5 @@
 import { Stack } from '@mui/material';
-import { Meta, StoryObj } from '@storybook/react';
+import { Meta, StoryObj } from '@storybook/nextjs';
 import { t } from 'i18next';
 import { FieldValues, useForm } from 'react-hook-form';
 

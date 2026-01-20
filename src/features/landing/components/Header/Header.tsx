@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { UiToolbar } from '@/components';
 
 import Logo from '../../assets/svg/logo/Logo.svg';
+import fallbackNavigate from '../../helpers/fallbackNavigate';
 import normalizeLink from '../../helpers/normalizeLink';
 import scrollToAnchor from '../../helpers/scrollToAnchor';
 
@@ -48,7 +49,7 @@ function Header(): React.ReactElement {
         await router.push(`/${link}`, undefined, { scroll: true });
         scrollToAnchor(link);
       } catch {
-        window.location.href = `/${link}`;
+        fallbackNavigate(`/${link}`);
       }
     } else {
       scrollToAnchor(link);

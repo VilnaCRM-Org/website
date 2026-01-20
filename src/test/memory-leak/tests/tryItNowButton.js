@@ -1,4 +1,8 @@
-const ScenarioBuilder = require('../utils/ScenarioBuilder');
+import nextEnv from '@next/env';
+import ScenarioBuilder from '../utils/ScenarioBuilder.js';
+
+const { loadEnvConfig } = nextEnv;
+loadEnvConfig(process.cwd());
 
 const scenarioBuilder = new ScenarioBuilder();
 
@@ -21,4 +25,4 @@ async function back(page) {
   );
 }
 
-module.exports = scenarioBuilder.createScenario({ action, back });
+export default scenarioBuilder.createScenario({ action, back });

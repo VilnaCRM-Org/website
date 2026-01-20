@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/nextjs';
 import { t } from 'i18next';
 
 import testImage from '../../assets/svg/TooltipIcons/Joomla.svg';

@@ -9,10 +9,14 @@ export default class Utils {
   }
 
   getConfig() {
+    return this.loadConfigFile('config.json') || this.loadConfigFile('config.json.dist');
+  }
+
+  loadConfigFile(filename) {
     try {
-      return JSON.parse(open('config.json'));
+      return JSON.parse(open(filename));
     } catch (error) {
-      return JSON.parse(open('config.json.dist'));
+      return error ? null : null;
     }
   }
 

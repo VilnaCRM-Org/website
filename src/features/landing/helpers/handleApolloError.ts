@@ -1,4 +1,4 @@
-import { ApolloError } from '@apollo/client';
+import { CombinedGraphQLErrors } from '@apollo/client';
 import { GraphQLFormattedError } from 'graphql';
 
 import {
@@ -30,6 +30,7 @@ export type HandleApolloErrorType = (props: HandleApolloErrorProps) => string;
 type HandleNetworkErrorProps = ServerErrorShape | unknown;
 
 type HandleNetworkErrorType = (props: HandleNetworkErrorProps) => string;
+
 export const NETWORK_ERROR_PATTERNS: readonly string[] = Object.freeze([
   'failed to fetch',
   'network request failed',
@@ -37,6 +38,31 @@ export const NETWORK_ERROR_PATTERNS: readonly string[] = Object.freeze([
   'network error',
   'request to',
 ] as const);
+
+type StatusCodeHandler = {
+  match: (statusCode: number | undefined) => boolean;
+  key: keyof ClientErrorMessages;
+};
+
+const STATUS_CODE_HANDLERS: StatusCodeHandler[] = [
+  { match: (code): boolean => code === HTTPStatusCodes.UNAUTHORIZED, key: CLIENT_ERROR_KEYS.UNAUTHORIZED },
+  { match: (code): boolean => code === HTTPStatusCodes.FORBIDDEN, key: CLIENT_ERROR_KEYS.DENIED },
+  { match: (code): boolean => typeof code === 'number' && code >= 500 && code < 600, key: CLIENT_ERROR_KEYS.SERVER_ERROR },
+];
+
+function getMessageByStatusCode(
+  statusCode: number | undefined,
+  messages: ClientErrorMessages
+): string | null {
+  const handler = STATUS_CODE_HANDLERS.find(h => h.match(statusCode));
+  return handler ? messages[handler.key] : null;
+}
+
+function isNetworkErrorMessage(message: string): boolean {
+  const lowered = message.toLowerCase();
+  return NETWORK_ERROR_PATTERNS.some(pattern => lowered.includes(pattern));
+}
+
 export const handleNetworkError: HandleNetworkErrorType = (
   networkError: HandleNetworkErrorProps
 ): string => {
@@ -45,62 +71,63 @@ export const handleNetworkError: HandleNetworkErrorType = (
   if (!isServerError(networkError)) return messages[CLIENT_ERROR_KEYS.WENT_WRONG];
 
   const { statusCode, message } = networkError;
-  const loweredMessage: string = message?.toLowerCase() ?? '';
 
-  if (statusCode === HTTPStatusCodes.UNAUTHORIZED) return messages[CLIENT_ERROR_KEYS.UNAUTHORIZED];
-  if (statusCode === HTTPStatusCodes.FORBIDDEN) return messages[CLIENT_ERROR_KEYS.DENIED];
+  const statusMessage = getMessageByStatusCode(statusCode, messages);
+  if (statusMessage) return statusMessage;
 
-  if (statusCode !== undefined && statusCode >= 500 && statusCode < 600) {
-    return messages[CLIENT_ERROR_KEYS.SERVER_ERROR];
-  }
-
-  if (NETWORK_ERROR_PATTERNS.some(pattern => loweredMessage.includes(pattern))) {
+  if (message && isNetworkErrorMessage(message)) {
     return messages[CLIENT_ERROR_KEYS.NETWORK];
   }
 
   return messages[CLIENT_ERROR_KEYS.WENT_WRONG];
 };
 
+function handleGraphQLErrors(
+  graphQLErrors: readonly GraphQLFormattedError[],
+  messages: ClientErrorMessages
+): string | null {
+  if (graphQLErrors.length === 0) return null;
+
+  const firstError = graphQLErrors[0];
+  const { extensions, message } = firstError;
+  const statusCode = extensions?.statusCode as number | undefined;
+
+  const statusMessage = getMessageByStatusCode(statusCode, messages);
+  if (statusMessage) return statusMessage;
+
+  if (message?.toUpperCase?.().includes('UNAUTHORIZED')) {
+    return messages[CLIENT_ERROR_KEYS.UNAUTHORIZED];
+  }
+
+  const combinedMessages = graphQLErrors
+    .map((e: GraphQLFormattedError) => e.message || '')
+    .filter(Boolean)
+    .join(', ');
+
+  return combinedMessages || null;
+}
+
 export const handleApolloError: HandleApolloErrorType = ({
   error,
 }: HandleApolloErrorProps): string => {
   const messages: ClientErrorMessages = getClientErrorMessages();
 
-  if (!(error instanceof ApolloError)) {
+  if (!error || typeof error !== 'object') {
     return messages[CLIENT_ERROR_KEYS.UNEXPECTED];
   }
-  const { networkError, graphQLErrors } = error;
 
-  if (networkError) return handleNetworkError(networkError);
+  if (CombinedGraphQLErrors.is(error)) {
+    const result = handleGraphQLErrors(error.errors, messages);
+    if (result) return result;
+  }
 
-  if (graphQLErrors.length > 0) {
-    const firstError: GraphQLFormattedError = graphQLErrors[0];
-    const { extensions, message } = firstError;
+  if (isServerError(error)) {
+    return handleNetworkError(error);
+  }
 
-    const statusCode: number | undefined = extensions?.statusCode as number | undefined;
-    const isServerErrorStatus: boolean =
-      typeof statusCode === 'number' && statusCode >= 500 && statusCode < 600;
-
-    if (isServerErrorStatus) {
-      return messages[CLIENT_ERROR_KEYS.SERVER_ERROR];
-    }
-    if (statusCode === HTTPStatusCodes.UNAUTHORIZED) {
-      return messages[CLIENT_ERROR_KEYS.UNAUTHORIZED];
-    }
-    if (statusCode === HTTPStatusCodes.FORBIDDEN) {
-      return messages[CLIENT_ERROR_KEYS.DENIED];
-    }
-
-    if (message?.toUpperCase?.().includes('UNAUTHORIZED')) {
-      return messages[CLIENT_ERROR_KEYS.UNAUTHORIZED];
-    }
-
-    return (
-      graphQLErrors
-        .map(e => e.message || '')
-        .filter(Boolean)
-        .join(', ') || messages[CLIENT_ERROR_KEYS.UNEXPECTED]
-    );
+  const errorMessage = (error as Error).message ?? '';
+  if (isNetworkErrorMessage(errorMessage)) {
+    return messages[CLIENT_ERROR_KEYS.NETWORK];
   }
 
   return messages[CLIENT_ERROR_KEYS.UNEXPECTED];

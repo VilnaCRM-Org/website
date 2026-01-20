@@ -63,7 +63,7 @@ describe('Localization Configuration', () => {
     delete process.env.NEXT_PUBLIC_MAIN_LANGUAGE;
     delete process.env.NEXT_PUBLIC_FALLBACK_LANGUAGE;
 
-    await expect(import('../../config/i18nConfig')).rejects.toThrowError(
+    await expect(import('../../config/i18nConfig.js')).rejects.toThrow(
       'Missing required environment variables for localization'
     );
   });
@@ -71,7 +71,15 @@ describe('Localization Configuration', () => {
     process.env.NEXT_PUBLIC_MAIN_LANGUAGE = 'uk';
     delete process.env.NEXT_PUBLIC_FALLBACK_LANGUAGE;
 
-    await expect(import('../../config/i18nConfig')).rejects.toThrowError(
+    await expect(import('../../config/i18nConfig.js')).rejects.toThrow(
+      'Missing required environment variables for localization'
+    );
+  });
+  it('should throw an error if only fallbackLanguage is missing', async () => {
+    process.env.NEXT_PUBLIC_MAIN_LANGUAGE = 'uk';
+    delete process.env.NEXT_PUBLIC_FALLBACK_LANGUAGE;
+
+    await expect(import('../../config/i18nConfig.js')).rejects.toThrow(
       'Missing required environment variables for localization'
     );
   });
@@ -91,7 +99,7 @@ describe('Localization Configuration', () => {
       throw new Error('Mocked file not found');
     });
 
-    await expect(import('../../config/i18nConfig')).rejects.toThrowError(
+    await expect(import('../../config/i18nConfig.js')).rejects.toThrow(
       'Failed to load localization resources: Mocked file not found'
     );
   });
@@ -100,7 +108,7 @@ describe('Localization Configuration', () => {
       throw new Error('Mocked file not found');
     });
 
-    await expect(import('../../config/i18nConfig')).rejects.toThrowError(
+    await expect(import('../../config/i18nConfig.js')).rejects.toThrow(
       'Failed to load localization resources: Mocked file not found'
     );
 

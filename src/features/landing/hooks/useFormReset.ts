@@ -25,7 +25,7 @@ const useFormReset: UseFormResetHook = ({
     if (formState.isSubmitSuccessful && notificationType !== 'error') {
       reset(initialFormValues);
     }
-  }, [formState, reset, notificationType]);
+  }, [formState.isSubmitSuccessful, notificationType, reset]);
 };
 
 export default useFormReset;

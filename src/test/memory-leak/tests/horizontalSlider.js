@@ -1,5 +1,5 @@
-const ScenarioBuilder = require('../utils/ScenarioBuilder');
-const swipeSlider = require('../utils/swipeSlider');
+import ScenarioBuilder from '../utils/ScenarioBuilder.js';
+import swipeSlider from '../utils/swipeSlider.js';
 
 const scenarioBuilder = new ScenarioBuilder();
 
@@ -21,4 +21,4 @@ async function back(page) {
   await swipeSlider(page, sliderSelector, iterations, 'right');
 }
 
-module.exports = scenarioBuilder.createScenario({ setup, action, back });
+export default scenarioBuilder.createScenario({ setup, action, back });
