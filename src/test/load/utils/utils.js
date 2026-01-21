@@ -9,12 +9,14 @@ export default class Utils {
   }
 
   getConfig() {
+    return this.loadConfigFile('config.json') || this.loadConfigFile('config.json.dist');
+  }
+
+  loadConfigFile(filename) {
     try {
-      return JSON.parse(open('config.json'));
-      // eslint-disable-next-line no-unused-vars, @typescript-eslint/no-unused-vars
-    } catch (_) {
-      // Fall back to example config when user config is missing
-      return JSON.parse(open('config.json.dist'));
+      return JSON.parse(open(filename));
+    } catch (error) {
+      return error ? null : null;
     }
   }
 
