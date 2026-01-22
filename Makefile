@@ -107,7 +107,7 @@ endif
 
 ifeq ($(CI), 1)
     PNPM_EXEC               = pnpm
-    NEXT_DEV_CMD            = $(NEXT_BIN) dev --webpack
+    NEXT_DEV_CMD            = $(NEXT_BIN) dev
     UNIT_TESTS              = env
 
     STORYBOOK_START         = $(STORYBOOK_BIN) dev -p $(STORYBOOK_PORT)
