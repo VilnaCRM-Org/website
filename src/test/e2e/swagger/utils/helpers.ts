@@ -49,6 +49,31 @@ interface ErrorResponse {
   };
 }
 
+const CORS_HEADERS: Record<string, string> = {
+  'access-control-allow-origin': '*',
+  'access-control-allow-methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
+  'access-control-allow-headers': '*',
+};
+
+async function fulfillPreflight(route: Parameters<Page['route']>[1] extends (
+  route: infer T,
+  ...args: never[]
+) => unknown
+  ? T
+  : never): Promise<boolean> {
+  if (route.request().method() !== 'OPTIONS') {
+    return false;
+  }
+
+  await route.fulfill({
+    status: 204,
+    headers: CORS_HEADERS,
+    body: '',
+  });
+
+  return true;
+}
+
 export async function interceptWithErrorResponse(
   page: Page,
   url: string,
@@ -58,13 +83,61 @@ export async function interceptWithErrorResponse(
   await page.route(
     url,
     async route => {
+      if (await fulfillPreflight(route)) {
+        return;
+      }
+
       await route.fulfill({
         status,
         contentType: 'application/json',
+        headers: CORS_HEADERS,
         body: JSON.stringify(errorResponse),
       });
-    },
-    { times: 1 }
+    }
+  );
+}
+
+export async function interceptWithJsonResponse(
+  page: Page,
+  url: string | RegExp,
+  responseBody: unknown,
+  status: number = 200
+): Promise<void> {
+  await page.route(
+    url,
+    async route => {
+      if (await fulfillPreflight(route)) {
+        return;
+      }
+
+      await route.fulfill({
+        status,
+        contentType: 'application/json',
+        headers: CORS_HEADERS,
+        body: JSON.stringify(responseBody),
+      });
+    }
+  );
+}
+
+export async function interceptWithEmptyResponse(
+  page: Page,
+  url: string | RegExp,
+  status: number = 204
+): Promise<void> {
+  await page.route(
+    url,
+    async route => {
+      if (await fulfillPreflight(route)) {
+        return;
+      }
+
+      await route.fulfill({
+        status,
+        headers: CORS_HEADERS,
+        body: '',
+      });
+    }
   );
 }
 

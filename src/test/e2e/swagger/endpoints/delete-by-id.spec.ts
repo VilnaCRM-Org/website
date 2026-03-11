@@ -6,6 +6,7 @@ import {
   clearEndpointResponse,
   getAndCheckExecuteBtn,
   interceptWithErrorResponse,
+  interceptWithEmptyResponse,
   cancelOperation,
   expectErrorOrFailureStatus,
 } from '../utils/helpers';
@@ -53,6 +54,7 @@ async function setupDeleteUserEndpoint(page: Page): Promise<DeleteUserEndpointEl
 test.describe('delete by ID', () => {
   test('successful user deletion', async ({ page }) => {
     const elements: DeleteUserEndpointElements = await setupDeleteUserEndpoint(page);
+    await interceptWithEmptyResponse(page, DELETE_USER_API_URL(testUserId));
 
     await expect(elements.parametersSection).toBeVisible();
     await expect(elements.idInput).toBeVisible();

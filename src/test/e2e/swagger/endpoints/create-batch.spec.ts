@@ -14,6 +14,7 @@ import {
   getAndCheckExecuteBtn,
   cancelOperation,
   interceptWithErrorResponse,
+  interceptWithJsonResponse,
   expectErrorOrFailureStatus,
   parseJsonSafe,
 } from '../utils/helpers';
@@ -104,6 +105,7 @@ test.describe('Create batch users endpoint tests', () => {
 
   test('successful batch user creation', async ({ page }) => {
     const elements: BatchUserEndpointElements = await setupBatchEndpoint(page);
+    await interceptWithJsonResponse(page, BATCH_API_URL, validBatchData, 201);
 
     await fillBatchRequestBody(elements, validBatchData);
     await elements.executeBtn.click();
