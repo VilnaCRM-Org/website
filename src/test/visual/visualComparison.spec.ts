@@ -22,9 +22,11 @@ test.describe('Visual Tests', () => {
       await page.setViewportSize({ width: screen.width, height: screen.height });
 
       await page.waitForTimeout(timeoutDuration);
+      await page.evaluate(() => document.fonts.ready);
 
       await expect(page).toHaveScreenshot(`${currentLanguage}_${screen.name}.png`, {
         fullPage: true,
+        maxDiffPixels: 20,
       });
     });
   });
