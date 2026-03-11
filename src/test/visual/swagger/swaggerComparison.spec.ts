@@ -5,7 +5,7 @@ import { getVisualMaxDiffPixels, screenSizes, timeoutDuration } from '../constan
 const currentLanguage: string = process.env.NEXT_PUBLIC_MAIN_LANGUAGE as string;
 
 test.describe('Visual Tests', () => {
-  for (const screen of screenSizes) {
+  screenSizes.forEach(screen => {
     test(`${screen.name} test`, async ({ page, browserName }) => {
       await page.goto('/swagger', { waitUntil: 'domcontentloaded' });
 
@@ -38,5 +38,5 @@ test.describe('Visual Tests', () => {
         maxDiffPixels: getVisualMaxDiffPixels(browserName),
       });
     });
-  }
+  });
 });

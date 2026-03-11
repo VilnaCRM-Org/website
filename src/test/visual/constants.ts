@@ -72,7 +72,7 @@ export const timeoutDuration: number = 3000;
 const defaultVisualMaxDiffPixels: number = 20;
 const webkitVisualMaxDiffPixels: number = 30;
 
-export const getVisualMaxDiffPixels = (browserName: string): number =>
+export const getVisualMaxDiffPixels: (browserName: string) => number = (browserName: string): number =>
   browserName === 'webkit' ? webkitVisualMaxDiffPixels : defaultVisualMaxDiffPixels;
 
 interface PlaceholderFields {
