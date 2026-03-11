@@ -95,7 +95,7 @@ test.describe('User Section', () => {
       await expect(body).not.toBeVisible();
     }
   });
-  test('should display all User endpoints', async ({ page }) => {
+  test('should display all User endpoints', async () => {
     const endpoints: (keyof GetUserEndpoints)[] = [
       'getCollection',
       'create',
