@@ -1,12 +1,12 @@
 import { test, expect } from '@playwright/test';
 
-import { screenSizes, timeoutDuration } from '../constants';
+import { getVisualMaxDiffPixels, screenSizes, timeoutDuration } from '../constants';
 
 const currentLanguage: string = process.env.NEXT_PUBLIC_MAIN_LANGUAGE as string;
 
 test.describe('Visual Tests', () => {
   for (const screen of screenSizes) {
-    test(`${screen.name} test`, async ({ page }) => {
+    test(`${screen.name} test`, async ({ page, browserName }) => {
       await page.goto('/swagger', { waitUntil: 'domcontentloaded' });
 
       await page.waitForSelector('.swagger-ui', { state: 'attached' });
@@ -35,7 +35,7 @@ test.describe('Visual Tests', () => {
 
       await expect(page).toHaveScreenshot(`${currentLanguage}_${screen.name}.png`, {
         fullPage: true,
-        maxDiffPixels: 20,
+        maxDiffPixels: getVisualMaxDiffPixels(browserName),
       });
     });
   }

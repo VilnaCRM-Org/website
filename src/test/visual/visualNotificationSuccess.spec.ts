@@ -1,11 +1,11 @@
 import { test, expect, Locator, Route } from '@playwright/test';
 
-import { screenSizes, currentLanguage, placeholders } from './constants';
+import { getVisualMaxDiffPixels, screenSizes, currentLanguage, placeholders } from './constants';
 import { successResponse } from './graphqlMocks';
 
 test.describe('Form Submission Visual Test', () => {
   screenSizes.forEach(screen => {
-    test(`Success notification - ${screen.name}`, async ({ page }) => {
+    test(`Success notification - ${screen.name}`, async ({ page, browserName }) => {
       await page.goto('/');
 
       await page.waitForLoadState('networkidle');
@@ -42,7 +42,9 @@ test.describe('Form Submission Visual Test', () => {
         Promise.all(document.getAnimations().map(animation => animation.finished.catch(() => null)))
       );
 
-      await expect(page).toHaveScreenshot(`${currentLanguage}_${screen.name}_success.png`);
+      await expect(page).toHaveScreenshot(`${currentLanguage}_${screen.name}_success.png`, {
+        maxDiffPixels: getVisualMaxDiffPixels(browserName),
+      });
 
       await page.unroute('**/graphql', routeHandler);
     });

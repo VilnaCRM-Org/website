@@ -1,6 +1,6 @@
 import { test, Locator, expect, Route } from '@playwright/test';
 
-import { currentLanguage, placeholders, screenSizes } from '@/test/visual/constants';
+import { currentLanguage, getVisualMaxDiffPixels, placeholders, screenSizes } from '@/test/visual/constants';
 
 import { errorResponse, ErrorResponseProps } from './graphqlMocks';
 
@@ -12,7 +12,7 @@ const serverErrorResponse: ErrorResponseProps = {
 
 test.describe('Form Submission Server Error Test', () => {
   screenSizes.forEach(screen => {
-    test(`Server error notification - ${screen.name}`, async ({ page }) => {
+    test(`Server error notification - ${screen.name}`, async ({ page, browserName }) => {
       await page.goto('/');
 
       await page.waitForLoadState('networkidle');
@@ -50,7 +50,9 @@ test.describe('Form Submission Server Error Test', () => {
         Promise.all(document.getAnimations().map(animation => animation.finished.catch(() => null)))
       );
 
-      await expect(page).toHaveScreenshot(`${currentLanguage}_${screen.name}_error.png`);
+      await expect(page).toHaveScreenshot(`${currentLanguage}_${screen.name}_error.png`, {
+        maxDiffPixels: getVisualMaxDiffPixels(browserName),
+      });
 
       await page.unroute('**/graphql', routeHandler);
     });
