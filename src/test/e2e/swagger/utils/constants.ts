@@ -47,6 +47,14 @@ export interface ApiUser {
   initials: string;
   id: string;
 }
+export const MOCK_API_USER: ApiUser = {
+  confirmed: true,
+  email: 'user@example.com',
+  initials: 'NS',
+  id: testUserId,
+};
+
+export const MOCK_API_USERS: ApiUser[] = [MOCK_API_USER];
 export const validBatchData: BatchUserData = {
   users: [
     {

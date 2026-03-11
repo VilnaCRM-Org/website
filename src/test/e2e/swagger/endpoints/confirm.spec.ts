@@ -9,6 +9,7 @@ import {
 import {
   clearEndpointResponse,
   interceptWithErrorResponse,
+  interceptWithEmptyResponse,
   cancelOperation,
   initSwaggerPage,
   getAndCheckExecuteBtn,
@@ -56,6 +57,7 @@ async function fillConfirmBody(elements: ConfirmEndpointElements, token: string)
 test.describe('confirm endpoint tests', () => {
   test('successful confirmation with valid token', async ({ page }) => {
     const elements: ConfirmEndpointElements = await setupConfirmEndpoint(page);
+    await interceptWithEmptyResponse(page, CONFIRM_API_URL);
 
     await expect(elements.parametersSection).toBeVisible();
     await expect(elements.tokenInput).toBeVisible();

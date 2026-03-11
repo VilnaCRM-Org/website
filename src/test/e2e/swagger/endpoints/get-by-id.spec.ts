@@ -1,11 +1,18 @@
 import { Download, expect, type Locator, Page, test } from '@playwright/test';
 
-import { testUserId, BASE_API, BasicEndpointElements, ApiUser } from '../utils/constants';
+import {
+  testUserId,
+  BASE_API,
+  BasicEndpointElements,
+  ApiUser,
+  MOCK_API_USER,
+} from '../utils/constants';
 import {
   initSwaggerPage,
   clearEndpointResponse,
   getAndCheckExecuteBtn,
   interceptWithErrorResponse,
+  interceptWithJsonResponse,
   cancelOperation,
   expectErrorOrFailureStatus,
   buildSafeUrl,
@@ -71,6 +78,7 @@ async function setupGetUserByIdEndpoint(page: Page): Promise<GetUserByIdElements
 test.describe('get user by ID', () => {
   test('successful user retrieval', async ({ page }) => {
     const elements: GetUserByIdElements = await setupGetUserByIdEndpoint(page);
+    await interceptWithJsonResponse(page, GET_USER_API_URL(TEST_USER_IDS.VALID), MOCK_API_USER);
 
     await expect(elements.parametersSection).toBeVisible();
     await expect(elements.idInput).toBeVisible();

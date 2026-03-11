@@ -10,13 +10,15 @@ import {
   SwaggerLocators,
 } from './utils';
 import { UI_INTERACTION_DELAY } from './utils/constants';
+import { collapseEndpoint } from './utils/helpers';
 
 test.describe('Swagger Section', () => {
   let elements: SwaggerLocators;
 
   test.beforeEach(async ({ page }) => {
-    await page.goto(TEST_CONSTANTS.SWAGGER_PATH);
+    await page.goto(TEST_CONSTANTS.SWAGGER_PATH, { waitUntil: 'domcontentloaded' });
     elements = getLocators(page);
+    await elements.apiDocumentation.waitFor({ state: 'visible', timeout: 15000 });
   });
 
   test('should display main Swagger UI components', async () => {
@@ -65,9 +67,10 @@ test.describe('User Section', () => {
   let elements: SwaggerLocators;
 
   test.beforeEach(async ({ page }) => {
-    await page.goto(TEST_CONSTANTS.SWAGGER_PATH);
+    await page.goto(TEST_CONSTANTS.SWAGGER_PATH, { waitUntil: 'domcontentloaded' });
     userEndpoints = getUserEndpoints(page);
     elements = getLocators(page);
+    await elements.apiDocumentation.waitFor({ state: 'visible', timeout: 15000 });
   });
   test('system endpoints', async ({ page }) => {
     const systemEndpoints: GetSystemEndpoints = getSystemEndpoints(page);
@@ -87,9 +90,7 @@ test.describe('User Section', () => {
       await expect(sectionHeader).toBeVisible();
       await expect(responses).toBeVisible();
 
-      await currentEndpoint.locator('.opblock-summary').click();
-
-      await page.waitForTimeout(UI_INTERACTION_DELAY);
+      await collapseEndpoint(currentEndpoint);
 
       await expect(body).not.toBeVisible();
     }
@@ -121,9 +122,7 @@ test.describe('User Section', () => {
       await expect(sectionHeader).toBeVisible();
       await expect(responses).toBeVisible();
 
-      await currentEndpoint.locator('.opblock-summary').click();
-
-      await page.waitForTimeout(UI_INTERACTION_DELAY);
+      await collapseEndpoint(currentEndpoint);
 
       await expect(body).not.toBeVisible();
     }

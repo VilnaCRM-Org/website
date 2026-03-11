@@ -8,12 +8,14 @@ import {
   BasicEndpointElements,
   UpdatedUser,
   ApiUser,
+  MOCK_API_USER,
 } from '../utils/constants';
 import {
   initSwaggerPage,
   clearEndpointResponse,
   getAndCheckExecuteBtn,
   interceptWithErrorResponse,
+  interceptWithJsonResponse,
   cancelOperation,
   expectErrorOrFailureStatus,
   parseJsonSafe,
@@ -71,6 +73,7 @@ async function setupUpdateUserEndpoint(page: Page): Promise<UpdateUserEndpointEl
 test.describe('updateById', () => {
   test('default values', async ({ page }) => {
     const elements: UpdateUserEndpointElements = await setupUpdateUserEndpoint(page);
+    await interceptWithJsonResponse(page, UPDATE_USER_API_URL(testUserId), MOCK_API_USER);
 
     await expect(elements.parametersSection).toBeVisible();
     await expect(elements.idInput).toBeVisible();
@@ -112,6 +115,7 @@ test.describe('updateById', () => {
 
   test('custom values', async ({ page }) => {
     const elements: UpdateUserEndpointElements = await setupUpdateUserEndpoint(page);
+    await interceptWithJsonResponse(page, UPDATE_USER_API_URL(testUserId), MOCK_API_USER);
 
     const customRequestBody: UpdatedUser = {
       email: 'updated@example.com',
@@ -170,6 +174,7 @@ test.describe('updateById', () => {
 
   test('download', async ({ page }) => {
     const elements: UpdateUserEndpointElements = await setupUpdateUserEndpoint(page);
+    await interceptWithJsonResponse(page, UPDATE_USER_API_URL(testUserId), MOCK_API_USER);
 
     await elements.idInput.fill(testUserId);
     await elements.jsonEditor.fill(

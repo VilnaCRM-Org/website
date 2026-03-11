@@ -6,6 +6,7 @@ import {
   clearEndpointResponse,
   getAndCheckExecuteBtn,
   interceptWithErrorResponse,
+  interceptWithEmptyResponse,
   cancelOperation,
   expectErrorOrFailureStatus,
   collapseEndpoint,
@@ -55,6 +56,7 @@ test.describe('resend confirmation email', () => {
   test('successfully resends confirmation email', async ({ page }) => {
     const elements: ResendConfirmationEndpointElements =
       await setupResendConfirmationEndpoint(page);
+    await interceptWithEmptyResponse(page, RESEND_CONFIRM_API_URL(testUserId));
     await expect(elements.parametersSection).toBeVisible();
     await expect(elements.idInput).toBeVisible();
     await elements.idInput.fill(testUserId);
