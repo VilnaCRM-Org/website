@@ -66,7 +66,8 @@ run_lint_tests_dind() {
     else
         printf "Markdown linting FAILED\n" | tee -a "lint-logs/summary.log" >/dev/null
     fi
-    failed_count=$(grep -c "FAILED" "lint-logs/summary.log" 2>/dev/null || echo "0")
+    failed_count=$(grep -c "FAILED" "lint-logs/summary.log" 2>/dev/null || true)
+    failed_count=${failed_count:-0}
     if [ "$failed_count" -gt 0 ]; then
         exit 1
     fi
