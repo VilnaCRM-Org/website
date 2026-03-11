@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-import { getVisualMaxDiffPixels, screenSizes, timeoutDuration } from './constants';
+import { getFullPageVisualMaxDiffPixels, screenSizes, timeoutDuration } from './constants';
 
 const currentLanguage: string = process.env.NEXT_PUBLIC_MAIN_LANGUAGE as string;
 
@@ -26,7 +26,7 @@ test.describe('Visual Tests', () => {
 
       await expect(page).toHaveScreenshot(`${currentLanguage}_${screen.name}.png`, {
         fullPage: true,
-        maxDiffPixels: getVisualMaxDiffPixels(browserName),
+        maxDiffPixels: getFullPageVisualMaxDiffPixels(browserName),
       });
     });
   });
