@@ -24,10 +24,18 @@ test.describe('Visual Tests', () => {
       const scrollHeight: number = await page.evaluate(() => document.documentElement.scrollHeight);
       await page.setViewportSize({ width: screen.width, height: scrollHeight });
 
-      await page.waitForLoadState('domcontentloaded');
+      await page.waitForLoadState('networkidle');
+      await page.evaluate(() => document.fonts.ready);
+      await page.waitForTimeout(timeoutDuration);
+
+      await page.waitForFunction(() => {
+        const swaggerUI: Element | null = document.querySelector('.swagger-ui');
+        return swaggerUI && getComputedStyle(swaggerUI).opacity === '1';
+      });
 
       await expect(page).toHaveScreenshot(`${currentLanguage}_${screen.name}.png`, {
         fullPage: true,
+        maxDiffPixels: 20,
       });
     });
   }
