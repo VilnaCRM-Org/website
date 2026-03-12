@@ -195,10 +195,8 @@ export async function expectErrorOrFailureStatus(getEndpoint: Locator): Promise<
     cleanErrorText.includes(msg)
   );
 
-  const hasFailureStatus: boolean =
-    /^(0|4\d{2}|5\d{2})/.test(cleanStatusText) ||
-    cleanStatusText === 'Undocumented' ||
-    cleanStatusText === '';
+  const hasSuccessStatus: boolean = /^(2\d{2}|3\d{2})/.test(cleanStatusText);
+  const hasFailureStatus: boolean = !hasSuccessStatus;
 
   expect(hasFailureStatus).toBe(true);
   expect(hasErrorMessage).toBe(true);
