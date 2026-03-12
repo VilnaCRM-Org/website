@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 
 import useSwagger from '../../../features/swagger/hooks/useSwagger';
 
@@ -108,17 +108,39 @@ describe('useSwagger', () => {
 
     const { result, unmount } = renderHook(() => useSwagger());
 
-    unmount();
-
-    await new Promise(resolve => {
-      setTimeout(resolve, 0);
+    await act(async () => {
+      unmount();
+      await Promise.resolve();
     });
 
     expect(result.current.error).toBeNull();
     expect(result.current.swaggerContent).toBeNull();
   });
 
+  test('ignores AbortError while the hook is still mounted', async () => {
+    const abortError: DOMException = new MockDOMException('Aborted', 'AbortError') as DOMException;
+    mockFetch.mockRejectedValueOnce(abortError);
+
+    const { result } = renderHook(() => useSwagger());
+
+    await waitFor(() => {
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+
+    await waitFor(() => {
+      expect(result.current.error).toBeNull();
+      expect(result.current.swaggerContent).toBeNull();
+    });
+  });
+
   test('aborts fetch when component unmounts', () => {
+    mockFetch.mockImplementationOnce(
+      () =>
+        new Promise(() => {
+          // Keep the request pending so unmount only exercises abort behavior.
+        })
+    );
+
     const { unmount } = renderHook(() => useSwagger());
 
     unmount();

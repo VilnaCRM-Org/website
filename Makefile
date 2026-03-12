@@ -31,7 +31,7 @@ TEST_DIR_APOLLO             = $(TEST_DIR_BASE)/apollo-server
 TEST_DIR_E2E                = $(TEST_DIR_BASE)/e2e
 TEST_DIR_VISUAL             = $(TEST_DIR_BASE)/visual
 
-STRYKER_CMD                 = pnpm stryker run
+STRYKER_CMD                 = pnpm exec stryker run
 
 SERVE_CMD                   = --collect.startServerCommand="$(SERVE_BIN) out"
 LHCI                        = pnpm lhci autorun
@@ -110,7 +110,7 @@ ifeq ($(CI), 1)
     LHCI_MOBILE             = $(LHCI_BUILD_CMD) $(LHCI_MOBILE_SERVE)
 else
     PNPM_EXEC               = $(EXEC_DEV_TTYLESS)
-    STRYKER_CMD             = make start && $(EXEC_DEV_TTYLESS) pnpm stryker run
+    STRYKER_CMD             = make start && $(EXEC_DEV_TTYLESS) pnpm exec stryker run
     UNIT_TESTS              = make start && $(EXEC_DEV_TTYLESS) env
 
     STORYBOOK_START         = $(STORYBOOK_BIN) dev -p $(STORYBOOK_PORT) --host 0.0.0.0
@@ -325,6 +325,9 @@ memory-leak-dind: start-prod ## Run Memlab tests in isolated compose project (DI
 test-mutation: build ## Run mutation tests using Stryker after building the app
 	$(STRYKER_CMD)
 
+test-mutation-ci: ## Run mutation tests in CI without Docker image builds
+	CI=1 pnpm exec stryker run
+
 wait-for-prod-health: ## Wait for the prod container to reach a healthy state.
 	@echo "Waiting for prod container to become healthy (timeout: 60s)..."
 	@for i in $$(seq 1 30); do \
@@ -414,4 +417,3 @@ stop: ## Stop docker
 
 check-node-version: ## Check if the correct Node.js version is installed
 	$(PNPM_EXEC) exec node checkNodeVersion.js
-
