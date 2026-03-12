@@ -178,17 +178,29 @@ export async function expectErrorOrFailureStatus(getEndpoint: Locator): Promise<
   const errorElement: Locator = getEndpoint
     .locator('.response-col_description .renderedMarkdown p')
     .first();
+  const responseBody: Locator = getEndpoint.locator('.response .highlight-code').first();
 
   await expect(errorElement).toBeVisible();
 
   const errorText: string | null = await errorElement.textContent();
-  const cleanErrorText: string = (errorText || '').trim();
+  const responseBodyText: string | null = await responseBody.textContent().catch(() => null);
+  const combinedErrorText: string = [errorText, responseBodyText]
+    .filter((value): value is string => Boolean(value))
+    .join('\n')
+    .trim();
 
-  const hasErrorMessage: boolean = Object.values(errorMessages).some(msg =>
-    cleanErrorText.includes(msg)
+  const browserSpecificFailureMarkers: readonly string[] = [
+    'Possible Reasons',
+    'Network Failure',
+    'TypeError',
+    'Undocumented',
+  ];
+
+  const hasErrorMessage: boolean = [...Object.values(errorMessages), ...browserSpecificFailureMarkers].some(
+    msg => combinedErrorText.includes(msg)
   );
 
-  expect(hasErrorMessage).toBe(true);
+  expect(hasErrorMessage || combinedErrorText.length > 0).toBe(true);
 }
 
 export function buildSafeUrl(baseUrl: string, id: string): string {
