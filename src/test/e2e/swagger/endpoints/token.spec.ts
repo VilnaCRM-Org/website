@@ -9,6 +9,7 @@ import {
   cancelOperation,
   getEndpointCopyButton,
   interceptWithJsonResponse,
+  interceptWithNetworkFailure,
   expectErrorOrFailureStatus,
   collapseEndpoint,
 } from '../utils/helpers';
@@ -121,7 +122,7 @@ test.describe('OAuth token endpoint', () => {
     const elements: TokenEndpointElements = await setupTokenEndpoint(page);
     await elements.requestBodyEditor.fill(JSON.stringify(TEST_OAUTH_DATA, null, 2));
 
-    await page.route(TOKEN_API_URL, route => route.abort('failed'), { times: 1 });
+    await interceptWithNetworkFailure(page, TOKEN_API_URL, { times: 1 });
 
     await elements.executeBtn.click();
 

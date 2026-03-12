@@ -13,6 +13,7 @@ import {
   getAndCheckExecuteBtn,
   interceptWithErrorResponse,
   interceptWithJsonResponse,
+  interceptWithNetworkFailure,
   cancelOperation,
   expectErrorOrFailureStatus,
   buildSafeUrl,
@@ -175,7 +176,7 @@ test.describe('get user by ID', () => {
   test('error response - CORS/Network failure', async ({ page }) => {
     const elements: GetUserByIdElements = await setupGetUserByIdEndpoint(page);
 
-    await page.route(GET_USER_API_URL(TEST_USER_IDS.VALID), route => route.abort('failed'));
+    await interceptWithNetworkFailure(page, GET_USER_API_URL(TEST_USER_IDS.VALID));
 
     await elements.idInput.fill(TEST_USER_IDS.VALID);
     await elements.executeBtn.click();

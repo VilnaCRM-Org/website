@@ -16,6 +16,7 @@ import {
   getAndCheckExecuteBtn,
   interceptWithErrorResponse,
   interceptWithJsonResponse,
+  interceptWithNetworkFailure,
   cancelOperation,
   expectErrorOrFailureStatus,
   parseJsonSafe,
@@ -259,7 +260,7 @@ test.describe('updateById', () => {
   test('error response - CORS/Network failure', async ({ page }) => {
     const elements: UpdateUserEndpointElements = await setupUpdateUserEndpoint(page);
 
-    await page.route(`**/api/users/${testUserId}`, route => route.abort('failed'));
+    await interceptWithNetworkFailure(page, `**/api/users/${testUserId}`);
 
     await elements.idInput.fill(testUserId);
     await elements.jsonEditor.fill(
