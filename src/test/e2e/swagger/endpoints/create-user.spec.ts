@@ -14,6 +14,7 @@ import {
   getAndCheckExecuteBtn,
   interceptWithErrorResponse,
   interceptWithJsonResponse,
+  interceptWithNetworkFailure,
   cancelOperation,
   expectErrorOrFailureStatus,
   parseJsonSafe,
@@ -209,7 +210,7 @@ test.describe('Create user endpoint tests', () => {
   test('error response - CORS/Network failure', async ({ page }) => {
     const elements: CreateUserEndpointElements = await setupCreateUserEndpoint(page);
 
-    await page.route('**/api/users', route => route.abort('failed'), { times: 1 });
+    await interceptWithNetworkFailure(page, '**/api/users', { times: 1 });
 
     await fillRequestBody(elements, TEST_USERS.VALID);
     await elements.executeBtn.click();

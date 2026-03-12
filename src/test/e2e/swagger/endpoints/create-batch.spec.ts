@@ -15,6 +15,7 @@ import {
   cancelOperation,
   interceptWithErrorResponse,
   interceptWithJsonResponse,
+  interceptWithNetworkFailure,
   expectErrorOrFailureStatus,
   parseJsonSafe,
 } from '../utils/helpers';
@@ -231,7 +232,7 @@ test.describe('Create batch users endpoint tests', () => {
   test('network failure handling', async ({ page }) => {
     const elements: BatchUserEndpointElements = await setupBatchEndpoint(page);
 
-    await page.route(`${BASE_API}/batch`, route => route.abort('failed'), { times: 1 });
+    await interceptWithNetworkFailure(page, `${BASE_API}/batch`, { times: 1 });
 
     await fillBatchRequestBody(elements, validBatchData);
     await elements.executeBtn.click();

@@ -13,6 +13,7 @@ import {
   getAndCheckExecuteBtn,
   interceptWithErrorResponse,
   interceptWithJsonResponse,
+  interceptWithNetworkFailure,
   cancelOperation,
   expectErrorOrFailureStatus,
   buildSafeUrl,
@@ -216,7 +217,7 @@ test.describe('patch by ID', () => {
   test('error response - CORS/Network failure', async ({ page }) => {
     const elements: PatchUserEndpointElements = await setupPatchUserEndpoint(page);
 
-    await page.route(PATCH_USER_API_URL(testUserId), route => route.abort('failed'));
+    await interceptWithNetworkFailure(page, PATCH_USER_API_URL(testUserId));
 
     await elements.idInput.fill(testUserId);
     await elements.jsonEditor.fill(JSON.stringify({ initials: 'NF' }));

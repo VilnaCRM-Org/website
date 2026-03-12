@@ -10,6 +10,7 @@ import {
   clearEndpointResponse,
   interceptWithErrorResponse,
   interceptWithEmptyResponse,
+  interceptWithNetworkFailure,
   cancelOperation,
   initSwaggerPage,
   getAndCheckExecuteBtn,
@@ -131,7 +132,7 @@ test.describe('confirm endpoint tests', () => {
   test('error response - CORS/Network failure', async ({ page }) => {
     const elements: ConfirmEndpointElements = await setupConfirmEndpoint(page);
 
-    await page.route(CONFIRM_API_URL, route => route.abort('failed'), { times: 1 });
+    await interceptWithNetworkFailure(page, CONFIRM_API_URL, { times: 1 });
 
     await fillConfirmBody(elements, confirmationToken);
     await elements.executeBtn.click();

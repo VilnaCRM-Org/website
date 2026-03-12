@@ -141,6 +141,26 @@ export async function interceptWithEmptyResponse(
   );
 }
 
+export async function interceptWithNetworkFailure(
+  page: Page,
+  url: string | RegExp,
+  options?: {
+    times?: number;
+  }
+): Promise<void> {
+  await page.route(
+    url,
+    async route => {
+      if (await fulfillPreflight(route)) {
+        return;
+      }
+
+      await route.abort('failed');
+    },
+    options
+  );
+}
+
 export async function cancelOperation(page: Page): Promise<void> {
   const cancelBtn: Locator = page.locator('button.btn.try-out__btn.cancel');
 
