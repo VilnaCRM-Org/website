@@ -8,6 +8,5 @@ export interface UiInputProps {
   type?: string;
   fullWidth?: boolean;
   disabled?: boolean;
-  onInput?: (event: React.ChangeEvent<HTMLInputElement>) => void;
   id?: string;
 }

@@ -8,7 +8,7 @@ const UiInput: React.ForwardRefExoticComponent<
   UiInputProps & React.RefAttributes<HTMLInputElement>
 > = React.forwardRef<HTMLInputElement, UiInputProps>(
   (
-    { sx, placeholder, error, onBlur, type, fullWidth, value, onChange, disabled, onInput, id },
+    { sx, placeholder, error, onBlur, type, fullWidth, value, onChange, disabled, id },
     ref
   ) => (
     <ThemeProvider theme={theme}>
@@ -23,7 +23,6 @@ const UiInput: React.ForwardRefExoticComponent<
         value={value}
         fullWidth={fullWidth}
         disabled={disabled}
-        onInput={onInput}
         id={id}
       />
     </ThemeProvider>
