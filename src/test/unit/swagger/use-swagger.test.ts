@@ -218,25 +218,21 @@ describe('useSwagger', () => {
     expect(result.current.error).toBeNull();
   });
 
-  test('handles different error types', async () => {
-    const testCases: Array<{ error: unknown; expectedMessage: string }> = [
-      { error: new TypeError('Type error'), expectedMessage: 'Type error' },
-      { error: new ReferenceError('Reference error'), expectedMessage: 'Reference error' },
-      { error: new Error('String error'), expectedMessage: 'String error' },
-      { error: new Error('500'), expectedMessage: '500' },
-    ];
+  test.each([
+    { error: new TypeError('Type error'), expectedMessage: 'Type error' },
+    { error: new ReferenceError('Reference error'), expectedMessage: 'Reference error' },
+    { error: new Error('String error'), expectedMessage: 'String error' },
+    { error: new Error('500'), expectedMessage: '500' },
+  ])('handles different error types: $expectedMessage', async ({ error, expectedMessage }) => {
+    mockFetch.mockRejectedValueOnce(error);
 
-    for (const { error, expectedMessage } of testCases) {
-      mockFetch.mockRejectedValueOnce(error);
+    const { result } = renderHook(() => useSwagger());
 
-      const { result } = renderHook(() => useSwagger());
+    await waitFor(() => {
+      expect(result.current.error).toBeInstanceOf(Error);
+    });
 
-      await waitFor(() => {
-        expect(result.current.error).toBeInstanceOf(Error);
-      });
-
-      expect(result.current.error?.message).toBe(expectedMessage);
-      expect(result.current.swaggerContent).toBeNull();
-    }
+    expect(result.current.error?.message).toBe(expectedMessage);
+    expect(result.current.swaggerContent).toBeNull();
   });
 });

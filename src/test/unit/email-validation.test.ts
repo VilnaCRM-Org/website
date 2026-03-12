@@ -1,4 +1,3 @@
-import { faker } from '@faker-js/faker';
 import { t } from 'i18next';
 
 import { validateEmail } from '../../features/landing/components/AuthSection/Validations';
