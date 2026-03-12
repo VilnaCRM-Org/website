@@ -1,4 +1,4 @@
-import { ApolloError } from '@apollo/client';
+import * as apolloClient from '@apollo/client';
 import { GraphQLFormattedError } from 'graphql';
 
 import {
@@ -15,6 +15,22 @@ import {
   ServerErrorShape,
 } from '../../features/landing/helpers/handleApolloError';
 import { networkMessage } from '../testing-library/fixtures/errors';
+
+// Mock error type that simulates Apollo Client 4's CombinedGraphQLErrors
+interface MockCombinedGraphQLErrors {
+  readonly errors: GraphQLFormattedError[];
+  readonly brand: 'CombinedGraphQLErrors';
+}
+
+// Helper to create a mock that will pass CombinedGraphQLErrors.is() check
+function createMockCombinedGraphQLErrors(
+  errors: GraphQLFormattedError[]
+): MockCombinedGraphQLErrors {
+  return {
+    errors,
+    brand: 'CombinedGraphQLErrors',
+  };
+}
 
 type StatusCode = Pick<ServerErrorShape, 'statusCode'>;
 
@@ -84,32 +100,44 @@ describe('Error Handling', () => {
 
   describe('handleApolloError', () => {
     let messages: ClientErrorMessages;
+    let combinedGraphQLErrorsSpy: jest.SpyInstance;
 
     beforeEach(() => {
       jest.clearAllMocks();
       messages = getClientErrorMessages();
+      // Mock CombinedGraphQLErrors.is to recognize our mock errors
+      combinedGraphQLErrorsSpy = jest.spyOn(apolloClient.CombinedGraphQLErrors, 'is').mockImplementation(
+        (err: unknown): err is apolloClient.CombinedGraphQLErrors =>
+          err !== null &&
+          typeof err === 'object' &&
+          'brand' in err &&
+          (err as MockCombinedGraphQLErrors).brand === 'CombinedGraphQLErrors'
+      );
     });
 
-    it('should handle network error', () => {
-      const error: ApolloError = new ApolloError({
-        networkError: {
-          name: 'ServerError',
-          message: 'Network Error',
-          statusCode: HTTPStatusCodes.UNAUTHORIZED,
-        },
-      });
+    afterEach(() => {
+      combinedGraphQLErrorsSpy.mockRestore();
+    });
+
+    // Apollo Client 4: Network errors are returned directly without networkError wrapper
+    it('should handle network error with statusCode (Apollo Client 4 direct error)', () => {
+      const error: ServerErrorShape = {
+        statusCode: HTTPStatusCodes.UNAUTHORIZED,
+        message: 'Network Error',
+      };
 
       const props: HandleApolloErrorProps = { error };
       expect(handleApolloError(props)).toBe(messages[CLIENT_ERROR_KEYS.UNAUTHORIZED]);
     });
 
+    // Apollo Client 4: GraphQL errors use CombinedGraphQLErrors
     it('should handle graphQLErrors with statusCode', () => {
       const graphQLError: GraphQLFormattedError = {
         message: 'Server Error',
         extensions: { statusCode: HTTPStatusCodes.INTERNAL_SERVER_ERROR },
       };
       const error: HandleApolloErrorProps = {
-        error: new ApolloError({ graphQLErrors: [graphQLError] }),
+        error: createMockCombinedGraphQLErrors([graphQLError]),
       };
       expect(handleApolloError(error)).toBe(messages[CLIENT_ERROR_KEYS.SERVER_ERROR]);
     });
@@ -119,7 +147,7 @@ describe('Error Handling', () => {
         message: 'UNAUTHORIZED',
       };
       const error: HandleApolloErrorProps = {
-        error: new ApolloError({ graphQLErrors: [graphQLError] }),
+        error: createMockCombinedGraphQLErrors([graphQLError]),
       };
       expect(handleApolloError(error)).toBe(messages[CLIENT_ERROR_KEYS.UNAUTHORIZED]);
     });
@@ -129,7 +157,9 @@ describe('Error Handling', () => {
         { message: 'Error 1' },
         { message: 'Error 2' },
       ];
-      const error: HandleApolloErrorProps = { error: new ApolloError({ graphQLErrors }) };
+      const error: HandleApolloErrorProps = {
+        error: createMockCombinedGraphQLErrors(graphQLErrors),
+      };
       expect(handleApolloError(error)).toBe('Error 1, Error 2');
     });
 
@@ -137,7 +167,7 @@ describe('Error Handling', () => {
       const error: HandleApolloErrorProps = { error: null };
       expect(handleApolloError(error)).toBe(messages[CLIENT_ERROR_KEYS.UNEXPECTED]);
 
-      const notApolloError: HandleApolloErrorProps = { error: {} as ApolloError };
+      const notApolloError: HandleApolloErrorProps = { error: {} };
       expect(handleApolloError(notApolloError)).toBe(messages[CLIENT_ERROR_KEYS.UNEXPECTED]);
     });
     it('should handle graphQLErrors with FORBIDDEN statusCode', () => {
@@ -146,9 +176,16 @@ describe('Error Handling', () => {
         extensions: { statusCode: HTTPStatusCodes.FORBIDDEN },
       };
       const error: HandleApolloErrorProps = {
-        error: new ApolloError({ graphQLErrors: [graphQLError] }),
+        error: createMockCombinedGraphQLErrors([graphQLError]),
       };
       expect(handleApolloError(error)).toBe(messages[CLIENT_ERROR_KEYS.DENIED]);
+    });
+
+    // Apollo Client 4: Network error pattern detection via error message
+    it('should handle network error pattern in message', () => {
+      const error: Error = new Error('Failed to fetch');
+      const props: HandleApolloErrorProps = { error };
+      expect(handleApolloError(props)).toBe(messages[CLIENT_ERROR_KEYS.NETWORK]);
     });
   });
 });

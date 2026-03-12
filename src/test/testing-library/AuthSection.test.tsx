@@ -1,4 +1,4 @@
-import { MockedProvider } from '@apollo/client/testing';
+import { MockedProvider } from '@apollo/client/testing/react';
 import { render, screen } from '@testing-library/react';
 import i18n, { t, TFunction } from 'i18next';
 import React from 'react';
@@ -53,7 +53,7 @@ describe('AuthSection', () => {
 
     render(
       <I18nextProvider i18n={i18n}>
-        <MockedProvider mocks={[]} addTypename={false}>
+        <MockedProvider mocks={[]}>
           <AuthSection />
         </MockedProvider>
       </I18nextProvider>

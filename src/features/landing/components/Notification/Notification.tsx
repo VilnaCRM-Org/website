@@ -8,32 +8,14 @@ import NotificationSuccess from './NotificationSuccess';
 import styles from './styles';
 import {
   NotificationComponentMap,
-  NotificationComponentProps,
   NotificationComponentType,
   NotificationControlProps,
-  NotificationToggleProps,
 } from './types';
 
 export const notificationComponents: NotificationComponentMap = {
-  success: ({ setIsOpen }: NotificationToggleProps) => (
-    <NotificationSuccess setIsOpen={setIsOpen} />
-  ),
-  error: ({ setIsOpen, onRetry, loading, errorText }: NotificationComponentProps) => (
-    <NotificationError
-      setIsOpen={setIsOpen}
-      onRetry={onRetry}
-      loading={loading}
-      errorText={errorText}
-    />
-  ),
+  success: NotificationSuccess,
+  error: NotificationError,
 };
-
-function getNotificationComponent(type: keyof NotificationComponentMap): NotificationComponentType {
-  if (!notificationComponents[type]) {
-    return NotificationError;
-  }
-  return notificationComponents[type];
-}
 
 function Notification({
   type,
@@ -43,7 +25,7 @@ function Notification({
   loading,
   errorText,
 }: NotificationControlProps): React.ReactElement {
-  const Component: NotificationComponentType = getNotificationComponent(type);
+  const Component: NotificationComponentType = notificationComponents[type] ?? NotificationError;
 
   return (
     <Fade in={isOpen} timeout={animationTimeout}>

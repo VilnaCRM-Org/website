@@ -11,37 +11,35 @@ const backToTheHome: string = t('navigation.navigate_to_home_page');
 const arrowAlt: string = t('navigation.back_arrow_description');
 
 describe('Swagger Navigation', () => {
-  const originalLocation: Location = window.location;
-  const mockAssign: jest.Mock = jest.fn();
+  // jsdom 26+ internal implementation symbol approach for mocking location methods
+  const getLocationImpl = (): Location => {
+    const implSymbol = Reflect.ownKeys(window.location).find(
+      (key): key is symbol => typeof key === 'symbol'
+    );
+    return implSymbol
+      ? (window.location as unknown as Record<symbol, Location>)[implSymbol]
+      : window.location;
+  };
 
-  beforeAll(() => {
-    (window as { location?: Location }).location = undefined;
-
-    Object.defineProperty(window, 'location', {
-      value: {
-        ...originalLocation,
-        assign: mockAssign,
-      },
-      writable: true,
-    });
-  });
-
-  afterAll(() => {
-    Object.defineProperty(window, 'location', {
-      value: originalLocation,
-      writable: true,
-    });
-  });
+  let assignSpy: jest.SpyInstance;
 
   beforeEach(() => {
-    mockAssign.mockClear();
+    assignSpy = jest
+      .spyOn(getLocationImpl(), 'assign')
+      .mockImplementation(() => {});
   });
+
+  afterEach(() => {
+    assignSpy.mockRestore();
+  });
+
   it('renders text from translations', () => {
     const { getByText, getByAltText } = render(<Navigation />);
 
     expect(getByText(backToTheHome)).toBeInTheDocument();
     expect(getByAltText(arrowAlt)).toBeInTheDocument();
   });
+
   test('back button', async () => {
     const { getByText } = render(<Navigation />);
     const user: UserEvent = userEvent.setup();
@@ -50,13 +48,19 @@ describe('Swagger Navigation', () => {
 
     await user.click(backButton);
 
-    expect(window.location.assign).toHaveBeenCalledWith('/');
+    expect(assignSpy).toHaveBeenCalledWith('/');
   });
 });
 
 jest.mock('../../features/swagger/hooks/useSwagger');
 
-jest.mock('swagger-ui-react', () => jest.fn(() => <div>SwaggerUI rendered</div>));
+jest.mock('swagger-ui-react', () => {
+  function SwaggerUI(): React.ReactElement {
+    return <div>SwaggerUI rendered</div>;
+  }
+
+  return { __esModule: true, default: SwaggerUI };
+});
 
 describe('ApiDocumentation', () => {
   const mockUseSwagger: jest.Mock = jest.mocked(useSwagger);

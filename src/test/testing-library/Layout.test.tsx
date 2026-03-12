@@ -19,8 +19,10 @@ function MockHead({ children }: { children: React.ReactNode }): null {
           }
         });
 
-        if (typeof child.props?.children === 'string') {
-          el.textContent = child.props.children;
+        const childContent = (child as React.ReactElement<{ children?: React.ReactNode }>).props
+          ?.children;
+        if (typeof childContent === 'string') {
+          el.textContent = childContent;
         }
 
         document.head.appendChild(el);

@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/nextjs';
 
 import { LARGE_CARDLIST_ARRAY, SMALL_CARDLIST_ARRAY } from './constants';
 

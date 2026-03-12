@@ -1,4 +1,5 @@
-import { MockedProvider, MockedResponse } from '@apollo/client/testing';
+import { MockedResponse } from '@apollo/client/testing';
+import { MockedProvider } from '@apollo/client/testing/react';
 import { fireEvent, render, RenderResult, screen } from '@testing-library/react';
 import { t } from 'i18next';
 import React, { AriaRole } from 'react';
@@ -39,7 +40,8 @@ export const getFormElements: () => ExtendedGetElementsResult = () => {
       return queryFunction();
     } catch (error) {
       throw new FormElementNotFoundError(
-        `Form element "${elementName}" not found using query: ${queryFunction.toString()}`
+        `Form element "${elementName}" not found using query: ${queryFunction.toString()}`,
+        error as Error
       );
     }
   };
@@ -65,8 +67,14 @@ export const getFormElements: () => ExtendedGetElementsResult = () => {
 export const validateFormInput: (
   fullNameValue: string,
   emailValue: string,
-  passwordValue: string
-) => void = (fullNameValue: string, emailValue: string, passwordValue: string): void => {
+  passwordValue: string,
+  allowEmpty?: boolean
+) => void = (
+  fullNameValue: string,
+  emailValue: string,
+  passwordValue: string,
+  allowEmpty = false
+): void => {
   if (fullNameValue && fullNameValue.length < 2) {
     throw new Error('Full name must be at least 2 characters');
   }
@@ -77,6 +85,10 @@ export const validateFormInput: (
 
   if (passwordValue && passwordValue.length < 8) {
     throw new Error('Password must be at least 8 characters');
+  }
+
+  if (!allowEmpty && !fullNameValue && !emailValue && !passwordValue) {
+    throw new Error('At least one field must be provided');
   }
 };
 
@@ -91,7 +103,9 @@ export const fillForm: (
   passwordValue = '',
   acceptPrivacyPolicy = false
 ) => {
-  validateFormInput(fullNameValue, emailValue, passwordValue);
+  // Allow empty form testing when all fields are intentionally empty
+  const allowEmpty = !fullNameValue && !emailValue && !passwordValue;
+  validateFormInput(fullNameValue, emailValue, passwordValue, allowEmpty);
 
   const { fullNameInput, emailInput, passwordInput, privacyCheckbox, signUpButton } =
     getFormElements();
@@ -129,9 +143,5 @@ export function renderWithProviders(
   ui: React.ReactElement,
   { apolloMocks = [] }: { apolloMocks?: MockedResponse[] } = {}
 ): RenderResult {
-  return render(
-    <MockedProvider mocks={apolloMocks} addTypename={false}>
-      {ui}
-    </MockedProvider>
-  );
+  return render(<MockedProvider mocks={apolloMocks}>{ui}</MockedProvider>);
 }

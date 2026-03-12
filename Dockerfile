@@ -23,7 +23,7 @@ COPY . .
 RUN node scripts/fetchSwaggerSchema.mjs && \
     node scripts/patchSwaggerServer.mjs
 
-RUN npx next build && \
+RUN npx next build --webpack && \
     npx next-export-optimize-images
 
 

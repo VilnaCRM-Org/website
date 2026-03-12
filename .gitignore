@@ -48,6 +48,7 @@ next-env.d.ts
 .vscode
 
 storybook-static/
+storybook-static-ci/
 /test-results/
 /playwright-report/
 /blob-report/

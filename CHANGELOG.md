@@ -1,3 +1,12 @@
+# [0.3.0](https://github.com/VilnaCRM-Org/website/compare/v0.2.13...v0.3.0) (2026-01-20)
+
+
+### Features
+
+* **deps:** bump the all-deps group across 1 directory with 70 updates ([#269](https://github.com/VilnaCRM-Org/website/issues/269)) ([895dd26](https://github.com/VilnaCRM-Org/website/commit/895dd26aef1ce1a00364334b8121294dea1dec9d))
+
+
+
 ## [0.2.13](https://github.com/VilnaCRM-Org/website/compare/v0.2.12...v0.2.13) (2025-12-17)
 
 
@@ -31,15 +40,6 @@
 ### Bug Fixes
 
 * **#249:** add body to error response to prevent 5xx error ([#250](https://github.com/VilnaCRM-Org/website/issues/250)) ([a10b478](https://github.com/VilnaCRM-Org/website/commit/a10b4784814c3e746c23e8eb93c13d4e459e5891)), closes [#249](https://github.com/VilnaCRM-Org/website/issues/249)
-
-
-
-## [0.2.9](https://github.com/VilnaCRM-Org/website/compare/v0.2.8...v0.2.9) (2025-10-15)
-
-
-### Bug Fixes
-
-* **#243:** Add Swagger E2E Tests for GET /users Endpoint (Production Mode) ([#245](https://github.com/VilnaCRM-Org/website/issues/245)) ([3ef72ea](https://github.com/VilnaCRM-Org/website/commit/3ef72eac1f24b363dac7e62d922cc7267b04c08e)), closes [#243](https://github.com/VilnaCRM-Org/website/issues/243) [#243](https://github.com/VilnaCRM-Org/website/issues/243) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#0](https://github.com/VilnaCRM-Org/website/issues/0) [#243](https://github.com/VilnaCRM-Org/website/issues/243)
 
 
 

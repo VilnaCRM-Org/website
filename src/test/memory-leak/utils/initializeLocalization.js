@@ -1,12 +1,12 @@
-const i18n = require('i18next');
-const { initReactI18next } = require('react-i18next');
-const { loadEnvConfig } = require('@next/env');
+import i18n from 'i18next';
+import { initReactI18next } from 'react-i18next';
+import nextEnv from '@next/env';
+import i18nConfig from '../../../config/i18nConfig.js';
 
-const projectDir = process.cwd();
-loadEnvConfig(projectDir);
+const { loadEnvConfig } = nextEnv;
 
-const i18nConfig = require('../../../config/i18nConfig');
+loadEnvConfig(process.cwd());
 
-i18n.use(initReactI18next).init(i18nConfig);
+await i18n.use(initReactI18next).init(i18nConfig);
 
-module.exports = i18n;
+export default i18n;

@@ -21,8 +21,24 @@ const config: Config = {
   ],
   preset: 'ts-jest',
   testEnvironment: process.env.TEST_ENV === 'server' ? 'node' : 'jsdom',
+  transform: {
+    '^.+\\.(js|jsx|mjs|cjs|ts|tsx)$': [
+      'babel-jest',
+      { configFile: '<rootDir>/babel-jest.config.js' },
+    ],
+  },
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
   modulePathIgnorePatterns: ['<rootDir>/.stryker-tmp/'],
 };
 
-export default createJestConfig(config);
+// Use async config to properly merge transformIgnorePatterns
+export default async () => {
+  const nextJestConfig = await createJestConfig(config)();
+  return {
+    ...nextJestConfig,
+    transformIgnorePatterns: [
+      // Allow transforming ESM packages from pnpm's .pnpm folder
+      '/node_modules/.pnpm/(?!(uuid|@faker-js\\+faker)@)',
+    ],
+  };
+};

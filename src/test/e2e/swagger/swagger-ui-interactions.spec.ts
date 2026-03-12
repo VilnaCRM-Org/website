@@ -138,7 +138,7 @@ test.describe('Swagger UI Enhanced Interactions', () => {
         const responseTime: Locator = firstEndpoint.locator('.response-time');
         if (await responseTime.isVisible()) {
           const timeText: string | null = await responseTime.textContent();
-          expect(timeText).toMatch(/\d+ms/);
+          expect(timeText).toMatch(/\d+(\.\d+)?\s?(ms|s)/);
         }
       }
     }

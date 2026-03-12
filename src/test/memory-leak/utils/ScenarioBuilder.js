@@ -1,7 +1,8 @@
-const { loadEnvConfig } = require('@next/env');
+import nextEnv from '@next/env';
 
-const projectDir = process.cwd();
-loadEnvConfig(projectDir);
+const { loadEnvConfig } = nextEnv;
+
+loadEnvConfig(process.cwd());
 
 class ScenarioBuilder {
   constructor(path) {
@@ -19,8 +20,13 @@ class ScenarioBuilder {
   }
 
   createScenario(scenarioOptions) {
-    return { url: this.url, beforeInitialPageLoad: this.beforeInitialPageLoad, ...scenarioOptions };
+    // memlab scenarios are plain objects conforming to IScenario interface
+    return {
+      url: this.url,
+      beforeInitialPageLoad: this.beforeInitialPageLoad,
+      ...scenarioOptions,
+    };
   }
 }
 
-module.exports = ScenarioBuilder;
+export default ScenarioBuilder;

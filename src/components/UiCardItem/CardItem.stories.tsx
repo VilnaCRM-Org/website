@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/nextjs';
 
 import UiCardList from '../UiCardList';
 import { CardList } from '../UiCardList/types';
@@ -13,18 +13,16 @@ const meta: Meta<typeof UiCardList> = {
 
 export default meta;
 
-function CardItem(args: CardList): React.ReactElement {
-  return <UiCardList {...args} />;
-}
-
-type Story = StoryObj<typeof CardItem>;
+type Story = StoryObj<typeof UiCardList>;
 
 export const CardItemLarge: Story = {
+  render: (args: CardList) => <UiCardList {...args} />,
   args: {
     cardList: [LARGE_CARD_ITEM],
   },
 };
 export const CardItemSmall: Story = {
+  render: (args: CardList) => <UiCardList {...args} />,
   args: {
     cardList: [SMALL_CARD_ITEM],
   },

@@ -1,5 +1,5 @@
-const ScenarioBuilder = require('../utils/ScenarioBuilder');
-const safeClick = require('../utils/safeClick');
+import ScenarioBuilder from '../utils/ScenarioBuilder.js';
+import safeClick from '../utils/safeClick.js';
 
 const scenarioBuilder = new ScenarioBuilder('swagger');
 
@@ -144,4 +144,4 @@ async function back(page) {
   }
 }
 
-module.exports = scenarioBuilder.createScenario({ setup, action, back });
+export default scenarioBuilder.createScenario({ setup, action, back });

@@ -187,7 +187,7 @@ describe('Apollo Server - createUser mutation', () => {
     expect(errors?.[0].message).toContain(
       'Field "email" of required type "String!" was not provided'
     );
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(400);
   });
 
   it('should handle invalid input gracefully', async () => {
@@ -200,7 +200,7 @@ describe('Apollo Server - createUser mutation', () => {
 
     const { response, result, errors } = await createUser(url, { phone: '1234567890' });
 
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(400);
     expect(result.errors).toBeDefined();
     expect(errors?.[0].message).toContain(
       'Field "email" of required type "String!" was not provided'
