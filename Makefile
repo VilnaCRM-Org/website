@@ -332,9 +332,6 @@ memory-leak-dind: start-prod ## Run Memlab tests in isolated compose project (DI
 test-mutation: build ## Run mutation tests using Stryker after building the app
 	$(STRYKER_CMD)
 
-test-mutation-ci: ## Run mutation tests in CI without Docker image builds
-	CI=1 pnpm exec stryker run
-
 wait-for-prod-health: ## Wait for the prod container to reach a healthy state.
 	@echo "Waiting for prod container to become healthy (timeout: 60s)..."
 	@for i in $$(seq 1 30); do \

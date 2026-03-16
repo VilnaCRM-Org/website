@@ -66,8 +66,8 @@ const mockSwaggerSchema: SwaggerSchema = {
 describe('useSwagger', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockFetch.mockClear();
-    mockAbort.mockClear();
+    mockFetch.mockReset();
+    mockAbort.mockReset();
   });
 
   test('loads swagger schema successfully', async () => {
@@ -86,6 +86,52 @@ describe('useSwagger', () => {
       signal: 'mock-signal',
     });
     expect(result.current.error).toBeNull();
+  });
+
+  test('refetches swagger schema when the schema URL changes', async () => {
+    const updatedSwaggerSchema: SwaggerSchema = {
+      ...mockSwaggerSchema,
+      info: {
+        ...mockSwaggerSchema.info,
+        version: '2.0.0',
+      },
+    };
+
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async (): Promise<SwaggerSchema> => mockSwaggerSchema,
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async (): Promise<SwaggerSchema> => updatedSwaggerSchema,
+      });
+
+    const { result, rerender } = renderHook(
+      ({ schemaUrl }: { schemaUrl: string }) => useSwagger(schemaUrl),
+      {
+        initialProps: {
+          schemaUrl: '/swagger-schema.json',
+        },
+      }
+    );
+
+    await waitFor(() => {
+      expect(result.current.swaggerContent).toEqual(mockSwaggerSchema);
+    });
+
+    rerender({ schemaUrl: '/swagger-schema-v2.json' });
+
+    await waitFor(() => {
+      expect(result.current.swaggerContent).toEqual(updatedSwaggerSchema);
+    });
+
+    expect(mockFetch).toHaveBeenNthCalledWith(1, '/swagger-schema.json', {
+      signal: 'mock-signal',
+    });
+    expect(mockFetch).toHaveBeenNthCalledWith(2, '/swagger-schema-v2.json', {
+      signal: 'mock-signal',
+    });
   });
 
   test('handles fetch error when response is not ok', async () => {

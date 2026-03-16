@@ -17,7 +17,7 @@ const config = {
     'src/features/swagger/hooks/useSwagger.ts',
   ],
   ignorePatterns: ['dist', 'coverage', 'src/test/memory-leak/results/**'],
-  thresholds: { high: 99, break: 98 },
+  thresholds: { high: 100, break: 100 },
 };
 
 export default config;
