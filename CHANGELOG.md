@@ -1,3 +1,12 @@
+## [0.3.1](https://github.com/VilnaCRM-Org/website/compare/v0.3.0...v0.3.1) (2026-03-16)
+
+
+### Bug Fixes
+
+* stabilize swagger network failure assertions in CI ([#288](https://github.com/VilnaCRM-Org/website/issues/288)) ([0683cc7](https://github.com/VilnaCRM-Org/website/commit/0683cc72d2ed22ff70f530f740f7e2faa006718e))
+
+
+
 # [0.3.0](https://github.com/VilnaCRM-Org/website/compare/v0.2.13...v0.3.0) (2026-01-20)
 
 
@@ -31,15 +40,6 @@
 ### Bug Fixes
 
 * **#251:** add public ecr usage to resolve 429 error in the Apollo.Dockerfile ([#252](https://github.com/VilnaCRM-Org/website/issues/252)) ([0319963](https://github.com/VilnaCRM-Org/website/commit/03199634edaee9132aead84e3d94305ff4ccb9aa))
-
-
-
-## [0.2.10](https://github.com/VilnaCRM-Org/website/compare/v0.2.9...v0.2.10) (2025-10-15)
-
-
-### Bug Fixes
-
-* **#249:** add body to error response to prevent 5xx error ([#250](https://github.com/VilnaCRM-Org/website/issues/250)) ([a10b478](https://github.com/VilnaCRM-Org/website/commit/a10b4784814c3e746c23e8eb93c13d4e459e5891)), closes [#249](https://github.com/VilnaCRM-Org/website/issues/249)
 
 
 
