@@ -1,7 +1,7 @@
 import { t } from 'i18next';
 
 export const isValidEmailFormat: (email: string) => boolean = (email: string): boolean =>
-  /^.+@.+\..+$/.test(email);
+  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
 const validateEmail: (email: string) => string | boolean = (email: string): string | boolean => {
   if (!isValidEmailFormat(email)) {

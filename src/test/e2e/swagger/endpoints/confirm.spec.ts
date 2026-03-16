@@ -9,6 +9,8 @@ import {
 import {
   clearEndpointResponse,
   interceptWithErrorResponse,
+  interceptWithEmptyResponse,
+  interceptWithNetworkFailure,
   cancelOperation,
   initSwaggerPage,
   getAndCheckExecuteBtn,
@@ -56,6 +58,7 @@ async function fillConfirmBody(elements: ConfirmEndpointElements, token: string)
 test.describe('confirm endpoint tests', () => {
   test('successful confirmation with valid token', async ({ page }) => {
     const elements: ConfirmEndpointElements = await setupConfirmEndpoint(page);
+    await interceptWithEmptyResponse(page, CONFIRM_API_URL);
 
     await expect(elements.parametersSection).toBeVisible();
     await expect(elements.tokenInput).toBeVisible();
@@ -129,7 +132,7 @@ test.describe('confirm endpoint tests', () => {
   test('error response - CORS/Network failure', async ({ page }) => {
     const elements: ConfirmEndpointElements = await setupConfirmEndpoint(page);
 
-    await page.route(CONFIRM_API_URL, route => route.abort('failed'), { times: 1 });
+    await interceptWithNetworkFailure(page, CONFIRM_API_URL, { times: 1 });
 
     await fillConfirmBody(elements, confirmationToken);
     await elements.executeBtn.click();

@@ -1,6 +1,13 @@
-import { expect, Locator, Page } from '@playwright/test';
+import { expect } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 
-import { errorMessages, executeBtnSelector } from './constants';
+import { executeBtnSelector } from './constants';
+import {
+  CORS_HEADERS,
+  createNetworkFailureRouteHandler,
+  fulfillPreflight,
+  isExpectedFailureState,
+} from './networkFailure';
 
 import {
   getLocators,
@@ -59,14 +66,72 @@ export async function interceptWithErrorResponse(
   await page.route(
     url,
     async route => {
+      if (await fulfillPreflight(route)) {
+        return;
+      }
+
       await route.fulfill({
         status,
         contentType: 'application/json',
+        headers: CORS_HEADERS,
         body: JSON.stringify(errorResponse),
       });
-    },
-    { times: 1 }
+    }
   );
+}
+
+export async function interceptWithJsonResponse(
+  page: Page,
+  url: string | RegExp,
+  responseBody: unknown,
+  status: number = 200
+): Promise<void> {
+  await page.route(
+    url,
+    async route => {
+      if (await fulfillPreflight(route)) {
+        return;
+      }
+
+      await route.fulfill({
+        status,
+        contentType: 'application/json',
+        headers: CORS_HEADERS,
+        body: JSON.stringify(responseBody),
+      });
+    }
+  );
+}
+
+export async function interceptWithEmptyResponse(
+  page: Page,
+  url: string | RegExp,
+  status: number = 204
+): Promise<void> {
+  await page.route(
+    url,
+    async route => {
+      if (await fulfillPreflight(route)) {
+        return;
+      }
+
+      await route.fulfill({
+        status,
+        headers: CORS_HEADERS,
+        body: '',
+      });
+    }
+  );
+}
+
+export async function interceptWithNetworkFailure(
+  page: Page,
+  url: string | RegExp,
+  options?: {
+    times?: number;
+  }
+): Promise<void> {
+  await page.route(url, createNetworkFailureRouteHandler(options));
 }
 
 export async function cancelOperation(page: Page): Promise<void> {
@@ -86,30 +151,20 @@ export async function expectErrorOrFailureStatus(getEndpoint: Locator): Promise<
   const errorElement: Locator = getEndpoint
     .locator('.response-col_description .renderedMarkdown p')
     .first();
-  const statusElement: Locator = getEndpoint.locator('.response .response-col_status').first();
+  const responseBody: Locator = getEndpoint.locator('.response .highlight-code').first();
+  const statusLocator: Locator = getEndpoint.locator('.response .response-col_status').first();
 
   await expect(errorElement).toBeVisible();
-  await expect(statusElement).toBeVisible();
 
-  const [errorText, statusText] = await Promise.all([
-    errorElement.textContent(),
-    statusElement.textContent(),
-  ]);
+  const errorText: string | null = await errorElement.textContent();
+  const responseBodyText: string | null = await responseBody.textContent().catch(() => null);
+  const statusText: string | null = await statusLocator.textContent().catch(() => null);
+  const combinedErrorText: string = [errorText, responseBodyText]
+    .filter((value): value is string => Boolean(value))
+    .join('\n')
+    .trim();
 
-  const cleanStatusText: string = (statusText || '').trim();
-  const cleanErrorText: string = (errorText || '').trim();
-
-  const hasErrorMessage: boolean = Object.values(errorMessages).some(msg =>
-    cleanErrorText.includes(msg)
-  );
-
-  const hasFailureStatus: boolean =
-    /^(0|4\d{2}|5\d{2})/.test(cleanStatusText) ||
-    cleanStatusText === 'Undocumented' ||
-    cleanStatusText === '';
-
-  expect(hasFailureStatus).toBe(true);
-  expect(hasErrorMessage).toBe(true);
+  expect(isExpectedFailureState(combinedErrorText, statusText)).toBe(true);
 }
 
 export function buildSafeUrl(baseUrl: string, id: string): string {

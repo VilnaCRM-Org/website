@@ -8,6 +8,7 @@ import {
   getAndCheckExecuteBtn,
   cancelOperation,
   expectErrorOrFailureStatus,
+  interceptWithNetworkFailure,
 } from '../utils/helpers';
 import { locators } from '../utils/locators';
 
@@ -183,7 +184,7 @@ test.describe('OAuth authorize endpoint', () => {
     await elements.scopeInput.fill(testOAuthParams.scope);
     await elements.stateInput.fill(testOAuthParams.state);
 
-    await page.route(AUTHORIZE_API_URL, r => r.abort('failed'));
+    await interceptWithNetworkFailure(page, AUTHORIZE_API_URL);
     const redirectRe: RegExp = new RegExp(
       `^${testOAuthParams.redirectUri.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}.*`
     );

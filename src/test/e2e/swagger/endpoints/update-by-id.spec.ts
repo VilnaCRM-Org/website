@@ -8,12 +8,15 @@ import {
   BasicEndpointElements,
   UpdatedUser,
   ApiUser,
+  MOCK_API_USER,
 } from '../utils/constants';
 import {
   initSwaggerPage,
   clearEndpointResponse,
   getAndCheckExecuteBtn,
   interceptWithErrorResponse,
+  interceptWithJsonResponse,
+  interceptWithNetworkFailure,
   cancelOperation,
   expectErrorOrFailureStatus,
   parseJsonSafe,
@@ -71,6 +74,7 @@ async function setupUpdateUserEndpoint(page: Page): Promise<UpdateUserEndpointEl
 test.describe('updateById', () => {
   test('default values', async ({ page }) => {
     const elements: UpdateUserEndpointElements = await setupUpdateUserEndpoint(page);
+    await interceptWithJsonResponse(page, UPDATE_USER_API_URL(testUserId), MOCK_API_USER);
 
     await expect(elements.parametersSection).toBeVisible();
     await expect(elements.idInput).toBeVisible();
@@ -112,6 +116,7 @@ test.describe('updateById', () => {
 
   test('custom values', async ({ page }) => {
     const elements: UpdateUserEndpointElements = await setupUpdateUserEndpoint(page);
+    await interceptWithJsonResponse(page, UPDATE_USER_API_URL(testUserId), MOCK_API_USER);
 
     const customRequestBody: UpdatedUser = {
       email: 'updated@example.com',
@@ -170,6 +175,7 @@ test.describe('updateById', () => {
 
   test('download', async ({ page }) => {
     const elements: UpdateUserEndpointElements = await setupUpdateUserEndpoint(page);
+    await interceptWithJsonResponse(page, UPDATE_USER_API_URL(testUserId), MOCK_API_USER);
 
     await elements.idInput.fill(testUserId);
     await elements.jsonEditor.fill(
@@ -254,7 +260,7 @@ test.describe('updateById', () => {
   test('error response - CORS/Network failure', async ({ page }) => {
     const elements: UpdateUserEndpointElements = await setupUpdateUserEndpoint(page);
 
-    await page.route(`**/api/users/${testUserId}`, route => route.abort('failed'));
+    await interceptWithNetworkFailure(page, `**/api/users/${testUserId}`);
 
     await elements.idInput.fill(testUserId);
     await elements.jsonEditor.fill(

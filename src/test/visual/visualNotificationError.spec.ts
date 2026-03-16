@@ -1,7 +1,6 @@
 import { test, Locator, expect, Route } from '@playwright/test';
 
-import { currentLanguage, placeholders, screenSizes } from '@/test/visual/constants';
-
+import { currentLanguage, placeholders, screenSizes } from './constants';
 import { errorResponse, ErrorResponseProps } from './graphqlMocks';
 
 const serverErrorResponse: ErrorResponseProps = {

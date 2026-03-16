@@ -4,8 +4,12 @@ const mockFetch: jest.Mock = jest.fn();
 global.fetch = mockFetch;
 
 const mockWriteFile: jest.MockedFunction<typeof writeFile> = jest.fn();
+const mockExistsSync: jest.Mock = jest.fn();
 
 jest.mock('dotenv/config', () => ({}), { virtual: true });
+jest.mock('node:fs', () => ({
+  existsSync: mockExistsSync,
+}));
 jest.mock('node:fs/promises', () => ({
   writeFile: mockWriteFile,
 }));
@@ -24,6 +28,7 @@ const mockExit: jest.SpyInstance = jest.spyOn(process, 'exit').mockImplementatio
 type SwaggerModule = {
   buildSpecUrl: () => string;
   fetchSwaggerYaml: (url: string) => Promise<string>;
+  refreshSwaggerSchema: (url: string, filePath: string) => Promise<boolean>;
   saveSwaggerJson: (yamlText: string, filePath: string) => Promise<void>;
 };
 
@@ -33,6 +38,7 @@ describe('swagger utils', () => {
 
   let buildSpecUrl: () => string;
   let fetchSwaggerYaml: (url: string) => Promise<string>;
+  let refreshSwaggerSchema: (url: string, filePath: string) => Promise<boolean>;
   let saveSwaggerJson: (yamlText: string, filePath: string) => Promise<void>;
 
   beforeAll(async () => {
@@ -46,12 +52,15 @@ describe('swagger utils', () => {
     const swaggerModule: SwaggerModule = await import('../../../../scripts/fetchSwaggerSchema.mjs');
     buildSpecUrl = swaggerModule.buildSpecUrl;
     fetchSwaggerYaml = swaggerModule.fetchSwaggerYaml;
+    refreshSwaggerSchema = swaggerModule.refreshSwaggerSchema;
     saveSwaggerJson = swaggerModule.saveSwaggerJson;
   });
 
   beforeEach(() => {
     mockFetch.mockClear();
     mockWriteFile.mockClear();
+    mockExistsSync.mockClear();
+    mockExistsSync.mockReturnValue(false);
 
     mockFetch.mockResolvedValue({
       ok: true,
@@ -110,6 +119,27 @@ describe('swagger utils', () => {
       JSON.stringify({ swagger: '2.0' }, null, 2)
     );
   });
+
+  test('refreshSwaggerSchema rethrows fetch failures even when a local schema exists', async () => {
+    mockExistsSync.mockReturnValue(true);
+    mockFetch.mockRejectedValueOnce(new TypeError('fetch failed'));
+
+    await expect(refreshSwaggerSchema(expectedUrl, './public/swagger-schema.json')).rejects.toThrow(
+      'fetch failed'
+    );
+
+    expect(mockWriteFile).not.toHaveBeenCalled();
+  });
+
+  test('refreshSwaggerSchema rethrows fetch failures when no local schema exists', async () => {
+    mockExistsSync.mockReturnValue(false);
+    mockFetch.mockRejectedValueOnce(new TypeError('fetch failed'));
+
+    await expect(refreshSwaggerSchema(expectedUrl, './public/swagger-schema.json')).rejects.toThrow(
+      'fetch failed'
+    );
+  });
+
   test('fetchSwaggerYaml throws if url is missing or invalid', async () => {
     // @ts-expect-error testing runtime type check
     await expect(fetchSwaggerYaml(undefined)).rejects.toThrow(

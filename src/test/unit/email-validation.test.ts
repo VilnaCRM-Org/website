@@ -1,4 +1,3 @@
-import { faker } from '@faker-js/faker';
 import { t } from 'i18next';
 
 import { validateEmail } from '../../features/landing/components/AuthSection/Validations';
@@ -8,7 +7,7 @@ const emailStepError: string = t('sign_up.form.email_input.email_format_error');
 const emailInvalidError: string = t('sign_up.form.email_input.invalid_message');
 const invalidTestEmailWithoutDot: string = 'test@example';
 const invalidTestEmailWithDot: string = 'test@example.';
-const correctEmail: string = faker.internet.email();
+const correctEmail: string = 'valid.user@example.com';
 
 describe('Email Tests', () => {
   describe('isValidEmailFormat', () => {
@@ -25,6 +24,8 @@ describe('Email Tests', () => {
       expect(isValidEmailFormat('user@.com')).toBe(false);
       expect(isValidEmailFormat('user@domain')).toBe(false);
       expect(isValidEmailFormat('@example-domain.com')).toBe(false);
+      expect(isValidEmailFormat('prefix user@example.com')).toBe(false);
+      expect(isValidEmailFormat('user@example.com suffix')).toBe(false);
     });
   });
 
@@ -50,6 +51,7 @@ describe('Email Tests', () => {
       expect(validateEmail('example@.com')).toBe(emailInvalidError);
       expect(validateEmail('@domain.com')).toBe(emailInvalidError);
       expect(validateEmail('example@domain.')).toBe(emailInvalidError);
+      expect(validateEmail('user@example.com suffix')).toBe(emailInvalidError);
     });
   });
 });

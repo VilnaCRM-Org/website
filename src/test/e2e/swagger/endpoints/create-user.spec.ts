@@ -1,11 +1,20 @@
 import { expect, type Locator, Page, test } from '@playwright/test';
 
-import { ApiUser, BASE_API, BasicEndpointElements, TEST_USERS, User } from '../utils/constants';
+import {
+  ApiUser,
+  BASE_API,
+  BasicEndpointElements,
+  MOCK_API_USER,
+  TEST_USERS,
+  User,
+} from '../utils/constants';
 import {
   initSwaggerPage,
   clearEndpointResponse,
   getAndCheckExecuteBtn,
   interceptWithErrorResponse,
+  interceptWithJsonResponse,
+  interceptWithNetworkFailure,
   cancelOperation,
   expectErrorOrFailureStatus,
   parseJsonSafe,
@@ -79,6 +88,7 @@ test.describe('Create user endpoint tests', () => {
 
   test('successful user creation', async ({ page }) => {
     const elements: CreateUserEndpointElements = await setupCreateUserEndpoint(page);
+    await interceptWithJsonResponse(page, API_URL, MOCK_API_USER);
 
     await fillRequestBody(elements, TEST_USERS.VALID);
     await elements.executeBtn.click();
@@ -115,6 +125,7 @@ test.describe('Create user endpoint tests', () => {
   });
   test('empty object in request body', async ({ page }) => {
     const elements: CreateUserEndpointElements = await setupCreateUserEndpoint(page);
+    await interceptWithJsonResponse(page, API_URL, MOCK_API_USER);
 
     await fillRequestBody(elements, {});
     await elements.executeBtn.click();
@@ -128,6 +139,7 @@ test.describe('Create user endpoint tests', () => {
   });
   test('object with empty values', async ({ page }) => {
     const elements: CreateUserEndpointElements = await setupCreateUserEndpoint(page);
+    await interceptWithJsonResponse(page, API_URL, MOCK_API_USER);
 
     await fillRequestBody(elements, {
       email: '',
@@ -145,6 +157,7 @@ test.describe('Create user endpoint tests', () => {
   });
   test('partially filled request body', async ({ page }) => {
     const elements: CreateUserEndpointElements = await setupCreateUserEndpoint(page);
+    await interceptWithJsonResponse(page, API_URL, MOCK_API_USER);
 
     await fillRequestBody(elements, {
       email: 'test@example.com',
@@ -197,7 +210,7 @@ test.describe('Create user endpoint tests', () => {
   test('error response - CORS/Network failure', async ({ page }) => {
     const elements: CreateUserEndpointElements = await setupCreateUserEndpoint(page);
 
-    await page.route('**/api/users', route => route.abort('failed'), { times: 1 });
+    await interceptWithNetworkFailure(page, '**/api/users', { times: 1 });
 
     await fillRequestBody(elements, TEST_USERS.VALID);
     await elements.executeBtn.click();
@@ -208,6 +221,7 @@ test.describe('Create user endpoint tests', () => {
   });
   test('response download functionality', async ({ page }) => {
     const elements: CreateUserEndpointElements = await setupCreateUserEndpoint(page);
+    await interceptWithJsonResponse(page, API_URL, MOCK_API_USER);
 
     await fillRequestBody(elements, TEST_USERS.VALID);
     await elements.executeBtn.click();

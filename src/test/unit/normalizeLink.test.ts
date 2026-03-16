@@ -9,6 +9,10 @@ describe('normalizeLink', () => {
     expect(normalizeLink('#test#section')).toBe('test#section');
   });
 
+  it('does not strip non-leading hash characters', () => {
+    expect(normalizeLink('test#section')).toBe('test#section');
+  });
+
   it('handles multiple leading hashes correctly', () => {
     expect(normalizeLink('##test')).toBe('#test');
   });

@@ -8,6 +8,8 @@ import {
   getAndCheckExecuteBtn,
   cancelOperation,
   getEndpointCopyButton,
+  interceptWithJsonResponse,
+  interceptWithNetworkFailure,
   expectErrorOrFailureStatus,
   collapseEndpoint,
 } from '../utils/helpers';
@@ -64,6 +66,11 @@ async function setupTokenEndpoint(page: Page): Promise<TokenEndpointElements> {
 test.describe('OAuth token endpoint', () => {
   test('success scenario', async ({ page }) => {
     const elements: TokenEndpointElements = await setupTokenEndpoint(page);
+    await interceptWithJsonResponse(page, TOKEN_API_URL, {
+      access_token: 'mock-access-token',
+      token_type: 'Bearer',
+      expires_in: 3600,
+    });
     await expect(elements.contentTypeSelect).toBeVisible();
     await expect(elements.contentTypeSelect).toHaveValue('application/json');
     await expect(elements.requestBodyEditor).toBeVisible();
@@ -115,7 +122,7 @@ test.describe('OAuth token endpoint', () => {
     const elements: TokenEndpointElements = await setupTokenEndpoint(page);
     await elements.requestBodyEditor.fill(JSON.stringify(TEST_OAUTH_DATA, null, 2));
 
-    await page.route(TOKEN_API_URL, route => route.abort('failed'), { times: 1 });
+    await interceptWithNetworkFailure(page, TOKEN_API_URL, { times: 1 });
 
     await elements.executeBtn.click();
 
