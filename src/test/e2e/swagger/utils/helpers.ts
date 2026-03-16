@@ -147,24 +147,44 @@ export async function getEndpointCopyButton(endpoint: Locator): Promise<Locator>
   return endpoint.locator('.curl-command .copy-to-clipboard button');
 }
 
-export async function expectErrorOrFailureStatus(getEndpoint: Locator): Promise<void> {
-  const errorElement: Locator = getEndpoint
-    .locator('.response-col_description .renderedMarkdown p')
-    .first();
+async function readFailureState(getEndpoint: Locator): Promise<{
+  combinedErrorText: string;
+  statusText: string | null;
+}> {
+  const responseDescription: Locator = getEndpoint.locator('.response-col_description').first();
   const responseBody: Locator = getEndpoint.locator('.response .highlight-code').first();
   const statusLocator: Locator = getEndpoint.locator('.response .response-col_status').first();
 
-  await expect(errorElement).toBeVisible();
-
-  const errorText: string | null = await errorElement.textContent();
+  const descriptionText: string | null = await responseDescription.textContent().catch(() => null);
   const responseBodyText: string | null = await responseBody.textContent().catch(() => null);
   const statusText: string | null = await statusLocator.textContent().catch(() => null);
-  const combinedErrorText: string = [errorText, responseBodyText]
+  const combinedErrorText: string = [descriptionText, responseBodyText]
     .filter((value): value is string => Boolean(value))
     .join('\n')
     .trim();
 
-  expect(isExpectedFailureState(combinedErrorText, statusText)).toBe(true);
+  return {
+    combinedErrorText,
+    statusText,
+  };
+}
+
+export async function expectErrorOrFailureStatus(getEndpoint: Locator): Promise<void> {
+  const responseSection: Locator = getEndpoint.locator('.responses-wrapper, .responses-inner').first();
+
+  await expect(responseSection).toBeVisible();
+  await expect
+    .poll(
+      async (): Promise<boolean> => {
+        const { combinedErrorText, statusText } = await readFailureState(getEndpoint);
+
+        return isExpectedFailureState(combinedErrorText, statusText);
+      },
+      {
+        timeout: 10000,
+      }
+    )
+    .toBe(true);
 }
 
 export function buildSafeUrl(baseUrl: string, id: string): string {
