@@ -1,6 +1,13 @@
-import { expect, Locator, Page } from '@playwright/test';
+import { expect } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 
-import { errorMessages, executeBtnSelector } from './constants';
+import { executeBtnSelector } from './constants';
+import {
+  CORS_HEADERS,
+  createNetworkFailureRouteHandler,
+  fulfillPreflight,
+  isExpectedFailureState,
+} from './networkFailure';
 
 import {
   getLocators,
@@ -48,31 +55,6 @@ interface ErrorResponse {
   details?: {
     [key: string]: string;
   };
-}
-
-const CORS_HEADERS: Record<string, string> = {
-  'access-control-allow-origin': '*',
-  'access-control-allow-methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
-  'access-control-allow-headers': '*',
-};
-
-async function fulfillPreflight(route: Parameters<Page['route']>[1] extends (
-  route: infer T,
-  ...args: never[]
-) => unknown
-  ? T
-  : never): Promise<boolean> {
-  if (route.request().method() !== 'OPTIONS') {
-    return false;
-  }
-
-  await route.fulfill({
-    status: 204,
-    headers: CORS_HEADERS,
-    body: '',
-  });
-
-  return true;
 }
 
 export async function interceptWithErrorResponse(
@@ -149,17 +131,7 @@ export async function interceptWithNetworkFailure(
     times?: number;
   }
 ): Promise<void> {
-  await page.route(
-    url,
-    async route => {
-      if (await fulfillPreflight(route)) {
-        return;
-      }
-
-      await route.abort('failed');
-    },
-    options
-  );
+  await page.route(url, createNetworkFailureRouteHandler(options));
 }
 
 export async function cancelOperation(page: Page): Promise<void> {
@@ -180,28 +152,19 @@ export async function expectErrorOrFailureStatus(getEndpoint: Locator): Promise<
     .locator('.response-col_description .renderedMarkdown p')
     .first();
   const responseBody: Locator = getEndpoint.locator('.response .highlight-code').first();
+  const statusLocator: Locator = getEndpoint.locator('.response .response-col_status').first();
 
   await expect(errorElement).toBeVisible();
 
   const errorText: string | null = await errorElement.textContent();
   const responseBodyText: string | null = await responseBody.textContent().catch(() => null);
+  const statusText: string | null = await statusLocator.textContent().catch(() => null);
   const combinedErrorText: string = [errorText, responseBodyText]
     .filter((value): value is string => Boolean(value))
     .join('\n')
     .trim();
 
-  const browserSpecificFailureMarkers: readonly string[] = [
-    'Possible Reasons',
-    'Network Failure',
-    'TypeError',
-    'Undocumented',
-  ];
-
-  const hasErrorMessage: boolean = [...Object.values(errorMessages), ...browserSpecificFailureMarkers].some(
-    msg => combinedErrorText.includes(msg)
-  );
-
-  expect(hasErrorMessage || combinedErrorText.length > 0).toBe(true);
+  expect(isExpectedFailureState(combinedErrorText, statusText)).toBe(true);
 }
 
 export function buildSafeUrl(baseUrl: string, id: string): string {

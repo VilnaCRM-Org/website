@@ -11,8 +11,16 @@ type HeaderTranslation = {
 const logoAlt: string = (headerEnTranslations as HeaderTranslation).header.logo_alt;
 
 async function expectLogoNavigatesHome(page: Page, logoLink: Locator): Promise<void> {
+  const expectedOrigin: string = new URL(page.url()).origin;
+
   await Promise.all([
-    page.waitForURL(url => new URL(url).pathname === '/', { timeout: 15000 }),
+    page.waitForURL(
+      url => {
+        const targetUrl: URL = new URL(url);
+        return targetUrl.origin === expectedOrigin && targetUrl.pathname === '/';
+      },
+      { timeout: 15000 }
+    ),
     logoLink.click(),
   ]);
 }

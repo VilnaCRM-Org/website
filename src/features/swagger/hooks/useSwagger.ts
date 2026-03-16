@@ -28,7 +28,7 @@ const useSwagger: () => UseSwaggerReturn = () => {
     return () => {
       controller.abort();
     };
-    /* Stryker disable next-line all: any constant dependency literal is equivalent here. */
+    // Stryker disable next-line ArrayDeclaration: any constant dependency literal is equivalent here.
   }, []);
 
   return { swaggerContent, error };

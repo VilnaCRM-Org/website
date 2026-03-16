@@ -31,6 +31,23 @@ interface SwaggerSchema {
   paths: Record<string, unknown>;
 }
 
+type DeferredPromise<T> = {
+  promise: Promise<T>;
+  reject: (reason?: unknown) => void;
+  resolve: (value: T | PromiseLike<T>) => void;
+};
+
+function createDeferredPromise<T>(): DeferredPromise<T> {
+  let resolve!: DeferredPromise<T>['resolve'];
+  let reject!: DeferredPromise<T>['reject'];
+  const promise: Promise<T> = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+
+  return { promise, reject, resolve };
+}
+
 const mockSwaggerSchema: SwaggerSchema = {
   openapi: '3.0.0',
   info: {
@@ -119,18 +136,19 @@ describe('useSwagger', () => {
 
   test('ignores AbortError while the hook is still mounted', async () => {
     const abortError: DOMException = new MockDOMException('Aborted', 'AbortError') as DOMException;
-    mockFetch.mockRejectedValueOnce(abortError);
+    const deferredFetch: DeferredPromise<never> = createDeferredPromise<never>();
+    mockFetch.mockReturnValueOnce(deferredFetch.promise);
 
     const { result } = renderHook(() => useSwagger());
 
-    await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      deferredFetch.reject(abortError);
+      await deferredFetch.promise.catch(() => undefined);
     });
 
-    await waitFor(() => {
-      expect(result.current.error).toBeNull();
-      expect(result.current.swaggerContent).toBeNull();
-    });
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(result.current.error).toBeNull();
+    expect(result.current.swaggerContent).toBeNull();
   });
 
   test('aborts fetch when component unmounts', () => {

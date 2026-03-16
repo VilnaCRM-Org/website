@@ -33,12 +33,17 @@ export async function saveSwaggerJson(yamlText, filePath) {
   await writeFile(filePath, JSON.stringify(jsonContent, null, 2));
 }
 
+export async function refreshSwaggerSchema(url, filePath) {
+  const swaggerSchema = await fetchSwaggerYaml(url);
+  await saveSwaggerJson(swaggerSchema, filePath);
+  console.log('✅ Swagger schema saved as JSON');
+  return true;
+}
+
 (async () => {
   try {
     const swaggerUrl = buildSpecUrl();
-    const swaggerSchema = await fetchSwaggerYaml(swaggerUrl);
-    await saveSwaggerJson(swaggerSchema, swaggerPath);
-    console.log('✅ Swagger schema saved as JSON');
+    await refreshSwaggerSchema(swaggerUrl, swaggerPath);
   } catch (err) {
     console.error('❌ Failed to fetch/save swagger schema:', err);
     process.exitCode = 1;

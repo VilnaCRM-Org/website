@@ -69,16 +69,6 @@ export const screenSizes: { width: number; height: number; name: string }[] = [
 
 export const currentLanguage: string = process.env.NEXT_PUBLIC_MAIN_LANGUAGE as string;
 export const timeoutDuration: number = 3000;
-const defaultVisualMaxDiffPixels: number = 20;
-const webkitVisualMaxDiffPixels: number = 30;
-const webkitFullPageVisualMaxDiffPixels: number = 40;
-
-export const getVisualMaxDiffPixels: (browserName: string) => number = (browserName: string): number =>
-  browserName === 'webkit' ? webkitVisualMaxDiffPixels : defaultVisualMaxDiffPixels;
-
-export const getFullPageVisualMaxDiffPixels: (browserName: string) => number = (
-  browserName: string,
-): number => (browserName === 'webkit' ? webkitFullPageVisualMaxDiffPixels : defaultVisualMaxDiffPixels);
 
 interface PlaceholderFields {
   name: string;
