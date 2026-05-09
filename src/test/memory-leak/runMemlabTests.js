@@ -13,30 +13,43 @@ const testsDir = './tests';
 
 const baseWorkDir = './src/test/memory-leak/results';
 const consoleMode = 'VERBOSE';
+const defaultProtocolTimeout = 10 * 60 * 1000;
+
+const configuredProtocolTimeout = Number.parseInt(process.env.MEMLAB_PROTOCOL_TIMEOUT ?? '', 10);
+memlabApi.config.puppeteerConfig.protocolTimeout =
+  Number.isFinite(configuredProtocolTimeout) && configuredProtocolTimeout > 0
+    ? configuredProtocolTimeout
+    : defaultProtocolTimeout;
 
 (async function runMemlab() {
   const testFilePaths = fs
     .readdirSync(`${memoryLeakDir}/${testsDir}`)
+    .sort()
     .map(test => `${testsDir}/${test}`);
 
   for (const testFilePath of testFilePaths) {
     const testName = path.basename(testFilePath, '.js');
     const workDir = `${baseWorkDir}/${testName}`;
+    let runResult;
 
     const scenarioModule = await import(new URL(testFilePath, import.meta.url).href);
     const scenario = scenarioModule.default ?? scenarioModule;
 
-    const { runResult } = await run({
-      scenario,
-      consoleMode,
-      workDir,
-      skipWarmup: process.env.MEMLAB_SKIP_WARMUP === 'true',
-      debug: process.env.MEMLAB_DEBUG === 'true',
-    });
+    process.stdout.write(`Running memory leak test: ${testName}\n`);
 
-    const analyzer = new StringAnalysis();
-    await analyze(runResult, analyzer);
+    try {
+      ({ runResult } = await run({
+        scenario,
+        consoleMode,
+        workDir,
+        skipWarmup: process.env.MEMLAB_SKIP_WARMUP === 'true',
+        debug: process.env.MEMLAB_DEBUG === 'true',
+      }));
 
-    runResult.cleanup();
+      const analyzer = new StringAnalysis();
+      await analyze(runResult, analyzer);
+    } finally {
+      runResult?.cleanup();
+    }
   }
 })();

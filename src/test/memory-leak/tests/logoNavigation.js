@@ -60,14 +60,15 @@ async function getHeaderLogoLink(page) {
 }
 
 async function action(page) {
-  await getHeaderLogoLink(page);
+  const logoLink = await getHeaderLogoLink(page);
 
-  // Navigation may not fire if we're already on "/" (SPA), so allow timeout without failing.
-  const maybeNavigation = page
-    .waitForNavigation({ waitUntil: 'networkidle0', timeout: 5000 })
-    .catch(() => null);
-
-  await Promise.all([maybeNavigation, page.goBack().catch(() => null)]);
+  await logoLink.evaluate(link => {
+    link.addEventListener('click', event => event.preventDefault(), {
+      capture: true,
+      once: true,
+    });
+  });
+  await logoLink.click();
 
   await new Promise(resolve => {
     setTimeout(resolve, 500);
@@ -75,11 +76,11 @@ async function action(page) {
 }
 
 async function back(page) {
-  const maybeNavigation = page
-    .waitForNavigation({ waitUntil: 'networkidle0', timeout: 5000 })
-    .catch(() => null);
-
-  await Promise.all([maybeNavigation, page.goBack().catch(() => null)]);
+  await page.evaluate(() => {
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+  });
 
   await new Promise(resolve => {
     setTimeout(resolve, 500);
