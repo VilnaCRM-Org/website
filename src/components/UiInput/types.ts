@@ -1,3 +1,5 @@
+import { TextFieldProps } from '@mui/material';
+
 export interface UiInputProps {
   sx?: React.CSSProperties;
   placeholder?: string;
@@ -8,6 +10,6 @@ export interface UiInputProps {
   type?: string;
   fullWidth?: boolean;
   disabled?: boolean;
-  onInput?: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onInput?: TextFieldProps['onInput'];
   id?: string;
 }

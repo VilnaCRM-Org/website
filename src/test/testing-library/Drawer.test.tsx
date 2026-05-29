@@ -54,8 +54,9 @@ describe('Drawer', () => {
     const exitButton: HTMLElement = getByLabelText(buttonToCloseDrawer);
     fireEvent.click(exitButton);
 
-    const drawer: HTMLElement | null = queryByRole(drawerContentRole);
-    expect(drawer).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(queryByRole(drawerContentRole)).not.toBeInTheDocument();
+    });
   });
 
   it('renders logo', () => {
