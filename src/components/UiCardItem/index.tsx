@@ -20,7 +20,7 @@ function UiCardItem({ item }: UiCardItemProps): React.ReactElement {
         alt={t(item.alt)}
         sx={isSmallCard ? styles.smallImage : styles.largeImage}
       />
-      <Stack flexDirection="column">
+      <Stack direction="column">
         <CardContent item={item} isSmallCard={isSmallCard} />
       </Stack>
     </Stack>

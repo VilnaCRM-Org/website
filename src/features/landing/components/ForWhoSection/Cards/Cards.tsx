@@ -12,7 +12,7 @@ function Cards(): React.ReactElement {
   const { t } = useTranslation();
 
   return (
-    <Stack flexDirection="column" sx={styles.wrapper}>
+    <Stack direction="column" sx={styles.wrapper}>
       <UiTypography sx={styles.secondTitle}>{t('for_who.heading_secondary')}</UiTypography>
       <Stack sx={styles.cardWrapper}>
         <Stack sx={styles.cardItem}>

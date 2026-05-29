@@ -73,7 +73,7 @@ function AuthForm({
           />
         </Stack>
         <Stack sx={styles.inputWrapper}>
-          <Stack direction="row" alignItems="center" gap="0.25rem">
+          <Stack direction="row" sx={{ alignItems: 'center', gap: '0.25rem' }}>
             <UiTypography
               variant="medium14"
               sx={styles.inputTitle}

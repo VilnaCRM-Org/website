@@ -1,6 +1,5 @@
 import { render } from '@testing-library/react';
 import { t } from 'i18next';
-import React from 'react';
 
 import ForWhoSection from '../../features/landing/components/ForWhoSection/ForWhoSection';
 

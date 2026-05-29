@@ -1,7 +1,6 @@
 import '@testing-library/jest-dom';
 import { render, fireEvent, waitFor } from '@testing-library/react';
 import { t } from 'i18next';
-import React from 'react';
 
 import Drawer from '../../features/landing/components/Header/Drawer/Drawer';
 

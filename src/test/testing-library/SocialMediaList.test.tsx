@@ -1,5 +1,4 @@
 import { render } from '@testing-library/react';
-import React from 'react';
 
 import { testSocialDrawerItem } from '../../features/landing/components/SocialMedia/constants';
 import SocialMediaList from '../../features/landing/components/SocialMedia/SocialMediaList/SocialMediaList';

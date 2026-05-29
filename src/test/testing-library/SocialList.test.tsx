@@ -1,5 +1,4 @@
 import { render } from '@testing-library/react';
-import React from 'react';
 
 import { testSocialLink } from '../../features/landing/components/AuthSection/constants';
 import SocialList from '../../features/landing/components/AuthSection/SocialList/SocialList';

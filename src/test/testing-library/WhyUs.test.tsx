@@ -1,6 +1,5 @@
 import { render } from '@testing-library/react';
 import { t } from 'i18next';
-import React from 'react';
 
 import WhyUs from '../../features/landing/components/WhyUs';
 

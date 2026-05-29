@@ -1,6 +1,5 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent, { UserEvent } from '@testing-library/user-event';
-import React from 'react';
 
 import WrapperUiTooltip from '@/components/UiTooltip/TooltipWrapper';
 import { UiTooltipProps } from '@/components/UiTooltip/types';
