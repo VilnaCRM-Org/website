@@ -4,7 +4,11 @@ import { currentLanguage, screenSizes, timeoutDuration } from './constants';
 
 test.describe('Visual Tests', () => {
   screenSizes.forEach(screen => {
-    test(`${screen.name} test`, async ({ page }) => {
+    test(`${screen.name} test`, async ({ page, browserName }) => {
+      const hasKnownWebkitTextDiff =
+        browserName === 'webkit' &&
+        ['full', 'desktop', 'desktop2', 'tablet', 'tablet2'].includes(screen.name);
+
       await page.goto('/');
 
       await page.waitForLoadState('networkidle');
@@ -24,6 +28,7 @@ test.describe('Visual Tests', () => {
 
       await expect(page).toHaveScreenshot(`${currentLanguage}_${screen.name}.png`, {
         fullPage: true,
+        ...(hasKnownWebkitTextDiff ? { maxDiffPixels: 2 } : {}),
       });
     });
   });

@@ -9,6 +9,7 @@ export default {
   },
 
   link: {
+    display: 'inline-flex',
     color: 'inherit',
     textDecoration: 'none',
   },

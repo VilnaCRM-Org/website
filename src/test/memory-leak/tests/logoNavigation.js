@@ -6,7 +6,7 @@ import '../utils/initializeLocalization.js';
 const { loadEnvConfig } = nextEnv;
 loadEnvConfig(process.cwd());
 
-const scenarioBuilder = new ScenarioBuilder();
+const scenarioBuilder = new ScenarioBuilder('swagger');
 
 const headerLogoLabels = Array.from(
   new Set(
@@ -59,31 +59,43 @@ async function getHeaderLogoLink(page) {
   return logoLink;
 }
 
-async function action(page) {
-  await getHeaderLogoLink(page);
-
-  // Navigation may not fire if we're already on "/" (SPA), so allow timeout without failing.
-  const maybeNavigation = page
-    .waitForNavigation({ waitUntil: 'networkidle0', timeout: 5000 })
-    .catch(() => null);
-
-  await Promise.all([maybeNavigation, page.goBack().catch(() => null)]);
-
-  await new Promise(resolve => {
-    setTimeout(resolve, 500);
+function delay(ms) {
+  return new Promise(resolve => {
+    setTimeout(resolve, ms);
   });
 }
 
+function waitForPath(page, expectedPath) {
+  if (typeof page.waitForFunction === 'function') {
+    return page
+      .waitForFunction(
+        path => window.location.pathname === path,
+        { timeout: 5000 },
+        expectedPath
+      )
+      .catch(() => null);
+  }
+
+  if (typeof page.waitForNavigation === 'function') {
+    return page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 5000 }).catch(() => null);
+  }
+
+  return Promise.resolve(null);
+}
+
+async function action(page) {
+  const logoLink = await getHeaderLogoLink(page);
+  const maybePathChange = waitForPath(page, '/');
+
+  await Promise.all([maybePathChange, logoLink.click()]);
+  await delay(500);
+}
+
 async function back(page) {
-  const maybeNavigation = page
-    .waitForNavigation({ waitUntil: 'networkidle0', timeout: 5000 })
-    .catch(() => null);
+  const maybePathChange = waitForPath(page, '/swagger');
 
-  await Promise.all([maybeNavigation, page.goBack().catch(() => null)]);
-
-  await new Promise(resolve => {
-    setTimeout(resolve, 500);
-  });
+  await Promise.all([maybePathChange, page.goBack().catch(() => null)]);
+  await delay(500);
 }
 
 export default scenarioBuilder.createScenario({ action, back });

@@ -85,7 +85,6 @@ function CustomDrawer({
               variant="outlined"
               size="small"
               disabled
-              onClick={handleCloseDrawer}
             >
               {t('header.actions.log_in')}
             </UiButton>
