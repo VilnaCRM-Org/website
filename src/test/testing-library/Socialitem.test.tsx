@@ -4,13 +4,16 @@ import { testSocialLink } from '../../features/landing/components/AuthSection/co
 import SocialItem from '../../features/landing/components/AuthSection/SocialItem/SocialItem';
 
 describe('SocialItem', () => {
-  test('renders social item with correct title and icon', () => {
-    const { getByAltText, getByText } = render(<SocialItem item={testSocialLink} />);
+  test('renders social item with decorative icon and visible title', () => {
+    const { container, queryByAltText, getByText } = render(<SocialItem item={testSocialLink} />);
 
     const titleElement: HTMLElement = getByText(testSocialLink.title);
     expect(titleElement).toBeInTheDocument();
 
-    const imageElement: HTMLElement = getByAltText(testSocialLink.title);
+    expect(queryByAltText(testSocialLink.title)).not.toBeInTheDocument();
+
+    const imageElement: HTMLImageElement | null = container.querySelector('img');
     expect(imageElement).toBeInTheDocument();
+    expect(imageElement).toHaveAttribute('alt', '');
   });
 });

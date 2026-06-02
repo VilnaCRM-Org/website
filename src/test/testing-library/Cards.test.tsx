@@ -8,15 +8,14 @@ const cardText: string = t('for_who.heading_secondary');
 const cardBusinessText: string = t('for_who.card_text_business');
 const cardButton: string = t('for_who.button_text');
 const forWhoImageAlt: string = t('for_who.vector_alt');
-const forWhoAriaLabel: string = t('for_who.aria_label');
 
 describe('Cards component', () => {
   it('renders secondary title correctly', () => {
-    const { getByText, getAllByAltText, getByLabelText } = render(<Cards />);
+    const { getByText, getAllByAltText } = render(<Cards />);
 
     expect(getAllByAltText(forWhoImageAlt)[0]).toBeInTheDocument();
     expect(getAllByAltText(forWhoImageAlt)[1]).toBeInTheDocument();
-    expect(getByLabelText(forWhoAriaLabel)).toBeInTheDocument();
+    expect(getByText(cardButton).closest('a')).toHaveAttribute('href', '#signUp');
     expect(getByText(cardTitle)).toBeInTheDocument();
   });
 
@@ -30,8 +29,10 @@ describe('Cards component', () => {
     expect(getByText(cardBusinessText)).toBeInTheDocument();
   });
 
-  it('renders button correctly', () => {
-    const { getByText } = render(<Cards />);
-    expect(getByText(cardButton)).toBeInTheDocument();
+  it('renders the cta without nested button semantics', () => {
+    const { getByText, queryByRole } = render(<Cards />);
+
+    expect(getByText(cardButton).closest('a')).toBeInTheDocument();
+    expect(queryByRole('button', { name: cardButton })).not.toBeInTheDocument();
   });
 });

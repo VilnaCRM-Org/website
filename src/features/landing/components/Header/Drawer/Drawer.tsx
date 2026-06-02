@@ -75,22 +75,18 @@ function CustomDrawer({
             direction="row"
             sx={{ alignItems: 'center', justifyContent: 'center', gap: '0.563rem', mt: '0.75rem' }}
           >
-            <Link href="#signUp" sx={styles.link}>
-              <UiButton
-                fullWidth
-                variant="outlined"
-                size="small"
-                disabled
-                onClick={handleCloseDrawer}
-              >
-                {t('header.actions.log_in')}
-              </UiButton>
-            </Link>
-            <Link href="#signUp" sx={styles.link}>
-              <UiButton fullWidth onClick={handleCloseDrawer} variant="contained" size="small">
-                {t('header.actions.try_it_out')}
-              </UiButton>
-            </Link>
+            <UiButton fullWidth variant="outlined" size="small" disabled onClick={handleCloseDrawer}>
+              {t('header.actions.log_in')}
+            </UiButton>
+            <UiButton
+              href="#signUp"
+              fullWidth
+              onClick={handleCloseDrawer}
+              variant="contained"
+              size="small"
+            >
+              {t('header.actions.try_it_out')}
+            </UiButton>
           </Stack>
           <NavList
             navItems={drawerNavList}

@@ -5,6 +5,7 @@ export interface UiButtonProps {
   fullWidth?: boolean;
   onClick?: () => void;
   type?: 'button' | 'submit' | 'reset';
+  href?: string;
   children?: React.ReactNode | string;
   sx?: React.CSSProperties;
   name?: string;

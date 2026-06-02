@@ -10,6 +10,7 @@ function UiButton({
   fullWidth,
   onClick,
   type,
+  href,
   children,
   sx,
   name,
@@ -22,6 +23,7 @@ function UiButton({
         disabled={disabled}
         fullWidth={fullWidth}
         type={type}
+        href={href}
         onClick={onClick}
         sx={sx}
         name={name}

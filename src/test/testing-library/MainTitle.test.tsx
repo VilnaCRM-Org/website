@@ -5,7 +5,6 @@ import MainTitle from '../../features/landing/components/ForWhoSection/MainTitle
 
 const forWhoTitle: string = t('for_who.heading_main');
 const forWhoText: string = t('for_who.text_main');
-const forWhoLabel: string = t('for_who.aria_label');
 const forWhoButton: string = t('for_who.button_text');
 
 describe('MainTitle component', () => {
@@ -19,14 +18,12 @@ describe('MainTitle component', () => {
     expect(getByText(forWhoText)).toBeInTheDocument();
   });
 
-  it('renders button correctly', () => {
-    const { getByLabelText } = render(<MainTitle />);
-    expect(getByLabelText(forWhoLabel)).toBeInTheDocument();
-    expect(getByLabelText(forWhoLabel)).toHaveAttribute('href', '#signUp');
-  });
+  it('renders the cta as a link without nested button semantics', () => {
+    const { getByRole, queryByRole } = render(<MainTitle />);
+    const ctaLink: HTMLElement = getByRole('link', { name: forWhoButton });
 
-  it('renders button correctly', () => {
-    const { getByText } = render(<MainTitle />);
-    expect(getByText(forWhoButton)).toBeInTheDocument();
+    expect(ctaLink).toBeInTheDocument();
+    expect(ctaLink).toHaveAttribute('href', '#signUp');
+    expect(queryByRole('button', { name: forWhoButton })).not.toBeInTheDocument();
   });
 });
