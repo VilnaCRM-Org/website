@@ -16,7 +16,8 @@ export default {
     zIndex: 2,
     display: 'none',
     [`@media (max-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
-      display: 'block',
+      display: 'flex',
+      width: 'fit-content',
       margin: '0 auto',
       marginTop: '0.9rem',
       marginBottom: '2rem',

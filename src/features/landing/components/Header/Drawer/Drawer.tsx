@@ -73,9 +73,20 @@ function CustomDrawer({
           </Stack>
           <Stack
             direction="row"
-            sx={{ alignItems: 'center', justifyContent: 'center', gap: '0.563rem', mt: '0.75rem' }}
+            sx={{
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.563rem',
+              mt: '0.75rem',
+            }}
           >
-            <UiButton fullWidth variant="outlined" size="small" disabled onClick={handleCloseDrawer}>
+            <UiButton
+              fullWidth
+              variant="outlined"
+              size="small"
+              disabled
+              onClick={handleCloseDrawer}
+            >
               {t('header.actions.log_in')}
             </UiButton>
             <UiButton

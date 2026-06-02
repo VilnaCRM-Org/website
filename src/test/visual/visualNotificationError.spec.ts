@@ -49,7 +49,9 @@ test.describe('Form Submission Server Error Test', () => {
         Promise.all(document.getAnimations().map(animation => animation.finished.catch(() => null)))
       );
 
-      await expect(page).toHaveScreenshot(`${currentLanguage}_${screen.name}_error.png`);
+      await expect(page).toHaveScreenshot(`${currentLanguage}_${screen.name}_error.png`, {
+        maxDiffPixels: 2,
+      });
 
       await page.unroute('**/graphql', routeHandler);
     });

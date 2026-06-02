@@ -18,13 +18,15 @@ const clickTryItNowButtonByFilteredSection: (
   page: Page,
   uniqueSectionText: string | RegExp
 ) => Promise<void> = async (page, uniqueSectionText) => {
-  const button: Locator = page
+  const link: Locator = page
     .locator('section')
     .filter({ hasText: uniqueSectionText })
-    .getByRole('button');
+    .getByRole('link', nameOption);
 
-  await expect(button).toHaveCount(1);
-  await button.click();
+  await expect(link).toHaveCount(1);
+  await link.scrollIntoViewIfNeeded();
+  await expect(link).toBeVisible();
+  await link.click();
 };
 
 test.describe('Buttons navigation tests', () => {
@@ -33,7 +35,7 @@ test.describe('Buttons navigation tests', () => {
   });
 
   test('Desktop buttons navigation', async ({ page }) => {
-    await page.locator('header').getByRole('button', nameOption).click();
+    await page.locator('header').getByRole('link', nameOption).click();
     await clickTryItNowButtonByFilteredSection(page, aboutVilnaCRM);
     await clickTryItNowButtonByFilteredSection(page, forWho);
   });
@@ -51,7 +53,7 @@ test.describe('Buttons navigation tests', () => {
 
     await page.getByLabel(openDrawerLabel).click();
 
-    const drawerTryItNowButton: Locator = page.getByRole('button', nameOption);
+    const drawerTryItNowButton: Locator = page.getByRole('link', nameOption);
     await drawerTryItNowButton.click();
   });
 });

@@ -94,7 +94,7 @@ describe('Drawer', () => {
 
     const drawerButton: HTMLElement = getByLabelText(buttonToOpenDrawer);
     fireEvent.click(drawerButton);
-    const tryItOutButton: HTMLElement = getByRole('button', {
+    const tryItOutButton: HTMLElement = getByRole('link', {
       name: buttonText,
     });
 

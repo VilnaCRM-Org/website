@@ -21,7 +21,7 @@ function TextInfo(): React.ReactElement {
       </UiTypography>
       <UiButton
         href="#signUp"
-        sx={styles.button as React.CSSProperties}
+        sx={{ ...styles.link, ...styles.button } as React.CSSProperties}
         variant="contained"
         size="medium"
       >
