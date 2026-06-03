@@ -8,7 +8,6 @@ import { createLocalizedRegExp } from './utils';
 const aboutTitle: RegExp = createLocalizedRegExp('about_vilna.heading_first_main');
 const aboutUsText: string = t('about_vilna.text_main');
 const aboutUsButtonText: string = t('about_vilna.button_main');
-const buttonSelector: string = 'a[href="#signUp"]';
 
 describe('code snippet', () => {
   it('should display correct title from translation file', () => {
@@ -23,19 +22,15 @@ describe('code snippet', () => {
     expect(getByText(aboutUsText)).toBeInTheDocument();
   });
 
-  it('should display correct button from translation file', () => {
-    const { getByRole } = render(<TextInfo />);
+  it('renders the cta as a link without nested button semantics', () => {
+    const { getByRole, queryByRole } = render(<TextInfo />);
 
-    const buttonElement: HTMLElement = getByRole('button', {
+    const ctaLink: HTMLElement = getByRole('link', {
       name: aboutUsButtonText,
     });
 
-    expect(buttonElement).toBeInTheDocument();
-  });
-
-  it('should display a link to sign up', () => {
-    const { container } = render(<TextInfo />);
-
-    expect(container.querySelector(buttonSelector)).toBeInTheDocument();
+    expect(ctaLink).toBeInTheDocument();
+    expect(ctaLink).toHaveAttribute('href', '#signUp');
+    expect(queryByRole('button', { name: aboutUsButtonText })).not.toBeInTheDocument();
   });
 });

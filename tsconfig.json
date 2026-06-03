@@ -16,8 +16,11 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
-    "jsx": "preserve",
-    "baseUrl": ".",
+    "jsx": "react-jsx",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@swagger/global": ["./src/features/swagger/components/ApiDocumentation/Global/_global.scss"]
+    },
     "incremental": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
@@ -37,6 +40,5 @@
     "src/components/UiFooter/.stories.tsx",
     "memoryLeak"
   ],
-  "exclude": ["node_modules", ".next", "out"],
-  "extends": "./tsconfig.paths.json"
+  "exclude": ["node_modules", ".next", "out"]
 }

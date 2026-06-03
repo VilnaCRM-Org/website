@@ -1,4 +1,4 @@
-import { Stack, Link } from '@mui/material';
+import { Stack } from '@mui/material';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -12,14 +12,10 @@ function AuthButtons(): React.ReactElement {
   return (
     <Stack spacing={1} direction="row" sx={styles.wrapper}>
       <UiButton variant="outlined" size="small" disabled>
-        <Link href="#signUp" sx={styles.link}>
-          {t('header.actions.log_in')}
-        </Link>
+        {t('header.actions.log_in')}
       </UiButton>
-      <UiButton variant="contained" size="small">
-        <Link href="#signUp" sx={styles.link}>
-          {t('header.actions.try_it_out')}
-        </Link>
+      <UiButton href="#signUp" variant="contained" size="small">
+        {t('header.actions.try_it_out')}
       </UiButton>
     </Stack>
   );

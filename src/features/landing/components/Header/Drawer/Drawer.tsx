@@ -43,8 +43,11 @@ function CustomDrawer({
         onClose={handleCloseDrawer}
         role="menu"
       >
-        <Box width="23.4375rem" textAlign="center" role="presentation" sx={styles.drawerContent}>
-          <Stack direction="row" justifyContent="space-between" alignItems="center">
+        <Box
+          role="presentation"
+          sx={[styles.drawerContent, { width: '23.4375rem', textAlign: 'center' }]}
+        >
+          <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
             <Link
               href="/"
               component={NextLink}
@@ -70,27 +73,25 @@ function CustomDrawer({
           </Stack>
           <Stack
             direction="row"
-            alignItems="center"
-            justifyContent="center"
-            gap="0.563rem"
-            mt="0.75rem"
+            sx={{
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.563rem',
+              mt: '0.75rem',
+            }}
           >
-            <Link href="#signUp" sx={styles.link}>
-              <UiButton
-                fullWidth
-                variant="outlined"
-                size="small"
-                disabled
-                onClick={handleCloseDrawer}
-              >
-                {t('header.actions.log_in')}
-              </UiButton>
-            </Link>
-            <Link href="#signUp" sx={styles.link}>
-              <UiButton fullWidth onClick={handleCloseDrawer} variant="contained" size="small">
-                {t('header.actions.try_it_out')}
-              </UiButton>
-            </Link>
+            <UiButton fullWidth variant="outlined" size="small" disabled>
+              {t('header.actions.log_in')}
+            </UiButton>
+            <UiButton
+              href="#signUp"
+              fullWidth
+              onClick={handleCloseDrawer}
+              variant="contained"
+              size="small"
+            >
+              {t('header.actions.try_it_out')}
+            </UiButton>
           </Stack>
           <NavList
             navItems={drawerNavList}

@@ -21,13 +21,11 @@ function DefaultFooter({ socialLinks }: { socialLinks: SocialMedia[] }): React.R
 
   return (
     <Stack sx={styles.footerWrapper}>
-      <Stack height="4.188rem" alignItems="center" flexDirection="row">
+      <Stack direction="row" sx={{ height: '4.188rem', alignItems: 'center' }}>
         <Box sx={styles.topWrapper}>
           <Stack
             direction="row"
-            justifyContent="space-between"
-            alignItems="center"
-            sx={styles.topContent}
+            sx={[styles.topContent, { justifyContent: 'space-between', alignItems: 'center' }]}
           >
             <Image src={Logo} alt={t('footer.logo_alt')} width={143} height={48} />
             <PrivacyPolicy />
@@ -40,7 +38,7 @@ function DefaultFooter({ socialLinks }: { socialLinks: SocialMedia[] }): React.R
             <UiTypography variant="medium15" sx={styles.copyright}>
               {t('footer.copyright')}, <Box component="span">{currentYear}</Box>
             </UiTypography>
-            <Stack direction="row" gap="0.875rem" alignItems="center">
+            <Stack direction="row" sx={{ gap: '0.875rem', alignItems: 'center' }}>
               <VilnaCRMEmail />
               <SocialMediaList socialLinks={socialLinks} />
             </Stack>

@@ -1,4 +1,4 @@
-import { Box, Stack, Link } from '@mui/material';
+import { Box, Stack } from '@mui/material';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -12,7 +12,7 @@ function Cards(): React.ReactElement {
   const { t } = useTranslation();
 
   return (
-    <Stack flexDirection="column" sx={styles.wrapper}>
+    <Stack direction="column" sx={styles.wrapper}>
       <UiTypography sx={styles.secondTitle}>{t('for_who.heading_secondary')}</UiTypography>
       <Stack sx={styles.cardWrapper}>
         <Stack sx={styles.cardItem}>
@@ -42,11 +42,9 @@ function Cards(): React.ReactElement {
           </UiTypography>
         </Stack>
       </Stack>
-      <Link href="#signUp" aria-label={t('for_who.aria_label')}>
-        <UiButton sx={styles.button} variant="contained" size="small">
-          {t('for_who.button_text')}
-        </UiButton>
-      </Link>
+      <UiButton href="#signUp" sx={styles.button} variant="contained" size="small">
+        {t('for_who.button_text')}
+      </UiButton>
     </Stack>
   );
 }

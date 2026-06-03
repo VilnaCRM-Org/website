@@ -4,17 +4,21 @@ import React from 'react';
 
 import ForWhoSection from '../../features/landing/components/ForWhoSection/ForWhoSection';
 
-const forWhoLabel: string = t('for_who.aria_label');
+const forWhoButton: string = t('for_who.button_text');
 
 describe('ForWhoSection component', () => {
-  it('should render the ForWhoSection component without errors', () => {
-    const { getAllByLabelText } = render(<ForWhoSection />);
+  it('should render sign up links without nested button semantics', () => {
+    const { getAllByText, queryAllByRole } = render(React.createElement(ForWhoSection));
 
-    expect(getAllByLabelText(forWhoLabel)[0]).toBeInTheDocument();
+    expect(getAllByText(forWhoButton)).toHaveLength(3);
+    getAllByText(forWhoButton).forEach(element => {
+      expect(element.closest('a')).toHaveAttribute('href', '#signUp');
+    });
+    expect(queryAllByRole('button', { name: forWhoButton })).toHaveLength(0);
   });
 
   it('should have the correct number of images with empty alt text and images with proper alt text', () => {
-    const { getAllByAltText } = render(<ForWhoSection />);
+    const { getAllByAltText } = render(React.createElement(ForWhoSection));
 
     const imagesWithEmptyAlt: HTMLElement[] = getAllByAltText('');
     expect(imagesWithEmptyAlt).toHaveLength(9);

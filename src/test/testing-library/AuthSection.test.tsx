@@ -1,7 +1,6 @@
 import { MockedProvider } from '@apollo/client/testing/react';
 import { render, screen } from '@testing-library/react';
 import i18n, { t, TFunction } from 'i18next';
-import React from 'react';
 import { I18nextProvider } from 'react-i18next';
 
 import AuthSection from '../../features/landing/components/AuthSection/AuthSection';

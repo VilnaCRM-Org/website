@@ -1,6 +1,5 @@
 import { render } from '@testing-library/react';
 import { getOptimizedImageProps } from 'next-export-optimize-images/image';
-import React from 'react';
 import '@testing-library/jest-dom';
 
 import BackgroundImages from '../../features/landing/components/BackgroundImages/BackgroundImages';

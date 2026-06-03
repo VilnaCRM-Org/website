@@ -1,6 +1,5 @@
 import { render } from '@testing-library/react';
 import { t } from 'i18next';
-import React from 'react';
 
 import ServicesHoverCard from '../../features/landing/components/Possibilities/ServicesHoverCard/ServicesHoverCard';
 

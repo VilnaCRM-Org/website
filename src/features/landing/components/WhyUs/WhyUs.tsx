@@ -1,4 +1,4 @@
-import { Box, Link } from '@mui/material';
+import { Box } from '@mui/material';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -16,11 +16,9 @@ function WhyUs(): React.ReactElement {
     <Box sx={styles.wrapper} id="Advantages" component="section">
       <Heading />
       <UiCardList cardList={cardList} />
-      <Link href="#signUp" aria-label={t('why_us.aria_label')}>
-        <UiButton variant="contained" size="small" sx={styles.button}>
-          {t('why_us.button_text')}
-        </UiButton>
-      </Link>
+      <UiButton href="#signUp" variant="contained" size="small" sx={styles.button}>
+        {t('why_us.button_text')}
+      </UiButton>
     </Box>
   );
 }

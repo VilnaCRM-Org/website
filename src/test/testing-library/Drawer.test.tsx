@@ -1,7 +1,6 @@
 import '@testing-library/jest-dom';
 import { render, fireEvent, waitFor } from '@testing-library/react';
 import { t } from 'i18next';
-import React from 'react';
 
 import Drawer from '../../features/landing/components/Header/Drawer/Drawer';
 
@@ -54,8 +53,9 @@ describe('Drawer', () => {
     const exitButton: HTMLElement = getByLabelText(buttonToCloseDrawer);
     fireEvent.click(exitButton);
 
-    const drawer: HTMLElement | null = queryByRole(drawerContentRole);
-    expect(drawer).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(queryByRole(drawerContentRole)).not.toBeInTheDocument();
+    });
   });
 
   it('renders logo', () => {
@@ -94,7 +94,7 @@ describe('Drawer', () => {
 
     const drawerButton: HTMLElement = getByLabelText(buttonToOpenDrawer);
     fireEvent.click(drawerButton);
-    const tryItOutButton: HTMLElement = getByRole('button', {
+    const tryItOutButton: HTMLElement = getByRole('link', {
       name: buttonText,
     });
 
