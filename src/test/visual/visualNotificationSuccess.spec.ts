@@ -42,9 +42,7 @@ test.describe('Form Submission Visual Test', () => {
         Promise.all(document.getAnimations().map(animation => animation.finished.catch(() => null)))
       );
 
-      await expect(page).toHaveScreenshot(`${currentLanguage}_${screen.name}_success.png`, {
-        maxDiffPixels: 2,
-      });
+      await expect(page).toHaveScreenshot(`${currentLanguage}_${screen.name}_success.png`);
 
       await page.unroute('**/graphql', routeHandler);
     });
