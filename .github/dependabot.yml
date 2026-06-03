@@ -10,10 +10,8 @@ updates:
       all-deps:
         patterns:
           - '*'
-        update-types:
-          - 'minor'
-          - 'patch'
     commit-message:
       prefix: 'feat'
       prefix-development: 'chore'
       include: 'scope'
+      
