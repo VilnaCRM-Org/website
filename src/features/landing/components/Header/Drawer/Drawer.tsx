@@ -80,12 +80,7 @@ function CustomDrawer({
               mt: '0.75rem',
             }}
           >
-            <UiButton
-              fullWidth
-              variant="outlined"
-              size="small"
-              disabled
-            >
+            <UiButton fullWidth variant="outlined" size="small" disabled>
               {t('header.actions.log_in')}
             </UiButton>
             <UiButton

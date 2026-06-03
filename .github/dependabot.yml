@@ -17,4 +17,3 @@ updates:
       prefix: 'feat'
       prefix-development: 'chore'
       include: 'scope'
-      
