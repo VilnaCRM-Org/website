@@ -15,6 +15,7 @@ function UiButton({
   children,
   sx,
   name,
+  ...rest
 }: UiButtonProps): React.ReactElement {
   const componentProps = component ? { component } : {};
   const hrefProps = href ? { href } : {};
@@ -32,6 +33,7 @@ function UiButton({
         name={name}
         {...componentProps}
         {...hrefProps}
+        {...rest}
       >
         {children}
       </Button>

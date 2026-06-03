@@ -53,7 +53,8 @@ test.describe('Buttons navigation tests', () => {
 
     await page.getByLabel(openDrawerLabel).click();
 
-    const drawerTryItNowButton: Locator = page.getByRole('link', nameOption);
+    const drawerContainer: Locator = page.getByRole('menu');
+    const drawerTryItNowButton: Locator = drawerContainer.getByRole('link', nameOption);
     await drawerTryItNowButton.click();
   });
 });

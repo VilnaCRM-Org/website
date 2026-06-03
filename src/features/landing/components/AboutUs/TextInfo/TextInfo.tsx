@@ -19,12 +19,7 @@ function TextInfo(): React.ReactElement {
       <UiTypography variant="bodyText18" sx={styles.text}>
         {t('about_vilna.text_main')}
       </UiTypography>
-      <UiButton
-        href="#signUp"
-        sx={{ ...styles.link, ...styles.button } as React.CSSProperties}
-        variant="contained"
-        size="medium"
-      >
+      <UiButton href="#signUp" sx={[styles.link, styles.button]} variant="contained" size="medium">
         {t('about_vilna.button_main')}
       </UiButton>
     </Stack>

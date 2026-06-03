@@ -8,6 +8,7 @@ type MockLogoHandle = {
 
 type MockPage = {
   goBack: jest.Mock;
+  waitForFunction?: jest.Mock;
   waitForNavigation: jest.Mock;
   waitForSelector: jest.Mock;
 };
@@ -52,6 +53,7 @@ function createLogoHandle(): MockLogoHandle {
 function createPage(logoHandle: MockLogoHandle): MockPage {
   return {
     goBack: jest.fn().mockResolvedValue(null),
+    waitForFunction: jest.fn().mockImplementation(() => createWaitable()),
     waitForNavigation: jest.fn().mockImplementation(() => createWaitable()),
     waitForSelector: jest.fn().mockResolvedValue({
       asElement: () => logoHandle,
@@ -84,5 +86,17 @@ describe('logoNavigation memlab scenario', () => {
 
     expect(logoHandle.click).toHaveBeenCalledTimes(1);
     expect(page.goBack).not.toHaveBeenCalled();
+  });
+
+  it('waits for the target path with waitForFunction when that API is available', async () => {
+    const scenarioModule = await import('../memory-leak/tests/logoNavigation.js');
+    const scenario = scenarioModule.default;
+    const logoHandle = createLogoHandle();
+    const page = createPage(logoHandle);
+
+    await scenario.action(page);
+
+    expect(page.waitForFunction).toHaveBeenCalledWith(expect.any(Function), { timeout: 5000 }, '/');
+    expect(page.waitForNavigation).not.toHaveBeenCalled();
   });
 });
