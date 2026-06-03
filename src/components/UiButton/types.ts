@@ -1,6 +1,7 @@
 import { ButtonProps } from '@mui/material';
-import { AnchorHTMLAttributes, ButtonHTMLAttributes } from 'react';
+import { HTMLAttributeAnchorTarget } from 'react';
 
-export type UiButtonProps = ButtonProps &
-  ButtonHTMLAttributes<HTMLButtonElement> &
-  AnchorHTMLAttributes<HTMLAnchorElement>;
+export type UiButtonProps = ButtonProps & {
+  rel?: string;
+  target?: HTMLAttributeAnchorTarget;
+};
