@@ -96,9 +96,9 @@ describe('logoNavigation memlab scenario', () => {
 
     await scenario.action(page);
 
-    expect(page.waitForFunction).toHaveBeenCalledWith(expect.any(Function), '/', {
+    expect(page.waitForFunction).toHaveBeenCalledWith(expect.any(Function), {
       timeout: 5000,
-    });
+    }, '/');
     expect(page.waitForNavigation).not.toHaveBeenCalled();
   });
 });

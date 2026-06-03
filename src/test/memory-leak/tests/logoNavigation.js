@@ -68,7 +68,7 @@ function delay(ms) {
 function waitForPath(page, expectedPath) {
   if (typeof page.waitForFunction === 'function') {
     return page
-      .waitForFunction(path => window.location.pathname === path, expectedPath, { timeout: 5000 })
+      .waitForFunction(path => window.location.pathname === path, { timeout: 5000 }, expectedPath)
       .catch(() => null);
   }
 
