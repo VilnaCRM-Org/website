@@ -68,14 +68,7 @@ jobs:
       - name: Get PR Number
         id: get_pr_number
         run: |
-          RESPONSE=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/pulls?head=${GITHUB_REPOSITORY_OWNER}:${BRANCH_NAME}")
-          if [ $? -ne 0 ]; then
-            echo "::error::Failed to retrieve PR number. Full response: $RESPONSE"
-            exit 1
-          fi
-          PR_NUMBER=$(echo "$RESPONSE" | jq -r 'if type == "array" then .[0].number // empty else empty end')
+          PR_NUMBER="${{ github.event.pull_request.number }}"
           if [ -z "$PR_NUMBER" ]; then
             echo "::error::PR number extraction failed; received an empty value"
             exit 1
