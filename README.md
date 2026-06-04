@@ -106,6 +106,7 @@ Testing
   make test-unit-all: runs unit tests for both client and server environments
   make test-unit-client: runs unit tests for the client using Jest
   make test-unit-server: runs unit tests for the server using Jest
+  make test-bats: runs the Bats shell regression suite for Makefile targets and CI helper scripts
   make test-memory-leak: runs memory leak tests using Memlab
   make load-tests: executes load tests using the K6 library
   make test-e2e: runs end-to-end tests inside the prod container
@@ -182,6 +183,20 @@ Example:
 ```bash
   CI=1 make start
 ```
+
+### Bats Shell Coverage
+
+Use the Bats suite to validate Makefile shell flows and `scripts/ci` helpers that are
+not already exercised by the pull request workflows:
+
+```bash
+  make test-bats
+```
+
+The coverage inventory lives in `tests/bats/make-target-coverage.tsv`. When you add a
+new Makefile target, either add Bats coverage for it or document the workflow that
+already exercises it in that file. Additional suite-maintenance notes live in
+`tests/bats/README.md`.
 
 ### Load Testing with K6
 

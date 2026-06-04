@@ -45,7 +45,6 @@ setup_docker_network() {
 
 start_prod_dind() {
     setup_docker_network
-    make build-prod
     docker compose ${COMPOSE_ARGS} up -d --wait prod
 }
 run_make_with_prod_dind() {

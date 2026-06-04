@@ -173,6 +173,9 @@ importers:
       babel-preset-jest:
         specifier: 30.2.0
         version: 30.2.0(@babel/core@7.29.7)
+      bats:
+        specifier: ^1.13.0
+        version: 1.13.0
       eslint:
         specifier: ^9.39.4
         version: 9.39.4(jiti@2.7.0)
@@ -6012,6 +6015,13 @@ packages:
         integrity: sha512-bopVNp6ugyA150DDuZfPFdt1KZ5a94ZDiwX4hMgZDzF+GttD80lEy8kj98kbyhLXnPvhtIo93mdnLIjpCAeeOw==,
       }
     engines: { node: '>=10.0.0' }
+
+  bats@1.13.0:
+    resolution:
+      {
+        integrity: sha512-giSYKGTOcPZyJDbfbTtzAedLcNWdjCLbXYU3/MwPnjyvDXzu6Dgw8d2M+8jHhZXSmsCMSQqCp+YBsJ603UO4vQ==,
+      }
+    hasBin: true
 
   big.js@5.2.2:
     resolution:
@@ -18697,6 +18707,8 @@ snapshots:
   baseline-browser-mapping@2.10.32: {}
 
   basic-ftp@5.3.1: {}
+
+  bats@1.13.0: {}
 
   big.js@5.2.2: {}
 

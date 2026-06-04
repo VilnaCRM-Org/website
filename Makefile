@@ -22,6 +22,7 @@ STORYBOOK_BIN               = $(BIN_DIR)/storybook
 JEST_BIN                    = $(BIN_DIR)/jest
 SERVE_BIN                   = $(BIN_DIR)/serve
 PLAYWRIGHT_BIN              = $(BIN_DIR)/playwright
+BATS_BIN                    = pnpm exec bats
 
 NEXT_BUILD                  = $(NEXT_BIN) build --webpack
 NEXT_BUILD_CMD              = $(NEXT_BUILD) && $(IMG_OPTIMIZE)
@@ -95,6 +96,7 @@ UI_MODE_URL                 = http://$(WEBSITE_DOMAIN):$(PLAYWRIGHT_TEST_PORT)
 MD_LINT_ARGS                = -i CHANGELOG.md -i "test-results/**/*.md" -i "playwright-report/data/**/*.md" -i "node_modules/**/*.md"
 
 JEST_FLAGS                  = --verbose
+BATS_FORMATTER              ?= pretty
 
 NETWORK_NAME                = website-network
 
@@ -304,6 +306,13 @@ test-unit-client: ## Run all client-side unit tests using Jest (Next.js env, TES
 
 test-unit-server: ## Run server-side unit tests for Apollo using Jest (Node.js env, TEST_ENV=server, target: $(TEST_DIR_APOLLO))
 	$(UNIT_TESTS) TEST_ENV=server $(JEST_BIN) $(JEST_FLAGS) $(TEST_DIR_APOLLO)
+
+test-bats: ## Run Bats coverage for Makefile shell flows and CI helper scripts
+	DOCKER_COMPOSE_TEST_FILE=docker-compose.test.yml \
+	DOCKER_COMPOSE_DEV_FILE=docker-compose.yml \
+	COMMON_HEALTHCHECKS_FILE=common-healthchecks.yml \
+	DOCKER_COMPOSE_MEMLEAK_FILE=docker-compose.memory-leak.yml \
+	$(BATS_BIN) --formatter $(BATS_FORMATTER) -r tests/bats
 
 test-memory-leak: start-prod ## This command executes memory leaks tests using Memlab library.
 	@echo "🧪 Starting memory leak test environment..."
