@@ -23,6 +23,15 @@ jobs:
         with:
           node-version: ${{ vars.NODE_VERSION }}
 
+      - name: Cache pnpm dependencies
+        id: cache-pnpm-dependencies
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-dependencies-node-${{ vars.NODE_VERSION }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-dependencies-node-${{ vars.NODE_VERSION }}-
+
       - name: Install pnpm
         run: npm install -g pnpm@10.6.5
 
