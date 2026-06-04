@@ -18,6 +18,7 @@ setup() {
   local required_var
 
   while IFS='|' read -r target required_var; do
+    unset "$required_var"
     run_make_target "$target"
     [ "$status" -ne 0 ]
     assert_output_contains "Error: $required_var is required."

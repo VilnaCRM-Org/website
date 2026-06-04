@@ -66,11 +66,11 @@ If you find an issue to work on, you are welcome to open a PR with a fix.
 If your change adds or updates a Makefile target, keep the shell-coverage inventory in
 sync:
 
-- Run `make test-bats`.
 - Update `tests/bats/make-target-coverage.tsv` so every Makefile target is marked as
   either Bats-covered or already covered by a pull request workflow.
 - If the target is not already exercised by CI, add or update the relevant test in
   `tests/bats/`.
+- Run `make test-bats`.
 
 ### Commit your update
 

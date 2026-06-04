@@ -172,11 +172,12 @@ assert_log_contains() {
 
 assert_output_contains() {
   local expected="$1"
+  local actual_output="${output-}"
 
-  if [[ "$output" != *"$expected"* ]]; then
+  if [[ "$actual_output" != *"$expected"* ]]; then
     echo "Expected output to contain: $expected" >&2
     echo "--- output ---" >&2
-    printf '%s\n' "$output" >&2
+    printf '%s\n' "$actual_output" >&2
     return 1
   fi
 }

@@ -31,7 +31,17 @@ load './test_helper.bash'
     [ -f "$PROJECT_ROOT/$evidence" ]
 
     if [ "$coverage" = "bats" ]; then
-      run grep -F "$target" "$PROJECT_ROOT/$evidence"
+      run awk -v target="$target" '
+        BEGIN { found = 0 }
+        {
+          for (i = 1; i <= NF; i++) {
+            if ($i == target) {
+              found = 1
+            }
+          }
+        }
+        END { exit(found ? 0 : 1) }
+      ' FS='[^A-Za-z0-9_.-]+' "$PROJECT_ROOT/$evidence"
       [ "$status" -eq 0 ]
     fi
   done < "$manifest_path"
@@ -64,13 +74,16 @@ load './test_helper.bash'
   run test -s "$workflows_with_bats"
   [ "$status" -eq 0 ]
 
-  workflow_path="$(head -n 1 "$workflows_with_bats")"
+  while IFS= read -r workflow_path; do
+    run grep -F 'pull_request:' "$workflow_path"
+    [ "$status" -eq 0 ]
 
-  run grep -F 'pull_request:' "$workflow_path"
-  [ "$status" -eq 0 ]
+    run grep -F 'contents: read' "$workflow_path"
+    [ "$status" -eq 0 ]
 
-  run grep -F 'contents: read' "$workflow_path"
-  [ "$status" -eq 0 ]
+    run grep -F 'contents: write' "$workflow_path"
+    [ "$status" -ne 0 ]
+  done < "$workflows_with_bats"
 }
 
 @test "repository docs explain how to run and maintain the Bats suite" {
