@@ -183,14 +183,26 @@ EOF
 
 @test "detect-exception: marker match is case-insensitive and trims whitespace (edge)" {
   local df="$BATS_TEST_TMPDIR/Dockerfile.case"
-  cat > "$df" <<'EOF'
-FROM alpine
-#   Perf-Exception:  glibc only
-EOF
+  # CRLF line endings + leading/trailing whitespace + mixed case, so this
+  # exercises the case-insensitive match, the `tr -d '\r'` and the trailing
+  # whitespace `sed` together.
+  printf 'FROM alpine\r\n#   Perf-Exception:  glibc only   \r\n' > "$df"
 
   run bash "$SCRIPT" detect-exception "$df"
   [ "$status" -eq 0 ]
   [ "$output" = "glibc only" ]
+}
+
+@test "detect-exception: scoped image label waives only the named image (positive)" {
+  local df="$BATS_TEST_TMPDIR/Dockerfile.scoped"
+  cat > "$df" <<'EOF'
+FROM alpine
+EOF
+
+  run env -u PERF_EXCEPTION_LABEL PERF_EXCEPTION_IMAGE_LABEL=true NAME=website \
+    bash "$SCRIPT" detect-exception "$df"
+  [ "$status" -eq 0 ]
+  [ "$output" = "PR label 'docker-perf-exception:website' applied" ]
 }
 
 @test "detect-exception: missing/nonexistent file path yields empty output, exit 0 (edge)" {
@@ -252,8 +264,12 @@ EOF
 
   run bash "$SCRIPT" render-report "$json"
   [ "$status" -eq 0 ]
-  [[ "$output" == *"n/a"* ]]
-  [[ "$output" != *"MiB +"* ]] || [[ "$output" == *"150 MiB +0%"* ]]
+  # The delta is the 4th data cell (5th pipe-field). Assert it is exactly "n/a"
+  # rather than checking for "n/a" anywhere in the row — a stray signed delta in
+  # that cell must fail even though the budget cell also reads "... MiB +0%".
+  local delta
+  delta="$(printf '%s\n' "$output" | awk -F'|' '{gsub(/^ +| +$/, "", $5); print $5}')"
+  [ "$delta" = "n/a" ]
 }
 
 @test "render-report: failing verdict renders the fail status cell (negative)" {

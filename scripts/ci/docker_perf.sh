@@ -27,9 +27,12 @@ log() { printf '%s\n' "$*" >&2; }
 #
 # A perf exception is documented either inline in the Dockerfile as
 #   # perf-exception: <reason>
-# or repo-wide via a PR label (the caller exports PERF_EXCEPTION_LABEL=true and,
-# optionally, PERF_EXCEPTION_LABEL_NAME). Prints the reason (empty if none) and
-# always exits 0 — the marker is informational, never an error.
+# or via a PR label. The caller (matrix-aware workflow) exports two booleans:
+#   PERF_EXCEPTION_LABEL=true        the repo-wide `docker-perf-exception` label
+#                                    applies to every image in the PR.
+#   PERF_EXCEPTION_IMAGE_LABEL=true  a scoped `docker-perf-exception:<NAME>`
+#                                    label applies only to THIS image ($NAME).
+# Prints the reason (empty if none) and always exits 0 — it is informational.
 # ---------------------------------------------------------------------------
 detect_exception() {
   local dockerfile="${1:-}"
@@ -45,8 +48,13 @@ detect_exception() {
       | sed -E 's/[[:space:]]+$//' || true)"
   fi
 
-  if [ -z "$reason" ] && [ "${PERF_EXCEPTION_LABEL:-false}" = "true" ]; then
-    reason="PR label '${PERF_EXCEPTION_LABEL_NAME:-docker-perf-exception}' applied"
+  if [ -z "$reason" ]; then
+    local label_name="${PERF_EXCEPTION_LABEL_NAME:-docker-perf-exception}"
+    if [ "${PERF_EXCEPTION_LABEL:-false}" = "true" ]; then
+      reason="PR label '${label_name}' applied"
+    elif [ "${PERF_EXCEPTION_IMAGE_LABEL:-false}" = "true" ]; then
+      reason="PR label '${label_name}:${NAME:-}' applied"
+    fi
   fi
 
   printf '%s' "$reason"

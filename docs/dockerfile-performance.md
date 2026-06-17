@@ -126,11 +126,15 @@ scoped to that one image, and a reason is **required**:
 
     # perf-exception: Playwright ships glibc-only browser binaries; Alpine/musl is not viable here
 
-### Option B — PR label (repo-wide for that PR)
+### Option B — PR label
 
-Apply the PR label `docker-perf-exception`. This waives failing gates for the
-whole PR. Prefer Option A unless you genuinely need a PR-wide waiver, because
-the inline marker documents the reason next to the code.
+- `docker-perf-exception` waives failing gates for **every** image in the PR.
+- `docker-perf-exception:<name>` waives only the matching image (the `name`
+  from [`.github/dockerfile-perf.json`](../.github/dockerfile-perf.json), e.g.
+  `docker-perf-exception:website`), so other images stay fully gated.
+
+Prefer the scoped form over the repo-wide one, and prefer Option A over either,
+because the inline marker documents the reason next to the code.
 
 ## Tuning the budgets
 
