@@ -16,6 +16,13 @@ on:
 permissions:
   contents: read
 
+# Only the latest run per PR may proceed: a new push cancels any in-flight run
+# so its (slower) comment job cannot overwrite the sticky PR comment with stale
+# metrics from a superseded commit, and we avoid duplicate head+base builds.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   setup:
     name: resolve matrix
