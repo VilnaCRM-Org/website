@@ -152,7 +152,8 @@ FROM alpine
 RUN true
 EOF
 
-  run env PERF_EXCEPTION_LABEL=true bash "$SCRIPT" detect-exception "$df"
+  run env -u PERF_EXCEPTION_LABEL_NAME PERF_EXCEPTION_LABEL=true \
+    bash "$SCRIPT" detect-exception "$df"
   [ "$status" -eq 0 ]
   [[ "$output" == *"PR label 'docker-perf-exception' applied"* ]]
 }
@@ -199,7 +200,8 @@ EOF
 FROM alpine
 EOF
 
-  run env -u PERF_EXCEPTION_LABEL PERF_EXCEPTION_IMAGE_LABEL=true NAME=website \
+  run env -u PERF_EXCEPTION_LABEL -u PERF_EXCEPTION_LABEL_NAME \
+    PERF_EXCEPTION_IMAGE_LABEL=true NAME=website \
     bash "$SCRIPT" detect-exception "$df"
   [ "$status" -eq 0 ]
   [ "$output" = "PR label 'docker-perf-exception:website' applied" ]
