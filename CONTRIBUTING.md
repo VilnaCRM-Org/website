@@ -72,6 +72,18 @@ sync:
   `tests/bats/`.
 - Run `make test-bats`.
 
+#### Dockerfile build performance
+
+If your change touches a `Dockerfile` (or the gate's own config), a CI gate
+rebuilds each configured image, measures its size and build time, and runs
+`dive` and `hadolint` checks against per-image budgets. The check hard-fails a
+pull request when a budget or gate is exceeded, unless a documented exception
+applies. Budgets live in `.github/dockerfile-perf.json`, and exceptions are
+granted via an inline `# perf-exception: <reason>` marker or the
+`docker-perf-exception` PR label. See
+[docs/dockerfile-performance.md](docs/dockerfile-performance.md) for the full
+policy, thresholds, and tuning guide.
+
 ### Commit your update
 
 Commit the changes once you are happy with them.

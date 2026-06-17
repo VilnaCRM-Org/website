@@ -1,0 +1,18 @@
+[
+  {
+    "name": "website",
+    "dockerfile": "Dockerfile",
+    "context": ".",
+    "target": "production",
+    "budget_mb": 1550,
+    "tolerance_pct": 10
+  },
+  {
+    "name": "load-k6",
+    "dockerfile": "src/test/load/Dockerfile",
+    "context": ".",
+    "target": "",
+    "budget_mb": 55,
+    "tolerance_pct": 15
+  }
+]
