@@ -13,8 +13,7 @@ on:
       - '.hadolint.yaml'
       - '.dive-ci'
 
-permissions:
-  contents: read
+permissions: {}
 
 # Only the latest run per PR may proceed: a new push cancels any in-flight run
 # so its (slower) comment job cannot overwrite the sticky PR comment with stale
@@ -27,6 +26,8 @@ jobs:
   setup:
     name: resolve matrix
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       matrix: ${{ steps.gen.outputs.matrix }}
     steps:
@@ -45,6 +46,8 @@ jobs:
     name: ${{ matrix.name }}
     needs: setup
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.setup.outputs.matrix) }}
