@@ -25,6 +25,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Build image matrix from config
         id: gen
@@ -42,6 +44,8 @@ jobs:
     steps:
       - name: Checkout PR head
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Checkout base branch
         uses: actions/checkout@v4
@@ -49,6 +53,7 @@ jobs:
           ref: ${{ github.event.pull_request.base.sha }}
           path: base
           fetch-depth: 1
+          persist-credentials: false
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0

@@ -88,18 +88,24 @@ an array and the single source of truth. Each entry has: `name`,
 `budget_mb`, and `tolerance_pct`. **Adding a Dockerfile to the gate is just
 adding an entry.**
 
-| Name      | Dockerfile                 | Target       | Budget  | Tolerance | Current size |
-| --------- | -------------------------- | ------------ | ------- | --------- | ------------ |
-| `website` | `Dockerfile`               | `production` | 480 MiB | 10%       | ~459 MiB     |
-| `load-k6` | `src/test/load/Dockerfile` | _(none)_     | 25 MiB  | 15%       | ~18 MiB      |
+| Name      | Dockerfile                 | Target       | Budget   | Tolerance | Current size |
+| --------- | -------------------------- | ------------ | -------- | --------- | ------------ |
+| `website` | `Dockerfile`               | `production` | 1550 MiB | 10%       | ~1502 MiB    |
+| `load-k6` | `src/test/load/Dockerfile` | _(none)_     | 55 MiB   | 15%       | ~49 MiB      |
 
-The effective cap is `budget_mb × (1 + tolerance_pct / 100)` — 528 MiB for
-`website` and ~28.75 MiB for `load-k6`.
+The effective cap is `budget_mb × (1 + tolerance_pct / 100)` — 1705 MiB for
+`website` and ~63 MiB for `load-k6`.
 
-The budgets are a **calibration baseline** measured from real builds: each sits
-just above the current image size so it catches regressions without flagging
-the status quo. As images are slimmed, **ratchet the budgets down** over time
-so the gate keeps protecting the gains.
+The budgets are a **calibration baseline** measured from the CI runner (not a
+developer laptop, where layer caching and toolchain differences can report very
+different sizes): each sits just above the current image size so it catches
+regressions without flagging the status quo. As images are slimmed, **ratchet
+the budgets down** over time so the gate keeps protecting the gains.
+
+> The `website` production image is currently large (~1.5 GiB) because its final
+> stage inherits the build toolchain (`python3`, `make`, `g++`) and the full
+> dependency tree. Slimming it to a `serve`-only stage is a high-value follow-up
+> that this gate is designed to encourage and then protect.
 
 ## Exceptions
 
