@@ -266,9 +266,6 @@ export default [
       'import/no-unresolved': 'off',
       'react/jsx-filename-extension': ['error', { extensions: ['.jsx', '.tsx'] }],
       'class-methods-use-this': 'off',
-      // Coverage tests deliberately reach into deep feature modules (default
-      // exports, internal helpers) that app code would import via a barrel.
-      'no-restricted-imports': 'off',
     },
   },
 ];
