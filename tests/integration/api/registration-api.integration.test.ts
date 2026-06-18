@@ -10,9 +10,9 @@
  * link level, so this verifies wiring that the unit and `testing-library`
  * (MockedProvider) layers cannot reach: the actual HTTP request the client
  * emits and how real Apollo error classes flow back through the app's error
- * translation. See tests/integration/README.md for the layer's scope.
+ * translation.
  */
-import { CombinedGraphQLErrors } from '@apollo/client';
+import { CombinedGraphQLErrors, TypedDocumentNode } from '@apollo/client';
 
 import { CLIENT_ERROR_KEYS, getClientErrorMessages } from '@/shared/clientErrorMessages';
 
@@ -51,9 +51,19 @@ const signUpInput = {
   clientMutationId: 'integration-client-id',
 };
 
-function runSignup(): ReturnType<typeof client.mutate<CreateUserResponse>> {
-  return client.mutate<CreateUserResponse>({
-    mutation: SIGNUP_MUTATION,
+type SignupVariables = { input: typeof signUpInput };
+
+// SIGNUP_MUTATION is exported as TypedDocumentNode<SignUpInput> (input-shaped);
+// retype it to the response so the result is correctly typed without passing
+// generics to client.mutate (which Apollo v4 deprecates).
+const SIGNUP_OPERATION = SIGNUP_MUTATION as unknown as TypedDocumentNode<
+  CreateUserResponse,
+  SignupVariables
+>;
+
+function runSignup() {
+  return client.mutate({
+    mutation: SIGNUP_OPERATION,
     variables: { input: signUpInput },
   });
 }
@@ -123,6 +133,25 @@ describe('integration: registration GraphQL API boundary', () => {
       // header at import time. Pinned to a literal so the assertion is not
       // tautological with the i18n global the client itself read.
       expect(request.headers.get('accept-language')).toBe('uk');
+    });
+
+    it('falls back to the en-US Accept-Language header when no i18n language is active', async () => {
+      fetchMock.mockResolvedValue(graphqlData(successPayload()));
+
+      await jest.isolateModulesAsync(async () => {
+        // Re-import the client with an i18n instance that has no active
+        // language, exercising the `language || 'en-US'` fallback in apollo.ts.
+        jest.doMock('i18next', () => ({ __esModule: true, default: { language: undefined } }));
+        const { default: freshClient } =
+          await import('../../../src/features/landing/api/graphql/apollo');
+        const { default: freshMutation } =
+          await import('../../../src/features/landing/api/service/userService');
+        await freshClient.mutate({ mutation: freshMutation, variables: { input: signUpInput } });
+      });
+      jest.dontMock('i18next');
+
+      const request = readGraphQLRequest(fetchMock);
+      expect(request.headers.get('accept-language')).toBe('en-US');
     });
   });
 

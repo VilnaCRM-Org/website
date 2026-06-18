@@ -106,7 +106,7 @@ Testing
   make test-unit-all: runs unit tests for both client and server environments
   make test-unit-client: runs unit tests for the client using Jest
   make test-unit-server: runs unit tests for the server using Jest
-  make test-integration: runs the integration layer (real Apollo transport, network stubbed) — see tests/integration/README.md
+  make test-integration: runs the integration layer (real Apollo transport, network stubbed)
   make test-integration-watch: runs the integration layer in watch mode
   make test-bats: runs the Bats shell regression suite for Makefile targets and CI helper scripts
   make test-memory-leak: runs memory leak tests using Memlab

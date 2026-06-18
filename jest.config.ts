@@ -10,7 +10,7 @@ const createJestConfig = nextJest({ dir: './' });
  * - `client`      (default) — component tests (jsdom) + pure unit tests.
  * - `server`               — Apollo server tests (Node) + pure unit tests.
  * - `integration`          — the cross-module / API-boundary layer that lives
- *                            in `tests/integration/**` (see tests/integration/README.md).
+ *                            in `tests/integration/**`.
  *
  * The integration layer is intentionally isolated from the unit globs: it is
  * the "missing middle" between unit and e2e and must not silently absorb unit
@@ -36,11 +36,39 @@ const isServer = TEST_ENV === 'server';
 // docblock.
 const INTEGRATION_ENVIRONMENT = '<rootDir>/tests/integration/jsdom-fetch.environment.js';
 
+// The integration layer mirrors CRM: it collects coverage across the whole
+// product source and enforces a global 100% threshold, so the integration
+// suite alone must exercise every shipped module. Client/server runs keep their
+// existing (default-scope) coverage behaviour untouched.
+const INTEGRATION_COVERAGE_FROM = [
+  '<rootDir>/src/**/*.{ts,tsx}',
+  '!<rootDir>/src/**/types/**',
+  '!<rootDir>/src/**/types.ts',
+  '!<rootDir>/src/**/theme.ts',
+  '!<rootDir>/src/**/styles/**',
+  '!<rootDir>/src/**/*.d.ts',
+  '!<rootDir>/src/**/*.stories.{ts,tsx}',
+  '!<rootDir>/src/**/*.test.{ts,tsx}',
+  '!<rootDir>/src/**/__mocks__/**',
+  '!<rootDir>/src/**/__fixtures__/**',
+  '!<rootDir>/src/test/**',
+];
+
+const INTEGRATION_COVERAGE_THRESHOLD = {
+  global: { branches: 100, functions: 100, lines: 100, statements: 100 },
+};
+
 const config: Config = {
   clearMocks: true,
-  collectCoverage: !isIntegration,
+  collectCoverage: true,
   coverageDirectory: 'coverage',
-  coverageProvider: 'v8',
+  coverageProvider: isIntegration ? 'babel' : 'v8',
+  ...(isIntegration
+    ? {
+        collectCoverageFrom: INTEGRATION_COVERAGE_FROM,
+        coverageThreshold: INTEGRATION_COVERAGE_THRESHOLD,
+      }
+    : {}),
   testMatch: testMatchByEnv[TEST_ENV] ?? testMatchByEnv.client,
   testPathIgnorePatterns: [
     '/node_modules/',

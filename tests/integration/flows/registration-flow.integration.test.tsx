@@ -12,7 +12,6 @@
  * The `testing-library` layer covers these components with the Apollo link
  * mocked; this layer additionally proves the real transport and the cross-module
  * data transform (email lower-casing, generated clientMutationId) end-to-end.
- * See tests/integration/README.md.
  */
 import { ApolloProvider } from '@apollo/client/react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
