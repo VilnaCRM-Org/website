@@ -11,14 +11,12 @@
 import { render, screen } from '@testing-library/react';
 import { t } from 'i18next';
 
-import {
-  socialLinks,
-  testSocialLink,
-} from '../../../../src/features/landing/components/AuthSection/constants';
-import { PasswordTip } from '../../../../src/features/landing/components/AuthSection/PasswordTip';
-import { SignUpText } from '../../../../src/features/landing/components/AuthSection/SignUpText';
-import { SocialItem } from '../../../../src/features/landing/components/AuthSection/SocialItem';
-import { SocialList } from '../../../../src/features/landing/components/AuthSection/SocialList';
+import { socialLinks, testSocialLink } from '@components/AuthSection/constants';
+import { PasswordTip } from '@components/AuthSection/PasswordTip';
+import { SignUpText } from '@components/AuthSection/SignUpText';
+import { SocialItem } from '@components/AuthSection/SocialItem';
+import { SocialList } from '@components/AuthSection/SocialList';
+
 import { SocialLink } from '../../../../src/features/landing/types/authentication/social';
 
 describe('integration: PasswordTip', () => {

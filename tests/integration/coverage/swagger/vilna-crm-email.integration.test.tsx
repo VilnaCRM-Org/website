@@ -6,7 +6,7 @@
  */
 import { render, screen } from '@testing-library/react';
 
-import VilnaCRMEmail from '../../../../src/features/swagger/components/Header/Drawer/VilnaCRMEmail/VilnaCRMEmail';
+import VilnaCRMEmail from '@/features/swagger/components/Header/Drawer/VilnaCRMEmail/VilnaCRMEmail';
 
 const EMAIL = 'info@vilnacrm.com';
 

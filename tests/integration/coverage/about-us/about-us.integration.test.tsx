@@ -11,16 +11,16 @@
 import { render } from '@testing-library/react';
 import { t } from 'i18next';
 
-import AboutUsBarrel from '../../../../src/features/landing/components/AboutUs';
-import AboutUs from '../../../../src/features/landing/components/AboutUs/AboutUs';
-import { DeviceImage } from '../../../../src/features/landing/components/AboutUs/DeviceImage';
-import DeviceImageDefault from '../../../../src/features/landing/components/AboutUs/DeviceImage/DeviceImage';
-import { MainImage } from '../../../../src/features/landing/components/AboutUs/MainImage';
-import MainImageDefault from '../../../../src/features/landing/components/AboutUs/MainImage/MainImage';
-import { Notch } from '../../../../src/features/landing/components/AboutUs/Notch';
-import NotchDefault from '../../../../src/features/landing/components/AboutUs/Notch/Notch';
-import { TextInfo } from '../../../../src/features/landing/components/AboutUs/TextInfo';
-import TextInfoDefault from '../../../../src/features/landing/components/AboutUs/TextInfo/TextInfo';
+import AboutUsBarrel from '@components/AboutUs';
+import AboutUs from '@components/AboutUs/AboutUs';
+import { DeviceImage } from '@components/AboutUs/DeviceImage';
+import DeviceImageDefault from '@components/AboutUs/DeviceImage/DeviceImage';
+import { MainImage } from '@components/AboutUs/MainImage';
+import MainImageDefault from '@components/AboutUs/MainImage/MainImage';
+import { Notch } from '@components/AboutUs/Notch';
+import NotchDefault from '@components/AboutUs/Notch/Notch';
+import { TextInfo } from '@components/AboutUs/TextInfo';
+import TextInfoDefault from '@components/AboutUs/TextInfo/TextInfo';
 
 const mainImageAlt: string = 'Main image';
 const aboutText: string = t('about_vilna.text_main');

@@ -12,10 +12,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import UiCardList from '@/components/UiCardList';
 import CardGrid from '@/components/UiCardList/CardGrid';
 import CardSwiper from '@/components/UiCardList/CardSwiper';
-import {
-  LARGE_CARDLIST_ARRAY,
-  SMALL_CARDLIST_ARRAY,
-} from '@/components/UiCardList/constants';
+import { LARGE_CARDLIST_ARRAY, SMALL_CARDLIST_ARRAY } from '@/components/UiCardList/constants';
 
 // `swiper` ships as untransformed ESM that the integration Jest transform does
 // not include, so the swiper React bindings and modules are stubbed with light
@@ -24,9 +21,7 @@ import {
 // pulling the ESM package through Babel.
 jest.mock('swiper/react', () => ({
   __esModule: true,
-  Swiper: ({ children }: { children: React.ReactNode }) => (
-    <div className="swiper">{children}</div>
-  ),
+  Swiper: ({ children }: { children: React.ReactNode }) => <div className="swiper">{children}</div>,
   SwiperSlide: ({ children }: { children: React.ReactNode }) => (
     <div className="swiper-slide">{children}</div>
   ),
@@ -55,9 +50,7 @@ describe('integration: UiCardList', () => {
       const { container } = render(<CardGrid cardList={SMALL_CARDLIST_ARRAY} />);
 
       expect(container.firstChild).toBeInTheDocument();
-      expect(screen.getAllByRole('heading', { level: 3 }).length).toBe(
-        SMALL_CARDLIST_ARRAY.length
-      );
+      expect(screen.getAllByRole('heading', { level: 3 }).length).toBe(SMALL_CARDLIST_ARRAY.length);
     });
 
     it('uses the large grid style when the first card is a largeCard', () => {
@@ -130,9 +123,7 @@ describe('integration: UiCardList', () => {
     });
 
     it('does not observe when the document body is unavailable', () => {
-      const querySpy = jest
-        .spyOn(document, 'querySelector')
-        .mockReturnValue(null);
+      const querySpy = jest.spyOn(document, 'querySelector').mockReturnValue(null);
 
       try {
         const { container } = render(<CardSwiper cardList={LARGE_CARDLIST_ARRAY} />);

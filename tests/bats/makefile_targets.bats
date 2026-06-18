@@ -264,3 +264,29 @@ EOF
   [ "$status" -eq 0 ]
   assert_log_contains 'docker compose down --remove-orphans'
 }
+
+@test "test-integration runs Jest in the integration environment" {
+  cat > "$STUB_BIN_DIR/jest" <<'STUB'
+#!/usr/bin/env bash
+printf 'jest TEST_ENV=%s %s\n' "${TEST_ENV:-unset}" "$*" >> "${COMMAND_LOG:?}"
+exit 0
+STUB
+  chmod +x "$STUB_BIN_DIR/jest"
+
+  run_make_target test-integration CI=1
+  [ "$status" -eq 0 ]
+  assert_log_contains 'jest TEST_ENV=integration --verbose'
+}
+
+@test "test-integration-watch runs Jest in watch mode for the integration environment" {
+  cat > "$STUB_BIN_DIR/jest" <<'STUB'
+#!/usr/bin/env bash
+printf 'jest TEST_ENV=%s %s\n' "${TEST_ENV:-unset}" "$*" >> "${COMMAND_LOG:?}"
+exit 0
+STUB
+  chmod +x "$STUB_BIN_DIR/jest"
+
+  run_make_target test-integration-watch CI=1
+  [ "$status" -eq 0 ]
+  assert_log_contains 'jest TEST_ENV=integration --watch'
+}

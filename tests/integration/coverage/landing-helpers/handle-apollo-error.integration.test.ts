@@ -150,15 +150,11 @@ describe('integration: handleApolloError helpers', () => {
     });
 
     it('returns the unexpected message for null input', () => {
-      expect(handleApolloError({ error: null })).toBe(
-        messages[CLIENT_ERROR_KEYS.UNEXPECTED]
-      );
+      expect(handleApolloError({ error: null })).toBe(messages[CLIENT_ERROR_KEYS.UNEXPECTED]);
     });
 
     it('returns the unexpected message for a non-object input', () => {
-      expect(handleApolloError({ error: 'oops' })).toBe(
-        messages[CLIENT_ERROR_KEYS.UNEXPECTED]
-      );
+      expect(handleApolloError({ error: 'oops' })).toBe(messages[CLIENT_ERROR_KEYS.UNEXPECTED]);
     });
 
     it('maps a GraphQL error with a server statusCode', () => {

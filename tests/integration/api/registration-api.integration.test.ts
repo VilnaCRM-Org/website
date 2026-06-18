@@ -135,7 +135,7 @@ describe('integration: registration GraphQL API boundary', () => {
       expect(request.headers.get('accept-language')).toBe('uk');
     });
 
-    it('falls back to the en-US Accept-Language header when no i18n language is active', async () => {
+    it('falls back to en-US Accept-Language when no i18n language is active', async () => {
       fetchMock.mockResolvedValue(graphqlData(successPayload()));
 
       await jest.isolateModulesAsync(async () => {

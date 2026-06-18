@@ -17,8 +17,9 @@ import { ApolloProvider } from '@apollo/client/react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { t } from 'i18next';
 
+import AuthLayout from '@components/AuthSection/AuthForm/AuthLayout';
+
 import client from '../../../src/features/landing/api/graphql/apollo';
-import AuthLayout from '../../../src/features/landing/components/AuthSection/AuthForm/AuthLayout';
 import {
   FetchMock,
   graphqlData,

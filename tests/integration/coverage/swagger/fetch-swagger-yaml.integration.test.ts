@@ -20,9 +20,7 @@ describe('integration: fetchSwaggerYaml', () => {
 
   it('returns the response body when the request succeeds', async () => {
     const body = 'openapi: "3.0.0"';
-    fetchSpy = jest
-      .spyOn(global, 'fetch')
-      .mockResolvedValue(new Response(body, { status: 200 }));
+    fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue(new Response(body, { status: 200 }));
 
     await expect(fetchSwaggerYaml(URL)).resolves.toBe(body);
     expect(fetchSpy).toHaveBeenCalledWith(URL);
@@ -39,9 +37,7 @@ describe('integration: fetchSwaggerYaml', () => {
   });
 
   it('throws when the response body is empty/whitespace', async () => {
-    fetchSpy = jest
-      .spyOn(global, 'fetch')
-      .mockResolvedValue(new Response('   ', { status: 200 }));
+    fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue(new Response('   ', { status: 200 }));
 
     await expect(fetchSwaggerYaml(URL)).rejects.toThrow(
       'Error fetching Swagger YAML: Received empty response from Swagger YAML endpoint'

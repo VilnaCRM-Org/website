@@ -15,7 +15,8 @@ import { t } from 'i18next';
 import React from 'react';
 import { useForm } from 'react-hook-form';
 
-import AuthForm from '../../../../src/features/landing/components/AuthSection/AuthForm/AuthForm';
+import AuthForm from '@components/AuthSection/AuthForm/AuthForm';
+
 import { RegisterItem } from '../../../../src/features/landing/types/authentication/form';
 
 interface WrapperProps {
@@ -48,9 +49,7 @@ function AuthFormHarness({ onSubmit, loading }: WrapperProps): React.ReactElemen
 
 const noopSubmit: () => Promise<void> = () => Promise.resolve();
 
-function renderHarness(
-  overrides: Partial<WrapperProps> = {}
-): ReturnType<typeof render> {
+function renderHarness(overrides: Partial<WrapperProps> = {}): ReturnType<typeof render> {
   const { onSubmit = noopSubmit, loading = false } = overrides;
   return render(<AuthFormHarness onSubmit={onSubmit} loading={loading} />);
 }

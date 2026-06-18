@@ -13,6 +13,7 @@ import useSwagger from '../../../../src/features/swagger/hooks/useSwagger';
 type Schema = { openapi: string };
 
 const schema: Schema = { openapi: '3.0.0' };
+const SERVER_ERROR_MESSAGE = 'Failed to fetch swagger schema – 500 Server Error';
 
 describe('integration: useSwagger', () => {
   let fetchSpy: jest.SpyInstance;
@@ -78,9 +79,7 @@ describe('integration: useSwagger', () => {
     const { result } = renderHook(() => useSwagger());
 
     await waitFor(() => expect(result.current.error).toBeInstanceOf(Error));
-    expect(result.current.error?.message).toBe(
-      'Failed to fetch swagger schema – 500 Server Error'
-    );
+    expect(result.current.error?.message).toBe(SERVER_ERROR_MESSAGE);
     expect(result.current.swaggerContent).toBeNull();
   });
 

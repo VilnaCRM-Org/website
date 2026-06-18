@@ -9,8 +9,8 @@
 import { render, screen } from '@testing-library/react';
 import { t } from 'i18next';
 
-import Notification from '../../../../src/features/landing/components/Notification';
-import { NotificationStatus } from '../../../../src/features/landing/components/Notification/types';
+import Notification from '@components/Notification';
+import { NotificationStatus } from '@components/Notification/types';
 
 const successTitle: string = t('notifications.success.title');
 const errorTitle: string = t('notifications.error.title');

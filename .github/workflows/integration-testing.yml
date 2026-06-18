@@ -28,9 +28,9 @@ jobs:
         uses: actions/cache@v4.2.3
         with:
           path: node_modules
-          key: ${{ runner.os }}-dependencies-${{ hashFiles('**/pnpm-lock.yaml') }}
+          key: ${{ runner.os }}-dependencies-node-${{ vars.NODE_VERSION }}-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
-            ${{ runner.os }}-dependencies-
+            ${{ runner.os }}-dependencies-node-${{ vars.NODE_VERSION }}-
 
       - name: Install pnpm
         run: npm install -g pnpm@10.6.5

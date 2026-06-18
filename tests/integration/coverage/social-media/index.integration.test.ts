@@ -1,7 +1,4 @@
-import {
-  SocialMedia,
-  SocialMediaList,
-} from '../../../../src/features/landing/components/SocialMedia';
+import { SocialMedia, SocialMediaList } from '@components/SocialMedia';
 
 describe('SocialMedia barrel (integration)', () => {
   it('re-exports the SocialMediaItem and SocialMediaList components', () => {

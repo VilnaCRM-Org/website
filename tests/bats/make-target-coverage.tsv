@@ -61,3 +61,6 @@ logs	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Docker Compo
 new-logs	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Docker Compose invocation.
 stop	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Docker Compose invocation.
 check-node-version	bats	tests/bats/makefile_targets.bats	Validated with a stubbed pnpm/node invocation.
+test-integration	bats	tests/bats/makefile_targets.bats	Validated by invoking Jest with TEST_ENV=integration through a stubbed jest binary.
+test-integration-watch	bats	tests/bats/makefile_targets.bats	Validated by invoking Jest in watch mode with TEST_ENV=integration through a stubbed jest binary.
+ci-test-integration	ci	.github/workflows/integration-testing.yml	Executed directly by the integration testing workflow.

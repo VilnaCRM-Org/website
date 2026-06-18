@@ -10,7 +10,7 @@
 import { render, screen } from '@testing-library/react';
 import { t } from 'i18next';
 
-import WhyUs from '../../../../src/features/landing/components/WhyUs';
+import WhyUs from '@components/WhyUs';
 
 jest.mock('../../../../src/components/UiCardList/CardSwiper', () => jest.fn(() => null));
 
@@ -30,8 +30,7 @@ describe('WhyUs integration', () => {
   it('renders the sign-up call-to-action as a link to the sign-up anchor', () => {
     render(<WhyUs />);
 
-    const signUpLink: HTMLAnchorElement | null =
-      screen.getByText(signUpButtonText).closest('a');
+    const signUpLink: HTMLAnchorElement | null = screen.getByText(signUpButtonText).closest('a');
 
     expect(signUpLink).toBeInTheDocument();
     expect(signUpLink).toHaveAttribute('href', '#signUp');

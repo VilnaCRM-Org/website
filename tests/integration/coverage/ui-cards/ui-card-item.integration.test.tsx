@@ -48,7 +48,7 @@ describe('integration: UiCardItem', () => {
       expect(document.getElementById('services-label')).toBeNull();
     });
 
-    it('renders the small variant without the services-label id when text is not text_integrate', () => {
+    it('renders small variant without services-label id when text is not text_integrate', () => {
       render(<CardContent item={SMALL_CARD_ITEM} isSmallCard />);
 
       expect(screen.getByRole('heading', { level: 3 })).toBeInTheDocument();

@@ -114,7 +114,7 @@ describe('integration: scrollToAnchor helpers', () => {
       expect(scrollIntoViewMock).not.toHaveBeenCalled();
     });
 
-    it('does not clear a timeout that has not been scheduled yet (observer fires during observe)', () => {
+    it('does not clear an unscheduled timeout (observer fires during observe)', () => {
       const clearTimeoutSpy: jest.SpyInstance = jest.spyOn(window, 'clearTimeout');
 
       // The element is absent when waitForElement runs (so the immediate

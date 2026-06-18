@@ -12,9 +12,9 @@ import { render } from '@testing-library/react';
 import { DynamicOptions, Loader } from 'next/dynamic';
 import React from 'react';
 
-import { LandingComponent } from '@/features/landing';
+import Landing from '@components/Landing/Landing';
 
-import Landing from '../../../../src/features/landing/components/Landing/Landing';
+import { LandingComponent } from '../../../../src/features/landing';
 
 jest.mock('next/head', () => ({
   __esModule: true,

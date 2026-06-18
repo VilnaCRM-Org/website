@@ -18,10 +18,11 @@ import { ApolloProvider } from '@apollo/client/react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { t } from 'i18next';
 
+import AuthLayout from '@components/AuthSection/AuthForm/AuthLayout';
+import AuthSection from '@components/AuthSection/AuthSection';
+import { socialLinks } from '@components/AuthSection/constants';
+
 import client from '../../../../src/features/landing/api/graphql/apollo';
-import AuthLayout from '../../../../src/features/landing/components/AuthSection/AuthForm/AuthLayout';
-import AuthSection from '../../../../src/features/landing/components/AuthSection/AuthSection';
-import { socialLinks } from '../../../../src/features/landing/components/AuthSection/constants';
 import { SocialLink } from '../../../../src/features/landing/types/authentication/social';
 import {
   FetchMock,
@@ -96,7 +97,7 @@ describe('integration: AuthLayout', () => {
     expect(screen.queryByText(errorTitle)).not.toBeInTheDocument();
   });
 
-  it('shows the loader during submit, lower-cases the email, resets the form and shows success', async () => {
+  it('shows the loader, lower-cases the email, resets the form and shows success', async () => {
     const expectedEmail: string = credentials.email.toLowerCase();
     // Defer the response so the in-flight `loading` branch (the spinner) is
     // observable before it resolves.

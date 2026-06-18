@@ -1,16 +1,11 @@
 import { render } from '@testing-library/react';
 import { t } from 'i18next';
 
-import Possibilities from '../../../../src/features/landing/components/Possibilities';
-import {
-  cardList,
-  imageList,
-} from '../../../../src/features/landing/components/Possibilities/constants';
-import PossibilitiesComponent from '../../../../src/features/landing/components/Possibilities/Possibilities';
+import Possibilities from '@components/Possibilities';
+import { cardList, imageList } from '@components/Possibilities/constants';
+import PossibilitiesComponent from '@components/Possibilities/Possibilities';
 
-jest.mock('../../../../src/components/UiCardList/CardSwiper', () =>
-  jest.fn(() => null)
-);
+jest.mock('../../../../src/components/UiCardList/CardSwiper', () => jest.fn(() => null));
 
 describe('Possibilities integration', () => {
   it('renders the Integration section wrapper via the barrel export', () => {
@@ -25,12 +20,8 @@ describe('Possibilities integration', () => {
   it('renders the registration heading text inside the section', () => {
     const { getByText } = render(<PossibilitiesComponent />);
 
-    expect(
-      getByText(t('unlimited_possibilities.main_heading_text'))
-    ).toBeInTheDocument();
-    expect(
-      getByText(t('unlimited_possibilities.secondary_heading_text'))
-    ).toBeInTheDocument();
+    expect(getByText(t('unlimited_possibilities.main_heading_text'))).toBeInTheDocument();
+    expect(getByText(t('unlimited_possibilities.secondary_heading_text'))).toBeInTheDocument();
   });
 
   it('exposes the card and image constants used by the section', () => {
