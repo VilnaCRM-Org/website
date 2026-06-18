@@ -69,6 +69,7 @@ export default [
       'docker/**/*.{js,ts,mts}',
       '**/*.stories.@(js|jsx|ts|tsx)',
       'src/test/**/*',
+      'tests/integration/**/*.{ts,tsx}',
     ],
     languageOptions: {
       parser: '@typescript-eslint/parser',
