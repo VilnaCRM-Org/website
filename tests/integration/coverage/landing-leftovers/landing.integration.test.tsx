@@ -12,7 +12,7 @@ import { render } from '@testing-library/react';
 import { DynamicOptions, Loader } from 'next/dynamic';
 import React from 'react';
 
-import Landing from '@components/Landing/Landing';
+import Landing from '@landing-components/Landing/Landing';
 
 import { LandingComponent } from '../../../../src/features/landing';
 

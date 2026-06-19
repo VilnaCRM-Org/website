@@ -1,8 +1,8 @@
 import { render } from '@testing-library/react';
 import { t } from 'i18next';
 
-import { testSocialDrawerItem, testSocialNoDrawerItem } from '@components/SocialMedia/constants';
-import SocialMediaItem from '@components/SocialMedia/SocialMediaItem/SocialMediaItem';
+import { testSocialDrawerItem, testSocialNoDrawerItem } from '@landing-components/SocialMedia/constants';
+import SocialMediaItem from '@landing-components/SocialMedia/SocialMediaItem/SocialMediaItem';
 
 const widthStyle: string = 'width';
 const heightStyle: string = 'height';

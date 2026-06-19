@@ -9,8 +9,8 @@
 import { render, screen } from '@testing-library/react';
 import { t } from 'i18next';
 
-import { Heading } from '@components/WhyUs/Heading';
-import HeadingDefault from '@components/WhyUs/Heading/Heading';
+import { Heading } from '@landing-components/WhyUs/Heading';
+import HeadingDefault from '@landing-components/WhyUs/Heading/Heading';
 
 const headingText: string = t('why_us.heading');
 const businessSubtitle: RegExp = new RegExp(t('why_us.business_subtitle'));

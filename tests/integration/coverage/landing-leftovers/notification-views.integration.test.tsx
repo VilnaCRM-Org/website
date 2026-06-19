@@ -6,8 +6,8 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { t } from 'i18next';
 
-import Notification, { notificationComponents } from '@components/Notification/Notification';
-import { NotificationStatus } from '@components/Notification/types';
+import Notification, { notificationComponents } from '@landing-components/Notification/Notification';
+import { NotificationStatus } from '@landing-components/Notification/types';
 
 describe('integration: notification views', () => {
   it('maps each notification status to a view component', () => {

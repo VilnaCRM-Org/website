@@ -502,6 +502,65 @@ validate_pr() {
     fi
 }
 
+# Fetch the comments on a single review thread beyond the first page. GraphQL
+# connections cap `comments(first: ...)` at 100 per page, so a thread holding
+# more than 100 comments would otherwise be silently truncated. Follows the
+# nested cursor via the thread's node id and echoes a JSON array of the extra
+# comment nodes (matching the shape selected in the main query).
+fetch_remaining_thread_comments() {
+    local thread_id="$1"
+    local after_cursor="$2"
+
+    local gh_args=()
+    if [[ -n "$GITHUB_HOST" && "$GITHUB_HOST" != "github.com" ]]; then
+        gh_args+=(--hostname "$GITHUB_HOST")
+    fi
+
+    local extra='[]'
+    local resp page has_next
+    while [[ -n "$after_cursor" ]]; do
+        local query='{
+  node(id: "'"$thread_id"'") {
+    ... on PullRequestReviewThread {
+      comments(first: 100, after: "'"$after_cursor"'") {
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+        nodes {
+          id
+          body
+          author {
+            login
+          }
+          createdAt
+          updatedAt
+          url
+        }
+      }
+    }
+  }
+}'
+
+        if ! resp=$(gh api graphql "${gh_args[@]}" -f query="$query" 2>/dev/null); then
+            log "Warning: failed to fetch additional comments for thread $thread_id; output may be incomplete."
+            break
+        fi
+
+        page=$(echo "$resp" | jq '.data.node.comments.nodes // []')
+        extra=$(jq -n --argjson acc "$extra" --argjson page "$page" '$acc + $page')
+
+        has_next=$(echo "$resp" | jq -r '.data.node.comments.pageInfo.hasNextPage // false')
+        after_cursor=$(echo "$resp" | jq -r '.data.node.comments.pageInfo.endCursor // empty')
+
+        if [[ "$has_next" != "true" || -z "$after_cursor" ]]; then
+            break
+        fi
+    done
+
+    echo "$extra"
+}
+
 # Get unresolved comments for a PR
 get_pr_comments() {
     local pr_number="$1"
@@ -545,6 +604,10 @@ get_pr_comments() {
           startLine
           originalStartLine
           comments(first: 100) {
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
             nodes {
               id
               body
@@ -581,6 +644,26 @@ get_pr_comments() {
             break
         fi
     done
+
+    # Nested comment pagination: a single review thread can hold more than the
+    # 100 comments fetched above. For any thread flagged hasNextPage, fetch the
+    # remaining comments by node id and merge them back so large threads are not
+    # silently truncated.
+    local more_threads
+    more_threads=$(echo "$all_threads" | jq -r '
+        to_entries[]
+        | select(.value.comments.pageInfo.hasNextPage == true)
+        | "\(.key)\t\(.value.id)\t\(.value.comments.pageInfo.endCursor)"')
+
+    if [[ -n "$more_threads" ]]; then
+        local idx thread_id cursor extra
+        while IFS=$'\t' read -r idx thread_id cursor; do
+            [[ -z "$thread_id" || -z "$cursor" || "$cursor" == "null" ]] && continue
+            extra=$(fetch_remaining_thread_comments "$thread_id" "$cursor")
+            all_threads=$(jq --argjson i "$idx" --argjson extra "$extra" \
+                '.[$i].comments.nodes += $extra' <<<"$all_threads")
+        done <<<"$more_threads"
+    fi
 
     # Filter for unresolved and non-outdated threads and flatten ALL comments from each thread
     local unresolved_comments

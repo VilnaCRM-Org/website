@@ -10,7 +10,7 @@
 import { render, screen } from '@testing-library/react';
 import { t } from 'i18next';
 
-import WhyUs from '@components/WhyUs';
+import WhyUs from '@landing-components/WhyUs';
 
 jest.mock('../../../../src/components/UiCardList/CardSwiper', () => jest.fn(() => null));
 

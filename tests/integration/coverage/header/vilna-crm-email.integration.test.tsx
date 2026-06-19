@@ -1,6 +1,6 @@
 import { render } from '@testing-library/react';
 
-import VilnaCRMEmail from '@components/Header/Drawer/VilnaCRMEmail/VilnaCRMEmail';
+import VilnaCRMEmail from '@landing-components/Header/Drawer/VilnaCRMEmail/VilnaCRMEmail';
 
 const mockEmail: string = 'info@vilnacrm.com';
 const atSymbol: string = '@';

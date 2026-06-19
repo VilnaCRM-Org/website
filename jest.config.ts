@@ -27,6 +27,14 @@ const testMatchByEnv: Record<string, string[]> = {
   client: ['<rootDir>/src/test/testing-library**/*.test.tsx', UNIT_GLOB],
 };
 
+// Fail fast on an unrecognised TEST_ENV (e.g. a typo in a CI job) instead of
+// silently falling back to the client layer and running the wrong suite.
+if (!(TEST_ENV in testMatchByEnv)) {
+  throw new Error(
+    `Unsupported TEST_ENV: "${TEST_ENV}". Expected one of: ${Object.keys(testMatchByEnv).join(', ')}.`
+  );
+}
+
 const isIntegration = TEST_ENV === 'integration';
 const isServer = TEST_ENV === 'server';
 
@@ -74,7 +82,7 @@ const config: Config = {
         coverageThreshold: INTEGRATION_COVERAGE_THRESHOLD,
       }
     : {}),
-  testMatch: testMatchByEnv[TEST_ENV] ?? testMatchByEnv.client,
+  testMatch: testMatchByEnv[TEST_ENV],
   testPathIgnorePatterns: [
     '/node_modules/',
     '/.next/',
