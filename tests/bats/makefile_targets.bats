@@ -376,10 +376,12 @@ STUB
   reset_command_log
   run_make_target ci-test-memory-leak
   [ "$status" -eq 0 ]
-  assert_log_contains 'docker compose -p memleak -f docker-compose.memory-leak.yml up -d'
+  # --wait avoids racing the exec against an unready container.
+  assert_log_contains 'docker compose -p memleak -f docker-compose.memory-leak.yml up -d --wait memory-leak'
   assert_log_contains 'node ./src/test/memory-leak/runMemlabTests.js'
   # Teardown must be scoped to the isolated memleak project so it never removes
-  # the shared prod stack as an orphan mid-sequence in ci-test-prod.
+  # the shared prod stack as an orphan mid-sequence in ci-test-prod, and the
+  # trap guarantees it runs even if the Memlab run fails.
   assert_log_contains 'docker compose -p memleak -f docker-compose.memory-leak.yml down --remove-orphans'
 
   reset_command_log

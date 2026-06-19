@@ -55,10 +55,13 @@ build_safe_target() {
 targets=("$@")
 pids=()
 
-for target in "${targets[@]}"; do
+# Index the temp filenames by position so duplicate target arguments never
+# share a log/status file and race (which could otherwise mask a failure).
+for i in "${!targets[@]}"; do
+  target="${targets[$i]}"
   safe_target="$(build_safe_target "$target")"
-  log_path="$tmp_dir/$safe_target.log"
-  status_path="$tmp_dir/$safe_target.status"
+  log_path="$tmp_dir/${i}_${safe_target}.log"
+  status_path="$tmp_dir/${i}_${safe_target}.status"
 
   (
     if "$MAKE_BIN" "$target" >"$log_path" 2>&1; then
@@ -75,10 +78,11 @@ for pid in "${pids[@]}"; do
   wait "$pid"
 done
 
-for target in "${targets[@]}"; do
+for i in "${!targets[@]}"; do
+  target="${targets[$i]}"
   safe_target="$(build_safe_target "$target")"
-  log_path="$tmp_dir/$safe_target.log"
-  status_path="$tmp_dir/$safe_target.status"
+  log_path="$tmp_dir/${i}_${safe_target}.log"
+  status_path="$tmp_dir/${i}_${safe_target}.status"
   target_status="$(cat "$status_path")"
 
   printf '===== %s =====\n' "$target"

@@ -228,7 +228,7 @@ set -euo pipefail
 PR_NUMBER=""
 FORMAT="text"
 REPO=""
-GITHUB_HOST="${GITHUB_HOST:-github.com}"
+GITHUB_HOST="${GITHUB_HOST:-${GH_HOST:-github.com}}"
 
 # Logging function
 log() {
@@ -514,11 +514,27 @@ get_pr_comments() {
     repo_owner=$(echo "$REPO" | cut -d'/' -f1)
     repo_name=$(echo "$REPO" | cut -d'/' -f2)
 
-    # Use GraphQL to get unresolved review threads
-    local graphql_query='{
-  repository(owner: "'$repo_owner'", name: "'$repo_name'") {
-    pullRequest(number: '$pr_number') {
-      reviewThreads(first: 250) {
+    # Use GraphQL API (only add hostname if it's not empty/default)
+    local gh_args=()
+    if [[ -n "$GITHUB_HOST" && "$GITHUB_HOST" != "github.com" ]]; then
+        gh_args+=(--hostname "$GITHUB_HOST")
+    fi
+
+    # Paginate through every review thread. GraphQL connections cap `first` at
+    # 100 per page, so accumulate pages until hasNextPage is false; otherwise
+    # large PRs would silently truncate unresolved feedback.
+    local all_threads='[]'
+    local after_clause='null'
+    local threads_data page_nodes has_next end_cursor
+    while :; do
+        local graphql_query='{
+  repository(owner: "'"$repo_owner"'", name: "'"$repo_name"'") {
+    pullRequest(number: '"$pr_number"') {
+      reviewThreads(first: 100, after: '"$after_clause"') {
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
         nodes {
           id
           isResolved
@@ -546,25 +562,30 @@ get_pr_comments() {
   }
 }'
 
-    local threads_data
-    # Use GraphQL API (only add hostname if it's not empty/default)
-    local gh_args=()
-    if [[ -n "$GITHUB_HOST" && "$GITHUB_HOST" != "github.com" ]]; then
-        gh_args+=(--hostname "$GITHUB_HOST")
-    fi
+        if ! threads_data=$(gh api graphql "${gh_args[@]}" -f query="$graphql_query" 2>/dev/null); then
+            echo "Error: Failed to fetch PR comments via GraphQL. Check your permissions and network connection."
+            echo "Debug: GraphQL query failed. Trying to get error details..."
+            gh api graphql "${gh_args[@]}" -f query="$graphql_query"
+            exit 1
+        fi
 
-    if ! threads_data=$(gh api graphql "${gh_args[@]}" -f query="$graphql_query" 2>/dev/null); then
-        echo "Error: Failed to fetch PR comments via GraphQL. Check your permissions and network connection."
-        echo "Debug: GraphQL query failed. Trying to get error details..."
-        gh api graphql "${gh_args[@]}" -f query="$graphql_query"
-        exit 1
-    fi
+        page_nodes=$(echo "$threads_data" | jq '.data.repository.pullRequest.reviewThreads.nodes // []')
+        all_threads=$(jq -n --argjson acc "$all_threads" --argjson page "$page_nodes" '$acc + $page')
+
+        has_next=$(echo "$threads_data" | jq -r '.data.repository.pullRequest.reviewThreads.pageInfo.hasNextPage // false')
+        end_cursor=$(echo "$threads_data" | jq -r '.data.repository.pullRequest.reviewThreads.pageInfo.endCursor // empty')
+
+        if [[ "$has_next" == "true" && -n "$end_cursor" ]]; then
+            after_clause="\"$end_cursor\""
+        else
+            break
+        fi
+    done
 
     # Filter for unresolved and non-outdated threads and flatten ALL comments from each thread
     local unresolved_comments
-    unresolved_comments=$(echo "$threads_data" | jq --argjson pr_number "$pr_number" '
-        .data.repository.pullRequest.reviewThreads.nodes
-        | map(select(.isResolved == false and .isOutdated == false))
+    unresolved_comments=$(echo "$all_threads" | jq '
+        map(select(.isResolved == false and .isOutdated == false))
         | map(. as $thread | .comments.nodes[] | {
             id: .id,
             path: $thread.path,

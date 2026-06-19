@@ -363,6 +363,12 @@ ci-test-integration: ## Run integration tests directly assuming deps are install
 #     profile targets the Swagger page and is exposed as test-load-swagger.
 # ============================================================================
 
+.PHONY: ci ci-setup ci-lint ci-test ci-test-unit-client ci-test-unit-server \
+	ci-test-mutation ci-mutation ci-prod-setup ci-test-e2e ci-test-visual \
+	ci-test-memory-leak ci-test-load ci-test-lighthouse-desktop \
+	ci-test-lighthouse-mobile ci-test-prod ensure-dev start-prod-clean \
+	test-load test-load-swagger pr-comments
+
 ci-setup: create-network ## Prepare the shared dev environment for CI-oriented checks
 	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) up $(CI_SETUP_UP_FLAGS) dev && $(MAKE) wait-for-dev
 
@@ -396,16 +402,24 @@ ci-test-visual: ## Run visual tests assuming ci-prod-setup already started the p
 
 ci-test-memory-leak: ## Run Memlab memory leak tests against the dedicated compose stack (assumes prod is running)
 	# Isolate the Memlab stack in its own Compose project (-p memleak) so the
-	# teardown below never removes the shared prod stack as an "orphan" — this
-	# target runs mid-sequence in ci-test-prod, before load and lighthouse.
-	@echo "🧪 Starting memory leak test environment..."
-	$(DOCKER_COMPOSE) -p memleak $(DOCKER_COMPOSE_MEMLEAK_FILE) up -d
-	@echo "🧹 Cleaning up previous memory leak results..."
-	$(DOCKER_COMPOSE) -p memleak $(DOCKER_COMPOSE_MEMLEAK_FILE) exec -T $(MEMLEAK_SERVICE) rm -rf $(MEMLEAK_RESULTS_DIR)
-	@echo "🚀 Running memory leak tests..."
+	# teardown never removes the shared prod stack as an "orphan" — this target
+	# runs mid-sequence in ci-test-prod, before load and lighthouse. The trap
+	# guarantees teardown even on failure, --wait avoids racing the exec against
+	# an unready container, and the captured rc keeps a failing run non-zero.
+	@set -e; \
+	cleanup() { \
+		rc=$$?; \
+		echo "🧹 Cleaning up memory leak test containers..."; \
+		$(DOCKER_COMPOSE) -p memleak $(DOCKER_COMPOSE_MEMLEAK_FILE) down --remove-orphans || true; \
+		exit $$rc; \
+	}; \
+	trap cleanup EXIT; \
+	echo "🧪 Starting memory leak test environment..."; \
+	$(DOCKER_COMPOSE) -p memleak $(DOCKER_COMPOSE_MEMLEAK_FILE) up -d --wait $(MEMLEAK_SERVICE); \
+	echo "🧹 Cleaning up previous memory leak results..."; \
+	$(DOCKER_COMPOSE) -p memleak $(DOCKER_COMPOSE_MEMLEAK_FILE) exec -T $(MEMLEAK_SERVICE) rm -rf $(MEMLEAK_RESULTS_DIR); \
+	echo "🚀 Running memory leak tests..."; \
 	$(DOCKER_COMPOSE) -p memleak $(DOCKER_COMPOSE_MEMLEAK_FILE) exec -T $(MEMLEAK_SERVICE) node $(MEMLEAK_TEST_SCRIPT)
-	@echo "🧹 Cleaning up memory leak test containers..."
-	$(DOCKER_COMPOSE) -p memleak $(DOCKER_COMPOSE_MEMLEAK_FILE) down --remove-orphans
 
 ci-test-load: ## Run K6 load tests assuming ci-prod-setup already started the prod environment
 	$(LOAD_TESTS_RUN)
