@@ -115,6 +115,38 @@ Testing
   make test-e2e-ui: runs end-to-end tests with UI inside the prod container
   make test-visual: runs visual tests inside the prod container
   make test-visual-ui: runs visual tests with UI inside the prod container
+  make test-load: alias for load-tests (K6 homepage load tests)
+  make test-load-swagger: alias for load-tests-swagger (K6 Swagger load tests)
+```
+
+Local CI Orchestration
+
+These targets run the same grouped CI phases the pipeline uses, adapted to
+website's pnpm + Next.js toolchain, so developers and agents can reproduce a
+full CI run — or any single phase — locally:
+
+```bash
+  make ci: runs the full local CI flow (setup → lint → dev tests → mutation → prod setup → prod tests)
+  make ci-setup: prepares the shared dev container for CI-oriented checks
+  make ci-lint: runs the lint phase (ESLint, TypeScript, Markdown) in parallel with grouped output
+  make ci-test: runs the dev-side tests (unit client/server, integration) in parallel
+  make ci-mutation: runs Stryker mutation testing in isolation
+  make ci-prod-setup: starts the prod stack and installs Chromium/LHCI for prod-side tests
+  make ci-test-prod: runs the prod-side tests (e2e, visual, memory-leak, load, lighthouse) sequentially
+  make ensure-dev: starts the dev service only when it is not already running
+```
+
+The phases are also exposed as individual entrypoints so CI workflows can fan
+them out independently: `ci-test-unit-client`, `ci-test-unit-server`,
+`ci-test-integration` (dev-side) and `ci-test-e2e`, `ci-test-visual`,
+`ci-test-memory-leak`, `ci-test-load`, `ci-test-lighthouse-desktop`,
+`ci-test-lighthouse-mobile` (prod-side).
+
+Repository Helpers
+
+```bash
+  make pr-comments: retrieves unresolved PR review comments (PR=<num> FORMAT=<text|json|markdown>)
+  make start-prod-clean: force-rebuilds and recreates the prod test stack, then waits for health
 ```
 
 ### Important Note About Swagger E2E Tests
