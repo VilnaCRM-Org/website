@@ -115,6 +115,10 @@ describe('integration: AuthForm', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('checkbox')).toHaveAttribute('aria-invalid', 'true');
+      // FullName, Email and Password each use their own required-message key
+      // (name_input/email_input/password_input.required), but all three keys
+      // intentionally resolve to the same text ("This field is required"), so a
+      // single key's text matches all three rendered error nodes.
       expect(screen.getAllByText(t('sign_up.form.name_input.required'))).toHaveLength(3);
     });
     expect(onSubmit).not.toHaveBeenCalled();

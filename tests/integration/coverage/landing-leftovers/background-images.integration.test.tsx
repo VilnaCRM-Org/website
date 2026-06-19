@@ -36,5 +36,8 @@ describe('BackgroundImages integration', () => {
     expect(box).toBeInTheDocument();
     expect(box).toHaveStyle({ backgroundRepeat: 'no-repeat' });
     expect(box).toHaveStyle({ position: 'absolute' });
+
+    const { backgroundImage } = window.getComputedStyle(box as HTMLElement);
+    expect(backgroundImage).toMatch(/^url\(["']?\/_next\/static\/chunks\/images\/.+["']?\)$/);
   });
 });

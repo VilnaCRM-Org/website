@@ -24,7 +24,7 @@ const containerElementClass: string = '.MuiContainer-root';
 const logoAlt: string = t('footer.logo_alt');
 const privacyText: string = t('footer.privacy');
 const usagePolicyText: string = t('footer.usage_policy');
-const expectedEmail: string = 'info@vilnacrm.com';
+const expectedEmail: string = process.env.NEXT_PUBLIC_VILNACRM_GMAIL ?? 'info@vilnacrm.com';
 
 const localizedRegExp: (key: string) => RegExp = key => new RegExp(t(key));
 
@@ -95,6 +95,11 @@ describe('PrivacyPolicy (integration)', () => {
     const privacyAnchor: HTMLElement | null = privacyLink.closest('a');
     const usageAnchor: HTMLElement | null = usagePolicyLink.closest('a');
     expect(privacyAnchor).toHaveAttribute(
+      'href',
+      'https://github.com/VilnaCRM-Org/website/blob/main/README.md'
+    );
+    expect(privacyAnchor).toHaveAttribute('target', '_blank');
+    expect(usageAnchor).toHaveAttribute(
       'href',
       'https://github.com/VilnaCRM-Org/website/blob/main/README.md'
     );

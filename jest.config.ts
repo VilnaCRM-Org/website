@@ -62,6 +62,11 @@ const config: Config = {
   clearMocks: true,
   collectCoverage: true,
   coverageDirectory: 'coverage',
+  // The integration layer uses the `babel` coverage provider so coverage is
+  // instrumented on the same babel-jest-transformed output the tests run
+  // against; this keeps the strict 100% threshold measured against the exact
+  // executed code. `v8` instruments native output and remaps via source maps,
+  // which can shift branch/line attribution and destabilise the 100% gate.
   coverageProvider: isIntegration ? 'babel' : 'v8',
   ...(isIntegration
     ? {

@@ -107,14 +107,26 @@ describe('integration: UiCardList', () => {
       global.MutationObserver = CapturingObserver as unknown as typeof MutationObserver;
 
       try {
-        render(<CardSwiper cardList={LARGE_CARDLIST_ARRAY} />);
+        const { container } = render(<CardSwiper cardList={LARGE_CARDLIST_ARRAY} />);
+        const swiperGrid = container.firstChild as HTMLElement;
 
         expect(capturedCallback).toBeDefined();
-        // A non-childList record must be skipped by the `mutation.type` guard.
+        // A non-childList record that still carries a tooltip popper in its
+        // addedNodes must be skipped by the `mutation.type` guard, so
+        // `pointerEvents` stays untouched. Regressing the guard would set it to
+        // `none` and fail the assertion below.
         capturedCallback!(
-          [{ type: 'attributes', addedNodes: [], removedNodes: [] } as unknown as MutationRecord],
+          [
+            {
+              type: 'attributes',
+              addedNodes: [makeTooltip()],
+              removedNodes: [],
+            } as unknown as MutationRecord,
+          ],
           {} as MutationObserver
         );
+
+        expect(swiperGrid).not.toHaveStyle({ pointerEvents: 'none' });
       } finally {
         global.MutationObserver = realObserver;
       }

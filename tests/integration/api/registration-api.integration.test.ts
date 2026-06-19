@@ -148,7 +148,6 @@ describe('integration: registration GraphQL API boundary', () => {
           await import('../../../src/features/landing/api/service/userService');
         await freshClient.mutate({ mutation: freshMutation, variables: { input: signUpInput } });
       });
-      jest.dontMock('i18next');
 
       const request = readGraphQLRequest(fetchMock);
       expect(request.headers.get('accept-language')).toBe('en-US');

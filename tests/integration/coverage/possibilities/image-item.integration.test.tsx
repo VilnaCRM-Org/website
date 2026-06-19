@@ -17,6 +17,7 @@ describe('ImageItem integration', () => {
     const image: HTMLImageElement = getByAltText(item.alt) as HTMLImageElement;
     expect(image).toBeInTheDocument();
     expect(image).toHaveAttribute('alt', item.alt);
+    expect(image).toHaveAttribute('src', expect.stringContaining('integration-image'));
   });
 
   it('renders the same image via the default export', () => {
