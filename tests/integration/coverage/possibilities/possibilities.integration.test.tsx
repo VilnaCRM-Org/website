@@ -1,9 +1,9 @@
 import { render } from '@testing-library/react';
 import { t } from 'i18next';
 
-import Possibilities from '@landing-components/Possibilities';
-import { cardList, imageList } from '@landing-components/Possibilities/constants';
-import PossibilitiesComponent from '@landing-components/Possibilities/Possibilities';
+import Possibilities from '@landing/Possibilities';
+import { cardList, imageList } from '@landing/Possibilities/constants';
+import PossibilitiesComponent from '@landing/Possibilities/Possibilities';
 
 jest.mock('../../../../src/components/UiCardList/CardSwiper', () => jest.fn(() => null));
 

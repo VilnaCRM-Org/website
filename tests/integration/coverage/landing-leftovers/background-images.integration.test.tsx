@@ -9,9 +9,9 @@
  */
 import { render } from '@testing-library/react';
 
-import BackgroundImagesBarrel from '@landing-components/BackgroundImages';
-import BackgroundImages from '@landing-components/BackgroundImages/BackgroundImages';
-import styles from '@landing-components/BackgroundImages/styles';
+import BackgroundImagesBarrel from '@landing/BackgroundImages';
+import BackgroundImages from '@landing/BackgroundImages/BackgroundImages';
+import styles from '@landing/BackgroundImages/styles';
 
 describe('BackgroundImages integration', () => {
   it('re-exports the component from its barrel', () => {

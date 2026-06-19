@@ -30,9 +30,8 @@ const testMatchByEnv: Record<string, string[]> = {
 // Fail fast on an unrecognised TEST_ENV (e.g. a typo in a CI job) instead of
 // silently falling back to the client layer and running the wrong suite.
 if (!(TEST_ENV in testMatchByEnv)) {
-  throw new Error(
-    `Unsupported TEST_ENV: "${TEST_ENV}". Expected one of: ${Object.keys(testMatchByEnv).join(', ')}.`
-  );
+  const supported = Object.keys(testMatchByEnv).join(', ');
+  throw new Error(`Unsupported TEST_ENV: "${TEST_ENV}". Expected one of: ${supported}.`);
 }
 
 const isIntegration = TEST_ENV === 'integration';

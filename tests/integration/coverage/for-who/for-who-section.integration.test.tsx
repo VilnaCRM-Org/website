@@ -11,8 +11,8 @@ import { render } from '@testing-library/react';
 import { t } from 'i18next';
 import React from 'react';
 
-import ForWhoSectionBarrel from '@landing-components/ForWhoSection';
-import ForWhoSection from '@landing-components/ForWhoSection/ForWhoSection';
+import ForWhoSectionBarrel from '@landing/ForWhoSection';
+import ForWhoSection from '@landing/ForWhoSection/ForWhoSection';
 
 const forWhoButton: string = t('for_who.button_text');
 const forWhoTitle: string = t('for_who.heading_main');

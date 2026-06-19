@@ -11,11 +11,11 @@
 import { render, screen } from '@testing-library/react';
 import { t } from 'i18next';
 
-import { socialLinks, testSocialLink } from '@landing-components/AuthSection/constants';
-import { PasswordTip } from '@landing-components/AuthSection/PasswordTip';
-import { SignUpText } from '@landing-components/AuthSection/SignUpText';
-import { SocialItem } from '@landing-components/AuthSection/SocialItem';
-import { SocialList } from '@landing-components/AuthSection/SocialList';
+import { socialLinks, testSocialLink } from '@landing/AuthSection/constants';
+import { PasswordTip } from '@landing/AuthSection/PasswordTip';
+import { SignUpText } from '@landing/AuthSection/SignUpText';
+import { SocialItem } from '@landing/AuthSection/SocialItem';
+import { SocialList } from '@landing/AuthSection/SocialList';
 
 import { SocialLink } from '../../../../src/features/landing/types/authentication/social';
 

@@ -12,9 +12,9 @@ import {
   validateEmail,
   validateFullName,
   validatePassword,
-} from '@landing-components/AuthSection/Validations';
-import { isValidEmailFormat } from '@landing-components/AuthSection/Validations/email';
-import { validators, validationMessages } from '@landing-components/AuthSection/Validations/initials';
+} from '@landing/AuthSection/Validations';
+import { isValidEmailFormat } from '@landing/AuthSection/Validations/email';
+import { validators, validationMessages } from '@landing/AuthSection/Validations/initials';
 
 const emailFormatError: string = t('sign_up.form.email_input.email_format_error');
 const emailInvalidError: string = t('sign_up.form.email_input.invalid_message');
