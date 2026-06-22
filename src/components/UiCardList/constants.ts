@@ -1,13 +1,13 @@
-import Diamond from '../../features/landing/assets/svg/possibilities/diamond.svg';
-import Ruby from '../../features/landing/assets/svg/possibilities/ruby.svg';
-import SmallDiamond from '../../features/landing/assets/svg/possibilities/smallDiamond.svg';
-import SmallRuby from '../../features/landing/assets/svg/possibilities/smallRuby.svg';
-import WhyUsCodeIcon from '../../features/landing/assets/svg/why-us/code.svg';
-import WhyUsIntegrationsIcon from '../../features/landing/assets/svg/why-us/integrations.svg';
-import WhyUsMigrationIcon from '../../features/landing/assets/svg/why-us/migration.svg';
-import WhyUsServicesIcon from '../../features/landing/assets/svg/why-us/services.svg';
-import WhyUsSettingsIcon from '../../features/landing/assets/svg/why-us/settings.svg';
-import WhyUsTemplatesIcon from '../../features/landing/assets/svg/why-us/templates.svg';
+import Diamond from '@/assets/svg/possibilities/diamond.svg';
+import Ruby from '@/assets/svg/possibilities/ruby.svg';
+import SmallDiamond from '@/assets/svg/possibilities/smallDiamond.svg';
+import SmallRuby from '@/assets/svg/possibilities/smallRuby.svg';
+import WhyUsCodeIcon from '@/assets/svg/why-us/code.svg';
+import WhyUsIntegrationsIcon from '@/assets/svg/why-us/integrations.svg';
+import WhyUsMigrationIcon from '@/assets/svg/why-us/migration.svg';
+import WhyUsServicesIcon from '@/assets/svg/why-us/services.svg';
+import WhyUsSettingsIcon from '@/assets/svg/why-us/settings.svg';
+import WhyUsTemplatesIcon from '@/assets/svg/why-us/templates.svg';
 
 import { CardItem } from './types';
 

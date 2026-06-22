@@ -8,7 +8,7 @@ import CardContent from './CardContent';
 import styles from './styles';
 import { UiCardItemProps } from './types';
 
-function UiCardItem({ item }: UiCardItemProps): React.ReactElement {
+function UiCardItem({ item, hoverCardContent }: UiCardItemProps): React.ReactElement {
   const { t } = useTranslation();
 
   const isSmallCard: boolean = item.type === 'smallCard';
@@ -21,7 +21,7 @@ function UiCardItem({ item }: UiCardItemProps): React.ReactElement {
         sx={isSmallCard ? styles.smallImage : styles.largeImage}
       />
       <Stack direction="column">
-        <CardContent item={item} isSmallCard={isSmallCard} />
+        <CardContent item={item} isSmallCard={isSmallCard} hoverCardContent={hoverCardContent} />
       </Stack>
     </Stack>
   );

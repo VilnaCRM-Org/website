@@ -1,3 +1,5 @@
+import { ReactNode } from 'react';
+
 export type CardItem = {
   type: string;
   id: string;
@@ -9,9 +11,11 @@ export type CardItem = {
 
 export interface UiCardItemProps {
   item: CardItem;
+  hoverCardContent?: ReactNode;
 }
 
 export interface CardContentProps {
   item: CardItem;
   isSmallCard: boolean;
+  hoverCardContent?: ReactNode;
 }

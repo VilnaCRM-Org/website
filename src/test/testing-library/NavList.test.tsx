@@ -3,14 +3,12 @@ import userEvent, { UserEvent } from '@testing-library/user-event';
 import { t } from 'i18next';
 import { useRouter } from 'next/router';
 
-import {
-  headerNavList,
-  testDrawerItem,
-  testHeaderItem,
-} from '../../features/landing/components/Header/constants';
+import { headerNavList } from '../../features/landing/components/Header/constants';
 import NavList from '../../features/landing/components/Header/NavList/NavList';
 import scrollToAnchor from '../../features/landing/helpers/scrollToAnchor';
 import { NavItemProps } from '../../features/landing/types/header/navigation';
+
+import { testDrawerItem, testHeaderItem } from './fixtures/header-nav.fixtures';
 
 const handleClick: () => void = jest.fn();
 

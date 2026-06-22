@@ -79,3 +79,5 @@ app.log
 /_bmad-output/
 /bmalph/
 /.ralph/
+/.claude/
+/CLAUDE.md

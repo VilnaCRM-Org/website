@@ -3,8 +3,7 @@ import { t } from 'i18next';
 import { AriaRole } from 'react';
 
 import { CardItem } from '@/components/UiCardList/types';
-
-import { SocialMedia } from '../../features/landing/types/social-media';
+import { SocialMedia } from '@/types/social-media';
 
 export const testId: string = faker.string.uuid();
 export const testTitle: string = faker.lorem.word(6);

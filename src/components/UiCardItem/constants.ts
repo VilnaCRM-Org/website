@@ -1,5 +1,5 @@
-import Ruby from '../../features/landing/assets/svg/possibilities/ruby.svg';
-import WhyUsTemplatesIcon from '../../features/landing/assets/svg/why-us/templates.svg';
+import Ruby from '@/assets/svg/possibilities/ruby.svg';
+import WhyUsTemplatesIcon from '@/assets/svg/why-us/templates.svg';
 
 import { CardItem } from './types';
 

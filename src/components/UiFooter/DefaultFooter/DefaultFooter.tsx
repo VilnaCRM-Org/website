@@ -3,11 +3,12 @@ import Image from 'next-export-optimize-images/image';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import UiTypography from '@/components/UiTypography';
 
-import Logo from '../../../features/landing/assets/svg/logo/Logo.svg';
-import { SocialMediaList } from '../../../features/landing/components/SocialMedia';
-import { SocialMedia } from '../../../features/landing/types/social-media';
+import Logo from '@/assets/svg/logo/Logo.svg';
+import { SocialMediaList } from '@/components/SocialMedia';
+import UiTypography from '@/components/UiTypography';
+import { SocialMedia } from '@/types/social-media';
+
 import { PrivacyPolicy } from '../PrivacyPolicy';
 import { VilnaCRMEmail } from '../VilnaCRMEmail';
 

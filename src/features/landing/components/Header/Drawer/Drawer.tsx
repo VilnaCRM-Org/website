@@ -4,12 +4,12 @@ import Image from 'next-export-optimize-images/image';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Logo from '@/assets/svg/logo/Logo.svg';
 import { UiButton } from '@/components';
+import { SocialMediaList } from '@/components/SocialMedia';
 
 import Bars from '../../../assets/svg/header-drawer/menu-04.svg';
 import CloseImage from '../../../assets/svg/header-drawer/x-close.svg';
-import Logo from '../../../assets/svg/logo/Logo.svg';
-import { SocialMediaList } from '../../SocialMedia';
 import { drawerNavList, socialMedia } from '../constants';
 import NavList from '../NavList/NavList';
 

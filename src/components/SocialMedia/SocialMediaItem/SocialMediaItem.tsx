@@ -3,7 +3,7 @@ import Image from 'next-export-optimize-images/image';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { SocialMedia } from '../../../types/social-media';
+import { SocialMedia } from '@/types/social-media';
 
 import styles from './styles';
 

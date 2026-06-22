@@ -40,14 +40,6 @@ jest.mock('next/head', () => ({
   default: MockHead,
 }));
 jest.mock(
-  '../../features/landing/components/Header',
-  () =>
-    function Header(): React.ReactElement {
-      return <header data-testid="header" />;
-    }
-);
-
-jest.mock(
   '../../components/UiFooter',
   () =>
     function Footer(): React.ReactElement {
@@ -73,7 +65,8 @@ const customRender: (ui: React.ReactElement, options?: CustomRenderOptions) => R
 describe('Layout component', () => {
   const renderLayout: (children?: React.ReactNode) => RenderResult = (
     children?: React.ReactNode
-  ): RenderResult => customRender(<Layout>{children}</Layout>);
+  ): RenderResult =>
+    customRender(<Layout header={<header data-testid="header" />}>{children}</Layout>);
 
   it('renders children content', () => {
     const testContent: string = 'Test child content';

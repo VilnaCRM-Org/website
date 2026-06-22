@@ -10,7 +10,7 @@ import 'swiper/css';
 import 'swiper/css/pagination';
 import { CardList } from './types';
 
-function CardSwiper({ cardList }: CardList): React.ReactElement {
+function CardSwiper({ cardList, hoverCardContent }: CardList): React.ReactElement {
   const swiperRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -65,7 +65,7 @@ function CardSwiper({ cardList }: CardList): React.ReactElement {
       >
         {cardList.map(item => (
           <SwiperSlide key={item.id}>
-            <UiCardItem item={item} />
+            <UiCardItem item={item} hoverCardContent={hoverCardContent} />
           </SwiperSlide>
         ))}
       </Swiper>

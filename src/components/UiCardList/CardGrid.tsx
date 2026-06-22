@@ -6,14 +6,14 @@ import UiCardItem from '../UiCardItem';
 import styles from './styles';
 import { CardList } from './types';
 
-function CardGrid({ cardList }: CardList): React.ReactElement {
+function CardGrid({ cardList, hoverCardContent }: CardList): React.ReactElement {
   const grid: CSSProperties =
     cardList[0].type === 'smallCard' ? styles.smallGrid : styles.largeGrid;
 
   return (
     <Grid sx={grid}>
       {cardList.map(item => (
-        <UiCardItem key={item.id} item={item} />
+        <UiCardItem key={item.id} item={item} hoverCardContent={hoverCardContent} />
       ))}
     </Grid>
   );

@@ -1,8 +1,9 @@
 import { render } from '@testing-library/react';
 
-import { testSocialLink } from '../../features/landing/components/AuthSection/constants';
 import SocialList from '../../features/landing/components/AuthSection/SocialList/SocialList';
 import { SocialLink } from '../../features/landing/types/authentication/social';
+
+import { testSocialLink } from './fixtures/auth-social.fixtures';
 
 const socialLinksTestId: string = 'social-item';
 const emptySocialLinks: SocialLink[] = [];

@@ -1,3 +1,7 @@
+import Diamond from '@/assets/svg/possibilities/diamond.svg';
+import Ruby from '@/assets/svg/possibilities/ruby.svg';
+import SmallDiamond from '@/assets/svg/possibilities/smallDiamond.svg';
+import SmallRuby from '@/assets/svg/possibilities/smallRuby.svg';
 import Drupal from '@/assets/svg/TooltipIcons/Drupal.svg';
 import Joomla from '@/assets/svg/TooltipIcons/Joomla.svg';
 import Magento from '@/assets/svg/TooltipIcons/Magento.svg';
@@ -7,10 +11,7 @@ import WooCommerce from '@/assets/svg/TooltipIcons/WooCommerce.svg';
 import WordPress from '@/assets/svg/TooltipIcons/WordPress.svg';
 import Zapier from '@/assets/svg/TooltipIcons/Zapier.svg';
 
-import Diamond from '../../assets/svg/possibilities/diamond.svg';
-import Ruby from '../../assets/svg/possibilities/ruby.svg';
-import SmallDiamond from '../../assets/svg/possibilities/smallDiamond.svg';
-import SmallRuby from '../../assets/svg/possibilities/smallRuby.svg';
+
 import { Card } from '../../types/Card/card-item';
 import { ImageList } from '../../types/possibilities/image-list';
 
