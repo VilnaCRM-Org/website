@@ -265,7 +265,7 @@ lint-md: ## This command executes Markdown linter
 	$(MARKDOWNLINT_BIN) $(MD_LINT_ARGS) "**/*.md"
 
 lint-deps: ## Validate architecture/import boundaries with dependency-cruiser
-	$(PNPM_EXEC) $(DEPCRUISE_BIN) src tests --config .dependency-cruiser.js
+	$(PNPM_EXEC) $(DEPCRUISE_BIN) src pages tests --config .dependency-cruiser.js
 
 lint: lint-next lint-tsc lint-md lint-deps ## Runs all linters: ESLint, TypeScript, Markdown, and dependency-cruiser in sequence.
 

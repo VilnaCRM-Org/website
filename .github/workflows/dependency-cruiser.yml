@@ -35,7 +35,7 @@ jobs:
             ${{ runner.os }}-dependencies-
 
       - name: Install pnpm
-        run: npm install -g pnpm
+        run: corepack enable
 
       - name: Install dependencies
         run: make install

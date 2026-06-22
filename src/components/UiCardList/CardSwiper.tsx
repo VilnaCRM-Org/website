@@ -49,7 +49,7 @@ function CardSwiper({ cardList, hoverCardContent }: CardList): React.ReactElemen
   }, []);
 
   const gridMobile: CSSProperties =
-    cardList[0].type === 'smallCard' ? styles.gridSmallMobile : styles.gridLargeMobile;
+    cardList[0]?.type === 'smallCard' ? styles.gridSmallMobile : styles.gridLargeMobile;
 
   return (
     <Grid sx={gridMobile} ref={swiperRef as React.RefObject<HTMLDivElement>}>
