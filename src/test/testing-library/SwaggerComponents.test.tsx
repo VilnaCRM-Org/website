@@ -24,9 +24,7 @@ describe('Swagger Navigation', () => {
   let assignSpy: jest.SpyInstance;
 
   beforeEach(() => {
-    assignSpy = jest
-      .spyOn(getLocationImpl(), 'assign')
-      .mockImplementation(() => {});
+    assignSpy = jest.spyOn(getLocationImpl(), 'assign').mockImplementation(() => {});
   });
 
   afterEach(() => {

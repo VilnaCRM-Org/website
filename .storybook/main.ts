@@ -49,6 +49,6 @@ const config: StorybookConfig = {
       from: `${fromPath}/Inter/Inter-Regular.ttf`,
       to: `${toPath}/Inter/Inter-Regular.ttf`,
     },
-  ]
+  ],
 };
 export default config;

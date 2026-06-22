@@ -41,6 +41,20 @@ exclude_patterns = [
   "**/templates/**",
   "**/testdata/**",
   "**/vendor/**",
+  # YAML is formatted by yamlfmt and .github by yamlfmt/actionlint; CHANGELOG.md
+  # is auto-generated. Exclude them so qlty does not double-format files owned by
+  # other tooling (avoids conflicts with the yamlfmt check).
+  "*.yml",
+  "*.yaml",
+  "**/*.yml",
+  "**/*.yaml",
+  ".github/**",
+  "CHANGELOG.md",
+  # Infra files with intentional non-standard patterns, outside the repo's eslint
+  # scope: an ES5.1 CloudFront function (uses `var` by design) and a server
+  # bootstrap that configures dotenv before its other imports load.
+  "scripts/cloudfront_routing.js",
+  "docker/apollo-server/server.mts",
 ]
 
 test_patterns = [
