@@ -154,10 +154,7 @@ module.exports = {
         path: '^src',
         // Exempt all test code (specs, fixtures, helpers) — tests legitimately
         // use devDependencies (@playwright/test, @testing-library, faker, etc.).
-        pathNot: [
-          '[.](?:spec|test)[.](?:js|mjs|cjs|jsx|ts|mts|cts|tsx)$',
-          '^src/test/',
-        ],
+        pathNot: ['[.](?:spec|test)[.](?:js|mjs|cjs|jsx|ts|mts|cts|tsx)$', '^src/test/'],
       },
       to: {
         dependencyTypes: ['npm-dev'],

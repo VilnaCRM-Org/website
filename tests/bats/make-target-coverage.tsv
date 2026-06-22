@@ -61,3 +61,5 @@ logs	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Docker Compo
 new-logs	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Docker Compose invocation.
 stop	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Docker Compose invocation.
 check-node-version	bats	tests/bats/makefile_targets.bats	Validated with a stubbed pnpm/node invocation.
+lint-deps	ci	.github/workflows/static-testing.yml	Executed through `make lint`, which depends on `lint-deps`.
+run-deps-lint-tests-dind	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker exec calls.

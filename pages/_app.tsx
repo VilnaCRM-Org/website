@@ -21,10 +21,9 @@ import client from '../src/features/landing/api/graphql/apollo';
 // The landing Header is the site-wide chrome. It is composed here at the Next.js
 // routing root so the shared Layout (src/components) stays feature-agnostic and
 // does not import from src/features (enforced by dependency-cruiser).
-const DynamicHeader: ComponentType = dynamic(
-  () => import('@/features/landing/components/Header'),
-  { ssr: false }
-);
+const DynamicHeader: ComponentType = dynamic(() => import('@/features/landing/components/Header'), {
+  ssr: false,
+});
 
 Sentry.init({
   dsn: process.env.SENTRY_DSN_KEY,

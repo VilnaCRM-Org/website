@@ -11,7 +11,6 @@ import WooCommerce from '@/assets/svg/TooltipIcons/WooCommerce.svg';
 import WordPress from '@/assets/svg/TooltipIcons/WordPress.svg';
 import Zapier from '@/assets/svg/TooltipIcons/Zapier.svg';
 
-
 import { Card } from '../../types/Card/card-item';
 import { ImageList } from '../../types/possibilities/image-list';
 
