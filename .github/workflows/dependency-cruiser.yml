@@ -35,7 +35,11 @@ jobs:
             ${{ runner.os }}-dependencies-
 
       - name: Install pnpm
-        run: corepack enable
+        # Pin to package.json's packageManager version for reproducibility.
+        # Corepack is avoided here: the .nvmrc-pinned Node (22.12.0) ships a
+        # corepack whose signing keys can't verify the registry, which fails
+        # provisioning ("Cannot find matching keyid").
+        run: npm install -g pnpm@10.6.5
 
       - name: Install dependencies
         run: make install
