@@ -66,7 +66,6 @@ Add these objects to `forbidden[]` exactly as authored:
       '^(node-inspect/lib/_inspect)$',
       '^(node-inspect/lib/internal/inspect_client)$',
       '^(node-inspect/lib/internal/inspect_repl)$',
-      '^(async_hooks)$',
       '^(punycode)$',
       '^(domain)$',
       '^(constants)$',
