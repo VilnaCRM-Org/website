@@ -1,6 +1,6 @@
 # Story 2.2: Add feature public-API barrel and no-cross-feature rules
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -18,25 +18,25 @@ so that the feature-slice contract is enforced at the dependency-graph level bey
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Add the `features-import-via-public-api` rule to the `forbidden[]` array (AC: 1, 2)
-  - [ ] 1.1 Insert the rule as boundary rule 11 in `.dependency-cruiser.js`, immediately after the generic hygiene rules (rules 1–10) and before `no-cross-feature-imports`, matching the PRD enumeration order.
-  - [ ] 1.2 Set `name: 'features-import-via-public-api'`, `severity: 'error'`, and a `comment` stating intent: "Import a feature only through its public index barrel; do not reach into its internals."
-  - [ ] 1.3 Set `from: { path: '^src/', pathNot: '^src/features/[^/]+/' }` so the rule applies to any source under `src/` that is NOT itself inside a feature (a feature importing its own internals is allowed).
-  - [ ] 1.4 Set `to: { path: '^src/features/[^/]+/(?!index[.](?:js|cjs|mjs|jsx|ts|cts|mts|tsx)$).+' }` so only the `index` barrel (any supported extension) is an allowed import target; any deeper path is forbidden.
-- [ ] Task 2: Add the `no-cross-feature-imports` rule to the `forbidden[]` array (AC: 3, 4)
-  - [ ] 2.1 Insert the rule as boundary rule 12, immediately after `features-import-via-public-api`.
-  - [ ] 2.2 Set `name: 'no-cross-feature-imports'`, `severity: 'error'`, and a `comment`: "A feature must not import another feature; use shared layers instead."
-  - [ ] 2.3 Set `from: { path: '^src/features/([^/]+)/' }` with a capture group on the source feature name.
-  - [ ] 2.4 Set `to: { path: '^src/features/(?!$1/)' }` so the negative lookahead `(?!$1/)` back-references the captured source feature, forbidding any target feature that is NOT the same feature (sibling imports fail; intra-feature imports pass).
-- [ ] Task 3: Validate the barrel rule fires on a deep import (AC: 2)
-  - [ ] 3.1 Temporarily add an outside module that imports `@/features/swagger/helpers/formatDate` (past the barrel) and run `make lint-deps`.
-  - [ ] 3.2 Confirm `features-import-via-public-api` fires with a non-zero exit and the `text` reporter names the source and target modules (NFR7); remove the temporary import.
-- [ ] Task 4: Validate the cross-feature rule fires on a sibling import (AC: 4)
-  - [ ] 4.1 Temporarily add an import in the `landing` feature that pulls from the `swagger` feature and run `make lint-deps`.
-  - [ ] 4.2 Confirm `no-cross-feature-imports` fires; remove the temporary import.
-- [ ] Task 5: Confirm zero violations against current `main` (AC: 5)
-  - [ ] 5.1 Run `make lint-deps CI=1` on a clean checkout and confirm both new rules produce zero violations (the graph has zero cross-feature imports today).
-  - [ ] 5.2 Confirm the dedicated `dependency-cruiser.yml` workflow check passes green on the introducing PR.
+- [x] Task 1: Add the `features-import-via-public-api` rule to the `forbidden[]` array (AC: 1, 2)
+  - [x] 1.1 Insert the rule as boundary rule 11 in `.dependency-cruiser.js`, immediately after the generic hygiene rules (rules 1–10) and before `no-cross-feature-imports`, matching the PRD enumeration order.
+  - [x] 1.2 Set `name: 'features-import-via-public-api'`, `severity: 'error'`, and a `comment` stating intent: "Import a feature only through its public index barrel; do not reach into its internals."
+  - [x] 1.3 Set `from: { path: '^src/', pathNot: '^src/features/[^/]+/' }` so the rule applies to any source under `src/` that is NOT itself inside a feature (a feature importing its own internals is allowed).
+  - [x] 1.4 Set `to: { path: '^src/features/[^/]+/(?!index[.](?:js|cjs|mjs|jsx|ts|cts|mts|tsx)$).+' }` so only the `index` barrel (any supported extension) is an allowed import target; any deeper path is forbidden.
+- [x] Task 2: Add the `no-cross-feature-imports` rule to the `forbidden[]` array (AC: 3, 4)
+  - [x] 2.1 Insert the rule as boundary rule 12, immediately after `features-import-via-public-api`.
+  - [x] 2.2 Set `name: 'no-cross-feature-imports'`, `severity: 'error'`, and a `comment`: "A feature must not import another feature; use shared layers instead."
+  - [x] 2.3 Set `from: { path: '^src/features/([^/]+)/' }` with a capture group on the source feature name.
+  - [x] 2.4 Set `to: { path: '^src/features/(?!$1/)' }` so the negative lookahead `(?!$1/)` back-references the captured source feature, forbidding any target feature that is NOT the same feature (sibling imports fail; intra-feature imports pass).
+- [x] Task 3: Validate the barrel rule fires on a deep import (AC: 2)
+  - [x] 3.1 Temporarily add an outside module that imports `@/features/swagger/helpers/formatDate` (past the barrel) and run `make lint-deps`.
+  - [x] 3.2 Confirm `features-import-via-public-api` fires with a non-zero exit and the `text` reporter names the source and target modules (NFR7); remove the temporary import.
+- [x] Task 4: Validate the cross-feature rule fires on a sibling import (AC: 4)
+  - [x] 4.1 Temporarily add an import in the `landing` feature that pulls from the `swagger` feature and run `make lint-deps`.
+  - [x] 4.2 Confirm `no-cross-feature-imports` fires; remove the temporary import.
+- [x] Task 5: Confirm zero violations against current `main` (AC: 5)
+  - [x] 5.1 Run `make lint-deps CI=1` on a clean checkout and confirm both new rules produce zero violations (the graph has zero cross-feature imports today).
+  - [x] 5.2 Confirm the dedicated `dependency-cruiser.yml` workflow check passes green on the introducing PR.
 
 ## Dev Notes
 
@@ -107,16 +107,25 @@ This is configuration / tooling, validated by running the tool, not by unit test
 
 ### Agent Model Used
 
-_TBD — not yet implemented_
+claude-opus-4-8
 
 ### Debug Log References
 
-_None yet._
+Verified via `make lint-deps CI=1` (dependency-cruiser: 0 violations), `make lint CI=1` (ESLint, TypeScript, markdownlint, dependency-cruiser all pass), and the client/server Jest suites (349 + 8 passing).
 
 ### Completion Notes List
 
-_None yet._
+- Added features-import-via-public-api and no-cross-feature-imports rules (tests exempt). Compliance refactor: relocated the SocialMedia component to src/components/SocialMedia and the social-media type to src/types/social-media, and repathed all importers.
+- Part of issue #225; full architecture gate verified green on the current main branch (0 dependency-cruiser violations).
 
 ### File List
 
-_None yet._
+- `.dependency-cruiser.js`
+- `src/components/SocialMedia/ (relocated from src/features/landing)`
+- `src/types/social-media/index.ts (relocated)`
+- `src/features/landing/components/Header/Drawer/Drawer.tsx`
+- `src/components/UiFooter/*`
+
+### Change Log
+
+- 2026-06-22: Implemented and verified as part of #225 (dependency-cruiser architecture gate).

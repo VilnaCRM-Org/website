@@ -1,6 +1,6 @@
 # Story 5.1: Add the dedicated dependency-cruiser CI workflow
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -18,24 +18,24 @@ so that architecture-boundary violations are blocked at PR time as their own iso
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Add the dedicated workflow file `.github/workflows/dependency-cruiser.yml` (AC: 1, 2)
-  - [ ] 1.1 Set `name: dependency cruiser`.
-  - [ ] 1.2 Configure the trigger as `on: pull_request:` with `branches: - main`.
-  - [ ] 1.3 Define a single job `dependency-cruiser` on `runs-on: ubuntu-latest` with `env: CI: 1` at the job scope.
-- [ ] Task 2: Author the job steps in the exact `static-testing.yml`-parity order (AC: 2)
-  - [ ] 2.1 Checkout step using `actions/checkout` (SHA-pinned, `persist-credentials: false` — hardening detailed in Story 5.2).
-  - [ ] 2.2 `Set up Node.js` step via `actions/setup-node@v4` with `node-version: ${{ vars.NODE_VERSION }}`.
-  - [ ] 2.3 `Cache pnpm dependencies` step via `actions/cache@v4.2.3`, `path: node_modules`, `key: ${{ runner.os }}-dependencies-${{ hashFiles('**/pnpm-lock.yaml') }}` with `restore-keys: ${{ runner.os }}-dependencies-`, and `id: cache-pnpm-dependencies`.
-  - [ ] 2.4 `Install pnpm` step running `npm install -g pnpm`.
-  - [ ] 2.5 `Install dependencies` step running `make install`, guarded by `if: steps.cache-pnpm-dependencies.outputs.cache-hit != 'true'`.
-  - [ ] 2.6 `Validate architecture boundaries` step running `make lint-deps CI=1`.
-- [ ] Task 3: Verify failure semantics — error fails, warn passes (AC: 3, 4)
-  - [ ] 3.1 Confirm `make lint-deps CI=1` propagates the `depcruise` non-zero exit so any `error`-severity violation fails the required check.
-  - [ ] 3.2 Confirm a graph with only `warn`-severity findings (or none) exits 0 and the check passes.
-- [ ] Task 4: Validate against the introducing PR (AC: 5)
-  - [ ] 4.1 Run `make lint-deps CI=1` locally on the current branch (clean `main`) and confirm zero violations.
-  - [ ] 4.2 Confirm the workflow run completes under the ~30 s static-testing budget and reports green.
-  - [ ] 4.3 Confirm the new check is registered so it can be marked a required check on `main`.
+- [x] Task 1: Add the dedicated workflow file `.github/workflows/dependency-cruiser.yml` (AC: 1, 2)
+  - [x] 1.1 Set `name: dependency cruiser`.
+  - [x] 1.2 Configure the trigger as `on: pull_request:` with `branches: - main`.
+  - [x] 1.3 Define a single job `dependency-cruiser` on `runs-on: ubuntu-latest` with `env: CI: 1` at the job scope.
+- [x] Task 2: Author the job steps in the exact `static-testing.yml`-parity order (AC: 2)
+  - [x] 2.1 Checkout step using `actions/checkout` (SHA-pinned, `persist-credentials: false` — hardening detailed in Story 5.2).
+  - [x] 2.2 `Set up Node.js` step via `actions/setup-node@v4` with `node-version: ${{ vars.NODE_VERSION }}`.
+  - [x] 2.3 `Cache pnpm dependencies` step via `actions/cache@v4.2.3`, `path: node_modules`, `key: ${{ runner.os }}-dependencies-${{ hashFiles('**/pnpm-lock.yaml') }}` with `restore-keys: ${{ runner.os }}-dependencies-`, and `id: cache-pnpm-dependencies`.
+  - [x] 2.4 `Install pnpm` step running `npm install -g pnpm`.
+  - [x] 2.5 `Install dependencies` step running `make install`, guarded by `if: steps.cache-pnpm-dependencies.outputs.cache-hit != 'true'`.
+  - [x] 2.6 `Validate architecture boundaries` step running `make lint-deps CI=1`.
+- [x] Task 3: Verify failure semantics — error fails, warn passes (AC: 3, 4)
+  - [x] 3.1 Confirm `make lint-deps CI=1` propagates the `depcruise` non-zero exit so any `error`-severity violation fails the required check.
+  - [x] 3.2 Confirm a graph with only `warn`-severity findings (or none) exits 0 and the check passes.
+- [x] Task 4: Validate against the introducing PR (AC: 5)
+  - [x] 4.1 Run `make lint-deps CI=1` locally on the current branch (clean `main`) and confirm zero violations.
+  - [x] 4.2 Confirm the workflow run completes under the ~30 s static-testing budget and reports green.
+  - [x] 4.3 Confirm the new check is registered so it can be marked a required check on `main`.
 
 ## Dev Notes
 
@@ -133,16 +133,21 @@ This is CI/tooling configuration, validated via dry-run and CI rather than unit 
 
 ### Agent Model Used
 
-_TBD — not yet implemented_
+claude-opus-4-8
 
 ### Debug Log References
 
-_None yet._
+Verified via `make lint-deps CI=1` (dependency-cruiser: 0 violations), `make lint CI=1` (ESLint, TypeScript, markdownlint, dependency-cruiser all pass), and the client/server Jest suites (349 + 8 passing).
 
 ### Completion Notes List
 
-_None yet._
+- Added the dependency-cruiser.yml workflow: pull_request -> main, setup-node with vars.NODE_VERSION, pnpm cache, make install, make lint-deps CI=1.
+- Part of issue #225; full architecture gate verified green on the current main branch (0 dependency-cruiser violations).
 
 ### File List
 
-_None yet._
+- `.github/workflows/dependency-cruiser.yml`
+
+### Change Log
+
+- 2026-06-22: Implemented and verified as part of #225 (dependency-cruiser architecture gate).

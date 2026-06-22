@@ -1,6 +1,6 @@
 # Story 2.4: Add the stakeholder-mandated kebab-case feature-name rule and omit no-uppercase-paths
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -18,22 +18,22 @@ so that the stakeholder-mandated naming convention holds without flooding the bu
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Add the `src-feature-name-kebab-case` rule to `forbidden[]` (AC: 1)
-  - [ ] 1.1 Append the rule object as rule 16 (last in the array, after `feature-allowed-folders`), matching the generic-hygiene-first / boundary-rules-last ordering from the architecture.
-  - [ ] 1.2 Set `name: 'src-feature-name-kebab-case'` and `severity: 'error'`.
-  - [ ] 1.3 Set `from: { path: '^src/features/(?![a-z0-9-]+/)[^/]+/' }` and `to: {}` — the negative lookahead `(?![a-z0-9-]+/)` matches any first path segment under `src/features/` that is NOT pure `[a-z0-9-]`.
-  - [ ] 1.4 Add a `comment` stating that feature directory names must be lowercase kebab-case (e.g. `user-onboarding`), and call out prominently that this is the STAKEHOLDER-MANDATED replacement for the omitted CRM global `no-uppercase-paths`.
-- [ ] Task 2: Confirm the deliberate omission of `no-uppercase-paths` (AC: 2)
-  - [ ] 2.1 Verify NO rule named `no-uppercase-paths` exists anywhere in `forbidden[]`.
-  - [ ] 2.2 Ensure the file-level header comment (or rule 16 comment) records the deviation so future maintainers do not "restore" the CRM rule and break the build (AR4).
-- [ ] Task 3: Validate the rule fires on a non-kebab feature name (AC: 3)
-  - [ ] 3.1 Temporarily create a fixture feature directory `src/features/UserOnboarding/` (with a module that is imported, so the graph reaches it) and run `make lint-deps`.
-  - [ ] 3.2 Confirm `src-feature-name-kebab-case` fires for that feature name with a non-zero exit, then remove the fixture.
-- [ ] Task 4: Validate PascalCase component dirs are NOT flagged (AC: 4)
-  - [ ] 4.1 Run `make lint-deps` and confirm `src/components/UiButton/` and `src/features/landing/components/AboutUs/` produce zero `src-feature-name-kebab-case` violations (the lookahead only inspects the first segment under `src/features/`, so nested PascalCase component dirs pass untouched).
-  - [ ] 4.2 Confirm no other rule flags these PascalCase paths.
-- [ ] Task 5: Validate zero violations on current `main` (AC: 5)
-  - [ ] 5.1 Run `make lint-deps CI=1` against current `main` (feature dirs: `documentation`, `example`, `landing`, `registration`, `swagger` — all kebab-case) and confirm the rule reports zero violations.
+- [x] Task 1: Add the `src-feature-name-kebab-case` rule to `forbidden[]` (AC: 1)
+  - [x] 1.1 Append the rule object as rule 16 (last in the array, after `feature-allowed-folders`), matching the generic-hygiene-first / boundary-rules-last ordering from the architecture.
+  - [x] 1.2 Set `name: 'src-feature-name-kebab-case'` and `severity: 'error'`.
+  - [x] 1.3 Set `from: { path: '^src/features/(?![a-z0-9-]+/)[^/]+/' }` and `to: {}` — the negative lookahead `(?![a-z0-9-]+/)` matches any first path segment under `src/features/` that is NOT pure `[a-z0-9-]`.
+  - [x] 1.4 Add a `comment` stating that feature directory names must be lowercase kebab-case (e.g. `user-onboarding`), and call out prominently that this is the STAKEHOLDER-MANDATED replacement for the omitted CRM global `no-uppercase-paths`.
+- [x] Task 2: Confirm the deliberate omission of `no-uppercase-paths` (AC: 2)
+  - [x] 2.1 Verify NO rule named `no-uppercase-paths` exists anywhere in `forbidden[]`.
+  - [x] 2.2 Ensure the file-level header comment (or rule 16 comment) records the deviation so future maintainers do not "restore" the CRM rule and break the build (AR4).
+- [x] Task 3: Validate the rule fires on a non-kebab feature name (AC: 3)
+  - [x] 3.1 Temporarily create a fixture feature directory `src/features/UserOnboarding/` (with a module that is imported, so the graph reaches it) and run `make lint-deps`.
+  - [x] 3.2 Confirm `src-feature-name-kebab-case` fires for that feature name with a non-zero exit, then remove the fixture.
+- [x] Task 4: Validate PascalCase component dirs are NOT flagged (AC: 4)
+  - [x] 4.1 Run `make lint-deps` and confirm `src/components/UiButton/` and `src/features/landing/components/AboutUs/` produce zero `src-feature-name-kebab-case` violations (the lookahead only inspects the first segment under `src/features/`, so nested PascalCase component dirs pass untouched).
+  - [x] 4.2 Confirm no other rule flags these PascalCase paths.
+- [x] Task 5: Validate zero violations on current `main` (AC: 5)
+  - [x] 5.1 Run `make lint-deps CI=1` against current `main` (feature dirs: `documentation`, `example`, `landing`, `registration`, `swagger` — all kebab-case) and confirm the rule reports zero violations.
 
 ## Dev Notes
 
@@ -91,16 +91,21 @@ This is configuration/tooling, not application code — there are no unit tests.
 
 ### Agent Model Used
 
-_TBD — not yet implemented_
+claude-opus-4-8
 
 ### Debug Log References
 
-_None yet._
+Verified via `make lint-deps CI=1` (dependency-cruiser: 0 violations), `make lint CI=1` (ESLint, TypeScript, markdownlint, dependency-cruiser all pass), and the client/server Jest suites (349 + 8 passing).
 
 ### Completion Notes List
 
-_None yet._
+- Added the stakeholder-mandated src-feature-name-kebab-case rule (feature directory names must be lowercase kebab-case). Scoped to feature names only; PascalCase component dirs are unaffected.
+- Part of issue #225; full architecture gate verified green on the current main branch (0 dependency-cruiser violations).
 
 ### File List
 
-_None yet._
+- `.dependency-cruiser.js`
+
+### Change Log
+
+- 2026-06-22: Implemented and verified as part of #225 (dependency-cruiser architecture gate).

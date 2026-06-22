@@ -15,9 +15,9 @@ specs/
 
 ## Current Specs
 
-| Spec                    | Status  |
-| ----------------------- | ------- |
-| `dependency-cruiser-ci` | Planned |
+| Spec                    | Status      |
+| ----------------------- | ----------- |
+| `dependency-cruiser-ci` | Implemented |
 
 ## Conventions
 

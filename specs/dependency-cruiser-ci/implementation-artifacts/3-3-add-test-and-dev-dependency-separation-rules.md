@@ -1,6 +1,6 @@
 # Story 3.3: Add the test/production and runtime/devDependency separation rules
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -18,24 +18,24 @@ so that test-only and dev-only code never leaks into the shipped runtime graph.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Add the `not-to-test` rule to `forbidden[]` in `.dependency-cruiser.js` (AC: 1, 4, 5)
-  - [ ] 1.1 Append the rule object directly after `no-duplicate-dep-types` (rule 7) so it is rule 8, preserving the "generic hygiene first" ordering from the architecture's `forbidden[]` layout.
-  - [ ] 1.2 Set `name: 'not-to-test'`, `severity: 'error'`, and a `comment` of `'Production code must not import from test folders (src/test, tests).'` (drives the FR21 actionable output).
-  - [ ] 1.3 Set `from: { pathNot: '^(?:src/test|tests)' }` so test code itself is exempt from the rule's source side.
-  - [ ] 1.4 Set `to: { path: '^(?:src/test|tests)' }` so any import that lands in `src/test` or the top-level `tests/` from non-test code is flagged.
-- [ ] Task 2: Add the `not-to-spec` rule to `forbidden[]` (AC: 2, 4, 5)
-  - [ ] 2.1 Append as rule 9, immediately after `not-to-test`.
-  - [ ] 2.2 Set `name: 'not-to-spec'`, `severity: 'error'`, and a `comment` of `'Spec/test files must not be imported by anything.'`.
-  - [ ] 2.3 Set `from: {}` (any source) and `to: { path: '[.](?:spec|test)[.](?:js|mjs|cjs|jsx|ts|mts|cts|tsx)$' }` so no module may import a `*.spec.*` / `*.test.*` file across the eight supported extensions.
-- [ ] Task 3: Add the `not-to-dev-dep` rule to `forbidden[]` (AC: 3, 4, 5)
-  - [ ] 3.1 Append as rule 10, immediately after `not-to-spec`, closing the generic-hygiene block before the architecture boundary rules begin.
-  - [ ] 3.2 Set `name: 'not-to-dev-dep'`, `severity: 'error'`, and a `comment` of `'Runtime code under src must not depend on devDependencies.'`.
-  - [ ] 3.3 Set `from: { path: '^src', pathNot: '[.](?:spec|test)[.](?:js|mjs|cjs|jsx|ts|mts|cts|tsx)$' }` so only runtime (non-spec/test) `src` files are treated as the production source.
-  - [ ] 3.4 Set `to: { dependencyTypes: ['npm-dev'], dependencyTypesNot: ['type-only'], pathNot: ['node_modules/@types/'] }` so devDependency edges are flagged while type-only imports and `@types/*` packages are exempt.
-- [ ] Task 4: Validate the three rules against current `main` (AC: 4, 5)
-  - [ ] 4.1 Run `make lint-deps CI=1` and confirm a zero-violation, zero-exit result for all three rules on the clean graph (NFR9).
-  - [ ] 4.2 Temporarily introduce a probe import of a test folder, a `.spec`/`.test` file, and a devDependency from a runtime `src` file; confirm `not-to-test`, `not-to-spec`, and `not-to-dev-dep` each fire with a non-zero exit and name the source/target (NFR6, NFR7); then revert the probes.
-  - [ ] 4.3 Confirm that spec/test files importing devDependencies are NOT flagged by `not-to-dev-dep` (the `from.pathNot` exclusion) and that `@types/*` imports are NOT flagged (the `to.pathNot` exclusion).
+- [x] Task 1: Add the `not-to-test` rule to `forbidden[]` in `.dependency-cruiser.js` (AC: 1, 4, 5)
+  - [x] 1.1 Append the rule object directly after `no-duplicate-dep-types` (rule 7) so it is rule 8, preserving the "generic hygiene first" ordering from the architecture's `forbidden[]` layout.
+  - [x] 1.2 Set `name: 'not-to-test'`, `severity: 'error'`, and a `comment` of `'Production code must not import from test folders (src/test, tests).'` (drives the FR21 actionable output).
+  - [x] 1.3 Set `from: { pathNot: '^(?:src/test|tests)' }` so test code itself is exempt from the rule's source side.
+  - [x] 1.4 Set `to: { path: '^(?:src/test|tests)' }` so any import that lands in `src/test` or the top-level `tests/` from non-test code is flagged.
+- [x] Task 2: Add the `not-to-spec` rule to `forbidden[]` (AC: 2, 4, 5)
+  - [x] 2.1 Append as rule 9, immediately after `not-to-test`.
+  - [x] 2.2 Set `name: 'not-to-spec'`, `severity: 'error'`, and a `comment` of `'Spec/test files must not be imported by anything.'`.
+  - [x] 2.3 Set `from: {}` (any source) and `to: { path: '[.](?:spec|test)[.](?:js|mjs|cjs|jsx|ts|mts|cts|tsx)$' }` so no module may import a `*.spec.*` / `*.test.*` file across the eight supported extensions.
+- [x] Task 3: Add the `not-to-dev-dep` rule to `forbidden[]` (AC: 3, 4, 5)
+  - [x] 3.1 Append as rule 10, immediately after `not-to-spec`, closing the generic-hygiene block before the architecture boundary rules begin.
+  - [x] 3.2 Set `name: 'not-to-dev-dep'`, `severity: 'error'`, and a `comment` of `'Runtime code under src must not depend on devDependencies.'`.
+  - [x] 3.3 Set `from: { path: '^src', pathNot: '[.](?:spec|test)[.](?:js|mjs|cjs|jsx|ts|mts|cts|tsx)$' }` so only runtime (non-spec/test) `src` files are treated as the production source.
+  - [x] 3.4 Set `to: { dependencyTypes: ['npm-dev'], dependencyTypesNot: ['type-only'], pathNot: ['node_modules/@types/'] }` so devDependency edges are flagged while type-only imports and `@types/*` packages are exempt.
+- [x] Task 4: Validate the three rules against current `main` (AC: 4, 5)
+  - [x] 4.1 Run `make lint-deps CI=1` and confirm a zero-violation, zero-exit result for all three rules on the clean graph (NFR9).
+  - [x] 4.2 Temporarily introduce a probe import of a test folder, a `.spec`/`.test` file, and a devDependency from a runtime `src` file; confirm `not-to-test`, `not-to-spec`, and `not-to-dev-dep` each fire with a non-zero exit and name the source/target (NFR6, NFR7); then revert the probes.
+  - [x] 4.3 Confirm that spec/test files importing devDependencies are NOT flagged by `not-to-dev-dep` (the `from.pathNot` exclusion) and that `@types/*` imports are NOT flagged (the `to.pathNot` exclusion).
 
 ## Dev Notes
 
@@ -117,16 +117,24 @@ This is configuration/tooling, not application code, so validation is by running
 
 ### Agent Model Used
 
-_TBD — not yet implemented_
+claude-opus-4-8
 
 ### Debug Log References
 
-_None yet._
+Verified via `make lint-deps CI=1` (dependency-cruiser: 0 violations), `make lint CI=1` (ESLint, TypeScript, markdownlint, dependency-cruiser all pass), and the client/server Jest suites (349 + 8 passing).
 
 ### Completion Notes List
 
-_None yet._
+- Added not-to-test, not-to-spec, not-to-dev-dep (with src/test exemption). Compliance: moved faker test fixtures into src/test/testing-library/fixtures and removed faker from production constants; reclassified next-export-optimize-images from devDependencies to dependencies.
+- Part of issue #225; full architecture gate verified green on the current main branch (0 dependency-cruiser violations).
 
 ### File List
 
-_None yet._
+- `.dependency-cruiser.js`
+- `package.json`
+- `src/test/testing-library/fixtures/*.fixtures.ts (new)`
+- `src/features/landing/components/{Header,AuthSection}/constants.ts`
+
+### Change Log
+
+- 2026-06-22: Implemented and verified as part of #225 (dependency-cruiser architecture gate).

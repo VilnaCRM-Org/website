@@ -1,6 +1,6 @@
 # Story 1.1: Add dependency-cruiser devDependency at CRM-parity version
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -17,17 +17,17 @@ so that the website has the same architecture-governance tool at the same major 
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Add the `dependency-cruiser` devDependency at CRM-parity major (AC: 1, 2)
-  - [ ] 1.1 Add `dependency-cruiser` under `devDependencies` in `package.json` with a `^17.x` range that matches CRM's `^17.3.7` major (e.g. `"dependency-cruiser": "^17.3.7"`).
-  - [ ] 1.2 Confirm the addition is the only change to `package.json` and that NO `scripts` section is introduced — the tool is invoked exclusively through the Makefile (`$(PNPM_EXEC) $(DEPCRUISE_BIN)`), wired in a later story (Epic 4).
-  - [ ] 1.3 Keep the existing `packageManager: "pnpm@10.6.5"` pin unchanged so resolution is deterministic.
-- [ ] Task 2: Install through the existing pnpm / `make install` flow and update the lockfile (AC: 3)
-  - [ ] 2.1 Run `make install` so `pnpm@10.6.5` resolves `dependency-cruiser ^17.x` and updates `pnpm-lock.yaml` deterministically (reproducible local + CI per NFR3/NFR4/NFR8).
-  - [ ] 2.2 Verify the `depcruise` binary is present at `./node_modules/.bin/depcruise` (this is the binary the future `DEPCRUISE_BIN = $(BIN_DIR)/depcruise` Makefile variable will point at).
-  - [ ] 2.3 Verify the installed version satisfies the declared `^17.x` range (e.g. `./node_modules/.bin/depcruise --version` reports a `17.x` version).
-- [ ] Task 3: Verify zero blast radius (AC: 4)
-  - [ ] 3.1 Confirm no file under `src/` is added, modified, or deleted by this change.
-  - [ ] 3.2 Confirm the only touched files are `package.json` (devDeps) and `pnpm-lock.yaml`; `.dependency-cruiser.js`, the `Makefile`, and the workflow are intentionally NOT created in this story (they belong to Stories 1.2, 4.x, and 5.x).
+- [x] Task 1: Add the `dependency-cruiser` devDependency at CRM-parity major (AC: 1, 2)
+  - [x] 1.1 Add `dependency-cruiser` under `devDependencies` in `package.json` with a `^17.x` range that matches CRM's `^17.3.7` major (e.g. `"dependency-cruiser": "^17.3.7"`).
+  - [x] 1.2 Confirm the addition is the only change to `package.json` and that NO `scripts` section is introduced — the tool is invoked exclusively through the Makefile (`$(PNPM_EXEC) $(DEPCRUISE_BIN)`), wired in a later story (Epic 4).
+  - [x] 1.3 Keep the existing `packageManager: "pnpm@10.6.5"` pin unchanged so resolution is deterministic.
+- [x] Task 2: Install through the existing pnpm / `make install` flow and update the lockfile (AC: 3)
+  - [x] 2.1 Run `make install` so `pnpm@10.6.5` resolves `dependency-cruiser ^17.x` and updates `pnpm-lock.yaml` deterministically (reproducible local + CI per NFR3/NFR4/NFR8).
+  - [x] 2.2 Verify the `depcruise` binary is present at `./node_modules/.bin/depcruise` (this is the binary the future `DEPCRUISE_BIN = $(BIN_DIR)/depcruise` Makefile variable will point at).
+  - [x] 2.3 Verify the installed version satisfies the declared `^17.x` range (e.g. `./node_modules/.bin/depcruise --version` reports a `17.x` version).
+- [x] Task 3: Verify zero blast radius (AC: 4)
+  - [x] 3.1 Confirm no file under `src/` is added, modified, or deleted by this change.
+  - [x] 3.2 Confirm the only touched files are `package.json` (devDeps) and `pnpm-lock.yaml`; `.dependency-cruiser.js`, the `Makefile`, and the workflow are intentionally NOT created in this story (they belong to Stories 1.2, 4.x, and 5.x).
 
 ## Dev Notes
 
@@ -83,16 +83,22 @@ This is a tooling/dependency change with no application code, so it is validated
 
 ### Agent Model Used
 
-_TBD — not yet implemented_
+claude-opus-4-8
 
 ### Debug Log References
 
-_None yet._
+Verified via `make lint-deps CI=1` (dependency-cruiser: 0 violations), `make lint CI=1` (ESLint, TypeScript, markdownlint, dependency-cruiser all pass), and the client/server Jest suites (349 + 8 passing).
 
 ### Completion Notes List
 
-_None yet._
+- Added dependency-cruiser ^17.3.7 (resolved 17.4.3) to devDependencies and updated the lockfile.
+- Part of issue #225; full architecture gate verified green on the current main branch (0 dependency-cruiser violations).
 
 ### File List
 
-_None yet._
+- `package.json`
+- `pnpm-lock.yaml`
+
+### Change Log
+
+- 2026-06-22: Implemented and verified as part of #225 (dependency-cruiser architecture gate).

@@ -1,6 +1,6 @@
 # Story 1.2: Author the .dependency-cruiser.js skeleton and resolver/scope options
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -20,29 +20,29 @@ so that the import graph for `src` and `tests` is correctly resolvable and the r
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create the root-level CommonJS config skeleton (AC: 1)
-  - [ ] 1.1 Add `.dependency-cruiser.js` at the repository root (NOT `.mjs`/`.ts`/ESM) so the `depcruise` binary consumes it with zero transpile step.
-  - [ ] 1.2 Export `module.exports = { forbidden: [], options: {...} }`; leave `forbidden` as an empty array placeholder so Stories 2.1–3.3 can append the sixteen rules into it.
-  - [ ] 1.3 Add the top-of-file doc comment recording the website FEATURE-BASED adaptation (no `src/modules`) and the PascalCase-safe deviation, matching the architecture drop-in header.
-- [ ] Task 2: Author the resolver options that close the `@/*` / `bundler` gap (AC: 2)
-  - [ ] 2.1 Set `options.tsConfig = { fileName: 'tsconfig.json' }` so the resolver reads the `@/*` -> `./src/*` alias.
-  - [ ] 2.2 Add `options.enhancedResolveOptions` with `exportsFields: ['exports']`, `conditionNames: ['import','require','node','default','types']`, TS-first `extensions: ['.ts','.tsx','.d.ts','.js','.jsx']`, and `mainFields: ['main','types','typings']`.
-- [ ] Task 3: Author the graph-capture options (AC: 3)
-  - [ ] 3.1 Set `options.tsPreCompilationDeps: true` so `import type` edges are captured.
-  - [ ] 3.2 Set `options.combinedDependencies: true`.
-  - [ ] 3.3 Set `options.detectProcessBuiltinModuleCalls: true`.
-- [ ] Task 4: Author the analysis-scope / performance options (AC: 4)
-  - [ ] 4.1 Set `options.doNotFollow = { path: ['node_modules'] }`.
-  - [ ] 4.2 Set `options.skipAnalysisNotInRules: true`.
-- [ ] Task 5: Register k6 built-in modules, omit bun (AC: 5)
-  - [ ] 5.1 Set `options.builtInModules = { add: ['k6', 'k6/http'] }`.
-  - [ ] 5.2 Do NOT add any bun built-ins; add an inline comment recording that the website is node/pnpm.
-- [ ] Task 6: Author reporter options (AC: 6)
-  - [ ] 6.1 Configure `reporterOptions.dot.collapsePattern` and `reporterOptions.archi.collapsePattern` to `node_modules/(?:@[^/]+/[^/]+|[^/]+)`.
-  - [ ] 6.2 Configure `reporterOptions.text.highlightFocused: true`.
-- [ ] Task 7: Validate resolution against current `main` (AC: 7)
-  - [ ] 7.1 With Story 1.1's devDependency installed (`make install`), run `depcruise src tests --config .dependency-cruiser.js` (or via the Story 4.1 `make lint-deps` target once available).
-  - [ ] 7.2 Confirm internal `@/*` edges resolve and there is no `not-to-unresolvable`-style flooding; an empty `forbidden` array means no violations should be reported.
+- [x] Task 1: Create the root-level CommonJS config skeleton (AC: 1)
+  - [x] 1.1 Add `.dependency-cruiser.js` at the repository root (NOT `.mjs`/`.ts`/ESM) so the `depcruise` binary consumes it with zero transpile step.
+  - [x] 1.2 Export `module.exports = { forbidden: [], options: {...} }`; leave `forbidden` as an empty array placeholder so Stories 2.1–3.3 can append the sixteen rules into it.
+  - [x] 1.3 Add the top-of-file doc comment recording the website FEATURE-BASED adaptation (no `src/modules`) and the PascalCase-safe deviation, matching the architecture drop-in header.
+- [x] Task 2: Author the resolver options that close the `@/*` / `bundler` gap (AC: 2)
+  - [x] 2.1 Set `options.tsConfig = { fileName: 'tsconfig.json' }` so the resolver reads the `@/*` -> `./src/*` alias.
+  - [x] 2.2 Add `options.enhancedResolveOptions` with `exportsFields: ['exports']`, `conditionNames: ['import','require','node','default','types']`, TS-first `extensions: ['.ts','.tsx','.d.ts','.js','.jsx']`, and `mainFields: ['main','types','typings']`.
+- [x] Task 3: Author the graph-capture options (AC: 3)
+  - [x] 3.1 Set `options.tsPreCompilationDeps: true` so `import type` edges are captured.
+  - [x] 3.2 Set `options.combinedDependencies: true`.
+  - [x] 3.3 Set `options.detectProcessBuiltinModuleCalls: true`.
+- [x] Task 4: Author the analysis-scope / performance options (AC: 4)
+  - [x] 4.1 Set `options.doNotFollow = { path: ['node_modules'] }`.
+  - [x] 4.2 Set `options.skipAnalysisNotInRules: true`.
+- [x] Task 5: Register k6 built-in modules, omit bun (AC: 5)
+  - [x] 5.1 Set `options.builtInModules = { add: ['k6', 'k6/http'] }`.
+  - [x] 5.2 Do NOT add any bun built-ins; add an inline comment recording that the website is node/pnpm.
+- [x] Task 6: Author reporter options (AC: 6)
+  - [x] 6.1 Configure `reporterOptions.dot.collapsePattern` and `reporterOptions.archi.collapsePattern` to `node_modules/(?:@[^/]+/[^/]+|[^/]+)`.
+  - [x] 6.2 Configure `reporterOptions.text.highlightFocused: true`.
+- [x] Task 7: Validate resolution against current `main` (AC: 7)
+  - [x] 7.1 With Story 1.1's devDependency installed (`make install`), run `depcruise src tests --config .dependency-cruiser.js` (or via the Story 4.1 `make lint-deps` target once available).
+  - [x] 7.2 Confirm internal `@/*` edges resolve and there is no `not-to-unresolvable`-style flooding; an empty `forbidden` array means no violations should be reported.
 
 ## Dev Notes
 
@@ -118,16 +118,21 @@ module.exports = {
 
 ### Agent Model Used
 
-_TBD — not yet implemented_
+claude-opus-4-8
 
 ### Debug Log References
 
-_None yet._
+Verified via `make lint-deps CI=1` (dependency-cruiser: 0 violations), `make lint CI=1` (ESLint, TypeScript, markdownlint, dependency-cruiser all pass), and the client/server Jest suites (349 + 8 passing).
 
 ### Completion Notes List
 
-_None yet._
+- Authored .dependency-cruiser.js (module.exports with forbidden[] + options): tsConfig=tsconfig.json, enhancedResolveOptions for the @/* alias, k6 built-ins, skipAnalysisNotInRules, tsPreCompilationDeps, reporterOptions.
+- Part of issue #225; full architecture gate verified green on the current main branch (0 dependency-cruiser violations).
 
 ### File List
 
-_None yet._
+- `.dependency-cruiser.js`
+
+### Change Log
+
+- 2026-06-22: Implemented and verified as part of #225 (dependency-cruiser architecture gate).

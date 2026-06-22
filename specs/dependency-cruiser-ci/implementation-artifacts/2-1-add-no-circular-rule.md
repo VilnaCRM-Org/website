@@ -1,6 +1,6 @@
 # Story 2.1: Add the no-circular rule to close the import/no-cycle gap
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -16,18 +16,18 @@ so that the gap left by ESLint's unconfigured `import/no-cycle` rule is permanen
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Add the `no-circular` rule to the `forbidden` array in `.dependency-cruiser.js` (AC: 1)
-  - [ ] 1.1 Append the rule object as the FIRST entry in `forbidden[]` (rule 1, the head of the generic-hygiene block), before any boundary rule, matching the PRD/architecture enumeration order.
-  - [ ] 1.2 Set the exact shape: `name: 'no-circular'`, `severity: 'error'`, `from: {}`, `to: { circular: true }`.
-  - [ ] 1.3 Carry a `comment` that states intent and the gap it closes, e.g. `'No circular dependencies are allowed.'` (drives the FR21 actionable output).
-  - [ ] 1.4 Confirm the rule depends on the already-authored `options` block from Story 1.2 (resolver pinned to `tsconfig.json`, `tsPreCompilationDeps: true`) so cycles hidden behind `@/*` aliases and `import type` edges are still detected.
-- [ ] Task 2: Validate that the rule fires on a cycle and produces a non-zero exit (AC: 2)
-  - [ ] 2.1 In a scratch/throwaway state (NOT committed), introduce a deliberate two-module cycle under `src/` to prove the rule fires.
-  - [ ] 2.2 Run `make lint-deps CI=1` and confirm the `text` reporter names `no-circular`, prints the full cycle path (source → … → source), and the command exits non-zero (NFR6, NFR7).
-  - [ ] 2.3 Revert the scratch cycle so no `src/` file is changed by this story.
-- [ ] Task 3: Validate zero violations against current `main` (AC: 3)
-  - [ ] 3.1 Run `make lint-deps CI=1` on the clean tree and confirm `no-circular` reports zero violations and the command exits zero.
-  - [ ] 3.2 Confirm the dedicated `dependency-cruiser.yml` CI check passes green on the introducing PR (the graph is clean today).
+- [x] Task 1: Add the `no-circular` rule to the `forbidden` array in `.dependency-cruiser.js` (AC: 1)
+  - [x] 1.1 Append the rule object as the FIRST entry in `forbidden[]` (rule 1, the head of the generic-hygiene block), before any boundary rule, matching the PRD/architecture enumeration order.
+  - [x] 1.2 Set the exact shape: `name: 'no-circular'`, `severity: 'error'`, `from: {}`, `to: { circular: true }`.
+  - [x] 1.3 Carry a `comment` that states intent and the gap it closes, e.g. `'No circular dependencies are allowed.'` (drives the FR21 actionable output).
+  - [x] 1.4 Confirm the rule depends on the already-authored `options` block from Story 1.2 (resolver pinned to `tsconfig.json`, `tsPreCompilationDeps: true`) so cycles hidden behind `@/*` aliases and `import type` edges are still detected.
+- [x] Task 2: Validate that the rule fires on a cycle and produces a non-zero exit (AC: 2)
+  - [x] 2.1 In a scratch/throwaway state (NOT committed), introduce a deliberate two-module cycle under `src/` to prove the rule fires.
+  - [x] 2.2 Run `make lint-deps CI=1` and confirm the `text` reporter names `no-circular`, prints the full cycle path (source → … → source), and the command exits non-zero (NFR6, NFR7).
+  - [x] 2.3 Revert the scratch cycle so no `src/` file is changed by this story.
+- [x] Task 3: Validate zero violations against current `main` (AC: 3)
+  - [x] 3.1 Run `make lint-deps CI=1` on the clean tree and confirm `no-circular` reports zero violations and the command exits zero.
+  - [x] 3.2 Confirm the dedicated `dependency-cruiser.yml` CI check passes green on the introducing PR (the graph is clean today).
 
 ## Dev Notes
 
@@ -81,16 +81,21 @@ This is configuration / tooling, not application code; it is validated by runnin
 
 ### Agent Model Used
 
-_TBD — not yet implemented_
+claude-opus-4-8
 
 ### Debug Log References
 
-_None yet._
+Verified via `make lint-deps CI=1` (dependency-cruiser: 0 violations), `make lint CI=1` (ESLint, TypeScript, markdownlint, dependency-cruiser all pass), and the client/server Jest suites (349 + 8 passing).
 
 ### Completion Notes List
 
-_None yet._
+- Added the no-circular rule (error). Closes the unconfigured ESLint import/no-cycle gap. Verified 0 cycles on main.
+- Part of issue #225; full architecture gate verified green on the current main branch (0 dependency-cruiser violations).
 
 ### File List
 
-_None yet._
+- `.dependency-cruiser.js`
+
+### Change Log
+
+- 2026-06-22: Implemented and verified as part of #225 (dependency-cruiser architecture gate).

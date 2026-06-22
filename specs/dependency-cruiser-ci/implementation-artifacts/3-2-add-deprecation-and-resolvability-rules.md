@@ -1,6 +1,6 @@
 # Story 3.2: Add deprecation, resolvability, and duplicate-dep-type advisories
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -18,20 +18,20 @@ so that dependency hygiene issues surface (as warnings) and unresolvable or unde
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Add the deprecation advisory rules to `forbidden[]` (AC: 1)
-  - [ ] 1.1 Add `no-deprecated-core` as rule 3 in `forbidden[]`: `severity: 'warn'`, `from: {}`, `to: { dependencyTypes: ['core'], path: [...deprecated core-module list] }`, with a `comment` stating intent.
-  - [ ] 1.2 Populate the `to.path` deprecated core-module list verbatim from the architecture config (the `v8/tools/*`, `node-inspect/lib/*`, `async_hooks`, `punycode`, `domain`, `constants`, `sys`, `_linklist`, `_stream_wrap` anchored entries).
-  - [ ] 1.3 Add `not-to-deprecated` as rule 4 in `forbidden[]`: `severity: 'warn'`, `from: {}`, `to: { dependencyTypes: ['deprecated'] }`, with a `comment` stating intent.
-- [ ] Task 2: Add the resolvability / package.json-presence rules to `forbidden[]` (AC: 2)
-  - [ ] 2.1 Add the not-present-in-package.json rule `no-non-package-json` as rule 5 in `forbidden[]`: `severity: 'error'`, `from: {}`, `to: { dependencyTypes: ['npm-no-pkg', 'npm-unknown'] }`, with a `comment` stating intent.
-  - [ ] 2.2 Add `not-to-unresolvable` as rule 6 in `forbidden[]`: `severity: 'error'`, `from: {}`, `to: { couldNotResolve: true, pathNot: ['^https?://'] }`, so `http(s)://` URLs are excluded.
-- [ ] Task 3: Add the duplicate-dependency-type rule to `forbidden[]` (AC: 3)
-  - [ ] 3.1 Add `no-duplicate-dep-types` as rule 7 in `forbidden[]`: `severity: 'warn'`, `from: {}`, `to: { moreThanOneDependencyType: true, dependencyTypesNot: ['type-only'] }`, with a `comment` stating intent.
-- [ ] Task 4: Verify warn-vs-error severity semantics (AC: 4)
-  - [ ] 4.1 Confirm the two warn rules surface in `make lint-deps` output without changing the exit code (NFR6).
-  - [ ] 4.2 Confirm the two error rules cause a non-zero exit / failed check when they fire (NFR6).
-- [ ] Task 5: Validate zero false positives on current `main` (AC: 5)
-  - [ ] 5.1 Run `make lint-deps CI=1` against `main` and confirm `not-to-unresolvable` and `no-non-package-json` report zero violations (relies on the AD-2 resolver options being present).
+- [x] Task 1: Add the deprecation advisory rules to `forbidden[]` (AC: 1)
+  - [x] 1.1 Add `no-deprecated-core` as rule 3 in `forbidden[]`: `severity: 'warn'`, `from: {}`, `to: { dependencyTypes: ['core'], path: [...deprecated core-module list] }`, with a `comment` stating intent.
+  - [x] 1.2 Populate the `to.path` deprecated core-module list verbatim from the architecture config (the `v8/tools/*`, `node-inspect/lib/*`, `async_hooks`, `punycode`, `domain`, `constants`, `sys`, `_linklist`, `_stream_wrap` anchored entries).
+  - [x] 1.3 Add `not-to-deprecated` as rule 4 in `forbidden[]`: `severity: 'warn'`, `from: {}`, `to: { dependencyTypes: ['deprecated'] }`, with a `comment` stating intent.
+- [x] Task 2: Add the resolvability / package.json-presence rules to `forbidden[]` (AC: 2)
+  - [x] 2.1 Add the not-present-in-package.json rule `no-non-package-json` as rule 5 in `forbidden[]`: `severity: 'error'`, `from: {}`, `to: { dependencyTypes: ['npm-no-pkg', 'npm-unknown'] }`, with a `comment` stating intent.
+  - [x] 2.2 Add `not-to-unresolvable` as rule 6 in `forbidden[]`: `severity: 'error'`, `from: {}`, `to: { couldNotResolve: true, pathNot: ['^https?://'] }`, so `http(s)://` URLs are excluded.
+- [x] Task 3: Add the duplicate-dependency-type rule to `forbidden[]` (AC: 3)
+  - [x] 3.1 Add `no-duplicate-dep-types` as rule 7 in `forbidden[]`: `severity: 'warn'`, `from: {}`, `to: { moreThanOneDependencyType: true, dependencyTypesNot: ['type-only'] }`, with a `comment` stating intent.
+- [x] Task 4: Verify warn-vs-error severity semantics (AC: 4)
+  - [x] 4.1 Confirm the two warn rules surface in `make lint-deps` output without changing the exit code (NFR6).
+  - [x] 4.2 Confirm the two error rules cause a non-zero exit / failed check when they fire (NFR6).
+- [x] Task 5: Validate zero false positives on current `main` (AC: 5)
+  - [x] 5.1 Run `make lint-deps CI=1` against `main` and confirm `not-to-unresolvable` and `no-non-package-json` report zero violations (relies on the AD-2 resolver options being present).
 
 ## Dev Notes
 
@@ -147,16 +147,21 @@ This is configuration/tooling, validated by running dependency-cruiser and the C
 
 ### Agent Model Used
 
-_TBD — not yet implemented_
+claude-opus-4-8
 
 ### Debug Log References
 
-_None yet._
+Verified via `make lint-deps CI=1` (dependency-cruiser: 0 violations), `make lint CI=1` (ESLint, TypeScript, markdownlint, dependency-cruiser all pass), and the client/server Jest suites (349 + 8 passing).
 
 ### Completion Notes List
 
-_None yet._
+- Added no-deprecated-core (warn), not-to-deprecated (warn), no-non-package-json (error), not-to-unresolvable (error, http(s) excepted) and no-duplicate-dep-types (warn).
+- Part of issue #225; full architecture gate verified green on the current main branch (0 dependency-cruiser violations).
 
 ### File List
 
-_None yet._
+- `.dependency-cruiser.js`
+
+### Change Log
+
+- 2026-06-22: Implemented and verified as part of #225 (dependency-cruiser architecture gate).

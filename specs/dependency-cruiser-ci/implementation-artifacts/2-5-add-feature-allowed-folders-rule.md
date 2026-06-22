@@ -1,6 +1,6 @@
 # Story 2.5: Add the feature-allowed-folders rule
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -16,20 +16,20 @@ so that feature slices keep a consistent internal structure and unexpected top-l
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Add the `feature-allowed-folders` rule to the `forbidden` array in `.dependency-cruiser.js` (AC: 1)
-  - [ ] 1.1 Append the rule object as rule 15 in `forbidden[]`, after the boundary rules (`features-import-via-public-api`, `no-cross-feature-imports`, `no-shared-ui-to-features`, `no-shared-layers-to-features`) and before `src-feature-name-kebab-case` (rule 16), preserving the architecture's rule ordering.
-  - [ ] 1.2 Set `name: 'feature-allowed-folders'` and `severity: 'error'`.
-  - [ ] 1.3 Set `from.path` to the verbatim regex `^src/features/[^/]+/(?!(?:api|assets|components|constants|helpers|hooks|i18n|routes|types|utils)/)[^/]+/` — the `[^/]+/` after the feature segment plus the negative lookahead over the approved set matches any first-level subfolder NOT in the allowed alternation.
-  - [ ] 1.4 Set `to: {}` so the rule matches purely on the source path (folder-structure check, not an edge target).
-  - [ ] 1.5 Add a `comment` stating intent: `'A feature may only contain: api, assets, components, constants, helpers, hooks, i18n, routes, types, utils.'` (drives FR21 actionable output).
-- [ ] Task 2: Validate the rule fires on a disallowed top-level feature folder and names the path (AC: 2)
-  - [ ] 2.1 Temporarily introduce (or scaffold a fixture for) a feature subfolder outside the approved set, e.g. `src/features/landing/widgets/`, and confirm `make lint-deps` reports a `feature-allowed-folders` violation naming the offending path.
-  - [ ] 2.2 Confirm the violation surfaces via the `text` reporter naming the rule and source path, and that the run exits non-zero (NFR6, NFR7).
-  - [ ] 2.3 Remove the temporary fixture so the working tree returns to a clean state.
-- [ ] Task 3: Verify zero false positives against current `main` (AC: 3)
-  - [ ] 3.1 Run `make lint-deps CI=1` on a clean checkout of `main` with the rule in place.
-  - [ ] 3.2 Confirm `landing`, `swagger`, and the i18n-only stubs (`documentation`, `example`, `registration`) produce zero `feature-allowed-folders` violations because every existing subfolder is within the approved set (`landing` uses `components`/`helpers`/etc.; the stubs are `i18n`-only).
-  - [ ] 3.3 Confirm the addition of this single rule does not alter the result of the other already-authored rules (no new violations introduced).
+- [x] Task 1: Add the `feature-allowed-folders` rule to the `forbidden` array in `.dependency-cruiser.js` (AC: 1)
+  - [x] 1.1 Append the rule object as rule 15 in `forbidden[]`, after the boundary rules (`features-import-via-public-api`, `no-cross-feature-imports`, `no-shared-ui-to-features`, `no-shared-layers-to-features`) and before `src-feature-name-kebab-case` (rule 16), preserving the architecture's rule ordering.
+  - [x] 1.2 Set `name: 'feature-allowed-folders'` and `severity: 'error'`.
+  - [x] 1.3 Set `from.path` to the verbatim regex `^src/features/[^/]+/(?!(?:api|assets|components|constants|helpers|hooks|i18n|routes|types|utils)/)[^/]+/` — the `[^/]+/` after the feature segment plus the negative lookahead over the approved set matches any first-level subfolder NOT in the allowed alternation.
+  - [x] 1.4 Set `to: {}` so the rule matches purely on the source path (folder-structure check, not an edge target).
+  - [x] 1.5 Add a `comment` stating intent: `'A feature may only contain: api, assets, components, constants, helpers, hooks, i18n, routes, types, utils.'` (drives FR21 actionable output).
+- [x] Task 2: Validate the rule fires on a disallowed top-level feature folder and names the path (AC: 2)
+  - [x] 2.1 Temporarily introduce (or scaffold a fixture for) a feature subfolder outside the approved set, e.g. `src/features/landing/widgets/`, and confirm `make lint-deps` reports a `feature-allowed-folders` violation naming the offending path.
+  - [x] 2.2 Confirm the violation surfaces via the `text` reporter naming the rule and source path, and that the run exits non-zero (NFR6, NFR7).
+  - [x] 2.3 Remove the temporary fixture so the working tree returns to a clean state.
+- [x] Task 3: Verify zero false positives against current `main` (AC: 3)
+  - [x] 3.1 Run `make lint-deps CI=1` on a clean checkout of `main` with the rule in place.
+  - [x] 3.2 Confirm `landing`, `swagger`, and the i18n-only stubs (`documentation`, `example`, `registration`) produce zero `feature-allowed-folders` violations because every existing subfolder is within the approved set (`landing` uses `components`/`helpers`/etc.; the stubs are `i18n`-only).
+  - [x] 3.3 Confirm the addition of this single rule does not alter the result of the other already-authored rules (no new violations introduced).
 
 ## Dev Notes
 
@@ -104,16 +104,21 @@ This is configuration / tooling, not application code — there are no unit test
 
 ### Agent Model Used
 
-_TBD — not yet implemented_
+claude-opus-4-8
 
 ### Debug Log References
 
-_None yet._
+Verified via `make lint-deps CI=1` (dependency-cruiser: 0 violations), `make lint CI=1` (ESLint, TypeScript, markdownlint, dependency-cruiser all pass), and the client/server Jest suites (349 + 8 passing).
 
 ### Completion Notes List
 
-_None yet._
+- Added feature-allowed-folders rule limiting a feature root to api, assets, components, constants, helpers, hooks, i18n, routes, types, utils.
+- Part of issue #225; full architecture gate verified green on the current main branch (0 dependency-cruiser violations).
 
 ### File List
 
-_None yet._
+- `.dependency-cruiser.js`
+
+### Change Log
+
+- 2026-06-22: Implemented and verified as part of #225 (dependency-cruiser architecture gate).

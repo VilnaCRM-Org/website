@@ -1,6 +1,6 @@
 # Story 4.1: Add the make lint-deps target and wire it into the lint aggregate
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -18,22 +18,22 @@ so that I can validate architecture boundaries locally before opening a PR and t
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Declare the `DEPCRUISE_BIN` variable in the Makefile (AC: 1)
-  - [ ] 1.1 Add `DEPCRUISE_BIN = $(BIN_DIR)/depcruise` in the per-tool binary-variable block, alongside the existing `ESLINT_BIN`, `TS_BIN`, and `MARKDOWNLINT_BIN` declarations, so it resolves to `./node_modules/.bin/depcruise` via the observed `BIN_DIR = ./node_modules/.bin`.
-  - [ ] 1.2 Follow the existing UPPER_SNAKE `*_BIN` naming convention exactly; do not introduce a `package.json` `scripts` entry (NFR12).
-- [ ] Task 2: Add the `lint-deps` target (AC: 2, 3)
-  - [ ] 2.1 Add the target alongside the existing `lint-next` / `lint-tsc` / `lint-md` targets.
-  - [ ] 2.2 Set the recipe to `$(PNPM_EXEC) $(DEPCRUISE_BIN) src tests --config .dependency-cruiser.js` so the cruise targets are exactly `src tests` and read the root config (FR13).
-  - [ ] 2.3 Carry a trailing `## ` description comment on the target line (e.g. `## Validate architecture/import boundaries with dependency-cruiser`) so the target self-documents into `make help` (AC 5).
-  - [ ] 2.4 Rely on the existing `PNPM_EXEC` resolution (no per-target branching): with no flags `PNPM_EXEC = $(EXEC_DEV_TTYLESS)` (`docker compose exec -T dev`) runs it inside the dev container; with `CI=1` `PNPM_EXEC = pnpm` runs `depcruise` directly on the runner (FR13, NFR8).
-- [ ] Task 3: Extend the `lint` aggregate (AC: 4)
-  - [ ] 3.1 Change the existing aggregate line from `lint: lint-next lint-tsc lint-md` to `lint: lint-next lint-tsc lint-md lint-deps` so `make lint` runs all four linters in sequence (FR14).
-  - [ ] 3.2 Preserve / update the aggregate's trailing `## ` description so `make help` still describes `lint` and now reflects that dependency-cruiser is included.
-- [ ] Task 4: Validate the wiring (AC: 2, 3, 4, 5)
-  - [ ] 4.1 Run `make help` and confirm `lint-deps` appears in the target listing via its trailing `## ` description (AC 5).
-  - [ ] 4.2 Run `make lint-deps CI=1` and confirm it invokes `depcruise src tests --config .dependency-cruiser.js` directly on the host and returns a zero-violation, zero-exit result on current `main` (NFR9).
-  - [ ] 4.3 Run `make lint-deps` (no flags) and confirm it executes inside the dev container via `PNPM_EXEC` (FR13, NFR8).
-  - [ ] 4.4 Run `make lint` and confirm `lint-next`, `lint-tsc`, `lint-md`, and `lint-deps` all execute in sequence (FR14).
+- [x] Task 1: Declare the `DEPCRUISE_BIN` variable in the Makefile (AC: 1)
+  - [x] 1.1 Add `DEPCRUISE_BIN = $(BIN_DIR)/depcruise` in the per-tool binary-variable block, alongside the existing `ESLINT_BIN`, `TS_BIN`, and `MARKDOWNLINT_BIN` declarations, so it resolves to `./node_modules/.bin/depcruise` via the observed `BIN_DIR = ./node_modules/.bin`.
+  - [x] 1.2 Follow the existing UPPER_SNAKE `*_BIN` naming convention exactly; do not introduce a `package.json` `scripts` entry (NFR12).
+- [x] Task 2: Add the `lint-deps` target (AC: 2, 3)
+  - [x] 2.1 Add the target alongside the existing `lint-next` / `lint-tsc` / `lint-md` targets.
+  - [x] 2.2 Set the recipe to `$(PNPM_EXEC) $(DEPCRUISE_BIN) src tests --config .dependency-cruiser.js` so the cruise targets are exactly `src tests` and read the root config (FR13).
+  - [x] 2.3 Carry a trailing `## ` description comment on the target line (e.g. `## Validate architecture/import boundaries with dependency-cruiser`) so the target self-documents into `make help` (AC 5).
+  - [x] 2.4 Rely on the existing `PNPM_EXEC` resolution (no per-target branching): with no flags `PNPM_EXEC = $(EXEC_DEV_TTYLESS)` (`docker compose exec -T dev`) runs it inside the dev container; with `CI=1` `PNPM_EXEC = pnpm` runs `depcruise` directly on the runner (FR13, NFR8).
+- [x] Task 3: Extend the `lint` aggregate (AC: 4)
+  - [x] 3.1 Change the existing aggregate line from `lint: lint-next lint-tsc lint-md` to `lint: lint-next lint-tsc lint-md lint-deps` so `make lint` runs all four linters in sequence (FR14).
+  - [x] 3.2 Preserve / update the aggregate's trailing `## ` description so `make help` still describes `lint` and now reflects that dependency-cruiser is included.
+- [x] Task 4: Validate the wiring (AC: 2, 3, 4, 5)
+  - [x] 4.1 Run `make help` and confirm `lint-deps` appears in the target listing via its trailing `## ` description (AC 5).
+  - [x] 4.2 Run `make lint-deps CI=1` and confirm it invokes `depcruise src tests --config .dependency-cruiser.js` directly on the host and returns a zero-violation, zero-exit result on current `main` (NFR9).
+  - [x] 4.3 Run `make lint-deps` (no flags) and confirm it executes inside the dev container via `PNPM_EXEC` (FR13, NFR8).
+  - [x] 4.4 Run `make lint` and confirm `lint-next`, `lint-tsc`, `lint-md`, and `lint-deps` all execute in sequence (FR14).
 
 ## Dev Notes
 
@@ -95,16 +95,21 @@ This is build/tooling wiring, not application code, so validation is by running 
 
 ### Agent Model Used
 
-_TBD — not yet implemented_
+claude-opus-4-8
 
 ### Debug Log References
 
-_None yet._
+Verified via `make lint-deps CI=1` (dependency-cruiser: 0 violations), `make lint CI=1` (ESLint, TypeScript, markdownlint, dependency-cruiser all pass), and the client/server Jest suites (349 + 8 passing).
 
 ### Completion Notes List
 
-_None yet._
+- Added DEPCRUISE_BIN and the lint-deps target ($(PNPM_EXEC) $(DEPCRUISE_BIN) src tests --config .dependency-cruiser.js); appended lint-deps to the lint aggregate. Verified make help lists it and make lint-deps CI=1 passes.
+- Part of issue #225; full architecture gate verified green on the current main branch (0 dependency-cruiser violations).
 
 ### File List
 
-_None yet._
+- `Makefile`
+
+### Change Log
+
+- 2026-06-22: Implemented and verified as part of #225 (dependency-cruiser architecture gate).

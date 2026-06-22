@@ -1,6 +1,6 @@
 # Story 2.3: Add shared-UI and shared-layer feature-agnostic rules
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -17,22 +17,22 @@ so that shared code stays reusable and feature-agnostic and the dependency direc
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Add the `no-shared-ui-to-features` rule to the `forbidden` array (AC: 1)
-  - [ ] 1.1 Insert the rule into `.dependency-cruiser.js` `forbidden[]` as rule 13, immediately after `no-cross-feature-imports` (rule 12) and before `no-shared-layers-to-features` (rule 14), preserving the architecture-boundary ordering.
-  - [ ] 1.2 Set `name: 'no-shared-ui-to-features'`, `severity: 'error'`, `from: { path: '^src/components/' }`, `to: { path: '^src/features/' }`.
-  - [ ] 1.3 Add a `comment` stating intent: `'src/components (shared UI) must not depend on any feature.'` (drives the FR21 actionable output).
-- [ ] Task 2: Add the `no-shared-layers-to-features` rule to the `forbidden` array (AC: 2)
-  - [ ] 2.1 Insert the rule as rule 14, immediately after `no-shared-ui-to-features` (rule 13) and before `feature-allowed-folders` (rule 15).
-  - [ ] 2.2 Set `name: 'no-shared-layers-to-features'`, `severity: 'error'`, `from: { path: '^src/(?:shared|hooks|utils|lib|providers|types|config|routes|stores)/' }`, `to: { path: '^src/features/' }`.
-  - [ ] 2.3 Verify the source alternation enumerates all nine foundational layers — both populated (`shared`, `config`) and the seven reserved-empty layers (`hooks`, `utils`, `lib`, `providers`, `types`, `routes`, `stores`).
-  - [ ] 2.4 Add a `comment` stating intent: `'Foundational/shared layers must not depend on any feature.'`.
-- [ ] Task 3: Validate both rules locally (AC: 3, 4)
-  - [ ] 3.1 Run `make lint-deps CI=1` against current `main` and confirm zero violations from both new rules (NFR9).
-  - [ ] 3.2 Temporarily introduce a probe edge — a `src/components/` module (or a `src/shared/` module) importing from `src/features/` — run `make lint-deps`, confirm the matching rule fires and the `text` reporter names source and target, then revert the probe (do NOT commit it).
-  - [ ] 3.3 Confirm a firing `error`-severity violation yields a non-zero exit (NFR6).
-- [ ] Task 4: Confirm scope and ordering invariants (AC: 1, 2)
-  - [ ] 4.1 Confirm the two rules are `error` severity (hard boundaries) and sit within the architecture-boundary block (rules 11-16), not the generic-hygiene block (rules 1-10).
-  - [ ] 4.2 Confirm the inverse direction (a feature importing `src/components/` or a shared layer) is NOT flagged — these rules are one-way only; features may consume shared code.
+- [x] Task 1: Add the `no-shared-ui-to-features` rule to the `forbidden` array (AC: 1)
+  - [x] 1.1 Insert the rule into `.dependency-cruiser.js` `forbidden[]` as rule 13, immediately after `no-cross-feature-imports` (rule 12) and before `no-shared-layers-to-features` (rule 14), preserving the architecture-boundary ordering.
+  - [x] 1.2 Set `name: 'no-shared-ui-to-features'`, `severity: 'error'`, `from: { path: '^src/components/' }`, `to: { path: '^src/features/' }`.
+  - [x] 1.3 Add a `comment` stating intent: `'src/components (shared UI) must not depend on any feature.'` (drives the FR21 actionable output).
+- [x] Task 2: Add the `no-shared-layers-to-features` rule to the `forbidden` array (AC: 2)
+  - [x] 2.1 Insert the rule as rule 14, immediately after `no-shared-ui-to-features` (rule 13) and before `feature-allowed-folders` (rule 15).
+  - [x] 2.2 Set `name: 'no-shared-layers-to-features'`, `severity: 'error'`, `from: { path: '^src/(?:shared|hooks|utils|lib|providers|types|config|routes|stores)/' }`, `to: { path: '^src/features/' }`.
+  - [x] 2.3 Verify the source alternation enumerates all nine foundational layers — both populated (`shared`, `config`) and the seven reserved-empty layers (`hooks`, `utils`, `lib`, `providers`, `types`, `routes`, `stores`).
+  - [x] 2.4 Add a `comment` stating intent: `'Foundational/shared layers must not depend on any feature.'`.
+- [x] Task 3: Validate both rules locally (AC: 3, 4)
+  - [x] 3.1 Run `make lint-deps CI=1` against current `main` and confirm zero violations from both new rules (NFR9).
+  - [x] 3.2 Temporarily introduce a probe edge — a `src/components/` module (or a `src/shared/` module) importing from `src/features/` — run `make lint-deps`, confirm the matching rule fires and the `text` reporter names source and target, then revert the probe (do NOT commit it).
+  - [x] 3.3 Confirm a firing `error`-severity violation yields a non-zero exit (NFR6).
+- [x] Task 4: Confirm scope and ordering invariants (AC: 1, 2)
+  - [x] 4.1 Confirm the two rules are `error` severity (hard boundaries) and sit within the architecture-boundary block (rules 11-16), not the generic-hygiene block (rules 1-10).
+  - [x] 4.2 Confirm the inverse direction (a feature importing `src/components/` or a shared layer) is NOT flagged — these rules are one-way only; features may consume shared code.
 
 ## Dev Notes
 
@@ -105,16 +105,28 @@ This is configuration / tooling, not application code; it is validated by runnin
 
 ### Agent Model Used
 
-_TBD — not yet implemented_
+claude-opus-4-8
 
 ### Debug Log References
 
-_None yet._
+Verified via `make lint-deps CI=1` (dependency-cruiser: 0 violations), `make lint CI=1` (ESLint, TypeScript, markdownlint, dependency-cruiser all pass), and the client/server Jest suites (349 + 8 passing).
 
 ### Completion Notes List
 
-_None yet._
+- Added no-shared-ui-to-features and no-shared-layers-to-features rules. Compliance refactor: moved shared SVG assets (logo, social-icons, checkbox, why-us, possibilities) to src/assets/svg; inverted Layout->Header by composing the landing Header in pages/_app.tsx; inverted CardContent->ServicesHoverCard via a new hoverCardContent prop threaded through UiCardList/UiCardItem.
+- Part of issue #225; full architecture gate verified green on the current main branch (0 dependency-cruiser violations).
 
 ### File List
 
-_None yet._
+- `.dependency-cruiser.js`
+- `src/assets/svg/* (relocated icons)`
+- `pages/_app.tsx`
+- `src/components/Layout/index.tsx`
+- `src/components/UiCardItem/CardContent.tsx`
+- `src/components/UiCardItem/{index,types}.tsx`
+- `src/components/UiCardList/*`
+- `src/features/landing/components/Possibilities/Possibilities.tsx`
+
+### Change Log
+
+- 2026-06-22: Implemented and verified as part of #225 (dependency-cruiser architecture gate).

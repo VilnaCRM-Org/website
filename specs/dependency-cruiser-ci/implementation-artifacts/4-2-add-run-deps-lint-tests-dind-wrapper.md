@@ -1,6 +1,6 @@
 # Story 4.2: Add the run-deps-lint-tests-dind wrapper
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -16,19 +16,19 @@ so that dependency-cruiser has the same in-container execution parity as the exi
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Add the `run-deps-lint-tests-dind` target to the `Makefile` (AC: 1, 3)
-  - [ ] 1.1 Place the target in the DIND-wrapper block alongside `run-eslint-tests-dind`, `run-typescript-tests-dind`, and `run-markdown-lint-tests-dind`, preserving the existing grouping and ordering.
-  - [ ] 1.2 Give it a trailing `## Run dependency-cruiser tests in DIND container (TEMP_CONTAINER_NAME required)` description so `.DEFAULT_GOAL = help` / `make help` lists it (NFR12).
-  - [ ] 1.3 As the first recipe line, call `$(call REQUIRE_ENV_VAR,TEMP_CONTAINER_NAME,my-container)` — the same macro and example value the sibling wrappers use.
-  - [ ] 1.4 Add an `@echo "🔍 Running dependency-cruiser in container $(TEMP_CONTAINER_NAME)..."` line matching the sibling wrappers' status-echo style.
-  - [ ] 1.5 As the final recipe line, call `$(call EXEC_IN_CONTAINER,TEMP_CONTAINER_NAME,cd /app && make lint-deps CI=1)` so the cruiser runs directly on the container runner (`CI=1` → `PNPM_EXEC = pnpm`) (AC: 1).
-- [ ] Task 2: Confirm the required-env-var failure path (AC: 2)
-  - [ ] 2.1 Verify that invoking `make run-deps-lint-tests-dind` with no `TEMP_CONTAINER_NAME` set prints `Error: TEMP_CONTAINER_NAME is required. Usage: make run-deps-lint-tests-dind TEMP_CONTAINER_NAME=my-container` and exits non-zero, via the shared `REQUIRE_ENV_VAR` macro.
-- [ ] Task 3: Validate help discoverability and parity (AC: 1, 3)
-  - [ ] 3.1 Run `make help` and confirm `run-deps-lint-tests-dind` appears with its description.
-  - [ ] 3.2 Diff the new target against `run-eslint-tests-dind` line-for-line to confirm it mirrors the pattern exactly (macro call, echo, exec), differing only in the inner `make lint-deps CI=1` target and the echo/description wording (NFR11).
-- [ ] Task 4: End-to-end DIND validation (AC: 1, 2)
-  - [ ] 4.1 With a temp container provisioned (per the existing `*-dind` setup targets), set `TEMP_CONTAINER_NAME` and run `make run-deps-lint-tests-dind`; confirm `make lint-deps CI=1` executes inside the container and exits zero on the clean `main` graph.
+- [x] Task 1: Add the `run-deps-lint-tests-dind` target to the `Makefile` (AC: 1, 3)
+  - [x] 1.1 Place the target in the DIND-wrapper block alongside `run-eslint-tests-dind`, `run-typescript-tests-dind`, and `run-markdown-lint-tests-dind`, preserving the existing grouping and ordering.
+  - [x] 1.2 Give it a trailing `## Run dependency-cruiser tests in DIND container (TEMP_CONTAINER_NAME required)` description so `.DEFAULT_GOAL = help` / `make help` lists it (NFR12).
+  - [x] 1.3 As the first recipe line, call `$(call REQUIRE_ENV_VAR,TEMP_CONTAINER_NAME,my-container)` — the same macro and example value the sibling wrappers use.
+  - [x] 1.4 Add an `@echo "🔍 Running dependency-cruiser in container $(TEMP_CONTAINER_NAME)..."` line matching the sibling wrappers' status-echo style.
+  - [x] 1.5 As the final recipe line, call `$(call EXEC_IN_CONTAINER,TEMP_CONTAINER_NAME,cd /app && make lint-deps CI=1)` so the cruiser runs directly on the container runner (`CI=1` → `PNPM_EXEC = pnpm`) (AC: 1).
+- [x] Task 2: Confirm the required-env-var failure path (AC: 2)
+  - [x] 2.1 Verify that invoking `make run-deps-lint-tests-dind` with no `TEMP_CONTAINER_NAME` set prints `Error: TEMP_CONTAINER_NAME is required. Usage: make run-deps-lint-tests-dind TEMP_CONTAINER_NAME=my-container` and exits non-zero, via the shared `REQUIRE_ENV_VAR` macro.
+- [x] Task 3: Validate help discoverability and parity (AC: 1, 3)
+  - [x] 3.1 Run `make help` and confirm `run-deps-lint-tests-dind` appears with its description.
+  - [x] 3.2 Diff the new target against `run-eslint-tests-dind` line-for-line to confirm it mirrors the pattern exactly (macro call, echo, exec), differing only in the inner `make lint-deps CI=1` target and the echo/description wording (NFR11).
+- [x] Task 4: End-to-end DIND validation (AC: 1, 2)
+  - [x] 4.1 With a temp container provisioned (per the existing `*-dind` setup targets), set `TEMP_CONTAINER_NAME` and run `make run-deps-lint-tests-dind`; confirm `make lint-deps CI=1` executes inside the container and exits zero on the clean `main` graph.
 
 ## Dev Notes
 
@@ -95,16 +95,21 @@ This is build-tooling (Makefile) wiring, not application code, so validation is 
 
 ### Agent Model Used
 
-_TBD — not yet implemented_
+claude-opus-4-8
 
 ### Debug Log References
 
-_None yet._
+Verified via `make lint-deps CI=1` (dependency-cruiser: 0 violations), `make lint CI=1` (ESLint, TypeScript, markdownlint, dependency-cruiser all pass), and the client/server Jest suites (349 + 8 passing).
 
 ### Completion Notes List
 
-_None yet._
+- Added run-deps-lint-tests-dind wrapper mirroring run-eslint-tests-dind (REQUIRE_ENV_VAR + EXEC_IN_CONTAINER -> make lint-deps CI=1).
+- Part of issue #225; full architecture gate verified green on the current main branch (0 dependency-cruiser violations).
 
 ### File List
 
-_None yet._
+- `Makefile`
+
+### Change Log
+
+- 2026-06-22: Implemented and verified as part of #225 (dependency-cruiser architecture gate).

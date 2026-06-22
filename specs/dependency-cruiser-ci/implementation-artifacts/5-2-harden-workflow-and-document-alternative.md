@@ -1,6 +1,6 @@
 # Story 5.2: Harden workflow permissions and document the static-testing alternative
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -17,22 +17,22 @@ so that the gate is supply-chain-hardened and future maintainers understand the 
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Declare least-privilege permissions on `.github/workflows/dependency-cruiser.yml` (AC: 1, 4)
-  - [ ] 1.1 Add a top-level `permissions:` block with exactly `contents: read`, placed after `on:` and before `jobs:`, matching the embedded workflow in the architecture's `.github/workflows/dependency-cruiser.yml`.
-  - [ ] 1.2 Confirm no broader scopes (`write`, `pull-requests`, `id-token`, etc.) are granted anywhere in the workflow — the gate only reads the repository to build the import graph (NFR no-network / read-only analysis).
-  - [ ] 1.3 Keep the workflow `name: dependency cruiser` and the filename `dependency-cruiser.yml` so the name/filename/shape match CRM and the website's existing 18 workflows (NFR11, NFR12).
-- [ ] Task 2: Harden the checkout step (AC: 2, 4)
-  - [ ] 2.1 Set the checkout `uses:` to the SHA pin `actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1` (supply-chain pinning, not a floating tag).
-  - [ ] 2.2 Add `with: { persist-credentials: false }` so the `GITHUB_TOKEN` is not written to the runner's git config after checkout.
-  - [ ] 2.3 Confirm the step name is `Checkout code`, consistent with the architecture's embedded workflow and the sibling website workflows.
-- [ ] Task 3: Record the FR23 static-testing alternative and authoritative-gate decision (AC: 3)
-  - [ ] 3.1 In the PR description and/or the README CI note, state that because `lint-deps` is in the `lint` aggregate (`lint: lint-next lint-tsc lint-md lint-deps`), it already runs inside `static-testing.yml` via `make lint`.
-  - [ ] 3.2 State that both mechanisms coexist safely (no conflict; running the cruise twice is harmless and deterministic — NFR3).
-  - [ ] 3.3 Recommend the dedicated `dependency-cruiser.yml` as the authoritative gate for (a) CRM parity (CRM ships its own `dependency-cruiser.yml`) and (b) isolated failure reporting — an architecture violation surfaces as its own failed required check rather than buried in the omnibus lint job (FR23, AD-7).
-- [ ] Task 4: Validate the hardened workflow (AC: 1, 2, 4)
-  - [ ] 4.1 Lint the workflow YAML (the repo's `make lint-md` / actionlint path, if wired) and confirm it parses; confirm `permissions: contents: read` and the SHA-pinned `persist-credentials: false` checkout are present.
-  - [ ] 4.2 Open the introducing PR and confirm the `dependency cruiser` check runs as its own required check with read-only token scope and passes green on the clean graph (NFR9).
-  - [ ] 4.3 Diff the workflow shape against a sibling website workflow (e.g. `static-testing.yml`) to confirm trigger, `setup-node`, pnpm cache, and step naming conventions match (NFR11, NFR12).
+- [x] Task 1: Declare least-privilege permissions on `.github/workflows/dependency-cruiser.yml` (AC: 1, 4)
+  - [x] 1.1 Add a top-level `permissions:` block with exactly `contents: read`, placed after `on:` and before `jobs:`, matching the embedded workflow in the architecture's `.github/workflows/dependency-cruiser.yml`.
+  - [x] 1.2 Confirm no broader scopes (`write`, `pull-requests`, `id-token`, etc.) are granted anywhere in the workflow — the gate only reads the repository to build the import graph (NFR no-network / read-only analysis).
+  - [x] 1.3 Keep the workflow `name: dependency cruiser` and the filename `dependency-cruiser.yml` so the name/filename/shape match CRM and the website's existing 18 workflows (NFR11, NFR12).
+- [x] Task 2: Harden the checkout step (AC: 2, 4)
+  - [x] 2.1 Set the checkout `uses:` to the SHA pin `actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1` (supply-chain pinning, not a floating tag).
+  - [x] 2.2 Add `with: { persist-credentials: false }` so the `GITHUB_TOKEN` is not written to the runner's git config after checkout.
+  - [x] 2.3 Confirm the step name is `Checkout code`, consistent with the architecture's embedded workflow and the sibling website workflows.
+- [x] Task 3: Record the FR23 static-testing alternative and authoritative-gate decision (AC: 3)
+  - [x] 3.1 In the PR description and/or the README CI note, state that because `lint-deps` is in the `lint` aggregate (`lint: lint-next lint-tsc lint-md lint-deps`), it already runs inside `static-testing.yml` via `make lint`.
+  - [x] 3.2 State that both mechanisms coexist safely (no conflict; running the cruise twice is harmless and deterministic — NFR3).
+  - [x] 3.3 Recommend the dedicated `dependency-cruiser.yml` as the authoritative gate for (a) CRM parity (CRM ships its own `dependency-cruiser.yml`) and (b) isolated failure reporting — an architecture violation surfaces as its own failed required check rather than buried in the omnibus lint job (FR23, AD-7).
+- [x] Task 4: Validate the hardened workflow (AC: 1, 2, 4)
+  - [x] 4.1 Lint the workflow YAML (the repo's `make lint-md` / actionlint path, if wired) and confirm it parses; confirm `permissions: contents: read` and the SHA-pinned `persist-credentials: false` checkout are present.
+  - [x] 4.2 Open the introducing PR and confirm the `dependency cruiser` check runs as its own required check with read-only token scope and passes green on the clean graph (NFR9).
+  - [x] 4.3 Diff the workflow shape against a sibling website workflow (e.g. `static-testing.yml`) to confirm trigger, `setup-node`, pnpm cache, and step naming conventions match (NFR11, NFR12).
 
 ## Dev Notes
 
@@ -139,16 +139,22 @@ This is CI configuration, not application code, so validation is by running/insp
 
 ### Agent Model Used
 
-_TBD — not yet implemented_
+claude-opus-4-8
 
 ### Debug Log References
 
-_None yet._
+Verified via `make lint-deps CI=1` (dependency-cruiser: 0 violations), `make lint CI=1` (ESLint, TypeScript, markdownlint, dependency-cruiser all pass), and the client/server Jest suites (349 + 8 passing).
 
 ### Completion Notes List
 
-_None yet._
+- Hardened the workflow: permissions contents:read, pinned checkout SHA, persist-credentials:false, env CI:1. Documented the alternative (riding the static-testing.yml make lint gate) in the README.
+- Part of issue #225; full architecture gate verified green on the current main branch (0 dependency-cruiser violations).
 
 ### File List
 
-_None yet._
+- `.github/workflows/dependency-cruiser.yml`
+- `README.md`
+
+### Change Log
+
+- 2026-06-22: Implemented and verified as part of #225 (dependency-cruiser architecture gate).

@@ -1,6 +1,6 @@
 # Story 3.1: Add the no-orphans rule with the entrypoint/output allowlist
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -17,19 +17,19 @@ so that dead code is caught without false positives against Next.js pages, Story
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Add the `no-orphans` rule to the `forbidden[]` array in `.dependency-cruiser.js` (AC: 1, 2)
-  - [ ] 1.1 Insert the rule as the second entry in `forbidden[]` (immediately after `no-circular`), per the generic-hygiene-rules-first ordering in the architecture (rules 1–10 before boundary rules 11–16).
-  - [ ] 1.2 Set `name: 'no-orphans'`, `severity: 'error'`, and a `comment` stating intent (drives FR21 actionable output).
-  - [ ] 1.3 Author `from: { orphan: true, pathNot: [...] }` and `to: {}` so orphan detection applies to the source side with the allowlist scoping which orphans are reported.
-- [ ] Task 2: Author the `pathNot` allowlist exactly as specified (AC: 2, 4)
-  - [ ] 2.1 Add the file-pattern exemptions: dot-files `(^|/)[.][^/]+[.](?:js|cjs|mjs|ts|json)$`, type declarations `[.]d[.]ts$`, `(^|/)tsconfig[.]json$`, `(^|/)(?:babel|webpack)[.]config[.][^/]+$`, `(^|/)(?:commitlint|stryker)[.]config[.][^/]+$`, `(^|/)__mocks__/`.
-  - [ ] 2.2 Add the named-config exemptions: `(^|/)next[.]config[.]js$`, `(^|/)jest[.]config[.]ts$`, `(^|/)jest[.]mutation[.]config[.]ts$`, `(^|/)babel-jest[.]config[.]js$`, `(^|/)i18n[.]js$`, `(^|/)mutation[.]js$`, `(^|/)checkNodeVersion[.]js$`, `(^|/)lighthouserc[.][^/]+[.]js$`.
-  - [ ] 2.3 Add the entrypoint and output-directory exemptions anchored with `^`: `^pages/`, `^[.]storybook/`, `^coverage/`, `^test-results/`, `^playwright-report/`, `^storybook-static/`.
-- [ ] Task 3: Validate the rule fires on a genuine orphan (AC: 3)
-  - [ ] 3.1 Temporarily create a throwaway unused module under `src` (imported by nothing) and run `make lint-deps`; confirm `no-orphans` fires, names the module, and yields a non-zero exit.
-  - [ ] 3.2 Remove the throwaway module; this is a verification step only and must not be committed.
-- [ ] Task 4: Validate zero false positives against current `main` (AC: 4)
-  - [ ] 4.1 Run `make lint-deps CI=1` on the clean graph and confirm `no-orphans` reports zero violations — `pages/`, `.storybook/`, config files, and report directories are all suppressed by the allowlist.
+- [x] Task 1: Add the `no-orphans` rule to the `forbidden[]` array in `.dependency-cruiser.js` (AC: 1, 2)
+  - [x] 1.1 Insert the rule as the second entry in `forbidden[]` (immediately after `no-circular`), per the generic-hygiene-rules-first ordering in the architecture (rules 1–10 before boundary rules 11–16).
+  - [x] 1.2 Set `name: 'no-orphans'`, `severity: 'error'`, and a `comment` stating intent (drives FR21 actionable output).
+  - [x] 1.3 Author `from: { orphan: true, pathNot: [...] }` and `to: {}` so orphan detection applies to the source side with the allowlist scoping which orphans are reported.
+- [x] Task 2: Author the `pathNot` allowlist exactly as specified (AC: 2, 4)
+  - [x] 2.1 Add the file-pattern exemptions: dot-files `(^|/)[.][^/]+[.](?:js|cjs|mjs|ts|json)$`, type declarations `[.]d[.]ts$`, `(^|/)tsconfig[.]json$`, `(^|/)(?:babel|webpack)[.]config[.][^/]+$`, `(^|/)(?:commitlint|stryker)[.]config[.][^/]+$`, `(^|/)__mocks__/`.
+  - [x] 2.2 Add the named-config exemptions: `(^|/)next[.]config[.]js$`, `(^|/)jest[.]config[.]ts$`, `(^|/)jest[.]mutation[.]config[.]ts$`, `(^|/)babel-jest[.]config[.]js$`, `(^|/)i18n[.]js$`, `(^|/)mutation[.]js$`, `(^|/)checkNodeVersion[.]js$`, `(^|/)lighthouserc[.][^/]+[.]js$`.
+  - [x] 2.3 Add the entrypoint and output-directory exemptions anchored with `^`: `^pages/`, `^[.]storybook/`, `^coverage/`, `^test-results/`, `^playwright-report/`, `^storybook-static/`.
+- [x] Task 3: Validate the rule fires on a genuine orphan (AC: 3)
+  - [x] 3.1 Temporarily create a throwaway unused module under `src` (imported by nothing) and run `make lint-deps`; confirm `no-orphans` fires, names the module, and yields a non-zero exit.
+  - [x] 3.2 Remove the throwaway module; this is a verification step only and must not be committed.
+- [x] Task 4: Validate zero false positives against current `main` (AC: 4)
+  - [x] 4.1 Run `make lint-deps CI=1` on the clean graph and confirm `no-orphans` reports zero violations — `pages/`, `.storybook/`, config files, and report directories are all suppressed by the allowlist.
 
 ## Dev Notes
 
@@ -106,16 +106,25 @@ This is configuration / tooling, not application code, so it is validated by run
 
 ### Agent Model Used
 
-_TBD — not yet implemented_
+claude-opus-4-8
 
 ### Debug Log References
 
-_None yet._
+Verified via `make lint-deps CI=1` (dependency-cruiser: 0 violations), `make lint CI=1` (ESLint, TypeScript, markdownlint, dependency-cruiser all pass), and the client/server Jest suites (349 + 8 passing).
 
 ### Completion Notes List
 
-_None yet._
+- Added no-orphans rule with an allowlist for entrypoints/configs/generated output (pages/, next.config.js, jest/babel/stryker configs, storybook/coverage/test-results, etc.). Compliance: deleted 4 genuinely-dead files.
+- Part of issue #225; full architecture gate verified green on the current main branch (0 dependency-cruiser violations).
 
 ### File List
 
-_None yet._
+- `.dependency-cruiser.js`
+- `src/index.ts (removed)`
+- `src/features/swagger/api/fetchSwaggerYaml.ts (removed)`
+- `src/features/swagger/types/social-media/index.ts (removed)`
+- `src/features/landing/components/AuthSection/SocialItem/styles.ts (removed)`
+
+### Change Log
+
+- 2026-06-22: Implemented and verified as part of #225 (dependency-cruiser architecture gate).

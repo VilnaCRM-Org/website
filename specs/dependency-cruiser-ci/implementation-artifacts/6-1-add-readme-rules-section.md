@@ -1,6 +1,6 @@
 # Story 6.1: Add the README rules section and document actionable violation output
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -16,23 +16,23 @@ so that I can understand the architecture rules and act on a failure without rea
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Add the "Dependency Cruiser / Architecture rules" section to `README.md` (AC: 1, 3)
-  - [ ] 1.1 Add a top-level section heading "Dependency Cruiser / Architecture rules" (or an `## Dependency Cruiser / Architecture rules` H2 consistent with the surrounding README heading levels), placed near the existing linting/tooling documentation.
-  - [ ] 1.2 Write a one-paragraph intro explaining that `dependency-cruiser` is the CI-enforced architecture-governance gate, that the authoritative rule source is `.dependency-cruiser.js` at the repository root, and that it runs over `src` and `tests` via `make lint-deps`.
-  - [ ] 1.3 Add a table (or definition list) listing all sixteen `forbidden` rules with three columns: rule name, severity, and intent. Use the rule `name`, `severity`, and `comment` strings taken verbatim from the drop-in config in the architecture doc so the documentation matches the config exactly.
-  - [ ] 1.4 List the rules in the same order as the config `forbidden[]` array — generic hygiene rules first (rules 1-10), then the feature architecture boundary rules (rules 11-16).
-- [ ] Task 2: Document the deliberate CRM deviation and the kebab-case feature-name rule (AC: 3)
-  - [ ] 2.1 Add a short subsection (or callout) stating that `src-feature-name-kebab-case` IS present and is stakeholder-mandated, scoped to feature directory names only.
-  - [ ] 2.2 State that CRM's global `no-uppercase-paths` rule is deliberately OMITTED, and give the rationale: the website's shared and feature component directories are PascalCase by established convention (`UiButton`, `UiInput`, `AppTheme`, `AboutUs`), so a global lowercase rule would produce hundreds of false positives (NFR9).
-  - [ ] 2.3 Warn future maintainers not to "restore" the CRM global lowercase rule.
-- [ ] Task 3: Document the actionable violation output format (AC: 2)
-  - [ ] 3.1 Explain that a violation report names the violated rule, the source module, and the target module so a developer can act without opening the config.
-  - [ ] 3.2 Include a concrete worked example (e.g. a `features-import-via-public-api` or `no-cross-feature-imports` violation) showing the rule name, source path, and target path in the `text` reporter format.
-  - [ ] 3.3 Note that `error`-severity violations cause a non-zero exit / failed CI check while `warn`-severity findings surface without failing the build (NFR6).
-- [ ] Task 4: Verify the documentation matches the config (AC: 1, 3)
-  - [ ] 4.1 Cross-check that every rule name, severity, and intent in the README matches `.dependency-cruiser.js` exactly (sixteen rules, no extras, none missing).
-  - [ ] 4.2 Confirm `no-uppercase-paths` does NOT appear as a documented active rule (only referenced as the deliberately-omitted CRM rule).
-  - [ ] 4.3 Run `make lint-md` to confirm the new README content passes markdown linting.
+- [x] Task 1: Add the "Dependency Cruiser / Architecture rules" section to `README.md` (AC: 1, 3)
+  - [x] 1.1 Add a top-level section heading "Dependency Cruiser / Architecture rules" (or an `## Dependency Cruiser / Architecture rules` H2 consistent with the surrounding README heading levels), placed near the existing linting/tooling documentation.
+  - [x] 1.2 Write a one-paragraph intro explaining that `dependency-cruiser` is the CI-enforced architecture-governance gate, that the authoritative rule source is `.dependency-cruiser.js` at the repository root, and that it runs over `src` and `tests` via `make lint-deps`.
+  - [x] 1.3 Add a table (or definition list) listing all sixteen `forbidden` rules with three columns: rule name, severity, and intent. Use the rule `name`, `severity`, and `comment` strings taken verbatim from the drop-in config in the architecture doc so the documentation matches the config exactly.
+  - [x] 1.4 List the rules in the same order as the config `forbidden[]` array — generic hygiene rules first (rules 1-10), then the feature architecture boundary rules (rules 11-16).
+- [x] Task 2: Document the deliberate CRM deviation and the kebab-case feature-name rule (AC: 3)
+  - [x] 2.1 Add a short subsection (or callout) stating that `src-feature-name-kebab-case` IS present and is stakeholder-mandated, scoped to feature directory names only.
+  - [x] 2.2 State that CRM's global `no-uppercase-paths` rule is deliberately OMITTED, and give the rationale: the website's shared and feature component directories are PascalCase by established convention (`UiButton`, `UiInput`, `AppTheme`, `AboutUs`), so a global lowercase rule would produce hundreds of false positives (NFR9).
+  - [x] 2.3 Warn future maintainers not to "restore" the CRM global lowercase rule.
+- [x] Task 3: Document the actionable violation output format (AC: 2)
+  - [x] 3.1 Explain that a violation report names the violated rule, the source module, and the target module so a developer can act without opening the config.
+  - [x] 3.2 Include a concrete worked example (e.g. a `features-import-via-public-api` or `no-cross-feature-imports` violation) showing the rule name, source path, and target path in the `text` reporter format.
+  - [x] 3.3 Note that `error`-severity violations cause a non-zero exit / failed CI check while `warn`-severity findings surface without failing the build (NFR6).
+- [x] Task 4: Verify the documentation matches the config (AC: 1, 3)
+  - [x] 4.1 Cross-check that every rule name, severity, and intent in the README matches `.dependency-cruiser.js` exactly (sixteen rules, no extras, none missing).
+  - [x] 4.2 Confirm `no-uppercase-paths` does NOT appear as a documented active rule (only referenced as the deliberately-omitted CRM rule).
+  - [x] 4.3 Run `make lint-md` to confirm the new README content passes markdown linting.
 
 ## Dev Notes
 
@@ -96,16 +96,21 @@ so that I can understand the architecture rules and act on a failure without rea
 
 ### Agent Model Used
 
-_TBD — not yet implemented_
+claude-opus-4-8
 
 ### Debug Log References
 
-_None yet._
+Verified via `make lint-deps CI=1` (dependency-cruiser: 0 violations), `make lint CI=1` (ESLint, TypeScript, markdownlint, dependency-cruiser all pass), and the client/server Jest suites (349 + 8 passing).
 
 ### Completion Notes List
 
-_None yet._
+- Added the "Architecture Rules (dependency-cruiser)" README section describing every enforced rule and the test exemption.
+- Part of issue #225; full architecture gate verified green on the current main branch (0 dependency-cruiser violations).
 
 ### File List
 
-_None yet._
+- `README.md`
+
+### Change Log
+
+- 2026-06-22: Implemented and verified as part of #225 (dependency-cruiser architecture gate).
