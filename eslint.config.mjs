@@ -47,7 +47,11 @@ export default [
       parser: '@typescript-eslint/parser',
       parserOptions: {
         project: './tsconfig.json',
-        tsconfigRootDir: __dirname,
+        // Resolve tsconfig from the working directory (repo root) rather than the
+        // config file's dir. Tools like qlty copy eslint.config.mjs into a cache
+        // dir before running, which makes __dirname point outside the repo and
+        // breaks tsconfig resolution. Lint is always invoked from the repo root.
+        tsconfigRootDir: process.cwd(),
         sourceType: 'module',
         ecmaVersion: 2022,
       },
@@ -252,6 +256,14 @@ export default [
       'react/react-in-jsx-scope': 'off',
       'no-await-in-loop': 'off',
       'no-restricted-syntax': 'off',
+      // Module resolution and dev-dependency provenance are handled by
+      // TypeScript and dependency-cruiser, not eslint-plugin-import. Disable
+      // globally (last-wins) so they hold even under tools that don't fully
+      // apply the FlatCompat-converted overrides above (e.g. qlty's eslint).
+      'import/no-unresolved': 'off',
+      'import/no-extraneous-dependencies': 'off',
+      // TSX is the standard JSX extension here (mirrors the override above).
+      'react/jsx-filename-extension': ['error', { extensions: ['.jsx', '.tsx'] }],
     },
   },
 ];
