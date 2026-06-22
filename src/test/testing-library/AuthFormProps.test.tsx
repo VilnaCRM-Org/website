@@ -3,12 +3,12 @@ import { RenderResult } from '@testing-library/react';
 import React from 'react';
 import { useForm } from 'react-hook-form';
 
-import AuthForm from '../../features/landing/components/AuthSection/AuthForm/AuthForm';
-import Notification from '../../features/landing/components/Notification';
+import AuthForm from '../../features/landing/components/auth-section/auth-form/auth-form';
+import Notification from '../../features/landing/components/notification';
 import {
   NotificationControlProps,
   NotificationStatus,
-} from '../../features/landing/components/Notification/types';
+} from '../../features/landing/components/notification/types';
 import { RegisterItem } from '../../features/landing/types/authentication/form';
 
 import { AuthFormWrapperProps, OnSubmitType, renderAuthLayout } from './fixtures/auth-test-helpers';
@@ -63,7 +63,7 @@ function renderAuthForm({
 }
 type DefaultValue = { FullName: ''; Password: ''; Email: ''; Privacy: false };
 
-jest.mock('../../features/landing/components/AuthSection/AuthForm/AuthForm', () => ({
+jest.mock('../../features/landing/components/auth-section/auth-form/auth-form', () => ({
   __esModule: true,
   default: jest.fn(({ control }) => {
     const { _options } = control || {};
@@ -134,7 +134,7 @@ describe('AuthFormWrapper - Default Values', () => {
   });
 });
 
-jest.mock('../../features/landing/components/Notification', () => ({
+jest.mock('../../features/landing/components/notification', () => ({
   __esModule: true,
   default: jest.fn(({ errorText, type, isOpen, loading }: NotificationControlProps) => (
     <div

@@ -1,6 +1,6 @@
 import { render } from '@testing-library/react';
 
-import MainImage from '../../features/landing/components/AboutUs/MainImage/MainImage';
+import MainImage from '../../features/landing/components/about-us/main-image/main-image';
 
 const mainImageTestId: string = 'Main image';
 

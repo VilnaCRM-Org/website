@@ -8,12 +8,12 @@ import {
   CLIENT_ERROR_KEYS,
 } from '@/shared/clientErrorMessages';
 
-import Notification from '../../features/landing/components/Notification';
-import { notificationComponents } from '../../features/landing/components/Notification/Notification';
+import Notification from '../../features/landing/components/notification';
+import { notificationComponents } from '../../features/landing/components/notification/notification';
 import {
   NotificationControlProps,
   NotificationStatus,
-} from '../../features/landing/components/Notification/types';
+} from '../../features/landing/components/notification/types';
 
 import { buttonRole } from './constants';
 import { SetIsOpenType } from './fixtures/auth-test-helpers';

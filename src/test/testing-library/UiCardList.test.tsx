@@ -1,10 +1,10 @@
 import { render } from '@testing-library/react';
 
-import UiCardList from '@/components/UiCardList';
+import UiCardList from '@/components/ui-card-list';
 
 import { cardList } from './constants';
 
-jest.mock('../../components/UiCardList/CardSwiper', () =>
+jest.mock('../../components/ui-card-list/card-swiper', () =>
   jest.fn(() => <div data-testid="card-swiper" />)
 );
 

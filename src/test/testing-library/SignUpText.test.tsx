@@ -1,7 +1,7 @@
 import { render } from '@testing-library/react';
 import { t } from 'i18next';
 
-import SignUpText from '../../features/landing/components/AuthSection/SignUpText/SignUpText';
+import SignUpText from '../../features/landing/components/auth-section/sign-up-text/sign-up-text';
 
 const socialTitle: string = t('sign_up.main_heading');
 const vilnaText: string = t('sign_up.vilna_text');

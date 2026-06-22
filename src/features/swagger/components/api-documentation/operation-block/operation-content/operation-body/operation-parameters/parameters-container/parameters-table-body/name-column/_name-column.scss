@@ -1,0 +1,13 @@
+@use '@swagger/global' as *;
+
+@use 'parameter-name/parameter-name';
+@use 'parameter-type/parameter-type';
+@use 'parameter-in/parameter-in';
+
+%nameColumn {
+  .parameters-col_name {
+    @extend %parameterName;
+    @extend %parameterType;
+    @extend %parameterIn;
+  }
+}

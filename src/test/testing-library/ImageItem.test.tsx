@@ -1,7 +1,7 @@
 import { faker } from '@faker-js/faker';
 import { render } from '@testing-library/react';
 
-import { ImageItem } from '../../features/landing/components/Possibilities/ServicesHoverCard/ImageItem';
+import { ImageItem } from '../../features/landing/components/possibilities/services-hover-card/image-item';
 import { ImageList } from '../../features/landing/types/possibilities/image-list';
 
 const item: ImageList = {

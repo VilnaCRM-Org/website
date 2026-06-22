@@ -3,8 +3,8 @@ import { render, screen } from '@testing-library/react';
 import i18n, { t, TFunction } from 'i18next';
 import { I18nextProvider } from 'react-i18next';
 
-import AuthSection from '../../features/landing/components/AuthSection/AuthSection';
-import { socialLinks } from '../../features/landing/components/AuthSection/constants';
+import AuthSection from '../../features/landing/components/auth-section/auth-section';
+import { socialLinks } from '../../features/landing/components/auth-section/constants';
 import { SocialLink } from '../../features/landing/types/authentication/social';
 
 import { renderWithProviders } from './utils';

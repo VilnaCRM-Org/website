@@ -1,7 +1,7 @@
 import { render } from '@testing-library/react';
 import { t } from 'i18next';
 
-import TextInfo from '../../features/landing/components/AboutUs/TextInfo/TextInfo';
+import TextInfo from '../../features/landing/components/about-us/text-info/text-info';
 
 import { createLocalizedRegExp } from './utils';
 

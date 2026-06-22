@@ -1,9 +1,9 @@
 import { render, screen } from '@testing-library/react';
 
-import Swagger from '../../features/swagger/components/Swagger/Swagger';
+import Swagger from '../../features/swagger/components/swagger/swagger';
 
 jest.mock(
-  '../../features/swagger/components/Navigation/Navigation',
+  '../../features/swagger/components/navigation/navigation',
   () =>
     function MockNavigation(): React.ReactElement {
       return <div data-testid="navigation">Navigation Component</div>;
@@ -11,7 +11,7 @@ jest.mock(
 );
 
 jest.mock(
-  '../../features/swagger/components/ApiDocumentation/ApiDocumentation',
+  '../../features/swagger/components/api-documentation/api-documentation',
   () =>
     function MockApiDocumentation(): React.ReactElement {
       return <div data-testid="api-documentation">API Documentation Component</div>;
@@ -58,7 +58,7 @@ jest.mock('@mui/material', () => ({
   ),
 }));
 
-jest.mock('../../features/swagger/components/Swagger/styles', () => ({
+jest.mock('../../features/swagger/components/swagger/styles', () => ({
   wrapper: {
     padding: '20px',
     backgroundColor: '#f5f5f5',

@@ -1,6 +1,6 @@
 import { render } from '@testing-library/react';
 
-import SocialMediaItem from '@/components/SocialMedia/SocialMediaItem/SocialMediaItem';
+import SocialMediaItem from '@/components/social-media/social-media-item/social-media-item';
 
 import { testSocialDrawerItem, testSocialNoDrawerItem } from './fixtures/social-media.fixtures';
 

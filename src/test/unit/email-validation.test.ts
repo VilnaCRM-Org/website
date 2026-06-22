@@ -1,7 +1,7 @@
 import { t } from 'i18next';
 
-import { validateEmail } from '../../features/landing/components/AuthSection/Validations';
-import { isValidEmailFormat } from '../../features/landing/components/AuthSection/Validations/email';
+import { validateEmail } from '../../features/landing/components/auth-section/validations';
+import { isValidEmailFormat } from '../../features/landing/components/auth-section/validations/email';
 
 const emailStepError: string = t('sign_up.form.email_input.email_format_error');
 const emailInvalidError: string = t('sign_up.form.email_input.invalid_message');

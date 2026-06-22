@@ -19,7 +19,7 @@
     "jsx": "react-jsx",
     "paths": {
       "@/*": ["./src/*"],
-      "@swagger/global": ["./src/features/swagger/components/ApiDocumentation/Global/_global.scss"]
+      "@swagger/global": ["./src/features/swagger/components/api-documentation/global/_global.scss"]
     },
     "incremental": true,
     "experimentalDecorators": true,

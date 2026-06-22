@@ -1,6 +1,6 @@
 import { t } from 'i18next';
 
-import { validatePassword } from '../../features/landing/components/AuthSection/Validations';
+import { validatePassword } from '../../features/landing/components/auth-section/validations';
 
 const tooShortPassword: string = 'Abc1234';
 

@@ -3,7 +3,7 @@ import { t } from 'i18next';
 import React from 'react';
 import '@testing-library/jest-dom';
 
-import Layout from '@/components/Layout';
+import Layout from '@/components/layout';
 
 function MockHead({ children }: { children: React.ReactNode }): null {
   React.useEffect(() => {
@@ -40,7 +40,7 @@ jest.mock('next/head', () => ({
   default: MockHead,
 }));
 jest.mock(
-  '../../components/UiFooter',
+  '../../components/ui-footer',
   () =>
     function Footer(): React.ReactElement {
       return <footer data-testid="footer" />;

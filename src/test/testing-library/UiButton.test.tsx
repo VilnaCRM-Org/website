@@ -2,7 +2,7 @@ import { ThemeProvider } from '@mui/material';
 import { render, fireEvent } from '@testing-library/react';
 
 import { UiButton } from '@/components';
-import { theme } from '@/components/UiButton/theme';
+import { theme } from '@/components/ui-button/theme';
 
 import { testText } from './constants';
 

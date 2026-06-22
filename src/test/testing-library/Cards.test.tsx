@@ -2,7 +2,7 @@ import { render } from '@testing-library/react';
 import { t } from 'i18next';
 import React from 'react';
 
-import Cards from '../../features/landing/components/ForWhoSection/Cards/Cards';
+import Cards from '../../features/landing/components/for-who-section/cards/cards';
 
 const cardTitle: string = t('for_who.card_text_title');
 const cardText: string = t('for_who.heading_secondary');

@@ -1,8 +1,8 @@
 import { render } from '@testing-library/react';
 
-import Possibilities from '../../features/landing/components/Possibilities';
+import Possibilities from '../../features/landing/components/possibilities';
 
-jest.mock('../../components/UiCardList/CardSwiper', () => jest.fn());
+jest.mock('../../components/ui-card-list/card-swiper', () => jest.fn());
 
 describe('Header component', () => {
   it('renders logo', () => {

@@ -1,7 +1,7 @@
 import { render } from '@testing-library/react';
 import { t } from 'i18next';
 
-import { DefaultFooter } from '@/components/UiFooter/DefaultFooter';
+import { DefaultFooter } from '@/components/ui-footer/default-footer';
 
 import { mockedSocialLinks } from './constants';
 import { createLocalizedRegExp } from './utils';

@@ -1,11 +1,11 @@
 import { render } from '@testing-library/react';
 
-import SocialMediaList from '@/components/SocialMedia/SocialMediaList/SocialMediaList';
+import SocialMediaList from '@/components/social-media/social-media-list/social-media-list';
 import { SocialMedia } from '@/types/social-media';
 
 import { testSocialDrawerItem } from './fixtures/social-media.fixtures';
 
-jest.mock('../../components/SocialMedia/SocialMediaItem/SocialMediaItem', () =>
+jest.mock('../../components/social-media/social-media-item/social-media-item', () =>
   jest.fn(() => <div data-testid="social-media-item" />)
 );
 

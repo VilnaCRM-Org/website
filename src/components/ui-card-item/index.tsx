@@ -1,0 +1,29 @@
+import { Stack } from '@mui/material';
+import React from 'react';
+import { useTranslation } from 'react-i18next';
+
+import UiImage from '@/components/ui-image';
+
+import CardContent from './card-content';
+import styles from './styles';
+import { UiCardItemProps } from './types';
+
+function UiCardItem({ item, hoverCardContent }: UiCardItemProps): React.ReactElement {
+  const { t } = useTranslation();
+
+  const isSmallCard: boolean = item.type === 'smallCard';
+
+  return (
+    <Stack sx={isSmallCard ? styles.smallWrapper : styles.largeWrapper}>
+      <UiImage
+        src={item.imageSrc}
+        alt={t(item.alt)}
+        sx={isSmallCard ? styles.smallImage : styles.largeImage}
+      />
+      <Stack direction="column">
+        <CardContent item={item} isSmallCard={isSmallCard} hoverCardContent={hoverCardContent} />
+      </Stack>
+    </Stack>
+  );
+}
+export default UiCardItem;

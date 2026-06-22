@@ -1,6 +1,6 @@
 import { render } from '@testing-library/react';
 
-import DeviceImage from '../../features/landing/components/AboutUs/DeviceImage/DeviceImage';
+import DeviceImage from '../../features/landing/components/about-us/device-image/device-image';
 
 const notchContainerClass: string = '.MuiBox-root';
 const mainImageAltText: string = 'Main image';

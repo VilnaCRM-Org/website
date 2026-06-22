@@ -1,6 +1,6 @@
 import { render } from '@testing-library/react';
 
-import { VilnaCRMEmail } from '@/components/UiFooter/VilnaCRMEmail';
+import { VilnaCRMEmail } from '@/components/ui-footer/vilna-crm-email';
 
 import { mockEmail } from './constants';
 

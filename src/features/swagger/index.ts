@@ -1,1 +1,1 @@
-export { default as Swagger } from './components/Swagger/Swagger';
+export { default as Swagger } from './components/swagger/swagger';

@@ -2,7 +2,7 @@ import { render } from '@testing-library/react';
 import { getOptimizedImageProps } from 'next-export-optimize-images/image';
 import '@testing-library/jest-dom';
 
-import BackgroundImages from '../../features/landing/components/BackgroundImages/BackgroundImages';
+import BackgroundImages from '../../features/landing/components/background-images/background-images';
 
 jest.mock('../../features/landing/assets/svg/about-vilna/Vector.svg', () => 'test-image.jpg');
 

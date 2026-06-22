@@ -1,6 +1,6 @@
 import { render } from '@testing-library/react';
 
-import NavItem from '../../features/landing/components/Header/NavItem/NavItem';
+import NavItem from '../../features/landing/components/header/nav-item/nav-item';
 
 import { testDrawerItem, testHeaderItem } from './fixtures/header-nav.fixtures';
 

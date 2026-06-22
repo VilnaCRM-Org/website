@@ -3,7 +3,7 @@ import { t } from 'i18next';
 
 import { buttonRole } from '@/test/testing-library/constants';
 
-import NotificationSuccess from '../../features/landing/components/Notification/NotificationSuccess';
+import NotificationSuccess from '../../features/landing/components/notification/notification-success';
 
 import { SetIsOpenType } from './fixtures/auth-test-helpers';
 

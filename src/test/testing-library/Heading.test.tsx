@@ -1,7 +1,7 @@
 import { render } from '@testing-library/react';
 import { t } from 'i18next';
 
-import Heading from '../../features/landing/components/WhyUs/Heading/Heading';
+import Heading from '../../features/landing/components/why-us/heading/heading';
 
 import { createLocalizedRegExp } from './utils';
 

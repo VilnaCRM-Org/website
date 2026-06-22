@@ -3,7 +3,7 @@ import { RenderResult } from '@testing-library/react';
 import React from 'react';
 import { useForm } from 'react-hook-form';
 
-import AuthForm from '../../../features/landing/components/AuthSection/AuthForm/AuthForm';
+import AuthForm from '../../../features/landing/components/auth-section/auth-form/auth-form';
 import { RegisterItem } from '../../../features/landing/types/authentication/form';
 import { renderWithProviders } from '../utils';
 
