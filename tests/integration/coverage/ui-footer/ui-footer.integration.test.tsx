@@ -15,8 +15,7 @@ import { DefaultFooter } from '@/components/UiFooter/DefaultFooter';
 import { Mobile } from '@/components/UiFooter/Mobile';
 import { PrivacyPolicy } from '@/components/UiFooter/PrivacyPolicy';
 import { VilnaCRMEmail } from '@/components/UiFooter/VilnaCRMEmail';
-
-import { SocialMedia } from '../../../../src/features/landing/types/social-media';
+import { SocialMedia } from '@/types/social-media';
 
 const stackElementClass: string = '.MuiStack-root';
 const containerElementClass: string = '.MuiContainer-root';

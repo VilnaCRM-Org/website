@@ -2,7 +2,8 @@ import { fireEvent, render } from '@testing-library/react';
 import userEvent, { UserEvent } from '@testing-library/user-event';
 import { t } from 'i18next';
 
-import { headerNavList, testDrawerItem, testHeaderItem } from '@components/Header/constants';
+import { testDrawerItem, testHeaderItem } from '@/test/testing-library/fixtures/header-nav.fixtures';
+import { headerNavList } from '@components/Header/constants';
 import NavList from '@components/Header/NavList/NavList';
 
 import { NavItemProps } from '../../../../src/features/landing/types/header/navigation';

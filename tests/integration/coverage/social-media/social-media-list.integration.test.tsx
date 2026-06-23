@@ -1,9 +1,8 @@
 import { render } from '@testing-library/react';
 
-import { testSocialDrawerItem, testSocialNoDrawerItem } from '@components/SocialMedia/constants';
-import SocialMediaList from '@components/SocialMedia/SocialMediaList/SocialMediaList';
-
-import { SocialMedia } from '../../../../src/features/landing/types/social-media';
+import SocialMediaList from '@/components/SocialMedia/SocialMediaList/SocialMediaList';
+import { testSocialDrawerItem, testSocialNoDrawerItem } from '@/test/testing-library/fixtures/social-media.fixtures';
+import { SocialMedia } from '@/types/social-media';
 
 const imageRole: string = 'img';
 const linkRole: string = 'link';

@@ -11,7 +11,8 @@
 import { render, screen } from '@testing-library/react';
 import { t } from 'i18next';
 
-import { socialLinks, testSocialLink } from '@components/AuthSection/constants';
+import { testSocialLink } from '@/test/testing-library/fixtures/auth-social.fixtures';
+import { socialLinks } from '@components/AuthSection/constants';
 import { PasswordTip } from '@components/AuthSection/PasswordTip';
 import { SignUpText } from '@components/AuthSection/SignUpText';
 import { SocialItem } from '@components/AuthSection/SocialItem';
