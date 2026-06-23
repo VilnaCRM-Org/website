@@ -72,6 +72,23 @@ sync:
   `tests/bats/`.
 - Run `make test-bats`.
 
+#### Run the CI phases locally
+
+Before opening a pull request you can reproduce the pipeline's grouped phases
+locally with the CI orchestration targets:
+
+- `make ci` runs the full flow (setup → lint → dev tests → mutation → prod
+  setup → prod tests).
+- Run a single phase with `make ci-lint`, `make ci-test`, `make ci-mutation`,
+  or `make ci-test-prod`; `make ensure-dev` starts the dev container only when
+  it is not already running.
+- The individual `ci-test-*` entrypoints (e.g. `ci-test-unit-client`,
+  `ci-test-e2e`) assume the matching `ci-setup` / `ci-prod-setup` phase already
+  prepared the environment, mirroring how CI fans them out.
+
+When you add a new orchestration target, keep
+`tests/bats/make-target-coverage.tsv` in sync as described above.
+
 #### Dockerfile build performance
 
 If your change touches a `Dockerfile` (or the gate's own config), a CI gate

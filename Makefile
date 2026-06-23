@@ -100,6 +100,19 @@ BATS_FORMATTER              ?= pretty
 
 NETWORK_NAME                = website-network
 
+# ===== CI orchestration (issue #305 — CRM command-surface parity) =====
+# Dev-side lint and test phases are grouped so local developers and agents can
+# run the same CI stages as the pipeline. The parallel runners execute each
+# target concurrently, group their output, and aggregate exit codes.
+CI_LINT_TARGETS             = lint-next lint-tsc lint-md
+CI_TEST_TARGETS             = ci-test-unit-client ci-test-unit-server ci-test-integration
+CI_LINT_RUNNER              = ./scripts/ci/run-parallel.sh ci-lint
+CI_TEST_RUNNER              = ./scripts/ci/run-parallel.sh ci-test
+
+# Arguments for the pr-comments helper (PR=<num> FORMAT=<text|json|markdown>).
+PR                          ?=
+FORMAT                      ?=
+
 CI                          ?= 0
 
 # Treat common truthy CI values the same (e.g., CI=true from GitHub Actions/act)
@@ -111,6 +124,7 @@ ifeq ($(CI), 1)
     PNPM_EXEC               = pnpm
     NEXT_DEV_CMD            = $(NEXT_BIN) dev
     UNIT_TESTS              = env
+    CI_SETUP_UP_FLAGS       = -d --build
 
     STORYBOOK_START         = $(STORYBOOK_BIN) dev -p $(STORYBOOK_PORT)
 
@@ -121,6 +135,7 @@ else
     PNPM_EXEC               = $(EXEC_DEV_TTYLESS)
     STRYKER_CMD             = make start && $(EXEC_DEV_TTYLESS) pnpm exec stryker run
     UNIT_TESTS              = make start && $(EXEC_DEV_TTYLESS) env
+    CI_SETUP_UP_FLAGS       = -d --no-recreate
 
     STORYBOOK_START         = $(STORYBOOK_BIN) dev -p $(STORYBOOK_PORT) --host 0.0.0.0
 
@@ -149,6 +164,13 @@ help:
 
 start: ## Start the application
 	$(NEXT_DEV_CMD)
+
+ensure-dev: ## Start the dev service only when it is not already running
+	@if $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) ps --status running --services 2>/dev/null | grep -qx dev; then \
+		echo "✅ Dev service is already running."; \
+	else \
+		$(MAKE) start; \
+	fi
 
 wait-for-dev: ## Wait for the dev service to be ready on port $(DEV_PORT).
 	@echo "Waiting for dev service to be ready on port $(DEV_PORT)..."
@@ -294,6 +316,9 @@ create-network: ## Create the external Docker network if it doesn't exist
 start-prod: create-network ## Build image and start container in production mode
 	$(DOCKER_COMPOSE) $(COMMON_HEALTHCHECKS_FILE) $(DOCKER_COMPOSE_TEST_FILE) up -d && make wait-for-prod-health
 
+start-prod-clean: create-network ## Force rebuild and recreate all test containers, then wait for health
+	$(DOCKER_COMPOSE) $(COMMON_HEALTHCHECKS_FILE) $(DOCKER_COMPOSE_TEST_FILE) up -d --force-recreate --build && $(MAKE) wait-for-prod-health
+
 wait-for-prod: ## Wait for the prod service to be ready on port $(NEXT_PUBLIC_PROD_PORT).
 	@echo "Waiting for prod service to be ready on port $(NEXT_PUBLIC_PROD_PORT)..."
 	@while ! curl -s -f http://$(WEBSITE_DOMAIN):$(NEXT_PUBLIC_PROD_PORT) >/dev/null 2>&1; do printf "."; sleep 1; done
@@ -316,6 +341,111 @@ test-integration-watch: ## Run integration tests in watch mode (TEST_ENV=integra
 ci-test-integration: ## Run integration tests directly assuming deps are installed (CI entrypoint)
 	env TEST_ENV=integration $(JEST_BIN) $(JEST_FLAGS)
 
+# ============================================================================
+# CI orchestration (issue #305 — CRM command-surface parity)
+# ----------------------------------------------------------------------------
+# These targets give local developers and agents the same grouped CI phases the
+# pipeline runs, adapted to website's pnpm + Next.js toolchain.
+#
+# Intentionally NOT ported from crm/Makefile (rationale):
+#   * lint-dup (jscpd), lint-metrics (rust-code-analysis), lint-deps
+#     (dependency-cruiser), fmt-qlty / qlty: not configured in this repo;
+#     website's lint stack is ESLint + tsc + markdownlint. Adopting them needs
+#     new tooling/config and belongs in a dedicated issue, not a naming-parity
+#     change.
+#   * mockoon wait in ci-setup: website's dev service has no mockoon dependency
+#     (mockoon lives in the prod/test compose stack), so ci-setup brings up dev
+#     only.
+#   * ensure-chromium / build-dev-chromium (apk into dev): website installs
+#     Chromium + LHCI into the prod container via install-chromium-lhci, which
+#     ci-prod-setup reuses.
+#   * test-load-signup: website has no signup load scenario; its second K6
+#     profile targets the Swagger page and is exposed as test-load-swagger.
+# ============================================================================
+
+.PHONY: ci ci-setup ci-lint ci-test ci-test-unit-client ci-test-unit-server \
+	ci-test-mutation ci-mutation ci-prod-setup ci-test-e2e ci-test-visual \
+	ci-test-memory-leak ci-test-load ci-test-lighthouse-desktop \
+	ci-test-lighthouse-mobile ci-test-prod ensure-dev start-prod-clean \
+	test-load test-load-swagger pr-comments
+
+ci-setup: create-network ## Prepare the shared dev environment for CI-oriented checks
+	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) up $(CI_SETUP_UP_FLAGS) dev && $(MAKE) wait-for-dev
+
+ci-lint: ## Run the CI lint phase (ESLint, TypeScript, Markdown) with grouped, aggregated output
+	$(CI_LINT_RUNNER) $(CI_LINT_TARGETS)
+
+ci-test: ## Run the CI dev-side test phase (unit client/server, integration) in parallel
+	$(CI_TEST_RUNNER) $(CI_TEST_TARGETS)
+
+ci-test-unit-client: ## Run client-side unit tests directly assuming deps are installed (CI entrypoint)
+	env TEST_ENV=client $(JEST_BIN) $(JEST_FLAGS)
+
+ci-test-unit-server: ## Run server-side unit tests directly assuming deps are installed (CI entrypoint)
+	env TEST_ENV=server $(JEST_BIN) $(JEST_FLAGS) $(TEST_DIR_APOLLO)
+
+ci-test-mutation: ## Run mutation tests directly assuming deps are installed (CI entrypoint)
+	pnpm exec stryker run
+
+ci-mutation: ## Run mutation testing in isolation after the parallel dev-side tests (heavy; not parallelized)
+	$(MAKE) ci-test-mutation
+
+ci-prod-setup: ## Prepare the prod + Chromium environment for prod-side CI tests
+	$(MAKE) start-prod
+	$(MAKE) install-chromium-lhci
+
+ci-test-e2e: ## Run E2E tests assuming ci-prod-setup already started the prod environment
+	$(run-e2e)
+
+ci-test-visual: ## Run visual tests assuming ci-prod-setup already started the prod environment
+	$(run-visual)
+
+ci-test-memory-leak: ## Run Memlab memory leak tests against the dedicated compose stack (assumes prod is running)
+	# Isolate the Memlab stack in its own Compose project (-p memleak) so the
+	# teardown never removes the shared prod stack as an "orphan" — this target
+	# runs mid-sequence in ci-test-prod, before load and lighthouse. The trap
+	# guarantees teardown even on failure, --wait avoids racing the exec against
+	# an unready container, and the captured rc keeps a failing run non-zero.
+	@set -e; \
+	cleanup() { \
+		rc=$$?; \
+		echo "🧹 Cleaning up memory leak test containers..."; \
+		$(DOCKER_COMPOSE) -p memleak $(DOCKER_COMPOSE_MEMLEAK_FILE) down --remove-orphans || true; \
+		exit $$rc; \
+	}; \
+	trap cleanup EXIT; \
+	echo "🧪 Starting memory leak test environment..."; \
+	$(DOCKER_COMPOSE) -p memleak $(DOCKER_COMPOSE_MEMLEAK_FILE) up -d --wait $(MEMLEAK_SERVICE); \
+	echo "🧹 Cleaning up previous memory leak results..."; \
+	$(DOCKER_COMPOSE) -p memleak $(DOCKER_COMPOSE_MEMLEAK_FILE) exec -T $(MEMLEAK_SERVICE) rm -rf $(MEMLEAK_RESULTS_DIR); \
+	echo "🚀 Running memory leak tests..."; \
+	$(DOCKER_COMPOSE) -p memleak $(DOCKER_COMPOSE_MEMLEAK_FILE) exec -T $(MEMLEAK_SERVICE) node $(MEMLEAK_TEST_SCRIPT)
+
+ci-test-load: ## Run K6 load tests assuming ci-prod-setup already started the prod environment
+	$(LOAD_TESTS_RUN)
+
+ci-test-lighthouse-desktop: ## Run Lighthouse desktop audit assuming ci-prod-setup prepared prod + Chromium
+	$(MAKE) lighthouse-desktop-dind
+
+ci-test-lighthouse-mobile: ## Run Lighthouse mobile audit assuming ci-prod-setup prepared prod + Chromium
+	$(MAKE) lighthouse-mobile-dind
+
+ci-test-prod: ## Run the CI prod-side test phase (e2e, visual, memory-leak, load, lighthouse) sequentially
+	$(MAKE) ci-test-e2e
+	$(MAKE) ci-test-visual
+	$(MAKE) ci-test-memory-leak
+	$(MAKE) ci-test-load
+	$(MAKE) ci-test-lighthouse-desktop
+	$(MAKE) ci-test-lighthouse-mobile
+
+ci: ## Run the full local CI flow: setup, lint, dev tests, mutation, prod setup, prod tests
+	$(MAKE) ci-setup
+	$(MAKE) ci-lint
+	$(MAKE) ci-test
+	$(MAKE) ci-mutation
+	$(MAKE) ci-prod-setup
+	$(MAKE) ci-test-prod
+
 test-bats: ## Run Bats coverage for Makefile shell flows and CI helper scripts
 	DOCKER_COMPOSE_TEST_FILE=docker-compose.test.yml \
 	DOCKER_COMPOSE_DEV_FILE=docker-compose.yml \
@@ -324,14 +454,7 @@ test-bats: ## Run Bats coverage for Makefile shell flows and CI helper scripts
 	$(BATS_BIN) --formatter $(BATS_FORMATTER) -r tests/bats
 
 test-memory-leak: start-prod ## This command executes memory leaks tests using Memlab library.
-	@echo "🧪 Starting memory leak test environment..."
-	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_MEMLEAK_FILE) up -d
-	@echo "🧹 Cleaning up previous memory leak results..."
-	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_MEMLEAK_FILE) exec -T $(MEMLEAK_SERVICE) rm -rf $(MEMLEAK_RESULTS_DIR)
-	@echo "🚀 Running memory leak tests..."
-	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_MEMLEAK_FILE) exec -T $(MEMLEAK_SERVICE) node $(MEMLEAK_TEST_SCRIPT)
-	@echo "🧹 Cleaning up memory leak test containers..."
-	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_MEMLEAK_FILE) down --remove-orphans
+	$(MAKE) ci-test-memory-leak
 
 memory-leak-dind: start-prod ## Run Memlab tests in isolated compose project (DIND safe)
 	@echo "🧪 Starting memory leak test environment (isolated project)..."
@@ -382,6 +505,10 @@ load-tests: start-prod wait-for-prod-health ## This command executes load tests 
 load-tests-swagger: start-prod wait-for-prod-health ## Execute comprehensive load tests for the Swagger page. Use environment variables to run specific scenarios:
                        ## run_smoke=true, run_average=true, run_stress=true, run_spike=true. If none set, runs all scenarios.
 	$(LOAD_TESTS_RUN_SWAGGER)
+
+test-load: load-tests ## Alias for load-tests (CRM-style naming): run K6 homepage load tests
+
+test-load-swagger: load-tests-swagger ## Alias for load-tests-swagger (CRM-style naming): run K6 Swagger load tests
 
 lighthouse-desktop: ## Run a Lighthouse audit using desktop viewport settings to evaluate performance and best practices
 	$(LHCI_DESKTOP)
@@ -439,3 +566,14 @@ stop: ## Stop docker
 
 check-node-version: ## Check if the correct Node.js version is installed
 	$(PNPM_EXEC) exec node checkNodeVersion.js
+
+pr-comments: ## Retrieve unresolved PR review comments (PR=<num> FORMAT=<text|json|markdown>)
+	@if [ -n "$(PR)" ] && [ -n "$(FORMAT)" ]; then \
+		./scripts/get-pr-comments.sh "$(PR)" "$(FORMAT)"; \
+	elif [ -n "$(PR)" ]; then \
+		./scripts/get-pr-comments.sh "$(PR)"; \
+	elif [ -n "$(FORMAT)" ]; then \
+		./scripts/get-pr-comments.sh "$(FORMAT)"; \
+	else \
+		./scripts/get-pr-comments.sh; \
+	fi

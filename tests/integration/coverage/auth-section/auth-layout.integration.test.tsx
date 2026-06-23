@@ -18,9 +18,9 @@ import { ApolloProvider } from '@apollo/client/react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { t } from 'i18next';
 
-import AuthLayout from '@components/AuthSection/AuthForm/AuthLayout';
-import AuthSection from '@components/AuthSection/AuthSection';
-import { socialLinks } from '@components/AuthSection/constants';
+import AuthLayout from '@landing/AuthSection/AuthForm/AuthLayout';
+import AuthSection from '@landing/AuthSection/AuthSection';
+import { socialLinks } from '@landing/AuthSection/constants';
 
 import client from '../../../../src/features/landing/api/graphql/apollo';
 import { SocialLink } from '../../../../src/features/landing/types/authentication/social';

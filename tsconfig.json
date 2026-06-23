@@ -19,7 +19,7 @@
     "jsx": "react-jsx",
     "paths": {
       "@/*": ["./src/*"],
-      "@components/*": ["./src/features/landing/components/*"],
+      "@landing/*": ["./src/features/landing/components/*"],
       "@swagger/global": ["./src/features/swagger/components/ApiDocumentation/Global/_global.scss"],
       "@swagger/*": ["./src/features/swagger/*"]
     },

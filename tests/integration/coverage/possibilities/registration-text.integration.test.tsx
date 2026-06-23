@@ -1,8 +1,8 @@
 import { render } from '@testing-library/react';
 import { t } from 'i18next';
 
-import { RegistrationText } from '@components/Possibilities/RegistrationText';
-import RegistrationTextDefault from '@components/Possibilities/RegistrationText/RegistrationText';
+import { RegistrationText } from '@landing/Possibilities/RegistrationText';
+import RegistrationTextDefault from '@landing/Possibilities/RegistrationText/RegistrationText';
 
 describe('RegistrationText integration', () => {
   it('renders the main and secondary heading text via the barrel export', () => {

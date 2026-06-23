@@ -85,3 +85,35 @@ setup() {
   assert_log_contains 'make test-chromium'
   assert_log_contains 'make lighthouse-mobile-dind'
 }
+
+@test "run-parallel.sh runs the lint phase targets through make and groups output" {
+  local script_path="$PROJECT_ROOT/scripts/ci/run-parallel.sh"
+
+  run_ci_script "$script_path" ci-lint lint-next lint-tsc lint-md
+  [ "$status" -eq 0 ]
+  assert_log_contains 'make lint-next'
+  assert_log_contains 'make lint-tsc'
+  assert_log_contains 'make lint-md'
+  assert_output_contains '===== lint-next ====='
+  assert_output_contains '===== lint-md ====='
+}
+
+@test "run-parallel.sh runs the test phase targets through make and aggregates failures" {
+  local script_path="$PROJECT_ROOT/scripts/ci/run-parallel.sh"
+
+  run_ci_script "$script_path" ci-test ci-test-unit-client ci-test-unit-server ci-test-integration
+  [ "$status" -eq 0 ]
+  assert_log_contains 'make ci-test-unit-client'
+  assert_log_contains 'make ci-test-integration'
+  assert_output_contains '===== ci-test-unit-server ====='
+
+  reset_command_log
+  run env \
+    -C "$SCRIPT_SANDBOX" \
+    PATH="$STUB_BIN_DIR:$PATH" \
+    COMMAND_LOG="$COMMAND_LOG" \
+    FAKE_MAKE_FAIL_TARGET=ci-test-unit-server \
+    "$script_path" ci-test ci-test-unit-client ci-test-unit-server
+  [ "$status" -ne 0 ]
+  assert_output_contains 'ci-test: ci-test-unit-server failed'
+}
