@@ -316,6 +316,15 @@ test-unit-client: ## Run all client-side unit tests using Jest (Next.js env, TES
 test-unit-server: ## Run server-side unit tests for Apollo using Jest (Node.js env, TEST_ENV=server, target: $(TEST_DIR_APOLLO))
 	$(UNIT_TESTS) TEST_ENV=server $(JEST_BIN) $(JEST_FLAGS) $(TEST_DIR_APOLLO)
 
+test-integration: ## Run the integration layer using Jest (TEST_ENV=integration, target: tests/integration)
+	$(UNIT_TESTS) TEST_ENV=integration $(JEST_BIN) $(JEST_FLAGS)
+
+test-integration-watch: ## Run integration tests in watch mode (TEST_ENV=integration)
+	$(UNIT_TESTS) TEST_ENV=integration $(JEST_BIN) --watch
+
+ci-test-integration: ## Run integration tests directly assuming deps are installed (CI entrypoint)
+	env TEST_ENV=integration $(JEST_BIN) $(JEST_FLAGS)
+
 test-bats: ## Run Bats coverage for Makefile shell flows and CI helper scripts
 	DOCKER_COMPOSE_TEST_FILE=docker-compose.test.yml \
 	DOCKER_COMPOSE_DEV_FILE=docker-compose.yml \

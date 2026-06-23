@@ -63,3 +63,6 @@ stop	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Docker Compo
 check-node-version	bats	tests/bats/makefile_targets.bats	Validated with a stubbed pnpm/node invocation.
 lint-deps	ci	.github/workflows/static-testing.yml	Executed through `make lint`, which depends on `lint-deps`.
 run-deps-lint-tests-dind	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker exec calls.
+test-integration	bats	tests/bats/makefile_targets.bats	Validated by invoking Jest with TEST_ENV=integration through a stubbed jest binary.
+test-integration-watch	bats	tests/bats/makefile_targets.bats	Validated by invoking Jest in watch mode with TEST_ENV=integration through a stubbed jest binary.
+ci-test-integration	ci	.github/workflows/integration-testing.yml	Executed directly by the integration testing workflow.
