@@ -1,7 +1,10 @@
 import { render } from '@testing-library/react';
 
 import SocialMediaList from '@/components/SocialMedia/SocialMediaList/SocialMediaList';
-import { testSocialDrawerItem, testSocialNoDrawerItem } from '@/test/testing-library/fixtures/social-media.fixtures';
+import {
+  testSocialDrawerItem,
+  testSocialNoDrawerItem,
+} from '@/test/testing-library/fixtures/social-media.fixtures';
 import { SocialMedia } from '@/types/social-media';
 
 const imageRole: string = 'img';

@@ -2,11 +2,14 @@ import { fireEvent, render } from '@testing-library/react';
 import userEvent, { UserEvent } from '@testing-library/user-event';
 import { t } from 'i18next';
 
-import { testDrawerItem, testHeaderItem } from '@/test/testing-library/fixtures/header-nav.fixtures';
 import { headerNavList } from '@landing/Header/constants';
 import NavList from '@landing/Header/NavList/NavList';
 
 import { NavItemProps } from '../../../../src/features/landing/types/header/navigation';
+import {
+  testDrawerItem,
+  testHeaderItem,
+} from '../../../../src/test/testing-library/fixtures/header-nav.fixtures';
 
 const handleClick: () => void = jest.fn();
 

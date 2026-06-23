@@ -2,7 +2,10 @@ import { render } from '@testing-library/react';
 import { t } from 'i18next';
 
 import SocialMediaItem from '@/components/SocialMedia/SocialMediaItem/SocialMediaItem';
-import { testSocialDrawerItem, testSocialNoDrawerItem } from '@/test/testing-library/fixtures/social-media.fixtures';
+import {
+  testSocialDrawerItem,
+  testSocialNoDrawerItem,
+} from '@/test/testing-library/fixtures/social-media.fixtures';
 
 const widthStyle: string = 'width';
 const heightStyle: string = 'height';
