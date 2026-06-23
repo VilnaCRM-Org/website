@@ -691,9 +691,13 @@ get_pr_comments() {
     local comment_count
     comment_count=$(echo "$unresolved_comments" | jq 'length')
 
+    # Note the empty result on stderr, but still fall through to the formatter
+    # so callers always receive well-formed output on stdout (an empty JSON
+    # object/array, an empty markdown section, etc.) instead of nothing. This
+    # keeps automation that parses the requested format from choking on empty
+    # input.
     if [[ "$comment_count" -eq 0 ]]; then
         log "No unresolved comments found for PR #$pr_number"
-        exit 0
     fi
 
     # Output in requested format

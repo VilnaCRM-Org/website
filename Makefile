@@ -569,11 +569,11 @@ check-node-version: ## Check if the correct Node.js version is installed
 
 pr-comments: ## Retrieve unresolved PR review comments (PR=<num> FORMAT=<text|json|markdown>)
 	@if [ -n "$(PR)" ] && [ -n "$(FORMAT)" ]; then \
-		./scripts/get-pr-comments.sh $(PR) $(FORMAT); \
+		./scripts/get-pr-comments.sh "$(PR)" "$(FORMAT)"; \
 	elif [ -n "$(PR)" ]; then \
-		./scripts/get-pr-comments.sh $(PR); \
+		./scripts/get-pr-comments.sh "$(PR)"; \
 	elif [ -n "$(FORMAT)" ]; then \
-		./scripts/get-pr-comments.sh $(FORMAT); \
+		./scripts/get-pr-comments.sh "$(FORMAT)"; \
 	else \
 		./scripts/get-pr-comments.sh; \
 	fi
