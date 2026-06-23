@@ -5,8 +5,8 @@
  * not reached transitively by rendering, so they are imported directly here to
  * execute their module bodies and count toward coverage.
  */
-import authSection from '@components/AuthSection';
-import authLayout from '@components/AuthSection/AuthForm';
+import authSection from '@landing/AuthSection';
+import authLayout from '@landing/AuthSection/AuthForm';
 
 describe('integration: AuthSection barrels', () => {
   it('re-exports the AuthSection and AuthLayout default components', () => {

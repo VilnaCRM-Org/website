@@ -1,7 +1,7 @@
 import { render } from '@testing-library/react';
 
 import { testDrawerItem, testHeaderItem } from '@/test/testing-library/fixtures/header-nav.fixtures';
-import NavItem from '@components/Header/NavItem/NavItem';
+import NavItem from '@landing/Header/NavItem/NavItem';
 
 const handleClick: () => void = jest.fn();
 

@@ -296,3 +296,168 @@ STUB
   [ "$status" -eq 0 ]
   assert_log_contains 'jest TEST_ENV=integration --watch'
 }
+
+@test "ensure-dev starts the dev service when it is not already running" {
+  run_make_target ensure-dev CI=1
+  [ "$status" -eq 0 ]
+  # The stubbed docker compose ps does not report a running 'dev' service,
+  # so ensure-dev falls back to 'make start'.
+  assert_log_contains 'next dev'
+}
+
+@test "ci-setup brings up the dev service and waits for readiness" {
+  run_make_target ci-setup CI=1
+  [ "$status" -eq 0 ]
+  assert_log_contains 'docker compose -f docker-compose.yml up -d --build dev'
+  assert_output_contains 'Dev service is up and running!'
+}
+
+@test "ci-lint runs the lint phase through the parallel runner with grouped output" {
+  run_make_target ci-lint CI=1
+  [ "$status" -eq 0 ]
+  assert_output_contains '===== lint-next ====='
+  assert_output_contains '===== lint-tsc ====='
+  assert_output_contains '===== lint-md ====='
+}
+
+@test "ci-test runs the dev-side test phase through the parallel runner" {
+  run_make_target ci-test CI=1
+  [ "$status" -eq 0 ]
+  assert_output_contains '===== ci-test-unit-client ====='
+  assert_output_contains '===== ci-test-unit-server ====='
+  assert_output_contains '===== ci-test-integration ====='
+}
+
+@test "ci-test split targets invoke Jest directly with the right TEST_ENV" {
+  cat > "$STUB_BIN_DIR/jest" <<'STUB'
+#!/usr/bin/env bash
+printf 'jest TEST_ENV=%s %s\n' "${TEST_ENV:-unset}" "$*" >> "${COMMAND_LOG:?}"
+exit 0
+STUB
+  chmod +x "$STUB_BIN_DIR/jest"
+
+  run_make_target ci-test-unit-client CI=1
+  [ "$status" -eq 0 ]
+  assert_log_contains 'jest TEST_ENV=client --verbose'
+
+  reset_command_log
+  run_make_target ci-test-unit-server CI=1
+  [ "$status" -eq 0 ]
+  assert_log_contains 'jest TEST_ENV=server --verbose ./src/test/apollo-server'
+
+  reset_command_log
+  run_make_target ci-test-mutation CI=1
+  [ "$status" -eq 0 ]
+  assert_log_contains 'pnpm exec stryker run'
+}
+
+@test "ci-mutation delegates to ci-test-mutation" {
+  run_make_target ci-mutation CI=1
+  [ "$status" -eq 0 ]
+  assert_log_contains 'pnpm exec stryker run'
+}
+
+@test "ci-prod-setup starts prod and installs Chromium" {
+  run_make_target ci-prod-setup
+  [ "$status" -eq 0 ]
+  assert_log_contains 'docker compose -f common-healthchecks.yml -f docker-compose.test.yml up -d'
+  assert_log_contains 'apk add --no-cache chromium chromium-chromedriver'
+}
+
+@test "prod-side ci-test split targets dispatch to the prod test flows" {
+  run_make_target ci-test-e2e
+  [ "$status" -eq 0 ]
+  assert_log_contains 'playwright test ./src/test/e2e'
+
+  reset_command_log
+  run_make_target ci-test-visual
+  [ "$status" -eq 0 ]
+  assert_log_contains 'playwright test ./src/test/visual'
+
+  reset_command_log
+  run_make_target ci-test-load
+  [ "$status" -eq 0 ]
+  assert_log_contains '/loadTests/homepage.js'
+
+  reset_command_log
+  run_make_target ci-test-memory-leak
+  [ "$status" -eq 0 ]
+  # --wait avoids racing the exec against an unready container.
+  assert_log_contains 'docker compose -p memleak -f docker-compose.memory-leak.yml up -d --wait memory-leak'
+  assert_log_contains 'node ./src/test/memory-leak/runMemlabTests.js'
+  # Teardown must be scoped to the isolated memleak project so it never removes
+  # the shared prod stack as an orphan mid-sequence in ci-test-prod, and the
+  # trap guarantees it runs even if the Memlab run fails.
+  assert_log_contains 'docker compose -p memleak -f docker-compose.memory-leak.yml down --remove-orphans'
+
+  reset_command_log
+  run_make_target ci-test-lighthouse-desktop
+  [ "$status" -eq 0 ]
+  assert_log_contains 'lhci autorun --config=lighthouserc.desktop.js'
+
+  reset_command_log
+  run_make_target ci-test-lighthouse-mobile
+  [ "$status" -eq 0 ]
+  assert_log_contains 'lhci autorun --config=lighthouserc.mobile.js'
+}
+
+@test "ci-test-prod runs every prod-side phase in sequence" {
+  run_make_target ci-test-prod
+  [ "$status" -eq 0 ]
+  assert_log_contains 'playwright test ./src/test/e2e'
+  assert_log_contains 'playwright test ./src/test/visual'
+  assert_log_contains 'lhci autorun --config=lighthouserc.desktop.js'
+  assert_log_contains 'lhci autorun --config=lighthouserc.mobile.js'
+}
+
+@test "ci runs the full local CI pipeline end to end" {
+  run_make_target ci CI=1
+  [ "$status" -eq 0 ]
+  assert_output_contains '===== lint-next ====='
+  assert_log_contains 'apk add --no-cache chromium'
+}
+
+@test "start-prod-clean force-recreates and rebuilds the prod stack" {
+  run_make_target start-prod-clean
+  [ "$status" -eq 0 ]
+  assert_log_contains 'docker compose -f common-healthchecks.yml -f docker-compose.test.yml up -d --force-recreate --build'
+}
+
+@test "test-load and test-load-swagger alias the K6 load targets" {
+  run_make_target test-load
+  [ "$status" -eq 0 ]
+  assert_log_contains '/loadTests/homepage.js'
+
+  reset_command_log
+  run_make_target test-load-swagger
+  [ "$status" -eq 0 ]
+  assert_log_contains '/loadTests/swagger.js'
+}
+
+@test "pr-comments dispatches to the helper script with PR and FORMAT" {
+  cat > "$MAKEFILE_SANDBOX/scripts/get-pr-comments.sh" <<'STUB'
+#!/usr/bin/env bash
+printf 'get-pr-comments %s\n' "$*" >> "${COMMAND_LOG:?}"
+exit 0
+STUB
+  chmod +x "$MAKEFILE_SANDBOX/scripts/get-pr-comments.sh"
+
+  run_make_target pr-comments PR=123 FORMAT=json
+  [ "$status" -eq 0 ]
+  assert_log_contains 'get-pr-comments 123 json'
+
+  reset_command_log
+  run_make_target pr-comments PR=456
+  [ "$status" -eq 0 ]
+  assert_log_contains 'get-pr-comments 456'
+
+  reset_command_log
+  run_make_target pr-comments FORMAT=markdown
+  [ "$status" -eq 0 ]
+  assert_log_contains 'get-pr-comments markdown'
+
+  reset_command_log
+  run_make_target pr-comments
+  [ "$status" -eq 0 ]
+  assert_log_contains 'get-pr-comments'
+}

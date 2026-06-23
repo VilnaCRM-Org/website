@@ -1,7 +1,7 @@
 import { render } from '@testing-library/react';
 
-import { ImageItem } from '@components/Possibilities/ServicesHoverCard/ImageItem';
-import ImageItemDefault from '@components/Possibilities/ServicesHoverCard/ImageItem/ImageItem';
+import { ImageItem } from '@landing/Possibilities/ServicesHoverCard/ImageItem';
+import ImageItemDefault from '@landing/Possibilities/ServicesHoverCard/ImageItem/ImageItem';
 
 import { ImageList } from '../../../../src/features/landing/types/possibilities/image-list';
 
