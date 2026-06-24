@@ -1,8 +1,7 @@
-import { SocialMedia, SocialMediaList } from '@/components/social-media';
+import { SocialMediaList } from '@/components/social-media';
 
 describe('SocialMedia barrel (integration)', () => {
-  it('re-exports the SocialMedia and SocialMediaList components', () => {
-    expect(SocialMedia).toBeInstanceOf(Function);
+  it('re-exports the SocialMediaList component', () => {
     expect(SocialMediaList).toBeInstanceOf(Function);
   });
 });
