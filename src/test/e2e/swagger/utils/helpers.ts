@@ -63,21 +63,18 @@ export async function interceptWithErrorResponse(
   errorResponse: ErrorResponse,
   status: number = 400
 ): Promise<void> {
-  await page.route(
-    url,
-    async route => {
-      if (await fulfillPreflight(route)) {
-        return;
-      }
-
-      await route.fulfill({
-        status,
-        contentType: 'application/json',
-        headers: CORS_HEADERS,
-        body: JSON.stringify(errorResponse),
-      });
+  await page.route(url, async route => {
+    if (await fulfillPreflight(route)) {
+      return;
     }
-  );
+
+    await route.fulfill({
+      status,
+      contentType: 'application/json',
+      headers: CORS_HEADERS,
+      body: JSON.stringify(errorResponse),
+    });
+  });
 }
 
 export async function interceptWithJsonResponse(
@@ -86,21 +83,18 @@ export async function interceptWithJsonResponse(
   responseBody: unknown,
   status: number = 200
 ): Promise<void> {
-  await page.route(
-    url,
-    async route => {
-      if (await fulfillPreflight(route)) {
-        return;
-      }
-
-      await route.fulfill({
-        status,
-        contentType: 'application/json',
-        headers: CORS_HEADERS,
-        body: JSON.stringify(responseBody),
-      });
+  await page.route(url, async route => {
+    if (await fulfillPreflight(route)) {
+      return;
     }
-  );
+
+    await route.fulfill({
+      status,
+      contentType: 'application/json',
+      headers: CORS_HEADERS,
+      body: JSON.stringify(responseBody),
+    });
+  });
 }
 
 export async function interceptWithEmptyResponse(
@@ -108,20 +102,17 @@ export async function interceptWithEmptyResponse(
   url: string | RegExp,
   status: number = 204
 ): Promise<void> {
-  await page.route(
-    url,
-    async route => {
-      if (await fulfillPreflight(route)) {
-        return;
-      }
-
-      await route.fulfill({
-        status,
-        headers: CORS_HEADERS,
-        body: '',
-      });
+  await page.route(url, async route => {
+    if (await fulfillPreflight(route)) {
+      return;
     }
-  );
+
+    await route.fulfill({
+      status,
+      headers: CORS_HEADERS,
+      body: '',
+    });
+  });
 }
 
 export async function interceptWithNetworkFailure(
@@ -170,7 +161,9 @@ async function readFailureState(getEndpoint: Locator): Promise<{
 }
 
 export async function expectErrorOrFailureStatus(getEndpoint: Locator): Promise<void> {
-  const responseSection: Locator = getEndpoint.locator('.responses-wrapper, .responses-inner').first();
+  const responseSection: Locator = getEndpoint
+    .locator('.responses-wrapper, .responses-inner')
+    .first();
 
   await expect(responseSection).toBeVisible();
   await expect

@@ -19,13 +19,15 @@ jobs:
           persist-credentials: false
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: ${{ vars.NODE_VERSION }}
+          # dependency-cruiser supports LTS Node only (^20.12 || ^22 || >=24);
+          # pin to the repo's .nvmrc (22.x) rather than non-LTS vars.NODE_VERSION.
+          node-version-file: '.nvmrc'
 
       - name: Cache pnpm dependencies
         id: cache-pnpm-dependencies
-        uses: actions/cache@v4.2.3
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
         with:
           path: node_modules
           key: ${{ runner.os }}-dependencies-${{ hashFiles('**/pnpm-lock.yaml') }}
@@ -33,7 +35,11 @@ jobs:
             ${{ runner.os }}-dependencies-
 
       - name: Install pnpm
-        run: npm install -g pnpm
+        # Install the exact pnpm pinned in package.json's packageManager field,
+        # keeping a single source of truth. Corepack is avoided here: the
+        # .nvmrc-pinned Node (22.12.0) ships a corepack whose signing keys can't
+        # verify the registry, failing provisioning ("Cannot find matching keyid").
+        run: npm install -g "$(node -p "require('./package.json').packageManager.split('+')[0]")"
 
       - name: Install dependencies
         run: make install

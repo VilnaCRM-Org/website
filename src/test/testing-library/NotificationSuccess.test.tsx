@@ -1,10 +1,9 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { t } from 'i18next';
 
-import { buttonRole } from '@/test/testing-library/constants';
+import NotificationSuccess from '@landing/notification/notification-success';
 
-import NotificationSuccess from '../../features/landing/components/notification/notification-success';
-
+import { buttonRole } from './constants';
 import { SetIsOpenType } from './fixtures/auth-test-helpers';
 
 const successTitleText: string = t('notifications.success.title');

@@ -61,3 +61,29 @@ logs	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Docker Compo
 new-logs	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Docker Compose invocation.
 stop	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Docker Compose invocation.
 check-node-version	bats	tests/bats/makefile_targets.bats	Validated with a stubbed pnpm/node invocation.
+lint-deps	ci	.github/workflows/static-testing.yml	Executed through `make lint`, which depends on `lint-deps`.
+run-deps-lint-tests-dind	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker exec calls.
+test-integration	bats	tests/bats/makefile_targets.bats	Validated by invoking Jest with TEST_ENV=integration through a stubbed jest binary.
+test-integration-watch	bats	tests/bats/makefile_targets.bats	Validated by invoking Jest in watch mode with TEST_ENV=integration through a stubbed jest binary.
+ci-test-integration	ci	.github/workflows/integration-testing.yml	Executed directly by the integration testing workflow.
+ci-setup	bats	tests/bats/makefile_targets.bats	Validated by bringing up the stubbed dev service and asserting the readiness wait.
+ci-lint	bats	tests/bats/makefile_targets.bats	Validated by running the parallel lint runner against stubbed make targets.
+ci-test	bats	tests/bats/makefile_targets.bats	Validated by running the parallel dev-side test runner against stubbed make targets.
+ci-test-unit-client	bats	tests/bats/makefile_targets.bats	Validated by invoking Jest with TEST_ENV=client through a stubbed jest binary.
+ci-test-unit-server	bats	tests/bats/makefile_targets.bats	Validated by invoking Jest with TEST_ENV=server through a stubbed jest binary.
+ci-test-mutation	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Stryker invocation via pnpm.
+ci-mutation	bats	tests/bats/makefile_targets.bats	Validated by delegating to ci-test-mutation with a stubbed Stryker invocation.
+ci-prod-setup	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker Compose start-prod and Chromium install commands.
+ci-test-e2e	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker and Playwright commands.
+ci-test-visual	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker and Playwright commands.
+ci-test-memory-leak	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker Compose Memlab commands.
+ci-test-load	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker Compose K6 commands.
+ci-test-lighthouse-desktop	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker Compose LHCI commands.
+ci-test-lighthouse-mobile	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker Compose LHCI commands.
+ci-test-prod	bats	tests/bats/makefile_targets.bats	Validated by running every prod-side phase against stubbed commands.
+ci	bats	tests/bats/makefile_targets.bats	Validated by running the full CI pipeline against stubbed tooling.
+ensure-dev	bats	tests/bats/makefile_targets.bats	Validated by asserting the dev service starts when it is not already running.
+start-prod-clean	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Docker Compose force-recreate invocation.
+test-load	bats	tests/bats/makefile_targets.bats	Validated as an alias that runs the load-tests target with stubbed K6 commands.
+test-load-swagger	bats	tests/bats/makefile_targets.bats	Validated as an alias that runs the load-tests-swagger target with stubbed K6 commands.
+pr-comments	bats	tests/bats/makefile_targets.bats	Validated with a stubbed get-pr-comments.sh helper and PR/FORMAT argument dispatch.

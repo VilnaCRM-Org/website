@@ -3,7 +3,6 @@ import Image from 'next-export-optimize-images/image';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-
 import Logo from '@/assets/svg/logo/Logo.svg';
 import { SocialMediaList } from '@/components/social-media';
 import UiTypography from '@/components/ui-typography';

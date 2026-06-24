@@ -10,7 +10,7 @@ import 'swiper/css';
 import 'swiper/css/pagination';
 import { CardList } from './types';
 
-function CardSwiper({ cardList, hoverCardContent }: CardList): React.ReactElement {
+function CardSwiper({ cardList, hoverCardContent }: CardList): React.ReactElement | null {
   const swiperRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -47,6 +47,10 @@ function CardSwiper({ cardList, hoverCardContent }: CardList): React.ReactElemen
 
     return () => observer.disconnect();
   }, []);
+
+  if (cardList.length === 0) {
+    return null;
+  }
 
   const gridMobile: CSSProperties =
     cardList[0].type === 'smallCard' ? styles.gridSmallMobile : styles.gridLargeMobile;

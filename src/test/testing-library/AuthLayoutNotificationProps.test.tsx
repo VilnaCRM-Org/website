@@ -1,4 +1,4 @@
-import type { NotificationControlProps } from '../../features/landing/components/notification/types';
+import type { NotificationControlProps } from '@landing/notification/types';
 
 import { renderWithProviders } from './utils';
 

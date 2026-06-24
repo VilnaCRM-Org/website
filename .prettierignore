@@ -29,3 +29,10 @@ storybook-static/
 yarn-error.log
 .github
 .husky
+
+# BMAD planning/implementation artifacts — raw markdown, not auto-formatted
+# (also excluded from markdownlint; mirrors the CRM "do not scan specs" convention)
+/specs/
+
+# Auto-generated changelog
+/CHANGELOG.md

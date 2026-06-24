@@ -15,7 +15,7 @@
  */
 module.exports = {
   forbidden: [
-    // ── GENERIC HYGIENE (ported from CRM) ──────────────────────────────────
+    // ----- Generic hygiene rules (ported from CRM) -----
 
     // 1. Circular dependencies — closes the unconfigured ESLint import/no-cycle gap. (FR6)
     {
@@ -81,7 +81,6 @@ module.exports = {
           '^(node-inspect/lib/_inspect)$',
           '^(node-inspect/lib/internal/inspect_client)$',
           '^(node-inspect/lib/internal/inspect_repl)$',
-          '^(async_hooks)$',
           '^(punycode)$',
           '^(domain)$',
           '^(constants)$',
@@ -155,10 +154,7 @@ module.exports = {
         path: '^src',
         // Exempt all test code (specs, fixtures, helpers) — tests legitimately
         // use devDependencies (@playwright/test, @testing-library, faker, etc.).
-        pathNot: [
-          '[.](?:spec|test)[.](?:js|mjs|cjs|jsx|ts|mts|cts|tsx)$',
-          '^src/test/',
-        ],
+        pathNot: ['[.](?:spec|test)[.](?:js|mjs|cjs|jsx|ts|mts|cts|tsx)$', '^src/test/'],
       },
       to: {
         dependencyTypes: ['npm-dev'],
@@ -167,7 +163,7 @@ module.exports = {
       },
     },
 
-    // ── ARCHITECTURE BOUNDARY RULES (the feature-based adaptation) ──────────
+    // ----- Architecture boundary rules (feature-based adaptation) -----
 
     // 11. Outside code may import a feature ONLY through its index barrel. (FR7)
     //     Formalizes ESLint no-restricted-imports ['@/features/*/*'] at graph level.
@@ -178,8 +174,9 @@ module.exports = {
         'Import a feature only through its public index barrel; do not reach into its internals.',
       from: {
         path: '^src/',
-        // Tests may import feature internals directly; the public-API rule
-        // applies to production code only.
+        // Tests may import feature internals directly. The Next.js routing root
+        // (pages/, outside src/) is the composition layer that wires features
+        // into routes, so it is intentionally outside this gate as well.
         pathNot: ['^src/features/[^/]+/', '^src/test/'],
       },
       to: {
@@ -216,14 +213,19 @@ module.exports = {
       to: { path: '^src/features/' },
     },
 
-    // 15. A feature root may only contain approved subfolders. (FR13a)
+    // 15. A feature root may contain only approved subfolders plus the index
+    //     barrel; stray files or folders at the root are flagged too. (FR13a)
     {
       name: 'feature-allowed-folders',
       severity: 'error',
       comment:
-        'A feature may only contain: api, assets, components, constants, helpers, hooks, i18n, routes, types, utils.',
+        'A feature root may only contain the index barrel and these folders: ' +
+        'api, assets, components, constants, helpers, hooks, i18n, routes, types, utils.',
       from: {
-        path: '^src/features/[^/]+/(?!(?:api|assets|components|constants|helpers|hooks|i18n|routes|types|utils)/)[^/]+/',
+        path:
+          '^src/features/[^/]+/' +
+          '(?!(?:api|assets|components|constants|helpers|hooks|i18n|routes|types|utils)/' +
+          '|index[.](?:js|cjs|mjs|jsx|ts|cts|mts|tsx)$)[^/]+',
       },
       to: {},
     },
@@ -267,7 +269,7 @@ module.exports = {
     },
     skipAnalysisNotInRules: true,
     // Website load tests import k6 (resolved by the k6 runtime, not Node).
-    // NOTE: deliberately NO bun built-ins — the website is node/pnpm.
+    // Intentionally no bun built-ins — the website is node/pnpm.
     builtInModules: { add: ['k6', 'k6/http'] },
     reporterOptions: {
       dot: { collapsePattern: 'node_modules/(?:@[^/]+/[^/]+|[^/]+)' },

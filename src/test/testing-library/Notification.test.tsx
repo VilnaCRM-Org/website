@@ -2,18 +2,15 @@ import { render, RenderResult, screen, waitFor } from '@testing-library/react';
 import userEvent, { UserEvent } from '@testing-library/user-event';
 import { t } from 'i18next';
 
+import Notification from '@landing/notification';
+import { notificationComponents } from '@landing/notification/notification';
+import { NotificationControlProps, NotificationStatus } from '@landing/notification/types';
+
 import {
   ClientErrorMessages,
   getClientErrorMessages,
   CLIENT_ERROR_KEYS,
-} from '@/shared/clientErrorMessages';
-
-import Notification from '../../features/landing/components/notification';
-import { notificationComponents } from '../../features/landing/components/notification/notification';
-import {
-  NotificationControlProps,
-  NotificationStatus,
-} from '../../features/landing/components/notification/types';
+} from '../../shared/clientErrorMessages';
 
 import { buttonRole } from './constants';
 import { SetIsOpenType } from './fixtures/auth-test-helpers';

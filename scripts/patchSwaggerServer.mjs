@@ -3,7 +3,6 @@ import fs from 'node:fs';
 import dotenvExpand from 'dotenv-expand';
 import dotenv from 'dotenv';
 
-
 const env = dotenv.config();
 dotenvExpand.expand(env);
 

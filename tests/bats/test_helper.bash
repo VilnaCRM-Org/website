@@ -124,6 +124,9 @@ setup_makefile_test_env() {
   mkdir -p "$MAKEFILE_SANDBOX"
   cp "$PROJECT_ROOT/Makefile" "$MAKEFILE_SANDBOX/Makefile"
   cp "$PROJECT_ROOT/.env" "$MAKEFILE_SANDBOX/.env"
+  # CI orchestration targets (ci-lint, ci-test, pr-comments) shell out to
+  # repository scripts; copy them so recursive make runs resolve their paths.
+  cp -R "$PROJECT_ROOT/scripts" "$MAKEFILE_SANDBOX/scripts"
 }
 
 setup_ci_script_test_env() {

@@ -1,7 +1,7 @@
 import { render } from '@testing-library/react';
 import { t } from 'i18next';
 
-import RegistrationText from '../../features/landing/components/possibilities/registration-text/registration-text';
+import RegistrationText from '@landing/possibilities/registration-text/registration-text';
 
 const mainHeadingText: string = t('unlimited_possibilities.main_heading_text');
 const secondaryHeadingText: string = t('unlimited_possibilities.secondary_heading_text');

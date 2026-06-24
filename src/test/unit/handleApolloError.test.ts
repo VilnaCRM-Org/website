@@ -106,13 +106,15 @@ describe('Error Handling', () => {
       jest.clearAllMocks();
       messages = getClientErrorMessages();
       // Mock CombinedGraphQLErrors.is to recognize our mock errors
-      combinedGraphQLErrorsSpy = jest.spyOn(apolloClient.CombinedGraphQLErrors, 'is').mockImplementation(
-        (err: unknown): err is apolloClient.CombinedGraphQLErrors =>
-          err !== null &&
-          typeof err === 'object' &&
-          'brand' in err &&
-          (err as MockCombinedGraphQLErrors).brand === 'CombinedGraphQLErrors'
-      );
+      combinedGraphQLErrorsSpy = jest
+        .spyOn(apolloClient.CombinedGraphQLErrors, 'is')
+        .mockImplementation(
+          (err: unknown): err is apolloClient.CombinedGraphQLErrors =>
+            err !== null &&
+            typeof err === 'object' &&
+            'brand' in err &&
+            (err as MockCombinedGraphQLErrors).brand === 'CombinedGraphQLErrors'
+        );
     });
 
     afterEach(() => {
