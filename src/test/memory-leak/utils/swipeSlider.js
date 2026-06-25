@@ -16,16 +16,18 @@ function calculateCoordinates(boundingBox, direction) {
   return { startX, endX, startY, endY };
 }
 
+const delay = ms => new Promise(resolve => {setTimeout(resolve, ms)});
+
 async function horizontalDragAndDrop(page, coordinates, iterationsNumber) {
-  Array(iterationsNumber).forEach(async () => {
+  for (let i = 0; i < iterationsNumber; i += 1) {
     await page.mouse.move(coordinates.startX, coordinates.startY);
     await page.mouse.down();
 
     await page.mouse.move(coordinates.endX, coordinates.endY, { steps: 20 });
     await page.mouse.up();
 
-    await page.waitForTimeout(500);
-  });
+    await delay(500);
+  }
 }
 
-module.exports = swipeSlider;
+export default swipeSlider;

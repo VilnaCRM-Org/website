@@ -2,7 +2,6 @@ import { fireEvent, render } from '@testing-library/react';
 import userEvent, { UserEvent } from '@testing-library/user-event';
 import { t } from 'i18next';
 import { useRouter } from 'next/router';
-import React from 'react';
 
 import {
   headerNavList,

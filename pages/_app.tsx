@@ -1,4 +1,4 @@
-import { ApolloProvider } from '@apollo/client';
+import { ApolloProvider } from '@apollo/client/react';
 import { ThemeProvider } from '@mui/material/styles';
 import { GoogleAnalytics } from '@next/third-parties/google';
 import * as Sentry from '@sentry/react';
@@ -12,7 +12,7 @@ import 'swagger-ui-react/swagger-ui.css';
 
 import '../styles/global.css';
 
-import 'src/features/swagger/components/ApiDocumentation/styles.scss';
+import '../src/features/swagger/components/ApiDocumentation/styles.scss';
 
 import i18n from '../i18n';
 import client from '../src/features/landing/api/graphql/apollo';

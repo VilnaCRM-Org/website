@@ -1,5 +1,5 @@
 import { Stack } from '@mui/material';
-import { Meta, StoryObj } from '@storybook/react';
+import { Meta, StoryObj } from '@storybook/nextjs';
 import { t } from 'i18next';
 import { FieldValues, useForm } from 'react-hook-form';
 
@@ -53,7 +53,7 @@ function TextFieldFormStory<T extends FieldValues>(args: CustomTextField<T>): Re
 
   return (
     <form onSubmit={handleSubmit(() => {})}>
-      <Stack direction="row" alignItems="center" gap="1rem">
+      <Stack direction="row" sx={{ alignItems: 'center', gap: '1rem' }}>
         <UiTextFieldForm
           control={control}
           rules={rules}

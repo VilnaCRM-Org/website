@@ -1,7 +1,6 @@
-const { t } = require('i18next');
-const { faker } = require('@faker-js/faker');
-
-const ScenarioBuilder = require('../utils/ScenarioBuilder');
+import { faker } from '@faker-js/faker';
+import { t } from 'i18next';
+import ScenarioBuilder from '../utils/ScenarioBuilder.js';
 
 const scenarioBuilder = new ScenarioBuilder();
 
@@ -48,4 +47,4 @@ async function back(page) {
   await page.click(privacyCheckboxSelector);
 }
 
-module.exports = scenarioBuilder.createScenario({ action, back });
+export default scenarioBuilder.createScenario({ action, back });

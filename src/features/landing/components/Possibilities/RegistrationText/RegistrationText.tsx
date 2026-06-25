@@ -10,7 +10,7 @@ function RegistrationText(): React.ReactElement {
   const { t } = useTranslation();
 
   return (
-    <Stack justifyContent="center" width="100%" sx={styles.textWrapper}>
+    <Stack sx={[styles.textWrapper, { justifyContent: 'center', width: '100%' }]}>
       <UiTypography variant="h3" component="h3" sx={styles.title}>
         {t('unlimited_possibilities.main_heading_text')}
       </UiTypography>

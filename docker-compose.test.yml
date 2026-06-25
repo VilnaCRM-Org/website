@@ -1,5 +1,6 @@
 services:
   prod:
+    container_name: website-prod
     build:
       context: .
       dockerfile: Dockerfile
@@ -7,12 +8,14 @@ services:
     restart: unless-stopped
     ports:
       - '3001:3001'
+    shm_size: ${SHM_SIZE:-1g}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://${WEBSITE_DOMAIN}:${NEXT_PUBLIC_PROD_PORT}"]
     networks:
       - website-network
 
   playwright:
+    container_name: website-playwright
     build:
       context: .
       dockerfile: Playwright.Dockerfile
@@ -23,13 +26,14 @@ services:
     ports:
       - '9324:9324'
     environment:
-      - NEXT_PUBLIC_PROD_HOST_API_URL=http://${NEXT_PUBLIC_PROD_HOST}:${NEXT_PUBLIC_PROD_PORT}
+      - NEXT_PUBLIC_API_BASE_URL=http://${NEXT_PUBLIC_PROD_HOST}:${NEXT_PUBLIC_PROD_PORT}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://${WEBSITE_DOMAIN}:${PLAYWRIGHT_TEST_PORT}"]
     networks:
       - website-network
 
   apollo:
+    container_name: website-apollo
     build:
       context: .
       dockerfile: Apollo.Dockerfile
@@ -42,6 +46,7 @@ services:
       - website-network
 
   mockoon:
+    container_name: website-mockoon
     build:
       context: .
       dockerfile: Mockoon.Dockerfile
@@ -49,12 +54,13 @@ services:
       - '8080:8080'
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://${WEBSITE_DOMAIN}:${NEXT_PUBLIC_MOCKOON_PORT}/api/users"]
+      test: ["CMD", "curl", "-f", "http://${WEBSITE_DOMAIN}:${MOCKOON_PORT}/api/users"]
     networks:
       - website-network
 
 
   k6:
+    container_name: website-k6
     profiles: ["load"]
     build:
       context: .

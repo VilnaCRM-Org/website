@@ -1,6 +1,13 @@
-import { expect, Locator, Page } from '@playwright/test';
+import { expect } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 
-import { errorMessages, executeBtnSelector } from './constants';
+import { executeBtnSelector } from './constants';
+import {
+  CORS_HEADERS,
+  createNetworkFailureRouteHandler,
+  fulfillPreflight,
+  isExpectedFailureState,
+} from './networkFailure';
 
 import {
   getLocators,
@@ -17,11 +24,14 @@ export async function clearEndpointResponse(endpoint: Locator): Promise<void> {
 
   await expect(clearButton).toBeVisible();
   await clearButton.click();
-  await expect(curl).not.toBeVisible();
+
+  // Wait for curl to be detached from DOM (not just hidden)
+  await curl.waitFor({ state: 'detached' });
 }
 
 export async function initSwaggerPage(page: Page): Promise<SwaggerPageObjects> {
-  await page.goto(TEST_CONSTANTS.SWAGGER_PATH);
+  await page.goto(TEST_CONSTANTS.SWAGGER_PATH, { waitUntil: 'domcontentloaded' });
+  await page.locator('.swagger-ui').waitFor({ state: 'visible' });
 
   const userEndpoints: GetUserEndpoints = getUserEndpoints(page);
   const elements: SwaggerLocators = getLocators(page);
@@ -56,18 +66,80 @@ export async function interceptWithErrorResponse(
   await page.route(
     url,
     async route => {
+      if (await fulfillPreflight(route)) {
+        return;
+      }
+
       await route.fulfill({
         status,
         contentType: 'application/json',
+        headers: CORS_HEADERS,
         body: JSON.stringify(errorResponse),
       });
-    },
-    { times: 1 }
+    }
   );
+}
+
+export async function interceptWithJsonResponse(
+  page: Page,
+  url: string | RegExp,
+  responseBody: unknown,
+  status: number = 200
+): Promise<void> {
+  await page.route(
+    url,
+    async route => {
+      if (await fulfillPreflight(route)) {
+        return;
+      }
+
+      await route.fulfill({
+        status,
+        contentType: 'application/json',
+        headers: CORS_HEADERS,
+        body: JSON.stringify(responseBody),
+      });
+    }
+  );
+}
+
+export async function interceptWithEmptyResponse(
+  page: Page,
+  url: string | RegExp,
+  status: number = 204
+): Promise<void> {
+  await page.route(
+    url,
+    async route => {
+      if (await fulfillPreflight(route)) {
+        return;
+      }
+
+      await route.fulfill({
+        status,
+        headers: CORS_HEADERS,
+        body: '',
+      });
+    }
+  );
+}
+
+export async function interceptWithNetworkFailure(
+  page: Page,
+  url: string | RegExp,
+  options?: {
+    times?: number;
+  }
+): Promise<void> {
+  await page.route(url, createNetworkFailureRouteHandler(options));
 }
 
 export async function cancelOperation(page: Page): Promise<void> {
   const cancelBtn: Locator = page.locator('button.btn.try-out__btn.cancel');
+
+  await expect(cancelBtn).toBeVisible();
+  await expect(cancelBtn).toBeEnabled();
+
   await cancelBtn.click();
 }
 
@@ -75,62 +147,44 @@ export async function getEndpointCopyButton(endpoint: Locator): Promise<Locator>
   return endpoint.locator('.curl-command .copy-to-clipboard button');
 }
 
-export async function expectErrorOrFailureStatus(getEndpoint: Locator): Promise<void> {
-  const errorElement: Locator = getEndpoint
-    .locator('.response-col_description .renderedMarkdown p')
-    .first();
-  const statusElement: Locator = getEndpoint.locator('.response .response-col_status').first();
+async function readFailureState(getEndpoint: Locator): Promise<{
+  combinedErrorText: string;
+  statusText: string | null;
+}> {
+  const responseDescription: Locator = getEndpoint.locator('.response-col_description').first();
+  const responseBody: Locator = getEndpoint.locator('.response .highlight-code').first();
+  const statusLocator: Locator = getEndpoint.locator('.response .response-col_status').first();
 
-  await expect(errorElement).toBeVisible();
-  await expect(statusElement).toBeVisible();
+  const descriptionText: string | null = await responseDescription.textContent().catch(() => null);
+  const responseBodyText: string | null = await responseBody.textContent().catch(() => null);
+  const statusText: string | null = await statusLocator.textContent().catch(() => null);
+  const combinedErrorText: string = [descriptionText, responseBodyText]
+    .filter((value): value is string => Boolean(value))
+    .join('\n')
+    .trim();
 
-  const [errorText, statusText] = await Promise.all([
-    errorElement.textContent(),
-    statusElement.textContent(),
-  ]);
-
-  const cleanStatusText: string = (statusText || '').trim();
-  const cleanErrorText: string = (errorText || '').trim();
-
-  const hasErrorMessage: boolean = Object.values(errorMessages).some(msg =>
-    cleanErrorText.includes(msg)
-  );
-
-  const hasFailureStatus: boolean =
-    /^(0|4\d{2}|5\d{2})/.test(cleanStatusText) ||
-    cleanStatusText === 'Undocumented' ||
-    cleanStatusText === '';
-
-  expect(hasFailureStatus).toBe(true);
-  expect(hasErrorMessage).toBe(true);
+  return {
+    combinedErrorText,
+    statusText,
+  };
 }
-export async function mockAuthorizeSuccess(
-  page: Page,
-  authorizeUrl: string,
-  redirectUri: string,
-  state?: string
-): Promise<void> {
-  await page.route(
-    authorizeUrl,
-    route => {
-      const targetUrl: string = `${redirectUri}?code=abc123${state ? `&state=${state}` : ''}`;
-      route.fulfill({
-        status: 200,
-        contentType: 'text/html',
-        body: `
-        <html lang="en">
-          <head>
-            <meta http-equiv="refresh" content="0; url=${targetUrl}" />
-          </head>
-          <body>
-            <p>Redirecting...</p>
-          </body>
-        </html>
-      `,
-      });
-    },
-    { times: 1 }
-  );
+
+export async function expectErrorOrFailureStatus(getEndpoint: Locator): Promise<void> {
+  const responseSection: Locator = getEndpoint.locator('.responses-wrapper, .responses-inner').first();
+
+  await expect(responseSection).toBeVisible();
+  await expect
+    .poll(
+      async (): Promise<boolean> => {
+        const { combinedErrorText, statusText } = await readFailureState(getEndpoint);
+
+        return isExpectedFailureState(combinedErrorText, statusText);
+      },
+      {
+        timeout: 10000,
+      }
+    )
+    .toBe(true);
 }
 
 export function buildSafeUrl(baseUrl: string, id: string): string {
@@ -152,11 +206,57 @@ export function parseJsonSafe<T>(text: string): T {
 export async function collapseEndpoint(endpoint: Locator): Promise<void> {
   const opblockSummary: Locator = endpoint.locator('.opblock-summary');
   const opblockBody: Locator = endpoint.locator('.opblock-body');
+  const tryItOutButton: Locator = endpoint.locator('button:has-text("Try it out")');
 
-  await expect(opblockBody).toBeVisible();
   await expect(opblockSummary).toBeVisible();
 
-  await opblockSummary.click();
+  const isTryItOutVisible: boolean = await tryItOutButton.isVisible();
+  if (!isTryItOutVisible) {
+    await tryItOutButton.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
+  }
 
-  await expect(opblockBody).not.toBeVisible();
+  // Check if the endpoint is already collapsed
+  const isAlreadyCollapsed: boolean = !(await opblockBody.isVisible());
+  if (isAlreadyCollapsed) {
+    return;
+  }
+
+  await expect(opblockBody).toBeVisible();
+
+  // Wait for any ongoing animations/transitions to complete before clicking
+  await opblockBody.evaluate(
+    el =>
+      new Promise<void>(resolve => {
+        const animations: Animation[] = el.getAnimations();
+        if (animations.length === 0) {
+          resolve();
+        } else {
+          Promise.all(animations.map(a => a.finished)).then(() => resolve());
+        }
+      })
+  );
+
+  let collapsed: boolean = false;
+  for (let attempt: number = 0; attempt < 3 && !collapsed; attempt += 1) {
+    await opblockSummary.click();
+
+    // Check if it actually collapsed
+    try {
+      await opblockBody.waitFor({ state: 'hidden', timeout: 3000 });
+      collapsed = true;
+    } catch {
+      if (attempt < 2) {
+        await opblockSummary.evaluate(
+          () =>
+            new Promise(resolve => {
+              setTimeout(resolve, 500);
+            })
+        );
+      }
+    }
+  }
+
+  if (!collapsed) {
+    await opblockBody.waitFor({ state: 'hidden' });
+  }
 }

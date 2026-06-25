@@ -1,13 +1,14 @@
-const { loadEnvConfig } = require('@next/env');
+import nextEnv from '@next/env';
 
-const projectDir = process.cwd();
-loadEnvConfig(projectDir);
+const { loadEnvConfig } = nextEnv;
+
+loadEnvConfig(process.cwd());
 
 class ScenarioBuilder {
   constructor(path) {
     this.path = path;
     this.url = () => {
-      const baseUrl = process.env.NEXT_PUBLIC_PROD_CONTAINER_API_URL;
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
       return this.path ? `${baseUrl}/${this.path}` : baseUrl;
     };
     this.beforeInitialPageLoad = async page => {
@@ -19,8 +20,13 @@ class ScenarioBuilder {
   }
 
   createScenario(scenarioOptions) {
-    return { url: this.url, beforeInitialPageLoad: this.beforeInitialPageLoad, ...scenarioOptions };
+    // memlab scenarios are plain objects conforming to IScenario interface
+    return {
+      url: this.url,
+      beforeInitialPageLoad: this.beforeInitialPageLoad,
+      ...scenarioOptions,
+    };
   }
 }
 
-module.exports = ScenarioBuilder;
+export default ScenarioBuilder;

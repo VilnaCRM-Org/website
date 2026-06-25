@@ -1,5 +1,4 @@
-import type { Meta, StoryObj } from '@storybook/react';
-import React from 'react';
+import type { Meta, StoryObj } from '@storybook/nextjs';
 
 import { NotificationStatus } from './types';
 

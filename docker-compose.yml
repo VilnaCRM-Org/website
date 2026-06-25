@@ -1,5 +1,6 @@
 services:
   dev:
+    container_name: website-dev
     build:
       context: .
       target: base

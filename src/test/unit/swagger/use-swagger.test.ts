@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 
 import useSwagger from '../../../features/swagger/hooks/useSwagger';
 
@@ -31,6 +31,23 @@ interface SwaggerSchema {
   paths: Record<string, unknown>;
 }
 
+type DeferredPromise<T> = {
+  promise: Promise<T>;
+  reject: (reason?: unknown) => void;
+  resolve: (value: T | PromiseLike<T>) => void;
+};
+
+function createDeferredPromise<T>(): DeferredPromise<T> {
+  let resolve!: DeferredPromise<T>['resolve'];
+  let reject!: DeferredPromise<T>['reject'];
+  const promise: Promise<T> = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+
+  return { promise, reject, resolve };
+}
+
 const mockSwaggerSchema: SwaggerSchema = {
   openapi: '3.0.0',
   info: {
@@ -49,8 +66,8 @@ const mockSwaggerSchema: SwaggerSchema = {
 describe('useSwagger', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockFetch.mockClear();
-    mockAbort.mockClear();
+    mockFetch.mockReset();
+    mockAbort.mockReset();
   });
 
   test('loads swagger schema successfully', async () => {
@@ -69,6 +86,52 @@ describe('useSwagger', () => {
       signal: 'mock-signal',
     });
     expect(result.current.error).toBeNull();
+  });
+
+  test('refetches swagger schema when the schema URL changes', async () => {
+    const updatedSwaggerSchema: SwaggerSchema = {
+      ...mockSwaggerSchema,
+      info: {
+        ...mockSwaggerSchema.info,
+        version: '2.0.0',
+      },
+    };
+
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async (): Promise<SwaggerSchema> => mockSwaggerSchema,
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async (): Promise<SwaggerSchema> => updatedSwaggerSchema,
+      });
+
+    const { result, rerender } = renderHook(
+      ({ schemaUrl }: { schemaUrl: string }) => useSwagger(schemaUrl),
+      {
+        initialProps: {
+          schemaUrl: '/swagger-schema.json',
+        },
+      }
+    );
+
+    await waitFor(() => {
+      expect(result.current.swaggerContent).toEqual(mockSwaggerSchema);
+    });
+
+    rerender({ schemaUrl: '/swagger-schema-v2.json' });
+
+    await waitFor(() => {
+      expect(result.current.swaggerContent).toEqual(updatedSwaggerSchema);
+    });
+
+    expect(mockFetch).toHaveBeenNthCalledWith(1, '/swagger-schema.json', {
+      signal: 'mock-signal',
+    });
+    expect(mockFetch).toHaveBeenNthCalledWith(2, '/swagger-schema-v2.json', {
+      signal: 'mock-signal',
+    });
   });
 
   test('handles fetch error when response is not ok', async () => {
@@ -108,17 +171,40 @@ describe('useSwagger', () => {
 
     const { result, unmount } = renderHook(() => useSwagger());
 
-    unmount();
-
-    await new Promise(resolve => {
-      setTimeout(resolve, 0);
+    await act(async () => {
+      unmount();
+      await Promise.resolve();
     });
 
     expect(result.current.error).toBeNull();
     expect(result.current.swaggerContent).toBeNull();
   });
 
+  test('ignores AbortError while the hook is still mounted', async () => {
+    const abortError: DOMException = new MockDOMException('Aborted', 'AbortError') as DOMException;
+    const deferredFetch: DeferredPromise<never> = createDeferredPromise<never>();
+    mockFetch.mockReturnValueOnce(deferredFetch.promise);
+
+    const { result } = renderHook(() => useSwagger());
+
+    await act(async () => {
+      deferredFetch.reject(abortError);
+      await deferredFetch.promise.catch(() => undefined);
+    });
+
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(result.current.error).toBeNull();
+    expect(result.current.swaggerContent).toBeNull();
+  });
+
   test('aborts fetch when component unmounts', () => {
+    mockFetch.mockImplementationOnce(
+      () =>
+        new Promise(() => {
+          // Keep the request pending so unmount only exercises abort behavior.
+        })
+    );
+
     const { unmount } = renderHook(() => useSwagger());
 
     unmount();
@@ -196,25 +282,21 @@ describe('useSwagger', () => {
     expect(result.current.error).toBeNull();
   });
 
-  test('handles different error types', async () => {
-    const testCases: Array<{ error: unknown; expectedMessage: string }> = [
-      { error: new TypeError('Type error'), expectedMessage: 'Type error' },
-      { error: new ReferenceError('Reference error'), expectedMessage: 'Reference error' },
-      { error: new Error('String error'), expectedMessage: 'String error' },
-      { error: new Error('500'), expectedMessage: '500' },
-    ];
+  test.each([
+    { error: new TypeError('Type error'), expectedMessage: 'Type error' },
+    { error: new ReferenceError('Reference error'), expectedMessage: 'Reference error' },
+    { error: new Error('String error'), expectedMessage: 'String error' },
+    { error: new Error('500'), expectedMessage: '500' },
+  ])('handles different error types: $expectedMessage', async ({ error, expectedMessage }) => {
+    mockFetch.mockRejectedValueOnce(error);
 
-    for (const { error, expectedMessage } of testCases) {
-      mockFetch.mockRejectedValueOnce(error);
+    const { result } = renderHook(() => useSwagger());
 
-      const { result } = renderHook(() => useSwagger());
+    await waitFor(() => {
+      expect(result.current.error).toBeInstanceOf(Error);
+    });
 
-      await waitFor(() => {
-        expect(result.current.error).toBeInstanceOf(Error);
-      });
-
-      expect(result.current.error?.message).toBe(expectedMessage);
-      expect(result.current.swaggerContent).toBeNull();
-    }
+    expect(result.current.error?.message).toBe(expectedMessage);
+    expect(result.current.swaggerContent).toBeNull();
   });
 });

@@ -23,6 +23,7 @@ describe('UiCardItem Component', () => {
 
       expect(titleElement).toBeInTheDocument();
       expect(titleElement).toHaveTextContent(cardItem.title);
+      expect(titleElement.tagName).toBe('H3');
       expect(textElement).toBeInTheDocument();
     });
 
@@ -35,6 +36,7 @@ describe('UiCardItem Component', () => {
 
       expect(titleElement).toBeInTheDocument();
       expect(titleElement).toHaveTextContent(cardItem.title);
+      expect(titleElement.tagName).toBe('H3');
       expect(integrateElement).toBeInTheDocument();
       expect(servicesElement).toBeInTheDocument();
     });

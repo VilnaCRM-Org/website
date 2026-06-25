@@ -29,4 +29,15 @@ export default {
   link: {
     width: '100%',
   },
+
+  logoLink: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    cursor: 'pointer',
+  },
+
+  logo: {
+    width: '8.188rem',
+    height: '2.75rem',
+  },
 };

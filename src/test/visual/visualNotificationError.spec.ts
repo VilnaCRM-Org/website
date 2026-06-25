@@ -1,7 +1,6 @@
 import { test, Locator, expect, Route } from '@playwright/test';
 
-import { currentLanguage, placeholders, screenSizes } from '@/test/visual/constants';
-
+import { currentLanguage, placeholders, screenSizes } from './constants';
 import { errorResponse, ErrorResponseProps } from './graphqlMocks';
 
 const serverErrorResponse: ErrorResponseProps = {
@@ -11,7 +10,7 @@ const serverErrorResponse: ErrorResponseProps = {
 };
 
 test.describe('Form Submission Server Error Test', () => {
-  for (const screen of screenSizes) {
+  screenSizes.forEach(screen => {
     test(`Server error notification - ${screen.name}`, async ({ page }) => {
       await page.goto('/');
 
@@ -46,13 +45,13 @@ test.describe('Form Submission Server Error Test', () => {
 
       await expect(submitButton).toBeEnabled();
 
-      await page.waitForFunction(
-        () => !document.querySelector('[aria-invalid="true"]')?.classList.contains('animating')
+      await page.evaluate(() =>
+        Promise.all(document.getAnimations().map(animation => animation.finished.catch(() => null)))
       );
 
       await expect(page).toHaveScreenshot(`${currentLanguage}_${screen.name}_error.png`);
 
       await page.unroute('**/graphql', routeHandler);
     });
-  }
+  });
 });

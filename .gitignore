@@ -48,6 +48,7 @@ next-env.d.ts
 .vscode
 
 storybook-static/
+storybook-static-ci/
 /test-results/
 /playwright-report/
 /blob-report/
@@ -68,3 +69,6 @@ app.log
 *.log
 
 /public/swagger-schema.*
+
+# Dockerfile build-performance gate (scripts/ci/docker_perf.sh) artifacts
+/.docker-perf/

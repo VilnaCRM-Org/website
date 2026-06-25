@@ -21,7 +21,7 @@ export const successResponse: (route: Route, status: number) => Promise<void> = 
   let postData: GraphQLRequestPayload;
   try {
     postData = await request.postDataJSON();
-  } catch (error) {
+  } catch {
     await route.continue();
     return;
   }
@@ -69,7 +69,7 @@ export const errorResponse: (
   let postData: GraphQLErrorRequestPayload;
   try {
     postData = await request.postDataJSON();
-  } catch (error) {
+  } catch {
     await route.continue();
     return;
   }

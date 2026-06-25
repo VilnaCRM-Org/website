@@ -1,7 +1,6 @@
 import '@testing-library/jest-dom';
 import { render, fireEvent, waitFor } from '@testing-library/react';
 import { t } from 'i18next';
-import React from 'react';
 
 import Drawer from '../../features/landing/components/Header/Drawer/Drawer';
 
@@ -16,8 +15,10 @@ const drawerContentRole: string = 'menu';
 const listItem: string = 'listitem';
 
 describe('Drawer', () => {
+  const handleLinkClick: jest.Mock<void, [string]> = jest.fn();
+
   it('renders drawer button', () => {
-    const { getByLabelText, getByAltText } = render(<Drawer />);
+    const { getByLabelText, getByAltText } = render(<Drawer handleLinkClick={handleLinkClick} />);
 
     const drawerButton: HTMLElement = getByLabelText(buttonToOpenDrawer);
     const drawerImage: HTMLElement = getByAltText(drawerImageAlt);
@@ -27,7 +28,9 @@ describe('Drawer', () => {
   });
 
   it('opens drawer when button is clicked', async () => {
-    const { getByLabelText, getByRole, getByAltText, getByText } = render(<Drawer />);
+    const { getByLabelText, getByRole, getByAltText, getByText } = render(
+      <Drawer handleLinkClick={handleLinkClick} />
+    );
 
     const drawerButton: HTMLElement = getByLabelText(buttonToOpenDrawer);
     fireEvent.click(drawerButton);
@@ -42,7 +45,7 @@ describe('Drawer', () => {
   });
 
   it('closes drawer when exit button is clicked', async () => {
-    const { getByLabelText, queryByRole } = render(<Drawer />);
+    const { getByLabelText, queryByRole } = render(<Drawer handleLinkClick={handleLinkClick} />);
 
     const drawerButton: HTMLElement = getByLabelText(buttonToOpenDrawer);
     fireEvent.click(drawerButton);
@@ -50,12 +53,13 @@ describe('Drawer', () => {
     const exitButton: HTMLElement = getByLabelText(buttonToCloseDrawer);
     fireEvent.click(exitButton);
 
-    const drawer: HTMLElement | null = queryByRole(drawerContentRole);
-    expect(drawer).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(queryByRole(drawerContentRole)).not.toBeInTheDocument();
+    });
   });
 
   it('renders logo', () => {
-    const { getByLabelText, getByAltText } = render(<Drawer />);
+    const { getByLabelText, getByAltText } = render(<Drawer handleLinkClick={handleLinkClick} />);
     const drawerButton: HTMLElement = getByLabelText(buttonToOpenDrawer);
 
     fireEvent.click(drawerButton);
@@ -63,8 +67,20 @@ describe('Drawer', () => {
     expect(logo).toBeInTheDocument();
   });
 
+  it('renders logo link pointing to home with aria-label', () => {
+    const { getByLabelText, getByRole } = render(<Drawer handleLinkClick={handleLinkClick} />);
+    const drawerButton: HTMLElement = getByLabelText(buttonToOpenDrawer);
+
+    fireEvent.click(drawerButton);
+
+    const logoLink: HTMLElement = getByRole('link', { name: logoAlt });
+
+    expect(logoLink).toHaveAttribute('href', '/');
+    expect(logoLink).toHaveAttribute('aria-label', logoAlt);
+  });
+
   it('renders nav items', () => {
-    const { getByLabelText, getAllByRole } = render(<Drawer />);
+    const { getByLabelText, getAllByRole } = render(<Drawer handleLinkClick={handleLinkClick} />);
     const drawerButton: HTMLElement = getByLabelText(buttonToOpenDrawer);
     fireEvent.click(drawerButton);
     const navItems: HTMLElement[] = getAllByRole(listItem);
@@ -72,16 +88,52 @@ describe('Drawer', () => {
   });
 
   it('closes the drawer when handleCloseDrawer is called', async () => {
-    const { getByRole, getByLabelText, queryByRole } = render(<Drawer />);
+    const { getByRole, getByLabelText, queryByRole } = render(
+      <Drawer handleLinkClick={handleLinkClick} />
+    );
 
     const drawerButton: HTMLElement = getByLabelText(buttonToOpenDrawer);
     fireEvent.click(drawerButton);
-    const tryItOutButton: HTMLElement = getByRole('button', {
+    const tryItOutButton: HTMLElement = getByRole('link', {
       name: buttonText,
     });
 
     fireEvent.click(tryItOutButton);
 
+    await waitFor(() => {
+      expect(queryByRole(drawerContentRole)).not.toBeInTheDocument();
+    });
+  });
+
+  it('calls handleLinkClick when nav item link is clicked', async () => {
+    const { getByLabelText, getByText, queryByRole } = render(
+      <Drawer handleLinkClick={handleLinkClick} />
+    );
+
+    const drawerButton: HTMLElement = getByLabelText(buttonToOpenDrawer);
+    fireEvent.click(drawerButton);
+
+    const advantagesLink: HTMLElement = getByText(t('header.advantages'));
+    fireEvent.click(advantagesLink);
+
+    expect(handleLinkClick).toHaveBeenCalledWith('#Advantages');
+    await waitFor(() => {
+      expect(queryByRole(drawerContentRole)).not.toBeInTheDocument();
+    });
+  });
+
+  it('calls handleLinkClick and closes drawer when nav item is clicked', async () => {
+    const { getByLabelText, getByText, queryByRole } = render(
+      <Drawer handleLinkClick={handleLinkClick} />
+    );
+
+    const drawerButton: HTMLElement = getByLabelText(buttonToOpenDrawer);
+    fireEvent.click(drawerButton);
+
+    const contactsLink: HTMLElement = getByText(t('header.contacts'));
+    fireEvent.click(contactsLink);
+
+    expect(handleLinkClick).toHaveBeenCalledWith('#Contacts');
     await waitFor(() => {
       expect(queryByRole(drawerContentRole)).not.toBeInTheDocument();
     });

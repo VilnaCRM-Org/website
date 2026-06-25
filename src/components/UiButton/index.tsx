@@ -8,12 +8,18 @@ function UiButton({
   size,
   disabled,
   fullWidth,
+  component,
   onClick,
   type,
+  href,
   children,
   sx,
   name,
+  ...rest
 }: UiButtonProps): React.ReactElement {
+  const componentProps = component ? { component } : {};
+  const hrefProps = href ? { href } : {};
+
   return (
     <ThemeProvider theme={theme}>
       <Button
@@ -25,6 +31,9 @@ function UiButton({
         onClick={onClick}
         sx={sx}
         name={name}
+        {...componentProps}
+        {...hrefProps}
+        {...rest}
       >
         {children}
       </Button>

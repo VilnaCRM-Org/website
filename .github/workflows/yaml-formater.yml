@@ -1,4 +1,4 @@
-name: Format yaml files
+name: format yaml files
 
 on:
   pull_request:

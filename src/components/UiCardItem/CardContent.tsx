@@ -12,7 +12,7 @@ function CardContent({ item, isSmallCard }: CardContentProps): React.ReactElemen
     <>
       <UiTypography
         variant={isSmallCard ? 'h6' : 'h5'}
-        component={isSmallCard ? 'h6' : 'h5'}
+        component="h3"
         sx={isSmallCard ? styles.smallTitle : styles.largeTitle}
       >
         <Trans i18nKey={item.title} />
@@ -31,7 +31,9 @@ function CardContent({ item, isSmallCard }: CardContentProps): React.ReactElemen
               sx={styles.hoveredCard}
               title={<ServicesHoverCard />}
             >
-              <UiTypography variant="bodyText16">services</UiTypography>
+              <UiTypography variant="bodyText16" component="span">
+                services
+              </UiTypography>
             </UiTooltip>
           </Trans>
         ) : (

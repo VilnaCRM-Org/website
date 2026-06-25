@@ -1,10 +1,10 @@
 FROM public.ecr.aws/docker/library/node:23.11.1-alpine3.21 AS base
 
 RUN apk add --no-cache \
-    python3=3.12.11-r0 \
+    python3=3.12.13-r0\
     make=4.4.1-r2 \
     g++=14.2.0-r4 \
-    curl=8.12.1-r1 && \
+    curl=8.14.1-r2 && \
     npm install -g pnpm@10.6.5 serve@14.2.0 && \
     pnpm add -D js-yaml@4.1.0
 
@@ -23,7 +23,7 @@ COPY . .
 RUN node scripts/fetchSwaggerSchema.mjs && \
     node scripts/patchSwaggerServer.mjs
 
-RUN npx next build && \
+RUN npx next build --webpack && \
     npx next-export-optimize-images
 
 

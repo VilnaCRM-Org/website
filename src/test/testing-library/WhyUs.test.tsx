@@ -7,19 +7,18 @@ import WhyUs from '../../features/landing/components/WhyUs';
 jest.mock('../../components/UiCardList/CardSwiper', () => jest.fn());
 
 const WrapperId: string = '#Advantages';
-const signUpLinkLabelText: string = t('why_us.aria_label');
 const signUpButtonText: string = t('why_us.button_text');
 
 describe('SocialMediaItem', () => {
   it('render WhyUs component correctly', () => {
-    const { container, getByLabelText, getByText } = render(<WhyUs />);
+    const { container, getByText, queryByRole } = render(React.createElement(WhyUs));
 
     const wrapperElement: HTMLElement | null = container.querySelector(WrapperId);
-    const signUpLink: HTMLElement = getByLabelText(signUpLinkLabelText);
-    const signUpButton: HTMLElement = getByText(signUpButtonText);
+    const signUpLink: HTMLAnchorElement | null = getByText(signUpButtonText).closest('a');
 
     expect(signUpLink).toBeInTheDocument();
+    expect(signUpLink).toHaveAttribute('href', '#signUp');
     expect(wrapperElement).toBeInTheDocument();
-    expect(signUpButton).toBeInTheDocument();
+    expect(queryByRole('button', { name: signUpButtonText })).not.toBeInTheDocument();
   });
 });

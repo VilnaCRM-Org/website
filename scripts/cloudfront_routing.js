@@ -1,42 +1,68 @@
 /**
- * This script follows ES5.1 rules for compatibility.
- * Avoid ES6+ syntax (e.g., `let`, `const`, arrow functions).
+ * ES5.1 compatible (no let/const/arrow functions).
  */
 'use strict';
+
+var NOT_FOUND_BODY = '<!DOCTYPE html><html><head><title>404 Not Found</title></head><body><h1>404 - Page Not Found</h1></body></html>';
+
+var ROUTE_MAP = Object.freeze({
+  '/': '/index.html',
+  '/about': '/about/index.html',
+  '/about/': '/about/index.html',
+  '/en': '/en/index.html',
+  '/en/': '/en/index.html',
+  '/swagger': '/swagger.html',
+  '/swagger/': '/swagger.html',
+});
+
 function handler(event) {
   var request = event.request;
 
-  if (!request.uri || typeof request.uri !== 'string') {
+  if (!request || typeof request.uri !== 'string') {
+    var host =
+      (request && request.headers && request.headers.host && request.headers.host.value) || '';
+    console.log(
+      'cloudfront_routing: missing/invalid request.uri',
+      'host=',
+      host,
+      'uri=',
+      request && request.uri
+    );
     return request;
   }
 
   try {
     var uri = request.uri;
 
-    var routeMap = {
-      '/': '/index.html',
-      '/about': '/about/index.html',
-      '/about/': '/about/index.html',
-      '/en': '/en/index.html',
-      '/en/': '/en/index.html',
-      '/swagger': '/swagger.html',
-    };
-
-    if (routeMap[uri] !== undefined) {
-      request.uri = routeMap[uri];
+    if (Object.prototype.hasOwnProperty.call(ROUTE_MAP, uri)) {
+      request.uri = ROUTE_MAP[uri];
       return request;
     }
 
-    if (uri.substr(-1) === '/') {
-      uri += 'index.html';
-    } else if (uri.indexOf('.') === -1) {
-      uri += '/index.html';
+    var lastSlash = uri.lastIndexOf('/');
+    var lastSegment = uri.substring(lastSlash + 1);
+    if (lastSegment.indexOf('.') !== -1) {
+      return request;
     }
 
-    request.uri = uri;
+    var parts = uri.split('/');
+    var segmentCount = parts.filter(Boolean).length;
+
+    if (segmentCount === 1) {
+      return {
+        statusCode: 404,
+        statusDescription: 'Not Found',
+        headers: {
+          'cache-control': { value: 'public, max-age=60' },
+          'content-type': { value: 'text/html; charset=utf-8' },
+        },
+        body: NOT_FOUND_BODY
+      };
+    }
+
     return request;
-  } catch (error) {
-    console.log('CloudFront Function error:', error);
+  } catch (err) {
+    console.log('cloudfront_routing: error', err);
     return request;
   }
 }

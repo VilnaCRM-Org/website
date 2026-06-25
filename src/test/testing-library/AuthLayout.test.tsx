@@ -1,4 +1,4 @@
-import { MockedResponse } from '@apollo/client/testing';
+import { MockLink } from '@apollo/client/testing';
 import { fireEvent, waitFor } from '@testing-library/react';
 import { t } from 'i18next';
 import { AriaRole } from 'react';
@@ -118,12 +118,11 @@ describe('AuthLayout', () => {
       expect(loader).toBeInTheDocument();
     });
 
-    const serverErrorMessage: HTMLElement | null = queryByRole(alertRole);
-    expect(serverErrorMessage).not.toHaveAttribute('aria-live', 'assertive');
-
     await waitFor(() => {
       expect(queryByRole(statusRole)).not.toBeInTheDocument();
       expect(getByText(successTitleText)).toBeInTheDocument();
+      const alertBox: HTMLElement = getByRole(alertRole);
+      expect(alertBox).not.toHaveAttribute('aria-live', 'assertive');
       expect(queryByText(errorTitleText)).not.toBeInTheDocument();
     });
   });
@@ -132,11 +131,13 @@ describe('AuthLayout', () => {
       .fn()
       .mockReturnValue(true);
 
-    const mockWithVariableCapture: typeof fulfilledMockResponse & {
-      variableMatcher: jest.Mock<boolean, [{ input: CreateUserInput }]>;
-    } = {
-      ...fulfilledMockResponse,
-      variableMatcher: mockVariableMatcher,
+    // Apollo Client 4: variableMatcher moved to request.variables as a callback
+    const mockWithVariableCapture: MockLink.MockedResponse = {
+      request: {
+        query: fulfilledMockResponse.request.query,
+        variables: mockVariableMatcher,
+      },
+      result: fulfilledMockResponse.result,
     };
 
     renderAuthLayout([mockWithVariableCapture]);
@@ -322,7 +323,7 @@ describe('AuthLayout', () => {
   test.each(edgeCases)(
     'submits successfully with edge-case inputs',
     async ({ initials, email, password }) => {
-      const mocks: MockedResponse[] = [{ ...fulfilledMockResponse, variableMatcher: jest.fn() }];
+      const mocks: MockLink.MockedResponse[] = [{ ...fulfilledMockResponse }];
       const { findByText } = renderAuthLayout(mocks);
       fillForm(initials, email, password, true);
       expect(await findByText(successTitleText)).toBeInTheDocument();
@@ -446,7 +447,7 @@ describe('AuthLayoutWithNotification', () => {
       expect(notificationBox).toBeInTheDocument();
       expect(notificationBox).toBeVisible();
       expect(notificationTitle).toBeInTheDocument();
-      expect(getByRole('heading')).toHaveTextContent(successTitleText);
+      expect(getByRole('heading', { name: successTitleText })).toBeInTheDocument();
       expect(queryByText(errorTitleText)).not.toBeInTheDocument();
     });
   });
@@ -460,7 +461,7 @@ describe('AuthLayoutWithNotification', () => {
     expect(queryByText(errorTitleText)).not.toBeInTheDocument();
   });
   it('should display network error text when network error message includes "Failed to fetch"', async () => {
-    const failedToFetchMockResponse: MockedResponse = {
+    const failedToFetchMockResponse: MockLink.MockedResponse = {
       request: {
         query: SIGNUP_MUTATION,
         variables: {
@@ -494,5 +495,47 @@ describe('AuthLayoutWithNotification', () => {
 
     expect(queryByLabelText('error')).not.toBeInTheDocument();
     expect(queryByLabelText('success')).toBeInTheDocument();
+  });
+
+  it('should convert email to lowercase before submitting', async () => {
+    const uppercaseEmail: string = 'TEST.USER@EXAMPLE.COM';
+    const mockVariableMatcher: jest.Mock<boolean, [{ input: CreateUserInput }]> = jest
+      .fn()
+      .mockReturnValue(true);
+
+    // Apollo Client 4: variableMatcher moved to request.variables as a callback
+    const mockWithVariableCapture: MockLink.MockedResponse = {
+      request: {
+        query: fulfilledMockResponse.request.query,
+        variables: mockVariableMatcher,
+      },
+      result: fulfilledMockResponse.result,
+    };
+
+    renderAuthLayout([mockWithVariableCapture]);
+
+    fillForm(testInitials, uppercaseEmail, testPassword, true);
+
+    await waitFor(() => {
+      expect(mockVariableMatcher).toHaveBeenCalled();
+      const capturedVariables: { input: CreateUserInput } = mockVariableMatcher.mock.calls[0][0];
+      const { input } = capturedVariables;
+
+      expect(input.email).toBe(uppercaseEmail.toLowerCase());
+      expect(input.email).not.toBe(uppercaseEmail);
+    });
+  });
+
+  it('should render success notification hidden and no client error messages initially', () => {
+    const { queryByText, getByText } = renderAuthLayout([]);
+
+    const successTitle: HTMLElement = getByText(successTitleText);
+    expect(successTitle).toBeInTheDocument();
+    expect(successTitle).not.toBeVisible();
+
+    Object.values(CLIENT_ERROR_KEYS).forEach(key => {
+      const errorMessage: string = messages[key];
+      expect(queryByText(errorMessage)).not.toBeInTheDocument();
+    });
   });
 });

@@ -1,11 +1,19 @@
 import { expect, type Locator, Page, test, type Download } from '@playwright/test';
 
-import { testUserId, BASE_API, BasicEndpointElements, UpdatedUser } from '../utils/constants';
+import {
+  testUserId,
+  BASE_API,
+  BasicEndpointElements,
+  MOCK_API_USER,
+  UpdatedUser,
+} from '../utils/constants';
 import {
   initSwaggerPage,
   clearEndpointResponse,
   getAndCheckExecuteBtn,
   interceptWithErrorResponse,
+  interceptWithJsonResponse,
+  interceptWithNetworkFailure,
   cancelOperation,
   expectErrorOrFailureStatus,
   buildSafeUrl,
@@ -61,6 +69,7 @@ async function setupPatchUserEndpoint(page: Page): Promise<PatchUserEndpointElem
 test.describe('patch by ID', () => {
   test('default values', async ({ page }) => {
     const elements: PatchUserEndpointElements = await setupPatchUserEndpoint(page);
+    await interceptWithJsonResponse(page, PATCH_USER_API_URL(testUserId), MOCK_API_USER);
     const defaultRequestBody: UpdatedUser = {
       email: 'user@example.com',
       initials: 'Name Surname',
@@ -83,6 +92,7 @@ test.describe('patch by ID', () => {
 
   test('custom values', async ({ page }) => {
     const elements: PatchUserEndpointElements = await setupPatchUserEndpoint(page);
+    await interceptWithJsonResponse(page, PATCH_USER_API_URL(testUserId), MOCK_API_USER);
     const customRequestBody: UpdatedUser = {
       email: 'patch@example.com',
       initials: 'PT',
@@ -125,6 +135,7 @@ test.describe('patch by ID', () => {
 
   test('download', async ({ page }) => {
     const elements: PatchUserEndpointElements = await setupPatchUserEndpoint(page);
+    await interceptWithJsonResponse(page, PATCH_USER_API_URL(testUserId), MOCK_API_USER);
     const downloadData: { email: string; initials: string } = {
       email: 'download@example.com',
       initials: 'DL',
@@ -206,7 +217,7 @@ test.describe('patch by ID', () => {
   test('error response - CORS/Network failure', async ({ page }) => {
     const elements: PatchUserEndpointElements = await setupPatchUserEndpoint(page);
 
-    await page.route(PATCH_USER_API_URL(testUserId), route => route.abort('failed'));
+    await interceptWithNetworkFailure(page, PATCH_USER_API_URL(testUserId));
 
     await elements.idInput.fill(testUserId);
     await elements.jsonEditor.fill(JSON.stringify({ initials: 'NF' }));

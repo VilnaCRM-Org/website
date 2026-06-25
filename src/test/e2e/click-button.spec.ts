@@ -1,4 +1,4 @@
-import { Locator, Page, test } from '@playwright/test';
+import { Locator, Page, test, expect } from '@playwright/test';
 
 import { createLocalizedRegExp } from '@/test/e2e/utils/createLocalizedRegExp';
 
@@ -18,7 +18,15 @@ const clickTryItNowButtonByFilteredSection: (
   page: Page,
   uniqueSectionText: string | RegExp
 ) => Promise<void> = async (page, uniqueSectionText) => {
-  await page.locator('section').filter({ hasText: uniqueSectionText }).getByRole('button').click();
+  const link: Locator = page
+    .locator('section')
+    .filter({ hasText: uniqueSectionText })
+    .getByRole('link', nameOption);
+
+  await expect(link).toHaveCount(1);
+  await link.scrollIntoViewIfNeeded();
+  await expect(link).toBeVisible();
+  await link.click();
 };
 
 test.describe('Buttons navigation tests', () => {
@@ -27,7 +35,7 @@ test.describe('Buttons navigation tests', () => {
   });
 
   test('Desktop buttons navigation', async ({ page }) => {
-    await page.locator('header').getByRole('button', nameOption).click();
+    await page.locator('header').getByRole('link', nameOption).click();
     await clickTryItNowButtonByFilteredSection(page, aboutVilnaCRM);
     await clickTryItNowButtonByFilteredSection(page, forWho);
   });
@@ -45,7 +53,8 @@ test.describe('Buttons navigation tests', () => {
 
     await page.getByLabel(openDrawerLabel).click();
 
-    const drawerTryItNowButton: Locator = page.getByRole('button', nameOption);
+    const drawerContainer: Locator = page.getByRole('menu');
+    const drawerTryItNowButton: Locator = drawerContainer.getByRole('link', nameOption);
     await drawerTryItNowButton.click();
   });
 });

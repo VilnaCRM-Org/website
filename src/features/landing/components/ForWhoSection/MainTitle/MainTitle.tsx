@@ -1,4 +1,4 @@
-import { Box, Link } from '@mui/material';
+import { Box } from '@mui/material';
 import React from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
@@ -17,11 +17,9 @@ function MainTitle(): React.ReactElement {
       <UiTypography sx={styles.description} variant="bodyText18">
         <Trans i18nKey="for_who.text_main" />
       </UiTypography>
-      <Link href="#signUp" aria-label={t('for_who.aria_label')}>
-        <UiButton sx={styles.button} variant="contained" size="medium">
-          {t('for_who.button_text')}
-        </UiButton>
-      </Link>
+      <UiButton href="#signUp" sx={styles.button} variant="contained" size="medium">
+        {t('for_who.button_text')}
+      </UiButton>
     </Box>
   );
 }

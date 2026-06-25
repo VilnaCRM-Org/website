@@ -1,16 +1,14 @@
 import { test, expect } from '@playwright/test';
 
-import { screenSizes, timeoutDuration } from './constants';
-
-const currentLanguage: string = process.env.NEXT_PUBLIC_MAIN_LANGUAGE as string;
+import { currentLanguage, screenSizes, timeoutDuration } from './constants';
 
 test.describe('Visual Tests', () => {
-  for (const screen of screenSizes) {
+  screenSizes.forEach(screen => {
     test(`${screen.name} test`, async ({ page }) => {
       await page.goto('/');
 
       await page.waitForLoadState('networkidle');
-      await page.evaluateHandle('document.fonts.ready');
+      await page.evaluate(() => document.fonts.ready);
 
       await page.waitForTimeout(timeoutDuration);
 
@@ -22,10 +20,11 @@ test.describe('Visual Tests', () => {
       await page.setViewportSize({ width: screen.width, height: screen.height });
 
       await page.waitForTimeout(timeoutDuration);
+      await page.evaluate(() => document.fonts.ready);
 
       await expect(page).toHaveScreenshot(`${currentLanguage}_${screen.name}.png`, {
         fullPage: true,
       });
     });
-  }
+  });
 });

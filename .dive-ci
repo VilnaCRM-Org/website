@@ -1,0 +1,17 @@
+# dive CI thresholds for the Dockerfile build-performance gate.
+# See docs/dockerfile-performance.md for the policy this enforces.
+#
+# All three keys are set explicitly: dive treats commented-out keys as a 0.1
+# default rather than "disabled", so every gate we rely on is stated here.
+rules:
+  # Fail when image efficiency drops below this ratio (0-1). Both current
+  # images build at ~1.0; 0.90 leaves headroom for legitimate multi-stage
+  # copies while still catching duplicated/leaked layers.
+  lowestEfficiency: 0.90
+
+  # Fail when total wasted space reaches this size (duplicate/removed files
+  # still occupying earlier layers).
+  highestWastedBytes: 20MB
+
+  # Fail when wasted space makes up this fraction (0-1) of the image.
+  highestUserWastedPercent: 0.15

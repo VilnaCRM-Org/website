@@ -12,12 +12,17 @@
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
     "module": "esnext",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
-    "jsx": "preserve",
-    "baseUrl": ".",
+    "jsx": "react-jsx",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@landing/*": ["./src/features/landing/components/*"],
+      "@swagger/global": ["./src/features/swagger/components/ApiDocumentation/Global/_global.scss"],
+      "@swagger/*": ["./src/features/swagger/*"]
+    },
     "incremental": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
@@ -37,6 +42,5 @@
     "src/components/UiFooter/.stories.tsx",
     "memoryLeak"
   ],
-  "exclude": ["node_modules", ".next", "out"],
-  "extends": "./tsconfig.paths.json"
+  "exclude": ["node_modules", ".next", "out"]
 }

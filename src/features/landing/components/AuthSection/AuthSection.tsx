@@ -10,7 +10,7 @@ function AuthSection(): React.ReactElement {
   return (
     <Box sx={styles.wrapper} component="section">
       <Container>
-        <Stack justifyContent="space-between" sx={styles.content}>
+        <Stack sx={[styles.content, { justifyContent: 'space-between' }]}>
           <SignUpText socialLinks={socialLinks} />
           <AuthLayout />
         </Stack>

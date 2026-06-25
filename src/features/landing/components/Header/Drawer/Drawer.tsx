@@ -1,4 +1,5 @@
 import { Drawer, Box, Stack, Button, Link } from '@mui/material';
+import NextLink from 'next/link';
 import Image from 'next-export-optimize-images/image';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -15,7 +16,11 @@ import NavList from '../NavList/NavList';
 import styles from './styles';
 import { VilnaCRMEmail } from './VilnaCRMEmail';
 
-function CustomDrawer(): React.ReactElement {
+function CustomDrawer({
+  handleLinkClick,
+}: {
+  handleLinkClick: (link: string) => void;
+}): React.ReactElement {
   const { t } = useTranslation();
   const [isDrawerOpen, setIsDrawerOpen] = React.useState(false);
 
@@ -38,10 +43,20 @@ function CustomDrawer(): React.ReactElement {
         onClose={handleCloseDrawer}
         role="menu"
       >
-        <Box width="23.4375rem" textAlign="center" role="presentation" sx={styles.drawerContent}>
-          <Stack direction="row" justifyContent="space-between" alignItems="center">
-            <Link href="/">
-              <Image src={Logo} alt={t('header.logo_alt')} width={131} height={44} />
+        <Box
+          role="presentation"
+          sx={[styles.drawerContent, { width: '23.4375rem', textAlign: 'center' }]}
+        >
+          <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
+            <Link
+              href="/"
+              component={NextLink}
+              sx={styles.logoLink}
+              aria-label={t('header.logo_alt') as string}
+            >
+              <Box component="span" sx={styles.logo}>
+                <Image src={Logo} alt={t('header.logo_alt')} width={131} height={44} />
+              </Box>
             </Link>
             <Button
               aria-label={t('header.drawer.button_aria_labels.exit') as string}
@@ -58,29 +73,33 @@ function CustomDrawer(): React.ReactElement {
           </Stack>
           <Stack
             direction="row"
-            alignItems="center"
-            justifyContent="center"
-            gap="0.563rem"
-            mt="0.75rem"
+            sx={{
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.563rem',
+              mt: '0.75rem',
+            }}
           >
-            <Link href="#signUp" sx={styles.link}>
-              <UiButton
-                fullWidth
-                variant="outlined"
-                size="small"
-                disabled
-                onClick={handleCloseDrawer}
-              >
-                {t('header.actions.log_in')}
-              </UiButton>
-            </Link>
-            <Link href="#signUp" sx={styles.link}>
-              <UiButton fullWidth onClick={handleCloseDrawer} variant="contained" size="small">
-                {t('header.actions.try_it_out')}
-              </UiButton>
-            </Link>
+            <UiButton fullWidth variant="outlined" size="small" disabled>
+              {t('header.actions.log_in')}
+            </UiButton>
+            <UiButton
+              href="#signUp"
+              fullWidth
+              onClick={handleCloseDrawer}
+              variant="contained"
+              size="small"
+            >
+              {t('header.actions.try_it_out')}
+            </UiButton>
           </Stack>
-          <NavList navItems={drawerNavList} handleClick={handleCloseDrawer} />
+          <NavList
+            navItems={drawerNavList}
+            handleClick={(link: string) => {
+              handleLinkClick(link);
+              handleCloseDrawer();
+            }}
+          />
           <VilnaCRMEmail />
           <SocialMediaList socialLinks={socialMedia} />
         </Box>

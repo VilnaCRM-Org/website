@@ -61,6 +61,46 @@ If you find an issue to work on, you are welcome to open a PR with a fix.
 
 2. Create a working branch and start with your changes!
 
+#### Maintain Makefile shell coverage
+
+If your change adds or updates a Makefile target, keep the shell-coverage inventory in
+sync:
+
+- Update `tests/bats/make-target-coverage.tsv` so every Makefile target is marked as
+  either Bats-covered or already covered by a pull request workflow.
+- If the target is not already exercised by CI, add or update the relevant test in
+  `tests/bats/`.
+- Run `make test-bats`.
+
+#### Run the CI phases locally
+
+Before opening a pull request you can reproduce the pipeline's grouped phases
+locally with the CI orchestration targets:
+
+- `make ci` runs the full flow (setup → lint → dev tests → mutation → prod
+  setup → prod tests).
+- Run a single phase with `make ci-lint`, `make ci-test`, `make ci-mutation`,
+  or `make ci-test-prod`; `make ensure-dev` starts the dev container only when
+  it is not already running.
+- The individual `ci-test-*` entrypoints (e.g. `ci-test-unit-client`,
+  `ci-test-e2e`) assume the matching `ci-setup` / `ci-prod-setup` phase already
+  prepared the environment, mirroring how CI fans them out.
+
+When you add a new orchestration target, keep
+`tests/bats/make-target-coverage.tsv` in sync as described above.
+
+#### Dockerfile build performance
+
+If your change touches a `Dockerfile` (or the gate's own config), a CI gate
+rebuilds each configured image, measures its size and build time, and runs
+`dive` and `hadolint` checks against per-image budgets. The check hard-fails a
+pull request when a budget or gate is exceeded, unless a documented exception
+applies. Budgets live in `.github/dockerfile-perf.json`, and exceptions are
+granted via an inline `# perf-exception: <reason>` marker or the
+`docker-perf-exception` PR label. See
+[docs/dockerfile-performance.md](docs/dockerfile-performance.md) for the full
+policy, thresholds, and tuning guide.
+
 ### Commit your update
 
 Commit the changes once you are happy with them.

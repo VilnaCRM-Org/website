@@ -92,7 +92,7 @@ describe('AuthFormWrapper - Props Forwarding', () => {
         control: expect.any(Object),
         formValidationErrors: expect.any(Object),
       }),
-      {}
+      undefined
     );
   });
 });
@@ -117,7 +117,7 @@ describe('AuthFormWrapper - Default Values', () => {
           }),
         }),
       }),
-      {}
+      undefined
     );
   });
   it('renders form with initial default values in the control object', () => {
@@ -160,7 +160,7 @@ describe('AuthFormWrapper - Notification props', () => {
         onRetry: expect.any(Function),
         loading: false,
       }),
-      {}
+      undefined
     );
   });
 });

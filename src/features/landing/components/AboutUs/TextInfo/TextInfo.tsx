@@ -1,4 +1,4 @@
-import { Box, Link, Stack } from '@mui/material';
+import { Box, Stack } from '@mui/material';
 import React from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
@@ -19,11 +19,9 @@ function TextInfo(): React.ReactElement {
       <UiTypography variant="bodyText18" sx={styles.text}>
         {t('about_vilna.text_main')}
       </UiTypography>
-      <Link href="#signUp" sx={styles.link}>
-        <UiButton sx={styles.button as React.CSSProperties} variant="contained" size="medium">
-          {t('about_vilna.button_main')}
-        </UiButton>
-      </Link>
+      <UiButton href="#signUp" sx={[styles.link, styles.button]} variant="contained" size="medium">
+        {t('about_vilna.button_main')}
+      </UiButton>
     </Stack>
   );
 }

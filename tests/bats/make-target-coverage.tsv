@@ -1,0 +1,87 @@
+target	coverage	evidence	details
+help	bats	tests/bats/makefile_targets.bats	Validated through the help output contract.
+start	bats	tests/bats/makefile_targets.bats	Validated in CI=1 mode with a stubbed Next.js binary.
+wait-for-dev	bats	tests/bats/makefile_targets.bats	Validated with a stubbed curl readiness check.
+create-temp-dev-container-dind	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker commands and env-var guards.
+copy-source-to-container-dind	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker and tar commands.
+install-deps-in-container-dind	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker and npm/pnpm commands.
+run-unit-tests-dind	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker exec calls.
+run-mutation-tests-dind	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker exec calls.
+run-eslint-tests-dind	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker exec calls.
+run-typescript-tests-dind	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker exec calls.
+run-markdown-lint-tests-dind	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker exec calls.
+create-k6-helper-container-dind	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker commands and env-var guards.
+build-k6	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker Compose build calls.
+run-load-tests-dind	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker exec calls and env-var guards.
+build	ci	.github/workflows/mutation-testing.yml	Executed through `make test-mutation`, which depends on `build`.
+build-analyze	bats	tests/bats/makefile_targets.bats	Validated with stubbed Next.js build commands.
+build-out	bats	tests/bats/makefile_targets.bats	Validated in an isolated Makefile sandbox with stubbed Docker commands.
+format	bats	tests/bats/makefile_targets.bats	Validated with a stubbed pnpm invocation.
+lint-next	ci	.github/workflows/static-testing.yml	Executed through `make lint`, which depends on `lint-next`.
+lint-tsc	ci	.github/workflows/static-testing.yml	Executed through `make lint`, which depends on `lint-tsc`.
+lint-md	ci	.github/workflows/static-testing.yml	Executed through `make lint`, which depends on `lint-md`.
+lint	ci	.github/workflows/static-testing.yml	Executed directly by the static testing workflow.
+husky	bats	tests/bats/makefile_targets.bats	Validated with a stubbed pnpm invocation.
+storybook-start	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Storybook binary.
+storybook-build	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Storybook binary.
+test-e2e	ci	.github/workflows/e2e-testing.yml	Executed directly by the Playwright PR workflow.
+test-e2e-ui	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker and Playwright commands.
+test-visual	ci	.github/workflows/visual-testing.yml	Executed directly by the visual testing workflow.
+test-visual-ui	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker and Playwright commands.
+test-visual-update	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker and Playwright commands.
+create-network	ci	.github/workflows/e2e-testing.yml	Executed through `make test-e2e`, which calls `start-prod` and its `create-network` prerequisite.
+start-prod	ci	.github/workflows/e2e-testing.yml	Executed through `make test-e2e` and other PR workflows that depend on `start-prod`.
+wait-for-prod	bats	tests/bats/makefile_targets.bats	Validated with a stubbed curl readiness check.
+test-unit-all	ci	.github/workflows/unit-testing.yml	Executed directly by the unit testing workflow.
+test-unit-client	ci	.github/workflows/unit-testing.yml	Executed through `make test-unit-all`, which depends on `test-unit-client`.
+test-unit-server	ci	.github/workflows/unit-testing.yml	Executed through `make test-unit-all`, which depends on `test-unit-server`.
+test-bats	ci	.github/workflows/bats-testing.yml	Executed directly by the dedicated Bats PR workflow.
+test-memory-leak	ci	.github/workflows/memory-leak-testing.yml	Executed directly by the memory leak workflow.
+memory-leak-dind	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker Compose commands.
+test-mutation	ci	.github/workflows/mutation-testing.yml	Executed directly by the mutation testing workflow.
+wait-for-prod-health	ci	.github/workflows/load-testing.yml	Executed through `make load-tests` and `make load-tests-swagger`, which depend on `wait-for-prod-health`.
+visual-direct	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker and Playwright commands.
+e2e-direct	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker and Playwright commands.
+all	bats	tests/bats/makefile_targets.bats	Validated through its `build` prerequisite in the Makefile sandbox.
+clean	bats	tests/bats/makefile_targets.bats	Validated through its `down` prerequisite in the Makefile sandbox.
+load-tests	ci	.github/workflows/load-testing.yml	Executed directly by the load testing workflow matrix.
+load-tests-swagger	ci	.github/workflows/load-testing.yml	Executed directly by the load testing workflow matrix.
+lighthouse-desktop	ci	.github/workflows/performance-testing.yml	Executed directly by the performance workflow.
+lighthouse-desktop-dind	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker Compose LHCI commands.
+lighthouse-mobile	ci	.github/workflows/performance-testing.yml	Executed directly by the performance workflow.
+lighthouse-mobile-dind	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker Compose LHCI commands.
+install	ci	.github/workflows/static-testing.yml	Executed directly by the static testing workflow.
+install-chromium-lhci	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker Compose and npm commands.
+test-chromium	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Chromium version check.
+update	bats	tests/bats/makefile_targets.bats	Validated with a stubbed pnpm invocation.
+down	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Docker Compose invocation.
+sh	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Docker Compose invocation.
+ps	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Docker Compose invocation.
+logs	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Docker Compose invocation.
+new-logs	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Docker Compose invocation.
+stop	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Docker Compose invocation.
+check-node-version	bats	tests/bats/makefile_targets.bats	Validated with a stubbed pnpm/node invocation.
+test-integration	bats	tests/bats/makefile_targets.bats	Validated by invoking Jest with TEST_ENV=integration through a stubbed jest binary.
+test-integration-watch	bats	tests/bats/makefile_targets.bats	Validated by invoking Jest in watch mode with TEST_ENV=integration through a stubbed jest binary.
+ci-test-integration	ci	.github/workflows/integration-testing.yml	Executed directly by the integration testing workflow.
+ci-setup	bats	tests/bats/makefile_targets.bats	Validated by bringing up the stubbed dev service and asserting the readiness wait.
+ci-lint	bats	tests/bats/makefile_targets.bats	Validated by running the parallel lint runner against stubbed make targets.
+ci-test	bats	tests/bats/makefile_targets.bats	Validated by running the parallel dev-side test runner against stubbed make targets.
+ci-test-unit-client	bats	tests/bats/makefile_targets.bats	Validated by invoking Jest with TEST_ENV=client through a stubbed jest binary.
+ci-test-unit-server	bats	tests/bats/makefile_targets.bats	Validated by invoking Jest with TEST_ENV=server through a stubbed jest binary.
+ci-test-mutation	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Stryker invocation via pnpm.
+ci-mutation	bats	tests/bats/makefile_targets.bats	Validated by delegating to ci-test-mutation with a stubbed Stryker invocation.
+ci-prod-setup	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker Compose start-prod and Chromium install commands.
+ci-test-e2e	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker and Playwright commands.
+ci-test-visual	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker and Playwright commands.
+ci-test-memory-leak	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker Compose Memlab commands.
+ci-test-load	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker Compose K6 commands.
+ci-test-lighthouse-desktop	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker Compose LHCI commands.
+ci-test-lighthouse-mobile	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker Compose LHCI commands.
+ci-test-prod	bats	tests/bats/makefile_targets.bats	Validated by running every prod-side phase against stubbed commands.
+ci	bats	tests/bats/makefile_targets.bats	Validated by running the full CI pipeline against stubbed tooling.
+ensure-dev	bats	tests/bats/makefile_targets.bats	Validated by asserting the dev service starts when it is not already running.
+start-prod-clean	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Docker Compose force-recreate invocation.
+test-load	bats	tests/bats/makefile_targets.bats	Validated as an alias that runs the load-tests target with stubbed K6 commands.
+test-load-swagger	bats	tests/bats/makefile_targets.bats	Validated as an alias that runs the load-tests-swagger target with stubbed K6 commands.
+pr-comments	bats	tests/bats/makefile_targets.bats	Validated with a stubbed get-pr-comments.sh helper and PR/FORMAT argument dispatch.

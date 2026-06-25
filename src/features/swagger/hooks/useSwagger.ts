@@ -5,7 +5,11 @@ type UseSwaggerReturn = {
   error: Error | null;
 };
 
-const useSwagger: () => UseSwaggerReturn = () => {
+const DEFAULT_SWAGGER_SCHEMA_URL = '/swagger-schema.json';
+
+const useSwagger: (schemaUrl?: string) => UseSwaggerReturn = (
+  schemaUrl: string = DEFAULT_SWAGGER_SCHEMA_URL
+) => {
   const [swaggerContent, setSwaggerContent] = useState<unknown | null>(null);
   const [error, setError] = useState<Error | null>(null);
 
@@ -13,7 +17,7 @@ const useSwagger: () => UseSwaggerReturn = () => {
     const controller: AbortController = new AbortController();
     const loadSwaggerSchema: () => Promise<void> = async (): Promise<void> => {
       try {
-        const res: Response = await fetch('/swagger-schema.json', { signal: controller.signal });
+        const res: Response = await fetch(schemaUrl, { signal: controller.signal });
         if (!res.ok) {
           throw new Error(`Failed to fetch swagger schema – ${res.status} ${res.statusText}`);
         }
@@ -28,7 +32,7 @@ const useSwagger: () => UseSwaggerReturn = () => {
     return () => {
       controller.abort();
     };
-  }, []);
+  }, [schemaUrl]);
 
   return { swaggerContent, error };
 };

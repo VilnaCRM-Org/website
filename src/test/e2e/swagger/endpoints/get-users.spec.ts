@@ -1,11 +1,12 @@
 import { expect, type Locator, Page, test } from '@playwright/test';
 
-import { ApiUser, BASE_API, BasicEndpointElements } from '../utils/constants';
+import { ApiUser, BASE_API, BasicEndpointElements, MOCK_API_USERS } from '../utils/constants';
 import {
   initSwaggerPage,
   clearEndpointResponse,
   getAndCheckExecuteBtn,
   interceptWithErrorResponse,
+  interceptWithJsonResponse,
   parseJsonSafe,
 } from '../utils/helpers';
 import { locators } from '../utils/locators';
@@ -89,6 +90,7 @@ async function checkErrorResponse(
 test.describe('get user: try it out interaction', () => {
   test('default values', async ({ page }) => {
     const elements: EndpointElements = await setupEndpoint(page);
+    await interceptWithJsonResponse(page, `${BASE_API}**`, MOCK_API_USERS);
 
     await expect(elements.pageNumberInput).toHaveValue('1');
     await expect(elements.itemsPerPageInput).toHaveValue('30');
@@ -113,6 +115,7 @@ test.describe('get user: try it out interaction', () => {
     const elements: EndpointElements = await setupEndpoint(page);
     const changedNumberPage: string = '2';
     const changedPerPageNumber: string = '15';
+    await interceptWithJsonResponse(page, `${BASE_API}**`, MOCK_API_USERS);
 
     await elements.pageNumberInput.fill(changedNumberPage);
     await elements.itemsPerPageInput.fill(changedPerPageNumber);
@@ -126,6 +129,7 @@ test.describe('get user: try it out interaction', () => {
 
   test('empty values', async ({ page }) => {
     const elements: EndpointElements = await setupEndpoint(page);
+    await interceptWithJsonResponse(page, `${BASE_API}**`, MOCK_API_USERS);
 
     await elements.pageNumberInput.fill('');
     await elements.itemsPerPageInput.fill('');

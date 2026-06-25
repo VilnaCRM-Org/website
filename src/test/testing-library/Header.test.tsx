@@ -5,6 +5,7 @@ import { useRouter } from 'next/router';
 
 import { headerNavList } from '../../features/landing/components/Header/constants';
 import Header from '../../features/landing/components/Header/Header';
+import fallbackNavigate from '../../features/landing/helpers/fallbackNavigate';
 import scrollToAnchor from '../../features/landing/helpers/scrollToAnchor';
 import { NavItemProps } from '../../features/landing/types/header/navigation';
 
@@ -13,8 +14,29 @@ const logoAlt: string = i18next.t(logoAltKey);
 
 jest.mock('next/router', () => ({ useRouter: jest.fn() }));
 
+type RouterMock = {
+  pathname: string;
+  asPath: string;
+  push: jest.Mock;
+  events: { on: jest.Mock; off: jest.Mock };
+};
+
 describe('Header component', () => {
   let spy: jest.SpyInstance;
+  let routerMock: RouterMock;
+
+  beforeEach(() => {
+    routerMock = {
+      pathname: '/',
+      asPath: '/',
+      push: jest.fn(),
+      events: {
+        on: jest.fn(),
+        off: jest.fn(),
+      },
+    };
+    (useRouter as jest.Mock).mockReturnValue(routerMock);
+  });
 
   afterEach(() => {
     if (spy) {
@@ -33,31 +55,51 @@ describe('Header component', () => {
     const { getByAltText } = render(<Header />);
     expect(getByAltText(logoAlt)).toBeInTheDocument();
   });
+
+  it('renders logo link pointing to home with aria-label', () => {
+    const { getByRole } = render(<Header />);
+    const logoLink: HTMLElement = getByRole('link', { name: logoAlt });
+
+    expect(logoLink).toHaveAttribute('href', '/');
+    expect(logoLink).toHaveAttribute('aria-label', logoAlt);
+  });
 });
 
 jest.mock('../../features/landing/helpers/scrollToAnchor', () => ({
   __esModule: true,
   default: jest.fn(),
 }));
+jest.mock('../../features/landing/helpers/fallbackNavigate', () => ({
+  __esModule: true,
+  default: jest.fn(),
+}));
 const scrollToAnchorMock: jest.MockedFunction<typeof scrollToAnchor> =
   scrollToAnchor as jest.MockedFunction<typeof scrollToAnchor>;
+const fallbackNavigateMock: jest.MockedFunction<typeof fallbackNavigate> =
+  fallbackNavigate as jest.MockedFunction<typeof fallbackNavigate>;
 
 describe('Header navigation', () => {
   const user: UserEvent = userEvent.setup();
 
-  let routerMock: { pathname: string; push: jest.Mock };
+  let routerMock: RouterMock;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    window.history.pushState({}, 'Test Page', '/');
 
     routerMock = {
       pathname: '/swagger',
+      asPath: '/swagger',
       push: jest.fn().mockImplementation(async (url: string) => {
         routerMock.pathname = url;
         return Promise.resolve();
       }),
+      events: {
+        on: jest.fn(),
+        off: jest.fn(),
+      },
     };
     (useRouter as jest.Mock).mockReturnValue(routerMock);
+    scrollToAnchorMock.mockClear();
   });
 
   it('should scroll to the correct link on the swagger page', async () => {
@@ -98,23 +140,104 @@ describe('Header navigation', () => {
   it('falls back to window.location.href when router.push fails', async () => {
     routerMock.push.mockRejectedValueOnce(new Error('push failed'));
 
-    const originalLocation: Location = window.location;
-
-    type MutableWindow = Omit<Window, 'location'> & { location: Location };
-    const mutableWindow: MutableWindow = window as unknown as MutableWindow;
-
-    Object.defineProperty(mutableWindow, 'location', {
-      value: { ...originalLocation, href: originalLocation.href },
-      writable: true,
-    });
-
     const { getByText } = render(<Header />);
     const target: NavItemProps = headerNavList[1];
 
     await user.click(getByText(t(target.title)));
 
-    expect(mutableWindow.location.href.endsWith(`/${target.link}`)).toBe(true);
+    expect(fallbackNavigateMock).toHaveBeenCalledWith(`/${target.link}`);
     expect(routerMock.push).toHaveBeenCalledTimes(1);
     expect(scrollToAnchorMock).not.toHaveBeenCalled();
+  });
+
+  it('should register routeChangeComplete event listener on mount', () => {
+    render(<Header />);
+
+    expect(routerMock.events.on).toHaveBeenCalledWith('routeChangeComplete', expect.any(Function));
+  });
+
+  it('should unregister routeChangeComplete event listener on unmount', () => {
+    const { unmount } = render(<Header />);
+
+    unmount();
+
+    expect(routerMock.events.off).toHaveBeenCalledWith('routeChangeComplete', expect.any(Function));
+  });
+
+  it('should scroll to anchor when URL contains hash on mount', () => {
+    routerMock.asPath = '/swagger#Contacts';
+
+    render(<Header />);
+
+    expect(scrollToAnchorMock).toHaveBeenCalledWith('#Contacts');
+  });
+
+  it('should scroll to anchor when routeChangeComplete fires with hash in URL', () => {
+    render(<Header />);
+
+    const handleScroll: (url: string) => void = routerMock.events.on.mock.calls[0][1];
+
+    handleScroll('/swagger#Advantages');
+
+    expect(scrollToAnchorMock).toHaveBeenCalledWith('#Advantages');
+  });
+
+  it('should not scroll when URL does not contain hash', () => {
+    routerMock.asPath = '/swagger';
+
+    render(<Header />);
+
+    const callsBeforeMount: number = scrollToAnchorMock.mock.calls.length;
+
+    const handleScroll: (url: string) => void = routerMock.events.on.mock.calls[0][1];
+    handleScroll('/swagger');
+
+    expect(scrollToAnchorMock).toHaveBeenCalledTimes(callsBeforeMount);
+  });
+
+  it('should extract correct hash ID from URL with multiple # characters', () => {
+    render(<Header />);
+
+    const handleScroll: (url: string) => void = routerMock.events.on.mock.calls[0][1];
+
+    // URL has multiple # characters, but only the first segment is extracted
+    // Implementation splits by '#', takes [1] to get 'Section'
+    handleScroll('/page#Section#subsection');
+
+    expect(scrollToAnchorMock).toHaveBeenCalledWith('#Section');
+  });
+
+  it('should handle URL with hash at the end', () => {
+    render(<Header />);
+
+    const handleScroll: (url: string) => void = routerMock.events.on.mock.calls[0][1];
+
+    handleScroll('/page#');
+
+    expect(scrollToAnchorMock).toHaveBeenCalledWith('#');
+  });
+
+  it('should re-register event listener when router changes', () => {
+    const { rerender } = render(<Header />);
+
+    expect(routerMock.events.on).toHaveBeenCalledTimes(1);
+    expect(routerMock.events.off).toHaveBeenCalledTimes(0);
+
+    const newRouterMock: RouterMock = {
+      pathname: '/',
+      asPath: '/',
+      push: jest.fn(),
+      events: {
+        on: jest.fn(),
+        off: jest.fn(),
+      },
+    };
+
+    (useRouter as jest.Mock).mockReturnValue(newRouterMock);
+
+    rerender(<Header />);
+
+    expect(routerMock.events.off).toHaveBeenCalledTimes(1);
+    expect(newRouterMock.events.on).toHaveBeenCalledTimes(1);
   });
 });

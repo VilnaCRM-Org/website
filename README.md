@@ -106,12 +106,47 @@ Testing
   make test-unit-all: runs unit tests for both client and server environments
   make test-unit-client: runs unit tests for the client using Jest
   make test-unit-server: runs unit tests for the server using Jest
+  make test-integration: runs the integration layer (real Apollo transport, network stubbed)
+  make test-integration-watch: runs the integration layer in watch mode
+  make test-bats: runs the Bats shell regression suite for Makefile targets and CI helper scripts
   make test-memory-leak: runs memory leak tests using Memlab
   make load-tests: executes load tests using the K6 library
   make test-e2e: runs end-to-end tests inside the prod container
   make test-e2e-ui: runs end-to-end tests with UI inside the prod container
   make test-visual: runs visual tests inside the prod container
   make test-visual-ui: runs visual tests with UI inside the prod container
+  make test-load: alias for load-tests (K6 homepage load tests)
+  make test-load-swagger: alias for load-tests-swagger (K6 Swagger load tests)
+```
+
+Local CI Orchestration
+
+These targets run the same grouped CI phases the pipeline uses, adapted to
+website's pnpm + Next.js toolchain, so developers and agents can reproduce a
+full CI run — or any single phase — locally:
+
+```bash
+  make ci: runs the full local CI flow (setup → lint → dev tests → mutation → prod setup → prod tests)
+  make ci-setup: prepares the shared dev container for CI-oriented checks
+  make ci-lint: runs the lint phase (ESLint, TypeScript, Markdown) in parallel with grouped output
+  make ci-test: runs the dev-side tests (unit client/server, integration) in parallel
+  make ci-mutation: runs Stryker mutation testing in isolation
+  make ci-prod-setup: starts the prod stack and installs Chromium/LHCI for prod-side tests
+  make ci-test-prod: runs the prod-side tests (e2e, visual, memory-leak, load, lighthouse) sequentially
+  make ensure-dev: starts the dev service only when it is not already running
+```
+
+The phases are also exposed as individual entrypoints so CI workflows can fan
+them out independently: `ci-test-unit-client`, `ci-test-unit-server`,
+`ci-test-integration` (dev-side) and `ci-test-e2e`, `ci-test-visual`,
+`ci-test-memory-leak`, `ci-test-load`, `ci-test-lighthouse-desktop`,
+`ci-test-lighthouse-mobile` (prod-side).
+
+Repository Helpers
+
+```bash
+  make pr-comments: retrieves unresolved PR review comments (PR=<num> FORMAT=<text|json|markdown>)
+  make start-prod-clean: force-rebuilds and recreates the prod test stack, then waits for health
 ```
 
 ### Important Note About Swagger E2E Tests
@@ -182,6 +217,20 @@ Example:
 ```bash
   CI=1 make start
 ```
+
+### Bats Shell Coverage
+
+Use the Bats suite to validate Makefile shell flows and `scripts/ci` helpers that are
+not already exercised by the pull request workflows:
+
+```bash
+  make test-bats
+```
+
+The coverage inventory lives in `tests/bats/make-target-coverage.tsv`. When you add a
+new Makefile target, either add Bats coverage for it or document the workflow that
+already exercises it in that file. Additional suite-maintenance notes live in
+`tests/bats/README.md`.
 
 ### Load Testing with K6
 
