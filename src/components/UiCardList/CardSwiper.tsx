@@ -14,6 +14,10 @@ function CardSwiper({ cardList, hoverCardContent }: CardList): React.ReactElemen
   const swiperRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (cardList.length === 0) {
+      return undefined;
+    }
+
     const target: HTMLElement | null = document.querySelector('body');
 
     function isToolTip(node: Element): boolean {
@@ -28,13 +32,13 @@ function CardSwiper({ cardList, hoverCardContent }: CardList): React.ReactElemen
       mutationsList.forEach((mutation: MutationRecord) => {
         if (mutation.type === 'childList') {
           mutation.addedNodes.forEach((node: Node): void => {
-            if (node instanceof Element && isToolTip(node)) {
-              swiperRef.current!.style.pointerEvents = 'none';
+            if (node instanceof Element && isToolTip(node) && swiperRef.current) {
+              swiperRef.current.style.pointerEvents = 'none';
             }
           });
           mutation.removedNodes.forEach((node: Node): void => {
-            if (node instanceof Element && isToolTip(node)) {
-              swiperRef.current!.style.pointerEvents = 'auto';
+            if (node instanceof Element && isToolTip(node) && swiperRef.current) {
+              swiperRef.current.style.pointerEvents = 'auto';
             }
           });
         }
@@ -46,7 +50,7 @@ function CardSwiper({ cardList, hoverCardContent }: CardList): React.ReactElemen
     }
 
     return () => observer.disconnect();
-  }, []);
+  }, [cardList.length]);
 
   if (cardList.length === 0) {
     return null;

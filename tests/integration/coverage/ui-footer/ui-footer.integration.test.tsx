@@ -23,7 +23,7 @@ const containerElementClass: string = '.MuiContainer-root';
 const logoAlt: string = t('footer.logo_alt');
 const privacyText: string = t('footer.privacy');
 const usagePolicyText: string = t('footer.usage_policy');
-const expectedEmail: string = process.env.NEXT_PUBLIC_VILNACRM_GMAIL ?? 'info@vilnacrm.com';
+const expectedEmail: string = process.env.NEXT_PUBLIC_VILNACRM_GMAIL?.trim() || 'info@vilnacrm.com';
 
 const localizedRegExp: (key: string) => RegExp = key => new RegExp(t(key));
 
@@ -112,6 +112,6 @@ describe('VilnaCRMEmail (integration)', () => {
 
     expect(screen.getByText(expectedEmail)).toBeInTheDocument();
     const anchor: HTMLElement | null = within(container).getByText(expectedEmail).closest('a');
-    expect(anchor).toHaveAttribute('href', 'mailto:info@vilnacrm.com');
+    expect(anchor).toHaveAttribute('href', `mailto:${expectedEmail}`);
   });
 });

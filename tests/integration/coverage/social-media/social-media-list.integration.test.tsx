@@ -25,5 +25,6 @@ describe('SocialMediaList (integration)', () => {
     const { queryAllByRole } = render(<SocialMediaList socialLinks={emptySocialLinks} />);
 
     expect(queryAllByRole(linkRole)).toHaveLength(0);
+    expect(queryAllByRole(imageRole)).toHaveLength(0);
   });
 });
