@@ -127,7 +127,11 @@ describe('VilnaCRMEmail (integration)', () => {
       const anchor: HTMLElement | null = within(container).getByText(fallbackEmail).closest('a');
       expect(anchor).toHaveAttribute('href', `mailto:${fallbackEmail}`);
     } finally {
-      process.env.NEXT_PUBLIC_VILNACRM_GMAIL = original;
+      if (original === undefined) {
+        delete process.env.NEXT_PUBLIC_VILNACRM_GMAIL;
+      } else {
+        process.env.NEXT_PUBLIC_VILNACRM_GMAIL = original;
+      }
     }
   });
 });
