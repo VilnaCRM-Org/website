@@ -357,11 +357,11 @@ ci-test-integration: ## Run integration tests directly assuming deps are install
 # pipeline runs, adapted to website's pnpm + Next.js toolchain.
 #
 # Intentionally NOT ported from crm/Makefile (rationale):
-#   * lint-dup (jscpd), lint-metrics (rust-code-analysis), lint-deps
-#     (dependency-cruiser), fmt-qlty / qlty: not configured in this repo;
-#     website's lint stack is ESLint + tsc + markdownlint. Adopting them needs
-#     new tooling/config and belongs in a dedicated issue, not a naming-parity
-#     change.
+#   * lint-dup (jscpd), lint-metrics (rust-code-analysis), fmt-qlty / qlty:
+#     not configured in this repo; website's lint stack is ESLint + tsc +
+#     markdownlint + dependency-cruiser (exposed as lint-deps). Adopting the
+#     remaining tools needs new tooling/config and belongs in a dedicated
+#     issue, not a naming-parity change.
 #   * mockoon wait in ci-setup: website's dev service has no mockoon dependency
 #     (mockoon lives in the prod/test compose stack), so ci-setup brings up dev
 #     only.

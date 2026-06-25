@@ -23,7 +23,8 @@ const containerElementClass: string = '.MuiContainer-root';
 const logoAlt: string = t('footer.logo_alt');
 const privacyText: string = t('footer.privacy');
 const usagePolicyText: string = t('footer.usage_policy');
-const expectedEmail: string = process.env.NEXT_PUBLIC_VILNACRM_GMAIL ?? 'info@vilnacrm.com';
+const fallbackEmail: string = 'info@vilnacrm.com';
+const expectedEmail: string = process.env.NEXT_PUBLIC_VILNACRM_GMAIL?.trim() || fallbackEmail;
 
 const localizedRegExp: (key: string) => RegExp = key => new RegExp(t(key));
 
@@ -112,6 +113,25 @@ describe('VilnaCRMEmail (integration)', () => {
 
     expect(screen.getByText(expectedEmail)).toBeInTheDocument();
     const anchor: HTMLElement | null = within(container).getByText(expectedEmail).closest('a');
-    expect(anchor).toHaveAttribute('href', 'mailto:info@vilnacrm.com');
+    expect(anchor).toHaveAttribute('href', `mailto:${expectedEmail}`);
+  });
+
+  it('falls back to the default address when the env var is unset', () => {
+    const original: string | undefined = process.env.NEXT_PUBLIC_VILNACRM_GMAIL;
+    delete process.env.NEXT_PUBLIC_VILNACRM_GMAIL;
+
+    try {
+      const { container } = render(<VilnaCRMEmail />);
+
+      expect(screen.getByText(fallbackEmail)).toBeInTheDocument();
+      const anchor: HTMLElement | null = within(container).getByText(fallbackEmail).closest('a');
+      expect(anchor).toHaveAttribute('href', `mailto:${fallbackEmail}`);
+    } finally {
+      if (original === undefined) {
+        delete process.env.NEXT_PUBLIC_VILNACRM_GMAIL;
+      } else {
+        process.env.NEXT_PUBLIC_VILNACRM_GMAIL = original;
+      }
+    }
   });
 });
