@@ -98,6 +98,8 @@ Linting & Formatting
   make lint-next: lints the codebase using Next.js rules
   make lint-tsc: runs static type checking with TypeScript
   make lint-md: lints all markdown files (excluding CHANGELOG.md) using markdownlint
+  make lint-deps: validates architecture/import boundaries with dependency-cruiser
+  make lint: runs all linters (ESLint, TypeScript, markdownlint, and dependency-cruiser)
 ```
 
 Testing
@@ -261,6 +263,51 @@ Available Load Test Scenarios:
 - spike: sudden ramp-up of virtual users to test burst handling.
 
 Adjust scenarios and thresholds in ./src/test/load/config.json.dist as needed.
+
+## Architecture Rules (dependency-cruiser)
+
+Architectural boundaries are enforced with
+[dependency-cruiser](https://github.com/sverweij/dependency-cruiser). The rules
+live in [`.dependency-cruiser.js`](.dependency-cruiser.js), run locally via
+`make lint-deps` (also part of the aggregate `make lint`), and are validated in
+CI on every pull request to `main` by `.github/workflows/dependency-cruiser.yml`.
+
+### What is enforced
+
+- **No circular dependencies** anywhere in the graph.
+- **Feature isolation**: code outside a feature may import it only through its
+  public barrel (`src/features/<feature>/index.ts`); a feature must not import a
+  sibling feature.
+- **Shared layers stay feature-agnostic**: `src/components` (shared UI) and the
+  foundational layers (`shared`, `hooks`, `utils`, `lib`, `providers`, `types`,
+  `config`, `routes`, `stores`) must not depend on `src/features`.
+- **Feature directory names** must be lowercase `kebab-case`. Component
+  directories stay `PascalCase` by convention, so lowercase enforcement is
+  scoped to feature names only.
+- **Allowed feature subfolders**: `api`, `assets`, `components`, `constants`,
+  `helpers`, `hooks`, `i18n`, `routes`, `types`, `utils`.
+- **Hygiene**: no orphan modules, no production imports of test files or
+  `devDependencies`, and no unresolved / not-in-`package.json` imports.
+
+Tests (`src/test`, `tests`) are exempt from the feature-boundary and
+devDependency rules — they may import internals and dev tooling directly.
+
+### Running it
+
+```bash
+make lint-deps        # validate locally (depcruise over src and tests)
+make lint             # run every linter, including dependency-cruiser
+```
+
+CI fails the build on any violation.
+
+### Adding an exception
+
+Prefer fixing the boundary violation. When an exception is genuinely warranted,
+adjust the relevant rule in `.dependency-cruiser.js` — narrow its `from`/`to`
+globs, add a `pathNot` entry, or (only for unavoidable cases) lower its
+`severity` to `warn` — and leave a comment explaining why so the boundary intent
+stays clear.
 
 ## Routing
 

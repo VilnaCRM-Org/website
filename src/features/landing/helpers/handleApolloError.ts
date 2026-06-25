@@ -45,9 +45,15 @@ type StatusCodeHandler = {
 };
 
 const STATUS_CODE_HANDLERS: StatusCodeHandler[] = [
-  { match: (code): boolean => code === HTTPStatusCodes.UNAUTHORIZED, key: CLIENT_ERROR_KEYS.UNAUTHORIZED },
+  {
+    match: (code): boolean => code === HTTPStatusCodes.UNAUTHORIZED,
+    key: CLIENT_ERROR_KEYS.UNAUTHORIZED,
+  },
   { match: (code): boolean => code === HTTPStatusCodes.FORBIDDEN, key: CLIENT_ERROR_KEYS.DENIED },
-  { match: (code): boolean => typeof code === 'number' && code >= 500 && code < 600, key: CLIENT_ERROR_KEYS.SERVER_ERROR },
+  {
+    match: (code): boolean => typeof code === 'number' && code >= 500 && code < 600,
+    key: CLIENT_ERROR_KEYS.SERVER_ERROR,
+  },
 ];
 
 function getMessageByStatusCode(

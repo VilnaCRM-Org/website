@@ -7,6 +7,7 @@ on:
     paths:
       - 'Dockerfile'
       - 'src/test/load/Dockerfile'
+      - '.dockerignore'
       - '.github/dockerfile-perf.json'
       - '.github/workflows/dockerfile-performance.yml'
       - 'scripts/ci/docker_perf.sh'

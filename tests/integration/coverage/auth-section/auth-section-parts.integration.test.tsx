@@ -11,13 +11,14 @@
 import { render, screen } from '@testing-library/react';
 import { t } from 'i18next';
 
-import { socialLinks, testSocialLink } from '@landing/AuthSection/constants';
+import { socialLinks } from '@landing/AuthSection/constants';
 import { PasswordTip } from '@landing/AuthSection/PasswordTip';
 import { SignUpText } from '@landing/AuthSection/SignUpText';
 import { SocialItem } from '@landing/AuthSection/SocialItem';
 import { SocialList } from '@landing/AuthSection/SocialList';
 
 import { SocialLink } from '../../../../src/features/landing/types/authentication/social';
+import { testSocialLink } from '../../../../src/test/testing-library/fixtures/auth-social.fixtures';
 
 describe('integration: PasswordTip', () => {
   it('renders the recommendation text and all three option lines', () => {

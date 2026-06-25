@@ -3,6 +3,10 @@ on:
   pull_request:
     branches:
       - main
+
+permissions:
+  contents: read
+
 jobs:
   static:
     runs-on: ubuntu-latest
@@ -15,7 +19,10 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ vars.NODE_VERSION }}
+          # Use the repo's pinned LTS (.nvmrc). dependency-cruiser, run via
+          # `make lint`, supports LTS Node only (^20.12 || ^22 || >=24) and
+          # rejects the non-LTS 23.x in vars.NODE_VERSION.
+          node-version-file: '.nvmrc'
 
       - name: Cache pnpm dependencies
         id: cache-pnpm-dependencies

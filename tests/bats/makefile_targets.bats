@@ -31,6 +31,7 @@ run-mutation-tests-dind|TEMP_CONTAINER_NAME
 run-eslint-tests-dind|TEMP_CONTAINER_NAME
 run-typescript-tests-dind|TEMP_CONTAINER_NAME
 run-markdown-lint-tests-dind|TEMP_CONTAINER_NAME
+run-deps-lint-tests-dind|TEMP_CONTAINER_NAME
 create-k6-helper-container-dind|K6_HELPER_NAME
 run-load-tests-dind|K6_HELPER_NAME
 EOF
@@ -80,6 +81,11 @@ EOF
   run_make_target run-markdown-lint-tests-dind TEMP_CONTAINER_NAME=website-dev-test
   [ "$status" -eq 0 ]
   assert_log_contains 'docker exec website-dev-test sh -lc cd /app && make lint-md CI=1'
+
+  reset_command_log
+  run_make_target run-deps-lint-tests-dind TEMP_CONTAINER_NAME=website-dev-test
+  [ "$status" -eq 0 ]
+  assert_log_contains 'docker exec website-dev-test sh -lc cd /app && make lint-deps CI=1'
 }
 
 @test "K6 and DIND quality targets invoke the expected Docker commands" {

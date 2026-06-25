@@ -12,3 +12,9 @@ stryker.log
 *.log
 
 storybook-static
+
+# The dockerfile-performance CI job checks out the base branch into ./base to
+# compare image size/build time. Keep it out of the build context so the head
+# image isn't polluted with the base branch's sources (which would otherwise be
+# type-checked against head modules and can break `next build`).
+base/

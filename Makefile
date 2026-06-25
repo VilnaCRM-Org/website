@@ -23,6 +23,7 @@ JEST_BIN                    = $(BIN_DIR)/jest
 SERVE_BIN                   = $(BIN_DIR)/serve
 PLAYWRIGHT_BIN              = $(BIN_DIR)/playwright
 BATS_BIN                    = pnpm exec bats
+DEPCRUISE_BIN               = $(BIN_DIR)/depcruise
 
 NEXT_BUILD                  = $(NEXT_BIN) build --webpack
 NEXT_BUILD_CMD              = $(NEXT_BUILD) && $(IMG_OPTIMIZE)
@@ -93,7 +94,7 @@ LOAD_TESTS_RUN_SWAGGER      = $(K6) run --summary-trend-stats="avg,min,med,max,p
 UI_FLAGS                    = --ui-port=$(PLAYWRIGHT_TEST_PORT) --ui-host=$(UI_HOST)
 UI_MODE_URL                 = http://$(WEBSITE_DOMAIN):$(PLAYWRIGHT_TEST_PORT)
 
-MD_LINT_ARGS                = -i CHANGELOG.md -i "test-results/**/*.md" -i "playwright-report/data/**/*.md" -i "node_modules/**/*.md"
+MD_LINT_ARGS                = -i CHANGELOG.md -i "test-results/**/*.md" -i "playwright-report/data/**/*.md" -i "node_modules/**/*.md" -i "specs/**" -i "_bmad/**" -i "_bmad-output/**" -i "bmalph/**" -i "CLAUDE.md"
 
 JEST_FLAGS                  = --verbose
 BATS_FORMATTER              ?= pretty
@@ -233,6 +234,11 @@ run-markdown-lint-tests-dind: ## Run Markdown linting tests in DIND container (T
 	@echo "🔍 Running Markdown linting in container $(TEMP_CONTAINER_NAME)..."
 	$(call EXEC_IN_CONTAINER,TEMP_CONTAINER_NAME,cd /app && make lint-md CI=1)
 
+run-deps-lint-tests-dind: ## Run dependency-cruiser tests in DIND container (TEMP_CONTAINER_NAME required)
+	$(call REQUIRE_ENV_VAR,TEMP_CONTAINER_NAME,my-container)
+	@echo "🔍 Running dependency-cruiser in container $(TEMP_CONTAINER_NAME)..."
+	$(call EXEC_IN_CONTAINER,TEMP_CONTAINER_NAME,cd /app && make lint-deps CI=1)
+
 create-k6-helper-container-dind: ## Create a detached K6 helper container for DIND testing (K6_HELPER_NAME required)
 	$(call REQUIRE_ENV_VAR,K6_HELPER_NAME,my-k6-helper)
 	@echo "🧹 Cleaning old K6 helper container $(K6_HELPER_NAME)..."
@@ -280,7 +286,10 @@ lint-tsc: ## This command executes Typescript linter
 lint-md: ## This command executes Markdown linter
 	$(MARKDOWNLINT_BIN) $(MD_LINT_ARGS) "**/*.md"
 
-lint: lint-next lint-tsc lint-md ## Runs all linters: ESLint, TypeScript, and Markdown linters in sequence.
+lint-deps: ## Validate architecture/import boundaries with dependency-cruiser
+	$(PNPM_EXEC) $(DEPCRUISE_BIN) src pages tests --config .dependency-cruiser.js
+
+lint: lint-next lint-tsc lint-md lint-deps ## Runs all linters: ESLint, TypeScript, Markdown, and dependency-cruiser in sequence.
 
 husky: ## One-time Husky setup to enable Git hooks (deprecated if already set)
 	pnpm husky install
@@ -348,11 +357,11 @@ ci-test-integration: ## Run integration tests directly assuming deps are install
 # pipeline runs, adapted to website's pnpm + Next.js toolchain.
 #
 # Intentionally NOT ported from crm/Makefile (rationale):
-#   * lint-dup (jscpd), lint-metrics (rust-code-analysis), lint-deps
-#     (dependency-cruiser), fmt-qlty / qlty: not configured in this repo;
-#     website's lint stack is ESLint + tsc + markdownlint. Adopting them needs
-#     new tooling/config and belongs in a dedicated issue, not a naming-parity
-#     change.
+#   * lint-dup (jscpd), lint-metrics (rust-code-analysis), fmt-qlty / qlty:
+#     not configured in this repo; website's lint stack is ESLint + tsc +
+#     markdownlint + dependency-cruiser (exposed as lint-deps). Adopting the
+#     remaining tools needs new tooling/config and belongs in a dedicated
+#     issue, not a naming-parity change.
 #   * mockoon wait in ci-setup: website's dev service has no mockoon dependency
 #     (mockoon lives in the prod/test compose stack), so ci-setup brings up dev
 #     only.

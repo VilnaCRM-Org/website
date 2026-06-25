@@ -10,10 +10,14 @@ import 'swiper/css';
 import 'swiper/css/pagination';
 import { CardList } from './types';
 
-function CardSwiper({ cardList }: CardList): React.ReactElement {
+function CardSwiper({ cardList, hoverCardContent }: CardList): React.ReactElement | null {
   const swiperRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (cardList.length === 0) {
+      return undefined;
+    }
+
     const target: HTMLElement | null = document.querySelector('body');
 
     function isToolTip(node: Element): boolean {
@@ -28,13 +32,13 @@ function CardSwiper({ cardList }: CardList): React.ReactElement {
       mutationsList.forEach((mutation: MutationRecord) => {
         if (mutation.type === 'childList') {
           mutation.addedNodes.forEach((node: Node): void => {
-            if (node instanceof Element && isToolTip(node)) {
-              swiperRef.current!.style.pointerEvents = 'none';
+            if (node instanceof Element && isToolTip(node) && swiperRef.current) {
+              swiperRef.current.style.pointerEvents = 'none';
             }
           });
           mutation.removedNodes.forEach((node: Node): void => {
-            if (node instanceof Element && isToolTip(node)) {
-              swiperRef.current!.style.pointerEvents = 'auto';
+            if (node instanceof Element && isToolTip(node) && swiperRef.current) {
+              swiperRef.current.style.pointerEvents = 'auto';
             }
           });
         }
@@ -46,7 +50,11 @@ function CardSwiper({ cardList }: CardList): React.ReactElement {
     }
 
     return () => observer.disconnect();
-  }, []);
+  }, [cardList.length]);
+
+  if (cardList.length === 0) {
+    return null;
+  }
 
   const gridMobile: CSSProperties =
     cardList[0].type === 'smallCard' ? styles.gridSmallMobile : styles.gridLargeMobile;
@@ -65,7 +73,7 @@ function CardSwiper({ cardList }: CardList): React.ReactElement {
       >
         {cardList.map(item => (
           <SwiperSlide key={item.id}>
-            <UiCardItem item={item} />
+            <UiCardItem item={item} hoverCardContent={hoverCardContent} />
           </SwiperSlide>
         ))}
       </Swiper>

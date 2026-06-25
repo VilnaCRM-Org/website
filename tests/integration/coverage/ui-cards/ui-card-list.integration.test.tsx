@@ -58,6 +58,12 @@ describe('integration: UiCardList', () => {
 
       expect(container.firstChild).toBeInTheDocument();
     });
+
+    it('renders nothing when the card list is empty', () => {
+      const { container } = render(<CardGrid cardList={[]} />);
+
+      expect(container).toBeEmptyDOMElement();
+    });
   });
 
   describe('CardSwiper', () => {
@@ -65,6 +71,12 @@ describe('integration: UiCardList', () => {
       const { container } = render(<CardSwiper cardList={SMALL_CARDLIST_ARRAY} />);
 
       expect(container.querySelector('.swiper')).toBeInTheDocument();
+    });
+
+    it('renders nothing when the card list is empty', () => {
+      const { container } = render(<CardSwiper cardList={[]} />);
+
+      expect(container).toBeEmptyDOMElement();
     });
 
     it('renders the large mobile grid when the first card is a largeCard', () => {

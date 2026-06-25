@@ -5,9 +5,9 @@ import Image from 'next-export-optimize-images/image';
 import React, { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Logo from '@/assets/svg/logo/Logo.svg';
 import { UiToolbar } from '@/components';
 
-import Logo from '../../assets/svg/logo/Logo.svg';
 import fallbackNavigate from '../../helpers/fallbackNavigate';
 import normalizeLink from '../../helpers/normalizeLink';
 import scrollToAnchor from '../../helpers/scrollToAnchor';

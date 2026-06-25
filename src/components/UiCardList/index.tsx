@@ -5,14 +5,14 @@ import CardSwiper from './CardSwiper';
 import styles from './styles';
 import { CardList } from './types';
 
-function UiCardList({ cardList }: CardList): React.ReactElement {
+function UiCardList({ cardList, hoverCardContent }: CardList): React.ReactElement {
   return (
     <>
       <Box sx={styles.gridContainerLargeScreen}>
-        <CardGrid cardList={cardList} />
+        <CardGrid cardList={cardList} hoverCardContent={hoverCardContent} />
       </Box>
       <Box sx={styles.swiperContainerSmallScreen}>
-        <CardSwiper cardList={cardList} />
+        <CardSwiper cardList={cardList} hoverCardContent={hoverCardContent} />
       </Box>
     </>
   );

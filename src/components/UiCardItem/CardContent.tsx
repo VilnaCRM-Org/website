@@ -1,13 +1,16 @@
 import { Trans } from 'react-i18next';
 
-import { ServicesHoverCard } from '../../features/landing/components/Possibilities/ServicesHoverCard';
 import UiTooltip from '../UiTooltip';
 import UiTypography from '../UiTypography';
 
 import styles from './styles';
 import { CardContentProps } from './types';
 
-function CardContent({ item, isSmallCard }: CardContentProps): React.ReactElement {
+function CardContent({
+  item,
+  isSmallCard,
+  hoverCardContent,
+}: CardContentProps): React.ReactElement {
   return (
     <>
       <UiTypography
@@ -25,12 +28,7 @@ function CardContent({ item, isSmallCard }: CardContentProps): React.ReactElemen
         {isSmallCard ? (
           <Trans i18nKey={item.text}>
             Integrate
-            <UiTooltip
-              placement="bottom"
-              arrow
-              sx={styles.hoveredCard}
-              title={<ServicesHoverCard />}
-            >
+            <UiTooltip placement="bottom" arrow sx={styles.hoveredCard} title={hoverCardContent}>
               <UiTypography variant="bodyText16" component="span">
                 services
               </UiTypography>

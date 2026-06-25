@@ -1,10 +1,8 @@
 import { render } from '@testing-library/react';
 
-import {
-  testSocialDrawerItem,
-  testSocialNoDrawerItem,
-} from '../../features/landing/components/SocialMedia/constants';
-import SocialMediaItem from '../../features/landing/components/SocialMedia/SocialMediaItem/SocialMediaItem';
+import SocialMediaItem from '@/components/SocialMedia/SocialMediaItem/SocialMediaItem';
+
+import { testSocialDrawerItem, testSocialNoDrawerItem } from './fixtures/social-media.fixtures';
 
 const widthStyle: string = 'width';
 const heightStyle: string = 'height';

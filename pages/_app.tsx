@@ -2,7 +2,8 @@ import { ApolloProvider } from '@apollo/client/react';
 import { ThemeProvider } from '@mui/material/styles';
 import { GoogleAnalytics } from '@next/third-parties/google';
 import * as Sentry from '@sentry/react';
-import React, { useEffect } from 'react';
+import dynamic from 'next/dynamic';
+import React, { ComponentType, useEffect } from 'react';
 
 import { theme } from '@/components/AppTheme';
 import Layout from '@/components/Layout';
@@ -16,6 +17,13 @@ import '../src/features/swagger/components/ApiDocumentation/styles.scss';
 
 import i18n from '../i18n';
 import client from '../src/features/landing/api/graphql/apollo';
+
+// The landing Header is the site-wide chrome. It is composed here at the Next.js
+// routing root so the shared Layout (src/components) stays feature-agnostic and
+// does not import from src/features (enforced by dependency-cruiser).
+const DynamicHeader: ComponentType = dynamic(() => import('@/features/landing/components/Header'), {
+  ssr: false,
+});
 
 Sentry.init({
   dsn: process.env.SENTRY_DSN_KEY,
@@ -38,7 +46,7 @@ function MyApp({ Component }: { Component: React.ComponentType }): React.ReactEl
     <ThemeProvider theme={theme}>
       <ApolloProvider client={client}>
         <main className={golos.className}>
-          <Layout>
+          <Layout header={<DynamicHeader />}>
             <Component />
           </Layout>
           <GoogleAnalytics gaId="G-XYZ" />

@@ -1,11 +1,12 @@
 /**
  * Integration: Layout shell.
  *
- * `Layout` wires the Header and UiFooter through `next/dynamic` (ssr: false).
- * To exercise the real composition synchronously in jsdom, `next/dynamic` is
- * unwrapped to its actual loader and the heavy children are stubbed, mirroring
- * the proven testing-library setup. This proves the i18n page title / meta
- * description and the header → children → footer order end-to-end.
+ * `Layout` receives the header as a prop and loads UiFooter through
+ * `next/dynamic` (ssr: false). To exercise the real composition synchronously
+ * in jsdom, `next/dynamic` is unwrapped to its actual loader and the footer is
+ * stubbed, mirroring the proven testing-library setup. This proves the i18n
+ * page title / meta description and the header → children → footer order
+ * end-to-end.
  */
 import { render, screen, waitFor } from '@testing-library/react';
 import { t } from 'i18next';
@@ -73,14 +74,6 @@ jest.mock('next/dynamic', () => ({
 }));
 
 jest.mock(
-  '../../../../src/features/landing/components/Header',
-  () =>
-    function Header(): React.ReactElement {
-      return <header data-testid="header" />;
-    }
-);
-
-jest.mock(
   '../../../../src/components/UiFooter',
   () =>
     function Footer(): React.ReactElement {
@@ -91,7 +84,7 @@ jest.mock(
 describe('Layout', () => {
   it('renders header, children and footer in order with i18n head metadata', async () => {
     render(
-      <Layout>
+      <Layout header={<header data-testid="header" />}>
         <main data-testid="main-content">Content</main>
       </Layout>
     );

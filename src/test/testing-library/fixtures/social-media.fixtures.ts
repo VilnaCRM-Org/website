@@ -1,6 +1,6 @@
 import { faker } from '@faker-js/faker';
 
-import { SocialMedia } from '../../types/social-media';
+import { SocialMedia } from '@/types/social-media';
 
 export const testSocialDrawerItem: SocialMedia = {
   id: faker.string.uuid(),

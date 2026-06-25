@@ -10,7 +10,11 @@ export type RouteLike = {
   request: () => {
     method: () => string;
   };
-  fulfill: (response: { status: number; headers: Record<string, string>; body: string }) => Promise<void>;
+  fulfill: (response: {
+    status: number;
+    headers: Record<string, string>;
+    body: string;
+  }) => Promise<void>;
   abort: (errorCode: 'failed') => Promise<void>;
   continue: () => Promise<void>;
 };
@@ -76,9 +80,10 @@ export function isExpectedFailureState(
   combinedErrorText: string,
   statusText: string | null | undefined
 ): boolean {
-  const hasErrorMessage: boolean = [...Object.values(errorMessages), ...browserSpecificFailureMarkers].some(
-    msg => combinedErrorText.includes(msg)
-  );
+  const hasErrorMessage: boolean = [
+    ...Object.values(errorMessages),
+    ...browserSpecificFailureMarkers,
+  ].some(msg => combinedErrorText.includes(msg));
 
   return hasErrorMessage || isNonSuccessStatus(statusText);
 }

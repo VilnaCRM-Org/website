@@ -1,4 +1,5 @@
-import Check from '../../features/landing/assets/svg/checkbox/check.svg';
+import Check from '@/assets/svg/checkbox/check.svg';
+
 import colorTheme from '../UiColorTheme';
 
 export default {
