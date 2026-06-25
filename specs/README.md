@@ -18,6 +18,7 @@ specs/
 | Spec                    | Status      |
 | ----------------------- | ----------- |
 | `dependency-cruiser-ci` | Implemented |
+| `rust-code-analysis`    | Planned     |
 
 ## Conventions
 
