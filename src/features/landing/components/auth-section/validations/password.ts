@@ -15,9 +15,7 @@ const PASSWORD_RULES: readonly PasswordRule[] = [
   { isValid: hasUppercase, messageKey: 'sign_up.form.password_input.error_uppercase' },
 ];
 
-const validatePassword: (value: string) => string | boolean = (
-  value: string
-): string | boolean => {
+const validatePassword: (value: string) => string | boolean = (value: string): string | boolean => {
   const failedRule: PasswordRule | undefined = PASSWORD_RULES.find(rule => !rule.isValid(value));
   return failedRule ? t(failedRule.messageKey) : true;
 };

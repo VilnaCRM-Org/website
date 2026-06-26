@@ -26,13 +26,14 @@ type FullNameRule = { isInvalid: (value: string) => boolean; message: string };
 
 const FULL_NAME_RULES: readonly FullNameRule[] = [
   { isInvalid: value => validators.isEmpty(value), message: validationMessages.required },
-  { isInvalid: value => !validators.isLettersOnly(value), message: validationMessages.lettersOnlyError },
+  {
+    isInvalid: value => !validators.isLettersOnly(value),
+    message: validationMessages.lettersOnlyError,
+  },
   { isInvalid: value => !validators.isFormatted(value), message: validationMessages.formatError },
 ];
 
-const validateFullName: (fullName: string) => string | null = (
-  fullName: string
-): string | null => {
+const validateFullName: (fullName: string) => string | null = (fullName: string): string | null => {
   const trimmedFullName: string = fullName.trim();
   const failedRule: FullNameRule | undefined = FULL_NAME_RULES.find(rule =>
     rule.isInvalid(trimmedFullName)

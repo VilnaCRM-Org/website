@@ -73,7 +73,10 @@ function DrawerContent({
   handleLinkClick: (link: string) => void;
 }): React.ReactElement {
   return (
-    <Box role="presentation" sx={[styles.drawerContent, { width: '23.4375rem', textAlign: 'center' }]}>
+    <Box
+      role="presentation"
+      sx={[styles.drawerContent, { width: '23.4375rem', textAlign: 'center' }]}
+    >
       <DrawerHeader onClose={onClose} />
       <DrawerActions onClose={onClose} />
       <NavList

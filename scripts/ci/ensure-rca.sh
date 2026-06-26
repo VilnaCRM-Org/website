@@ -12,7 +12,8 @@ RCA_VERSION="${RCA_VERSION:-0.0.25}"
 RCA_SHA256_LINUX="${RCA_SHA256_LINUX:-9ec2a217b8ff191e02dab5d5f2eee6158b63fd975c532b2c5d67c2e6c7249894}"
 
 # Already the right version? Nothing to do (idempotent; no network needed).
-if [ -x "$RCA_BIN" ] && "$RCA_BIN" --version 2>/dev/null | grep -q "$RCA_VERSION"; then
+# -Fwq: fixed-string, whole-word match so e.g. 0.0.250 cannot satisfy 0.0.25.
+if [ -x "$RCA_BIN" ] && "$RCA_BIN" --version 2>/dev/null | grep -Fwq "$RCA_VERSION"; then
   exit 0
 fi
 

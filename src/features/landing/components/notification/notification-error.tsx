@@ -68,7 +68,12 @@ function NotificationError({
   return (
     <Box sx={styles.contentBoxError} aria-invalid="true" aria-label="error" aria-live="polite">
       <Box sx={styles.imageWrapperError}>
-        <Image src={ErrorImg} alt={t('notifications.error.images.error')} width={268} height={195} />
+        <Image
+          src={ErrorImg}
+          alt={t('notifications.error.images.error')}
+          width={268}
+          height={195}
+        />
       </Box>
 
       <Box sx={styles.messageContainerError}>

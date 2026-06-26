@@ -41,10 +41,7 @@ const useSwagger: (schemaUrl?: string) => UseSwaggerReturn = (
   const [swaggerContent, setSwaggerContent] = useState<unknown | null>(null);
   const [error, setError] = useState<Error | null>(null);
 
-  useEffect(
-    () => loadSwaggerSchema(schemaUrl, setSwaggerContent, setError),
-    [schemaUrl]
-  );
+  useEffect(() => loadSwaggerSchema(schemaUrl, setSwaggerContent, setError), [schemaUrl]);
 
   return { swaggerContent, error };
 };
