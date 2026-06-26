@@ -77,15 +77,13 @@ export const handleNetworkError: HandleNetworkErrorType = (
   if (!isServerError(networkError)) return messages[CLIENT_ERROR_KEYS.WENT_WRONG];
 
   const { statusCode, message } = networkError;
-
   const statusMessage = getMessageByStatusCode(statusCode, messages);
-  if (statusMessage) return statusMessage;
+  const fallbackMessage =
+    message && isNetworkErrorMessage(message)
+      ? messages[CLIENT_ERROR_KEYS.NETWORK]
+      : messages[CLIENT_ERROR_KEYS.WENT_WRONG];
 
-  if (message && isNetworkErrorMessage(message)) {
-    return messages[CLIENT_ERROR_KEYS.NETWORK];
-  }
-
-  return messages[CLIENT_ERROR_KEYS.WENT_WRONG];
+  return statusMessage ?? fallbackMessage;
 };
 
 function handleGraphQLErrors(
@@ -113,6 +111,20 @@ function handleGraphQLErrors(
   return combinedMessages || null;
 }
 
+function resolveErrorMessage(error: object, messages: ClientErrorMessages): string {
+  const graphQLMessage = CombinedGraphQLErrors.is(error)
+    ? handleGraphQLErrors(error.errors, messages)
+    : null;
+  if (graphQLMessage) return graphQLMessage;
+
+  if (isServerError(error)) return handleNetworkError(error);
+
+  const errorMessage = (error as Error).message ?? '';
+  return isNetworkErrorMessage(errorMessage)
+    ? messages[CLIENT_ERROR_KEYS.NETWORK]
+    : messages[CLIENT_ERROR_KEYS.UNEXPECTED];
+}
+
 export const handleApolloError: HandleApolloErrorType = ({
   error,
 }: HandleApolloErrorProps): string => {
@@ -122,19 +134,5 @@ export const handleApolloError: HandleApolloErrorType = ({
     return messages[CLIENT_ERROR_KEYS.UNEXPECTED];
   }
 
-  if (CombinedGraphQLErrors.is(error)) {
-    const result = handleGraphQLErrors(error.errors, messages);
-    if (result) return result;
-  }
-
-  if (isServerError(error)) {
-    return handleNetworkError(error);
-  }
-
-  const errorMessage = (error as Error).message ?? '';
-  if (isNetworkErrorMessage(errorMessage)) {
-    return messages[CLIENT_ERROR_KEYS.NETWORK];
-  }
-
-  return messages[CLIENT_ERROR_KEYS.UNEXPECTED];
+  return resolveErrorMessage(error, messages);
 };

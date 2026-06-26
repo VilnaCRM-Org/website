@@ -87,3 +87,4 @@ start-prod-clean	bats	tests/bats/makefile_targets.bats	Validated with a stubbed 
 test-load	bats	tests/bats/makefile_targets.bats	Validated as an alias that runs the load-tests target with stubbed K6 commands.
 test-load-swagger	bats	tests/bats/makefile_targets.bats	Validated as an alias that runs the load-tests-swagger target with stubbed K6 commands.
 pr-comments	bats	tests/bats/makefile_targets.bats	Validated with a stubbed get-pr-comments.sh helper and PR/FORMAT argument dispatch.
+lint-metrics	bats	tests/bats/makefile_targets.bats	Validated host-only: ensure-rca.sh provisioning (idempotent) plus lint-metrics.sh policy enforcement against the committed policy with a stubbed analyzer.

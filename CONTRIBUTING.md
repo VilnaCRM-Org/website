@@ -101,6 +101,25 @@ granted via an inline `# perf-exception: <reason>` marker or the
 [docs/dockerfile-performance.md](docs/dockerfile-performance.md) for the full
 policy, thresholds, and tuning guide.
 
+#### Code metrics (rust-code-analysis)
+
+A CI gate runs Mozilla `rust-code-analysis` over `src/` on every pull request to
+`main` and hard-fails when a function or file exceeds a complexity budget
+(cyclomatic, cognitive, Halstead, size/LOC, ABC, NARGS, NEXITS, NOM, or the
+Maintainability-Index floor). The budgets live in
+[`config/metrics-policy.json`](config/metrics-policy.json) and the gate is its
+own workflow, separate from `make lint` — run it locally with `make
+lint-metrics` (it auto-installs the pinned CLI to `./bin` and never uses the dev
+container). See the README's "Code Metrics (rust-code-analysis)" section for what
+is enforced and how to read a failure.
+
+If a change trips the gate, **fix the offending code first** — extract helpers,
+split a god-file, or simplify dense expressions. When a higher budget is
+genuinely warranted, raise the relevant threshold in `config/metrics-policy.json`
+as a reviewed, in-repo change visible in the PR diff (or confirm the path belongs
+outside the governed scope). Never silence the gate with a local override or a
+per-line disable.
+
 ### Commit your update
 
 Commit the changes once you are happy with them.

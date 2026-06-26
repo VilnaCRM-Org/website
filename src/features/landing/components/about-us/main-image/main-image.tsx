@@ -1,5 +1,5 @@
 import { Box } from '@mui/material';
-import { ImageProps } from 'next/image';
+import { ImageProps, StaticImageData } from 'next/image';
 import { getOptimizedImageProps } from 'next-export-optimize-images/image';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -12,37 +12,44 @@ import TabletMainImage from '../../../assets/img/about-vilna/tablet.jpg';
 
 import styles from './styles';
 
+const IMG_ALT_TEXT: string = 'Main image';
+
+const optimizedProps: (src: StaticImageData) => ImageProps = (src: StaticImageData): ImageProps =>
+  getOptimizedImageProps({ src, alt: IMG_ALT_TEXT }).props;
+
+function PictureSource({
+  imageProps,
+  media,
+}: {
+  imageProps: ImageProps;
+  media: string;
+}): React.ReactElement {
+  return (
+    <source
+      srcSet={imageProps.src as string}
+      width={imageProps.width}
+      height={imageProps.height}
+      media={media}
+    />
+  );
+}
+
 function MainImage(): React.ReactElement {
   const { t } = useTranslation();
 
-  const imgAltText: string = 'Main image';
-
-  const mobileProps: ImageProps = getOptimizedImageProps({
-    src: PhoneMainImage,
-    alt: imgAltText,
-  }).props;
-  const tabletProps: ImageProps = getOptimizedImageProps({
-    src: TabletMainImage,
-    alt: imgAltText,
-  }).props;
-  const desktopProps: ImageProps = getOptimizedImageProps({
-    src: MainImageSrc,
-    alt: imgAltText,
-  }).props;
+  const mobileProps: ImageProps = optimizedProps(PhoneMainImage);
+  const tabletProps: ImageProps = optimizedProps(TabletMainImage);
+  const desktopProps: ImageProps = optimizedProps(MainImageSrc);
 
   return (
     <Box sx={styles.mainImageWrapper}>
       <picture>
-        <source
-          srcSet={mobileProps.src as string}
-          width={mobileProps.width}
-          height={mobileProps.height}
+        <PictureSource
+          imageProps={mobileProps}
           media={`(max-width: ${breakpointsTheme.breakpoints.values.sm}px)`}
         />
-        <source
-          srcSet={tabletProps.src as string}
-          width={tabletProps.width}
-          height={tabletProps.height}
+        <PictureSource
+          imageProps={tabletProps}
           media={`(max-width: ${breakpointsTheme.breakpoints.values.lg}px)`}
         />
         <img

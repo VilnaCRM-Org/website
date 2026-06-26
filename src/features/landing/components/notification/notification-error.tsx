@@ -16,6 +16,47 @@ const buttonTextStyle: React.CSSProperties = {
   ...styles.errorButtonMessage,
 };
 
+function ErrorActions({
+  onRetry,
+  onClose,
+  loading,
+}: Pick<NotificationComponentProps, 'onRetry' | 'loading'> & {
+  onClose: () => void;
+}): React.ReactElement {
+  const { t } = useTranslation();
+
+  return (
+    <Box sx={styles.buttonsBox}>
+      <UiButton
+        sx={styles.errorButton}
+        variant="contained"
+        type="button"
+        size="medium"
+        fullWidth
+        disabled={loading}
+        onClick={onRetry}
+      >
+        <Typography component="span" sx={buttonTextStyle}>
+          {t('notifications.error.retry_button')}
+        </Typography>
+      </UiButton>
+
+      <UiButton
+        sx={{ ...styles.errorButton, marginTop: '0.5rem' }}
+        variant="outlined"
+        type="button"
+        size="medium"
+        fullWidth
+        onClick={onClose}
+      >
+        <Typography component="span" sx={buttonTextStyle}>
+          {t('notifications.error.button')}
+        </Typography>
+      </UiButton>
+    </Box>
+  );
+}
+
 function NotificationError({
   setIsOpen,
   onRetry,
@@ -27,12 +68,7 @@ function NotificationError({
   return (
     <Box sx={styles.contentBoxError} aria-invalid="true" aria-label="error" aria-live="polite">
       <Box sx={styles.imageWrapperError}>
-        <Image
-          src={ErrorImg}
-          alt={t('notifications.error.images.error')}
-          width={268}
-          height={195}
-        />
+        <Image src={ErrorImg} alt={t('notifications.error.images.error')} width={268} height={195} />
       </Box>
 
       <Box sx={styles.messageContainerError}>
@@ -44,34 +80,7 @@ function NotificationError({
           {errorText || t('failure_responses.client_errors.something_went_wrong')}
         </UiTypography>
 
-        <Box sx={styles.buttonsBox}>
-          <UiButton
-            sx={styles.errorButton}
-            variant="contained"
-            type="button"
-            size="medium"
-            fullWidth
-            disabled={loading}
-            onClick={onRetry}
-          >
-            <Typography component="span" sx={buttonTextStyle}>
-              {t('notifications.error.retry_button')}
-            </Typography>
-          </UiButton>
-
-          <UiButton
-            sx={{ ...styles.errorButton, marginTop: '0.5rem' }}
-            variant="outlined"
-            type="button"
-            size="medium"
-            fullWidth
-            onClick={onHandleClose}
-          >
-            <Typography component="span" sx={buttonTextStyle}>
-              {t('notifications.error.button')}
-            </Typography>
-          </UiButton>
-        </Box>
+        <ErrorActions onRetry={onRetry} onClose={onHandleClose} loading={loading} />
       </Box>
     </Box>
   );

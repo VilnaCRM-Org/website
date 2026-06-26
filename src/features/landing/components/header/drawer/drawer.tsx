@@ -16,6 +16,79 @@ import NavList from '../nav-list/nav-list';
 import styles from './styles';
 import { VilnaCRMEmail } from './vilna-crm-email';
 
+function DrawerHeader({ onClose }: { onClose: () => void }): React.ReactElement {
+  const { t } = useTranslation();
+
+  return (
+    <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
+      <Link
+        href="/"
+        component={NextLink}
+        sx={styles.logoLink}
+        aria-label={t('header.logo_alt') as string}
+      >
+        <Box component="span" sx={styles.logo}>
+          <Image src={Logo} alt={t('header.logo_alt')} width={131} height={44} />
+        </Box>
+      </Link>
+      <Button
+        aria-label={t('header.drawer.button_aria_labels.exit') as string}
+        sx={styles.button}
+        onClick={onClose}
+      >
+        <Image src={CloseImage} alt={t('header.drawer.image_alt.exit')} width={24} height={24} />
+      </Button>
+    </Stack>
+  );
+}
+
+function DrawerActions({ onClose }: { onClose: () => void }): React.ReactElement {
+  const { t } = useTranslation();
+
+  return (
+    <Stack
+      direction="row"
+      sx={{
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '0.563rem',
+        mt: '0.75rem',
+      }}
+    >
+      <UiButton fullWidth variant="outlined" size="small" disabled>
+        {t('header.actions.log_in')}
+      </UiButton>
+      <UiButton href="#signUp" fullWidth onClick={onClose} variant="contained" size="small">
+        {t('header.actions.try_it_out')}
+      </UiButton>
+    </Stack>
+  );
+}
+
+function DrawerContent({
+  onClose,
+  handleLinkClick,
+}: {
+  onClose: () => void;
+  handleLinkClick: (link: string) => void;
+}): React.ReactElement {
+  return (
+    <Box role="presentation" sx={[styles.drawerContent, { width: '23.4375rem', textAlign: 'center' }]}>
+      <DrawerHeader onClose={onClose} />
+      <DrawerActions onClose={onClose} />
+      <NavList
+        navItems={drawerNavList}
+        handleClick={(link: string) => {
+          handleLinkClick(link);
+          onClose();
+        }}
+      />
+      <VilnaCRMEmail />
+      <SocialMediaList socialLinks={socialMedia} />
+    </Box>
+  );
+}
+
 function CustomDrawer({
   handleLinkClick,
 }: {
@@ -43,66 +116,7 @@ function CustomDrawer({
         onClose={handleCloseDrawer}
         role="menu"
       >
-        <Box
-          role="presentation"
-          sx={[styles.drawerContent, { width: '23.4375rem', textAlign: 'center' }]}
-        >
-          <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
-            <Link
-              href="/"
-              component={NextLink}
-              sx={styles.logoLink}
-              aria-label={t('header.logo_alt') as string}
-            >
-              <Box component="span" sx={styles.logo}>
-                <Image src={Logo} alt={t('header.logo_alt')} width={131} height={44} />
-              </Box>
-            </Link>
-            <Button
-              aria-label={t('header.drawer.button_aria_labels.exit') as string}
-              sx={styles.button}
-              onClick={handleCloseDrawer}
-            >
-              <Image
-                src={CloseImage}
-                alt={t('header.drawer.image_alt.exit')}
-                width={24}
-                height={24}
-              />
-            </Button>
-          </Stack>
-          <Stack
-            direction="row"
-            sx={{
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.563rem',
-              mt: '0.75rem',
-            }}
-          >
-            <UiButton fullWidth variant="outlined" size="small" disabled>
-              {t('header.actions.log_in')}
-            </UiButton>
-            <UiButton
-              href="#signUp"
-              fullWidth
-              onClick={handleCloseDrawer}
-              variant="contained"
-              size="small"
-            >
-              {t('header.actions.try_it_out')}
-            </UiButton>
-          </Stack>
-          <NavList
-            navItems={drawerNavList}
-            handleClick={(link: string) => {
-              handleLinkClick(link);
-              handleCloseDrawer();
-            }}
-          />
-          <VilnaCRMEmail />
-          <SocialMediaList socialLinks={socialMedia} />
-        </Box>
+        <DrawerContent onClose={handleCloseDrawer} handleLinkClick={handleLinkClick} />
       </Drawer>
     </Box>
   );
