@@ -1,0 +1,4 @@
+# Repo-local AI-agent docs are not product documentation and are intentionally
+# exempt from the Markdown lint gate (mirrors make lint-md, whose **/*.md glob
+# already skips dot-directories). They are still Prettier-formatted via qlty.
+.claude/
