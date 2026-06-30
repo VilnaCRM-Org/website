@@ -1,11 +1,11 @@
 import { render } from '@testing-library/react';
 import { t } from 'i18next';
 
-import Possibilities from '@landing/Possibilities';
-import { cardList, imageList } from '@landing/Possibilities/constants';
-import PossibilitiesComponent from '@landing/Possibilities/Possibilities';
+import Possibilities from '@landing/possibilities';
+import { cardList, imageList } from '@landing/possibilities/constants';
+import PossibilitiesComponent from '@landing/possibilities/possibilities';
 
-jest.mock('../../../../src/components/UiCardList/CardSwiper', () => jest.fn(() => null));
+jest.mock('../../../../src/components/ui-card-list/card-swiper', () => jest.fn(() => null));
 
 describe('Possibilities integration', () => {
   it('renders the Integration section wrapper via the barrel export', () => {

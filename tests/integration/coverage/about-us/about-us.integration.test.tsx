@@ -11,16 +11,16 @@
 import { render } from '@testing-library/react';
 import { t } from 'i18next';
 
-import AboutUsBarrel from '@landing/AboutUs';
-import AboutUs from '@landing/AboutUs/AboutUs';
-import { DeviceImage } from '@landing/AboutUs/DeviceImage';
-import DeviceImageDefault from '@landing/AboutUs/DeviceImage/DeviceImage';
-import { MainImage } from '@landing/AboutUs/MainImage';
-import MainImageDefault from '@landing/AboutUs/MainImage/MainImage';
-import { Notch } from '@landing/AboutUs/Notch';
-import NotchDefault from '@landing/AboutUs/Notch/Notch';
-import { TextInfo } from '@landing/AboutUs/TextInfo';
-import TextInfoDefault from '@landing/AboutUs/TextInfo/TextInfo';
+import AboutUsBarrel from '@landing/about-us';
+import AboutUs from '@landing/about-us/about-us';
+import { DeviceImage } from '@landing/about-us/device-image';
+import DeviceImageDefault from '@landing/about-us/device-image/device-image';
+import { MainImage } from '@landing/about-us/main-image';
+import MainImageDefault from '@landing/about-us/main-image/main-image';
+import { Notch } from '@landing/about-us/notch';
+import NotchDefault from '@landing/about-us/notch/notch';
+import { TextInfo } from '@landing/about-us/text-info';
+import TextInfoDefault from '@landing/about-us/text-info/text-info';
 
 const mainImageAlt: string = 'Main image';
 const aboutText: string = t('about_vilna.text_main');

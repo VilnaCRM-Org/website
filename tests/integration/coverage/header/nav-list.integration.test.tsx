@@ -2,8 +2,8 @@ import { fireEvent, render } from '@testing-library/react';
 import userEvent, { UserEvent } from '@testing-library/user-event';
 import { t } from 'i18next';
 
-import { headerNavList } from '@landing/Header/constants';
-import NavList from '@landing/Header/NavList/NavList';
+import { headerNavList } from '@landing/header/constants';
+import NavList from '@landing/header/nav-list/nav-list';
 
 import { NavItemProps } from '../../../../src/features/landing/types/header/navigation';
 import {

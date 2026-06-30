@@ -1,7 +1,7 @@
 import { render } from '@testing-library/react';
 import { t } from 'i18next';
 
-import { PrivacyPolicy } from '@/components/UiFooter/PrivacyPolicy';
+import { PrivacyPolicy } from '@/components/ui-footer/privacy-policy';
 
 const privacyPolicyText: string = t('footer.privacy');
 const usagePolicyText: string = t('footer.usage_policy');

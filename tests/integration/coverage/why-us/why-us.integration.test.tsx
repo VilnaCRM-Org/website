@@ -10,9 +10,9 @@
 import { render, screen } from '@testing-library/react';
 import { t } from 'i18next';
 
-import WhyUs from '@landing/WhyUs';
+import WhyUs from '@landing/why-us';
 
-jest.mock('../../../../src/components/UiCardList/CardSwiper', () => jest.fn(() => null));
+jest.mock('../../../../src/components/ui-card-list/card-swiper', () => jest.fn(() => null));
 
 const wrapperId: string = '#Advantages';
 const signUpButtonText: string = t('why_us.button_text');

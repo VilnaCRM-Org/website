@@ -11,10 +11,10 @@
 import { render, screen } from '@testing-library/react';
 import { t } from 'i18next';
 
-import UiCardItem from '@/components/UiCardItem';
-import CardContent from '@/components/UiCardItem/CardContent';
-import { LARGE_CARD_ITEM, SMALL_CARD_ITEM } from '@/components/UiCardItem/constants';
-import { CardItem } from '@/components/UiCardItem/types';
+import UiCardItem from '@/components/ui-card-item';
+import CardContent from '@/components/ui-card-item/card-content';
+import { LARGE_CARD_ITEM, SMALL_CARD_ITEM } from '@/components/ui-card-item/constants';
+import { CardItem } from '@/components/ui-card-item/types';
 
 const integrateCardItem: CardItem = {
   ...SMALL_CARD_ITEM,

@@ -5,15 +5,15 @@ import * as Sentry from '@sentry/react';
 import dynamic from 'next/dynamic';
 import React, { ComponentType, useEffect } from 'react';
 
-import { theme } from '@/components/AppTheme';
-import Layout from '@/components/Layout';
+import { theme } from '@/components/app-theme';
+import Layout from '@/components/layout';
 import { golos } from '@/config/Fonts/golos';
 
 import 'swagger-ui-react/swagger-ui.css';
 
 import '../styles/global.css';
 
-import '../src/features/swagger/components/ApiDocumentation/styles.scss';
+import '../src/features/swagger/components/api-documentation/styles.scss';
 
 import i18n from '../i18n';
 import client from '../src/features/landing/api/graphql/apollo';
@@ -21,7 +21,7 @@ import client from '../src/features/landing/api/graphql/apollo';
 // The landing Header is the site-wide chrome. It is composed here at the Next.js
 // routing root so the shared Layout (src/components) stays feature-agnostic and
 // does not import from src/features (enforced by dependency-cruiser).
-const DynamicHeader: ComponentType = dynamic(() => import('@/features/landing/components/Header'), {
+const DynamicHeader: ComponentType = dynamic(() => import('@/features/landing/components/header'), {
   ssr: false,
 });
 

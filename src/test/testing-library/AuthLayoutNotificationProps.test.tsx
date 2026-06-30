@@ -1,10 +1,10 @@
-import type { NotificationControlProps } from '../../features/landing/components/Notification/types';
+import type { NotificationControlProps } from '@landing/notification/types';
 
 import { renderWithProviders } from './utils';
 
 const notificationSpy: jest.Mock = jest.fn();
 
-jest.mock('../../features/landing/components/Notification/Notification', () => ({
+jest.mock('../../features/landing/components/notification/notification', () => ({
   __esModule: true,
   default: (props: NotificationControlProps): null => {
     notificationSpy(props);
@@ -19,7 +19,7 @@ describe('AuthLayout notification props', () => {
 
   it('passes empty errorText before any submission', async () => {
     const { default: AuthLayout } =
-      await import('../../features/landing/components/AuthSection/AuthForm/AuthLayout');
+      await import('../../features/landing/components/auth-section/auth-form/auth-layout');
     renderWithProviders(<AuthLayout />);
 
     expect(notificationSpy).toHaveBeenCalledWith(

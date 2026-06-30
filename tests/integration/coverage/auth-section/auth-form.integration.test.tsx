@@ -15,7 +15,7 @@ import { t } from 'i18next';
 import React from 'react';
 import { useForm } from 'react-hook-form';
 
-import AuthForm from '@landing/AuthSection/AuthForm/AuthForm';
+import AuthForm from '@landing/auth-section/auth-form/auth-form';
 
 import { RegisterItem } from '../../../../src/features/landing/types/authentication/form';
 

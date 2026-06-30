@@ -1,7 +1,7 @@
 import { render } from '@testing-library/react';
 import { t } from 'i18next';
 
-import ServicesHoverCard from '../../features/landing/components/Possibilities/ServicesHoverCard/ServicesHoverCard';
+import ServicesHoverCard from '@landing/possibilities/services-hover-card/services-hover-card';
 
 const hoverCardTitle: string = t('unlimited_possibilities.service_text.title');
 const hoverCardText: string = t('unlimited_possibilities.service_text.text');

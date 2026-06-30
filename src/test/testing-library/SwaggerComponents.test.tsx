@@ -3,8 +3,8 @@ import userEvent, { UserEvent } from '@testing-library/user-event';
 import { t } from 'i18next';
 import React from 'react';
 
-import ApiDocumentation from '../../features/swagger/components/ApiDocumentation';
-import Navigation from '../../features/swagger/components/Navigation/Navigation';
+import ApiDocumentation from '../../features/swagger/components/api-documentation';
+import Navigation from '../../features/swagger/components/navigation/navigation';
 import useSwagger from '../../features/swagger/hooks/useSwagger';
 
 const backToTheHome: string = t('navigation.navigate_to_home_page');

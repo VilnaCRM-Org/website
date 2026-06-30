@@ -1,0 +1,23 @@
+import { Box, Stack } from '@mui/material';
+import React from 'react';
+
+import { MainImage } from '../main-image';
+import { Notch } from '../notch';
+
+import styles from './styles';
+
+function DeviceImage(): React.ReactElement {
+  return (
+    <Stack sx={[styles.wrapper, { justifyContent: 'center', alignItems: 'center' }]}>
+      <Box sx={styles.screenBorder}>
+        <Box sx={styles.screenBackground}>
+          <Notch />
+          <MainImage />
+        </Box>
+      </Box>
+      <Box sx={styles.backgroundImage} />
+    </Stack>
+  );
+}
+
+export default DeviceImage;

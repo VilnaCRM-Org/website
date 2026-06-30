@@ -1,7 +1,7 @@
 import { render } from '@testing-library/react';
 import { t } from 'i18next';
 
-import { Mobile } from '@/components/UiFooter/Mobile';
+import { Mobile } from '@/components/ui-footer/mobile';
 
 import { mockedSocialLinks } from './constants';
 import { createLocalizedRegExp } from './utils';

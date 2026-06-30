@@ -2,7 +2,7 @@ import { render } from '@testing-library/react';
 import { t } from 'i18next';
 import React from 'react';
 
-import ForWhoSection from '../../features/landing/components/ForWhoSection/ForWhoSection';
+import ForWhoSection from '../../features/landing/components/for-who-section/for-who-section';
 
 const forWhoButton: string = t('for_who.button_text');
 

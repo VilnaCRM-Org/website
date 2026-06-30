@@ -9,12 +9,12 @@
 import { render, screen, within } from '@testing-library/react';
 import { t } from 'i18next';
 
-import UiFooter from '@/components/UiFooter';
-import { socialLinks } from '@/components/UiFooter/constants';
-import { DefaultFooter } from '@/components/UiFooter/DefaultFooter';
-import { Mobile } from '@/components/UiFooter/Mobile';
-import { PrivacyPolicy } from '@/components/UiFooter/PrivacyPolicy';
-import { VilnaCRMEmail } from '@/components/UiFooter/VilnaCRMEmail';
+import UiFooter from '@/components/ui-footer';
+import { socialLinks } from '@/components/ui-footer/constants';
+import { DefaultFooter } from '@/components/ui-footer/default-footer';
+import { Mobile } from '@/components/ui-footer/mobile';
+import { PrivacyPolicy } from '@/components/ui-footer/privacy-policy';
+import { VilnaCRMEmail } from '@/components/ui-footer/vilna-crm-email';
 import { SocialMedia } from '@/types/social-media';
 
 const stackElementClass: string = '.MuiStack-root';

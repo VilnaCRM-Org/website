@@ -1,8 +1,8 @@
 import { render } from '@testing-library/react';
 import { t } from 'i18next';
 
-import { ServicesHoverCard } from '@landing/Possibilities/ServicesHoverCard';
-import HoverCardDefault from '@landing/Possibilities/ServicesHoverCard/ServicesHoverCard';
+import { ServicesHoverCard } from '@landing/possibilities/services-hover-card';
+import HoverCardDefault from '@landing/possibilities/services-hover-card/services-hover-card';
 
 describe('ServicesHoverCard integration', () => {
   it('renders the service title and text via the barrel export', () => {

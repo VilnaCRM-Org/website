@@ -1,6 +1,6 @@
 import { render } from '@testing-library/react';
 
-import SocialList from '../../features/landing/components/AuthSection/SocialList/SocialList';
+import SocialList from '../../features/landing/components/auth-section/social-list/social-list';
 import { SocialLink } from '../../features/landing/types/authentication/social';
 
 import { testSocialLink } from './fixtures/auth-social.fixtures';
@@ -10,7 +10,7 @@ const emptySocialLinks: SocialLink[] = [];
 
 const socialLinks: SocialLink[] = [testSocialLink];
 
-jest.mock('../../features/landing/components/AuthSection/SocialItem/SocialItem', () =>
+jest.mock('../../features/landing/components/auth-section/social-item/social-item', () =>
   jest.fn(() => <div data-testid="social-item" />)
 );
 

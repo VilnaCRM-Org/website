@@ -13,7 +13,7 @@ import { t } from 'i18next';
 import { DynamicOptions, Loader } from 'next/dynamic';
 import React from 'react';
 
-import Layout from '@/components/Layout';
+import Layout from '@/components/layout';
 
 function MockHead({ children }: { children: React.ReactNode }): null {
   React.useEffect(() => {
@@ -74,7 +74,7 @@ jest.mock('next/dynamic', () => ({
 }));
 
 jest.mock(
-  '../../../../src/components/UiFooter',
+  '../../../../src/components/ui-footer',
   () =>
     function Footer(): React.ReactElement {
       return <footer data-testid="footer" />;

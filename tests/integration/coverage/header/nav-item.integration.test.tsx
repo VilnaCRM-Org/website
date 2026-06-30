@@ -1,6 +1,6 @@
 import { render } from '@testing-library/react';
 
-import NavItem from '@landing/Header/NavItem/NavItem';
+import NavItem from '@landing/header/nav-item/nav-item';
 
 import {
   testDrawerItem,

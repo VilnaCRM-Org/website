@@ -1,1 +1,1 @@
-export { default as LandingComponent } from './components/Landing/Landing';
+export { default as LandingComponent } from './components/landing/landing';

@@ -10,7 +10,7 @@ import { ClickAwayListener } from '@mui/material';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent, { UserEvent } from '@testing-library/user-event';
 
-import WrapperUiTooltip from '@/components/UiTooltip/TooltipWrapper';
+import WrapperUiTooltip from '@/components/ui-tooltip/tooltip-wrapper';
 
 const useMediaQueryMock: jest.Mock = jest.fn();
 

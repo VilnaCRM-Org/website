@@ -1,7 +1,7 @@
 import { render } from '@testing-library/react';
 
-import UiCardItem from '../../components/UiCardItem';
-import CardContent from '../../components/UiCardItem/CardContent';
+import UiCardItem from '../../components/ui-card-item';
+import CardContent from '../../components/ui-card-item/card-content';
 
 import { cardItem, largeCard, smallCard } from './constants';
 

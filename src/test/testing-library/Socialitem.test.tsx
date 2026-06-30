@@ -1,7 +1,7 @@
 import { render } from '@testing-library/react';
 import React from 'react';
 
-import SocialItem from '../../features/landing/components/AuthSection/SocialItem/SocialItem';
+import SocialItem from '../../features/landing/components/auth-section/social-item/social-item';
 
 import { testSocialLink } from './fixtures/auth-social.fixtures';
 

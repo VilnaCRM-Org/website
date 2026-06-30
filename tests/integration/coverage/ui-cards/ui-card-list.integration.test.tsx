@@ -9,10 +9,10 @@
  */
 import { render, screen, waitFor } from '@testing-library/react';
 
-import UiCardList from '@/components/UiCardList';
-import CardGrid from '@/components/UiCardList/CardGrid';
-import CardSwiper from '@/components/UiCardList/CardSwiper';
-import { LARGE_CARDLIST_ARRAY, SMALL_CARDLIST_ARRAY } from '@/components/UiCardList/constants';
+import UiCardList from '@/components/ui-card-list';
+import CardGrid from '@/components/ui-card-list/card-grid';
+import CardSwiper from '@/components/ui-card-list/card-swiper';
+import { LARGE_CARDLIST_ARRAY, SMALL_CARDLIST_ARRAY } from '@/components/ui-card-list/constants';
 
 // `swiper` ships as untransformed ESM that the integration Jest transform does
 // not include, so the swiper React bindings and modules are stubbed with light

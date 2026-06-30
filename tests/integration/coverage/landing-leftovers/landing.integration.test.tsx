@@ -12,7 +12,7 @@ import { render } from '@testing-library/react';
 import { DynamicOptions, Loader } from 'next/dynamic';
 import React from 'react';
 
-import Landing from '@landing/Landing/Landing';
+import Landing from '@landing/landing/landing';
 
 import { LandingComponent } from '../../../../src/features/landing';
 
@@ -45,22 +45,22 @@ jest.mock('next/dynamic', () => ({
   },
 }));
 
-jest.mock('../../../../src/features/landing/components/BackgroundImages/BackgroundImages', () =>
+jest.mock('../../../../src/features/landing/components/background-images/background-images', () =>
   jest.fn(() => <div data-testid="background-images">BackgroundImages</div>)
 );
-jest.mock('../../../../src/features/landing/components/AboutUs/AboutUs', () =>
+jest.mock('../../../../src/features/landing/components/about-us/about-us', () =>
   jest.fn(() => <div data-testid="about-us">AboutUs</div>)
 );
-jest.mock('../../../../src/features/landing/components/WhyUs/WhyUs', () =>
+jest.mock('../../../../src/features/landing/components/why-us/why-us', () =>
   jest.fn(() => <div data-testid="why-us">WhyUs</div>)
 );
-jest.mock('../../../../src/features/landing/components/ForWhoSection/ForWhoSection', () =>
+jest.mock('../../../../src/features/landing/components/for-who-section/for-who-section', () =>
   jest.fn(() => <div data-testid="for-who-section">ForWhoSection</div>)
 );
-jest.mock('../../../../src/features/landing/components/Possibilities/Possibilities', () =>
+jest.mock('../../../../src/features/landing/components/possibilities/possibilities', () =>
   jest.fn(() => <div data-testid="possibilities">Possibilities</div>)
 );
-jest.mock('../../../../src/features/landing/components/AuthSection/AuthSection', () =>
+jest.mock('../../../../src/features/landing/components/auth-section/auth-section', () =>
   jest.fn(() => <div data-testid="auth-section">AuthSection</div>)
 );
 

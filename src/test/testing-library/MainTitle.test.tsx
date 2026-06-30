@@ -1,7 +1,7 @@
 import { render } from '@testing-library/react';
 import { t } from 'i18next';
 
-import MainTitle from '../../features/landing/components/ForWhoSection/MainTitle/MainTitle';
+import MainTitle from '../../features/landing/components/for-who-section/main-title/main-title';
 
 const forWhoTitle: string = t('for_who.heading_main');
 const forWhoText: string = t('for_who.text_main');

@@ -3,8 +3,8 @@ import userEvent, { UserEvent } from '@testing-library/user-event';
 import i18next, { t } from 'i18next';
 import { useRouter } from 'next/router';
 
-import { headerNavList } from '@landing/Header/constants';
-import Header from '@landing/Header/Header';
+import { headerNavList } from '@landing/header/constants';
+import Header from '@landing/header/header';
 
 import fallbackNavigate from '../../../../src/features/landing/helpers/fallbackNavigate';
 import scrollToAnchor from '../../../../src/features/landing/helpers/scrollToAnchor';

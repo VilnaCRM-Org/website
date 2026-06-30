@@ -1,7 +1,7 @@
 import { render } from '@testing-library/react';
 import { t } from 'i18next';
 
-import AuthButtons from '@landing/Header/AuthButtons/AuthButtons';
+import AuthButtons from '@landing/header/auth-buttons/auth-buttons';
 
 const buttonLogInText: string = t('header.actions.log_in');
 const buttonSignUpText: string = t('header.actions.try_it_out');

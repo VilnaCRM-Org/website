@@ -2,7 +2,7 @@ import '@testing-library/jest-dom';
 import { render, fireEvent, waitFor } from '@testing-library/react';
 import { t } from 'i18next';
 
-import Drawer from '@landing/Header/Drawer/Drawer';
+import Drawer from '@landing/header/drawer/drawer';
 
 const buttonText: string = t('header.actions.try_it_out');
 const buttonToOpenDrawer: string = t('header.drawer.button_aria_labels.bars');

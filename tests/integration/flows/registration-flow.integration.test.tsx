@@ -17,7 +17,7 @@ import { ApolloProvider } from '@apollo/client/react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { t } from 'i18next';
 
-import AuthLayout from '@landing/AuthSection/AuthForm/AuthLayout';
+import AuthLayout from '@landing/auth-section/auth-form/auth-layout';
 
 import client from '../../../src/features/landing/api/graphql/apollo';
 import {

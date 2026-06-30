@@ -1,6 +1,6 @@
 import { render } from '@testing-library/react';
 
-import AboutUs from '../../features/landing/components/AboutUs/AboutUs';
+import AboutUs from '../../features/landing/components/about-us/about-us';
 
 test('renders without errors', () => {
   const { container, getByRole } = render(<AboutUs />);

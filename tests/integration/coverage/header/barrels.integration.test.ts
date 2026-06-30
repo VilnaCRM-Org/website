@@ -1,9 +1,9 @@
-import Header from '@landing/Header';
-import { AuthButtons } from '@landing/Header/AuthButtons';
-import { Drawer } from '@landing/Header/Drawer';
-import { VilnaCRMEmail } from '@landing/Header/Drawer/VilnaCRMEmail';
-import { NavItem } from '@landing/Header/NavItem';
-import { NavList } from '@landing/Header/NavList';
+import Header from '@landing/header';
+import { AuthButtons } from '@landing/header/auth-buttons';
+import { Drawer } from '@landing/header/drawer';
+import { VilnaCRMEmail } from '@landing/header/drawer/vilna-crm-email';
+import { NavItem } from '@landing/header/nav-item';
+import { NavList } from '@landing/header/nav-list';
 
 describe('integration: Header barrels', () => {
   it('re-exports every Header module entrypoint', () => {

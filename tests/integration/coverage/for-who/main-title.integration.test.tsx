@@ -6,8 +6,8 @@ import { render } from '@testing-library/react';
 import { t } from 'i18next';
 import React from 'react';
 
-import { MainTitle as MainTitleBarrel } from '@landing/ForWhoSection/MainTitle';
-import MainTitle from '@landing/ForWhoSection/MainTitle/MainTitle';
+import { MainTitle as MainTitleBarrel } from '@landing/for-who-section/main-title';
+import MainTitle from '@landing/for-who-section/main-title/main-title';
 
 const mainHeading: string = t('for_who.heading_main');
 const mainText: string = t('for_who.text_main');

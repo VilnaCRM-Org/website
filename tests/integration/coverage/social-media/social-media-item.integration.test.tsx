@@ -1,7 +1,7 @@
 import { render } from '@testing-library/react';
 import { t } from 'i18next';
 
-import SocialMediaItem from '@/components/SocialMedia/SocialMediaItem/SocialMediaItem';
+import SocialMediaItem from '@/components/social-media/social-media-item/social-media-item';
 import {
   testSocialDrawerItem,
   testSocialNoDrawerItem,

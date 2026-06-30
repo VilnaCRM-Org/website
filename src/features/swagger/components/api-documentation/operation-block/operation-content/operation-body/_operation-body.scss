@@ -1,0 +1,21 @@
+@use '@swagger/global' as *;
+
+@use 'operation-parameters/operation-parameters';
+@use 'responses/responses';
+@use 'execute-buttons/execute-buttons';
+@use 'description/description';
+@use 'section-request-body/section-request-body';
+@use 'error/error';
+@use 'loading/loading';
+
+%operationBody {
+  .opblock-body {
+    @extend %description;
+    @extend %parameters;
+    @extend %responses;
+    @extend %executeButtons;
+    @extend %sectionRequestBody;
+    @extend %error;
+    @extend %loading;
+  }
+}

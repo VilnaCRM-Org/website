@@ -9,7 +9,7 @@
 import { render, screen } from '@testing-library/react';
 import React from 'react';
 
-import ApiDocumentation from '../../../../src/features/swagger/components/ApiDocumentation';
+import ApiDocumentation from '../../../../src/features/swagger/components/api-documentation';
 import useSwagger from '../../../../src/features/swagger/hooks/useSwagger';
 
 jest.mock('../../../../src/features/swagger/hooks/useSwagger');

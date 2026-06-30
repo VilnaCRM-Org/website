@@ -1,8 +1,8 @@
-import { validateFullName } from '../../features/landing/components/AuthSection/Validations';
+import { validateFullName } from '../../features/landing/components/auth-section/validations';
 import {
   validators,
   validationMessages,
-} from '../../features/landing/components/AuthSection/Validations/initials';
+} from '../../features/landing/components/auth-section/validations/initials';
 
 const testFullName: string = 'John Doe';
 const testFirstName: string = 'John';

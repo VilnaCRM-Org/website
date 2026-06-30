@@ -1,6 +1,6 @@
 import { render } from '@testing-library/react';
 
-import SocialMediaList from '@/components/SocialMedia/SocialMediaList/SocialMediaList';
+import SocialMediaList from '@/components/social-media/social-media-list/social-media-list';
 import {
   testSocialDrawerItem,
   testSocialNoDrawerItem,

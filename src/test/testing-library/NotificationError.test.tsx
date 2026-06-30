@@ -8,7 +8,7 @@ import {
   CLIENT_ERROR_KEYS,
 } from '@/shared/clientErrorMessages';
 
-import NotificationError from '../../features/landing/components/Notification/NotificationError';
+import NotificationError from '../../features/landing/components/notification/notification-error';
 
 import { buttonRole } from './constants';
 

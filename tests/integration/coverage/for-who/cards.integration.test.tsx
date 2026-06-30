@@ -6,8 +6,8 @@ import { render } from '@testing-library/react';
 import { t } from 'i18next';
 import React from 'react';
 
-import { Cards as CardsBarrel } from '@landing/ForWhoSection/Cards';
-import Cards from '@landing/ForWhoSection/Cards/Cards';
+import { Cards as CardsBarrel } from '@landing/for-who-section/cards';
+import Cards from '@landing/for-who-section/cards/cards';
 
 const cardTitle: string = t('for_who.card_text_title');
 const secondaryHeading: string = t('for_who.heading_secondary');

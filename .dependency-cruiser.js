@@ -5,10 +5,11 @@
  * structure (there is NO src/modules layer) and made PascalCase-safe:
  *   - Boundary rules target src/features/<feature>/, src/components/, and the
  *     foundational shared layers directly.
- *   - CRM's global `no-uppercase-paths` rule is DELIBERATELY OMITTED because the
- *     website's shared/feature COMPONENT directories are PascalCase by convention
- *     (UiButton, AboutUs, AppTheme). Lowercase enforcement is scoped to FEATURE
- *     directory NAMES only, via `src-feature-name-kebab-case` (rule 16).
+ *   - Component directories and files (src/components and feature component
+ *     folders) are lowercase kebab-case, enforced via `components-kebab-case`
+ *     (rule 17); feature directory names via `src-feature-name-kebab-case`
+ *     (rule 16). A global `no-uppercase-paths` is still omitted so non-component
+ *     assets/config may keep their existing casing.
  *
  * Run with: make lint-deps   (depcruise src tests --config .dependency-cruiser.js)
  */
@@ -237,6 +238,18 @@ module.exports = {
       severity: 'error',
       comment: 'Feature directory names must be lowercase kebab-case (e.g. user-onboarding).',
       from: { path: '^src/features/(?![a-z0-9-]+/)[^/]+/' },
+      to: {},
+    },
+
+    // 17. Component directory + file names must be lowercase kebab-case.
+    //     Scoped uppercase ban for src/components and feature component folders
+    //     (assets/config keep their casing). Mirrors CRM's kebab-case structure.
+    {
+      name: 'components-kebab-case',
+      severity: 'error',
+      comment:
+        'Names under src/components and feature component folders must be lowercase kebab-case (no PascalCase).',
+      from: { path: '^src/(?:components|features/[^/]+/components)/.*[A-Z]' },
       to: {},
     },
   ],

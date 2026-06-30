@@ -1,6 +1,6 @@
 import { render } from '@testing-library/react';
 
-import VilnaCRMEmail from '../../features/landing/components/Header/Drawer/VilnaCRMEmail/VilnaCRMEmail';
+import VilnaCRMEmail from '@landing/header/drawer/vilna-crm-email/vilna-crm-email';
 
 import { mockEmail } from './constants';
 

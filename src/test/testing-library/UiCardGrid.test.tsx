@@ -1,10 +1,10 @@
 import { render } from '@testing-library/react';
 
-import CardGrid from '@/components/UiCardList/CardGrid';
+import CardGrid from '@/components/ui-card-list/card-grid';
 
 import { cardList, largeCardList, smallCardList } from './constants';
 
-jest.mock('../../components/UiCardItem', () => ({
+jest.mock('../../components/ui-card-item', () => ({
   __esModule: true,
   default: jest.fn(() => <div data-testid="mock-ui-card-item" />),
 }));

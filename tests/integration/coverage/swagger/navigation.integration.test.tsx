@@ -8,7 +8,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { t } from 'i18next';
 
-import Navigation from '../../../../src/features/swagger/components/Navigation';
+import Navigation from '../../../../src/features/swagger/components/navigation';
 
 const homeLabel = t('navigation.navigate_to_home_page');
 const arrowAlt = t('navigation.back_arrow_description');

@@ -2,7 +2,7 @@ import { faker } from '@faker-js/faker';
 import { t } from 'i18next';
 import { AriaRole } from 'react';
 
-import { CardItem } from '@/components/UiCardList/types';
+import { CardItem } from '@/components/ui-card-list/types';
 import { SocialMedia } from '@/types/social-media';
 
 export const testId: string = faker.string.uuid();
