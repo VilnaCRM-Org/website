@@ -111,7 +111,7 @@ MD038: true
 MD039: true
 
 MD040:
-  allowed_languages: ['bash']
+  allowed_languages: ['bash', 'text', 'ts', 'tsx', 'js', 'jsx', 'json', 'yaml', 'diff']
   language_only: false
 
 MD041: false
