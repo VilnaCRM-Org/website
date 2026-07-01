@@ -8,7 +8,7 @@ type UseSwaggerReturn = {
 const DEFAULT_SWAGGER_SCHEMA_URL = '/swagger-schema.json';
 
 const isAbortError: (err: unknown) => boolean = (err: unknown): boolean =>
-  (err as DOMException | null)?.name === 'AbortError';
+  (err as DOMException).name === 'AbortError';
 
 const fetchSwaggerSchema: (url: string, signal: AbortSignal) => Promise<unknown> = async (
   url: string,
