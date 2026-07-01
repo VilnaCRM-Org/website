@@ -146,6 +146,49 @@ describe('integration: UiCardList', () => {
       expect(observeSpy).toHaveBeenCalled();
     });
 
+    it('leaves pointer events untouched when a tooltip mutation arrives after the swiper ref detaches', () => {
+      let capturedCallback: MutationCallback | undefined;
+      const realObserver = global.MutationObserver;
+
+      // A named function (not a class) keeps this file within the single-class
+      // eslint budget already used by the childList-guard test above.
+      function MockObserver(cb: MutationCallback): void {
+        capturedCallback = cb;
+      }
+      MockObserver.prototype.observe = jest.fn();
+      MockObserver.prototype.disconnect = jest.fn();
+      MockObserver.prototype.takeRecords = (): MutationRecord[] => [];
+
+      global.MutationObserver = MockObserver as unknown as typeof MutationObserver;
+
+      try {
+        const { unmount } = render(<CardSwiper cardList={LARGE_CARDLIST_ARRAY} />);
+
+        expect(capturedCallback).toBeDefined();
+
+        // Unmounting nulls the swiper Grid ref. A tooltip popper mutation that
+        // arrives afterwards must hit the `if (element)` guard's false branch in
+        // setSwiperPointerEvents and be a no-op instead of throwing on a detached
+        // ref.
+        unmount();
+
+        expect(() =>
+          capturedCallback!(
+            [
+              {
+                type: 'childList',
+                addedNodes: [makeTooltip()],
+                removedNodes: [],
+              } as unknown as MutationRecord,
+            ],
+            {} as MutationObserver
+          )
+        ).not.toThrow();
+      } finally {
+        global.MutationObserver = realObserver;
+      }
+    });
+
     it('does not observe when the document body is unavailable', () => {
       const querySpy = jest.spyOn(document, 'querySelector').mockReturnValue(null);
 
