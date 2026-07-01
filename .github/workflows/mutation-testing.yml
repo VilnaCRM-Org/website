@@ -11,6 +11,13 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+env:
+  # Keep `corepack prepare` non-interactive if it has to fetch pnpm.
+  COREPACK_ENABLE_DOWNLOAD_PROMPT: '0'
+  # Single source of truth for the shard count; keep the shard job's matrix index
+  # list [0 .. TOTAL-1] in lock-step with it.
+  MUTATION_SHARD_TOTAL: '2'
+
 jobs:
   shard:
     name: shard ${{ matrix.index }}
@@ -20,9 +27,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # To change the shard count, keep this list and the merge job's
-        # MUTATION_SHARD_TOTAL in lock-step: index must be [0 .. TOTAL-1]. A
-        # mismatch fails closed at the merge gate's shard-count/index check.
+        # Keep this list in lock-step with the MUTATION_SHARD_TOTAL env above:
+        # index must be [0 .. TOTAL-1]. A mismatch fails closed at the merge
+        # gate's shard-count/index check (and stryker.shard.config.mjs throws on
+        # an out-of-range index).
         index: [0, 1]
 
     steps:
@@ -54,7 +62,7 @@ jobs:
       - name: Run mutation shard
         env:
           SHARD_INDEX: ${{ matrix.index }}
-        run: make test-mutation-shard MUTATION_SHARD_INDEX="$SHARD_INDEX" MUTATION_SHARD_TOTAL=2
+        run: make test-mutation-shard MUTATION_SHARD_INDEX="$SHARD_INDEX" MUTATION_SHARD_TOTAL="$MUTATION_SHARD_TOTAL"
 
       - name: Upload shard report
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -117,4 +125,4 @@ jobs:
           merge-multiple: true
 
       - name: Merge reports and enforce mutation-score gate
-        run: make merge-mutation-reports MUTATION_SHARD_TOTAL=2
+        run: make merge-mutation-reports MUTATION_SHARD_TOTAL="$MUTATION_SHARD_TOTAL"

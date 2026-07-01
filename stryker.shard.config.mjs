@@ -3,6 +3,15 @@ import base from './stryker.config.mjs';
 const total = Math.max(1, Number.parseInt(process.env.MUTATION_SHARD_TOTAL ?? '1', 10) || 1);
 const index = Math.max(0, Number.parseInt(process.env.MUTATION_SHARD_INDEX ?? '0', 10) || 0);
 
+// Fail loud on an out-of-range index instead of letting `index % total` wrap and
+// silently collide with another shard — that would produce a plausible (correct
+// shard count) but wrong partition the merge gate could not detect.
+if (index >= total) {
+  throw new Error(
+    `MUTATION_SHARD_INDEX (${index}) must be less than MUTATION_SHARD_TOTAL (${total}).`
+  );
+}
+
 // The base config enumerates the mutated files explicitly (an array, not a
 // glob), so the shard slices that array deterministically. Sorting first makes
 // the partition stable regardless of source order, and the round-robin split
@@ -11,7 +20,7 @@ const index = Math.max(0, Number.parseInt(process.env.MUTATION_SHARD_INDEX ?? '0
 // identical to an unsharded run.
 const sliced = [...base.mutate]
   .sort((a, b) => a.localeCompare(b))
-  .filter((_, i) => i % total === index % total);
+  .filter((_, i) => i % total === index);
 
 /** @type {import('@stryker-mutator/api/core').PartialStrykerOptions} */
 const config = {

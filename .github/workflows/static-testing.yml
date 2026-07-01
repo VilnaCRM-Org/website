@@ -34,13 +34,20 @@ jobs:
         id: cache-pnpm-dependencies
         uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
         with:
+          # Node comes from .nvmrc here, so fold it into the key: a Node bump must
+          # invalidate node_modules or a stale native module could be restored.
           path: node_modules
-          key: ${{ runner.os }}-dependencies-${{ hashFiles('**/pnpm-lock.yaml') }}
+          key: ${{ runner.os }}-dependencies-${{ hashFiles('.nvmrc') }}-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
             ${{ runner.os }}-dependencies-
 
       - name: Install pnpm
-        run: npm install -g pnpm
+        # Install the exact pnpm pinned in package.json's packageManager field
+        # (not the latest global) so lockfile resolution matches the other jobs.
+        # Corepack is avoided: the .nvmrc-pinned Node (22.12) ships a corepack
+        # whose signing keys can't verify the registry ("Cannot find matching
+        # keyid"). Mirrors dependency-cruiser.yml, the sibling .nvmrc job.
+        run: npm install -g "$(node -p "require('./package.json').packageManager.split('+')[0]")"
 
       - name: Install dependencies
         run: make install

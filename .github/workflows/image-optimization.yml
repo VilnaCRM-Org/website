@@ -10,9 +10,12 @@ on:
 
 permissions: {}
 
+# calibreapp/image-actions commits optimized images back to the PR branch and
+# holds contents: write, so cancelling mid-run could leave a partial commit — a
+# newer push queues behind the current one rather than superseding it.
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:

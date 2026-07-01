@@ -11,6 +11,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+env:
+  # Keep `corepack prepare` non-interactive if it has to fetch pnpm.
+  COREPACK_ENABLE_DOWNLOAD_PROMPT: '0'
+
 jobs:
   performance:
     # Desktop and mobile Lighthouse used to run back-to-back in one job, each
