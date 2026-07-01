@@ -138,8 +138,9 @@ tiered off, weakened, or removed.
   mid-run.
 - **Caching.** Node jobs restore the pnpm store (`~/.pnpm-store`, keyed on the Node version
   and `pnpm-lock.yaml`).
-- **Matrices.** Lighthouse runs `desktop`/`mobile` in parallel, the K6 load suites run in
-  parallel, and mutation testing runs as a shard matrix plus a merge gate.
+- **Matrices.** The Playwright e2e suite splits across a `--shard` matrix
+  (`test-e2e-shard`), Lighthouse runs `desktop`/`mobile` in parallel, the K6 load suites run
+  in parallel, and mutation testing runs as a shard matrix plus a merge gate.
 - **Mutation sharding.** `make test-mutation-shard` (with `MUTATION_SHARD_INDEX` /
   `MUTATION_SHARD_TOTAL`) writes a per-shard report (`stryker.shard.config.mjs`, with
   `break` disabled); `make merge-mutation-reports` unions the shards and re-enforces the

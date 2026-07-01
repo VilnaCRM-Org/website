@@ -160,6 +160,12 @@ MARKDOWNLINT_BIN            = $(PNPM_EXEC) ./node_modules/.bin/markdownlint
 
 run-visual                  = $(PLAYWRIGHT_TEST) "$(PLAYWRIGHT_BIN) test $(TEST_DIR_VISUAL)"
 run-e2e                     = $(PLAYWRIGHT_TEST) "$(PLAYWRIGHT_BIN) test $(TEST_DIR_E2E)"
+# E2E sharding: the e2e workflow matrix runs one shard per runner via Playwright
+# --shard=<index>/<total>. Defaults to 1/1 (the whole suite), so a bare
+# `make test-e2e-shard` behaves exactly like `make test-e2e`.
+E2E_SHARD_INDEX             ?= 1
+E2E_SHARD_TOTAL             ?= 1
+run-e2e-shard               = $(PLAYWRIGHT_TEST) "$(PLAYWRIGHT_BIN) test $(TEST_DIR_E2E) --shard=$(E2E_SHARD_INDEX)/$(E2E_SHARD_TOTAL)"
 playwright-test             = $(PLAYWRIGHT_DOCKER_CMD) $(PLAYWRIGHT_BIN) test
 
 help:
@@ -306,6 +312,9 @@ storybook-build: ## Build Storybook UI.
 
 test-e2e: start-prod  ## Start production and run E2E tests (Playwright)
 	$(run-e2e)
+
+test-e2e-shard: start-prod ## Start production and run one E2E shard (E2E_SHARD_INDEX of E2E_SHARD_TOTAL; used by the e2e workflow matrix)
+	$(run-e2e-shard)
 
 test-e2e-ui: start-prod ## Start the production environment and run E2E tests with the UI available at $(UI_MODE_URL)
 	@echo "🚀 Starting Playwright UI tests..."

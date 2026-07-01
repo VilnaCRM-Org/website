@@ -105,9 +105,11 @@ removed.
   current one.
 - **Caching.** Node jobs restore the pnpm store (`~/.pnpm-store`, keyed on the
   Node version and `pnpm-lock.yaml`) so installs are warm instead of cold.
-- **Matrices instead of serial steps.** Lighthouse runs `desktop` and `mobile`
-  as parallel matrix cells, the K6 load suites (homepage, Swagger) run as
-  parallel cells, and mutation testing runs as a shard matrix (see below).
+- **Matrices instead of serial steps.** The Playwright e2e suite splits across a
+  Playwright `--shard` matrix (one balanced slice of the ~340 test runs per
+  runner), Lighthouse runs `desktop` and `mobile` as parallel cells, the K6 load
+  suites (homepage, Swagger) run as parallel cells, and mutation testing runs as
+  a shard matrix (see below).
 
 #### Mutation testing runs sharded
 

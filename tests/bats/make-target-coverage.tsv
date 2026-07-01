@@ -25,6 +25,7 @@ husky	bats	tests/bats/makefile_targets.bats	Validated with a stubbed pnpm invoca
 storybook-start	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Storybook binary.
 storybook-build	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Storybook binary.
 test-e2e	ci	.github/workflows/e2e-testing.yml	Executed directly by the Playwright PR workflow.
+test-e2e-shard	ci	.github/workflows/e2e-testing.yml	Executed directly by the e2e testing workflow shard matrix.
 test-e2e-ui	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker and Playwright commands.
 test-visual	ci	.github/workflows/visual-testing.yml	Executed directly by the visual testing workflow.
 test-visual-ui	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker and Playwright commands.
