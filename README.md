@@ -360,7 +360,8 @@ A failing run prints an aligned table naming the **file**, **function/scope**
 (with its start line), the **metric**, the **measured value**, and the breached
 **threshold** — so you can fix every breach in one pass without reading the raw
 analyzer JSON. A passing run prints the measured-vs-threshold summary. CI fails
-the build on any hard violation; review-tier breaches surface without failing.
+the build on any hard violation; review-tier metrics are computed but are not
+currently printed and do not fail the build.
 
 ### Raising a budget / adding an exception
 

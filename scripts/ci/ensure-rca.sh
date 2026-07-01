@@ -41,7 +41,12 @@ url="https://github.com/mozilla/rust-code-analysis/releases/download/v${RCA_VERS
 tmp="$(mktemp -d "${TMPDIR:-/tmp}/rca-install.XXXXXX")"
 trap 'rm -rf "$tmp"' EXIT INT TERM
 
-curl -fsSL "$url" -o "$tmp/$asset"
+curl -fsSL \
+  --retry 3 \
+  --retry-all-errors \
+  --connect-timeout 10 \
+  --max-time 120 \
+  "$url" -o "$tmp/$asset"
 printf '%s  %s\n' "$RCA_SHA256_LINUX" "$tmp/$asset" | sha256sum -c -
 tar -xzf "$tmp/$asset" -C "$tmp"
 install -m 0755 "$tmp/rust-code-analysis-cli" "$RCA_BIN"

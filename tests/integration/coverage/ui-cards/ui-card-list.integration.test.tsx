@@ -146,7 +146,7 @@ describe('integration: UiCardList', () => {
       expect(observeSpy).toHaveBeenCalled();
     });
 
-    it('leaves pointer events untouched when a tooltip mutation arrives after the swiper ref detaches', () => {
+    it('leaves pointer events untouched when the swiper ref has detached', () => {
       let capturedCallback: MutationCallback | undefined;
       const realObserver = global.MutationObserver;
 
