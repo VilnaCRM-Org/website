@@ -12,6 +12,35 @@ import Settings from '../../assets/svg/notification/settings.svg';
 import styles from './styles';
 import { NotificationToggleProps } from './types';
 
+function SuccessMessage({ onClose }: { onClose: () => void }): React.ReactElement {
+  const { t } = useTranslation();
+
+  return (
+    <Box sx={styles.messageContainer}>
+      <UiTypography component="h4" sx={styles.messageTitle}>
+        {t('notifications.success.title')}
+      </UiTypography>
+
+      <UiTypography component="span" sx={styles.messageDescription}>
+        {t('notifications.success.description')}
+      </UiTypography>
+
+      <UiButton
+        sx={styles.messageButton}
+        variant="contained"
+        type="button"
+        size="medium"
+        fullWidth
+        onClick={onClose}
+      >
+        <Typography component="span" sx={styles.messageButtonText}>
+          {t('notifications.success.button')}
+        </Typography>
+      </UiButton>
+    </Box>
+  );
+}
+
 function NotificationSuccess({ setIsOpen }: NotificationToggleProps): React.ReactElement {
   const { t } = useTranslation();
   const handleClick: () => void = (): void => setIsOpen(false);
@@ -30,28 +59,8 @@ function NotificationSuccess({ setIsOpen }: NotificationToggleProps): React.Reac
         />
       </Box>
 
-      <Box sx={styles.messageContainer}>
-        <UiTypography component="h4" sx={styles.messageTitle}>
-          {t('notifications.success.title')}
-        </UiTypography>
+      <SuccessMessage onClose={handleClick} />
 
-        <UiTypography component="span" sx={styles.messageDescription}>
-          {t('notifications.success.description')}
-        </UiTypography>
-
-        <UiButton
-          sx={styles.messageButton}
-          variant="contained"
-          type="button"
-          size="medium"
-          fullWidth
-          onClick={handleClick}
-        >
-          <Typography component="span" sx={styles.messageButtonText}>
-            {t('notifications.success.button')}
-          </Typography>
-        </UiButton>
-      </Box>
       <Box sx={styles.bottomImgBox}>
         <Image src={Confetti} alt="" aria-hidden="true" />
       </Box>

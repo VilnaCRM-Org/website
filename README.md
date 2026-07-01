@@ -100,6 +100,7 @@ Linting & Formatting
   make lint-md: lints all markdown files (excluding CHANGELOG.md) using markdownlint
   make lint-deps: validates architecture/import boundaries with dependency-cruiser
   make lint: runs all linters (ESLint, TypeScript, markdownlint, and dependency-cruiser)
+  make lint-metrics: runs the rust-code-analysis complexity gate (host-only, not in make lint)
 ```
 
 Testing
@@ -308,6 +309,67 @@ adjust the relevant rule in `.dependency-cruiser.js` — narrow its `from`/`to`
 globs, add a `pathNot` entry, or (only for unavoidable cases) lower its
 `severity` to `warn` — and leave a comment explaining why so the boundary intent
 stays clear.
+
+## Code Metrics (rust-code-analysis)
+
+Per-function and per-file **code complexity** is enforced with Mozilla
+[rust-code-analysis](https://github.com/mozilla/rust-code-analysis). The
+thresholds live in [`config/metrics-policy.json`](config/metrics-policy.json)
+(validated against [`config/metrics-policy.schema.json`](config/metrics-policy.schema.json)),
+run locally via `make lint-metrics`, and are validated in CI on every pull
+request to `main` by
+[`.github/workflows/rust-code-analysis.yml`](.github/workflows/rust-code-analysis.yml).
+
+Unlike the other linters, `rust-code-analysis-cli` is a **standalone Rust
+binary**, not an npm package — so this gate runs **host-only** (it cannot run
+through the `node:*-alpine` dev container) and is deliberately **not** part of
+`make lint` or `CI_LINT_TARGETS`, and ships no DinD wrapper. The CLI only emits
+metrics; [`scripts/ci/lint-metrics.sh`](scripts/ci/lint-metrics.sh) parses them
+against the policy and owns the pass/fail (collect-all-then-fail).
+
+### What the gate enforces
+
+The analyzer measures `src/` `*.ts`/`*.tsx` only, excluding `src/test`,
+`*.d.ts`, `assets`, and `config`. Every metric is either a blocking **hard**
+threshold or a non-blocking **review** threshold.
+
+- **Hard (block CI)** — per function/closure: cyclomatic complexity, cognitive
+  complexity, ABC magnitude, argument count (NARGS), exit points (NEXITS),
+  size/LOC (`lloc`/`ploc`/`sloc`), and Halstead volume & bugs. Per file: number
+  of methods (NOM — functions, closures, total), size/LOC, Halstead volume &
+  bugs, and a Maintainability-Index floor (`mi_visual_studio`). Class/interface
+  bounds (`wmc`, `npm`, `npa`, `coa`, `cda`) are kept hard-but-permissive for
+  forward-compatibility; they are inert for TypeScript in v0.0.25.
+- **Review (computed, never block)** — the secondary MI variants (`mi_original`,
+  `mi_sei`), comment- and blank-ratio band checks, and the remaining Halstead
+  submetrics (operators/operands, length, vocabulary, difficulty, level, effort,
+  time, purity ratio).
+
+> The hard/review split above mirrors `config/metrics-policy.json`, which is the
+> single source of truth — **this list must be kept in sync with that file.**
+> Thresholds mirror the CRM sister repository (the shared cross-repo complexity
+> standard); the `src/` code is kept within them.
+
+### Running the gate
+
+```bash
+make lint-metrics     # host-only; auto-installs the pinned CLI to ./bin on first run
+```
+
+A failing run prints an aligned table naming the **file**, **function/scope**
+(with its start line), the **metric**, the **measured value**, and the breached
+**threshold** — so you can fix every breach in one pass without reading the raw
+analyzer JSON. A passing run prints the measured-vs-threshold summary. CI fails
+the build on any hard violation; review-tier metrics are computed but are not
+currently printed and do not fail the build.
+
+### Raising a budget / adding an exception
+
+Prefer fixing the offending code first — extract helpers, split a god-file,
+simplify dense expressions. When a higher budget is genuinely warranted, raise
+the relevant threshold in `config/metrics-policy.json` (a reviewed, in-repo
+change visible in the PR diff) or confirm the path belongs outside the governed
+scope. Do **not** silence the gate with a local override or a per-line disable.
 
 ## Routing
 

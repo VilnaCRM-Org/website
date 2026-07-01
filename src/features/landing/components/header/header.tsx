@@ -18,10 +18,32 @@ import { Drawer } from './drawer';
 import { NavList } from './nav-list';
 import styles from './styles';
 
-function Header(): React.ReactElement {
-  const { t } = useTranslation();
-  const router: NextRouter = useRouter();
+async function navigateToLink(router: NextRouter, link: string): Promise<void> {
+  try {
+    await router.push(`/${link}`, undefined, { scroll: true });
+    scrollToAnchor(link);
+  } catch {
+    fallbackNavigate(`/${link}`);
+  }
+}
 
+// Factory bound to the live `router` (never a module-scope constant handler).
+function createLinkClickHandler(router: NextRouter): (link: string) => void {
+  return async (link: string): Promise<void> => {
+    const normalized: string = normalizeLink(link);
+
+    // Anchor scroll covers same-page nav and the contacts shortcut; any other
+    // route navigates first, then scrolls (navigateToLink owns the fallback).
+    if (normalized === 'contacts' || router.pathname === '/') {
+      scrollToAnchor(link);
+      return;
+    }
+
+    await navigateToLink(router, link);
+  };
+}
+
+function useScrollOnRouteChange(router: NextRouter): void {
   useEffect(() => {
     const handleScroll: (url: string) => void = (url: string): void => {
       if (url.includes('#')) {
@@ -35,26 +57,19 @@ function Header(): React.ReactElement {
 
     return () => router.events.off('routeChangeComplete', handleScroll);
   }, [router]);
+}
 
-  const handleLinkClick: (link: string) => void = async (link: string) => {
-    const normalized: string = normalizeLink(link);
+// Keeps the live `router` in scope (it must never be hoisted to module scope)
+// and owns the routeChangeComplete scroll effect; returns the nav click handler.
+function useHeaderNavigation(router: NextRouter): (link: string) => void {
+  useScrollOnRouteChange(router);
+  return createLinkClickHandler(router);
+}
 
-    if (normalized === 'contacts') {
-      scrollToAnchor(link);
-      return;
-    }
-
-    if (router.pathname !== '/') {
-      try {
-        await router.push(`/${link}`, undefined, { scroll: true });
-        scrollToAnchor(link);
-      } catch {
-        fallbackNavigate(`/${link}`);
-      }
-    } else {
-      scrollToAnchor(link);
-    }
-  };
+function Header(): React.ReactElement {
+  const { t } = useTranslation();
+  const router: NextRouter = useRouter();
+  const handleLinkClick: (link: string) => void = useHeaderNavigation(router);
 
   return (
     <AppBar sx={styles.headerWrapper}>

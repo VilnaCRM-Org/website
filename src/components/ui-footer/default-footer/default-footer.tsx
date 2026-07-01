@@ -13,38 +13,58 @@ import { VilnaCRMEmail } from '../vilna-crm-email';
 
 import styles from './styles';
 
-function DefaultFooter({ socialLinks }: { socialLinks: SocialMedia[] }): React.ReactElement {
+function FooterTop(): React.ReactElement {
   const { t } = useTranslation();
 
+  return (
+    <Stack direction="row" sx={{ height: '4.188rem', alignItems: 'center' }}>
+      <Box sx={styles.topWrapper}>
+        <Stack
+          direction="row"
+          sx={[styles.topContent, { justifyContent: 'space-between', alignItems: 'center' }]}
+        >
+          <Image src={Logo} alt={t('footer.logo_alt')} width={143} height={48} />
+          <PrivacyPolicy />
+        </Stack>
+      </Box>
+    </Stack>
+  );
+}
+
+function FooterBottom({
+  socialLinks,
+  currentYear,
+}: {
+  socialLinks: SocialMedia[];
+  currentYear: number;
+}): React.ReactElement {
+  const { t } = useTranslation();
+
+  return (
+    <Box sx={styles.bottomWrapper}>
+      <Stack sx={styles.copyrightAndLinksWrapper}>
+        <Stack sx={styles.copyrightAndLinks}>
+          <UiTypography variant="medium15" sx={styles.copyright}>
+            {t('footer.copyright')}, <Box component="span">{currentYear}</Box>
+          </UiTypography>
+          <Stack direction="row" sx={{ gap: '0.875rem', alignItems: 'center' }}>
+            <VilnaCRMEmail />
+            <SocialMediaList socialLinks={socialLinks} />
+          </Stack>
+        </Stack>
+      </Stack>
+    </Box>
+  );
+}
+
+function DefaultFooter({ socialLinks }: { socialLinks: SocialMedia[] }): React.ReactElement {
   const currentDate: Date = useMemo(() => new Date(), []);
   const currentYear: number = useMemo(() => currentDate.getFullYear(), [currentDate]);
 
   return (
     <Stack sx={styles.footerWrapper}>
-      <Stack direction="row" sx={{ height: '4.188rem', alignItems: 'center' }}>
-        <Box sx={styles.topWrapper}>
-          <Stack
-            direction="row"
-            sx={[styles.topContent, { justifyContent: 'space-between', alignItems: 'center' }]}
-          >
-            <Image src={Logo} alt={t('footer.logo_alt')} width={143} height={48} />
-            <PrivacyPolicy />
-          </Stack>
-        </Box>
-      </Stack>
-      <Box sx={styles.bottomWrapper}>
-        <Stack sx={styles.copyrightAndLinksWrapper}>
-          <Stack sx={styles.copyrightAndLinks}>
-            <UiTypography variant="medium15" sx={styles.copyright}>
-              {t('footer.copyright')}, <Box component="span">{currentYear}</Box>
-            </UiTypography>
-            <Stack direction="row" sx={{ gap: '0.875rem', alignItems: 'center' }}>
-              <VilnaCRMEmail />
-              <SocialMediaList socialLinks={socialLinks} />
-            </Stack>
-          </Stack>
-        </Stack>
-      </Box>
+      <FooterTop />
+      <FooterBottom socialLinks={socialLinks} currentYear={currentYear} />
     </Stack>
   );
 }

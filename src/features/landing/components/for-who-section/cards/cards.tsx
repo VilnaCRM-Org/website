@@ -8,6 +8,26 @@ import Vector from '../../../assets/svg/for-who/yellowVector.svg';
 
 import styles from './styles';
 
+function CardItem({ textKey }: { textKey: string }): React.ReactElement {
+  const { t } = useTranslation();
+
+  return (
+    <Stack sx={styles.cardItem}>
+      <Box
+        component="img"
+        loading="lazy"
+        decoding="async"
+        src={Vector.src}
+        alt={t('for_who.vector_alt')}
+        sx={styles.img}
+      />
+      <UiTypography variant="bodyText18" sx={styles.optionText}>
+        {t(textKey)}
+      </UiTypography>
+    </Stack>
+  );
+}
+
 function Cards(): React.ReactElement {
   const { t } = useTranslation();
 
@@ -15,32 +35,8 @@ function Cards(): React.ReactElement {
     <Stack direction="column" sx={styles.wrapper}>
       <UiTypography sx={styles.secondTitle}>{t('for_who.heading_secondary')}</UiTypography>
       <Stack sx={styles.cardWrapper}>
-        <Stack sx={styles.cardItem}>
-          <Box
-            component="img"
-            loading="lazy"
-            decoding="async"
-            src={Vector.src}
-            alt={t('for_who.vector_alt')}
-            sx={styles.img}
-          />
-          <UiTypography variant="bodyText18" sx={styles.optionText}>
-            {t('for_who.card_text_title')}
-          </UiTypography>
-        </Stack>
-        <Stack sx={styles.cardItem}>
-          <Box
-            component="img"
-            loading="lazy"
-            decoding="async"
-            src={Vector.src}
-            alt={t('for_who.vector_alt')}
-            sx={styles.img}
-          />
-          <UiTypography variant="bodyText18" sx={styles.optionText}>
-            {t('for_who.card_text_business')}
-          </UiTypography>
-        </Stack>
+        <CardItem textKey="for_who.card_text_title" />
+        <CardItem textKey="for_who.card_text_business" />
       </Stack>
       <UiButton href="#signUp" sx={styles.button} variant="contained" size="small">
         {t('for_who.button_text')}

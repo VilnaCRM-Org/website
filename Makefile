@@ -25,6 +25,18 @@ PLAYWRIGHT_BIN              = $(BIN_DIR)/playwright
 BATS_BIN                    = pnpm exec bats
 DEPCRUISE_BIN               = $(BIN_DIR)/depcruise
 
+# rust-code-analysis is a host-installed Rust binary (release tarball / cargo),
+# NOT an npm dep under $(BIN_DIR); pin the version for reproducibility and install
+# it to the gitignored ./bin so local and CI share one provisioning path.
+# RCA_BIN is intentionally NOT a $(BIN_DIR)/... entry.
+RCA_VERSION                 = 0.0.25
+RCA_BIN                     = ./bin/rust-code-analysis-cli
+RCA_SCOPE                   = src
+RCA_INCLUDES                = *.ts *.tsx
+RCA_EXCLUDES                = */test/* *.d.ts */assets/* */config/*
+METRICS_POLICY_PATH         = config/metrics-policy.json
+RCA_SHA256_LINUX            = 9ec2a217b8ff191e02dab5d5f2eee6158b63fd975c532b2c5d67c2e6c7249894
+
 NEXT_BUILD                  = $(NEXT_BIN) build --webpack
 NEXT_BUILD_CMD              = $(NEXT_BUILD) && $(IMG_OPTIMIZE)
 STORYBOOK_BUILD_CMD         = $(STORYBOOK_BIN) build --output-dir storybook-static-ci
@@ -291,6 +303,26 @@ lint-deps: ## Validate architecture/import boundaries with dependency-cruiser
 
 lint: lint-next lint-tsc lint-md lint-deps ## Runs all linters: ESLint, TypeScript, Markdown, and dependency-cruiser in sequence.
 
+# DELIBERATE DIVERGENCE FROM THE npm-tool LINT GATES (lint-next/tsc/md/deps):
+#   * Host-only: rust-code-analysis is a Rust binary absent from the dev image,
+#     so this target does NOT use $(PNPM_EXEC) and runs on the host in both modes.
+#   * NOT in the `lint` aggregate (line above) and NOT in CI_LINT_TARGETS (both
+#     route through the dev container / run-parallel.sh, which cannot run the
+#     binary). Its only CI surface is .github/workflows/rust-code-analysis.yml.
+#   * NO run-metrics-lint-tests-dind wrapper (it would have to install Rust into
+#     the temp container, defeating the purpose).
+# rust-code-analysis-cli only EMITS metrics; scripts/ci/lint-metrics.sh parses
+# them against config/metrics-policy.json and owns the non-zero exit on hard
+# breaches (collect-all-then-fail). ensure-rca.sh provisions the pinned, verified
+# binary to ./bin if it is missing.
+lint-metrics: ## Run rust-code-analysis complexity gate on src (host-only; auto-installs the pinned CLI to ./bin)
+	@scripts/ci/ensure-rca.sh
+	@RCA_BIN="$(RCA_BIN)" RCA_VERSION="$(RCA_VERSION)" RCA_SCOPE="$(RCA_SCOPE)" \
+	 RCA_INCLUDES="$(RCA_INCLUDES)" RCA_EXCLUDES="$(RCA_EXCLUDES)" \
+	 RCA_SHA256_LINUX="$(RCA_SHA256_LINUX)" \
+	 METRICS_POLICY="$(METRICS_POLICY_PATH)" \
+	 sh scripts/ci/lint-metrics.sh
+
 husky: ## One-time Husky setup to enable Git hooks (deprecated if already set)
 	pnpm husky install
 
@@ -357,11 +389,15 @@ ci-test-integration: ## Run integration tests directly assuming deps are install
 # pipeline runs, adapted to website's pnpm + Next.js toolchain.
 #
 # Intentionally NOT ported from crm/Makefile (rationale):
-#   * lint-dup (jscpd), lint-metrics (rust-code-analysis), fmt-qlty / qlty:
-#     not configured in this repo; website's lint stack is ESLint + tsc +
-#     markdownlint + dependency-cruiser (exposed as lint-deps). Adopting the
-#     remaining tools needs new tooling/config and belongs in a dedicated
-#     issue, not a naming-parity change.
+#   * lint-dup (jscpd), fmt-qlty / qlty: not configured in this repo; website's
+#     lint stack is ESLint + tsc + markdownlint + dependency-cruiser (exposed as
+#     lint-deps). Adopting the remaining tools needs new tooling/config and
+#     belongs in a dedicated issue, not a naming-parity change.
+#   * lint-metrics (rust-code-analysis): now ported (issue #224), but adapted —
+#     the analyzer is a Rust binary absent from the node:*-alpine dev image, so
+#     the target runs host-only, stays OUT of the `lint` aggregate and
+#     CI_LINT_TARGETS, and ships no DinD wrapper. See the lint-metrics target
+#     below for the full rationale.
 #   * mockoon wait in ci-setup: website's dev service has no mockoon dependency
 #     (mockoon lives in the prod/test compose stack), so ci-setup brings up dev
 #     only.

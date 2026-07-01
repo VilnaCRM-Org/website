@@ -461,3 +461,34 @@ STUB
   [ "$status" -eq 0 ]
   assert_log_contains 'get-pr-comments'
 }
+
+@test "lint-metrics provisions the pinned CLI then enforces the policy host-only" {
+  reset_command_log
+
+  # Pretend the pinned analyzer is already provisioned so ensure-rca.sh is a
+  # no-op (idempotent, no download) and have it emit a minimal in-policy object.
+  mkdir -p "$MAKEFILE_SANDBOX/bin"
+  cat > "$MAKEFILE_SANDBOX/bin/rust-code-analysis-cli" <<'STUB'
+#!/usr/bin/env bash
+if [ "$1" = "--version" ]; then
+  echo "rust-code-analysis-cli 0.0.25"
+  exit 0
+fi
+echo '{"name":"sample.ts","kind":"unit","spaces":[],"metrics":{}}'
+exit 0
+STUB
+  chmod +x "$MAKEFILE_SANDBOX/bin/rust-code-analysis-cli"
+
+  # The wrapper validates the real committed policy + schema before enforcing.
+  mkdir -p "$MAKEFILE_SANDBOX/config"
+  cp "$PROJECT_ROOT/config/metrics-policy.json" "$MAKEFILE_SANDBOX/config/"
+  cp "$PROJECT_ROOT/config/metrics-policy.schema.json" "$MAKEFILE_SANDBOX/config/"
+
+  run_make_target lint-metrics
+  [ "$status" -eq 0 ]
+  assert_output_contains 'all hard checks pass'
+
+  # Host-only: never routed through the dev container (docker) or pnpm.
+  run grep -E 'docker|pnpm' "$COMMAND_LOG"
+  [ "$status" -ne 0 ]
+}

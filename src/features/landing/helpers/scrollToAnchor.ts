@@ -6,33 +6,26 @@ export const scrollToElement: (id: string) => boolean = (id: string): boolean =>
   }
   return false;
 };
-export const waitForElement: (id: string) => void = (id: string): void => {
-  if (scrollToElement(id)) return;
 
-  const MAX_WAIT_TIME: number = 10000;
+const MAX_WAIT_TIME: number = 10000;
+
+const observeUntilFound: (id: string) => void = (id: string): void => {
   let timeoutId: number | undefined;
   let observer: MutationObserver | null = null;
 
   observer = new MutationObserver(() => {
-    if (scrollToElement(id)) {
-      if (timeoutId !== undefined) {
-        clearTimeout(timeoutId);
-      }
-      observer?.disconnect();
-      observer = null;
-    }
-  });
-
-  observer.observe(document.body, {
-    childList: true,
-    subtree: true,
-  });
-
-  // schedule fallback to avoid leaking the observer forever
-  timeoutId = window.setTimeout(() => {
+    if (!scrollToElement(id)) return;
+    if (timeoutId !== undefined) clearTimeout(timeoutId);
     observer?.disconnect();
-    observer = null;
-  }, MAX_WAIT_TIME);
+  });
+
+  observer.observe(document.body, { childList: true, subtree: true });
+  // schedule fallback to avoid leaking the observer forever
+  timeoutId = window.setTimeout(() => observer?.disconnect(), MAX_WAIT_TIME);
+};
+
+export const waitForElement: (id: string) => void = (id: string): void => {
+  if (!scrollToElement(id)) observeUntilFound(id);
 };
 
 export default function scrollToAnchor(link: string): void {

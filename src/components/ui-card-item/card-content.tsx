@@ -6,6 +6,21 @@ import UiTypography from '../ui-typography';
 import styles from './styles';
 import { CardContentProps } from './types';
 
+function CardTitle({
+  item,
+  isSmallCard,
+}: Pick<CardContentProps, 'item' | 'isSmallCard'>): React.ReactElement {
+  return (
+    <UiTypography
+      variant={isSmallCard ? 'h6' : 'h5'}
+      component="h3"
+      sx={isSmallCard ? styles.smallTitle : styles.largeTitle}
+    >
+      <Trans i18nKey={item.title} />
+    </UiTypography>
+  );
+}
+
 function CardContent({
   item,
   isSmallCard,
@@ -13,13 +28,7 @@ function CardContent({
 }: CardContentProps): React.ReactElement {
   return (
     <>
-      <UiTypography
-        variant={isSmallCard ? 'h6' : 'h5'}
-        component="h3"
-        sx={isSmallCard ? styles.smallTitle : styles.largeTitle}
-      >
-        <Trans i18nKey={item.title} />
-      </UiTypography>
+      <CardTitle item={item} isSmallCard={isSmallCard} />
       <UiTypography
         variant={isSmallCard ? 'bodyText16' : 'bodyText18'}
         sx={isSmallCard ? styles.smallText : styles.largeText}

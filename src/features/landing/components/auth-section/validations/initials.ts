@@ -22,20 +22,23 @@ export const validators: Record<ValidationKeys, ValidationFunction> = {
   isEmpty: value => value.trim().length === 0,
 };
 
+type FullNameRule = { isInvalid: (value: string) => boolean; message: string };
+
+const FULL_NAME_RULES: readonly FullNameRule[] = [
+  { isInvalid: value => validators.isEmpty(value), message: validationMessages.required },
+  {
+    isInvalid: value => !validators.isLettersOnly(value),
+    message: validationMessages.lettersOnlyError,
+  },
+  { isInvalid: value => !validators.isFormatted(value), message: validationMessages.formatError },
+];
+
 const validateFullName: (fullName: string) => string | null = (fullName: string): string | null => {
   const trimmedFullName: string = fullName.trim();
-
-  if (validators.isEmpty(trimmedFullName)) return validationMessages.required;
-
-  if (trimmedFullName.length > 0 && !validators.isLettersOnly(trimmedFullName)) {
-    return validationMessages.lettersOnlyError;
-  }
-
-  if (trimmedFullName.length > 0 && !validators.isFormatted(trimmedFullName)) {
-    return validationMessages.formatError;
-  }
-
-  return null;
+  const failedRule: FullNameRule | undefined = FULL_NAME_RULES.find(rule =>
+    rule.isInvalid(trimmedFullName)
+  );
+  return failedRule ? failedRule.message : null;
 };
 
 export default validateFullName;
