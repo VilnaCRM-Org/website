@@ -15,6 +15,12 @@ permissions:
   contents: read
   pull-requests: read
 
+# Serialize sandbox provisioning per branch/PR without cancelling: aborting an
+# in-flight AWS pipeline trigger mid-run is unsafe.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
 jobs:
   check-tokens:
     runs-on: ubuntu-latest

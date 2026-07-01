@@ -1,4 +1,5 @@
 name: Image optimization
+
 on:
   pull_request:
     paths:
@@ -6,17 +7,32 @@ on:
       - '**.jpeg'
       - '**.png'
       - '**.webp'
+
+permissions: {}
+
+# calibreapp/image-actions commits optimized images back to the PR branch and
+# holds contents: write, so cancelling mid-run could leave a partial commit — a
+# newer push queues behind the current one rather than superseding it.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
 jobs:
   build:
     if: github.event.pull_request.head.repo.full_name == github.repository
     name: calibreapp/image-actions
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
 
       - name: Compress Images
-        uses: calibreapp/image-actions@main
+        uses: calibreapp/image-actions@9d037c06280028c110ff61c433ad4dc7d33c3c43 # v1.5.0
         with:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           ignorePaths: 'src/test/**'

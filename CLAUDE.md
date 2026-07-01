@@ -125,6 +125,29 @@ the [`complexity-management`](.claude/skills/complexity-management/SKILL.md) ski
 refactoring moves (extract helper, lookup map, typed options object, split file, consolidate
 exits).
 
+## Continuous Integration (parallel PR pipeline)
+
+Each PR check is its own workflow on its own runner, so they run in parallel and a PR is
+gated by the slowest single job, not their sum (issue #316). The layout is
+orchestration-only — every check still runs on every PR at the same thresholds; nothing is
+tiered off, weakened, or removed.
+
+- **Concurrency.** Every workflow sets a `concurrency` group keyed on the PR/ref. PR checks
+  use `cancel-in-progress: true` (a new push cancels the superseded run); the deploy,
+  release, and sandbox workflows use `false` so a production trigger is never aborted
+  mid-run.
+- **Caching.** Node jobs restore the pnpm store (`~/.pnpm-store`, keyed on the Node version
+  and `pnpm-lock.yaml`).
+- **Matrices.** The Playwright e2e suite splits across a `--shard` matrix
+  (`test-e2e-shard`), Lighthouse runs `desktop`/`mobile` in parallel, the K6 load suites run
+  in parallel, and mutation testing runs as a shard matrix plus a merge gate.
+- **Mutation sharding.** `make test-mutation-shard` (with `MUTATION_SHARD_INDEX` /
+  `MUTATION_SHARD_TOTAL`) writes a per-shard report (`stryker.shard.config.mjs`, with
+  `break` disabled); `make merge-mutation-reports` unions the shards and re-enforces the
+  exact `break` from `stryker.config.mjs` (`scripts/ci/merge-mutation-reports.ts`). The
+  split is a total partition, so the merged score equals an unsharded run and the merge job
+  fails closed.
+
 ## Architecture
 
 The codebase follows a bulletproof-react, feature-based layout.

@@ -47,6 +47,10 @@ TEST_DIR_E2E                = $(TEST_DIR_BASE)/e2e
 TEST_DIR_VISUAL             = $(TEST_DIR_BASE)/visual
 
 STRYKER_CMD                 = pnpm exec stryker run
+STRYKER_SHARD_CONFIG        = stryker.shard.config.mjs
+MUTATION_SHARD_TOTAL        ?= 1
+MUTATION_SHARD_INDEX        ?= 0
+MERGE_MUTATION_REPORTS_CMD  = pnpm exec tsx scripts/ci/merge-mutation-reports.ts
 
 SERVE_CMD                   = --collect.startServerCommand="$(SERVE_BIN) -l $(NEXT_PUBLIC_PROD_PORT) out" \
                               --collect.startServerReadyPattern="Accepting connections"
@@ -168,6 +172,12 @@ MARKDOWNLINT_BIN            = $(PNPM_EXEC) ./node_modules/.bin/markdownlint
 
 run-visual                  = $(PLAYWRIGHT_TEST) "$(PLAYWRIGHT_BIN) test $(TEST_DIR_VISUAL)"
 run-e2e                     = $(PLAYWRIGHT_TEST) "$(PLAYWRIGHT_BIN) test $(TEST_DIR_E2E)"
+# E2E sharding: the e2e workflow matrix runs one shard per runner via Playwright
+# --shard=<index>/<total>. Defaults to 1/1 (the whole suite), so a bare
+# `make test-e2e-shard` behaves exactly like `make test-e2e`.
+E2E_SHARD_INDEX             ?= 1
+E2E_SHARD_TOTAL             ?= 1
+run-e2e-shard               = $(PLAYWRIGHT_TEST) "$(PLAYWRIGHT_BIN) test $(TEST_DIR_E2E) --shard=$(E2E_SHARD_INDEX)/$(E2E_SHARD_TOTAL)"
 playwright-test             = $(PLAYWRIGHT_DOCKER_CMD) $(PLAYWRIGHT_BIN) test
 
 help:
@@ -335,6 +345,9 @@ storybook-build: ## Build Storybook UI.
 test-e2e: start-prod  ## Start production and run E2E tests (Playwright)
 	$(run-e2e)
 
+test-e2e-shard: start-prod ## Start production and run one E2E shard (E2E_SHARD_INDEX of E2E_SHARD_TOTAL; used by the e2e workflow matrix)
+	$(run-e2e-shard)
+
 test-e2e-ui: start-prod ## Start the production environment and run E2E tests with the UI available at $(UI_MODE_URL)
 	@echo "🚀 Starting Playwright UI tests..."
 	@echo "Test will be run on: $(UI_MODE_URL)"
@@ -412,7 +425,8 @@ ci-test-integration: ## Run integration tests directly assuming deps are install
 	ci-test-mutation ci-mutation ci-prod-setup ci-test-e2e ci-test-visual \
 	ci-test-memory-leak ci-test-load ci-test-lighthouse-desktop \
 	ci-test-lighthouse-mobile ci-test-prod ensure-dev start-prod-clean \
-	test-load test-load-swagger pr-comments
+	test-load test-load-swagger test-mutation-shard merge-mutation-reports \
+	pr-comments
 
 ci-setup: create-network ## Prepare the shared dev environment for CI-oriented checks
 	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) up $(CI_SETUP_UP_FLAGS) dev && $(MAKE) wait-for-dev
@@ -517,6 +531,13 @@ memory-leak-dind: start-prod ## Run Memlab tests in isolated compose project (DI
 
 test-mutation: build ## Run mutation tests using Stryker after building the app
 	$(STRYKER_CMD)
+
+test-mutation-shard: ## Run mutation shard MUTATION_SHARD_INDEX of MUTATION_SHARD_TOTAL (host; assumes deps installed) — writes reports/mutation/mutation-shard-<index>.json with break disabled
+	MUTATION_SHARD_INDEX=$(MUTATION_SHARD_INDEX) MUTATION_SHARD_TOTAL=$(MUTATION_SHARD_TOTAL) \
+		$(STRYKER_CMD) $(STRYKER_SHARD_CONFIG)
+
+merge-mutation-reports: ## Union the per-shard mutation reports and re-enforce the exact Stryker break gate over the whole set (host; assumes deps installed)
+	MUTATION_SHARD_TOTAL=$(MUTATION_SHARD_TOTAL) $(MERGE_MUTATION_REPORTS_CMD)
 
 wait-for-prod-health: ## Wait for the prod container to reach a healthy state.
 	@echo "Waiting for prod container to become healthy (timeout: 60s)..."

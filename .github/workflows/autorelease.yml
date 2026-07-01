@@ -5,9 +5,20 @@ on:
     branches:
       - main
 
+permissions: {}
+
+# Serialize releases per ref without cancelling: aborting an in-flight changelog
+# commit / tag / release mid-run could leave a partial release, so a newer push
+# queues behind the current one.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Generate token

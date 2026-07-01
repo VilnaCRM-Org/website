@@ -12,6 +12,13 @@ permissions:
   id-token: write
   contents: read
 
+# Serialize deploys per ref without cancelling: aborting an in-flight production
+# CodePipeline trigger mid-run is unsafe, so a newer push queues behind the
+# current one rather than superseding it.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest

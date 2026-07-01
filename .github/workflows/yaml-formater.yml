@@ -5,8 +5,19 @@ on:
     branches:
       - main
 
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   yamlfmt:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: norwd/fmtya@v1
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: norwd/fmtya@11c4eb4d55f8a465564cbef9aabb3e149d4a6247 # v1
