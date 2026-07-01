@@ -35,6 +35,10 @@ TEST_DIR_E2E                = $(TEST_DIR_BASE)/e2e
 TEST_DIR_VISUAL             = $(TEST_DIR_BASE)/visual
 
 STRYKER_CMD                 = pnpm exec stryker run
+STRYKER_SHARD_CONFIG        = stryker.shard.config.mjs
+MUTATION_SHARD_TOTAL        ?= 1
+MUTATION_SHARD_INDEX        ?= 0
+MERGE_MUTATION_REPORTS_CMD  = pnpm exec tsx scripts/ci/merge-mutation-reports.ts
 
 SERVE_CMD                   = --collect.startServerCommand="$(SERVE_BIN) -l $(NEXT_PUBLIC_PROD_PORT) out" \
                               --collect.startServerReadyPattern="Accepting connections"
@@ -376,7 +380,8 @@ ci-test-integration: ## Run integration tests directly assuming deps are install
 	ci-test-mutation ci-mutation ci-prod-setup ci-test-e2e ci-test-visual \
 	ci-test-memory-leak ci-test-load ci-test-lighthouse-desktop \
 	ci-test-lighthouse-mobile ci-test-prod ensure-dev start-prod-clean \
-	test-load test-load-swagger pr-comments
+	test-load test-load-swagger test-mutation-shard merge-mutation-reports \
+	pr-comments
 
 ci-setup: create-network ## Prepare the shared dev environment for CI-oriented checks
 	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) up $(CI_SETUP_UP_FLAGS) dev && $(MAKE) wait-for-dev
@@ -481,6 +486,13 @@ memory-leak-dind: start-prod ## Run Memlab tests in isolated compose project (DI
 
 test-mutation: build ## Run mutation tests using Stryker after building the app
 	$(STRYKER_CMD)
+
+test-mutation-shard: ## Run mutation shard MUTATION_SHARD_INDEX of MUTATION_SHARD_TOTAL (host; assumes deps installed) — writes reports/mutation/mutation-shard-<index>.json with break disabled
+	MUTATION_SHARD_INDEX=$(MUTATION_SHARD_INDEX) MUTATION_SHARD_TOTAL=$(MUTATION_SHARD_TOTAL) \
+		$(STRYKER_CMD) $(STRYKER_SHARD_CONFIG)
+
+merge-mutation-reports: ## Union the per-shard mutation reports and re-enforce the exact Stryker break gate over the whole set (host; assumes deps installed)
+	MUTATION_SHARD_TOTAL=$(MUTATION_SHARD_TOTAL) $(MERGE_MUTATION_REPORTS_CMD)
 
 wait-for-prod-health: ## Wait for the prod container to reach a healthy state.
 	@echo "Waiting for prod container to become healthy (timeout: 60s)..."

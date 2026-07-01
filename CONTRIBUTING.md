@@ -89,6 +89,45 @@ locally with the CI orchestration targets:
 When you add a new orchestration target, keep
 `tests/bats/make-target-coverage.tsv` in sync as described above.
 
+#### How the PR pipeline runs in parallel
+
+Every check on a pull request is its own workflow on its own runner, so GitHub
+runs them all in parallel — the PR is only as slow as the slowest single job,
+not the sum. This is an orchestration-only layout: the same checks run on every
+PR at the same thresholds; nothing is moved to a nightly tier, weakened, or
+removed.
+
+- **Concurrency.** Every workflow declares a `concurrency` group keyed on the PR
+  (or ref). PR checks set `cancel-in-progress: true`, so a new push cancels the
+  superseded run instead of letting its slow jobs run to completion. The deploy,
+  release, and sandbox workflows use `cancel-in-progress: false` — a production
+  trigger must never be aborted mid-run, so newer pushes queue behind the
+  current one.
+- **Caching.** Node jobs restore the pnpm store (`~/.pnpm-store`, keyed on the
+  Node version and `pnpm-lock.yaml`) so installs are warm instead of cold.
+- **Matrices instead of serial steps.** Lighthouse runs `desktop` and `mobile`
+  as parallel matrix cells, the K6 load suites (homepage, Swagger) run as
+  parallel cells, and mutation testing runs as a shard matrix (see below).
+
+#### Mutation testing runs sharded
+
+Mutation testing runs as a deterministic shard matrix plus a merge gate:
+
+- Each `shard` cell runs `make test-mutation-shard` (with `MUTATION_SHARD_INDEX`
+  and `MUTATION_SHARD_TOTAL`), which slices the `mutate` list from
+  `stryker.config.mjs` (via `stryker.shard.config.mjs`) and writes
+  `reports/mutation/mutation-shard-<i>.json` with `break` disabled.
+- The `merge` job runs `make merge-mutation-reports` (with `MUTATION_SHARD_TOTAL`),
+  which unions the per-shard reports and re-enforces the **exact** `break`
+  threshold read from `stryker.config.mjs`
+  ([`scripts/ci/merge-mutation-reports.ts`](scripts/ci/merge-mutation-reports.ts),
+  unit-tested in `src/test/unit/mutation-report.test.ts`).
+
+The round-robin split is a total partition of `mutate`, so the union equals the
+full list and the sharded score is identical to an unsharded run — the gate is
+preserved, never relaxed. The merge job runs even when a shard fails, so the
+gate fails closed rather than passing vacuously.
+
 #### Dockerfile build performance
 
 If your change touches a `Dockerfile` (or the gate's own config), a CI gate

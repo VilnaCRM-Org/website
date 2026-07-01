@@ -7,6 +7,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   static:
     runs-on: ubuntu-latest
@@ -14,10 +18,12 @@ jobs:
       CI: 1
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           # Use the repo's pinned LTS (.nvmrc). dependency-cruiser, run via
           # `make lint`, supports LTS Node only (^20.12 || ^22 || >=24) and
@@ -26,7 +32,7 @@ jobs:
 
       - name: Cache pnpm dependencies
         id: cache-pnpm-dependencies
-        uses: actions/cache@v4.2.3
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
         with:
           path: node_modules
           key: ${{ runner.os }}-dependencies-${{ hashFiles('**/pnpm-lock.yaml') }}
@@ -38,9 +44,7 @@ jobs:
 
       - name: Install dependencies
         run: make install
-        if: |
-          steps.cache-pnpm-dependencies.outputs.cache-hit != 'true' ||
-          steps.cache-pnpm-packages.outputs.cache-hit != 'true'
+        if: steps.cache-pnpm-dependencies.outputs.cache-hit != 'true'
 
       - name: Run all linters
         run: make lint

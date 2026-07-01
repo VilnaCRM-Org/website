@@ -39,6 +39,8 @@ test-bats	ci	.github/workflows/bats-testing.yml	Executed directly by the dedicat
 test-memory-leak	ci	.github/workflows/memory-leak-testing.yml	Executed directly by the memory leak workflow.
 memory-leak-dind	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker Compose commands.
 test-mutation	ci	.github/workflows/mutation-testing.yml	Executed directly by the mutation testing workflow.
+test-mutation-shard	ci	.github/workflows/mutation-testing.yml	Executed directly by the mutation testing shard matrix.
+merge-mutation-reports	ci	.github/workflows/mutation-testing.yml	Executed by the mutation testing merge job to re-enforce the break gate over the shard union.
 wait-for-prod-health	ci	.github/workflows/load-testing.yml	Executed through `make load-tests` and `make load-tests-swagger`, which depend on `wait-for-prod-health`.
 visual-direct	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker and Playwright commands.
 e2e-direct	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker and Playwright commands.

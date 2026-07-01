@@ -44,6 +44,13 @@ strength), `make test-bats` (Makefile and CI shell flows), `make test-memory-lea
 `make load-tests` (traffic, K6), and `make lighthouse-desktop` / `make lighthouse-mobile`
 (performance, accessibility, best practices).
 
+In CI these suites are fanned out to run in parallel (issue #316): every workflow declares a
+`concurrency` group (PR checks cancel superseded runs; deploy/release/sandbox do not),
+Lighthouse and the K6 load suites run as matrices, and mutation testing runs as a shard
+matrix whose `merge` job re-enforces the **exact** Stryker `break` threshold over the union
+of shards (`make merge-mutation-reports`). The thresholds are unchanged — locally you still
+run the single `make test-mutation`.
+
 ### Step 2 — Cover Every Applicable Scenario Class
 
 For each layer you touch, cover all three scenario classes that apply to the change.

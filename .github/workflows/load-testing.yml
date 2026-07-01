@@ -5,28 +5,42 @@ on:
     branches:
       - main
 
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   load-testing:
+    # Each K6 scenario is an independent matrix cell (its own runner), so the
+    # homepage and Swagger suites run in parallel instead of one after another.
+    name: ${{ matrix.label }} load testing
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     strategy:
+      fail-fast: false
       matrix:
         include:
-          - make_cmd: load-tests
+          - make_cmd: test-load
             label: homepage
-          - make_cmd: load-tests-swagger
+          - make_cmd: test-load-swagger
             label: swagger
-
-    name: ${{ matrix.label }} load testing
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
 
       - name: Setup Node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: ${{ vars.NODE_VERSION }}
 
       - name: Run ${{ matrix.label }} target
-        run: make ${{ matrix.make_cmd }}
+        env:
+          MAKE_CMD: ${{ matrix.make_cmd }}
+        run: make "$MAKE_CMD"
