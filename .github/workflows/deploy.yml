@@ -22,6 +22,14 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Gate the prod deploy behind a GitHub Environment so protection rules
+    # (required reviewers / wait timer) can be enforced from repo Settings →
+    # Environments → production. `url` surfaces the live site in the deployment
+    # timeline once the PRODUCTION_SITE_URL repo variable is set.
+    environment:
+      name: production
+      url: ${{ vars.PRODUCTION_SITE_URL }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -36,3 +44,49 @@ jobs:
       - name: Trigger CodePipeline
         run: |
           aws codepipeline start-pipeline-execution --name ci-cd-website-prod-pipeline
+
+  post-deploy-smoke:
+    name: post-deploy smoke test
+    needs: deploy
+    # The smoke test needs a public URL to probe. Until a maintainer sets the
+    # PRODUCTION_SITE_URL repository variable (Settings → Secrets and variables →
+    # Actions → Variables — see docs/deployment-runbook.md) the job skips cleanly
+    # rather than failing the deploy workflow.
+    if: ${{ vars.PRODUCTION_SITE_URL != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - name: Smoke-test homepage and /swagger
+        env:
+          # CodePipeline deploys asynchronously, so the probe retries until the
+          # CDN serves the new build (or the job times out).
+          SITE_URL: ${{ vars.PRODUCTION_SITE_URL }}
+        run: |
+          set -euo pipefail
+
+          base="${SITE_URL%/}"
+
+          probe() {
+            path="$1"
+            label="$2"
+            marker="$3"
+            url="${base}${path}"
+            attempts=30
+            delay=20
+            for i in $(seq 1 "$attempts"); do
+              if body="$(curl -fsS --max-time 30 "$url")" \
+                && printf '%s' "$body" | grep -Eiq "$marker"; then
+                echo "✓ ${label} (${url}) returned 200 and matched /${marker}/i"
+                return 0
+              fi
+              echo "… ${label} not ready (attempt ${i}/${attempts}); retrying in ${delay}s"
+              sleep "$delay"
+            done
+            echo "::error::${label} (${url}) failed smoke test after $((attempts * delay))s"
+            return 1
+          }
+
+          probe "/" "homepage" "__next|<title"
+          probe "/swagger" "swagger page" "swagger"

@@ -12,6 +12,10 @@ export default defineConfig({
   testMatch: ['**/*.spec.ts'],
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
+  // Retry twice in CI so a transient cross-container/network blip self-heals
+  // instead of failing the run; this also activates `trace: 'on-first-retry'`
+  // below (dead config while retries were 0). Locally retries stay at 0.
+  retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
   reporter: [['html', { open: 'never' }]],
   use: {
