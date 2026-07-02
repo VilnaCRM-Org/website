@@ -393,6 +393,9 @@ If you're having trouble, head for
 [the troubleshooting guide](https://github.com/VilnaCRM-Org/frontend-ssr-template/wiki/Troubleshooting)
 as it's frequently updated.
 
+For production deploys, the post-deploy smoke test, and the rollback procedure,
+see the [deployment and rollback runbook](docs/deployment-runbook.md).
+
 You can generate complete API-level documentation by running `doc` in the top-level
 folder, and documentation will appear in the `docs` folder, though you'll need to have
 [API-Extractor](https://api-extractor.com/) installed.

@@ -24,6 +24,7 @@ concurrency:
 jobs:
   check-tokens:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Validate AWS Region
         run: |
@@ -114,6 +115,7 @@ jobs:
 
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     needs: [check-tokens]
     steps:
       - name: Checkout repository

@@ -21,6 +21,7 @@ jobs:
     # prod stack and is fully independent.
     name: e2e shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }}
     runs-on: ubuntu-latest
+    timeout-minutes: 40
     permissions:
       contents: read
     strategy:
