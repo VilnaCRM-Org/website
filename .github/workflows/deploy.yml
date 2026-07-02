@@ -54,7 +54,7 @@ jobs:
     # rather than failing the deploy workflow.
     if: ${{ vars.PRODUCTION_SITE_URL != '' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     permissions:
       contents: read
     steps:
@@ -73,10 +73,10 @@ jobs:
             label="$2"
             marker="$3"
             url="${base}${path}"
-            attempts=30
-            delay=20
+            attempts=24
+            delay=15
             for i in $(seq 1 "$attempts"); do
-              if body="$(curl -fsS --max-time 30 "$url")" \
+              if body="$(curl -fsS --max-time 15 "$url")" \
                 && printf '%s' "$body" | grep -Eiq "$marker"; then
                 echo "✓ ${label} (${url}) returned 200 and matched /${marker}/i"
                 return 0
@@ -84,9 +84,18 @@ jobs:
               echo "… ${label} not ready (attempt ${i}/${attempts}); retrying in ${delay}s"
               sleep "$delay"
             done
-            echo "::error::${label} (${url}) failed smoke test after $((attempts * delay))s"
+            echo "::error::${label} (${url}) failed smoke test"
             return 1
           }
 
-          probe "/" "homepage" "__next|<title"
-          probe "/swagger" "swagger page" "swagger"
+          # Probe both endpoints in parallel so each is fully tested within the
+          # job timeout regardless of the other's outcome (they deploy together).
+          probe "/" "homepage" "__next|<title" &
+          home_pid=$!
+          probe "/swagger" "swagger page" "swagger" &
+          swagger_pid=$!
+
+          rc=0
+          wait "$home_pid" || rc=1
+          wait "$swagger_pid" || rc=1
+          exit "$rc"
