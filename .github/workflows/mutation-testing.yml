@@ -22,6 +22,7 @@ jobs:
   shard:
     name: shard ${{ matrix.index }}
     runs-on: ubuntu-latest
+    timeout-minutes: 40
     permissions:
       contents: read
     strategy:
@@ -80,6 +81,7 @@ jobs:
     # required check as passing — silently bypassing the mutation gate.
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: read
 

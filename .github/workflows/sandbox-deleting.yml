@@ -23,6 +23,7 @@ concurrency:
 jobs:
   trigger-sandbox-deletion-pipeline:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Validate environment variables
         run: |

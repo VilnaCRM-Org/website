@@ -17,6 +17,7 @@ jobs:
     # homepage and Swagger suites run in parallel instead of one after another.
     name: ${{ matrix.label }} load testing
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: read
 
