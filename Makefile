@@ -309,6 +309,7 @@ lint-md: ## This command executes Markdown linter
 	$(MARKDOWNLINT_BIN) $(MD_LINT_ARGS) "**/*.md"
 
 lint-deps: ## Validate architecture/import boundaries with dependency-cruiser
+	node scripts/generateLocalization.mjs
 	$(PNPM_EXEC) $(DEPCRUISE_BIN) src pages tests --config .dependency-cruiser.js
 
 lint: lint-next lint-tsc lint-md lint-deps ## Runs all linters: ESLint, TypeScript, Markdown, and dependency-cruiser in sequence.
@@ -444,6 +445,7 @@ ci-test-unit-server: ## Run server-side unit tests directly assuming deps are in
 	env TEST_ENV=server $(JEST_BIN) $(JEST_FLAGS) $(TEST_DIR_APOLLO)
 
 ci-test-mutation: ## Run mutation tests directly assuming deps are installed (CI entrypoint)
+	node scripts/generateLocalization.mjs
 	pnpm exec stryker run
 
 ci-mutation: ## Run mutation testing in isolation after the parallel dev-side tests (heavy; not parallelized)
@@ -533,6 +535,7 @@ test-mutation: build ## Run mutation tests using Stryker after building the app
 	$(STRYKER_CMD)
 
 test-mutation-shard: ## Run mutation shard MUTATION_SHARD_INDEX of MUTATION_SHARD_TOTAL (host; assumes deps installed) — writes reports/mutation/mutation-shard-<index>.json with break disabled
+	node scripts/generateLocalization.mjs
 	MUTATION_SHARD_INDEX=$(MUTATION_SHARD_INDEX) MUTATION_SHARD_TOTAL=$(MUTATION_SHARD_TOTAL) \
 		$(STRYKER_CMD) $(STRYKER_SHARD_CONFIG)
 
