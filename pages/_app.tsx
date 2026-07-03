@@ -29,7 +29,11 @@ const DynamicHeader: ComponentType = dynamic(() => import('@/features/landing/co
 Sentry.init({
   dsn: env.NEXT_PUBLIC_SENTRY_DSN,
   integrations: [Sentry.browserTracingIntegration(), Sentry.replayIntegration()],
-  tracePropagationTargets: [env.NEXT_PUBLIC_DEVELOPMENT_API_URL, env.NEXT_PUBLIC_API_URL],
+  // Drop empty origins so Sentry never receives '' (which substring-matches
+  // every URL and would attach trace headers to all outbound requests).
+  tracePropagationTargets: [env.NEXT_PUBLIC_DEVELOPMENT_API_URL, env.NEXT_PUBLIC_API_URL].filter(
+    Boolean
+  ),
   tracesSampleRate: 1.0,
   replaysSessionSampleRate: 0.1,
   replaysOnErrorSampleRate: 1.0,

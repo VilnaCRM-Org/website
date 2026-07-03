@@ -297,7 +297,14 @@ export default [
       'no-restricted-syntax': [
         'error',
         {
+          // Dotted access: process.env.X (and `const { X } = process.env`).
           selector: "MemberExpression[object.name='process'][property.name='env']",
+          message:
+            'Read environment variables from the validated config in src/config/env.ts, not process.env directly (#328).',
+        },
+        {
+          // Computed access: process['env'].
+          selector: "MemberExpression[object.name='process'][property.value='env']",
           message:
             'Read environment variables from the validated config in src/config/env.ts, not process.env directly (#328).',
         },

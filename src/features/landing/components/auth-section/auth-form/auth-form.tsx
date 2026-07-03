@@ -168,7 +168,11 @@ function PrivacyField({
                   Privacy Policy
                 </UiLink>
                 and the
-                <UiLink href={env.NEXT_PUBLIC_VILNACRM_USE_POLICY_URL} target="_blank">
+                <UiLink
+                  href={env.NEXT_PUBLIC_VILNACRM_USE_POLICY_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
                   Use Policy
                 </UiLink>
                 VilnaCRM Service
