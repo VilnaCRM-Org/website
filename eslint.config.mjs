@@ -66,6 +66,7 @@ export default [
       'checkNodeVersion.js',
       'mutation.js',
       'next.config.js',
+      'jest.global-setup.js',
       'lighthouserc.*.js',
       'commitlint.config.js',
       'stryker.config.mjs',
@@ -124,6 +125,7 @@ export default [
       '*rc.*',
       'checkNodeVersion.js',
       'next.config.js',
+      'jest.global-setup.js',
       'mutation.js',
       'lighthouserc.*.js',
       'commitlint.config.js',
@@ -278,6 +280,28 @@ export default [
       'import/no-unresolved': 'off',
       'react/jsx-filename-extension': ['error', { extensions: ['.jsx', '.tsx'] }],
       'class-methods-use-this': 'off',
+    },
+  },
+
+  {
+    // Typed config guard (#328): every environment-variable read under src/ and
+    // pages/ must go through the validated `src/config/env.ts` module. The
+    // config module itself, tests and stories are exempt via `ignores` (a
+    // files-scoped override, never disable comments). Declared as the last
+    // top-level block so it wins under sandboxed eslint runs (qlty/CI) that only
+    // apply top-level flat config, and so it overrides the project-wide
+    // `no-restricted-syntax: 'off'` for these files.
+    files: ['src/**/*.{ts,tsx,js,jsx}', 'pages/**/*.{ts,tsx,js,jsx}'],
+    ignores: ['src/config/env.ts', 'src/test/**', '**/*.stories.@(js|jsx|ts|tsx)'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "MemberExpression[object.name='process'][property.name='env']",
+          message:
+            'Read environment variables from the validated config in src/config/env.ts, not process.env directly (#328).',
+        },
+      ],
     },
   },
 ];

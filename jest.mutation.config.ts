@@ -5,6 +5,9 @@ const createJestConfig = nextJest({ dir: './' });
 
 const config: Config = {
   clearMocks: true,
+  // Generate the gitignored pages/i18n/localization.json (#328) before
+  // jest.setup.ts imports the i18n stack that requires it.
+  globalSetup: '<rootDir>/jest.global-setup.js',
   collectCoverage: false,
   coverageProvider: 'v8',
   testEnvironment: 'jsdom',

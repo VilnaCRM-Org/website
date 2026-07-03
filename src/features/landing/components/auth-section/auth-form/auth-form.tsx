@@ -12,6 +12,7 @@ import {
   UiTooltip,
   UiTypography,
 } from '@/components';
+import { env } from '@/config/env';
 
 import QuestionMark from '../../../assets/svg/auth-section/questionMark.svg';
 import { PasswordTip } from '../password-tip';
@@ -160,14 +161,14 @@ function PrivacyField({
               <Trans i18nKey="sign_up.form.confidential_text.fullText">
                 I have read and accept the
                 <UiLink
-                  href="https://github.com/VilnaCRM-Org"
+                  href={env.NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL}
                   target="_blank"
                   rel="noopener noreferrer"
                 >
                   Privacy Policy
                 </UiLink>
                 and the
-                <UiLink href="https://github.com/VilnaCRM-Org" target="_blank">
+                <UiLink href={env.NEXT_PUBLIC_VILNACRM_USE_POLICY_URL} target="_blank">
                   Use Policy
                 </UiLink>
                 VilnaCRM Service

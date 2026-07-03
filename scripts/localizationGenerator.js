@@ -103,11 +103,13 @@ class LocalizationGenerator {
 
   // eslint-disable-next-line class-methods-use-this
   writeLocalizationFile(fileContent, filePath) {
-    fs.writeFile(filePath, fileContent, err => {
-      if (err) {
-        throw new Error(err);
-      }
-    });
+    // Synchronous so callers (the next.config webpack hook and the Jest
+    // globalSetup) can rely on the file existing the moment this returns —
+    // pages/i18n/localization.json is a gitignored build artifact (#328). The
+    // pages/i18n directory only ever held that one file, so it is absent on a
+    // fresh checkout; create it before writing.
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
+    fs.writeFileSync(filePath, fileContent);
   }
   deepMerge(target = {}, source = {}) {
     for (const key of Object.keys(source)) {

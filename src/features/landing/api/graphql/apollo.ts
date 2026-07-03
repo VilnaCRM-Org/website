@@ -1,10 +1,12 @@
 import { ApolloClient, InMemoryCache, HttpLink } from '@apollo/client';
 import i18n from 'i18next';
 
+import { env } from '@/config/env';
+
 const { language } = i18n;
 
 const httpLink = new HttpLink({
-  uri: process.env.NEXT_PUBLIC_GRAPHQL_API_URL,
+  uri: env.NEXT_PUBLIC_GRAPHQL_API_URL,
   headers: {
     'Accept-Language': language || 'en-US',
   },
