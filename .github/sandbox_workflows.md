@@ -19,7 +19,7 @@ This documentation provides an overview of two GitHub Actions workflows used for
 
 The two GitHub Actions workflows automate the process of triggering AWS CodePipeline executions in response to various GitHub events. They leverage GitHub's OpenID Connect (OIDC) feature for secure authentication with AWS and manage both sandbox and production environments.
 
-  Sandbox Management: Handles the creation and updating of sandbox environments when pull requests are opened or when code is pushed (excluding the main branch).
+  Sandbox Management: Handles the creation and updating of sandbox environments when pull requests are opened, reopened, or synchronized (new commits pushed).
   Trigger Sandbox Deletion: Initiates the deletion of sandbox environments when a pull request is closed on the main branch.
 
 ## Prerequisites
@@ -37,8 +37,7 @@ Filename: .github/workflows/sandbox-creating.yml
 
 Triggers:
 
-  pull_request: When a pull request is opened, trigger the sandbox creation/update pipeline, passing along the PR number.
-  push: When code is pushed to any branch except main, trigger the sandbox pipeline without a PR number.
+  pull_request: When a pull request is opened, reopened, or synchronized (new commits pushed), trigger the sandbox creation/update pipeline. The PR number is read directly from the pull_request event payload (github.event.pull_request.number); no GitHub token or API lookup is used.
 
 New Feature: Before starting the pipeline execution, the workflow checks if secrets managed in AWS Secrets Manager need rotation. If rotation is required, it triggers custom GitHub repository dispatch events (rotate_token_test, rotate_token_prod) that can be handled by another workflow to rotate the secrets accordingly.
 
@@ -57,7 +56,7 @@ Additionally, you need to ensure that an AWS_REGION variable is set either at th
   - `TEST_AWS_ACCOUNT_ID`: The ID of the AWS account for token rotation in the test environment.
   - `PROD_AWS_ACCOUNT_ID`: The ID of the AWS account for token rotation in the prod environment.
   - `AWS_REGION`: The region of the AWS account.
-  - [`GITHUB_TOKEN`](https://github.com/VilnaCRM-Org/website-infrastructure/blob/main/.github/github-token-usage.md): The token for getting a PR number.
+  - No GitHub token is needed to obtain the PR number: it is read from the `pull_request` event payload (`github.event.pull_request.number`), and AWS access uses OIDC only.
 
 ## Workflow 2: Trigger Sandbox Deletion
 ### Deletion Overview
@@ -79,7 +78,7 @@ Key Features:
   - `TEST_AWS_ACCOUNT_ID`: The ID of the AWS account for token rotation in the test environment.
   - `PROD_AWS_ACCOUNT_ID`: The ID of the AWS account for token rotation in the prod environment.
   - `AWS_REGION`: The region of the AWS account.
-  - [`GITHUB_TOKEN`](https://github.com/VilnaCRM-Org/website-infrastructure/blob/main/.github/github-token-usage.md): The token for getting a PR number.
+  - No GitHub token is needed to obtain the PR number: it is read from the `pull_request` event payload (`github.event.pull_request.number`), and AWS access uses OIDC only.
 
 ## AWS IAM Role Configuration
 
