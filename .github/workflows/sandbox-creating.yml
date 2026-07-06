@@ -2,18 +2,15 @@ name: sandbox
 
 on:
   pull_request:
-    types: [opened]
-  push:
-    branches-ignore: [main]
+    types: [opened, reopened, synchronize]
 
 env:
   AWS_REGION: ${{ vars.AWS_REGION }}
+  PROD_AWS_ACCOUNT_ID: ${{ vars.PROD_AWS_ACCOUNT_ID }}
   BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+  PR_NUMBER: ${{ github.event.pull_request.number }}
 
-permissions:
-  id-token: write
-  contents: read
-  pull-requests: read
+permissions: {}
 
 # Serialize sandbox provisioning per branch/PR without cancelling: aborting an
 # in-flight AWS pipeline trigger mid-run is unsafe.
@@ -23,18 +20,24 @@ concurrency:
 
 jobs:
   check-tokens:
+    # Same-repo guard: fork PRs receive no OIDC id-token and no secrets, so the
+    # prod-account role assumptions below can only run for branches in this repo.
+    if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - name: Validate AWS Region
         run: |
-          if [ -z "${{ vars.AWS_REGION }}" ]; then
+          if [ -z "${AWS_REGION}" ]; then
             echo "::error::AWS_REGION is not set"
             exit 1
           fi
 
       - name: Configure AWS Credentials (Test)
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
         with:
           role-to-assume: arn:aws:iam::${{vars.TEST_AWS_ACCOUNT_ID}}:role/github-actions-role
           aws-region: ${{ env.AWS_REGION }}
@@ -74,7 +77,7 @@ jobs:
           fi
 
       - name: Configure AWS Credentials (Prod)
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
         with:
           role-to-assume: arn:aws:iam::${{vars.PROD_AWS_ACCOUNT_ID}}:role/github-actions-role
           aws-region: ${{ env.AWS_REGION }}
@@ -114,70 +117,50 @@ jobs:
           fi
 
   deploy:
+    # Same-repo guard: fork PRs receive no OIDC id-token, so the prod-account
+    # sandbox-creation trigger can only run for branches in this repo.
+    if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: [check-tokens]
+    permissions:
+      id-token: write
+      contents: read
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::${{vars.PROD_AWS_ACCOUNT_ID}}:role/github-actions-role
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Retrieve GitHub Token from Secrets Manager
+      # PR_NUMBER comes straight from the pull_request event payload, so no
+      # GitHub token or API round-trip is needed to discover it. This drops the
+      # Secrets-Manager-token dependency that broke this job whenever the stored
+      # token expired, and no longer writes that token to $GITHUB_ENV.
+      - name: Validate environment variables
         run: |
-          SECRET_ID=$(aws secretsmanager list-secrets \
-            --region "${AWS_REGION}" \
-            --query "SecretList[?starts_with(Name, 'github-token-') && DeletionDate==null].Name | [0]" \
-            --output text)
-
-          if [ -z "$SECRET_ID" ] || [ "$SECRET_ID" = "None" ]; then
-            echo "No active secret found with prefix 'github-token-'"
+          if [ -z "${AWS_REGION}" ]; then
+            echo "::error::AWS_REGION is not set"
             exit 1
           fi
-
-          GITHUB_TOKEN=$(aws secretsmanager get-secret-value \
-            --region "${AWS_REGION}" \
-            --secret-id "$SECRET_ID" \
-            --query "SecretString" \
-            --output text | jq -r '.token')
-
-          if [ -z "$GITHUB_TOKEN" ]; then
-            echo "Error: Unable to extract GitHub token from secret"
+          if [ -z "${PROD_AWS_ACCOUNT_ID}" ]; then
+            echo "::error::PROD_AWS_ACCOUNT_ID is not set"
             exit 1
           fi
-
-          echo "GITHUB_TOKEN=${GITHUB_TOKEN}" >> $GITHUB_ENV
-
-      - name: Get PR Number
-        id: get_pr_number
-        run: |
-          RESPONSE=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/pulls?head=${GITHUB_REPOSITORY_OWNER}:${BRANCH_NAME}")
-
-          if [ $? -ne 0 ]; then
-            echo "::error::Failed to retrieve PR number: ${PR_NUMBER}"
+          if [ -z "${BRANCH_NAME}" ]; then
+            echo "::error::BRANCH_NAME is not set"
             exit 1
           fi
-          PR_NUMBER=$(echo "$RESPONSE" | jq -r 'if type == "array" then .[0].number // empty else empty end')
-          if [ -z "$PR_NUMBER" ] && [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
-            echo "::error::PR number extraction failed for branch ${BRANCH_NAME}"
+          if [ -z "${PR_NUMBER}" ] || [ "${PR_NUMBER}" = "null" ]; then
+            echo "::error::PR_NUMBER is not set"
             exit 1
           fi
-          echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_ENV
 
       - name: Configure AWS Credentials (Sandbox Creation Trigger Role)
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
         with:
-          role-to-assume: arn:aws:iam::${{vars.PROD_AWS_ACCOUNT_ID}}:role/sandbox-creation-trigger-role
+          role-to-assume: arn:aws:iam::${{ env.PROD_AWS_ACCOUNT_ID }}:role/sandbox-creation-trigger-role
           role-session-name: GitHub_to_AWS_via_FederatedOIDC
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Start Pipeline Execution
         run: |
           aws codepipeline start-pipeline-execution --name "sandbox-creation" \
-            --variables "name=BRANCH_NAME,value=${BRANCH_NAME}" "name=PR_NUMBER,value=${PR_NUMBER}" "name=IS_PULL_REQUEST,value=1"
+            --variables \
+            "name=BRANCH_NAME,value=${BRANCH_NAME}" \
+            "name=PR_NUMBER,value=${PR_NUMBER}" \
+            "name=IS_PULL_REQUEST,value=1"
