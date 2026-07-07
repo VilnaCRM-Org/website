@@ -110,7 +110,8 @@ When a PR check fails, follow this sequence:
 
 - ✅ Triggers: `push: branches: [main]` only.
 - ✅ Job permissions: `permissions: id-token: write, contents: read`.
-- ✅ AWS role: `configure-aws-credentials` SHA-pinned, `role-session-name` includes "OIDC".
+- ✅ AWS role: `configure-aws-credentials` sets `role-session-name` including "OIDC" for audit and a `role-to-assume` targeting the prod deploy-trigger role.
+- ⚠️ `configure-aws-credentials` / `actions/checkout` here are still on the `@v4` tag, NOT SHA-pinned (unlike `sandbox-creating.yml`, which is). SHA-pinning the privileged workflows is a tracked gap (#366); pin these to a commit SHA when that lands.
 - ✅ No Secrets Manager dependency; OIDC handles all auth.
 - ✅ Concurrency: `cancel-in-progress: false` (do not abort in-flight production triggers).
 - ✅ Environment gate: job runs in the `production` environment (requires protection rules from Settings).
