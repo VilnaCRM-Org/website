@@ -156,6 +156,11 @@ describe('cloudfront_routing handler', () => {
 
   describe('defensive fallback', () => {
     test('returns the request unchanged when reading the uri throws', () => {
+      // The handler reads `request.uri` twice: first in the `typeof request.uri` guard
+      // (which runs BEFORE the try block) and again as `var uri = request.uri` inside the
+      // try. To reach the try/catch, the getter must return a valid string on the first
+      // read (so the guard passes) and throw on the second (so the throw lands inside the
+      // try). Throwing on the first read instead would escape the guard uncaught.
       const request: CloudFrontRequest = {};
       let reads = 0;
       Object.defineProperty(request, 'uri', {
