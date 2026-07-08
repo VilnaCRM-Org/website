@@ -15,7 +15,6 @@ const nextConfig = withExportImages({
   transpilePackages: ['@faker-js/faker'],
 
   compiler: {
-    styledComponents: true,
     reactRemoveProperties: true,
     removeConsole: process.env.NODE_ENV === 'production',
   },
