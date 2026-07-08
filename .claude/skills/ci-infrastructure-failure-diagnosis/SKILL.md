@@ -122,7 +122,7 @@ Before pushing a new or modified CI workflow:
 
 - [ ] Workflow triggers are explicit and non-overlapping (no push + pull_request race).
 - [ ] Job permissions are the minimum required (OIDC jobs get `id-token: write`, plus `contents: read` only if they check out code — the sandbox jobs check out nothing, so they use `id-token: write` alone; pure read-only jobs get `contents: read`).
-- [ ] Production-account jobs have fork guard: `if: github.event.pull_request.head.repo.full_name == github.repository`.
+- [ ] PR-triggered production-account jobs have a fork guard: `if: github.event.pull_request.head.repo.full_name == github.repository` (this predicate is only valid on `pull_request` workflows; push-only workflows like `deploy.yml` must not use it).
 - [ ] Environment variables (PR_NUMBER, BRANCH_NAME, AWS_REGION, etc.) are read directly from event payload, not from API calls.
 - [ ] AWS role is SHA-pinned and trust policy includes GitHub OIDC provider.
 - [ ] Concurrency is set correctly: production jobs use `cancel-in-progress: false`; sandbox jobs serialize per PR.

@@ -23,7 +23,7 @@ Both config files gate through `assertMatrix` (LHCI rejects `assertMatrix`
 alongside a shared `assertions` block), with a per-page entry for the homepage
 and a looser one for the heavier `/swagger` URL. Each entry asserts category
 floors (`categories:performance`, `categories:accessibility`,
-`categories:bestPractices`, `categories:seo`) plus metric ceilings
+`categories:best-practices`, `categories:seo`) plus metric ceilings
 (`largest-contentful-paint`, `total-blocking-time`, `cumulative-layout-shift`)
 and `resource-summary` script/total byte budgets. Desktop and mobile carry
 different floors; always open the config to read the current numbers instead of
