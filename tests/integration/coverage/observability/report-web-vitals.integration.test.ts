@@ -65,9 +65,12 @@ describe('shouldForwardWebVital', () => {
     expect(shouldForwardWebVital(makeMetric(), true, 0.5)).toBe(false);
   });
 
-  it('forwards a sampled field vital in production', () => {
-    expect(shouldForwardWebVital(makeMetric(), true, 0.05)).toBe(true);
-  });
+  it.each(['LCP', 'INP', 'CLS', 'FCP', 'TTFB'] as const)(
+    'forwards the field vital %s when sampled in production',
+    name => {
+      expect(shouldForwardWebVital(makeMetric({ name }), true, 0.05)).toBe(true);
+    }
+  );
 });
 
 describe('forwardWebVital', () => {

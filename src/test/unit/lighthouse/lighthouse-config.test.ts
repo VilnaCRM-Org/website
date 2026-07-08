@@ -2,12 +2,15 @@ import desktopConfig from '../../../../lighthouserc.desktop';
 import mobileConfig from '../../../../lighthouserc.mobile';
 
 /**
- * Locks the Lighthouse gate so a future edit cannot silently weaken it:
- * - the desktop config once nested `assertions`/`assertMatrix` directly under
- *   `ci` (never asserted); this guards the fixed `ci.assert` shape and that
- *   `assertMatrix` is used alone (LHCI errors on `assertMatrix` + `assertions`);
- * - the ratcheted per-page performance floors (tighten-only);
- * - the presence of LCP/TBT/CLS + script/total byte budgets on every page.
+ * Ratchet guard for the Lighthouse gate — so a future edit cannot silently weaken
+ * it. Locks:
+ * - the `ci.assert.assertMatrix`-only shape (LHCI errors on assertMatrix combined
+ *   with a shared `assertions` block — the reason the old desktop gate never ran);
+ * - host-agnostic URL routing (a WEBSITE_DOMAIN / PROD_PORT change must not drop
+ *   the homepage gate);
+ * - the exact ratcheted floors, metric ceilings, and byte budgets on every page,
+ *   each median-run aggregated. Loosening any number requires editing this table,
+ *   making it a deliberate, reviewable change.
  */
 
 type AssertionOptions = {
@@ -21,16 +24,6 @@ type LhciConfig = {
   ci: { assert: { assertMatrix: MatrixEntry[]; assertions?: unknown } };
 };
 
-const HOME_URL = 'http://localhost:3001/';
-const SWAGGER_URL = 'http://localhost:3001/swagger';
-const METRIC_BUDGETS = [
-  'largest-contentful-paint',
-  'total-blocking-time',
-  'cumulative-layout-shift',
-  'resource-summary:script:size',
-  'resource-summary:total:size',
-] as const;
-
 // The configs are `.js` (`module.exports`); cast through `unknown` since their
 // inferred shape does not structurally overlap the narrowed test type.
 const desktop = desktopConfig as unknown as LhciConfig;
@@ -41,18 +34,102 @@ const configs: Array<[string, LhciConfig]> = [
   ['mobile', mobile],
 ];
 
+// A non-default origin proves the matchers are host/port-agnostic.
+const HOME_URL = 'http://localhost:3001/';
+const SWAGGER_URL = 'http://localhost:3001/swagger';
+const ALT_HOME_URL = 'https://vilna.example:9999/';
+const ALT_SWAGGER_URL = 'https://vilna.example:9999/swagger';
+
+type Budgets = {
+  performance: number;
+  accessibility: number;
+  bestPractices: number;
+  seo: number;
+  lcp: number;
+  tbt: number;
+  cls: number;
+  scriptBytes: number;
+  totalBytes: number;
+};
+
+// Ratcheted budgets locked per config/page — mirror lighthouserc.*.js exactly.
+const EXPECTED: Record<string, { home: Budgets; swagger: Budgets }> = {
+  desktop: {
+    home: {
+      performance: 0.9,
+      accessibility: 0.9,
+      bestPractices: 0.9,
+      seo: 0.85,
+      lcp: 2500,
+      tbt: 150,
+      cls: 0.05,
+      scriptBytes: 750000,
+      totalBytes: 1550000,
+    },
+    swagger: {
+      performance: 0.85,
+      accessibility: 0.89,
+      bestPractices: 0.9,
+      seo: 0.85,
+      lcp: 3000,
+      tbt: 350,
+      cls: 0.05,
+      scriptBytes: 1050000,
+      totalBytes: 1450000,
+    },
+  },
+  mobile: {
+    home: {
+      performance: 0.4,
+      accessibility: 0.9,
+      bestPractices: 0.9,
+      seo: 0.9,
+      lcp: 11000,
+      tbt: 1800,
+      cls: 0.2,
+      scriptBytes: 750000,
+      totalBytes: 1550000,
+    },
+    swagger: {
+      performance: 0.45,
+      accessibility: 0.9,
+      bestPractices: 0.9,
+      seo: 0.9,
+      lcp: 12000,
+      tbt: 2200,
+      cls: 0.2,
+      scriptBytes: 1050000,
+      totalBytes: 1450000,
+    },
+  },
+};
+
+const MEDIAN = { aggregationMethod: 'median-run' };
+const floor = (v: number): Assertion => ['error', { minScore: v, ...MEDIAN }];
+const ceiling = (v: number): Assertion => ['error', { maxNumericValue: v, ...MEDIAN }];
+
+function expectedAssertions(b: Budgets): Record<string, Assertion> {
+  return {
+    'categories:performance': floor(b.performance),
+    'categories:accessibility': floor(b.accessibility),
+    'categories:bestPractices': floor(b.bestPractices),
+    'categories:seo': floor(b.seo),
+    'largest-contentful-paint': ceiling(b.lcp),
+    'total-blocking-time': ceiling(b.tbt),
+    'cumulative-layout-shift': ceiling(b.cls),
+    'resource-summary:script:size': ceiling(b.scriptBytes),
+    'resource-summary:total:size': ceiling(b.totalBytes),
+  };
+}
+
 function matrixOf(config: LhciConfig): MatrixEntry[] {
   return config.ci.assert.assertMatrix;
 }
 
 function entryFor(config: LhciConfig, url: string): MatrixEntry {
-  const match = matrixOf(config).find(entry => new RegExp(entry.matchingUrlPattern).test(url));
-  if (!match) throw new Error(`no assertMatrix entry matched ${url}`);
-  return match;
-}
-
-function perfFloor(config: LhciConfig, url: string): number {
-  return entryFor(config, url).assertions['categories:performance'][1].minScore as number;
+  const matches = matrixOf(config).filter(entry => new RegExp(entry.matchingUrlPattern).test(url));
+  expect(matches).toHaveLength(1);
+  return matches[0];
 }
 
 describe('lighthouse config', () => {
@@ -64,44 +141,28 @@ describe('lighthouse config', () => {
     }
   );
 
-  it.each(configs)(
-    '%s routes the homepage and swagger URLs to distinct entries',
-    (_name, config) => {
-      const homeMatches = matrixOf(config).filter(e =>
-        new RegExp(e.matchingUrlPattern).test(HOME_URL)
-      );
-      const swaggerMatches = matrixOf(config).filter(e =>
-        new RegExp(e.matchingUrlPattern).test(SWAGGER_URL)
-      );
-      expect(homeMatches).toHaveLength(1);
-      expect(swaggerMatches).toHaveLength(1);
-      expect(homeMatches[0]).not.toBe(swaggerMatches[0]);
-    }
-  );
+  it.each(configs)('%s routes homepage and swagger URLs host-agnostically', (_name, config) => {
+    // Same entry for the default and a non-default origin — the matcher is not
+    // coupled to WEBSITE_DOMAIN / NEXT_PUBLIC_PROD_PORT.
+    expect(entryFor(config, HOME_URL)).toBe(entryFor(config, ALT_HOME_URL));
+    expect(entryFor(config, SWAGGER_URL)).toBe(entryFor(config, ALT_SWAGGER_URL));
+    expect(entryFor(config, HOME_URL)).not.toBe(entryFor(config, SWAGGER_URL));
+  });
 
-  it('locks the ratcheted desktop performance floors (>= 0.85)', () => {
-    expect(perfFloor(desktop, HOME_URL)).toBe(0.9);
-    expect(perfFloor(desktop, SWAGGER_URL)).toBe(0.85);
+  it.each(configs)('%s locks the exact ratcheted budgets on every page', (name, config) => {
+    expect(entryFor(config, HOME_URL).assertions).toEqual(expectedAssertions(EXPECTED[name].home));
+    expect(entryFor(config, SWAGGER_URL).assertions).toEqual(
+      expectedAssertions(EXPECTED[name].swagger)
+    );
+  });
+
+  it('keeps desktop performance floors at or above 0.85', () => {
+    expect(EXPECTED.desktop.home.performance).toBeGreaterThanOrEqual(0.85);
+    expect(EXPECTED.desktop.swagger.performance).toBeGreaterThanOrEqual(0.85);
   });
 
   it('lifts the mobile performance floors above the retired 0.24 non-gate', () => {
-    const home = perfFloor(mobile, HOME_URL);
-    const swagger = perfFloor(mobile, SWAGGER_URL);
-    expect(home).toBe(0.5);
-    expect(swagger).toBe(0.45);
-    expect(home).toBeGreaterThan(0.24);
-    expect(swagger).toBeGreaterThan(0.24);
+    expect(EXPECTED.mobile.home.performance).toBeGreaterThan(0.24);
+    expect(EXPECTED.mobile.swagger.performance).toBeGreaterThan(0.24);
   });
-
-  it.each(configs)(
-    '%s asserts LCP/TBT/CLS and script/total byte budgets on every page',
-    (_name, config) => {
-      for (const entry of matrixOf(config)) {
-        for (const budget of METRIC_BUDGETS) {
-          expect(entry.assertions[budget]).toBeDefined();
-          expect(entry.assertions[budget][1].maxNumericValue).toBeGreaterThan(0);
-        }
-      }
-    }
-  );
 });
