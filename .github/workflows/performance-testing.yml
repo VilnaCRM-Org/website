@@ -60,3 +60,18 @@ jobs:
         env:
           FORM_FACTOR: ${{ matrix.formFactor }}
         run: make "lighthouse-$FORM_FACTOR"
+
+      # Publish the raw Lighthouse reports so the measured scores and metric
+      # values behind the pass/fail decision are inspectable, and so floors can
+      # be ratcheted from real CI baselines rather than guesses. Always runs,
+      # even when an assertion fails, to capture the regression that tripped it.
+      - name: Upload Lighthouse reports
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: lighthouse-reports-${{ matrix.formFactor }}
+          path: |
+            lhci-reports-${{ matrix.formFactor }}
+            .lighthouseci
+          retention-days: 7
+          if-no-files-found: ignore
