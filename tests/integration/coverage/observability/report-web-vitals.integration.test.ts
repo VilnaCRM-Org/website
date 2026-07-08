@@ -18,7 +18,8 @@ import {
 
 jest.mock('@sentry/react', () => ({ setMeasurement: jest.fn() }));
 
-const mockedSetMeasurement = Sentry.setMeasurement as jest.MockedFunction<typeof Sentry.setMeasurement>;
+type SetMeasurement = typeof Sentry.setMeasurement;
+const mockedSetMeasurement = Sentry.setMeasurement as jest.MockedFunction<SetMeasurement>;
 
 type TestGlobal = typeof globalThis & { gtag?: jest.Mock };
 const testGlobal = globalThis as TestGlobal;
