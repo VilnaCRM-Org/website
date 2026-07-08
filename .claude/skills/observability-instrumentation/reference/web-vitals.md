@@ -1,8 +1,9 @@
 # Core Web Vitals
 
 This site has no `web-vitals` npm package — Next.js reports field vitals through
-the pages-router `reportWebVitals` export. Add it to `pages/_app.tsx`; do not
-install a separate reporter.
+the pages-router `reportWebVitals` export. It is wired: `pages/_app.tsx` exports
+`reportWebVitals`, delegating to `src/lib/web-vitals/report-web-vitals.ts` (the
+forwarding gate + PII-free payload). Do not install a separate reporter.
 
 ## Signals
 
@@ -18,9 +19,10 @@ callback; forward or ignore them by inspecting `metric.label`.
 
 ## Wiring
 
-Export `reportWebVitals` from `pages/_app.tsx`. Type the metric with
-`NextWebVitalsMetric`, gate forwarding behind production, and sample to control
-volume:
+`pages/_app.tsx` exports `reportWebVitals` and delegates to
+`src/lib/web-vitals/report-web-vitals.ts`, which types the metric with
+`NextWebVitalsMetric`, gates forwarding behind production, samples to control
+volume, and ships to GA4 (`window.gtag`) plus Sentry (`setMeasurement`). The shape:
 
 ```ts
 import type { NextWebVitalsMetric } from 'next/app';
