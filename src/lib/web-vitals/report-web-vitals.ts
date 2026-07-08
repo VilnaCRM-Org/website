@@ -55,10 +55,12 @@ export function shouldForwardWebVital(
   isProduction: boolean,
   sample: number
 ): boolean {
-  if (metric.label !== 'web-vital') return false;
-  if (!FORWARDED_VITALS.has(metric.name)) return false;
-  if (!isProduction) return false;
-  return sample < VITALS_SAMPLE_RATE;
+  return (
+    metric.label === 'web-vital' &&
+    FORWARDED_VITALS.has(metric.name) &&
+    isProduction &&
+    sample < VITALS_SAMPLE_RATE
+  );
 }
 
 /**
