@@ -40,7 +40,9 @@ function pageBudgets({
   return {
     'categories:performance': ['error', { minScore: performance, ...median }],
     'categories:accessibility': ['error', { minScore: accessibility, ...median }],
-    'categories:bestPractices': ['error', { minScore: bestPractices, ...median }],
+    // Lighthouse category id is hyphenated; 'categories:bestPractices' would match
+    // no category and silently never enforce the floor.
+    'categories:best-practices': ['error', { minScore: bestPractices, ...median }],
     'categories:seo': ['error', { minScore: seo, ...median }],
     'largest-contentful-paint': ['error', { maxNumericValue: lcp, ...median }],
     'total-blocking-time': ['error', { maxNumericValue: tbt, ...median }],

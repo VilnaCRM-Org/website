@@ -112,7 +112,7 @@ function expectedAssertions(b: Budgets): Record<string, Assertion> {
   return {
     'categories:performance': floor(b.performance),
     'categories:accessibility': floor(b.accessibility),
-    'categories:bestPractices': floor(b.bestPractices),
+    'categories:best-practices': floor(b.bestPractices),
     'categories:seo': floor(b.seo),
     'largest-contentful-paint': ceiling(b.lcp),
     'total-blocking-time': ceiling(b.tbt),
