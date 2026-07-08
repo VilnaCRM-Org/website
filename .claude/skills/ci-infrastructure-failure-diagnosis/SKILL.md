@@ -13,12 +13,12 @@ Diagnosing GitHub Actions CI check failures when the root cause is not obvious �
 
 The sandbox `deploy` PR check (from `sandbox-creating.yml`, NOT `deploy.yml`) provisions AWS sandbox environments via CodePipeline. It can fail for:
 
-1. **Push-vs-PR race condition** (historical, pre-#375)
+1. **Push-vs-PR race condition** (currently present in `sandbox-creating.yml`)
    - Symptom: job dies at `aws codepipeline start-pipeline-execution` with `ParamValidation` error (exit 252)
    - Cause: workflow fired on both branch `push` (with empty `PR_NUMBER`) and `pull_request` event; the push run failed while pull_request passed
    - Fix: Remove `push` triggers; keep only `pull_request: [opened, reopened, synchronize]`
 
-2. **Expired Secrets-Manager token** (historical, pre-#375)
+2. **Expired Secrets-Manager token** (current risk — PR number is resolved via a Secrets-Manager token)
    - Symptom: "PR number extraction failed" on every re-run; API call to `GET /pulls?head=...` returns empty
    - Cause: "Get PR Number" step pulled a token from AWS Secrets Manager (not `github.token`); token expired, token rotation was pending
    - Fix: Read `PR_NUMBER` directly from `${{ github.event.pull_request.number }}` (no API call, no token dependency)
@@ -26,7 +26,7 @@ The sandbox `deploy` PR check (from `sandbox-creating.yml`, NOT `deploy.yml`) pr
 3. **OIDC token or AWS role misconfiguration**
    - Symptom: `configure-aws-credentials` fails with auth errors; permission denied on `aws codepipeline start-pipeline-execution`
    - Cause: job permissions are missing `id-token: write`; AWS role trust policy doesn't include the GitHub OIDC provider; role session mismatch
-   - Fix: Grant the job its minimum required scopes — `id-token: write` for the OIDC token exchange, plus `contents: read` only when it checks out code (`deploy.yml` does); the `sandbox-creating.yml` jobs check out nothing and read `PR_NUMBER` from the event, so they use `id-token: write` alone under a top-level `permissions: {}`. Verify the AWS role trust policy includes the OpenID Connect provider; pin `aws-actions/configure-aws-credentials` to SHA
+   - Fix: Grant the job its minimum required scopes — `id-token: write` for the OIDC token exchange, plus `contents: read` only when it checks out code (`deploy.yml` does). A job that checks out nothing and reads `PR_NUMBER` from the event needs `id-token: write` alone under a tight top-level `permissions` block. Verify the AWS role trust policy includes the OpenID Connect provider; pin `aws-actions/configure-aws-credentials` to SHA
 
 4. **Fork PR guard missing**
    - Symptom: fork PRs trigger sandbox creation (wasteful, security concern)
@@ -69,7 +69,7 @@ When a PR check fails, follow this sequence:
    - `AWS_REGION`, `PROD_AWS_ACCOUNT_ID`, `BRANCH_NAME`, `PR_NUMBER` — are they non-empty?
    - Confirm `PR_NUMBER` is read from `${{ github.event.pull_request.number }}`, not from API.
 3. Check permissions block in the job:
-   - OIDC jobs need `id-token: write` for the token exchange, plus `contents: read` only when they check out code. `deploy.yml` checks out → `id-token: write` + `contents: read`. The `sandbox-creating.yml` jobs check out nothing and read `PR_NUMBER` from the event, so they use `id-token: write` alone under a top-level `permissions: {}`. Grant the minimum required scopes, not more.
+   - OIDC jobs need `id-token: write` for the token exchange, plus `contents: read` only when they check out code. `deploy.yml` checks out → `id-token: write` + `contents: read`. A job that checks out nothing and reads `PR_NUMBER` from the event needs only `id-token: write`. Grant the minimum required scopes, not more.
    - Smoke-test / read-only jobs need `contents: read` only.
 4. If using AWS OIDC:
    - Verify `aws-actions/configure-aws-credentials` is SHA-pinned and called with correct `role-to-assume`, `role-session-name`, and `aws-region`.
@@ -96,13 +96,14 @@ When a PR check fails, follow this sequence:
 
 **File:** `.github/workflows/sandbox-creating.yml`
 
-- ✅ Triggers: `pull_request: [opened, reopened, synchronize]` only (no push).
-- ✅ Job permissions (minimum required): top-level `permissions: {}` with per-job `id-token: write` for the prod-account jobs — they check out nothing and read `PR_NUMBER` from the event, so no `contents` / `pull-requests` scope is needed.
-- ✅ Fork guard: `if: github.event.pull_request.head.repo.full_name == github.repository`.
-- ✅ PR number source: `PR_NUMBER: ${{ github.event.pull_request.number }}` (env var, direct from event).
-- ✅ Environment variables: Validated in the "Validate environment variables" step (all non-null, non-empty).
-- ✅ AWS role: `configure-aws-credentials` SHA-pinned, `role-session-name` includes "OIDC" for audit.
-- ✅ Secrets rotation check: `check-tokens` job verifies AWS Secrets Manager tokens exist and haven't expired.
+Target configuration, and where the current workflow deviates — those deviations are themselves what to check when the `deploy` check misbehaves:
+
+- **Triggers.** Target: `pull_request` events only, so `PR_NUMBER` always has event context. Current: `pull_request: [opened]` **plus** `push: branches-ignore: [main]` — the push trigger fires on every non-main branch push with no PR context (the push-vs-PR race, pattern #1), and the `[opened]`-only PR trigger means re-pushes don't re-run the check.
+- **PR number source.** Target: read `PR_NUMBER` directly from `${{ github.event.pull_request.number }}`. Current: a "Retrieve GitHub Token from Secrets Manager" step pulls a token and calls the GitHub API to resolve the PR number — the Secrets-Manager-token dependency described in pattern #2.
+- **Fork guard.** Target: `if: github.event.pull_request.head.repo.full_name == github.repository` on the prod-account jobs. Current: no fork guard is present.
+- **AWS role pinning.** Target: `aws-actions/configure-aws-credentials` pinned to a commit SHA. Current: all calls use the `@v4` tag (the same #366 SHA-pinning gap noted below for `deploy.yml`).
+- **Permissions.** Current top-level block is `id-token: write`, `contents: read`, `pull-requests: read`; grant only what each job actually needs.
+- **Concurrency.** Serialized per PR/branch with `cancel-in-progress: false` (aborting an in-flight AWS pipeline trigger is unsafe).
 
 ### For Main Deploy (Push Check)
 
@@ -111,7 +112,7 @@ When a PR check fails, follow this sequence:
 - ✅ Triggers: `push: branches: [main]` only.
 - ✅ Job permissions: `permissions: id-token: write, contents: read`.
 - ✅ AWS role: `configure-aws-credentials` sets `role-session-name` including "OIDC" for audit and a `role-to-assume` targeting the prod deploy-trigger role.
-- ⚠️ `configure-aws-credentials` / `actions/checkout` here are still on the `@v4` tag, NOT SHA-pinned (unlike `sandbox-creating.yml`, which is). SHA-pinning the privileged workflows is a tracked gap (#366); pin these to a commit SHA when that lands.
+- ⚠️ `configure-aws-credentials` / `actions/checkout` here are still on the `@v4` tag, NOT SHA-pinned (as is `sandbox-creating.yml`). SHA-pinning the privileged workflows is a tracked gap (#366); pin these to a commit SHA when that lands.
 - ✅ No Secrets Manager dependency; OIDC handles all auth.
 - ✅ Concurrency: `cancel-in-progress: false` (do not abort in-flight production triggers).
 - ✅ Environment gate: job runs in the `production` environment (requires protection rules from Settings).
@@ -121,7 +122,7 @@ When a PR check fails, follow this sequence:
 Before pushing a new or modified CI workflow:
 
 - [ ] Workflow triggers are explicit and non-overlapping (no push + pull_request race).
-- [ ] Job permissions are the minimum required (OIDC jobs get `id-token: write`, plus `contents: read` only if they check out code — the sandbox jobs check out nothing, so they use `id-token: write` alone; pure read-only jobs get `contents: read`).
+- [ ] Job permissions are the minimum required (OIDC jobs get `id-token: write`, plus `contents: read` only if they check out code; a job that checks out nothing and reads PR context from the event needs `id-token: write` alone; pure read-only jobs get `contents: read`).
 - [ ] Production-account jobs have fork guard: `if: github.event.pull_request.head.repo.full_name == github.repository`.
 - [ ] Environment variables (PR_NUMBER, BRANCH_NAME, AWS_REGION, etc.) are read directly from event payload, not from API calls.
 - [ ] AWS role is SHA-pinned and trust policy includes GitHub OIDC provider.
