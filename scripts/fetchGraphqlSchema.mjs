@@ -18,7 +18,7 @@ export async function fetchGraphqlSchema(url) {
       `Failed to fetch GraphQL schema. HTTP status: ${response.status} ${response.statusText}`
     );
   }
-  return await response.text();
+  return response.text();
 }
 
 export async function saveGraphqlSchema(sdl, filePath) {

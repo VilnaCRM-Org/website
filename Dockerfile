@@ -21,9 +21,8 @@ COPY . .
 
 # Reads the committed contract under contracts/ — no network. Refresh it with
 # `make update-contracts`; `make lint-contracts` fails if it drifts from the pin.
-RUN node scripts/patchSwaggerServer.mjs
-
-RUN npx next build --webpack && \
+RUN node scripts/patchSwaggerServer.mjs && \
+    npx next build --webpack && \
     npx next-export-optimize-images
 
 

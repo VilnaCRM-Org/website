@@ -76,7 +76,7 @@ describe('swagger utils', () => {
   });
 
   afterAll(() => {
-    process.env.USER_SERVICE_VERSION = undefined;
+    delete process.env.USER_SERVICE_VERSION;
     mockExit.mockRestore();
   });
 

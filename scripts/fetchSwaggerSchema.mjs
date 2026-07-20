@@ -20,7 +20,7 @@ export async function fetchSwaggerYaml(url) {
       `Failed to fetch swagger schema. HTTP status: ${response.status} ${response.statusText}`
     );
   }
-  return await response.text();
+  return response.text();
 }
 
 /**

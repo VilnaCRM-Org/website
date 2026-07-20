@@ -51,7 +51,11 @@ services:
       context: .
       dockerfile: Mockoon.Dockerfile
       args:
-        USER_SERVICE_VERSION: ${USER_SERVICE_VERSION}
+        # Fail closed rather than defaulting again here. An unset variable would
+        # otherwise pass an empty string, which overrides the Dockerfile's ARG
+        # default and builds a malformed upstream URL. The pin lives in .env and
+        # nowhere else.
+        USER_SERVICE_VERSION: ${USER_SERVICE_VERSION:?set USER_SERVICE_VERSION (it comes from .env)}
     ports:
       - '8080:8080'
     restart: unless-stopped

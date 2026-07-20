@@ -321,8 +321,10 @@ lint: lint-next lint-tsc lint-md lint-deps ## Runs all linters: ESLint, TypeScri
 #     turn the whole static lane red.
 #   * Its CI surface is .github/workflows/contract-testing.yml, which runs it on
 #     every PR with the network available.
-# Pass --offline (see the script) to skip only the drift check; the GraphQL and
-# spectral validations are fully local.
+# This target deliberately runs the full check, drift included. To validate the
+# GraphQL operations and the spectral baseline without touching the network,
+# invoke the script directly:
+#   pnpm node scripts/contracts/lint-contracts.mjs --offline
 lint-contracts: ## Validate the pinned user-service contracts: client GraphQL operations, the OpenAPI spectral baseline, and artifact drift
 	$(PNPM_EXEC) node scripts/contracts/lint-contracts.mjs
 

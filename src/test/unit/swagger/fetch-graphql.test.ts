@@ -52,7 +52,7 @@ describe('graphql schema fetcher', () => {
   });
 
   afterAll(() => {
-    process.env.USER_SERVICE_VERSION = undefined;
+    delete process.env.USER_SERVICE_VERSION;
   });
 
   test('buildSchemaUrl derives the URL from the single upstream pin', () => {

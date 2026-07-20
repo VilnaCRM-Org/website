@@ -101,6 +101,9 @@ implementation**:
 - **quality-standards** — index of what each gate enforces and which specialist skill
   fixes a given failure. Key commands: `make lint`, `make lint-metrics`,
   `make test-unit-client`, `make test-e2e`, `make test-visual`.
+- **contract-testing-workflow** — the single upstream pin, the committed artifacts
+  under `contracts/`, and the spectral baseline ratchet. Key commands:
+  `make lint-contracts`, `make update-contracts`.
 - **complexity-management** — reduce file/function/component complexity flagged by the
   rust-code-analysis gate without lowering thresholds. Key commands:
   `make lint-metrics`, `make format`, `make lint`.
