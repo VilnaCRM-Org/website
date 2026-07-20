@@ -26,8 +26,6 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          # dependency-cruiser supports LTS Node only (^20.12 || ^22 || >=24);
-          # pin to the repo's .nvmrc (22.x) rather than non-LTS vars.NODE_VERSION.
           node-version-file: '.nvmrc'
 
       - name: Cache pnpm dependencies

@@ -592,7 +592,7 @@ lighthouse-mobile-dind: ## Run Lighthouse mobile audit in DIND mode using prod c
 	$(LHCI_DIND_BIN) --config=lighthouserc.mobile.js $(LHCI_DIND_COMMON)
 	@echo "✅ Lighthouse mobile DIND tests completed"
 
-install: ## Install node modules using pnpm (CI=1 runs locally, default runs in container) — uses frozen lockfile and affects node_modules via volumes
+install: check-node-version ## Install node modules using pnpm (CI=1 runs locally, default runs in container) — uses frozen lockfile and affects node_modules via volumes
 	$(PNPM_EXEC) pnpm install --frozen-lockfile
 
 install-chromium-lhci: ## Install Chromium and Lighthouse CLI in the prod container for DIND testing

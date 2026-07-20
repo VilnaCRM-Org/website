@@ -1,4 +1,4 @@
-FROM public.ecr.aws/docker/library/node:23.11.1-alpine3.21 AS base
+FROM public.ecr.aws/docker/library/node:22.12.0-alpine3.21 AS base
 
 RUN apk add --no-cache \
     chromium=136.0.7103.113-r0 \
@@ -13,7 +13,7 @@ RUN apk add --no-cache \
     libxcomposite=0.4.6-r5 \
     libxdamage=1.1.6-r5 \
     libxext=1.3.6-r2 \
-    && npm install -g pnpm@10.11.0
+    && npm install -g pnpm@10.6.5
 
 ENV DISPLAY=:99 \
     PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser \
