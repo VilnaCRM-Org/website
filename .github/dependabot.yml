@@ -17,3 +17,41 @@ updates:
     commit-message:
       prefix: 'deps'
       include: 'scope'
+
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+      time: '09:00'
+      timezone: 'UTC'
+    open-pull-requests-limit: 5
+    groups:
+      github-actions-all:
+        patterns:
+          - '*'
+    labels:
+      - 'dependencies'
+      - 'automated'
+    commit-message:
+      prefix: 'deps'
+      include: 'scope'
+
+  - package-ecosystem: 'docker'
+    directories:
+      - '/'
+      - '/src/test/load'
+    schedule:
+      interval: 'weekly'
+      time: '09:00'
+      timezone: 'UTC'
+    open-pull-requests-limit: 5
+    groups:
+      docker-all:
+        patterns:
+          - '*'
+    labels:
+      - 'dependencies'
+      - 'automated'
+    commit-message:
+      prefix: 'deps'
+      include: 'scope'
