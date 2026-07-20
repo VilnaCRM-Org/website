@@ -99,6 +99,10 @@ make lint-md    # markdownlint
 make lint-deps  # dependency-cruiser on src, pages, tests
 ```
 
+Two gates sit deliberately outside `make lint`: `make lint-metrics` (host-only Rust
+binary) and `make lint-contracts` (needs network for its drift check). Each has its own
+workflow — `rust-code-analysis.yml` and `contract-testing.yml`.
+
 Run `make format` before `make lint`; formatting is intentionally separate from the lint
 verification suite. Git hooks are managed by Husky. CI phases are mirrored locally by
 `make ci-lint`, `make ci-test`, and `make ci` (see the Makefile's CI orchestration

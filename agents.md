@@ -113,6 +113,7 @@ CI=1 make test-unit-server   # Server unit suite (node)
 make test-e2e                # User-facing flows (for UI or behavior changes)
 make test-visual             # Visual regression (for UI or styling changes)
 make lint                    # Full gate: ESLint, TypeScript, and markdownlint
+make lint-contracts          # Upstream contracts (when .env pins or gql documents change)
 ```
 
 Run only the suites the change affects, but never skip a suite that does apply. Any unit
