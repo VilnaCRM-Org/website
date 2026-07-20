@@ -313,6 +313,25 @@ lint-deps: ## Validate architecture/import boundaries with dependency-cruiser
 
 lint: lint-next lint-tsc lint-md lint-deps ## Runs all linters: ESLint, TypeScript, Markdown, and dependency-cruiser in sequence.
 
+# DELIBERATE DIVERGENCE FROM THE npm-tool LINT GATES (lint-next/tsc/md/deps),
+# for the same reason as lint-metrics below:
+#   * NOT in the `lint` aggregate (line above) and NOT in CI_LINT_TARGETS. The
+#     drift check re-fetches the pinned tag from raw.githubusercontent.com, and
+#     static-testing.yml is otherwise hermetic — a GitHub raw outage must not
+#     turn the whole static lane red.
+#   * Its CI surface is .github/workflows/contract-testing.yml, which runs it on
+#     every PR with the network available.
+# Pass --offline (see the script) to skip only the drift check; the GraphQL and
+# spectral validations are fully local.
+lint-contracts: ## Validate the pinned user-service contracts: client GraphQL operations, the OpenAPI spectral baseline, and artifact drift
+	$(PNPM_EXEC) node scripts/contracts/lint-contracts.mjs
+
+update-contracts: ## Re-fetch the user-service contracts for the pinned USER_SERVICE_VERSION and refresh the spectral baseline
+	$(PNPM_EXEC) node scripts/fetchSwaggerSchema.mjs
+	$(PNPM_EXEC) node scripts/fetchGraphqlSchema.mjs
+	$(PNPM_EXEC) node scripts/contracts/lint-contracts.mjs --update-baseline
+	$(PRETTIER_BIN) "contracts/**/*.json" --write --ignore-path .prettierignore
+
 # DELIBERATE DIVERGENCE FROM THE npm-tool LINT GATES (lint-next/tsc/md/deps):
 #   * Host-only: rust-code-analysis is a Rust binary absent from the dev image,
 #     so this target does NOT use $(PNPM_EXEC) and runs on the host in both modes.

@@ -50,6 +50,8 @@ services:
     build:
       context: .
       dockerfile: Mockoon.Dockerfile
+      args:
+        USER_SERVICE_VERSION: ${USER_SERVICE_VERSION}
     ports:
       - '8080:8080'
     restart: unless-stopped

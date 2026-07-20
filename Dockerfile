@@ -5,8 +5,7 @@ RUN apk add --no-cache \
     make=4.4.1-r2 \
     g++=14.2.0-r4 \
     curl=8.14.1-r2 && \
-    npm install -g pnpm@10.6.5 serve@14.2.0 && \
-    pnpm add -D js-yaml@4.1.0
+    npm install -g pnpm@10.6.5 serve@14.2.0
 
 
 WORKDIR /app
@@ -20,8 +19,9 @@ FROM base AS build
 
 COPY . .
 
-RUN node scripts/fetchSwaggerSchema.mjs && \
-    node scripts/patchSwaggerServer.mjs
+# Reads the committed contract under contracts/ — no network. Refresh it with
+# `make update-contracts`; `make lint-contracts` fails if it drifts from the pin.
+RUN node scripts/patchSwaggerServer.mjs
 
 RUN npx next build --webpack && \
     npx next-export-optimize-images
