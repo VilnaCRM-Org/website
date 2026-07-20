@@ -1,4 +1,4 @@
-FROM public.ecr.aws/docker/library/node:23.11.1-alpine3.21 AS base
+FROM public.ecr.aws/docker/library/node:25.2.1-alpine3.21 AS base
 
 RUN apk add --no-cache curl=8.14.1-r2
 
