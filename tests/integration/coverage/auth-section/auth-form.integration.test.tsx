@@ -17,6 +17,7 @@ import { useForm } from 'react-hook-form';
 
 import AuthForm from '@landing/auth-section/auth-form/auth-form';
 
+import { env } from '../../../../src/config/env';
 import { RegisterItem } from '../../../../src/features/landing/types/authentication/form';
 
 interface WrapperProps {
@@ -70,8 +71,8 @@ describe('integration: AuthForm', () => {
     expect(screen.getByAltText(t('sign_up.form.password_tip.alt'))).toBeInTheDocument();
 
     const links: HTMLElement[] = screen.getAllByRole('link');
-    expect(links[0]).toHaveAttribute('href', 'https://github.com/VilnaCRM-Org');
-    expect(links[1]).toHaveAttribute('href', 'https://github.com/VilnaCRM-Org');
+    expect(links[0]).toHaveAttribute('href', env.NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL);
+    expect(links[1]).toHaveAttribute('href', env.NEXT_PUBLIC_VILNACRM_USE_POLICY_URL);
   });
 
   it('disables the submit button while loading', () => {

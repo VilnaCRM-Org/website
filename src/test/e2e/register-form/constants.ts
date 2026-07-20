@@ -13,7 +13,12 @@ export const signUpButton: string = t('sign_up.form.button_text');
 
 export const requiredNameError: string = t('sign_up.form.name_input.required');
 
-export const graphqlEndpoint: string = process.env.NEXT_PUBLIC_GRAPHQL_API_URL as string;
+// The built bundle points its Apollo client at a different GraphQL host per
+// environment (localhost in dev, the production API in the export), so match by
+// path instead of the exact dev URL (#328): the glob drives `page.route` mocks,
+// the fragment drives response-URL filters.
+export const graphqlEndpoint: string = '**/graphql';
+export const graphqlUrlFragment: string = '/graphql';
 const firstName: string = faker.helpers.fromRegExp(/[A-Za-zА-Яа-яІіЇїЄєҐґ]{3,10}/);
 const lastName: string = faker.helpers.fromRegExp(/[A-Za-zА-Яа-яІіЇїЄєҐґ]{3,10}/);
 

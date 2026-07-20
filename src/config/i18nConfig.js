@@ -1,9 +1,4 @@
-const mainLanguage = process.env.NEXT_PUBLIC_MAIN_LANGUAGE;
-const fallbackLanguage = process.env.NEXT_PUBLIC_FALLBACK_LANGUAGE;
-
-if (!mainLanguage || !fallbackLanguage) {
-  throw new Error('Missing required environment variables for localization');
-}
+import { env } from './env';
 
 const getResources = () => {
   try {
@@ -14,10 +9,10 @@ const getResources = () => {
   }
 };
 
-module.exports = {
-  lng: mainLanguage,
+export default {
+  lng: env.NEXT_PUBLIC_MAIN_LANGUAGE,
   resources: getResources(),
-  fallbackLng: fallbackLanguage,
+  fallbackLng: env.NEXT_PUBLIC_FALLBACK_LANGUAGE,
   interpolation: {
     escapeValue: false,
   },
