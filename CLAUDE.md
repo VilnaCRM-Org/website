@@ -21,7 +21,7 @@ stacks.
   `graphql`.
 - Forms and i18n: react-hook-form; i18next / react-i18next.
 - Observability: `@sentry/node` + `@sentry/react`; Next.js web-vitals reporting.
-- Tooling: pnpm@10.6.5, Node pinned by `.nvmrc` (22.12.0 LTS); Prettier, ESLint (flat config), TypeScript,
+- Tooling: pnpm@10.6.5, Node pinned by `.nvmrc` (24.18.0 LTS); Prettier, ESLint (flat config), TypeScript,
   markdownlint, dependency-cruiser.
 - Testing: Jest (jsdom + node envs) with React Testing Library; Playwright (chromium,
   firefox, webkit) with Mockoon; Stryker (mutation); K6 (load); memlab (memory);

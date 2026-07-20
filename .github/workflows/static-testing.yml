@@ -41,10 +41,9 @@ jobs:
 
       - name: Install pnpm
         # Install the exact pnpm pinned in package.json's packageManager field
-        # (not the latest global) so lockfile resolution matches the other jobs.
-        # Corepack is avoided: the .nvmrc-pinned Node (22.12) ships a corepack
-        # whose signing keys can't verify the registry ("Cannot find matching
-        # keyid"). Mirrors dependency-cruiser.yml, the sibling .nvmrc job.
+        # (not the latest global) so the version is declared in exactly one place
+        # and lockfile resolution matches every other job. Corepack is avoided:
+        # it has needed registry signing keys the pinned Node did not carry.
         run: npm install -g "$(node -p "require('./package.json').packageManager.split('+')[0]")"
 
       - name: Install dependencies
