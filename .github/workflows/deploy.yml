@@ -32,10 +32,10 @@ jobs:
       url: ${{ vars.PRODUCTION_SITE_URL }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: arn:aws:iam::${{vars.PROD_AWS_ACCOUNT_ID}}:role/website-deploy-trigger-role
           role-session-name: GitHub_to_AWS_via_FederatedOIDC
