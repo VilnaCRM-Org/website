@@ -36,7 +36,11 @@ WORKDIR /app
 COPY --from=build /app/node_modules ./node_modules
 
 COPY src/test/memory-leak ./src/test/memory-leak
-COPY src/config/i18nConfig.js ./src/config/i18nConfig.js
-COPY pages/i18n/localization.json ./pages/i18n/localization.json
+COPY scripts/localizationGenerator.js ./scripts/localizationGenerator.js
+COPY src/features ./src/features
+
+# localization.json is a gitignored build artifact (#328), so generate it in the
+# image from the per-feature i18n sources instead of copying a committed file.
+RUN node -e "new (require('./scripts/localizationGenerator'))().generateLocalizationFile()"
 
 CMD ["sleep","infinity"]

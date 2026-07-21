@@ -8,6 +8,7 @@ import React, { ComponentType, useEffect } from 'react';
 
 import { theme } from '@/components/app-theme';
 import Layout from '@/components/layout';
+import { env } from '@/config/env';
 import { golos } from '@/config/Fonts/golos';
 import { handleWebVitalsMetric } from '@/lib/web-vitals/report-web-vitals';
 
@@ -28,12 +29,13 @@ const DynamicHeader: ComponentType = dynamic(() => import('@/features/landing/co
 });
 
 Sentry.init({
-  dsn: process.env.SENTRY_DSN_KEY,
+  dsn: env.NEXT_PUBLIC_SENTRY_DSN,
   integrations: [Sentry.browserTracingIntegration(), Sentry.replayIntegration()],
-  tracePropagationTargets: [
-    process.env.NEXT_PUBLIC_DEVELOPMENT_API_URL || '',
-    process.env.NEXT_PUBLIC_API_URL || '',
-  ],
+  // Drop empty origins so Sentry never receives '' (which substring-matches
+  // every URL and would attach trace headers to all outbound requests).
+  tracePropagationTargets: [env.NEXT_PUBLIC_DEVELOPMENT_API_URL, env.NEXT_PUBLIC_API_URL].filter(
+    Boolean
+  ),
   tracesSampleRate: 1.0,
   replaysSessionSampleRate: 0.1,
   replaysOnErrorSampleRate: 1.0,
@@ -51,7 +53,9 @@ function MyApp({ Component }: { Component: React.ComponentType }): React.ReactEl
           <Layout header={<DynamicHeader />}>
             <Component />
           </Layout>
-          <GoogleAnalytics gaId="G-XYZ" />
+          {env.NEXT_PUBLIC_GA_MEASUREMENT_ID ? (
+            <GoogleAnalytics gaId={env.NEXT_PUBLIC_GA_MEASUREMENT_ID} />
+          ) : null}
         </main>
       </ApolloProvider>
     </ThemeProvider>

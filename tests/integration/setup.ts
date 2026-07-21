@@ -1,8 +1,10 @@
 /**
  * Integration-layer test setup.
  *
- * Runs after `jest.setup.ts` (jest-dom matchers + i18next bootstrap) and is
- * loaded only for the `TEST_ENV=integration` Jest project.
+ * Runs before `jest.setup.ts` (jest-dom matchers + i18next bootstrap) for the
+ * `TEST_ENV=integration` Jest project: the GraphQL endpoint must be set before
+ * i18next boots src/config/env.ts, which validates and freezes
+ * NEXT_PUBLIC_GRAPHQL_API_URL once at module load (#328).
  *
  * Integration tests exercise the *real* Apollo Client transport
  * (`src/features/landing/api/graphql/apollo.ts`) and the real cross-module

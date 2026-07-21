@@ -64,7 +64,7 @@ describe('Localization Configuration', () => {
     delete process.env.NEXT_PUBLIC_FALLBACK_LANGUAGE;
 
     await expect(import('../../config/i18nConfig.js')).rejects.toThrow(
-      'Missing required environment variables for localization'
+      /Invalid environment configuration/
     );
   });
   it('should throw an error if only fallbackLanguage is missing', async () => {
@@ -72,15 +72,15 @@ describe('Localization Configuration', () => {
     delete process.env.NEXT_PUBLIC_FALLBACK_LANGUAGE;
 
     await expect(import('../../config/i18nConfig.js')).rejects.toThrow(
-      'Missing required environment variables for localization'
+      /Invalid environment configuration/
     );
   });
-  it('should throw an error if only fallbackLanguage is missing', async () => {
-    process.env.NEXT_PUBLIC_MAIN_LANGUAGE = 'uk';
-    delete process.env.NEXT_PUBLIC_FALLBACK_LANGUAGE;
+  it('should throw an error if only mainLanguage is missing', async () => {
+    delete process.env.NEXT_PUBLIC_MAIN_LANGUAGE;
+    process.env.NEXT_PUBLIC_FALLBACK_LANGUAGE = 'en';
 
     await expect(import('../../config/i18nConfig.js')).rejects.toThrow(
-      'Missing required environment variables for localization'
+      /Invalid environment configuration/
     );
   });
 

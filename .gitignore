@@ -29,6 +29,10 @@ yarn-error.log*
 # local env files
 .env*.local
 
+# generated i18n bundle (rebuilt by the next.config webpack hook and the Jest
+# globalSetup; see scripts/localizationGenerator.js)
+pages/i18n/localization.json
+
 # vercel
 .vercel
 
