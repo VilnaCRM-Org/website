@@ -21,10 +21,13 @@ const TEST_ENV = process.env.TEST_ENV ?? 'client';
 const UNIT_GLOB = '<rootDir>/src/test/unit/**/*.test.ts';
 const INTEGRATION_GLOB = '<rootDir>/tests/integration/**/*.integration.test.{ts,tsx}';
 
+const EDGE_GLOB = '<rootDir>/src/test/edge/**/*.test.ts';
+
 const testMatchByEnv: Record<string, string[]> = {
   server: ['<rootDir>/src/test/apollo-server**/*.test.ts', UNIT_GLOB],
   integration: [INTEGRATION_GLOB],
   client: ['<rootDir>/src/test/testing-library**/*.test.tsx', UNIT_GLOB],
+  edge: [EDGE_GLOB],
 };
 
 // Fail fast on an unrecognised TEST_ENV (e.g. a typo in a CI job) instead of
@@ -36,6 +39,7 @@ if (!(TEST_ENV in testMatchByEnv)) {
 
 const isIntegration = TEST_ENV === 'integration';
 const isServer = TEST_ENV === 'server';
+const isEdge = TEST_ENV === 'edge';
 
 // jsdom lacks the Fetch API; the integration layer drives the real Apollo
 // HttpLink, so it runs in a jsdom variant that injects Node's fetch globals.
@@ -65,13 +69,30 @@ const INTEGRATION_COVERAGE_THRESHOLD = {
   global: { branches: 100, functions: 100, lines: 100, statements: 100 },
 };
 
+// The `edge` layer covers the deployed edge/runtime scripts under `scripts/` that are not
+// part of the Next.js bundle. Today that is the CloudFront Functions handler
+// (`scripts/cloudfront_routing.js`) which fronts every production request: it is the repo's
+// most-fixed file (7 fix commits / 4 production incidents) yet historically shipped with
+// zero test coverage (issue #349). The spec loads that byte-identical ES5.1 file via
+// `node:vm` with its real path as the vm `filename`, so the v8 provider attributes the
+// executed code back to the source file. This layer is isolated from client/server/
+// integration so it enforces 100% on exactly these scripts without touching their coverage
+// reports.
+const EDGE_COVERAGE_FROM = ['<rootDir>/scripts/cloudfront_routing.js'];
+
+const EDGE_COVERAGE_THRESHOLD = {
+  global: { branches: 100, functions: 100, lines: 100, statements: 100 },
+};
+
 const config: Config = {
   clearMocks: true,
   // Generate the gitignored pages/i18n/localization.json (#328) before
   // jest.setup.ts imports the i18n stack that requires it.
   globalSetup: '<rootDir>/jest.global-setup.js',
   collectCoverage: true,
-  coverageDirectory: 'coverage',
+  // The edge layer writes to its own coverage dir so its scripts-only report never
+  // clobbers the product coverage the client/server runs write to `coverage/`.
+  coverageDirectory: isEdge ? 'coverage/edge' : 'coverage',
   // The integration layer uses the `babel` coverage provider so coverage is
   // instrumented on the same babel-jest-transformed output the tests run
   // against; this keeps the strict 100% threshold measured against the exact
@@ -84,6 +105,12 @@ const config: Config = {
         coverageThreshold: INTEGRATION_COVERAGE_THRESHOLD,
       }
     : {}),
+  ...(isEdge
+    ? {
+        collectCoverageFrom: EDGE_COVERAGE_FROM,
+        coverageThreshold: EDGE_COVERAGE_THRESHOLD,
+      }
+    : {}),
   testMatch: testMatchByEnv[TEST_ENV],
   testPathIgnorePatterns: [
     '/node_modules/',
@@ -91,7 +118,7 @@ const config: Config = {
     '<rootDir>/src/test/testing-library/.*\\/utils\\.tsx$',
   ],
   preset: 'ts-jest',
-  testEnvironment: isServer ? 'node' : isIntegration ? INTEGRATION_ENVIRONMENT : 'jsdom',
+  testEnvironment: isServer || isEdge ? 'node' : isIntegration ? INTEGRATION_ENVIRONMENT : 'jsdom',
   transform: {
     '^.+\\.(js|jsx|mjs|cjs|ts|tsx)$': [
       'babel-jest',

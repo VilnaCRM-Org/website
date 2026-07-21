@@ -36,6 +36,7 @@ wait-for-prod	bats	tests/bats/makefile_targets.bats	Validated with a stubbed cur
 test-unit-all	ci	.github/workflows/unit-testing.yml	Executed directly by the unit testing workflow.
 test-unit-client	ci	.github/workflows/unit-testing.yml	Executed through `make test-unit-all`, which depends on `test-unit-client`.
 test-unit-server	ci	.github/workflows/unit-testing.yml	Executed through `make test-unit-all`, which depends on `test-unit-server`.
+test-unit-edge	ci	.github/workflows/unit-testing.yml	Executed through `make test-unit-all`, which depends on `test-unit-edge`.
 test-bats	ci	.github/workflows/bats-testing.yml	Executed directly by the dedicated Bats PR workflow.
 test-memory-leak	ci	.github/workflows/memory-leak-testing.yml	Executed directly by the memory leak workflow.
 memory-leak-dind	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker Compose commands.

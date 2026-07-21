@@ -61,9 +61,10 @@ runs `next dev` directly).
 ## Testing
 
 ```bash
-make test-unit-all      # Jest: client (jsdom) + server (node)
+make test-unit-all      # Jest: client (jsdom) + server (node) + edge (node)
 make test-unit-client   # Client unit tests (TEST_ENV=client, jsdom)
 make test-unit-server   # Apollo server unit tests (TEST_ENV=server, node)
+make test-unit-edge     # Edge-script unit tests (TEST_ENV=edge, node; scripts/, 100% per-file)
 make test-integration   # Integration layer (TEST_ENV=integration)
 make test-e2e           # Playwright E2E (prod stack + Mockoon API mock)
 make test-visual        # Playwright visual regression

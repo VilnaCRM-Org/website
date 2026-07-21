@@ -43,6 +43,7 @@ STORYBOOK_BUILD_CMD         = $(STORYBOOK_BIN) build --output-dir storybook-stat
 
 TEST_DIR_BASE               = ./src/test
 TEST_DIR_APOLLO             = $(TEST_DIR_BASE)/apollo-server
+TEST_DIR_EDGE               = $(TEST_DIR_BASE)/edge
 TEST_DIR_E2E                = $(TEST_DIR_BASE)/e2e
 TEST_DIR_VISUAL             = $(TEST_DIR_BASE)/visual
 
@@ -380,13 +381,16 @@ wait-for-prod: ## Wait for the prod service to be ready on port $(NEXT_PUBLIC_PR
 	@while ! curl -s -f http://$(WEBSITE_DOMAIN):$(NEXT_PUBLIC_PROD_PORT) >/dev/null 2>&1; do printf "."; sleep 1; done
 	@printf '\nProd service is up and running!\n'
 
-test-unit-all: test-unit-client test-unit-server ## This command executes unit tests for both client and server environments.
+test-unit-all: test-unit-client test-unit-server test-unit-edge ## This command executes unit tests for the client, server, and edge environments.
 
 test-unit-client: ## Run all client-side unit tests using Jest (Next.js env, TEST_ENV=client)
 	$(UNIT_TESTS) TEST_ENV=client $(JEST_BIN) $(JEST_FLAGS)
 
 test-unit-server: ## Run server-side unit tests for Apollo using Jest (Node.js env, TEST_ENV=server, target: $(TEST_DIR_APOLLO))
 	$(UNIT_TESTS) TEST_ENV=server $(JEST_BIN) $(JEST_FLAGS) $(TEST_DIR_APOLLO)
+
+test-unit-edge: ## Run edge-script unit tests using Jest (Node.js env, TEST_ENV=edge, target: $(TEST_DIR_EDGE))
+	$(UNIT_TESTS) TEST_ENV=edge $(JEST_BIN) $(JEST_FLAGS) $(TEST_DIR_EDGE)
 
 test-integration: ## Run the integration layer using Jest (TEST_ENV=integration, target: tests/integration)
 	$(UNIT_TESTS) TEST_ENV=integration $(JEST_BIN) $(JEST_FLAGS)
