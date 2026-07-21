@@ -4,6 +4,12 @@ on:
   pull_request:
     branches:
       - main
+  push:
+    branches:
+      - main
+  schedule:
+    # Weekly re-scan of main with the latest CodeQL query packs.
+    - cron: '0 5 * * 1'
 
 permissions: {}
 

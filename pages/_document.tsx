@@ -1,6 +1,8 @@
 import { Html, Head, Main, NextScript } from 'next/document';
 
-const mainLanguage: string = process.env.NEXT_PUBLIC_MAIN_LANGUAGE ?? 'en';
+import { env } from '@/config/env';
+
+const mainLanguage: string = env.NEXT_PUBLIC_MAIN_LANGUAGE;
 
 export default function Document(): React.ReactElement {
   return (

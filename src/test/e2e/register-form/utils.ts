@@ -8,7 +8,7 @@ import {
   placeholderEmail,
   placeholderPassword,
   signUpButton,
-  graphqlEndpoint,
+  graphqlUrlFragment,
   requiredNameError,
   userData,
   policyText,
@@ -46,7 +46,7 @@ export async function fillPasswordInput(page: Page, user: User): Promise<void> {
 }
 
 export function responseFilter(resp: Response): boolean {
-  return resp.url().includes(graphqlEndpoint) && resp.status() === 200;
+  return resp.url().includes(graphqlUrlFragment) && resp.status() === 200;
 }
 interface GraphQLResponse {
   errors: { message: string }[];
@@ -70,7 +70,7 @@ export async function responseErrorFilter(resp: Response): Promise<boolean> {
     const hasErrors: boolean = json.errors?.length > 0;
 
     logger.info(`Response URL: ${resp.url()}, Has Errors: ${hasErrors}`);
-    return resp.url().includes(graphqlEndpoint) && hasErrors;
+    return resp.url().includes(graphqlUrlFragment) && hasErrors;
   } catch (error) {
     logger.warn(`Failed to parse JSON response from ${resp.url()}:`, error);
     return false;

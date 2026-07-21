@@ -15,6 +15,7 @@ import { DefaultFooter } from '@/components/ui-footer/default-footer';
 import { Mobile } from '@/components/ui-footer/mobile';
 import { PrivacyPolicy } from '@/components/ui-footer/privacy-policy';
 import { VilnaCRMEmail } from '@/components/ui-footer/vilna-crm-email';
+import { env } from '@/config/env';
 import { SocialMedia } from '@/types/social-media';
 
 const stackElementClass: string = '.MuiStack-root';
@@ -23,8 +24,7 @@ const containerElementClass: string = '.MuiContainer-root';
 const logoAlt: string = t('footer.logo_alt');
 const privacyText: string = t('footer.privacy');
 const usagePolicyText: string = t('footer.usage_policy');
-const fallbackEmail: string = 'info@vilnacrm.com';
-const expectedEmail: string = process.env.NEXT_PUBLIC_VILNACRM_GMAIL?.trim() || fallbackEmail;
+const expectedEmail: string = env.NEXT_PUBLIC_VILNACRM_GMAIL;
 
 const localizedRegExp: (key: string) => RegExp = key => new RegExp(t(key));
 
@@ -83,7 +83,7 @@ describe('Mobile (integration)', () => {
 });
 
 describe('PrivacyPolicy (integration)', () => {
-  it('renders privacy and usage policy links pointing to the README', () => {
+  it('renders privacy and usage policy links from the configured policy URLs', () => {
     render(<PrivacyPolicy />);
 
     const privacyLink: HTMLElement = screen.getByText(privacyText);
@@ -94,44 +94,19 @@ describe('PrivacyPolicy (integration)', () => {
 
     const privacyAnchor: HTMLElement | null = privacyLink.closest('a');
     const usageAnchor: HTMLElement | null = usagePolicyLink.closest('a');
-    expect(privacyAnchor).toHaveAttribute(
-      'href',
-      'https://github.com/VilnaCRM-Org/website/blob/main/README.md'
-    );
+    expect(privacyAnchor).toHaveAttribute('href', env.NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL);
     expect(privacyAnchor).toHaveAttribute('target', '_blank');
-    expect(usageAnchor).toHaveAttribute(
-      'href',
-      'https://github.com/VilnaCRM-Org/website/blob/main/README.md'
-    );
+    expect(usageAnchor).toHaveAttribute('href', env.NEXT_PUBLIC_VILNACRM_USE_POLICY_URL);
     expect(usageAnchor).toHaveAttribute('target', '_blank');
   });
 });
 
 describe('VilnaCRMEmail (integration)', () => {
-  it('renders the mailto email link from the public env var', () => {
+  it('renders the mailto email link from the configured env value', () => {
     const { container } = render(<VilnaCRMEmail />);
 
     expect(screen.getByText(expectedEmail)).toBeInTheDocument();
     const anchor: HTMLElement | null = within(container).getByText(expectedEmail).closest('a');
     expect(anchor).toHaveAttribute('href', `mailto:${expectedEmail}`);
-  });
-
-  it('falls back to the default address when the env var is unset', () => {
-    const original: string | undefined = process.env.NEXT_PUBLIC_VILNACRM_GMAIL;
-    delete process.env.NEXT_PUBLIC_VILNACRM_GMAIL;
-
-    try {
-      const { container } = render(<VilnaCRMEmail />);
-
-      expect(screen.getByText(fallbackEmail)).toBeInTheDocument();
-      const anchor: HTMLElement | null = within(container).getByText(fallbackEmail).closest('a');
-      expect(anchor).toHaveAttribute('href', `mailto:${fallbackEmail}`);
-    } finally {
-      if (original === undefined) {
-        delete process.env.NEXT_PUBLIC_VILNACRM_GMAIL;
-      } else {
-        process.env.NEXT_PUBLIC_VILNACRM_GMAIL = original;
-      }
-    }
   });
 });
