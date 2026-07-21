@@ -1,6 +1,8 @@
 import * as Sentry from '@sentry/react';
 import type { NextWebVitalsMetric } from 'next/app';
 
+import { isProductionBuild } from '@/config/env';
+
 /**
  * Real-user (field) Core Web Vitals forwarding for the pages-router
  * `reportWebVitals` hook. Next.js invokes the hook for every metric it records;
@@ -82,7 +84,7 @@ export function forwardWebVital(metric: NextWebVitalsMetric): void {
  * (build mode and the per-call sample) and forwards when the gate passes.
  */
 export function handleWebVitalsMetric(metric: NextWebVitalsMetric): void {
-  if (!shouldForwardWebVital(metric, process.env.NODE_ENV === 'production', Math.random())) {
+  if (!shouldForwardWebVital(metric, isProductionBuild(), Math.random())) {
     return;
   }
   forwardWebVital(metric);
