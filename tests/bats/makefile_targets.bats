@@ -492,3 +492,19 @@ STUB
   run grep -E 'docker|pnpm' "$COMMAND_LOG"
   [ "$status" -ne 0 ]
 }
+
+@test "contract targets route through pnpm and cover fetch, lint and baseline refresh" {
+  reset_command_log
+
+  run_make_target lint-contracts CI=1
+  [ "$status" -eq 0 ]
+  assert_log_contains 'pnpm node scripts/contracts/lint-contracts.mjs'
+
+  reset_command_log
+
+  run_make_target update-contracts CI=1
+  [ "$status" -eq 0 ]
+  assert_log_contains 'pnpm node scripts/fetchSwaggerSchema.mjs'
+  assert_log_contains 'pnpm node scripts/fetchGraphqlSchema.mjs'
+  assert_log_contains 'pnpm node scripts/contracts/lint-contracts.mjs --update-baseline'
+}

@@ -1,12 +1,11 @@
-FROM public.ecr.aws/docker/library/node:23.11.1-alpine3.21 AS base
+FROM public.ecr.aws/docker/library/node:24.18.0-alpine3.23 AS base
 
 RUN apk add --no-cache \
     python3=3.12.13-r0\
-    make=4.4.1-r2 \
-    g++=14.2.0-r4 \
-    curl=8.14.1-r2 && \
-    npm install -g pnpm@10.6.5 serve@14.2.0 && \
-    pnpm add -D js-yaml@4.1.0
+    make=4.4.1-r3 \
+    g++=15.2.0-r2 \
+    curl=8.20.0-r0 && \
+    npm install -g pnpm@10.6.5 serve@14.2.0
 
 
 WORKDIR /app
@@ -20,10 +19,10 @@ FROM base AS build
 
 COPY . .
 
-RUN node scripts/fetchSwaggerSchema.mjs && \
-    node scripts/patchSwaggerServer.mjs
-
-RUN npx next build --webpack && \
+# Reads the committed contract under contracts/ — no network. Refresh it with
+# `make update-contracts`; `make lint-contracts` fails if it drifts from the pin.
+RUN node scripts/patchSwaggerServer.mjs && \
+    npx next build --webpack && \
     npx next-export-optimize-images
 
 

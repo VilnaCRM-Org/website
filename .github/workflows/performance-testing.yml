@@ -11,10 +11,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
-env:
-  # Keep `corepack prepare` non-interactive if it has to fetch pnpm.
-  COREPACK_ENABLE_DOWNLOAD_PROMPT: '0'
-
 jobs:
   performance:
     # Desktop and mobile Lighthouse used to run back-to-back in one job, each
@@ -39,20 +35,23 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: ${{ vars.NODE_VERSION }}
+          node-version-file: '.nvmrc'
 
       - name: Cache pnpm store
         uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
         with:
           path: ~/.pnpm-store
-          key: ${{ runner.os }}-pnpm-node-${{ vars.NODE_VERSION }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('.nvmrc') }}-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
-            ${{ runner.os }}-pnpm-node-${{ vars.NODE_VERSION }}-
+            ${{ runner.os }}-pnpm-${{ hashFiles('.nvmrc') }}-
 
       - name: Setup pnpm and install dependencies
         run: |
-          corepack enable
-          corepack prepare "$(node -p "require('./package.json').packageManager")" --activate
+          # Install the exact pnpm pinned in package.json's packageManager field,
+          # so the version is declared in exactly one place. Corepack is avoided
+          # because `npm install -g` carries the registry signing keys that the
+          # pinned Node's bundled corepack lacks.
+          npm install -g "$(node -p "require('./package.json').packageManager.split('+')[0]")"
           pnpm config set store-dir ~/.pnpm-store
           pnpm install --frozen-lockfile
 

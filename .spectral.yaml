@@ -1,0 +1,9 @@
+# Full default OpenAPI ruleset — deliberately unmodified.
+#
+# The pinned upstream spec does not pass it cleanly today, but no rule is
+# disabled or downgraded to make CI green. Instead the known findings are
+# recorded in contracts/spectral-baseline.json and `make lint-contracts` fails
+# on anything NEW. Bumping USER_SERVICE_VERSION therefore surfaces every
+# regression the ruleset can see, and fixing an upstream defect is a visible
+# baseline shrink rather than a silent no-op.
+extends: ['spectral:oas']

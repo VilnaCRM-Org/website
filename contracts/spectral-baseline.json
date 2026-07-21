@@ -1,0 +1,27 @@
+{
+  "comment": "Known spectral:oas findings in the pinned upstream OpenAPI spec. These are upstream defects this repo does not control. lint-contracts fails on any finding not listed here, and on any listed finding that disappears (so a fixed defect shrinks the baseline instead of rotting).",
+  "findings": [
+    "array-items @ paths./api/users.post.responses.422.content.application/json.schema.properties.violations",
+    "array-items @ paths./api/users/batch.post.requestBody.content.application/json.schema.properties.users",
+    "array-items @ paths./api/users/batch.post.responses.422.content.application/json.schema.properties.violations",
+    "array-items @ paths./api/users/{id}.patch.responses.422.content.application/json.schema.properties.violations",
+    "array-items @ paths./api/users/{id}.put.responses.422.content.application/json.schema.properties.violations",
+    "info-contact @ info",
+    "oas3-schema @ paths./api/oauth/authorize.get.responses.302.headers.Location",
+    "oas3-schema @ paths./api/users/{id}.delete.parameters.0",
+    "oas3-schema @ paths./api/users/{id}.get.parameters.0",
+    "oas3-schema @ paths./api/users/{id}.patch.parameters.0",
+    "oas3-schema @ paths./api/users/{id}.put.parameters.0",
+    "oas3-schema @ paths./api/users/{id}/resend-confirmation-email.post.parameters.0",
+    "oas3-valid-media-example @ paths./api/users.post.responses.422.content.application/json.example.violations",
+    "oas3-valid-media-example @ paths./api/users/batch.post.responses.422.content.application/json.example.violations",
+    "oas3-valid-media-example @ paths./api/users/{id}.patch.responses.422.content.application/json.example.violations",
+    "oas3-valid-media-example @ paths./api/users/{id}.put.responses.422.content.application/json.example.violations",
+    "operation-description @ paths./api/oauth/authorize.get",
+    "operation-description @ paths./api/oauth/token.post",
+    "operation-operationId @ paths./api/oauth/authorize.get",
+    "operation-operationId @ paths./api/oauth/token.post",
+    "operation-tag-defined @ paths./api/oauth/authorize.get.tags.0",
+    "operation-tag-defined @ paths./api/oauth/token.post.tags.0"
+  ]
+}

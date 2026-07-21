@@ -40,7 +40,7 @@ Clone locally or use GitHub’s `Use this template` feature.
 
 Before running the application, make sure the following tools are installed on your machine:
 
-- **[Node.js](https://nodejs.org/en/)** (version 20 or higher).
+- **[Node.js](https://nodejs.org/en/)** (the LTS pinned in [`.nvmrc`](.nvmrc) — run `nvm use`).
   You can download and install Node.js from the official website, or use a version manager like
   nvm [Node Version Manager](https://github.com/nvm-sh/nvm) to easily manage versions.
 
@@ -101,6 +101,8 @@ Linting & Formatting
   make lint-deps: validates architecture/import boundaries with dependency-cruiser
   make lint: runs all linters (ESLint, TypeScript, markdownlint, and dependency-cruiser)
   make lint-metrics: runs the rust-code-analysis complexity gate (host-only, not in make lint)
+  make lint-contracts: validates the pinned user-service contracts (not in make lint; needs network)
+  make update-contracts: re-fetches the contracts after bumping USER_SERVICE_VERSION
 ```
 
 Testing

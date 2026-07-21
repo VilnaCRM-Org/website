@@ -21,7 +21,7 @@ stacks.
   `graphql`.
 - Forms and i18n: react-hook-form; i18next / react-i18next.
 - Observability: `@sentry/node` + `@sentry/react`; Next.js web-vitals reporting.
-- Tooling: pnpm@10.6.5, Node >=20; Prettier, ESLint (flat config), TypeScript,
+- Tooling: pnpm@10.6.5, Node pinned by `.nvmrc` (24.18.0 LTS); Prettier, ESLint (flat config), TypeScript,
   markdownlint, dependency-cruiser.
 - Testing: Jest (jsdom + node envs) with React Testing Library; Playwright (chromium,
   firefox, webkit) with Mockoon; Stryker (mutation); K6 (load); memlab (memory);
@@ -99,6 +99,10 @@ make lint-tsc   # TypeScript (tsc, no emit)
 make lint-md    # markdownlint
 make lint-deps  # dependency-cruiser on src, pages, tests
 ```
+
+Two gates sit deliberately outside `make lint`: `make lint-metrics` (host-only Rust
+binary) and `make lint-contracts` (needs network for its drift check). Each has its own
+workflow — `rust-code-analysis.yml` and `contract-testing.yml`.
 
 Run `make format` before `make lint`; formatting is intentionally separate from the lint
 verification suite. Git hooks are managed by Husky. CI phases are mirrored locally by

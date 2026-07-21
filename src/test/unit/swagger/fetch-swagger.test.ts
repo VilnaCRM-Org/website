@@ -28,6 +28,7 @@ const mockExit: jest.SpyInstance = jest.spyOn(process, 'exit').mockImplementatio
 type SwaggerModule = {
   buildSpecUrl: () => string;
   fetchSwaggerYaml: (url: string) => Promise<string>;
+  normalizeSpec: (node: unknown) => unknown;
   refreshSwaggerSchema: (url: string, filePath: string) => Promise<boolean>;
   saveSwaggerJson: (yamlText: string, filePath: string) => Promise<void>;
 };
@@ -38,11 +39,12 @@ describe('swagger utils', () => {
 
   let buildSpecUrl: () => string;
   let fetchSwaggerYaml: (url: string) => Promise<string>;
+  let normalizeSpec: (node: unknown) => unknown;
   let refreshSwaggerSchema: (url: string, filePath: string) => Promise<boolean>;
   let saveSwaggerJson: (yamlText: string, filePath: string) => Promise<void>;
 
   beforeAll(async () => {
-    process.env.USER_SERVICE_SPEC_VERSION = version;
+    process.env.USER_SERVICE_VERSION = version;
 
     mockFetch.mockResolvedValue({
       ok: true,
@@ -52,6 +54,7 @@ describe('swagger utils', () => {
     const swaggerModule: SwaggerModule = await import('../../../../scripts/fetchSwaggerSchema.mjs');
     buildSpecUrl = swaggerModule.buildSpecUrl;
     fetchSwaggerYaml = swaggerModule.fetchSwaggerYaml;
+    normalizeSpec = swaggerModule.normalizeSpec;
     refreshSwaggerSchema = swaggerModule.refreshSwaggerSchema;
     saveSwaggerJson = swaggerModule.saveSwaggerJson;
   });
@@ -73,13 +76,22 @@ describe('swagger utils', () => {
   });
 
   afterAll(() => {
-    process.env.USER_SERVICE_SPEC_VERSION = undefined;
+    delete process.env.USER_SERVICE_VERSION;
     mockExit.mockRestore();
   });
 
   test('buildSpecUrl returns correct URL', () => {
     const url: string = buildSpecUrl();
     expect(url).toBe(expectedUrl);
+  });
+
+  test('buildSpecUrl throws a clear error when USER_SERVICE_VERSION is unset', () => {
+    delete process.env.USER_SERVICE_VERSION;
+    try {
+      expect(() => buildSpecUrl()).toThrow('USER_SERVICE_VERSION is not set');
+    } finally {
+      process.env.USER_SERVICE_VERSION = version;
+    }
   });
 
   test('fetchSwaggerYaml returns text when response is ok', async () => {
@@ -116,7 +128,7 @@ describe('swagger utils', () => {
     expect(jsYaml.load).toHaveBeenCalledWith(yamlText);
     expect(mockWriteFile).toHaveBeenCalledWith(
       outputPath,
-      JSON.stringify({ swagger: '2.0' }, null, 2)
+      `${JSON.stringify({ swagger: '2.0' }, null, 2)}\n`
     );
   });
 
@@ -160,6 +172,52 @@ describe('swagger utils', () => {
     await expect(saveSwaggerJson(123, './swagger.json')).rejects.toThrow(
       'yamlText parameter is required and must be a string'
     );
+  });
+
+  test('normalizeSpec strips maxLength:null and format:null at every depth', () => {
+    expect(
+      normalizeSpec({
+        type: 'string',
+        maxLength: null,
+        format: null,
+        nested: { minLength: 1, format: null },
+      })
+    ).toEqual({ type: 'string', nested: { minLength: 1 } });
+  });
+
+  test('normalizeSpec preserves valid null-valued OpenAPI 3.1 metadata', () => {
+    // default/example/const may legitimately be null in OpenAPI 3.1, and null is a
+    // valid enum member. Only the invalid maxLength/format nulls are dropped.
+    expect(
+      normalizeSpec({
+        default: null,
+        example: null,
+        const: null,
+        enum: [null, 'a'],
+        format: null,
+      })
+    ).toEqual({ default: null, example: null, const: null, enum: [null, 'a'] });
+  });
+
+  test('normalizeSpec recurses through arrays and keeps null elements', () => {
+    expect(normalizeSpec([{ type: 'string', maxLength: null }, { type: 'integer' }, null])).toEqual(
+      [{ type: 'string' }, { type: 'integer' }, null]
+    );
+  });
+
+  test('normalizeSpec preserves falsy values and unrelated null keys', () => {
+    expect(normalizeSpec({ zero: 0, empty: '', no: false, description: null })).toEqual({
+      zero: 0,
+      empty: '',
+      no: false,
+      description: null,
+    });
+  });
+
+  test('normalizeSpec returns primitives unchanged', () => {
+    expect(normalizeSpec('text')).toBe('text');
+    expect(normalizeSpec(42)).toBe(42);
+    expect(normalizeSpec(null)).toBeNull();
   });
 
   test('saveSwaggerJson throws if filePath is missing or not a string', async () => {
