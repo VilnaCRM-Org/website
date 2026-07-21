@@ -85,6 +85,15 @@ describe('swagger utils', () => {
     expect(url).toBe(expectedUrl);
   });
 
+  test('buildSpecUrl throws a clear error when USER_SERVICE_VERSION is unset', () => {
+    delete process.env.USER_SERVICE_VERSION;
+    try {
+      expect(() => buildSpecUrl()).toThrow('USER_SERVICE_VERSION is not set');
+    } finally {
+      process.env.USER_SERVICE_VERSION = version;
+    }
+  });
+
   test('fetchSwaggerYaml returns text when response is ok', async () => {
     const mockText: string = 'swagger: "2.0"';
     mockFetch.mockResolvedValue({
@@ -165,29 +174,43 @@ describe('swagger utils', () => {
     );
   });
 
-  test('normalizeSpec drops null-valued keys at every depth', () => {
+  test('normalizeSpec strips maxLength:null and format:null at every depth', () => {
     expect(
       normalizeSpec({
         type: 'string',
         maxLength: null,
         format: null,
-        nested: { keep: 1, drop: null },
+        nested: { minLength: 1, format: null },
       })
-    ).toEqual({ type: 'string', nested: { keep: 1 } });
+    ).toEqual({ type: 'string', nested: { minLength: 1 } });
   });
 
-  test('normalizeSpec recurses through arrays', () => {
-    expect(normalizeSpec([{ keep: 'a', drop: null }, { keep: 'b' }])).toEqual([
-      { keep: 'a' },
-      { keep: 'b' },
-    ]);
+  test('normalizeSpec preserves valid null-valued OpenAPI 3.1 metadata', () => {
+    // default/example/const may legitimately be null in OpenAPI 3.1, and null is a
+    // valid enum member. Only the invalid maxLength/format nulls are dropped.
+    expect(
+      normalizeSpec({
+        default: null,
+        example: null,
+        const: null,
+        enum: [null, 'a'],
+        format: null,
+      })
+    ).toEqual({ default: null, example: null, const: null, enum: [null, 'a'] });
   });
 
-  test('normalizeSpec preserves falsy values that are not null', () => {
-    expect(normalizeSpec({ zero: 0, empty: '', no: false, gone: null })).toEqual({
+  test('normalizeSpec recurses through arrays and keeps null elements', () => {
+    expect(normalizeSpec([{ type: 'string', maxLength: null }, { type: 'integer' }, null])).toEqual(
+      [{ type: 'string' }, { type: 'integer' }, null]
+    );
+  });
+
+  test('normalizeSpec preserves falsy values and unrelated null keys', () => {
+    expect(normalizeSpec({ zero: 0, empty: '', no: false, description: null })).toEqual({
       zero: 0,
       empty: '',
       no: false,
+      description: null,
     });
   });
 

@@ -94,18 +94,23 @@ or bump the pin if the field genuinely landed upstream.
 4. Commit `contracts/` together with `.env`. That diff **is** the record of what
    changed upstream; keep it in its own commit so it stays reviewable.
 
-Mockoon builds from the same pin via a build arg, so a bump changes what e2e
-mocks too. Check that every endpoint the app calls still exists in the new spec
-before assuming a red e2e run is unrelated.
+Mockoon serves the committed `contracts/user-service/openapi.json` directly (the
+image COPYs it, no build-time download), so a pin bump changes what e2e mocks
+only once you refresh that artifact. Check that every endpoint the app calls
+still exists in the new spec before assuming a red e2e run is unrelated.
 
 ## Normalization at ingestion
 
-`scripts/fetchSwaggerSchema.mjs` strips null-valued keys while converting the
-spec. Upstream emits `maxLength: null` / `format: null`, which is invalid
-OpenAPI 3 and makes spectral abort rather than report. This is a documented
-transformation at the single point the document enters the repo — not a way to
-hide findings. If you add another normalization, say why in the code and expect
-to justify it in review.
+`scripts/fetchSwaggerSchema.mjs` strips the invalid `maxLength: null` and
+`format: null` keywords while converting the spec — and only those. Both are
+invalid OpenAPI 3 (maxLength must be a non-negative integer, format a string) and
+make spectral abort rather than report. The strip is scoped to those keys on
+purpose: a blanket "drop every null" would also delete legitimate OpenAPI 3.1
+metadata (`default: null`, `example: null`) and, because the drift check
+normalizes both sides identically, that deletion would pass silently while
+mutating the committed contract. This is a documented transformation at the
+single point the document enters the repo — not a way to hide findings. If you
+add another normalization, say why in the code and expect to justify it in review.
 
 ## Related guides
 

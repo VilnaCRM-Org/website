@@ -10,7 +10,7 @@ services:
       - '3001:3001'
     shm_size: ${SHM_SIZE:-1g}
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://${WEBSITE_DOMAIN}:${NEXT_PUBLIC_PROD_PORT}"]
+      test: ['CMD', 'curl', '-f', 'http://${WEBSITE_DOMAIN}:${NEXT_PUBLIC_PROD_PORT}']
     networks:
       - website-network
 
@@ -28,7 +28,7 @@ services:
     environment:
       - NEXT_PUBLIC_API_BASE_URL=http://${NEXT_PUBLIC_PROD_HOST}:${NEXT_PUBLIC_PROD_PORT}
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://${WEBSITE_DOMAIN}:${PLAYWRIGHT_TEST_PORT}"]
+      test: ['CMD', 'curl', '-f', 'http://${WEBSITE_DOMAIN}:${PLAYWRIGHT_TEST_PORT}']
     networks:
       - website-network
 
@@ -41,33 +41,29 @@ services:
     ports:
       - '4000:4000'
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://${WEBSITE_DOMAIN}:${GRAPHQL_PORT}/${GRAPHQL_API_PATH}"]
+      test: ['CMD', 'curl', '-f', 'http://${WEBSITE_DOMAIN}:${GRAPHQL_PORT}/${GRAPHQL_API_PATH}']
     networks:
       - website-network
 
   mockoon:
     container_name: website-mockoon
     build:
+      # Hermetic: the image COPYs the committed contracts/user-service/openapi.json,
+      # so there is no build arg and no network fetch. The pin still lives in .env,
+      # consumed when the artifact is refreshed via `make update-contracts`.
       context: .
       dockerfile: Mockoon.Dockerfile
-      args:
-        # Fail closed rather than defaulting again here. An unset variable would
-        # otherwise pass an empty string, which overrides the Dockerfile's ARG
-        # default and builds a malformed upstream URL. The pin lives in .env and
-        # nowhere else.
-        USER_SERVICE_VERSION: ${USER_SERVICE_VERSION:?set USER_SERVICE_VERSION (it comes from .env)}
     ports:
       - '8080:8080'
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://${WEBSITE_DOMAIN}:${MOCKOON_PORT}/api/users"]
+      test: ['CMD', 'curl', '-f', 'http://${WEBSITE_DOMAIN}:${MOCKOON_PORT}/api/users']
     networks:
       - website-network
 
-
   k6:
     container_name: website-k6
-    profiles: ["load"]
+    profiles: ['load']
     build:
       context: .
       dockerfile: ./src/test/load/Dockerfile

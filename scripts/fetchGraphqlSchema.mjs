@@ -2,10 +2,22 @@ import 'dotenv/config';
 import { writeFile } from 'node:fs/promises';
 
 const schemaPath = './contracts/user-service/schema.graphql';
-const version = process.env.USER_SERVICE_VERSION || 'v2.6.0';
+
+// USER_SERVICE_VERSION is the single pin for every user-service contract and
+// lives in .env. Refuse to fall back to a hidden default: a silent default would
+// let a refresh or the drift check run against the wrong generation of the spec.
+function requireUserServiceVersion() {
+  const version = process.env.USER_SERVICE_VERSION;
+  if (!version) {
+    throw new Error(
+      'USER_SERVICE_VERSION is not set — define it in .env (the single user-service pin).'
+    );
+  }
+  return version;
+}
 
 export function buildSchemaUrl() {
-  return `https://raw.githubusercontent.com/VilnaCRM-Org/user-service/${version}/.github/graphql-spec/spec`;
+  return `https://raw.githubusercontent.com/VilnaCRM-Org/user-service/${requireUserServiceVersion()}/.github/graphql-spec/spec`;
 }
 
 export async function fetchGraphqlSchema(url) {

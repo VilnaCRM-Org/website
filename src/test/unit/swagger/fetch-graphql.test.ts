@@ -59,6 +59,15 @@ describe('graphql schema fetcher', () => {
     expect(buildSchemaUrl()).toBe(expectedUrl);
   });
 
+  test('buildSchemaUrl throws a clear error when USER_SERVICE_VERSION is unset', () => {
+    delete process.env.USER_SERVICE_VERSION;
+    try {
+      expect(() => buildSchemaUrl()).toThrow('USER_SERVICE_VERSION is not set');
+    } finally {
+      process.env.USER_SERVICE_VERSION = version;
+    }
+  });
+
   test('fetchGraphqlSchema returns the SDL when the response is ok', async () => {
     await expect(fetchGraphqlSchema(expectedUrl)).resolves.toBe(sdl);
     expect(mockFetch).toHaveBeenCalledWith(expectedUrl);
