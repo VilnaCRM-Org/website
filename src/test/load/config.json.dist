@@ -12,13 +12,13 @@
     "homepage": {
       "setupTimeoutInMinutes": 10,
       "smoke": {
-        "threshold": 15000,
+        "threshold": 2000,
         "rps": 5,
         "vus": 5,
         "duration": 10
       },
       "average": {
-        "threshold": 5000,
+        "threshold": 1500,
         "rps": 15,
         "vus": 15,
         "duration": {
@@ -28,7 +28,7 @@
         }
       },
       "stress": {
-        "threshold": 17000,
+        "threshold": 3000,
         "rps": 75,
         "vus": 75,
         "duration": {
@@ -38,7 +38,7 @@
         }
       },
       "spike": {
-        "threshold": 44000,
+        "threshold": 5000,
         "rps": 150,
         "vus": 150,
         "duration": {
@@ -50,13 +50,13 @@
     "swagger": {
       "setupTimeoutInMinutes": 15,
       "smoke": {
-        "threshold": 20000,
+        "threshold": 3000,
         "rps": 3,
         "vus": 3,
         "duration": 15
       },
       "average": {
-        "threshold": 8000,
+        "threshold": 2500,
         "rps": 10,
         "vus": 10,
         "duration": {
@@ -66,7 +66,7 @@
         }
       },
       "stress": {
-        "threshold": 25000,
+        "threshold": 4000,
         "rps": 50,
         "vus": 50,
         "duration": {
@@ -76,7 +76,7 @@
         }
       },
       "spike": {
-        "threshold": 60000,
+        "threshold": 8000,
         "rps": 100,
         "vus": 100,
         "duration": {

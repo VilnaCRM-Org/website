@@ -19,16 +19,21 @@ surface still reports both, so read the right report.
 
 ## Score budgets
 
-The pass/fail thresholds are category `minScore` assertions inside the two
-config files (`categories:performance`, `categories:accessibility`,
-`categories:bestPractices`, `categories:seo`). Desktop and mobile carry
-different performance floors, and the desktop config has a stricter
-`assertMatrix` override for the `/swagger` URL. Always open the config to read
-the current numbers instead of memorizing them.
+Both config files gate through `assertMatrix` (LHCI rejects `assertMatrix`
+alongside a shared `assertions` block), with a per-page entry for the homepage
+and a looser one for the heavier `/swagger` URL. Each entry asserts category
+floors (`categories:performance`, `categories:accessibility`,
+`categories:best-practices`, `categories:seo`) plus metric ceilings
+(`largest-contentful-paint`, `total-blocking-time`, `cumulative-layout-shift`)
+and `resource-summary` script/total byte budgets. Desktop and mobile carry
+different floors; always open the config to read the current numbers instead of
+memorizing them.
 
-If an audit fails, fix the underlying issue (image weight, contrast, missing
-labels, render-blocking work). Never lower a `minScore`, add an exclusion, or
-otherwise weaken the gate to turn a run green.
+Floors, metric ceilings, and byte budgets are ratcheted from a CI baseline and
+may only move in the stricter direction. If an audit fails, fix the underlying
+issue (image weight, contrast, missing labels, render-blocking work). Never lower
+a `minScore`, raise a `maxNumericValue`, add an exclusion, or otherwise weaken the
+gate to turn a run green.
 
 ## Review areas
 

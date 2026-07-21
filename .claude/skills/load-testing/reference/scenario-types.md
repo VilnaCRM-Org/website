@@ -26,20 +26,23 @@ These are the committed defaults in `config.json.dist`. `threshold` is the `p(99
 
 ```text
 homepage  setupTimeoutInMinutes 10
-  smoke    threshold 15000  rps 5    vus 5    duration 10
-  average  threshold 5000   rps 15   vus 15   rise 5  plateau 30  fall 5
-  stress   threshold 17000  rps 75   vus 75   rise 5  plateau 30  fall 5
-  spike    threshold 44000  rps 150  vus 150  rise 30 fall 10
+  smoke    threshold 2000  rps 5    vus 5    duration 10
+  average  threshold 1500  rps 15   vus 15   rise 5  plateau 30  fall 5
+  stress   threshold 3000  rps 75   vus 75   rise 5  plateau 30  fall 5
+  spike    threshold 5000  rps 150  vus 150  rise 30 fall 10
 
 swagger   setupTimeoutInMinutes 15
-  smoke    threshold 20000  rps 3    vus 3    duration 15
-  average  threshold 8000   rps 10   vus 10   rise 5  plateau 45  fall 5
-  stress   threshold 25000  rps 50   vus 50   rise 5  plateau 45  fall 5
-  spike    threshold 60000  rps 100  vus 100  rise 30 fall 15
+  smoke    threshold 3000  rps 3    vus 3    duration 15
+  average  threshold 2500  rps 10   vus 10   rise 5  plateau 45  fall 5
+  stress   threshold 4000  rps 50   vus 50   rise 5  plateau 45  fall 5
+  spike    threshold 8000  rps 100  vus 100  rise 30 fall 15
 ```
 
-Change these only in a local `config.json` copy (see `configuration.md`); keep the
-committed `config.json.dist` as the shared baseline so runs stay comparable.
+These `p(99)` ceilings are ratcheted from a CI baseline (a static page served by
+`serve` answers in ~2-5 ms even under load); see `src/test/load/README.md` for the
+tighten-only ratchet rule. Change them only in a local `config.json` copy (see
+`configuration.md`); keep the committed `config.json.dist` as the shared baseline so
+runs stay comparable.
 
 ## Selecting which scenarios run
 

@@ -63,3 +63,14 @@ if (!parsed.success) {
 }
 
 export const env: ClientEnv = parsed.data;
+
+/**
+ * Build mode. `NODE_ENV` is a Next/webpack build-time constant (inlined into the
+ * static export), not a runtime configuration value, so it stays out of the
+ * validated schema above. Centralizing the read in this rule-exempt module keeps
+ * feature code free of direct `process.env` access (#328). Exposed as a function
+ * rather than a const so callers observe the ambient value at call time.
+ */
+export function isProductionBuild(): boolean {
+  return process.env.NODE_ENV === 'production';
+}
