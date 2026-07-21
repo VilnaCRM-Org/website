@@ -27,7 +27,7 @@ For per-gate fix detail (ESLint, tsc, markdownlint, dependency-cruiser,
 Prettier, and the per-suite recovery steps) defer to
 [../ci-workflow/reference/failure-recovery.md](../ci-workflow/reference/failure-recovery.md).
 The coverage contract — scenario classes, skip justifications, regression
-rule — lives in the root `agents.md`; this skill assumes it.
+rule — lives in the root `AGENTS.md`; this skill assumes it.
 
 ## Test routing
 
@@ -77,7 +77,7 @@ Lighthouse run against the Docker prod stack the targets bring up.
 3. Classify the cause: app logic, test data (Faker builder), mock state (Mockoon
    fixture or Apollo mock), visual snapshot drift, or environment drift.
 4. Fix the cause, not the symptom. For a bug fix, add the regression test that
-   fails before the fix and passes after it (agents.md, Step 4).
+   fails before the fix and passes after it (AGENTS.md, Step 4).
 5. Re-run the focused suite, then `make format` and `make lint`.
 
 Per-suite classification cues (snapshot drift vs real diff, surviving mutants,

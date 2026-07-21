@@ -42,7 +42,7 @@ companion skill that owns that concern instead of patching in place.
 | Bug or regression      | Reproduce with a failing test, fix, keep the test            |
 | Architecture concern   | Use the `code-organization` skill; re-check `make lint-deps` |
 | Complexity concern     | Use the `complexity-management` skill; watch qlty smells     |
-| Test gap               | Add coverage per `agents.md` at the smallest useful layer    |
+| Test gap               | Add coverage per `AGENTS.md` at the smallest useful layer    |
 | Question               | Answer in the thread or make the code self-explanatory       |
 
 Architecture comments (cross-feature imports, deep paths past a feature barrel,
@@ -84,7 +84,7 @@ snapshots to clear a red check.
 - Do not add `eslint-disable`, `@ts-ignore`, `@ts-nocheck`, `@ts-expect-error`,
   `prettier-ignore`, or `markdownlint-disable`; fix the underlying code or type instead.
 - Assert user-facing behavior (`getByRole`, `getByLabelText`, `getByText`, localized
-  `t()` strings), not implementation details — see `agents.md`.
+  `t()` strings), not implementation details — see `AGENTS.md`.
 - Re-run `make pr-comments` before declaring the review resolved.
 
 ## Related Guides

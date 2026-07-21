@@ -1,0 +1,89 @@
+schema_version: 1
+project:
+  name: "website"
+  repo: "VilnaCRM-Org/website"
+framework:
+  ui: react-mui
+  state: null
+  di: null
+  router: next
+  bundler: next
+  package_manager: pnpm
+  runtime: "20.0.0"
+  i18n: react-i18next
+  graphql_mock: apollo-server
+architecture:
+  source_root: src
+  modules: ["app-theme", "layout", "social-media", "ui-breakpoints", "ui-button", "ui-card-item", "ui-card-list", "ui-checkbox", "ui-color-theme", "ui-footer", "ui-image", "ui-input", "ui-link", "ui-text-field-form", "ui-toolbar", "ui-tooltip", "ui-typography"]
+  component_prefix: UI
+  path_aliases: []
+make:
+  ci: ci
+  start: start
+  start_prod: start-prod
+  build: build
+  lint: lint
+  lint_eslint: lint-next
+  lint_tsc: lint-tsc
+  lint_md: lint-md
+  lint_dup: null
+  lint_metrics: lint-metrics
+  lint_deps: lint-deps
+  format: format
+  test_unit_client: ci-test-unit-client
+  test_unit_server: ci-test-unit-server
+  test_integration: ci-test-integration
+  test_e2e: test-e2e
+  test_visual: test-visual
+  test_mutation: test-mutation
+  merge_mutation_reports: merge-mutation-reports
+  test_load: test-load
+  test_memory_leak: test-memory-leak
+  lighthouse_desktop: lighthouse-desktop
+  lighthouse_mobile: lighthouse-mobile
+  storybook_build: storybook-build
+  ai_review_loop: null
+  pr_comments: pr-comments
+  fr_nfr_gate: null
+  post_review_findings: null
+  a11y: null
+quality:
+  coverage_statements: 100
+  coverage_branches: 100
+  coverage_functions: 100
+  coverage_lines: 100
+  mutation_msi: 100
+  jscpd_clones: 0
+  eslint_errors: 0
+  eslint_warnings: 0
+  tsc_errors: 0
+  markdownlint_errors: 0
+  depcruise_violations: 0
+  metrics_enforced: true
+  visual_diffs: 0
+  lighthouse_desktop: 95
+  lighthouse_mobile: 85
+capabilities:
+  visual_testing: true
+  lighthouse: true
+  mutation_testing: true
+  storybook: true
+  load_testing: true
+  memory_leak_testing: true
+  figma: false
+  observability: false
+  accessibility_audit: true
+  dynamic_a11y_testing: true
+  publish_pr_comments: false
+ci:
+  provider: github-actions
+  workflows: ["Generate Changelog and Create Release", "bats testing", "codecov", "dependency cruiser", "website", "dockerfile performance", "e2e testing", "Image optimization", "integration testing", "load testing", "memory leak testing", "mutation testing", "performance testing", "rust code analysis", "sandbox", "Trigger Sandbox Deletion", "security testing", "static testing", "unit testing", "visual tests", "format yaml files"]
+  required_checks: []
+review:
+  coderabbit: false
+  ai_review_agents: [claude]
+  request_changes_blocking: true
+companion:
+  skills: ["design-taste-frontend", "frontend-design", "make-interfaces-feel-better", "interaction-design", "oklch-skill"]
+  agents: ["accessibility-lead", "aria-specialist", "keyboard-navigator", "contrast-master", "forms-specialist"]
+  install_command: "manual"

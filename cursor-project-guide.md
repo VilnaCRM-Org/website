@@ -2,7 +2,7 @@
 
 This is the orientation guide for Cursor, Claude Code, and any other AI agent working in the
 VilnaCRM `website` repository. It explains what the project is, where code lives, how to run
-every check through `make`, and the conventions a change must honor. Read `agents.md` first for
+every check through `make`, and the conventions a change must honor. Read `AGENTS.md` first for
 the mandatory test-coverage contract; this guide assumes it and points back to it.
 
 ## Project overview
@@ -238,14 +238,14 @@ make build
 
 Before writing code, search for existing patterns with grep or glob, follow the structure of a
 similar feature under `src/features/`, read the related specs to learn the expected behavior,
-and re-read the test-coverage contract in `agents.md`.
+and re-read the test-coverage contract in `AGENTS.md`.
 
 While writing code, import features through their `index.ts` barrel and use the `@/*` alias;
 keep feature directory names kebab-case; give shared UI primitives the `ui-*` prefix; add
 explicit TypeScript types (the config is strict with `noUnusedLocals` and
 `noUnusedParameters`); localize every user-facing string with the i18next `t()` function and
 per-feature `i18n/{en,uk}.json`; and add positive, negative, and edge-case coverage as
-`agents.md` requires.
+`AGENTS.md` requires.
 
 After writing code, run `make format`, then `make lint`, then the affected test suites, verify
 the change in the running app, and update docs when an API or convention changes.
@@ -265,7 +265,7 @@ the change in the running app, and update docs when an API or convention changes
 - Build forms with react-hook-form and fetch data with Apollo Client 4; there is no Redux or
   Zustand store to wire into.
 - Prefer user-facing semantic queries in tests (`getByRole`, `getByLabelText`, `getByAltText`,
-  `getByText`) over `data-testid`, per the guidance in `agents.md`.
+  `getByText`) over `data-testid`, per the guidance in `AGENTS.md`.
 - For a worked example of positive, negative, and empty-input coverage in one place, read
   `src/test/unit/email-validation.test.ts`.
 
@@ -285,7 +285,7 @@ Branch from `main` for new work; a common convention is `feature/<issue>-<short-
 
 ## Where the agent guidance lives
 
-- `agents.md` is the root contract: the mandatory test-coverage policy, behavior-first
+- `AGENTS.md` is the root contract: the mandatory test-coverage policy, behavior-first
   assertions, and Definition of Done. Read it before writing tests.
 - `.claude/skills/` holds the implementation skills: `architecture`, `ci-workflow`,
   `code-organization`, `code-review`, `complexity-management`, `documentation-creation`,
@@ -300,7 +300,7 @@ Branch from `main` for new work; a common convention is `feature/<issue>-<short-
 
 ## Resources
 
-- `agents.md` for the test-coverage contract.
+- `AGENTS.md` for the test-coverage contract.
 - `Makefile` for every available command.
 - `.dependency-cruiser.js` for the architecture and import boundaries.
 - `eslint.config.mjs` and `tsconfig.json` for the lint and type rules.

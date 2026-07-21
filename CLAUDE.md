@@ -1,7 +1,7 @@
 # CLAUDE.md
 
 This file gives Claude Code (claude.ai/code) guidance for working in the VilnaCRM
-`website` repository. It complements [`agents.md`](agents.md) (the test-coverage
+`website` repository. It complements [`AGENTS.md`](AGENTS.md) (the test-coverage
 contract) and the skills under [`.claude/skills/`](.claude/skills). Read both before
 changing code.
 
@@ -79,7 +79,7 @@ make lighthouse-mobile  # Lighthouse audit (mobile)
 Unit suites accept `CI=1` to run on the host without Docker (e.g. `CI=1 make
 test-unit-all`). E2E and visual specs run Playwright inside the prod/test compose stack;
 E2E uses Mockoon to mock the API. The test-layer map and coverage policy live in
-[`agents.md`](agents.md).
+[`AGENTS.md`](AGENTS.md).
 
 ### Running a single unit test
 
@@ -190,10 +190,10 @@ same-folder imports.
   `components/<name>/validations/`) or lives in `helpers`/`hooks`. There is no feature-root
   `validations/` folder.
 - Selectors: prefer user-facing semantic queries (`getByRole`, `getByLabelText`,
-  `getByAltText`, `getByText`); avoid `data-testid` (guidance in `agents.md`).
+  `getByAltText`, `getByText`); avoid `data-testid` (guidance in `AGENTS.md`).
 - GraphQL: Apollo Server provides a local mock for development; Apollo Client 4 consumes it.
 
-See [`agents.md`](agents.md) for the test-layer map, the test-coverage policy, and the
+See [`AGENTS.md`](AGENTS.md) for the test-layer map, the test-coverage policy, and the
 Faker test-data builders convention.
 
 ## BMAD-METHOD Integration
@@ -211,3 +211,48 @@ Use `/bmalph` to navigate phases and `/bmalph-status` for a quick overview. Comm
 | `/sm`         | Sprint planning, status, coordination |
 | `/dev`        | Implementation and coding             |
 | `/qa`         | Test automation and quality assurance |
+
+<!-- react-frontend-sdlc:begin -->
+
+## react-frontend-sdlc governance (managed block — do not edit between markers)
+
+This repository's SDLC is driven by the react-frontend-sdlc plugin through the
+`/fe-sdlc` orchestrator and its stage commands (`/fe-sdlc-setup`,
+`/fe-sdlc-issue`, `/fe-sdlc-plan`, `/fe-sdlc-implement`, `/fe-sdlc-review`,
+`/fe-sdlc-qa`, `/fe-sdlc-finish-pr`). Every command, agent, and skill reads the
+project profile at `.claude/react-sdlc.yml` rather than hardcoding repo shape.
+
+### Skill-triage gate
+
+Before review or implementation work, every skill shipped by the
+react-frontend-sdlc plugin receives a recorded verdict: EXECUTE (with
+evidence) or NOT-APPLICABLE (with a reason). Verdicts are formed from
+skill frontmatter and the decision guide only; full skill bodies are
+loaded solely on EXECUTE.
+
+### Protected quality thresholds
+
+Quality gates live in `.claude/react-sdlc.yml` under `quality.*` and are
+raise-only: score floors (coverage, mutation MSI, Lighthouse desktop/mobile)
+may be raised above the shipped defaults, and the eslint, tsc, jscpd,
+markdownlint, dependency-cruiser, and visual-diff violation ceilings stay at 0.
+Never lower them — `validate-profile.sh` rejects lowered values.
+
+### Mandatory accessibility gate
+
+Accessibility is non-negotiable. The `/fe-sdlc-review` and `/fe-sdlc-qa`
+stages run the accessibility lane — the target mapped by `make.a11y`, or the
+plugin's bundled static axe-core / semantic / ARIA checks when that mapping is
+`null` — and must report a clean a11y verdict before a change can finish.
+Never weaken or skip it.
+
+### Make-map execution
+
+Run all build, test, lint, and quality commands through the logical targets
+mapped in `.claude/react-sdlc.yml` (`make.*` — `make.ci`, `make.lint`,
+`make.test_unit_client`, and the rest). Never invoke the package manager,
+bundler, or test runners directly on the host. A `null` mapping means the
+capability is absent: skip or degrade with a note, never improvise a raw
+host command.
+
+<!-- react-frontend-sdlc:end -->

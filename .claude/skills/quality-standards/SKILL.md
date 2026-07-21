@@ -17,7 +17,7 @@ This is the catalog of the website's quality gates: what each one enforces, the
 order to run them, the policy that protects them, and which specialist skill
 fixes each failure. For the full run-before-PR orchestration see
 [../ci-workflow/SKILL.md](../ci-workflow/SKILL.md); for the test-coverage
-contract see the root `agents.md`.
+contract see the root `AGENTS.md`.
 
 ## Required Order
 
@@ -90,13 +90,13 @@ When a gate fails, hand the fix to the skill that owns that concern:
   [../figma-design-check/SKILL.md](../figma-design-check/SKILL.md) and
   [../frontend-performance-accessibility/SKILL.md](../frontend-performance-accessibility/SKILL.md).
 - **Jest / Playwright e2e / Stryker** coverage and assertion gaps: the root
-  `agents.md` test-scenario policy.
+  `AGENTS.md` test-scenario policy.
 - **PR review comments** from `make pr-comments`: [../code-review/SKILL.md](../code-review/SKILL.md).
 
 ## Focused Test Gates
 
 Run the suite that actually exercises the change; one change often needs more
-than one. The root `agents.md` policy governs scenario coverage.
+than one. The root `AGENTS.md` policy governs scenario coverage.
 
 | Change type            | Command                  |
 | ---------------------- | ------------------------ |
@@ -129,7 +129,7 @@ relevant commands have actually been run and pass.
 Before applying this skill, confirm the active task against
 [../AI-AGENT-GUIDE.md](../AI-AGENT-GUIDE.md) and
 [../SKILL-DECISION-GUIDE.md](../SKILL-DECISION-GUIDE.md) so every relevant skill
-is consulted. The root `agents.md` test-coverage policy applies to any behavior a
+is consulted. The root `AGENTS.md` test-coverage policy applies to any behavior a
 change touches.
 
 ## Line Length Disclosure

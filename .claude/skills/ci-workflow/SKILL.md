@@ -14,7 +14,7 @@ description: >-
 How to take a website change from "edited" to "ready to push" without guessing.
 Every command here is a Makefile target run from the repo root (this repo has no
 `package.json` scripts — the Makefile is the command surface). Pair this with the
-test-coverage contract in [agents.md](../../../agents.md): that file decides _what_
+test-coverage contract in [AGENTS.md](../../../AGENTS.md): that file decides _what_
 to test; this skill decides _which suites to run and in what order_.
 
 ## Core rule: format, then test, then lint
@@ -83,14 +83,14 @@ Prefer the focused suites during iteration and the `ci-*` aliases for a final ch
 - [ ] The focused suite(s) for the change ran and passed (`CI=1` locally).
 - [ ] `make lint` passed (ESLint, tsc, markdownlint, dependency-cruiser).
 - [ ] `git status --short` shows only intended files.
-- [ ] Commit message follows Conventional Commits (per agents.md).
+- [ ] Commit message follows Conventional Commits (per AGENTS.md).
 
 ## Pre-PR checklist
 
 - [ ] Every applicable suite from "Match the change to suites" ran green.
 - [ ] For UI/behavior changes: `make test-e2e` and/or `make test-visual` ran; any
       reviewed baseline refresh used `make test-visual-update`.
-- [ ] Bug fixes include a regression test that failed before the fix (agents.md Step 4).
+- [ ] Bug fixes include a regression test that failed before the fix (AGENTS.md Step 4).
 - [ ] No gate was weakened to pass (see "Never weaken a gate").
 - [ ] `make ci-lint` and `make ci-test` (or `make ci`) pass for a pipeline-faithful run.
 
@@ -123,7 +123,7 @@ markdownlint
 disable directives; do not relax dependency-cruiser rules, lower coverage or mutation
 thresholds, or add `maxDiffPixels` to silence a visual diff. Complexity and metrics
 budgets (owned by the complexity-management skill) follow the same no-lowering rule.
-Fix the code or document a concrete `Not applicable: <reason>` per agents.md instead.
+Fix the code or document a concrete `Not applicable: <reason>` per AGENTS.md instead.
 
 ## Related guides
 
