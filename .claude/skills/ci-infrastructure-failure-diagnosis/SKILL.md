@@ -1,136 +1,130 @@
 ---
 name: ci-infrastructure-failure-diagnosis
-description: Use when a GitHub Actions check fails intermittently or consistently — sandbox deploy, code scanning, or other infrastructure-dependent jobs. Covers diagnosis methodology (timeline analysis, cross-branch consistency, trigger guards, OIDC/token verification) and common failure patterns in this repo's CI.
+description: Use when GitHub Actions sandbox/deploy checks fail across multiple PRs/branches — diagnose whether the failure is code-specific or repo-wide infrastructure. Triggers on "deploy check red", "sandbox failing", "all my PRs failing at deploy", "check-tokens failure", or when troubleshooting CI red flags that affect unrelated branches.
 ---
 
 # CI Infrastructure Failure Diagnosis
 
-Diagnosing GitHub Actions CI check failures when the root cause is not obvious — permission issues, race conditions, expired credentials, or misconfigured triggers.
+When GitHub Actions checks fail red, especially the `deploy` (sandbox) job, determine whether the failure is caused by:
 
-## Common Failure Patterns
+1. Code in the PR (fix in code)
+2. Repo-wide infrastructure (escalate to ops)
 
-### Sandbox Deploy Check Failures
+This skill covers the `deploy` job in `.github/workflows/sandbox-creating.yml` (the `sandbox` workflow), which historically retrieved the PR number via a GitHub API call using a token stored in AWS Secrets Manager — not `github.token`. (`sandbox-deleting.yml` mirrored the same token retrieval.)
 
-The sandbox `deploy` PR check (from `sandbox-creating.yml`, NOT `deploy.yml`) provisions AWS sandbox environments via CodePipeline. It can fail for:
+> **Resolved in code (#375).** The sandbox `deploy` job no longer looks up the PR number via that token — it now reads `PR_NUMBER` straight from `${{ github.event.pull_request.number }}`, so an expired `github-token-*` secret can no longer make this check fail. The timeline + cross-branch methodology below still applies to any _other_ shared-infrastructure CI failure.
 
-1. **Push-vs-PR race condition** (historical, pre-#375)
-   - Symptom: job dies at `aws codepipeline start-pipeline-execution` with `ParamValidation` error (exit 252)
-   - Cause: workflow fired on both branch `push` (with empty `PR_NUMBER`) and `pull_request` event; the push run failed while pull_request passed
-   - Fix: Remove `push` triggers; keep only `pull_request: [opened, reopened, synchronize]`
+## Quick diagnostic: timeline + consistency
 
-2. **Expired Secrets-Manager token** (historical, pre-#375)
-   - Symptom: "PR number extraction failed" on every re-run; API call to `GET /pulls?head=...` returns empty
-   - Cause: "Get PR Number" step pulled a token from AWS Secrets Manager (not `github.token`); token expired, token rotation was pending
-   - Fix: Read `PR_NUMBER` directly from `${{ github.event.pull_request.number }}` (no API call, no token dependency)
+**Step 1: Check the timeline**
 
-3. **OIDC token or AWS role misconfiguration**
-   - Symptom: `configure-aws-credentials` fails with auth errors; permission denied on `aws codepipeline start-pipeline-execution`
-   - Cause: job permissions are missing `id-token: write`; AWS role trust policy doesn't include the GitHub OIDC provider; role session mismatch
-   - Fix: Grant the job its minimum required scopes — `id-token: write` for the OIDC token exchange, plus `contents: read` only when it checks out code (`deploy.yml` does); the `sandbox-creating.yml` jobs check out nothing and read `PR_NUMBER` from the event, so they use `id-token: write` alone under a top-level `permissions: {}`. Verify the AWS role trust policy includes the OpenID Connect provider; pin `aws-actions/configure-aws-credentials` to SHA
+Look at the GitHub Actions run history (repo > Actions > All workflows > deploy).
 
-4. **Fork PR guard missing**
-   - Symptom: fork PRs trigger sandbox creation (wasteful, security concern)
-   - Cause: workflow lacks same-repo check
-   - Fix: Add `if: github.event.pull_request.head.repo.full_name == github.repository` to production-account jobs
+- When was the last successful sandbox run?
+- Did every run since then fail at the same step?
 
-## Diagnosis Methodology
+If the last successful run is 3+ days old and every run since then fails at the same step, the failure is **almost certainly infrastructure**, not your code.
 
-When a PR check fails, follow this sequence:
+Example:
 
-### Step 1: Gather Timeline & Logs
+```
+Last green: 2026-07-03T13:14:07Z
+Today's runs: all red since 2026-07-06T07:37:00Z
+→ Timeline cutoff = infrastructure incident
+```
 
-1. Open the failed workflow run in GitHub Actions UI.
-2. Note the **exact timestamp** and **branch/PR number**.
-3. Capture the **full error message** and **exit code**:
-   - AWS errors (e.g., `ParamValidation exit 252`, auth failures)
-   - GitHub API errors (e.g., `401 Unauthorized`, `empty response`)
-   - Script errors (e.g., missing env var, validation fail)
-4. Check for warnings or upstream job failures.
+**Step 2: Check consistency across branches**
 
-### Step 2: Check Workflow Triggers
+Look at recent runs on **multiple unrelated branches** (main, feat/_, chore/_, ci/\*, etc.).
 
-1. Review the workflow file's `on:` section.
-2. Verify it fires only on the expected event type(s).
-   - Sandbox deploy: should be `pull_request: [opened, reopened, synchronize]` only.
-   - Main deploy: should be `push: branches: [main]` only.
-3. Look for unintended `push` / `pull_request` / `schedule` triggers that could race.
-4. Confirm no `if:` conditions accidentally suppress the job.
+- Does the same failure happen on all of them at the same step?
 
-### Step 3: Cross-Branch Consistency
+If both `feat/328` and `chore/364` fail at "Get PR Number" in the sandbox job, it's not your code — it's a shared resource (token, API, secret).
 
-1. Does the same PR fail on multiple pushes / re-runs? → Persistent config issue.
-2. Does it pass on one branch but fail on another? → Check branch protection rules, environment variables, or fork vs. upstream.
-3. Does it only fail on fork PRs? → Missing same-repo guard; add `if: github.event.pull_request.head.repo.full_name == github.repository`.
+**Step 3 (historical, pre-#375): the old `deploy` job's "Get PR Number" step**
 
-### Step 4: Verify Environment Variables & Credentials
+_This exact failure mode is resolved on the sandbox `deploy` path (see the note above) — it no longer fetches a token or calls the API. Keep the pattern below as a template for diagnosing any *other* job that still pulls a token from Secrets Manager and calls the GitHub API._
 
-1. In the failed run, expand each step and check **all `env:` output**.
-2. Verify expected variables are set:
-   - `AWS_REGION`, `PROD_AWS_ACCOUNT_ID`, `BRANCH_NAME`, `PR_NUMBER` — are they non-empty?
-   - Confirm `PR_NUMBER` is read from `${{ github.event.pull_request.number }}`, not from API.
-3. Check permissions block in the job:
-   - OIDC jobs need `id-token: write` for the token exchange, plus `contents: read` only when they check out code. `deploy.yml` checks out → `id-token: write` + `contents: read`. The `sandbox-creating.yml` jobs check out nothing and read `PR_NUMBER` from the event, so they use `id-token: write` alone under a top-level `permissions: {}`. Grant the minimum required scopes, not more.
-   - Smoke-test / read-only jobs need `contents: read` only.
-4. If using AWS OIDC:
-   - Verify `aws-actions/configure-aws-credentials` is SHA-pinned and called with correct `role-to-assume`, `role-session-name`, and `aws-region`.
-   - Confirm the IAM role exists and trust policy includes GitHub OIDC provider.
-5. If pulling secrets from AWS Secrets Manager:
-   - Check the secret exists and hasn't expired (see `check-tokens` job in `sandbox-creating.yml`).
-   - Verify the current AWS role has permission to list/read the secret.
+The sandbox workflow historically ran an API query to fetch the PR number:
 
-### Step 5: Check Upstream Jobs & Concurrency
+```bash
+gh api "repos/VilnaCRM-Org/website/pulls?state=open&head=VilnaCRM-Org:${GITHUB_REF_NAME}" --jq '.[] | .number'
+```
 
-1. If the job `needs: [other-job]`, verify the upstream job passed.
-2. Check the `concurrency` block for accidental cancellation:
-   - Should be `cancel-in-progress: false` for production jobs (aborting a pipeline trigger mid-run is unsafe).
-   - Sandbox jobs should serialize per PR: `group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}`.
+It pulled the GitHub token from **AWS Secrets Manager** (not `github.token`). If such a job returns an empty PR number:
 
-### Step 6: Consult Memory & Sister Repo
+1. **Test the query manually** with your own GitHub token:
 
-- Related memory: [[website-deploy-check-push-vs-pr]], [[website-pr-review-bots]], [[crm-sister-repo-ci-gate-reference]].
-- If diagnosing a similar workflow in the CRM repo, check its `sandbox-creating.yml` / `deploy.yml` — it is the reference implementation for this pattern.
+   ```bash
+   gh api "repos/VilnaCRM-Org/website/pulls?state=open&head=VilnaCRM-Org:<your-branch-name>" --jq '.[] | .number'
+   ```
 
-## Fix Patterns
+   If this returns your PR number, the query is correct and the issue is the stored token.
 
-### For Sandbox Deploy (PR Check)
+2. **Check the GitHub Actions logs** for the exact error:
+   - Is it "Unauthorized" (401)?
+   - Is it "token expired"?
+   - Or just empty output?
 
-**File:** `.github/workflows/sandbox-creating.yml`
+3. **If the stored token is invalid/expired**, that's the fix: rotate the `github-token-*` secret in AWS Secrets Manager (ops action, not code).
 
-- ✅ Triggers: `pull_request: [opened, reopened, synchronize]` only (no push).
-- ✅ Job permissions (minimum required): top-level `permissions: {}` with per-job `id-token: write` for the prod-account jobs — they check out nothing and read `PR_NUMBER` from the event, so no `contents` / `pull-requests` scope is needed.
-- ✅ Fork guard: `if: github.event.pull_request.head.repo.full_name == github.repository`.
-- ✅ PR number source: `PR_NUMBER: ${{ github.event.pull_request.number }}` (env var, direct from event).
-- ✅ Environment variables: Validated in the "Validate environment variables" step (all non-null, non-empty).
-- ✅ AWS role: `configure-aws-credentials` SHA-pinned, `role-session-name` includes "OIDC" for audit.
-- ✅ Secrets rotation check: `check-tokens` job verifies AWS Secrets Manager tokens exist and haven't expired.
+**Signs of an expired token in AWS Secrets Manager:**
 
-### For Main Deploy (Push Check)
+- Your API query works with a fresh token, but the workflow gets empty result
+- GitHub Actions logs show "401 Unauthorized" or timeout
+- Timeline shows a clean cutoff: green runs until date X, then all red
+- Affects all branches equally (not just your PR)
 
-**File:** `.github/workflows/deploy.yml`
+## Confirming it's infrastructure (not your code)
 
-- ✅ Triggers: `push: branches: [main]` only.
-- ✅ Job permissions: `permissions: id-token: write, contents: read`.
-- ✅ AWS role: `configure-aws-credentials` sets `role-session-name` including "OIDC" for audit and a `role-to-assume` targeting the prod deploy-trigger role.
-- ⚠️ `configure-aws-credentials` / `actions/checkout` here are still on the `@v4` tag, NOT SHA-pinned (unlike `sandbox-creating.yml`, which is). SHA-pinning the privileged workflows is a tracked gap (#366); pin these to a commit SHA when that lands.
-- ✅ No Secrets Manager dependency; OIDC handles all auth.
-- ✅ Concurrency: `cancel-in-progress: false` (do not abort in-flight production triggers).
-- ✅ Environment gate: job runs in the `production` environment (requires protection rules from Settings).
+Checklist before escalating:
 
-## Prevention Checklist
+- [ ] Timeline: last green run is 3+ days old ✓
+- [ ] Cross-branch: same failure on 2+ unrelated branches ✓
+- [ ] Code: the PR contains no infrastructure changes (no workflow edits, no secret refs) ✓
+- [ ] Manual test: API query works with your token but workflow fails ✓
 
-Before pushing a new or modified CI workflow:
+If all four are true, it's infrastructure.
 
-- [ ] Workflow triggers are explicit and non-overlapping (no push + pull_request race).
-- [ ] Job permissions are the minimum required (OIDC jobs get `id-token: write`, plus `contents: read` only if they check out code — the sandbox jobs check out nothing, so they use `id-token: write` alone; pure read-only jobs get `contents: read`).
-- [ ] Production-account jobs have fork guard: `if: github.event.pull_request.head.repo.full_name == github.repository`.
-- [ ] Environment variables (PR_NUMBER, BRANCH_NAME, AWS_REGION, etc.) are read directly from event payload, not from API calls.
-- [ ] AWS role is SHA-pinned and trust policy includes GitHub OIDC provider.
-- [ ] Concurrency is set correctly: production jobs use `cancel-in-progress: false`; sandbox jobs serialize per PR.
-- [ ] Smoke tests and other downstream jobs have explicit `if:` guards (e.g., `if: ${{ vars.PRODUCTION_SITE_URL != '' }}`).
+## How to file the tracking issue
 
-## Related Skills & References
+Example issue title and body:
 
-- [[architecture]] — repo structure and module boundaries.
-- [[ci-workflow]] — pre-commit/pre-PR local validation (format, test, lint).
-- [[hardening-github-actions-permissions]] — general GitHub Actions permissions best practices.
-- Memory: [[website-deploy-check-push-vs-pr]], [[crm-sister-repo-ci-gate-reference]].
+**Title:** Sandbox `deploy` job: GitHub token in AWS Secrets Manager expired (~2026-07-03)
+
+**Body:**
+
+```
+## Symptom
+Sandbox `deploy` check fails on all PRs/branches at "Get PR Number" step.
+
+## Evidence
+- Last successful sandbox run: 2026-07-03T13:14:07Z (feat/328)
+- Every run since 2026-07-06T07:37:00Z fails at same step (feat/328, chore/364, ci/358)
+- API query `gh api "repos/VilnaCRM-Org/website/pulls?state=open&head=VilnaCRM-Org:<branch>"` returns PR number with fresh token
+- Same query in sandbox job workflow returns empty (stored token invalid)
+
+## Root Cause
+GitHub token stored in AWS Secrets Manager (pulled by the `deploy` job in `.github/workflows/sandbox-creating.yml`) is expired or invalid.
+
+## Fix Required (ops)
+Rotate `github-token-*` secret in AWS Secrets Manager.
+
+## Timeline Impact
+All PRs since 2026-07-03 have red `deploy` checks (regardless of code quality).
+```
+
+Include the timeline, branches, and the manual test result — that proves it's infrastructure.
+
+## What NOT to do
+
+- ❌ Do not mask the failing step to force a green check (e.g. `continue-on-error: true`, `|| true`, or `set +e`) — the check is doing its job
+- ❌ Do not commit a workaround in code (the issue is not in code)
+- ❌ Do not lower the check's required status (the check itself is fine; the secret is broken)
+- ❌ Do not assume "re-running will fix it" (re-running uses the same expired token)
+
+## Related
+
+- **Before this step:** See [`ci-workflow`](../ci-workflow/SKILL.md) for pre-commit/pre-PR validation when code changes are made.
+- **For code CI failures:** Use `ci-workflow`'s "When a gate fails" section to fix ESLint, TypeScript, Jest, Playwright, etc.
+- **For AWS Secrets Manager ops:** Escalate to DevOps / infrastructure team; provide the issue evidence above.

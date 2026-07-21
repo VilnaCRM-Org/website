@@ -86,6 +86,9 @@ const EDGE_COVERAGE_THRESHOLD = {
 
 const config: Config = {
   clearMocks: true,
+  // Generate the gitignored pages/i18n/localization.json (#328) before
+  // jest.setup.ts imports the i18n stack that requires it.
+  globalSetup: '<rootDir>/jest.global-setup.js',
   collectCoverage: true,
   // The edge layer writes to its own coverage dir so its scripts-only report never
   // clobbers the product coverage the client/server runs write to `coverage/`.
@@ -122,8 +125,13 @@ const config: Config = {
       { configFile: '<rootDir>/babel-jest.config.js' },
     ],
   },
+  // For the integration layer, the graphql-endpoint override in
+  // tests/integration/setup.ts must run BEFORE jest.setup.ts: the latter boots
+  // i18n, which loads src/config/env.ts, which validates and freezes
+  // NEXT_PUBLIC_GRAPHQL_API_URL once. Setting it first makes the real Apollo
+  // transport use the deterministic INTEGRATION_GRAPHQL_URL (#328).
   setupFilesAfterEnv: isIntegration
-    ? ['<rootDir>/jest.setup.ts', '<rootDir>/tests/integration/setup.ts']
+    ? ['<rootDir>/tests/integration/setup.ts', '<rootDir>/jest.setup.ts']
     : ['<rootDir>/jest.setup.ts'],
   modulePathIgnorePatterns: ['<rootDir>/.stryker-tmp/'],
 };

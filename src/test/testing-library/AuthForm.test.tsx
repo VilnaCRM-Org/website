@@ -2,6 +2,7 @@ import { fireEvent, waitFor } from '@testing-library/react';
 import { UserEvent, userEvent } from '@testing-library/user-event';
 import { t } from 'i18next';
 
+import { env } from '@/config/env';
 import { OnSubmitType } from '@/test/testing-library/fixtures/auth-test-helpers';
 
 import { testInitials, testEmail, testPassword } from './constants';
@@ -201,10 +202,11 @@ describe('AuthForm', () => {
     const { getAllByRole } = renderAuthForm({ onSubmit });
 
     const privacyPolicyLink: HTMLElement[] = getAllByRole('link');
-    const expectedUrl: string =
-      process.env.NEXT_PUBLIC_PRIVACY_POLICY_URL || 'https://github.com/VilnaCRM-Org';
-    expect(privacyPolicyLink[0]).toHaveAttribute('href', expectedUrl);
-    expect(privacyPolicyLink[1]).toHaveAttribute('href', expectedUrl);
+    expect(privacyPolicyLink[0]).toHaveAttribute(
+      'href',
+      env.NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL
+    );
+    expect(privacyPolicyLink[1]).toHaveAttribute('href', env.NEXT_PUBLIC_VILNACRM_USE_POLICY_URL);
   });
   it('calls onSubmit with form data when form is submitted', async () => {
     renderAuthForm({ onSubmit, mocks: [] });
