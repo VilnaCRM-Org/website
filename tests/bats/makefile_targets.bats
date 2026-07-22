@@ -54,7 +54,7 @@ EOF
   reset_command_log
   run_make_target install-deps-in-container-dind TEMP_CONTAINER_NAME=website-dev-test
   [ "$status" -eq 0 ]
-  assert_log_contains 'docker exec website-dev-test sh -lc cd /app && npm install -g bun && bun install --frozen-lockfile'
+  assert_log_contains 'docker exec website-dev-test sh -lc cd /app && npm install -g bun@1.3.5 && bun install --frozen-lockfile'
 
   reset_command_log
   run_make_target run-unit-tests-dind TEMP_CONTAINER_NAME=website-dev-test

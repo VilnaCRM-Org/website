@@ -26,7 +26,15 @@ RUN node scripts/patchSwaggerServer.mjs && \
     npx next-export-optimize-images
 
 
-FROM base AS production
+# Production serves the fully static export, so it needs neither the build
+# toolchain (python3/make/g++) nor node_modules — only `serve` and `out/`.
+# Starting from a clean base instead of inheriting `base` keeps the shipped
+# image within the docker-perf budget.
+FROM public.ecr.aws/docker/library/node:24.18.0-alpine3.23 AS production
+
+RUN npm install -g serve@14.2.0
+
+WORKDIR /app
 
 COPY --from=build /app/out ./out
 

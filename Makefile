@@ -230,7 +230,7 @@ copy-source-to-container-dind: ## Copy source code to container for DIND testing
 install-deps-in-container-dind: ## Install dependencies in container for DIND testing (TEMP_CONTAINER_NAME required)
 	$(call REQUIRE_ENV_VAR,TEMP_CONTAINER_NAME,my-container)
 	@echo "📦 Installing deps in container $(TEMP_CONTAINER_NAME)..."
-	$(call EXEC_IN_CONTAINER,TEMP_CONTAINER_NAME,cd /app && npm install -g bun && bun install --frozen-lockfile)
+	$(call EXEC_IN_CONTAINER,TEMP_CONTAINER_NAME,cd /app && npm install -g bun@1.3.5 && bun install --frozen-lockfile)
 
 run-unit-tests-dind: ## Run unit tests in DIND container (TEMP_CONTAINER_NAME required)
 	$(call REQUIRE_ENV_VAR,TEMP_CONTAINER_NAME,my-container)
