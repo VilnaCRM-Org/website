@@ -10,7 +10,7 @@ this file covers the test suites.
 ## Triage loop
 
 1. Shrink the blast radius. Re-run only the failing file, e.g.
-   `CI=1 TEST_ENV=client pnpm exec jest src/test/unit/email-validation.test.ts`,
+   `CI=1 TEST_ENV=client bun x jest src/test/unit/email-validation.test.ts`,
    so you read one failure, not fifty.
 2. Read the first real failure. Later failures are often fallout from the first.
 3. Classify the cause (next section) before changing anything.

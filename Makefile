@@ -22,7 +22,7 @@ STORYBOOK_BIN               = $(BIN_DIR)/storybook
 JEST_BIN                    = $(BIN_DIR)/jest
 SERVE_BIN                   = $(BIN_DIR)/serve
 PLAYWRIGHT_BIN              = $(BIN_DIR)/playwright
-BATS_BIN                    = pnpm exec bats
+BATS_BIN                    = bun x bats
 DEPCRUISE_BIN               = $(BIN_DIR)/depcruise
 
 # rust-code-analysis is a host-installed Rust binary (release tarball / cargo),
@@ -47,15 +47,15 @@ TEST_DIR_EDGE               = $(TEST_DIR_BASE)/edge
 TEST_DIR_E2E                = $(TEST_DIR_BASE)/e2e
 TEST_DIR_VISUAL             = $(TEST_DIR_BASE)/visual
 
-STRYKER_CMD                 = pnpm exec stryker run
+STRYKER_CMD                 = bun x stryker run
 STRYKER_SHARD_CONFIG        = stryker.shard.config.mjs
 MUTATION_SHARD_TOTAL        ?= 1
 MUTATION_SHARD_INDEX        ?= 0
-MERGE_MUTATION_REPORTS_CMD  = pnpm exec tsx scripts/ci/merge-mutation-reports.ts
+MERGE_MUTATION_REPORTS_CMD  = bun x tsx scripts/ci/merge-mutation-reports.ts
 
 SERVE_CMD                   = --collect.startServerCommand="$(SERVE_BIN) -l $(NEXT_PUBLIC_PROD_PORT) out" \
                               --collect.startServerReadyPattern="Accepting connections"
-LHCI                        = pnpm lhci autorun
+LHCI                        = bun x lhci autorun
 LHCI_CONFIG_DESKTOP         = --config=lighthouserc.desktop.js
 LHCI_CONFIG_MOBILE          = --config=lighthouserc.mobile.js
 LHCI_DESKTOP_SERVE          = $(LHCI_CONFIG_DESKTOP) $(SERVE_CMD)
@@ -139,7 +139,9 @@ ifneq (,$(filter 1 true TRUE,$(CI)))
 endif
 
 ifeq ($(CI), 1)
-    PNPM_EXEC               = pnpm
+    # Host CI mode: bins carry a Node shebang and run directly (Bun is the
+    # package manager, not the runtime). No executor prefix is needed.
+    PM_EXEC                 =
     NEXT_DEV_CMD            = $(NEXT_BIN) dev
     UNIT_TESTS              = env
     CI_SETUP_UP_FLAGS       = -d --build
@@ -150,8 +152,8 @@ ifeq ($(CI), 1)
     LHCI_DESKTOP            = $(LHCI_BUILD_CMD) $(LHCI_DESKTOP_SERVE)
     LHCI_MOBILE             = $(LHCI_BUILD_CMD) $(LHCI_MOBILE_SERVE)
 else
-    PNPM_EXEC               = $(EXEC_DEV_TTYLESS)
-    STRYKER_CMD             = make start && $(EXEC_DEV_TTYLESS) pnpm exec stryker run
+    PM_EXEC                 = $(EXEC_DEV_TTYLESS)
+    STRYKER_CMD             = make start && $(EXEC_DEV_TTYLESS) bun x stryker run
     UNIT_TESTS              = make start && $(EXEC_DEV_TTYLESS) env
     CI_SETUP_UP_FLAGS       = -d --no-recreate
 
@@ -162,8 +164,8 @@ else
     LHCI_MOBILE             = $(LHCI_BUILD_CMD) $(LHCI_CONFIG_MOBILE)
 endif
 
-PRETTIER_BIN                = $(PNPM_EXEC) ./node_modules/.bin/prettier
-MARKDOWNLINT_BIN            = $(PNPM_EXEC) ./node_modules/.bin/markdownlint
+PRETTIER_BIN                = $(PM_EXEC) $(BIN_DIR)/prettier
+MARKDOWNLINT_BIN            = $(PM_EXEC) $(BIN_DIR)/markdownlint
 
 # To Run in CI mode specify CI variable. Example: make lint-md CI=1
 
@@ -228,7 +230,7 @@ copy-source-to-container-dind: ## Copy source code to container for DIND testing
 install-deps-in-container-dind: ## Install dependencies in container for DIND testing (TEMP_CONTAINER_NAME required)
 	$(call REQUIRE_ENV_VAR,TEMP_CONTAINER_NAME,my-container)
 	@echo "📦 Installing deps in container $(TEMP_CONTAINER_NAME)..."
-	$(call EXEC_IN_CONTAINER,TEMP_CONTAINER_NAME,cd /app && npm install -g pnpm && pnpm install --frozen-lockfile)
+	$(call EXEC_IN_CONTAINER,TEMP_CONTAINER_NAME,cd /app && npm install -g bun && bun install --frozen-lockfile)
 
 run-unit-tests-dind: ## Run unit tests in DIND container (TEMP_CONTAINER_NAME required)
 	$(call REQUIRE_ENV_VAR,TEMP_CONTAINER_NAME,my-container)
@@ -240,7 +242,7 @@ run-unit-tests-dind: ## Run unit tests in DIND container (TEMP_CONTAINER_NAME re
 run-mutation-tests-dind: ## Run mutation tests in DIND container (TEMP_CONTAINER_NAME required)
 	$(call REQUIRE_ENV_VAR,TEMP_CONTAINER_NAME,my-container)
 	@echo "🧬 Running Stryker mutation tests in container $(TEMP_CONTAINER_NAME)..."
-	$(call EXEC_IN_CONTAINER,TEMP_CONTAINER_NAME,cd /app && pnpm stryker run)
+	$(call EXEC_IN_CONTAINER,TEMP_CONTAINER_NAME,cd /app && bun x stryker run)
 
 run-eslint-tests-dind: ## Run ESLint tests in DIND container (TEMP_CONTAINER_NAME required)
 	$(call REQUIRE_ENV_VAR,TEMP_CONTAINER_NAME,my-container)
@@ -301,17 +303,17 @@ format: ## This command executes Prettier formatting
 	$(PRETTIER_BIN) "**/*.{js,jsx,ts,tsx,json,css,scss,md}" --write --ignore-path .prettierignore
 
 lint-next: ## This command executes ESLint
-	$(PNPM_EXEC) $(ESLINT_BIN)
+	$(PM_EXEC) $(ESLINT_BIN)
 
 lint-tsc: ## This command executes Typescript linter
-	$(PNPM_EXEC) $(TS_BIN)
+	$(PM_EXEC) $(TS_BIN)
 
 lint-md: ## This command executes Markdown linter
 	$(MARKDOWNLINT_BIN) $(MD_LINT_ARGS) "**/*.md"
 
 lint-deps: ## Validate architecture/import boundaries with dependency-cruiser
 	node scripts/generateLocalization.mjs
-	$(PNPM_EXEC) $(DEPCRUISE_BIN) src pages tests --config .dependency-cruiser.js
+	$(PM_EXEC) $(DEPCRUISE_BIN) src pages tests --config .dependency-cruiser.js
 
 lint: lint-next lint-tsc lint-md lint-deps ## Runs all linters: ESLint, TypeScript, Markdown, and dependency-cruiser in sequence.
 
@@ -326,19 +328,19 @@ lint: lint-next lint-tsc lint-md lint-deps ## Runs all linters: ESLint, TypeScri
 # This target deliberately runs the full check, drift included. To validate the
 # GraphQL operations and the spectral baseline without touching the network,
 # invoke the script directly:
-#   pnpm node scripts/contracts/lint-contracts.mjs --offline
+#   node scripts/contracts/lint-contracts.mjs --offline
 lint-contracts: ## Validate the pinned user-service contracts: client GraphQL operations, the OpenAPI spectral baseline, and artifact drift
-	$(PNPM_EXEC) node scripts/contracts/lint-contracts.mjs
+	$(PM_EXEC) node scripts/contracts/lint-contracts.mjs
 
 update-contracts: ## Re-fetch the user-service contracts for the pinned USER_SERVICE_VERSION and refresh the spectral baseline
-	$(PNPM_EXEC) node scripts/fetchSwaggerSchema.mjs
-	$(PNPM_EXEC) node scripts/fetchGraphqlSchema.mjs
-	$(PNPM_EXEC) node scripts/contracts/lint-contracts.mjs --update-baseline
+	$(PM_EXEC) node scripts/fetchSwaggerSchema.mjs
+	$(PM_EXEC) node scripts/fetchGraphqlSchema.mjs
+	$(PM_EXEC) node scripts/contracts/lint-contracts.mjs --update-baseline
 	$(PRETTIER_BIN) "contracts/**/*.json" --write --ignore-path .prettierignore
 
 # DELIBERATE DIVERGENCE FROM THE npm-tool LINT GATES (lint-next/tsc/md/deps):
 #   * Host-only: rust-code-analysis is a Rust binary absent from the dev image,
-#     so this target does NOT use $(PNPM_EXEC) and runs on the host in both modes.
+#     so this target does NOT use $(PM_EXEC) and runs on the host in both modes.
 #   * NOT in the `lint` aggregate (line above) and NOT in CI_LINT_TARGETS (both
 #     route through the dev container / run-parallel.sh, which cannot run the
 #     binary). Its only CI surface is .github/workflows/rust-code-analysis.yml.
@@ -357,13 +359,13 @@ lint-metrics: ## Run rust-code-analysis complexity gate on src (host-only; auto-
 	 sh scripts/ci/lint-metrics.sh
 
 husky: ## One-time Husky setup to enable Git hooks (deprecated if already set)
-	pnpm husky install
+	bun x husky install
 
 storybook-start: ## Start Storybook UI and open in browser
-	$(PNPM_EXEC) $(STORYBOOK_START)
+	$(PM_EXEC) $(STORYBOOK_START)
 
 storybook-build: ## Build Storybook UI.
-	$(PNPM_EXEC) $(STORYBOOK_BUILD_CMD)
+	$(PM_EXEC) $(STORYBOOK_BUILD_CMD)
 
 test-e2e: start-prod  ## Start production and run E2E tests (Playwright)
 	$(run-e2e)
@@ -426,7 +428,7 @@ ci-test-integration: ## Run integration tests directly assuming deps are install
 # CI orchestration (issue #305 — CRM command-surface parity)
 # ----------------------------------------------------------------------------
 # These targets give local developers and agents the same grouped CI phases the
-# pipeline runs, adapted to website's pnpm + Next.js toolchain.
+# pipeline runs, adapted to website's Bun + Next.js toolchain.
 #
 # Intentionally NOT ported from crm/Makefile (rationale):
 #   * lint-dup (jscpd), fmt-qlty / qlty: not configured in this repo; website's
@@ -472,7 +474,7 @@ ci-test-unit-server: ## Run server-side unit tests directly assuming deps are in
 
 ci-test-mutation: ## Run mutation tests directly assuming deps are installed (CI entrypoint)
 	node scripts/generateLocalization.mjs
-	pnpm exec stryker run
+	bun x stryker run
 
 ci-mutation: ## Run mutation testing in isolation after the parallel dev-side tests (heavy; not parallelized)
 	$(MAKE) ci-test-mutation
@@ -621,8 +623,8 @@ lighthouse-mobile-dind: ## Run Lighthouse mobile audit in DIND mode using prod c
 	$(LHCI_DIND_BIN) --config=lighthouserc.mobile.js $(LHCI_DIND_COMMON)
 	@echo "✅ Lighthouse mobile DIND tests completed"
 
-install: check-node-version ## Install node modules using pnpm (CI=1 runs locally, default runs in container) — uses frozen lockfile and affects node_modules via volumes
-	$(PNPM_EXEC) pnpm install --frozen-lockfile
+install: check-node-version ## Install node modules using Bun (CI=1 runs locally, default runs in container) — uses frozen lockfile and affects node_modules via volumes
+	$(PM_EXEC) bun install --frozen-lockfile
 
 install-chromium-lhci: ## Install Chromium and Lighthouse CLI in the prod container for DIND testing
 	@echo "📦 Installing Chromium and Lighthouse CLI in prod container..."
@@ -639,7 +641,7 @@ test-chromium: ## Test Chromium browser installation and version in the prod con
 	fi
 
 update: ## Update node modules to latest allowed versions — always runs locally, updates lockfile (run before committing dependency changes)
-	pnpm update
+	bun update
 
 down: ## Stop the docker containers
 	$(DOCKER_COMPOSE) down --remove-orphans
@@ -660,7 +662,7 @@ stop: ## Stop docker
 	$(DOCKER_COMPOSE) stop
 
 check-node-version: ## Check if the correct Node.js version is installed
-	$(PNPM_EXEC) exec node checkNodeVersion.js
+	$(PM_EXEC) node checkNodeVersion.js
 
 pr-comments: ## Retrieve unresolved PR review comments (PR=<num> FORMAT=<text|json|markdown>)
 	@if [ -n "$(PR)" ] && [ -n "$(FORMAT)" ]; then \

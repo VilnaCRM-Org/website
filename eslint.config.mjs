@@ -112,7 +112,7 @@ export default [
       'node_modules/**',
       'docker/**',
       'docker-compose.yml',
-      'pnpm-lock.yaml',
+      'bun.lock',
       'build/**',
       'coverage/**',
       'storybook-static/**',

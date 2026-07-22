@@ -2,7 +2,7 @@
 # Provision the pinned rust-code-analysis-cli into ./bin (idempotent, SHA256-verified).
 #
 # rust-code-analysis is a standalone Rust binary, NOT an npm dependency: it is
-# absent from the node:*-alpine dev image, so it cannot run through PNPM_EXEC /
+# absent from the node:*-alpine dev image, so it cannot run through PM_EXEC /
 # the dev container. This helper gives `make lint-metrics` (local) and the CI
 # workflow a single, reproducible provisioning path to a gitignored ./bin.
 set -eu

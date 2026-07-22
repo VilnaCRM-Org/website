@@ -7,7 +7,7 @@ not generic Markdown advice.
 
 - [ ] Every referenced path exists in the repo, or is clearly flagged as a proposed new
       file.
-- [ ] Every command is a real `Makefile` target (no raw `pnpm`/`next`/`jest` calls that
+- [ ] Every command is a real `Makefile` target (no raw `bun`/`next`/`jest` calls that
       bypass the target surface).
 - [ ] No absent tooling is mentioned (no Bun, Zustand, Redux, tsyringe/DI, React Router,
       jscpd, `make fmt-qlty`, or `make lint-dup`).

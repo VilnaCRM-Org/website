@@ -11,10 +11,9 @@ WORKDIR /app
 
 # The base image vendors its own Node (24.11.1 in v1.57.0-jammy), which is both
 # a different version from every other surface and below what the dependency
-# graph requires — mute-stream, pulled in by Stryker, needs ^24.15.0, so
-# `pnpm install` fails under .npmrc's engine-strict. Install the exact version
-# from .nvmrc over it so this image resolves the same Node as the Dockerfiles
-# and CI, rather than being exempted from the check.
+# graph requires at runtime — mute-stream, pulled in by Stryker, needs ^24.15.0.
+# Install the exact version from .nvmrc over it so this image resolves the same
+# Node as the Dockerfiles and CI, rather than being exempted from the check.
 #
 # /usr/local/bin precedes /usr/bin on PATH, so this shadows the vendored binary.
 #
@@ -39,12 +38,12 @@ RUN NODE_VERSION="$(tr -d '[:space:]' < .nvmrc)" && \
     tar -xzf /tmp/node.tar.gz -C /usr/local --strip-components=1 \
         --exclude=CHANGELOG.md --exclude=LICENSE --exclude=README.md && \
     rm /tmp/node.tar.gz && \
-    npm install -g pnpm@10.6.5
+    npm install -g bun@1.3.5
 
-# .npmrc carries engine-strict=true. Without it here, this image's install would
-# silently opt out of the very gate the Node pin above exists to satisfy.
-COPY package.json pnpm-lock.yaml .npmrc checkNodeVersion.js ./
+# .npmrc carries engine-strict=true so any npm-based tooling in this image honors
+# the same Node pin the block above installs; keep it beside the lockfile.
+COPY package.json bun.lock .npmrc checkNodeVersion.js ./
 
-RUN pnpm install
+RUN bun install --frozen-lockfile
 
 CMD ["tail", "-f", "/dev/null"]

@@ -28,28 +28,27 @@ jobs:
         with:
           node-version-file: '.nvmrc'
 
-      - name: Cache pnpm dependencies
-        id: cache-pnpm-dependencies
+      - name: Cache bun dependencies
+        id: cache-bun-dependencies
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           # Node comes from .nvmrc here, so fold it into the key: a Node bump must
           # invalidate node_modules or a stale native module could be restored.
           path: node_modules
-          key: ${{ runner.os }}-dependencies-${{ hashFiles('.nvmrc') }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          key: ${{ runner.os }}-dependencies-${{ hashFiles('.nvmrc') }}-${{ hashFiles('**/bun.lock') }}
           restore-keys: |
             ${{ runner.os }}-dependencies-
 
-      - name: Install pnpm
-        # Install the exact pnpm pinned in package.json's packageManager field
+      - name: Install Bun
+        # Install the exact Bun pinned in package.json's packageManager field
         # (not the latest global) so the version is declared in exactly one place
-        # and lockfile resolution matches every other job. Corepack is avoided
-        # because `npm install -g` carries the registry signing keys that the
-        # pinned Node's bundled corepack lacks.
+        # and lockfile resolution matches every other job. Corepack does not
+        # manage Bun, so it is installed globally via `npm install -g`.
         run: npm install -g "$(node -p "require('./package.json').packageManager.split('+')[0]")"
 
       - name: Install dependencies
         run: make install
-        if: steps.cache-pnpm-dependencies.outputs.cache-hit != 'true'
+        if: steps.cache-bun-dependencies.outputs.cache-hit != 'true'
 
       - name: Run all linters
         run: make lint

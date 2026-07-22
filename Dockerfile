@@ -5,14 +5,14 @@ RUN apk add --no-cache \
     make=4.4.1-r3 \
     g++=15.2.0-r2 \
     curl=8.20.0-r0 && \
-    npm install -g pnpm@10.6.5 serve@14.2.0
+    npm install -g bun@1.3.5 serve@14.2.0
 
 
 WORKDIR /app
 
-COPY package.json pnpm-lock.yaml checkNodeVersion.js scripts/*.mjs ./
+COPY package.json bun.lock checkNodeVersion.js scripts/*.mjs ./
 
-RUN pnpm install
+RUN bun install --frozen-lockfile
 
 
 FROM base AS build

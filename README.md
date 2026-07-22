@@ -88,7 +88,7 @@ General
   make build: builds the application
   make format: formats the codebase to ensure consistent style across all files
   make update: updates node modules according to the current package.json file
-  make install: installs node modules according to the current pnpm-lock.yaml file
+  make install: installs node modules according to the current bun.lock file
   make check-node-version: checks if the correct Node.js version is installed
 ```
 
@@ -127,7 +127,7 @@ Testing
 Local CI Orchestration
 
 These targets run the same grouped CI phases the pipeline uses, adapted to
-website's pnpm + Next.js toolchain, so developers and agents can reproduce a
+website's Bun + Next.js toolchain, so developers and agents can reproduce a
 full CI run — or any single phase — locally:
 
 ```bash

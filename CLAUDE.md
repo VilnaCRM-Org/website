@@ -10,7 +10,7 @@ changing code.
 VilnaCRM's public marketing website / landing, built on Next.js 16 (pages router) with a
 bulletproof-react feature layout. It ships a local Apollo Server GraphQL mock for
 development, an interactive Swagger page, and a heavily gated CI pipeline. Everything runs
-through Makefile targets; the package manager is pnpm and Docker backs the dev and test
+through Makefile targets; the package manager is Bun and Docker backs the dev and test
 stacks.
 
 ## Tech Stack
@@ -21,7 +21,7 @@ stacks.
   `graphql`.
 - Forms and i18n: react-hook-form; i18next / react-i18next.
 - Observability: `@sentry/node` + `@sentry/react`; Next.js web-vitals reporting.
-- Tooling: pnpm@10.6.5, Node pinned by `.nvmrc` (24.18.0 LTS); Prettier, ESLint (flat config), TypeScript,
+- Tooling: bun@1.3.5, Node pinned by `.nvmrc` (24.18.0 LTS); Prettier, ESLint (flat config), TypeScript,
   markdownlint, dependency-cruiser.
 - Testing: Jest (jsdom + node envs) with React Testing Library; Playwright (chromium,
   firefox, webkit) with Mockoon; Stryker (mutation); K6 (load); memlab (memory);
@@ -85,8 +85,8 @@ E2E uses Mockoon to mock the API. The test-layer map and coverage policy live in
 ### Running a single unit test
 
 ```bash
-TEST_ENV=client pnpm exec jest src/test/unit/email-validation.test.ts
-TEST_ENV=server pnpm exec jest src/test/apollo-server/<spec>.test.ts
+TEST_ENV=client bun x jest src/test/unit/email-validation.test.ts
+TEST_ENV=server bun x jest src/test/apollo-server/<spec>.test.ts
 ```
 
 ## Code Quality
@@ -141,8 +141,8 @@ tiered off, weakened, or removed.
   use `cancel-in-progress: true` (a new push cancels the superseded run); the deploy,
   release, and sandbox workflows use `false` so a production trigger is never aborted
   mid-run.
-- **Caching.** Node jobs restore the pnpm store (`~/.pnpm-store`, keyed on the Node version
-  and `pnpm-lock.yaml`).
+- **Caching.** Node jobs restore the Bun cache (`~/.bun/install/cache`, keyed on the Node version
+  and `bun.lock`).
 - **Matrices.** The Playwright e2e suite splits across a `--shard` matrix
   (`test-e2e-shard`), Lighthouse runs `desktop`/`mobile` in parallel, the K6 load suites run
   in parallel, and mutation testing runs as a shard matrix plus a merge gate.

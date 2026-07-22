@@ -46,7 +46,7 @@ leave them to drift.
   local-only — reference it, never duplicate it into a skill here.
 - `make format` runs Prettier only — there is no `qlty`, `jscpd`, or
   `make fmt-*` step on website. Describe it as "Prettier" and do not invent one.
-- Reference commands by their make target. Do not paste the raw `pnpm`, `eslint`,
+- Reference commands by their make target. Do not paste the raw `bun`, `eslint`,
   or `tsc` invocations the Makefile already wraps.
 - Keep website docs website-specific. Do not copy CRM or sister-repo backend,
   dependency-injection, Zustand, or Redux/RTK Query details into these docs.
