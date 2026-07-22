@@ -6,7 +6,7 @@ Update:
 
 - Makefile help text — the `## ...` description after the changed target.
 - `CLAUDE.md` command, quality, or testing sections.
-- `agents.md` workflow guidance when the change affects the test-coverage policy
+- `AGENTS.md` workflow guidance when the change affects the test-coverage policy
   or Definition of Done.
 - `README.md` or `CONTRIBUTING.md` when the change is contributor-facing.
 - The relevant `.claude/skills/<skill>/SKILL.md` and its support files.
@@ -27,7 +27,7 @@ Keep these surfaces distinct:
 
 After editing skill files, run `make format` (Prettier formats the skill
 markdown). Run `make lint-md` only when you also touched a markdownlint-scanned
-doc such as `README.md`, `CONTRIBUTING.md`, `agents.md`, or
+doc such as `README.md`, `CONTRIBUTING.md`, `AGENTS.md`, or
 `cursor-project-guide.md`:
 
 ```bash

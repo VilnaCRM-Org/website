@@ -1,7 +1,7 @@
 # CLAUDE.md
 
 This file gives Claude Code (claude.ai/code) guidance for working in the VilnaCRM
-`website` repository. It complements [`agents.md`](agents.md) (the test-coverage
+`website` repository. It complements [`AGENTS.md`](AGENTS.md) (the test-coverage
 contract) and the skills under [`.claude/skills/`](.claude/skills). Read both before
 changing code.
 
@@ -80,7 +80,7 @@ make lighthouse-mobile  # Lighthouse audit (mobile)
 Unit suites accept `CI=1` to run on the host without Docker (e.g. `CI=1 make
 test-unit-all`). E2E and visual specs run Playwright inside the prod/test compose stack;
 E2E uses Mockoon to mock the API. The test-layer map and coverage policy live in
-[`agents.md`](agents.md).
+[`AGENTS.md`](AGENTS.md).
 
 ### Running a single unit test
 
@@ -195,10 +195,10 @@ same-folder imports.
   `components/<name>/validations/`) or lives in `helpers`/`hooks`. There is no feature-root
   `validations/` folder.
 - Selectors: prefer user-facing semantic queries (`getByRole`, `getByLabelText`,
-  `getByAltText`, `getByText`); avoid `data-testid` (guidance in `agents.md`).
+  `getByAltText`, `getByText`); avoid `data-testid` (guidance in `AGENTS.md`).
 - GraphQL: Apollo Server provides a local mock for development; Apollo Client 4 consumes it.
 
-See [`agents.md`](agents.md) for the test-layer map, the test-coverage policy, and the
+See [`AGENTS.md`](AGENTS.md) for the test-layer map, the test-coverage policy, and the
 Faker test-data builders convention.
 
 ## BMAD-METHOD Integration

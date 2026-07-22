@@ -50,7 +50,7 @@ Prettier formats committed Markdown, including code fences it can parse. That in
 - Use a `text` fence for partial or pseudo snippets that would not parse.
 - `bash` fences are left untouched by Prettier, so shell commands are safe as written.
   The bash-only fence restriction (markdownlint MD040) applies only to markdownlint-scanned
-  top-level docs (README.md, CONTRIBUTING.md, agents.md, cursor-project-guide.md); the
+  top-level docs (README.md, CONTRIBUTING.md, AGENTS.md, cursor-project-guide.md); the
   `.claude/skills/**` tree and `CLAUDE.md` are not scanned, so `ts`/`tsx`/`json`/`text`
   fences are allowed here.
 

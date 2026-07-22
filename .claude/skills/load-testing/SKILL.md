@@ -114,7 +114,7 @@ scenario before declaring the change safe.
 Before applying this skill, confirm the active task against
 [../AI-AGENT-GUIDE.md](../AI-AGENT-GUIDE.md) and
 [../SKILL-DECISION-GUIDE.md](../SKILL-DECISION-GUIDE.md) so every relevant skill is
-consulted. The root `agents.md` test-coverage policy still applies to any behavior a load
+consulted. The root `AGENTS.md` test-coverage policy still applies to any behavior a load
 scenario touches.
 
 ## Line Length Disclosure

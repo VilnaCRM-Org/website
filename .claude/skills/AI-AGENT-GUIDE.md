@@ -16,7 +16,7 @@ plain markdown that any AI agent can read and execute, so the workflows are
 **process and gates** (what to run, in what order, how to react to failures). They
 sit on top of two existing contracts you must respect:
 
-- `agents.md` — the root contract: the mandatory test-scenario coverage policy,
+- `AGENTS.md` — the root contract: the mandatory test-scenario coverage policy,
   behavior-first assertions, and the Definition of Done. This guide never replaces
   it; it routes you to the right skill for the change at hand.
 - The Makefile — the authoritative command surface. If a command is not a `make`
@@ -54,14 +54,14 @@ point tuned for Cursor — read it first, then return here and to
 
 Before any code, doc, config, or workflow change, do all of the following:
 
-1. Read `agents.md` (the root contract) and this guide.
+1. Read `AGENTS.md` (the root contract) and this guide.
 2. Read `.claude/skills/SKILL-DECISION-GUIDE.md`.
 3. Identify every skill that applies to the task — a single change often needs
    several (component work usually pulls in design, testing, docs, and CI).
 4. Open each matching `SKILL.md` and follow its steps. If your host exposes global
    technique skills, match them through the same decision process.
 5. If a skill is plausibly relevant, read it before deciding it does not apply, and
-   record `Not applicable: <reason>` (the same convention `agents.md` uses) when you
+   record `Not applicable: <reason>` (the same convention `AGENTS.md` uses) when you
    skip it.
 
 This check is non-negotiable. Do not hand the user implementation steps or commit
@@ -188,7 +188,7 @@ Skills use progressive disclosure. Pull in `reference/`, `examples/`, or
 
 - **documentation-creation** (`documentation-creation/SKILL.md`) — create new
   repository documentation or agent guides.
-- **documentation-sync** (`documentation-sync/SKILL.md`) — keep `agents.md`, READMEs,
+- **documentation-sync** (`documentation-sync/SKILL.md`) — keep `AGENTS.md`, READMEs,
   feature docs, and skill files aligned after a code, command, or workflow change.
 - **observability-instrumentation**
   (`observability-instrumentation/SKILL.md`) — add Sentry, structured logs, or
@@ -229,7 +229,7 @@ implementation skills above are intentionally kept distinct from planning.
 4. Follow `frontend-component-development` for MUI 9, Emotion, react-hook-form, and
    i18next patterns.
 5. Add Jest and Playwright coverage per `frontend-testing-workflow` and the
-   `agents.md` scenario-coverage policy.
+   `AGENTS.md` scenario-coverage policy.
 6. Update docs per `documentation-sync`, then validate with `make format`, focused
    suites, and `make lint`.
 
@@ -355,7 +355,7 @@ Each skill directory holds a `SKILL.md` plus optional `reference/`, `examples/`,
 
 ### Do
 
-- Start with `agents.md`, this guide, and `SKILL-DECISION-GUIDE.md` when unsure.
+- Start with `AGENTS.md`, this guide, and `SKILL-DECISION-GUIDE.md` when unsure.
 - Read the whole `SKILL.md` before executing, and follow its steps in order.
 - Run `make format` before `make lint`.
 - Respect protected thresholds and the rust-code-analysis complexity gate.
@@ -374,7 +374,7 @@ Each skill directory holds a `SKILL.md` plus optional `reference/`, `examples/`,
 
 1. Check the skill's `reference/` folder.
 2. Review the worked examples under `examples/`.
-3. Re-read `agents.md` (coverage policy, Definition of Done) and the Makefile (the
+3. Re-read `AGENTS.md` (coverage policy, Definition of Done) and the Makefile (the
    command surface).
 
 ## Conclusion

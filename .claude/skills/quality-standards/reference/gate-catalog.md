@@ -99,7 +99,7 @@ budgets below become the complexity policy of record once #224 lands.
 
 ## Test and runtime gates
 
-These verify behavior rather than static rules. The root `agents.md` policy
+These verify behavior rather than static rules. The root `AGENTS.md` policy
 governs which layers and scenario classes a change must cover.
 
 - **`make test-unit-client`** — Jest + React Testing Library in jsdom

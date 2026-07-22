@@ -2,7 +2,7 @@
 
 Worked examples of mapping a website change to the suites and commands that
 exercise it, then triaging. Each scenario assumes the coverage contract in
-`agents.md` (positive, negative, and edge/boundary classes for every layer you
+`AGENTS.md` (positive, negative, and edge/boundary classes for every layer you
 touch).
 
 ## 1. New validation rule on the registration form

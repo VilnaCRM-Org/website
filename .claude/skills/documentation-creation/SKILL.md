@@ -21,13 +21,13 @@ command, and convention you write MUST exist in the live repo — read it, do no
 
 State the audience (contributor or AI agent) and the task the doc supports up front.
 Documentation here is reference material, not narrative: link real files, name real
-Makefile targets, and stop. Do not recreate `agents.md` — link to it as the root contract.
+Makefile targets, and stop. Do not recreate `AGENTS.md` — link to it as the root contract.
 
 ## Ground Every Claim In The Repo
 
 Before you write a fact, read its source:
 
-- `agents.md` — test-coverage policy, behavior-first assertions, Definition of Done.
+- `AGENTS.md` — test-coverage policy, behavior-first assertions, Definition of Done.
 - `Makefile` — the only sanctioned command surface (run things via `make` targets).
 - `.dependency-cruiser.js` — feature/import boundaries surfaced by `make lint-deps`.
 - `eslint.config.mjs`, `tsconfig.json`, `package.json` — real gates and versions.
@@ -101,9 +101,9 @@ make lint
 change touches (`make test-unit-client`, `make test-unit-server`, `make test-e2e`,
 `make test-visual`); prefix unit runs with `CI=1` to run locally without Docker.
 
-## Align With agents.md
+## Align With AGENTS.md
 
-`agents.md` is the root contract: the mandatory test-scenario coverage policy,
+`AGENTS.md` is the root contract: the mandatory test-scenario coverage policy,
 behavior-first assertions (`getByRole`/`getByLabelText`/`getByText`, localized `t()`),
 and the Definition of Done. Documentation must reinforce that contract, never contradict
 or restate it — link to it instead.

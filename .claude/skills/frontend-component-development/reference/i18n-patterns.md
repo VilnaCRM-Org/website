@@ -56,4 +56,4 @@ The Ukrainian file mirrors the same shape:
 - Do not hardcode user-facing strings in JSX, props, or validation messages.
 - Keep keys grouped by feature and screen.
 - In tests, assert against the localized output of `t(...)`, not hardcoded
-  English, so translation-sensitive behavior stays covered (see agents.md).
+  English, so translation-sensitive behavior stays covered (see AGENTS.md).

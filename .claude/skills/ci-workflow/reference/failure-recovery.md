@@ -92,4 +92,4 @@ Coverage thresholds, mutation score, dependency-cruiser rules, ESLint/tsc strict
 markdownlint rules, visual diff tolerance, and any complexity/metrics budget are the
 contract. Lowering or disabling any of them to get green is a regression in disguise.
 When a limit genuinely does not apply, record a concrete `Not applicable: <reason>` per
-agents.md — never a silent suppression.
+AGENTS.md — never a silent suppression.

@@ -87,6 +87,8 @@ app.log
 # generated slash-command stubs under .claude/commands/ stay local.
 /_bmad/
 /_bmad-output/
+_bmad-output/
 /bmalph/
 /.ralph/
+.ralph/logs/
 /.claude/commands/
