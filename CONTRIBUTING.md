@@ -161,6 +161,34 @@ as a reviewed, in-repo change visible in the PR diff (or confirm the path belong
 outside the governed scope). Never silence the gate with a local override or a
 per-line disable.
 
+#### Upstream contracts (user-service)
+
+Every user-service contract this repo consumes — the GraphQL schema behind the
+Apollo mock, the OpenAPI spec behind the swagger page, and the Mockoon fixture
+behind the e2e suite — comes from the single `USER_SERVICE_VERSION` pin in
+[`.env`](.env). The fetched artifacts are committed under
+[`contracts/`](contracts) so `docker build` and `make start` never depend on
+`raw.githubusercontent.com` being up.
+
+`make lint-contracts` (its own workflow, `contract-testing.yml`, and
+deliberately outside `make lint` because it needs network) checks that:
+
+- every client GraphQL operation still validates against the pinned schema;
+- the OpenAPI document lints against an unmodified `spectral:oas` ruleset; and
+- the committed artifacts still match the pinned tag.
+
+To bump the upstream version, change `USER_SERVICE_VERSION` and run `make
+update-contracts` — it re-fetches both artifacts and refreshes the spectral
+baseline. Commit the resulting diff; it is the reviewable record of what
+changed upstream.
+
+The baseline in [`contracts/spectral-baseline.json`](contracts/spectral-baseline.json)
+records defects in the upstream spec that this repo does not control. It is not
+a suppression list: the gate fails on any finding **not** in it, and equally on
+any baselined finding that disappears, so an upstream fix shrinks the baseline
+instead of leaving it stale. Never add an entry to silence a defect in code we
+own — fix the code.
+
 ### Commit your update
 
 Commit the changes once you are happy with them.

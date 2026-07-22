@@ -43,6 +43,7 @@ STORYBOOK_BUILD_CMD         = $(STORYBOOK_BIN) build --output-dir storybook-stat
 
 TEST_DIR_BASE               = ./src/test
 TEST_DIR_APOLLO             = $(TEST_DIR_BASE)/apollo-server
+TEST_DIR_EDGE               = $(TEST_DIR_BASE)/edge
 TEST_DIR_E2E                = $(TEST_DIR_BASE)/e2e
 TEST_DIR_VISUAL             = $(TEST_DIR_BASE)/visual
 
@@ -314,6 +315,27 @@ lint-deps: ## Validate architecture/import boundaries with dependency-cruiser
 
 lint: lint-next lint-tsc lint-md lint-deps ## Runs all linters: ESLint, TypeScript, Markdown, and dependency-cruiser in sequence.
 
+# DELIBERATE DIVERGENCE FROM THE npm-tool LINT GATES (lint-next/tsc/md/deps),
+# for the same reason as lint-metrics below:
+#   * NOT in the `lint` aggregate (line above) and NOT in CI_LINT_TARGETS. The
+#     drift check re-fetches the pinned tag from raw.githubusercontent.com, and
+#     static-testing.yml is otherwise hermetic — a GitHub raw outage must not
+#     turn the whole static lane red.
+#   * Its CI surface is .github/workflows/contract-testing.yml, which runs it on
+#     every PR with the network available.
+# This target deliberately runs the full check, drift included. To validate the
+# GraphQL operations and the spectral baseline without touching the network,
+# invoke the script directly:
+#   pnpm node scripts/contracts/lint-contracts.mjs --offline
+lint-contracts: ## Validate the pinned user-service contracts: client GraphQL operations, the OpenAPI spectral baseline, and artifact drift
+	$(PNPM_EXEC) node scripts/contracts/lint-contracts.mjs
+
+update-contracts: ## Re-fetch the user-service contracts for the pinned USER_SERVICE_VERSION and refresh the spectral baseline
+	$(PNPM_EXEC) node scripts/fetchSwaggerSchema.mjs
+	$(PNPM_EXEC) node scripts/fetchGraphqlSchema.mjs
+	$(PNPM_EXEC) node scripts/contracts/lint-contracts.mjs --update-baseline
+	$(PRETTIER_BIN) "contracts/**/*.json" --write --ignore-path .prettierignore
+
 # DELIBERATE DIVERGENCE FROM THE npm-tool LINT GATES (lint-next/tsc/md/deps):
 #   * Host-only: rust-code-analysis is a Rust binary absent from the dev image,
 #     so this target does NOT use $(PNPM_EXEC) and runs on the host in both modes.
@@ -380,13 +402,16 @@ wait-for-prod: ## Wait for the prod service to be ready on port $(NEXT_PUBLIC_PR
 	@while ! curl -s -f http://$(WEBSITE_DOMAIN):$(NEXT_PUBLIC_PROD_PORT) >/dev/null 2>&1; do printf "."; sleep 1; done
 	@printf '\nProd service is up and running!\n'
 
-test-unit-all: test-unit-client test-unit-server ## This command executes unit tests for both client and server environments.
+test-unit-all: test-unit-client test-unit-server test-unit-edge ## This command executes unit tests for the client, server, and edge environments.
 
 test-unit-client: ## Run all client-side unit tests using Jest (Next.js env, TEST_ENV=client)
 	$(UNIT_TESTS) TEST_ENV=client $(JEST_BIN) $(JEST_FLAGS)
 
 test-unit-server: ## Run server-side unit tests for Apollo using Jest (Node.js env, TEST_ENV=server, target: $(TEST_DIR_APOLLO))
 	$(UNIT_TESTS) TEST_ENV=server $(JEST_BIN) $(JEST_FLAGS) $(TEST_DIR_APOLLO)
+
+test-unit-edge: ## Run edge-script unit tests using Jest (Node.js env, TEST_ENV=edge, target: $(TEST_DIR_EDGE))
+	$(UNIT_TESTS) TEST_ENV=edge $(JEST_BIN) $(JEST_FLAGS) $(TEST_DIR_EDGE)
 
 test-integration: ## Run the integration layer using Jest (TEST_ENV=integration, target: tests/integration)
 	$(UNIT_TESTS) TEST_ENV=integration $(JEST_BIN) $(JEST_FLAGS)
@@ -596,7 +621,7 @@ lighthouse-mobile-dind: ## Run Lighthouse mobile audit in DIND mode using prod c
 	$(LHCI_DIND_BIN) --config=lighthouserc.mobile.js $(LHCI_DIND_COMMON)
 	@echo "✅ Lighthouse mobile DIND tests completed"
 
-install: ## Install node modules using pnpm (CI=1 runs locally, default runs in container) — uses frozen lockfile and affects node_modules via volumes
+install: check-node-version ## Install node modules using pnpm (CI=1 runs locally, default runs in container) — uses frozen lockfile and affects node_modules via volumes
 	$(PNPM_EXEC) pnpm install --frozen-lockfile
 
 install-chromium-lhci: ## Install Chromium and Lighthouse CLI in the prod container for DIND testing

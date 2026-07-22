@@ -14,40 +14,40 @@ const config: StorybookConfig = {
 
   staticDirs: [
     {
-      from: `${fromPath}/Golos/GolosText-Black.ttf`,
-      to: `${toPath}/Golos/GolosText-Black.ttf`,
+      from: `${fromPath}/Golos/GolosText-Black.woff2`,
+      to: `${toPath}/Golos/GolosText-Black.woff2`,
     },
     {
-      from: `${fromPath}/Golos/GolosText-Bold.ttf`,
-      to: `${toPath}/Golos/GolosText-Bold.ttf`,
+      from: `${fromPath}/Golos/GolosText-Bold.woff2`,
+      to: `${toPath}/Golos/GolosText-Bold.woff2`,
     },
     {
-      from: `${fromPath}/Golos/GolosText-ExtraBold.ttf`,
-      to: `${toPath}/Golos/GolosText-ExtraBold.ttf`,
+      from: `${fromPath}/Golos/GolosText-ExtraBold.woff2`,
+      to: `${toPath}/Golos/GolosText-ExtraBold.woff2`,
     },
     {
-      from: `${fromPath}/Golos/GolosText-Medium.ttf`,
-      to: `${toPath}/Golos/GolosText-Medium.ttf`,
+      from: `${fromPath}/Golos/GolosText-Medium.woff2`,
+      to: `${toPath}/Golos/GolosText-Medium.woff2`,
     },
     {
-      from: `${fromPath}/Golos/GolosText-Regular.ttf`,
-      to: `${toPath}/Golos/GolosText-Regular.ttf`,
+      from: `${fromPath}/Golos/GolosText-Regular.woff2`,
+      to: `${toPath}/Golos/GolosText-Regular.woff2`,
     },
     {
-      from: `${fromPath}/Golos/GolosText-SemiBold.ttf`,
-      to: `${toPath}/Golos/GolosText-SemiBold.ttf`,
+      from: `${fromPath}/Golos/GolosText-SemiBold.woff2`,
+      to: `${toPath}/Golos/GolosText-SemiBold.woff2`,
     },
     {
-      from: `${fromPath}/Inter/Inter-Bold.ttf`,
-      to: `${toPath}/Inter/Inter-Bold.ttf`,
+      from: `${fromPath}/Inter/Inter-Bold.woff2`,
+      to: `${toPath}/Inter/Inter-Bold.woff2`,
     },
     {
-      from: `${fromPath}/Inter/Inter-Medium.ttf`,
-      to: `${toPath}/Inter/Inter-Medium.ttf`,
+      from: `${fromPath}/Inter/Inter-Medium.woff2`,
+      to: `${toPath}/Inter/Inter-Medium.woff2`,
     },
     {
-      from: `${fromPath}/Inter/Inter-Regular.ttf`,
-      to: `${toPath}/Inter/Inter-Regular.ttf`,
+      from: `${fromPath}/Inter/Inter-Regular.woff2`,
+      to: `${toPath}/Inter/Inter-Regular.woff2`,
     },
   ],
 };

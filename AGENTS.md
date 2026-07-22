@@ -28,16 +28,21 @@ than one. Match the change to the suite and run its verification command.
 | ----------------- | ------------------------------------------ | ----------------------- |
 | Client unit       | Components, hooks, and pure client logic   | `make test-unit-client` |
 | Server unit       | Apollo resolvers and server-side logic     | `make test-unit-server` |
+| Edge unit         | Deployed edge/runtime scripts (`scripts/`) | `make test-unit-edge`   |
 | End-to-end (e2e)  | User-facing flows end to end (Mockoon API) | `make test-e2e`         |
 | Visual regression | Any change to rendered UI or styling       | `make test-visual`      |
 
 Client unit tests run on Jest with React Testing Library in a jsdom env
 (`TEST_ENV=client`); specs live in `src/test/testing-library/**/*.test.tsx` and
 `src/test/unit/**/*.test.ts`. Server unit tests run on Jest in a node env
-(`TEST_ENV=server`); specs live in `src/test/apollo-server/**/*.test.ts`. E2E and visual
-specs are Playwright across chromium, firefox, and webkit (`src/test/e2e/**/*.spec.ts`,
-`src/test/visual/**/*.spec.ts`); visual snapshots sit in adjacent `*-snapshots/` folders.
-Run both unit layers with `make test-unit-all`.
+(`TEST_ENV=server`); specs live in `src/test/apollo-server/**/*.test.ts`. Edge unit tests
+run on Jest in a node env (`TEST_ENV=edge`) and cover the deployed edge/runtime scripts
+under `scripts/` that ship outside the Next.js bundle (today the CloudFront Functions
+handler `scripts/cloudfront_routing.js`); specs live in `src/test/edge/**/*.test.ts` and
+the layer is pinned at 100% per-file coverage. E2E and visual specs are Playwright across
+chromium, firefox, and webkit (`src/test/e2e/**/*.spec.ts`, `src/test/visual/**/*.spec.ts`);
+visual snapshots sit in adjacent `*-snapshots/` folders. Run all three unit layers with
+`make test-unit-all`.
 
 Add a specialized suite when the change touches its concern: `make test-mutation` (test
 strength), `make test-bats` (Makefile and CI shell flows), `make test-memory-leak` (leaks),
@@ -113,6 +118,7 @@ CI=1 make test-unit-server   # Server unit suite (node)
 make test-e2e                # User-facing flows (for UI or behavior changes)
 make test-visual             # Visual regression (for UI or styling changes)
 make lint                    # Full gate: ESLint, TypeScript, and markdownlint
+make lint-contracts          # Upstream contracts (when .env pins or gql documents change)
 ```
 
 Run only the suites the change affects, but never skip a suite that does apply. Any unit

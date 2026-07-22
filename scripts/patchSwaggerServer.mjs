@@ -47,8 +47,14 @@ function writeSwaggerSchema(path, doc) {
   return `✅ Swagger server URL patched to: ${doc.servers[0].url}`;
 }
 
-const schemaPath = './public/swagger-schema.json';
+// Read the committed, pristine contract and emit the patched copy the swagger
+// page serves. Source and destination are deliberately different files: the
+// server URL is environment-specific (it becomes http://mockoon:8080 inside
+// Docker), so patching in place would leave a container hostname in the working
+// tree — and eventually in a commit — after every `make start`.
+const contractPath = './contracts/user-service/openapi.json';
+const outputPath = './public/swagger-schema.json';
 const apiBaseUrl = getApiBaseUrl();
-const doc = readSwaggerSchema(schemaPath);
+const doc = readSwaggerSchema(contractPath);
 const updatedDoc = patchSwaggerServerUrl(doc, apiBaseUrl);
-writeSwaggerSchema(schemaPath, updatedDoc);
+writeSwaggerSchema(outputPath, updatedDoc);

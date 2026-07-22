@@ -2,6 +2,7 @@ import { ApolloProvider } from '@apollo/client/react';
 import { ThemeProvider } from '@mui/material/styles';
 import { GoogleAnalytics } from '@next/third-parties/google';
 import * as Sentry from '@sentry/react';
+import type { NextWebVitalsMetric } from 'next/app';
 import dynamic from 'next/dynamic';
 import React, { ComponentType, useEffect } from 'react';
 
@@ -9,6 +10,7 @@ import { theme } from '@/components/app-theme';
 import Layout from '@/components/layout';
 import { env } from '@/config/env';
 import { golos } from '@/config/Fonts/golos';
+import { handleWebVitalsMetric } from '@/lib/web-vitals/report-web-vitals';
 
 import 'swagger-ui-react/swagger-ui.css';
 
@@ -58,6 +60,13 @@ function MyApp({ Component }: { Component: React.ComponentType }): React.ReactEl
       </ApolloProvider>
     </ThemeProvider>
   );
+}
+
+// Next.js calls this named export for every web-vital it records; the forwarding
+// gate (field-vital filter, production check, sampling) and PII-free payload live
+// in the shared module so the routing root stays a thin wrapper.
+export function reportWebVitals(metric: NextWebVitalsMetric): void {
+  handleWebVitalsMetric(metric);
 }
 
 export default MyApp;
