@@ -16,7 +16,7 @@ architecture:
   source_root: src
   modules: ["app-theme", "layout", "social-media", "ui-breakpoints", "ui-button", "ui-card-item", "ui-card-list", "ui-checkbox", "ui-color-theme", "ui-footer", "ui-image", "ui-input", "ui-link", "ui-text-field-form", "ui-toolbar", "ui-tooltip", "ui-typography"]
   component_prefix: UI
-  path_aliases: []
+  path_aliases: ["@/*", "@landing/*", "@swagger/*", "@swagger/global"]
 make:
   ci: ci
   start: start
