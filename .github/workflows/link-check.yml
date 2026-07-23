@@ -1,0 +1,81 @@
+name: link check
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '**/*.md'
+  schedule:
+    - cron: '0 5 * * 1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  offline:
+    # Blocking, deterministic PR leg: relative links + `#fragment` anchors only.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check relative links and fragments (offline)
+        run: |
+          # Scan only git-tracked Markdown so the cross-referencing docs
+          # (CLAUDE.md, agents.md, .claude/skills/**) are covered while
+          # node_modules and build output are not. Offline mode skips external
+          # URLs, so a third party's outage can never flake this blocking leg.
+          docker run --rm -v "$GITHUB_WORKSPACE:/repo" -w /repo \
+            lycheeverse/lychee@sha256:eaff3e0a13603c9a701accfcc84f44158bb77bf36ecfa4622b626056c3463892 \
+            --offline --include-fragments --no-progress $(git ls-files '*.md')
+
+  external:
+    # Advisory weekly leg: full external resolution over Markdown plus the built
+    # HTML export; files/refreshes a tracking issue instead of blocking, because
+    # external sites flap and a third party's outage must not block anything.
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Build static export
+        run: make build-out
+
+      - name: Check external links (Markdown + built HTML)
+        id: lychee
+        continue-on-error: true
+        run: |
+          docker run --rm -v "$GITHUB_WORKSPACE:/repo" -w /repo \
+            lycheeverse/lychee@sha256:eaff3e0a13603c9a701accfcc84f44158bb77bf36ecfa4622b626056c3463892 \
+            --no-progress --output /repo/lychee-report.md \
+            $(git ls-files '*.md') './out/**/*.html'
+
+      - name: File or refresh the tracking issue on failures
+        if: steps.lychee.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          title='Weekly link check failures'
+          existing="$(gh issue list --label docs --state open \
+            --search "$title in:title" --json number --jq '.[0].number')"
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body-file lychee-report.md
+          else
+            gh issue create --label docs --title "$title" --body-file lychee-report.md
+          fi
