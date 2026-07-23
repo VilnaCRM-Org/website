@@ -18,8 +18,8 @@ We aim to respond on the following timeline:
 
 - **Acknowledgement:** within 3 business days.
 - **Triage decision and severity:** within 10 business days.
-- **Disclosure:** coordinated after a fix ships; we credit reporters unless you
-  ask us not to.
+- **Disclosure:** coordinated after a fix ships; we credit reporters who ask to
+  be credited.
 
 If you do not receive an acknowledgement within 3 business days, please re-send
 the report to make sure it was not missed.
