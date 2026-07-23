@@ -26,6 +26,8 @@ fail() {
 # and swagger/index.html appears instead, silently breaking the edge rewrite.
 [ -f "${out_dir}/swagger.html" ] ||
   fail "missing flat ${out_dir}/swagger.html (edge route contract)"
+grep -qi 'swagger' "${out_dir}/swagger.html" ||
+  fail "${out_dir}/swagger.html has no 'swagger' content; the Swagger page did not render"
 if [ -e "${out_dir}/swagger/index.html" ]; then
   fail "unexpected ${out_dir}/swagger/index.html: export layout flipped to trailing-slash; the edge /swagger -> /swagger.html rewrite would 404"
 fi
