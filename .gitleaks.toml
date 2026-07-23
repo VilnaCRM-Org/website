@@ -1,0 +1,17 @@
+title = "VilnaCRM website gitleaks config"
+
+# Start from gitleaks' bundled default ruleset, then allowlist the handful of
+# committed fixtures that legitimately contain secret-shaped strings (issue #353).
+# Keeping the allowlist explicit and path-scoped means a real credential pasted
+# anywhere else still turns the scan red, while the known mock data does not.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Committed mock / fixture files with intentional secret-shaped example values (OpenAPI spec examples, mock GraphQL schema export, integration-test passwords). None are real credentials."
+paths = [
+  '''contracts/user-service/openapi\.json''',
+  '''public/swagger-schema\.json''',
+  '''tests/integration/coverage/auth-section/auth-layout\.integration\.test\.tsx''',
+  '''tests/integration/flows/registration-flow\.integration\.test\.tsx''',
+]
