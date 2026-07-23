@@ -30,7 +30,7 @@ the pinned tag, and `static-testing.yml` is otherwise hermetic. Its CI home is
 `contract-testing.yml`. To check everything except drift without network:
 
 ```bash
-pnpm node scripts/contracts/lint-contracts.mjs --offline
+node scripts/contracts/lint-contracts.mjs --offline
 ```
 
 ## What the gate checks

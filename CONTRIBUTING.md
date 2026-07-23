@@ -103,8 +103,8 @@ removed.
   release, and sandbox workflows use `cancel-in-progress: false` — a production
   trigger must never be aborted mid-run, so newer pushes queue behind the
   current one.
-- **Caching.** Node jobs restore the pnpm store (`~/.pnpm-store`, keyed on the
-  Node version and `pnpm-lock.yaml`) so installs are warm instead of cold.
+- **Caching.** Node jobs restore the Bun cache (`~/.bun/install/cache`, keyed on the
+  Node version and `bun.lock`) so installs are warm instead of cold.
 - **Matrices instead of serial steps.** The Playwright e2e suite splits across a
   Playwright `--shard` matrix (one balanced slice of the ~340 test runs per
   runner), Lighthouse runs `desktop` and `mobile` as parallel cells, the K6 load

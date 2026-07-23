@@ -26,7 +26,7 @@ jobs:
 
       - name: Install rust-code-analysis CLI
         # Pinned + SHA256-verified prebuilt asset -> ./bin (same path as local).
-        # No Node/pnpm/`make install`: the analyzer reads the source tree directly.
+        # No Node/Bun/`make install`: the analyzer reads the source tree directly.
         env:
           RCA_VERSION: '0.0.25'
         run: sh scripts/ci/ensure-rca.sh

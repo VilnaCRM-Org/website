@@ -1,6 +1,6 @@
 // Guards the Node runtime against package.json "engines".
 //
-// Deliberately dependency-free: `make install` runs this BEFORE `pnpm install`,
+// Deliberately dependency-free: `make install` runs this BEFORE `bun install`,
 // so anything required from node_modules (previously `semver`) throws
 // MODULE_NOT_FOUND on a cold cache and turns a helpful version error into a
 // confusing crash. Only the caret/or range shapes this repo actually pins are

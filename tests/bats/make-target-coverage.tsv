@@ -4,7 +4,7 @@ start	bats	tests/bats/makefile_targets.bats	Validated in CI=1 mode with a stubbe
 wait-for-dev	bats	tests/bats/makefile_targets.bats	Validated with a stubbed curl readiness check.
 create-temp-dev-container-dind	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker commands and env-var guards.
 copy-source-to-container-dind	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker and tar commands.
-install-deps-in-container-dind	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker and npm/pnpm commands.
+install-deps-in-container-dind	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker and npm/bun commands.
 run-unit-tests-dind	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker exec calls.
 run-mutation-tests-dind	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker exec calls.
 run-eslint-tests-dind	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker exec calls.
@@ -16,12 +16,12 @@ run-load-tests-dind	bats	tests/bats/makefile_targets.bats	Validated with stubbed
 build	ci	.github/workflows/mutation-testing.yml	Executed through `make test-mutation`, which depends on `build`.
 build-analyze	bats	tests/bats/makefile_targets.bats	Validated with stubbed Next.js build commands.
 build-out	bats	tests/bats/makefile_targets.bats	Validated in an isolated Makefile sandbox with stubbed Docker commands.
-format	bats	tests/bats/makefile_targets.bats	Validated with a stubbed pnpm invocation.
+format	bats	tests/bats/makefile_targets.bats	Validated with a stubbed prettier invocation.
 lint-next	ci	.github/workflows/static-testing.yml	Executed through `make lint`, which depends on `lint-next`.
 lint-tsc	ci	.github/workflows/static-testing.yml	Executed through `make lint`, which depends on `lint-tsc`.
 lint-md	ci	.github/workflows/static-testing.yml	Executed through `make lint`, which depends on `lint-md`.
 lint	ci	.github/workflows/static-testing.yml	Executed directly by the static testing workflow.
-husky	bats	tests/bats/makefile_targets.bats	Validated with a stubbed pnpm invocation.
+husky	bats	tests/bats/makefile_targets.bats	Validated with a stubbed bun invocation.
 storybook-start	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Storybook binary.
 storybook-build	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Storybook binary.
 test-e2e	ci	.github/workflows/e2e-testing.yml	Executed directly by the Playwright PR workflow.
@@ -57,14 +57,14 @@ lighthouse-mobile-dind	bats	tests/bats/makefile_targets.bats	Validated with stub
 install	ci	.github/workflows/static-testing.yml	Executed directly by the static testing workflow.
 install-chromium-lhci	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker Compose and npm commands.
 test-chromium	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Chromium version check.
-update	bats	tests/bats/makefile_targets.bats	Validated with a stubbed pnpm invocation.
+update	bats	tests/bats/makefile_targets.bats	Validated with a stubbed bun invocation.
 down	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Docker Compose invocation.
 sh	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Docker Compose invocation.
 ps	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Docker Compose invocation.
 logs	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Docker Compose invocation.
 new-logs	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Docker Compose invocation.
 stop	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Docker Compose invocation.
-check-node-version	bats	tests/bats/makefile_targets.bats	Validated with a stubbed pnpm/node invocation.
+check-node-version	bats	tests/bats/makefile_targets.bats	Validated with a stubbed node invocation.
 lint-deps	ci	.github/workflows/static-testing.yml	Executed through `make lint`, which depends on `lint-deps`.
 lint-contracts	bats	tests/bats/makefile_targets.bats	Executed directly by contract-testing.yml; deliberately outside `make lint` because the drift check needs network.
 update-contracts	bats	tests/bats/makefile_targets.bats	Maintainer command for bumping USER_SERVICE_VERSION; refreshes both artifacts and the spectral baseline.
@@ -77,7 +77,7 @@ ci-lint	bats	tests/bats/makefile_targets.bats	Validated by running the parallel 
 ci-test	bats	tests/bats/makefile_targets.bats	Validated by running the parallel dev-side test runner against stubbed make targets.
 ci-test-unit-client	bats	tests/bats/makefile_targets.bats	Validated by invoking Jest with TEST_ENV=client through a stubbed jest binary.
 ci-test-unit-server	bats	tests/bats/makefile_targets.bats	Validated by invoking Jest with TEST_ENV=server through a stubbed jest binary.
-ci-test-mutation	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Stryker invocation via pnpm.
+ci-test-mutation	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Stryker invocation via bun.
 ci-mutation	bats	tests/bats/makefile_targets.bats	Validated by delegating to ci-test-mutation with a stubbed Stryker invocation.
 ci-prod-setup	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker Compose start-prod and Chromium install commands.
 ci-test-e2e	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker and Playwright commands.

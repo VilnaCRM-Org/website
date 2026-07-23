@@ -25,10 +25,10 @@ committed workflows; the targets wire env vars, Docker, and Mockoon for you.
 
 Prefix any unit target with `CI=1` to run it locally WITHOUT Docker
 (`CI=1 make test-unit-all`). To reproduce a single failing file, run Jest
-through pnpm with the same env the target sets, for example:
+directly with the same env the target sets, for example:
 
 ```bash
-CI=1 TEST_ENV=server pnpm exec jest src/test/apollo-server/server.test.ts
+CI=1 TEST_ENV=server bun x jest src/test/apollo-server/server.test.ts
 ```
 
 ## Browser suites (Playwright, Docker prod stack)

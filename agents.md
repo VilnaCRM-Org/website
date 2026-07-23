@@ -7,7 +7,7 @@ update tests.
 
 The stack is Next.js 16, React 19, TypeScript 6, MUI 9 with Emotion, Apollo Client 4 with
 Apollo Server 5, react-hook-form, i18next, and Storybook 10. The package manager is
-`pnpm@10.6.5` and Node `>=20`. The project structure is adapted from bulletproof-react. All
+`bun@1.3.5` and Node `>=20`. The project structure is adapted from bulletproof-react. All
 commands are Makefile targets run from the repository root.
 
 ## Mandatory Test-Scenario Coverage Policy

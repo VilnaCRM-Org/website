@@ -54,7 +54,7 @@ EOF
   reset_command_log
   run_make_target install-deps-in-container-dind TEMP_CONTAINER_NAME=website-dev-test
   [ "$status" -eq 0 ]
-  assert_log_contains 'docker exec website-dev-test sh -lc cd /app && npm install -g pnpm && pnpm install --frozen-lockfile'
+  assert_log_contains 'docker exec website-dev-test sh -lc cd /app && npm install -g bun@1.3.5 && bun install --frozen-lockfile'
 
   reset_command_log
   run_make_target run-unit-tests-dind TEMP_CONTAINER_NAME=website-dev-test
@@ -65,7 +65,7 @@ EOF
   reset_command_log
   run_make_target run-mutation-tests-dind TEMP_CONTAINER_NAME=website-dev-test
   [ "$status" -eq 0 ]
-  assert_log_contains 'docker exec website-dev-test sh -lc cd /app && pnpm stryker run'
+  assert_log_contains 'docker exec website-dev-test sh -lc cd /app && bun x stryker run'
 
   reset_command_log
   run_make_target run-eslint-tests-dind TEMP_CONTAINER_NAME=website-dev-test
@@ -143,12 +143,12 @@ EOF
   reset_command_log
   run_make_target format CI=1
   [ "$status" -eq 0 ]
-  assert_log_contains 'pnpm ./node_modules/.bin/prettier **/*.{js,jsx,ts,tsx,json,css,scss,md} --write --ignore-path .prettierignore'
+  assert_log_contains 'prettier **/*.{js,jsx,ts,tsx,json,css,scss,md} --write --ignore-path .prettierignore'
 
   reset_command_log
   run_make_target husky
   [ "$status" -eq 0 ]
-  assert_log_contains 'pnpm husky install'
+  assert_log_contains 'bun x husky install'
 
   reset_command_log
   run_make_target storybook-start CI=1
@@ -163,12 +163,12 @@ EOF
   reset_command_log
   run_make_target check-node-version CI=1
   [ "$status" -eq 0 ]
-  assert_log_contains 'pnpm exec node checkNodeVersion.js'
+  assert_log_contains 'node checkNodeVersion.js'
 
   reset_command_log
   run_make_target update
   [ "$status" -eq 0 ]
-  assert_log_contains 'pnpm update'
+  assert_log_contains 'bun update'
 }
 
 @test "prod-side wrapper targets invoke the expected Docker and Playwright flows" {
@@ -209,7 +209,7 @@ EOF
   assert_log_contains 'playwright test ./src/test/e2e'
 }
 
-@test "maintenance targets shell out through Docker and pnpm as expected" {
+@test "maintenance targets shell out through Docker and Bun as expected" {
   reset_command_log
   run_make_target lighthouse-desktop-dind
   [ "$status" -eq 0 ]
@@ -348,13 +348,13 @@ STUB
   reset_command_log
   run_make_target ci-test-mutation CI=1
   [ "$status" -eq 0 ]
-  assert_log_contains 'pnpm exec stryker run'
+  assert_log_contains 'bun x stryker run'
 }
 
 @test "ci-mutation delegates to ci-test-mutation" {
   run_make_target ci-mutation CI=1
   [ "$status" -eq 0 ]
-  assert_log_contains 'pnpm exec stryker run'
+  assert_log_contains 'bun x stryker run'
 }
 
 @test "ci-prod-setup starts prod and installs Chromium" {
@@ -488,23 +488,23 @@ STUB
   [ "$status" -eq 0 ]
   assert_output_contains 'all hard checks pass'
 
-  # Host-only: never routed through the dev container (docker) or pnpm.
-  run grep -E 'docker|pnpm' "$COMMAND_LOG"
+  # Host-only: never routed through the dev container (docker) or the package manager (bun).
+  run grep -E 'docker|bun' "$COMMAND_LOG"
   [ "$status" -ne 0 ]
 }
 
-@test "contract targets route through pnpm and cover fetch, lint and baseline refresh" {
+@test "contract targets shell out to Node and cover fetch, lint and baseline refresh" {
   reset_command_log
 
   run_make_target lint-contracts CI=1
   [ "$status" -eq 0 ]
-  assert_log_contains 'pnpm node scripts/contracts/lint-contracts.mjs'
+  assert_log_contains 'node scripts/contracts/lint-contracts.mjs'
 
   reset_command_log
 
   run_make_target update-contracts CI=1
   [ "$status" -eq 0 ]
-  assert_log_contains 'pnpm node scripts/fetchSwaggerSchema.mjs'
-  assert_log_contains 'pnpm node scripts/fetchGraphqlSchema.mjs'
-  assert_log_contains 'pnpm node scripts/contracts/lint-contracts.mjs --update-baseline'
+  assert_log_contains 'node scripts/fetchSwaggerSchema.mjs'
+  assert_log_contains 'node scripts/fetchGraphqlSchema.mjs'
+  assert_log_contains 'node scripts/contracts/lint-contracts.mjs --update-baseline'
 }

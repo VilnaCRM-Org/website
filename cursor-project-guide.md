@@ -11,7 +11,7 @@ the mandatory test-coverage contract; this guide assumes it and points back to i
 React 19 with TypeScript 6. The UI uses MUI 9 with Emotion; data is fetched with Apollo Client 4
 against a local Apollo Server 5 GraphQL mock; forms use react-hook-form; copy is localized with
 i18next and react-i18next; components are documented in Storybook 10. The package manager is
-`pnpm@10.6.5` and Node is `>=20`. The folder layout is adapted from bulletproof-react, and every
+`bun@1.3.5` and Node is `>=20`. The folder layout is adapted from bulletproof-react, and every
 command runs through a Makefile target from the repository root.
 
 There is no Redux, no Zustand, and no dependency-injection container, and there is no
@@ -53,7 +53,7 @@ make build      # Production build
 
 ## Development setup
 
-Requirements: Node `>=20`, `pnpm@10.6.5`, and Docker for the containerized dev and test stacks.
+Requirements: Node `>=20`, `bun@1.3.5`, and Docker for the containerized dev and test stacks.
 
 ```bash
 make check-node-version   # Verify the Node version
@@ -65,12 +65,12 @@ make start                # Start the dev server
 ## Running commands without Docker
 
 Prefix unit and lint commands with `CI=1` to run them locally without the Docker stack. `CI=1`
-makes the Makefile call the local `pnpm` binaries directly instead of execing into a container.
+makes the Makefile run the local `node_modules/.bin` binaries directly instead of execing into a container.
 
 ```bash
 CI=1 make test-unit-all                 # Both unit suites, no Docker
 CI=1 make lint-next                      # ESLint, no Docker
-CI=1 TEST_ENV=client pnpm exec jest \
+CI=1 TEST_ENV=client bun x jest \
   src/test/unit/email-validation.test.ts # One client spec
 ```
 
@@ -202,7 +202,7 @@ Clear the Jest cache and confirm the `@/*` alias resolves the same way in `tscon
 `index.ts` barrel rather than imported from a deep path.
 
 ```bash
-CI=1 pnpm exec jest --clearCache
+CI=1 bun x jest --clearCache
 ```
 
 ### Dev container will not start

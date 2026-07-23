@@ -1,6 +1,6 @@
 /** @type {import('@stryker-mutator/api/core').PartialStrykerOptions} */
 const config = {
-  packageManager: 'pnpm',
+  packageManager: 'npm',
   reporters: ['html', 'clear-text'],
   testRunner: 'jest',
   coverageAnalysis: 'off',

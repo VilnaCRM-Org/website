@@ -1,18 +1,17 @@
 FROM public.ecr.aws/docker/library/node:24.18.0-alpine3.23 AS base
 
-RUN apk add --no-cache curl=8.20.0-r0
-
-RUN npm install -g pnpm@10.6.5 typescript@5.8.2
+RUN apk add --no-cache curl=8.20.0-r0 && \
+    npm install -g bun@1.3.5 typescript@5.8.2
 
 WORKDIR /app
 
-COPY package.json pnpm-lock.yaml checkNodeVersion.js ./
+COPY package.json bun.lock checkNodeVersion.js ./
 COPY tsconfig.server.json tsconfig.server.json
 COPY docker docker
 COPY contracts contracts
 COPY .env .env
 
-RUN pnpm install
+RUN bun install --frozen-lockfile
 RUN tsc --project tsconfig.server.json
 
 # Seed the committed contract where server.mts expects it. schemaFetcher then

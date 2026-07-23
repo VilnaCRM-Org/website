@@ -142,8 +142,8 @@ export default async () => {
   return {
     ...nextJestConfig,
     transformIgnorePatterns: [
-      // Allow transforming ESM packages from pnpm's .pnpm folder
-      '/node_modules/.pnpm/(?!(uuid|@faker-js\\+faker)@)',
+      // Allow transforming these ESM-only packages from the hoisted node_modules
+      '/node_modules/(?!(uuid|@faker-js/faker)/)',
     ],
   };
 };

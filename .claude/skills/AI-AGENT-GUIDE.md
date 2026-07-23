@@ -4,7 +4,7 @@ For Claude Code, Codex / OpenAI agents, GitHub Copilot, Cursor, and any other AI
 coding assistant working in the VilnaCRM **website** repo — the marketing site and
 landing built on Next.js 16 (pages router), React 19, TypeScript 6, MUI 9 with
 Emotion, Apollo Client 4 with Apollo Server 5, react-hook-form, i18next, and
-Storybook 10. The package manager is `pnpm@10.6.5` and Node is `>=20`. Structure is
+Storybook 10. The package manager is `bun@1.3.5` and Node is `>=20`. Structure is
 adapted from bulletproof-react. Every command is a Makefile target run from the repo
 root — this repo has no `package.json` scripts.
 
