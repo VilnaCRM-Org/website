@@ -1,17 +1,24 @@
 title = "VilnaCRM website gitleaks config"
 
-# Start from gitleaks' bundled default ruleset, then allowlist the handful of
-# committed fixtures that legitimately contain secret-shaped strings (issue #353).
-# Keeping the allowlist explicit and path-scoped means a real credential pasted
-# anywhere else still turns the scan red, while the known mock data does not.
+# Start from gitleaks' bundled default ruleset, then allowlist only what is
+# genuinely non-secret (issue #353). Scoped narrowly so a real credential added
+# to any of these files later still fails the scan.
 [extend]
 useDefault = true
 
 [allowlist]
-description = "Committed mock / fixture files with intentional secret-shaped example values (OpenAPI spec examples, mock GraphQL schema export, integration-test passwords). None are real credentials."
+description = "Generated / upstream-fetched artifacts and the single shared integration-test mock password. None are real credentials."
+# Whole-file exemptions are limited to machine-generated / upstream-fetched
+# artifacts that are never a place a human pastes a real credential:
+#   - contracts/user-service/openapi.json — fetched from the pinned user-service contract
+#   - public/swagger-schema.json          — generated build artifact
 paths = [
   '''contracts/user-service/openapi\.json''',
   '''public/swagger-schema\.json''',
-  '''tests/integration/coverage/auth-section/auth-layout\.integration\.test\.tsx''',
-  '''tests/integration/flows/registration-flow\.integration\.test\.tsx''',
+]
+# Hand-edited test fixtures are NOT exempted wholesale — only the specific mock
+# password shared across the integration-test builders is, so a real secret
+# added to those files is still caught.
+regexes = [
+  '''Integration123''',
 ]
