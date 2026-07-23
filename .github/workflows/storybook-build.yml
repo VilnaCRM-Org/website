@@ -6,6 +6,11 @@ on:
       - main
     paths:
       - '.storybook/**'
+      # Stories glob over the whole src tree (.storybook/main.ts:
+      # '../src/**/*.stories.*' and '../src/**/*.mdx') and import the components
+      # they render, so an ordinary source edit can break the Storybook build
+      # without touching a story file. Watch the tree those stories import.
+      - 'src/**'
       - '**/*.stories.*'
       - 'package.json'
       - 'bun.lock'
@@ -14,6 +19,8 @@ on:
       - 'Makefile'
       - 'scripts/generateLocalization.mjs'
       - '.nvmrc'
+      - 'next.config.js'
+      - 'tsconfig.json'
       - '.github/workflows/storybook-build.yml'
   schedule:
     - cron: '0 5 * * 1'
