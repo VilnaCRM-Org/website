@@ -137,8 +137,11 @@ setup() {
   assert_output_contains 'only 199 files'
 }
 
-@test "fails when the export ships no JS payload (empty _next/static)" {
+@test "fails when _next/static has no .js files (no JS payload)" {
   make_valid_artifact "$ARTIFACT"
+  # Remove only the .js, keeping the populated _next/static dir and the 200-file
+  # floor intact, so this exercises the no-JS guard rather than the earlier
+  # "missing _next/static" or file-count-floor checks.
   rm "$ARTIFACT/_next/static/chunks/main.js"
 
   run_validator "$ARTIFACT"
