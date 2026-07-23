@@ -9,6 +9,12 @@ on:
       - '**/*.stories.*'
       - 'package.json'
       - 'bun.lock'
+      # Direct inputs of the job below — a change to any of these can break the
+      # build without touching a story, so they must re-trigger this check too.
+      - 'Makefile'
+      - 'scripts/generateLocalization.mjs'
+      - '.nvmrc'
+      - '.github/workflows/storybook-build.yml'
   schedule:
     - cron: '0 5 * * 1'
 
