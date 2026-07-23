@@ -34,9 +34,11 @@ jobs:
           # (CLAUDE.md, agents.md, .claude/skills/**) are covered while
           # node_modules and build output are not. Offline mode skips external
           # URLs, so a third party's outage can never flake this blocking leg.
+          # NUL-delimited read keeps paths containing spaces as single inputs.
+          mapfile -d '' markdown_files < <(git ls-files -z '*.md')
           docker run --rm -v "$GITHUB_WORKSPACE:/repo" -w /repo \
             lycheeverse/lychee@sha256:eaff3e0a13603c9a701accfcc84f44158bb77bf36ecfa4622b626056c3463892 \
-            --offline --include-fragments --no-progress $(git ls-files '*.md')
+            --offline --include-fragments --no-progress -- "${markdown_files[@]}"
 
   external:
     # Advisory weekly leg: full external resolution over Markdown plus the built
@@ -61,10 +63,11 @@ jobs:
         id: lychee
         continue-on-error: true
         run: |
+          mapfile -d '' markdown_files < <(git ls-files -z '*.md')
           docker run --rm -v "$GITHUB_WORKSPACE:/repo" -w /repo \
             lycheeverse/lychee@sha256:eaff3e0a13603c9a701accfcc84f44158bb77bf36ecfa4622b626056c3463892 \
             --no-progress --output /repo/lychee-report.md \
-            $(git ls-files '*.md') './out/**/*.html'
+            -- "${markdown_files[@]}" './out/**/*.html'
 
       - name: File or refresh the tracking issue on failures
         if: steps.lychee.outcome == 'failure'
