@@ -55,10 +55,11 @@ exclude_patterns = [
   # bootstrap that configures dotenv before its other imports load.
   "scripts/cloudfront_routing.js",
   "docker/apollo-server/server.mts",
-  # Root dependency-cruiser config: not under any eslint config block (it lives
-  # at the repo root, outside src/), so qlty's eslint only emits a "file ignored"
-  # warning. It is Prettier-formatted via `make format`.
+  # Root config files not under any eslint config block (they live at the repo
+  # root, outside src/), so qlty's eslint only emits a "file ignored" warning.
+  # They are Prettier-formatted via `make format`.
   ".dependency-cruiser.js",
+  "jest.config.ts",
 ]
 
 test_patterns = [

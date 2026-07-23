@@ -14,10 +14,10 @@ description: >-
 # Contract Testing Workflow
 
 Every user-service contract this repo consumes comes from **one** pin —
-`USER_SERVICE_VERSION` in [`.env`](../../.env). It feeds the GraphQL schema
+`USER_SERVICE_VERSION` in [`.env`](../../../.env). It feeds the GraphQL schema
 behind the Apollo mock, the OpenAPI spec behind the swagger page, and the
 Mockoon fixture behind e2e. The fetched artifacts are committed under
-[`contracts/`](../../contracts) so `docker build` and `make start` never depend
+[`contracts/`](../../../contracts) so `docker build` and `make start` never depend
 on `raw.githubusercontent.com` being reachable.
 
 ```bash

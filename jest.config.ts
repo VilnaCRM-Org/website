@@ -40,6 +40,7 @@ if (!(TEST_ENV in testMatchByEnv)) {
 const isIntegration = TEST_ENV === 'integration';
 const isServer = TEST_ENV === 'server';
 const isEdge = TEST_ENV === 'edge';
+const isClient = TEST_ENV === 'client';
 
 // jsdom lacks the Fetch API; the integration layer drives the real Apollo
 // HttpLink, so it runs in a jsdom variant that injects Node's fetch globals.
@@ -84,6 +85,22 @@ const EDGE_COVERAGE_THRESHOLD = {
   global: { branches: 100, functions: 100, lines: 100, statements: 100 },
 };
 
+// Bind the client (jsdom) and server (node) suites to a coverage floor (#351). Before
+// this, only the integration and edge layers had a threshold, so the bulk of the test
+// estate could lose tests or gain untested code indefinitely with no CI signal — coverage
+// could only ratchet down invisibly. These floors sit below the measured baseline
+// (client ~99% lines / ~94% branches, server ~93% lines / 60% branches over the small
+// apollo-server surface) with headroom for line-attribution variance; they are a ratchet
+// against erosion, not an aspirational target. Never lower them; raise them as coverage
+// improves.
+const CLIENT_COVERAGE_THRESHOLD = {
+  global: { branches: 92, functions: 95, lines: 97, statements: 97 },
+};
+
+const SERVER_COVERAGE_THRESHOLD = {
+  global: { branches: 55, functions: 70, lines: 90, statements: 90 },
+};
+
 const config: Config = {
   clearMocks: true,
   // Generate the gitignored pages/i18n/localization.json (#328) before
@@ -111,6 +128,11 @@ const config: Config = {
         coverageThreshold: EDGE_COVERAGE_THRESHOLD,
       }
     : {}),
+  // Client/server keep their default (imported-file) coverage scope; only the enforcement
+  // floor is added here (#351). Coverage is already collected globally, so this is zero
+  // added CI cost.
+  ...(isClient ? { coverageThreshold: CLIENT_COVERAGE_THRESHOLD } : {}),
+  ...(isServer ? { coverageThreshold: SERVER_COVERAGE_THRESHOLD } : {}),
   testMatch: testMatchByEnv[TEST_ENV],
   testPathIgnorePatterns: [
     '/node_modules/',
