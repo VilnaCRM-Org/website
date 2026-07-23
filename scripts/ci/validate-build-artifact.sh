@@ -39,12 +39,21 @@ if [ "${file_count}" -lt "${floor}" ]; then
   fail "only ${file_count} files in ${out_dir} (floor ${floor}); export looks truncated"
 fi
 
-# --- Static JS payload budget --------------------------------------------------
-# Guards against accidental heavy imports bloating the first-load bundle. Budget
-# is the current actual (~3.13 MB) + ~5% headroom; never raise it to absorb a
+# --- Static JS payload ---------------------------------------------------------
+# A real export ships many first-load chunks. An empty _next/static yields
+# js_bytes=0, which is under the upper budget below, and the file-count floor
+# above counts non-JS assets too -- so a JS-less export would pass green. Require
+# at least one regular .js file first, then enforce the byte budget. The budget
+# guards against accidental heavy imports bloating the first-load bundle: it is
+# the current actual (~3.13 MB) + ~5% headroom; never raise it to absorb a
 # regression -- trim the imports instead.
-js_bytes="$(find "${out_dir}/_next/static" -name '*.js' -printf '%s\n' |
-  awk '{ s += $1 } END { print s + 0 }')"
+read -r js_count js_bytes < <(
+  find "${out_dir}/_next/static" -type f -name '*.js' -printf '%s\n' |
+    awk '{ c += 1; s += $1 } END { print c + 0, s + 0 }'
+)
+if [ "${js_count}" -eq 0 ]; then
+  fail "no .js files under ${out_dir}/_next/static; the export shipped no JS payload"
+fi
 js_budget=3300000
 if [ "${js_bytes}" -gt "${js_budget}" ]; then
   fail "static JS is ${js_bytes} bytes, over budget ${js_budget}; trim imports (do not raise the budget)"
