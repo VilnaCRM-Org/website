@@ -1,0 +1,49 @@
+name: OpenSSF Scorecard
+
+on:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: '0 6 * * 1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  analysis:
+    # Continuous supply-chain posture measurement (#346): runs on main push and
+    # weekly, uploads SARIF to code scanning so regressions in pinning, token
+    # permissions, or dangerous-workflow patterns surface as alerts. This is a
+    # main-branch monitor with no pull_request trigger, so it never gates a PR.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      # Upload the results as code-scanning SARIF.
+      security-events: write
+      # Publish results to the public OpenSSF API (publish_results: true).
+      id-token: write
+      # Read workflow-run metadata for the Scorecard checks.
+      actions: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Run analysis
+        uses: ossf/scorecard-action@2d1146689b8cda280b9bc96326124645441f03bc # v2.4.4
+        with:
+          results_file: results.sarif
+          results_format: sarif
+          publish_results: true
+
+      - name: Upload SARIF to code scanning
+        uses: github/codeql-action/upload-sarif@7188fc363630916deb702c7fdcf4e481b751f97a # v3
+        with:
+          sarif_file: results.sarif
