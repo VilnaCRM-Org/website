@@ -5,7 +5,4 @@
 export function buildSchemaUrl(): string;
 export function fetchGraphqlSchema(url: string): Promise<string>;
 export function saveGraphqlSchema(sdl: string, filePath: string): Promise<void>;
-export function refreshGraphqlSchema(
-  url: string,
-  filePath: string
-): Promise<boolean>;
+export function refreshGraphqlSchema(url: string, filePath: string): Promise<boolean>;

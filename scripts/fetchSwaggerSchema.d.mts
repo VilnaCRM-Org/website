@@ -5,11 +5,5 @@
 export function buildSpecUrl(): string;
 export function fetchSwaggerYaml(url: string): Promise<string>;
 export function normalizeSpec(node: unknown): unknown;
-export function saveSwaggerJson(
-  yamlText: string,
-  filePath: string
-): Promise<void>;
-export function refreshSwaggerSchema(
-  url: string,
-  filePath: string
-): Promise<boolean>;
+export function saveSwaggerJson(yamlText: string, filePath: string): Promise<void>;
+export function refreshSwaggerSchema(url: string, filePath: string): Promise<boolean>;
