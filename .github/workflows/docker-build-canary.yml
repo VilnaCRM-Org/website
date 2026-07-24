@@ -15,12 +15,13 @@ concurrency:
 jobs:
   canary:
     # Detects builds broken by the outside world between PRs — vanished apk
-    # packages, registry rate-limit changes, stale base tags (#371). PR-time
-    # build-artifact.yml runs only when a PR is pushed and builds only the
-    # production image (`docker build --target production`); this canary runs on a
-    # schedule with no PR, and `make build` builds the FULL compose stack (Apollo,
-    # Mockoon, Playwright, MemoryLeak images) that the PR build never exercises.
-    # It files an owned issue instead of surfacing as a surprise red PR.
+    # packages, registry rate-limit changes, stale base tags (#371). It builds
+    # every image in the compose stack — dev, prod, apollo, mockoon, playwright,
+    # k6 and memory-leak, i.e. all six Dockerfiles — plus the extracted
+    # production artifact, on a schedule with no PR, so upstream breakage in ANY
+    # image is caught early and filed as an owned issue instead of a surprise red
+    # PR. (PR-time build-artifact.yml only runs on a push and only builds the
+    # production image.)
     runs-on: ubuntu-latest
     timeout-minutes: 40
     permissions:
@@ -32,10 +33,17 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Build the Docker image stack
-        run: make build
+      - name: Build every image in the compose stack
+        # All three compose files + the load profile so every Dockerfile is
+        # exercised, not just the default docker-compose.yml `dev` service.
+        run: |
+          docker compose \
+            -f docker-compose.yml \
+            -f docker-compose.test.yml \
+            -f docker-compose.memory-leak.yml \
+            --profile load build
 
-      - name: Build the production artifact
+      - name: Build and extract the production artifact
         run: CI=1 make build-out
 
       - name: File or refresh the canary issue on failure
