@@ -4,6 +4,13 @@ on:
   pull_request:
     branches:
       - main
+    # Re-run on title/body edits too (default types miss `edited`), so a title
+    # fixed or broken after opening is always re-validated.
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - edited
 
 permissions:
   contents: read
@@ -14,12 +21,15 @@ concurrency:
 
 jobs:
   commitlint:
-    # Skip bot authors: Dependabot/renovate use `deps(deps):` messages whose
+    # Skip bot-authored PRs: Dependabot/renovate use `deps(deps):` messages whose
     # type is outside the allowed list and whose issue number sits after the
     # colon, so they fail the repo's custom check-task-number-rule. Gating them
-    # would red-wall the weekly dependency PRs. Human commits and PR titles must
-    # still follow `type(#NNN): summary`.
-    if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
+    # would red-wall the weekly dependency PRs. Keyed on the PR author (not
+    # github.actor) so a human reopening a bot PR still skips. Human commits and
+    # PR titles must follow `type(#NNN): summary`.
+    if: >-
+      github.event.pull_request.user.login != 'dependabot[bot]' &&
+      github.event.pull_request.user.login != 'renovate[bot]'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -51,20 +61,27 @@ jobs:
         run: |
           # Install the exact Bun pinned in package.json's packageManager field,
           # then install locked deps (mirrors static-testing.yml). commitlint and
-          # its config-conventional preset resolve from bun.lock, so the repo's
-          # commitlint.config.js — including the custom check-task-number-rule —
-          # is what runs.
+          # its config-conventional preset resolve from bun.lock.
           npm install -g "$(node -p "require('./package.json').packageManager.split('+')[0]")"
           bun install --frozen-lockfile
+
+      - name: Extract the trusted base commitlint config
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        # Validate against the base branch's config, never the PR's own copy, so a
+        # PR cannot weaken the very rules it must satisfy. Written into the repo
+        # root so `extends: @commitlint/config-conventional` resolves from
+        # node_modules; .cjs keeps it CommonJS regardless of package.json type.
+        run: git show "$BASE_SHA:commitlint.config.js" > commitlint.base.config.cjs
 
       - name: Lint the PR commit range
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: bun x commitlint --from "$BASE_SHA" --to "$HEAD_SHA" --verbose
+        run: bun x commitlint --config commitlint.base.config.cjs --from "$BASE_SHA" --to "$HEAD_SHA" --verbose
 
       - name: Lint the PR title (squash merges use it as the commit message)
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
         # Title passed via env, never interpolated into the script body.
-        run: printf '%s' "$PR_TITLE" | bun x commitlint --verbose
+        run: printf '%s' "$PR_TITLE" | bun x commitlint --config commitlint.base.config.cjs --verbose

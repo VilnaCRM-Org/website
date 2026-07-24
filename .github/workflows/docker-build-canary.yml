@@ -14,11 +14,13 @@ concurrency:
 
 jobs:
   canary:
-    # Catches builds broken by the outside world between PRs — upstream apk
-    # packages vanishing, registry rate-limit changes, stale base tags (#371).
-    # The host-mode PR build (CI=1 make build-out) misses the Docker/apk/registry
-    # class entirely, so this exercises the real Docker build path nightly and
-    # files an owned issue instead of surfacing as a surprise red PR.
+    # Detects builds broken by the outside world between PRs — vanished apk
+    # packages, registry rate-limit changes, stale base tags (#371). PR-time
+    # build-artifact.yml runs only when a PR is pushed and builds only the
+    # production image (`docker build --target production`); this canary runs on a
+    # schedule with no PR, and `make build` builds the FULL compose stack (Apollo,
+    # Mockoon, Playwright, MemoryLeak images) that the PR build never exercises.
+    # It files an owned issue instead of surfacing as a surprise red PR.
     runs-on: ubuntu-latest
     timeout-minutes: 40
     permissions:
@@ -41,6 +43,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # Ensure the tracking label exists so gh issue create cannot fail on an
+          # unknown label (idempotent; also provisioned as repo metadata).
+          gh label create ci-canary --color BFD4F2 \
+            --description "Nightly Docker build canary failures" 2>/dev/null || true
           title='Docker build canary failed'
           run_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
           existing="$(gh issue list --label ci-canary --state open \

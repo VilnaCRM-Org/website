@@ -57,7 +57,9 @@ jobs:
         run: make test-fuzz
 
       - name: File or refresh the tracking issue on failure
-        if: failure()
+        # Only a genuine property failure, not a checkout/install/setup failure —
+        # otherwise a setup blip would file a false "property failure" issue.
+        if: failure() && steps.fuzz.outcome == 'failure'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

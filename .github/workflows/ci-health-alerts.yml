@@ -14,7 +14,10 @@ permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.workflow_run.id || github.run_id }}
+  # One workflow-wide group (not per-event) so the read/create/close sequences
+  # that share ci-alert issue state run serially — concurrent runs cannot
+  # duplicate an issue or close one based on stale state.
+  group: ${{ github.workflow }}
   cancel-in-progress: false
 
 jobs:
@@ -29,17 +32,25 @@ jobs:
     permissions:
       contents: read
       issues: write
-      actions: read
+      # The commits/{ref}/check-runs endpoint used by the red-main sweep needs
+      # the Checks read scope.
+      checks: read
     steps:
-      - name: Alert on a failed deploy or release run
+      - name: Alert on a failed or timed-out deploy or release run
         if: >-
           github.event_name == 'workflow_run' &&
-          github.event.workflow_run.conclusion == 'failure'
+          (github.event.workflow_run.conclusion == 'failure' ||
+          github.event.workflow_run.conclusion == 'timed_out')
         env:
           GH_TOKEN: ${{ github.token }}
           WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
           RUN_URL: ${{ github.event.workflow_run.html_url }}
         run: |
+          # Ensure the tracking label exists so gh issue create cannot fail on an
+          # unknown label (idempotent; the label is also provisioned as repo
+          # metadata).
+          gh label create ci-alert --color B60205 \
+            --description "Deploy/release/red-main CI health alerts" 2>/dev/null || true
           title="CI health: '$WORKFLOW_NAME' workflow is failing"
           existing="$(gh issue list --label ci-alert --state open \
             --search "$title in:title" --json number --jq '.[0].number')"
@@ -74,10 +85,18 @@ jobs:
           # Daily approximation of the "main red > 24h" signal: the sweep runs
           # once a day and refreshes (comments on) the same issue rather than
           # duplicating, so a persistently red main keeps one open issue that
-          # auto-closes on the first green sweep.
+          # auto-closes on the first fully-green sweep.
+          gh label create ci-alert --color B60205 \
+            --description "Deploy/release/red-main CI health alerts" 2>/dev/null || true
           sha="$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq '.sha')"
-          failed="$(gh api "repos/$GITHUB_REPOSITORY/commits/$sha/check-runs" \
-            --jq '[.check_runs[] | select(.conclusion == "failure" or .conclusion == "timed_out")] | length')"
+          # per_page=100 captures every check-run for the commit in one page
+          # (this repo has well under 100). failed = completed red; incomplete =
+          # still queued/in-progress (no conclusion yet).
+          runs="$(gh api "repos/$GITHUB_REPOSITORY/commits/$sha/check-runs?per_page=100")"
+          failed="$(printf '%s' "$runs" | \
+            jq '[.check_runs[] | select(.conclusion == "failure" or .conclusion == "timed_out")] | length')"
+          incomplete="$(printf '%s' "$runs" | \
+            jq '[.check_runs[] | select(.status != "completed")] | length')"
           title='CI health: main is red'
           existing="$(gh issue list --label ci-alert --state open \
             --search "$title in:title" --json number --jq '.[0].number')"
@@ -89,7 +108,9 @@ jobs:
               gh issue create --label ci-alert --title "$title" \
                 --body "The default branch has $failed failing check-run(s) at $sha: $commit_url"
             fi
-          elif [ -n "$existing" ]; then
+          elif [ "$incomplete" -eq 0 ] && [ -n "$existing" ]; then
+            # Only close once every check-run has completed and none failed — a
+            # commit whose checks are still running is not "recovered".
             gh issue comment "$existing" --body "main is green again at $sha. Closing."
             gh issue close "$existing"
           fi
