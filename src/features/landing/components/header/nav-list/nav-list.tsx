@@ -7,13 +7,14 @@ import styles from './styles';
 import { NavListProps } from './types';
 
 function NavList({ navItems, handleClick }: NavListProps): React.ReactElement {
-  if (navItems.length === 0) return <>Something went wrong</>;
+  const [firstItem] = navItems;
+  if (firstItem === undefined) return <>Something went wrong</>;
 
   const wrapperStyle: CSSProperties =
-    navItems[0].type === 'header' ? styles.wrapper : styles.drawerWrapper;
+    firstItem.type === 'header' ? styles.wrapper : styles.drawerWrapper;
 
   const contentStyle: CSSProperties =
-    navItems[0].type === 'header' ? styles.content : styles.drawerContent;
+    firstItem.type === 'header' ? styles.content : styles.drawerContent;
 
   return (
     <Stack component="nav" sx={wrapperStyle}>

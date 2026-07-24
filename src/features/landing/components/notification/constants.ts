@@ -45,11 +45,14 @@ export const DIMENSIONS: DimensionsType = {
     LG: '40.45rem',
   },
 };
-export const Z_INDICES: Record<string, number> = {
+// Concrete keys (not `Record<string, number>`) so each lookup is a definite
+// `number` under `noUncheckedIndexedAccess` — a `Record` index signature would
+// widen every access to `number | undefined` and break the MUI `sx` typing.
+export const Z_INDICES = {
   NOTIFICATION_SECTION: 1000,
   MESSAGE_CONTAINER: 100,
   MESSAGE_TITLE: 100,
   GEARS: 5,
   BOTTOM_IMG_BOX: -1,
   SUCCESS_BOX: 3,
-};
+} as const;

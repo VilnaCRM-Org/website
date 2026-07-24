@@ -92,7 +92,10 @@ export interface BasicEndpointElements {
   requestUrl: Locator;
   responseBody: Locator;
 }
-export const TEST_USERS: Record<string, User> = {
+// `satisfies` (not a `Record<string, User>` annotation) keeps each entry
+// conformance-checked while leaving lookups as definite, non-`undefined` types
+// under `noUncheckedIndexedAccess`.
+export const TEST_USERS = {
   VALID: {
     email: 'user@example.com',
     initials: 'NS',
@@ -108,7 +111,7 @@ export const TEST_USERS: Record<string, User> = {
     initials: 'TU',
     password: TEST_PASSWORDS.WEAK,
   },
-} as const;
+} as const satisfies Record<string, User>;
 
 export const errorMessages: { NETWORK: string; LOAD: string; FETCH: string } = {
   NETWORK: 'TypeError: NetworkError when attempting to fetch resource',

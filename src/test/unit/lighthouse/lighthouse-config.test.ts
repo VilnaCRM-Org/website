@@ -29,7 +29,12 @@ type LhciConfig = {
 const desktop = desktopConfig as unknown as LhciConfig;
 const mobile = mobileConfig as unknown as LhciConfig;
 
-const configs: Array<[string, LhciConfig]> = [
+// A finite key union (not `string`) so `EXPECTED[name]` stays a definite value
+// under `noUncheckedIndexedAccess` — a `Record` over a literal union is a mapped
+// type, not an index signature.
+type ConfigName = 'desktop' | 'mobile';
+
+const configs: Array<[ConfigName, LhciConfig]> = [
   ['desktop', desktop],
   ['mobile', mobile],
 ];
@@ -53,7 +58,7 @@ type Budgets = {
 };
 
 // Ratcheted budgets locked per config/page — mirror lighthouserc.*.js exactly.
-const EXPECTED: Record<string, { home: Budgets; swagger: Budgets }> = {
+const EXPECTED: Record<ConfigName, { home: Budgets; swagger: Budgets }> = {
   desktop: {
     home: {
       performance: 0.9,
@@ -129,7 +134,9 @@ function matrixOf(config: LhciConfig): MatrixEntry[] {
 function entryFor(config: LhciConfig, url: string): MatrixEntry {
   const matches = matrixOf(config).filter(entry => new RegExp(entry.matchingUrlPattern).test(url));
   expect(matches).toHaveLength(1);
-  return matches[0];
+  const [firstMatch] = matches;
+  if (firstMatch === undefined) throw new Error(`No matrix entry matched ${url}`);
+  return firstMatch;
 }
 
 describe('lighthouse config', () => {

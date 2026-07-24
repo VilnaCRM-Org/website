@@ -33,7 +33,7 @@ export interface UiTypographyProps {
     | 'h5'
     | 'h6'
     | 'label';
-  id?: string;
+  id?: string | undefined;
   role?: React.AriaRole;
   htmlFor?: string;
 }

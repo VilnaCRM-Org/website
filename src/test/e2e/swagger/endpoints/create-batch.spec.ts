@@ -73,7 +73,7 @@ async function verifySuccessResponse(elements: BatchUserEndpointElements): Promi
   const jsonMatch: RegExpMatchArray | null = responseText.match(
     /-d\s+['"]([\s\S]*?)['"]\s*(?:\\\s*)?$/
   );
-  if (!jsonMatch) {
+  if (!jsonMatch || jsonMatch[1] === undefined) {
     throw new Error(`Failed to extract JSON from response: ${responseText}`);
   }
 

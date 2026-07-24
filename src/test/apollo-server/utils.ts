@@ -2,7 +2,7 @@ import { CreateUserInput, CreateUserResponse, OptionalPhoneInput } from './types
 
 export async function handleResponse<T extends { errors?: { message: string }[] }>(
   response: Response
-): Promise<{ result: T; errors?: { message: string }[] }> {
+): Promise<{ result: T; errors?: { message: string }[] | undefined }> {
   const result: T = await response.json();
   return { result, errors: result.errors };
 }

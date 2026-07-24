@@ -7,12 +7,12 @@ import styles from './styles';
 import { CardList } from './types';
 
 function CardGrid({ cardList, hoverCardContent }: CardList): React.ReactElement | null {
-  if (cardList.length === 0) {
+  const [firstCard] = cardList;
+  if (firstCard === undefined) {
     return null;
   }
 
-  const grid: CSSProperties =
-    cardList[0].type === 'smallCard' ? styles.smallGrid : styles.largeGrid;
+  const grid: CSSProperties = firstCard.type === 'smallCard' ? styles.smallGrid : styles.largeGrid;
 
   return (
     <Grid sx={grid}>
