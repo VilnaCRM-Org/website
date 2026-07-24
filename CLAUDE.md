@@ -70,6 +70,7 @@ make test-e2e           # Playwright E2E (prod stack + Mockoon API mock)
 make test-visual        # Playwright visual regression
 make test-visual-update # Refresh visual snapshots after a reviewed UI change
 make test-mutation      # Stryker mutation testing
+make test-fuzz          # fast-check property-based fuzz suites (high FC_NUM_RUNS; nightly deep pass)
 make test-bats          # Bats coverage for Makefile / CI shell flows
 make test-memory-leak   # memlab leak detection
 make load-tests         # K6 load tests (alias: make test-load)
@@ -81,6 +82,10 @@ Unit suites accept `CI=1` to run on the host without Docker (e.g. `CI=1 make
 test-unit-all`). E2E and visual specs run Playwright inside the prod/test compose stack;
 E2E uses Mockoon to mock the API. The test-layer map and coverage policy live in
 [`agents.md`](agents.md).
+
+Property-based suites (`src/test/unit/*.property.test.ts`, fast-check) run inside the unit
+suites on every PR at a small run count and re-run nightly via `make test-fuzz` (the `fuzz
+testing` workflow) at a high `FC_NUM_RUNS` for a deeper input-space pass.
 
 ### Running a single unit test
 

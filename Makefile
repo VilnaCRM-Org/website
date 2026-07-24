@@ -116,6 +116,14 @@ MD_LINT_ARGS                = -i CHANGELOG.md -i "test-results/**/*.md" -i "play
 JEST_FLAGS                  = --verbose
 BATS_FORMATTER              ?= pretty
 
+# Property-based fuzz suites (src/test/unit/*.property.test.ts). On PR they run
+# inside the normal unit suite at the file's default run count (fast); the
+# nightly fuzz workflow calls `make test-fuzz` with a high FC_NUM_RUNS for a deep
+# pass. Coverage is disabled here: the fuzz target runs a filtered subset, so the
+# global coverage thresholds (enforced by the full unit suite) do not apply.
+FC_NUM_RUNS                 ?= 100000
+FUZZ_TEST_PATTERN           = property\.test
+
 NETWORK_NAME                = website-network
 
 # ===== CI orchestration (issue #305 — CRM command-surface parity) =====
@@ -418,6 +426,9 @@ test-unit-edge: ## Run edge-script unit tests using Jest (Node.js env, TEST_ENV=
 test-integration: ## Run the integration layer using Jest (TEST_ENV=integration, target: tests/integration)
 	$(UNIT_TESTS) TEST_ENV=integration $(JEST_BIN) $(JEST_FLAGS)
 
+test-fuzz: ## Run property-based fuzz suites at a high run count (FC_NUM_RUNS); nightly deep pass, coverage off
+	env TEST_ENV=client FC_NUM_RUNS=$(FC_NUM_RUNS) $(JEST_BIN) $(JEST_FLAGS) --coverage=false $(FUZZ_TEST_PATTERN)
+
 test-integration-watch: ## Run integration tests in watch mode (TEST_ENV=integration)
 	$(UNIT_TESTS) TEST_ENV=integration $(JEST_BIN) --watch
 
@@ -455,7 +466,7 @@ ci-test-integration: ## Run integration tests directly assuming deps are install
 	ci-test-memory-leak ci-test-load ci-test-lighthouse-desktop \
 	ci-test-lighthouse-mobile ci-test-prod ensure-dev start-prod-clean \
 	test-load test-load-swagger test-mutation-shard merge-mutation-reports \
-	pr-comments
+	pr-comments test-fuzz
 
 ci-setup: create-network ## Prepare the shared dev environment for CI-oriented checks
 	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) up $(CI_SETUP_UP_FLAGS) dev && $(MAKE) wait-for-dev
