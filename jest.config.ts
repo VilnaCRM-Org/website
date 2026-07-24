@@ -31,10 +31,13 @@ const testMatchByEnv: Record<string, string[]> = {
 };
 
 // Fail fast on an unrecognised TEST_ENV (e.g. a typo in a CI job) instead of
-// silently falling back to the client layer and running the wrong suite. The
-// value-based guard also narrows the lookup to a definite `string[]` under
-// `noUncheckedIndexedAccess`.
-const resolvedTestMatch: string[] | undefined = testMatchByEnv[TEST_ENV];
+// silently falling back to the client layer and running the wrong suite. Guard
+// on an own key so inherited names like `constructor`/`toString` don't resolve
+// to Object.prototype members; the value-based check also narrows the lookup to
+// a definite `string[]` under `noUncheckedIndexedAccess`.
+const resolvedTestMatch: string[] | undefined = Object.hasOwn(testMatchByEnv, TEST_ENV)
+  ? testMatchByEnv[TEST_ENV]
+  : undefined;
 if (resolvedTestMatch === undefined) {
   const supported = Object.keys(testMatchByEnv).join(', ');
   throw new Error(`Unsupported TEST_ENV: "${TEST_ENV}". Expected one of: ${supported}.`);

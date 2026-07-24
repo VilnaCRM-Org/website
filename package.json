@@ -112,11 +112,11 @@
     "safari >= 16.4"
   ],
   "lint-staged": {
-    "*.{ts,tsx}": [
+    "*.{ts,tsx,js,jsx,mjs,cjs}": [
       "prettier --write --ignore-path .prettierignore",
       "eslint --fix"
     ],
-    "*.{js,jsx,mjs,cjs,json,css,scss,md}": "prettier --write --ignore-path .prettierignore"
+    "*.{json,css,scss,md}": "prettier --write --ignore-path .prettierignore"
   },
   "version": "0.3.0"
 }
