@@ -59,7 +59,9 @@ describe('integration: NavList render', () => {
 
     const { getByText } = render(<NavList navItems={headerNavList} handleClick={clickSpy} />);
 
-    await userEvent.click(getByText(t(headerNavList[0].title)));
+    const [firstNavItem] = headerNavList;
+    if (firstNavItem === undefined) throw new Error('headerNavList is empty');
+    await userEvent.click(getByText(t(firstNavItem.title)));
 
     expect(clickSpy).toHaveBeenCalledTimes(1);
     expect(clickSpy).toHaveBeenCalledWith('#Advantages');

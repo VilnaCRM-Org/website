@@ -171,7 +171,7 @@ describe('AuthForm', () => {
 
     await waitFor(() => {
       expect(onSubmit).toHaveBeenCalled();
-      expect(onSubmit.mock.calls[0][0]).toMatchObject({
+      expect(onSubmit.mock.calls[0]?.[0]).toMatchObject({
         Email: testEmail,
         FullName: testInitials,
         Password: testPassword,

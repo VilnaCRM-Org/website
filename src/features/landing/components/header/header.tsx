@@ -47,7 +47,10 @@ function useScrollOnRouteChange(router: NextRouter): void {
   useEffect(() => {
     const handleScroll: (url: string) => void = (url: string): void => {
       if (url.includes('#')) {
-        const id: string = url.split('#')[1];
+        // Guarded by `includes('#')`, so split always yields a second segment;
+        // assert it (rather than a `?? ''` fallback that adds an unreachable,
+        // coverage-breaking branch) under `noUncheckedIndexedAccess`.
+        const id: string = url.split('#')[1]!;
         scrollToAnchor(`#${id}`);
       }
     };

@@ -13,6 +13,16 @@ import { NavItemProps } from '../../../../src/features/landing/types/header/navi
 const logoAltKey: string = 'header.logo_alt';
 const logoAlt: string = i18next.t(logoAltKey);
 
+// `noUncheckedIndexedAccess` types `headerNavList[i]` as possibly-undefined;
+// this guards the fixed test index once instead of asserting non-null per case.
+function getHeaderNavItem(index: number): NavItemProps {
+  const item: NavItemProps | undefined = headerNavList[index];
+  if (item === undefined) {
+    throw new Error(`headerNavList[${index}] is required for this test`);
+  }
+  return item;
+}
+
 jest.mock('next/router', () => ({ useRouter: jest.fn() }));
 
 jest.mock('../../../../src/features/landing/helpers/scrollToAnchor', () => ({
@@ -116,7 +126,7 @@ describe('integration: Header navigation', () => {
 
   it('pushes to home then scrolls when not on home page', async () => {
     const { getByText } = render(<Header />);
-    const targetElement: NavItemProps = headerNavList[1];
+    const targetElement: NavItemProps = getHeaderNavItem(1);
     const { link } = targetElement;
 
     await user.click(getByText(t(targetElement.title)));
@@ -131,7 +141,7 @@ describe('integration: Header navigation', () => {
     routerMock.pathname = '/';
 
     const { getByText } = render(<Header />);
-    const targetElement: NavItemProps = headerNavList[1];
+    const targetElement: NavItemProps = getHeaderNavItem(1);
     const { link } = targetElement;
 
     await user.click(getByText(t(targetElement.title)));
@@ -145,7 +155,7 @@ describe('integration: Header navigation', () => {
     routerMock.push.mockRejectedValueOnce(new Error('push failed'));
 
     const { getByText } = render(<Header />);
-    const target: NavItemProps = headerNavList[1];
+    const target: NavItemProps = getHeaderNavItem(1);
 
     await user.click(getByText(t(target.title)));
 
