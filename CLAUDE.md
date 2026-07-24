@@ -115,14 +115,15 @@ lowered threshold — fix the root cause.
 
 ### Code Metrics (rust-code-analysis, issue #224)
 
-Issue #224 introduces a code-complexity gate built on Mozilla rust-code-analysis —
+Issue #224 added a code-complexity gate built on Mozilla rust-code-analysis —
 `make lint-metrics`, the policy file `config/metrics-policy.json`, and the CI workflow
-`.github/workflows/rust-code-analysis.yml`. This gate is NOT yet present on `main`; the
-guidance here applies once #224 lands. The authoritative thresholds live in
-`config/metrics-policy.json` and mirror the CRM sister repo's strict budgets; once #224
-lands the same policy file is applied by the local target and the CI workflow. Hard metrics
-(cyclomatic, cognitive, ABC, argument and exit counts, function and file size, Halstead,
-Maintainability Index) will block CI; review-tier metrics are computed but do not.
+`.github/workflows/rust-code-analysis.yml`. This gate is live on `main` (the `lint-metrics`
+Makefile target and the `rust-code-analysis.yml` workflow both ship there). The
+authoritative thresholds live in `config/metrics-policy.json` and mirror the CRM sister
+repo's strict budgets; the same policy file is applied by the local target and the CI
+workflow. Hard metrics (cyclomatic, cognitive, ABC, argument and exit counts, function and
+file size, Halstead, Maintainability Index) block CI; review-tier metrics are computed but
+do not.
 
 Do not lower a threshold, exclude a file, or suppress a metric — reduce the complexity
 instead. Read the policy file for the current numbers rather than memorizing them, and see
