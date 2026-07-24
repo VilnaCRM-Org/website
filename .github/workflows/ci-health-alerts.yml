@@ -1,0 +1,95 @@
+name: ci health alerts
+
+on:
+  workflow_run:
+    workflows:
+      - website
+      - Generate Changelog and Create Release
+    types:
+      - completed
+  schedule:
+    - cron: '0 6 * * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.workflow_run.id || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  alert:
+    # Post-merge detection half of CI health (#365): even a perfect PR gate says
+    # nothing once main, the deploy workflow, or the release workflow breaks and
+    # nobody is told. This files/refreshes a labelled tracking issue on those
+    # failures and on a red default branch, and closes it on recovery. It has no
+    # pull_request trigger, so it never gates a PR.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+      actions: read
+    steps:
+      - name: Alert on a failed deploy or release run
+        if: >-
+          github.event_name == 'workflow_run' &&
+          github.event.workflow_run.conclusion == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+        run: |
+          title="CI health: '$WORKFLOW_NAME' workflow is failing"
+          existing="$(gh issue list --label ci-alert --state open \
+            --search "$title in:title" --json number --jq '.[0].number')"
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "Still failing: $RUN_URL"
+          else
+            gh issue create --label ci-alert --title "$title" \
+              --body "The '$WORKFLOW_NAME' workflow failed. Latest run: $RUN_URL"
+          fi
+
+      - name: Close the alert when the workflow recovers
+        if: >-
+          github.event_name == 'workflow_run' &&
+          github.event.workflow_run.conclusion == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
+        run: |
+          title="CI health: '$WORKFLOW_NAME' workflow is failing"
+          existing="$(gh issue list --label ci-alert --state open \
+            --search "$title in:title" --json number --jq '.[0].number')"
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "Recovered: the workflow is green again. Closing."
+            gh issue close "$existing"
+          fi
+
+      - name: Sweep for a red default branch
+        if: github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Daily approximation of the "main red > 24h" signal: the sweep runs
+          # once a day and refreshes (comments on) the same issue rather than
+          # duplicating, so a persistently red main keeps one open issue that
+          # auto-closes on the first green sweep.
+          sha="$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq '.sha')"
+          failed="$(gh api "repos/$GITHUB_REPOSITORY/commits/$sha/check-runs" \
+            --jq '[.check_runs[] | select(.conclusion == "failure" or .conclusion == "timed_out")] | length')"
+          title='CI health: main is red'
+          existing="$(gh issue list --label ci-alert --state open \
+            --search "$title in:title" --json number --jq '.[0].number')"
+          commit_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/commit/$sha"
+          if [ "$failed" -gt 0 ]; then
+            if [ -n "$existing" ]; then
+              gh issue comment "$existing" --body "main still red at $sha ($failed failing check-run(s)): $commit_url"
+            else
+              gh issue create --label ci-alert --title "$title" \
+                --body "The default branch has $failed failing check-run(s) at $sha: $commit_url"
+            fi
+          elif [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "main is green again at $sha. Closing."
+            gh issue close "$existing"
+          fi
