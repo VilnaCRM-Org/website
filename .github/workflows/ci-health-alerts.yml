@@ -14,10 +14,11 @@ permissions:
   contents: read
 
 concurrency:
-  # One workflow-wide group (not per-event) so the read/create/close sequences
-  # that share ci-alert issue state run serially — concurrent runs cannot
-  # duplicate an issue or close one based on stale state.
-  group: ${{ github.workflow }}
+  # Keyed on the ref; every trigger here operates on main, so runs serialize on
+  # the shared ci-alert issue state (no duplicate/stale-close races) without
+  # blocking unrelated refs. cancel-in-progress is false so a queued alert run is
+  # never dropped.
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -32,9 +33,10 @@ jobs:
     permissions:
       contents: read
       issues: write
-      # The commits/{ref}/check-runs endpoint used by the red-main sweep needs
-      # the Checks read scope.
+      # commits/{ref}/check-runs (red-main sweep) needs Checks read; gh run list
+      # (recovery confirmation) needs Actions read.
       checks: read
+      actions: read
     steps:
       - name: Alert on a failed or timed-out deploy or release run
         if: >-
@@ -72,8 +74,14 @@ jobs:
           title="CI health: '$WORKFLOW_NAME' workflow is failing"
           existing="$(gh issue list --label ci-alert --state open \
             --search "$title in:title" --json number --jq '.[0].number')"
-          if [ -n "$existing" ]; then
-            gh issue comment "$existing" --body "Recovered: the workflow is green again. Closing."
+          [ -n "$existing" ] || exit 0
+          # Guard against an out-of-order (stale) success event closing an issue a
+          # newer failed run opened: close only if the LATEST run of this workflow
+          # on main is itself successful.
+          latest="$(gh run list --workflow "$WORKFLOW_NAME" --branch main --limit 1 \
+            --json conclusion --jq '.[0].conclusion')"
+          if [ "$latest" = "success" ]; then
+            gh issue comment "$existing" --body "Recovered: '$WORKFLOW_NAME' is green again (latest main run succeeded). Closing."
             gh issue close "$existing"
           fi
 
@@ -89,14 +97,19 @@ jobs:
           gh label create ci-alert --color B60205 \
             --description "Deploy/release/red-main CI health alerts" 2>/dev/null || true
           sha="$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq '.sha')"
-          # per_page=100 captures every check-run for the commit in one page
-          # (this repo has well under 100). failed = completed red; incomplete =
-          # still queued/in-progress (no conclusion yet).
+          # per_page=100 captures every check-run for the commit in one page (this
+          # repo has well under 100). failed = any completed run whose conclusion
+          # is not a healthy one (success/neutral/skipped) — this catches
+          # cancelled/action_required/stale/timed_out, not only failure.
+          # incomplete = still queued/in-progress (no conclusion yet).
           runs="$(gh api "repos/$GITHUB_REPOSITORY/commits/$sha/check-runs?per_page=100")"
-          failed="$(printf '%s' "$runs" | \
-            jq '[.check_runs[] | select(.conclusion == "failure" or .conclusion == "timed_out")] | length')"
-          incomplete="$(printf '%s' "$runs" | \
-            jq '[.check_runs[] | select(.status != "completed")] | length')"
+          failed="$(printf '%s' "$runs" | jq '[.check_runs[]
+            | select(.status == "completed"
+              and .conclusion != "success"
+              and .conclusion != "neutral"
+              and .conclusion != "skipped")] | length')"
+          incomplete="$(printf '%s' "$runs" | jq '[.check_runs[]
+            | select(.status != "completed")] | length')"
           title='CI health: main is red'
           existing="$(gh issue list --label ci-alert --state open \
             --search "$title in:title" --json number --jq '.[0].number')"
@@ -109,7 +122,7 @@ jobs:
                 --body "The default branch has $failed failing check-run(s) at $sha: $commit_url"
             fi
           elif [ "$incomplete" -eq 0 ] && [ -n "$existing" ]; then
-            # Only close once every check-run has completed and none failed — a
+            # Close only once every check-run has completed and none is red — a
             # commit whose checks are still running is not "recovered".
             gh issue comment "$existing" --body "main is green again at $sha. Closing."
             gh issue close "$existing"

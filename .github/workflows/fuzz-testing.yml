@@ -63,6 +63,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # Ensure the tracking label exists so gh issue create cannot fail on an
+          # unknown label (idempotent; test-effectiveness is provisioned already).
+          gh label create test-effectiveness --color 0E8A16 \
+            --description "Test-effectiveness gaps" 2>/dev/null || true
           title='Nightly fuzz run detected a property failure'
           run_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
           existing="$(gh issue list --label test-effectiveness --state open \
