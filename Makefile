@@ -415,6 +415,12 @@ test-unit-server: ## Run server-side unit tests for Apollo using Jest (Node.js e
 test-unit-edge: ## Run edge-script unit tests using Jest (Node.js env, TEST_ENV=edge, target: $(TEST_DIR_EDGE))
 	$(UNIT_TESTS) TEST_ENV=edge $(JEST_BIN) $(JEST_FLAGS) $(TEST_DIR_EDGE)
 
+test-fuzz: ## Run the client unit suite with the property suites at high fast-check run counts (FC_NUM_RUNS, default 100000) — the nightly fuzz leg of #347
+	# Runs the full client suite so Jest coverage and its thresholds stay
+	# enforced; FC_NUM_RUNS raises only the fast-check property suites' iteration
+	# count (other suites ignore it), turning this into the deep fuzz pass.
+	$(UNIT_TESTS) TEST_ENV=client FC_NUM_RUNS=$${FC_NUM_RUNS:-100000} $(JEST_BIN) $(JEST_FLAGS)
+
 test-integration: ## Run the integration layer using Jest (TEST_ENV=integration, target: tests/integration)
 	$(UNIT_TESTS) TEST_ENV=integration $(JEST_BIN) $(JEST_FLAGS)
 

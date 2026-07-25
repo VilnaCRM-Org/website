@@ -1,0 +1,67 @@
+name: docker build canary
+
+on:
+  schedule:
+    - cron: '0 1 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  canary:
+    # Detects builds broken by the outside world between PRs — vanished apk
+    # packages, registry rate-limit changes, stale base tags (#371). It builds
+    # every image in the compose stack — dev, prod, apollo, mockoon, playwright,
+    # k6 and memory-leak, i.e. all six Dockerfiles — plus the extracted
+    # production artifact, on a schedule with no PR, so upstream breakage in ANY
+    # image is caught early and filed as an owned issue instead of a surprise red
+    # PR. (PR-time build-artifact.yml only runs on a push and only builds the
+    # production image.)
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Build every image in the compose stack
+        # All three compose files + the load profile so every Dockerfile is
+        # exercised, not just the default docker-compose.yml `dev` service.
+        run: |
+          docker compose \
+            -f docker-compose.yml \
+            -f docker-compose.test.yml \
+            -f docker-compose.memory-leak.yml \
+            --profile load build
+
+      - name: Build and extract the production artifact
+        run: CI=1 make build-out
+
+      - name: File or refresh the canary issue on failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Ensure the tracking label exists so gh issue create cannot fail on an
+          # unknown label (idempotent; also provisioned as repo metadata).
+          gh label create ci-canary --color BFD4F2 \
+            --description "Nightly Docker build canary failures" 2>/dev/null || true
+          title='Docker build canary failed'
+          run_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          existing="$(gh issue list --label ci-canary --state open \
+            --search "$title in:title" --json number --jq '.[0].number')"
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "Canary still red: $run_url"
+          else
+            gh issue create --label ci-canary --title "$title" \
+              --body "Nightly Docker build canary is red: $run_url"
+          fi

@@ -37,6 +37,7 @@ test-unit-all	ci	.github/workflows/unit-testing.yml	Executed directly by the uni
 test-unit-client	ci	.github/workflows/unit-testing.yml	Executed through `make test-unit-all`, which depends on `test-unit-client`.
 test-unit-server	ci	.github/workflows/unit-testing.yml	Executed through `make test-unit-all`, which depends on `test-unit-server`.
 test-unit-edge	ci	.github/workflows/unit-testing.yml	Executed through `make test-unit-all`, which depends on `test-unit-edge`.
+test-fuzz	ci	.github/workflows/fuzz-testing.yml	Executed directly by the nightly fuzz workflow at FC_NUM_RUNS=100000.
 test-bats	ci	.github/workflows/bats-testing.yml	Executed directly by the dedicated Bats PR workflow.
 test-memory-leak	ci	.github/workflows/memory-leak-testing.yml	Executed directly by the memory leak workflow.
 memory-leak-dind	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker Compose commands.
