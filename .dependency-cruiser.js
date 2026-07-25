@@ -44,7 +44,7 @@ module.exports = {
           '(^|/)jest[.]config[.]ts$',
           '(^|/)jest[.]mutation[.]config[.]ts$',
           '(^|/)babel-jest[.]config[.]js$',
-          '(^|/)i18n[.]js$',
+          '(^|/)i18n[.]ts$',
           '(^|/)mutation[.]js$',
           '(^|/)checkNodeVersion[.]js$',
           '(^|/)lighthouserc[.][^/]+[.]js$',

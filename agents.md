@@ -139,6 +139,22 @@ Prefer meaningful behavior assertions over shallow rendering or snapshot-only co
 - Treat snapshots and screenshots as a supplement that guards appearance; the load-bearing
   assertions must check behavior.
 
+## Storybook Story Coverage
+
+Storybook is the composability and visual-review contract for the UI. Story coverage is
+mandatory, not optional:
+
+- Every renderable shared primitive under `src/components/ui-*` ships a co-located
+  `*.stories.tsx`, and every exported `src/features/landing` section component
+  (`components/<section>/<section>.tsx`) ships one too. Follow the existing
+  `for-who-section.stories.tsx` pattern and import feature components through their public
+  API, never a deep cross-feature path.
+- The only `ui-*` directories exempt are the non-renderable theme utilities that export a
+  configured object rather than a component — `ui-breakpoints` and `ui-color-theme` each
+  export an MUI `Theme`, so a component story does not apply. Record any future exemption
+  the same way, with a concrete `Not applicable: <reason>`.
+- New components are not done until their story exists and `make storybook-build` succeeds.
+
 ## Definition of Done
 
 A change to tests is done only when every statement below is true.
@@ -149,5 +165,6 @@ A change to tests is done only when every statement below is true.
 - Bug fixes include a regression test that fails before the fix and passes after it.
 - Assertions check user-facing behavior, not implementation details or snapshots alone.
 - Localized text and accessibility-visible behavior are asserted where the UI changed.
+- New or changed `ui-*` primitives and exported feature components have a `*.stories.tsx`.
 - The relevant test commands above were run and passed, including `make lint`.
 - Commits follow Conventional Commits.

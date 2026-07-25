@@ -30,23 +30,21 @@ function setSwiperPointerEvents(swiperRef: SwiperRef, value: string): void {
 }
 
 function applyToTooltipNodes(nodes: NodeList, swiperRef: SwiperRef, value: string): void {
-  for (let i = 0; i < nodes.length; i += 1) {
-    const node: Node = nodes[i];
+  nodes.forEach((node: Node) => {
     if (node instanceof Element && isToolTip(node)) {
       setSwiperPointerEvents(swiperRef, value);
     }
-  }
+  });
 }
 
 function createTooltipObserver(swiperRef: SwiperRef): MutationObserver {
   return new MutationObserver((mutationsList: MutationRecord[]) => {
-    for (let i = 0; i < mutationsList.length; i += 1) {
-      const mutation: MutationRecord = mutationsList[i];
+    mutationsList.forEach((mutation: MutationRecord) => {
       if (mutation.type === 'childList') {
         applyToTooltipNodes(mutation.addedNodes, swiperRef, 'none');
         applyToTooltipNodes(mutation.removedNodes, swiperRef, 'auto');
       }
-    }
+    });
   });
 }
 
@@ -94,12 +92,13 @@ function CardSwiper({ cardList, hoverCardContent }: CardList): React.ReactElemen
   const swiperRef = useRef<HTMLDivElement>(null);
   useTooltipPointerGuard(swiperRef, cardList.length);
 
-  if (cardList.length === 0) {
+  const [firstCard] = cardList;
+  if (firstCard === undefined) {
     return null;
   }
 
   const gridMobile: CSSProperties =
-    cardList[0].type === 'smallCard' ? styles.gridSmallMobile : styles.gridLargeMobile;
+    firstCard.type === 'smallCard' ? styles.gridSmallMobile : styles.gridLargeMobile;
 
   return (
     <Grid sx={gridMobile} ref={swiperRef as React.RefObject<HTMLDivElement>}>

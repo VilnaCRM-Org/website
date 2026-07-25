@@ -3,7 +3,9 @@ import { test, expect, Page } from '@playwright/test';
 import { t } from './utils/initializeLocalization';
 
 const BASE_URL: string = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://prod:3001';
-const links: Record<string, string> = {
+// Concrete keys (not `Record<string, string>`) so each lookup stays a definite
+// `string` under `noUncheckedIndexedAccess`.
+const links = {
   advantages: `${BASE_URL}/#Advantages`,
   forWho: `${BASE_URL}/#forWhoSection`,
   integration: `${BASE_URL}/#Integration`,

@@ -90,9 +90,9 @@ function handleGraphQLErrors(
   graphQLErrors: readonly GraphQLFormattedError[],
   messages: ClientErrorMessages
 ): string | null {
-  if (graphQLErrors.length === 0) return null;
-
   const firstError = graphQLErrors[0];
+  if (firstError === undefined) return null;
+
   const { extensions, message } = firstError;
   const statusCode = extensions?.statusCode as number | undefined;
 

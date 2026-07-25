@@ -113,11 +113,11 @@ describe('cloudfront_routing handler', () => {
 
     test('sets the content-type header (guards #235: Safari downloads the 404)', () => {
       expect(response.headers['content-type']).toBeDefined();
-      expect(response.headers['content-type'].value).toBe('text/html; charset=utf-8');
+      expect(response.headers['content-type']?.value).toBe('text/html; charset=utf-8');
     });
 
     test('sets a short cache-control header', () => {
-      expect(response.headers['cache-control'].value).toBe('public, max-age=60');
+      expect(response.headers['cache-control']?.value).toBe('public, max-age=60');
     });
   });
 

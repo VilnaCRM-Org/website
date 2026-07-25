@@ -6,6 +6,6 @@ export interface CustomTextField<T extends FieldValues> extends TextFieldProps<'
   rules: FieldValues;
   name: Path<T>;
   placeholder: string;
-  type?: string;
-  fullWidth?: boolean;
+  type?: string | undefined;
+  fullWidth?: boolean | undefined;
 }

@@ -106,7 +106,12 @@ describe('integration: registration form submission flow', () => {
     });
 
     const request = readGraphQLRequest(fetchMock);
-    const input = request.body.variables.input as Record<string, string>;
+    const input = request.body.variables.input as {
+      email: string;
+      initials: string;
+      password: string;
+      clientMutationId: string;
+    };
     expect(input.email).toBe(expectedEmail);
     expect(input.initials).toBe(credentials.fullName);
     expect(input.password).toBe(credentials.password);

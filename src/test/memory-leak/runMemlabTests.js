@@ -17,6 +17,10 @@ const consoleMode = 'VERBOSE';
 (async function runMemlab() {
   const testFilePaths = fs
     .readdirSync(`${memoryLeakDir}/${testsDir}`)
+    // Only executable `.js` scenarios — skip co-located type declarations such as
+    // `logoNavigation.d.ts` (added so the unit test can import the scenario under
+    // `allowJs: false`); a `.d.ts` has no runtime body and would throw when imported.
+    .filter(test => test.endsWith('.js'))
     .map(test => `${testsDir}/${test}`);
 
   for (const testFilePath of testFilePaths) {

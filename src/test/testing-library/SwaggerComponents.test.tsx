@@ -17,7 +17,7 @@ describe('Swagger Navigation', () => {
       (key): key is symbol => typeof key === 'symbol'
     );
     return implSymbol
-      ? (window.location as unknown as Record<symbol, Location>)[implSymbol]
+      ? ((window.location as unknown as Record<symbol, Location>)[implSymbol] ?? window.location)
       : window.location;
   };
 

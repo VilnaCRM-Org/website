@@ -137,7 +137,11 @@ describe('AuthLayout', () => {
         query: fulfilledMockResponse.request.query,
         variables: mockVariableMatcher,
       },
-      result: fulfilledMockResponse.result,
+      // Omit `result` when the source mock has none — `exactOptionalPropertyTypes`
+      // rejects an explicit `undefined` on the optional `result` field.
+      ...(fulfilledMockResponse.result !== undefined && {
+        result: fulfilledMockResponse.result,
+      }),
     };
 
     renderAuthLayout([mockWithVariableCapture]);
@@ -146,7 +150,9 @@ describe('AuthLayout', () => {
 
     await waitFor(() => {
       expect(mockVariableMatcher).toHaveBeenCalled();
-      const capturedVariables: { input: CreateUserInput } = mockVariableMatcher.mock.calls[0][0];
+      const firstCall = mockVariableMatcher.mock.calls[0];
+      if (firstCall === undefined) throw new Error('mockVariableMatcher was not called');
+      const capturedVariables: { input: CreateUserInput } = firstCall[0];
       const { input } = capturedVariables;
 
       expect(input).not.toBeUndefined();
@@ -509,7 +515,11 @@ describe('AuthLayoutWithNotification', () => {
         query: fulfilledMockResponse.request.query,
         variables: mockVariableMatcher,
       },
-      result: fulfilledMockResponse.result,
+      // Omit `result` when the source mock has none — `exactOptionalPropertyTypes`
+      // rejects an explicit `undefined` on the optional `result` field.
+      ...(fulfilledMockResponse.result !== undefined && {
+        result: fulfilledMockResponse.result,
+      }),
     };
 
     renderAuthLayout([mockWithVariableCapture]);
@@ -518,7 +528,9 @@ describe('AuthLayoutWithNotification', () => {
 
     await waitFor(() => {
       expect(mockVariableMatcher).toHaveBeenCalled();
-      const capturedVariables: { input: CreateUserInput } = mockVariableMatcher.mock.calls[0][0];
+      const firstCall = mockVariableMatcher.mock.calls[0];
+      if (firstCall === undefined) throw new Error('mockVariableMatcher was not called');
+      const capturedVariables: { input: CreateUserInput } = firstCall[0];
       const { input } = capturedVariables;
 
       expect(input.email).toBe(uppercaseEmail.toLowerCase());

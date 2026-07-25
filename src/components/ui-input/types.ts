@@ -7,8 +7,8 @@ export interface UiInputProps {
   onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
   error?: boolean;
   onBlur?: (event: React.FocusEvent<HTMLInputElement>) => void;
-  type?: string;
-  fullWidth?: boolean;
+  type?: string | undefined;
+  fullWidth?: boolean | undefined;
   disabled?: boolean;
   onInput?: TextFieldProps['onInput'];
   id?: string;

@@ -16,7 +16,9 @@ export default defineConfig({
   // instead of failing the run; this also activates `trace: 'on-first-retry'`
   // below (dead config while retries were 0). Locally retries stay at 0.
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  // Omit `workers` off-CI (Playwright's own default) rather than passing an
+  // explicit `undefined`, which `exactOptionalPropertyTypes` rejects.
+  ...(process.env.CI ? { workers: 1 } : {}),
   reporter: [['html', { open: 'never' }]],
   use: {
     trace: 'on-first-retry',
