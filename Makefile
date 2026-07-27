@@ -315,7 +315,10 @@ lint-deps: ## Validate architecture/import boundaries with dependency-cruiser
 	node scripts/generateLocalization.mjs
 	$(PM_EXEC) $(DEPCRUISE_BIN) src pages tests --config .dependency-cruiser.js
 
-lint: lint-next lint-tsc lint-md lint-deps ## Runs all linters: ESLint, TypeScript, Markdown, and dependency-cruiser in sequence.
+lint-docker-policy: ## Enforce the registry (no Docker Hub) + digest-pin policy on every Dockerfile
+	./scripts/ci/lint-dockerfile-policy.sh
+
+lint: lint-next lint-tsc lint-md lint-deps lint-docker-policy ## Runs all linters: ESLint, TypeScript, Markdown, dependency-cruiser, and the Dockerfile registry/digest policy in sequence.
 
 # DELIBERATE DIVERGENCE FROM THE npm-tool LINT GATES (lint-next/tsc/md/deps),
 # for the same reason as lint-metrics below:
