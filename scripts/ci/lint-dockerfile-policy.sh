@@ -10,12 +10,21 @@
 #      single conformance lint at the first incident would have prevented the
 #      other three.
 #   2. Every external base image must be digest-pinned (`@sha256:<digest>`), so
-#      a re-pushed mutable tag cannot silently change what a build runs.
+#      a re-pushed mutable tag cannot silently change what a build runs. The
+#      digest must be a concrete 64-char lowercase hex value — an empty,
+#      malformed, or variable-valued suffix (`@sha256:`, `@sha256:${DIGEST}`)
+#      does not satisfy the pin.
 #
 # Internal build-stage references (`FROM <stage>`) and `FROM scratch` pull
 # nothing, so they are exempt. Docker treats stage names case-insensitively, so
 # the exemption does too. Dependabot's `docker` ecosystem (#364) keeps the
 # pinned digests fresh while preserving the human-readable tag.
+#
+# Multi-line `FROM` instructions are honoured: physical lines joined by the
+# Dockerfile line-continuation escape character (`\` by default, or the value of
+# a leading `# escape=` parser directive) are folded into one logical
+# instruction before the policy is applied, so a legitimately wrapped `FROM`
+# is evaluated rather than rejected.
 #
 # Usage:
 #   scripts/ci/lint-dockerfile-policy.sh [DOCKERFILE ...]
@@ -69,6 +78,118 @@ violation() {
   status=1
 }
 
+# Enforce the registry + digest policy on a single, already line-folded logical
+# instruction. Non-FROM lines are ignored. Reads and updates the file-scoped
+# `stages` alias set and the loop-scoped `df` (for messages), and records
+# failures via `violation`.
+lint_from_line() {
+  line="$1"
+  # Trim surrounding whitespace; only genuine FROM instructions are relevant
+  # (a commented `# FROM ...` line no longer starts with FROM once trimmed).
+  line="${line#"${line%%[![:space:]]*}"}"
+  line="${line%"${line##*[![:space:]]}"}"
+  case "$(lc "$line")" in
+    from[[:space:]]*) : ;;
+    *) return 0 ;;
+  esac
+
+  # Tokenise on whitespace: toks[0] == FROM.
+  read -r -a toks <<<"$line"
+
+  # Skip any leading build flags such as `--platform=linux/amd64`.
+  idx=1
+  while [ -n "${toks[$idx]:-}" ]; do
+    case "${toks[$idx]}" in
+      --*) idx=$((idx + 1)) ;;
+      *) break ;;
+    esac
+  done
+  image="${toks[$idx]:-}"
+  imgkey="$(lc "$image")"
+
+  # Locate an optional `AS <name>` stage alias.
+  asname=""
+  i=$((idx + 1))
+  count=${#toks[@]}
+  while [ "$i" -lt "$count" ]; do
+    if [ "$(lc "${toks[$i]}")" = "as" ]; then
+      asname="$(lc "${toks[$((i + 1))]:-}")"
+      break
+    fi
+    i=$((i + 1))
+  done
+
+  # Internal stage reference, `scratch`, or empty base — nothing is pulled.
+  is_stage=0
+  case "$stages" in
+    *" $imgkey "*) is_stage=1 ;;
+  esac
+  if [ -z "$image" ] || [ "$is_stage" -eq 1 ] || [ "$imgkey" = "scratch" ]; then
+    if [ -n "$asname" ]; then
+      stages="$stages$asname "
+    fi
+    return 0
+  fi
+
+  # From here `image` is an external base image reference.
+  registry="${image%%/*}"    # part before the first '/'
+  reghost="${registry%%:*}"  # strip an optional :PORT from the host
+  is_dockerhub=0
+  if [ "$image" = "${image#*/}" ]; then
+    # No registry component at all, e.g. `node:23-alpine` (Docker Hub library).
+    is_dockerhub=1
+  else
+    case "$reghost" in
+      docker.io | *.docker.io)
+        # Explicitly spelled Docker Hub (docker.io / registry-1.docker.io ...).
+        is_dockerhub=1
+        ;;
+      *.* | localhost)
+        # A real registry host (has a dot) or a local registry — allowed.
+        : ;;
+      *)
+        # A single-label first component is an implicit Docker Hub reference
+        # (`library/node`, `user/img`) UNLESS it carries a port
+        # (`registry:5000/img`), which only ever denotes an explicit registry
+        # host — Docker Hub short forms never contain a ':' before the first '/'.
+        case "$registry" in
+          *:*) : ;;
+          *) is_dockerhub=1 ;;
+        esac
+        ;;
+    esac
+  fi
+
+  if [ "$is_dockerhub" -eq 1 ]; then
+    violation "$df: Docker Hub is forbidden; pin an explicit registry (e.g. public.ecr.aws/docker/library/...): 'FROM $image'"
+  fi
+
+  case "$image" in
+    *@sha256:*)
+      # The digest is the final `@sha256:` component; require a concrete
+      # 64-char lowercase hex value so an empty/variable/short suffix cannot
+      # satisfy the pin.
+      digest="${image##*@sha256:}"
+      case "$digest" in
+        "" | *[!0-9a-f]*)
+          violation "$df: @sha256 digest must be exactly 64 lowercase hex characters: 'FROM $image'" ;;
+        *)
+          if [ "${#digest}" -ne 64 ]; then
+            violation "$df: @sha256 digest must be exactly 64 lowercase hex characters: 'FROM $image'"
+          fi
+          ;;
+      esac
+      ;;
+    *)
+      violation "$df: base image must be digest-pinned with @sha256:<digest>: 'FROM $image'" ;;
+  esac
+
+  if [ -n "$asname" ]; then
+    stages="$stages$asname "
+  fi
+  return 0
+}
+
 for df in "${files[@]}"; do
   if [ ! -f "$df" ]; then
     violation "file not found: $df"
@@ -80,91 +201,49 @@ for df in "${files[@]}"; do
   # must not be treated as a pull.
   stages=" "
 
-  # `|| [ -n "$rawline" ]` processes a final line that lacks a trailing newline.
+  # Dockerfile line-continuation escape character. Defaults to backslash; a
+  # leading `# escape=` parser directive can switch it to a backtick.
+  esc='\'
+  IFS= read -r first_line <"$df" || first_line=""
+  case "$(lc "$first_line")" in
+    '# escape=`'* | '#escape=`'*) esc='`' ;;
+  esac
+
+  # Fold FROM line-continuations into a single logical instruction, then lint
+  # it. Only FROM instructions are folded — every other line (comments, RUN,
+  # etc.) is passed through verbatim so a trailing escape elsewhere can never
+  # merge a following FROM out of sight. `|| [ -n "$rawline" ]` processes a
+  # final line that lacks a trailing newline.
+  pending=""
   while IFS= read -r rawline || [ -n "$rawline" ]; do
-    # Trim surrounding whitespace; only genuine FROM instructions are relevant
-    # (a commented `# FROM ...` line no longer starts with FROM once trimmed).
-    line="${rawline#"${rawline%%[![:space:]]*}"}"
-    line="${line%"${line##*[![:space:]]}"}"
-    case "$(lc "$line")" in
-      from[[:space:]]*) : ;;
-      *) continue ;;
-    esac
-
-    # Tokenise on whitespace: toks[0] == FROM.
-    read -r -a toks <<<"$line"
-
-    # Skip any leading build flags such as `--platform=linux/amd64`.
-    idx=1
-    while [ -n "${toks[$idx]:-}" ]; do
-      case "${toks[$idx]}" in
-        --*) idx=$((idx + 1)) ;;
-        *) break ;;
-      esac
-    done
-    image="${toks[$idx]:-}"
-    imgkey="$(lc "$image")"
-
-    # Locate an optional `AS <name>` stage alias.
-    asname=""
-    i=$((idx + 1))
-    count=${#toks[@]}
-    while [ "$i" -lt "$count" ]; do
-      if [ "$(lc "${toks[$i]}")" = "as" ]; then
-        asname="$(lc "${toks[$((i + 1))]:-}")"
-        break
-      fi
-      i=$((i + 1))
-    done
-
-    # Internal stage reference, `scratch`, or empty base — nothing is pulled.
-    is_stage=0
-    case "$stages" in
-      *" $imgkey "*) is_stage=1 ;;
-    esac
-    if [ -z "$image" ] || [ "$is_stage" -eq 1 ] || [ "$imgkey" = "scratch" ]; then
-      if [ -n "$asname" ]; then
-        stages="$stages$asname "
+    if [ -n "$pending" ]; then
+      stripped="${rawline%"$esc"}"
+      pending="$pending $stripped"
+      if [ "$stripped" = "$rawline" ]; then
+        # This physical line has no trailing escape: the FROM is complete.
+        lint_from_line "$pending"
+        pending=""
       fi
       continue
     fi
-
-    # From here `image` is an external base image reference.
-    registry="${image%%/*}"    # part before the first '/'
-    reghost="${registry%%:*}"  # strip an optional :PORT from the host
-    is_dockerhub=0
-    if [ "$image" = "${image#*/}" ]; then
-      # No registry component at all, e.g. `node:23-alpine` (Docker Hub library).
-      is_dockerhub=1
-    else
-      case "$reghost" in
-        docker.io | *.docker.io)
-          # Explicitly spelled Docker Hub (docker.io / registry-1.docker.io ...).
-          is_dockerhub=1
-          ;;
-        *.* | localhost)
-          # A real registry host (has a dot) or a local registry — allowed.
-          : ;;
-        *)
-          # Single-label first component, e.g. `library/node` or `user/img` —
-          # still an implicit Docker Hub reference.
-          is_dockerhub=1
+    stripped="${rawline%"$esc"}"
+    if [ "$stripped" != "$rawline" ]; then
+      trimmed="${rawline#"${rawline%%[![:space:]]*}"}"
+      case "$(lc "$trimmed")" in
+        from[[:space:]]*)
+          # A wrapped FROM — start accumulating its continuation.
+          pending="$stripped"
+          continue
           ;;
       esac
     fi
-
-    if [ "$is_dockerhub" -eq 1 ]; then
-      violation "$df: Docker Hub is forbidden; pin an explicit registry (e.g. public.ecr.aws/docker/library/...): 'FROM $image'"
-    fi
-    case "$image" in
-      *@sha256:*) : ;;
-      *) violation "$df: base image must be digest-pinned with @sha256:<digest>: 'FROM $image'" ;;
-    esac
-
-    if [ -n "$asname" ]; then
-      stages="$stages$asname "
-    fi
+    lint_from_line "$rawline"
   done <"$df"
+  # A FROM left dangling on a trailing continuation (malformed, but still lint
+  # what we have rather than skip it silently).
+  if [ -n "$pending" ]; then
+    lint_from_line "$pending"
+  fi
 done
 
 if [ "$status" -ne 0 ]; then
