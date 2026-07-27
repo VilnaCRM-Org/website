@@ -201,9 +201,10 @@ for df in "${files[@]}"; do
   # must not be treated as a pull.
   stages=" "
 
-  # Dockerfile line-continuation escape character. Defaults to backslash; a
-  # leading `# escape=` parser directive can switch it to a backtick.
-  esc='\'
+  # Dockerfile line-continuation escape character. Defaults to backslash
+  # (written as "\\" so it is a single literal backslash); a leading
+  # `# escape=` parser directive can switch it to a backtick.
+  esc="\\"
   IFS= read -r first_line <"$df" || first_line=""
   case "$(lc "$first_line")" in
     '# escape=`'* | '#escape=`'*) esc='`' ;;
