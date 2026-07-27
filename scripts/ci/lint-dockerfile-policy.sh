@@ -132,8 +132,10 @@ lint_from_line() {
   fi
 
   # From here `image` is an external base image reference.
-  registry="${image%%/*}"    # part before the first '/'
-  reghost="${registry%%:*}"  # strip an optional :PORT from the host
+  registry="${image%%/*}"           # part before the first '/'
+  reghost="$(lc "${registry%%:*}")" # host without :PORT, lowercased — registry
+                                    # hostnames are case-insensitive, so
+                                    # `DOCKER.IO/...` must classify as Docker Hub
   is_dockerhub=0
   if [ "$image" = "${image#*/}" ]; then
     # No registry component at all, e.g. `node:23-alpine` (Docker Hub library).

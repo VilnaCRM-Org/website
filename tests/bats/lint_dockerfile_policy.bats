@@ -4,6 +4,16 @@
 # policy gate (issue #370). Exercises the parser's edge cases directly against
 # throwaway Dockerfile fixtures so a regression in the policy logic is caught
 # without a container build.
+#
+# Scenario-class coverage (agents.md Step 2/3):
+#   - Positive / happy path: compliant explicit-registry + digest-pinned,
+#     multi-line, scratch, --platform, and port-registry FROMs pass.
+#   - Negative / error: Docker Hub (implicit, explicit, uppercase-host),
+#     unpinned, and empty/variable/short/wrong-length/uppercase digests fail.
+#   - Boundary / edge (empty, null, missing data): a no-FROM file passes; a
+#     missing file path is reported and fails.
+#   Not applicable: Loading, retry, timeout, and error (async) states — the
+#   linter is a synchronous local-file CLI with no async boundary.
 
 load './test_helper.bash'
 
@@ -109,6 +119,13 @@ lint_fixture() {
   [[ "$output" == *"Docker Hub is forbidden"* ]]
 }
 
+@test "an uppercase-host Docker Hub reference is rejected (hosts are case-insensitive)" {
+  write_fixture "FROM DOCKER.IO/library/node@sha256:$HEX64"
+  lint_fixture
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Docker Hub is forbidden"* ]]
+}
+
 # --- digest pinning must be a concrete 64-char hex value -------------------
 
 @test "an unpinned explicit-registry image is rejected" {
@@ -151,4 +168,18 @@ lint_fixture() {
   lint_fixture
   [ "$status" -eq 1 ]
   [[ "$output" == *"64 lowercase hex"* ]]
+}
+
+# --- boundary / edge: empty and missing inputs -----------------------------
+
+@test "a Dockerfile with no FROM instruction passes" {
+  write_fixture "# a Dockerfile with only a comment, no FROM instruction" "RUN true"
+  lint_fixture
+  [ "$status" -eq 0 ]
+}
+
+@test "a missing Dockerfile path is reported and fails" {
+  run bash "$LINTER" "$BATS_TEST_TMPDIR/does-not-exist.Dockerfile"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"file not found"* ]]
 }
