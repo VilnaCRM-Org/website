@@ -93,12 +93,19 @@ TEST_ENV=server bun x jest src/test/apollo-server/<spec>.test.ts
 
 ```bash
 make format     # Prettier (run before lint)
-make lint       # lint-next + lint-tsc + lint-md + lint-deps
-make lint-next  # ESLint (flat config, eslint.config.mjs)
-make lint-tsc   # TypeScript (tsc, no emit)
-make lint-md    # markdownlint
-make lint-deps  # dependency-cruiser on src, pages, tests
+make lint         # lint-next + lint-tsc + lint-md + lint-deps + lint-headers
+make lint-next    # ESLint (flat config, eslint.config.mjs)
+make lint-tsc     # TypeScript (tsc, no emit)
+make lint-md      # markdownlint
+make lint-deps    # dependency-cruiser on src, pages, tests
+make lint-headers # edge security-header policy (config/security-headers.json)
 ```
+
+`lint-headers` proves the CloudFront edge functions still emit every header in
+`config/security-headers.json` on real page, asset, and 404 responses (issue #377).
+The static export makes Next's `headers()` a no-op, so the edge is the only
+enforcement point — see [`docs/security-headers.md`](docs/security-headers.md). Never
+drop or weaken a header to make the gate pass.
 
 Two gates sit deliberately outside `make lint`: `make lint-metrics` (host-only Rust
 binary) and `make lint-contracts` (needs network for its drift check). Each has its own

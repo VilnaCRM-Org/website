@@ -85,7 +85,10 @@ const INTEGRATION_COVERAGE_THRESHOLD = {
 // executed code back to the source file. This layer is isolated from client/server/
 // integration so it enforces 100% on exactly these scripts without touching their coverage
 // reports.
-const EDGE_COVERAGE_FROM = ['<rootDir>/scripts/cloudfront_routing.js'];
+const EDGE_COVERAGE_FROM = [
+  '<rootDir>/scripts/cloudfront_routing.js',
+  '<rootDir>/scripts/cloudfront_security_headers.js',
+];
 
 const EDGE_COVERAGE_THRESHOLD = {
   global: { branches: 100, functions: 100, lines: 100, statements: 100 },

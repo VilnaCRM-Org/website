@@ -58,6 +58,11 @@ jobs:
     permissions:
       contents: read
     steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
       - name: Smoke-test homepage and /swagger
         env:
           # CodePipeline deploys asynchronously, so the probe retries until the
@@ -98,4 +103,54 @@ jobs:
           rc=0
           wait "$home_pid" || rc=1
           wait "$swagger_pid" || rc=1
+          exit "$rc"
+
+      # Issue #377: the static export cannot honour Next `headers()`, so the CloudFront
+      # edge functions are the only enforcement point. `make lint-headers` proves the
+      # in-repo policy reaches every response the functions produce; this step proves the
+      # deployed distribution actually associates them — on a real PAGE and a real ASSET,
+      # not just the synthetic 404.
+      - name: Verify security headers on a real page and an asset
+        env:
+          SITE_URL: ${{ vars.PRODUCTION_SITE_URL }}
+        run: |
+          set -euo pipefail
+
+          base="${SITE_URL%/}"
+          rc=0
+
+          # Header names + expected values come from the single in-repo source of truth.
+          policy="$(jq -r '.headers | to_entries[] | "\(.key)\t\(.value)"' config/security-headers.json)"
+
+          check_path() {
+            path="$1"
+            label="$2"
+            url="${base}${path}"
+            if ! headers="$(curl -fsSI --max-time 15 "$url" | tr -d '\r')"; then
+              echo "::error::${label} (${url}) — could not fetch response headers"
+              rc=1
+              return 0
+            fi
+
+            while IFS="$(printf '\t')" read -r name expected; do
+              # `|| true`: a missing header makes grep exit 1, which under `set -e` +
+              # `pipefail` would abort the step instead of reporting the gap.
+              actual="$(printf '%s\n' "$headers" \
+                | grep -i "^${name}:" \
+                | head -n 1 \
+                | cut -d: -f2- \
+                | sed 's/^ *//' || true)"
+              if [ "$actual" = "$expected" ]; then
+                echo "✓ ${label}: ${name}: ${actual}"
+              else
+                echo "::error::${label} (${url}) — ${name}: expected '${expected}', got '${actual:-<missing>}'"
+                rc=1
+              fi
+            done <<EOF
+          $policy
+          EOF
+          }
+
+          check_path "/" "homepage"
+          check_path "/favicon.svg" "static asset"
           exit "$rc"
