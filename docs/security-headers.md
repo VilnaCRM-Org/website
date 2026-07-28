@@ -41,7 +41,7 @@ rollout with report-only monitoring. Adding it here later is a value change in
 
 ## Where the policy is applied
 
-- Every page, asset, and origin error — `scripts/cloudfront_security_headers.js`
+- Every page and asset response — `scripts/cloudfront_security_headers.js`
   (viewer-response event).
 - The synthetic 404 for unknown top-level paths — `scripts/cloudfront_routing.js`
   (viewer-request event).
@@ -53,6 +53,22 @@ inline, and `make lint-headers` proves both copies match the policy file.
 
 Values are set, not merged, so an origin response can never weaken or drop a header.
 
+### Known gap: origin errors of 400 and above
+
+CloudFront does **not** run a viewer-response function when the origin returns HTTP 400
+or higher — "If the origin returns an HTTP error of 400 and above, the CloudFront
+Function will not run"
+([CloudFront Functions event structure](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/functions-event-structure.html)).
+
+So an S3 403/404 for a path the routing function passes through to the origin (a dotted
+asset path, or an unknown multi-segment path) is returned without the policy. The
+synthetic 404 covers only unknown single-segment paths, which the routing function
+answers itself.
+
+That gap cannot be closed from a viewer-response function. Close it at the distribution
+with a **response headers policy** (below), which CloudFront applies to error responses
+too, or with custom error pages served from the same origin.
+
 ## CloudFront association (out-of-repo infrastructure)
 
 The distribution itself is managed outside this repository. Associate both functions
@@ -63,9 +79,11 @@ with the default cache behaviour:
 | `scripts/cloudfront_routing.js`          | Viewer request        |
 | `scripts/cloudfront_security_headers.js` | Viewer response       |
 
-A CloudFront **response headers policy** carrying the same values is an equally valid
-enforcement point; if one is adopted, keep `config/security-headers.json` as the
-reviewed source and mirror it there.
+A CloudFront **response headers policy** carrying the same values is the stronger
+enforcement point, because CloudFront also applies it to the 400-and-above origin
+responses the viewer-response function never sees. Adopting one is recommended; keep
+`config/security-headers.json` as the reviewed source and mirror it there. The functions
+stay useful either way — they are the in-repo, testable, reviewable copy of the policy.
 
 ## The CI gate
 
@@ -86,7 +104,8 @@ It checks three things:
    `max-age` of at least one year plus `includeSubDomains` and `preload`. Weakening the
    policy therefore requires editing that baseline in the same reviewed diff.
 2. The viewer-response function emits every policy header, with the exact value, on a
-   page response, an asset response, and an origin error response.
+   page response, an asset response, and a redirect — the statuses CloudFront actually
+   runs it for (see the known gap above).
 3. The synthetic 404 from the routing function carries the same headers.
 
 The gate reasons about the checked-in handlers, not about production: it cannot see
@@ -105,8 +124,11 @@ in-repo check can see.
 ## Verifying by hand
 
 ```bash
-curl -fsSI https://vilnacrm.com/ | grep -Ei 'content-security-policy|x-frame-options|strict-transport-security|x-content-type-options|referrer-policy'
-curl -fsSI https://vilnacrm.com/favicon.svg | grep -Ei 'content-security-policy|x-frame-options'
+policy='content-security-policy|x-frame-options|x-content-type-options'
+policy="$policy|referrer-policy|strict-transport-security"
+
+curl -fsSI https://vilnacrm.com/ | grep -Ei "$policy"
+curl -fsSI https://vilnacrm.com/favicon.svg | grep -Ei "$policy"
 ```
 
 ## Changing the policy

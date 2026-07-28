@@ -61,6 +61,17 @@ function directiveValue(value, directive) {
   return match === null ? null : match[1];
 }
 
+function checkHsts(value) {
+  const maxAge = directiveValue(value, 'max-age');
+  if (maxAge === null || !/^\d+$/.test(maxAge)) {
+    return false;
+  }
+  if (Number(maxAge) < HSTS_MIN_MAX_AGE) {
+    return false;
+  }
+  return hasDirective(value, 'includeSubDomains') && hasDirective(value, 'preload');
+}
+
 const BASELINE = {
   'content-security-policy': {
     requirement: "must be exactly frame-ancestors 'none'",
@@ -83,16 +94,7 @@ const BASELINE = {
   },
   'strict-transport-security': {
     requirement: `max-age must be >= ${HSTS_MIN_MAX_AGE} (1 year) and include includeSubDomains and preload`,
-    check: value => {
-      const maxAge = directiveValue(value, 'max-age');
-      return (
-        maxAge !== null &&
-        /^\d+$/.test(maxAge) &&
-        Number(maxAge) >= HSTS_MIN_MAX_AGE &&
-        hasDirective(value, 'includeSubDomains') &&
-        hasDirective(value, 'preload')
-      );
-    },
+    check: value => checkHsts(value),
   },
 };
 
@@ -181,8 +183,16 @@ function checkViewerResponse(policyHeaders) {
       },
     },
     {
-      scope: 'viewer-response (origin error)',
-      response: { statusCode: 403, statusDescription: 'Forbidden', headers: {} },
+      // A 3xx is the last status CloudFront still runs a viewer-response function for:
+      // it skips the function entirely once the origin returns 400 or higher, which is a
+      // documented gap covered by a response headers policy (see docs/security-headers.md),
+      // not something this handler can close.
+      scope: 'viewer-response (redirect)',
+      response: {
+        statusCode: 301,
+        statusDescription: 'Moved Permanently',
+        headers: { location: { value: '/' } },
+      },
     },
   ];
 

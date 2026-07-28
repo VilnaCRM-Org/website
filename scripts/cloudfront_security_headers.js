@@ -2,8 +2,15 @@
  * ES5.1 compatible (no let/const/arrow functions).
  *
  * CloudFront Functions **viewer-response** handler. It attaches the repository's
- * security-header policy to EVERY response CloudFront returns — pages, assets, and
- * origin errors alike (issue #377).
+ * security-header policy to every response CloudFront runs it for — every page and every
+ * asset (issue #377).
+ *
+ * KNOWN GAP: CloudFront does NOT run a viewer-response function when the origin returns an
+ * HTTP status of 400 or higher ("If the origin returns an HTTP error of 400 and above, the
+ * CloudFront Function will not run" — CloudFront Functions event structure / edge-function
+ * restrictions). S3 4xx/5xx bodies for paths this repo's routing function passes through
+ * therefore do not get the policy from here. A CloudFront **response headers policy**
+ * carrying the same values covers those too; see docs/security-headers.md.
  *
  * The static export (`output: 'export'` in next.config.js) makes Next's `headers()`
  * a no-op, so the edge is the only enforcement point available to this repo. Associate
