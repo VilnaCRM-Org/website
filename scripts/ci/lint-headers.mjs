@@ -61,9 +61,7 @@ const BASELINE = {
     requirement: 'max-age must be >= 31536000 (1 year) and include includeSubDomains',
     check: value => {
       const maxAge = /max-age=(\d+)/.exec(value);
-      return (
-        maxAge !== null && Number(maxAge[1]) >= 31536000 && /includeSubDomains/i.test(value)
-      );
+      return maxAge !== null && Number(maxAge[1]) >= 31536000 && /includeSubDomains/i.test(value);
     },
   },
 };
@@ -94,7 +92,7 @@ function readPolicy() {
   if (!policy.headers || typeof policy.headers !== 'object') {
     throw new Error('config/security-headers.json must define a "headers" object');
   }
-  return policy.headers;
+  return policy;
 }
 
 function checkPolicyBaseline(policyHeaders) {
@@ -102,9 +100,21 @@ function checkPolicyBaseline(policyHeaders) {
     const value = policyHeaders[name];
     if (typeof value !== 'string') {
       record('policy', name, false, `missing from config/security-headers.json (${requirement})`);
-      continue;
+    } else {
+      const ok = check(value);
+      record('policy', name, ok, ok ? value : `"${value}" ${requirement}`);
     }
-    record('policy', name, check(value), check(value) ? value : `"${value}" ${requirement}`);
+  }
+}
+
+/**
+ * `appliedBy` documents which edge functions carry the policy; a stale entry would send a
+ * reviewer to a file that no longer exists, so it is verified rather than trusted.
+ */
+function checkAppliedByPaths(appliedBy) {
+  for (const relativePath of appliedBy ?? []) {
+    const exists = fs.existsSync(path.join(ROOT, relativePath));
+    record('policy.appliedBy', relativePath, exists, exists ? 'exists' : 'file not found');
   }
 }
 
@@ -192,8 +202,10 @@ function report() {
   );
 }
 
-const policyHeaders = readPolicy();
+const policy = readPolicy();
+const policyHeaders = policy.headers;
 checkPolicyBaseline(policyHeaders);
+checkAppliedByPaths(policy.appliedBy);
 checkViewerResponse(policyHeaders);
 checkRoutingNotFound(policyHeaders);
 report();
