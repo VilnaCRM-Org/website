@@ -218,6 +218,22 @@ run_headers_gate() {
   assert_output_contains 'strict-transport-security'
 }
 
+@test "lint-headers rejects HSTS directives that only look right as substrings" {
+  setup_headers_sandbox
+  node -e '
+    const fs = require("node:fs");
+    const file = process.argv[1];
+    const policy = JSON.parse(fs.readFileSync(file, "utf8"));
+    policy.headers["strict-transport-security"] =
+      "max-age=63072000; xincludeSubDomains; notpreload";
+    fs.writeFileSync(file, JSON.stringify(policy, null, 2));
+  ' "$HEADERS_SANDBOX/config/security-headers.json"
+
+  run_headers_gate
+  [ "$status" -ne 0 ]
+  assert_output_contains 'strict-transport-security'
+}
+
 @test "lint-headers fails when an appliedBy path no longer exists" {
   setup_headers_sandbox
   rm "$HEADERS_SANDBOX/scripts/cloudfront_security_headers.js"

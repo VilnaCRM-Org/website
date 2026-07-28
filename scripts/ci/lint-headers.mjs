@@ -48,6 +48,19 @@ const ROUTING_FN_PATH = path.join(ROOT, 'scripts/cloudfront_routing.js');
  */
 const HSTS_MIN_MAX_AGE = 31536000; // one year — the HSTS preload-list minimum
 
+/**
+ * Match a whole semicolon-delimited directive, not a substring: `notpreload` and
+ * `xincludeSubDomains` must not satisfy a `preload` / `includeSubDomains` requirement.
+ */
+function hasDirective(value, directive) {
+  return new RegExp(String.raw`(?:^|;)\s*${directive}\s*(?:;|$)`, 'i').test(value);
+}
+
+function directiveValue(value, directive) {
+  const match = new RegExp(String.raw`(?:^|;)\s*${directive}=([^;\s]+)\s*(?:;|$)`, 'i').exec(value);
+  return match === null ? null : match[1];
+}
+
 const BASELINE = {
   'content-security-policy': {
     requirement: "must be exactly frame-ancestors 'none'",
@@ -71,12 +84,13 @@ const BASELINE = {
   'strict-transport-security': {
     requirement: `max-age must be >= ${HSTS_MIN_MAX_AGE} (1 year) and include includeSubDomains and preload`,
     check: value => {
-      const maxAge = /max-age=(\d+)/.exec(value);
+      const maxAge = directiveValue(value, 'max-age');
       return (
         maxAge !== null &&
-        Number(maxAge[1]) >= HSTS_MIN_MAX_AGE &&
-        /includeSubDomains/i.test(value) &&
-        /preload/i.test(value)
+        /^\d+$/.test(maxAge) &&
+        Number(maxAge) >= HSTS_MIN_MAX_AGE &&
+        hasDirective(value, 'includeSubDomains') &&
+        hasDirective(value, 'preload')
       );
     },
   },

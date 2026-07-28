@@ -122,35 +122,53 @@ jobs:
           # Header names + expected values come from the single in-repo source of truth.
           policy="$(jq -r '.headers | to_entries[] | "\(.key)\t\(.value)"' config/security-headers.json)"
 
+          # CodePipeline (and any CloudFront function association) propagates
+          # asynchronously, so — like the readiness probes above — each path is retried
+          # until the FULL policy is present rather than failing on a single early miss.
           check_path() {
             path="$1"
             label="$2"
             url="${base}${path}"
-            if ! headers="$(curl -fsSI --max-time 15 "$url" | tr -d '\r')"; then
-              echo "::error::${label} (${url}) — could not fetch response headers"
-              rc=1
-              return 0
-            fi
+            attempts=12
+            delay=15
 
-            while IFS="$(printf '\t')" read -r name expected; do
-              # `|| true`: a missing header makes grep exit 1, which under `set -e` +
-              # `pipefail` would abort the step instead of reporting the gap.
-              actual="$(printf '%s\n' "$headers" \
-                | grep -i "^${name}:" \
-                | head -n 1 \
-                | cut -d: -f2- \
-                | sed 's/^ *//' || true)"
-              if [ "$actual" = "$expected" ]; then
-                echo "✓ ${label}: ${name}: ${actual}"
-              else
-                echo "::error::${label} (${url}) — ${name}: expected '${expected}', got '${actual:-<missing>}'"
-                rc=1
-              fi
-            done <<EOF
+            for i in $(seq 1 "$attempts"); do
+              gaps=''
+
+              if headers="$(curl -fsSI --max-time 15 "$url" | tr -d '\r')"; then
+                while IFS="$(printf '\t')" read -r name expected; do
+                  # `|| true`: a missing header makes grep exit 1, which under `set -e` +
+                  # `pipefail` would abort the step instead of reporting the gap.
+                  actual="$(printf '%s\n' "$headers" \
+                    | grep -i "^${name}:" \
+                    | head -n 1 \
+                    | cut -d: -f2- \
+                    | sed 's/^ *//' || true)"
+                  if [ "$actual" != "$expected" ]; then
+                    gaps="${gaps}${name}: expected '${expected}', got '${actual:-<missing>}'; "
+                  fi
+                done <<EOF
           $policy
           EOF
+              else
+                gaps='could not fetch response headers; '
+              fi
+
+              if [ -z "$gaps" ]; then
+                echo "✓ ${label} (${url}) carries the full security-header policy"
+                return 0
+              fi
+
+              echo "… ${label} headers not ready (attempt ${i}/${attempts}): ${gaps}"
+              if [ "$i" -lt "$attempts" ]; then
+                sleep "$delay"
+              fi
+            done
+
+            echo "::error::${label} (${url}) — ${gaps}"
+            return 1
           }
 
-          check_path "/" "homepage"
-          check_path "/favicon.svg" "static asset"
+          check_path "/" "homepage" || rc=1
+          check_path "/favicon.svg" "static asset" || rc=1
           exit "$rc"
