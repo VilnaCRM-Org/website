@@ -34,17 +34,28 @@ const RESPONSE_FN_PATH = path.join(ROOT, 'scripts/cloudfront_security_headers.js
 const ROUTING_FN_PATH = path.join(ROOT, 'scripts/cloudfront_routing.js');
 
 /**
- * The minimum posture the policy must keep. Each entry validates the VALUE in
+ * The posture the policy must keep. Each entry validates the VALUE in
  * config/security-headers.json; a missing key is a failure on its own.
+ *
+ * The anti-framing entries are pinned to the EXACT mandated values rather than to a
+ * permissive minimum: `frame-ancestors 'self'` / `SAMEORIGIN` would still allow same-origin
+ * framing of the sign-up form, so accepting them here would let the policy be quietly
+ * weakened while the gate stayed green. Relaxing one is possible — but only by editing this
+ * baseline in the same reviewed diff.
+ *
+ * `referrer-policy` keeps an allow-list because its accepted values are equivalent for this
+ * threat (none of them leak a full URL cross-origin).
  */
+const HSTS_MIN_MAX_AGE = 31536000; // one year — the HSTS preload-list minimum
+
 const BASELINE = {
   'content-security-policy': {
-    requirement: "must contain frame-ancestors 'none' or 'self'",
-    check: value => /frame-ancestors\s+'(none|self)'/.test(value),
+    requirement: "must be exactly frame-ancestors 'none'",
+    check: value => value.trim() === "frame-ancestors 'none'",
   },
   'x-frame-options': {
-    requirement: 'must be DENY or SAMEORIGIN',
-    check: value => value === 'DENY' || value === 'SAMEORIGIN',
+    requirement: 'must be DENY',
+    check: value => value === 'DENY',
   },
   'x-content-type-options': {
     requirement: 'must be nosniff',
@@ -58,10 +69,15 @@ const BASELINE = {
       ),
   },
   'strict-transport-security': {
-    requirement: 'max-age must be >= 31536000 (1 year) and include includeSubDomains',
+    requirement: `max-age must be >= ${HSTS_MIN_MAX_AGE} (1 year) and include includeSubDomains and preload`,
     check: value => {
       const maxAge = /max-age=(\d+)/.exec(value);
-      return maxAge !== null && Number(maxAge[1]) >= 31536000 && /includeSubDomains/i.test(value);
+      return (
+        maxAge !== null &&
+        Number(maxAge[1]) >= HSTS_MIN_MAX_AGE &&
+        /includeSubDomains/i.test(value) &&
+        /preload/i.test(value)
+      );
     },
   },
 };

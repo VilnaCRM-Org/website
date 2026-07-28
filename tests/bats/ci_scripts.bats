@@ -175,6 +175,57 @@ run_headers_gate() {
   assert_output_contains 'strict-transport-security'
 }
 
+@test "lint-headers rejects the weaker same-origin framing values" {
+  setup_headers_sandbox
+  node -e '
+    const fs = require("node:fs");
+    const file = process.argv[1];
+    const policy = JSON.parse(fs.readFileSync(file, "utf8"));
+    policy.headers["content-security-policy"] = "frame-ancestors \u0027self\u0027";
+    fs.writeFileSync(file, JSON.stringify(policy, null, 2));
+  ' "$HEADERS_SANDBOX/config/security-headers.json"
+
+  run_headers_gate
+  [ "$status" -ne 0 ]
+  assert_output_contains 'content-security-policy'
+
+  setup_headers_sandbox
+  node -e '
+    const fs = require("node:fs");
+    const file = process.argv[1];
+    const policy = JSON.parse(fs.readFileSync(file, "utf8"));
+    policy.headers["x-frame-options"] = "SAMEORIGIN";
+    fs.writeFileSync(file, JSON.stringify(policy, null, 2));
+  ' "$HEADERS_SANDBOX/config/security-headers.json"
+
+  run_headers_gate
+  [ "$status" -ne 0 ]
+  assert_output_contains 'x-frame-options'
+}
+
+@test "lint-headers fails when HSTS drops includeSubDomains or preload" {
+  setup_headers_sandbox
+  node -e '
+    const fs = require("node:fs");
+    const file = process.argv[1];
+    const policy = JSON.parse(fs.readFileSync(file, "utf8"));
+    policy.headers["strict-transport-security"] = "max-age=63072000";
+    fs.writeFileSync(file, JSON.stringify(policy, null, 2));
+  ' "$HEADERS_SANDBOX/config/security-headers.json"
+
+  run_headers_gate
+  [ "$status" -ne 0 ]
+  assert_output_contains 'strict-transport-security'
+}
+
+@test "lint-headers fails when an appliedBy path no longer exists" {
+  setup_headers_sandbox
+  rm "$HEADERS_SANDBOX/scripts/cloudfront_security_headers.js"
+
+  run_headers_gate
+  [ "$status" -ne 0 ]
+}
+
 @test "lint-headers fails when the viewer-response function stops emitting a header" {
   setup_headers_sandbox
   sed -i "s/'x-frame-options': 'DENY',//" "$HEADERS_SANDBOX/scripts/cloudfront_security_headers.js"

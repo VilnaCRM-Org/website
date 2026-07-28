@@ -28,8 +28,11 @@ of truth. Every other artifact is checked against it.
   an executable document.
 - `referrer-policy: strict-origin-when-cross-origin` — keeps full URLs (and any query
   data) from leaking to third-party origins.
-- `strict-transport-security: max-age=63072000; includeSubDomains; preload` — pins
-  transport to HTTPS, so a downgraded request never carries form input.
+- `strict-transport-security: max-age=63072000; includeSubDomains; preload` — after the
+  first HTTPS response, pins the origin and its subdomains to HTTPS for two years, so a
+  later downgrade attempt never carries form input. `preload` is the opt-in signal for
+  the browser preload list; until `vilnacrm.com` is actually submitted to and accepted by
+  <https://hstspreload.org>, the very first contact with a host is still unprotected.
 
 The `script-src` / `connect-src` half of the CSP (gtag, Sentry) is deliberately **not**
 in this policy — it is owned by the client-side hardening issue and needs its own
@@ -67,8 +70,8 @@ reviewed source and mirror it there.
 ## The CI gate
 
 `make lint-headers` (part of `make lint`, so it runs in the static testing workflow on
-every PR) executes both edge functions and fails if any policy header is missing or
-altered:
+every PR) executes the checked-in edge functions and fails if any policy header is
+missing or altered:
 
 ```bash
 make lint-headers
@@ -76,14 +79,19 @@ make lint-headers
 
 It checks three things:
 
-1. The policy in `config/security-headers.json` still meets a baseline encoded in
-   `scripts/ci/lint-headers.mjs` — `frame-ancestors` set to `'none'` or `'self'`,
-   `X-Frame-Options` `DENY`/`SAMEORIGIN`, `nosniff`, a non-leaking `Referrer-Policy`,
-   and HSTS with `max-age` of at least one year plus `includeSubDomains`. The policy
-   cannot be weakened without failing the gate.
+1. The policy in `config/security-headers.json` still meets the baseline encoded in
+   `scripts/ci/lint-headers.mjs`: `frame-ancestors 'none'` and `X-Frame-Options: DENY`
+   exactly (`'self'` / `SAMEORIGIN` are rejected — they would still permit same-origin
+   framing), `nosniff`, a `Referrer-Policy` from the non-leaking set, and HSTS with
+   `max-age` of at least one year plus `includeSubDomains` and `preload`. Weakening the
+   policy therefore requires editing that baseline in the same reviewed diff.
 2. The viewer-response function emits every policy header, with the exact value, on a
    page response, an asset response, and an origin error response.
 3. The synthetic 404 from the routing function carries the same headers.
+
+The gate reasons about the checked-in handlers, not about production: it cannot see
+whether the functions are associated with the distribution. That is the post-deploy
+smoke test's job (below).
 
 Behaviour is additionally pinned by the edge unit layer
 (`make test-unit-edge`, 100% coverage) in `src/test/edge/`.

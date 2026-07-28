@@ -399,9 +399,10 @@ every response by the viewer-response function
 (the synthetic 404 in the routing function carries the same set inline, because
 CloudFront skips viewer-response functions for a short-circuited request).
 
-`make lint-headers` — part of `make lint` — fails if the deployed functions stop
-emitting the policy, and the post-deploy smoke test re-checks the live responses with
-`curl -I`. See [the security-headers guide](docs/security-headers.md).
+`make lint-headers` — part of `make lint` — runs the checked-in functions and fails if
+they stop emitting the policy; the post-deploy smoke test then verifies the live
+responses with `curl -I`, which is what catches the functions not being associated with
+the distribution. See [the security-headers guide](docs/security-headers.md).
 
 ## Documentation
 

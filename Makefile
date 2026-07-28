@@ -315,6 +315,8 @@ lint-deps: ## Validate architecture/import boundaries with dependency-cruiser
 	node scripts/generateLocalization.mjs
 	$(PM_EXEC) $(DEPCRUISE_BIN) src pages tests --config .dependency-cruiser.js
 
+.PHONY: lint lint-headers
+
 lint-headers: ## Verify the edge security-header policy (config/security-headers.json) reaches every production response
 	$(PM_EXEC) node scripts/ci/lint-headers.mjs
 

@@ -101,8 +101,10 @@ make lint-deps    # dependency-cruiser on src, pages, tests
 make lint-headers # edge security-header policy (config/security-headers.json)
 ```
 
-`lint-headers` proves the CloudFront edge functions still emit every header in
-`config/security-headers.json` on real page, asset, and 404 responses (issue #377).
+`lint-headers` executes the checked-in CloudFront edge functions against representative
+page, asset, and 404 responses and fails if any header in `config/security-headers.json`
+is missing or weakened (issue #377). Live responses — and whether the functions are
+actually associated with the distribution — are verified by the post-deploy smoke test.
 The static export makes Next's `headers()` a no-op, so the edge is the only
 enforcement point — see [`docs/security-headers.md`](docs/security-headers.md). Never
 drop or weaken a header to make the gate pass.
