@@ -7,12 +7,14 @@ import {
   DEFAULT_MAX_QUERY_DEPTH,
   DEFAULT_MAX_QUERY_TOKENS,
   MAX_TRAVERSAL_DEPTH,
+  MAX_TRAVERSAL_VISITS,
   QUERY_GUARDS,
   QUERY_GUARD_EXTENSION,
   createQueryCostLimitRule,
   createQueryDepthLimitRule,
   createPageSizeLimitRule,
   createQueryGuardPlugins,
+  operationPaginationVariables,
   createQueryGuardRules,
   introspectionEnabled,
   measureOperationCost,
@@ -61,7 +63,7 @@ function depthOf(source: string): number {
 
 function costOf(source: string, maxPageSize: number = DEFAULT_MAX_PAGE_SIZE): number {
   const document = parse(source);
-  return measureOperationCost(operationOf(document), document, schema, maxPageSize);
+  return measureOperationCost(operationOf(document), document, { schema, maxPageSize });
 }
 
 function validateWith(source: string, rule: ReturnType<typeof createQueryDepthLimitRule>) {
@@ -236,14 +238,10 @@ describe('query cost guard', () => {
       fragment f20 on User { id }
     `;
 
-    const cost = measureOperationCost(
-      operationOf(parse(source)),
-      parse(source),
+    const cost = measureOperationCost(operationOf(parse(source)), parse(source), {
       schema,
-      DEFAULT_MAX_PAGE_SIZE,
-      MAX_TRAVERSAL_DEPTH,
-      DEFAULT_MAX_QUERY_COST
-    );
+      maxCost: DEFAULT_MAX_QUERY_COST,
+    });
 
     // Saturates one past the budget instead of expanding the whole tree: every field
     // costs at least 1 here, so counting maxCost + 1 of them already settles the
@@ -261,9 +259,7 @@ describe('query cost guard', () => {
     // simply not priced — the point is that the walk stays bounded.
     const document = parse(nestedNodeQuery(DEEP_NESTING));
 
-    expect(
-      measureOperationCost(operationOf(document), document, schema, DEFAULT_MAX_PAGE_SIZE, 8)
-    ).toBe(9);
+    expect(measureOperationCost(operationOf(document), document, { schema, maxDepth: 8 })).toBe(9);
   });
 });
 
@@ -291,6 +287,30 @@ describe('page-size guard', () => {
         parse('query Q($a: Int, $b: Int, $c: Int) { users(first: $a) { totalCount } }')
       )
     ).toEqual(['a']);
+  });
+
+  it('scopes collection to the operation a request selected', () => {
+    // A request naming `Cheap` must not be rejected because `Expensive` paginates.
+    const document = parse(`
+      query Cheap { user(id: "1") { id } }
+      query Expensive($n: Int) { users(first: $n) { totalCount } }
+    `);
+    const cheap = document.definitions[0] as OperationDefinitionNode;
+
+    expect(paginationVariables(document)).toEqual(['n']);
+    expect(operationPaginationVariables(cheap, document)).toEqual([]);
+  });
+
+  it('follows only the fragments the selected operation spreads', () => {
+    const document = parse(`
+      query Cheap { user(id: "1") { ...safe } }
+      query Expensive { users { ...paged } }
+      fragment safe on User { id }
+      fragment paged on UserCursorConnection { edges { node { id } } }
+    `);
+    const cheap = document.definitions[0] as OperationDefinitionNode;
+
+    expect(operationPaginationVariables(cheap, document)).toEqual([]);
   });
 
   it('ignores a variable used somewhere other than a list bound', () => {
@@ -391,6 +411,14 @@ describe('limit resolution from the environment', () => {
   it('clamps an over-large depth so a misconfiguration cannot unbound the walk', () => {
     expect(resolveQueryGuardLimits({ GRAPHQL_MAX_QUERY_DEPTH: '100000' }).maxDepth).toBe(
       MAX_TRAVERSAL_DEPTH
+    );
+  });
+
+  it('clamps a cost budget that would sit at or above the traversal visit cap', () => {
+    // Otherwise a document the walk merely stopped measuring would come back under
+    // budget and be accepted.
+    expect(resolveQueryGuardLimits({ GRAPHQL_MAX_QUERY_COST: '100000' }).maxCost).toBe(
+      MAX_TRAVERSAL_VISITS - 1
     );
   });
 

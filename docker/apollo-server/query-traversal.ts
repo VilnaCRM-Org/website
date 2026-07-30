@@ -92,7 +92,12 @@ export function literalListSize(value: ValueNode): number | undefined {
   return undefined;
 }
 
-/** Every variable used as a `first` / `last` bound anywhere in the document. */
+/**
+ * Every variable used as a `first` / `last` bound anywhere in the document, regardless
+ * of which operation uses it. Use `operationPaginationVariables` for a request:
+ * rejecting a named request because of a bound in an operation it did not select
+ * would be a false positive.
+ */
 export function paginationVariables(document: DocumentNode): string[] {
   const names = new Set<string>();
 
@@ -190,6 +195,7 @@ interface Frame {
 
 /** Each field the walk reaches, with the depth and cost multiplier in effect there. */
 interface VisitedField {
+  node: FieldNode;
   depth: number;
   multiplier: number;
 }
@@ -215,7 +221,7 @@ function fieldFrame(
   if (isMetaField(field.name.value)) return undefined;
 
   const depth = frame.depth + 1;
-  onField({ depth, multiplier: frame.multiplier });
+  onField({ node: field, depth, multiplier: frame.multiplier });
 
   if (!field.selectionSet || depth > options.maxDepth) return undefined;
 
@@ -337,6 +343,18 @@ export function measureOperationDepth(
   return deepest;
 }
 
+export interface CostOptions {
+  schema: GraphQLSchema;
+  maxPageSize?: number | undefined;
+  maxDepth?: number | undefined;
+  /**
+   * Must stay below `MAX_TRAVERSAL_VISITS`; `resolveQueryGuardLimits` clamps it.
+   * A budget at or above the cap could otherwise be "met" by a document the walk
+   * simply stopped measuring.
+   */
+  maxCost?: number | undefined;
+}
+
 /**
  * Static cost estimate for `operation`, saturating just past `maxCost`.
  *
@@ -347,21 +365,19 @@ export function measureOperationDepth(
 export function measureOperationCost(
   operation: OperationDefinitionNode,
   document: DocumentNode,
-  schema: GraphQLSchema,
-  maxPageSize: number = DEFAULT_MAX_PAGE_SIZE,
-  maxDepth: number = MAX_TRAVERSAL_DEPTH,
-  maxCost: number = MAX_TRAVERSAL_VISITS
+  options: CostOptions
 ): number {
+  const maxCost = Math.min(options.maxCost ?? MAX_TRAVERSAL_VISITS, MAX_TRAVERSAL_VISITS - 1);
   let total = 0;
 
   walkFields(
     operation,
     {
       fragments: collectFragments(document),
-      schema,
-      maxPageSize,
-      maxDepth,
-      maxVisits: Math.min(maxCost + 1, MAX_TRAVERSAL_VISITS),
+      schema: options.schema,
+      maxPageSize: options.maxPageSize ?? DEFAULT_MAX_PAGE_SIZE,
+      maxDepth: options.maxDepth ?? MAX_TRAVERSAL_DEPTH,
+      maxVisits: maxCost + 1,
     },
     field => {
       total += field.multiplier;
@@ -369,4 +385,38 @@ export function measureOperationCost(
   );
 
   return total;
+}
+
+/**
+ * The `first` / `last` variables the *resolved* operation actually reaches, following
+ * only the fragments it spreads. A request naming one operation must not be rejected
+ * because a different operation in the same document paginates.
+ */
+export function operationPaginationVariables(
+  operation: OperationDefinitionNode,
+  document: DocumentNode
+): string[] {
+  const names = new Set<string>();
+
+  walkFields(
+    operation,
+    {
+      fragments: collectFragments(document),
+      maxPageSize: DEFAULT_MAX_PAGE_SIZE,
+      maxDepth: MAX_TRAVERSAL_DEPTH,
+      maxVisits: MAX_TRAVERSAL_VISITS,
+    },
+    ({ node }) => {
+      node.arguments?.forEach(argument => {
+        if (
+          LIST_SIZE_ARGUMENTS.includes(argument.name.value) &&
+          argument.value.kind === Kind.VARIABLE
+        ) {
+          names.add(argument.value.name.value);
+        }
+      });
+    }
+  );
+
+  return [...names];
 }

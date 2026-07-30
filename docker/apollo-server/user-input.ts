@@ -146,9 +146,11 @@ export function validateCreateUserInput(input: Readonly<CreateUserInput>): void 
   // value — `User` has no password field, by design.
   requireString(input.password, 'Password is required', CREATE_USER_REASONS.MISSING_PASSWORD);
 
-  // `clientMutationId` is nullable in the schema, but when present it is echoed back
-  // to the client, so it must be the opaque string the schema promises.
-  if (input.clientMutationId !== undefined && typeof input.clientMutationId !== 'string') {
+  // `clientMutationId` is nullable in the schema, so `null` and `undefined` both round
+  // trip. Anything else is echoed back to the client verbatim, so it has to be the
+  // opaque string the schema promises.
+  const echo: unknown = input.clientMutationId;
+  if (echo !== undefined && echo !== null && typeof echo !== 'string') {
     throw badRequest('Invalid clientMutationId', CREATE_USER_REASONS.INVALID_INPUT_TYPE);
   }
 }

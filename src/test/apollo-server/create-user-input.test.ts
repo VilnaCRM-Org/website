@@ -200,6 +200,15 @@ describe('createUser input handling (mock reference pattern)', () => {
       expect(reasonOf(run)).toBe(reason);
     });
 
+    it.each([
+      ['null', null],
+      ['undefined', undefined],
+    ])('accepts a %s clientMutationId — the schema declares it nullable', (_label, echo) => {
+      expect(() =>
+        validateCreateUserInput({ ...validInput, clientMutationId: echo } as CreateUserInput)
+      ).not.toThrow();
+    });
+
     it('rejects a non-string clientMutationId, which would be echoed back verbatim', () => {
       const run = (): void =>
         validateCreateUserInput({

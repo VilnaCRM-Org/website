@@ -1,4 +1,4 @@
-import { GraphQLError } from 'graphql';
+import { GraphQLError, Kind } from 'graphql';
 import type {
   ASTNode,
   ASTVisitor,
@@ -11,11 +11,12 @@ import type {
 import {
   DEFAULT_MAX_PAGE_SIZE,
   MAX_TRAVERSAL_DEPTH,
+  MAX_TRAVERSAL_VISITS,
   isListSizeArgument,
   literalListSize,
   measureOperationCost,
   measureOperationDepth,
-  paginationVariables,
+  operationPaginationVariables,
 } from './query-traversal.js';
 
 /**
@@ -69,6 +70,7 @@ export {
   MAX_TRAVERSAL_VISITS,
   measureOperationCost,
   measureOperationDepth,
+  operationPaginationVariables,
   paginationVariables,
 } from './query-traversal.js';
 
@@ -137,14 +139,12 @@ export function createQueryCostLimitRule(
 ): ValidationRule {
   return (context: ValidationContext): ASTVisitor => ({
     OperationDefinition(operation: OperationDefinitionNode): void {
-      const cost = measureOperationCost(
-        operation,
-        context.getDocument(),
-        context.getSchema(),
+      const cost = measureOperationCost(operation, context.getDocument(), {
+        schema: context.getSchema(),
         maxPageSize,
         maxDepth,
-        maxCost
-      );
+        maxCost,
+      });
 
       if (cost > maxCost) {
         context.reportError(
@@ -188,6 +188,23 @@ export function createPageSizeLimitRule(
 }
 
 /**
+ * The operation a request selects, by GraphQL's own rule: the only one in the document,
+ * or the one whose name matches `operationName`.
+ */
+function selectedOperation(
+  document: DocumentNode,
+  operationName: string | null | undefined
+): OperationDefinitionNode | undefined {
+  const operations = document.definitions.filter(
+    (definition): definition is OperationDefinitionNode =>
+      definition.kind === Kind.OPERATION_DEFINITION
+  );
+
+  if (operations.length === 1) return operations[0];
+  return operations.find(operation => operation.name?.value === operationName);
+}
+
+/**
  * The slice of Apollo's request pipeline this plugin needs. Declared structurally
  * rather than imported: `@apollo/server` ships separate CJS and ESM type trees, and
  * this module compiles to CJS while `server.mts` compiles to ESM, so importing the
@@ -197,7 +214,10 @@ export interface PageSizeLimitPlugin {
   requestDidStart(): Promise<{
     didResolveOperation(requestContext: {
       document: DocumentNode;
-      request: { variables?: Record<string, unknown> | undefined };
+      request: {
+        variables?: Record<string, unknown> | undefined;
+        operationName?: string | null | undefined;
+      };
     }): Promise<void>;
   }>;
 }
@@ -215,9 +235,15 @@ export function createPageSizeLimitPlugin(
     async requestDidStart() {
       return {
         async didResolveOperation({ document, request }): Promise<void> {
+          // Scoped to the operation this request selected: rejecting it because a
+          // *different* operation in the same document paginates would be a false
+          // positive.
+          const operation = selectedOperation(document, request.operationName);
+          if (!operation) return;
+
           const variables: Record<string, unknown> = request.variables ?? {};
 
-          paginationVariables(document).forEach(name => {
+          operationPaginationVariables(operation, document).forEach(name => {
             const value = variables[name];
             if (typeof value === 'number' && value > maxPageSize) {
               throw pageSizeError(value, maxPageSize);
@@ -275,7 +301,12 @@ export function resolveQueryGuardLimits(
       positiveIntFromEnv(env.GRAPHQL_MAX_QUERY_DEPTH, DEFAULT_MAX_QUERY_DEPTH),
       MAX_TRAVERSAL_DEPTH
     ),
-    maxCost: positiveIntFromEnv(env.GRAPHQL_MAX_QUERY_COST, DEFAULT_MAX_QUERY_COST),
+    // Clamped below the traversal's visit cap: a budget at or above the cap could
+    // otherwise be "met" by a document the walk simply stopped measuring.
+    maxCost: Math.min(
+      positiveIntFromEnv(env.GRAPHQL_MAX_QUERY_COST, DEFAULT_MAX_QUERY_COST),
+      MAX_TRAVERSAL_VISITS - 1
+    ),
     maxPageSize: positiveIntFromEnv(env.GRAPHQL_MAX_PAGE_SIZE, DEFAULT_MAX_PAGE_SIZE),
     maxTokens: positiveIntFromEnv(env.GRAPHQL_MAX_QUERY_TOKENS, DEFAULT_MAX_QUERY_TOKENS),
   };
