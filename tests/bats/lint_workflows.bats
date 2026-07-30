@@ -104,6 +104,25 @@ run_lint_workflows() {
   assert_log_contains ':/repo:ro'
 }
 
+@test "forwards the token by name so its value never enters the docker argv" {
+  # `-e GH_TOKEN=<value>` would put the credential in the docker process's argv,
+  # readable by any local user via `ps`. Only the variable NAME may appear.
+  export GH_TOKEN='super-secret-token-value'
+
+  run_lint_workflows
+  [ "$status" -eq 0 ]
+  assert_log_contains '-e GH_TOKEN'
+  ! grep -Fq 'super-secret-token-value' "$COMMAND_LOG"
+}
+
+@test "does not leak a gh-CLI-sourced token into the docker argv either" {
+  create_gh_stub 'secret-from-gh-cli'
+
+  run_lint_workflows
+  [ "$status" -eq 0 ]
+  ! grep -Fq 'secret-from-gh-cli' "$COMMAND_LOG"
+}
+
 # --- Negative ------------------------------------------------------------------
 
 @test "fails when ZIZMOR_IMAGE is not set" {

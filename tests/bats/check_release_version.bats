@@ -138,6 +138,51 @@ setup() {
   assert_output_contains 'not a MAJOR.MINOR.PATCH semver'
 }
 
+@test "rejects a prerelease suffix rather than comparing it against plain tags" {
+  # Tag discovery keeps only plain MAJOR.MINOR.PATCH, so a prerelease version
+  # would be compared against a set it can never match and sail through.
+  make_repo "$REPO" '1.6.0-rc.1' v1.6.0 v1.7.0
+
+  run_guard "$REPO"
+  [ "$status" -eq 1 ]
+  assert_output_contains 'not a MAJOR.MINOR.PATCH semver'
+}
+
+@test "rejects a version with a fourth component" {
+  make_repo "$REPO" '1.2.3.4' v1.6.0
+
+  run_guard "$REPO"
+  [ "$status" -eq 1 ]
+  assert_output_contains 'not a MAJOR.MINOR.PATCH semver'
+}
+
+@test "rejects a version with non-numeric components" {
+  make_repo "$REPO" '1a.2b.3c' v1.6.0
+
+  run_guard "$REPO"
+  [ "$status" -eq 1 ]
+  assert_output_contains 'not a MAJOR.MINOR.PATCH semver'
+}
+
+@test "rejects a build-metadata suffix" {
+  make_repo "$REPO" '1.6.0+build.5' v1.6.0
+
+  run_guard "$REPO"
+  [ "$status" -eq 1 ]
+  assert_output_contains 'not a MAJOR.MINOR.PATCH semver'
+}
+
+@test "fails closed when the tags cannot be listed at all" {
+  # Not a git repository: `git tag --list` errors. Treating that as "no tags"
+  # would pass the guard exactly when it can no longer see what it checks.
+  mkdir -p "$REPO"
+  printf '{\n  "name": "website",\n  "version": "0.3.0"\n}\n' >"$REPO/package.json"
+
+  run_guard "$REPO"
+  [ "$status" -eq 1 ]
+  assert_output_contains 'could not list git tags'
+}
+
 @test "fails when package.json is not valid JSON" {
   mkdir -p "$REPO"
   git -C "$REPO" init --quiet --initial-branch=main

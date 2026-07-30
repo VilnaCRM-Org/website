@@ -37,18 +37,31 @@ version="$(
     "${pkg}" 2>/dev/null
 )" || fail "could not parse ${pkg}"
 
-case "${version}" in
-  [0-9]*.[0-9]*.[0-9]*) ;;
-  '') fail "${pkg} has no \"version\" field" ;;
-  *) fail "${pkg} version '${version}' is not a MAJOR.MINOR.PATCH semver" ;;
-esac
+# Anchored on purpose. A glob like [0-9]*.[0-9]*.[0-9]* also accepts "1.6.0-rc.1"
+# and "1.2.3.4", and tag discovery below keeps only plain MAJOR.MINOR.PATCH -- so a
+# malformed version would be compared against a set it can never match and sail
+# through the guard.
+if [ -z "${version}" ]; then
+  fail "${pkg} has no \"version\" field"
+fi
+if [[ ! "${version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+  fail "${pkg} version '${version}' is not a MAJOR.MINOR.PATCH semver"
+fi
 
 # Release tags are written as `v<semver>` by the changelog action. Older tags in
 # this repo also exist without the `v` prefix (0.1.0), and pre-release / non-
 # version tags may exist too; normalise the prefix and keep only plain semver,
 # because only those can collide with a computed release tag.
+#
+# `git tag --list` is captured on its own so its failure is fatal. Folding it into
+# the pipeline below would let `|| true` swallow a broken or missing repository as
+# "no tags yet" -- the guard would pass precisely when it can no longer see the
+# tags it exists to check. Only grep's no-match exit is tolerated.
+raw_tags="$(git -C "${repo_dir}" tag --list)" ||
+  fail "could not list git tags in ${repo_dir}"
+
 tags="$(
-  git -C "${repo_dir}" tag --list |
+  printf '%s\n' "${raw_tags}" |
     sed 's/^v//' |
     grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' || true
 )"

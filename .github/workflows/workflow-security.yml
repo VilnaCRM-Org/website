@@ -14,8 +14,7 @@ on:
   schedule:
     - cron: '0 4 * * 1'
 
-permissions:
-  contents: read
+permissions: {}
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -52,6 +51,10 @@ jobs:
     # those are cleared; never lower it to make a finding go away.
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      # Reading the workflows is all the audit needs; kept on the job so the
+      # workflow default stays empty for anything added later.
+      contents: read
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

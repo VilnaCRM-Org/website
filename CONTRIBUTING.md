@@ -170,7 +170,9 @@ Docker, deliberately outside `make lint`).
 
 The gate fails on medium-and-above findings reported with high confidence. In
 practice that means: pin every `uses:` to a full 40-character commit SHA with a
-trailing `# vX.Y.Z` comment that names the tag the SHA **actually** points at,
+trailing comment naming the tag that SHA **actually** points at — copy the tag
+verbatim, including whether upstream writes it `v1.5.0` or `1.5.0`, because
+zizmor compares the comment against the real tag and flags a mismatch —
 keep `permissions:` scoped to the job that needs them, never use an archived
 action, and never interpolate `${{ }}` into a `run:` body — pass values through
 `env:` and reference `"$VAR"`.

@@ -36,10 +36,14 @@ if [ -z "${token}" ]; then
   offline_args=(--offline)
 fi
 
+# Exported and forwarded by NAME. `-e GH_TOKEN=<value>` would place the credential
+# in the docker process's argv, where any local user can read it out of `ps`.
+export GH_TOKEN="${token}"
+
 docker run --rm \
   -v "${workspace}:/repo:ro" \
   -w /repo \
-  -e GH_TOKEN="${token}" \
+  -e GH_TOKEN \
   "${image}" \
   --no-progress \
   --persona "${persona}" \

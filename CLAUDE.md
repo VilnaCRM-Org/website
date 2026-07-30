@@ -111,7 +111,8 @@ API). Each has its own workflow — `rust-code-analysis.yml`, `contract-testing.
 `make lint-workflows` audits `.github/workflows` with zizmor, pinned by image digest in
 the Makefile. It blocks on medium-and-above findings at high confidence
 (`ZIZMOR_MIN_SEVERITY` / `ZIZMOR_MIN_CONFIDENCE`). Every `uses:` must be a full 40-char
-SHA whose `# vX.Y.Z` comment names the tag that SHA actually points at; `permissions:`
+SHA whose trailing comment names the tag that SHA actually points at, copied verbatim
+(upstream may write it `v1.5.0` or `1.5.0` — zizmor flags a mismatch); `permissions:`
 belong on the job that needs them; never interpolate `${{ }}` into a `run:` body. Fix
 findings at the root — never add a `zizmor.yml` ignore, a `# zizmor: ignore[...]`
 comment, or lower the thresholds.
