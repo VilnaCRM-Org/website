@@ -13,6 +13,7 @@ import type {
   DocumentNode,
   FieldNode,
   FragmentDefinitionNode,
+  FragmentSpreadNode,
   GraphQLArgument,
   GraphQLField,
   GraphQLNamedType,
@@ -48,11 +49,14 @@ import type {
  *   * `resolveQueryGuardLimits().maxTokens` — bounds `parse` itself, since a document
  *     nested deeply enough crashes the parser before any rule can run.
  *
- * The two walkers expand fragment spreads (with a cycle guard, since `NoFragmentCycles`
- * reports the cycle itself), skip introspection meta-fields — introspection is gated
- * separately by `introspectionEnabled` below, and the exemption keeps the standard,
- * legitimately deep introspection query usable in local development — and saturate at
- * the depth ceiling rather than recursing to the bottom of the document.
+ * Depth and cost share one iterative, explicitly-stacked traversal. It expands fragment
+ * spreads (with a cycle guard, since `NoFragmentCycles` reports the cycle itself), skips
+ * introspection meta-fields — introspection is gated separately by `introspectionEnabled`
+ * below, and the exemption keeps the standard, legitimately deep introspection query
+ * usable in local development — and stops at the depth ceiling. Iterative on purpose: a
+ * recursive walk descends once per nesting level, so a deep enough document would
+ * overflow the stack inside the guard, crashing the server instead of rejecting the
+ * request.
  *
  * A real service should price fields from the schema with a cost directive; this is
  * the smallest honest control that actually rejects an over-budget document.
@@ -75,10 +79,10 @@ export const DEFAULT_MAX_QUERY_COST = 500;
 export const DEFAULT_MAX_PAGE_SIZE = 25;
 
 /**
- * Absolute ceiling on how deep either walker will recurse, and the clamp applied to a
- * configured `maxDepth`. Both walkers are recursive, so an unbounded walk over a
- * deeply nested document would overflow the call stack *before* the guard could
- * reject it — the control would become the DoS.
+ * Absolute ceiling on how deep the traversal descends, and the clamp applied to a
+ * configured `maxDepth`. The walk is iterative, so this is about bounding work rather
+ * than the call stack: a document past this depth is rejected by the depth guard
+ * regardless, so there is nothing to gain by measuring the rest of it.
  */
 export const MAX_TRAVERSAL_DEPTH = 64;
 
@@ -142,105 +146,8 @@ function guardError(message: string, guard: QueryGuard, node?: ASTNode): GraphQL
   });
 }
 
-interface FragmentWalk {
-  fragments: Map<string, FragmentDefinitionNode>;
-  /** Fragment names on the current path, so a cyclic spread cannot recurse forever. */
-  active: Set<string>;
-  /**
-   * Neither walker descends past this. Without a bound, measuring a document nested
-   * tens of thousands of levels deep would itself blow the call stack *before* the
-   * guard could reject it — turning the control into the very DoS it exists to stop.
-   */
-  maxDepth: number;
-}
-
-/** Resolves a spread once, skipping unknown and cyclic fragments. */
-function visitFragment<T>(
-  walk: FragmentWalk,
-  name: string,
-  visit: (fragment: FragmentDefinitionNode) => T
-): T | undefined {
-  const fragment = walk.fragments.get(name);
-  if (!fragment || walk.active.has(name)) return undefined;
-
-  walk.active.add(name);
-  try {
-    return visit(fragment);
-  } finally {
-    walk.active.delete(name);
-  }
-}
-
 // ---------------------------------------------------------------------------
-// Depth
-// ---------------------------------------------------------------------------
-
-function measureDepth(selectionSet: SelectionSetNode, walk: FragmentWalk, depth: number): number {
-  // Once the budget is already blown the answer cannot get smaller, so stop.
-  if (depth > walk.maxDepth) return depth;
-
-  return selectionSet.selections.reduce(
-    (deepest, selection) => Math.max(deepest, depthOfSelection(selection, walk, depth)),
-    depth
-  );
-}
-
-function depthOfSelection(selection: SelectionNode, walk: FragmentWalk, depth: number): number {
-  if (selection.kind === Kind.FIELD) {
-    if (isMetaField(selection.name.value)) return depth;
-    return selection.selectionSet
-      ? measureDepth(selection.selectionSet, walk, depth + 1)
-      : depth + 1;
-  }
-
-  if (selection.kind === Kind.INLINE_FRAGMENT) {
-    return measureDepth(selection.selectionSet, walk, depth);
-  }
-
-  return (
-    visitFragment(walk, selection.name.value, fragment =>
-      measureDepth(fragment.selectionSet, walk, depth)
-    ) ?? depth
-  );
-}
-
-/**
- * Nesting depth of `operation`, saturating at `maxDepth + 1` — the exact depth of an
- * over-budget document is never needed, and computing it is what makes the walk
- * unbounded.
- */
-export function measureOperationDepth(
-  operation: OperationDefinitionNode,
-  document: DocumentNode,
-  maxDepth: number = MAX_TRAVERSAL_DEPTH
-): number {
-  return measureDepth(
-    operation.selectionSet,
-    { fragments: collectFragments(document), active: new Set<string>(), maxDepth },
-    0
-  );
-}
-
-export function createQueryDepthLimitRule(
-  maxDepth: number = DEFAULT_MAX_QUERY_DEPTH
-): ValidationRule {
-  return (context: ValidationContext): ASTVisitor => ({
-    OperationDefinition(operation: OperationDefinitionNode): void {
-      if (measureOperationDepth(operation, context.getDocument(), maxDepth) > maxDepth) {
-        context.reportError(
-          guardError(
-            `Query is too deep: it nests deeper than the maximum of ${maxDepth} levels.`,
-            QUERY_GUARDS.DEPTH,
-            operation
-          )
-        );
-      }
-    },
-  });
-}
-
-// ---------------------------------------------------------------------------
-// Cost
+// Traversal
 // ---------------------------------------------------------------------------
 
 function literalListSize(value: ValueNode): number | undefined {
@@ -287,91 +194,12 @@ function fieldDefinition(
 }
 
 function typeCondition(
-  schema: GraphQLSchema,
+  schema: GraphQLSchema | undefined,
   name: string | undefined,
   fallback: GraphQLNamedType | undefined
 ): GraphQLNamedType | undefined {
-  return name ? (schema.getType(name) ?? fallback) : fallback;
-}
-
-interface CostWalk extends FragmentWalk {
-  schema: GraphQLSchema;
-  maxPageSize: number;
-}
-
-function measureCost(
-  selectionSet: SelectionSetNode,
-  walk: CostWalk,
-  multiplier: number,
-  parentType: GraphQLNamedType | undefined,
-  depth: number
-): number {
-  // Anything nested this deep is already rejected by the depth guard, so pricing
-  // the rest of the subtree buys nothing and would leave this walk unbounded.
-  if (depth > walk.maxDepth) return 0;
-
-  return selectionSet.selections.reduce(
-    (total, selection) => total + costOfSelection(selection, walk, multiplier, parentType, depth),
-    0
-  );
-}
-
-function costOfSelection(
-  selection: SelectionNode,
-  walk: CostWalk,
-  multiplier: number,
-  parentType: GraphQLNamedType | undefined,
-  depth: number
-): number {
-  if (selection.kind === Kind.FIELD) {
-    return costOfField(selection, walk, multiplier, parentType, depth);
-  }
-
-  if (selection.kind === Kind.INLINE_FRAGMENT) {
-    return measureCost(
-      selection.selectionSet,
-      walk,
-      multiplier,
-      typeCondition(walk.schema, selection.typeCondition?.name.value, parentType),
-      depth
-    );
-  }
-
-  return (
-    visitFragment(walk, selection.name.value, fragment =>
-      measureCost(
-        fragment.selectionSet,
-        walk,
-        multiplier,
-        typeCondition(walk.schema, fragment.typeCondition.name.value, parentType),
-        depth
-      )
-    ) ?? 0
-  );
-}
-
-function costOfField(
-  field: FieldNode,
-  walk: CostWalk,
-  multiplier: number,
-  parentType: GraphQLNamedType | undefined,
-  depth: number
-): number {
-  if (isMetaField(field.name.value)) return 0;
-
-  const definition = fieldDefinition(parentType, field.name.value);
-  if (!field.selectionSet) return multiplier;
-
-  return (
-    multiplier +
-    measureCost(
-      field.selectionSet,
-      walk,
-      multiplier * listMultiplier(field, definition, walk.maxPageSize),
-      definition ? getNamedType(definition.type) : undefined,
-      depth + 1
-    )
-  );
+  if (!schema || !name) return fallback;
+  return schema.getType(name) ?? fallback;
 }
 
 function rootType(
@@ -387,6 +215,202 @@ function rootType(
   return schema.getQueryType() ?? undefined;
 }
 
+interface TraversalOptions {
+  fragments: Map<string, FragmentDefinitionNode>;
+  /** Absent for the depth walk, which needs no type information. */
+  schema?: GraphQLSchema | undefined;
+  maxPageSize: number;
+  /**
+   * The walk does not descend past this. A document that deep is rejected by the
+   * depth guard anyway, and refusing to go further is what keeps the traversal — and
+   * therefore the control itself — bounded.
+   */
+  maxDepth: number;
+}
+
+/** One pending selection set. Frames are pushed and popped on an explicit stack. */
+interface Frame {
+  selections: readonly SelectionNode[];
+  index: number;
+  depth: number;
+  multiplier: number;
+  parentType: GraphQLNamedType | undefined;
+  /** Set when the frame came from a spread, so the cycle guard can be released. */
+  fragment: string | undefined;
+}
+
+/** Each field the walk reaches, with the depth and cost multiplier in effect there. */
+interface VisitedField {
+  depth: number;
+  multiplier: number;
+}
+
+function frameOf(
+  selectionSet: SelectionSetNode,
+  depth: number,
+  multiplier: number,
+  parentType: GraphQLNamedType | undefined,
+  fragment: string | undefined
+): Frame {
+  return { selections: selectionSet.selections, index: 0, depth, multiplier, parentType, fragment };
+}
+
+function fieldFrame(
+  field: FieldNode,
+  frame: Frame,
+  options: TraversalOptions,
+  visit: (visited: VisitedField) => void
+): Frame | undefined {
+  // Introspection meta-fields and their subtrees are exempt; see the module comment.
+  if (isMetaField(field.name.value)) return undefined;
+
+  const depth = frame.depth + 1;
+  visit({ depth, multiplier: frame.multiplier });
+
+  if (!field.selectionSet || depth > options.maxDepth) return undefined;
+
+  const definition = fieldDefinition(frame.parentType, field.name.value);
+
+  return frameOf(
+    field.selectionSet,
+    depth,
+    frame.multiplier * listMultiplier(field, definition, options.maxPageSize),
+    definition ? getNamedType(definition.type) : undefined,
+    undefined
+  );
+}
+
+function spreadFrame(
+  spread: FragmentSpreadNode,
+  frame: Frame,
+  options: TraversalOptions,
+  active: Set<string>
+): Frame | undefined {
+  const name = spread.name.value;
+  const fragment = options.fragments.get(name);
+
+  // An unknown fragment is reported by KnownFragmentNames and a cyclic one by
+  // NoFragmentCycles; here they simply do not extend the walk.
+  if (!fragment || active.has(name)) return undefined;
+
+  active.add(name);
+
+  return frameOf(
+    fragment.selectionSet,
+    frame.depth,
+    frame.multiplier,
+    typeCondition(options.schema, fragment.typeCondition.name.value, frame.parentType),
+    name
+  );
+}
+
+function nextFrame(
+  selection: SelectionNode,
+  frame: Frame,
+  options: TraversalOptions,
+  active: Set<string>,
+  visit: (visited: VisitedField) => void
+): Frame | undefined {
+  if (selection.kind === Kind.FIELD) {
+    return fieldFrame(selection, frame, options, visit);
+  }
+
+  if (selection.kind === Kind.INLINE_FRAGMENT) {
+    return frameOf(
+      selection.selectionSet,
+      frame.depth,
+      frame.multiplier,
+      typeCondition(options.schema, selection.typeCondition?.name.value, frame.parentType),
+      undefined
+    );
+  }
+
+  return spreadFrame(selection, frame, options, active);
+}
+
+/**
+ * Depth-first walk over every field an operation reaches, expanding fragments.
+ *
+ * Deliberately iterative. A recursive walk descends once per nesting level, so a
+ * document nested deeply enough overflows the call stack *inside the guard* — the
+ * control crashing the server instead of rejecting the request. With an explicit
+ * stack the traversal costs heap, not stack, and cannot fail that way at all.
+ */
+function walkFields(
+  operation: OperationDefinitionNode,
+  options: TraversalOptions,
+  visit: (visited: VisitedField) => void
+): void {
+  const active = new Set<string>();
+  const parentType = options.schema ? rootType(options.schema, operation) : undefined;
+  const stack: Frame[] = [frameOf(operation.selectionSet, 0, 1, parentType, undefined)];
+
+  while (stack.length > 0) {
+    const frame = stack[stack.length - 1] as Frame;
+
+    if (frame.index >= frame.selections.length) {
+      if (frame.fragment !== undefined) active.delete(frame.fragment);
+      stack.pop();
+      continue;
+    }
+
+    const selection = frame.selections[frame.index] as SelectionNode;
+    frame.index += 1;
+
+    const child = nextFrame(selection, frame, options, active, visit);
+    if (child) stack.push(child);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Depth
+// ---------------------------------------------------------------------------
+
+/**
+ * Nesting depth of `operation`, saturating at `maxDepth + 1` — the exact depth of an
+ * over-budget document is never needed, and computing it is what would make the walk
+ * unbounded.
+ */
+export function measureOperationDepth(
+  operation: OperationDefinitionNode,
+  document: DocumentNode,
+  maxDepth: number = MAX_TRAVERSAL_DEPTH
+): number {
+  let deepest = 0;
+
+  walkFields(
+    operation,
+    { fragments: collectFragments(document), maxPageSize: DEFAULT_MAX_PAGE_SIZE, maxDepth },
+    field => {
+      deepest = Math.max(deepest, field.depth);
+    }
+  );
+
+  return deepest;
+}
+
+export function createQueryDepthLimitRule(
+  maxDepth: number = DEFAULT_MAX_QUERY_DEPTH
+): ValidationRule {
+  return (context: ValidationContext): ASTVisitor => ({
+    OperationDefinition(operation: OperationDefinitionNode): void {
+      if (measureOperationDepth(operation, context.getDocument(), maxDepth) > maxDepth) {
+        context.reportError(
+          guardError(
+            `Query is too deep: it nests deeper than the maximum of ${maxDepth} levels.`,
+            QUERY_GUARDS.DEPTH,
+            operation
+          )
+        );
+      }
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Cost
+// ---------------------------------------------------------------------------
+
 export function measureOperationCost(
   operation: OperationDefinitionNode,
   document: DocumentNode,
@@ -394,19 +418,17 @@ export function measureOperationCost(
   maxPageSize: number = DEFAULT_MAX_PAGE_SIZE,
   maxDepth: number = MAX_TRAVERSAL_DEPTH
 ): number {
-  return measureCost(
-    operation.selectionSet,
-    {
-      schema,
-      fragments: collectFragments(document),
-      active: new Set<string>(),
-      maxPageSize,
-      maxDepth,
-    },
-    1,
-    rootType(schema, operation),
-    0
+  let total = 0;
+
+  walkFields(
+    operation,
+    { fragments: collectFragments(document), schema, maxPageSize, maxDepth },
+    field => {
+      total += field.multiplier;
+    }
   );
+
+  return total;
 }
 
 export function createQueryCostLimitRule(

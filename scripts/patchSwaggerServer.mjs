@@ -100,7 +100,8 @@ export function stampUserServiceVersion(doc, version) {
 
 export function writeSwaggerSchema(path, doc) {
   fs.writeFileSync(path, JSON.stringify(doc, null, 2));
-  return `✅ Swagger spec patched: server ${doc.servers?.[0]?.url}, user-service ${doc.info?.version}`;
+  const { url } = doc.servers?.[0] ?? {};
+  return `✅ Swagger spec patched: server ${url}, user-service ${doc.info?.version}`;
 }
 
 export function patchSwaggerSchema(contractPath = CONTRACT_PATH, outputPath = OUTPUT_PATH) {

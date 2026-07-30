@@ -7,7 +7,7 @@ dotenvExpand.expand(env);
 import { ApolloServer, BaseContext } from '@apollo/server';
 import { startStandaloneServer } from '@apollo/server/standalone';
 import { ApolloServerPluginLandingPageDisabled } from '@apollo/server/plugin/disabled';
-import { ApolloServerPluginLandingPageLocalDefault } from '@apollo/server/plugin/landingPage/default';
+import * as landingPage from '@apollo/server/plugin/landingPage/default';
 
 import { formatError } from './error-formatting.js';
 import {
@@ -65,7 +65,7 @@ async function startServer() {
       introspection: isLocalDev,
       plugins: [
         isLocalDev
-          ? ApolloServerPluginLandingPageLocalDefault()
+          ? landingPage.ApolloServerPluginLandingPageLocalDefault()
           : ApolloServerPluginLandingPageDisabled(),
         // Page-size ceiling for variable bounds: validation cannot see variable
         // values, so it is re-checked at didResolveOperation, before execution.

@@ -64,6 +64,7 @@ type PatchModule = {
 };
 
 const API_BASE_URL: string = 'http://mockoon:8080';
+const READ_FAILURE: string = 'ENOENT: no such file or directory';
 const PINNED_VERSION: string = 'v2.6.0';
 
 const pristineContract: SwaggerDocument = {
@@ -126,14 +127,14 @@ describe('patchSwaggerServer', () => {
 
     it('exits when the contract cannot be read', () => {
       mockReadFileSync.mockImplementation(() => {
-        throw new Error('ENOENT: no such file or directory');
+        throw new Error(READ_FAILURE);
       });
 
       expect(() => patchModule.readSwaggerSchema('./missing.json')).toThrow(
         'process.exit was called'
       );
       expect(mockStderr).toHaveBeenCalledWith(
-        '❌ Failed to read or parse swagger schema at "./missing.json": ENOENT: no such file or directory\n'
+        `❌ Failed to read or parse swagger schema at "./missing.json": ${READ_FAILURE}\n`
       );
     });
 
