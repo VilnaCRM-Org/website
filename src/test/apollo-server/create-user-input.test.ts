@@ -177,6 +177,40 @@ describe('createUser input handling (mock reference pattern)', () => {
       );
     });
 
+    it.each([
+      ['an array', []],
+      ['an object', {}],
+      ['a number', 12345678],
+      ['a boolean', true],
+    ])('rejects a %s password — truthiness alone would let it through', (_label, password) => {
+      const run = (): void =>
+        validateCreateUserInput({ ...validInput, password } as CreateUserInput);
+
+      expect(run).toThrow('Password is required');
+      expect(reasonOf(run)).toBe(CREATE_USER_REASONS.MISSING_PASSWORD);
+    });
+
+    it.each([
+      ['email', CREATE_USER_REASONS.INVALID_EMAIL],
+      ['initials', CREATE_USER_REASONS.INVALID_INITIALS],
+    ])('rejects a non-string %s', (field, reason) => {
+      const run = (): void =>
+        validateCreateUserInput({ ...validInput, [field]: [] } as unknown as CreateUserInput);
+
+      expect(reasonOf(run)).toBe(reason);
+    });
+
+    it('rejects a non-string clientMutationId, which would be echoed back verbatim', () => {
+      const run = (): void =>
+        validateCreateUserInput({
+          ...validInput,
+          clientMutationId: { nested: true },
+        } as unknown as CreateUserInput);
+
+      expect(run).toThrow('Invalid clientMutationId');
+      expect(reasonOf(run)).toBe(CREATE_USER_REASONS.INVALID_INPUT_TYPE);
+    });
+
     it('rejects a missing password so no passwordless account can be created', () => {
       const run = (): void => validateCreateUserInput({ ...validInput, password: '' });
 

@@ -221,6 +221,37 @@ describe('query cost guard', () => {
     expect(costOf('query { __typename __schema { queryType { name } } }')).toBe(0);
   });
 
+  it('stops pricing a fragment bomb instead of expanding it exponentially', () => {
+    // The cycle guard only blocks repeats along the current path, so repeated
+    // *acyclic* spreads expand exponentially: this document is a few hundred bytes
+    // and would otherwise expand to 2^20 field visits before the budget is checked.
+    const chain = Array.from(
+      { length: 20 },
+      (_unused, level) =>
+        `fragment f${level} on User { ...f${level + 1} ...f${level + 1} ...f${level + 1} }`
+    ).join('\n');
+    const source = `
+      query { user(id: "1") { ...f0 } }
+      ${chain}
+      fragment f20 on User { id }
+    `;
+
+    const cost = measureOperationCost(
+      operationOf(parse(source)),
+      parse(source),
+      schema,
+      DEFAULT_MAX_PAGE_SIZE,
+      MAX_TRAVERSAL_DEPTH,
+      DEFAULT_MAX_QUERY_COST
+    );
+
+    // Saturates one past the budget instead of expanding the whole tree: every field
+    // costs at least 1 here, so counting maxCost + 1 of them already settles the
+    // verdict. Reaching this assertion at all is the regression signal — an unbounded
+    // walk would blow Jest's per-test timeout long before returning.
+    expect(cost).toBe(DEFAULT_MAX_QUERY_COST + 1);
+  });
+
   it('defaults to a budget that leaves the shipped client operation headroom', () => {
     expect(DEFAULT_MAX_QUERY_COST).toBeGreaterThan(costOf(SIGNUP_OPERATION));
   });
@@ -267,11 +298,21 @@ describe('page-size guard', () => {
   });
 
   describe('at request time, where variable values exist', () => {
-    let server: MockServer;
+    let server: MockServer | undefined;
+
+    /** Narrows the teardown-guarded handle at the point of use. */
+    function activeServer(): MockServer {
+      if (!server) throw new Error('the mock server was not started');
+      return server;
+    }
 
     afterEach(async () => {
-      await server.stop();
-      resetUsers();
+      try {
+        await server?.stop();
+      } finally {
+        server = undefined;
+        resetUsers();
+      }
     });
 
     it('rejects a variable page size above the ceiling', async () => {
@@ -280,7 +321,7 @@ describe('page-size guard', () => {
       server = await startMockServer({ maxPageSize: 25 });
 
       const { status, body } = await graphqlRequest(
-        server.url,
+        activeServer().url,
         'query Q($n: Int) { users(first: $n) { totalCount } }',
         { n: 100000 }
       );
@@ -299,7 +340,7 @@ describe('page-size guard', () => {
       server = await startMockServer({ maxPageSize: 25 });
 
       const { status, body } = await graphqlRequest(
-        server.url,
+        activeServer().url,
         'query Q($n: Int) { users(first: $n) { totalCount } }',
         { n: 25 }
       );
@@ -390,17 +431,29 @@ describe('introspection gating', () => {
 });
 
 describe('the guards over HTTP, against the real mock', () => {
-  let server: MockServer;
+  let server: MockServer | undefined;
+
+  /** Narrows the teardown-guarded handle at the point of use. */
+  function activeServer(): MockServer {
+    if (!server) throw new Error('the mock server was not started');
+    return server;
+  }
 
   afterEach(async () => {
-    await server.stop();
-    resetUsers();
+    // Guarded: if startMockServer threw, dereferencing `server` here would mask the
+    // original setup failure with a TypeError.
+    try {
+      await server?.stop();
+    } finally {
+      server = undefined;
+      resetUsers();
+    }
   });
 
   it('rejects an over-depth document with 400', async () => {
     server = await startMockServer({ maxDepth: 3 });
 
-    const { status, body } = await graphqlRequest(server.url, nestedNodeQuery(4));
+    const { status, body } = await graphqlRequest(activeServer().url, nestedNodeQuery(4));
 
     expect(status).toBe(400);
     expect(body.errors?.[0]?.message).toBe('The query is nested too deeply.');
@@ -411,7 +464,7 @@ describe('the guards over HTTP, against the real mock', () => {
     server = await startMockServer({ maxCost: 20 });
 
     const { status, body } = await graphqlRequest(
-      server.url,
+      activeServer().url,
       'query { users(first: 500) { edges { node { id email } } } }'
     );
 
@@ -423,7 +476,7 @@ describe('the guards over HTTP, against the real mock', () => {
   it('still accepts the operation the shipped client sends', async () => {
     server = await startMockServer();
 
-    const { status, body } = await graphqlRequest(server.url, SIGNUP_OPERATION, {
+    const { status, body } = await graphqlRequest(activeServer().url, SIGNUP_OPERATION, {
       input: {
         email: 'guarded@example.com',
         initials: 'GU',
@@ -439,7 +492,10 @@ describe('the guards over HTTP, against the real mock', () => {
   it('refuses introspection outside local development', async () => {
     server = await startMockServer({ nodeEnv: 'production' });
 
-    const { body } = await graphqlRequest(server.url, 'query { __schema { queryType { name } } }');
+    const { body } = await graphqlRequest(
+      activeServer().url,
+      'query { __schema { queryType { name } } }'
+    );
 
     expect(body.errors?.[0]?.message).toBe("Your query doesn't match the schema. Please check it!");
     expect(body.data).toBeUndefined();
@@ -449,7 +505,7 @@ describe('the guards over HTTP, against the real mock', () => {
     server = await startMockServer({ nodeEnv: 'development' });
 
     const { status, body } = await graphqlRequest(
-      server.url,
+      activeServer().url,
       'query { __schema { queryType { name } } }'
     );
 

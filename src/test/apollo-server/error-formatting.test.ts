@@ -84,6 +84,31 @@ describe('formatError — client-facing error shaping', () => {
       expect(result.extensions).not.toHaveProperty(key);
     });
 
+    it('drops an allow-listed key whose VALUE is not one this repo enumerated', () => {
+      // A key check alone would still let a resolver mistake publish an arbitrary
+      // object — or an internal detail — under a permitted name.
+      const result = formatError(
+        formattedError({
+          code: 'BAD_REQUEST',
+          reason: { host: '10.0.0.7', db: 'users' },
+          [QUERY_GUARD_EXTENSION]: INTERNAL_TEXT,
+        }),
+        new Error(INTERNAL_TEXT)
+      );
+
+      expect(Object.keys(result.extensions ?? {})).toEqual(['code', 'correlationId']);
+      expect(JSON.stringify(result)).not.toContain(INTERNAL_TEXT);
+    });
+
+    it('ignores an inherited property, which this process did not put there', () => {
+      const inherited = Object.create({ reason: 'INVALID_EMAIL' }) as Record<string, unknown>;
+      inherited.code = 'BAD_REQUEST';
+
+      const result = formatError(formattedError(inherited), new Error('boom'));
+
+      expect(result.extensions).not.toHaveProperty('reason');
+    });
+
     it('allow-lists extensions, so a key nobody anticipated cannot ride out', () => {
       // A deny-list would only remove the leaks known today; anything a future error
       // class, resolver mistake or dependency bump introduces would pass straight
@@ -190,11 +215,23 @@ describe('formatError — client-facing error shaping', () => {
 });
 
 describe('formatError — over HTTP, against the real mock', () => {
-  let server: MockServer;
+  let server: MockServer | undefined;
+
+  /** Narrows the teardown-guarded handle at the point of use. */
+  function activeServer(): MockServer {
+    if (!server) throw new Error('the mock server was not started');
+    return server;
+  }
 
   afterEach(async () => {
-    await server.stop();
-    resetUsers();
+    // Guarded: if startMockServer threw, dereferencing `server` here would mask the
+    // original setup failure with a TypeError.
+    try {
+      await server?.stop();
+    } finally {
+      server = undefined;
+      resetUsers();
+    }
   });
 
   it('returns a generic body with no internals when a resolver throws', async () => {
@@ -208,7 +245,7 @@ describe('formatError — over HTTP, against the real mock', () => {
       },
     });
 
-    const { body, raw } = await graphqlRequest(server.url, CREATE_USER_MUTATION, {
+    const { body, raw } = await graphqlRequest(activeServer().url, CREATE_USER_MUTATION, {
       input: {
         email: 'boom@example.com',
         initials: 'BO',
@@ -227,14 +264,14 @@ describe('formatError — over HTTP, against the real mock', () => {
       code: 'INTERNAL_SERVER_ERROR',
       correlationId: expect.any(String),
     });
-    expect(server.errorLog).toHaveBeenCalled();
+    expect(activeServer().errorLog).toHaveBeenCalled();
   });
 
   it('returns a generic body with no internals for a validation failure', async () => {
     server = await startMockServer();
 
     const { status, raw, body } = await graphqlRequest(
-      server.url,
+      activeServer().url,
       'mutation { createUser(input: { email: "a@b.co" }) { user { id } } }'
     );
 

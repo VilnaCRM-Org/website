@@ -157,6 +157,20 @@ describe('user-service version invariant', () => {
       );
     });
 
+    it('accepts an unrelated GraphQL version setting', () => {
+      // The rival-pin guard is scoped to the user-service / schema naming family, so
+      // legitimate client or protocol version config does not block the gate.
+      expect(run({ '.env': `${envFile()}GRAPHQL_CLIENT_VERSION=4.2.0\n` })).toEqual([]);
+    });
+
+    it('fails when a prefixed rival pin reappears', () => {
+      expect(run({ '.env': `${envFile()}NEXT_PUBLIC_USER_SERVICE_VERSION=v2.4.1\n` })).toEqual(
+        expect.arrayContaining([
+          expect.stringContaining('NEXT_PUBLIC_USER_SERVICE_VERSION is a second user-service pin'),
+        ])
+      );
+    });
+
     it('fails when a second version variable reappears — the original shape of the drift', () => {
       const problems = run({
         '.env': envFile({
@@ -254,6 +268,15 @@ describe('user-service version invariant', () => {
       expect(run({ '.env': envFile() })).toEqual([
         expect.stringContaining('hardcodes user-service v2.4.1'),
       ]);
+    });
+
+    it('scans the modern compose.yaml filename too', () => {
+      expect(
+        run({
+          '.env': envFile(),
+          'compose.yaml': 'image: ghcr.io/VilnaCRM-Org/user-service/v2.4.1\n',
+        })
+      ).toEqual([expect.stringContaining('compose.yaml hardcodes user-service v2.4.1')]);
     });
 
     it('does not scan vendored or generated trees', () => {

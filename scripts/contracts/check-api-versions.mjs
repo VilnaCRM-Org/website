@@ -47,11 +47,13 @@ export const DEFAULT_ENV_FILES = ['.env', '.env.example'];
 const PINNED_URL_VARS = ['GRAPHQL_SCHEMA_URL', 'NEXT_PUBLIC_USER_SERVICE_OPENAI_SPEC_URL'];
 
 /**
- * A second version variable is the shape the original drift took. The optional
- * leading segment matters: `NEXT_PUBLIC_USER_SERVICE_VERSION` is just as much a
- * rival pin as `USER_SERVICE_SPEC_VERSION`.
+ * A second version variable is the shape the original drift took
+ * (`GRAPHQL_SCHEMA_VERSION` alongside `USER_SERVICE_SPEC_VERSION`). The optional
+ * leading segment matters — `NEXT_PUBLIC_USER_SERVICE_VERSION` is just as much a
+ * rival pin — while the naming family stays narrow so unrelated settings such as
+ * `GRAPHQL_CLIENT_VERSION` are not swept up.
  */
-const RIVAL_PIN_PATTERN = /(?:^|_)(?:USER_SERVICE|GRAPHQL)[A-Z0-9_]*VERSION$/;
+const RIVAL_PIN_PATTERN = /(?:^|_)(?:USER_SERVICE|GRAPHQL_SCHEMA|GRAPHQL_SPEC)[A-Z0-9_]*VERSION$/;
 
 /** `https://raw.githubusercontent.com/<owner>/<repo>/<ref>/<path>` */
 const RAW_URL_PATTERN = /^https:\/\/raw\.githubusercontent\.com\/([^/]+\/[^/]+)\/([^/]+)\/(?:.+)$/;
@@ -59,7 +61,9 @@ const RAW_URL_PATTERN = /^https:\/\/raw\.githubusercontent\.com\/([^/]+\/[^/]+)\
 /** Any literal user-service tag anywhere in a scanned config file. */
 const HARDCODED_TAG_PATTERN = new RegExp(`${UPSTREAM_REPO}/(v\\d+\\.\\d+\\.\\d+)`, 'g');
 
-const CONFIG_FILE_PATTERN = /^(?:\.env(?:\..+)?|.*Dockerfile|docker-compose.*\.ya?ml)$/;
+// Both Compose naming conventions: the legacy `docker-compose*.yml` and the current
+// `compose*.yaml`, so a stale reference cannot hide behind the newer filename.
+const CONFIG_FILE_PATTERN = /^(?:\.env(?:\..+)?|.*Dockerfile|(?:docker-)?compose.*\.ya?ml)$/;
 
 /** Vendored, generated and VCS trees — nothing in them is a source of truth. */
 const SKIPPED_DIRECTORIES = new Set([

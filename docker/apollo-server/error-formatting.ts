@@ -3,7 +3,8 @@ import { randomUUID } from 'node:crypto';
 import { ApolloServerErrorCode } from '@apollo/server/errors';
 import type { GraphQLFormattedError } from 'graphql';
 
-import { QUERY_GUARDS, QUERY_GUARD_EXTENSION } from './query-guards.js';
+import { QUERY_GUARDS, QUERY_GUARD_EXTENSION, isQueryGuard } from './query-guards.js';
+import { isCreateUserReason } from './user-input.js';
 
 /**
  * Client-facing error shaping for the local Apollo mock (issue #381, F2).
@@ -27,13 +28,16 @@ import { QUERY_GUARDS, QUERY_GUARD_EXTENSION } from './query-guards.js';
  */
 
 /**
- * Extension keys a client may see — an ALLOW-list, not a deny-list. A deny-list
- * only removes the leaks known today: any key a future error class, resolver
- * mistake or dependency bump introduces would ride straight out, which is the
- * very failure mode (CWE-209) this module exists to close. `code` and
+ * Extension keys a client may see, each paired with a predicate that must accept the
+ * value. An ALLOW-list, and a value-checked one: a key check alone would still let a
+ * resolver mistake put an arbitrary object — or an internal detail — under a
+ * permitted name. Only own, recognised, enumerated values are copied. `code` and
  * `correlationId` are added explicitly afterwards.
  */
-const ALLOWED_EXTENSIONS: readonly string[] = ['reason', QUERY_GUARD_EXTENSION];
+const ALLOWED_EXTENSIONS: ReadonlyArray<readonly [string, (value: unknown) => boolean]> = [
+  ['reason', isCreateUserReason],
+  [QUERY_GUARD_EXTENSION, isQueryGuard],
+];
 
 const GENERIC_MESSAGES: Readonly<Record<string, string>> = {
   INTERNAL_SERVER_ERROR: 'Something went wrong on the server. Please try again later.',
@@ -54,8 +58,12 @@ function safeExtensions(extensions: GraphQLFormattedError['extensions']): Record
   const source: Record<string, unknown> = extensions ?? {};
   const safe: Record<string, unknown> = {};
 
-  ALLOWED_EXTENSIONS.forEach(key => {
-    if (key in source) safe[key] = source[key];
+  ALLOWED_EXTENSIONS.forEach(([key, accepts]) => {
+    // `hasOwn`, not `in`: an inherited property is not something this process put there.
+    if (!Object.hasOwn(source, key)) return;
+
+    const value = source[key];
+    if (accepts(value)) safe[key] = value;
   });
 
   return safe;
@@ -87,7 +95,7 @@ const QUERY_GUARD_MESSAGES: Readonly<Record<string, string>> = {
 
 function queryGuardMessage(extensions: Record<string, unknown>): string | undefined {
   const guard = extensions[QUERY_GUARD_EXTENSION];
-  return typeof guard === 'string' ? QUERY_GUARD_MESSAGES[guard] : undefined;
+  return isQueryGuard(guard) ? QUERY_GUARD_MESSAGES[guard] : undefined;
 }
 
 export function createFormatError(

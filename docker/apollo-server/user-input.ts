@@ -47,6 +47,13 @@ export const CREATE_USER_REASONS = {
 
 export type CreateUserReason = (typeof CREATE_USER_REASONS)[keyof typeof CREATE_USER_REASONS];
 
+const CREATE_USER_REASON_VALUES: readonly string[] = Object.values(CREATE_USER_REASONS);
+
+/** True only for a reason this module authored. Used to validate, never to trust. */
+export function isCreateUserReason(value: unknown): value is CreateUserReason {
+  return typeof value === 'string' && CREATE_USER_REASON_VALUES.includes(value);
+}
+
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_INITIALS_LENGTH = 2;
 
@@ -101,22 +108,48 @@ export function assertOnlyAllowedProperties(input: unknown): void {
   }
 }
 
+/**
+ * Every scalar is type-checked, not just tested for truthiness. GraphQL coerces these
+ * for us, but the allow-list exists precisely for callers that do not go through
+ * GraphQL — and there `[]` or `{}` is truthy, so a presence check alone would let a
+ * non-string password satisfy a schema invariant it does not actually meet.
+ */
+function requireString(value: unknown, message: string, reason: CreateUserReason): string {
+  if (typeof value !== 'string' || value.length === 0) {
+    throw badRequest(message, reason);
+  }
+  return value;
+}
+
 export function validateCreateUserInput(input: Readonly<CreateUserInput>): void {
   assertOnlyAllowedProperties(input);
 
-  if (!input.email || !EMAIL_PATTERN.test(input.email)) {
+  const email = requireString(
+    input.email,
+    'Invalid email format',
+    CREATE_USER_REASONS.INVALID_EMAIL
+  );
+  if (!EMAIL_PATTERN.test(email)) {
     throw badRequest('Invalid email format', CREATE_USER_REASONS.INVALID_EMAIL);
   }
 
-  if (!input.initials || input.initials.length < MIN_INITIALS_LENGTH) {
+  const initials = requireString(
+    input.initials,
+    'Invalid initials',
+    CREATE_USER_REASONS.INVALID_INITIALS
+  );
+  if (initials.length < MIN_INITIALS_LENGTH) {
     throw badRequest('Invalid initials', CREATE_USER_REASONS.INVALID_INITIALS);
   }
 
-  // The pinned schema marks `password` non-null; presence is re-checked here so a
-  // non-GraphQL caller cannot create a passwordless account. The mock never stores
-  // or echoes the value — `User` has no password field, by design.
-  if (!input.password) {
-    throw badRequest('Password is required', CREATE_USER_REASONS.MISSING_PASSWORD);
+  // The pinned schema marks `password` non-null. The mock never stores or echoes the
+  // value — `User` has no password field, by design.
+  requireString(input.password, 'Password is required', CREATE_USER_REASONS.MISSING_PASSWORD);
+
+  // `clientMutationId` is nullable in the schema, but when present it is echoed back
+  // to the client, so it must be the opaque string the schema promises.
+  if (input.clientMutationId !== undefined && typeof input.clientMutationId !== 'string') {
+    throw badRequest('Invalid clientMutationId', CREATE_USER_REASONS.INVALID_INPUT_TYPE);
   }
 }
 
