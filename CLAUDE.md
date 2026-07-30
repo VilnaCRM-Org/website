@@ -152,7 +152,9 @@ extending it, and do not copy a weaker shape into new code:
   response.
 - **Query budget** (`query-guards.ts`). The server applies depth and cost
   `validationRules` (`GRAPHQL_MAX_QUERY_DEPTH`, `GRAPHQL_MAX_QUERY_COST`,
-  `GRAPHQL_DEFAULT_LIST_SIZE` in `.env`), bounds parsing itself with
+  `GRAPHQL_MAX_PAGE_SIZE` in `.env` — enforced on literal bounds at validation and
+  on variable bounds at `didResolveOperation`, which is what makes the cost estimate
+  an upper bound), bounds parsing itself with
   `GRAPHQL_MAX_QUERY_TOKENS` — graphql-js parses by recursive descent, so a deeply
   nested document overflows the parser before any rule can run — and enables
   introspection plus the Apollo Sandbox only when `NODE_ENV=development`. Both

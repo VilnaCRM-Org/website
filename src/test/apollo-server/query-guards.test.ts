@@ -2,7 +2,7 @@ import { buildSchema, getIntrospectionQuery, parse, validate } from 'graphql';
 import type { DocumentNode, GraphQLSchema, OperationDefinitionNode } from 'graphql';
 
 import {
-  DEFAULT_LIST_SIZE,
+  DEFAULT_MAX_PAGE_SIZE,
   DEFAULT_MAX_QUERY_COST,
   DEFAULT_MAX_QUERY_DEPTH,
   DEFAULT_MAX_QUERY_TOKENS,
@@ -11,10 +11,13 @@ import {
   QUERY_GUARD_EXTENSION,
   createQueryCostLimitRule,
   createQueryDepthLimitRule,
+  createPageSizeLimitRule,
+  createQueryGuardPlugins,
   createQueryGuardRules,
   introspectionEnabled,
   measureOperationCost,
   measureOperationDepth,
+  paginationVariables,
   resolveQueryGuardLimits,
 } from '../../../docker/apollo-server/query-guards';
 import { resetUsers } from '../../../docker/apollo-server/resolvers';
@@ -56,9 +59,9 @@ function depthOf(source: string): number {
   return measureOperationDepth(operationOf(document), document);
 }
 
-function costOf(source: string, defaultListSize: number = DEFAULT_LIST_SIZE): number {
+function costOf(source: string, maxPageSize: number = DEFAULT_MAX_PAGE_SIZE): number {
   const document = parse(source);
-  return measureOperationCost(operationOf(document), document, schema, defaultListSize);
+  return measureOperationCost(operationOf(document), document, schema, maxPageSize);
 }
 
 function validateWith(source: string, rule: ReturnType<typeof createQueryDepthLimitRule>) {
@@ -228,8 +231,82 @@ describe('query cost guard', () => {
     const document = parse(nestedNodeQuery(DEEP_NESTING));
 
     expect(
-      measureOperationCost(operationOf(document), document, schema, DEFAULT_LIST_SIZE, 8)
+      measureOperationCost(operationOf(document), document, schema, DEFAULT_MAX_PAGE_SIZE, 8)
     ).toBe(9);
+  });
+});
+
+describe('page-size guard', () => {
+  it('accepts a literal bound at the ceiling', () => {
+    expect(
+      validateWith('query { users(first: 25) { totalCount } }', createPageSizeLimitRule(25))
+    ).toHaveLength(0);
+  });
+
+  it.each(['first', 'last'])('rejects a literal %s above the ceiling', argument => {
+    const errors = validateWith(
+      `query { users(${argument}: 1000) { totalCount } }`,
+      createPageSizeLimitRule(25)
+    );
+
+    expect(errors).toHaveLength(1);
+    expect(errors[0]?.message).toBe('Page size 1000 exceeds the maximum of 25.');
+    expect(errors[0]?.extensions?.[QUERY_GUARD_EXTENSION]).toBe(QUERY_GUARDS.PAGE_SIZE);
+  });
+
+  it('collects every variable used as a list bound', () => {
+    expect(
+      paginationVariables(
+        parse('query Q($a: Int, $b: Int, $c: Int) { users(first: $a) { totalCount } }')
+      )
+    ).toEqual(['a']);
+  });
+
+  it('ignores a variable used somewhere other than a list bound', () => {
+    expect(paginationVariables(parse('query Q($id: ID!) { user(id: $id) { id } }'))).toEqual([]);
+  });
+
+  describe('at request time, where variable values exist', () => {
+    let server: MockServer;
+
+    afterEach(async () => {
+      await server.stop();
+      resetUsers();
+    });
+
+    it('rejects a variable page size above the ceiling', async () => {
+      // Validation cannot see variable values, so `users(first: $n)` would otherwise
+      // be priced at the ceiling while the request supplied any Int it liked.
+      server = await startMockServer({ maxPageSize: 25 });
+
+      const { status, body } = await graphqlRequest(
+        server.url,
+        'query Q($n: Int) { users(first: $n) { totalCount } }',
+        { n: 100000 }
+      );
+
+      expect(status).toBe(400);
+      expect(body.errors?.[0]?.message).toBe('The requested page size is too large.');
+      expect(body.errors?.[0]?.extensions).toMatchObject({
+        [QUERY_GUARD_EXTENSION]: QUERY_GUARDS.PAGE_SIZE,
+        // Apollo defaults a plugin-thrown error to INTERNAL_SERVER_ERROR, which
+        // would misreport a rejected request as a server fault.
+        code: 'BAD_USER_INPUT',
+      });
+    });
+
+    it('accepts a variable page size at the ceiling', async () => {
+      server = await startMockServer({ maxPageSize: 25 });
+
+      const { status, body } = await graphqlRequest(
+        server.url,
+        'query Q($n: Int) { users(first: $n) { totalCount } }',
+        { n: 25 }
+      );
+
+      expect(status).toBe(200);
+      expect(body.errors).toBeUndefined();
+    });
   });
 });
 
@@ -238,7 +315,7 @@ describe('limit resolution from the environment', () => {
     expect(resolveQueryGuardLimits({})).toEqual({
       maxDepth: DEFAULT_MAX_QUERY_DEPTH,
       maxCost: DEFAULT_MAX_QUERY_COST,
-      defaultListSize: DEFAULT_LIST_SIZE,
+      maxPageSize: DEFAULT_MAX_PAGE_SIZE,
       maxTokens: DEFAULT_MAX_QUERY_TOKENS,
     });
   });
@@ -248,10 +325,10 @@ describe('limit resolution from the environment', () => {
       resolveQueryGuardLimits({
         GRAPHQL_MAX_QUERY_DEPTH: '4',
         GRAPHQL_MAX_QUERY_COST: '60',
-        GRAPHQL_DEFAULT_LIST_SIZE: '5',
+        GRAPHQL_MAX_PAGE_SIZE: '5',
         GRAPHQL_MAX_QUERY_TOKENS: '900',
       })
-    ).toEqual({ maxDepth: 4, maxCost: 60, defaultListSize: 5, maxTokens: 900 });
+    ).toEqual({ maxDepth: 4, maxCost: 60, maxPageSize: 5, maxTokens: 900 });
   });
 
   it.each([
@@ -259,6 +336,11 @@ describe('limit resolution from the environment', () => {
     ['zero', '0'],
     ['a negative value', '-5'],
     ['an empty value', ''],
+    // `Number.parseInt` stops at the first non-digit, so this would silently
+    // configure a limit of 8 if the whole value were not required to be numeric.
+    ['a numeric prefix followed by junk', '8junk'],
+    ['a decimal', '8.5'],
+    ['a padded value', ' 8 '],
   ])('falls back to the default for %s instead of disabling the guard', (_label, raw) => {
     expect(resolveQueryGuardLimits({ GRAPHQL_MAX_QUERY_DEPTH: raw }).maxDepth).toBe(
       DEFAULT_MAX_QUERY_DEPTH
@@ -288,10 +370,11 @@ describe('limit resolution from the environment', () => {
     });
   });
 
-  it('builds one rule per guard', () => {
-    expect(
-      createQueryGuardRules({ maxDepth: 5, maxCost: 50, defaultListSize: 5, maxTokens: 100 })
-    ).toHaveLength(2);
+  it('builds one rule per static guard, plus the request-time page-size plugin', () => {
+    const limits = { maxDepth: 5, maxCost: 50, maxPageSize: 5, maxTokens: 100 };
+
+    expect(createQueryGuardRules(limits)).toHaveLength(3);
+    expect(createQueryGuardPlugins(limits)).toHaveLength(1);
   });
 });
 
@@ -320,7 +403,7 @@ describe('the guards over HTTP, against the real mock', () => {
     const { status, body } = await graphqlRequest(server.url, nestedNodeQuery(4));
 
     expect(status).toBe(400);
-    expect(body.errors?.[0]?.message).toMatch(/^Query is too deep/);
+    expect(body.errors?.[0]?.message).toBe('The query is nested too deeply.');
     expect(body.errors?.[0]?.extensions?.[QUERY_GUARD_EXTENSION]).toBe(QUERY_GUARDS.DEPTH);
   });
 
@@ -333,7 +416,7 @@ describe('the guards over HTTP, against the real mock', () => {
     );
 
     expect(status).toBe(400);
-    expect(body.errors?.[0]?.message).toMatch(/^Query is too expensive/);
+    expect(body.errors?.[0]?.message).toBe('The query is too expensive to execute.');
     expect(body.errors?.[0]?.extensions?.[QUERY_GUARD_EXTENSION]).toBe(QUERY_GUARDS.COST);
   });
 

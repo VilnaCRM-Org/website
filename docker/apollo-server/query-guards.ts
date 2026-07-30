@@ -5,8 +5,10 @@ import {
   getNamedType,
   isInterfaceType,
   isObjectType,
+  visit,
 } from 'graphql';
 import type {
+  ASTNode,
   ASTVisitor,
   DocumentNode,
   FieldNode,
@@ -32,19 +34,25 @@ import type {
  * Resource Consumption). The mock is not deployed, but `CLAUDE.md` / `agents.md`
  * point agents at it as the canonical API shape, so it has to model the control.
  *
- * Two rules are exported, both plain `graphql-js` validation rules so they compose
- * with everything Apollo already runs and need no runtime dependency:
+ * The controls, all built on `graphql-js` and Apollo's own hooks so they compose with
+ * everything already running and need no runtime dependency:
  *
  *   * `createQueryDepthLimitRule` — rejects a document nested deeper than `maxDepth`.
  *   * `createQueryCostLimitRule`  — rejects a document whose static cost estimate
  *     exceeds `maxCost`. Each field costs 1, multiplied by every list bound
  *     (`first` / `last`) in effect above it, so breadth, aliasing and pagination
  *     amplification are all priced.
+ *   * `createPageSizeLimitRule` / `createPageSizeLimitPlugin` — enforce `maxPageSize`
+ *     on literal and variable bounds respectively, which is what makes the cost
+ *     estimate an upper bound rather than a guess.
+ *   * `resolveQueryGuardLimits().maxTokens` — bounds `parse` itself, since a document
+ *     nested deeply enough crashes the parser before any rule can run.
  *
- * Both expand fragment spreads (with a cycle guard, since `NoFragmentCycles` reports
- * the cycle itself) and both skip introspection meta-fields: introspection is gated
- * separately by `introspectionEnabled` below, and exempting the meta-fields keeps the
- * standard — and legitimately deep — introspection query usable in local development.
+ * The two walkers expand fragment spreads (with a cycle guard, since `NoFragmentCycles`
+ * reports the cycle itself), skip introspection meta-fields — introspection is gated
+ * separately by `introspectionEnabled` below, and the exemption keeps the standard,
+ * legitimately deep introspection query usable in local development — and saturate at
+ * the depth ceiling rather than recursing to the bottom of the document.
  *
  * A real service should price fields from the schema with a cost directive; this is
  * the smallest honest control that actually rejects an over-budget document.
@@ -54,11 +62,17 @@ export const DEFAULT_MAX_QUERY_DEPTH = 8;
 export const DEFAULT_MAX_QUERY_COST = 500;
 
 /**
- * Assumed page size when a paginated field's bound is not a literal in the document
- * (a variable, or omitted entirely). Deliberately pessimistic: an unbounded list is
- * the expensive case, so it must not price as 1.
+ * The largest page a paginated field may request, and therefore the size assumed when
+ * a bound is not a literal in the document (a variable, or omitted entirely). Making
+ * it a real ceiling rather than a guess is what makes the cost estimate sound: without
+ * one, `first: $n` prices as the guess while runtime could supply any Int at all.
+ *
+ * It is enforced in both places a page size can be decided: `createPageSizeLimitRule`
+ * rejects an over-large literal at validation time, and `createPageSizeLimitPlugin`
+ * rejects an over-large *variable* at `didResolveOperation`, which is the first point
+ * where variable values exist.
  */
-export const DEFAULT_LIST_SIZE = 25;
+export const DEFAULT_MAX_PAGE_SIZE = 25;
 
 /**
  * Absolute ceiling on how deep either walker will recurse, and the clamp applied to a
@@ -94,6 +108,7 @@ export const QUERY_GUARD_EXTENSION = 'queryGuard';
 export const QUERY_GUARDS = {
   DEPTH: 'QUERY_DEPTH_LIMIT',
   COST: 'QUERY_COST_LIMIT',
+  PAGE_SIZE: 'QUERY_PAGE_SIZE_LIMIT',
 } as const;
 
 export type QueryGuard = (typeof QUERY_GUARDS)[keyof typeof QUERY_GUARDS];
@@ -113,15 +128,15 @@ function collectFragments(document: DocumentNode): Map<string, FragmentDefinitio
   return fragments;
 }
 
-function guardError(
-  message: string,
-  guard: QueryGuard,
-  node: OperationDefinitionNode
-): GraphQLError {
+function guardError(message: string, guard: QueryGuard, node?: ASTNode): GraphQLError {
   return new GraphQLError(message, {
-    nodes: [node],
+    ...(node ? { nodes: [node] } : {}),
     extensions: {
       [QUERY_GUARD_EXTENSION]: guard,
+      // Apollo overrides this with GRAPHQL_VALIDATION_FAILED for a validation rule.
+      // It survives on the plugin path, where the alternative is Apollo's default of
+      // INTERNAL_SERVER_ERROR — misleading for a rejected request.
+      code: 'BAD_USER_INPUT',
       http: { status: 400 },
     },
   });
@@ -242,23 +257,23 @@ function declaresListBound(args: readonly GraphQLArgument[]): boolean {
 
 /**
  * How much the subtree below `field` is multiplied. A literal `first` / `last` in the
- * document wins; otherwise a field the schema declares as paginated falls back to
- * `defaultListSize`, and everything else multiplies by 1.
+ * document wins; a bound that cannot be read statically prices at `maxPageSize`, which
+ * the page-size guards make a genuine ceiling; everything else multiplies by 1.
  */
 function listMultiplier(
   field: FieldNode,
   definition: GraphQLField<unknown, unknown> | undefined,
-  defaultListSize: number
+  maxPageSize: number
 ): number {
   const bound = field.arguments?.find(argument =>
     LIST_SIZE_ARGUMENTS.includes(argument.name.value)
   );
 
   if (bound) {
-    return literalListSize(bound.value) ?? defaultListSize;
+    return literalListSize(bound.value) ?? maxPageSize;
   }
 
-  return definition && declaresListBound(definition.args) ? defaultListSize : 1;
+  return definition && declaresListBound(definition.args) ? maxPageSize : 1;
 }
 
 function fieldDefinition(
@@ -281,7 +296,7 @@ function typeCondition(
 
 interface CostWalk extends FragmentWalk {
   schema: GraphQLSchema;
-  defaultListSize: number;
+  maxPageSize: number;
 }
 
 function measureCost(
@@ -352,7 +367,7 @@ function costOfField(
     measureCost(
       field.selectionSet,
       walk,
-      multiplier * listMultiplier(field, definition, walk.defaultListSize),
+      multiplier * listMultiplier(field, definition, walk.maxPageSize),
       definition ? getNamedType(definition.type) : undefined,
       depth + 1
     )
@@ -376,7 +391,7 @@ export function measureOperationCost(
   operation: OperationDefinitionNode,
   document: DocumentNode,
   schema: GraphQLSchema,
-  defaultListSize: number = DEFAULT_LIST_SIZE,
+  maxPageSize: number = DEFAULT_MAX_PAGE_SIZE,
   maxDepth: number = MAX_TRAVERSAL_DEPTH
 ): number {
   return measureCost(
@@ -385,7 +400,7 @@ export function measureOperationCost(
       schema,
       fragments: collectFragments(document),
       active: new Set<string>(),
-      defaultListSize,
+      maxPageSize,
       maxDepth,
     },
     1,
@@ -396,7 +411,7 @@ export function measureOperationCost(
 
 export function createQueryCostLimitRule(
   maxCost: number = DEFAULT_MAX_QUERY_COST,
-  defaultListSize: number = DEFAULT_LIST_SIZE,
+  maxPageSize: number = DEFAULT_MAX_PAGE_SIZE,
   maxDepth: number = DEFAULT_MAX_QUERY_DEPTH
 ): ValidationRule {
   return (context: ValidationContext): ASTVisitor => ({
@@ -405,7 +420,7 @@ export function createQueryCostLimitRule(
         operation,
         context.getDocument(),
         context.getSchema(),
-        defaultListSize,
+        maxPageSize,
         maxDepth
       );
 
@@ -423,6 +438,91 @@ export function createQueryCostLimitRule(
 }
 
 // ---------------------------------------------------------------------------
+// Page size
+// ---------------------------------------------------------------------------
+
+/** Every variable used as a `first` / `last` bound anywhere in the document. */
+export function paginationVariables(document: DocumentNode): string[] {
+  const names = new Set<string>();
+
+  visit(document, {
+    Argument(node) {
+      if (LIST_SIZE_ARGUMENTS.includes(node.name.value) && node.value.kind === Kind.VARIABLE) {
+        names.add(node.value.name.value);
+      }
+    },
+  });
+
+  return [...names];
+}
+
+function pageSizeError(requested: number, maxPageSize: number, node?: ASTNode): GraphQLError {
+  return guardError(
+    `Page size ${requested} exceeds the maximum of ${maxPageSize}.`,
+    QUERY_GUARDS.PAGE_SIZE,
+    node
+  );
+}
+
+/** Rejects a literal `first: 1000`. Visitor-based, so it never recurses. */
+export function createPageSizeLimitRule(
+  maxPageSize: number = DEFAULT_MAX_PAGE_SIZE
+): ValidationRule {
+  return (context: ValidationContext): ASTVisitor => ({
+    Argument(node): void {
+      if (!LIST_SIZE_ARGUMENTS.includes(node.name.value)) return;
+
+      const requested = literalListSize(node.value);
+      if (requested !== undefined && requested > maxPageSize) {
+        context.reportError(pageSizeError(requested, maxPageSize, node));
+      }
+    },
+  });
+}
+
+/**
+ * The slice of Apollo's request pipeline this plugin needs. Declared structurally
+ * rather than imported: `@apollo/server` ships separate CJS and ESM type trees, and
+ * this module compiles to CJS while `server.mts` compiles to ESM, so importing the
+ * plugin interface here would make the two nominally incompatible.
+ */
+export interface PageSizeLimitPlugin {
+  requestDidStart(): Promise<{
+    didResolveOperation(requestContext: {
+      document: DocumentNode;
+      request: { variables?: Record<string, unknown> | undefined };
+    }): Promise<void>;
+  }>;
+}
+
+/**
+ * Closes the gap validation cannot: `users(first: $n)` is priced at `maxPageSize`
+ * statically, but nothing stops the request supplying `$n = 100000`. Variable values
+ * first exist at `didResolveOperation`, so the ceiling is re-checked there — before
+ * execution, which is what makes the static estimate an actual upper bound.
+ */
+export function createPageSizeLimitPlugin(
+  maxPageSize: number = DEFAULT_MAX_PAGE_SIZE
+): PageSizeLimitPlugin {
+  return {
+    async requestDidStart() {
+      return {
+        async didResolveOperation({ document, request }): Promise<void> {
+          const variables: Record<string, unknown> = request.variables ?? {};
+
+          paginationVariables(document).forEach(name => {
+            const value = variables[name];
+            if (typeof value === 'number' && value > maxPageSize) {
+              throw pageSizeError(value, maxPageSize);
+            }
+          });
+        },
+      };
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Introspection / Sandbox
 // ---------------------------------------------------------------------------
 
@@ -435,15 +535,21 @@ export function introspectionEnabled(nodeEnv: string | undefined = process.env.N
   return nodeEnv === 'development';
 }
 
+/**
+ * Requires the WHOLE value to be a positive integer. `Number.parseInt` stops at the
+ * first non-digit, so `8junk` would otherwise silently configure a limit of 8.
+ */
 function positiveIntFromEnv(raw: string | undefined, fallback: number): number {
-  const parsed = Number.parseInt(raw ?? '', 10);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+  if (!/^\d+$/.test(raw ?? '')) return fallback;
+
+  const parsed = Number.parseInt(raw as string, 10);
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : fallback;
 }
 
 export interface QueryGuardLimits {
   maxDepth: number;
   maxCost: number;
-  defaultListSize: number;
+  maxPageSize: number;
   /** graphql-js parse limit; see MAX_TRAVERSAL_DEPTH for why parsing is bounded too. */
   maxTokens: number;
 }
@@ -459,7 +565,7 @@ export function resolveQueryGuardLimits(
       MAX_TRAVERSAL_DEPTH
     ),
     maxCost: positiveIntFromEnv(env.GRAPHQL_MAX_QUERY_COST, DEFAULT_MAX_QUERY_COST),
-    defaultListSize: positiveIntFromEnv(env.GRAPHQL_DEFAULT_LIST_SIZE, DEFAULT_LIST_SIZE),
+    maxPageSize: positiveIntFromEnv(env.GRAPHQL_MAX_PAGE_SIZE, DEFAULT_MAX_PAGE_SIZE),
     maxTokens: positiveIntFromEnv(env.GRAPHQL_MAX_QUERY_TOKENS, DEFAULT_MAX_QUERY_TOKENS),
   };
 }
@@ -467,6 +573,12 @@ export function resolveQueryGuardLimits(
 export function createQueryGuardRules(limits: QueryGuardLimits): ValidationRule[] {
   return [
     createQueryDepthLimitRule(limits.maxDepth),
-    createQueryCostLimitRule(limits.maxCost, limits.defaultListSize, limits.maxDepth),
+    createQueryCostLimitRule(limits.maxCost, limits.maxPageSize, limits.maxDepth),
+    createPageSizeLimitRule(limits.maxPageSize),
   ];
+}
+
+/** The guards that cannot run as validation rules, because they need request values. */
+export function createQueryGuardPlugins(limits: QueryGuardLimits): PageSizeLimitPlugin[] {
+  return [createPageSizeLimitPlugin(limits.maxPageSize)];
 }

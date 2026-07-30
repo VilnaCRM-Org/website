@@ -141,21 +141,50 @@ describe('formatError — client-facing error shaping', () => {
     });
   });
 
-  describe('query-guard rejections keep their repo-authored message', () => {
-    it('passes the depth/cost message through untouched', () => {
-      const message = 'Query is too deep: 12 levels exceeds the maximum of 8.';
+  describe('query-guard rejections report why, from a message authored here', () => {
+    it.each([
+      [QUERY_GUARDS.DEPTH, 'The query is nested too deeply.'],
+      [QUERY_GUARDS.COST, 'The query is too expensive to execute.'],
+      [QUERY_GUARDS.PAGE_SIZE, 'The requested page size is too large.'],
+    ])('maps the %s guard to its own message', (guard, expected) => {
       const result = formatError(
         formattedError(
-          {
-            code: 'GRAPHQL_VALIDATION_FAILED',
-            [QUERY_GUARD_EXTENSION]: QUERY_GUARDS.DEPTH,
-          },
-          message
+          { code: 'GRAPHQL_VALIDATION_FAILED', [QUERY_GUARD_EXTENSION]: guard },
+          'Query is too deep: it nests deeper than the maximum of 8 levels.'
         ),
-        new Error(message)
+        new Error('internal')
       );
 
-      expect(result.message).toBe(message);
+      expect(result.message).toBe(expected);
+    });
+
+    it('does not let an unrecognised guard value forward a raw message', () => {
+      // Forwarding whenever a `queryGuard` key was present would have made the
+      // sanitisation opt-out-able by any error that happened to carry one.
+      const result = formatError(
+        formattedError(
+          { code: 'INTERNAL_SERVER_ERROR', [QUERY_GUARD_EXTENSION]: 'NOT_A_REAL_GUARD' },
+          INTERNAL_TEXT
+        ),
+        new Error(INTERNAL_TEXT)
+      );
+
+      expect(result.message).toBe('Something went wrong on the server. Please try again later.');
+      expect(JSON.stringify(result)).not.toContain(INTERNAL_TEXT);
+    });
+
+    it('still records the rule’s detailed message server-side', () => {
+      const detailed = 'Query is too deep: it nests deeper than the maximum of 8 levels.';
+      formatError(
+        formattedError(
+          { code: 'GRAPHQL_VALIDATION_FAILED', [QUERY_GUARD_EXTENSION]: QUERY_GUARDS.DEPTH },
+          detailed
+        ),
+        new Error(detailed)
+      );
+
+      const [, meta] = logger.error.mock.calls[0] as [string, Record<string, unknown>];
+      expect(String(meta.detail)).toContain(detailed);
     });
   });
 });

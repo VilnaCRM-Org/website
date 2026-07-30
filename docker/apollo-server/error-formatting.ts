@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { ApolloServerErrorCode } from '@apollo/server/errors';
 import type { GraphQLFormattedError } from 'graphql';
 
-import { QUERY_GUARD_EXTENSION } from './query-guards.js';
+import { QUERY_GUARDS, QUERY_GUARD_EXTENSION } from './query-guards.js';
 
 /**
  * Client-facing error shaping for the local Apollo mock (issue #381, F2).
@@ -69,13 +69,25 @@ function internalDetail(error: unknown): string {
 }
 
 /**
- * Query-guard rejections (depth / cost) carry messages this repo authors, so the
- * limit that was breached can be reported without leaking anything. Apollo forces
- * `code: GRAPHQL_VALIDATION_FAILED` onto every validation error, which is why the
- * guard marks itself with its own extension key instead of a custom code.
+ * A query-guard rejection is reported as *why* it was rejected, using a message
+ * written here — not the rule's own message. Forwarding `formattedError.message`
+ * whenever a `queryGuard` extension was present would have made the sanitisation
+ * opt-out-able by any error that happened to carry that key. The rule's detailed
+ * message (with the exact limits) still reaches the server log.
+ *
+ * Apollo forces `code: GRAPHQL_VALIDATION_FAILED` onto every validation error,
+ * which is why the guard marks itself with its own extension key rather than a
+ * custom code.
  */
-function isQueryGuardRejection(extensions: Record<string, unknown>): boolean {
-  return typeof extensions[QUERY_GUARD_EXTENSION] === 'string';
+const QUERY_GUARD_MESSAGES: Readonly<Record<string, string>> = {
+  [QUERY_GUARDS.DEPTH]: 'The query is nested too deeply.',
+  [QUERY_GUARDS.COST]: 'The query is too expensive to execute.',
+  [QUERY_GUARDS.PAGE_SIZE]: 'The requested page size is too large.',
+};
+
+function queryGuardMessage(extensions: Record<string, unknown>): string | undefined {
+  const guard = extensions[QUERY_GUARD_EXTENSION];
+  return typeof guard === 'string' ? QUERY_GUARD_MESSAGES[guard] : undefined;
 }
 
 export function createFormatError(
@@ -94,9 +106,7 @@ export function createFormatError(
       detail: internalDetail(error),
     });
 
-    const message = isQueryGuardRejection(extensions)
-      ? formattedError.message
-      : (GENERIC_MESSAGES[code] ?? FALLBACK_MESSAGE);
+    const message = queryGuardMessage(extensions) ?? GENERIC_MESSAGES[code] ?? FALLBACK_MESSAGE;
 
     // Rebuilt field by field rather than spread, at both levels: the removed defect
     // rode out on a top-level `details` key, and a spread would happily carry that —

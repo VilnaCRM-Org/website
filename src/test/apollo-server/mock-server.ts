@@ -8,6 +8,7 @@ import type { GraphQLFormattedError } from 'graphql';
 import { createFormatError } from '../../../docker/apollo-server/error-formatting';
 import {
   QueryGuardLimits,
+  createQueryGuardPlugins,
   createQueryGuardRules,
   introspectionEnabled,
   resolveQueryGuardLimits,
@@ -38,7 +39,7 @@ export interface MockServerOptions {
   nodeEnv?: string | undefined;
   maxDepth?: number | undefined;
   maxCost?: number | undefined;
-  defaultListSize?: number | undefined;
+  maxPageSize?: number | undefined;
   /** Swap the resolvers to force an unexpected internal failure. */
   resolverOverrides?: { Mutation: { createUser: (...args: never[]) => never } } | undefined;
 }
@@ -69,7 +70,7 @@ export async function startMockServer(options: MockServerOptions = {}): Promise<
   const limits: QueryGuardLimits = {
     maxDepth: options.maxDepth ?? defaults.maxDepth,
     maxCost: options.maxCost ?? defaults.maxCost,
-    defaultListSize: options.defaultListSize ?? defaults.defaultListSize,
+    maxPageSize: options.maxPageSize ?? defaults.maxPageSize,
     maxTokens: defaults.maxTokens,
   };
 
@@ -81,6 +82,7 @@ export async function startMockServer(options: MockServerOptions = {}): Promise<
     },
     formatError: createFormatError({ error: errorLog }),
     validationRules: createQueryGuardRules(limits),
+    plugins: createQueryGuardPlugins(limits),
     parseOptions: { maxTokens: limits.maxTokens },
     introspection: isLocalDev,
     includeStacktraceInErrorResponses: false,

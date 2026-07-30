@@ -11,6 +11,7 @@ import { ApolloServerPluginLandingPageLocalDefault } from '@apollo/server/plugin
 
 import { formatError } from './error-formatting.js';
 import {
+  createQueryGuardPlugins,
   createQueryGuardRules,
   introspectionEnabled,
   resolveQueryGuardLimits,
@@ -66,6 +67,9 @@ async function startServer() {
         isLocalDev
           ? ApolloServerPluginLandingPageLocalDefault()
           : ApolloServerPluginLandingPageDisabled(),
+        // Page-size ceiling for variable bounds: validation cannot see variable
+        // values, so it is re-checked at didResolveOperation, before execution.
+        ...createQueryGuardPlugins(limits),
       ],
       // Apollo attaches `extensions.stacktrace` outside production/test. Pin it
       // off so an internal stack can never ride out on an error response.

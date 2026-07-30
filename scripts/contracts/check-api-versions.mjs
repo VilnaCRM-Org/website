@@ -46,8 +46,12 @@ export const DEFAULT_ENV_FILES = ['.env', '.env.example'];
 /** Every variable whose value must resolve to the pinned user-service release. */
 const PINNED_URL_VARS = ['GRAPHQL_SCHEMA_URL', 'NEXT_PUBLIC_USER_SERVICE_OPENAI_SPEC_URL'];
 
-/** A second version variable is the shape the original drift took. */
-const RIVAL_PIN_PATTERN = /^(?:USER_SERVICE|GRAPHQL)[A-Z0-9_]*VERSION$/;
+/**
+ * A second version variable is the shape the original drift took. The optional
+ * leading segment matters: `NEXT_PUBLIC_USER_SERVICE_VERSION` is just as much a
+ * rival pin as `USER_SERVICE_SPEC_VERSION`.
+ */
+const RIVAL_PIN_PATTERN = /(?:^|_)(?:USER_SERVICE|GRAPHQL)[A-Z0-9_]*VERSION$/;
 
 /** `https://raw.githubusercontent.com/<owner>/<repo>/<ref>/<path>` */
 const RAW_URL_PATTERN = /^https:\/\/raw\.githubusercontent\.com\/([^/]+\/[^/]+)\/([^/]+)\/(?:.+)$/;
