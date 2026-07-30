@@ -1,10 +1,12 @@
-import { buildSchema, parse, validate } from 'graphql';
+import { buildSchema, getIntrospectionQuery, parse, validate } from 'graphql';
 import type { DocumentNode, GraphQLSchema, OperationDefinitionNode } from 'graphql';
 
 import {
   DEFAULT_LIST_SIZE,
   DEFAULT_MAX_QUERY_COST,
   DEFAULT_MAX_QUERY_DEPTH,
+  DEFAULT_MAX_QUERY_TOKENS,
+  MAX_TRAVERSAL_DEPTH,
   QUERY_GUARDS,
   QUERY_GUARD_EXTENSION,
   createQueryCostLimitRule,
@@ -63,6 +65,13 @@ function validateWith(source: string, rule: ReturnType<typeof createQueryDepthLi
   return validate(schema, parse(source), [rule]);
 }
 
+/**
+ * Deep enough to prove the walkers saturate rather than descend, while still inside
+ * what graphql-js can parse — past roughly 2000 levels `parse` itself overflows,
+ * which is exactly why the server also bounds parsing with `maxTokens`.
+ */
+const DEEP_NESTING = 500;
+
 /** Builds `user(id:"1"){ node { ... } }`-style nesting to a requested depth. */
 function nestedNodeQuery(levels: number): string {
   const open = '{ node '.repeat(levels);
@@ -86,7 +95,9 @@ describe('query depth guard', () => {
     const errors = validateWith(nestedNodeQuery(2), createQueryDepthLimitRule(3));
 
     expect(errors).toHaveLength(1);
-    expect(errors[0]?.message).toBe('Query is too deep: 4 levels exceeds the maximum of 3.');
+    expect(errors[0]?.message).toBe(
+      'Query is too deep: it nests deeper than the maximum of 3 levels.'
+    );
     expect(errors[0]?.extensions?.[QUERY_GUARD_EXTENSION]).toBe(QUERY_GUARDS.DEPTH);
   });
 
@@ -119,6 +130,21 @@ describe('query depth guard', () => {
 
   it('defaults to a limit that leaves the shipped client operation headroom', () => {
     expect(DEFAULT_MAX_QUERY_DEPTH).toBeGreaterThan(depthOf(SIGNUP_OPERATION));
+  });
+
+  it('saturates instead of walking a deeply nested document to the bottom', () => {
+    // Without the bound the walker recurses once per level, so a deep enough
+    // document blows the call stack before the guard can reject anything — the
+    // control becoming the DoS it exists to prevent.
+    const document = parse(nestedNodeQuery(DEEP_NESTING));
+
+    expect(measureOperationDepth(operationOf(document), document, 8)).toBe(9);
+  });
+
+  it('rejects a deeply nested document instead of crashing', () => {
+    const errors = validateWith(nestedNodeQuery(DEEP_NESTING), createQueryDepthLimitRule(8));
+
+    expect(errors[0]?.extensions?.[QUERY_GUARD_EXTENSION]).toBe(QUERY_GUARDS.DEPTH);
   });
 });
 
@@ -195,6 +221,16 @@ describe('query cost guard', () => {
   it('defaults to a budget that leaves the shipped client operation headroom', () => {
     expect(DEFAULT_MAX_QUERY_COST).toBeGreaterThan(costOf(SIGNUP_OPERATION));
   });
+
+  it('stops descending at the depth ceiling instead of walking to the bottom', () => {
+    // The depth guard rejects such a document anyway, so the unexplored subtree is
+    // simply not priced — the point is that the walk stays bounded.
+    const document = parse(nestedNodeQuery(DEEP_NESTING));
+
+    expect(
+      measureOperationCost(operationOf(document), document, schema, DEFAULT_LIST_SIZE, 8)
+    ).toBe(9);
+  });
 });
 
 describe('limit resolution from the environment', () => {
@@ -203,6 +239,7 @@ describe('limit resolution from the environment', () => {
       maxDepth: DEFAULT_MAX_QUERY_DEPTH,
       maxCost: DEFAULT_MAX_QUERY_COST,
       defaultListSize: DEFAULT_LIST_SIZE,
+      maxTokens: DEFAULT_MAX_QUERY_TOKENS,
     });
   });
 
@@ -212,8 +249,9 @@ describe('limit resolution from the environment', () => {
         GRAPHQL_MAX_QUERY_DEPTH: '4',
         GRAPHQL_MAX_QUERY_COST: '60',
         GRAPHQL_DEFAULT_LIST_SIZE: '5',
+        GRAPHQL_MAX_QUERY_TOKENS: '900',
       })
-    ).toEqual({ maxDepth: 4, maxCost: 60, defaultListSize: 5 });
+    ).toEqual({ maxDepth: 4, maxCost: 60, defaultListSize: 5, maxTokens: 900 });
   });
 
   it.each([
@@ -227,8 +265,33 @@ describe('limit resolution from the environment', () => {
     );
   });
 
+  it('clamps an over-large depth so a misconfiguration cannot unbound the walk', () => {
+    expect(resolveQueryGuardLimits({ GRAPHQL_MAX_QUERY_DEPTH: '100000' }).maxDepth).toBe(
+      MAX_TRAVERSAL_DEPTH
+    );
+  });
+
+  describe('the parse-time token bound', () => {
+    it('leaves the shipped client operation and the introspection query room', () => {
+      expect(() => parse(SIGNUP_OPERATION, { maxTokens: DEFAULT_MAX_QUERY_TOKENS })).not.toThrow();
+      expect(() =>
+        parse(getIntrospectionQuery(), { maxTokens: DEFAULT_MAX_QUERY_TOKENS })
+      ).not.toThrow();
+    });
+
+    it('aborts a document nested deeply enough to overflow the parser itself', () => {
+      // graphql-js parses by recursive descent, so this is the only bound that can
+      // stop a pathological document — no validation rule ever runs on it.
+      expect(() => parse(nestedNodeQuery(5000), { maxTokens: DEFAULT_MAX_QUERY_TOKENS })).toThrow(
+        /Parsing aborted/
+      );
+    });
+  });
+
   it('builds one rule per guard', () => {
-    expect(createQueryGuardRules({ maxDepth: 5, maxCost: 50, defaultListSize: 5 })).toHaveLength(2);
+    expect(
+      createQueryGuardRules({ maxDepth: 5, maxCost: 50, defaultListSize: 5, maxTokens: 100 })
+    ).toHaveLength(2);
   });
 });
 

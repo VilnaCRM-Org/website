@@ -152,8 +152,12 @@ extending it, and do not copy a weaker shape into new code:
   response.
 - **Query budget** (`query-guards.ts`). The server applies depth and cost
   `validationRules` (`GRAPHQL_MAX_QUERY_DEPTH`, `GRAPHQL_MAX_QUERY_COST`,
-  `GRAPHQL_DEFAULT_LIST_SIZE` in `.env`), and enables introspection plus the Apollo
-  Sandbox only when `NODE_ENV=development`.
+  `GRAPHQL_DEFAULT_LIST_SIZE` in `.env`), bounds parsing itself with
+  `GRAPHQL_MAX_QUERY_TOKENS` — graphql-js parses by recursive descent, so a deeply
+  nested document overflows the parser before any rule can run — and enables
+  introspection plus the Apollo Sandbox only when `NODE_ENV=development`. Both
+  walkers saturate at the depth ceiling rather than descending, so the control can
+  never become the DoS.
 - **One upstream pin.** Every user-service artifact derives from `USER_SERVICE_VERSION`.
   `make lint-api-versions` is hermetic (no network) and therefore runs inside `make lint`
   on every PR: it fails on a missing or malformed pin, a second version variable, a

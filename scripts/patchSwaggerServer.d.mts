@@ -16,6 +16,8 @@ export interface SwaggerDocument {
 export const CONTRACT_PATH: string;
 export const OUTPUT_PATH: string;
 
+export function report(message: string): void;
+export function reportError(message: string): void;
 export function ensureEnv(name: string): string;
 export function getApiBaseUrl(): string;
 export function getUserServiceVersion(): string;

@@ -33,9 +33,11 @@ const mockWriteFileSync: jest.MockedFunction<typeof fs.writeFileSync> = jest.moc
 const mockExit: jest.SpyInstance = jest.spyOn(process, 'exit').mockImplementation(() => {
   throw new Error('process.exit was called');
 });
-const mockConsoleError: jest.SpyInstance = jest
-  .spyOn(console, 'error')
-  .mockImplementation(() => {});
+// The script writes to the standard streams directly (it is a build-time CLI, so
+// `console` is reserved for — and linted as — stray application logging).
+const mockStderr: jest.SpyInstance = jest
+  .spyOn(process.stderr, 'write')
+  .mockImplementation(() => true);
 
 interface SwaggerInfo {
   [key: string]: unknown;
@@ -87,7 +89,7 @@ describe('patchSwaggerServer', () => {
 
   afterAll(() => {
     mockExit.mockRestore();
-    mockConsoleError.mockRestore();
+    mockStderr.mockRestore();
   });
 
   describe('environment access', () => {
@@ -105,8 +107,8 @@ describe('patchSwaggerServer', () => {
       expect(() => patchModule.ensureEnv('PATCH_SWAGGER_TEST_VAR')).toThrow(
         'process.exit was called'
       );
-      expect(mockConsoleError).toHaveBeenCalledWith(
-        '❌ Missing required environment variable: PATCH_SWAGGER_TEST_VAR'
+      expect(mockStderr).toHaveBeenCalledWith(
+        '❌ Missing required environment variable: PATCH_SWAGGER_TEST_VAR\n'
       );
     });
 
@@ -130,9 +132,8 @@ describe('patchSwaggerServer', () => {
       expect(() => patchModule.readSwaggerSchema('./missing.json')).toThrow(
         'process.exit was called'
       );
-      expect(mockConsoleError).toHaveBeenCalledWith(
-        '❌ Failed to read or parse swagger schema at "./missing.json":',
-        'ENOENT: no such file or directory'
+      expect(mockStderr).toHaveBeenCalledWith(
+        '❌ Failed to read or parse swagger schema at "./missing.json": ENOENT: no such file or directory\n'
       );
     });
 

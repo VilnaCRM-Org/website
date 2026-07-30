@@ -22,15 +22,15 @@
  *   4. a consumer URL resolves to a different repository or a different ref;
  *   5. any two consumers resolve to different refs;
  *   6. a second user-service version variable exists at all;
- *   7. a repo-root config file (env files, Dockerfiles, compose files) references
- *      a user-service tag that is not the pin.
+ *   7. any config file in the repository (env files, Dockerfiles, compose files, at
+ *      any depth) references a user-service tag that is not the pin.
  *
  * Deliberately HERMETIC — no network, no Docker — so it can sit inside `make lint`
  * and run on every pull request. The complementary `make lint-contracts` verifies
  * the committed artifacts still match that tag upstream; that one needs network,
  * which is why the two are separate targets.
  */
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 
 import dotenv from 'dotenv';
@@ -55,10 +55,30 @@ const RAW_URL_PATTERN = /^https:\/\/raw\.githubusercontent\.com\/([^/]+\/[^/]+)\
 /** Any literal user-service tag anywhere in a scanned config file. */
 const HARDCODED_TAG_PATTERN = new RegExp(`${UPSTREAM_REPO}/(v\\d+\\.\\d+\\.\\d+)`, 'g');
 
-const ROOT_CONFIG_PATTERN = /^(?:\.env(?:\..+)?|.*Dockerfile|Dockerfile|docker-compose.*\.ya?ml)$/;
+const CONFIG_FILE_PATTERN = /^(?:\.env(?:\..+)?|.*Dockerfile|docker-compose.*\.ya?ml)$/;
+
+/** Vendored, generated and VCS trees — nothing in them is a source of truth. */
+const SKIPPED_DIRECTORIES = new Set([
+  '.git',
+  '.next',
+  'node_modules',
+  'out',
+  'coverage',
+  'storybook-static',
+  'storybook-static-ci',
+  'playwright-report',
+  'test-results',
+  '.stryker-tmp',
+]);
 
 const failures = [];
 const fail = message => failures.push(message);
+
+// This is a CI/CLI gate whose job is to report to the terminal, so it writes to the
+// standard streams directly rather than through `console`, which is reserved for
+// (and linted as) stray application logging.
+const report = message => process.stdout.write(`${message}\n`);
+const reportError = message => process.stderr.write(`${message}\n`);
 
 function readEnvFile(filePath) {
   const contents = readFileSync(filePath, 'utf8');
@@ -164,15 +184,27 @@ function checkEnvFile(file, filePath) {
   return { pin, consumers: checkConsumers(pin, parsed, expanded, file).size };
 }
 
-function rootConfigFiles(rootDir) {
-  return readdirSync(rootDir)
-    .filter(entry => ROOT_CONFIG_PATTERN.test(entry))
-    .filter(entry => statSync(path.join(rootDir, entry)).isFile())
+/**
+ * Every env file, Dockerfile and compose file in the repository, at any depth —
+ * `Mockoon.Dockerfile` sits at the root today, but a nested one must not become a
+ * blind spot. Generated and vendored trees are skipped.
+ */
+function configFiles(rootDir, relative = '') {
+  return readdirSync(path.join(rootDir, relative), { withFileTypes: true })
+    .flatMap(entry => {
+      const entryPath = relative ? path.join(relative, entry.name) : entry.name;
+
+      if (entry.isDirectory()) {
+        return SKIPPED_DIRECTORIES.has(entry.name) ? [] : configFiles(rootDir, entryPath);
+      }
+
+      return CONFIG_FILE_PATTERN.test(entry.name) ? [entryPath] : [];
+    })
     .sort();
 }
 
-function checkNoHardcodedTags(pin, rootDir) {
-  rootConfigFiles(rootDir).forEach(file => {
+function checkNoHardcodedTags(pin, files, rootDir) {
+  files.forEach(file => {
     const contents = readFileSync(path.join(rootDir, file), 'utf8');
 
     [...contents.matchAll(HARDCODED_TAG_PATTERN)].forEach(([, tag]) => {
@@ -199,7 +231,7 @@ export function checkApiVersions({ rootDir = '.', envFiles = DEFAULT_ENV_FILES }
     const { pin, consumers } = checkEnvFile(file, filePath);
     if (pin !== undefined) {
       pins.set(file, pin);
-      console.log(`   ${file}: ${consumers} consumer(s) pinned to ${pin}`);
+      report(`   ${file}: ${consumers} consumer(s) pinned to ${pin}`);
     }
   });
 
@@ -212,23 +244,24 @@ export function checkApiVersions({ rootDir = '.', envFiles = DEFAULT_ENV_FILES }
 
   const [canonicalPin] = pins.values();
   if (canonicalPin !== undefined) {
-    checkNoHardcodedTags(canonicalPin, rootDir);
-    console.log(`   scanned ${rootConfigFiles(rootDir).length} root config file(s) for stray tags`);
+    const scanned = configFiles(rootDir);
+    checkNoHardcodedTags(canonicalPin, scanned, rootDir);
+    report(`   scanned ${scanned.length} config file(s) for stray tags`);
   }
 
   return [...failures];
 }
 
 if (process.argv[1]?.endsWith(path.join('contracts', 'check-api-versions.mjs'))) {
-  console.log('🔎 Checking the user-service version invariant');
+  report('🔎 Checking the user-service version invariant');
 
   const problems = checkApiVersions();
 
   if (problems.length > 0) {
-    console.error(`\n❌ ${problems.length} API version problem(s):\n`);
-    problems.forEach(problem => console.error(`   ${problem}`));
+    reportError(`\n❌ ${problems.length} API version problem(s):\n`);
+    problems.forEach(problem => reportError(`   ${problem}`));
     process.exit(1);
   }
 
-  console.log('\n✅ OpenAPI and GraphQL reference the same user-service release');
+  report('\n✅ OpenAPI and GraphQL reference the same user-service release');
 }

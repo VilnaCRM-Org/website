@@ -37,6 +37,7 @@ export const CREATE_USER_ALLOWED_PROPERTIES: readonly string[] = [
  * here, never derived from an internal error, so they are safe to return.
  */
 export const CREATE_USER_REASONS = {
+  INVALID_INPUT_TYPE: 'INVALID_INPUT_TYPE',
   UNKNOWN_INPUT_PROPERTY: 'UNKNOWN_INPUT_PROPERTY',
   INVALID_EMAIL: 'INVALID_EMAIL',
   INVALID_INITIALS: 'INVALID_INITIALS',
@@ -61,11 +62,30 @@ export function badRequest(message: string, reason: CreateUserReason): GraphQLEr
 }
 
 /**
+ * Email is the identity key of the store, so it is compared and stored in one
+ * canonical form. Without this, `User@Example.com` and `user@example.com` create
+ * two records — the same collide-and-shadow outcome the duplicate check exists to
+ * prevent. Mailbox providers treat the local part case-insensitively in practice;
+ * the domain is case-insensitive by RFC 1035.
+ */
+export function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
+/**
  * Rejects any property the pinned schema does not declare. Mass assignment is the
  * defect this guards: without it, an `id` or `confirmed` key riding along in the
  * input object would be copied straight onto the stored record.
+ *
+ * The type guard matters for the same reason the allow-list does: a non-GraphQL
+ * caller must get the same stable BAD_REQUEST, not a TypeError that surfaces as a
+ * generic internal error.
  */
-export function assertOnlyAllowedProperties(input: Readonly<Record<string, unknown>>): void {
+export function assertOnlyAllowedProperties(input: unknown): void {
+  if (typeof input !== 'object' || input === null || Array.isArray(input)) {
+    throw badRequest('Input must be an object', CREATE_USER_REASONS.INVALID_INPUT_TYPE);
+  }
+
   const unknownProperties = Object.keys(input).filter(
     key => !CREATE_USER_ALLOWED_PROPERTIES.includes(key)
   );
@@ -82,7 +102,7 @@ export function assertOnlyAllowedProperties(input: Readonly<Record<string, unkno
 }
 
 export function validateCreateUserInput(input: Readonly<CreateUserInput>): void {
-  assertOnlyAllowedProperties(input as Readonly<Record<string, unknown>>);
+  assertOnlyAllowedProperties(input);
 
   if (!input.email || !EMAIL_PATTERN.test(input.email)) {
     throw badRequest('Invalid email format', CREATE_USER_REASONS.INVALID_EMAIL);
@@ -102,13 +122,14 @@ export function validateCreateUserInput(input: Readonly<CreateUserInput>): void 
 
 /**
  * Builds the stored record. `id` comes from the server's own generator and
- * `confirmed` starts `false`; neither is reachable from `input`.
+ * `confirmed` starts `false`; neither is reachable from `input`. The email is
+ * canonicalised so the stored record and the duplicate-check key always agree.
  */
 export function buildNewUser(input: Readonly<CreateUserInput>): User {
   return {
     id: uuidv4(),
     confirmed: false,
-    email: input.email,
+    email: normalizeEmail(input.email),
     initials: input.initials,
   };
 }

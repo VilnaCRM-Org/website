@@ -14,10 +14,21 @@ dotenvExpand.expand(env);
 export const CONTRACT_PATH = './contracts/user-service/openapi.json';
 export const OUTPUT_PATH = './public/swagger-schema.json';
 
+// This is a build-time CLI whose job is to report to the terminal, so it writes to
+// the standard streams directly rather than through `console`, which is reserved
+// for (and linted as) stray application logging.
+export function report(message) {
+  process.stdout.write(`${message}\n`);
+}
+
+export function reportError(message) {
+  process.stderr.write(`${message}\n`);
+}
+
 export function ensureEnv(name) {
   const value = process.env[name];
   if (!value) {
-    console.error(`❌ Missing required environment variable: ${name}`);
+    reportError(`❌ Missing required environment variable: ${name}`);
     process.exit(1);
   }
   return value;
@@ -41,7 +52,7 @@ export function readSwaggerSchema(path) {
     const content = fs.readFileSync(path, 'utf8');
     return JSON.parse(content);
   } catch (error) {
-    console.error(`❌ Failed to read or parse swagger schema at "${path}":`, error.message);
+    reportError(`❌ Failed to read or parse swagger schema at "${path}": ${error.message}`);
     process.exit(1);
     throw error;
   }
@@ -106,5 +117,5 @@ export function patchSwaggerSchema(contractPath = CONTRACT_PATH, outputPath = OU
 // this module to CJS, where import.meta is not available — the same guard
 // fetchSwaggerSchema.mjs uses.
 if (process.argv[1]?.endsWith('patchSwaggerServer.mjs')) {
-  console.log(patchSwaggerSchema());
+  report(patchSwaggerSchema());
 }

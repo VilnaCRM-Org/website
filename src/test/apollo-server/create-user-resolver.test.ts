@@ -150,6 +150,19 @@ describe('Apollo mock — createUser resolver', () => {
       expect(users.size).toBe(1);
     });
 
+    it('treats a case variant of a registered email as the same account', async () => {
+      await graphqlRequest(server.url, CREATE_USER_MUTATION, { input: signupInput });
+
+      const { body } = await graphqlRequest(server.url, CREATE_USER_MUTATION, {
+        input: { ...signupInput, email: signupInput.email.toUpperCase() },
+      });
+
+      expect(body.errors?.[0]?.extensions).toMatchObject({
+        reason: 'EMAIL_ALREADY_REGISTERED',
+      });
+      expect(users.size).toBe(1);
+    });
+
     it.each([
       ['a malformed email', { email: 'not-an-email' }, 'INVALID_EMAIL'],
       ['one-character initials', { initials: 'S' }, 'INVALID_INITIALS'],

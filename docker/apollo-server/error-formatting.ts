@@ -21,12 +21,19 @@ import { QUERY_GUARD_EXTENSION } from './query-guards.js';
  *   * a `correlationId` the operator can grep for in the server log,
  *   * an enumerated `reason` when the resolver authored one (see user-input.ts).
  *
- * `details` and Apollo's `stacktrace` extension are stripped unconditionally, so
- * neither can reappear by way of a config change or a future error class.
+ * Both levels of the response are rebuilt field by field from an allow-list, so
+ * `details`, Apollo's `stacktrace`, and anything a future error class or dependency
+ * bump introduces cannot reappear by way of a config change.
  */
 
-/** Keys that must never reach a client, whatever produced them. */
-const REDACTED_EXTENSIONS: readonly string[] = ['stacktrace', 'exception', 'details'];
+/**
+ * Extension keys a client may see — an ALLOW-list, not a deny-list. A deny-list
+ * only removes the leaks known today: any key a future error class, resolver
+ * mistake or dependency bump introduces would ride straight out, which is the
+ * very failure mode (CWE-209) this module exists to close. `code` and
+ * `correlationId` are added explicitly afterwards.
+ */
+const ALLOWED_EXTENSIONS: readonly string[] = ['reason', QUERY_GUARD_EXTENSION];
 
 const GENERIC_MESSAGES: Readonly<Record<string, string>> = {
   INTERNAL_SERVER_ERROR: 'Something went wrong on the server. Please try again later.',
@@ -43,14 +50,15 @@ export interface ErrorLogger {
   error: (message: string, meta?: unknown) => void;
 }
 
-function redactExtensions(
-  extensions: GraphQLFormattedError['extensions']
-): Record<string, unknown> {
-  const source: Record<string, unknown> = { ...extensions };
-  REDACTED_EXTENSIONS.forEach(key => {
-    delete source[key];
+function safeExtensions(extensions: GraphQLFormattedError['extensions']): Record<string, unknown> {
+  const source: Record<string, unknown> = extensions ?? {};
+  const safe: Record<string, unknown> = {};
+
+  ALLOWED_EXTENSIONS.forEach(key => {
+    if (key in source) safe[key] = source[key];
   });
-  return source;
+
+  return safe;
 }
 
 function internalDetail(error: unknown): string {
@@ -74,8 +82,9 @@ export function createFormatError(
   logger: ErrorLogger = console
 ): (formattedError: GraphQLFormattedError, error: unknown) => GraphQLFormattedError {
   return (formattedError: GraphQLFormattedError, error: unknown): GraphQLFormattedError => {
-    const extensions = redactExtensions(formattedError.extensions);
-    const code = typeof extensions.code === 'string' ? extensions.code : 'INTERNAL_SERVER_ERROR';
+    const rawCode = formattedError.extensions?.code;
+    const code = typeof rawCode === 'string' ? rawCode : 'INTERNAL_SERVER_ERROR';
+    const extensions = safeExtensions(formattedError.extensions);
     const correlationId = randomUUID();
 
     // The internals stay here, on the server, tied to the id the client is given.
@@ -89,9 +98,9 @@ export function createFormatError(
       ? formattedError.message
       : (GENERIC_MESSAGES[code] ?? FALLBACK_MESSAGE);
 
-    // Rebuilt field by field rather than spread: the removed defect rode out on a
-    // top-level `details` key, and a spread would happily carry that — or any future
-    // non-spec field — straight back to the client.
+    // Rebuilt field by field rather than spread, at both levels: the removed defect
+    // rode out on a top-level `details` key, and a spread would happily carry that —
+    // or any future non-spec field — straight back to the client.
     return {
       message,
       ...(formattedError.locations ? { locations: formattedError.locations } : {}),

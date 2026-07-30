@@ -44,6 +44,7 @@ async function startServer() {
     }
 
     const isLocalDev = introspectionEnabled();
+    const limits = resolveQueryGuardLimits();
 
     server = new ApolloServer<BaseContext>({
       typeDefs,
@@ -54,7 +55,10 @@ async function startServer() {
       formatError,
       // Depth + cost budget (issue #381, F3). Without these an unauthenticated
       // client can amplify CPU/memory with a nested or heavily-aliased document.
-      validationRules: createQueryGuardRules(resolveQueryGuardLimits()),
+      validationRules: createQueryGuardRules(limits),
+      // graphql-js parses by recursive descent, so a deeply nested document would
+      // crash the parser before any validation rule could run. Bound it too.
+      parseOptions: { maxTokens: limits.maxTokens },
       // Schema disclosure and the embedded Sandbox console are local-development
       // affordances only. Everywhere else they are recon surface.
       introspection: isLocalDev,

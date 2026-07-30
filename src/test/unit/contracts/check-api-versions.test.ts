@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -46,15 +46,16 @@ function envFile(overrides: Record<string, string | null> = {}): string {
 
 describe('user-service version invariant', () => {
   let sandbox: string;
-  let logSpy: jest.SpyInstance;
+  let stdoutSpy: jest.SpyInstance;
 
   beforeEach(() => {
     sandbox = mkdtempSync(path.join(tmpdir(), 'api-versions-'));
-    logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+    // The gate reports through the standard streams, not `console`.
+    stdoutSpy = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
   });
 
   afterEach(() => {
-    logSpy.mockRestore();
+    stdoutSpy.mockRestore();
     rmSync(sandbox, { recursive: true, force: true });
   });
 
@@ -241,6 +242,28 @@ describe('user-service version invariant', () => {
           'notes.md': 'see VilnaCRM-Org/user-service/v1.0.0 for the historical shape\n',
         })
       ).toEqual([]);
+    });
+
+    it('scans nested Dockerfiles, not only the repository root', () => {
+      mkdirSync(path.join(sandbox, 'docker', 'apollo-server'), { recursive: true });
+      writeFileSync(
+        path.join(sandbox, 'docker', 'apollo-server', 'Nested.Dockerfile'),
+        'RUN curl https://raw.githubusercontent.com/VilnaCRM-Org/user-service/v2.4.1/spec\n'
+      );
+
+      expect(run({ '.env': envFile() })).toEqual([
+        expect.stringContaining('hardcodes user-service v2.4.1'),
+      ]);
+    });
+
+    it('does not scan vendored or generated trees', () => {
+      mkdirSync(path.join(sandbox, 'node_modules', 'some-package'), { recursive: true });
+      writeFileSync(
+        path.join(sandbox, 'node_modules', 'some-package', 'Dockerfile'),
+        'FROM VilnaCRM-Org/user-service/v1.0.0\n'
+      );
+
+      expect(run({ '.env': envFile() })).toEqual([]);
     });
   });
 });

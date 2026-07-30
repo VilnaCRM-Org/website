@@ -84,6 +84,22 @@ describe('formatError — client-facing error shaping', () => {
       expect(result.extensions).not.toHaveProperty(key);
     });
 
+    it('allow-lists extensions, so a key nobody anticipated cannot ride out', () => {
+      // A deny-list would only remove the leaks known today; anything a future error
+      // class, resolver mistake or dependency bump introduces would pass straight
+      // through — the same CWE-209 failure this module exists to close.
+      const result = formatError(
+        formattedError({
+          code: 'INTERNAL_SERVER_ERROR',
+          somethingNobodyAnticipated: INTERNAL_TEXT,
+          serviceUrl: 'postgres://user:hunter2@10.0.0.7:5432/users',
+        }),
+        new Error(INTERNAL_TEXT)
+      );
+
+      expect(Object.keys(result.extensions ?? {})).toEqual(['code', 'correlationId']);
+    });
+
     it('keeps the enumerated reason a resolver authored', () => {
       const result = formatError(
         formattedError({ code: 'BAD_REQUEST', reason: 'INVALID_EMAIL' }),

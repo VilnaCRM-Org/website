@@ -6,6 +6,7 @@ import {
   CREATE_USER_REASONS,
   assertOnlyAllowedProperties,
   buildNewUser,
+  normalizeEmail,
   validateCreateUserInput,
 } from '../../../docker/apollo-server/user-input';
 
@@ -103,6 +104,35 @@ describe('createUser input handling (mock reference pattern)', () => {
 
     it('accepts an empty object (there is nothing to mass-assign)', () => {
       expect(() => assertOnlyAllowedProperties({})).not.toThrow();
+    });
+
+    it.each([
+      ['null', null],
+      ['undefined', undefined],
+      ['an array', ['email']],
+      ['a string', 'email'],
+      ['a number', 7],
+    ])('rejects %s with a stable reason rather than a TypeError', (_label, input) => {
+      const run = (): void => assertOnlyAllowedProperties(input);
+
+      expect(run).toThrow('Input must be an object');
+      expect(reasonOf(run)).toBe(CREATE_USER_REASONS.INVALID_INPUT_TYPE);
+    });
+  });
+
+  describe('normalizeEmail — the identity key', () => {
+    it.each([
+      ['User@Example.com', 'user@example.com'],
+      ['  user@example.com  ', 'user@example.com'],
+      ['USER@EXAMPLE.COM', 'user@example.com'],
+    ])('canonicalises %s', (raw, expected) => {
+      expect(normalizeEmail(raw)).toBe(expected);
+    });
+
+    it('stores the canonical form, so case variants cannot become two accounts', () => {
+      expect(buildNewUser({ ...validInput, email: 'User@Example.com' }).email).toBe(
+        'user@example.com'
+      );
     });
   });
 

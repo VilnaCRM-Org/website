@@ -3,6 +3,7 @@ import {
   CREATE_USER_REASONS,
   badRequest,
   buildNewUser,
+  normalizeEmail,
   validateCreateUserInput,
 } from './user-input.js';
 
@@ -26,10 +27,10 @@ async function createUser(
 ): Promise<CreateUserPayload> {
   validateCreateUserInput(input);
 
-  // The store is keyed by email. Without this check a second signup for the same
-  // address would silently overwrite the existing record — the same
+  // The store is keyed by the canonical email. Without this check a second signup
+  // for the same address would silently overwrite the existing record — the same
   // collide-and-overwrite primitive that client-controlled ids used to give away.
-  if (users.has(input.email)) {
+  if (users.has(normalizeEmail(input.email))) {
     throw badRequest(
       'A user with this email already exists.',
       CREATE_USER_REASONS.EMAIL_ALREADY_REGISTERED

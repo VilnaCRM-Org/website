@@ -470,7 +470,7 @@ ci-test-integration: ## Run integration tests directly assuming deps are install
 	ci-test-memory-leak ci-test-load ci-test-lighthouse-desktop \
 	ci-test-lighthouse-mobile ci-test-prod ensure-dev start-prod-clean \
 	test-load test-load-swagger test-mutation-shard merge-mutation-reports \
-	pr-comments
+	pr-comments lint lint-api-versions
 
 ci-setup: create-network ## Prepare the shared dev environment for CI-oriented checks
 	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) up $(CI_SETUP_UP_FLAGS) dev && $(MAKE) wait-for-dev

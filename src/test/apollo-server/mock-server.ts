@@ -7,8 +7,10 @@ import type { GraphQLFormattedError } from 'graphql';
 
 import { createFormatError } from '../../../docker/apollo-server/error-formatting';
 import {
+  QueryGuardLimits,
   createQueryGuardRules,
   introspectionEnabled,
+  resolveQueryGuardLimits,
 } from '../../../docker/apollo-server/query-guards';
 import { resolvers } from '../../../docker/apollo-server/resolvers';
 
@@ -57,11 +59,19 @@ export interface GraphQLHttpResponse {
   raw: string;
 }
 
-const DEFAULT_LIMITS = { maxDepth: 8, maxCost: 500, defaultListSize: 25 };
-
 export async function startMockServer(options: MockServerOptions = {}): Promise<MockServer> {
   const errorLog: jest.Mock = jest.fn();
   const isLocalDev: boolean = introspectionEnabled(options.nodeEnv ?? 'production');
+
+  // Start from the shipped defaults rather than restating them here, so a budget
+  // change cannot silently leave this harness testing different limits.
+  const defaults: QueryGuardLimits = resolveQueryGuardLimits({});
+  const limits: QueryGuardLimits = {
+    maxDepth: options.maxDepth ?? defaults.maxDepth,
+    maxCost: options.maxCost ?? defaults.maxCost,
+    defaultListSize: options.defaultListSize ?? defaults.defaultListSize,
+    maxTokens: defaults.maxTokens,
+  };
 
   const server: ApolloServer<BaseContext> = new ApolloServer<BaseContext>({
     typeDefs: readPinnedSchema(),
@@ -70,11 +80,8 @@ export async function startMockServer(options: MockServerOptions = {}): Promise<
       requestHeaders: ['Apollo-Require-Preflight', 'X-Apollo-Operation-Name'],
     },
     formatError: createFormatError({ error: errorLog }),
-    validationRules: createQueryGuardRules({
-      maxDepth: options.maxDepth ?? DEFAULT_LIMITS.maxDepth,
-      maxCost: options.maxCost ?? DEFAULT_LIMITS.maxCost,
-      defaultListSize: options.defaultListSize ?? DEFAULT_LIMITS.defaultListSize,
-    }),
+    validationRules: createQueryGuardRules(limits),
+    parseOptions: { maxTokens: limits.maxTokens },
     introspection: isLocalDev,
     includeStacktraceInErrorResponses: false,
   });
