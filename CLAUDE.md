@@ -100,9 +100,21 @@ make lint-md    # markdownlint
 make lint-deps  # dependency-cruiser on src, pages, tests
 ```
 
-Two gates sit deliberately outside `make lint`: `make lint-metrics` (host-only Rust
-binary) and `make lint-contracts` (needs network for its drift check). Each has its own
-workflow — `rust-code-analysis.yml` and `contract-testing.yml`.
+Three gates sit deliberately outside `make lint`: `make lint-metrics` (host-only Rust
+binary), `make lint-contracts` (needs network for its drift check), and
+`make lint-workflows` (host-only zizmor container; its online audits reach the GitHub
+API). Each has its own workflow — `rust-code-analysis.yml`, `contract-testing.yml`, and
+`workflow-security.yml`.
+
+### Workflow security (zizmor, issue #360)
+
+`make lint-workflows` audits `.github/workflows` with zizmor, pinned by image digest in
+the Makefile. It blocks on medium-and-above findings at high confidence
+(`ZIZMOR_MIN_SEVERITY` / `ZIZMOR_MIN_CONFIDENCE`). Every `uses:` must be a full 40-char
+SHA whose `# vX.Y.Z` comment names the tag that SHA actually points at; `permissions:`
+belong on the job that needs them; never interpolate `${{ }}` into a `run:` body. Fix
+findings at the root — never add a `zizmor.yml` ignore, a `# zizmor: ignore[...]`
+comment, or lower the thresholds.
 
 Run `make format` before `make lint`; formatting is intentionally separate from the lint
 verification suite. Git hooks are managed by Husky. CI phases are mirrored locally by

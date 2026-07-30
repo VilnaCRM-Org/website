@@ -161,6 +161,25 @@ as a reviewed, in-repo change visible in the PR diff (or confirm the path belong
 outside the governed scope). Never silence the gate with a local override or a
 per-line disable.
 
+#### Workflow security (zizmor)
+
+Anything you change under `.github/workflows` is audited by
+[zizmor](https://docs.zizmor.sh) on every pull request through its own workflow,
+`workflow-security.yml`. Run it locally with `make lint-workflows` (host-only,
+Docker, deliberately outside `make lint`).
+
+The gate fails on medium-and-above findings reported with high confidence. In
+practice that means: pin every `uses:` to a full 40-character commit SHA with a
+trailing `# vX.Y.Z` comment that names the tag the SHA **actually** points at,
+keep `permissions:` scoped to the job that needs them, never use an archived
+action, and never interpolate `${{ }}` into a `run:` body — pass values through
+`env:` and reference `"$VAR"`.
+
+If the gate fails, fix the workflow. Never add a `zizmor.yml` ignore rule, a
+`# zizmor: ignore[...]` comment, or lower `ZIZMOR_MIN_SEVERITY` /
+`ZIZMOR_MIN_CONFIDENCE` in the Makefile — those thresholds are a ratchet that
+only moves up as the remaining low-severity clusters are cleared.
+
 #### Upstream contracts (user-service)
 
 Every user-service contract this repo consumes — the GraphQL schema behind the

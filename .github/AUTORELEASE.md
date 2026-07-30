@@ -42,6 +42,54 @@ One more thing you need to do from the app's settings. Go to the app's settings 
 You can easily find ID here(Settings > Application > configure your github APP > app settings > you can see app id). Generate a new private key and copy the app ID. These will be used to authenticate the GitHub Actions workflow with the necessary permissions to perform auto-releases.
 #### 2) The GitHub repository configuration
 Go to Settings > Secrets and Variables > Actions to create new secrets. Add one secret for the private key(VILNACRM_APP_PRIVATE_KEY) and another for the app ID(VILNACRM_APP_ID).
+
+`VILNACRM_APP_PRIVATE_KEY` must hold the **raw PEM** exactly as GitHub generated it, starting with `-----BEGIN RSA PRIVATE KEY-----`. `actions/create-github-app-token` does not accept a base64-encoded key.
 #### 3) Allow force push
 To configure the repository branch protection rules, go to Settings > Branches.
 Check the option to Allow force pushes and specify that the only allowed actor is the GitHub app you already installed.
+
+---
+## What each release produces
+
+Every push to `main` whose commits are release-eligible runs
+[`.github/workflows/autorelease.yml`](workflows/autorelease.yml), which:
+
+1. Verifies the next version cannot collide with an existing tag
+   (`scripts/ci/check-release-version.sh`).
+2. Generates `CHANGELOG.md`, bumps `package.json`, commits `chore(release): vX.Y.Z [skip ci]`, and pushes the tag.
+3. Generates a CycloneDX SBOM of the full locked dependency tree with Syft.
+4. Publishes the GitHub release with `gh release create` and attaches the SBOM as `website-sbom.cdx.json`.
+
+To answer "did release X ship the vulnerable package?":
+
+```bash
+gh release download vX.Y.Z --pattern 'website-sbom.cdx.json'
+jq -r '.components[] | "\(.name)@\(.version)"' website-sbom.cdx.json | grep '<package>'
+```
+
+The SBOM step is a hard step. If Syft cannot read `bun.lock`, or the resulting
+document lists implausibly few components, the release fails rather than
+publishing an inventory that is silently empty.
+
+---
+## The version and tag invariant
+
+The changelog action derives the next version by bumping the `version` field in
+`package.json`, then runs `git tag -a v<next>`. If a tag already exists at that
+version, `git tag` aborts with exit 128 — **after** the changelog has already
+been committed — and the release dies half-finished.
+
+That is what happened between 2026-01-20 and the repair in issue #366: a history
+rewrite left `v0.3.1` and `v0.4.0` on the remote pointing at commits that are
+not ancestors of `main`, while `package.json` stayed at `0.3.0`. Eight
+consecutive runs failed on `fatal: tag 'v0.4.0' already exists` and no release
+shipped.
+
+So the repository holds one invariant:
+
+> The `version` in `package.json` must be at least as high as every existing tag.
+
+`scripts/ci/check-release-version.sh` enforces it as the first real step of the
+workflow, so a violation fails immediately with a remedy instead of corrupting a
+release. If it fires, either advance `package.json` to the highest existing tag
+or reconcile the stray tags with the maintainers. Do not weaken the check.

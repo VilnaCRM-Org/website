@@ -102,6 +102,7 @@ Linting & Formatting
   make lint: runs all linters (ESLint, TypeScript, markdownlint, and dependency-cruiser)
   make lint-metrics: runs the rust-code-analysis complexity gate (host-only, not in make lint)
   make lint-contracts: validates the pinned user-service contracts (not in make lint; needs network)
+  make lint-workflows: audits the GitHub Actions workflows with zizmor (host-only, not in make lint)
   make update-contracts: re-fetches the contracts after bumping USER_SERVICE_VERSION
 ```
 
@@ -372,6 +373,51 @@ simplify dense expressions. When a higher budget is genuinely warranted, raise
 the relevant threshold in `config/metrics-policy.json` (a reviewed, in-repo
 change visible in the PR diff) or confirm the path belongs outside the governed
 scope. Do **not** silence the gate with a local override or a per-line disable.
+
+## Workflow Security (zizmor)
+
+The GitHub Actions workflows are audited for supply-chain and privilege defects
+with [zizmor](https://docs.zizmor.sh). It runs locally via `make lint-workflows`
+and in CI on every pull request, every push to `main`, and weekly, through
+[`.github/workflows/workflow-security.yml`](.github/workflows/workflow-security.yml).
+
+`.github/workflows` is the one part of the repo no other gate reads — ESLint,
+`tsc`, dependency-cruiser and the metrics gate all stop at `src/`, and the qlty
+`zizmor`/`actionlint` plugins are inert here because `.qlty/qlty.toml` excludes
+`.github/**` and every `*.yml`. Without this gate a workflow can hand a
+privileged token to a mutable action tag and nothing says a word.
+
+Like `lint-metrics`, zizmor is a standalone Rust CLI rather than an npm package,
+so the gate runs **host-only** (Docker) and is deliberately **not** part of
+`make lint` or `CI_LINT_TARGETS`. The CLI container is pinned **by digest** in
+the Makefile (`ZIZMOR_IMAGE`), so a repointed tag can never change what the
+security gate enforces.
+
+### What the workflow audit enforces
+
+The gate blocks on findings of **medium severity and above** that zizmor reports
+with **high confidence** (`ZIZMOR_MIN_SEVERITY` / `ZIZMOR_MIN_CONFIDENCE` in the
+Makefile). That covers the defect classes that matter most here: unpinned or
+archived actions, workflow-level over-permissioning, version comments that name
+a tag the pinned SHA does not point at, ad-hoc GitHub App tokens with blanket
+installation permissions, and known-vulnerable action versions.
+
+Findings below that floor are tracked and ratcheted, never silenced — see the
+job comment in `workflow-security.yml` for the current list and why each one is
+still open. Raise the floor as they are cleared; never lower it to make a
+finding go away, and never add a `zizmor.yml` ignore or a
+`# zizmor: ignore[...]` comment.
+
+### Running the workflow audit
+
+```bash
+make lint-workflows
+```
+
+Online audits resolve action tags against the GitHub API. The gate uses
+`GH_TOKEN` (or `GITHUB_TOKEN`) when set and otherwise falls back to the `gh`
+CLI's token; with neither it runs `--offline`, which is a strict subset of the
+CI run.
 
 ## Routing
 
