@@ -1,4 +1,4 @@
-FROM public.ecr.aws/docker/library/node:24.18.0-alpine3.23 AS base
+FROM public.ecr.aws/docker/library/node:26.5.0-alpine3.23 AS base
 
 RUN apk add --no-cache curl=8.20.0-r0 && \
     npm install -g bun@1.3.5 typescript@5.8.2

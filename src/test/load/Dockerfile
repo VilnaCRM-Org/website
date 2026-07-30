@@ -1,4 +1,4 @@
-FROM golang:1.25.11-alpine3.22 AS builder
+FROM golang:1.26.4-alpine3.22 AS builder
 
 WORKDIR /app
 
@@ -12,7 +12,7 @@ RUN xk6 build \
     --with github.com/grafana/xk6-exec@v0.3.0  \
     --with github.com/avitalique/xk6-file@v1.4.0
     
-FROM alpine:3.21
+FROM alpine:3.24
 
 COPY --from=builder /app/k6 /bin/
 

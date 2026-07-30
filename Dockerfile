@@ -1,4 +1,4 @@
-FROM public.ecr.aws/docker/library/node:24.18.0-alpine3.23 AS base
+FROM public.ecr.aws/docker/library/node:26.5.0-alpine3.23 AS base
 
 RUN apk add --no-cache \
     python3=3.12.13-r0\
@@ -31,7 +31,7 @@ RUN node scripts/patchSwaggerServer.mjs && \
 # Starting from a clean base instead of inheriting `base` keeps the shipped
 # image within the docker-perf budget. `curl` is kept because the
 # docker-compose prod healthcheck (`curl -f http://…`) depends on it.
-FROM public.ecr.aws/docker/library/node:24.18.0-alpine3.23 AS production
+FROM public.ecr.aws/docker/library/node:26.5.0-alpine3.23 AS production
 
 RUN apk add --no-cache curl=8.20.0-r0 && \
     npm install -g serve@14.2.0

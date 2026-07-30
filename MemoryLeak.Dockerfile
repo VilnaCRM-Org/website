@@ -1,4 +1,4 @@
-FROM public.ecr.aws/docker/library/node:24.18.0-alpine3.23 AS base
+FROM public.ecr.aws/docker/library/node:26.5.0-alpine3.23 AS base
 
 RUN apk add --no-cache \
     chromium=149.0.7827.53-r0 \
