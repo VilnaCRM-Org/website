@@ -37,12 +37,30 @@ run_lint_workflows() {
   run env \
     PATH="$STUB_BIN_DIR:$PATH" \
     COMMAND_LOG="$COMMAND_LOG" \
+    TOKEN_SEEN="${TOKEN_SEEN-}" \
     ZIZMOR_IMAGE="${ZIZMOR_IMAGE-}" \
     ZIZMOR_MIN_SEVERITY="${ZIZMOR_MIN_SEVERITY-}" \
     ZIZMOR_MIN_CONFIDENCE="${ZIZMOR_MIN_CONFIDENCE-}" \
     ZIZMOR_TARGETS="${ZIZMOR_TARGETS-}" \
     GH_TOKEN="${GH_TOKEN-}" \
     bash "$PROJECT_ROOT/$SCRIPT_REL"
+}
+
+# A docker stub that also records the GH_TOKEN it was handed via the environment,
+# so a test can prove the token actually reaches the container rather than only
+# proving it is absent from argv -- a typo'd `-e GH_TOKENN` would satisfy the
+# absence assertions while silently disabling every online audit.
+create_token_recording_docker_stub() {
+  export TOKEN_SEEN="$BATS_TEST_TMPDIR/token-seen"
+  : >"$TOKEN_SEEN"
+
+  cat >"$STUB_BIN_DIR/docker" <<'EOF'
+#!/usr/bin/env bash
+printf 'docker %s\n' "$*" >> "${COMMAND_LOG:?}"
+printf '%s' "${GH_TOKEN-}" > "${TOKEN_SEEN:?}"
+exit 0
+EOF
+  chmod +x "$STUB_BIN_DIR/docker"
 }
 
 # --- Positive ------------------------------------------------------------------
@@ -121,6 +139,28 @@ run_lint_workflows() {
   run_lint_workflows
   [ "$status" -eq 0 ]
   ! grep -Fq 'secret-from-gh-cli' "$COMMAND_LOG"
+}
+
+@test "the gh-CLI-resolved token still reaches the container environment" {
+  create_gh_stub 'secret-from-gh-cli'
+  create_token_recording_docker_stub
+
+  run_lint_workflows
+  [ "$status" -eq 0 ]
+  # Present in the environment...
+  [ "$(cat "$TOKEN_SEEN")" = 'secret-from-gh-cli' ]
+  # ...and still absent from the command line.
+  ! grep -Fq 'secret-from-gh-cli' "$COMMAND_LOG"
+}
+
+@test "the GH_TOKEN-supplied token reaches the container environment" {
+  export GH_TOKEN='secret-from-env'
+  create_token_recording_docker_stub
+
+  run_lint_workflows
+  [ "$status" -eq 0 ]
+  [ "$(cat "$TOKEN_SEEN")" = 'secret-from-env' ]
+  ! grep -Fq 'secret-from-env' "$COMMAND_LOG"
 }
 
 # --- Negative ------------------------------------------------------------------

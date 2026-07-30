@@ -172,6 +172,25 @@ setup() {
   assert_output_contains 'not a MAJOR.MINOR.PATCH semver'
 }
 
+@test "rejects zero-padded components" {
+  # "01.2.3" is not valid semver, and `sort -V` orders it differently from the
+  # "1.2.3" tag it is meant to match.
+  make_repo "$REPO" '01.2.3' v1.6.0
+
+  run_guard "$REPO"
+  [ "$status" -eq 1 ]
+  assert_output_contains 'not a MAJOR.MINOR.PATCH semver'
+}
+
+@test "still accepts legitimate zero components" {
+  # The leading-zero rule must not reject 0.x.y or a plain zero component.
+  make_repo "$REPO" '0.4.0' v0.4.0
+
+  run_guard "$REPO"
+  [ "$status" -eq 0 ]
+  assert_output_contains 'release-version: OK'
+}
+
 @test "fails closed when the tags cannot be listed at all" {
   # Not a git repository: `git tag --list` errors. Treating that as "no tags"
   # would pass the guard exactly when it can no longer see what it checks.
