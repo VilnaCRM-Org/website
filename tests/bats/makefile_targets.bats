@@ -508,3 +508,21 @@ STUB
   assert_log_contains 'node scripts/fetchGraphqlSchema.mjs'
   assert_log_contains 'node scripts/contracts/lint-contracts.mjs --update-baseline'
 }
+
+# Issue #381 / F4: the user-service version invariant is hermetic, so unlike
+# lint-contracts it is part of the `lint` aggregate and runs on every PR.
+@test "lint-api-versions shells out to the hermetic version-invariant check" {
+  reset_command_log
+
+  run_make_target lint-api-versions CI=1
+  [ "$status" -eq 0 ]
+  assert_log_contains 'node scripts/contracts/check-api-versions.mjs'
+}
+
+@test "the lint aggregate includes the API version invariant" {
+  run grep -E '^lint: .*lint-api-versions' "$PROJECT_ROOT/Makefile"
+  [ "$status" -eq 0 ]
+
+  run grep -E '^CI_LINT_TARGETS .*lint-api-versions' "$PROJECT_ROOT/Makefile"
+  [ "$status" -eq 0 ]
+}

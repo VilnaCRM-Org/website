@@ -99,7 +99,8 @@ Linting & Formatting
   make lint-tsc: runs static type checking with TypeScript
   make lint-md: lints all markdown files (excluding CHANGELOG.md) using markdownlint
   make lint-deps: validates architecture/import boundaries with dependency-cruiser
-  make lint: runs all linters (ESLint, TypeScript, markdownlint, and dependency-cruiser)
+  make lint-api-versions: verifies OpenAPI and GraphQL reference the same pinned user-service release
+  make lint: runs all linters (ESLint, TypeScript, markdownlint, dependency-cruiser, API versions)
   make lint-metrics: runs the rust-code-analysis complexity gate (host-only, not in make lint)
   make lint-contracts: validates the pinned user-service contracts (not in make lint; needs network)
   make update-contracts: re-fetches the contracts after bumping USER_SERVICE_VERSION

@@ -1,9 +1,17 @@
 import { GraphQLResolveInfo } from 'graphql';
 
+/**
+ * Mirrors the pinned user-service `createUserInput`
+ * (contracts/user-service/schema.graphql): `clientMutationId` is nullable,
+ * everything else is required. There is deliberately no `id` and no `confirmed`
+ * here — both are server-owned (see user-input.ts) and must never be assignable
+ * from client input.
+ */
 export interface CreateUserInput {
   email: string;
   initials: string;
-  clientMutationId: string;
+  password: string;
+  clientMutationId?: string | undefined;
 }
 
 export interface User {
@@ -12,9 +20,10 @@ export interface User {
   email: string;
   initials: string;
 }
-interface CreateUserPayload {
+
+export interface CreateUserPayload {
   user: User;
-  clientMutationId: string;
+  clientMutationId?: string | undefined;
 }
 
 export interface CreateUserResponse {

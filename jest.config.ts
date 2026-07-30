@@ -140,6 +140,14 @@ const config: Config = {
   ...(isClient ? { coverageThreshold: CLIENT_COVERAGE_THRESHOLD } : {}),
   ...(isServer ? { coverageThreshold: SERVER_COVERAGE_THRESHOLD } : {}),
   testMatch: resolvedTestMatch,
+  // The Apollo mock under `docker/apollo-server` is compiled by
+  // `tsconfig.server.json` with `moduleResolution: NodeNext`, where a relative
+  // import MUST carry the emitted `.js` extension. Jest's resolver does not
+  // perform that `.js` -> `.ts` substitution, so map it here; without this the
+  // server suite cannot import the real modules and would be reduced to testing
+  // hand-written doubles again (#381). Requests that genuinely point at a `.js`
+  // file still resolve to it — `.js` leads `moduleFileExtensions`.
+  moduleNameMapper: { '^(\\.{1,2}/.*)\\.js$': '$1' },
   testPathIgnorePatterns: [
     '/node_modules/',
     '/.next/',

@@ -122,7 +122,7 @@ NETWORK_NAME                = website-network
 # Dev-side lint and test phases are grouped so local developers and agents can
 # run the same CI stages as the pipeline. The parallel runners execute each
 # target concurrently, group their output, and aggregate exit codes.
-CI_LINT_TARGETS             = lint-next lint-tsc lint-md
+CI_LINT_TARGETS             = lint-next lint-tsc lint-md lint-api-versions
 CI_TEST_TARGETS             = ci-test-unit-client ci-test-unit-server ci-test-integration
 CI_LINT_RUNNER              = ./scripts/ci/run-parallel.sh ci-lint
 CI_TEST_RUNNER              = ./scripts/ci/run-parallel.sh ci-test
@@ -315,7 +315,16 @@ lint-deps: ## Validate architecture/import boundaries with dependency-cruiser
 	node scripts/generateLocalization.mjs
 	$(PM_EXEC) $(DEPCRUISE_BIN) src pages tests --config .dependency-cruiser.js
 
-lint: lint-next lint-tsc lint-md lint-deps ## Runs all linters: ESLint, TypeScript, Markdown, and dependency-cruiser in sequence.
+# The user-service inventory invariant (issue #381, F4): every consumer of the
+# upstream contracts — the GraphQL schema behind the Apollo mock and the OpenAPI
+# spec behind /swagger — must derive from the single USER_SERVICE_VERSION pin.
+# Unlike lint-contracts this check is HERMETIC (no network, no Docker), so it
+# belongs in the `lint` aggregate and in CI_LINT_TARGETS: the drift that produced
+# the defect (docs on v2.6.0, GraphQL on v2.4.1) is caught on every PR.
+lint-api-versions: ## Verify OpenAPI and GraphQL reference the same pinned user-service release
+	$(PM_EXEC) node scripts/contracts/check-api-versions.mjs
+
+lint: lint-next lint-tsc lint-md lint-deps lint-api-versions ## Runs all linters: ESLint, TypeScript, Markdown, dependency-cruiser, and the API version invariant in sequence.
 
 # DELIBERATE DIVERGENCE FROM THE npm-tool LINT GATES (lint-next/tsc/md/deps),
 # for the same reason as lint-metrics below:

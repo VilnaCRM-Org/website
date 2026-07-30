@@ -92,12 +92,13 @@ TEST_ENV=server bun x jest src/test/apollo-server/<spec>.test.ts
 ## Code Quality
 
 ```bash
-make format     # Prettier (run before lint)
-make lint       # lint-next + lint-tsc + lint-md + lint-deps
-make lint-next  # ESLint (flat config, eslint.config.mjs)
-make lint-tsc   # TypeScript (tsc, no emit)
-make lint-md    # markdownlint
-make lint-deps  # dependency-cruiser on src, pages, tests
+make format            # Prettier (run before lint)
+make lint              # lint-next + lint-tsc + lint-md + lint-deps + lint-api-versions
+make lint-next         # ESLint (flat config, eslint.config.mjs)
+make lint-tsc          # TypeScript (tsc, no emit)
+make lint-md           # markdownlint
+make lint-deps         # dependency-cruiser on src, pages, tests
+make lint-api-versions # user-service version invariant (hermetic; see below)
 ```
 
 Two gates sit deliberately outside `make lint`: `make lint-metrics` (host-only Rust
@@ -130,6 +131,40 @@ instead. Read the policy file for the current numbers rather than memorizing the
 the [`complexity-management`](.claude/skills/complexity-management/SKILL.md) skill for the
 refactoring moves (extract helper, lookup map, typed options object, split file, consolidate
 exits).
+
+### API & GraphQL hardening (issue #381)
+
+`CLAUDE.md` and `agents.md` point agents at the local Apollo mock
+(`docker/apollo-server`) as the canonical shape of the user-service API, so the mock
+models the **safe** pattern even though it never ships. Do not relax any of these when
+extending it, and do not copy a weaker shape into new code:
+
+- **Server-owned identity** (`user-input.ts`). `id` is generated server-side with
+  `uuidv4()` and is never derived from `clientMutationId`, which stays an opaque Relay
+  echo field. New users are created `confirmed: false`; only a verified confirmation
+  token may flip it. Input is allow-listed against the properties the pinned schema
+  declares, so an `id` or `confirmed` key cannot be mass-assigned.
+- **No internal detail in responses** (`error-formatting.ts`). `formatError` returns only
+  a stable `extensions.code`, a generic authored message, an enumerated `reason`, and a
+  `correlationId`; the original error is logged server-side against that id. `details`,
+  `stacktrace` and `exception` are stripped unconditionally and
+  `includeStacktraceInErrorResponses` is pinned off. Never attach `error.message` to a
+  response.
+- **Query budget** (`query-guards.ts`). The server applies depth and cost
+  `validationRules` (`GRAPHQL_MAX_QUERY_DEPTH`, `GRAPHQL_MAX_QUERY_COST`,
+  `GRAPHQL_DEFAULT_LIST_SIZE` in `.env`), and enables introspection plus the Apollo
+  Sandbox only when `NODE_ENV=development`.
+- **One upstream pin.** Every user-service artifact derives from `USER_SERVICE_VERSION`.
+  `make lint-api-versions` is hermetic (no network) and therefore runs inside `make lint`
+  on every PR: it fails on a missing or malformed pin, a second version variable, a
+  consumer that stops interpolating the pin, a stray hardcoded tag in a root config file,
+  or `.env`/`.env.example` disagreeing. `/swagger` renders that pin as the document
+  version and exposes it as `info['x-user-service-version']`.
+
+The behaviour is covered by `src/test/apollo-server/**` (which exercises the real
+resolvers against the real pinned schema, not a hand-written double),
+`src/test/unit/contracts/check-api-versions.test.ts`, and
+`src/test/unit/swagger/patch-swagger.test.ts`.
 
 ## Continuous Integration (parallel PR pipeline)
 

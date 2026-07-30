@@ -38,17 +38,18 @@ Import a feature only through its `index.ts` barrel, never through a deep intern
 ## Command surface
 
 Run everything through `make`; the targets are the single source of truth and the same ones CI
-runs. The aggregate gate is `make lint`, which runs ESLint, TypeScript, markdownlint, and
-dependency-cruiser in sequence.
+runs. The aggregate gate is `make lint`, which runs ESLint, TypeScript, markdownlint,
+dependency-cruiser, and the user-service API version invariant in sequence.
 
 ```bash
 make format     # Prettier formatting; run before lint
-make lint       # Full gate: lint-next + lint-tsc + lint-md + lint-deps
-make lint-next  # ESLint only
-make lint-tsc   # TypeScript type-check only
-make lint-md    # markdownlint only
-make lint-deps  # dependency-cruiser architecture/import boundaries
-make build      # Production build
+make lint              # Full gate: lint-next + lint-tsc + lint-md + lint-deps + lint-api-versions
+make lint-next         # ESLint only
+make lint-tsc          # TypeScript type-check only
+make lint-md           # markdownlint only
+make lint-deps         # dependency-cruiser architecture/import boundaries
+make lint-api-versions # one USER_SERVICE_VERSION pin for OpenAPI + GraphQL
+make build             # Production build
 ```
 
 ## Development setup
