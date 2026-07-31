@@ -497,7 +497,10 @@ Co-authored-by: dependabot[bot] <support@github.com>'
 }
 
 @test "exits 2 when no repository is configured" {
-  run env \
+  # `-u GITHUB_REPOSITORY` is load-bearing: GitHub Actions sets that variable for
+  # every step, so without unsetting it the script finds a repository, never
+  # reaches the guard, and this test passes locally while failing in CI.
+  run env -u AUDIT_REPO -u GITHUB_REPOSITORY \
     PATH="$STUB_BIN_DIR:$PATH" \
     COMMAND_LOG="$COMMAND_LOG" \
     AUDIT_EVENT=sweep \
