@@ -77,7 +77,8 @@ function loadWorkflows() {
       }
       // YAML 1.1 folds a bare `on:` key to boolean true; js-yaml v4 (YAML 1.2
       // core) keeps it a string. Read both so the gate is parser-agnostic.
-      const triggers = doc.on ?? doc[true] ?? {};
+      // (A boolean key reaches JS as the string 'true', hence `doc.true`.)
+      const triggers = doc.on ?? doc.true ?? {};
       return { file, name: typeof doc.name === 'string' ? doc.name : file, doc, triggers };
     })
     .filter(Boolean);

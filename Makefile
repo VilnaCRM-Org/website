@@ -302,8 +302,13 @@ build-out: ## Build production artifacts to ./out directory
 	docker rm $$container_id && \
 	echo "✅ Build artifacts extracted to ./out directory"
 
+# `mjs` is in the glob deliberately: the Node CLI helpers under scripts/ are
+# excluded from qlty (see .qlty/qlty.toml — they sit outside eslint.config.mjs's
+# scope), so without this nothing would check their formatting and they would
+# have to be hand-run through Prettier. Every tracked .mjs is already clean, so
+# this adds coverage without churn.
 format: ## This command executes Prettier formatting
-	$(PRETTIER_BIN) "**/*.{js,jsx,ts,tsx,json,css,scss,md}" --write --ignore-path .prettierignore
+	$(PRETTIER_BIN) "**/*.{js,jsx,mjs,ts,tsx,json,css,scss,md}" --write --ignore-path .prettierignore
 
 lint-next: ## This command executes ESLint
 	$(PM_EXEC) $(ESLINT_BIN)
