@@ -26,18 +26,32 @@ One issue comment per event, on the single permanently-open issue titled
 A release record additionally resolves `tag_name` to its commit, so the bot's changelog
 push is captured even though no push-triggered workflow can see it.
 
-Example of the commit block, for the real `v0.4.0` release commit:
+Example of the commit block, for the real `v0.4.0` release commit (values read back
+from the API, not illustrative):
 
 ```text
 - commit `1091cc128ece57b6c38c4a8eb20b75b7e199293e`
   - subject: `chore(release): v0.4.0 [skip ci]`
   - author: `Conventional Changelog Action <conventional.changelog.action@github.com>`
-    (github: vilnacrm-release[bot], type: Bot)
+    (github: invalid-email-address, type: User)
   - committer: `Conventional Changelog Action <conventional.changelog.action@github.com>`
-    (github: vilnacrm-release[bot], type: Bot)
+    (github: invalid-email-address, type: User)
   - signature: verified=false reason=unsigned
   - declared trailers (self-declared, unverified): none
 ```
+
+That record is worth reading closely, because it contradicts the obvious design.
+The release bot's commit does **not** resolve to a Bot account at the commit
+level: GitHub cannot map `conventional.changelog.action@github.com` to a real
+user, so it links the placeholder `invalid-email-address` account, type `User`.
+A `[bot]`-suffix or account-type heuristic applied to the _commit_ would
+therefore fail to recognise the single most important automated write in this
+repository.
+
+This is why the anomaly checks key on `github.actor` — the workflow-level
+identity, which for an App-token push really is `<app-slug>[bot]` — while the
+commit-level author, committer and signature fields are recorded as evidence
+rather than used as a bot test.
 
 Each record embeds an HTML-comment dedup marker (`release-audit:commit:<sha>` or
 `release-audit:release:<id>:<class>`). Before writing, the script scans the ledger's
@@ -114,12 +128,15 @@ prints the verifiable identity and nothing more.
 
 **Trailers are self-declared and unauthenticated.** This repository's `main` history does
 contain trailers — 129 `Signed-off-by:` lines and 106 `Co-authored-by:` lines — but they
-are GitHub squash-merge co-authors and DCO sign-offs, and **zero** of them identify an
-automated agent. `commitlint.config.js` extends `@commitlint/config-conventional` plus a
-rule that only checks the header matches `type(#123):`; nothing in this repository
-produces, requires, or verifies an agent-attribution trailer. The ledger reports whatever
-trailers exist, labelled unverified, and prints `none` otherwise — it does not invent a
-convention that nothing enforces.
+are DCO sign-offs and GitHub squash-merge co-authors. Forty of the co-author lines name a
+CI bot (`dependabot[bot]`, `snyk-bot`, `github-actions[bot]`,
+`Conventional Changelog Action`), which is a by-product of squash-merging their pull
+requests rather than a deliberate attribution. **None** names an AI coding agent.
+`commitlint.config.js` extends `@commitlint/config-conventional` plus a rule that only
+checks the header matches `type(#123):`; nothing in this repository produces, requires, or
+verifies an agent-attribution trailer. The ledger reports whatever trailers exist, labelled
+unverified, and prints `none` otherwise — it does not invent a convention that nothing
+enforces.
 
 **The ledger is not tamper-evident.** Any maintainer with write access can edit or delete
 an issue comment, and no record is signed. The tamper-evident record is GitHub's
