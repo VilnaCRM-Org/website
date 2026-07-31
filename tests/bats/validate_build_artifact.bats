@@ -28,8 +28,9 @@ make_valid_artifact() {
   printf '<!doctype html><title>404</title>' >"$dir/404.html"
   printf '<!doctype html><title>Swagger UI</title>' >"$dir/swagger.html"
   printf 'console.log(1);' >"$dir/_next/static/chunks/main.js"
-  printf 'Contact: mailto:security@example.com\nExpires: 2027-06-30T23:59:59Z\n' \
-    >"$dir/.well-known/security.txt"
+  # The REAL committed policy, because the validator now also asserts the exported
+  # copy is byte-identical to it — a synthetic fixture would not exercise that.
+  cp "$PROJECT_ROOT/public/.well-known/security.txt" "$dir/.well-known/security.txt"
 
   local i
   for ((i = 1; i <= filler; i++)); do
@@ -138,6 +139,32 @@ setup() {
   run_validator "$ARTIFACT"
   [ "$status" -eq 1 ]
   assert_output_contains 'no Contact field'
+}
+
+@test "fails when the exported security.txt differs from the committed source" {
+  # Shape checks alone would pass a policy whose contacts were altered somewhere
+  # between the repository and the bucket, publishing a disclosure channel nobody
+  # reviewed.
+  make_valid_artifact "$ARTIFACT"
+  printf 'Contact: mailto:attacker@example.com\nExpires: 2027-06-30T23:59:59Z\nCanonical: https://vilnacrm.com/.well-known/security.txt\n' \
+    >"$ARTIFACT/.well-known/security.txt"
+
+  run_validator "$ARTIFACT"
+  [ "$status" -eq 1 ]
+  assert_output_contains 'byte-identical'
+}
+
+@test "accepts a lowercase RFC 9116 field name" {
+  # RFC 9116 field names are case-insensitive; the exported file is compared to
+  # the source byte-for-byte, so exercise the case rule on its own.
+  make_valid_artifact "$ARTIFACT"
+  sed -i 's/^Contact:/contact:/' "$ARTIFACT/.well-known/security.txt"
+
+  run_validator "$ARTIFACT"
+  [ "$status" -eq 1 ]
+  # Fails on the byte-comparison, NOT on "no Contact field" -- proving the field
+  # matcher accepted the lowercase spelling.
+  assert_output_contains 'byte-identical'
 }
 
 @test "fails when a shipped path is blocked by the fail-closed edge allow-list" {

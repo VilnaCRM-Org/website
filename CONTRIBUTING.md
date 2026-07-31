@@ -185,7 +185,9 @@ Branch protection itself **cannot be committed**. The required check names are
 `CodeQL` and `Analyze (typescript)` — the latter is `name: Analyze` plus
 `matrix.language: ['typescript']`, so renaming the job or adding a language
 renames the check run and GitHub silently stops requiring it.
-`tests/bats/security_workflows.bats` pins those names against drift.
+`tests/bats/security_workflows.bats` pins the `Analyze (typescript)` half against drift.
+The `CodeQL` name comes from GitHub's native code-scanning integration and cannot be
+asserted from inside the repository, so verify it in Settings after any change there.
 
 To dismiss a genuine false positive, use the Security tab's dismiss flow — do not
 weaken the gate.

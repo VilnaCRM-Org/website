@@ -39,12 +39,21 @@ fi
 # silently, and a security.txt that 404s is worse than none (RFC 9116 consumers
 # treat the absence as "no policy", but a broken link as a dead contact).
 security_txt="${out_dir}/.well-known/security.txt"
+source_security_txt="${script_dir}/../../public/.well-known/security.txt"
 [ -s "${security_txt}" ] ||
   fail "missing or empty ${security_txt}; the public/.well-known/ dot-directory did not survive the export"
-grep -q '^Contact:' "${security_txt}" ||
-  fail "${security_txt} has no Contact field (RFC 9116 requires at least one)"
-grep -q '^Expires:' "${security_txt}" ||
-  fail "${security_txt} has no Expires field (RFC 9116 requires exactly one)"
+# RFC 9116 field names are case-insensitive, and a bare `Contact:` with no value
+# satisfies neither the RFC nor a researcher, so require a non-empty value.
+grep -qiE '^Contact:[[:space:]]*[^[:space:]]' "${security_txt}" ||
+  fail "${security_txt} has no Contact field with a value (RFC 9116 requires at least one)"
+grep -qiE '^Expires:[[:space:]]*[^[:space:]]' "${security_txt}" ||
+  fail "${security_txt} has no Expires field with a value (RFC 9116 requires exactly one)"
+# The committed file is the one `make lint-security-txt` validates; if the
+# exported copy differs, the deployed disclosure policy is not the reviewed one.
+if [ -f "${source_security_txt}" ]; then
+  cmp -s "${source_security_txt}" "${security_txt}" ||
+    fail "${security_txt} differs from ${source_security_txt}; the published disclosure policy must be byte-identical to its validated source"
+fi
 
 # --- Non-trivial export --------------------------------------------------------
 file_count="$(find "${out_dir}" -type f | wc -l)"

@@ -4,11 +4,14 @@
 # copies public/ verbatim into out/, so this file is published at
 # /.well-known/security.txt with no build-step or edge-routing special case.
 #
-# `Expires` is a hard expiry: RFC 9116 section 2.5.5 says consumers MUST ignore
-# this file once the date has passed. `make lint-security-txt` fails the build
-# while more than 60 days remain, so it can never silently go stale. Fix a
-# failing gate by BUMPING the date and re-confirming the contacts below still
-# reach a human — never by lowering the threshold in
+# `Expires` is a hard expiry: RFC 9116 section 2.5.5 requires the field and says
+# the data is considered stale and should not be used after that date, and
+# recommends a value under a year out. A lapsed policy is therefore worse than
+# none — it advertises a channel researchers are told to disregard.
+# `make lint-security-txt` fails once FEWER than 60 days remain, while there is
+# still time to review and merge a refresh, so this can never go stale silently.
+# Fix a failing gate by BUMPING the date and re-confirming the contacts below
+# still reach a human — never by lowering the threshold in
 # scripts/ci/check-security-txt.sh.
 
 Contact: https://github.com/VilnaCRM-Org/website/security/advisories/new

@@ -134,8 +134,12 @@ Run: $RUN_URL"
     return 0
   fi
   ensure_label "$ALERT_LABEL" B60205 'Deploy/release/red-main CI health alerts'
+  # `--search ... in:title` is a fuzzy match, so filter to an EXACT title the way
+  # ledger_number does. Without this an unrelated open ci-alert issue can absorb a
+  # force-push or unexpected-bot escalation and the real signal is never filed.
   existing="$(gh issue list --repo "$REPO" --label "$ALERT_LABEL" --state open \
-    --search "$title in:title" --json number --jq '.[0].number // empty')"
+    --search "$title in:title" --json number,title \
+    --jq "map(select(.title == \"$title\")) | .[0].number // empty")"
   if [ -n "$existing" ]; then
     gh issue comment "$existing" --repo "$REPO" --body "$body" >/dev/null
   else
@@ -210,6 +214,12 @@ handle_release() {
     edited) class="edited:${AUDIT_RELEASE_UPDATED_AT:-unknown}" ;;
     *) class="$action" ;;
   esac
+  # A workflow_dispatch audit has no release ID, so every manual run would share
+  # the marker `...:0:created` and dedup every tag after the first. Fall back to
+  # the tag, which is unique per release.
+  if [ -z "$id" ] || [ "$id" = '0' ]; then
+    id="tag-${tag:-unknown}"
+  fi
   marker="release-audit:release:${id}:${class}"
   ledger="$(ledger_number)"
   if already_recorded "$ledger" "$marker"; then
@@ -269,24 +279,12 @@ record_commits() {
   printf '%s' "$recorded"
 }
 
-handle_push() {
-  local ledger recorded actor="${AUDIT_ACTOR:-unknown}"
-  ledger="$(ledger_number)"
-  add "## Push to \`main\` by \`${actor}\`"
-  add ""
-  add "- pusher: \`${AUDIT_PUSHER_NAME:-unknown} <${AUDIT_PUSHER_EMAIL:-unknown}>\`"
-  add "- sender type: \`${AUDIT_SENDER_TYPE:-unknown}\` ($(actor_class "$actor"))"
-  add "- force-push: \`${AUDIT_FORCED:-false}\`"
-  add ""
-  recorded="$(list_pushed_commits "${AUDIT_BEFORE:-}" "${AUDIT_AFTER:-}" |
-    record_commits "$ledger")"
-  if [ "$recorded" -eq 0 ]; then
-    note "release-audit: every pushed commit is already in the ledger"
-    : >"$BODY"
-    return 0
-  fi
-  provenance
-  post_record "$ledger"
+# Escalations are a SECURITY signal, not a record, so they are evaluated
+# independently of ledger dedup: a force-push that only restores commits already
+# in the ledger is still a force-push, and it is exactly the case dedup would
+# otherwise swallow.
+escalate_push_anomalies() {
+  local actor="$1"
   if [ "${AUDIT_FORCED:-false}" = 'true' ]; then
     raise_alert "Release audit: force-push to main by ${actor}" \
       "\`main\` was force-pushed by \`${actor}\` (${AUDIT_BEFORE:-?} -> ${AUDIT_AFTER:-?}). Confirm this was intentional."
@@ -295,6 +293,32 @@ handle_push() {
     raise_alert "Release audit: unexpected bot push to main by ${actor}" \
       "\`main\` was pushed by bot \`${actor}\`, which is not the expected release App \`${EXPECTED_BOT}\`."
   fi
+}
+
+handle_push() {
+  local ledger recorded actor="${AUDIT_ACTOR:-unknown}"
+  ledger="$(ledger_number)"
+  add "## Push to \`main\` by \`${actor}\`"
+  add ""
+  # Login only, never the pusher's email. Commit author/committer addresses are
+  # already public through the commits API, but the pusher address is the
+  # account's push email and this record lands in an issue that is public,
+  # indexed, and mailed to every subscriber.
+  add "- pusher: \`${AUDIT_PUSHER_NAME:-unknown}\`"
+  add "- sender type: \`${AUDIT_SENDER_TYPE:-unknown}\` ($(actor_class "$actor"))"
+  add "- force-push: \`${AUDIT_FORCED:-false}\`"
+  add ""
+  recorded="$(list_pushed_commits "${AUDIT_BEFORE:-}" "${AUDIT_AFTER:-}" |
+    record_commits "$ledger")"
+  if [ "$recorded" -eq 0 ]; then
+    note "release-audit: every pushed commit is already in the ledger"
+    : >"$BODY"
+    escalate_push_anomalies "$actor"
+    return 0
+  fi
+  provenance
+  post_record "$ledger"
+  escalate_push_anomalies "$actor"
 }
 
 # Backstop for [skip ci]: reconcile the last SWEEP_HOURS of main against the
@@ -310,9 +334,19 @@ handle_sweep() {
   add ""
   # The commits API returns newest-first, so the cap is the HEAD of the array
   # (a `tail` here would audit the oldest commits in the window instead).
-  recorded="$(gh api \
+  # The sweep is the backstop for [skip ci] commits no push event can observe, so
+  # a transient API blip must not take the whole run down with `set -e`: log it
+  # loudly and record nothing this cycle. The next scheduled run reconciles the
+  # same window (SWEEP_HOURS > the 24h cadence), so no commit is lost.
+  local shas
+  if ! shas="$(gh api \
     "repos/$REPO/commits?sha=main&per_page=100&since=$(iso_since "$SWEEP_HOURS")" \
-    --jq "[.[].sha] | .[0:${MAX_COMMITS}] | .[]" | record_commits "$ledger")"
+    --jq "[.[].sha] | .[0:${MAX_COMMITS}] | .[]" 2>&1)"; then
+    note "release-audit: sweep could not list commits (${shas}); the next run retries the same window"
+    : >"$BODY"
+    return 0
+  fi
+  recorded="$(printf '%s\n' "$shas" | record_commits "$ledger")"
   if [ "$recorded" -eq 0 ]; then
     note "release-audit: sweep found nothing unaudited"
     : >"$BODY"

@@ -150,9 +150,10 @@ Four production-facing invariants that no other gate watches. Extend them; never
   `scripts/ci/verify-edge-allowlist.mjs`, which runs the real handler over every file in
   `out/` — if that gate fails, add the shipped path, do not widen the tables.
 - **RFC 9116 disclosure** (`public/.well-known/security.txt`). Published straight through
-  the static export. `Expires` is a hard expiry, so `make lint-security-txt` fails while
-  60+ days remain and refuses a value more than 366 days out. Fix a red gate by **bumping
-  `Expires`** and re-confirming the contacts — never by lowering the threshold in
+  the static export. `Expires` is a hard expiry, so `make lint-security-txt` fails once
+  **fewer than 60 days remain** — while there is still time to merge a refresh — and also
+  refuses a value more than 366 days out. Fix a red gate by **bumping `Expires`** and
+  re-confirming the contacts — never by lowering the threshold in
   `scripts/ci/check-security-txt.sh`.
 - **Privileged workflows are monitored.** `make lint-prod-guardrails` fails the PR if a
   workflow that assumes an AWS role or cuts a release runs on a non-pull-request trigger

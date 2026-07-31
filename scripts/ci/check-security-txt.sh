@@ -76,6 +76,23 @@ if ! printf '%s' "${expires_value}" | grep -qE "${expires_re}"; then
   fail "${file}: Expires '${expires_value}' is not an RFC 3339 UTC timestamp (YYYY-MM-DDThh:mm:ssZ)"
 fi
 
+# The pattern above accepts any day 01-31 for any month, so 2027-02-31 would slip
+# through and days_from_civil would silently normalise it into a DIFFERENT expiry
+# (3 March). Reject impossible calendar dates outright rather than publishing a
+# policy whose stated expiry is not the one enforced.
+expires_date="${expires_value%%T*}"
+if ! awk -v d="${expires_date}" '
+  BEGIN {
+    split(d, p, "-")
+    y = p[1] + 0; m = p[2] + 0; day = p[3] + 0
+    leap = (y % 4 == 0 && y % 100 != 0) || (y % 400 == 0)
+    split("31 28 31 30 31 30 31 31 30 31 30 31", len, " ")
+    if (m == 2 && leap) len[2] = 29
+    exit (day >= 1 && day <= len[m]) ? 0 : 1
+  }'; then
+  fail "${file}: Expires '${expires_value}' is not a real calendar date"
+fi
+
 # --- Days remaining ------------------------------------------------------------
 # Pure-arithmetic civil-date conversion (Howard Hinnant's days_from_civil), so
 # the gate needs neither GNU `date -d` (absent on macOS/BSD) nor busybox

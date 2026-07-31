@@ -396,6 +396,42 @@ Co-authored-by: dependabot[bot] <support@github.com>'
   assert_log_contains 'force-push to main by RudoiDmytro'
 }
 
+@test "still escalates a force-push whose commits are all already audited" {
+  # Review finding: the zero-new-commit dedup return used to happen BEFORE the
+  # escalation, so a force-push that merely restored audited commits — the case
+  # most worth alerting on — was silently swallowed. Dedup must suppress ledger
+  # noise, never a security signal.
+  write_human_commit deadbeef 'fix(#383): restored history'
+
+  run_audit \
+    FAKE_ISSUE_LIST="$LEDGER_EXISTS" \
+    FAKE_LEDGER_COMMENTS='[{"body":"<!-- release-audit:commit:deadbeef -->"}]' \
+    AUDIT_EVENT=push \
+    AUDIT_AFTER=deadbeef \
+    AUDIT_FORCED=true \
+    AUDIT_ACTOR=RudoiDmytro
+
+  [ "$status" -eq 0 ]
+  assert_output_contains 'already in the ledger'
+  assert_log_contains 'force-push to main by RudoiDmytro'
+}
+
+@test "records the pusher login but never the pusher email" {
+  write_human_commit deadbeef 'fix(#383): a push'
+
+  run_audit \
+    FAKE_ISSUE_LIST="$LEDGER_EXISTS" \
+    AUDIT_EVENT=push \
+    AUDIT_AFTER=deadbeef \
+    AUDIT_PUSHER_NAME=RudoiDmytro \
+    AUDIT_PUSHER_EMAIL=private@example.com
+
+  [ "$status" -eq 0 ]
+  assert_output_contains 'pusher: `RudoiDmytro`'
+  # The ledger issue is public, indexed, and mailed to subscribers.
+  [[ "$output" != *'private@example.com'* ]]
+}
+
 @test "escalates a bot push only once the expected bot is declared" {
   write_release_bot_commit deadbeef
 

@@ -39,6 +39,12 @@ run_checker_at() {
   run env SECURITY_TXT_TODAY="$1" bash "$PROJECT_ROOT/$SCRIPT_REL" "$SEC_TXT"
 }
 
+# Rewrite only the Expires date, keeping the rest of a valid policy intact.
+write_fixture_expiring_on() {
+  write_valid_fixture
+  sed -i "s/^Expires:.*/Expires: ${1}T23:59:59Z/" "$SEC_TXT"
+}
+
 setup() {
   SEC_TXT="$BATS_TEST_TMPDIR/security.txt"
 }
@@ -285,4 +291,64 @@ EOF
   run_checker_at 'not-a-date'
   [ "$status" -eq 1 ]
   assert_output_contains 'is not a YYYY-MM-DD calendar date'
+}
+
+# --- Impossible calendar dates (review finding) --------------------------------
+# The RFC 3339 pattern accepts any day 01-31 in any month, so without an explicit
+# range check `2027-02-31` would reach the day-delta arithmetic and be silently
+# normalised into a DIFFERENT expiry (3 March) -- publishing a policy whose stated
+# expiry is not the one enforced.
+
+@test "rejects a day that does not exist in that month" {
+  write_fixture_expiring_on 2027-02-31
+
+  run_checker_at 2026-07-31
+  [ "$status" -eq 1 ]
+  assert_output_contains 'not a real calendar date'
+}
+
+@test "rejects the 31st of a thirty-day month" {
+  write_fixture_expiring_on 2027-04-31
+
+  run_checker_at 2026-07-31
+  [ "$status" -eq 1 ]
+  assert_output_contains 'not a real calendar date'
+}
+
+@test "rejects 29 February in a common year" {
+  write_fixture_expiring_on 2027-02-29
+
+  run_checker_at 2026-07-31
+  [ "$status" -eq 1 ]
+  assert_output_contains 'not a real calendar date'
+}
+
+@test "accepts 29 February in a leap year" {
+  # 2028 is a leap year, so this is a real date and must clear the calendar check;
+  # it is then legitimately refused by the 366-day ceiling, which proves it got
+  # past the date validation rather than being rejected as malformed.
+  write_fixture_expiring_on 2028-02-29
+
+  run_checker_at 2026-07-31
+  [ "$status" -eq 1 ]
+  assert_output_contains 'over the 366-day ceiling'
+}
+
+@test "accepts 29 February in a 400-year leap year" {
+  # 2000 is divisible by 100 but also by 400, so it IS a leap year -- the case a
+  # naive `year % 4` check gets wrong. The clock is set so the date lands inside
+  # the 60..366 day window and the run is green on its own merits.
+  write_fixture_expiring_on 2000-02-29
+
+  run_checker_at 1999-06-01
+  [ "$status" -eq 0 ]
+}
+
+@test "rejects 29 February in a 100-year common year" {
+  # 2100 is divisible by 100 but not 400, so it is NOT a leap year.
+  write_fixture_expiring_on 2100-02-29
+
+  run_checker_at 2026-07-31
+  [ "$status" -eq 1 ]
+  assert_output_contains 'not a real calendar date'
 }

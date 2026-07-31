@@ -386,6 +386,10 @@ lint-metrics: ## Run rust-code-analysis complexity gate on src (host-only; auto-
 # release or commit, and must never write a ledger comment from a developer's
 # machine. Override the target with AUDIT_EVENT=release|push|sweep and AUDIT_REF.
 release-audit-dry-run: ## Dry-run the release audit against the live repo (host-only, writes nothing)
+	@if [ "$${AUDIT_EVENT:-sweep}" != "sweep" ] && [ -z "$(AUDIT_REF)" ]; then \
+		echo "Error: AUDIT_REF is required. Usage: make release-audit-dry-run AUDIT_EVENT=$${AUDIT_EVENT} AUDIT_REF=<tag|sha>"; \
+		exit 1; \
+	fi
 	@AUDIT_EVENT="$${AUDIT_EVENT:-sweep}" \
 	 AUDIT_RELEASE_TAG="$(AUDIT_REF)" \
 	 AUDIT_AFTER="$(AUDIT_REF)" \
@@ -495,7 +499,7 @@ ci-test-integration: ## Run integration tests directly assuming deps are install
 	ci-test-memory-leak ci-test-load ci-test-lighthouse-desktop \
 	ci-test-lighthouse-mobile ci-test-prod ensure-dev start-prod-clean \
 	test-load test-load-swagger test-mutation-shard merge-mutation-reports \
-	pr-comments
+	pr-comments lint lint-security-txt lint-prod-guardrails release-audit-dry-run
 
 ci-setup: create-network ## Prepare the shared dev environment for CI-oriented checks
 	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) up $(CI_SETUP_UP_FLAGS) dev && $(MAKE) wait-for-dev

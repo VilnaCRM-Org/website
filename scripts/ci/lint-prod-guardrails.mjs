@@ -91,9 +91,18 @@ function stepsOf(doc) {
 
 function assumesAwsRole(step) {
   const uses = typeof step?.uses === 'string' ? step.uses : '';
+  const run = typeof step?.run === 'string' ? step.run : '';
   const hasRoleInput =
     step?.with && typeof step.with === 'object' && Object.hasOwn(step.with, 'role-to-assume');
-  return uses.startsWith(AWS_CREDENTIALS_ACTION) || Boolean(hasRoleInput);
+  return (
+    uses.startsWith(AWS_CREDENTIALS_ACTION) ||
+    Boolean(hasRoleInput) ||
+    // The action is the documented path, but a role can also be assumed straight
+    // from the CLI, and a local composite action hides its steps from this audit
+    // entirely — treat both as privileged rather than as invisible.
+    /\baws\s+sts\s+assume-role(-with-web-identity)?\b/.test(run) ||
+    /^\.\/\.github\/actions\//.test(uses)
+  );
 }
 
 function createsRelease(step) {
@@ -114,14 +123,27 @@ function runsUnwatched(triggers) {
   return triggerKeys(triggers).some(key => !WATCHED_TRIGGERS.has(key));
 }
 
-// Coverage is a relationship across the whole workflow directory, not a
-// hardcoded filename: any workflow that lists a name under
-// `on.workflow_run.workflows` covers it, and any workflow with an `on.release`
-// trigger counts as the release audit.
-function collectAlertCoverage(workflows) {
+// A workflow only provides coverage if it can actually reach a human, i.e. it
+// grants `issues: write` (files/refreshes the ci-alert or ledger issue). Without
+// that test, adding any unrelated `workflow_run` listener — or a release
+// workflow that listens to its own `release` event — would satisfy the audit
+// requirement while alerting nobody.
+function canAlertHumans(doc) {
+  const jobs = doc?.jobs && typeof doc.jobs === 'object' ? Object.values(doc.jobs) : [];
+  const grantsIssueWrite = perms => perms && typeof perms === 'object' && perms.issues === 'write';
+  return grantsIssueWrite(doc?.permissions) || jobs.some(job => grantsIssueWrite(job?.permissions));
+}
+
+// Coverage is a relationship across the workflow directory rather than a
+// hardcoded filename, so renaming the alert workflow does not silently disable
+// this assertion — but only alerting workflows count, and a workflow can never
+// vouch for itself.
+function collectAlertCoverage(workflows, audited) {
   const alertedNames = new Set();
   let hasReleaseAudit = false;
   workflows.forEach(workflow => {
+    if (workflow.file === audited.file) return;
+    if (!canAlertHumans(workflow.doc)) return;
     const listed = workflow.triggers?.workflow_run?.workflows;
     if (Array.isArray(listed)) listed.forEach(name => alertedNames.add(String(name)));
     if (triggerKeys(workflow.triggers).includes('release')) hasReleaseAudit = true;
@@ -130,13 +152,13 @@ function collectAlertCoverage(workflows) {
 }
 
 function assertPrivilegedWorkflowsAreAlerted(workflows) {
-  const { alertedNames, hasReleaseAudit } = collectAlertCoverage(workflows);
   workflows.forEach(workflow => {
     const steps = stepsOf(workflow.doc);
     const aws = steps.some(assumesAwsRole);
     const release = steps.some(createsRelease);
     if (!aws && !release) return;
     if (!runsUnwatched(workflow.triggers)) return;
+    const { alertedNames, hasReleaseAudit } = collectAlertCoverage(workflows, workflow);
     if (alertedNames.has(workflow.name)) return;
     if (release && !aws && hasReleaseAudit) return;
     const privilege = aws ? 'assumes an AWS role' : 'creates a GitHub release';
@@ -155,7 +177,16 @@ function assertPrivilegedWorkflowsAreAlerted(workflows) {
 // cannot assert about itself is the shape below: that the allow-list maps are
 // still immutable and that the handler still fails closed instead of ending in
 // an unconditional origin pass-through.
-const ORIGIN_PASSTHROUGH_TAIL = /return\s+request(?:\.uri)?\s*;\s*$/;
+// The semicolon is optional (ASI makes a bare `return request` valid) and a
+// trailing comment must not hide the fallthrough, so comments are stripped
+// before this is applied rather than being tolerated by the pattern.
+const ORIGIN_PASSTHROUGH_TAIL = /return\s+request(?:\.uri)?\s*;?$/;
+
+// Line and block comments only — enough to normalise a tail like
+// `return request; // TODO` without pulling in a JS parser for one assertion.
+function stripComments(source) {
+  return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\r\n]*/g, '');
+}
 
 function assertEdgeAllowListIntact() {
   const source = readIfPresent(EDGE_SCRIPT);
@@ -164,7 +195,12 @@ function assertEdgeAllowListIntact() {
     return;
   }
 
-  const maps = [...source.matchAll(/var\s+(ROUTE_MAP|ALLOW(?:ED)?_[A-Z0-9_]+)\s*=\s*(\S+)/g)];
+  // `var|let|const`: the file is ES5.1 today, but a later edit to `const` must not
+  // silently drop the ALLOWED_* tables out of this audit and take the
+  // immutability check with them.
+  const maps = [
+    ...source.matchAll(/(?:var|let|const)\s+(ROUTE_MAP|ALLOW(?:ED)?_[A-Z0-9_]+)\s*=\s*(\S+)/g),
+  ];
   if (!maps.some(([, name]) => name === 'ROUTE_MAP')) {
     fail('B', `${EDGE_SCRIPT} no longer declares a ROUTE_MAP allow-list.`);
   }
@@ -178,7 +214,19 @@ function assertEdgeAllowListIntact() {
     fail('B', `${EDGE_SCRIPT} no longer builds a synthetic 404 response for unknown paths.`);
   }
 
-  const tryBlock = /try\s*\{([\s\S]*?)\}\s*catch\s*\(/.exec(source)?.[1];
+  // `map` in the extension table would publish browser source maps through the
+  // edge even while next.config.js keeps them off — the routing policy forbids it
+  // outright, so it is asserted here rather than left to review.
+  const extensionTable = /ALLOWED_EXTENSIONS\s*=\s*Object\.freeze\(\{([\s\S]*?)\}\)/.exec(source);
+  if (extensionTable && /(^|[\s{,'"])map\s*:/.test(extensionTable[1])) {
+    fail(
+      'B',
+      `${EDGE_SCRIPT}: 'map' is in ALLOWED_EXTENSIONS; that publishes browser source maps ` +
+        'through the edge. It must never be added.'
+    );
+  }
+
+  const tryBlock = /try\s*\{([\s\S]*?)\}\s*catch\s*\(/.exec(stripComments(source))?.[1];
   if (tryBlock === undefined) {
     fail('B', `${EDGE_SCRIPT}: could not locate the handler try/catch block to audit its exit.`);
     return;
@@ -221,19 +269,28 @@ function assertNoProductionSourceMaps() {
     fail('C', `${NEXT_CONFIG} is missing; the source-map guardrail cannot be verified.`);
     return;
   }
-  // Drop whole-line comments so prose mentioning the option cannot trip the
-  // gate; inline values are still matched.
-  const code = config.replace(/^\s*\/\/.*$/gm, '');
-  const match = /productionBrowserSourceMaps\s*:\s*([^,}\n]+)/.exec(code);
-  const value = match?.[1]?.trim();
-  if (value !== undefined && value !== 'false') {
-    fail(
-      'C',
-      `${NEXT_CONFIG} sets productionBrowserSourceMaps to \`${value}\`; that publishes ` +
-        'readable application source to the CDN. Remove the key (Next defaults to false) ' +
-        'or pin it to false.'
-    );
-  }
+  // Comments are stripped so prose mentioning the option cannot trip the gate.
+  const code = stripComments(config);
+  // Three spellings reach the same setting and all must be caught: an object
+  // literal property (`productionBrowserSourceMaps: true`), an assignment
+  // (`config.productionBrowserSourceMaps = true`), and a quoted/computed key
+  // (`['productionBrowserSourceMaps']: true`). Anything other than a literal
+  // `false` is rejected — including a variable, whose value this gate cannot
+  // know, so it must not be assumed safe.
+  const assignments = [
+    ...code.matchAll(/productionBrowserSourceMaps["'\]]*\s*[:=]\s*([^,;}\n]+)/g),
+  ];
+  assignments
+    .map(match => match[1].trim())
+    .filter(value => value !== 'false')
+    .forEach(value => {
+      fail(
+        'C',
+        `${NEXT_CONFIG} sets productionBrowserSourceMaps to \`${value}\`; that publishes ` +
+          'readable application source to the CDN. Remove the key (Next defaults to false) ' +
+          'or pin it to the literal false.'
+      );
+    });
 }
 
 const workflows = loadWorkflows();

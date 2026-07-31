@@ -90,8 +90,13 @@ jobs:
       # guessed default would raise a false alert on every single release.
       AUDIT_EXPECTED_BOT: ${{ vars.RELEASE_BOT_ACTOR }}
     steps:
-      # Always run the script as it exists on main, never the pushed or tagged
-      # revision: the audit must not be rewritable by the change it audits.
+      # Always run the script as it exists on main, never a tagged or PR revision.
+      # This bounds the `release` and `schedule` paths to reviewed code, but note
+      # the honest limit: on the `push` trigger `main` IS the pushed commit, so a
+      # merged change to this script does audit its own push. That is acceptable
+      # because reaching main requires review, and because the ledger is a
+      # monitored projection rather than a tamper-evident record — the
+      # organisation audit log is (see docs/release-audit.md).
       # Sparse checkout keeps this to one file; no credentials are persisted.
       - name: Check out the audit script from main
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

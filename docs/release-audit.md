@@ -173,7 +173,7 @@ stubbed `gh`, plus the workflow-file invariants, so the whole thing is covered a
 without cutting a release:
 
 ```bash
-bun x bats --formatter tap tests/bats/release_audit.bats
+make test-bats
 ```
 
 Against the real GitHub API, read-only:

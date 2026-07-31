@@ -153,6 +153,131 @@ YAML
   assert_output_contains 'creates a GitHub release'
 }
 
+@test "a privileged workflow cannot vouch for itself via its own release trigger" {
+  # Review finding: collectAlertCoverage used to scan every workflow including the
+  # one under audit, so a workflow that both cut a release and listened on
+  # `release` satisfied its own audit requirement.
+  rm -f "$FIXTURE/.github/workflows/release-audit.yml"
+  cat >"$FIXTURE/.github/workflows/self-vouching.yml" <<'YAML'
+name: self vouching
+on:
+  push:
+    branches:
+      - main
+  release:
+    types:
+      - published
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - run: gh release create v1.0.0
+YAML
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains 'self vouching'
+}
+
+@test "a workflow that cannot reach a human does not count as alert coverage" {
+  # Listing a name under workflow_run is not enough: without issues: write the
+  # listener can file nothing, so nobody is told.
+  sed -i '/^      - website$/d' "$FIXTURE/.github/workflows/ci-health-alerts.yml"
+  cat >"$FIXTURE/.github/workflows/fake-listener.yml" <<'YAML'
+name: fake listener
+on:
+  workflow_run:
+    workflows:
+      - website
+    types:
+      - completed
+jobs:
+  noop:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - run: echo "I cannot open an issue"
+YAML
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains 'deploy.yml'
+}
+
+@test "detects a role assumed through the AWS CLI rather than the action" {
+  cat >"$FIXTURE/.github/workflows/cli-role.yml" <<'YAML'
+name: cli role
+on:
+  push:
+    branches:
+      - main
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - run: aws sts assume-role --role-arn arn:aws:iam::1234:role/example --role-session-name s
+YAML
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains 'cli role'
+}
+
+@test "fails when the allow-list tables are declared with const instead of var" {
+  # The freeze audit used to match `var` only, so switching to const dropped the
+  # ALLOWED_* tables out of the immutability check entirely.
+  sed -i 's/^var ALLOWED_DIRS = Object.freeze({$/const ALLOWED_DIRS = ({/' \
+    "$FIXTURE/scripts/cloudfront_routing.js"
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains 'ALLOWED_DIRS'
+  assert_output_contains 'mutable'
+}
+
+@test "fails when map is added to the edge extension allow-list" {
+  sed -i "s/^  js: true,$/  js: true,\n  map: true,/" "$FIXTURE/scripts/cloudfront_routing.js"
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains 'ALLOWED_EXTENSIONS'
+  assert_output_contains 'source maps'
+}
+
+@test "an origin fallthrough cannot hide behind a missing semicolon or a comment" {
+  # ASI makes a bare `return request` valid, and a trailing comment used to break
+  # the end-of-block anchor.
+  python3 - "$FIXTURE/scripts/cloudfront_routing.js" <<'PY'
+import sys
+p = sys.argv[1]
+s = open(p).read()
+s = s.replace('    return buildNotFoundResponse();\n',
+              '    return request // fall back to the origin\n')
+open(p, 'w').write(s)
+PY
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains 'unconditional'
+}
+
+@test "fails when source maps are enabled by assignment rather than a literal key" {
+  python3 - "$FIXTURE/next.config.js" <<'PY'
+import sys
+p = sys.argv[1]
+s = open(p).read()
+s += "\nmodule.exports.productionBrowserSourceMaps = true;\n"
+open(p, 'w').write(s)
+PY
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains 'productionBrowserSourceMaps'
+}
+
 @test "reports an unparseable workflow instead of crashing the whole gate" {
   # A duplicate key or bad indent must not take assertions B and C down with it,
   # which is what an uncaught js-yaml throw would do.

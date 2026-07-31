@@ -156,7 +156,14 @@ describe('cloudfront_routing handler', () => {
       const result = asResponse(handler({ request }));
       expect(result).not.toBe(request);
       expect(result.statusCode).toBe(404);
+      expect(result.statusDescription).toBe('Not Found');
       expect(result.body).toContain('404');
+      // The full documented shape, not just the status: a dropped content-type
+      // made Safari download the 404 (#235) and a missing body produced a 5xx
+      // (#249). Those regressions must be caught on every blocked path, not only
+      // on the single top-level case below.
+      expect(result.headers['content-type']?.value).toBe('text/html; charset=utf-8');
+      expect(result.headers['cache-control']?.value).toBe('public, max-age=60');
     });
 
     test('a blocked nested path returns the same 404 shape as a blocked top-level path', () => {
