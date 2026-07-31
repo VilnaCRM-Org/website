@@ -66,9 +66,11 @@ ensure_label() {
 # The ledger issue: found by exact title, created on first use.
 ledger_number() {
   local found created
+  # Same treatment as raise_alert: AUDIT_LEDGER_TITLE is configurable, so it is
+  # passed as jq data rather than spliced into the program.
   found="$(gh issue list --repo "$REPO" --label "$LEDGER_LABEL" --state open \
-    --search "$LEDGER_TITLE in:title" --json number,title \
-    --jq "map(select(.title == \"$LEDGER_TITLE\")) | .[0].number // empty")"
+    --search "$LEDGER_TITLE in:title" --json number,title |
+    jq -r --arg t "$LEDGER_TITLE" 'map(select(.title == $t)) | .[0].number // empty')"
   if [ -n "$found" ]; then
     printf '%s' "$found"
     return 0
@@ -137,9 +139,13 @@ Run: $RUN_URL"
   # `--search ... in:title` is a fuzzy match, so filter to an EXACT title the way
   # ledger_number does. Without this an unrelated open ci-alert issue can absorb a
   # force-push or unexpected-bot escalation and the real signal is never filed.
+  # The title is interpolated from a release tag, so it must reach jq as DATA via
+  # --arg, never spliced into the program text: a tag containing a double quote
+  # would otherwise terminate the filter and abort the escalation. `gh --jq` has
+  # no --arg, hence the pipe to real jq (already a documented dependency).
   existing="$(gh issue list --repo "$REPO" --label "$ALERT_LABEL" --state open \
-    --search "$title in:title" --json number,title \
-    --jq "map(select(.title == \"$title\")) | .[0].number // empty")"
+    --search "$title in:title" --json number,title |
+    jq -r --arg t "$title" 'map(select(.title == $t)) | .[0].number // empty')"
   if [ -n "$existing" ]; then
     gh issue comment "$existing" --repo "$REPO" --body "$body" >/dev/null
   else

@@ -634,3 +634,24 @@ Co-authored-by: dependabot[bot] <support@github.com>'
   [ "$status" -eq 0 ]
   [ "$output" = 'true' ]
 }
+
+@test "an alert title containing a double quote still refreshes the existing alert" {
+  # Review finding: the title was spliced into the jq PROGRAM, so a release tag
+  # carrying a double quote produced a malformed filter, the exact-title lookup
+  # returned nothing, and the escalation opened a DUPLICATE alert issue instead of
+  # refreshing the open one. The observable difference is comment-vs-create.
+  local tag='v1.0.0" or true #'
+  local alert_title="Release audit: release ${tag} was deleted"
+
+  run_audit \
+    FAKE_ISSUE_LIST="$LEDGER_EXISTS" \
+    FAKE_ALERT_LIST="$(jq -nc --arg t "$alert_title" '[{number:99,title:$t}]')" \
+    AUDIT_EVENT=release \
+    AUDIT_RELEASE_ACTION=deleted \
+    AUDIT_RELEASE_TAG="$tag" \
+    AUDIT_RELEASE_ID=42
+
+  [ "$status" -eq 0 ]
+  assert_log_contains 'gh issue comment 99'
+  refute_log_contains 'gh issue create --repo VilnaCRM-Org/website --label ci-alert'
+}

@@ -195,11 +195,17 @@ function assertEdgeAllowListIntact() {
     return;
   }
 
+  // Every structural check below runs on a comment-stripped copy. A comment can
+  // otherwise both hide a violation (`map/* x */: true`) and break an extraction
+  // (a `})` inside a comment ends the table capture early), and a commented-out
+  // declaration must not count as a live one.
+  const code = stripComments(source);
+
   // `var|let|const`: the file is ES5.1 today, but a later edit to `const` must not
   // silently drop the ALLOWED_* tables out of this audit and take the
   // immutability check with them.
   const maps = [
-    ...source.matchAll(/(?:var|let|const)\s+(ROUTE_MAP|ALLOW(?:ED)?_[A-Z0-9_]+)\s*=\s*(\S+)/g),
+    ...code.matchAll(/(?:var|let|const)\s+(ROUTE_MAP|ALLOW(?:ED)?_[A-Z0-9_]+)\s*=\s*(\S+)/g),
   ];
   if (!maps.some(([, name]) => name === 'ROUTE_MAP')) {
     fail('B', `${EDGE_SCRIPT} no longer declares a ROUTE_MAP allow-list.`);
@@ -210,14 +216,14 @@ function assertEdgeAllowListIntact() {
       fail('B', `${EDGE_SCRIPT}: ${name} is not Object.freeze()d; the allow-list is mutable.`);
     });
 
-  if (!/statusCode:\s*404/.test(source)) {
+  if (!/statusCode:\s*404/.test(code)) {
     fail('B', `${EDGE_SCRIPT} no longer builds a synthetic 404 response for unknown paths.`);
   }
 
   // `map` in the extension table would publish browser source maps through the
   // edge even while next.config.js keeps them off — the routing policy forbids it
   // outright, so it is asserted here rather than left to review.
-  const extensionTable = /ALLOWED_EXTENSIONS\s*=\s*Object\.freeze\(\{([\s\S]*?)\}\)/.exec(source);
+  const extensionTable = /ALLOWED_EXTENSIONS\s*=\s*Object\.freeze\(\{([\s\S]*?)\}\)/.exec(code);
   if (extensionTable && /(^|[\s{,'"])map\s*:/.test(extensionTable[1])) {
     fail(
       'B',
@@ -226,7 +232,7 @@ function assertEdgeAllowListIntact() {
     );
   }
 
-  const tryBlock = /try\s*\{([\s\S]*?)\}\s*catch\s*\(/.exec(stripComments(source))?.[1];
+  const tryBlock = /try\s*\{([\s\S]*?)\}\s*catch\s*\(/.exec(code)?.[1];
   if (tryBlock === undefined) {
     fail('B', `${EDGE_SCRIPT}: could not locate the handler try/catch block to audit its exit.`);
     return;

@@ -416,3 +416,32 @@ JS
   assert_output_contains '[B]'
   assert_output_contains '[C]'
 }
+
+@test "a block comment cannot hide map in the edge extension allow-list" {
+  # Review finding: `map/* x */: true` satisfied the table syntax while evading a
+  # naive `map\s*:` test, so every structural check now runs on a comment-stripped
+  # copy of the source.
+  sed -i "s|^  js: true,$|  js: true,\n  map/* not a real extension */: true,|" \
+    "$FIXTURE/scripts/cloudfront_routing.js"
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains 'ALLOWED_EXTENSIONS'
+  assert_output_contains 'source maps'
+}
+
+@test "a comment containing a brace cannot truncate the extension table capture" {
+  # A `})` inside a comment would end the non-greedy table capture early, hiding
+  # anything after it from the map check.
+  python3 - "$FIXTURE/scripts/cloudfront_routing.js" <<'PY'
+import sys
+p = sys.argv[1]
+s = open(p).read()
+s = s.replace('  css: true,', '  /* closes early: }) */\n  css: true,\n  map: true,')
+open(p, 'w').write(s)
+PY
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains 'source maps'
+}
