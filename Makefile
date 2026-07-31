@@ -122,7 +122,7 @@ NETWORK_NAME                = website-network
 # Dev-side lint and test phases are grouped so local developers and agents can
 # run the same CI stages as the pipeline. The parallel runners execute each
 # target concurrently, group their output, and aggregate exit codes.
-CI_LINT_TARGETS             = lint-next lint-tsc lint-md
+CI_LINT_TARGETS             = lint-next lint-tsc lint-md lint-prod-guardrails
 CI_TEST_TARGETS             = ci-test-unit-client ci-test-unit-server ci-test-integration
 CI_LINT_RUNNER              = ./scripts/ci/run-parallel.sh ci-lint
 CI_TEST_RUNNER              = ./scripts/ci/run-parallel.sh ci-test
@@ -130,6 +130,9 @@ CI_TEST_RUNNER              = ./scripts/ci/run-parallel.sh ci-test
 # Arguments for the pr-comments helper (PR=<num> FORMAT=<text|json|markdown>).
 PR                          ?=
 FORMAT                      ?=
+
+# Arguments for the release-audit dry run (AUDIT_EVENT=release|push|sweep, AUDIT_REF=<tag|sha>).
+AUDIT_REF                   ?=
 
 CI                          ?= 0
 
@@ -315,7 +318,20 @@ lint-deps: ## Validate architecture/import boundaries with dependency-cruiser
 	node scripts/generateLocalization.mjs
 	$(PM_EXEC) $(DEPCRUISE_BIN) src pages tests --config .dependency-cruiser.js
 
-lint: lint-next lint-tsc lint-md lint-deps ## Runs all linters: ESLint, TypeScript, Markdown, and dependency-cruiser in sequence.
+lint-security-txt: ## Validate the published RFC 9116 security.txt (fields + Expires runway)
+	@bash scripts/ci/check-security-txt.sh
+
+lint-prod-guardrails: ## Enforce the production-safety invariants (privileged-workflow alerting, fail-closed edge routing, no source maps)
+	$(PM_EXEC) node scripts/ci/lint-prod-guardrails.mjs
+
+# lint-security-txt and lint-prod-guardrails DO belong in the aggregate below,
+# unlike lint-contracts and lint-metrics: both read only committed files (no
+# network, no host binary, no Docker), so they are hermetic and cannot make the
+# static lane flaky. lint-prod-guardrails additionally joins CI_LINT_TARGETS
+# because it needs `node` + js-yaml, which the parallel ci-lint runner provides;
+# lint-security-txt is pure bash and needs no package manager, mirroring how
+# lint-deps stays out of that list.
+lint: lint-next lint-tsc lint-md lint-deps lint-security-txt lint-prod-guardrails ## Runs all linters: ESLint, TypeScript, Markdown, dependency-cruiser, the RFC 9116 security.txt gate, and the production-safety guardrails in sequence.
 
 # DELIBERATE DIVERGENCE FROM THE npm-tool LINT GATES (lint-next/tsc/md/deps),
 # for the same reason as lint-metrics below:
@@ -357,6 +373,19 @@ lint-metrics: ## Run rust-code-analysis complexity gate on src (host-only; auto-
 	 RCA_SHA256_LINUX="$(RCA_SHA256_LINUX)" \
 	 METRICS_POLICY="$(METRICS_POLICY_PATH)" \
 	 sh scripts/ci/lint-metrics.sh
+
+# Host-only, and deliberately OUTSIDE `lint` and CI_LINT_TARGETS for the same
+# reason as lint-metrics above: it drives `gh` against the live GitHub API, so it
+# is neither hermetic nor offline-safe. AUDIT_DRY_RUN is forced to 1 here — this
+# target exists to exercise the audit pipeline end to end against a real past
+# release or commit, and must never write a ledger comment from a developer's
+# machine. Override the target with AUDIT_EVENT=release|push|sweep and AUDIT_REF.
+release-audit-dry-run: ## Dry-run the release audit against the live repo (host-only, writes nothing)
+	@AUDIT_EVENT="$${AUDIT_EVENT:-sweep}" \
+	 AUDIT_RELEASE_TAG="$(AUDIT_REF)" \
+	 AUDIT_AFTER="$(AUDIT_REF)" \
+	 AUDIT_DRY_RUN=1 \
+	 bash scripts/ci/release-audit.sh
 
 husky: ## One-time Husky setup to enable Git hooks (deprecated if already set)
 	bun x husky install

@@ -23,3 +23,9 @@ make test-bats BATS_FORMATTER=tap
    that covers its shell behavior.
 3. If a workflow already exercises the target, document that workflow in
    `tests/bats/make-target-coverage.tsv` instead of duplicating the coverage.
+4. A policy script under `scripts/ci/` gets its own suite, separate from the
+   Makefile-wiring test. Copy the fixture-driven pattern in
+   `validate_build_artifact.bats`, `prod_guardrails.bats` or
+   `check_security_txt.bats`: build a fixture from the real committed files, then
+   mutate exactly one invariant per test so each case proves the gate is red on
+   that specific regression rather than red in general.

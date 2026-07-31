@@ -1,0 +1,158 @@
+name: release audit
+
+# Audit trail and alerting for release creation and automated pushes to main
+# (issue #383).
+#
+# LOOP SAFETY -- the single most important property of this file. This workflow
+# is triggered BY pushes to main, and the autorelease bot pushes CHANGELOG.md to
+# main, so it must never itself write to the repository. It holds contents: read
+# only, checks out with persist-credentials: false, and its only writes are
+# issues/comments made with GITHUB_TOKEN. Events raised by GITHUB_TOKEN do not
+# start new workflow runs, so neither the ledger comment nor the alert issue can
+# re-enter this workflow. The `contents` scope is deliberately never elevated
+# past read anywhere in this file.
+#
+# WHY THREE EVENT PATHS -- the release bot commits `chore(release): vX.Y.Z
+# [skip ci]`, and GitHub skips push-triggered runs whose head commit message
+# contains [skip ci]. A push-only audit would therefore be blind to exactly the
+# push it exists to audit. `release` is not skip-ci-able and carries the tag from
+# which that commit is resolved; the daily sweep is the backstop for whatever
+# both miss.
+#
+# The `release` path additionally depends on autorelease.yml creating the release
+# under a GitHub App installation token rather than the default GITHUB_TOKEN --
+# events raised by GITHUB_TOKEN do not start workflow runs. If that ever changes,
+# the release path goes silent and only the sweep still records the commit.
+on:
+  release:
+    types:
+      - published
+      - created
+      - edited
+      - deleted
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: '17 5 * * *'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Audit path to exercise'
+        type: choice
+        options:
+          - sweep
+          - push
+          - release
+        default: sweep
+      ref:
+        description: 'Commit SHA (mode=push) or tag (mode=release) to audit'
+        type: string
+        default: ''
+      dry_run:
+        description: 'Print the record to the job summary instead of writing the ledger'
+        type: boolean
+        default: true
+
+permissions: {}
+
+# Deliberately NOT keyed on github.ref, unlike the rest of this repo: a release
+# event runs on refs/tags/vX.Y.Z while a push runs on refs/heads/main, and both
+# mutate the same ledger issue, so a ref-keyed group would let two runs race to
+# create it. A constant group serializes every run of this workflow against that
+# shared state. cancel-in-progress is false so a queued audit record is never
+# dropped.
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      # Read commits (author, committer, signature verification) via the API.
+      contents: read
+      # The ledger comment and the ci-alert escalation. This is the ONLY write
+      # scope in this workflow.
+      issues: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      AUDIT_REPO: ${{ github.repository }}
+      AUDIT_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      AUDIT_WORKFLOW_REF: ${{ github.workflow_ref }}
+      AUDIT_ACTOR: ${{ github.actor }}
+      AUDIT_TRIGGERING_ACTOR: ${{ github.triggering_actor }}
+      # Login of the GitHub App autorelease.yml authenticates as, e.g.
+      # `vilnacrm-release[bot]`. Set it under Settings -> Secrets and variables
+      # -> Actions -> Variables. While unset, bot pushes and releases are still
+      # RECORDED and only the "unexpected bot" escalation is suppressed -- a
+      # guessed default would raise a false alert on every single release.
+      AUDIT_EXPECTED_BOT: ${{ vars.RELEASE_BOT_ACTOR }}
+    steps:
+      # Always run the script as it exists on main, never the pushed or tagged
+      # revision: the audit must not be rewritable by the change it audits.
+      # Sparse checkout keeps this to one file; no credentials are persisted.
+      - name: Check out the audit script from main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          persist-credentials: false
+          sparse-checkout: scripts/ci/release-audit.sh
+          sparse-checkout-cone-mode: false
+
+      # Every event value reaches the script through env:. Nothing derived from
+      # a release body, tag, or commit message is interpolated with ${{ }} inside
+      # a run: block -- release notes are built from attacker-influencable commit
+      # messages, which is the template-injection class.
+      - name: Record the release event
+        if: github.event_name == 'release'
+        env:
+          AUDIT_EVENT: release
+          AUDIT_RELEASE_ACTION: ${{ github.event.action }}
+          AUDIT_RELEASE_ID: ${{ github.event.release.id }}
+          AUDIT_RELEASE_TAG: ${{ github.event.release.tag_name }}
+          AUDIT_RELEASE_URL: ${{ github.event.release.html_url }}
+          AUDIT_RELEASE_AUTHOR: ${{ github.event.release.author.login }}
+          AUDIT_RELEASE_AUTHOR_TYPE: ${{ github.event.release.author.type }}
+          AUDIT_RELEASE_DRAFT: ${{ github.event.release.draft }}
+          AUDIT_RELEASE_PRERELEASE: ${{ github.event.release.prerelease }}
+          AUDIT_RELEASE_UPDATED_AT: ${{ github.event.release.updated_at }}
+          AUDIT_SENDER: ${{ github.event.sender.login }}
+          AUDIT_SENDER_TYPE: ${{ github.event.sender.type }}
+        run: bash scripts/ci/release-audit.sh
+
+      - name: Record the push to main
+        if: github.event_name == 'push'
+        env:
+          AUDIT_EVENT: push
+          AUDIT_BEFORE: ${{ github.event.before }}
+          AUDIT_AFTER: ${{ github.event.after }}
+          AUDIT_FORCED: ${{ github.event.forced }}
+          AUDIT_PUSHER_NAME: ${{ github.event.pusher.name }}
+          AUDIT_PUSHER_EMAIL: ${{ github.event.pusher.email }}
+          AUDIT_SENDER: ${{ github.event.sender.login }}
+          AUDIT_SENDER_TYPE: ${{ github.event.sender.type }}
+        run: bash scripts/ci/release-audit.sh
+
+      # Closes the [skip ci] hole: reconciles the last day of main against the
+      # ledger and records anything the push trigger never saw.
+      - name: Sweep main for unaudited commits
+        if: github.event_name == 'schedule'
+        env:
+          AUDIT_EVENT: sweep
+        run: bash scripts/ci/release-audit.sh
+
+      # Manual exercise path. Defaults to a dry run, which prints the record to
+      # the job summary and writes nothing, so the pipeline can be proven
+      # end-to-end against a real past commit or tag without cutting a release.
+      - name: Manual audit run
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          AUDIT_EVENT: ${{ inputs.mode }}
+          AUDIT_AFTER: ${{ inputs.ref }}
+          AUDIT_RELEASE_TAG: ${{ inputs.ref }}
+          AUDIT_RELEASE_ACTION: published
+          AUDIT_SENDER: ${{ github.actor }}
+          AUDIT_DRY_RUN: ${{ inputs.dry_run && '1' || '0' }}
+        run: bash scripts/ci/release-audit.sh

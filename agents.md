@@ -39,13 +39,18 @@ Client unit tests run on Jest with React Testing Library in a jsdom env
 run on Jest in a node env (`TEST_ENV=edge`) and cover the deployed edge/runtime scripts
 under `scripts/` that ship outside the Next.js bundle (today the CloudFront Functions
 handler `scripts/cloudfront_routing.js`); specs live in `src/test/edge/**/*.test.ts` and
-the layer is pinned at 100% per-file coverage. E2E and visual specs are Playwright across
+the layer is pinned at 100% per-file coverage. That handler is **deny-by-default** since
+issue #383 — a path outside its allow-list gets a synthetic 404 rather than reaching the
+S3 origin — so an edge spec must cover both halves: that every shape the export ships
+still passes through, and that everything else is blocked. E2E and visual specs are Playwright across
 chromium, firefox, and webkit (`src/test/e2e/**/*.spec.ts`, `src/test/visual/**/*.spec.ts`);
 visual snapshots sit in adjacent `*-snapshots/` folders. Run all three unit layers with
 `make test-unit-all`.
 
 Add a specialized suite when the change touches its concern: `make test-mutation` (test
-strength), `make test-bats` (Makefile and CI shell flows), `make test-memory-leak` (leaks),
+strength), `make test-bats` (Makefile targets, `scripts/ci/` policy scripts, and CI shell
+flows — required when you add a Make target or change a workflow's `name:`),
+`make test-memory-leak` (leaks),
 `make load-tests` (traffic, K6), and `make lighthouse-desktop` / `make lighthouse-mobile`
 (performance, accessibility, best practices).
 

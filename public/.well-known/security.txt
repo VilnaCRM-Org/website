@@ -1,0 +1,19 @@
+# Security contact information for the VilnaCRM public website (RFC 9116).
+#
+# Served from the static export: next.config.js sets `output: 'export'`, which
+# copies public/ verbatim into out/, so this file is published at
+# /.well-known/security.txt with no build-step or edge-routing special case.
+#
+# `Expires` is a hard expiry: RFC 9116 section 2.5.5 says consumers MUST ignore
+# this file once the date has passed. `make lint-security-txt` fails the build
+# while more than 60 days remain, so it can never silently go stale. Fix a
+# failing gate by BUMPING the date and re-confirming the contacts below still
+# reach a human — never by lowering the threshold in
+# scripts/ci/check-security-txt.sh.
+
+Contact: https://github.com/VilnaCRM-Org/website/security/advisories/new
+Contact: mailto:info@vilnacrm.com
+Expires: 2027-06-30T23:59:59Z
+Policy: https://github.com/VilnaCRM-Org/website/blob/main/SECURITY.md
+Preferred-Languages: uk, en
+Canonical: https://vilnacrm.com/.well-known/security.txt

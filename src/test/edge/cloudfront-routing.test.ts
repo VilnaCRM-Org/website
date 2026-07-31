@@ -17,6 +17,12 @@
  *   - #235       — Safari downloaded 404s because the `content-type` header was missing.
  *   - #249       — a missing `body` field on the 404 response caused 5xx.
  * Reverting any of those fixes must turn this suite red.
+ *
+ * Since issue #383 the handler is FAIL-CLOSED, so this suite also pins both halves of that
+ * contract: `allowlisted export paths` (every shape the export ships still reaches the
+ * origin) and `fail-closed allowlist` (everything else is answered here, not by S3). The
+ * two are complementary — a table that only checked blocking would stay green while the
+ * allow-list silently 404'd the whole site.
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -83,16 +89,81 @@ describe('cloudfront_routing handler', () => {
     });
   });
 
-  describe('asset paths (last segment has an extension)', () => {
-    test.each(['/style.css', '/nested/app.js', '/en/logo.svg', '/deep/dir/photo.png'])(
-      'leaves %s untouched',
-      uri => {
-        const request: CloudFrontRequest = { uri };
-        const result = handler({ request });
-        expect(result).toBe(request);
-        expect((result as CloudFrontRequest).uri).toBe(uri);
-      }
-    );
+  // Every row is a real path the static export ships (or, for /robots.txt and /sitemap.xml,
+  // one issue #339 will ship). scripts/ci/verify-edge-allowlist.mjs proves the allow-list
+  // covers the WHOLE export on every PR; this table is the fast unit-level echo of that.
+  describe('allowlisted export paths', () => {
+    test.each([
+      '/index.html',
+      '/404.html',
+      '/favicon.svg',
+      '/supportUkraine.svg',
+      '/vercel.svg',
+      '/swagger.html',
+      '/swagger-schema.json',
+      '/robots.txt',
+      '/sitemap.xml',
+      '/.well-known/security.txt',
+      '/_next/static/chunks/main-0f1e2d.js',
+      '/_next/static/css/8b2c1d.css',
+      '/_next/static/media/tablet.c1e077c2_96.webp',
+      '/_next/static/media/inter.woff2',
+      '/_next/static/media/hero.jpg',
+      '/_next/static/jbV6vmKCu_JUrGFCr7onL/_buildManifest.js',
+      '/en/docs/api.html',
+      '/en/logo.svg',
+      '/images/swagger/lock.svg',
+      '/layout/favicon/favicon.ico',
+      '/layout/favicon/site.webmanifest',
+      '/layout/favicon/browserconfig.xml',
+      '/layout/favicon/32x32.png',
+    ])('leaves %s untouched', uri => {
+      const request: CloudFrontRequest = { uri };
+      const result = handler({ request });
+      expect(result).toBe(request);
+      expect((result as CloudFrontRequest).uri).toBe(uri);
+    });
+  });
+
+  // The heart of issue #383. Every one of these reached the S3 origin before the fail-closed
+  // rewrite; each must now be answered by this function instead. `/secret.json` is the
+  // acceptance criterion's own example, and `.js.map` is the source-map leak the allow-list
+  // exists to make impossible even if `productionBrowserSourceMaps` is ever flipped on.
+  describe('fail-closed allowlist', () => {
+    test.each([
+      '/secret.json',
+      '/.env',
+      '/style.css',
+      '/nested/app.js',
+      '/deep/dir/photo.png',
+      '/a/b',
+      '/blog/post/extra',
+      '/one/two/three',
+      '/en/docs',
+      '/en/.hidden',
+      '/images/',
+      '/_next/static/chunks/main-0f1e2d.js.map',
+      '/_NEXT/static/chunks/main.js',
+      '/Swagger',
+      '/swaggerx',
+      '/about-x',
+      '/toString',
+      '/constructor',
+      '/__proto__',
+      'no-leading-slash',
+    ])('returns the site 404 for %s', uri => {
+      const request: CloudFrontRequest = { uri };
+      const result = asResponse(handler({ request }));
+      expect(result).not.toBe(request);
+      expect(result.statusCode).toBe(404);
+      expect(result.body).toContain('404');
+    });
+
+    test('a blocked nested path returns the same 404 shape as a blocked top-level path', () => {
+      const nested = asResponse(handler({ request: { uri: '/blog/post/extra' } }));
+      const top = asResponse(handler({ request: { uri: '/does-not-exist' } }));
+      expect(nested).toEqual(top);
+    });
   });
 
   describe('unknown top-level path', () => {
@@ -119,18 +190,6 @@ describe('cloudfront_routing handler', () => {
     test('sets a short cache-control header', () => {
       expect(response.headers['cache-control']?.value).toBe('public, max-age=60');
     });
-  });
-
-  describe('unknown nested path (more than one segment)', () => {
-    test.each(['/a/b', '/blog/post/extra', '/one/two/three'])(
-      'passes %s through unchanged',
-      uri => {
-        const request: CloudFrontRequest = { uri };
-        const result = handler({ request });
-        expect(result).toBe(request);
-        expect((result as CloudFrontRequest).uri).toBe(uri);
-      }
-    );
   });
 
   describe('missing or malformed request', () => {

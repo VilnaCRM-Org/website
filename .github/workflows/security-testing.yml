@@ -61,3 +61,45 @@ jobs:
         uses: github/codeql-action/analyze@7188fc363630916deb702c7fdcf4e481b751f97a # v3
         with:
           category: '/language:${{matrix.language}}'
+
+      # The analyze step uploads results and stops, so this job was green
+      # whether CodeQL found zero alerts or fifty (issue #383). GitHub's own
+      # "CodeQL" check run does gate a pull request, but that rule lives in
+      # repository settings and is invisible in the diff; this backstop
+      # re-derives the same error/high/critical verdict from the code-scanning
+      # API, and makes a push or scheduled run on main fail when main carries an
+      # open blocking alert -- which is what routes it to ci-health-alerts.yml.
+      # No permissions change: this job's security-events: write already
+      # subsumes the read the alerts endpoint needs.
+      - name: Fail on new high or critical code-scanning alerts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          EVENT_NAME: ${{ github.event_name }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          ANALYSIS_SHA: ${{ github.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          DEFAULT_BRANCH: main
+        run: ./scripts/ci/code-scanning-gate.sh
+
+  # The RFC 9116 policy carries a hard `Expires` date, so it is the one gate in
+  # this repository that can go red with nobody having changed anything.
+  # `make lint` already runs it on every pull request; this leg re-runs it on the
+  # weekly schedule so a quiet period cannot let the published contact lapse
+  # unnoticed (issue #383). Skipped on pull requests, where `make lint` owns it.
+  security-txt:
+    name: RFC 9116 policy
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Validate public/.well-known/security.txt
+        run: bash scripts/ci/check-security-txt.sh

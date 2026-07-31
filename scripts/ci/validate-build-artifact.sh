@@ -9,6 +9,7 @@
 set -euo pipefail
 
 out_dir="${1:-out}"
+script_dir="$(cd "$(dirname "$0")" && pwd)"
 
 fail() {
   echo "::error::build-artifact: $1"
@@ -31,6 +32,19 @@ grep -qi 'swagger' "${out_dir}/swagger.html" ||
 if [ -e "${out_dir}/swagger/index.html" ]; then
   fail "unexpected ${out_dir}/swagger/index.html: export layout flipped to trailing-slash; the edge /swagger -> /swagger.html rewrite would 404"
 fi
+
+# --- RFC 9116 disclosure policy (issue #383) -----------------------------------
+# public/.well-known/security.txt is published purely by Next's public/ copy. A
+# dot-directory is exactly the kind of thing a future export/tooling change drops
+# silently, and a security.txt that 404s is worse than none (RFC 9116 consumers
+# treat the absence as "no policy", but a broken link as a dead contact).
+security_txt="${out_dir}/.well-known/security.txt"
+[ -s "${security_txt}" ] ||
+  fail "missing or empty ${security_txt}; the public/.well-known/ dot-directory did not survive the export"
+grep -q '^Contact:' "${security_txt}" ||
+  fail "${security_txt} has no Contact field (RFC 9116 requires at least one)"
+grep -q '^Expires:' "${security_txt}" ||
+  fail "${security_txt} has no Expires field (RFC 9116 requires exactly one)"
 
 # --- Non-trivial export --------------------------------------------------------
 file_count="$(find "${out_dir}" -type f | wc -l)"
@@ -59,4 +73,24 @@ if [ "${js_bytes}" -gt "${js_budget}" ]; then
   fail "static JS is ${js_bytes} bytes, over budget ${js_budget}; trim imports (do not raise the budget)"
 fi
 
-echo "build-artifact: OK (${file_count} files, $((js_bytes / 1024)) KiB static JS)"
+# --- No source maps in the shipped artifact (issue #383) -----------------------
+# next.config.js leaves `productionBrowserSourceMaps` unset (default false), and
+# `make lint-prod-guardrails` fails the PR if anyone enables it. This is the
+# artifact-level backstop the config check structurally cannot provide: a map
+# arriving by any other route (a plugin, a stray copy) is caught here, before the
+# TypeScript sources are published to a public bucket.
+map_files="$(find "${out_dir}" -type f -name '*.map')"
+if [ -n "${map_files}" ]; then
+  fail "source maps present in ${out_dir}; they would publish the TypeScript sources: ${map_files}"
+fi
+
+# --- Edge allow-list completeness (issue #383) ---------------------------------
+# scripts/cloudfront_routing.js is fail-closed: anything outside its allow-list
+# gets the synthetic 404 instead of reaching S3. That is only safe while the
+# allow-list is a superset of the export, so run the real handler over every
+# exported path. Deliberately LAST: the route-layout contract above must report
+# its own specific error for a trailing-slash flip, not a generic "blocked path".
+node "${script_dir}/verify-edge-allowlist.mjs" "${out_dir}" ||
+  fail "edge allow-list does not cover the export (see the blocked paths above)"
+
+echo "build-artifact: OK (${file_count} files, $((js_bytes / 1024)) KiB static JS, security.txt present)"

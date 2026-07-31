@@ -1,0 +1,293 @@
+#!/usr/bin/env bats
+#
+# Coverage for scripts/ci/lint-prod-guardrails.mjs (issue #383).
+#
+# The three invariants this gate protects only ever hold in production, where no
+# other PR check watches them: a privileged workflow whose failure nobody is told
+# about, an edge handler that quietly reverts to passing every path to the S3
+# origin, and browser source maps published to the CDN. A gate for that class of
+# regression is only worth having if it is red on the exact regression, so every
+# case below copies the REAL repository files into a fixture and mutates exactly
+# one invariant.
+
+load './test_helper.bash'
+
+setup() {
+  FIXTURE="$BATS_TEST_TMPDIR/repo"
+  mkdir -p "$FIXTURE/scripts"
+  cp -R "$PROJECT_ROOT/.github" "$FIXTURE/.github"
+  cp "$PROJECT_ROOT/jest.config.ts" "$FIXTURE/jest.config.ts"
+  cp "$PROJECT_ROOT/next.config.js" "$FIXTURE/next.config.js"
+  cp "$PROJECT_ROOT/scripts/cloudfront_routing.js" "$FIXTURE/scripts/cloudfront_routing.js"
+}
+
+run_guardrails() {
+  run node "$PROJECT_ROOT/scripts/ci/lint-prod-guardrails.mjs" "$FIXTURE"
+}
+
+# --- Happy path ----------------------------------------------------------------
+
+@test "passes against the committed repository" {
+  run_guardrails
+  [ "$status" -eq 0 ]
+  assert_output_contains 'prod-guardrails: OK'
+  assert_output_contains 'workflows audited'
+}
+
+# --- Assertion A: privileged workflows must be alerted on ----------------------
+
+@test "fails when a privileged workflow drops out of the alert list" {
+  # deploy.yml assumes the production AWS role on push to main. Removing its
+  # `name:` from ci-health-alerts.yml's workflow_run list is exactly the drift
+  # that leaves a broken production deploy unreported.
+  local alerts="$FIXTURE/.github/workflows/ci-health-alerts.yml"
+  grep -q '^      - website$' "$alerts"
+  sed -i '/^      - website$/d' "$alerts"
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains 'deploy.yml'
+  assert_output_contains 'assumes an AWS role'
+  assert_output_contains 'on.workflow_run.workflows'
+}
+
+@test "fails when a privileged workflow is renamed without updating the alert list" {
+  # The coupling that surprises contributors: `name:` is load-bearing, because
+  # workflow_run matches on it.
+  sed -i '0,/^name: website$/s//name: website deploy/' "$FIXTURE/.github/workflows/deploy.yml"
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains 'website deploy'
+}
+
+@test "accepts a new privileged workflow once it is added to the alert list" {
+  sed -i '0,/^name: website$/s//name: website deploy/' "$FIXTURE/.github/workflows/deploy.yml"
+  sed -i 's/^      - website$/      - website deploy/' "$FIXTURE/.github/workflows/ci-health-alerts.yml"
+
+  run_guardrails
+  [ "$status" -eq 0 ]
+}
+
+@test "exempts a privileged workflow that only runs on pull requests" {
+  # A PR-scoped failure is already visible as a red check on the pull request,
+  # so it needs no separate alert. sandbox-creating.yml relies on this.
+  cat >"$FIXTURE/.github/workflows/pr-only-privileged.yml" <<'YAML'
+name: pr only privileged
+on:
+  pull_request:
+    branches:
+      - main
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: arn:aws:iam::1234:role/example
+YAML
+
+  run_guardrails
+  [ "$status" -eq 0 ]
+}
+
+@test "fails on an unwatched privileged workflow added on a push trigger" {
+  cat >"$FIXTURE/.github/workflows/rogue-deploy.yml" <<'YAML'
+name: rogue deploy
+on:
+  push:
+    branches:
+      - main
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: arn:aws:iam::1234:role/example
+YAML
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains 'rogue deploy'
+}
+
+@test "accepts a release-cutting workflow when a release-audit workflow exists" {
+  # A workflow that only cuts releases is covered by any workflow listening on
+  # `release` — that is the audit path release-audit.yml provides.
+  cat >"$FIXTURE/.github/workflows/rogue-release.yml" <<'YAML'
+name: rogue release
+on:
+  push:
+    branches:
+      - main
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - run: gh release create v1.0.0
+YAML
+
+  run_guardrails
+  [ "$status" -eq 0 ]
+}
+
+@test "fails on a release-cutting workflow when no release audit is present" {
+  rm -f "$FIXTURE/.github/workflows/release-audit.yml"
+  cat >"$FIXTURE/.github/workflows/rogue-release.yml" <<'YAML'
+name: rogue release
+on:
+  push:
+    branches:
+      - main
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - run: gh release create v1.0.0
+YAML
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains 'rogue release'
+  assert_output_contains 'creates a GitHub release'
+}
+
+@test "reports an unparseable workflow instead of crashing the whole gate" {
+  # A duplicate key or bad indent must not take assertions B and C down with it,
+  # which is what an uncaught js-yaml throw would do.
+  printf 'name: broken\non:\n  push:\njobs:\n  a:\n    permissions:\n      issues: write\n      issues: write\n' \
+    >"$FIXTURE/.github/workflows/broken.yml"
+  sed -i 's/statusCode: 404,/statusCode: 200,/' "$FIXTURE/scripts/cloudfront_routing.js"
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains 'broken.yml is not valid YAML'
+  # The later assertions still ran.
+  assert_output_contains '[B]'
+}
+
+@test "fails when the workflow directory is missing entirely" {
+  rm -rf "$FIXTURE/.github/workflows"
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains 'is missing'
+}
+
+# --- Assertion B: the edge handler must stay fail-closed -----------------------
+
+@test "fails when the edge handler reverts to origin pass-through" {
+  # The literal regression this PR fixes: before issue #383 the handler's try
+  # block ended in an unconditional `return request`.
+  cat >"$FIXTURE/scripts/cloudfront_routing.js" <<'JS'
+'use strict';
+var ROUTE_MAP = Object.freeze({ '/': '/index.html' });
+function handler(event) {
+  var request = event.request;
+  try {
+    if (Object.prototype.hasOwnProperty.call(ROUTE_MAP, request.uri)) {
+      request.uri = ROUTE_MAP[request.uri];
+      return request;
+    }
+    return request;
+  } catch (err) {
+    return request;
+  }
+}
+JS
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains 'unconditional'
+  assert_output_contains 'fail closed'
+}
+
+@test "fails when an allow-list map is no longer frozen" {
+  sed -i 's/^var ALLOWED_DIRS = Object.freeze({$/var ALLOWED_DIRS = ({/' \
+    "$FIXTURE/scripts/cloudfront_routing.js"
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains 'ALLOWED_DIRS'
+  assert_output_contains 'mutable'
+}
+
+@test "fails when the synthetic 404 response is removed" {
+  sed -i 's/statusCode: 404,/statusCode: 200,/' "$FIXTURE/scripts/cloudfront_routing.js"
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains 'synthetic 404'
+}
+
+@test "fails when the edge handler is missing" {
+  rm -f "$FIXTURE/scripts/cloudfront_routing.js"
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains 'cloudfront_routing.js is missing'
+}
+
+@test "fails when the edge script is dropped from the 100% coverage layer" {
+  # Unpinning coverage first would let a later routing regression land unnoticed,
+  # so the pin itself is part of the contract.
+  sed -i "s#const EDGE_COVERAGE_FROM = \['<rootDir>/scripts/cloudfront_routing.js'\];#const EDGE_COVERAGE_FROM = ['<rootDir>/scripts/other.js'];#" \
+    "$FIXTURE/jest.config.ts"
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains 'no longer collects edge coverage'
+}
+
+@test "fails when an edge coverage threshold drops below 100" {
+  sed -i '/const EDGE_COVERAGE_THRESHOLD/,/};/ s/branches: 100/branches: 95/' \
+    "$FIXTURE/jest.config.ts"
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains 'threshold branches at 100'
+}
+
+# --- Assertion C: no production browser source maps ----------------------------
+
+@test "fails when productionBrowserSourceMaps is enabled" {
+  sed -i "s/  output: 'export',/  output: 'export',\n  productionBrowserSourceMaps: true,/" \
+    "$FIXTURE/next.config.js"
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains 'productionBrowserSourceMaps'
+  assert_output_contains 'publishes'
+}
+
+@test "accepts productionBrowserSourceMaps pinned explicitly to false" {
+  sed -i "s/  output: 'export',/  output: 'export',\n  productionBrowserSourceMaps: false,/" \
+    "$FIXTURE/next.config.js"
+
+  run_guardrails
+  [ "$status" -eq 0 ]
+}
+
+@test "ignores a commented-out mention of the source-map option" {
+  sed -i "s|  output: 'export',|  output: 'export',\n  // productionBrowserSourceMaps: true would publish sources.|" \
+    "$FIXTURE/next.config.js"
+
+  run_guardrails
+  [ "$status" -eq 0 ]
+}
+
+# --- Reporting -----------------------------------------------------------------
+
+@test "reports every violation in a single run rather than stopping at the first" {
+  sed -i '/^      - website$/d' "$FIXTURE/.github/workflows/ci-health-alerts.yml"
+  sed -i 's/statusCode: 404,/statusCode: 200,/' "$FIXTURE/scripts/cloudfront_routing.js"
+  sed -i "s/  output: 'export',/  output: 'export',\n  productionBrowserSourceMaps: true,/" \
+    "$FIXTURE/next.config.js"
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains '[A]'
+  assert_output_contains '[B]'
+  assert_output_contains '[C]'
+}

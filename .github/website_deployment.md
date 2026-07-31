@@ -144,8 +144,18 @@ AWS CodePipeline integrates with Amazon CloudWatch for logging, providing detail
 - Viewing Logs: You can view the logs in the CloudWatch console by navigating to Logs > Log Groups > /aws/codepipeline/ followed by the name of your pipeline.
 - CodeBuild Logs: If you're using AWS CodeBuild for build stages, ensure that the buildspec file includes commands to log important output, especially error messages and status updates.
 
+3. In-repository alerting and release audit
+
+Logs are only useful if somebody is told to read them. Two workflows close that gap (issue #383):
+
+- `.github/workflows/ci-health-alerts.yml` watches the deploy (`website`), release, and security-scan workflows via `workflow_run`, and files or refreshes a `ci-alert` tracking issue when one fails or when `main` is red — closing it again on recovery.
+- `.github/workflows/release-audit.yml` records every release and every automated push to `main` to a durable ledger issue, and escalates anomalies (a deleted release, an unexpected bot, a force-push) onto the same `ci-alert` label.
+
+`make lint-prod-guardrails` fails a pull request if a privileged workflow is not covered by that alerting, so the two cannot drift apart silently.
+
 ## Notes
 
 - Ensure that the IAM role (website-deploy-trigger-role) is correctly configured with the necessary permissions to trigger the AWS CodePipeline.
 - The vars.PROD_AWS_ACCOUNT_ID variable should be set up in the repository to contain the appropriate AWS account ID for the production environment.
 - The ci-cd-website-prod-pipeline CodePipeline should be created and configured in the specified AWS region.
+- A workflow's `name:` is load-bearing: `ci-health-alerts.yml` matches monitored workflows by name, so renaming one (for example `website`) requires updating that list in the same commit, or `make lint-prod-guardrails` fails the pull request.

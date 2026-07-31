@@ -92,17 +92,22 @@ TEST_ENV=server bun x jest src/test/apollo-server/<spec>.test.ts
 ## Code Quality
 
 ```bash
-make format     # Prettier (run before lint)
-make lint       # lint-next + lint-tsc + lint-md + lint-deps
-make lint-next  # ESLint (flat config, eslint.config.mjs)
-make lint-tsc   # TypeScript (tsc, no emit)
-make lint-md    # markdownlint
-make lint-deps  # dependency-cruiser on src, pages, tests
+make format               # Prettier (run before lint)
+make lint                 # lint-next + lint-tsc + lint-md + lint-deps
+                          #   + lint-security-txt + lint-prod-guardrails
+make lint-next            # ESLint (flat config, eslint.config.mjs)
+make lint-tsc             # TypeScript (tsc, no emit)
+make lint-md              # markdownlint
+make lint-deps            # dependency-cruiser on src, pages, tests
+make lint-security-txt    # RFC 9116 security.txt fields + Expires runway
+make lint-prod-guardrails # production-safety invariants (see #383 below)
 ```
 
 Two gates sit deliberately outside `make lint`: `make lint-metrics` (host-only Rust
 binary) and `make lint-contracts` (needs network for its drift check). Each has its own
-workflow — `rust-code-analysis.yml` and `contract-testing.yml`.
+workflow — `rust-code-analysis.yml` and `contract-testing.yml`. The two gates added by
+issue #383 are _inside_ `make lint` precisely because they are hermetic — they read only
+committed files, with no network, no host binary and no Docker.
 
 Run `make format` before `make lint`; formatting is intentionally separate from the lint
 verification suite. Git hooks are managed by Husky. CI phases are mirrored locally by
@@ -130,6 +135,35 @@ instead. Read the policy file for the current numbers rather than memorizing the
 the [`complexity-management`](.claude/skills/complexity-management/SKILL.md) skill for the
 refactoring moves (extract helper, lookup map, typed options object, split file, consolidate
 exits).
+
+### Security hygiene & disclosure (issue #383)
+
+Four production-facing invariants that no other gate watches. Extend them; never relax one.
+
+- **The edge is fail-closed** (`scripts/cloudfront_routing.js`). A URI reaches the S3
+  origin only if it is an exact `ROUTE_MAP` route, an exact `ALLOWED_FILES` entry, or sits
+  under an `ALLOWED_DIRS` top-level directory **and** carries an `ALLOWED_EXTENSIONS`
+  extension. Everything else gets the synthetic site 404, so `/secret.json`, `/.env` and
+  `/*.map` never reach the bucket. `json` is absent from the extension set on purpose (the
+  one exported `.json` is root-level and exact-matched) and `map` must never be added. The
+  allow-list is proved to be a **superset of the real export** on every PR by
+  `scripts/ci/verify-edge-allowlist.mjs`, which runs the real handler over every file in
+  `out/` — if that gate fails, add the shipped path, do not widen the tables.
+- **RFC 9116 disclosure** (`public/.well-known/security.txt`). Published straight through
+  the static export. `Expires` is a hard expiry, so `make lint-security-txt` fails while
+  60+ days remain and refuses a value more than 366 days out. Fix a red gate by **bumping
+  `Expires`** and re-confirming the contacts — never by lowering the threshold in
+  `scripts/ci/check-security-txt.sh`.
+- **Privileged workflows are monitored.** `make lint-prod-guardrails` fails the PR if a
+  workflow that assumes an AWS role or cuts a release runs on a non-pull-request trigger
+  without being listed in `ci-health-alerts.yml`'s `on.workflow_run.workflows`. A
+  workflow's `name:` is therefore load-bearing — renaming one requires updating that list
+  in the same commit.
+- **CodeQL findings are gated and routed.** `scripts/ci/code-scanning-gate.sh` fails the
+  run on _new_ high/critical alerts (PRs subtract the default-branch baseline, so
+  inherited debt does not block), and a failed scan reaches the `ci-alert` issue. Branch
+  protection itself is a GitHub setting that cannot be committed — see CONTRIBUTING.md for
+  the required check names.
 
 ## Continuous Integration (parallel PR pipeline)
 

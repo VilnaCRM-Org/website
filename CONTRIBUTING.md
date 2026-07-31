@@ -70,6 +70,9 @@ sync:
   either Bats-covered or already covered by a pull request workflow.
 - If the target is not already exercised by CI, add or update the relevant test in
   `tests/bats/`.
+- The same applies to a new policy script under `scripts/ci/`: give it its own
+  suite (`prod_guardrails.bats` and `check_security_txt.bats` are the fixture-driven
+  pattern to copy) rather than testing it only through the Makefile target.
 - Run `make test-bats`.
 
 #### Run the CI phases locally
@@ -160,6 +163,46 @@ genuinely warranted, raise the relevant threshold in `config/metrics-policy.json
 as a reviewed, in-repo change visible in the PR diff (or confirm the path belongs
 outside the governed scope). Never silence the gate with a local override or a
 per-line disable.
+
+#### Code scanning (CodeQL)
+
+Two mechanisms gate CodeQL findings, and only one of them is visible in the diff.
+
+1. GitHub's native `CodeQL` check run, configured under **Settings → Code
+   security → Code scanning**. Its "alert severities that cause a pull request
+   check failure" setting is the default (errors plus critical/high).
+2. `scripts/ci/code-scanning-gate.sh`, the in-repo backstop appended to
+   `security-testing.yml`. It re-derives the same verdict from the code-scanning
+   API so the rule is reviewable, and — unlike the native check — it also fails a
+   push or scheduled run on `main`, which is what routes a finding to the
+   `ci-alert` tracking issue.
+
+On a pull request it subtracts the alert set already open on `main`, so inherited
+debt never fails somebody else's PR. Pull requests from forks skip it with a
+notice, because a fork's token cannot read the code-scanning API.
+
+Branch protection itself **cannot be committed**. The required check names are
+`CodeQL` and `Analyze (typescript)` — the latter is `name: Analyze` plus
+`matrix.language: ['typescript']`, so renaming the job or adding a language
+renames the check run and GitHub silently stops requiring it.
+`tests/bats/security_workflows.bats` pins those names against drift.
+
+To dismiss a genuine false positive, use the Security tab's dismiss flow — do not
+weaken the gate.
+
+#### Production safety guardrails
+
+`make lint-prod-guardrails` (inside `make lint`) enforces three invariants that
+otherwise only hold in production:
+
+- Every workflow that assumes an AWS role or cuts a release, on a
+  non-pull-request trigger, is listed under `on.workflow_run.workflows` in
+  `ci-health-alerts.yml`. **A workflow's `name:` is therefore load-bearing** — if
+  you rename one, update that list in the same commit or `make lint` goes red.
+- `scripts/cloudfront_routing.js` keeps its frozen allow-lists and its synthetic
+  404, and stays pinned inside the 100%-coverage `edge` Jest layer, so it cannot
+  regress to passing arbitrary paths to the S3 origin.
+- `next.config.js` does not enable `productionBrowserSourceMaps`.
 
 #### Upstream contracts (user-service)
 

@@ -318,6 +318,7 @@ STUB
   assert_output_contains '===== lint-next ====='
   assert_output_contains '===== lint-tsc ====='
   assert_output_contains '===== lint-md ====='
+  assert_output_contains '===== lint-prod-guardrails ====='
 }
 
 @test "ci-test runs the dev-side test phase through the parallel runner" {
@@ -490,6 +491,36 @@ STUB
 
   # Host-only: never routed through the dev container (docker) or the package manager (bun).
   run grep -E 'docker|bun' "$COMMAND_LOG"
+  [ "$status" -ne 0 ]
+}
+
+@test "lint-security-txt validates the committed RFC 9116 security.txt" {
+  reset_command_log
+
+  # Run the real gate against the real committed policy file (the lint-metrics
+  # precedent): a stubbed check would prove only that the recipe fires, not that
+  # the shipped security.txt still satisfies RFC 9116 and has expiry runway.
+  mkdir -p "$MAKEFILE_SANDBOX/public/.well-known"
+  cp "$PROJECT_ROOT/public/.well-known/security.txt" "$MAKEFILE_SANDBOX/public/.well-known/"
+
+  run_make_target lint-security-txt
+  [ "$status" -eq 0 ]
+  assert_output_contains 'security-txt: OK'
+
+  # Pure bash: never routed through the dev container or the package manager.
+  run grep -E 'docker|bun' "$COMMAND_LOG"
+  [ "$status" -ne 0 ]
+}
+
+@test "lint-prod-guardrails shells out to the hermetic policy script" {
+  reset_command_log
+
+  run_make_target lint-prod-guardrails CI=1
+  [ "$status" -eq 0 ]
+  assert_log_contains 'node scripts/ci/lint-prod-guardrails.mjs'
+
+  # Hermetic: no container, no package manager, and no network client.
+  run grep -E 'docker|bun|curl' "$COMMAND_LOG"
   [ "$status" -ne 0 ]
 }
 
