@@ -71,7 +71,8 @@ fi
 
 expires_value="$(sed -n 's/^Expires:[[:space:]]*//p' "${file}")"
 expires_re='^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])'
-expires_re="${expires_re}T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]Z$"
+# `60` in the seconds field is a leap second, which RFC 3339 section 5.6 permits.
+expires_re="${expires_re}T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)Z$"
 if ! printf '%s' "${expires_value}" | grep -qE "${expires_re}"; then
   fail "${file}: Expires '${expires_value}' is not an RFC 3339 UTC timestamp (YYYY-MM-DDThh:mm:ssZ)"
 fi

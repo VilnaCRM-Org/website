@@ -352,3 +352,21 @@ EOF
   [ "$status" -eq 1 ]
   assert_output_contains 'not a real calendar date'
 }
+
+@test "accepts a leap second in the Expires timestamp" {
+  # RFC 3339 section 5.6 permits :60 in the seconds field.
+  write_valid_fixture
+  sed -i 's/^Expires:.*/Expires: 2027-06-30T23:59:60Z/' "$SEC_TXT"
+
+  run_checker_at 2026-07-31
+  [ "$status" -eq 0 ]
+}
+
+@test "still rejects an out-of-range seconds value" {
+  write_valid_fixture
+  sed -i 's/^Expires:.*/Expires: 2027-06-30T23:59:61Z/' "$SEC_TXT"
+
+  run_checker_at 2026-07-31
+  [ "$status" -eq 1 ]
+  assert_output_contains 'is not an RFC 3339 UTC timestamp'
+}
