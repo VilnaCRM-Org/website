@@ -31,7 +31,9 @@ import { replayOperation, startMockoon } from './utils/mockoon-harness';
 import {
   findOperation,
   readContract,
+  unsupportedResponseConstructs,
   type ContractOperation,
+  type OpenApiDocument,
   type SchemaObject,
 } from './utils/openapi-contract';
 import {
@@ -165,6 +167,75 @@ describe('a seeded defect in the mock data turns the gate red', () => {
     },
     SEED_TIMEOUT_MS
   );
+});
+
+describe('the unsupported-construct tripwire is precise in both directions', () => {
+  // It guards a BLOCKING gate, so a false positive is as costly as a miss: one
+  // reds CI over a perfectly supported contract, the other quietly validates
+  // less. Property names are chosen by the API author and are never schema
+  // keywords, and `example`/`enum` values are data — but a real sub-schema
+  // nested under a property that happens to be *named* `example` still counts.
+  const mutated = (corrupt: (document: MutableDocument) => void): string[] => {
+    const copy = JSON.parse(JSON.stringify(contract)) as MutableDocument;
+    corrupt(copy);
+    return unsupportedResponseConstructs(copy as unknown as OpenApiDocument);
+  };
+
+  const itemProps = (document: MutableDocument): Record<string, SchemaObject> =>
+    itemProperties(document);
+
+  const mediaType = (document: MutableDocument): Record<string, unknown> =>
+    (
+      document.paths['/api/users']!.get!.responses['200'] as {
+        content: Record<string, Record<string, unknown>>;
+      }
+    ).content['application/json']!;
+
+  it('is silent on the committed contract', () => {
+    expect(unsupportedResponseConstructs(contract)).toEqual([]);
+  });
+
+  it('does not flag a property whose NAME is a schema keyword', () => {
+    expect(
+      mutated(document => Object.assign(itemProps(document), { allOf: { type: 'string' } }))
+    ).toEqual([]);
+  });
+
+  it('does not flag example or enum data that contains schema-like keys', () => {
+    expect(
+      mutated(document => Object.assign(mediaType(document), { example: [{ allOf: 'x' }] }))
+    ).toEqual([]);
+    expect(
+      mutated(document => Object.assign(itemProps(document).email!, { enum: [{ oneOf: 'x' }] }))
+    ).toEqual([]);
+  });
+
+  it('flags a real sub-schema nested under a property named `example`', () => {
+    expect(
+      mutated(document =>
+        Object.assign(itemProps(document), { example: { oneOf: [{ type: 'string' }] } })
+      )
+    ).toHaveLength(1);
+  });
+
+  it('flags a composed schema, a nested composition and a media-type $ref', () => {
+    expect(
+      mutated(document =>
+        Object.assign(mediaType(document), { schema: { allOf: [{ type: 'object' }] } })
+      )
+    ).toHaveLength(1);
+    expect(
+      mutated(document =>
+        Object.assign(itemProps(document), { email: { oneOf: [{ type: 'string' }] } })
+      )
+    ).toHaveLength(1);
+    expect(
+      mutated(document => {
+        const { responses } = document.paths['/api/users']!.get!;
+        responses['200'] = { content: { 'application/json': { $ref: '#/components/x' } } };
+      })
+    ).toHaveLength(1);
+  });
 });
 
 describe('the rules Mockoon cannot be made to produce', () => {

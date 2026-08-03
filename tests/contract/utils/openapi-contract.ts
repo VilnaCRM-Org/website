@@ -135,6 +135,82 @@ const SCHEMA_DATA_KEYWORDS: ReadonlySet<string> = new Set([
 ]);
 
 /**
+ * Keywords whose value is a map of *arbitrarily named* sub-schemas. Their keys
+ * are names chosen by the API author, never schema keywords — a response with a
+ * property legitimately called `allOf` must not be mistaken for a composed
+ * schema, and a sub-schema under a property called `example` must still be
+ * scanned.
+ */
+const NAMED_SCHEMA_MAPS: ReadonlySet<string> = new Set([
+  'properties',
+  'patternProperties',
+  '$defs',
+  'definitions',
+]);
+
+const isRecord = (node: unknown): node is Record<string, unknown> =>
+  typeof node === 'object' && node !== null && !Array.isArray(node);
+
+/**
+ * The (sub-schema, location) pairs one keyword's value contributes to the scan.
+ *
+ * Kept separate from the recursion so exactly one function recurses: the
+ * `properties` case in particular must yield each property's *value* while
+ * never letting its *name* reach the keyword checks.
+ */
+function subSchemaTargets(
+  keyword: string,
+  value: unknown,
+  at: string
+): ReadonlyArray<readonly [unknown, string]> {
+  if (NAMED_SCHEMA_MAPS.has(keyword)) {
+    return isRecord(value)
+      ? Object.entries(value).map(([name, subSchema]) => [subSchema, `${at}.${name}`] as const)
+      : [];
+  }
+  if (Array.isArray(value)) {
+    return value.map((entry, index) => [entry, `${at}[${index}]`] as const);
+  }
+  return [[value, at] as const];
+}
+
+/** Records every keyword in one schema that the parity rules cannot reason about. */
+function scanSchema(schema: unknown, trail: string, found: string[]): void {
+  if (!isRecord(schema)) return;
+
+  for (const [keyword, value] of Object.entries(schema)) {
+    const at = `${trail}.${keyword}`;
+
+    if ((UNSUPPORTED_SCHEMA_KEYWORDS as readonly string[]).includes(keyword)) {
+      // Nothing below an unsupported keyword adds information: the rules stop
+      // here either way, and the location already names what to fix.
+      found.push(at);
+    } else if (!SCHEMA_DATA_KEYWORDS.has(keyword)) {
+      // Anything else is schema structure. Data keywords are skipped entirely —
+      // descending would flag ordinary payload fields.
+      subSchemaTargets(keyword, value, at).forEach(([node, nodeTrail]) =>
+        scanSchema(node, nodeTrail, found)
+      );
+    }
+  }
+}
+
+/** Records the unsupported constructs in one Response Object's bodies. */
+function scanResponse(response: ResponseObject, trail: string, found: string[]): void {
+  // A `$ref` on the Response or Media Type object itself is unsupported for the
+  // same reason as one inside a schema: nothing here resolves it, and
+  // `responseSchema` would read the media type as schema-less and silently skip
+  // every body rule.
+  if (Object.hasOwn(response, '$ref')) found.push(`${trail}.$ref`);
+
+  for (const [mediaType, media] of Object.entries(response.content ?? {})) {
+    const mediaAt = `${trail}.content.${mediaType}`;
+    if (Object.hasOwn(media, '$ref')) found.push(`${mediaAt}.$ref`);
+    scanSchema(media.schema, `${mediaAt}.schema`, found);
+  }
+}
+
+/**
  * Every `<location> -> <keyword>` in the document's response schemas that the
  * parity rules cannot handle.
  *
@@ -145,34 +221,9 @@ const SCHEMA_DATA_KEYWORDS: ReadonlySet<string> = new Set([
 export function unsupportedResponseConstructs(document: OpenApiDocument): string[] {
   const found: string[] = [];
 
-  const walkSchema = (node: unknown, trail: string): void => {
-    if (node === null || typeof node !== 'object') return;
-    if (Array.isArray(node)) {
-      node.forEach((entry, index) => walkSchema(entry, `${trail}[${index}]`));
-      return;
-    }
-    for (const [keyword, value] of Object.entries(node)) {
-      if ((UNSUPPORTED_SCHEMA_KEYWORDS as readonly string[]).includes(keyword)) {
-        found.push(`${trail}.${keyword}`);
-      }
-      if (!SCHEMA_DATA_KEYWORDS.has(keyword)) walkSchema(value, `${trail}.${keyword}`);
-    }
-  };
-
   listOperations(document).forEach(({ label, operation }) => {
     Object.entries(operation.responses ?? {}).forEach(([status, response]) => {
-      const responseAt = `${label} responses.${status}`;
-      // A `$ref` on the Response or Media Type object itself is unsupported for
-      // the same reason as one inside a schema: nothing here resolves it, and
-      // `responseSchema` would read the media type as schema-less and silently
-      // skip every body rule.
-      if (Object.hasOwn(response, '$ref')) found.push(`${responseAt}.$ref`);
-
-      Object.entries(response.content ?? {}).forEach(([mediaType, media]) => {
-        const mediaAt = `${responseAt}.content.${mediaType}`;
-        if (Object.hasOwn(media, '$ref')) found.push(`${mediaAt}.$ref`);
-        walkSchema(media.schema, `${mediaAt}.schema`);
-      });
+      scanResponse(response, `${label} responses.${status}`, found);
     });
   });
 
