@@ -339,6 +339,7 @@ STUB
   assert_output_contains '===== ci-test-unit-client ====='
   assert_output_contains '===== ci-test-unit-server ====='
   assert_output_contains '===== ci-test-integration ====='
+  assert_output_contains '===== ci-test-contract ====='
 }
 
 @test "ci-test split targets invoke Jest directly with the right TEST_ENV" {

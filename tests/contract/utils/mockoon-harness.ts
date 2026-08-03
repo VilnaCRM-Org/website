@@ -42,21 +42,29 @@ export interface MockoonHandle {
   stop(): Promise<void>;
 }
 
-/** Asks the OS for an unused port so parallel Jest workers never collide. */
+/** How many times to re-draw a port before giving up. */
+const PORT_ATTEMPTS = 5;
+
+/**
+ * Asks the OS for an unused port so parallel Jest workers never collide.
+ *
+ * Binds the **wildcard** address, not `127.0.0.1`: MockoonServer binds the
+ * wildcard too, and a loopback-only probe proves nothing about it — a port free
+ * on `127.0.0.1` can still be taken on `::1` or another interface, and the real
+ * bind then fails.
+ */
 async function reservePort(): Promise<number> {
   return new Promise((resolve, reject) => {
     const probe = createServer();
     probe.once('error', reject);
-    probe.listen(0, '127.0.0.1', () => {
+    probe.listen(0, () => {
       const { port } = probe.address() as AddressInfo;
       probe.close(() => resolve(port));
     });
   });
 }
 
-/** Converts an OpenAPI document into a Mockoon environment and serves it on a free port. */
-export async function startMockoon(dataFilePath: string): Promise<MockoonHandle> {
-  const port = await reservePort();
+async function listen(dataFilePath: string, port: number): Promise<MockoonServer> {
   const environment = await new OpenAPIConverter().convertFromOpenAPI(dataFilePath, port);
 
   if (environment === null) {
@@ -66,25 +74,49 @@ export async function startMockoon(dataFilePath: string): Promise<MockoonHandle>
   const server = new MockoonServer(environment, { fakerOptions: { seed: FAKER_SEED } });
   // MockoonServer is an EventEmitter: without an `error` listener Node rethrows
   // every recoverable server error (a malformed request body, for one) as an
-  // unhandled 'error' event and tears down the Jest worker.
+  // unhandled 'error' event and tears down the Jest worker. It is also how a
+  // failed bind surfaces — as an event, never a thrown exception, so the boot
+  // promise below must settle on it or it would hang until the Jest timeout.
   server.on('error', () => {});
 
   await new Promise<void>((resolve, reject) => {
     server.once('started', resolve);
-    server.once('error', (_code, originalError) =>
-      reject(originalError ?? new Error(`Mockoon failed to start on port ${port}`))
+    server.once('error', (code, originalError) =>
+      reject(originalError ?? new Error(`Mockoon failed to start on port ${port} (${code})`))
     );
     server.start();
   });
 
-  return {
-    baseUrl: `http://127.0.0.1:${port}`,
-    stop: () =>
-      new Promise<void>(resolve => {
-        server.once('stopped', resolve);
-        server.stop();
-      }),
-  };
+  return server;
+}
+
+/** Converts an OpenAPI document into a Mockoon environment and serves it on a free port. */
+export async function startMockoon(dataFilePath: string): Promise<MockoonHandle> {
+  let lastError: unknown;
+
+  // Reserving a port and binding it are two steps, so another process can take
+  // it in between. Re-draw rather than fail: parallel Jest workers each boot
+  // their own server, and a flaky gate is a gate people learn to ignore.
+  for (let attempt = 0; attempt < PORT_ATTEMPTS; attempt += 1) {
+    const port = await reservePort();
+    try {
+      const server = await listen(dataFilePath, port);
+      return {
+        baseUrl: `http://127.0.0.1:${port}`,
+        stop: () =>
+          new Promise<void>(resolve => {
+            server.once('stopped', resolve);
+            server.stop();
+          }),
+      };
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw new Error(
+    `Mockoon could not bind a free port in ${PORT_ATTEMPTS} attempts: ${String(lastError)}`
+  );
 }
 
 function requestInit(operation: OperationObject, method: string): RequestInit {

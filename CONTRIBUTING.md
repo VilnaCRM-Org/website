@@ -190,7 +190,10 @@ proves the app agrees with the mock:
   the committed document and holds every documented operation's response against
   it — status, media type, schema, and no property the schema never declares.
   Its CI home is
-  [`contract-parity-testing.yml`](.github/workflows/contract-parity-testing.yml).
+  [`contract-parity-testing.yml`](.github/workflows/contract-parity-testing.yml);
+  the status-check name a maintainer must add to the `main` required-checks
+  ruleset is **`contract parity testing / mock-contract-parity`** (branch
+  protection is a repository setting and cannot be committed).
   It also validates the swagger e2e fixtures against the same schema and pins the
   `@mockoon/*` libraries to the `@mockoon/cli` version `Mockoon.Dockerfile`
   installs. When it goes red, fix the mock or the contract — never relax a rule.

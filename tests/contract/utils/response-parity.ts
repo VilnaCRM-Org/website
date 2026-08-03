@@ -84,9 +84,12 @@ export function undeclaredProperties(
 
   const entries = Object.entries(value as Record<string, unknown>);
   return entries.flatMap(([key, nested]) => {
-    const declared = properties[key];
     const at = `${trail}.${key}`;
-    return declared === undefined ? [at] : undeclaredProperties(declared, nested, at);
+    // `Object.hasOwn`, not `properties[key] !== undefined`: a response field
+    // named `constructor`, `toString` or `valueOf` would otherwise resolve to
+    // an Object.prototype member and be waved through as "declared".
+    if (!Object.hasOwn(properties, key)) return [at];
+    return undeclaredProperties(properties[key], nested, at);
   });
 }
 
@@ -129,7 +132,10 @@ export function checkResponseParity(
 ): ParityProblem[] {
   const documented = operation.responses ?? {};
   const status = String(observed.status);
-  const declared = documented[status];
+  // `Object.hasOwn` guards every lookup here for the reason spelled out in
+  // `undeclaredProperties`: an inherited Object.prototype member must never
+  // read as something the contract declared.
+  const declared = Object.hasOwn(documented, status) ? documented[status] : undefined;
 
   if (declared === undefined) {
     const known = Object.keys(documented).join(', ') || 'none';
@@ -158,7 +164,9 @@ export function checkResponseParity(
       : [problem('undeclared-body', `${status} declares no content, got ${observed.body.length}B`)];
   }
 
-  const mediaType = content[observed.contentType];
+  const mediaType = Object.hasOwn(content, observed.contentType)
+    ? content[observed.contentType]
+    : undefined;
   if (mediaType === undefined) {
     return [
       problem(

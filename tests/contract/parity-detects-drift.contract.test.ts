@@ -21,7 +21,7 @@
  *     against `checkResponseParity`.
  *   - Positive — covered by `mockoon-openapi-parity.contract.test.ts`.
  */
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -57,6 +57,12 @@ let workDir: string;
 
 beforeAll(() => {
   workDir = mkdtempSync(path.join(tmpdir(), 'mockoon-parity-'));
+});
+
+afterAll(() => {
+  // Each case writes a full copy of the contract; without this the directories
+  // accumulate in $TMPDIR on every local run and on self-hosted runners.
+  rmSync(workDir, { recursive: true, force: true });
 });
 
 /** A mutable deep copy of the contract, used as corrupted *mock data* only. */

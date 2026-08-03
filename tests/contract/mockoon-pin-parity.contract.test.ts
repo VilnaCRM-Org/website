@@ -32,12 +32,18 @@ interface PackageManifest {
 
 function cliVersionFromDockerfile(): string {
   const dockerfile = readFileSync(MOCKOON_DOCKERFILE, 'utf8');
-  const pin = /@mockoon\/cli@(\d+\.\d+\.\d+)/.exec(dockerfile);
+  // Capture the WHOLE version token, not `\d+\.\d+\.\d+`: a narrow pattern
+  // matches the `9.3.0` prefix of `9.3.0-beta.1` and would call a pre-release
+  // image equal to a released library. Requiring exactly one occurrence stops
+  // a second, unpinned `@mockoon/cli@…` line from hiding behind the first.
+  const pins = [...dockerfile.matchAll(/@mockoon\/cli@([^\s"'\\]+)/g)].map(match => match[1]);
 
-  if (pin?.[1] === undefined) {
-    throw new Error(`${MOCKOON_DOCKERFILE} no longer pins @mockoon/cli@<version>`);
+  if (pins.length !== 1 || pins[0] === undefined) {
+    throw new Error(
+      `${MOCKOON_DOCKERFILE} must pin @mockoon/cli@<version> exactly once, found ${pins.length}`
+    );
   }
-  return pin[1];
+  return pins[0];
 }
 
 describe('the mocked API is pinned to one Mockoon version', () => {

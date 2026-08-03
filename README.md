@@ -362,12 +362,31 @@ turns the gate red. The gate is hermetic (no Docker, no network) and runs on
 every pull request via
 [`.github/workflows/contract-parity-testing.yml`](.github/workflows/contract-parity-testing.yml).
 
-**Scope, honestly stated:** Mockoon derives its responses from the same document
+**Scope, honestly stated.** Mockoon derives its responses from the same document
 the validator checks against, so this cannot detect "the mock disagrees with the
-real API" in general. What it does catch is every divergence the converter can
-introduce — a schema the generated mock can no longer satisfy after a version
-bump, a Mockoon upgrade that changes generation, a status or media type the mock
-stops serving, and e2e fixtures written against a shape the contract has dropped.
+real API" in general. What it does catch is divergence the converter introduces:
+a schema the generated mock can no longer satisfy after a version bump, a Mockoon
+upgrade that changes generation, a status or media type the mock stops serving,
+and e2e fixtures written against a shape the contract has dropped.
+
+Its reach is bounded in three ways, all deliberate and all guarded:
+
+- **One response per operation.** Mockoon serves the first response an operation
+  declares and honours neither `Accept` nor `Prefer`, so the documented 4xx/5xx
+  shapes are never exercised. 12 responses are observed out of 43 declared
+  (status, media-type) pairs.
+- **Body only, not headers.** Response headers — including the `Location` on the
+  302 — are served but not asserted.
+- **Schema-bearing responses only.** 7 of the 12 reach the schema and
+  undeclared-property rules; the rest declare `example: ""` with no schema, or
+  are bodyless 204s. A committed floor assertion fails if that 7 ever drops, so
+  the gate cannot quietly shrink toward validating nothing.
+
+Composed schemas (`allOf`, `oneOf`, `prefixItems`, …) and `$ref` are likewise a
+tripwire rather than a silent gap: the undeclared-property rule walks
+`properties`/`items` only, so the spec fails loudly if upstream introduces one
+instead of quietly checking less.
+
 The "is the contract itself current?" question is the second gate's job.
 
 ### Advisory: upstream drift
@@ -380,8 +399,9 @@ Downloads a pinned, SHA256-verified `oasdiff` binary (the same provisioning
 pattern as the rust-code-analysis CLI) and reports breaking changes between the
 committed baseline and the newest `VilnaCRM-Org/user-service` **release**. Latest
 is resolved from the releases API rather than by semver-sorting tags, because
-upstream restarted its numbering — the newest tag by semver is a year older than
-the newest release.
+upstream restarted its numbering: the highest tag by semver is `v2.8.0`
+(Aug 2025), while the newest release is `v0.8.0` (Feb 2026). Semver-sorting
+would compare against months-old content and report "no drift" indefinitely.
 
 This leg is **advisory by design**: upstream moving on is not a pull request
 author's fault, so it never blocks a PR. It runs nightly via

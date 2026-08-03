@@ -30,6 +30,7 @@ import {
   listOperations,
   readContract,
   responseSchema,
+  unsupportedResponseConstructs,
   type ContractOperation,
 } from './utils/openapi-contract';
 import { checkResponseParity, formatProblems, undeclaredProperties } from './utils/response-parity';
@@ -61,11 +62,32 @@ describe('the committed contract is shaped the way this gate assumes', () => {
     expect(operations.length).toBeGreaterThan(0);
   });
 
-  it('inlines every schema, so validation needs no $ref resolver', () => {
-    // ajv is handed each response schema on its own. A `$ref` would silently
-    // fail to resolve, so the day upstream introduces one this must fail loudly
-    // rather than quietly stop validating.
-    expect(JSON.stringify(contract)).not.toContain('"$ref"');
+  it('still routes at least as many operations through full body validation', () => {
+    // Mockoon serves the FIRST response an operation declares, so only that one
+    // is ever observed — and of those, only the schema-bearing ones reach the
+    // schema and undeclared-property rules. Today 7 of 12 do; the rest declare
+    // `example: ""` with no schema, or are bodyless 204s.
+    //
+    // This is a ratchet, not a target. Without it the gate could quietly shrink
+    // to validating nothing — an upstream reorder that put a schema-less
+    // response first on every operation would leave every assertion green.
+    // Raise the floor when the count rises; never lower it.
+    const withSchema = operations.filter(({ operation }) => {
+      const first = Object.keys(operation.responses ?? {})[0];
+      return first !== undefined && responseSchema(operation, first) !== undefined;
+    });
+
+    expect(withSchema.length).toBeGreaterThanOrEqual(7);
+  });
+
+  it('uses only response-schema constructs the parity rules can reason about', () => {
+    // ajv is handed each response schema on its own, with no resolver, and the
+    // undeclared-property rule walks `properties`/`items` only. A `$ref`, or a
+    // schema composed through `allOf`/`oneOf`/`prefixItems`/…, would make the
+    // gate quietly validate less while still reporting green — so the day
+    // `make update-contracts` pulls a spec that uses one, this must fail loudly.
+    // Extend the rules (never this list) when that day comes.
+    expect(unsupportedResponseConstructs(contract)).toEqual([]);
   });
 });
 

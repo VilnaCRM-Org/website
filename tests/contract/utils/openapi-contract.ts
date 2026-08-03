@@ -91,6 +91,57 @@ export function listOperations(document: OpenApiDocument): ContractOperation[] {
   );
 }
 
+/**
+ * Schema keywords the undeclared-property rule cannot reason about.
+ *
+ * `undeclaredProperties` walks `properties` and `items` only. A schema that
+ * describes its shape through composition instead has neither, so the rule
+ * treats it as free-form and silently stops checking — and ajv does not
+ * backstop it whenever the composition also loses `required`. `$ref` is the
+ * same class of problem one level up: ajv is handed each schema on its own,
+ * with no resolver.
+ *
+ * These are unsupported rather than forbidden. The contract uses none of them
+ * today; the parity spec asserts that stays true, so the day `make
+ * update-contracts` pulls a spec that uses one, the gate fails loudly instead
+ * of quietly validating less.
+ */
+export const UNSUPPORTED_SCHEMA_KEYWORDS = [
+  '$ref',
+  'allOf',
+  'anyOf',
+  'oneOf',
+  'not',
+  'prefixItems',
+  'patternProperties',
+  'additionalProperties',
+] as const;
+
+/** Every `<location> -> <keyword>` in the document's response schemas that the parity rules cannot handle. */
+export function unsupportedResponseConstructs(document: OpenApiDocument): string[] {
+  const found: string[] = [];
+
+  const walk = (node: unknown, trail: string): void => {
+    if (node === null || typeof node !== 'object') return;
+    if (Array.isArray(node)) {
+      node.forEach((entry, index) => walk(entry, `${trail}[${index}]`));
+      return;
+    }
+    for (const [key, value] of Object.entries(node)) {
+      if ((UNSUPPORTED_SCHEMA_KEYWORDS as readonly string[]).includes(key)) {
+        found.push(`${trail}.${key}`);
+      }
+      walk(value, `${trail}.${key}`);
+    }
+  };
+
+  listOperations(document).forEach(({ label, operation }) =>
+    walk(operation.responses ?? {}, `${label} responses`)
+  );
+
+  return found;
+}
+
 /** Looks up a single operation by method and path, or `undefined` when the contract does not document it. */
 export function findOperation(
   document: OpenApiDocument,

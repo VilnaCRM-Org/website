@@ -139,7 +139,7 @@ NETWORK_NAME                = website-network
 # run the same CI stages as the pipeline. The parallel runners execute each
 # target concurrently, group their output, and aggregate exit codes.
 CI_LINT_TARGETS             = lint-next lint-tsc lint-md
-CI_TEST_TARGETS             = ci-test-unit-client ci-test-unit-server ci-test-integration
+CI_TEST_TARGETS             = ci-test-unit-client ci-test-unit-server ci-test-integration ci-test-contract
 CI_LINT_RUNNER              = ./scripts/ci/run-parallel.sh ci-lint
 CI_TEST_RUNNER              = ./scripts/ci/run-parallel.sh ci-test
 
