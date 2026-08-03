@@ -121,29 +121,60 @@ export const UNSUPPORTED_SCHEMA_KEYWORDS = [
 ] as const;
 
 /**
+ * Keywords whose values are response *data*, not sub-schemas. The scan must not
+ * descend into them: an example payload with a field literally named `not` or
+ * `allOf` is ordinary data, and flagging it would fail the blocking gate over a
+ * perfectly supported contract.
+ */
+const SCHEMA_DATA_KEYWORDS: ReadonlySet<string> = new Set([
+  'example',
+  'examples',
+  'default',
+  'const',
+  'enum',
+]);
+
+/**
  * Every `<location> -> <keyword>` in the document's response schemas that the
  * parity rules cannot handle.
+ *
+ * Scoped to actual schema positions — it starts at each media type's `schema`
+ * and descends only through schema structure — so it reports what the rules
+ * genuinely cannot reason about and nothing else.
  */
 export function unsupportedResponseConstructs(document: OpenApiDocument): string[] {
   const found: string[] = [];
 
-  const walk = (node: unknown, trail: string): void => {
+  const walkSchema = (node: unknown, trail: string): void => {
     if (node === null || typeof node !== 'object') return;
     if (Array.isArray(node)) {
-      node.forEach((entry, index) => walk(entry, `${trail}[${index}]`));
+      node.forEach((entry, index) => walkSchema(entry, `${trail}[${index}]`));
       return;
     }
-    for (const [key, value] of Object.entries(node)) {
-      if ((UNSUPPORTED_SCHEMA_KEYWORDS as readonly string[]).includes(key)) {
-        found.push(`${trail}.${key}`);
+    for (const [keyword, value] of Object.entries(node)) {
+      if ((UNSUPPORTED_SCHEMA_KEYWORDS as readonly string[]).includes(keyword)) {
+        found.push(`${trail}.${keyword}`);
       }
-      walk(value, `${trail}.${key}`);
+      if (!SCHEMA_DATA_KEYWORDS.has(keyword)) walkSchema(value, `${trail}.${keyword}`);
     }
   };
 
-  listOperations(document).forEach(({ label, operation }) =>
-    walk(operation.responses ?? {}, `${label} responses`)
-  );
+  listOperations(document).forEach(({ label, operation }) => {
+    Object.entries(operation.responses ?? {}).forEach(([status, response]) => {
+      const responseAt = `${label} responses.${status}`;
+      // A `$ref` on the Response or Media Type object itself is unsupported for
+      // the same reason as one inside a schema: nothing here resolves it, and
+      // `responseSchema` would read the media type as schema-less and silently
+      // skip every body rule.
+      if (Object.hasOwn(response, '$ref')) found.push(`${responseAt}.$ref`);
+
+      Object.entries(response.content ?? {}).forEach(([mediaType, media]) => {
+        const mediaAt = `${responseAt}.content.${mediaType}`;
+        if (Object.hasOwn(media, '$ref')) found.push(`${mediaAt}.$ref`);
+        walkSchema(media.schema, `${mediaAt}.schema`);
+      });
+    });
+  });
 
   return found;
 }

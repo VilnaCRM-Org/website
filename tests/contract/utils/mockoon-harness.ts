@@ -111,16 +111,30 @@ export async function startMockoon(dataFilePath: string): Promise<MockoonHandle>
         // on the way down, and Jest has no `forceExit` here — a hung teardown
         // costs the whole job's timeout rather than one clear failure.
         stop: () =>
-          new Promise<void>(resolve => {
+          new Promise<void>((resolve, reject) => {
             let deadline: NodeJS.Timeout | undefined;
-            const settle = (): void => {
+            const clear = (): void => {
               if (deadline !== undefined) clearTimeout(deadline);
-              resolve();
             };
-            deadline = setTimeout(settle, STOP_TIMEOUT_MS);
+            // Timing out REJECTS rather than resolving. A wedged server still
+            // holds its port, so resolving would report a clean teardown while
+            // leaking a listener — the failure would resurface later as an
+            // unrelated bind error. Failing here names it where it happened.
+            deadline = setTimeout(() => {
+              reject(new Error(`Mockoon did not stop within ${STOP_TIMEOUT_MS}ms on port ${port}`));
+            }, STOP_TIMEOUT_MS);
             deadline.unref();
-            server.once('stopped', settle);
-            server.once('error', settle);
+            server.once('stopped', () => {
+              clear();
+              resolve();
+            });
+            // An error on the way down still means the listener is gone; the
+            // point of catching it is that waiting for `stopped` alone would
+            // hang forever.
+            server.once('error', () => {
+              clear();
+              resolve();
+            });
             server.stop();
           }),
       };

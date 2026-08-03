@@ -96,10 +96,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           title='Upstream OpenAPI drift in the pinned user-service contract'
-          # A failed list here is harmless (nothing gets closed), so it only
-          # warns — unlike the filing step, where it would create a duplicate.
-          open_issues="$(gh issue list --label api-contract --state open --limit 200 \
-            --search "\"$title\" in:title" --json number,title)" || open_issues='[]'
+          # A failed list here is harmless (nothing gets closed), so it warns
+          # instead of failing — unlike the filing step, where the same failure
+          # would create a duplicate. The warning matters: without it a stale
+          # tracking issue would stay open with the run still reporting success.
+          if ! open_issues="$(gh issue list --label api-contract --state open --limit 200 \
+            --search "\"$title\" in:title" --json number,title)"; then
+            echo "::warning::could not list open api-contract issues; no tracking issue was closed"
+            open_issues='[]'
+          fi
           existing="$(printf '%s' "$open_issues" |
             jq -r --arg title "$title" 'map(select(.title == $title)) | .[0].number // empty')"
           if [ -n "$existing" ]; then
