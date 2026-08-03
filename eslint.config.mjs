@@ -74,7 +74,8 @@ export default [
       'docker/**/*.{js,ts,mts}',
       '**/*.stories.@(js|jsx|ts|tsx)',
       'src/test/**/*',
-      'tests/integration/**/*.{ts,tsx}',
+      // Every layer under tests/ — integration (#328) and contract (#350).
+      'tests/**/*.{ts,tsx}',
     ],
     languageOptions: {
       parser: '@typescript-eslint/parser',
@@ -271,11 +272,11 @@ export default [
   },
 
   {
-    // Integration tests resolve via tsconfig paths + .ts/.tsx extensions and use
+    // Specs under tests/ resolve via tsconfig paths + .ts/.tsx extensions and use
     // test-only fetch/observer stubs. The FlatCompat-nested overrides above set
     // these rules, but sandboxed eslint runs (qlty/CI) only apply top-level flat
     // config, so re-declare them here as the last matching block for these files.
-    files: ['tests/integration/**/*.{js,ts,tsx}'],
+    files: ['tests/**/*.{js,ts,tsx}'],
     rules: {
       'import/no-unresolved': 'off',
       'react/jsx-filename-extension': ['error', { extensions: ['.jsx', '.tsx'] }],

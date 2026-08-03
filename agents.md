@@ -29,6 +29,8 @@ than one. Match the change to the suite and run its verification command.
 | Client unit       | Components, hooks, and pure client logic   | `make test-unit-client` |
 | Server unit       | Apollo resolvers and server-side logic     | `make test-unit-server` |
 | Edge unit         | Deployed edge/runtime scripts (`scripts/`) | `make test-unit-edge`   |
+| Integration       | Cross-module / API-boundary wiring         | `make test-integration` |
+| Contract          | The Mockoon mock vs. the OpenAPI contract  | `make test-contract`    |
 | End-to-end (e2e)  | User-facing flows end to end (Mockoon API) | `make test-e2e`         |
 | Visual regression | Any change to rendered UI or styling       | `make test-visual`      |
 
@@ -39,7 +41,12 @@ Client unit tests run on Jest with React Testing Library in a jsdom env
 run on Jest in a node env (`TEST_ENV=edge`) and cover the deployed edge/runtime scripts
 under `scripts/` that ship outside the Next.js bundle (today the CloudFront Functions
 handler `scripts/cloudfront_routing.js`); specs live in `src/test/edge/**/*.test.ts` and
-the layer is pinned at 100% per-file coverage. E2E and visual specs are Playwright across
+the layer is pinned at 100% per-file coverage. Integration specs run in a jsdom-with-fetch
+env (`TEST_ENV=integration`) from `tests/integration/**/*.integration.test.{ts,tsx}` and
+enforce a global 100% coverage sweep over `src/`. Contract specs run in a node env
+(`TEST_ENV=contract`) from `tests/contract/**/*.contract.test.ts`; they boot the Mockoon
+mock the e2e suite runs against and hold every response against the committed
+`contracts/user-service/openapi.json` (issue #350). E2E and visual specs are Playwright across
 chromium, firefox, and webkit (`src/test/e2e/**/*.spec.ts`, `src/test/visual/**/*.spec.ts`);
 visual snapshots sit in adjacent `*-snapshots/` folders. Run all three unit layers with
 `make test-unit-all`.
@@ -115,6 +122,7 @@ pass. Run the layer commands you touched, then the project lint gate.
 make format                  # Prettier formatting (run before lint)
 CI=1 make test-unit-client   # Client unit suite (jsdom)
 CI=1 make test-unit-server   # Server unit suite (node)
+make test-contract           # Mockoon mock vs. the committed OpenAPI contract
 make test-e2e                # User-facing flows (for UI or behavior changes)
 make test-visual             # Visual regression (for UI or styling changes)
 make lint                    # Full gate: ESLint, TypeScript, and markdownlint

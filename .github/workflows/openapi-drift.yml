@@ -1,0 +1,83 @@
+name: openapi drift
+
+on:
+  schedule:
+    - cron: '15 4 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  # cancel-in-progress: false — this workflow mutates shared state (a tracking
+  # issue), so a superseding run must never abort one mid-write.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  upstream-drift:
+    # Advisory by design. Upstream moving on is not a pull request author's
+    # fault, so breaking drift files a tracking issue instead of turning a check
+    # red. The blocking contract leg is `contract parity testing`.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Compare the committed baseline against the newest upstream release
+        id: drift
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # The script is invoked directly rather than through `make
+          # lint-openapi` (the equivalent human-facing target): GNU make collapses
+          # every recipe failure to its own exit 2, and this leg depends on the
+          # script's three-way code so a network outage is never published as an
+          # API change. 0 = clean, 1 = breaking drift, anything higher = the check
+          # could not run. Only exit 1 is advisory; a broken gate must be visible,
+          # so it fails the workflow.
+          set +e
+          bash scripts/ci/openapi-drift.sh
+          status=$?
+          set -e
+          if [ "$status" -gt 1 ]; then
+            echo "::error::the upstream drift check could not run (exit $status)"
+            exit "$status"
+          fi
+          echo "drift=$status" >>"$GITHUB_OUTPUT"
+
+      - name: File or refresh the tracking issue on breaking drift
+        if: steps.drift.outputs.drift == '1'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # `api-contract` is an existing repository label; `gh issue create
+          # --label <unknown>` errors and would silently drop the report.
+          title='Upstream OpenAPI drift: the pinned user-service contract is behind'
+          existing="$(gh issue list --label api-contract --state open \
+            --search "$title in:title" --json number --jq '.[0].number')"
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body-file reports/openapi-drift.md
+          else
+            gh issue create --label api-contract --title "$title" \
+              --body-file reports/openapi-drift.md
+          fi
+
+      - name: Close the tracking issue once the baseline is current again
+        if: steps.drift.outputs.drift == '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          title='Upstream OpenAPI drift: the pinned user-service contract is behind'
+          existing="$(gh issue list --label api-contract --state open \
+            --search "$title in:title" --json number --jq '.[0].number')"
+          if [ -n "$existing" ]; then
+            gh issue close "$existing" \
+              --comment 'The committed baseline matches the newest upstream release again.'
+          fi

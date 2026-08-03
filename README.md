@@ -102,6 +102,7 @@ Linting & Formatting
   make lint: runs all linters (ESLint, TypeScript, markdownlint, and dependency-cruiser)
   make lint-metrics: runs the rust-code-analysis complexity gate (host-only, not in make lint)
   make lint-contracts: validates the pinned user-service contracts (not in make lint; needs network)
+  make lint-openapi: reports breaking upstream OpenAPI drift (host-only, needs network; advisory)
   make update-contracts: re-fetches the contracts after bumping USER_SERVICE_VERSION
 ```
 
@@ -113,6 +114,7 @@ Testing
   make test-unit-server: runs unit tests for the server using Jest
   make test-integration: runs the integration layer (real Apollo transport, network stubbed)
   make test-integration-watch: runs the integration layer in watch mode
+  make test-contract: checks the Mockoon mock against the committed OpenAPI contract
   make test-bats: runs the Bats shell regression suite for Makefile targets and CI helper scripts
   make test-memory-leak: runs memory leak tests using Memlab
   make load-tests: executes load tests using the K6 library
@@ -166,6 +168,10 @@ the future—you'll need to update the API configuration accordingly.
 To run tests locally, the Mockoon mock server is automatically started via
 `make test-e2e`. For manual setup, see the Mockoon configuration in
 `docker-compose.test.yml`.
+
+Because the entire Playwright suite talks to Mockoon rather than a real backend,
+the mock is itself gated — see
+[API contract parity](#api-contract-parity-mockoon-vs-openapi) below.
 
 Lighthouse
 
@@ -311,6 +317,88 @@ adjust the relevant rule in `.dependency-cruiser.js` — narrow its `from`/`to`
 globs, add a `pathNot` entry, or (only for unavoidable cases) lower its
 `severity` to `warn` — and leave a comment explaining why so the boundary intent
 stays clear.
+
+## API Contract Parity (Mockoon vs OpenAPI)
+
+Every Playwright e2e run talks to Mockoon, never to a real backend, so a green
+e2e suite on its own only proves the app agrees with the **mock**. Two gates keep
+that mock honest, both anchored on the single committed baseline
+[`contracts/user-service/openapi.json`](contracts/user-service/openapi.json) —
+the same artifact `make lint-contracts` drift-gates against `USER_SERVICE_VERSION`
+and the same one `Mockoon.Dockerfile` serves. There is deliberately no second
+baseline file: a copy would be a drift source with nothing watching it.
+
+### Blocking: mock-vs-contract parity
+
+```bash
+make test-contract
+```
+
+Boots Mockoon in-process from the committed document — through
+`@mockoon/commons-server`, the libraries the container's `@mockoon/cli` wraps —
+replays every documented operation, and holds each response against the contract:
+
+- the status served must be one the operation documents;
+- a body must arrive under a media type that status declares;
+- a body must validate against that media type's schema; and
+- a body must not carry a property the schema never declares.
+
+The last rule is stricter than OpenAPI's permissive default on purpose. A mock
+offering a field the contract does not describe is precisely the "e2e certifies
+behavior the real API does not have" defect, and it is the only rule that catches
+a renamed field here, because the upstream document misplaces `required` on the
+array schema of `GET /api/users` instead of on its `items`.
+
+Two further checks ride along: the swagger e2e fixtures in
+`src/test/e2e/swagger/utils/constants.ts` are validated against the same schema,
+and the `@mockoon/*` versions in `package.json` are pinned to the `@mockoon/cli`
+version `Mockoon.Dockerfile` installs, so the gate can never certify a Mockoon
+the e2e stack does not run.
+
+`tests/contract/parity-detects-drift.contract.test.ts` proves the gate bites: it
+writes corrupted **copies** of the mock data — a renamed field, a retyped field,
+an added field, a moved status — boots Mockoon on each, and asserts every one
+turns the gate red. The gate is hermetic (no Docker, no network) and runs on
+every pull request via
+[`.github/workflows/contract-parity-testing.yml`](.github/workflows/contract-parity-testing.yml).
+
+**Scope, honestly stated:** Mockoon derives its responses from the same document
+the validator checks against, so this cannot detect "the mock disagrees with the
+real API" in general. What it does catch is every divergence the converter can
+introduce — a schema the generated mock can no longer satisfy after a version
+bump, a Mockoon upgrade that changes generation, a status or media type the mock
+stops serving, and e2e fixtures written against a shape the contract has dropped.
+The "is the contract itself current?" question is the second gate's job.
+
+### Advisory: upstream drift
+
+```bash
+make lint-openapi
+```
+
+Downloads a pinned, SHA256-verified `oasdiff` binary (the same provisioning
+pattern as the rust-code-analysis CLI) and reports breaking changes between the
+committed baseline and the newest `VilnaCRM-Org/user-service` **release**. Latest
+is resolved from the releases API rather than by semver-sorting tags, because
+upstream restarted its numbering — the newest tag by semver is a year older than
+the newest release.
+
+This leg is **advisory by design**: upstream moving on is not a pull request
+author's fault, so it never blocks a PR. It runs nightly via
+[`.github/workflows/openapi-drift.yml`](.github/workflows/openapi-drift.yml),
+which files or refreshes an `api-contract` tracking issue on breaking drift and
+closes it once the baseline is current again. Adopt a new contract by bumping
+`USER_SERVICE_VERSION` in `.env` and running `make update-contracts`.
+
+[`scripts/ci/openapi-drift.sh`](scripts/ci/openapi-drift.sh) exits three ways on
+purpose — `0` clean, `1` breaking drift, `2` the check could not run — so a
+network outage is never published as an API change. GNU Make discards a recipe's
+own exit status, so the workflow calls the script directly while
+`make lint-openapi` stays the human-facing surface.
+
+Like `make lint-contracts` and `make lint-metrics`, `make lint-openapi` is
+deliberately **outside** `make lint`: it needs the network and a host binary, and
+the static lint lane is hermetic by design.
 
 ## Code Metrics (rust-code-analysis)
 
