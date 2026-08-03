@@ -181,9 +181,6 @@ describe('the unsupported-construct tripwire is precise in both directions', () 
     return unsupportedResponseConstructs(copy as unknown as OpenApiDocument);
   };
 
-  const itemProps = (document: MutableDocument): Record<string, SchemaObject> =>
-    itemProperties(document);
-
   const mediaType = (document: MutableDocument): Record<string, unknown> =>
     (
       document.paths['/api/users']!.get!.responses['200'] as {
@@ -197,7 +194,7 @@ describe('the unsupported-construct tripwire is precise in both directions', () 
 
   it('does not flag a property whose NAME is a schema keyword', () => {
     expect(
-      mutated(document => Object.assign(itemProps(document), { allOf: { type: 'string' } }))
+      mutated(document => Object.assign(itemProperties(document), { allOf: { type: 'string' } }))
     ).toEqual([]);
   });
 
@@ -206,14 +203,16 @@ describe('the unsupported-construct tripwire is precise in both directions', () 
       mutated(document => Object.assign(mediaType(document), { example: [{ allOf: 'x' }] }))
     ).toEqual([]);
     expect(
-      mutated(document => Object.assign(itemProps(document).email!, { enum: [{ oneOf: 'x' }] }))
+      mutated(document =>
+        Object.assign(itemProperties(document).email!, { enum: [{ oneOf: 'x' }] })
+      )
     ).toEqual([]);
   });
 
   it('flags a real sub-schema nested under a property named `example`', () => {
     expect(
       mutated(document =>
-        Object.assign(itemProps(document), { example: { oneOf: [{ type: 'string' }] } })
+        Object.assign(itemProperties(document), { example: { oneOf: [{ type: 'string' }] } })
       )
     ).toHaveLength(1);
   });
@@ -226,7 +225,7 @@ describe('the unsupported-construct tripwire is precise in both directions', () 
     ).toHaveLength(1);
     expect(
       mutated(document =>
-        Object.assign(itemProps(document), { email: { oneOf: [{ type: 'string' }] } })
+        Object.assign(itemProperties(document), { email: { oneOf: [{ type: 'string' }] } })
       )
     ).toHaveLength(1);
     expect(
