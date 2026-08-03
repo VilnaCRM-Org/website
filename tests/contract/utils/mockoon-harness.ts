@@ -45,6 +45,9 @@ export interface MockoonHandle {
 /** How many times to re-draw a port before giving up. */
 const PORT_ATTEMPTS = 5;
 
+/** Upper bound on teardown, so a server that never emits `stopped` cannot hang the run. */
+const STOP_TIMEOUT_MS = 5_000;
+
 /**
  * Asks the OS for an unused port so parallel Jest workers never collide.
  *
@@ -103,9 +106,21 @@ export async function startMockoon(dataFilePath: string): Promise<MockoonHandle>
       const server = await listen(dataFilePath, port);
       return {
         baseUrl: `http://127.0.0.1:${port}`,
+        // Settles on `error` and on a deadline as well as on `stopped`: waiting
+        // for `stopped` alone would hang `afterAll` forever if the server errors
+        // on the way down, and Jest has no `forceExit` here — a hung teardown
+        // costs the whole job's timeout rather than one clear failure.
         stop: () =>
           new Promise<void>(resolve => {
-            server.once('stopped', resolve);
+            let deadline: NodeJS.Timeout | undefined;
+            const settle = (): void => {
+              if (deadline !== undefined) clearTimeout(deadline);
+              resolve();
+            };
+            deadline = setTimeout(settle, STOP_TIMEOUT_MS);
+            deadline.unref();
+            server.once('stopped', settle);
+            server.once('error', settle);
             server.stop();
           }),
       };

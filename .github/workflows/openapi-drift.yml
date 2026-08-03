@@ -70,8 +70,14 @@ jobs:
           # Fail rather than guess: a `gh issue list` that errors (rate limit,
           # API blip) writes nothing to stdout, which reads as "no tracking issue
           # exists" and would file a duplicate every night it happens.
-          if ! open_issues="$(gh issue list --label api-contract --state open --limit 100 \
-            --json number,title)"; then
+          # The `--search` phrase only NARROWS the candidate set (a quoted string
+          # is a phrase match, not the OR-of-terms a bare search does); the jq
+          # exact-title comparison below stays the authority. Narrowing matters:
+          # a plain `--limit` window would stop finding this gate's own issue
+          # once enough other open api-contract issues accumulate, and every
+          # breaking run would then open a duplicate.
+          if ! open_issues="$(gh issue list --label api-contract --state open --limit 200 \
+            --search "\"$title\" in:title" --json number,title)"; then
             echo "::error::could not list open api-contract issues; not filing a possible duplicate"
             exit 1
           fi
@@ -92,8 +98,8 @@ jobs:
           title='Upstream OpenAPI drift in the pinned user-service contract'
           # A failed list here is harmless (nothing gets closed), so it only
           # warns — unlike the filing step, where it would create a duplicate.
-          open_issues="$(gh issue list --label api-contract --state open --limit 100 \
-            --json number,title)" || open_issues='[]'
+          open_issues="$(gh issue list --label api-contract --state open --limit 200 \
+            --search "\"$title\" in:title" --json number,title)" || open_issues='[]'
           existing="$(printf '%s' "$open_issues" |
             jq -r --arg title "$title" 'map(select(.title == $title)) | .[0].number // empty')"
           if [ -n "$existing" ]; then
