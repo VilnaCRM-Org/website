@@ -45,13 +45,18 @@ const SEED_TIMEOUT_MS = 30_000;
 const ajv = new Ajv2020({ strict: false, allErrors: true });
 const contract = readContract();
 
-const listUsers = findOperation(contract, 'get', '/api/users');
-if (listUsers === undefined) {
-  throw new Error(
-    'GET /api/users is missing from the contract — the seeded-defect cases assume it'
-  );
+/** Fails with the operation's name rather than an opaque destructuring TypeError. */
+function requireOperation(method: 'get' | 'delete', routePath: string): ContractOperation {
+  const found = findOperation(contract, method, routePath);
+  if (found === undefined) {
+    const label = `${method.toUpperCase()} ${routePath}`;
+    throw new Error(`${label} is missing from the contract — the seeded-defect cases assume it`);
+  }
+  return found;
 }
-const LIST_USERS: ContractOperation = listUsers;
+
+const LIST_USERS = requireOperation('get', '/api/users');
+const DELETE_USER = requireOperation('delete', '/api/users/{id}');
 
 let workDir: string;
 
@@ -163,8 +168,6 @@ describe('a seeded defect in the mock data turns the gate red', () => {
 });
 
 describe('the rules Mockoon cannot be made to produce', () => {
-  const deleteUser = findOperation(contract, 'delete', '/api/users/{id}');
-
   const observe = (overrides: Partial<ObservedResponse>): ObservedResponse => ({
     status: 200,
     contentType: 'application/json',
@@ -200,12 +203,12 @@ describe('the rules Mockoon cannot be made to produce', () => {
   it('rejects a body on a status that must not carry one', () => {
     // DELETE /api/users/{id} documents 204 — and, as an upstream defect, even
     // declares `application/json` on it. A body there is still drift.
-    expect(kindsFor(deleteUser!, observe({ status: 204, body: '{}' }))).toEqual([
+    expect(kindsFor(DELETE_USER, observe({ status: 204, body: '{}' }))).toEqual([
       'undeclared-body',
     ]);
   });
 
   it('accepts an empty body on a status that must not carry one', () => {
-    expect(kindsFor(deleteUser!, observe({ status: 204, contentType: '', body: '' }))).toEqual([]);
+    expect(kindsFor(DELETE_USER, observe({ status: 204, contentType: '', body: '' }))).toEqual([]);
   });
 });

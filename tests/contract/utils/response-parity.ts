@@ -43,7 +43,10 @@ export interface ParityProblem {
 
 export interface ObservedResponse {
   readonly status: number;
-  /** Media type with parameters stripped (`application/json`, not `…; charset=utf-8`). Empty when the response carried no `Content-Type`. */
+  /**
+   * Media type with parameters stripped (`application/json`, not
+   * `…; charset=utf-8`). Empty when the response carried no `Content-Type`.
+   */
   readonly contentType: string;
   /** Raw response text, exactly as served. */
   readonly body: string;
@@ -171,7 +174,8 @@ export function checkResponseParity(
     return [
       problem(
         'undocumented-media-type',
-        `served \`${observed.contentType || 'no Content-Type'}\`; contract declares ${declaredMediaTypes.join(', ')}`
+        `served \`${observed.contentType || 'no Content-Type'}\`; ` +
+          `contract declares ${declaredMediaTypes.join(', ')}`
       ),
     ];
   }

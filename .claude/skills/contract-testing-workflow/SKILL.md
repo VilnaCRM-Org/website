@@ -132,12 +132,21 @@ load-bearing: upstream puts `required` on the _array_ schema of `GET /api/users`
 instead of on its `items`, so ajv alone accepts a response with every property
 renamed. Do not "fix" a red run by dropping it.
 
-| Symptom                              | Cause                                      | Fix                                                          |
-| ------------------------------------ | ------------------------------------------ | ------------------------------------------------------------ |
-| `[undeclared-property]`              | the mock serves a field the contract lacks | the contract is authoritative — refresh it, or fix the mock  |
-| `[schema-violation]`                 | Mockoon cannot generate a conforming value | usually a pin bump adding a constraint; check the new schema |
-| `[undocumented-status]`              | Mockoon's first-declared response moved    | a response was reordered or removed upstream                 |
-| `@mockoon/commons… matches the CLI…` | the two Mockoon pins drifted               | move `Mockoon.Dockerfile` **and** `package.json` together    |
+Reading a red run:
+
+- **`[undeclared-property]`** — the mock serves a field the contract does not
+  declare. The contract is authoritative: refresh it, or fix the mock.
+- **`[schema-violation]`** — Mockoon cannot generate a value the schema accepts.
+  Usually a pin bump that added a constraint; read the new schema.
+- **`[undocumented-status]`** — Mockoon's first-declared response moved, i.e. a
+  response was reordered or removed upstream.
+- **`[undocumented-media-type]`** — the status no longer declares the media type
+  the mock serves.
+- **`@mockoon/commons… matches the CLI…`** — the two Mockoon pins drifted. Move
+  `Mockoon.Dockerfile` and `package.json` together, in the same commit.
+- **`unsupportedResponseConstructs`** — upstream introduced a `$ref` or a
+  composed schema (`allOf`, `oneOf`, `prefixItems`, …). Extend the parity rules;
+  never extend the exemption list.
 
 Seed a defect only into a **temporary copy** of the contract, never into the
 committed file — `lint-contracts` guards it, and

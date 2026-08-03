@@ -95,7 +95,11 @@ printf '🔎 Comparing %s against %s@%s\n' "$OPENAPI_BASELINE" "$USER_SERVICE_RE
 
 report_dir="$(dirname "$OPENAPI_DRIFT_REPORT")"
 mkdir -p "$report_dir" 2>/dev/null || true
-[ -w "$report_dir" ] || fail "cannot write the drift report into $report_dir/"
+# `-d` as well as `-w`: a writable *regular file* at that path would pass a bare
+# `-w` and then fail the redirection below with exit 1 — indistinguishable from
+# "breaking drift found", which is the one thing this script must never confuse.
+{ [ -d "$report_dir" ] && [ -w "$report_dir" ]; } ||
+  fail "cannot write the drift report into $report_dir/"
 findings="$workdir/findings.md"
 
 # --fail-on ERR is what makes this a check at all: without it oasdiff prints
@@ -119,18 +123,30 @@ if [ "$status" -eq 0 ]; then
   exit 0
 fi
 
+pins="$(sed -n 's/^USER_SERVICE_VERSION=//p' .env 2>/dev/null || true)"
+pinned_ref="${pins%%$'\n'*}"
+
+# The prose is a QUOTED heredoc, not a series of single-quoted printfs: the text
+# is Markdown and full of backticks, which shellcheck reads inside single quotes
+# as a command substitution that will not expand (SC2016). A quoted heredoc is
+# literal by definition, so the warning is answered by construction rather than
+# suppressed — and the dynamic values stay in printf arguments, never inline.
 {
-  printf '## Upstream OpenAPI drift: `%s` → `%s`\n\n' \
-    "$(sed -n 's/^USER_SERVICE_VERSION=//p' .env 2>/dev/null | head -n 1)" "$upstream_ref"
-  printf 'The committed baseline `%s` no longer matches the newest `%s` release.\n' \
+  printf '## Upstream OpenAPI drift: %s -> %s\n\n' "${pinned_ref:-unknown}" "$upstream_ref"
+  printf 'The committed baseline %s no longer matches the newest %s release.\n' \
     "$OPENAPI_BASELINE" "$USER_SERVICE_REPO"
-  printf 'This is **advisory**: nothing is broken in this repository. It means the\n'
-  printf 'mock, the swagger page and the Apollo mock are pinned to an older contract.\n\n'
-  printf 'To adopt the new contract, bump `USER_SERVICE_VERSION` in `.env`, run\n'
-  printf '`make update-contracts`, then re-run `make test-contract` and `make test-e2e`.\n\n'
-  printf 'Breaking changes reported by `oasdiff breaking --fail-on ERR`:\n\n'
+  cat <<'PROSE'
+This is **advisory**: nothing is broken in this repository. It means the mock,
+the swagger page and the Apollo mock are pinned to an older contract.
+
+To adopt the new contract, bump `USER_SERVICE_VERSION` in `.env`, run
+`make update-contracts`, then re-run `make test-contract` and `make test-e2e`.
+
+Breaking changes reported by `oasdiff breaking --fail-on ERR`:
+
+PROSE
   cat "$findings"
-} >"$OPENAPI_DRIFT_REPORT"
+} >"$OPENAPI_DRIFT_REPORT" || fail "could not write the drift report to $OPENAPI_DRIFT_REPORT"
 
 printf '⚠️  Breaking changes found; report written to %s\n' "$OPENAPI_DRIFT_REPORT"
 exit "$EXIT_DRIFT"

@@ -21,7 +21,7 @@
  */
 import Ajv2020 from 'ajv/dist/2020';
 
-import { MOCK_API_USER, MOCK_API_USERS } from '../../src/test/e2e/swagger/utils/constants';
+import { MOCK_API_USER, MOCK_API_USERS } from '@/test/e2e/swagger/utils/constants';
 
 import { replayOperation, startMockoon, type MockoonHandle } from './utils/mockoon-harness';
 import {
@@ -110,18 +110,26 @@ describe('the swagger e2e fixtures describe a user the contract still documents'
   // drift class, one layer up from the mock.
   const listUsers = findOperation(contract, 'get', '/api/users');
   const collectionSchema = listUsers && responseSchema(listUsers.operation, '200');
+  const itemSchema = collectionSchema?.items;
 
-  it('exposes the GET /api/users 200 schema the fixtures are held against', () => {
+  it('exposes the GET /api/users 200 item schema the fixtures are held against', () => {
+    // Both assertions below reach through `.items`. Guarding only the
+    // collection would let them pass vacuously the day upstream drops it —
+    // the undeclared-property rule would stop checking the user shape while
+    // reporting green, which is the regression this gate exists to catch.
     expect(collectionSchema).toBeDefined();
+    expect(itemSchema).toBeDefined();
   });
 
   it('validates MOCK_API_USERS against that schema', () => {
-    const validate = ajv.compile(collectionSchema ?? {});
+    // No `?? {}` fallback: an empty schema validates anything, so a missing
+    // schema would turn this into an assertion that always passes.
+    const validate = ajv.compile(collectionSchema as object);
 
     expect(validate(MOCK_API_USERS) ? '' : ajv.errorsText(validate.errors)).toBe('');
   });
 
   it('declares every property the ApiUser fixture carries', () => {
-    expect(undeclaredProperties(collectionSchema?.items, MOCK_API_USER)).toEqual([]);
+    expect(undeclaredProperties(itemSchema, MOCK_API_USER)).toEqual([]);
   });
 });

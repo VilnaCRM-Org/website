@@ -9,15 +9,18 @@
  *
  * Only the slice the parity gate needs is typed. The document is OpenAPI 3.1
  * with inline response schemas and no `$ref` indirection, so no resolver is
- * required — see the `no-$ref` assertion in the parity spec, which fails if
- * that ever stops being true.
+ * required — `unsupportedResponseConstructs` below, asserted empty by the parity
+ * spec, fails loudly if that ever stops being true.
  */
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
 export const CONTRACT_PATH: string = path.join('contracts', 'user-service', 'openapi.json');
 
-/** The HTTP methods a path item may declare. Everything else (`summary`, `parameters`, …) is not an operation. */
+/**
+ * The HTTP methods a path item may declare. Everything else it can hold
+ * (`summary`, `description`, `parameters`, …) is not an operation.
+ */
 export const HTTP_METHODS = ['get', 'post', 'put', 'patch', 'delete'] as const;
 
 export type HttpMethod = (typeof HTTP_METHODS)[number];
@@ -117,7 +120,10 @@ export const UNSUPPORTED_SCHEMA_KEYWORDS = [
   'additionalProperties',
 ] as const;
 
-/** Every `<location> -> <keyword>` in the document's response schemas that the parity rules cannot handle. */
+/**
+ * Every `<location> -> <keyword>` in the document's response schemas that the
+ * parity rules cannot handle.
+ */
 export function unsupportedResponseConstructs(document: OpenApiDocument): string[] {
   const found: string[] = [];
 
@@ -142,7 +148,10 @@ export function unsupportedResponseConstructs(document: OpenApiDocument): string
   return found;
 }
 
-/** Looks up a single operation by method and path, or `undefined` when the contract does not document it. */
+/**
+ * Looks up a single operation by method and path, or `undefined` when the
+ * contract does not document it.
+ */
 export function findOperation(
   document: OpenApiDocument,
   method: HttpMethod,
@@ -153,7 +162,10 @@ export function findOperation(
   );
 }
 
-/** The response body schema an operation declares for one status and media type, if it declares one. */
+/**
+ * The response body schema an operation declares for one status and media
+ * type, if it declares one.
+ */
 export function responseSchema(
   operation: OperationObject,
   status: string,
