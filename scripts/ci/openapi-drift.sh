@@ -69,8 +69,16 @@ OASDIFF_BIN="$OASDIFF_BIN" sh "$(dirname "$0")/ensure-oasdiff.sh" ||
 # older than the newest release (v0.x). UPSTREAM_REF overrides it for testing.
 upstream_ref="${UPSTREAM_REF:-}"
 if [ -z "$upstream_ref" ]; then
-  upstream_ref="$(api "https://api.github.com/repos/${USER_SERVICE_REPO}/releases/latest" |
-    sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n 1)"
+  # `|| fail` is load-bearing: without it `set -e` aborts the whole script with
+  # curl's own exit code (7 on a connection failure), which both skips the
+  # diagnostic below and breaks the documented three-way contract.
+  releases="$(api "https://api.github.com/repos/${USER_SERVICE_REPO}/releases/latest")" ||
+    fail "could not reach the ${USER_SERVICE_REPO} releases API"
+  # No `head`: a pipeline whose reader exits early would SIGPIPE the writer and,
+  # under `pipefail`, abort here for the same reason.
+  tags="$(printf '%s' "$releases" |
+    sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')"
+  upstream_ref="${tags%%$'\n'*}"
 fi
 [ -n "$upstream_ref" ] || fail "could not resolve the latest ${USER_SERVICE_REPO} release"
 

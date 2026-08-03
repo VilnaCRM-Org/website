@@ -59,9 +59,17 @@ jobs:
         run: |
           # `api-contract` is an existing repository label; `gh issue create
           # --label <unknown>` errors and would silently drop the report.
-          title='Upstream OpenAPI drift: the pinned user-service contract is behind'
-          existing="$(gh issue list --label api-contract --state open \
-            --search "$title in:title" --json number --jq '.[0].number')"
+          #
+          # Dedup is an EXACT title match, not `--search "<title> in:title"`:
+          # GitHub's search ORs the terms, so a loose search would match any other
+          # open api-contract issue (the tracking issue for this gate itself, for
+          # one) and the nightly would comment on the wrong thread. `// empty`
+          # matters too — `.[0].number` on no matches yields the string "null",
+          # which is truthy in the test below.
+          title='Upstream OpenAPI drift in the pinned user-service contract'
+          existing="$(gh issue list --label api-contract --state open --limit 100 \
+            --json number,title |
+            jq -r --arg title "$title" 'map(select(.title == $title)) | .[0].number // empty')"
           if [ -n "$existing" ]; then
             gh issue comment "$existing" --body-file reports/openapi-drift.md
           else
@@ -74,9 +82,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          title='Upstream OpenAPI drift: the pinned user-service contract is behind'
-          existing="$(gh issue list --label api-contract --state open \
-            --search "$title in:title" --json number --jq '.[0].number')"
+          title='Upstream OpenAPI drift in the pinned user-service contract'
+          existing="$(gh issue list --label api-contract --state open --limit 100 \
+            --json number,title |
+            jq -r --arg title "$title" 'map(select(.title == $title)) | .[0].number // empty')"
           if [ -n "$existing" ]; then
             gh issue close "$existing" \
               --comment 'The committed baseline matches the newest upstream release again.'
