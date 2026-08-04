@@ -347,11 +347,12 @@ STUB
 @test "ensure-dev starts the dev container without waiting for the dev server" {
   run_make_target ensure-dev
   [ "$status" -eq 0 ]
-  # The stubbed `docker compose ps` reports no running 'dev' service, so
-  # ensure-dev brings the container up. It must NOT delegate to `make start`:
-  # the gates only need something to exec into, and start would block on
-  # wait-for-dev until the Next dev server answers on port 3000.
-  assert_log_contains 'compose -f docker-compose.yml up -d dev'
+  # It must NOT delegate to `make start`: the gates only need something to exec
+  # into, and start would block on wait-for-dev until the Next dev server answers
+  # on port 3000. `--no-recreate` is equally load-bearing — without it this would
+  # tear down the idle container `ci-setup` created through the CI overlay (a
+  # different compose config hash) and replace it with a Next dev server.
+  assert_log_contains 'compose -f docker-compose.yml up -d --no-recreate dev'
   run grep -c 'next dev' "$COMMAND_LOG"
   [ "$output" -eq 0 ]
 }
@@ -366,7 +367,7 @@ STUB
 }
 
 @test "ci-lint runs the lint phase through the parallel runner with grouped output" {
-  run_make_target ci-lint EXEC_MODE=host
+  run_make_target ci-lint
   [ "$status" -eq 0 ]
   assert_output_contains '===== lint-next ====='
   assert_output_contains '===== lint-tsc ====='
@@ -374,7 +375,7 @@ STUB
 }
 
 @test "ci-test runs the dev-side test phase through the parallel runner" {
-  run_make_target ci-test EXEC_MODE=host
+  run_make_target ci-test
   [ "$status" -eq 0 ]
   assert_output_contains '===== ci-test-unit-client ====='
   assert_output_contains '===== ci-test-unit-server ====='
@@ -392,6 +393,11 @@ STUB
   run_make_target ci-test-unit-client EXEC_MODE=host
   [ "$status" -eq 0 ]
   assert_log_contains 'jest TEST_ENV=client --verbose'
+
+  reset_command_log
+  run_make_target ci-test-integration EXEC_MODE=host
+  [ "$status" -eq 0 ]
+  assert_log_contains 'jest TEST_ENV=integration --verbose'
 
   reset_command_log
   run_make_target ci-test-unit-server EXEC_MODE=host

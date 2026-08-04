@@ -10,12 +10,15 @@ on:
     branches:
       - main
     paths:
-      # Exactly the inputs of the Dockerfile `base` stage the dev service builds,
-      # plus this workflow and the action that consumes the cache.
+      # The inputs of the Dockerfile `base` stage the dev service builds — its
+      # COPY list plus the lockfile it installs from — and this workflow and the
+      # action that consumes the cache.
       - 'Dockerfile'
       - 'bun.lock'
       - 'package.json'
       - '.dockerignore'
+      - 'checkNodeVersion.js'
+      - 'scripts/*.mjs'
       - '.github/actions/dev-container/**'
       - '.github/workflows/dev-image-cache.yml'
   # GitHub evicts a cache entry that has not been read for 7 days. The weekly run

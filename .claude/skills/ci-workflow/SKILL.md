@@ -31,8 +31,10 @@ make lint     # read-only gate: ESLint + TypeScript + markdownlint + dependency-
 anything is off. Running tests between them means you validate already-formatted code,
 so a formatting rewrite can never invalidate a green test run.
 
-Every suite runs inside the dev container by default, locally and in CI alike; unit-test
-targets start the container themselves if it is not already running. `EXEC_MODE=host
+The npm-tool gates and the Jest suites run inside the dev container by default, locally
+and in CI alike, and start the container themselves if it is not already running.
+`make test-bats` and `make lint-metrics` stay on the host in both modes — bats needs
+bash and the metrics gate is a Rust binary, neither of which the image ships. `EXEC_MODE=host
 make <target>` is the escape hatch that runs a target on the host instead (needs a host
 `bun install`); it backs the Husky hooks, the `run-*-dind` wrappers, and the Lighthouse
 audits. E2E, visual, load, memory-leak, and Lighthouse suites run against the Docker

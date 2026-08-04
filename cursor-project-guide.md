@@ -64,8 +64,10 @@ make start                # Start the dev server
 
 ## Running commands on the host
 
-Every unit and lint command runs inside the dev container by default — the same command CI
-runs — and starts that container if it is not already up. Prefix with `EXEC_MODE=host` to run
+The unit suites and the four `make lint` gates run inside the dev container by default —
+the same command CI runs — and start that container if it is not already up.
+`make lint-metrics` and the `generate-localization` prerequisite of `lint-deps` are
+host-only in both modes. Prefix with `EXEC_MODE=host` to run
 the local `node_modules/.bin` binaries directly instead of execing into the container; that
 path needs a host `bun install`, which `make install` performs alongside the container one.
 

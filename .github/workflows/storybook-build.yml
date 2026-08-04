@@ -19,6 +19,14 @@ on:
       - 'Makefile'
       - 'scripts/generateLocalization.mjs'
       - '.nvmrc'
+      # Since #399 the Storybook binary comes from the dev image, so anything
+      # that builds or starts that container can break this job without touching
+      # a story.
+      - 'Dockerfile'
+      - '.dockerignore'
+      - 'docker-compose.yml'
+      - 'docker-compose.ci.yml'
+      - '.github/actions/dev-container/**'
       - 'next.config.js'
       - 'tsconfig.json'
       - '.github/workflows/storybook-build.yml'

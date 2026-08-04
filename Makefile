@@ -87,6 +87,10 @@ define EXEC_IN_CONTAINER
 	docker exec "$($(1))" sh -lc "$(2)"
 endef
 
+# Must match `image:` on the dev service in docker-compose.yml and the tag the
+# .github/actions/dev-container step builds.
+DEV_IMAGE                   = website-dev:latest
+
 DOCKER_COMPOSE_TEST_FILE    = -f docker-compose.test.yml
 DOCKER_COMPOSE_DEV_FILE     = -f docker-compose.yml
 # The dev compose file plus the CI overlay that runs the container idle. Only
@@ -236,8 +240,23 @@ start: ## Start the application
 # `make start` here would instead block on wait-for-dev until Next finishes its
 # first full compile — up to WAIT_FOR_DEV_MAX_TRIES × WAIT_FOR_DEV_SLEEP — before
 # a single lint rule ran. Use `make start` when you actually want the dev server.
-ensure-dev: ## Reconcile the dev container (does not wait for the dev server)
-	@$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) up -d dev
+# Builds first when the tag is missing, rather than relying on Compose to fall
+# back from `pull_policy: never` to `build:`. Compose v5 does fall back (verified:
+# with no local image, `up -d dev` reports "Image website-dev:latest Built"), but
+# that behaviour has varied across versions and this repo has already been bitten
+# once by a Compose version difference. An explicit build makes a fresh clone
+# work on any of them, and costs one `image inspect` when the tag is present.
+# `--no-recreate` is load-bearing, not an optimisation. This target is invoked
+# with the BASE compose file only, while `ci-setup` creates the container from
+# base + docker-compose.ci.yml — a different config hash. Without it, the first
+# gate in every CI job would tear down the idle container ci-setup just started
+# and replace it with a Next dev server under `restart: unless-stopped`,
+# discarding both the overlay's whole purpose and its fail-fast restart policy.
+# It still creates or starts the container when it is missing or stopped.
+ensure-dev: ## Reconcile the dev container (builds the image if absent; does not wait for the dev server)
+	@docker image inspect $(DEV_IMAGE) >/dev/null 2>&1 || \
+		$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) build dev
+	@$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) up -d --no-recreate dev
 
 # Bounded on purpose. Every migrated workflow calls `make start` first, so an
 # unbounded wait here would turn any dev-service boot failure into a job that
@@ -387,7 +406,11 @@ generate-localization: ## Regenerate the gitignored pages/i18n/localization.json
 lint-deps: generate-localization ## Validate architecture/import boundaries with dependency-cruiser
 	$(DEV_READY) $(PM_EXEC) $(DEPCRUISE_BIN) src pages tests --config .dependency-cruiser.js
 
-lint: lint-next lint-tsc lint-md lint-deps ## Runs all linters: ESLint, TypeScript, Markdown, and dependency-cruiser in sequence.
+# generate-localization leads so the gitignored i18n bundle exists before the
+# first linter reads it. It is also a prerequisite of lint-deps, but that is
+# the LAST sub-target, which on a clean checkout left eslint and tsc resolving
+# a module that had not been written yet.
+lint: generate-localization lint-next lint-tsc lint-md lint-deps ## Runs all linters: ESLint, TypeScript, Markdown, and dependency-cruiser in sequence.
 
 # DELIBERATE DIVERGENCE FROM THE npm-tool LINT GATES (lint-next/tsc/md/deps),
 # for the same reason as lint-metrics below:
@@ -642,8 +665,13 @@ memory-leak-dind: start-prod ## Run Memlab tests in isolated compose project (DI
 	@echo "🧹 Cleaning up memory leak test containers..."
 	$(DOCKER_COMPOSE) -p memleak $(DOCKER_COMPOSE_MEMLEAK_FILE) down
 
+# `build` refreshes the image, so the container has to be recreated FROM it.
+# ensure-dev deliberately will not do that (see its comment), so this target
+# reconciles explicitly — otherwise Stryker would run against a container still
+# made from the pre-build image and miss a just-added dependency.
 test-mutation: build ## Run mutation tests using Stryker after building the app
-	$(STRYKER_CMD)
+	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) up -d dev
+	$(PM_EXEC) bun x stryker run
 
 # The shard variables are injected with `env` INSIDE the executor, not as a
 # shell prefix in front of it. A `VAR=v $(PM_EXEC) cmd` prefix binds the variable
