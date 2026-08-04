@@ -54,6 +54,21 @@ setup() {
   done
 }
 
+@test "EXEC_MODE=host needs no Docker daemon, even for the CI aggregates" {
+  # The escape hatch exists so the Husky hooks work with Docker stopped. A
+  # container-reconciling PREREQUISITE (as opposed to a recipe prefix) does not
+  # vanish in host mode by itself, so these entrypoints would otherwise still
+  # demand a daemon.
+  local target
+  for target in ci-lint ci-test ci-mutation update-contracts; do
+    reset_command_log
+    run_make_target "$target" EXEC_MODE=host
+    [ "$status" -eq 0 ]
+    run grep -c 'docker' "$COMMAND_LOG"
+    [ "$output" -eq 0 ]
+  done
+}
+
 @test "an unrecognised EXEC_MODE fails loudly instead of falling back" {
   run_make_target lint-next EXEC_MODE=hostt
   [ "$status" -ne 0 ]

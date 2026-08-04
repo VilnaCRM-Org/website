@@ -177,6 +177,10 @@ ifeq ($(EXEC_MODE),container)
     PM_EXEC_ENV             = $(EXEC_DEV_TTYLESS) env
     # Prefix for targets a developer may invoke cold, before any `make start`.
     DEV_READY               = $(MAKE) ensure-dev &&
+    # Prerequisite form of the above, for targets that reconcile before their
+    # recipe rather than inside it. Empty in host mode so `EXEC_MODE=host` really
+    # does bypass Docker — otherwise the escape hatch would still need a daemon.
+    DEV_PREREQ              = ensure-dev
     STORYBOOK_START         = $(STORYBOOK_BIN) dev -p $(STORYBOOK_PORT) --host 0.0.0.0
     LHCI_RUN                = $(MAKE) start-prod && $(LHCI)
     LHCI_DESKTOP            = $(LHCI_RUN) $(LHCI_CONFIG_DESKTOP)
@@ -185,6 +189,7 @@ else ifeq ($(EXEC_MODE),host)
     PM_EXEC                 =
     PM_EXEC_ENV             = env
     DEV_READY               =
+    DEV_PREREQ              =
     NEXT_DEV_CMD            = $(NEXT_BIN) dev
     STORYBOOK_START         = $(STORYBOOK_BIN) dev -p $(STORYBOOK_PORT)
     LHCI_RUN                = $(NEXT_BUILD_CMD) && $(LHCI)
@@ -427,7 +432,7 @@ lint: generate-localization lint-next lint-tsc lint-md lint-deps ## Runs all lin
 lint-contracts: ## Validate the pinned user-service contracts: client GraphQL operations, the OpenAPI spectral baseline, and artifact drift
 	$(DEV_READY) $(PM_EXEC) node scripts/contracts/lint-contracts.mjs
 
-update-contracts: ensure-dev ## Re-fetch the user-service contracts for the pinned USER_SERVICE_VERSION and refresh the spectral baseline
+update-contracts: $(DEV_PREREQ) ## Re-fetch the user-service contracts for the pinned USER_SERVICE_VERSION and refresh the spectral baseline
 	$(PM_EXEC) node scripts/fetchSwaggerSchema.mjs
 	$(PM_EXEC) node scripts/fetchGraphqlSchema.mjs
 	$(PM_EXEC) node scripts/contracts/lint-contracts.mjs --update-baseline
@@ -567,10 +572,10 @@ ci-test-integration: ## Run integration tests assuming ci-setup already started 
 ci-setup: create-network ## Prepare the shared dev environment for CI-oriented checks (idle container, no dev server)
 	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_CI_DEV_FILE) up $(CI_SETUP_UP_FLAGS) --wait dev
 
-ci-lint: ensure-dev ## Run the CI lint phase (ESLint, TypeScript, Markdown) with grouped, aggregated output
+ci-lint: $(DEV_PREREQ) ## Run the CI lint phase (ESLint, TypeScript, Markdown) with grouped, aggregated output
 	$(CI_LINT_RUNNER) $(CI_LINT_TARGETS)
 
-ci-test: ensure-dev ## Run the CI dev-side test phase (unit client/server, integration) in parallel
+ci-test: $(DEV_PREREQ) ## Run the CI dev-side test phase (unit client/server, integration) in parallel
 	$(CI_TEST_RUNNER) $(CI_TEST_TARGETS)
 
 ci-test-unit-client: ## Run client-side unit tests assuming ci-setup already started the dev environment (CI entrypoint)
@@ -582,7 +587,7 @@ ci-test-unit-server: ## Run server-side unit tests assuming ci-setup already sta
 ci-test-mutation: generate-localization ## Run mutation tests assuming ci-setup already started the dev environment (CI entrypoint)
 	$(PM_EXEC) bun x stryker run
 
-ci-mutation: ensure-dev ## Run mutation testing in isolation after the parallel dev-side tests (heavy; not parallelized)
+ci-mutation: $(DEV_PREREQ) ## Run mutation testing in isolation after the parallel dev-side tests (heavy; not parallelized)
 	$(MAKE) ci-test-mutation
 
 ci-prod-setup: ## Prepare the prod + Chromium environment for prod-side CI tests
@@ -670,7 +675,7 @@ memory-leak-dind: start-prod ## Run Memlab tests in isolated compose project (DI
 # reconciles explicitly — otherwise Stryker would run against a container still
 # made from the pre-build image and miss a just-added dependency.
 test-mutation: build ## Run mutation tests using Stryker after building the app
-	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) up -d dev
+	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) up -d --force-recreate --renew-anon-volumes dev
 	$(PM_EXEC) bun x stryker run
 
 # The shard variables are injected with `env` INSIDE the executor, not as a
