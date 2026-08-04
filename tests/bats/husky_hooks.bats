@@ -38,10 +38,10 @@ PRE_PUSH="$PROJECT_ROOT/.husky/pre-push"
   [ "$status" -eq 0 ]
 }
 
-@test "both hooks use the CI=1 host fallback so they work without Docker" {
-  run grep -F 'CI=1' "$PRE_COMMIT"
+@test "both hooks use the EXEC_MODE=host fallback so they work without Docker" {
+  run grep -F 'EXEC_MODE=host' "$PRE_COMMIT"
   [ "$status" -eq 0 ]
-  run grep -F 'CI=1' "$PRE_PUSH"
+  run grep -F 'EXEC_MODE=host' "$PRE_PUSH"
   [ "$status" -eq 0 ]
 }
 
@@ -65,12 +65,14 @@ PRE_PUSH="$PROJECT_ROOT/.husky/pre-push"
 }
 
 # Behavioral coverage: execute the hooks with stubbed `bun`/`make` on PATH and
-# assert the real abort-on-failure and CI=1 semantics, not just their text.
+# assert the real abort-on-failure and EXEC_MODE=host semantics, not just their
+# text.
 
 stub_logging() {
-  # $1 = command name, $2 = exit code. Logs "<name> <args>" (and CI for make).
+  # $1 = command name, $2 = exit code. Logs "<name> <args>" (and EXEC_MODE for
+  # make, so the host escape hatch is asserted rather than assumed).
   if [ "$1" = 'make' ]; then
-    printf '#!/usr/bin/env bash\nprintf "make CI=%%s %%s\\n" "${CI:-unset}" "$*" >> "${COMMAND_LOG:?}"\nexit %s\n' "$2" \
+    printf '#!/usr/bin/env bash\nprintf "make EXEC_MODE=%%s %%s\\n" "${EXEC_MODE:-unset}" "$*" >> "${COMMAND_LOG:?}"\nexit %s\n' "$2" \
       > "$STUB_BIN_DIR/make"
     chmod +x "$STUB_BIN_DIR/make"
   else
@@ -80,7 +82,7 @@ stub_logging() {
   fi
 }
 
-@test "pre-commit runs lint-staged then the type check with CI=1" {
+@test "pre-commit runs lint-staged then the type check with EXEC_MODE=host" {
   setup_stub_dir
   stub_logging bun 0
   stub_logging make 0
@@ -89,7 +91,7 @@ stub_logging() {
 
   [ "$status" -eq 0 ]
   assert_log_contains 'bun x lint-staged'
-  assert_log_contains 'make CI=1 lint-tsc'
+  assert_log_contains 'make EXEC_MODE=host lint-tsc'
 }
 
 @test "pre-commit aborts before the type check when lint-staged fails" {
@@ -112,7 +114,7 @@ stub_logging() {
   run sh "$PRE_PUSH"
 
   [ "$status" -ne 0 ]
-  assert_log_contains 'make CI=1 format'
+  assert_log_contains 'make EXEC_MODE=host format'
   # set -e stops after the first (format) invocation; lint and test never run.
   run grep -c 'make' "$COMMAND_LOG"
   [ "$output" -eq 1 ]

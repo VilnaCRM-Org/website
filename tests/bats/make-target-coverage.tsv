@@ -1,6 +1,6 @@
 target	coverage	evidence	details
 help	bats	tests/bats/makefile_targets.bats	Validated through the help output contract.
-start	bats	tests/bats/makefile_targets.bats	Validated in CI=1 mode with a stubbed Next.js binary.
+start	bats	tests/bats/makefile_targets.bats	Validated in EXEC_MODE=host mode with a stubbed Next.js binary.
 wait-for-dev	bats	tests/bats/makefile_targets.bats	Validated with a stubbed curl readiness check.
 create-temp-dev-container-dind	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker commands and env-var guards.
 copy-source-to-container-dind	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker and tar commands.
@@ -67,6 +67,7 @@ new-logs	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Docker C
 stop	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Docker Compose invocation.
 check-node-version	bats	tests/bats/makefile_targets.bats	Validated with a stubbed node invocation.
 lint-deps	ci	.github/workflows/static-testing.yml	Executed through `make lint`, which depends on `lint-deps`.
+generate-localization	ci	.github/workflows/static-testing.yml	Executed through `make lint`, whose `lint-deps` leg depends on it; also a prerequisite of `storybook-build`, `ci-test-mutation` and `test-mutation-shard`.
 lint-contracts	bats	tests/bats/makefile_targets.bats	Executed directly by contract-testing.yml; deliberately outside `make lint` because the drift check needs network.
 update-contracts	bats	tests/bats/makefile_targets.bats	Maintainer command for bumping USER_SERVICE_VERSION; refreshes both artifacts and the spectral baseline.
 run-deps-lint-tests-dind	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker exec calls.

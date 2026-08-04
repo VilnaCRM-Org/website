@@ -13,6 +13,53 @@ setup() {
   assert_output_contains 'test-bats'
 }
 
+# ---------------------------------------------------------------------------
+# Executor selection (issue #399). These four tests pin the contract that makes
+# a local `make <target>` and the CI invocation the same command: the container
+# is the default everywhere, the host path is reachable only by explicitly
+# asking for it, and no ambient environment variable can silently swap them.
+# ---------------------------------------------------------------------------
+
+@test "npm-tool gates exec into the dev container by default" {
+  reset_command_log
+  run_make_target lint-next
+  [ "$status" -eq 0 ]
+  assert_log_contains 'compose exec -T dev'
+
+  reset_command_log
+  run_make_target ci-test-unit-client
+  [ "$status" -eq 0 ]
+  assert_log_contains 'compose exec -T dev env TEST_ENV=client'
+}
+
+@test "EXEC_MODE=host runs the same gates straight from BIN_DIR" {
+  reset_command_log
+  run_make_target lint-next EXEC_MODE=host
+  [ "$status" -eq 0 ]
+  assert_log_contains 'eslint'
+  run grep -c 'compose exec' "$COMMAND_LOG"
+  [ "$output" -eq 0 ]
+}
+
+@test "the ambient CI variable does not select the host executor" {
+  # The regression this issue exists to fix: GitHub Actions exports CI=true into
+  # every step, and the previous `ifeq ($(CI),1)` switch turned that into "run
+  # on the host", so no CI job ever exercised the container path.
+  local ci_value
+  for ci_value in 1 true TRUE; do
+    reset_command_log
+    CI="$ci_value" run_make_target lint-next
+    [ "$status" -eq 0 ]
+    assert_log_contains 'compose exec -T dev'
+  done
+}
+
+@test "an unrecognised EXEC_MODE fails loudly instead of falling back" {
+  run_make_target lint-next EXEC_MODE=hostt
+  [ "$status" -ne 0 ]
+  assert_output_contains "EXEC_MODE must be 'container' or 'host'"
+}
+
 @test "container-backed helper targets fail fast when their required names are missing" {
   local target
   local required_var
@@ -59,8 +106,8 @@ EOF
   reset_command_log
   run_make_target run-unit-tests-dind TEMP_CONTAINER_NAME=website-dev-test
   [ "$status" -eq 0 ]
-  assert_log_contains 'docker exec website-dev-test sh -lc cd /app && make test-unit-client CI=1'
-  assert_log_contains 'docker exec website-dev-test sh -lc cd /app && make test-unit-server CI=1'
+  assert_log_contains 'docker exec website-dev-test sh -lc cd /app && make test-unit-client EXEC_MODE=host'
+  assert_log_contains 'docker exec website-dev-test sh -lc cd /app && make test-unit-server EXEC_MODE=host'
 
   reset_command_log
   run_make_target run-mutation-tests-dind TEMP_CONTAINER_NAME=website-dev-test
@@ -70,22 +117,22 @@ EOF
   reset_command_log
   run_make_target run-eslint-tests-dind TEMP_CONTAINER_NAME=website-dev-test
   [ "$status" -eq 0 ]
-  assert_log_contains 'docker exec website-dev-test sh -lc cd /app && make lint-next CI=1'
+  assert_log_contains 'docker exec website-dev-test sh -lc cd /app && make lint-next EXEC_MODE=host'
 
   reset_command_log
   run_make_target run-typescript-tests-dind TEMP_CONTAINER_NAME=website-dev-test
   [ "$status" -eq 0 ]
-  assert_log_contains 'docker exec website-dev-test sh -lc cd /app && make lint-tsc CI=1'
+  assert_log_contains 'docker exec website-dev-test sh -lc cd /app && make lint-tsc EXEC_MODE=host'
 
   reset_command_log
   run_make_target run-markdown-lint-tests-dind TEMP_CONTAINER_NAME=website-dev-test
   [ "$status" -eq 0 ]
-  assert_log_contains 'docker exec website-dev-test sh -lc cd /app && make lint-md CI=1'
+  assert_log_contains 'docker exec website-dev-test sh -lc cd /app && make lint-md EXEC_MODE=host'
 
   reset_command_log
   run_make_target run-deps-lint-tests-dind TEMP_CONTAINER_NAME=website-dev-test
   [ "$status" -eq 0 ]
-  assert_log_contains 'docker exec website-dev-test sh -lc cd /app && make lint-deps CI=1'
+  assert_log_contains 'docker exec website-dev-test sh -lc cd /app && make lint-deps EXEC_MODE=host'
 }
 
 @test "K6 and DIND quality targets invoke the expected Docker commands" {
@@ -116,7 +163,7 @@ EOF
 
 @test "developer convenience targets call the expected local commands" {
   reset_command_log
-  run_make_target start CI=1
+  run_make_target start EXEC_MODE=host
   [ "$status" -eq 0 ]
   assert_log_contains 'next dev'
 
@@ -124,7 +171,7 @@ EOF
   run_make_target wait-for-dev
   [ "$status" -eq 0 ]
   assert_output_contains 'Dev service is up and running!'
-  assert_log_contains 'curl -s -f http://localhost:3000'
+  assert_log_contains 'curl -fsS http://localhost:3000'
 
   reset_command_log
   run_make_target build-analyze
@@ -141,7 +188,7 @@ EOF
   assert_log_contains 'docker rm fake-container-id'
 
   reset_command_log
-  run_make_target format CI=1
+  run_make_target format EXEC_MODE=host
   [ "$status" -eq 0 ]
   assert_log_contains 'prettier **/*.{js,jsx,ts,tsx,json,css,scss,md} --write --ignore-path .prettierignore'
 
@@ -151,17 +198,17 @@ EOF
   assert_log_contains 'bun x husky install'
 
   reset_command_log
-  run_make_target storybook-start CI=1
+  run_make_target storybook-start EXEC_MODE=host
   [ "$status" -eq 0 ]
   assert_log_contains 'storybook dev -p'
 
   reset_command_log
-  run_make_target storybook-build CI=1
+  run_make_target storybook-build EXEC_MODE=host
   [ "$status" -eq 0 ]
   assert_log_contains 'storybook build --output-dir storybook-static-ci'
 
   reset_command_log
-  run_make_target check-node-version CI=1
+  run_make_target check-node-version EXEC_MODE=host
   [ "$status" -eq 0 ]
   assert_log_contains 'node checkNodeVersion.js'
 
@@ -279,7 +326,7 @@ exit 0
 STUB
   chmod +x "$STUB_BIN_DIR/jest"
 
-  run_make_target test-integration CI=1
+  run_make_target test-integration EXEC_MODE=host
   [ "$status" -eq 0 ]
   assert_log_contains 'jest TEST_ENV=integration --verbose'
 }
@@ -292,28 +339,34 @@ exit 0
 STUB
   chmod +x "$STUB_BIN_DIR/jest"
 
-  run_make_target test-integration-watch CI=1
+  run_make_target test-integration-watch EXEC_MODE=host
   [ "$status" -eq 0 ]
   assert_log_contains 'jest TEST_ENV=integration --watch'
 }
 
-@test "ensure-dev starts the dev service when it is not already running" {
-  run_make_target ensure-dev CI=1
+@test "ensure-dev starts the dev container without waiting for the dev server" {
+  run_make_target ensure-dev
   [ "$status" -eq 0 ]
-  # The stubbed docker compose ps does not report a running 'dev' service,
-  # so ensure-dev falls back to 'make start'.
-  assert_log_contains 'next dev'
+  # The stubbed `docker compose ps` reports no running 'dev' service, so
+  # ensure-dev brings the container up. It must NOT delegate to `make start`:
+  # the gates only need something to exec into, and start would block on
+  # wait-for-dev until the Next dev server answers on port 3000.
+  assert_log_contains 'compose -f docker-compose.yml up -d dev'
+  run grep -c 'next dev' "$COMMAND_LOG"
+  [ "$output" -eq 0 ]
 }
 
-@test "ci-setup brings up the dev service and waits for readiness" {
-  run_make_target ci-setup CI=1
+@test "ci-setup brings the dev service up idle through the CI compose overlay" {
+  run_make_target ci-setup
   [ "$status" -eq 0 ]
-  assert_log_contains 'docker compose -f docker-compose.yml up -d --build dev'
-  assert_output_contains 'Dev service is up and running!'
+  # The overlay replaces the dev server with an idle command, so the container
+  # is ready as soon as it is running -- `--wait` replaces the HTTP poll, and
+  # no `--build` is passed so a pre-built, layer-cached image is reused.
+  assert_log_contains 'docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d --no-recreate --wait dev'
 }
 
 @test "ci-lint runs the lint phase through the parallel runner with grouped output" {
-  run_make_target ci-lint CI=1
+  run_make_target ci-lint EXEC_MODE=host
   [ "$status" -eq 0 ]
   assert_output_contains '===== lint-next ====='
   assert_output_contains '===== lint-tsc ====='
@@ -321,7 +374,7 @@ STUB
 }
 
 @test "ci-test runs the dev-side test phase through the parallel runner" {
-  run_make_target ci-test CI=1
+  run_make_target ci-test EXEC_MODE=host
   [ "$status" -eq 0 ]
   assert_output_contains '===== ci-test-unit-client ====='
   assert_output_contains '===== ci-test-unit-server ====='
@@ -336,23 +389,23 @@ exit 0
 STUB
   chmod +x "$STUB_BIN_DIR/jest"
 
-  run_make_target ci-test-unit-client CI=1
+  run_make_target ci-test-unit-client EXEC_MODE=host
   [ "$status" -eq 0 ]
   assert_log_contains 'jest TEST_ENV=client --verbose'
 
   reset_command_log
-  run_make_target ci-test-unit-server CI=1
+  run_make_target ci-test-unit-server EXEC_MODE=host
   [ "$status" -eq 0 ]
   assert_log_contains 'jest TEST_ENV=server --verbose ./src/test/apollo-server'
 
   reset_command_log
-  run_make_target ci-test-mutation CI=1
+  run_make_target ci-test-mutation EXEC_MODE=host
   [ "$status" -eq 0 ]
   assert_log_contains 'bun x stryker run'
 }
 
 @test "ci-mutation delegates to ci-test-mutation" {
-  run_make_target ci-mutation CI=1
+  run_make_target ci-mutation EXEC_MODE=host
   [ "$status" -eq 0 ]
   assert_log_contains 'bun x stryker run'
 }
@@ -411,7 +464,7 @@ STUB
 }
 
 @test "ci runs the full local CI pipeline end to end" {
-  run_make_target ci CI=1
+  run_make_target ci EXEC_MODE=host
   [ "$status" -eq 0 ]
   assert_output_contains '===== lint-next ====='
   assert_log_contains 'apk add --no-cache chromium'
@@ -496,13 +549,13 @@ STUB
 @test "contract targets shell out to Node and cover fetch, lint and baseline refresh" {
   reset_command_log
 
-  run_make_target lint-contracts CI=1
+  run_make_target lint-contracts EXEC_MODE=host
   [ "$status" -eq 0 ]
   assert_log_contains 'node scripts/contracts/lint-contracts.mjs'
 
   reset_command_log
 
-  run_make_target update-contracts CI=1
+  run_make_target update-contracts EXEC_MODE=host
   [ "$status" -eq 0 ]
   assert_log_contains 'node scripts/fetchSwaggerSchema.mjs'
   assert_log_contains 'node scripts/fetchGraphqlSchema.mjs'
