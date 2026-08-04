@@ -55,8 +55,14 @@ make storybook-start  # Run Storybook
 make storybook-build  # Build static Storybook
 ```
 
-Append `CI=1` to run a target on the host without Docker (for example `CI=1 make start`
-runs `next dev` directly).
+Every lint and test target runs **inside the dev container**, locally and in CI alike
+(issue #399) — `make lint-tsc` on a laptop and `make lint-tsc` on a runner are the same
+command against the same image. Append `EXEC_MODE=host` to bypass Docker and run a target
+straight from `node_modules/.bin` (for example `EXEC_MODE=host make start` runs `next dev`
+directly); that escape hatch exists for the Husky hooks, the `run-*-dind` wrappers, and the
+Lighthouse audits, and it requires a host `bun install`. `EXEC_MODE` accepts only
+`container` (default) or `host`; anything else is a hard error. It is deliberately not
+derived from the ambient `CI` variable, which GitHub Actions sets on every step.
 
 ## Testing
 
@@ -77,7 +83,8 @@ make lighthouse-desktop # Lighthouse audit (desktop)
 make lighthouse-mobile  # Lighthouse audit (mobile)
 ```
 
-Unit suites accept `CI=1` to run on the host without Docker (e.g. `CI=1 make
+Unit suites run in the dev container and start it if it is not already up; append
+`EXEC_MODE=host` to run them on the host instead (e.g. `EXEC_MODE=host make
 test-unit-all`). E2E and visual specs run Playwright inside the prod/test compose stack;
 E2E uses Mockoon to mock the API. The test-layer map and coverage policy live in
 [`agents.md`](agents.md).
@@ -142,8 +149,21 @@ tiered off, weakened, or removed.
   use `cancel-in-progress: true` (a new push cancels the superseded run); the deploy,
   release, and sandbox workflows use `false` so a production trigger is never aborted
   mid-run.
-- **Caching.** Node jobs restore the Bun cache (`~/.bun/install/cache`, keyed on the Node version
-  and `bun.lock`).
+- **Container-always execution (issue #399).** The lint and test jobs no longer provision a
+  host toolchain. Each one checks out, runs the `./.github/actions/dev-container` composite
+  action — which builds or restores the `base` image through the BuildKit layer cache and
+  brings the dev service up idle via `make ci-setup` — and then runs the identical
+  `make <target>` a developer runs. There is no `setup-node`, no `~/.bun/install/cache`
+  restore and no host `bun install` left in them. Four workflows stay on the host on
+  purpose: `bats-testing` (bats-core needs bash, absent from the alpine image, and the suite
+  tests the host side of the Makefile), `performance-testing` (Lighthouse needs a real
+  Chrome and its budgets are calibrated against that path, so the run step passes
+  `EXEC_MODE=host`), `commitlint` (needs `git`, also absent from the image), and
+  `rust-code-analysis` (a host-only Rust binary).
+- **Dev-image cache.** `dev-image-cache.yml` warms the shared BuildKit layer cache on `main`
+  pushes that touch the image inputs, plus weekly to beat the 7-day eviction window. Only
+  the default branch writes it: a cache written on a PR branch is readable by that PR alone,
+  and the repository shares one 10 GB quota.
 - **Matrices.** The Playwright e2e suite splits across a `--shard` matrix
   (`test-e2e-shard`), Lighthouse runs `desktop`/`mobile` in parallel, the K6 load suites run
   in parallel, and mutation testing runs as a shard matrix plus a merge gate.

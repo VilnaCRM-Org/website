@@ -59,7 +59,13 @@ If you find an issue to work on, you are welcome to open a PR with a fix.
 
 1. Install or update to **Docker** and **Docker compose**. For more information, see [the README](README.md).
 
-2. Create a working branch and start with your changes!
+2. Run `make install`. It installs into both trees, which is what the tooling
+   needs: the dev container keeps its `node_modules` in its own volume — that is
+   what every lint and test gate execs into — while the host copy is what your
+   editor's TypeScript server, `lint-staged` in the pre-commit hook, and any
+   `EXEC_MODE=host` run resolve against. Re-run it after a `bun.lock` change.
+
+3. Create a working branch and start with your changes!
 
 #### Maintain Makefile shell coverage
 
@@ -103,8 +109,18 @@ removed.
   release, and sandbox workflows use `cancel-in-progress: false` — a production
   trigger must never be aborted mid-run, so newer pushes queue behind the
   current one.
-- **Caching.** Node jobs restore the Bun cache (`~/.bun/install/cache`, keyed on the
-  Node version and `bun.lock`) so installs are warm instead of cold.
+- **Container-always execution (issue #399).** The lint and test jobs run the same
+  `make <target>` you run locally, inside the same dev container. Each one checks
+  out, runs the `./.github/actions/dev-container` composite action — which builds
+  or restores the image through the BuildKit layer cache and starts the dev
+  service idle with `make ci-setup` — and then runs the target. There is no
+  `setup-node`, no `~/.bun/install/cache` restore, and no host `bun install`: the
+  image is the single source of truth for the runtime, so a CI failure reproduces
+  locally with the identical command. `dev-image-cache.yml` warms the shared layer
+  cache on `main`. Four workflows stay on the host deliberately —
+  `bats-testing` and `commitlint` need `bash`/`git`, which the alpine image does
+  not ship; `performance-testing` needs a real Chrome and passes `EXEC_MODE=host`;
+  `rust-code-analysis` runs a host-only Rust binary.
 - **Matrices instead of serial steps.** The Playwright e2e suite splits across a
   Playwright `--shard` matrix (one balanced slice of the ~340 test runs per
   runner), Lighthouse runs `desktop` and `mobile` as parallel cells, the K6 load

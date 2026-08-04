@@ -91,9 +91,9 @@ See [reference/i18n-patterns.md](reference/i18n-patterns.md).
 ## Verification
 
 ```bash
-make format                  # Prettier (run before lint)
-CI=1 make test-unit-client   # Client unit suite (jsdom, no Docker)
-make lint                    # ESLint + tsc + markdownlint + dependency-cruiser
+make format             # Prettier (run before lint)
+make test-unit-client   # Client unit suite (jsdom)
+make lint               # ESLint + tsc + markdownlint + dependency-cruiser
 ```
 
 For visible layout or styling changes, also run:

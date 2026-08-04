@@ -200,7 +200,8 @@ Docker
   make wait-for-prod: waits for the prod service to be ready on port 3001
 ```
 
-Note: The following commands do not require the `CI=1` prefix:
+Note: the following commands never run inside the dev container — they drive Docker
+itself, the prod/test compose stack, or the host toolchain directly:
 
 ```bash
   make test-e2e: starts production and runs end-to-end tests inside the prod container
@@ -216,11 +217,14 @@ Note: The following commands do not require the `CI=1` prefix:
   make update: runs locally on the host machine, not in a container
 ```
 
-💡 Tip: To run commands locally without Docker, please prefix command with CI=1.
-Example:
+💡 Tip: every lint and test target runs inside the dev container, which is exactly
+what CI does. To bypass Docker and run one straight from `node_modules/.bin` — what the
+Husky hooks do, so a commit works with no daemon running — prefix it with
+`EXEC_MODE=host`. That path needs a host `bun install`; `make install` populates the
+container instead.
 
 ```bash
-  CI=1 make start
+  EXEC_MODE=host make start
 ```
 
 ### Bats Shell Coverage

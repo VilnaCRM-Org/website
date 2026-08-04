@@ -62,16 +62,19 @@ make husky                # One-time Git hooks setup
 make start                # Start the dev server
 ```
 
-## Running commands without Docker
+## Running commands on the host
 
-Prefix unit and lint commands with `CI=1` to run them locally without the Docker stack. `CI=1`
-makes the Makefile run the local `node_modules/.bin` binaries directly instead of execing into a container.
+Every unit and lint command runs inside the dev container by default — the same command CI
+runs — and starts that container if it is not already up. Prefix with `EXEC_MODE=host` to run
+the local `node_modules/.bin` binaries directly instead of execing into the container; that
+path needs a host `bun install`, which `make install` performs alongside the container one.
 
 ```bash
-CI=1 make test-unit-all                 # Both unit suites, no Docker
-CI=1 make lint-next                      # ESLint, no Docker
-CI=1 TEST_ENV=client bun x jest \
-  src/test/unit/email-validation.test.ts # One client spec
+make test-unit-all                                 # All unit suites, in the container
+EXEC_MODE=host make test-unit-all                  # The same suites, no Docker
+EXEC_MODE=host make lint-next                      # ESLint, no Docker
+EXEC_MODE=host TEST_ENV=client bun x jest \
+  src/test/unit/email-validation.test.ts           # One client spec
 ```
 
 `TEST_ENV` selects the Jest environment: `client` (jsdom) or `server` (node). Pick the value
@@ -202,7 +205,7 @@ Clear the Jest cache and confirm the `@/*` alias resolves the same way in `tscon
 `index.ts` barrel rather than imported from a deep path.
 
 ```bash
-CI=1 bun x jest --clearCache
+EXEC_MODE=host bun x jest --clearCache
 ```
 
 ### Dev container will not start

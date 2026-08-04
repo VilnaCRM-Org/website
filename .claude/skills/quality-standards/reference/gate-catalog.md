@@ -107,7 +107,9 @@ governs which layers and scenario classes a change must cover.
   `src/test/testing-library/**/*.test.tsx` and `src/test/unit/**/*.test.ts`.
 - **`make test-unit-server`** — Jest in node (`TEST_ENV=server`): Apollo resolvers
   and server-side logic. Specs in `src/test/apollo-server/**/*.test.ts`.
-- **`make test-unit-all`** — both unit layers. Prefix `CI=1` to run without Docker.
+- **`make test-unit-all`** — both unit layers; runs inside the dev container by
+  default, add `EXEC_MODE=host` to run it on the host instead (needs a host
+  `bun install`).
 - **`make test-e2e`** — Playwright (chromium/firefox/webkit) over Mockoon-mocked
   flows; specs in `src/test/e2e/**/*.spec.ts`.
 - **`make test-visual`** — Playwright visual regression; snapshots in adjacent

@@ -65,14 +65,16 @@ The three unit-style suites share one Jest install and switch on `TEST_ENV`:
   suite under `tests/integration`.
 
 Use the `make` targets above rather than setting `TEST_ENV` by hand; they wire
-it for you. Unit suites run locally WITHOUT Docker when prefixed with `CI=1`
-(for example `CI=1 make test-unit-client`). E2E, visual, memory-leak, load, and
-Lighthouse run against the Docker prod stack the targets bring up.
+it for you. Unit-test targets run inside the dev container by default and
+start it themselves if it is not already running; run
+`EXEC_MODE=host make test-unit-client` to run locally without Docker (needs a
+host `bun install`). E2E, visual, memory-leak, load, and Lighthouse run
+against the Docker prod stack the targets bring up.
 
 ## Triage
 
 1. Re-run the smallest failing unit, e.g.
-   `CI=1 TEST_ENV=client bun x jest src/test/unit/email-validation.test.ts`.
+   `EXEC_MODE=host TEST_ENV=client bun x jest src/test/unit/email-validation.test.ts`.
 2. Read the first real failure before editing anything downstream of it.
 3. Classify the cause: app logic, test data (Faker builder), mock state (Mockoon
    fixture or Apollo mock), visual snapshot drift, or environment drift.
@@ -96,8 +98,8 @@ live in [../frontend-testing-workflow/SKILL.md](../frontend-testing-workflow/SKI
 
 ```bash
 make format                  # Prettier (run before lint)
-CI=1 make test-unit-client   # Client unit suite (jsdom, no Docker)
-CI=1 make test-unit-server   # Server unit suite (node, no Docker)
+make test-unit-client        # Client unit suite (jsdom)
+make test-unit-server        # Server unit suite (node)
 make test-e2e                # User-facing flows (for behavior changes)
 make test-visual             # Visual regression (for UI or styling changes)
 make lint                    # ESLint + tsc + markdownlint + dependency-cruiser
