@@ -39,9 +39,12 @@ PRE_PUSH="$PROJECT_ROOT/.husky/pre-push"
 }
 
 @test "both hooks use the EXEC_MODE=host fallback so they work without Docker" {
-  run grep -F 'EXEC_MODE=host' "$PRE_COMMIT"
+  # Anchored to an executable line: a plain substring search also matches the
+  # explanatory comment above it, so a hook could revert to another invocation,
+  # keep the comment, and still pass.
+  run grep -Eq '^[[:space:]]*EXEC_MODE=host make ' "$PRE_COMMIT"
   [ "$status" -eq 0 ]
-  run grep -F 'EXEC_MODE=host' "$PRE_PUSH"
+  run grep -Eq '^[[:space:]]*EXEC_MODE=host make ' "$PRE_PUSH"
   [ "$status" -eq 0 ]
 }
 
