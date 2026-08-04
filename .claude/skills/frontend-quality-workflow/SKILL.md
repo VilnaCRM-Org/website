@@ -41,9 +41,10 @@ rust-code-analysis metrics gate (`make lint-metrics`) is a **separate, host-only
 (delivered by issue #224); it is intentionally not part of `make lint`. Run it
 explicitly when a change to `src/` could grow complexity.
 
-Every gate runs inside the dev container by default, locally and in CI alike; prefix
-with `EXEC_MODE=host` to run it directly on the host instead (for example
-`EXEC_MODE=host make lint-next`), which needs a host `bun install`.
+The four `make lint` gates run inside the dev container by default, locally and in CI
+alike; prefix with `EXEC_MODE=host` to run one directly on the host instead (for example
+`EXEC_MODE=host make lint-next`), which needs a host `bun install`. `lint-metrics` is
+unaffected by `EXEC_MODE` — it is host-only in both modes, as above.
 
 ## Fix Each Gate At Its Source
 

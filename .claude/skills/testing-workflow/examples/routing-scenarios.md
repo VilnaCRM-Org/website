@@ -37,7 +37,7 @@ make test-unit-server
 ```
 
 - Reproduce a single file with
-  `EXEC_MODE=host TEST_ENV=server bun x jest src/test/apollo-server/server.test.ts`.
+  `TEST_ENV=server bun x jest src/test/apollo-server/server.test.ts`.
 - If a client unit also mocks that resolver shape, update the Apollo mock so the
   two stay in sync (mock-state drift, not app logic).
 

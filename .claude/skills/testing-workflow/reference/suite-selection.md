@@ -30,7 +30,7 @@ failing file, run Jest directly with the same env the target sets, for
 example:
 
 ```bash
-EXEC_MODE=host TEST_ENV=server bun x jest src/test/apollo-server/server.test.ts
+TEST_ENV=server bun x jest src/test/apollo-server/server.test.ts
 ```
 
 ## Browser suites (Playwright, Docker prod stack)

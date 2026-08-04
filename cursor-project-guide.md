@@ -73,7 +73,7 @@ path needs a host `bun install`, which `make install` performs alongside the con
 make test-unit-all                                 # All unit suites, in the container
 EXEC_MODE=host make test-unit-all                  # The same suites, no Docker
 EXEC_MODE=host make lint-next                      # ESLint, no Docker
-EXEC_MODE=host TEST_ENV=client bun x jest \
+TEST_ENV=client bun x jest \
   src/test/unit/email-validation.test.ts           # One client spec
 ```
 
@@ -205,7 +205,7 @@ Clear the Jest cache and confirm the `@/*` alias resolves the same way in `tscon
 `index.ts` barrel rather than imported from a deep path.
 
 ```bash
-EXEC_MODE=host bun x jest --clearCache
+bun x jest --clearCache
 ```
 
 ### Dev container will not start

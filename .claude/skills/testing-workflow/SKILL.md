@@ -74,7 +74,7 @@ against the Docker prod stack the targets bring up.
 ## Triage
 
 1. Re-run the smallest failing unit, e.g.
-   `EXEC_MODE=host TEST_ENV=client bun x jest src/test/unit/email-validation.test.ts`.
+   `TEST_ENV=client bun x jest src/test/unit/email-validation.test.ts`.
 2. Read the first real failure before editing anything downstream of it.
 3. Classify the cause: app logic, test data (Faker builder), mock state (Mockoon
    fixture or Apollo mock), visual snapshot drift, or environment drift.

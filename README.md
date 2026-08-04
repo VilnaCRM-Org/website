@@ -217,8 +217,9 @@ itself, the prod/test compose stack, or the host toolchain directly:
   make update: runs locally on the host machine, not in a container
 ```
 
-💡 Tip: every lint and test target runs inside the dev container, which is exactly
-what CI does. To bypass Docker and run one straight from `node_modules/.bin` — what the
+💡 Tip: the npm-tool gates listed above run inside the dev container, which is exactly
+what CI does; the targets in the previous block stay on the host in both modes. To bypass
+Docker and run a container-side one straight from `node_modules/.bin` — what the
 Husky hooks do, so a commit works with no daemon running — prefix it with
 `EXEC_MODE=host`. That path reads the host `node_modules`, which `make install`
 populates alongside the container's.
