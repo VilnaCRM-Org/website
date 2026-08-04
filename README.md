@@ -220,8 +220,8 @@ itself, the prod/test compose stack, or the host toolchain directly:
 💡 Tip: every lint and test target runs inside the dev container, which is exactly
 what CI does. To bypass Docker and run one straight from `node_modules/.bin` — what the
 Husky hooks do, so a commit works with no daemon running — prefix it with
-`EXEC_MODE=host`. That path needs a host `bun install`; `make install` populates the
-container instead.
+`EXEC_MODE=host`. That path reads the host `node_modules`, which `make install`
+populates alongside the container's.
 
 ```bash
   EXEC_MODE=host make start

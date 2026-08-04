@@ -113,14 +113,21 @@ removed.
   `make <target>` you run locally, inside the same dev container. Each one checks
   out, runs the `./.github/actions/dev-container` composite action — which builds
   or restores the image through the BuildKit layer cache and starts the dev
-  service idle with `make ci-setup` — and then runs the target. There is no
-  `setup-node`, no `~/.bun/install/cache` restore, and no host `bun install`: the
-  image is the single source of truth for the runtime, so a CI failure reproduces
-  locally with the identical command. `dev-image-cache.yml` warms the shared layer
-  cache on `main`. Four workflows stay on the host deliberately —
-  `bats-testing` and `commitlint` need `bash`/`git`, which the alpine image does
-  not ship; `performance-testing` needs a real Chrome and passes `EXEC_MODE=host`;
-  `rust-code-analysis` runs a host-only Rust binary.
+  service idle with `make ci-setup` — and then runs the target. No
+  `~/.bun/install/cache` restore and no host `bun install` remain: the image is the
+  single source of truth for the runtime, so a CI failure reproduces locally with
+  the identical command. `dev-image-cache.yml` warms the shared layer cache on
+  `main`. Four of them keep `actions/setup-node` (`static-testing`,
+  `dependency-cruiser`, `storybook-build`, the `mutation-testing` shard) purely to
+  pin the Node that runs the host-only `generate-localization` prerequisite.
+
+  Staying on the host entirely: `bats-testing` and `commitlint`, which need
+  `bash`/`git` that the alpine image does not ship; `rust-code-analysis`, a
+  host-only Rust binary; and the prod-stack suites the issue scopes out —
+  `e2e-testing`, `visual-testing`, `memory-leak-testing`, `load-testing` and
+  `performance-testing`, the last of which also passes `EXEC_MODE=host` so its
+  Lighthouse budgets keep measuring the path they were calibrated against.
+
 - **Matrices instead of serial steps.** The Playwright e2e suite splits across a
   Playwright `--shard` matrix (one balanced slice of the ~340 test runs per
   runner), Lighthouse runs `desktop` and `mobile` as parallel cells, the K6 load

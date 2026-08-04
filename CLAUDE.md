@@ -153,13 +153,20 @@ tiered off, weakened, or removed.
   host toolchain. Each one checks out, runs the `./.github/actions/dev-container` composite
   action — which builds or restores the `base` image through the BuildKit layer cache and
   brings the dev service up idle via `make ci-setup` — and then runs the identical
-  `make <target>` a developer runs. There is no `setup-node`, no `~/.bun/install/cache`
-  restore and no host `bun install` left in them. Four workflows stay on the host on
-  purpose: `bats-testing` (bats-core needs bash, absent from the alpine image, and the suite
-  tests the host side of the Makefile), `performance-testing` (Lighthouse needs a real
-  Chrome and its budgets are calibrated against that path, so the run step passes
-  `EXEC_MODE=host`), `commitlint` (needs `git`, also absent from the image), and
-  `rust-code-analysis` (a host-only Rust binary).
+  `make <target>` a developer runs. No `~/.bun/install/cache` restore and no host
+  `bun install` remain in any of them. Four keep `actions/setup-node` — `static-testing`,
+  `dependency-cruiser`, `storybook-build` and the `mutation-testing` shard — because their
+  target reaches the host-only `generate-localization`; that step pins a Node version and
+  nothing else, which is not what the issue's acceptance criterion forbids.
+
+  Jobs that stay on the host entirely: `bats-testing` (bats-core needs bash, absent from the
+  alpine image, and the suite's subject is the host side of the Makefile), `commitlint`
+  (needs `git`, also absent), `rust-code-analysis` (a host-only Rust binary), and the
+  prod-stack suites the issue scopes out — `e2e-testing`, `visual-testing`,
+  `memory-leak-testing`, `load-testing` and `performance-testing`, which drive the
+  prod/test compose stacks. `performance-testing` additionally passes `EXEC_MODE=host`,
+  because Lighthouse needs a real Chrome and its budgets are calibrated against that path.
+
 - **Dev-image cache.** `dev-image-cache.yml` warms the shared BuildKit layer cache on `main`
   pushes that touch the image inputs, plus weekly to beat the 7-day eviction window. Only
   the default branch writes it: a cache written on a PR branch is readable by that PR alone,
