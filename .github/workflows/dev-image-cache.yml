@@ -1,0 +1,50 @@
+name: dev image cache
+
+# Warms the BuildKit layer cache that every containerized lint/test job restores
+# from (#399). Only the default branch may write it: a cache written on a PR
+# branch is visible to that PR alone, while one written here is readable by every
+# branch, so a single warm run keeps all subsequent PR jobs off the cold build
+# path.
+on:
+  push:
+    branches:
+      - main
+    paths:
+      # Exactly the inputs of the Dockerfile `base` stage the dev service builds,
+      # plus this workflow and the action that consumes the cache.
+      - 'Dockerfile'
+      - 'bun.lock'
+      - 'package.json'
+      - '.dockerignore'
+      - '.github/actions/dev-container/**'
+      - '.github/workflows/dev-image-cache.yml'
+  # GitHub evicts a cache entry that has not been read for 7 days. The weekly run
+  # keeps the entry alive through quiet periods so a PR never pays for eviction.
+  schedule:
+    - cron: '0 2 * * 1'
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  # Never cancel a warm-up: an aborted run leaves the cache unwritten and every
+  # PR job behind it pays the cold build.
+  cancel-in-progress: false
+
+jobs:
+  warm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Build the dev image and write the layer cache
+        uses: ./.github/actions/dev-container
+        with:
+          cache-write: 'true'

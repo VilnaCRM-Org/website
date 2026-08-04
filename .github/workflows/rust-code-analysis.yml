@@ -16,8 +16,6 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read
-    env:
-      CI: 1
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -32,4 +30,4 @@ jobs:
         run: sh scripts/ci/ensure-rca.sh
 
       - name: Run code metrics gate
-        run: make lint-metrics CI=1
+        run: make lint-metrics
