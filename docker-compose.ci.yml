@@ -19,8 +19,15 @@ services:
     # A gate that crashes the container must fail the job, not be restarted
     # underneath it until the workflow's timeout-minutes expires.
     restart: 'no'
-    # There is no dev server to probe, so `up --wait` should return as soon as
-    # the container is running rather than block on a health probe that can
-    # never pass.
+    # The base healthcheck curls the dev server on :3000, which nothing serves
+    # here, so it must be replaced — but NOT with `disable: true`: `up --wait`
+    # then fails outright on Compose versions that reject a service with no
+    # healthcheck ("container website-dev has no healthcheck configured").
+    # Assert only that the container is up, which is all a gate needs before it
+    # can `docker compose exec` into it.
     healthcheck:
-      disable: true
+      test: ['CMD-SHELL', 'exit 0']
+      interval: 2s
+      timeout: 2s
+      retries: 5
+      start_period: 0s
