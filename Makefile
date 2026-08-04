@@ -236,12 +236,8 @@ start: ## Start the application
 # `make start` here would instead block on wait-for-dev until Next finishes its
 # first full compile — up to WAIT_FOR_DEV_MAX_TRIES × WAIT_FOR_DEV_SLEEP — before
 # a single lint rule ran. Use `make start` when you actually want the dev server.
-ensure-dev: ## Start the dev container when it is not already running (does not wait for the dev server)
-	@if $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) ps --status running --services 2>/dev/null | grep -qx dev; then \
-		echo "✅ Dev service is already running."; \
-	else \
-		$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) up -d dev; \
-	fi
+ensure-dev: ## Reconcile the dev container (does not wait for the dev server)
+	@$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) up -d dev
 
 # Bounded on purpose. Every migrated workflow calls `make start` first, so an
 # unbounded wait here would turn any dev-service boot failure into a job that
@@ -351,8 +347,10 @@ run-load-tests-dind: ## Run K6 load tests in DIND container without starting ser
 build: ## A tool build the project
 	$(DOCKER_COMPOSE) build
 
+# Wrapped in `sh -c` because NEXT_BUILD_CMD is a compound `a && b`: without it the
+# executor would take only the first command and run the second on the host.
 build-analyze: ## Build production bundle and launch bundle-analyzer report (ANALYZE=true)
-	ANALYZE=true $(NEXT_BUILD_CMD)
+	$(DEV_READY) $(PM_EXEC) sh -c 'ANALYZE=true $(NEXT_BUILD_CMD)'
 
 build-out: ## Build production artifacts to ./out directory
 	@echo "🏗️ Building production Docker image..."
@@ -406,7 +404,7 @@ lint: lint-next lint-tsc lint-md lint-deps ## Runs all linters: ESLint, TypeScri
 lint-contracts: ## Validate the pinned user-service contracts: client GraphQL operations, the OpenAPI spectral baseline, and artifact drift
 	$(DEV_READY) $(PM_EXEC) node scripts/contracts/lint-contracts.mjs
 
-update-contracts: ## Re-fetch the user-service contracts for the pinned USER_SERVICE_VERSION and refresh the spectral baseline
+update-contracts: ensure-dev ## Re-fetch the user-service contracts for the pinned USER_SERVICE_VERSION and refresh the spectral baseline
 	$(PM_EXEC) node scripts/fetchSwaggerSchema.mjs
 	$(PM_EXEC) node scripts/fetchGraphqlSchema.mjs
 	$(PM_EXEC) node scripts/contracts/lint-contracts.mjs --update-baseline
@@ -436,7 +434,7 @@ husky: ## One-time Husky setup to enable Git hooks (deprecated if already set)
 	bun x husky install
 
 storybook-start: ## Start Storybook UI and open in browser
-	$(PM_EXEC) $(STORYBOOK_START)
+	$(DEV_READY) $(PM_EXEC) $(STORYBOOK_START)
 
 # The stories import the i18n stack, which requires the generated bundle, so the
 # target produces it itself rather than relying on a caller to remember.
@@ -546,10 +544,10 @@ ci-test-integration: ## Run integration tests assuming ci-setup already started 
 ci-setup: create-network ## Prepare the shared dev environment for CI-oriented checks (idle container, no dev server)
 	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_CI_DEV_FILE) up $(CI_SETUP_UP_FLAGS) --wait dev
 
-ci-lint: ## Run the CI lint phase (ESLint, TypeScript, Markdown) with grouped, aggregated output
+ci-lint: ensure-dev ## Run the CI lint phase (ESLint, TypeScript, Markdown) with grouped, aggregated output
 	$(CI_LINT_RUNNER) $(CI_LINT_TARGETS)
 
-ci-test: ## Run the CI dev-side test phase (unit client/server, integration) in parallel
+ci-test: ensure-dev ## Run the CI dev-side test phase (unit client/server, integration) in parallel
 	$(CI_TEST_RUNNER) $(CI_TEST_TARGETS)
 
 ci-test-unit-client: ## Run client-side unit tests assuming ci-setup already started the dev environment (CI entrypoint)
@@ -561,7 +559,7 @@ ci-test-unit-server: ## Run server-side unit tests assuming ci-setup already sta
 ci-test-mutation: generate-localization ## Run mutation tests assuming ci-setup already started the dev environment (CI entrypoint)
 	$(PM_EXEC) bun x stryker run
 
-ci-mutation: ## Run mutation testing in isolation after the parallel dev-side tests (heavy; not parallelized)
+ci-mutation: ensure-dev ## Run mutation testing in isolation after the parallel dev-side tests (heavy; not parallelized)
 	$(MAKE) ci-test-mutation
 
 ci-prod-setup: ## Prepare the prod + Chromium environment for prod-side CI tests
@@ -719,7 +717,9 @@ lighthouse-mobile-dind: ## Run Lighthouse mobile audit in DIND mode using prod c
 # one of them leaves a fresh clone with a broken commit hook or broken gates.
 install: check-node-version ## Install node modules with Bun into the dev container and the host (frozen lockfile)
 	$(DEV_READY) $(PM_EXEC) bun install --frozen-lockfile
+ifeq ($(EXEC_MODE),container)
 	bun install --frozen-lockfile
+endif
 
 install-chromium-lhci: ## Install Chromium and Lighthouse CLI in the prod container for DIND testing
 	@echo "📦 Installing Chromium and Lighthouse CLI in prod container..."
