@@ -1,8 +1,13 @@
 import * as Sentry from '@sentry/react';
-import { waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
+import { t } from 'i18next';
 
 import { testInitials, testEmail, testPassword } from './constants';
-import { mockInternalServerErrorResponse, renderAuthLayout } from './fixtures/auth-test-helpers';
+import {
+  fulfilledMockResponse,
+  mockInternalServerErrorResponse,
+  renderAuthLayout,
+} from './fixtures/auth-test-helpers';
 import { fillForm } from './utils';
 
 jest.mock('@sentry/react', () => ({
@@ -42,15 +47,17 @@ describe('AuthLayout telemetry', () => {
   });
 
   it('sends nothing when the submission succeeds', async () => {
-    renderAuthLayout([]);
+    renderAuthLayout([fulfilledMockResponse]);
 
     fillForm(testInitials, testEmail, testPassword, true);
 
+    // Wait for the success notification first: asserting only the absence of
+    // telemetry would pass at t=0, before the mutation had a chance to settle,
+    // and would keep passing even if validation had blocked the submit.
     await waitFor(() => {
-      expect(captureException).not.toHaveBeenCalledWith(
-        expect.anything(),
-        expect.objectContaining({ tags: { feature: 'landing', action: 'signup' } })
-      );
+      expect(screen.getByText(t('notifications.success.title'))).toBeVisible();
     });
+
+    expect(captureException).not.toHaveBeenCalled();
   });
 });
