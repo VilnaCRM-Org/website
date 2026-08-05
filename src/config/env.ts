@@ -48,11 +48,13 @@ const CLEARTEXT_ENDPOINT_MESSAGE =
  * Anything it does not recognise — a remote `http://` host, a lookalike such as
  * `http://localhost.example.com`, or `http://user:pass@localhost` — is
  * rejected, which is the safe direction for the endpoint that carries the
- * registration password. The host alternatives are anchored by `(:port)?(/|$)`
- * so a longer hostname cannot pass as loopback.
+ * registration password. The host alternatives are anchored by an optional port
+ * and then a path, query, fragment or end-of-string, so a longer hostname such
+ * as `localhost.example.com` cannot pass as loopback while a legitimate
+ * `http://localhost:4000?trace=1` still can.
  */
 const ENCRYPTED_OR_LOOPBACK =
-  /^(https:\/\/|http:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?(\/|$))/i;
+  /^(https:\/\/|http:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?([/?#]|$))/i;
 
 function isEncryptedOrLoopback(value: string): boolean {
   return ENCRYPTED_OR_LOOPBACK.test(value);

@@ -73,6 +73,10 @@ describe('config/env (integration)', () => {
       ['http://localhost:4000/graphql'],
       ['http://127.0.0.1:4000/graphql'],
       ['http://[::1]:4000/graphql'],
+      // No path, and a query or fragment straight after the authority.
+      ['http://localhost:4000'],
+      ['http://localhost:4000?trace=1'],
+      ['http://localhost#anchor'],
     ])('accepts the loopback endpoint %s', async (endpoint: string) => {
       process.env.NEXT_PUBLIC_GRAPHQL_API_URL = endpoint;
 
@@ -81,8 +85,14 @@ describe('config/env (integration)', () => {
       expect(env.NEXT_PUBLIC_GRAPHQL_API_URL).toBe(endpoint);
     });
 
-    it('does not treat a lookalike host as loopback', async () => {
-      process.env.NEXT_PUBLIC_GRAPHQL_API_URL = 'http://localhost.attacker.example/graphql';
+    it.each([
+      ['http://localhost.attacker.example/graphql'],
+      ['http://127.0.0.1.attacker.example/graphql'],
+      ['http://user:pass@localhost/graphql'],
+      ['ftp://localhost/graphql'],
+      ['ws://localhost/graphql'],
+    ])('does not accept %s as loopback cleartext', async (endpoint: string) => {
+      process.env.NEXT_PUBLIC_GRAPHQL_API_URL = endpoint;
 
       await expect(import('@/config/env')).rejects.toThrow(/NEXT_PUBLIC_GRAPHQL_API_URL/);
     });
