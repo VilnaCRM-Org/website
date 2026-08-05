@@ -167,7 +167,7 @@ describe('integration: registration GraphQL API boundary', () => {
   });
 
   describe('error translation pipeline', () => {
-    it('never renders a business error verbatim, so the API cannot enumerate accounts', async () => {
+    it('never renders a business error verbatim, so accounts cannot be enumerated', async () => {
       // The server distinguishes "this email is taken" from any other failure;
       // the client must not pass that distinction on to the visitor (#378 F2).
       const message = 'A user with this email already exists.';

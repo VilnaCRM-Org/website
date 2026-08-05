@@ -55,7 +55,7 @@ describe('validatePassword', () => {
     expect(validatePassword(noNumbersPassword)).toBe(passwordNumbersError);
   });
 
-  it("should return localized error message when password doesn't contain uppercase letters", () => {
+  it('should return a localized error when the password has no uppercase letter', () => {
     expect(validatePassword(noUppercasePassword)).toBe(passwordUppercaseError);
   });
 
@@ -68,7 +68,7 @@ describe('validatePassword', () => {
   });
 
   // #382 F4: length + digit + uppercase alone accepted PASSWORD1.
-  it("should return localized error message when password doesn't contain lowercase letters", () => {
+  it('should return a localized error when the password has no lowercase letter', () => {
     expect(validatePassword(noLowercasePassword)).toBe(passwordLowercaseError);
   });
 

@@ -17,6 +17,10 @@ describe('integration: resolveExternalLinkRel', () => {
     expect(resolveExternalLinkRel('_parent')).toBeUndefined();
   });
 
+  it('normalises the target before deciding, so `_BLANK` is hardened too', () => {
+    expect(resolveExternalLinkRel('_BLANK')).toBe('noopener noreferrer');
+  });
+
   it('supplies both tokens when a new-tab link carries no rel', () => {
     expect(resolveExternalLinkRel(BLANK_TARGET, undefined)).toBe('noopener noreferrer');
   });

@@ -1,6 +1,6 @@
 import { t } from 'i18next';
 
-import { validateConfirmPassword } from '../../features/landing/components/auth-section/validations';
+import { validateConfirmPassword } from '@landing/auth-section/validations';
 
 const mismatchError: string = t('sign_up.form.confirm_password_input.error_mismatch');
 

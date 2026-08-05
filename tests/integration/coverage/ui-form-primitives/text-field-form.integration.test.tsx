@@ -134,6 +134,41 @@ describe('integration: UiTextFieldForm and UiInput', () => {
     expect(document.getElementById('Fallback-error')).toBeInTheDocument();
   });
 
+  // react-hook-form also accepts `required: { value, message }`; coercing the
+  // object itself would announce a disabled rule as required.
+  describe.each([
+    [true, true],
+    [false, false],
+  ])('object-form required rule with value %s', (ruleValue: boolean, expected: boolean) => {
+    function ObjectRuleHarness(): React.ReactElement {
+      const { control } = useForm();
+      return (
+        <>
+          <label htmlFor="Objecty">{labelText}</label>
+          <UiTextFieldForm
+            id="Objecty"
+            control={control}
+            name="Objecty"
+            rules={{ required: { value: ruleValue, message: requiredMessage } }}
+            placeholder="objecty"
+          />
+        </>
+      );
+    }
+
+    it(`marks the field required: ${expected}`, () => {
+      render(<ObjectRuleHarness />);
+
+      const input: HTMLElement = screen.getByLabelText(labelText);
+
+      if (expected) {
+        expect(input).toBeRequired();
+      } else {
+        expect(input).not.toBeRequired();
+      }
+    });
+  });
+
   it('renders a bare UiInput without any of the optional attributes', () => {
     render(<UiInput placeholder="bare" />);
 

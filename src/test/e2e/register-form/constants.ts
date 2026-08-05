@@ -35,13 +35,18 @@ export const userData: User = {
 
 export const mismatchedPassword: string = `${userData.password}-mismatch`;
 
+// Each fixture violates exactly one rule and satisfies the other three, so the
+// asserted message does not depend on the order of PASSWORD_RULES.
 const textShortText: string = faker.internet.password({
   length: 7,
+  pattern: /[a-z]/,
+  prefix: 'A1',
 });
 
 const textNoNumbers: string = faker.internet.password({
   length: 10,
-  pattern: /[A-Z]/,
+  pattern: /[a-z]/,
+  prefix: 'Ab',
 });
 const textNoUppercaseLetter: string = faker.internet.password({
   length: 10,

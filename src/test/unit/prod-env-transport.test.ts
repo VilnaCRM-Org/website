@@ -26,7 +26,13 @@ const CREDENTIAL_URL_VARS: readonly string[] = [
   'NEXT_PUBLIC_API_URL',
 ];
 
-const LOOPBACK_HOSTNAMES: readonly string[] = ['localhost', '127.0.0.1', '[::1]', '::1'];
+// A pattern rather than a list: the whole 127.0.0.0/8 range is loopback, and
+// `new URL().hostname` returns IPv6 hosts bracketed.
+const LOOPBACK_IPV4 = '127(?:\\.\\d{1,3}){3}';
+const LOOPBACK_HOSTNAME = new RegExp(
+  `^(localhost|${LOOPBACK_IPV4}|\\[::1\\]|\\[::ffff:${LOOPBACK_IPV4}\\])$`,
+  'i'
+);
 
 function readEnvFile(fileName: string): Record<string, string> {
   const contents: string = fs.readFileSync(path.join(REPO_ROOT, fileName), 'utf-8');
@@ -60,7 +66,7 @@ describe('production environment transport contract', () => {
     it('does not point the shipped bundle at a loopback host', () => {
       // A loopback endpoint in the static export is not merely wrong, it is
       // broken: an https page cannot POST to http://localhost.
-      expect(LOOPBACK_HOSTNAMES).not.toContain(new URL(value).hostname);
+      expect(new URL(value).hostname).not.toMatch(LOOPBACK_HOSTNAME);
     });
   });
 });
@@ -77,7 +83,7 @@ describe('development environment transport contract', () => {
       // endpoint here would be a credential leak the moment someone copied the
       // file, and `src/config/env.ts` rejects it at parse time.
       const url: URL = new URL(value);
-      const isLoopback: boolean = LOOPBACK_HOSTNAMES.includes(url.hostname);
+      const isLoopback: boolean = LOOPBACK_HOSTNAME.test(url.hostname);
 
       expect(url.protocol === 'https:' || isLoopback).toBe(true);
     });

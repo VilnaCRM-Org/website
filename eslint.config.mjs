@@ -151,13 +151,12 @@ export default [
         settings: {
           react: { version: 'detect' },
           // `react/jsx-no-target-blank` only inspects components it knows are
-          // links, which by default means a raw `<a>` — every new-tab link in
-          // this repo goes through MUI's `<Link>` or the shared `<UiLink>`, so
-          // without this the rule had nothing to check (#382 F2).
-          linkComponents: [
-            { name: 'Link', linkAttribute: 'href' },
-            { name: 'UiLink', linkAttribute: 'href' },
-          ],
+          // links, which by default means a raw `<a>`. Every new-tab link here
+          // goes through MUI's `<Link>`, so without this the rule had nothing to
+          // check (#382 F2). `UiLink` is deliberately NOT listed: it merges
+          // `noopener noreferrer` in itself, so a bare `target="_blank"` on it is
+          // already safe and flagging it would only demand redundant markup.
+          linkComponents: [{ name: 'Link', linkAttribute: 'href' }],
           'import/resolver': {
             node: {
               extensions: ['.ts', '.tsx', '.js', '.jsx', '.mjs'],

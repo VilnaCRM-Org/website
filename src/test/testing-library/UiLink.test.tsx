@@ -1,7 +1,6 @@
 import { render } from '@testing-library/react';
 
 import { UiLink } from '@/components';
-import { BLANK_TARGET } from '@/shared/externalLinkRel';
 
 import { testText, testUrl } from './constants';
 
@@ -23,7 +22,7 @@ describe('UiLink', () => {
   // #382 F2: a new-tab link must never rely on the caller remembering `rel`.
   it('hardens a new-tab link even when no rel is passed', () => {
     const { getByText } = render(
-      <UiLink href={testUrl} target={BLANK_TARGET}>
+      <UiLink href={testUrl} target="_blank">
         {testText}
       </UiLink>
     );
@@ -33,12 +32,22 @@ describe('UiLink', () => {
 
   it('keeps a caller-supplied rel and adds the missing hardening tokens', () => {
     const { getByText } = render(
-      <UiLink href={testUrl} target={BLANK_TARGET} rel="nofollow">
+      <UiLink href={testUrl} target="_blank" rel="nofollow">
         {testText}
       </UiLink>
     );
 
     expect(getByText(testText)).toHaveAttribute('rel', 'nofollow noopener noreferrer');
+  });
+
+  it('hardens a case-variant blank target the same way', () => {
+    const { getByText } = render(
+      <UiLink href={testUrl} target="_BLANK">
+        {testText}
+      </UiLink>
+    );
+
+    expect(getByText(testText)).toHaveAttribute('rel', 'noopener noreferrer');
   });
 
   it('leaves a same-tab link without a rel attribute', () => {

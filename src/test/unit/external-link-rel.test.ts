@@ -16,6 +16,11 @@ describe('resolveExternalLinkRel', () => {
     expect(resolveExternalLinkRel(BLANK_TARGET)).toBe('noopener noreferrer');
   });
 
+  it('treats a case-variant blank target as a new-tab link', () => {
+    expect(resolveExternalLinkRel('_BLANK')).toBe('noopener noreferrer');
+    expect(resolveExternalLinkRel('_Blank', 'nofollow')).toBe('nofollow noopener noreferrer');
+  });
+
   it('leaves a same-tab link untouched', () => {
     expect(resolveExternalLinkRel(undefined, undefined)).toBeUndefined();
     expect(resolveExternalLinkRel('_self')).toBeUndefined();

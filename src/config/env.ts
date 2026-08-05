@@ -31,10 +31,15 @@ import { z } from 'zod';
  * production* config is `https` and never loopback — is enforced by
  * `src/test/unit/prod-env-transport.test.ts`, because `NODE_ENV` alone cannot
  * distinguish a production export from a Storybook build.
+ *
+ * `NEXT_PUBLIC_API_URL` is held to the same rule even though the sign-up
+ * mutation does not use it: it is a Sentry trace-propagation target, so the
+ * browser attaches trace headers to requests bound for that origin, which is
+ * not something to hand to a cleartext remote host either.
  */
 const CLEARTEXT_ENDPOINT_MESSAGE =
   'must use https:// — cleartext http:// is accepted only for loopback hosts, ' +
-  'because this endpoint carries registration credentials';
+  'because the browser sends user data or trace headers to this endpoint';
 
 /**
  * Matches `https://…` and cleartext loopback only. Written as one pattern
@@ -46,7 +51,8 @@ const CLEARTEXT_ENDPOINT_MESSAGE =
  * registration password. The host alternatives are anchored by `(:port)?(/|$)`
  * so a longer hostname cannot pass as loopback.
  */
-const ENCRYPTED_OR_LOOPBACK = /^(https:\/\/|http:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?(\/|$))/i;
+const ENCRYPTED_OR_LOOPBACK =
+  /^(https:\/\/|http:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?(\/|$))/i;
 
 function isEncryptedOrLoopback(value: string): boolean {
   return ENCRYPTED_OR_LOOPBACK.test(value);

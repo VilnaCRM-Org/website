@@ -114,7 +114,7 @@ export const fillForm: (
   confirmPasswordValue = passwordValue
 ) => {
   // Allow empty form testing when all fields are intentionally empty
-  const allowEmpty = !fullNameValue && !emailValue && !passwordValue;
+  const allowEmpty = !fullNameValue && !emailValue && !passwordValue && !confirmPasswordValue;
   validateFormInput(fullNameValue, emailValue, passwordValue, allowEmpty);
 
   const {

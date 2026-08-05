@@ -11,6 +11,18 @@ function composeDescribedBy(...ids: (string | undefined)[]): string | undefined 
   return present.length > 0 ? present.join(' ') : undefined;
 }
 
+/**
+ * react-hook-form accepts `required` either as a message/boolean or as a
+ * `{ value, message }` object, and the object form can carry `value: false`.
+ * Coercing the object itself would announce every such field as required.
+ */
+function isRequiredRule(required: unknown): boolean {
+  if (typeof required === 'object' && required !== null) {
+    return Boolean((required as { value?: unknown }).value);
+  }
+  return Boolean(required);
+}
+
 function FieldMessage({
   errorId,
   message,
@@ -74,7 +86,7 @@ function FieldView<T extends FieldValues>({
         ref={registerInput}
         autoComplete={autoComplete}
         describedBy={composeDescribedBy(describedBy, error ? errorId : undefined)}
-        required={Boolean(rules.required)}
+        required={isRequiredRule(rules.required)}
         type={type}
         placeholder={placeholder}
         onChange={onChange}

@@ -368,7 +368,7 @@ describe('AuthForm', () => {
     });
   });
 
-  it('submits once the confirmation matches, without sending it to the server', async () => {
+  it('submits the matching confirmation as part of the client form payload', async () => {
     renderAuthForm({ onSubmit });
 
     fillForm(testInitials, testEmail, testPassword, true);

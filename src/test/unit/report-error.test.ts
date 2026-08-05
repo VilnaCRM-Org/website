@@ -37,6 +37,9 @@ describe('reportHandledError', () => {
   it('sends no user data alongside the exception', () => {
     reportHandledError(new Error('boom'), { feature: 'landing', action: 'signup' });
 
+    // `clearMocks` resets the spy between tests, and this assertion pins that
+    // so the call inspected below is unambiguously this test's.
+    expect(captureException).toHaveBeenCalledTimes(1);
     const [, context] = captureException.mock.calls[0] as [unknown, Record<string, unknown>];
 
     expect(Object.keys(context).sort()).toEqual(['level', 'tags']);

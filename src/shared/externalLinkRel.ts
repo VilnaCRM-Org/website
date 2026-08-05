@@ -21,7 +21,9 @@ export const REQUIRED_BLANK_REL_TOKENS: readonly string[] = Object.freeze([
 ] as const);
 
 export function resolveExternalLinkRel(target?: string, rel?: string): string | undefined {
-  if (target !== BLANK_TARGET) {
+  // HTML compares the reserved browsing-context names case-insensitively, so
+  // `_BLANK` opens a new tab exactly like `_blank` and must be hardened too.
+  if (target?.toLowerCase() !== BLANK_TARGET) {
     return rel;
   }
 
