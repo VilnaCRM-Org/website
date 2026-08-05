@@ -150,6 +150,14 @@ export default [
         plugins: ['@typescript-eslint'],
         settings: {
           react: { version: 'detect' },
+          // `react/jsx-no-target-blank` only inspects components it knows are
+          // links, which by default means a raw `<a>` — every new-tab link in
+          // this repo goes through MUI's `<Link>` or the shared `<UiLink>`, so
+          // without this the rule had nothing to check (#382 F2).
+          linkComponents: [
+            { name: 'Link', linkAttribute: 'href' },
+            { name: 'UiLink', linkAttribute: 'href' },
+          ],
           'import/resolver': {
             node: {
               extensions: ['.ts', '.tsx', '.js', '.jsx', '.mjs'],
@@ -178,6 +186,19 @@ export default [
         ],
         rules: {
           'eslint-comments/no-use': ['error', { allow: [] }],
+          // Regression gate for the referrer-leak / reverse-tabnabbing fix:
+          // a `target="_blank"` without `rel="noopener noreferrer"` fails
+          // `make lint-next` (#382 F2).
+          'react/jsx-no-target-blank': [
+            'error',
+            {
+              allowReferrer: false,
+              enforceDynamicLinks: 'always',
+              warnOnSpreadAttributes: true,
+              links: true,
+              forms: true,
+            },
+          ],
           'react/jsx-no-bind': 'warn',
           'no-await-in-loop': 'off',
           'no-restricted-syntax': 'off',

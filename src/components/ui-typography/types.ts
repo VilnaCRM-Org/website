@@ -36,4 +36,6 @@ export interface UiTypographyProps {
   id?: string | undefined;
   role?: React.AriaRole;
   htmlFor?: string;
+  'aria-live'?: 'off' | 'polite' | 'assertive' | undefined;
+  'aria-atomic'?: boolean | undefined;
 }

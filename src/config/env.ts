@@ -16,10 +16,55 @@ import { z } from 'zod';
  * therefore referenced literally; never read them dynamically
  * (`process.env[name]`), or the browser bundle will inline `undefined`.
  */
+/**
+ * Transport guard for the endpoints that carry credentials (#378 F1).
+ *
+ * The sign-up form POSTs a plaintext password to `NEXT_PUBLIC_GRAPHQL_API_URL`.
+ * Nothing here previously required that hop to be encrypted, so a deploy that
+ * pointed the variable at a remote `http://` host — the repo's own `.env` uses
+ * `http://` for every URL — would have leaked the password to any on-path
+ * attacker with no build-time signal at all.
+ *
+ * Cleartext is therefore accepted only for loopback, where there is no network
+ * hop to intercept and where the dev and Docker stacks genuinely run. Remote
+ * `http://` fails the build. The complementary invariant — that the *committed
+ * production* config is `https` and never loopback — is enforced by
+ * `src/test/unit/prod-env-transport.test.ts`, because `NODE_ENV` alone cannot
+ * distinguish a production export from a Storybook build.
+ */
+const LOOPBACK_HOSTNAMES: ReadonlySet<string> = new Set(['localhost', '127.0.0.1', '[::1]', '::1']);
+
+const CLEARTEXT_ENDPOINT_MESSAGE =
+  'must use https:// — cleartext http:// is accepted only for loopback hosts, ' +
+  'because this endpoint carries registration credentials';
+
+function parseUrl(value: string): URL | null {
+  try {
+    return new URL(value);
+  } catch {
+    return null;
+  }
+}
+
+function isEncryptedOrLoopback(value: string): boolean {
+  const url: URL | null = parseUrl(value);
+  // Zod runs refinements even when the base `z.url()` check already failed, so
+  // an unparseable value reaches here. That failure is `z.url()`'s to report —
+  // this check has nothing to add to it.
+  if (url === null) {
+    return true;
+  }
+
+  return url.protocol === 'https:' || LOOPBACK_HOSTNAMES.has(url.hostname);
+}
+
+const credentialEndpoint: () => z.ZodType<string> = () =>
+  z.url().refine(isEncryptedOrLoopback, { message: CLEARTEXT_ENDPOINT_MESSAGE });
+
 const clientEnvSchema = z.object({
   // Endpoints consumed by the browser bundle.
-  NEXT_PUBLIC_GRAPHQL_API_URL: z.url(),
-  NEXT_PUBLIC_API_URL: z.url(),
+  NEXT_PUBLIC_GRAPHQL_API_URL: credentialEndpoint(),
+  NEXT_PUBLIC_API_URL: credentialEndpoint(),
   NEXT_PUBLIC_DEVELOPMENT_API_URL: z.union([z.url(), z.literal('')]).default(''),
 
   // Locale gates the static export (html lang + i18next). Required and

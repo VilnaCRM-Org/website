@@ -35,6 +35,7 @@ test.describe('Form Submission Server Error Test', () => {
       await page.getByPlaceholder(placeholders.name).fill('John Doe');
       await page.getByPlaceholder(placeholders.email).fill('john@example.com');
       await page.getByPlaceholder(placeholders.password).fill('SecurePassword123');
+      await page.getByPlaceholder(placeholders.confirmPassword).fill('SecurePassword123');
       await page.getByRole('checkbox').check();
 
       const submitButton: Locator = page.locator('button[type="submit"]');

@@ -10,6 +10,12 @@ const noNumbersPassword: string = 'PasswordOnly';
 
 const noUppercasePassword: string = 'password1';
 
+const noLowercasePassword: string = 'PASSWORD1';
+
+const cyrillicPassword: string = 'Пароль123';
+
+const cyrillicNoLowercase: string = 'ПАРОЛЬ123';
+
 const onlyNumbers: string = '1234567890';
 
 const onlyUppercase: string = 'ABCDEFGHIJ';
@@ -21,6 +27,7 @@ const longestValidPassword: string = `A1${'b'.repeat(62)}`;
 const passwordLengthError: string = t('sign_up.form.password_input.error_length');
 const passwordNumbersError: string = t('sign_up.form.password_input.error_numbers');
 const passwordUppercaseError: string = t('sign_up.form.password_input.error_uppercase');
+const passwordLowercaseError: string = t('sign_up.form.password_input.error_lowercase');
 
 describe('validatePassword', () => {
   it('should return true when password is valid', () => {
@@ -58,5 +65,15 @@ describe('validatePassword', () => {
 
   it('should return localized error message when password contains only uppercase letters', () => {
     expect(validatePassword(onlyUppercase)).toBe(passwordNumbersError);
+  });
+
+  // #382 F4: length + digit + uppercase alone accepted PASSWORD1.
+  it("should return localized error message when password doesn't contain lowercase letters", () => {
+    expect(validatePassword(noLowercasePassword)).toBe(passwordLowercaseError);
+  });
+
+  it('applies the case rules to non-Latin alphabets', () => {
+    expect(validatePassword(cyrillicPassword)).toBe(true);
+    expect(validatePassword(cyrillicNoLowercase)).toBe(passwordLowercaseError);
   });
 });

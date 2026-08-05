@@ -1,6 +1,7 @@
 import { render } from '@testing-library/react';
 
 import { UiLink } from '@/components';
+import { BLANK_TARGET } from '@/shared/externalLinkRel';
 
 import { testText, testUrl } from './constants';
 
@@ -17,5 +18,32 @@ describe('UiLink', () => {
     const { getByText } = render(<UiLink href={testUrl}>{testText}</UiLink>);
     const linkElement: HTMLElement = getByText(testText);
     expect(linkElement).toBeInTheDocument();
+  });
+
+  // #382 F2: a new-tab link must never rely on the caller remembering `rel`.
+  it('hardens a new-tab link even when no rel is passed', () => {
+    const { getByText } = render(
+      <UiLink href={testUrl} target={BLANK_TARGET}>
+        {testText}
+      </UiLink>
+    );
+
+    expect(getByText(testText)).toHaveAttribute('rel', 'noopener noreferrer');
+  });
+
+  it('keeps a caller-supplied rel and adds the missing hardening tokens', () => {
+    const { getByText } = render(
+      <UiLink href={testUrl} target={BLANK_TARGET} rel="nofollow">
+        {testText}
+      </UiLink>
+    );
+
+    expect(getByText(testText)).toHaveAttribute('rel', 'nofollow noopener noreferrer');
+  });
+
+  it('leaves a same-tab link without a rel attribute', () => {
+    const { getByText } = render(<UiLink href={testUrl}>{testText}</UiLink>);
+
+    expect(getByText(testText)).not.toHaveAttribute('rel');
   });
 });

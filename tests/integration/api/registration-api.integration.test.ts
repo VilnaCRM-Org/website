@@ -167,7 +167,9 @@ describe('integration: registration GraphQL API boundary', () => {
   });
 
   describe('error translation pipeline', () => {
-    it('maps a GraphQL business error to its message via CombinedGraphQLErrors', async () => {
+    it('never renders a business error verbatim, so the API cannot enumerate accounts', async () => {
+      // The server distinguishes "this email is taken" from any other failure;
+      // the client must not pass that distinction on to the visitor (#378 F2).
       const message = 'A user with this email already exists.';
       fetchMock.mockResolvedValue(
         graphqlErrors([{ message, extensions: { code: 'BAD_USER_INPUT' } }])
@@ -176,7 +178,8 @@ describe('integration: registration GraphQL API boundary', () => {
       const error = await captureError();
 
       expect(CombinedGraphQLErrors.is(error)).toBe(true);
-      expect(handleApolloError({ error })).toBe(message);
+      expect(handleApolloError({ error })).toBe(messages[CLIENT_ERROR_KEYS.WENT_WRONG]);
+      expect(handleApolloError({ error })).not.toBe(message);
     });
 
     it('maps a GraphQL error carrying a 5xx statusCode to the server-error message', async () => {

@@ -27,6 +27,7 @@ test.describe('Form Submission Visual Test', () => {
       await nameInput.fill('John Doe');
       await page.getByPlaceholder(placeholders.email).fill('johndoe@example.com');
       await page.getByPlaceholder(placeholders.password).fill('SecurePassword123');
+      await page.getByPlaceholder(placeholders.confirmPassword).fill('SecurePassword123');
       await page.getByRole('checkbox').check();
 
       const submitButton: Locator = page.locator('button[type="submit"]');

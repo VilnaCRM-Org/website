@@ -36,6 +36,7 @@ import {
 const fullNamePlaceholder: string = t('sign_up.form.name_input.placeholder');
 const emailPlaceholder: string = t('sign_up.form.email_input.placeholder');
 const passwordPlaceholder: string = t('sign_up.form.password_input.placeholder');
+const confirmPasswordPlaceholder: string = t('sign_up.form.confirm_password_input.placeholder');
 const submitText: string = t('sign_up.form.button_text');
 const successTitle: string = t('notifications.success.title');
 const errorTitle: string = t('notifications.error.title');
@@ -64,6 +65,9 @@ function fillAndSubmit(): void {
     target: { value: credentials.email },
   });
   fireEvent.change(screen.getByPlaceholderText(passwordPlaceholder), {
+    target: { value: credentials.password },
+  });
+  fireEvent.change(screen.getByPlaceholderText(confirmPasswordPlaceholder), {
     target: { value: credentials.password },
   });
   fireEvent.click(screen.getByRole('checkbox'));
@@ -128,6 +132,7 @@ describe('integration: AuthLayout', () => {
       expect(screen.getByPlaceholderText(emailPlaceholder)).toHaveValue('');
       expect(screen.getByPlaceholderText(fullNamePlaceholder)).toHaveValue('');
       expect(screen.getByPlaceholderText(passwordPlaceholder)).toHaveValue('');
+    expect(screen.getByPlaceholderText(confirmPasswordPlaceholder)).toHaveValue('');
       expect(screen.getByRole('checkbox')).not.toBeChecked();
     });
 
@@ -142,6 +147,14 @@ describe('integration: AuthLayout', () => {
     expect(input.initials).toBe(credentials.fullName);
     expect(input.password).toBe(credentials.password);
     expect(input.clientMutationId.length).toBeGreaterThan(0);
+    // Exact key set, not just the expected fields: `ConfirmPassword` is a
+    // client-side typo guard and must never reach the server (#382 F4).
+    expect(Object.keys(input).sort()).toEqual([
+      'clientMutationId',
+      'email',
+      'initials',
+      'password',
+    ]);
   });
 
   it('shows the error notification and keeps the form data when the API rejects', async () => {
