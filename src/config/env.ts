@@ -32,30 +32,24 @@ import { z } from 'zod';
  * `src/test/unit/prod-env-transport.test.ts`, because `NODE_ENV` alone cannot
  * distinguish a production export from a Storybook build.
  */
-const LOOPBACK_HOSTNAMES: ReadonlySet<string> = new Set(['localhost', '127.0.0.1', '[::1]', '::1']);
-
 const CLEARTEXT_ENDPOINT_MESSAGE =
   'must use https:// — cleartext http:// is accepted only for loopback hosts, ' +
   'because this endpoint carries registration credentials';
 
-function parseUrl(value: string): URL | null {
-  try {
-    return new URL(value);
-  } catch {
-    return null;
-  }
-}
+/**
+ * Matches `https://…` and cleartext loopback only. Written as one pattern
+ * rather than a `new URL()` inspection so the check is total: it needs no
+ * try/catch for an unparseable value and has no branch that can fall open.
+ * Anything it does not recognise — a remote `http://` host, a lookalike such as
+ * `http://localhost.example.com`, or `http://user:pass@localhost` — is
+ * rejected, which is the safe direction for the endpoint that carries the
+ * registration password. The host alternatives are anchored by `(:port)?(/|$)`
+ * so a longer hostname cannot pass as loopback.
+ */
+const ENCRYPTED_OR_LOOPBACK = /^(https:\/\/|http:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?(\/|$))/i;
 
 function isEncryptedOrLoopback(value: string): boolean {
-  const url: URL | null = parseUrl(value);
-  // Zod runs refinements even when the base `z.url()` check already failed, so
-  // an unparseable value reaches here. That failure is `z.url()`'s to report —
-  // this check has nothing to add to it.
-  if (url === null) {
-    return true;
-  }
-
-  return url.protocol === 'https:' || LOOPBACK_HOSTNAMES.has(url.hostname);
+  return ENCRYPTED_OR_LOOPBACK.test(value);
 }
 
 const credentialEndpoint: () => z.ZodType<string> = () =>

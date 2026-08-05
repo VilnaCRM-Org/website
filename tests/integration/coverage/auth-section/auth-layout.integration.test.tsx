@@ -132,7 +132,7 @@ describe('integration: AuthLayout', () => {
       expect(screen.getByPlaceholderText(emailPlaceholder)).toHaveValue('');
       expect(screen.getByPlaceholderText(fullNamePlaceholder)).toHaveValue('');
       expect(screen.getByPlaceholderText(passwordPlaceholder)).toHaveValue('');
-    expect(screen.getByPlaceholderText(confirmPasswordPlaceholder)).toHaveValue('');
+      expect(screen.getByPlaceholderText(confirmPasswordPlaceholder)).toHaveValue('');
       expect(screen.getByRole('checkbox')).not.toBeChecked();
     });
 
