@@ -42,12 +42,33 @@ const TABBABLE_SELECTOR: string = [
   '[tabindex]',
 ].join(', ');
 
-/** Asserts the element is visible and takes focus when focused. */
+/**
+ * Asserts the element takes focus, and is visible once it has it.
+ *
+ * Visibility is checked AFTER focusing on purpose: the standard skip link
+ * (WCAG 2.4.1) is deliberately hidden until focused, so asserting visibility
+ * first would fail the one control this helper most needs to accept.
+ */
 export async function expectFocusable(target: Locator): Promise<void> {
-  await expect(target).toBeVisible();
   await target.focus();
   await expect(target).toBeFocused();
+  await expect(target).toBeVisible();
 }
+
+/**
+ * How many sweep stops may land somewhere the stamp did not mark before the
+ * sweep is treated as having escaped the document. Browsers occasionally route
+ * one Tab through the document root, so this is not zero — but it is small,
+ * because a stop that is not a stamped control is a stop the gate cannot reason
+ * about.
+ */
+const MAX_UNMARKED_STOPS: number = 2;
+
+/** Poll interval while waiting for the tabbable set to stop changing. */
+const STAMP_SETTLE_MS: number = 250;
+
+/** How many times the stamp may be retaken before we accept the count. */
+const STAMP_SETTLE_ATTEMPTS: number = 6;
 
 /**
  * Stamps every genuinely tabbable element with its DOM order and returns how
@@ -93,6 +114,32 @@ async function markTabbables(page: Page, selector: string, attribute: string): P
   );
 }
 
+/**
+ * Stamps repeatedly until the tabbable count stops changing.
+ *
+ * Every route here mounts its chrome through `next/dynamic({ ssr: false })`, so
+ * a single stamp taken the moment the ready selector appears can miss controls
+ * that mount milliseconds later. Those would then read as unmarked for the rest
+ * of the sweep — and a sweep that leaves the stamped set can no longer see a
+ * trap. Settling first is what makes the assertions below mean anything.
+ */
+async function markSettledTabbables(page: Page): Promise<number> {
+  let previous: number = -1;
+  let current: number = await markTabbables(page, TABBABLE_SELECTOR, TAB_ORDER_ATTRIBUTE);
+
+  for (
+    let attempt: number = 0;
+    attempt < STAMP_SETTLE_ATTEMPTS && current !== previous;
+    attempt += 1
+  ) {
+    await page.waitForTimeout(STAMP_SETTLE_MS);
+    previous = current;
+    current = await markTabbables(page, TABBABLE_SELECTOR, TAB_ORDER_ATTRIBUTE);
+  }
+
+  return current;
+}
+
 /** Reads the sweep marker of whatever currently holds focus, shadow DOM aware. */
 async function readFocusMarker(page: Page, attribute: string): Promise<number> {
   return page.evaluate(orderAttribute => {
@@ -122,7 +169,7 @@ async function readFocusMarker(page: Page, attribute: string): Promise<number> {
  * actually observed instead of only that something was wrong.
  */
 export async function expectKeyboardOperable(page: Page): Promise<void> {
-  const tabbableCount: number = await markTabbables(page, TABBABLE_SELECTOR, TAB_ORDER_ATTRIBUTE);
+  const tabbableCount: number = await markSettledTabbables(page);
 
   expect(tabbableCount, 'route exposes no keyboard-focusable controls').toBeGreaterThan(0);
 
@@ -141,10 +188,15 @@ export async function expectKeyboardOperable(page: Page): Promise<void> {
 
   const readableTrace: string = `tab order trace: ${trace.join(' -> ')}`;
 
+  // Without this the gate is vacuous: a sweep whose focus leaves the stamped
+  // set on step two records `0 -> -1 -> -1 -> ...`, has no adjacent known pair
+  // to inspect, and would otherwise pass — including when the route is
+  // completely keyboard-trapped.
+  const unmarkedStops: number = trace.filter(marker => marker === UNMARKED).length;
   expect(
-    trace.some(marker => marker !== UNMARKED),
-    `Tab never reached a known control. ${readableTrace}`
-  ).toBe(true);
+    unmarkedStops,
+    `Tab left the known controls and did not come back. ${readableTrace}`
+  ).toBeLessThanOrEqual(MAX_UNMARKED_STOPS);
 
   // Compare stops that are adjacent in the REAL sweep. Compacting the trace
   // first would be wrong: a trace of `3 -> -1 -> 3` is focus visiting something

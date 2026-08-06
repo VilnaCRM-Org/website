@@ -45,13 +45,15 @@ chromium, firefox, and webkit (`src/test/e2e/**/*.spec.ts`, `src/test/visual/**/
 visual snapshots sit in adjacent `*-snapshots/` folders. Run all three unit layers with
 `make test-unit-all`.
 
-The accessibility layer (issue #317) is two halves of one contract, both run by
-`make test-a11y`: `jest-axe` over rendered components in the client Jest suite
-(`src/test/testing-library/A11yComponents.test.tsx` plus inline assertions in component
-specs), and `@axe-core/playwright` over every registered route in all three browsers
-(`src/test/a11y/**`). The binding target is **WCAG 2.1 AA**, asserted per rule — the
-Lighthouse accessibility score is a weighted category heuristic on two URLs and does not
-replace it. The conformance target, the in-scope axe tags, and the exception process live in
+The accessibility layer (issue #317) is two halves of one contract: `jest-axe` over rendered
+components, and `@axe-core/playwright` over every registered route in all three browsers
+(`src/test/a11y/**`). `make test-a11y` runs the dedicated component suite
+(`src/test/testing-library/A11yComponents.test.tsx`) and the route suite; the per-component
+axe assertions that live inside `UiButton`, `UiInput`, `UiCheckBox`, `Header` and `AuthForm`
+run with the rest of the client layer under `make test-unit-client`. The binding target is
+**WCAG 2.1 AA**, asserted per rule — the Lighthouse accessibility score is a weighted
+category heuristic on two URLs and does not replace it. The conformance target, the in-scope
+axe tags, and the exception process live in
 [`docs/accessibility/acceptance-standard.md`](docs/accessibility/acceptance-standard.md); the
 tag list and allowlist have a single home in `src/test/a11y/axe-config.ts`. Adding a page
 means adding it to `src/test/a11y/routes.ts` — a unit test fails if the registry drifts from

@@ -154,7 +154,11 @@ test.describe('Swagger UI Enhanced Interactions', () => {
     await expect(endpoint.locator(locators.responseStatus).last()).toHaveText(/^\d{3}$/);
   });
 
-  test('should handle an invalid request body gracefully', async ({ page }) => {
+  // Named for what it can actually verify: Mockoon generates responses from the
+  // OpenAPI schema and serves the first declared status regardless of the body,
+  // so the contract here is that a malformed body still produces a rendered
+  // response rather than a hang or a blank pane — not that the API rejects it.
+  test('should render a response for a malformed request body', async ({ page }) => {
     const endpoint: Locator = page.locator(USER_ENDPOINTS.CREATE);
     await endpoint.click();
 

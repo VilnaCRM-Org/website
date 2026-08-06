@@ -97,5 +97,5 @@ pr-comments	bats	tests/bats/makefile_targets.bats	Validated with a stubbed get-p
 lint-metrics	bats	tests/bats/makefile_targets.bats	Validated host-only: ensure-rca.sh provisioning (idempotent) plus lint-metrics.sh policy enforcement against the committed policy with a stubbed analyzer.
 test-a11y	bats	tests/bats/makefile_targets.bats	Validated as the aggregate that runs both accessibility legs with stubbed Jest and Playwright commands.
 test-a11y-components	bats	tests/bats/makefile_targets.bats	Validated by invoking Jest with TEST_ENV=client against the component a11y spec through a stubbed jest binary.
-test-a11y-routes	ci	.github/workflows/a11y-testing.yml	Executed through `make test-a11y`, which depends on `test-a11y-routes`.
+test-a11y-routes	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker and Playwright commands; also executed in CI through `make test-a11y`.
 ci-test-a11y	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker and Playwright commands.

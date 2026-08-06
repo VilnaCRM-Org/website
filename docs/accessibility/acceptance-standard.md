@@ -38,9 +38,10 @@ Deliberately excluded:
 - `wcag2aaa`, `wcag22aa` — above the target.
 - `experimental`, `deprecated` — axe suppresses these by default via `tagExclude`.
 
-That last exclusion has a catch worth knowing about. Three rules carry a WCAG 2.1 AA tag but
-are flagged `experimental`, so a plain tag-based run silently never executes them — including
-`label-content-name-mismatch`, which is the **only** rule in axe-core tagged `wcag21a`.
+That last exclusion has a catch worth knowing about. In axe-core 4.12.1, five rules carry a
+WCAG 2.1 AA tag and are flagged `experimental`, so a plain tag-based run silently never
+executes them — including `label-content-name-mismatch`, which is the **only** rule in
+axe-core tagged `wcag21a`.
 Without an override, that whole tag matches nothing. `FORCED_RULES` in
 `src/test/a11y/axe-config.ts` re-enables them, and a unit test asserts the list stays correct
 against the installed axe-core:
@@ -102,9 +103,11 @@ make test-a11y-components   # jest-axe, jsdom, fast
 make test-a11y-routes       # axe + keyboard in real browsers (boots the prod stack)
 ```
 
-CI runs the same target from `.github/workflows/a11y-testing.yml` as its own required check,
+CI runs the same target from `.github/workflows/a11y-testing.yml` as a check of its own,
 separate from `static testing` and `performance testing`. The route scans also run in the
-prod-side phase via `make ci-test-a11y`.
+prod-side phase via `make ci-test-a11y`. Whether a check actually blocks a merge is a
+repository ruleset setting rather than something a workflow can declare — `main` has no
+required checks configured yet, which is tracked separately.
 
 ## Definition of a11y-done
 
@@ -136,8 +139,10 @@ Treat these as manual review items on any change that touches UI:
 - Contrast in hover, focus, active, disabled and placeholder states — the route scan only ever
   sees the default state.
 - Reflow, zoom and mobile viewports. The Playwright projects are desktop-only today.
-- `incomplete` axe results, which mean "axe could not decide". They are reported in the
-  Playwright artifact and are not gated, because they are advisory by construction.
+- `incomplete` axe results, which mean "axe could not decide" — typically contrast over a
+  gradient or an image. `scanRoute` attaches them to the Playwright report as an
+  `axe-incomplete*` artifact for human review; they are not gated, because they are advisory
+  by construction.
 
 ## Exception process
 

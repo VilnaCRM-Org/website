@@ -21,8 +21,24 @@ import { scanRoute } from './scan-route';
  */
 const ROUTE_READY_TIMEOUT: number = 20_000;
 
+/**
+ * The site chrome is composed in `pages/_app.tsx` through
+ * `next/dynamic({ ssr: false })`, so it exists only after hydration. Waiting for
+ * it on every route is what makes the scans deterministic: a page whose own
+ * ready selector is server-rendered (`/en/docs/api` is just an `h1`) would
+ * otherwise be scanned during the window before any interactive control has
+ * mounted, and the keyboard sweep would intermittently find nothing to walk.
+ */
+const CHROME_SELECTOR: string = 'header';
+
 async function openRoute(page: Page, route: A11yRoute): Promise<void> {
   await page.goto(route.path, { waitUntil: 'domcontentloaded' });
+
+  await page
+    .locator(CHROME_SELECTOR)
+    .first()
+    .waitFor({ state: 'visible', timeout: ROUTE_READY_TIMEOUT });
+
   await page
     .locator(route.readySelector)
     .first()

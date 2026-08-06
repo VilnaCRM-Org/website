@@ -12,14 +12,14 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # The accessibility gate is a required check of its own, separate from
-  # `static testing` (jsx-a11y lint) and `performance testing` (the Lighthouse
-  # accessibility category score). Those two are heuristics; this one asserts
-  # WCAG 2.1 AA per rule, per component and per route. See
+  # The accessibility gate is a check of its own, separate from `static testing`
+  # (jsx-a11y lint) and `performance testing` (the Lighthouse accessibility
+  # category score). Those two are heuristics; this one asserts WCAG 2.1 AA per
+  # rule, per component and per route. See
   # docs/accessibility/acceptance-standard.md.
   a11y:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
     permissions:
       contents: read
     steps:

@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, type Page } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 import {
   FORCED_RULES,
@@ -34,6 +34,24 @@ export async function scanRoute(page: Page, route: string): Promise<void> {
     results.passes.length + results.violations.length + results.incomplete.length,
     `axe evaluated no rules on ${route} — the page almost certainly failed to render`
   ).toBeGreaterThan(0);
+
+  // `incomplete` means axe could not decide — typically contrast over a
+  // gradient or an image. It is advisory by construction, so it is published
+  // for human review rather than gated on; see the acceptance standard.
+  if (results.incomplete.length > 0) {
+    await test.info().attach(`axe-incomplete${route.replace(/\//g, '_')}`, {
+      body: JSON.stringify(
+        results.incomplete.map(result => ({
+          id: result.id,
+          help: result.help,
+          nodes: result.nodes.length,
+        })),
+        null,
+        2
+      ),
+      contentType: 'application/json',
+    });
+  }
 
   const violations = filterAllowedViolations(results.violations, { layer: 'route', route });
 
