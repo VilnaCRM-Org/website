@@ -48,6 +48,11 @@ test.describe('route accessibility', () => {
     });
 
     test(`${route.name} (${route.path}) exposes a focusable first control`, async ({ page }) => {
+      // `openRoute` may wait ROUTE_READY_TIMEOUT for swagger to hydrate, which
+      // is close enough to Playwright's default test timeout to report a bare
+      // timeout instead of "the ready selector never appeared".
+      test.slow();
+
       await openRoute(page, route);
 
       await expectFocusable(page.getByRole('link').first());

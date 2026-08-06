@@ -5,8 +5,9 @@
  * (`lighthouserc.desktop.js` / `lighthouserc.mobile.js`); this registry is the
  * route-level contract and must list every page under `pages/`. Adding a page
  * without adding it here is the drift this registry exists to prevent —
- * `src/test/a11y/routes.a11y.spec.ts` asserts the registry stays in step with
- * the shipped pages.
+ * `src/test/unit/a11y/routes.test.ts` derives the route list from the
+ * filesystem and fails when the two disagree. `routes.a11y.spec.ts` consumes
+ * this registry; it does not police it.
  */
 export interface A11yRoute {
   /** Path relative to the Playwright `baseURL`. */

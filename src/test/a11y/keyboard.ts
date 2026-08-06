@@ -140,18 +140,28 @@ export async function expectKeyboardOperable(page: Page): Promise<void> {
   }
 
   const readableTrace: string = `tab order trace: ${trace.join(' -> ')}`;
-  const marked: number[] = trace.filter(marker => marker !== UNMARKED);
 
-  expect(marked.length, `Tab never reached a known control. ${readableTrace}`).toBeGreaterThan(0);
+  expect(
+    trace.some(marker => marker !== UNMARKED),
+    `Tab never reached a known control. ${readableTrace}`
+  ).toBe(true);
 
-  const trapped: boolean = marked.some(
-    (marker, index) => index > 0 && marker === marked[index - 1]
-  );
+  // Compare stops that are adjacent in the REAL sweep. Compacting the trace
+  // first would be wrong: a trace of `3 -> -1 -> 3` is focus visiting something
+  // the stamp did not match and coming back, which is neither a trap nor a
+  // back-jump — but compaction reads it as `[3, 3]` and fails. Any pair
+  // involving an unstamped stop is simply not evidence either way.
+  const adjacentKnownPairs: readonly (readonly [number, number])[] = trace
+    .slice(1)
+    .map((marker, index): readonly [number, number] => [trace[index] ?? UNMARKED, marker])
+    .filter(([previous, current]) => previous !== UNMARKED && current !== UNMARKED);
+
+  const trapped: boolean = adjacentKnownPairs.some(([previous, current]) => previous === current);
   const trapMessage: string = `focus stopped advancing — keyboard trap? ${readableTrace}`;
   expect(trapped, trapMessage).toBe(false);
 
-  const backJumps: number = marked.filter(
-    (marker, index) => index > 0 && marker < (marked[index - 1] ?? marker)
+  const backJumps: number = adjacentKnownPairs.filter(
+    ([previous, current]) => current < previous
   ).length;
   expect(backJumps, `focus order does not follow DOM order. ${readableTrace}`).toBeLessThanOrEqual(
     1

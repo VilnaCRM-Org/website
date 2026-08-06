@@ -351,19 +351,22 @@ describe('AuthForm', () => {
     const { container, queryByText } = renderAuthForm();
     const { emailInput, passwordInput } = getFormElements();
 
+    // Unconditional by design: an `if (emailInput)` wrapper here would be the
+    // very silent-green pattern this suite exists to remove — a missing field
+    // would skip the interaction and the scan would pass on a pristine form.
+    expect(emailInput).not.toBeNull();
+    expect(passwordInput).not.toBeNull();
+
     // The error state is where a11y regressions actually hide: the message has
-    // to be associated with its field, not just painted red next to it.
-    if (emailInput) {
-      fireEvent.change(emailInput, { target: { value: 'invalid-email' } });
-      fireEvent.blur(emailInput);
-    }
-    if (passwordInput) {
-      fireEvent.change(passwordInput, { target: { value: '123' } });
-      fireEvent.blur(passwordInput);
-    }
+    // to be associated with its field, not just painted red beside it.
+    fireEvent.change(emailInput!, { target: { value: 'invalid-email' } });
+    fireEvent.blur(emailInput!);
+    fireEvent.change(passwordInput!, { target: { value: '123' } });
+    fireEvent.blur(passwordInput!);
 
     await waitFor(() => {
       expect(queryByText(emailMissingSymbols)).toBeInTheDocument();
+      expect(queryByText(passwordErrorLength)).toBeInTheDocument();
     });
 
     await expectNoA11yViolations(container);
