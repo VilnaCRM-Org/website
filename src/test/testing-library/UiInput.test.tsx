@@ -2,6 +2,8 @@ import { render, fireEvent } from '@testing-library/react';
 
 import { UiInput } from '@/components';
 
+import { expectNoA11yViolations } from '../a11y/expect-no-a11y-violations';
+
 import { testText, testEmail, testPlaceholder } from './constants';
 
 const testType: string = 'email';
@@ -49,5 +51,16 @@ describe('UiInput', () => {
     const { getByRole } = render(<UiInput disabled />);
     const inputElement: HTMLElement = getByRole('textbox');
     expect(inputElement).toBeDisabled();
+  });
+
+  it('has no WCAG 2.1 AA violations when associated with a label', async () => {
+    const { container } = render(
+      <>
+        <label htmlFor="ui-input-a11y">{testText}</label>
+        <UiInput id="ui-input-a11y" type={testType} placeholder={testPlaceholder} />
+      </>
+    );
+
+    await expectNoA11yViolations(container);
   });
 });

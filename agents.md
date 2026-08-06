@@ -31,6 +31,7 @@ than one. Match the change to the suite and run its verification command.
 | Edge unit         | Deployed edge/runtime scripts (`scripts/`) | `make test-unit-edge`   |
 | End-to-end (e2e)  | User-facing flows end to end (Mockoon API) | `make test-e2e`         |
 | Visual regression | Any change to rendered UI or styling       | `make test-visual`      |
+| Accessibility     | Any change to rendered UI or a new route   | `make test-a11y`        |
 
 Client unit tests run on Jest with React Testing Library in a jsdom env
 (`TEST_ENV=client`); specs live in `src/test/testing-library/**/*.test.tsx` and
@@ -43,6 +44,24 @@ the layer is pinned at 100% per-file coverage. E2E and visual specs are Playwrig
 chromium, firefox, and webkit (`src/test/e2e/**/*.spec.ts`, `src/test/visual/**/*.spec.ts`);
 visual snapshots sit in adjacent `*-snapshots/` folders. Run all three unit layers with
 `make test-unit-all`.
+
+The accessibility layer (issue #317) is two halves of one contract, both run by
+`make test-a11y`: `jest-axe` over rendered components in the client Jest suite
+(`src/test/testing-library/A11yComponents.test.tsx` plus inline assertions in component
+specs), and `@axe-core/playwright` over every registered route in all three browsers
+(`src/test/a11y/**`). The binding target is **WCAG 2.1 AA**, asserted per rule — the
+Lighthouse accessibility score is a weighted category heuristic on two URLs and does not
+replace it. The conformance target, the in-scope axe tags, and the exception process live in
+[`docs/accessibility/acceptance-standard.md`](docs/accessibility/acceptance-standard.md); the
+tag list and allowlist have a single home in `src/test/a11y/axe-config.ts`. Adding a page
+means adding it to `src/test/a11y/routes.ts` — a unit test fails if the registry drifts from
+`pages/`.
+
+Never make an a11y gate pass by suppressing it: no `eslint-disable`, no axe rule removal, no
+`test.skip`, and no `if (count > 0)` / `if (isVisible())` wrapper around an assertion — a
+guarded assertion that never runs is worse than no test, because it reports green. Accepted
+debt goes through the documented exception allowlist with a rule id, a scope, a reason, and a
+tracking issue.
 
 Add a specialized suite when the change touches its concern: `make test-mutation` (test
 strength), `make test-bats` (Makefile and CI shell flows), `make test-memory-leak` (leaks),
@@ -117,6 +136,7 @@ CI=1 make test-unit-client   # Client unit suite (jsdom)
 CI=1 make test-unit-server   # Server unit suite (node)
 make test-e2e                # User-facing flows (for UI or behavior changes)
 make test-visual             # Visual regression (for UI or styling changes)
+make test-a11y               # WCAG 2.1 AA gates (for UI changes or a new route)
 make lint                    # Full gate: ESLint, TypeScript, and markdownlint
 make lint-contracts          # Upstream contracts (when .env pins or gql documents change)
 ```
@@ -165,6 +185,8 @@ A change to tests is done only when every statement below is true.
 - Bug fixes include a regression test that fails before the fix and passes after it.
 - Assertions check user-facing behavior, not implementation details or snapshots alone.
 - Localized text and accessibility-visible behavior are asserted where the UI changed.
+- Changed UI passes `make test-a11y` at WCAG 2.1 AA, with no new exception added to the
+  allowlist and no suppression used to get there.
 - New or changed `ui-*` primitives and exported feature components have a `*.stories.tsx`.
 - The relevant test commands above were run and passed, including `make lint`.
 - Commits follow Conventional Commits.

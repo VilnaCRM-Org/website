@@ -69,6 +69,7 @@ make test-integration   # Integration layer (TEST_ENV=integration)
 make test-e2e           # Playwright E2E (prod stack + Mockoon API mock)
 make test-visual        # Playwright visual regression
 make test-visual-update # Refresh visual snapshots after a reviewed UI change
+make test-a11y          # WCAG 2.1 AA gates: jest-axe components + axe/keyboard routes
 make test-mutation      # Stryker mutation testing
 make test-bats          # Bats coverage for Makefile / CI shell flows
 make test-memory-leak   # memlab leak detection
@@ -81,6 +82,24 @@ Unit suites accept `CI=1` to run on the host without Docker (e.g. `CI=1 make
 test-unit-all`). E2E and visual specs run Playwright inside the prod/test compose stack;
 E2E uses Mockoon to mock the API. The test-layer map and coverage policy live in
 [`agents.md`](agents.md).
+
+### Accessibility (issue #317)
+
+The binding conformance target is **WCAG 2.1 AA**, enforced per rule at two layers by
+`make test-a11y` and by `.github/workflows/a11y-testing.yml`: `jest-axe` over rendered
+components in the client Jest suite, and `@axe-core/playwright` plus a keyboard sweep over
+every route in `src/test/a11y/routes.ts`. Lighthouse's accessibility score is a weighted
+category heuristic on two URLs and is defence in depth, not a substitute.
+
+Read [`docs/accessibility/acceptance-standard.md`](docs/accessibility/acceptance-standard.md)
+before changing UI. The axe tag list and the exception allowlist have exactly one home,
+`src/test/a11y/axe-config.ts`. Adding a page means adding it to `src/test/a11y/routes.ts`; a
+unit test fails if that registry drifts from `pages/`.
+
+Never make the gate pass by suppressing it — no `eslint-disable`, no axe rule removal, no
+`test.skip`, and never an `if (count > 0)` / `if (isVisible())` wrapper around an assertion.
+Accepted debt goes through the documented allowlist with a rule id, a scope, a reason, and a
+tracking issue.
 
 ### Running a single unit test
 

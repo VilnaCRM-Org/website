@@ -5,6 +5,8 @@ import { t } from 'i18next';
 import { env } from '@/config/env';
 import { OnSubmitType } from '@/test/testing-library/fixtures/auth-test-helpers';
 
+import { expectNoA11yViolations } from '../a11y/expect-no-a11y-violations';
+
 import { testInitials, testEmail, testPassword } from './constants';
 import renderAuthForm from './fixtures/auth-form-helper';
 import { checkElementsInDocument, fillForm, getFormElements } from './utils';
@@ -337,5 +339,33 @@ describe('AuthForm', () => {
       expect(queryByText(requiredText)).toBeInTheDocument();
       expect(queryByText(nameRequired)).toBeInTheDocument();
     });
+  });
+
+  it('has no WCAG 2.1 AA violations in its pristine state', async () => {
+    const { container } = renderAuthForm();
+
+    await expectNoA11yViolations(container);
+  });
+
+  it('has no WCAG 2.1 AA violations while showing validation errors', async () => {
+    const { container, queryByText } = renderAuthForm();
+    const { emailInput, passwordInput } = getFormElements();
+
+    // The error state is where a11y regressions actually hide: the message has
+    // to be associated with its field, not just painted red next to it.
+    if (emailInput) {
+      fireEvent.change(emailInput, { target: { value: 'invalid-email' } });
+      fireEvent.blur(emailInput);
+    }
+    if (passwordInput) {
+      fireEvent.change(passwordInput, { target: { value: '123' } });
+      fireEvent.blur(passwordInput);
+    }
+
+    await waitFor(() => {
+      expect(queryByText(emailMissingSymbols)).toBeInTheDocument();
+    });
+
+    await expectNoA11yViolations(container);
   });
 });

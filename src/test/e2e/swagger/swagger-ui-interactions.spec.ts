@@ -1,33 +1,63 @@
 import { test, expect, type Locator } from '@playwright/test';
 
-import { getLocators, TEST_CONSTANTS, SwaggerLocators } from './utils';
-import { UI_INTERACTION_DELAY } from './utils/constants';
+import { getLocators, TEST_CONSTANTS, SwaggerLocators, USER_ENDPOINTS } from './utils';
+import { locators } from './utils/locators';
+
+/**
+ * Swagger UI interaction coverage.
+ *
+ * Every assertion here is unconditional (issue #317). This file previously
+ * wrapped its assertions in `if (count > 0)` / `if (await x.isVisible())`
+ * guards, so a missing element skipped the assertion and the test still
+ * reported green — several of them asserted nothing at all, because the
+ * elements they guarded on (an `api_key` input, a search box, a
+ * `button[title*="Copy"]`, `.model-box__description` links, `.response-time`)
+ * are not rendered by this Swagger configuration. The tests below target what
+ * the page actually renders, and fail when it stops rendering it.
+ */
+
+/** Swagger hydrates from a fetched spec, so the first paint needs headroom. */
+const SWAGGER_READY_TIMEOUT: number = 20_000;
+
+/** Executing against the Mockoon-backed API is a real round trip. */
+const EXECUTE_TIMEOUT: number = TEST_CONSTANTS.API_RESPONSE_TIMEOUT * 5;
 
 test.describe('Swagger UI Enhanced Interactions', () => {
   let elements: SwaggerLocators;
 
   test.beforeEach(async ({ page }) => {
-    await page.goto(TEST_CONSTANTS.SWAGGER_PATH);
+    await page.goto(TEST_CONSTANTS.SWAGGER_PATH, { waitUntil: 'domcontentloaded' });
     elements = getLocators(page);
+    await elements.apiDocumentation
+      .first()
+      .waitFor({ state: 'visible', timeout: SWAGGER_READY_TIMEOUT });
   });
 
   test('should handle authorization modal', async ({ page }) => {
-    await elements.authorizeButton.click();
+    await elements.authorizeButton.first().click();
 
     const authModal: Locator = page.locator('.modal-ux');
     await expect(authModal).toBeVisible();
 
-    const apiKeyInput: Locator = authModal.locator('input[placeholder*="api_key"]');
-    if (await apiKeyInput.isVisible()) {
-      await apiKeyInput.fill('test-api-key');
-      await authModal.locator('button:has-text("Authorize")').click();
-    }
+    // The pinned spec declares a single OAuth2 authorizationCode flow, so the
+    // modal renders client credential fields — not the api_key / Bearer inputs
+    // the guarded version looked for and never found.
+    const clientId: Locator = authModal.locator('#client_id_authorizationCode');
+    const clientSecret: Locator = authModal.locator('#client_secret_authorizationCode');
 
-    const bearerInput: Locator = authModal.locator('input[placeholder*="Bearer"]');
-    if (await bearerInput.isVisible()) {
-      await bearerInput.fill('test-bearer-token');
-      await authModal.locator('button:has-text("Authorize")').click();
-    }
+    await expect(clientId).toBeVisible();
+    await expect(clientSecret).toBeVisible();
+
+    await clientId.fill('test-client-id');
+    await clientSecret.fill('test-client-secret');
+
+    await expect(clientId).toHaveValue('test-client-id');
+    await expect(clientSecret).toHaveValue('test-client-secret');
+
+    // Both credential fields must be labelled, or the dialog is unusable with
+    // a screen reader.
+    await expect(authModal.locator('label[for="client_id_authorizationCode"]')).toBeVisible();
+    await expect(authModal.locator('label[for="client_secret_authorizationCode"]')).toBeVisible();
 
     await authModal.locator('button:has-text("Close")').click();
     await expect(authModal).not.toBeVisible();
@@ -37,137 +67,110 @@ test.describe('Swagger UI Enhanced Interactions', () => {
     const firstEndpoint: Locator = elements.endpoints.first();
     await firstEndpoint.click();
 
-    const responseExamples: Locator = firstEndpoint.locator(
+    const documentedResponses: Locator = firstEndpoint.locator(
       '.responses-inner .response-col_description__inner'
     );
-    const exampleCount: number = await responseExamples.count();
 
-    if (exampleCount > 0) {
-      for (let i: number = 0; i < Math.min(exampleCount, 3); i += 1) {
-        const example: Locator = responseExamples.nth(i);
-        await example.click();
+    await expect(documentedResponses.first()).toBeVisible();
+    expect(await documentedResponses.count()).toBeGreaterThan(0);
 
-        const exampleContent: Locator = firstEndpoint.locator(
-          '.response-col_description__inner .model-example'
-        );
-        if (await exampleContent.isVisible()) {
-          const content: string | null = await exampleContent.textContent();
-          expect(content).toBeTruthy();
-        }
-      }
-    }
+    const exampleValue: Locator = firstEndpoint.locator('.responses-inner .model-example').first();
+
+    await expect(exampleValue).toBeVisible();
+    await expect(exampleValue).not.toBeEmpty();
+    await expect(exampleValue.locator('pre.example')).toContainText('email');
   });
 
-  test('should handle model schema expansion', async ({ page }) => {
+  test('should handle model schema expansion', async () => {
     const firstEndpoint: Locator = elements.endpoints.first();
     await firstEndpoint.click();
 
-    const modelLinks: Locator = firstEndpoint.locator('.model-box .model-box__description a');
-    const modelCount: number = await modelLinks.count();
+    // The response pane exposes Example Value / Schema tabs; switching to
+    // Schema is the model expansion this test is named for.
+    const examplePane: Locator = firstEndpoint.locator('.responses-inner .model-example').first();
+    const exampleTab: Locator = examplePane.getByRole('tab', { name: 'Example Value' });
+    const schemaTab: Locator = examplePane.getByRole('tab', { name: 'Schema' });
 
-    if (modelCount > 0) {
-      for (let i: number = 0; i < Math.min(modelCount, 2); i += 1) {
-        const modelLink: Locator = modelLinks.nth(i);
-        await modelLink.click();
+    await expect(exampleTab).toHaveAttribute('aria-selected', 'true');
+    await expect(schemaTab).toHaveAttribute('aria-selected', 'false');
 
-        const schemaModal: Locator = page.locator('.model-box__description__content');
-        if (await schemaModal.isVisible()) {
-          await expect(schemaModal).toBeVisible();
+    await schemaTab.click();
 
-          await page.keyboard.press('Escape');
-        }
-      }
-    }
+    await expect(schemaTab).toHaveAttribute('aria-selected', 'true');
+    await expect(exampleTab).toHaveAttribute('aria-selected', 'false');
+
+    const schemaPanel: Locator = examplePane.locator('[data-name="modelPanel"]');
+    await expect(schemaPanel).toBeVisible();
+    await expect(schemaPanel).not.toBeEmpty();
   });
 
-  test('should handle search functionality', async ({ page }) => {
-    const searchInput: Locator = page.locator('input[placeholder*="Search"]');
-    if (await searchInput.isVisible()) {
-      await searchInput.fill('user');
-      await page.waitForTimeout(UI_INTERACTION_DELAY);
+  test('should list every documented endpoint under its tag', async ({ page }) => {
+    const tagSections: Locator = page.locator('.opblock-tag-section');
+    await tagSections.first().waitFor({ state: 'visible' });
 
-      const visibleEndpoints: Locator = elements.endpoints.filter({ hasText: 'user' });
-      const visibleCount: number = await visibleEndpoints.count();
-      expect(visibleCount).toBeGreaterThan(0);
+    const tagCount: number = await tagSections.count();
+    expect(tagCount).toBeGreaterThan(0);
 
-      await searchInput.clear();
-      await page.waitForTimeout(UI_INTERACTION_DELAY);
+    let taggedOperations: number = 0;
+    for (let index: number = 0; index < tagCount; index += 1) {
+      const operations: number = await tagSections.nth(index).locator('.opblock').count();
+      expect(operations).toBeGreaterThan(0);
+      taggedOperations += operations;
     }
+
+    // Every rendered operation belongs to a tag section — nothing is orphaned.
+    expect(taggedOperations).toBe(await elements.endpoints.count());
   });
 
-  test('should handle endpoint filtering by tag', async ({ page }) => {
-    const tagFilters: Locator = page.locator('.opblock-tag-section');
-    await tagFilters.first().waitFor({ state: 'visible' });
+  test('should expose the curl command and its copy control after execute', async ({ page }) => {
+    const endpoint: Locator = page.locator(USER_ENDPOINTS.GET_COLLECTION);
+    await endpoint.click();
 
-    const tagCount: number = await tagFilters.count();
-    if (tagCount > 0) {
-      const firstTag: Locator = tagFilters.first();
+    await endpoint.locator('button:has-text("Try it out")').click();
+    await endpoint.locator('button:has-text("Execute")').click();
 
-      const endpoints: Locator = firstTag.locator('.opblock');
-      const endpointCount: number = await endpoints.count();
-      expect(endpointCount).toBeGreaterThan(0);
-    }
+    const curlBlock: Locator = endpoint.locator('.curl-command');
+    await expect(curlBlock).toBeVisible({ timeout: EXECUTE_TIMEOUT });
+    await expect(curlBlock).toContainText('curl');
+
+    const copyButton: Locator = endpoint.locator(locators.copyButton);
+    await expect(copyButton).toBeVisible();
+    await copyButton.click();
+    await expect(copyButton).toBeVisible();
   });
 
-  test('should handle copy URL functionality', async () => {
-    const firstEndpoint: Locator = elements.endpoints.first();
-    await firstEndpoint.click();
+  test('should render the live response after execute', async ({ page }) => {
+    const endpoint: Locator = page.locator(USER_ENDPOINTS.GET_COLLECTION);
+    await endpoint.click();
 
-    const copyUrlBtn: Locator = firstEndpoint.locator('button[title*="Copy"]');
-    if (await copyUrlBtn.isVisible()) {
-      await copyUrlBtn.click();
+    await endpoint.locator('button:has-text("Try it out")').click();
+    await endpoint.locator('button:has-text("Execute")').click();
 
-      await expect(copyUrlBtn).toBeVisible();
-    }
+    const liveResponses: Locator = endpoint.locator('.live-responses-table');
+    await expect(liveResponses).toBeVisible({ timeout: EXECUTE_TIMEOUT });
+
+    // Assert the shape, not the value: Mockoon generates responses from the
+    // OpenAPI schema, so the status code is the contract and the body is not.
+    await expect(endpoint.locator(locators.responseStatus).last()).toHaveText(/^\d{3}$/);
   });
 
-  test('should handle response time display', async ({ page }) => {
-    const firstEndpoint: Locator = elements.endpoints.first();
-    await firstEndpoint.click();
+  test('should handle an invalid request body gracefully', async ({ page }) => {
+    const endpoint: Locator = page.locator(USER_ENDPOINTS.CREATE);
+    await endpoint.click();
 
-    const tryItOutBtn: Locator = firstEndpoint.locator('button:has-text("Try it out")');
-    if (await tryItOutBtn.isVisible()) {
-      await tryItOutBtn.click();
+    await endpoint.locator('button:has-text("Try it out")').click();
 
-      const executeBtn: Locator = firstEndpoint.locator('button:has-text("Execute")');
-      if (await executeBtn.isVisible()) {
-        await executeBtn.click();
+    const bodyEditor: Locator = endpoint.locator(locators.jsonEditor);
+    await expect(bodyEditor).toBeVisible();
+    await bodyEditor.fill('{"invalid": "data"}');
+    await expect(bodyEditor).toHaveValue('{"invalid": "data"}');
 
-        await page.waitForTimeout(TEST_CONSTANTS.API_RESPONSE_TIMEOUT || 2000);
+    await endpoint.locator('button:has-text("Execute")').click();
 
-        const responseTime: Locator = firstEndpoint.locator('.response-time');
-        if (await responseTime.isVisible()) {
-          const timeText: string | null = await responseTime.textContent();
-          expect(timeText).toMatch(/\d+(\.\d+)?\s?(ms|s)/);
-        }
-      }
-    }
-  });
+    // The UI must still surface a response rather than hanging or blanking.
+    const liveResponses: Locator = endpoint.locator('.live-responses-table');
+    await expect(liveResponses).toBeVisible({ timeout: EXECUTE_TIMEOUT });
 
-  test('should handle error responses gracefully', async ({ page }) => {
-    const firstEndpoint: Locator = elements.endpoints.first();
-    await firstEndpoint.click();
-
-    const tryItOutBtn: Locator = firstEndpoint.locator('button:has-text("Try it out")');
-    if (await tryItOutBtn.isVisible()) {
-      await tryItOutBtn.click();
-
-      const bodyEditor: Locator = firstEndpoint.locator('.body-param__text');
-      if (await bodyEditor.isVisible()) {
-        await bodyEditor.fill('{"invalid": "data"}');
-      }
-
-      const executeBtn: Locator = firstEndpoint.locator('button:has-text("Execute")');
-      if (await executeBtn.isVisible()) {
-        await executeBtn.click();
-
-        await page.waitForTimeout(TEST_CONSTANTS.API_RESPONSE_TIMEOUT || 2000);
-
-        const errorResponse: Locator = firstEndpoint.locator('.response-col_status.error');
-        if (await errorResponse.isVisible()) {
-          await expect(errorResponse).toBeVisible();
-        }
-      }
-    }
+    await expect(endpoint.locator(locators.responseStatus).last()).toHaveText(/^\d{3}$/);
   });
 });

@@ -1,0 +1,70 @@
+import { readdirSync } from 'node:fs';
+import { join, relative, sep } from 'node:path';
+
+import { A11Y_ROUTES } from '../../a11y/routes';
+
+/**
+ * Drift guard for the accessibility route registry (issue #317).
+ *
+ * The whole point of the route-level gate is that it covers every page, not
+ * the two URLs Lighthouse audits. A page added under `pages/` without a
+ * registry entry would silently escape the scan, so this test derives the
+ * route list from the filesystem and requires the two to match exactly.
+ */
+
+const PAGES_ROOT: string = join(process.cwd(), 'pages');
+
+/** Next.js special files and non-route assets that never become routes. */
+const NON_ROUTE_FILES: readonly string[] = ['_app', '_document', '_error'];
+
+function collectPageFiles(directory: string): string[] {
+  return readdirSync(directory, { withFileTypes: true }).flatMap(entry => {
+    const absolute: string = join(directory, entry.name);
+
+    if (entry.isDirectory()) {
+      return collectPageFiles(absolute);
+    }
+
+    return /\.tsx$/.test(entry.name) ? [absolute] : [];
+  });
+}
+
+function toRoutePath(absolute: string): string {
+  const segments: string[] = relative(PAGES_ROOT, absolute)
+    .replace(/\.tsx$/, '')
+    .split(sep);
+  const last: string = segments[segments.length - 1] ?? '';
+
+  const withoutIndex: string[] = last === 'index' ? segments.slice(0, -1) : segments;
+
+  return `/${withoutIndex.join('/')}`;
+}
+
+function discoverRoutes(): string[] {
+  return collectPageFiles(PAGES_ROOT)
+    .filter(file => !NON_ROUTE_FILES.some(name => file.endsWith(`${sep}${name}.tsx`)))
+    .map(toRoutePath)
+    .sort();
+}
+
+describe('accessibility route registry', () => {
+  it('covers every page under pages/', () => {
+    const registered: string[] = A11Y_ROUTES.map(route => route.path).sort();
+
+    expect(registered).toEqual(discoverRoutes());
+  });
+
+  it('gives every route a name and a readiness selector', () => {
+    A11Y_ROUTES.forEach(route => {
+      expect(route.name).not.toHaveLength(0);
+      expect(route.readySelector).not.toHaveLength(0);
+      expect(route.path.startsWith('/')).toBe(true);
+    });
+  });
+
+  it('registers each route exactly once', () => {
+    const paths: string[] = A11Y_ROUTES.map(route => route.path);
+
+    expect(new Set(paths).size).toBe(paths.length);
+  });
+});

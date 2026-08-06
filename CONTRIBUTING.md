@@ -142,6 +142,29 @@ granted via an inline `# perf-exception: <reason>` marker or the
 [docs/dockerfile-performance.md](docs/dockerfile-performance.md) for the full
 policy, thresholds, and tuning guide.
 
+#### Accessibility (WCAG 2.1 AA)
+
+If your change renders UI or adds a route, it has to pass the accessibility gate.
+`make test-a11y` runs both halves: `jest-axe` over rendered components in jsdom,
+and `@axe-core/playwright` plus a keyboard sweep over every registered route in
+Chromium, Firefox and WebKit. CI runs the same target as its own required check
+(`.github/workflows/a11y-testing.yml`), separate from `static testing` (the
+`jsx-a11y` lint rules) and `performance testing` (the Lighthouse accessibility
+category score) — those are heuristics, this one asserts per rule.
+
+A new page must be added to `src/test/a11y/routes.ts`; a unit test fails when
+that registry drifts from `pages/`. The axe tag list and the exception allowlist
+live only in `src/test/a11y/axe-config.ts`.
+
+Never make the gate pass by suppressing it — no `eslint-disable`, no axe rule
+removal, no `test.skip`, and never an `if (count > 0)` / `if (isVisible())`
+wrapper around an assertion (a guarded assertion that never runs reports green,
+which is worse than no test). Accepted debt goes through the documented
+exception allowlist with a rule id, a scope, a reason, and a tracking issue. See
+[docs/accessibility/acceptance-standard.md](docs/accessibility/acceptance-standard.md)
+for the conformance target, what automation does not cover, and the exception
+process.
+
 #### Code metrics (rust-code-analysis)
 
 A CI gate runs Mozilla `rust-code-analysis` over `src/` on every pull request to
