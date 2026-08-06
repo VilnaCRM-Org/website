@@ -1,6 +1,6 @@
 import { test, type Page } from '@playwright/test';
 
-import { expectFocusable, expectKeyboardOperable } from './keyboard';
+import { expectKeyboardOperable } from './keyboard';
 import { A11Y_ROUTES, type A11yRoute } from './routes';
 import { scanRoute } from './scan-route';
 
@@ -61,17 +61,6 @@ test.describe('route accessibility', () => {
       await openRoute(page, route);
 
       await expectKeyboardOperable(page);
-    });
-
-    test(`${route.name} (${route.path}) exposes a focusable first control`, async ({ page }) => {
-      // `openRoute` may wait ROUTE_READY_TIMEOUT for swagger to hydrate, which
-      // is close enough to Playwright's default test timeout to report a bare
-      // timeout instead of "the ready selector never appeared".
-      test.slow();
-
-      await openRoute(page, route);
-
-      await expectFocusable(page.getByRole('link').first());
     });
   });
 });

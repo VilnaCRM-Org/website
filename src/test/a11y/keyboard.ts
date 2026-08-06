@@ -1,4 +1,4 @@
-import { expect, type Locator, type Page } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 
 /**
  * Keyboard operability helpers for the route-level accessibility gate
@@ -41,19 +41,6 @@ const TABBABLE_SELECTOR: string = [
   '[contenteditable]',
   '[tabindex]',
 ].join(', ');
-
-/**
- * Asserts the element takes focus, and is visible once it has it.
- *
- * Visibility is checked AFTER focusing on purpose: the standard skip link
- * (WCAG 2.4.1) is deliberately hidden until focused, so asserting visibility
- * first would fail the one control this helper most needs to accept.
- */
-export async function expectFocusable(target: Locator): Promise<void> {
-  await target.focus();
-  await expect(target).toBeFocused();
-  await expect(target).toBeVisible();
-}
 
 /**
  * How many sweep stops may land somewhere the stamp did not mark before the

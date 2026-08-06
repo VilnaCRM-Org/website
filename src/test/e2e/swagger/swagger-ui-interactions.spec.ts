@@ -63,31 +63,37 @@ test.describe('Swagger UI Enhanced Interactions', () => {
     await expect(authModal).not.toBeVisible();
   });
 
-  test('should handle response examples', async () => {
-    const firstEndpoint: Locator = elements.endpoints.first();
-    await firstEndpoint.click();
+  test('should handle response examples', async ({ page }) => {
+    // Pin the endpoint rather than taking whichever renders first: document
+    // order is a property of the upstream spec, not of this behaviour.
+    const endpoint: Locator = page.locator(USER_ENDPOINTS.GET_COLLECTION);
+    await endpoint.click();
 
-    const documentedResponses: Locator = firstEndpoint.locator(
+    const documentedResponses: Locator = endpoint.locator(
       '.responses-inner .response-col_description__inner'
     );
 
     await expect(documentedResponses.first()).toBeVisible();
     expect(await documentedResponses.count()).toBeGreaterThan(0);
 
-    const exampleValue: Locator = firstEndpoint.locator('.responses-inner .model-example').first();
-
+    const exampleValue: Locator = endpoint.locator('.responses-inner .model-example').first();
     await expect(exampleValue).toBeVisible();
-    await expect(exampleValue).not.toBeEmpty();
-    await expect(exampleValue.locator('pre.example')).toContainText('email');
+
+    // `.microlight` is the rendered-code container the rest of the swagger
+    // suite uses. Assert it rendered a JSON document rather than asserting on
+    // a field name, which would couple this gate to the pinned contract.
+    const renderedExample: Locator = exampleValue.locator('.microlight').first();
+    await expect(renderedExample).toBeVisible();
+    await expect(renderedExample).toHaveText(/^\s*[[{]/);
   });
 
-  test('should handle model schema expansion', async () => {
-    const firstEndpoint: Locator = elements.endpoints.first();
-    await firstEndpoint.click();
+  test('should handle model schema expansion', async ({ page }) => {
+    const endpoint: Locator = page.locator(USER_ENDPOINTS.GET_COLLECTION);
+    await endpoint.click();
 
     // The response pane exposes Example Value / Schema tabs; switching to
     // Schema is the model expansion this test is named for.
-    const examplePane: Locator = firstEndpoint.locator('.responses-inner .model-example').first();
+    const examplePane: Locator = endpoint.locator('.responses-inner .model-example').first();
     const exampleTab: Locator = examplePane.getByRole('tab', { name: 'Example Value' });
     const schemaTab: Locator = examplePane.getByRole('tab', { name: 'Schema' });
 

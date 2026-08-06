@@ -58,41 +58,95 @@ function discoverRoutes(): string[] {
 /**
  * A dynamic page has no single navigable path, so it cannot be compared
  * literally against the registry. It still has to be scanned — but with a
- * concrete parameter, registered by hand. This split keeps the equality
- * assertion honest instead of forcing a non-navigable literal like
- * `/blog/[slug]` into `A11Y_ROUTES`, which would then break the Playwright run.
+ * concrete parameter, registered by hand. This split keeps the assertions
+ * honest instead of forcing a non-navigable literal like `/blog/[slug]` into
+ * `A11Y_ROUTES`, which the Playwright scan could not visit.
  */
-function partitionRoutes(paths: readonly string[]): {
-  static: string[];
-  dynamic: string[];
-} {
+interface DiscoveredRoutes {
+  readonly static: string[];
+  readonly dynamic: string[];
+}
+
+function partitionRoutes(paths: readonly string[]): DiscoveredRoutes {
   return {
     static: paths.filter(path => !DYNAMIC_SEGMENT.test(path)),
     dynamic: paths.filter(path => DYNAMIC_SEGMENT.test(path)),
   };
 }
 
-describe('accessibility route registry', () => {
-  it('covers every static page under pages/ and nothing else', () => {
-    const registered: string[] = A11Y_ROUTES.map(route => route.path).sort();
-    const discovered = partitionRoutes(discoverRoutes());
+/**
+ * Turns a dynamic page path into a matcher for the concrete paths it can serve.
+ *
+ * Segment-wise, not prefix-wise: a prefix test would make a root-level
+ * `pages/[slug].tsx` (prefix `/`) look satisfied by literally any registered
+ * route, which is the opposite of a guard.
+ */
+function dynamicRouteMatcher(dynamicPath: string): RegExp {
+  const pattern: string = dynamicPath
+    .split('/')
+    .map(segment => {
+      if (/^\[\.\.\..+\]$/.test(segment)) {
+        return '.+';
+      }
+      if (/^\[.+\]$/.test(segment)) {
+        return '[^/]+';
+      }
+      return segment.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    })
+    .join('/');
 
-    expect(registered).toEqual(discovered.static);
+  return new RegExp(`^${pattern}$`);
+}
+
+describe('accessibility route registry', () => {
+  it('covers every static page under pages/', () => {
+    const registered: readonly string[] = A11Y_ROUTES.map(route => route.path);
+    const discovered: DiscoveredRoutes = partitionRoutes(discoverRoutes());
+
+    const unregistered: string[] = discovered.static.filter(path => !registered.includes(path));
+
+    expect(unregistered).toEqual([]);
+  });
+
+  it('registers nothing that is not a page', () => {
+    const discovered: DiscoveredRoutes = partitionRoutes(discoverRoutes());
+    const matchers: RegExp[] = discovered.dynamic.map(dynamicRouteMatcher);
+
+    // A registered path is legitimate when it is a static page, or a concrete
+    // instance of a dynamic one. Anything else is a typo or a stale entry.
+    const unexplained: string[] = A11Y_ROUTES.map(route => route.path).filter(
+      path => !discovered.static.includes(path) && !matchers.some(matcher => matcher.test(path))
+    );
+
+    expect(unexplained).toEqual([]);
   });
 
   it('registers a concrete path for every dynamic page', () => {
+    const discovered: DiscoveredRoutes = partitionRoutes(discoverRoutes());
     const registered: readonly string[] = A11Y_ROUTES.map(route => route.path);
-    const discovered = partitionRoutes(discoverRoutes());
 
     // `/blog/[slug]` must be represented by something navigable such as
-    // `/blog/example`, so the scan exercises the rendered page.
+    // `/blog/example`, so the scan exercises the rendered page. The concrete
+    // path must not itself be a static page, or a root-level `[slug]` would
+    // count every existing route as its own coverage.
     const unrepresented: string[] = discovered.dynamic.filter(dynamicPath => {
-      const prefix: string = dynamicPath.slice(0, dynamicPath.search(DYNAMIC_SEGMENT));
+      const matcher: RegExp = dynamicRouteMatcher(dynamicPath);
 
-      return !registered.some(path => path.startsWith(prefix) && path.length > prefix.length);
+      return !registered.some(path => matcher.test(path) && !discovered.static.includes(path));
     });
 
     expect(unrepresented).toEqual([]);
+  });
+
+  it('matches dynamic pages segment-wise, not by prefix', () => {
+    expect(dynamicRouteMatcher('/blog/[slug]').test('/blog/example')).toBe(true);
+    expect(dynamicRouteMatcher('/blog/[slug]').test('/blog/a/b')).toBe(false);
+    expect(dynamicRouteMatcher('/blog/[slug]').test('/other/example')).toBe(false);
+    expect(dynamicRouteMatcher('/blog/[...rest]').test('/blog/a/b')).toBe(true);
+
+    // The root-level case the prefix check got wrong.
+    expect(dynamicRouteMatcher('/[slug]').test('/anything')).toBe(true);
+    expect(dynamicRouteMatcher('/[slug]').test('/en/docs/api')).toBe(false);
   });
 
   it('gives every route a name and a readiness selector', () => {

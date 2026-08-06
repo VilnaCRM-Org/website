@@ -103,6 +103,11 @@ make test-a11y-components   # jest-axe, jsdom, fast
 make test-a11y-routes       # axe + keyboard in real browsers (boots the prod stack)
 ```
 
+The route leg reuses the running production stack, exactly like `make test-e2e` and
+`make test-visual`. If you changed product code since the image was last built, run
+`make start-prod-clean` first so the scan measures your checkout rather than a stale
+bundle. CI always builds from scratch, so this only affects local runs.
+
 CI runs the same target from `.github/workflows/a11y-testing.yml` as a check of its own,
 separate from `static testing` and `performance testing`. The route scans also run in the
 prod-side phase via `make ci-test-a11y`. Whether a check actually blocks a merge is a
