@@ -147,7 +147,8 @@ export async function expectKeyboardOperable(page: Page): Promise<void> {
   const trapped: boolean = marked.some(
     (marker, index) => index > 0 && marker === marked[index - 1]
   );
-  expect(trapped, `focus stopped advancing — possible keyboard trap. ${readableTrace}`).toBe(false);
+  const trapMessage: string = `focus stopped advancing — keyboard trap? ${readableTrace}`;
+  expect(trapped, trapMessage).toBe(false);
 
   const backJumps: number = marked.filter(
     (marker, index) => index > 0 && marker < (marked[index - 1] ?? marker)

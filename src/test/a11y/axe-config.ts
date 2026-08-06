@@ -196,7 +196,8 @@ export function findInvalidExceptions(exceptions: readonly A11yException[]): str
 
     if (exception.scope === EXCEPTION_SCOPE_ANY && exception.layer !== 'route') {
       problems.push(
-        `${label} may only use the "${EXCEPTION_SCOPE_ANY}" scope on a route exception that names its routes`
+        `${label} may only use the "${EXCEPTION_SCOPE_ANY}" scope on a route ` +
+          'exception that names its routes'
       );
     }
 
@@ -244,10 +245,19 @@ function matchesScope(selectorText: string, scope: string): boolean {
   );
 }
 
+/** A component-level scan; component exceptions apply, route ones never do. */
+export interface ComponentScanContext {
+  readonly layer: 'component';
+}
+
+/** A scan of one route; only exceptions naming that route apply. */
+export interface RouteScanContext {
+  readonly layer: 'route';
+  readonly route: string;
+}
+
 /** Where a scan is running, so an exception only applies where it was reviewed. */
-export type A11yScanContext =
-  | { readonly layer: 'component' }
-  | { readonly layer: 'route'; readonly route: string };
+export type A11yScanContext = ComponentScanContext | RouteScanContext;
 
 function appliesTo(exception: A11yException, context: A11yScanContext): boolean {
   if (exception.layer !== context.layer) {
@@ -303,5 +313,7 @@ export function describeViolations(violations: readonly Result[]): string {
     ].join('\n');
   });
 
-  return `${violations.length} accessibility violation(s) against WCAG 2.1 AA:\n${details.join('\n')}`;
+  const heading: string = `${violations.length} accessibility violation(s) against WCAG 2.1 AA:`;
+
+  return `${heading}\n${details.join('\n')}`;
 }
