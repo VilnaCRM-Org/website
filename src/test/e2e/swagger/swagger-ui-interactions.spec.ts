@@ -80,11 +80,14 @@ test.describe('Swagger UI Enhanced Interactions', () => {
     await expect(exampleValue).toBeVisible();
 
     // `.microlight` is the rendered-code container the rest of the swagger
-    // suite uses. Assert it rendered a JSON document rather than asserting on
-    // a field name, which would couple this gate to the pinned contract.
+    // suite uses. Parse what it rendered instead of asserting on a field name,
+    // which would couple this gate to the pinned contract — and instead of
+    // checking the opening character, which a truncated example would pass.
     const renderedExample: Locator = exampleValue.locator('.microlight').first();
     await expect(renderedExample).toBeVisible();
-    await expect(renderedExample).toHaveText(/^\s*[[{]/);
+
+    const exampleText: string = (await renderedExample.innerText()).trim();
+    expect(() => JSON.parse(exampleText) as unknown).not.toThrow();
   });
 
   test('should handle model schema expansion', async ({ page }) => {

@@ -82,20 +82,28 @@ function partitionRoutes(paths: readonly string[]): DiscoveredRoutes {
  * route, which is the opposite of a guard.
  */
 function dynamicRouteMatcher(dynamicPath: string): RegExp {
-  const pattern: string = dynamicPath
-    .split('/')
-    .map(segment => {
-      if (/^\[\.\.\..+\]$/.test(segment)) {
-        return '.+';
-      }
-      if (/^\[.+\]$/.test(segment)) {
-        return '[^/]+';
-      }
-      return segment.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    })
-    .join('/');
+  const pattern: string = dynamicPath.split('/').reduce((accumulator, segment) => {
+    // `[[...slug]]` matches zero or more segments, so it has to swallow the
+    // slash in front of it — otherwise `/blog/[[...slug]]` would demand a
+    // parameter that Next.js treats as optional.
+    if (/^\[\[\.\.\..+\]\]$/.test(segment)) {
+      // At the root there is no preceding segment to hang the slash on, so the
+      // page serves `/` itself.
+      return accumulator === '' ? '/(?:.+)?' : `${accumulator}(?:/.+)?`;
+    }
+    if (segment === '') {
+      return accumulator;
+    }
+    if (/^\[\.\.\..+\]$/.test(segment)) {
+      return `${accumulator}/.+`;
+    }
+    if (/^\[.+\]$/.test(segment)) {
+      return `${accumulator}/[^/]+`;
+    }
+    return `${accumulator}/${segment.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`;
+  }, '');
 
-  return new RegExp(`^${pattern}$`);
+  return new RegExp(`^${pattern === '' ? '/' : pattern}$`);
 }
 
 describe('accessibility route registry', () => {
@@ -147,6 +155,13 @@ describe('accessibility route registry', () => {
     // The root-level case the prefix check got wrong.
     expect(dynamicRouteMatcher('/[slug]').test('/anything')).toBe(true);
     expect(dynamicRouteMatcher('/[slug]').test('/en/docs/api')).toBe(false);
+
+    // Optional catch-alls match zero segments too, so the route they serve
+    // without a parameter must not be treated as unregistered.
+    expect(dynamicRouteMatcher('/blog/[[...slug]]').test('/blog')).toBe(true);
+    expect(dynamicRouteMatcher('/blog/[[...slug]]').test('/blog/a/b')).toBe(true);
+    expect(dynamicRouteMatcher('/blog/[[...slug]]').test('/other')).toBe(false);
+    expect(dynamicRouteMatcher('/[[...slug]]').test('/')).toBe(true);
   });
 
   it('gives every route a name and a readiness selector', () => {
