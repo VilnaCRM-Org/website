@@ -159,11 +159,12 @@ async function readFocusMarker(page: Page, attribute: string): Promise<number> {
  * Walks the route with Tab alone and asserts the three properties a keyboard
  * user depends on:
  *
- * 1. the route has focusable content at all,
+ * 1. the route has focusable content at all, and focus stays within the
+ *    controls the sweep stamped,
  * 2. focus keeps moving — two consecutive stops on the same control is a
  *    keyboard trap (WCAG 2.1.2), and
- * 3. focus follows DOM order, allowing a single wrap back to the top
- *    (WCAG 2.4.3) — which also catches a positive `tabindex` jumping the queue.
+ * 3. focus follows DOM order exactly (WCAG 2.4.3), which is also what catches a
+ *    positive `tabindex` jumping the queue.
  *
  * The recorded trace is the failure message, so a failure names the order it
  * actually observed instead of only that something was wrong.
@@ -212,10 +213,14 @@ export async function expectKeyboardOperable(page: Page): Promise<void> {
   const trapMessage: string = `focus stopped advancing — keyboard trap? ${readableTrace}`;
   expect(trapped, trapMessage).toBe(false);
 
+  // Zero, not "at most one". The sweep takes exactly as many steps as there are
+  // controls starting from a blurred document, so a conformant page never wraps
+  // and never jumps backwards. A single positive `tabindex` moves exactly one
+  // element to the head of the order and so produces exactly ONE back-jump for
+  // any N — an allowance of one would let precisely the defect this check
+  // exists to catch through.
   const backJumps: number = adjacentKnownPairs.filter(
     ([previous, current]) => current < previous
   ).length;
-  expect(backJumps, `focus order does not follow DOM order. ${readableTrace}`).toBeLessThanOrEqual(
-    1
-  );
+  expect(backJumps, `focus order does not follow DOM order. ${readableTrace}`).toBe(0);
 }
