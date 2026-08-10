@@ -44,15 +44,17 @@ jobs:
           # The diff runs on its own so a git failure (e.g. an unfetched base) still aborts
           # the job; only grep's "no match" exit code is tolerated.
           changed="$(git diff --name-only --diff-filter=d "$BASE_SHA"...HEAD -- src/test/e2e)"
-          specs="$(printf '%s\n' "$changed" \
-            | grep -E '\.spec\.ts$' | tr '\n' ' ' | sed 's/ *$//')" || true
-          # The list is space-separated downstream, so a path containing whitespace would be
-          # split into two nonexistent paths and its flakes would silently drop to advisory.
-          # Refuse loudly instead of gating nothing; repo convention is kebab-case anyway.
-          if printf '%s\n' "$changed" | grep -qE '[[:space:]]'; then
-            echo "::error::e2e spec paths must not contain whitespace: $changed"
+          spec_lines="$(printf '%s\n' "$changed" | grep -E '\.spec\.ts$')" || true
+          # The list is space-separated downstream, so a spec path containing whitespace would
+          # be split into two nonexistent paths and its flakes would silently drop to advisory.
+          # Refuse loudly instead of gating nothing. Only the filtered spec list is checked:
+          # non-spec files under src/test/e2e never reach the downstream list, so a fixture
+          # with a space in its name must not hard-fail this job and cascade into both legs.
+          if printf '%s\n' "$spec_lines" | grep -qE '[[:space:]]'; then
+            echo "::error::e2e spec paths must not contain whitespace: $spec_lines"
             exit 1
           fi
+          specs="$(printf '%s\n' "$spec_lines" | tr '\n' ' ' | sed 's/ *$//')"
           echo "specs=$specs" >> "$GITHUB_OUTPUT"
           if [ -n "$specs" ]; then
             echo "any=true" >> "$GITHUB_OUTPUT"
