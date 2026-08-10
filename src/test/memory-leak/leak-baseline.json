@@ -9,7 +9,7 @@
     },
     "swaggerInteractions": {
       "allowedClusters": 29,
-      "reason": "Pre-existing on main and by far the largest of the three: expanding Swagger UI operations retains ~1MB across swagger-ui-react internals. Measured at 29 on four consecutive isolated runs and 28 in the full suite, where the earlier scenarios perturb GC state; pinned at the observed maximum so the ±1 does not produce a false red. A count of 30 is a real regression.",
+      "reason": "Pre-existing on main and by far the largest of the three: expanding Swagger UI operations retains ~1MB across swagger-ui-react internals. The count is environment-dependent — 29 on four isolated local runs, 28 in the full local suite, and 13 on a GitHub-hosted runner (run 31416963140) — so the ceiling is the cross-environment maximum. That deliberately makes this one entry loose on CI: it will not catch a regression from 13 up to 29 there. Pinning the CI figure instead would turn every local run red and pressure the next person into raising the allowance, which is worse. Burning the clusters down in issue #426 is what tightens this; do not raise it.",
       "issue": "https://github.com/VilnaCRM-Org/website/issues/426",
       "validUntil": "2027-02-10"
     },

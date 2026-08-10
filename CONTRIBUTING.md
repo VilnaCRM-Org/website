@@ -172,6 +172,12 @@ once that date passes, so accepted debt cannot become permanent. An allowance is
 only ever for debt that predates the gate: if your change introduces a leak, fix
 the retainer.
 
+Cluster counts differ between environments — `swaggerInteractions` clusters at
+13 on a GitHub-hosted runner and 28–29 locally — so an allowance records the
+maximum seen anywhere. A run below its allowance therefore prints a `ratchet`
+notice rather than failing. Do not act on a single low reading: lowering an
+allowance to a CI-only figure turns every local run red.
+
 #### Dockerfile build performance
 
 If your change touches a `Dockerfile` (or the gate's own config), a CI gate

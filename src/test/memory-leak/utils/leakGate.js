@@ -17,8 +17,11 @@
  * - `stale-entry` — an allowance for a scenario that no longer runs
  *
  * Counts below the allowance are reported as `ratchet` notices rather than failures: memlab
- * cluster counts vary slightly between runs, so demanding an exact match would make the gate
- * flaky. Lower the allowance once a notice is reported consistently.
+ * cluster counts vary between runs and, more sharply, between environments — the same
+ * scenario clusters at 13 on a GitHub-hosted runner and 28-29 locally — so demanding an
+ * exact match would make the gate flaky. An allowance is therefore the maximum seen across
+ * environments, which keeps it honest at the cost of some slack on the environment that
+ * clusters lowest. Lower it only when the smaller count holds everywhere.
  */
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -200,7 +203,9 @@ function classifyScenario({ scenario, count, allowance, today }) {
       allowed,
       message:
         `${scenario} detected ${count} of ${allowed} allowed cluster(s); ` +
-        `lower the allowance to ${count} once that count is reproducible.`,
+        `lower the allowance to ${count} only if that count holds in every environment — ` +
+        'CI runners and local machines cluster differently, so a lower CI count does not ' +
+        'mean the allowance is stale.',
     });
   }
 
