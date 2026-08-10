@@ -53,6 +53,17 @@ MUTATION_SHARD_TOTAL        ?= 1
 MUTATION_SHARD_INDEX        ?= 0
 MERGE_MUTATION_REPORTS_CMD  = bun x tsx scripts/ci/merge-mutation-reports.ts
 
+# E2E flake detection (#359). The burn-in re-runs the specs a PR changed with retries off, so
+# nondeterminism shows up as some-but-not-all failures instead of being absorbed by the
+# blanket `retries: 2` the CI Playwright config sets.
+E2E_BURNIN_SPECS            ?= $(TEST_DIR_E2E)
+E2E_BURNIN_REPEATS          ?= 5
+FLAKE_MODE                  ?= retry-pass
+FLAKE_REPORT_DIR            ?= test-results
+FLAKE_CHANGED_SPECS         ?=
+FLAKE_THRESHOLD             ?= 2
+CHECK_FLAKY_REPORT_CMD      = bun x tsx scripts/ci/check-flaky-report.ts
+
 SERVE_CMD                   = --collect.startServerCommand="$(SERVE_BIN) -l $(NEXT_PUBLIC_PROD_PORT) out" \
                               --collect.startServerReadyPattern="Accepting connections"
 LHCI                        = bun x lhci autorun
@@ -181,6 +192,10 @@ run-e2e                     = $(PLAYWRIGHT_TEST) "$(PLAYWRIGHT_BIN) test $(TEST_
 E2E_SHARD_INDEX             ?= 1
 E2E_SHARD_TOTAL             ?= 1
 run-e2e-shard               = $(PLAYWRIGHT_TEST) "$(PLAYWRIGHT_BIN) test $(TEST_DIR_E2E) --shard=$(E2E_SHARD_INDEX)/$(E2E_SHARD_TOTAL)"
+# Burn-in: repeat each spec with retries off so a flake surfaces as a partial failure. The
+# JSON report goes to its own path so it never overwrites the shard run's report.
+run-e2e-burnin              = $(PLAYWRIGHT_TEST) "PLAYWRIGHT_JSON_REPORT=test-results/burn-in/results.json \
+                              $(PLAYWRIGHT_BIN) test $(E2E_BURNIN_SPECS) --repeat-each=$(E2E_BURNIN_REPEATS) --retries=0"
 playwright-test             = $(PLAYWRIGHT_DOCKER_CMD) $(PLAYWRIGHT_BIN) test
 
 help:
@@ -373,6 +388,14 @@ test-e2e: start-prod  ## Start production and run E2E tests (Playwright)
 test-e2e-shard: start-prod ## Start production and run one E2E shard (E2E_SHARD_INDEX of E2E_SHARD_TOTAL; used by the e2e workflow matrix)
 	$(run-e2e-shard)
 
+test-e2e-burnin: start-prod ## Re-run E2E_BURNIN_SPECS E2E_BURNIN_REPEATS times with retries off to expose flaky specs (#359)
+	$(run-e2e-burnin)
+
+check-e2e-flakes: ## Grade a Playwright JSON report for flakes, host-only (FLAKE_MODE=retry-pass|burn-in|census, FLAKE_CHANGED_SPECS=<specs>)
+	FLAKE_MODE="$(FLAKE_MODE)" FLAKE_REPORT_DIR="$(FLAKE_REPORT_DIR)" \
+	FLAKE_CHANGED_SPECS="$(FLAKE_CHANGED_SPECS)" FLAKE_THRESHOLD="$(FLAKE_THRESHOLD)" \
+	$(CHECK_FLAKY_REPORT_CMD)
+
 test-e2e-ui: start-prod ## Start the production environment and run E2E tests with the UI available at $(UI_MODE_URL)
 	@echo "🚀 Starting Playwright UI tests..."
 	@echo "Test will be run on: $(UI_MODE_URL)"
@@ -461,7 +484,7 @@ ci-test-integration: ## Run integration tests directly assuming deps are install
 	ci-test-memory-leak ci-test-load ci-test-lighthouse-desktop \
 	ci-test-lighthouse-mobile ci-test-prod ensure-dev start-prod-clean \
 	test-load test-load-swagger test-mutation-shard merge-mutation-reports \
-	pr-comments
+	test-e2e-burnin check-e2e-flakes pr-comments
 
 ci-setup: create-network ## Prepare the shared dev environment for CI-oriented checks
 	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) up $(CI_SETUP_UP_FLAGS) dev && $(MAKE) wait-for-dev
@@ -510,7 +533,7 @@ ci-test-memory-leak: ## Run Memlab memory leak tests against the dedicated compo
 	}; \
 	trap cleanup EXIT; \
 	echo "🧪 Starting memory leak test environment..."; \
-	$(DOCKER_COMPOSE) -p memleak $(DOCKER_COMPOSE_MEMLEAK_FILE) up -d --wait $(MEMLEAK_SERVICE); \
+	$(DOCKER_COMPOSE) -p memleak $(DOCKER_COMPOSE_MEMLEAK_FILE) up -d --wait --build $(MEMLEAK_SERVICE); \
 	echo "🧹 Cleaning up previous memory leak results..."; \
 	$(DOCKER_COMPOSE) -p memleak $(DOCKER_COMPOSE_MEMLEAK_FILE) exec -T $(MEMLEAK_SERVICE) rm -rf $(MEMLEAK_RESULTS_DIR); \
 	echo "🚀 Running memory leak tests..."; \
@@ -553,7 +576,7 @@ test-memory-leak: start-prod ## This command executes memory leaks tests using M
 
 memory-leak-dind: start-prod ## Run Memlab tests in isolated compose project (DIND safe)
 	@echo "🧪 Starting memory leak test environment (isolated project)..."
-	$(DOCKER_COMPOSE) -p memleak $(DOCKER_COMPOSE_MEMLEAK_FILE) up -d --wait $(MEMLEAK_SERVICE)
+	$(DOCKER_COMPOSE) -p memleak $(DOCKER_COMPOSE_MEMLEAK_FILE) up -d --wait --build $(MEMLEAK_SERVICE)
 	@echo "🧹 Cleaning up previous memory leak results..."
 	$(DOCKER_COMPOSE) -p memleak $(DOCKER_COMPOSE_MEMLEAK_FILE) exec -T $(MEMLEAK_SERVICE) rm -rf $(MEMLEAK_RESULTS_DIR)
 	@echo "🚀 Running memory leak tests..."

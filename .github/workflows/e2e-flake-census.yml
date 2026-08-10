@@ -1,0 +1,93 @@
+name: e2e flake census
+
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+# A census is a measurement, not a gate: never abort one mid-run for a newer trigger.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  census:
+    # Advisory by design (#359). The blocking legs live in e2e-testing.yml and only cover the
+    # specs a pull request changed; this run repeats the WHOLE suite off the PR path so the
+    # pre-existing flake backlog is measured and tracked instead of silently absorbed by
+    # `retries: 2`. It records what it finds and stays green — a red census would page
+    # somebody nightly for debt that is already known.
+    name: nightly flake census
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: Cache Bun cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('.nvmrc') }}-${{ hashFiles('**/bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-${{ hashFiles('.nvmrc') }}-
+
+      - name: Setup Bun and install dependencies
+        run: |
+          npm install -g "$(node -p "require('./package.json').packageManager.split('+')[0]")"
+          bun install --frozen-lockfile
+
+      - name: Repeat the whole e2e suite with retries off
+        continue-on-error: true
+        run: make test-e2e-burnin E2E_BURNIN_REPEATS=3
+
+      - name: Summarise the flakes
+        id: census
+        run: |
+          set -euo pipefail
+          make check-e2e-flakes FLAKE_MODE=census FLAKE_REPORT_DIR=test-results/burn-in \
+            | tee census.md
+          cat census.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: File or refresh the flake-tracking issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # Idempotent: also provisioned as repo metadata, but a missing label must not
+          # fail the census.
+          gh label create e2e-flake --color FBCA04 \
+            --description "Nightly e2e flake census findings" 2>/dev/null || true
+          title='e2e flake census'
+          run_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          body="$(printf '%s\n\n%s\n' "$(cat census.md)" "Census run: $run_url")"
+          existing="$(gh issue list --label e2e-flake --state open \
+            --search "$title in:title" --json number --jq '.[0].number')"
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "$body"
+          else
+            gh issue create --label e2e-flake --title "$title" --body "$body"
+          fi
+
+      - name: Upload census report
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: e2e-flake-census-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            playwright-report/
+            test-results/burn-in/results.json
+          retention-days: 14
+          if-no-files-found: ignore

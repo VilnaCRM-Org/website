@@ -130,6 +130,48 @@ full list and the sharded score is identical to an unsharded run — the gate is
 preserved, never relaxed. The merge job runs even when a shard fails, so the
 gate fails closed rather than passing vacuously.
 
+#### E2E flakes are detected, not retried away
+
+`playwright.config.ts` sets `retries: 2` in CI, so a spec that fails and then
+passes is reported green and the flake signal is thrown away. That is how the
+WebKit swagger flake in #290 reached the production CodePipeline. Two jobs in
+`e2e-testing.yml` recover the signal, both scoped to the specs your pull request
+actually changed:
+
+- **`e2e flake gate`** reads every shard's Playwright JSON report
+  (`test-results/results.json`) through
+  [`scripts/ci/flaky-report.ts`](scripts/ci/flaky-report.ts) and fails when a
+  changed spec carries Playwright's `flaky` status — i.e. it only passed on a
+  retry. Like the mutation merge gate, it runs even when a shard failed so it
+  cannot pass vacuously.
+- **`burn in changed e2e specs`** runs `make test-e2e-burnin` on those specs with
+  `--repeat-each=5 --retries=0`. Two or more failures out of five is a flake;
+  a single failure is tolerated so one-off infrastructure blips do not block a
+  pull request.
+
+Flaky specs you did **not** touch are reported as annotations rather than
+failures, so the pre-existing backlog does not block unrelated work; the nightly
+`e2e flake census` workflow repeats the whole suite off the PR path and records
+what it finds in an `e2e-flake`-labelled issue.
+
+If a burn-in goes red, fix the nondeterminism at its source. Adding a
+`waitForTimeout`, widening `retries`, or wrapping the assertion in a condition
+defeats the gate and is not an acceptable fix.
+
+#### Memory leaks fail the job
+
+`make test-memory-leak` used to run memlab and discard its findings, so a run
+that detected fifty leak clusters exited 0 exactly like a clean one. The runner
+now reads the clusters and exits non-zero, printing the retainer traces for the
+scenarios that failed.
+
+Clusters that already existed when the gate was armed are recorded in
+[`src/test/memory-leak/leak-baseline.json`](src/test/memory-leak/leak-baseline.json),
+each with a reason, a tracking issue, and a `validUntil` date — the gate fails
+once that date passes, so accepted debt cannot become permanent. An allowance is
+only ever for debt that predates the gate: if your change introduces a leak, fix
+the retainer.
+
 #### Dockerfile build performance
 
 If your change touches a `Dockerfile` (or the gate's own config), a CI gate

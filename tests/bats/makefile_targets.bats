@@ -108,7 +108,7 @@ EOF
   reset_command_log
   run_make_target memory-leak-dind
   [ "$status" -eq 0 ]
-  assert_log_contains 'docker compose -p memleak -f docker-compose.memory-leak.yml up -d --wait memory-leak'
+  assert_log_contains 'docker compose -p memleak -f docker-compose.memory-leak.yml up -d --wait --build memory-leak'
   assert_log_contains 'docker compose -p memleak -f docker-compose.memory-leak.yml exec -T memory-leak rm -rf ./src/test/memory-leak/results'
   assert_log_contains 'docker compose -p memleak -f docker-compose.memory-leak.yml exec -T memory-leak sh -lc unset DISPLAY;'
   assert_log_contains 'docker compose -p memleak -f docker-compose.memory-leak.yml down'
@@ -207,6 +207,24 @@ EOF
   run_make_target e2e-direct
   [ "$status" -eq 0 ]
   assert_log_contains 'playwright test ./src/test/e2e'
+}
+
+@test "e2e flake targets repeat the changed specs and grade the report" {
+  reset_command_log
+  run_make_target test-e2e-burnin
+  [ "$status" -eq 0 ]
+  assert_log_contains 'playwright test ./src/test/e2e --repeat-each=5 --retries=0'
+  assert_log_contains 'PLAYWRIGHT_JSON_REPORT=test-results/burn-in/results.json'
+
+  reset_command_log
+  run_make_target test-e2e-burnin E2E_BURNIN_SPECS=src/test/e2e/a.spec.ts E2E_BURNIN_REPEATS=3
+  [ "$status" -eq 0 ]
+  assert_log_contains 'playwright test src/test/e2e/a.spec.ts --repeat-each=3 --retries=0'
+
+  reset_command_log
+  run_make_target check-e2e-flakes
+  [ "$status" -eq 0 ]
+  assert_log_contains 'bun x tsx scripts/ci/check-flaky-report.ts'
 }
 
 @test "maintenance targets shell out through Docker and Bun as expected" {
@@ -383,7 +401,7 @@ STUB
   run_make_target ci-test-memory-leak
   [ "$status" -eq 0 ]
   # --wait avoids racing the exec against an unready container.
-  assert_log_contains 'docker compose -p memleak -f docker-compose.memory-leak.yml up -d --wait memory-leak'
+  assert_log_contains 'docker compose -p memleak -f docker-compose.memory-leak.yml up -d --wait --build memory-leak'
   assert_log_contains 'node ./src/test/memory-leak/runMemlabTests.js'
   # Teardown must be scoped to the isolated memleak project so it never removes
   # the shared prod stack as an orphan mid-sequence in ci-test-prod, and the

@@ -1,0 +1,23 @@
+{
+  "description": "Accepted memlab leak clusters (issue #354). Every entry is time-boxed debt recorded from the first honest run of the armed gate; allowedClusters is a ceiling, not a target. Adding an entry for a leak your change introduced is not allowed — fix the retainer instead. See src/test/memory-leak/utils/leakGate.js for the rules the gate applies, and CONTRIBUTING.md for the workflow.",
+  "scenarios": {
+    "servicesTooltip": {
+      "allowedClusters": 1,
+      "reason": "Pre-existing on main: hovering the services tooltip leaves one cluster of detached MUI nodes (~12KB retained). Measured by running the armed gate against an empty baseline, which correctly went red.",
+      "issue": "https://github.com/VilnaCRM-Org/website/issues/426",
+      "validUntil": "2027-02-10"
+    },
+    "swaggerInteractions": {
+      "allowedClusters": 29,
+      "reason": "Pre-existing on main and by far the largest of the three: expanding Swagger UI operations retains ~1MB across swagger-ui-react internals. Measured at 29 on four consecutive isolated runs and 28 in the full suite, where the earlier scenarios perturb GC state; pinned at the observed maximum so the ±1 does not produce a false red. A count of 30 is a real regression.",
+      "issue": "https://github.com/VilnaCRM-Org/website/issues/426",
+      "validUntil": "2027-02-10"
+    },
+    "toggleMobileMenu": {
+      "allowedClusters": 1,
+      "reason": "Pre-existing on main: opening and closing the mobile drawer leaves one cluster of detached nodes. Measured by running the armed gate against an empty baseline, which correctly went red.",
+      "issue": "https://github.com/VilnaCRM-Org/website/issues/426",
+      "validUntil": "2027-02-10"
+    }
+  }
+}
