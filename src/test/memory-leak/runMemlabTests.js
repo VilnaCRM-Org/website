@@ -52,8 +52,14 @@ function write(line) {
   const resultsByScenario = new Map();
 
   // Scenarios whose work dir must survive the run. Populated only once a verdict exists, so
-  // an early exit leaves it empty and the `finally` below cleans up everything recorded so
-  // far rather than stranding heap snapshots on disk.
+  // an early exit leaves it empty and the `finally` below cleans up every scenario that
+  // completed rather than stranding their heap snapshots on disk.
+  //
+  // One directory deliberately survives an error: a scenario that throws inside `run()` never
+  // reaches `resultsByScenario`, so the `finally` cannot remove its partially written work
+  // dir. That is the behaviour we want — a crash mid-scenario is exactly when the partial
+  // snapshots are worth inspecting — and `ci-test-memory-leak` clears the results directory at
+  // the start of the next run, so it cannot accumulate across runs.
   /** @type {Set<string>} */
   const keepWorkDirFor = new Set();
 
