@@ -31,6 +31,12 @@ const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 export const TRACE_CHAR_LIMIT = 1200;
 
 /**
+ * Clusters printed per failing scenario. Bounds the total output on a scenario with a large
+ * allowance, where most clusters are already-accepted debt rather than the regression.
+ */
+export const TRACE_COUNT_LIMIT = 5;
+
+/**
  * Serialize one retainer trace, truncated to `limit` characters.
  *
  * @param {unknown} trace One entry of the `leaks` array `@memlab/api`'s `run()` returns.
@@ -194,7 +200,7 @@ function classifyScenario({ scenario, count, allowance, today }) {
       allowed,
       message:
         `${scenario} detected ${count} of ${allowed} allowed cluster(s); ` +
-        `lower the allowance to ${count}.`,
+        `lower the allowance to ${count} once that count is reproducible.`,
     });
   }
 
@@ -239,7 +245,10 @@ function gradeScenario({ scenario, count, usable, malformed, today }) {
       allowed: allowance.allowedClusters,
       message:
         `${scenario} reported no leak clusters but still holds a baseline allowance. ` +
-        'Remove its entry from leak-baseline.json to lock the fix in.',
+        'If it reports zero consistently, remove its entry from leak-baseline.json to lock ' +
+        'the fix in — but confirm across runs first, because a single zero can be run-to-run ' +
+        'variance and removing a still-valid entry turns the next run into a blocking ' +
+        'new-leak failure.',
     });
   }
 

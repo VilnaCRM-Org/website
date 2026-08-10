@@ -77,6 +77,26 @@ describe('e2e flake gate report parsing', () => {
     it('treats an empty changed list as nothing changed', () => {
       expect(isChanged('src/test/e2e/a.spec.ts', [])).toBe(false);
     });
+
+    // Exact matching is only correct because Playwright reports paths relative to
+    // `config.rootDir`, and rootDir here is the repository root (playwright.config.ts sits
+    // at the top level), so report paths are byte-identical to `git diff --name-only`
+    // output. Verified against a real CI shard report, whose suites carry
+    // `file: "src/test/e2e/check-date.spec.ts"` with `rootDir: "/app"`. If the config ever
+    // moves into a subdirectory, report paths become testDir-relative and this breaks.
+    it('matches the repository-root-relative paths a real report emits', () => {
+      const specs = flattenSpecs({
+        suites: [
+          {
+            file: 'src/test/e2e/check-date.spec.ts',
+            specs: [{ title: 'Checking the current year', tests: [] }],
+          },
+        ],
+      });
+
+      expect(specs[0]?.file).toBe('src/test/e2e/check-date.spec.ts');
+      expect(isChanged(specs[0]?.file ?? '', ['src/test/e2e/check-date.spec.ts'])).toBe(true);
+    });
   });
 
   describe('isFailure', () => {

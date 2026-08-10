@@ -57,7 +57,8 @@ jobs:
         id: census
         run: |
           set -euo pipefail
-          make check-e2e-flakes FLAKE_MODE=census FLAKE_REPORT_DIR=test-results/burn-in \
+          # -s so make does not echo the recipe into the captured Markdown.
+          make -s check-e2e-flakes FLAKE_MODE=census FLAKE_REPORT_DIR=burn-in-results \
             | tee census.md
           cat census.md >> "$GITHUB_STEP_SUMMARY"
 
@@ -73,8 +74,11 @@ jobs:
           title='e2e flake census'
           run_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
           body="$(printf '%s\n\n%s\n' "$(cat census.md)" "Census run: $run_url")"
+          # `.[0].number` over an empty array prints the literal string "null", which would
+          # pass the -n test and run `gh issue comment null`, so the tracking issue would
+          # never be created on the first census. `first(...) // empty` yields nothing.
           existing="$(gh issue list --label e2e-flake --state open \
-            --search "$title in:title" --json number --jq '.[0].number')"
+            --search "$title in:title" --json number --jq 'first(.[].number) // empty')"
           if [ -n "$existing" ]; then
             gh issue comment "$existing" --body "$body"
           else
@@ -88,6 +92,6 @@ jobs:
           name: e2e-flake-census-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             playwright-report/
-            test-results/burn-in/results.json
+            burn-in-results/results.json
           retention-days: 14
           if-no-files-found: ignore

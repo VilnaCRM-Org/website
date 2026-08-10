@@ -5,6 +5,7 @@ import {
   isExpired,
   summarizeTrace,
   TRACE_CHAR_LIMIT,
+  TRACE_COUNT_LIMIT,
   type LeakAllowance,
   type LeakBaseline,
 } from '../memory-leak/utils/leakGate';
@@ -83,6 +84,13 @@ describe('memlab leak gate', () => {
 
     it('caps CI output well below a raw dump', () => {
       expect(TRACE_CHAR_LIMIT).toBeLessThanOrEqual(2000);
+    });
+
+    it('caps the number of clusters printed per failing scenario', () => {
+      // A regression on a scenario with a large allowance (swaggerInteractions sits at 29)
+      // would otherwise print every cluster, most of them already-accepted debt.
+      expect(TRACE_COUNT_LIMIT).toBeGreaterThan(0);
+      expect(TRACE_COUNT_LIMIT).toBeLessThanOrEqual(10);
     });
   });
 
@@ -200,7 +208,7 @@ describe('memlab leak gate', () => {
 
       expect(verdict.ok).toBe(true);
       expect(verdict.notices[0]).toMatchObject({ kind: 'ratchet', observed: 0, allowed: 2 });
-      expect(verdict.notices[0]?.message).toContain('Remove its entry');
+      expect(verdict.notices[0]?.message).toContain('confirm across runs first');
     });
 
     it('sums clusters across every scenario', () => {

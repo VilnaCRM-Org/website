@@ -58,6 +58,10 @@ MERGE_MUTATION_REPORTS_CMD  = bun x tsx scripts/ci/merge-mutation-reports.ts
 # blanket `retries: 2` the CI Playwright config sets.
 E2E_BURNIN_SPECS            ?= $(TEST_DIR_E2E)
 E2E_BURNIN_REPEATS          ?= 5
+# The burn-in report deliberately sits OUTSIDE test-results: the grader walks its report
+# directory recursively, so nesting it would make a local `make check-e2e-flakes` parse the
+# shard report and the burn-in report together as one cohort under a single FLAKE_MODE.
+E2E_BURNIN_REPORT_DIR       ?= burn-in-results
 FLAKE_MODE                  ?= retry-pass
 FLAKE_REPORT_DIR            ?= test-results
 FLAKE_CHANGED_SPECS         ?=
@@ -193,8 +197,9 @@ E2E_SHARD_INDEX             ?= 1
 E2E_SHARD_TOTAL             ?= 1
 run-e2e-shard               = $(PLAYWRIGHT_TEST) "$(PLAYWRIGHT_BIN) test $(TEST_DIR_E2E) --shard=$(E2E_SHARD_INDEX)/$(E2E_SHARD_TOTAL)"
 # Burn-in: repeat each spec with retries off so a flake surfaces as a partial failure. The
-# JSON report goes to its own path so it never overwrites the shard run's report.
-run-e2e-burnin              = $(PLAYWRIGHT_TEST) "PLAYWRIGHT_JSON_REPORT=test-results/burn-in/results.json \
+# JSON report goes to its own top-level directory so it neither overwrites the shard run's
+# report nor gets swept up by a recursive walk of test-results.
+run-e2e-burnin              = $(PLAYWRIGHT_TEST) "PLAYWRIGHT_JSON_REPORT=$(E2E_BURNIN_REPORT_DIR)/results.json \
                               $(PLAYWRIGHT_BIN) test $(E2E_BURNIN_SPECS) --repeat-each=$(E2E_BURNIN_REPEATS) --retries=0"
 playwright-test             = $(PLAYWRIGHT_DOCKER_CMD) $(PLAYWRIGHT_BIN) test
 

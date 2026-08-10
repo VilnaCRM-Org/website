@@ -10,6 +10,7 @@ import {
   formatVerdict,
   summarizeTrace,
   TRACE_CHAR_LIMIT,
+  TRACE_COUNT_LIMIT,
 } from './utils/leakGate.js';
 
 const { run, analyze } = memlabApi;
@@ -47,6 +48,8 @@ function write(line) {
   const clustersByScenario = {};
   /** @type {Record<string, unknown[]>} */
   const tracesByScenario = {};
+  /** @type {Map<string, { cleanup: () => void }>} */
+  const resultsByScenario = new Map();
 
   for (const testFilePath of testFilePaths) {
     const testName = path.basename(testFilePath, '.js');
@@ -67,15 +70,26 @@ function write(line) {
 
     clustersByScenario[testName] = leaks.length;
     tracesByScenario[testName] = leaks;
+    resultsByScenario.set(testName, runResult);
 
     const analyzer = new StringAnalysis();
     await analyze(runResult, analyzer);
-
-    runResult.cleanup();
   }
 
   const today = new Date().toISOString().slice(0, 10);
   const verdict = evaluateLeakRun(clustersByScenario, baseline, today);
+
+  // `runResult.cleanup()` deletes the scenario's work dir (BaseResultReader calls
+  // fs.removeSync on it), so cleanup is deferred until the verdict is known and then skipped
+  // for the failing scenarios. Otherwise the heap snapshots would be gone before the traces
+  // below point a reader at them. Passing scenarios are still cleaned up, so a green run
+  // leaves nothing behind.
+  const failedScenarios = new Set(verdict.failures.map(failure => failure.scenario));
+  for (const [scenario, runResult] of resultsByScenario) {
+    if (!failedScenarios.has(scenario)) {
+      runResult.cleanup();
+    }
+  }
 
   // Print the retainer traces only for the scenarios that actually fail, so a red run is
   // directly actionable without burying it under the already-accepted clusters. memlab's
@@ -85,8 +99,14 @@ function write(line) {
     const traces = tracesByScenario[failure.scenario] ?? [];
     if (traces.length > 0) {
       const workDir = `${baseWorkDir}/${failure.scenario}`;
-      write(`[memlab] retainer traces for ${failure.scenario} (${workDir}):`);
-      for (const trace of traces) {
+      // Cap the count as well as each trace's length. A regression on a scenario with a
+      // large allowance (swaggerInteractions sits at 29) would otherwise print tens of KB,
+      // most of it re-describing clusters the baseline already accepts.
+      const shown = traces.slice(0, TRACE_COUNT_LIMIT);
+      const suffix =
+        traces.length > shown.length ? ` (first ${shown.length} of ${traces.length})` : '';
+      write(`[memlab] retainer traces for ${failure.scenario}${suffix} (${workDir}):`);
+      for (const trace of shown) {
         write(summarizeTrace(trace, TRACE_CHAR_LIMIT));
       }
     }

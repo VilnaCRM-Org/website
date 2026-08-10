@@ -214,7 +214,7 @@ EOF
   run_make_target test-e2e-burnin
   [ "$status" -eq 0 ]
   assert_log_contains 'playwright test ./src/test/e2e --repeat-each=5 --retries=0'
-  assert_log_contains 'PLAYWRIGHT_JSON_REPORT=test-results/burn-in/results.json'
+  assert_log_contains 'PLAYWRIGHT_JSON_REPORT=burn-in-results/results.json'
 
   reset_command_log
   run_make_target test-e2e-burnin E2E_BURNIN_SPECS=src/test/e2e/a.spec.ts E2E_BURNIN_REPEATS=3

@@ -74,11 +74,19 @@ function resolveChangedSpecs(): string[] {
   return (process.env.FLAKE_CHANGED_SPECS ?? '').split(/\s+/).filter(Boolean);
 }
 
-/** Read the burn-in failure threshold (`>= threshold` failures is a flake). */
+/**
+ * Read the burn-in failure threshold (`>= threshold` failures is a flake).
+ *
+ * The whole value is matched before parsing: `Number.parseInt` would read "2.5" and "2oops"
+ * as 2, so a typo'd threshold would silently run the gate at the default instead of failing.
+ */
 function resolveThreshold(): number {
   const raw = process.env.FLAKE_THRESHOLD ?? '2';
-  const threshold = Number.parseInt(raw, 10);
-  if (!Number.isInteger(threshold) || threshold < 1) {
+  if (!/^\d+$/.test(raw.trim())) {
+    throw new Error(`FLAKE_THRESHOLD must be a positive integer; got "${raw}".`);
+  }
+  const threshold = Number.parseInt(raw.trim(), 10);
+  if (threshold < 1) {
     throw new Error(`FLAKE_THRESHOLD must be a positive integer; got "${raw}".`);
   }
   return threshold;
@@ -125,15 +133,34 @@ function gate(mode: Mode, findings: readonly FlakeFinding[], changed: readonly s
   return 0;
 }
 
-/** Print the advisory census as Markdown for the nightly tracking issue. */
+/**
+ * Print the advisory census as Markdown for the nightly tracking issue.
+ *
+ * A test that failed every single repetition is deterministically broken, not
+ * nondeterministic, so it is listed separately — calling it flaky would send whoever reads
+ * the tracking issue hunting for a race that does not exist.
+ */
 function census(findings: readonly FlakeFinding[]): void {
-  if (findings.length === 0) {
+  const flaky = findings.filter(finding => finding.failures < finding.runs);
+  const broken = findings.filter(finding => finding.failures === finding.runs);
+
+  if (flaky.length === 0) {
     process.stdout.write('No flaky tests detected in this census run.\n');
-    return;
+  } else {
+    process.stdout.write(`Detected ${flaky.length} flaky test(s):\n\n`);
+    for (const finding of flaky) {
+      process.stdout.write(`- ${describeFinding(finding)}\n`);
+    }
   }
-  process.stdout.write(`Detected ${findings.length} flaky test(s):\n\n`);
-  for (const finding of findings) {
-    process.stdout.write(`- ${describeFinding(finding)}\n`);
+
+  if (broken.length > 0) {
+    process.stdout.write(
+      `\nAlso ${broken.length} test(s) failed every repetition — consistently broken rather ` +
+        'than flaky:\n\n'
+    );
+    for (const finding of broken) {
+      process.stdout.write(`- ${describeFinding(finding)}\n`);
+    }
   }
 }
 
@@ -143,6 +170,16 @@ function main(): void {
   const files = findReportFiles(dir);
 
   if (files.length === 0) {
+    // The two blocking modes fail closed: a missing report must never pass a gate vacuously.
+    // The census is a measurement rather than a gate, so it reports the gap and stays green
+    // — otherwise a burn-in that times out would page somebody nightly over missing data.
+    if (mode === 'census') {
+      process.stdout.write(
+        `No Playwright ${REPORT_FILE} found under "${dir}", so this census measured nothing. ` +
+          'The burn-in run probably failed or timed out; see the job log.\n'
+      );
+      return;
+    }
     throw new Error(
       `No Playwright ${REPORT_FILE} found under "${dir}". A missing report must not pass ` +
         'the flake gate vacuously — check that the e2e run produced its JSON reporter output.'

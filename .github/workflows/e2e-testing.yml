@@ -46,6 +46,13 @@ jobs:
           changed="$(git diff --name-only --diff-filter=d "$BASE_SHA"...HEAD -- src/test/e2e)"
           specs="$(printf '%s\n' "$changed" \
             | grep -E '\.spec\.ts$' | tr '\n' ' ' | sed 's/ *$//')" || true
+          # The list is space-separated downstream, so a path containing whitespace would be
+          # split into two nonexistent paths and its flakes would silently drop to advisory.
+          # Refuse loudly instead of gating nothing; repo convention is kebab-case anyway.
+          if printf '%s\n' "$changed" | grep -qE '[[:space:]]'; then
+            echo "::error::e2e spec paths must not contain whitespace: $changed"
+            exit 1
+          fi
           echo "specs=$specs" >> "$GITHUB_OUTPUT"
           if [ -n "$specs" ]; then
             echo "any=true" >> "$GITHUB_OUTPUT"
@@ -120,12 +127,17 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Fail if any e2e shard did not succeed
-        if: needs.test.result != 'success'
+      - name: Fail if a dependency did not succeed
+        # Both dependencies must be checked. A failed `changed-specs` yields an empty spec
+        # list, which would send every retry-pass to the advisory set and report success —
+        # one broken diff job would silently disarm the gate.
+        if: needs.test.result != 'success' || needs.changed-specs.result != 'success'
         env:
           SHARD_RESULT: ${{ needs.test.result }}
+          DIFF_RESULT: ${{ needs.changed-specs.result }}
         run: |
-          echo "::error::e2e shards did not all succeed (result=$SHARD_RESULT); failing the gate."
+          echo "::error::e2e prerequisites did not succeed (shards=$SHARD_RESULT," \
+            "changed-specs=$DIFF_RESULT); failing the gate closed."
           exit 1
 
       - name: Set up Node.js
@@ -167,12 +179,24 @@ jobs:
     # shows up as some-but-not-all failures. Skipped entirely when no e2e spec changed.
     name: burn in changed e2e specs
     needs: changed-specs
-    if: ${{ needs.changed-specs.outputs.any == 'true' }}
+    # Skipped only when the diff genuinely resolved to no e2e specs. If `changed-specs`
+    # itself failed the job still runs and fails closed below, because branch protection
+    # counts a skipped required check as passing.
+    if: ${{ !cancelled() && (needs.changed-specs.result != 'success' || needs.changed-specs.outputs.any == 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 40
     permissions:
       contents: read
     steps:
+      - name: Fail if the changed-spec diff did not succeed
+        if: needs.changed-specs.result != 'success'
+        env:
+          DIFF_RESULT: ${{ needs.changed-specs.result }}
+        run: |
+          echo "::error::changed-specs did not succeed (result=$DIFF_RESULT);" \
+            "cannot know what to burn in, so failing closed."
+          exit 1
+
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -208,7 +232,7 @@ jobs:
         env:
           CHANGED_SPECS: ${{ needs.changed-specs.outputs.specs }}
         run: |
-          make check-e2e-flakes FLAKE_MODE=burn-in FLAKE_REPORT_DIR=test-results/burn-in \
+          make check-e2e-flakes FLAKE_MODE=burn-in FLAKE_REPORT_DIR=burn-in-results \
             FLAKE_CHANGED_SPECS="$CHANGED_SPECS"
 
       - name: Upload burn-in report
@@ -218,6 +242,6 @@ jobs:
           name: playwright-report-e2e-burn-in-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             playwright-report/
-            test-results/burn-in/results.json
+            burn-in-results/results.json
           retention-days: 14
           if-no-files-found: ignore

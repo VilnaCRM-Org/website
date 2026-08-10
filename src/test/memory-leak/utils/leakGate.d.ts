@@ -45,6 +45,8 @@ export interface LeakVerdict {
 
 export declare const TRACE_CHAR_LIMIT: number;
 
+export declare const TRACE_COUNT_LIMIT: number;
+
 export declare function summarizeTrace(trace: unknown, limit: number): string;
 
 export declare function describeAllowanceProblem(allowance: unknown): string | null;
