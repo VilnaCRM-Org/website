@@ -82,6 +82,27 @@ export interface OsvFinding {
 
 const UNKNOWN = 'unknown';
 
+/**
+ * Narrow parsed JSON to an osv-scanner report, rejecting anything that merely parses.
+ *
+ * `{}` is valid JSON and would flatten to zero findings — indistinguishable from a clean
+ * scan, so a truncated or wrong-tool file could pass the gate vacuously. A real report always
+ * carries `results`, even when nothing is wrong: a clean scan emits `{"results": []}`
+ * (verified against osv-scanner 2.5.0), so requiring the key separates "scanned, found
+ * nothing" from "this is not a scan".
+ */
+export function assertOsvReport(value: unknown, source: string): OsvReport {
+  const results: unknown = (value as { results?: unknown } | null)?.results;
+  if (typeof value !== 'object' || value === null || !Array.isArray(results)) {
+    throw new Error(
+      `${source} is not an osv-scanner report: no top-level "results" array. A clean scan ` +
+        'still emits {"results": []}, so this file did not come from a completed scan and ' +
+        'must not be read as "no advisories".'
+    );
+  }
+  return value as OsvReport;
+}
+
 /** Parse osv-scanner's string severity into a number, tolerating a missing or junk value. */
 function parseSeverity(raw: string | undefined): number | undefined {
   if (raw === undefined || raw.trim() === '') {
@@ -219,6 +240,28 @@ export interface IgnoreEntry {
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
+ * Whether `value` is a real calendar date, not merely `\d{4}-\d{2}-\d{2}`-shaped.
+ *
+ * The shape alone is not enough: expiry is compared lexicographically, so a typo like
+ * `2026-13-45` sorts after every real date and would silently become an allowance that never
+ * expires — the one thing the ignoreUntil contract exists to prevent. Round-tripping through
+ * `Date.UTC` rejects impossible months and days, and gets leap years right (2026-02-29 rolls
+ * over to March 1 and fails the comparison).
+ */
+function isCalendarDate(value: string): boolean {
+  if (!ISO_DATE.test(value)) {
+    return false;
+  }
+  const [year, month, day] = value.split('-').map(Number) as [number, number, number];
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  return (
+    parsed.getUTCFullYear() === year &&
+    parsed.getUTCMonth() === month - 1 &&
+    parsed.getUTCDate() === day
+  );
+}
+
+/**
  * `key = value` inside an `[[IgnoredVulns]]` block.
  *
  * TOML allows a basic ("…") string, a literal ('…') string, or a bare value such as a date.
@@ -236,6 +279,9 @@ const ENTRY_FIELD = /^([A-Za-z][A-Za-z0-9_]*)\s*=\s*(?:"([^"]*)"|'([^']*)'|(\S+)
  * unjustified ignore through unvalidated.
  */
 const IGNORE_HEADER = /^\[\[\s*IgnoredVulns\s*\]\]$/;
+
+/** Default config path, used to prefix messages when the caller does not name the file. */
+const DEFAULT_CONFIG = 'config/osv-scanner.toml';
 
 /** Any table header at all, so an unsupported one can be rejected loudly rather than skipped. */
 const TABLE_HEADER = /^\[/;
@@ -272,7 +318,7 @@ function stripComment(line: string): string {
  * so an entry can never be silently skipped and thereby escape validation. osv-scanner itself
  * rejects unknown keys, so a typo is caught by the scanner as well as here.
  */
-export function parseIgnoreEntries(toml: string): IgnoreEntry[] {
+export function parseIgnoreEntries(toml: string, source = DEFAULT_CONFIG): IgnoreEntry[] {
   const entries: IgnoreEntry[] = [];
   let current: IgnoreEntry | undefined;
 
@@ -295,7 +341,7 @@ export function parseIgnoreEntries(toml: string): IgnoreEntry[] {
       // exactly what this policy exists to prevent. A near-miss such as `[IgnoredVulns]` is
       // caught by the same rule instead of silently dropping a real entry out of validation.
       throw new Error(
-        `config/osv-scanner.toml line ${index + 1}: unsupported table "${rawLine.trim()}". This ` +
+        `${source} line ${index + 1}: unsupported table "${rawLine.trim()}". This ` +
           'repository allows only `[[IgnoredVulns]]`, so that every suppression carries a ' +
           'reason and an expiry date.'
       );
@@ -307,7 +353,7 @@ export function parseIgnoreEntries(toml: string): IgnoreEntry[] {
       // so ignoring root keys here would leave a way to reach suppressions this reader never
       // sees. The policy is one file, one mechanism.
       throw new Error(
-        `config/osv-scanner.toml line ${index + 1}: "${rawLine.trim()}" sits outside any ` +
+        `${source} line ${index + 1}: "${rawLine.trim()}" sits outside any ` +
           '`[[IgnoredVulns]]` entry. Top-level settings are not part of this repository’s ' +
           'ignore policy.'
       );
@@ -316,7 +362,7 @@ export function parseIgnoreEntries(toml: string): IgnoreEntry[] {
     const field = ENTRY_FIELD.exec(line);
     if (field === null) {
       throw new Error(
-        `config/osv-scanner.toml line ${index + 1}: cannot read "${rawLine.trim()}". ` +
+        `${source} line ${index + 1}: cannot read "${rawLine.trim()}". ` +
           'Entries must be simple `key = "value"` or `key = value` lines.'
       );
     }
@@ -344,10 +390,10 @@ function describeExpiryProblems(
         're-triage date.',
     ];
   }
-  if (!ISO_DATE.test(ignoreUntil)) {
+  if (!isCalendarDate(ignoreUntil)) {
     return [
-      `${where}: ignore for ${id} has \`ignoreUntil = ${ignoreUntil}\`, which is not a ` +
-        'YYYY-MM-DD date.',
+      `${where}: ignore for ${id} has \`ignoreUntil = ${ignoreUntil}\`, which is not a real ` +
+        'YYYY-MM-DD calendar date.',
     ];
   }
   if (ignoreUntil < today) {
@@ -391,12 +437,16 @@ function describeEntryProblems(
  * come back, not a permanent exemption. Comparison is lexicographic, which is exact for
  * zero-padded ISO dates and avoids dragging a timezone into a date-only decision.
  */
-export function validateIgnores(entries: readonly IgnoreEntry[], today: string): string[] {
+export function validateIgnores(
+  entries: readonly IgnoreEntry[],
+  today: string,
+  source = DEFAULT_CONFIG
+): string[] {
   const problems: string[] = [];
   const seen = new Set<string>();
 
   for (const entry of entries) {
-    const where = `config/osv-scanner.toml line ${entry.line}`;
+    const where = `${source} line ${entry.line}`;
     const id = entry.id?.trim() ?? '';
 
     // An entry with no id cannot be matched to an advisory or deduplicated against one, so

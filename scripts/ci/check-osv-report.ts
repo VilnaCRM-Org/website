@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { relative, resolve } from 'node:path';
 
 import {
+  assertOsvReport,
   describeFinding,
   findIntroduced,
   findResolved,
@@ -75,11 +76,13 @@ function loadReport(variable: string): OsvReport {
     );
   }
   const raw = readFileSync(path, 'utf8');
+  let parsed: unknown;
   try {
-    return JSON.parse(raw) as OsvReport;
+    parsed = JSON.parse(raw);
   } catch (error) {
     throw new Error(`osv-scanner report "${path}" is not valid JSON: ${String(error)}`);
   }
+  return assertOsvReport(parsed, `osv-scanner report "${path}"`);
 }
 
 /** Today's date as `YYYY-MM-DD` in UTC, so expiry does not depend on the runner's timezone. */
@@ -99,8 +102,9 @@ function enforceIgnorePolicy(): void {
     );
   }
   const problems = validateIgnores(
-    parseIgnoreEntries(readFileSync(IGNORE_CONFIG, 'utf8')),
-    today()
+    parseIgnoreEntries(readFileSync(IGNORE_CONFIG, 'utf8'), IGNORE_CONFIG),
+    today(),
+    IGNORE_CONFIG
   );
   if (problems.length === 0) {
     return;

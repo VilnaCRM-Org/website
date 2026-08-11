@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 
 import {
+  assertOsvReport,
   describeFinding,
   findIntroduced,
   findResolved,
@@ -160,6 +161,39 @@ describe('osv-report dependency CVE gate', () => {
         versions: ['unknown'],
         ecosystem: 'unknown',
       });
+    });
+  });
+
+  describe('assertOsvReport', () => {
+    it('accepts a clean scan, which still carries an empty results array', () => {
+      expect(assertOsvReport({ results: [] }, 'fixture')).toEqual({ results: [] });
+    });
+
+    it('accepts a report with findings', () => {
+      const value = report([{ name: 'axios', version: '1.16.1', groups: [{ ids: ['GHSA-a'] }] }]);
+      expect(assertOsvReport(value, 'fixture')).toBe(value);
+    });
+
+    it('rejects valid JSON that is not a report, which would read as zero advisories', () => {
+      // `{}` flattens to no findings and is indistinguishable from a clean scan, so a
+      // truncated or wrong-tool file would pass the gate vacuously.
+      expect(() => assertOsvReport({}, 'fixture')).toThrow(/no top-level "results" array/);
+    });
+
+    it('rejects a results value that is not an array', () => {
+      expect(() => assertOsvReport({ results: {} }, 'fixture')).toThrow(/results/);
+      expect(() => assertOsvReport({ results: null }, 'fixture')).toThrow(/results/);
+    });
+
+    it('rejects JSON primitives and null', () => {
+      expect(() => assertOsvReport(null, 'fixture')).toThrow(/not an osv-scanner report/);
+      expect(() => assertOsvReport([], 'fixture')).toThrow(/not an osv-scanner report/);
+      expect(() => assertOsvReport('{}', 'fixture')).toThrow(/not an osv-scanner report/);
+      expect(() => assertOsvReport(7, 'fixture')).toThrow(/not an osv-scanner report/);
+    });
+
+    it('names the source so the operator knows which report was rejected', () => {
+      expect(() => assertOsvReport({}, 'the head report')).toThrow(/^the head report is not/);
     });
   });
 
@@ -520,8 +554,33 @@ describe('osv-report dependency CVE gate', () => {
       );
 
       expect(validateIgnores(entries, TODAY)).toEqual([
-        expect.stringContaining('not a YYYY-MM-DD date'),
+        expect.stringContaining('not a real YYYY-MM-DD calendar date'),
       ]);
+    });
+
+    it.each(['2026-13-01', '2026-00-10', '2026-02-30', '2027-02-29', '2026-04-31', '2026-01-32'])(
+      'rejects %s — a date-shaped typo would sort after every real date and never expire',
+      invalid => {
+        const entries = parseIgnoreEntries(
+          ['[[IgnoredVulns]]', 'id = "GHSA-a"', `ignoreUntil = ${invalid}`, 'reason = "why"'].join(
+            '\n'
+          )
+        );
+
+        expect(validateIgnores(entries, TODAY)).toEqual([
+          expect.stringContaining('not a real YYYY-MM-DD calendar date'),
+        ]);
+      }
+    );
+
+    it('accepts a genuine leap day', () => {
+      const entries = parseIgnoreEntries(
+        ['[[IgnoredVulns]]', 'id = "GHSA-a"', 'ignoreUntil = 2028-02-29', 'reason = "why"'].join(
+          '\n'
+        )
+      );
+
+      expect(validateIgnores(entries, TODAY)).toEqual([]);
     });
 
     it('rejects an entry with no id and does not cascade further errors from it', () => {
