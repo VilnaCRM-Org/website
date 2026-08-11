@@ -17,9 +17,9 @@ OSV_BIN="${OSV_BIN:-./bin/osv-scanner}"
 OSV_MODE="${OSV_MODE:-diff}"
 OSV_LOCKFILE="${OSV_LOCKFILE:-bun.lock}"
 OSV_BASE_REF="${OSV_BASE_REF:-origin/main}"
-# Kept under config/ beside metrics-policy.json rather than at the repository root: the root
-# name `osv-scanner.toml` is what qlty auto-discovers for its own osv-scanner plugin, and two
-# tools fighting over one config file is a needless collision.
+# Kept under config/ beside metrics-policy.json, where this repository puts the policy files
+# its gates read, rather than at the repository root. Every scan passes --config explicitly,
+# so nothing relies on osv-scanner's root auto-discovery.
 OSV_CONFIG="${OSV_CONFIG:-config/osv-scanner.toml}"
 OSV_REPORT_DIR="${OSV_REPORT_DIR:-reports/osv}"
 
