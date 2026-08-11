@@ -149,7 +149,9 @@ The nightly `dependency cve census` leg reports the whole backlog into one refre
 Never add a `config/osv-scanner.toml` ignore for an advisory your own change introduced, and
 never push an `ignoreUntil` date out to keep a build green — upgrade the dependency. Every
 ignore needs an `id`, a `reason`, and an unexpired `ignoreUntil`; all three are enforced by
-`scripts/ci/check-osv-report.ts`.
+`scripts/ci/osv-ignores.ts`. The rule is also mechanical, not just documented: both diff scans
+run under the _intersection_ of the base ref's ignores and the working tree's, so an ignore a
+change adds — or removes — cannot alter what its own gate suppresses.
 
 ## Continuous Integration (parallel PR pipeline)
 

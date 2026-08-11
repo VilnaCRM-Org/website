@@ -55,14 +55,14 @@ if [ "$OSV_MODE" = 'diff' ]; then
     exit 1
   fi
 
-  # BOTH scans use the BASE branch's ignore config, never the working tree's. Otherwise a
-  # change could add a vulnerable dependency AND an `[[IgnoredVulns]]` entry for it in the
-  # same diff: the entry would suppress the finding in both reports, `findIntroduced` would
-  # see nothing new, and the gate would pass on exactly the exposure it exists to catch. An
-  # ignore therefore only takes effect once it has been reviewed and merged.
+  # BOTH scans run under the ignore policy that will be in force AFTER this merges: the
+  # entries present in the base ref AND the working tree. Neither one-sided set can be
+  # honoured — an ignore the change ADDS would let one diff carry a vulnerable dependency and
+  # the excuse for it, and an ignore the change REMOVES would suppress an advisory that goes
+  # live on merge. See scripts/ci/osv-ignores.ts.
   #
   # The working-tree config is still validated — the checker reads OSV_CONFIG for the
-  # id/reason/ignoreUntil policy — it just cannot silence this run.
+  # id/reason/ignoreUntil policy — it just does not decide what this run may suppress.
   base_config="$OSV_REPORT_DIR/base-config.toml"
   if ! git show "$OSV_BASE_REF:$OSV_CONFIG" >"$base_config" 2>/dev/null; then
     # No config on the base ref yet (the gate is new, or the path moved). An empty config is
@@ -70,8 +70,13 @@ if [ "$OSV_MODE" = 'diff' ]; then
     : >"$base_config"
   fi
 
-  scan "$OSV_LOCKFILE" "$OSV_REPORT_DIR/head.json" "$base_config"
-  scan "$OSV_LOCKFILE:$base_copy" "$OSV_REPORT_DIR/base.json" "$base_config"
+  effective_config="$OSV_REPORT_DIR/effective-config.toml"
+  OSV_BASE_CONFIG="$base_config" OSV_CONFIG="$OSV_CONFIG" \
+    OSV_EFFECTIVE_CONFIG="$effective_config" \
+    bun x tsx scripts/ci/write-effective-osv-config.ts
+
+  scan "$OSV_LOCKFILE" "$OSV_REPORT_DIR/head.json" "$effective_config"
+  scan "$OSV_LOCKFILE:$base_copy" "$OSV_REPORT_DIR/base.json" "$effective_config"
   OSV_BASE_REPORT="$OSV_REPORT_DIR/base.json"
   OSV_BASE_CONFIG="$base_config"
   export OSV_BASE_REPORT OSV_BASE_CONFIG

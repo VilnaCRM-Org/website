@@ -1,16 +1,14 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { relative, resolve } from 'node:path';
 
+import { findUnappliedIgnores, parseIgnoreEntries, validateIgnores } from './osv-ignores';
 import {
   assertOsvReport,
   describeFinding,
-  findAddedIgnores,
   findIntroduced,
   findResolved,
   flattenFindings,
-  parseIgnoreEntries,
   renderFindings,
-  validateIgnores,
   type OsvFinding,
   type OsvReport,
 } from './osv-report';
@@ -141,29 +139,35 @@ function summarise(markdown: string): void {
 }
 
 /**
- * Ignores this change adds, which the blocking scan deliberately did not apply.
+ * Ignores the blocking scan could not honour, and why.
  *
- * scan-vulns.sh runs both diff scans under the BASE branch's config so a change cannot add a
- * vulnerable dependency and an ignore for it at once. When someone hits that, the gate has to
- * say so, or the failure looks like the ignore was simply broken.
+ * scan-vulns.sh scans under the intersection of the base ref's ignores and the working
+ * tree's — the policy in force after the merge. When an author has just added or removed an
+ * entry, the gate has to say so, or the failure looks like the entry is simply broken.
  */
-function reportAddedIgnores(): void {
+function reportUnappliedIgnores(): void {
   const basePath = process.env.OSV_BASE_CONFIG;
   if (basePath === undefined || basePath.trim() === '' || !existsSync(basePath)) {
     return;
   }
-  const added = findAddedIgnores(
+  const { added, removed } = findUnappliedIgnores(
     parseIgnoreEntries(readFileSync(basePath, 'utf8'), basePath),
     parseIgnoreEntries(readFileSync(IGNORE_CONFIG, 'utf8'), IGNORE_CONFIG)
   );
-  if (added.length === 0) {
-    return;
+  if (added.length > 0) {
+    summarise(
+      `\n> This pull request ADDS ${added.length} ignore(s) — ${added.join(', ')} — which ` +
+        'the scan above did not apply. An ignore takes effect only once it is merged, so a ' +
+        'change cannot suppress an advisory it introduces in the same diff.\n'
+    );
   }
-  summarise(
-    `\n> This pull request adds ${added.length} ignore(s) — ${added.join(', ')} — which were ` +
-      'NOT applied to the scan above. An ignore only takes effect once it is merged, so a ' +
-      'change cannot suppress an advisory it introduces in the same diff.\n'
-  );
+  if (removed.length > 0) {
+    summarise(
+      `\n> This pull request REMOVES ${removed.length} ignore(s) — ${removed.join(', ')} — ` +
+        'so the scan above did not apply them either. They stop suppressing anything the ' +
+        'moment this merges, and the gate reflects that now.\n'
+    );
+  }
 }
 
 /** Compare the two scans and fail when the pull request adds exposure. */
@@ -182,7 +186,7 @@ function diff(): number {
     summarise(renderFindings(resolved, ''));
   }
 
-  reportAddedIgnores();
+  reportUnappliedIgnores();
 
   for (const finding of introduced) {
     annotate('error', finding);

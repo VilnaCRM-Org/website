@@ -436,6 +436,14 @@ routes that carry neither a reason nor a date — `[[PackageOverrides]]` with
 `ignore = true` drops a package's findings outright, and `LoadConfigs` pulls in
 further config files the policy check would never see.
 
+A pull request also cannot change what its own blocking scan suppresses. Both
+diff scans run under the **intersection** of the base ref's ignores and the
+working tree's — the policy that will be in force after the merge. An ignore the
+change _adds_ is not applied (or one diff could carry a vulnerable dependency and
+the excuse for it), and an ignore the change _removes_ is not applied either (it
+stops suppressing the moment it merges). Land an ignore in its own reviewed
+commit first, then the dependency.
+
 ## Routing
 
 This project includes a routing script for managing URLs.
