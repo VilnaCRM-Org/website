@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import {
   assertOsvReport,
   describeFinding,
+  findAddedIgnores,
   findIntroduced,
   findResolved,
   flattenFindings,
@@ -374,6 +375,22 @@ describe('osv-report dependency CVE gate', () => {
       expect(entries).toEqual([{ line: 1, reason: 'dev-only via memlab; tracked in #391' }]);
     });
 
+    it('keeps a `#` inside a TOML literal string too, not just a basic one', () => {
+      const entries = parseIgnoreEntries(
+        ['[[IgnoredVulns]]', "reason = 'tracked in #391'"].join('\n')
+      );
+
+      expect(entries).toEqual([{ line: 1, reason: 'tracked in #391' }]);
+    });
+
+    it('treats the opening delimiter as the closing one, so a nested quote is text', () => {
+      const entries = parseIgnoreEntries(
+        ['[[IgnoredVulns]]', 'reason = "upstream\'s fix #12"'].join('\n')
+      );
+
+      expect(entries).toEqual([{ line: 1, reason: "upstream's fix #12" }]);
+    });
+
     it('still strips a real comment that follows a value containing a `#`', () => {
       const entries = parseIgnoreEntries(
         ['[[IgnoredVulns]]', 'reason = "see #391" # re-triage with the Q4 bump'].join('\n')
@@ -618,6 +635,36 @@ describe('osv-report dependency CVE gate', () => {
 
     it('accepts an empty ignore list — the committed default', () => {
       expect(validateIgnores([], TODAY)).toEqual([]);
+    });
+  });
+
+  describe('findAddedIgnores', () => {
+    const entries = (...ids: string[]) =>
+      parseIgnoreEntries(ids.map(id => `[[IgnoredVulns]]\nid = "${id}"`).join('\n'));
+
+    it('names the ignores a change adds on top of the base branch', () => {
+      expect(findAddedIgnores(entries('GHSA-a'), entries('GHSA-a', 'GHSA-b'))).toEqual(['GHSA-b']);
+    });
+
+    it('reports nothing when the change adds no ignore', () => {
+      expect(findAddedIgnores(entries('GHSA-a'), entries('GHSA-a'))).toEqual([]);
+      expect(findAddedIgnores([], [])).toEqual([]);
+    });
+
+    it('reports every ignore when the base branch has no config yet', () => {
+      expect(findAddedIgnores([], entries('GHSA-b', 'GHSA-a'))).toEqual(['GHSA-a', 'GHSA-b']);
+    });
+
+    it('does not report an ignore the change REMOVES', () => {
+      expect(findAddedIgnores(entries('GHSA-a', 'GHSA-b'), entries('GHSA-a'))).toEqual([]);
+    });
+
+    it('ignores entries with no id and de-duplicates repeats', () => {
+      const head = parseIgnoreEntries(
+        ['[[IgnoredVulns]]', 'reason = "no id"', '[[IgnoredVulns]]', 'id = "GHSA-b"'].join('\n')
+      );
+
+      expect(findAddedIgnores([], [...head, ...head])).toEqual(['GHSA-b']);
     });
   });
 

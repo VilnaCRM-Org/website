@@ -134,8 +134,14 @@ jobs:
           # `.[0].number` over an empty array prints the literal string "null", which would
           # pass the -n test and run `gh issue comment null`, so the tracking issue would
           # never be created on the first census. `first(...) // empty` yields nothing.
+          #
+          # `|| true` because a rate-limited or flaky lookup must not abort the census under
+          # `set -e`. An empty result falls through to `gh issue create`, which either files
+          # the issue or fails loudly on a real permissions problem — the outcome actually
+          # worth being red for. This leg exists to stay green over debt no author caused.
           existing="$(gh issue list --label dependency-cve --state open \
-            --search "$title in:title" --json number --jq 'first(.[].number) // empty')"
+            --search "$title in:title" --json number --jq 'first(.[].number) // empty' \
+            || true)"
           if [ -n "$existing" ]; then
             gh issue comment "$existing" --body "$body"
           else

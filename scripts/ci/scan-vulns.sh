@@ -31,8 +31,9 @@ mkdir -p "$OSV_REPORT_DIR"
 scan() {
   scan_lockfile="$1"
   scan_out="$2"
+  scan_config="$3"
   set +e
-  "$OSV_BIN" scan source --lockfile="$scan_lockfile" --config="$OSV_CONFIG" \
+  "$OSV_BIN" scan source --lockfile="$scan_lockfile" --config="$scan_config" \
     --format=json >"$scan_out"
   scan_status=$?
   set -e
@@ -42,10 +43,6 @@ scan() {
     exit 1
   fi
 }
-
-scan "$OSV_LOCKFILE" "$OSV_REPORT_DIR/head.json"
-OSV_HEAD_REPORT="$OSV_REPORT_DIR/head.json"
-export OSV_HEAD_REPORT
 
 if [ "$OSV_MODE" = 'diff' ]; then
   # Materialise the base branch's lockfile without touching the working tree, then tell
@@ -57,11 +54,33 @@ if [ "$OSV_MODE" = 'diff' ]; then
       "$OSV_LOCKFILE" "$OSV_BASE_REF" >&2
     exit 1
   fi
-  scan "$OSV_LOCKFILE:$base_copy" "$OSV_REPORT_DIR/base.json"
+
+  # BOTH scans use the BASE branch's ignore config, never the working tree's. Otherwise a
+  # change could add a vulnerable dependency AND an `[[IgnoredVulns]]` entry for it in the
+  # same diff: the entry would suppress the finding in both reports, `findIntroduced` would
+  # see nothing new, and the gate would pass on exactly the exposure it exists to catch. An
+  # ignore therefore only takes effect once it has been reviewed and merged.
+  #
+  # The working-tree config is still validated — the checker reads OSV_CONFIG for the
+  # id/reason/ignoreUntil policy — it just cannot silence this run.
+  base_config="$OSV_REPORT_DIR/base-config.toml"
+  if ! git show "$OSV_BASE_REF:$OSV_CONFIG" >"$base_config" 2>/dev/null; then
+    # No config on the base ref yet (the gate is new, or the path moved). An empty config is
+    # the strictest reading: nothing is suppressed.
+    : >"$base_config"
+  fi
+
+  scan "$OSV_LOCKFILE" "$OSV_REPORT_DIR/head.json" "$base_config"
+  scan "$OSV_LOCKFILE:$base_copy" "$OSV_REPORT_DIR/base.json" "$base_config"
   OSV_BASE_REPORT="$OSV_REPORT_DIR/base.json"
-  export OSV_BASE_REPORT
+  OSV_BASE_CONFIG="$base_config"
+  export OSV_BASE_REPORT OSV_BASE_CONFIG
+else
+  scan "$OSV_LOCKFILE" "$OSV_REPORT_DIR/head.json" "$OSV_CONFIG"
 fi
 
+OSV_HEAD_REPORT="$OSV_REPORT_DIR/head.json"
+export OSV_HEAD_REPORT
 export OSV_MODE
 export OSV_CONFIG
 exec bun x tsx scripts/ci/check-osv-report.ts

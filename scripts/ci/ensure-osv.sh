@@ -12,13 +12,18 @@
 set -eu
 
 OSV_BIN="${OSV_BIN:-./bin/osv-scanner}"
-OSV_VERSION="${OSV_VERSION:-2.5.0}"
 
-# From https://github.com/google/osv-scanner/releases/download/v2.5.0/osv-scanner_SHA256SUMS
-OSV_SHA256_LINUX_AMD64="${OSV_SHA256_LINUX_AMD64:-edcfc41d257db36148f065055655fe3fcfc434b0b423ea67468a84c207524e0c}"
-OSV_SHA256_LINUX_ARM64="${OSV_SHA256_LINUX_ARM64:-fe152e1a546af223e6c557cc3111a8bb3e5dc02fcbf7dbe95d26567c0f0041f2}"
-OSV_SHA256_DARWIN_AMD64="${OSV_SHA256_DARWIN_AMD64:-baef4f4a4ce2924a9241869c36d4bd9d6c04b632cae6637a0f6347ab9272eb16}"
-OSV_SHA256_DARWIN_ARM64="${OSV_SHA256_DARWIN_ARM64:-fff5a2e351b7f0a60001e87cbf862e82fb82e2792d368b533fec7a5865a73da2}"
+# The version and its digests are ONE fact, and are deliberately NOT overridable from the
+# environment: an `OSV_VERSION=2.6.0` override would download 2.6.0 and verify it against the
+# 2.5.0 digests, which can only ever fail. Upgrading means editing this block — the version
+# and all four digests together, copied from that release's own osv-scanner_SHA256SUMS — in a
+# reviewed diff, which is the entire point of pinning a security scanner.
+# https://github.com/google/osv-scanner/releases/download/v2.5.0/osv-scanner_SHA256SUMS
+OSV_VERSION='2.5.0'
+OSV_SHA256_LINUX_AMD64='edcfc41d257db36148f065055655fe3fcfc434b0b423ea67468a84c207524e0c'
+OSV_SHA256_LINUX_ARM64='fe152e1a546af223e6c557cc3111a8bb3e5dc02fcbf7dbe95d26567c0f0041f2'
+OSV_SHA256_DARWIN_AMD64='baef4f4a4ce2924a9241869c36d4bd9d6c04b632cae6637a0f6347ab9272eb16'
+OSV_SHA256_DARWIN_ARM64='fff5a2e351b7f0a60001e87cbf862e82fb82e2792d368b533fec7a5865a73da2'
 
 # Already the right version? Nothing to do (idempotent; no network needed).
 # -Fwq: fixed-string, whole-word match so e.g. 2.5.01 cannot satisfy 2.5.0.

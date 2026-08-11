@@ -291,17 +291,21 @@ const TABLE_HEADER = /^\[/;
  *
  * A naive `replace(/#.*$/, '')` truncates `reason = "… tracked in #391"` mid-value, which the
  * documented template in config/osv-scanner.toml would hit the first time anyone used it —
- * because this reader fails closed, that would take the whole gate down rather than degrade
- * quietly. A `"` toggles quoted state; escaped quotes are not part of the accepted subset, so
- * a value containing one falls through to ENTRY_FIELD and is rejected there.
+ * and because this reader fails closed, that would take the whole gate down rather than
+ * degrade quietly. Both TOML quote styles are tracked, and the OPENING delimiter is what
+ * closes the value, so a `'` inside a "…" string (or vice versa) is ordinary text. Escaped
+ * quotes are not part of the accepted subset, so a value containing one falls through to
+ * ENTRY_FIELD and is rejected there.
  */
 function stripComment(line: string): string {
-  let quoted = false;
+  let delimiter: string | undefined;
   for (let index = 0; index < line.length; index += 1) {
     const char = line[index];
-    if (char === '"') {
-      quoted = !quoted;
-    } else if (char === '#' && !quoted) {
+    if (delimiter === undefined && (char === '"' || char === "'")) {
+      delimiter = char;
+    } else if (char === delimiter) {
+      delimiter = undefined;
+    } else if (char === '#' && delimiter === undefined) {
       return line.slice(0, index);
     }
   }
@@ -428,6 +432,24 @@ function describeEntryProblems(
   problems.push(...describeExpiryProblems(entry.ignoreUntil, id, where, today));
 
   return problems;
+}
+
+/**
+ * Advisory ids ignored by `head` but not by `base` — the ignores a change ADDS.
+ *
+ * The blocking scan deliberately runs under the base branch's config, so these have no effect
+ * on this run. Reporting them keeps that non-obvious behaviour visible to whoever is reading
+ * a red gate and wondering why their new ignore did not help.
+ */
+export function findAddedIgnores(
+  baseEntries: readonly IgnoreEntry[],
+  headEntries: readonly IgnoreEntry[]
+): string[] {
+  const known = new Set(baseEntries.map(entry => entry.id?.trim()).filter(Boolean));
+  const added = headEntries
+    .map(entry => entry.id?.trim())
+    .filter((id): id is string => Boolean(id) && !known.has(id));
+  return [...new Set(added)].sort((a, b) => a.localeCompare(b));
 }
 
 /**

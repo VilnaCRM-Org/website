@@ -17,9 +17,11 @@
 #   ignoreUntil  a YYYY-MM-DD re-triage date
 #
 # scripts/ci/check-osv-report.ts enforces all three and FAILS the gate once ignoreUntil has
-# passed, exactly as src/test/memory-leak/leak-baseline.json does for memlab allowances
-# (#354). Never add an entry for an advisory your own change introduced, and never push the
-# date out to keep a build green — upgrade the dependency instead.
+# passed. Never push the date out to keep a build green — upgrade the dependency instead.
+#
+# You also cannot suppress an advisory your own change introduces: the blocking pull-request
+# scan runs against the BASE branch's copy of this file, so an entry added here takes effect
+# only once it has been reviewed and merged. Land the ignore first, then the dependency.
 #
 # `[[IgnoredVulns]]` is the ONLY construct this file may contain. Any other table, and any
 # top-level key, is rejected outright: `[[PackageOverrides]]` with `ignore = true` silences a

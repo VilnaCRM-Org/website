@@ -4,6 +4,7 @@ import { relative, resolve } from 'node:path';
 import {
   assertOsvReport,
   describeFinding,
+  findAddedIgnores,
   findIntroduced,
   findResolved,
   flattenFindings,
@@ -131,9 +132,38 @@ function annotate(level: 'warning' | 'error', finding: OsvFinding): void {
   process.stderr.write(`::${level}::${describeFinding(finding)}\n`);
 }
 
-/** Append Markdown to the job summary when running on GitHub Actions. */
+/**
+ * Write Markdown to stdout. The workflow tees stdout into the job summary and, for the
+ * census, verbatim into the tracking issue — so nothing but the report belongs on it.
+ */
 function summarise(markdown: string): void {
   process.stdout.write(markdown);
+}
+
+/**
+ * Ignores this change adds, which the blocking scan deliberately did not apply.
+ *
+ * scan-vulns.sh runs both diff scans under the BASE branch's config so a change cannot add a
+ * vulnerable dependency and an ignore for it at once. When someone hits that, the gate has to
+ * say so, or the failure looks like the ignore was simply broken.
+ */
+function reportAddedIgnores(): void {
+  const basePath = process.env.OSV_BASE_CONFIG;
+  if (basePath === undefined || basePath.trim() === '' || !existsSync(basePath)) {
+    return;
+  }
+  const added = findAddedIgnores(
+    parseIgnoreEntries(readFileSync(basePath, 'utf8'), basePath),
+    parseIgnoreEntries(readFileSync(IGNORE_CONFIG, 'utf8'), IGNORE_CONFIG)
+  );
+  if (added.length === 0) {
+    return;
+  }
+  summarise(
+    `\n> This pull request adds ${added.length} ignore(s) — ${added.join(', ')} — which were ` +
+      'NOT applied to the scan above. An ignore only takes effect once it is merged, so a ' +
+      'change cannot suppress an advisory it introduces in the same diff.\n'
+  );
 }
 
 /** Compare the two scans and fail when the pull request adds exposure. */
@@ -151,6 +181,8 @@ function diff(): number {
     summarise(`\n### Resolved by this pull request\n\n`);
     summarise(renderFindings(resolved, ''));
   }
+
+  reportAddedIgnores();
 
   for (const finding of introduced) {
     annotate('error', finding);
