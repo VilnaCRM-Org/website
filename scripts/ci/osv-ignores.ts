@@ -239,10 +239,13 @@ export function intersectIgnores(
   baseEntries: readonly IgnoreEntry[],
   headEntries: readonly IgnoreEntry[]
 ): IgnoreEntry[] {
-  const kept = idsOf(headEntries);
-  return baseEntries.filter(entry => {
+  // Membership is decided by the base ref, but the ENTRY returned is the working tree's, so a
+  // renewed or shortened `ignoreUntil` — and an edited reason — is what the scan sees. Taking
+  // the base entry would gate on metadata the merge is about to replace.
+  const agreed = idsOf(baseEntries);
+  return headEntries.filter(entry => {
     const id = entry.id?.trim();
-    return id !== undefined && kept.has(id);
+    return id !== undefined && agreed.has(id);
   });
 }
 
@@ -265,23 +268,31 @@ export function findUnappliedIgnores(
   };
 }
 
+/** Escape a value for a TOML basic string. */
+function escapeTomlBasic(value: string): string {
+  return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+}
+
 /**
  * Render entries back to TOML for osv-scanner to consume as the effective policy.
  *
- * Only the three governed keys are emitted. Values cannot contain a quote of their own kind —
- * ENTRY_FIELD rejects those on the way in — so this cannot produce malformed TOML.
+ * Only the three governed keys are emitted. String values are escaped rather than
+ * interpolated raw: a TOML LITERAL reason may legitimately contain a double quote
+ * (`reason = 'he said "no"'`), and emitting that unescaped into a basic string produces
+ * invalid TOML, which osv-scanner rejects with exit 127 — failing the gate on a valid config.
+ * `ignoreUntil` needs no escaping; it is validated as a bare `YYYY-MM-DD` date.
  */
 export function renderIgnoreConfig(entries: readonly IgnoreEntry[]): string {
   const header =
     '# GENERATED — do not edit. The ignores in force for this scan: the entries present in\n' +
     '# BOTH the base ref and the working tree. See scripts/ci/osv-ignores.ts.\n';
   const blocks = entries.map(entry => {
-    const lines = ['', '[[IgnoredVulns]]', `id = "${entry.id?.trim() ?? ''}"`];
+    const lines = ['', '[[IgnoredVulns]]', `id = "${escapeTomlBasic(entry.id?.trim() ?? '')}"`];
     if (entry.ignoreUntil !== undefined) {
       lines.push(`ignoreUntil = ${entry.ignoreUntil}`);
     }
     if (entry.reason !== undefined) {
-      lines.push(`reason = "${entry.reason}"`);
+      lines.push(`reason = "${escapeTomlBasic(entry.reason)}"`);
     }
     return lines.join('\n');
   });

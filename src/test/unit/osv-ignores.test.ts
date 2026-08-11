@@ -334,6 +334,21 @@ describe('osv-scanner ignore policy', () => {
         expect(ids(intersectIgnores(entries('GHSA-a'), entries('GHSA-a')))).toEqual(['GHSA-a']);
       });
 
+      it("takes the working tree's metadata for a shared id, not the base ref's", () => {
+        // A renewed or shortened ignoreUntil is what the merge will install, so that is the
+        // policy the blocking scan has to run under.
+        const base = parseIgnoreEntries(
+          '[[IgnoredVulns]]\nid = "GHSA-a"\nignoreUntil = 2027-12-31\nreason = "old"'
+        );
+        const head = parseIgnoreEntries(
+          '[[IgnoredVulns]]\nid = "GHSA-a"\nignoreUntil = 2026-09-01\nreason = "shortened"'
+        );
+
+        expect(intersectIgnores(base, head)).toEqual([
+          { line: 1, id: 'GHSA-a', ignoreUntil: '2026-09-01', reason: 'shortened' },
+        ]);
+      });
+
       it('drops an ignore the change ADDS, so it cannot excuse its own new advisory', () => {
         expect(intersectIgnores(entries('GHSA-a'), entries('GHSA-a', 'GHSA-b'))).toHaveLength(1);
         expect(ids(intersectIgnores([], entries('GHSA-b')))).toEqual([]);
@@ -390,6 +405,24 @@ describe('osv-scanner ignore policy', () => {
         const rendered = renderIgnoreConfig([]);
         expect(parseIgnoreEntries(rendered)).toEqual([]);
         expect(rendered).toContain('GENERATED');
+      });
+
+      it('escapes a double quote a literal reason may legitimately contain', () => {
+        // `reason = 'he said "no"'` is valid TOML in; interpolated raw into a basic string it
+        // would come out invalid, and osv-scanner would exit 127 on a perfectly good config.
+        const entry = parseIgnoreEntries(
+          '[[IgnoredVulns]]\nid = "GHSA-a"\nreason = \'he said "no"\''
+        );
+
+        expect(renderIgnoreConfig(entry)).toContain('reason = "he said \\"no\\""');
+      });
+
+      it('escapes a backslash so it cannot start an unintended escape', () => {
+        const entry = parseIgnoreEntries(
+          '[[IgnoredVulns]]\nid = "GHSA-a"\nreason = \'path C:\\\\tmp\''
+        );
+
+        expect(renderIgnoreConfig(entry)).toContain('reason = "path C:\\\\\\\\tmp"');
       });
 
       it('omits keys the entry does not carry', () => {
