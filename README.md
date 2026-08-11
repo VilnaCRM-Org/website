@@ -430,6 +430,12 @@ gate fails once `ignoreUntil` has passed — the same contract
 an entry for an advisory your own change introduced, and never push the date out
 to keep a build green.
 
+`[[IgnoredVulns]]` is the only construct that file may contain. Every other table
+and every top-level key is rejected, because osv-scanner offers suppression
+routes that carry neither a reason nor a date — `[[PackageOverrides]]` with
+`ignore = true` drops a package's findings outright, and `LoadConfigs` pulls in
+further config files the policy check would never see.
+
 ## Routing
 
 This project includes a routing script for managing URLs.

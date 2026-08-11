@@ -65,8 +65,13 @@ export interface OsvFinding {
   key: string;
   ecosystem: string;
   packageName: string;
-  /** The version seen in THIS report; informational only, never part of `key`. */
-  version: string;
+  /**
+   * Every vulnerable version of this package seen in THIS report, sorted. Informational only
+   * — never part of `key`. A lockfile routinely carries the same package at two or three
+   * versions (brace-expansion at 1.x, 2.x and 5.x all carry GHSA-3jxr-9vmj-r5cp), and naming
+   * only one of them would send a reader hunting the wrong dependency.
+   */
+  versions: string[];
   /** The primary advisory id (first in the group), e.g. `GHSA-hmw2-7cc7-3qxx`. */
   id: string;
   /** Every alias in the group, including `id`, so a reader can search by CVE too. */
@@ -86,6 +91,56 @@ function parseSeverity(raw: string | undefined): number | undefined {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
+/** Order findings by descending severity, then by package and id, so output is stable. */
+export function sortFindings(findings: readonly OsvFinding[]): OsvFinding[] {
+  return [...findings].sort(
+    (a, b) =>
+      (b.severity ?? -1) - (a.severity ?? -1) ||
+      a.packageName.localeCompare(b.packageName) ||
+      a.id.localeCompare(b.id)
+  );
+}
+
+/** Build the finding for one advisory group, or `undefined` when the group carries no id. */
+function toFinding(entry: OsvPackageResult, group: OsvGroup): OsvFinding | undefined {
+  const ids = group.ids ?? [];
+  const id = ids[0];
+  if (id === undefined) {
+    return undefined;
+  }
+
+  const packageName = entry.package?.name ?? UNKNOWN;
+  const ecosystem = entry.package?.ecosystem ?? UNKNOWN;
+
+  return {
+    key: `${ecosystem}|${packageName}|${id}`,
+    ecosystem,
+    packageName,
+    versions: [entry.package?.version ?? UNKNOWN],
+    id,
+    aliases: [...new Set([...ids, ...(group.aliases ?? [])])].sort((a, b) => a.localeCompare(b)),
+    severity: parseSeverity(group.max_severity),
+  };
+}
+
+/**
+ * Record a finding under its key, folding a repeat occurrence into the versions already seen.
+ *
+ * The same advisory legitimately hits several resolved versions of one package, and it can
+ * also arrive twice through two scanned sources. Both collapse to a single finding so the
+ * diff never double-reports, but every affected version is kept for the reader.
+ */
+function mergeFinding(byKey: Map<string, OsvFinding>, finding: OsvFinding): void {
+  const existing = byKey.get(finding.key);
+  if (existing === undefined) {
+    byKey.set(finding.key, finding);
+    return;
+  }
+  existing.versions = [...new Set([...existing.versions, ...finding.versions])].sort((a, b) =>
+    a.localeCompare(b)
+  );
+}
+
 /**
  * Flatten an osv-scanner report into one entry per package + advisory group.
  *
@@ -98,45 +153,16 @@ export function flattenFindings(report: OsvReport): OsvFinding[] {
 
   for (const result of report.results ?? []) {
     for (const entry of result.packages ?? []) {
-      const packageName = entry.package?.name ?? UNKNOWN;
-      const ecosystem = entry.package?.ecosystem ?? UNKNOWN;
-      const version = entry.package?.version ?? UNKNOWN;
-
       for (const group of entry.groups ?? []) {
-        const ids = group.ids ?? [];
-        const id = ids[0];
-        if (id === undefined) {
-          continue;
-        }
-        const key = `${ecosystem}|${packageName}|${id}`;
-        if (!byKey.has(key)) {
-          byKey.set(key, {
-            key,
-            ecosystem,
-            packageName,
-            version,
-            id,
-            aliases: [...new Set([...ids, ...(group.aliases ?? [])])].sort((a, b) =>
-              a.localeCompare(b)
-            ),
-            severity: parseSeverity(group.max_severity),
-          });
+        const finding = toFinding(entry, group);
+        if (finding !== undefined) {
+          mergeFinding(byKey, finding);
         }
       }
     }
   }
 
   return sortFindings([...byKey.values()]);
-}
-
-/** Order findings by descending severity, then by package and id, so output is stable. */
-export function sortFindings(findings: readonly OsvFinding[]): OsvFinding[] {
-  return [...findings].sort(
-    (a, b) =>
-      (b.severity ?? -1) - (a.severity ?? -1) ||
-      a.packageName.localeCompare(b.packageName) ||
-      a.id.localeCompare(b.id)
-  );
 }
 
 /**
@@ -165,7 +191,8 @@ export function findResolved(base: OsvReport, head: OsvReport): OsvFinding[] {
 export function describeFinding(finding: OsvFinding): string {
   const severity = finding.severity === undefined ? 'unrated' : finding.severity.toFixed(1);
   const advisory = `https://osv.dev/vulnerability/${finding.id}`;
-  return `${finding.packageName}@${finding.version} — ${finding.id} (CVSS ${severity}) ${advisory}`;
+  const affected = `${finding.packageName}@${finding.versions.join(', ')}`;
+  return `${affected} — ${finding.id} (CVSS ${severity}) ${advisory}`;
 }
 
 /** Render findings as a Markdown list, or a single line when there are none. */
@@ -191,10 +218,49 @@ export interface IgnoreEntry {
 /** A date-only `ignoreUntil` value: TOML local dates are `YYYY-MM-DD`. */
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
-/** `key = value` inside an `[[IgnoredVulns]]` block; value is a quoted string or a bare date. */
-const ENTRY_FIELD = /^([A-Za-z][A-Za-z0-9_]*)\s*=\s*(?:"([^"]*)"|(\S+))\s*$/;
+/**
+ * `key = value` inside an `[[IgnoredVulns]]` block.
+ *
+ * TOML allows a basic ("…") string, a literal ('…') string, or a bare value such as a date.
+ * All three are accepted and unquoted here: reading `''` as the two-character value `''`
+ * would let an EMPTY reason satisfy the "must have a reason" rule, and reading `'GHSA-a'` and
+ * `"GHSA-a"` as different strings would defeat duplicate detection.
+ */
+const ENTRY_FIELD = /^([A-Za-z][A-Za-z0-9_]*)\s*=\s*(?:"([^"]*)"|'([^']*)'|(\S+))\s*$/;
 
-const IGNORE_HEADER = '[[IgnoredVulns]]';
+/**
+ * An `[[IgnoredVulns]]` header, tolerating the whitespace TOML permits inside the brackets.
+ *
+ * An exact-string match here would be a FAIL-OPEN: osv-scanner honours `[[ IgnoredVulns ]]`,
+ * but this reader would take it for an unrelated table, skip the entry, and let an undated or
+ * unjustified ignore through unvalidated.
+ */
+const IGNORE_HEADER = /^\[\[\s*IgnoredVulns\s*\]\]$/;
+
+/** Any table header at all, so an unsupported one can be rejected loudly rather than skipped. */
+const TABLE_HEADER = /^\[/;
+
+/**
+ * Strip a trailing `#` comment, leaving any `#` that sits inside a quoted value alone.
+ *
+ * A naive `replace(/#.*$/, '')` truncates `reason = "… tracked in #391"` mid-value, which the
+ * documented template in osv-scanner.toml would hit the first time anyone used it — and,
+ * because this reader fails closed, that would take the whole gate down rather than degrade
+ * quietly. A `"` toggles quoted state; escaped quotes are not part of the accepted subset, so
+ * a value containing one falls through to ENTRY_FIELD and is rejected there.
+ */
+function stripComment(line: string): string {
+  let quoted = false;
+  for (let index = 0; index < line.length; index += 1) {
+    const char = line[index];
+    if (char === '"') {
+      quoted = !quoted;
+    } else if (char === '#' && !quoted) {
+      return line.slice(0, index);
+    }
+  }
+  return line;
+}
 
 /**
  * Read the `[[IgnoredVulns]]` entries out of `osv-scanner.toml`.
@@ -211,26 +277,40 @@ export function parseIgnoreEntries(toml: string): IgnoreEntry[] {
   let current: IgnoreEntry | undefined;
 
   toml.split('\n').forEach((rawLine, index) => {
-    const line = rawLine.replace(/#.*$/, '').trim();
+    const line = stripComment(rawLine).trim();
     if (line === '') {
       return;
     }
 
-    if (line === IGNORE_HEADER) {
+    if (IGNORE_HEADER.test(line)) {
       current = { line: index + 1 };
       entries.push(current);
       return;
     }
 
-    if (line.startsWith('[')) {
-      // Another table (e.g. `[[PackageOverrides]]`) ends the current entry. Its own fields
-      // are not this gate's business, so stop collecting rather than misattributing them.
-      current = undefined;
-      return;
+    if (TABLE_HEADER.test(line)) {
+      // Every other table is rejected, not skipped. `[[PackageOverrides]]` with `ignore =
+      // true` suppresses a package's findings outright — verified against osv-scanner 2.5.0 —
+      // and skipping it would let a suppression through with no reason and no expiry, which is
+      // exactly what this policy exists to prevent. A near-miss such as `[IgnoredVulns]` is
+      // caught by the same rule instead of silently dropping a real entry out of validation.
+      throw new Error(
+        `osv-scanner.toml line ${index + 1}: unsupported table "${rawLine.trim()}". This ` +
+          'repository allows only `[[IgnoredVulns]]`, so that every suppression carries a ' +
+          'reason and an expiry date.'
+      );
     }
 
     if (current === undefined) {
-      return;
+      // A key before any `[[IgnoredVulns]]` header is a root-level osv-scanner setting.
+      // `LoadConfigs` is one of those, and it makes the scanner pick up further config files,
+      // so ignoring root keys here would leave a way to reach suppressions this reader never
+      // sees. The policy is one file, one mechanism.
+      throw new Error(
+        `osv-scanner.toml line ${index + 1}: "${rawLine.trim()}" sits outside any ` +
+          '`[[IgnoredVulns]]` entry. Top-level settings are not part of this repository’s ' +
+          'ignore policy.'
+      );
     }
 
     const field = ENTRY_FIELD.exec(line);
@@ -241,14 +321,67 @@ export function parseIgnoreEntries(toml: string): IgnoreEntry[] {
       );
     }
 
-    const [, key, quoted, bare] = field;
-    const value = quoted ?? bare ?? '';
+    const [, key, basic, literal, bare] = field;
+    const value = basic ?? literal ?? bare ?? '';
     if (key === 'id' || key === 'reason' || key === 'ignoreUntil') {
       current[key] = value;
     }
   });
 
   return entries;
+}
+
+/** Expiry rules for one `ignoreUntil` value: present, well-formed, and not yet passed. */
+function describeExpiryProblems(
+  ignoreUntil: string | undefined,
+  id: string,
+  where: string,
+  today: string
+): string[] {
+  if (ignoreUntil === undefined) {
+    return [
+      `${where}: ignore for ${id} has no \`ignoreUntil\`. Every allowance needs a ` +
+        're-triage date.',
+    ];
+  }
+  if (!ISO_DATE.test(ignoreUntil)) {
+    return [
+      `${where}: ignore for ${id} has \`ignoreUntil = ${ignoreUntil}\`, which is not a ` +
+        'YYYY-MM-DD date.',
+    ];
+  }
+  if (ignoreUntil < today) {
+    return [
+      `${where}: ignore for ${id} expired on ${ignoreUntil}. Fix the advisory or re-triage ` +
+        'it with a new date and reason.',
+    ];
+  }
+  return [];
+}
+
+/**
+ * Every rule one ignore must satisfy, given that it already carries an id.
+ *
+ * The reason and the expiry are independent, so both are reported in one pass rather than
+ * stopping at the first — whoever wrote the entry should see everything to fix at once.
+ */
+function describeEntryProblems(
+  entry: IgnoreEntry,
+  id: string,
+  where: string,
+  today: string
+): string[] {
+  const problems: string[] = [];
+
+  if (entry.reason === undefined || entry.reason.trim() === '') {
+    problems.push(
+      `${where}: ignore for ${id} has no \`reason\`. State why it is accepted and what ` +
+        'unblocks the fix.'
+    );
+  }
+  problems.push(...describeExpiryProblems(entry.ignoreUntil, id, where, today));
+
+  return problems;
 }
 
 /**
@@ -264,37 +397,18 @@ export function validateIgnores(entries: readonly IgnoreEntry[], today: string):
 
   for (const entry of entries) {
     const where = `osv-scanner.toml line ${entry.line}`;
+    const id = entry.id?.trim() ?? '';
 
-    if (entry.id === undefined || entry.id.trim() === '') {
+    // An entry with no id cannot be matched to an advisory or deduplicated against one, so
+    // that single problem is the whole verdict for it.
+    if (id === '') {
       problems.push(`${where}: [[IgnoredVulns]] entry has no \`id\`.`);
-      continue;
-    }
-    if (seen.has(entry.id)) {
-      problems.push(`${where}: duplicate ignore for ${entry.id}.`);
-    }
-    seen.add(entry.id);
-
-    if (entry.reason === undefined || entry.reason.trim() === '') {
-      problems.push(
-        `${where}: ignore for ${entry.id} has no \`reason\`. State why it is accepted and ` +
-          'what unblocks the fix.'
-      );
-    }
-    if (entry.ignoreUntil === undefined) {
-      problems.push(
-        `${where}: ignore for ${entry.id} has no \`ignoreUntil\`. Every allowance needs a ` +
-          're-triage date.'
-      );
-    } else if (!ISO_DATE.test(entry.ignoreUntil)) {
-      problems.push(
-        `${where}: ignore for ${entry.id} has \`ignoreUntil = ${entry.ignoreUntil}\`, which is ` +
-          'not a YYYY-MM-DD date.'
-      );
-    } else if (entry.ignoreUntil < today) {
-      problems.push(
-        `${where}: ignore for ${entry.id} expired on ${entry.ignoreUntil}. Fix the advisory or ` +
-          're-triage it with a new date and reason.'
-      );
+    } else {
+      if (seen.has(id)) {
+        problems.push(`${where}: duplicate ignore for ${id}.`);
+      }
+      seen.add(id);
+      problems.push(...describeEntryProblems(entry, id, where, today));
     }
   }
 

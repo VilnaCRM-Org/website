@@ -88,8 +88,14 @@ function today(): string {
 
 /** Fail the run when an ignore is undated, unjustified, duplicated, or past its expiry. */
 function enforceIgnorePolicy(): void {
+  // The config is committed and is passed to osv-scanner on every scan, so its absence means
+  // the checkout is wrong or the file was removed. Skipping the policy check in that case
+  // would quietly drop the one thing standing between an ignore and an unreviewed exemption.
   if (!existsSync(IGNORE_CONFIG)) {
-    return;
+    throw new Error(
+      `${IGNORE_CONFIG} is missing. It is a committed part of the dependency-CVE gate; ` +
+        'restore it rather than running the gate without its ignore policy.'
+    );
   }
   const problems = validateIgnores(
     parseIgnoreEntries(readFileSync(IGNORE_CONFIG, 'utf8')),

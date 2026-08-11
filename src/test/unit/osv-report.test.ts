@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+
 import {
   describeFinding,
   findIntroduced,
@@ -59,7 +61,7 @@ describe('osv-report dependency CVE gate', () => {
       expect(findings[0]).toMatchObject({
         key: 'npm|axios|GHSA-a',
         packageName: 'axios',
-        version: '1.16.1',
+        versions: ['1.16.1'],
         id: 'GHSA-a',
         severity: 8.3,
       });
@@ -90,6 +92,22 @@ describe('osv-report dependency CVE gate', () => {
       };
 
       expect(flattenFindings(duplicated)).toHaveLength(1);
+    });
+
+    it('keeps every affected version when one advisory hits a package at several versions', () => {
+      const findings = flattenFindings(
+        report([
+          { name: 'brace-expansion', version: '2.1.1', groups: [{ ids: ['GHSA-3jxr'] }] },
+          { name: 'brace-expansion', version: '1.1.15', groups: [{ ids: ['GHSA-3jxr'] }] },
+          { name: 'brace-expansion', version: '5.0.6', groups: [{ ids: ['GHSA-3jxr'] }] },
+        ])
+      );
+
+      expect(findings).toHaveLength(1);
+      expect(findings[0]?.versions).toEqual(['1.1.15', '2.1.1', '5.0.6']);
+      expect(findings[0] && describeFinding(findings[0])).toContain(
+        'brace-expansion@1.1.15, 2.1.1, 5.0.6'
+      );
     });
 
     it('orders findings by descending severity so the worst reads first', () => {
@@ -139,7 +157,7 @@ describe('osv-report dependency CVE gate', () => {
       expect(finding).toMatchObject({
         key: 'unknown|unknown|GHSA-x',
         packageName: 'unknown',
-        version: 'unknown',
+        versions: ['unknown'],
         ecosystem: 'unknown',
       });
     });
@@ -314,19 +332,112 @@ describe('osv-report dependency CVE gate', () => {
       expect(entries).toEqual([{ line: 3, id: 'GHSA-a' }]);
     });
 
+    it('keeps a `#` inside a quoted value — issue references are ordinary text', () => {
+      const entries = parseIgnoreEntries(
+        ['[[IgnoredVulns]]', 'reason = "dev-only via memlab; tracked in #391"'].join('\n')
+      );
+
+      expect(entries).toEqual([{ line: 1, reason: 'dev-only via memlab; tracked in #391' }]);
+    });
+
+    it('still strips a real comment that follows a value containing a `#`', () => {
+      const entries = parseIgnoreEntries(
+        ['[[IgnoredVulns]]', 'reason = "see #391" # re-triage with the Q4 bump'].join('\n')
+      );
+
+      expect(entries).toEqual([{ line: 1, reason: 'see #391' }]);
+    });
+
+    it('parses the osv-scanner.toml template shape the repository documents', () => {
+      const entries = parseIgnoreEntries(
+        [
+          '[[IgnoredVulns]]',
+          'id = "GHSA-xxxx-xxxx-xxxx"',
+          'ignoreUntil = 2026-12-31',
+          'reason = "dev-only transitive via <tool>; no fixed release upstream; tracked in #NNN"',
+        ].join('\n')
+      );
+
+      expect(validateIgnores(entries, '2026-08-11')).toEqual([]);
+    });
+
     it('returns nothing for a config that declares no ignores', () => {
       expect(parseIgnoreEntries('# nothing here\n')).toEqual([]);
       expect(parseIgnoreEntries('')).toEqual([]);
     });
 
-    it('stops collecting at an unrelated table so its keys are not misattributed', () => {
+    it('reads a header with the whitespace TOML allows inside the brackets', () => {
+      // A fail-open if missed: osv-scanner honours this spelling, so skipping it here would
+      // let an undated, unjustified ignore through unvalidated.
       const entries = parseIgnoreEntries(
-        ['[[IgnoredVulns]]', 'id = "GHSA-a"', '[[PackageOverrides]]', 'name = "left-pad"'].join(
-          '\n'
-        )
+        ['[[ IgnoredVulns ]]', 'id = "GHSA-a"', 'ignoreUntil = 2026-12-31'].join('\n')
       );
 
-      expect(entries).toEqual([{ line: 1, id: 'GHSA-a' }]);
+      expect(entries).toEqual([{ line: 1, id: 'GHSA-a', ignoreUntil: '2026-12-31' }]);
+      expect(validateIgnores(entries, '2026-08-11')).toEqual([
+        expect.stringContaining('no `reason`'),
+      ]);
+    });
+
+    it('rejects a near-miss ignore header rather than silently skipping the entry', () => {
+      expect(() => parseIgnoreEntries(['[IgnoredVulns]', 'id = "GHSA-a"'].join('\n'))).toThrow(
+        /unsupported table/
+      );
+    });
+
+    it('rejects [[PackageOverrides]], which silences findings with no reason or expiry', () => {
+      // Verified against osv-scanner 2.5.0: `ignore = true` drops every finding for the named
+      // package. Skipping the table here would let that suppression bypass the whole policy.
+      expect(() =>
+        parseIgnoreEntries(
+          ['[[PackageOverrides]]', 'name = "form-data"', 'ignore = true'].join('\n')
+        )
+      ).toThrow(/only `\[\[IgnoredVulns\]\]`/);
+    });
+
+    it('unquotes a TOML literal string so it is not confused with a basic one', () => {
+      const entries = parseIgnoreEntries(
+        ['[[IgnoredVulns]]', "id = 'GHSA-a'", "reason = 'why'"].join('\n')
+      );
+
+      expect(entries).toEqual([{ line: 1, id: 'GHSA-a', reason: 'why' }]);
+    });
+
+    it('treats an empty literal string as empty, so it cannot pass as a reason', () => {
+      const entries = parseIgnoreEntries(
+        ['[[IgnoredVulns]]', 'id = "GHSA-a"', "reason = ''", 'ignoreUntil = 2026-12-31'].join('\n')
+      );
+
+      expect(validateIgnores(entries, '2026-08-11')).toEqual([
+        expect.stringContaining('no `reason`'),
+      ]);
+    });
+
+    it('sees quote styles as the same advisory, so duplicates cannot hide behind them', () => {
+      const entries = parseIgnoreEntries(
+        [
+          '[[IgnoredVulns]]',
+          'id = "GHSA-a"',
+          'reason = "first"',
+          'ignoreUntil = 2026-12-31',
+          '[[IgnoredVulns]]',
+          "id = 'GHSA-a'",
+          'reason = "second"',
+          'ignoreUntil = 2026-12-31',
+        ].join('\n')
+      );
+
+      expect(validateIgnores(entries, '2026-08-11')).toEqual([
+        expect.stringContaining('duplicate ignore for GHSA-a'),
+      ]);
+    });
+
+    it('rejects a root-level setting, which could otherwise reach unseen suppressions', () => {
+      // `LoadConfigs = true` makes osv-scanner pick up further config files; a reader that
+      // shrugged at root keys would never see the ignores those files carry.
+      expect(() => parseIgnoreEntries('LoadConfigs = true\n')).toThrow(
+        /sits outside any .\[\[IgnoredVulns\]\]. entry/
+      );
     });
 
     it('keeps only the keys the gate governs, so an unrelated key is not stored', () => {
@@ -448,6 +559,19 @@ describe('osv-report dependency CVE gate', () => {
 
     it('accepts an empty ignore list — the committed default', () => {
       expect(validateIgnores([], TODAY)).toEqual([]);
+    });
+  });
+
+  describe('the committed osv-scanner.toml', () => {
+    // Guards the real file, not a fixture: an entry that lands without a reason or with a
+    // stale date would fail the gate for everyone, and this catches it at unit-test time
+    // rather than on the next unlucky pull request.
+    const config = readFileSync('osv-scanner.toml', 'utf8');
+
+    it('is readable by the gate and carries no policy violations', () => {
+      expect(
+        validateIgnores(parseIgnoreEntries(config), new Date().toISOString().slice(0, 10))
+      ).toEqual([]);
     });
   });
 });
