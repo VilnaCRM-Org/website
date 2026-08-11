@@ -46,8 +46,9 @@ visual snapshots sit in adjacent `*-snapshots/` folders. Run all three unit laye
 
 Add a specialized suite when the change touches its concern: `make test-mutation` (test
 strength), `make test-bats` (Makefile and CI shell flows), `make test-memory-leak` (leaks),
-`make load-tests` (traffic, K6), and `make lighthouse-desktop` / `make lighthouse-mobile`
-(performance, accessibility, best practices).
+`make load-tests` (traffic, K6), `make lighthouse-desktop` / `make lighthouse-mobile`
+(performance, accessibility, best practices), and `make lint-vulns` (dependency CVEs —
+run it whenever a change touches `package.json` or `bun.lock`).
 
 In CI these suites are fanned out to run in parallel (issue #316): every workflow declares a
 `concurrency` group (PR checks cancel superseded runs; deploy/release/sandbox do not),

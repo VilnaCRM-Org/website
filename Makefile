@@ -37,6 +37,17 @@ RCA_EXCLUDES                = */test/* *.d.ts */assets/* */config/*
 METRICS_POLICY_PATH         = config/metrics-policy.json
 RCA_SHA256_LINUX            = 9ec2a217b8ff191e02dab5d5f2eee6158b63fd975c532b2c5d67c2e6c7249894
 
+# Dependency-CVE gate (#356). osv-scanner is a host-installed Go binary provisioned exactly
+# like RCA above: pinned, SHA256-verified, installed into the gitignored ./bin.
+# OSV_MODE=diff fails only on advisories a change ADDS versus OSV_BASE_REF; OSV_MODE=census
+# reports the whole backlog and stays green. See scripts/ci/osv-report.ts for the rationale.
+OSV_VERSION                 = 2.5.0
+OSV_BIN                     = ./bin/osv-scanner
+OSV_MODE                    ?= diff
+OSV_BASE_REF                ?= origin/main
+OSV_LOCKFILE                = bun.lock
+OSV_REPORT_DIR              = reports/osv
+
 NEXT_BUILD                  = $(NEXT_BIN) build --webpack
 NEXT_BUILD_CMD              = $(NEXT_BUILD) && $(IMG_OPTIMIZE)
 STORYBOOK_BUILD_CMD         = $(STORYBOOK_BIN) build --output-dir storybook-static-ci
@@ -358,6 +369,27 @@ lint-metrics: ## Run rust-code-analysis complexity gate on src (host-only; auto-
 	 METRICS_POLICY="$(METRICS_POLICY_PATH)" \
 	 sh scripts/ci/lint-metrics.sh
 
+# DELIBERATE DIVERGENCE FROM THE npm-tool LINT GATES (lint-next/tsc/md/deps), for the same
+# two reasons as lint-metrics above:
+#   * Host-only: osv-scanner is a Go binary absent from the dev image, so this target does
+#     NOT use $(PM_EXEC) and runs on the host in both modes.
+#   * NOT in the `lint` aggregate and NOT in CI_LINT_TARGETS. It resolves advisories against
+#     the OSV database over the network, and static-testing.yml is otherwise hermetic — an
+#     osv.dev outage must not turn the whole static lane red. Its CI surface is
+#     .github/workflows/osv-scanner.yml, which runs it on every PR and nightly.
+# ensure-osv.sh provisions the pinned, SHA256-verified binary to ./bin if it is missing;
+# scan-vulns.sh only produces JSON, and scripts/ci/check-osv-report.ts owns every pass/fail
+# decision (unit-tested in src/test/unit/osv-report.test.ts).
+lint-vulns: ## Fail on dependency CVEs this branch adds versus $(OSV_BASE_REF) (host-only; auto-installs the pinned osv-scanner to ./bin)
+	@scripts/ci/ensure-osv.sh
+	@OSV_BIN="$(OSV_BIN)" OSV_VERSION="$(OSV_VERSION)" OSV_MODE="$(OSV_MODE)" \
+	 OSV_BASE_REF="$(OSV_BASE_REF)" OSV_LOCKFILE="$(OSV_LOCKFILE)" \
+	 OSV_REPORT_DIR="$(OSV_REPORT_DIR)" \
+	 sh scripts/ci/scan-vulns.sh
+
+scan-vulns-census: ## Report every known dependency CVE in bun.lock without failing (advisory; feeds the nightly tracking issue)
+	@$(MAKE) lint-vulns OSV_MODE=census
+
 husky: ## One-time Husky setup to enable Git hooks (deprecated if already set)
 	bun x husky install
 
@@ -461,7 +493,7 @@ ci-test-integration: ## Run integration tests directly assuming deps are install
 	ci-test-memory-leak ci-test-load ci-test-lighthouse-desktop \
 	ci-test-lighthouse-mobile ci-test-prod ensure-dev start-prod-clean \
 	test-load test-load-swagger test-mutation-shard merge-mutation-reports \
-	pr-comments
+	pr-comments lint-vulns scan-vulns-census
 
 ci-setup: create-network ## Prepare the shared dev environment for CI-oriented checks
 	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) up $(CI_SETUP_UP_FLAGS) dev && $(MAKE) wait-for-dev

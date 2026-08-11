@@ -508,3 +508,57 @@ STUB
   assert_log_contains 'node scripts/fetchGraphqlSchema.mjs'
   assert_log_contains 'node scripts/contracts/lint-contracts.mjs --update-baseline'
 }
+
+# Shared fixture for the dependency-CVE gate (#356): a stubbed osv-scanner that satisfies
+# ensure-osv.sh's idempotency probe (so no release is downloaded) and emits an empty report.
+create_osv_scanner_stub() {
+  mkdir -p "$MAKEFILE_SANDBOX/bin"
+  cat > "$MAKEFILE_SANDBOX/bin/osv-scanner" <<'STUB'
+#!/usr/bin/env bash
+if [ "$1" = "--version" ]; then
+  echo "osv-scanner version: 2.5.0"
+  exit 0
+fi
+printf 'osv-scanner %s\n' "$*" >> "${COMMAND_LOG:?}"
+echo '{"results":[]}'
+exit 0
+STUB
+  chmod +x "$MAKEFILE_SANDBOX/bin/osv-scanner"
+}
+
+@test "scan-vulns-census scans the lockfile and hands the JSON to the checker host-only" {
+  reset_command_log
+  create_osv_scanner_stub
+
+  run_make_target scan-vulns-census
+  [ "$status" -eq 0 ]
+
+  # The scanner is only ever asked for JSON against the committed config; every pass/fail
+  # decision belongs to the checker, which is unit-tested in src/test/unit/osv-report.test.ts.
+  assert_log_contains 'osv-scanner scan source --lockfile=bun.lock --config=osv-scanner.toml --format=json'
+  assert_log_contains 'bun x tsx scripts/ci/check-osv-report.ts'
+
+  # Census mode never reads the base ref, so it must not diff against one.
+  run grep -F -- '--lockfile=bun.lock:' "$COMMAND_LOG"
+  [ "$status" -ne 0 ]
+
+  # Host-only: never routed through the dev container.
+  run grep -E 'docker' "$COMMAND_LOG"
+  [ "$status" -ne 0 ]
+}
+
+@test "lint-vulns fails closed when the base ref's lockfile cannot be read" {
+  reset_command_log
+  create_osv_scanner_stub
+
+  # The sandbox is a plain directory, not a work tree, so `git show <ref>:bun.lock` cannot
+  # resolve. A base ref the gate cannot read must fail rather than be treated as "no known
+  # advisories", which would let a vulnerable dependency through on an empty comparison.
+  run_make_target lint-vulns OSV_BASE_REF=refs/heads/definitely-missing
+  [ "$status" -ne 0 ]
+  assert_output_contains 'cannot read "bun.lock"'
+
+  # It failed before reaching the verdict, so the checker was never invoked.
+  run grep -F 'check-osv-report.ts' "$COMMAND_LOG"
+  [ "$status" -ne 0 ]
+}

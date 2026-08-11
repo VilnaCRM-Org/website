@@ -103,6 +103,8 @@ Linting & Formatting
   make lint-metrics: runs the rust-code-analysis complexity gate (host-only, not in make lint)
   make lint-contracts: validates the pinned user-service contracts (not in make lint; needs network)
   make update-contracts: re-fetches the contracts after bumping USER_SERVICE_VERSION
+  make lint-vulns: fails on dependency CVEs this branch adds vs main (host-only, not in make lint)
+  make scan-vulns-census: reports every known dependency CVE in bun.lock without failing
 ```
 
 Testing
@@ -372,6 +374,61 @@ simplify dense expressions. When a higher budget is genuinely warranted, raise
 the relevant threshold in `config/metrics-policy.json` (a reviewed, in-repo
 change visible in the PR diff) or confirm the path belongs outside the governed
 scope. Do **not** silence the gate with a local override or a per-line disable.
+
+## Dependency CVEs (osv-scanner)
+
+Published advisories against the dependency tree are gated with
+[osv-scanner](https://github.com/google/osv-scanner), run locally via
+`make lint-vulns` and in CI by
+[`.github/workflows/osv-scanner.yml`](.github/workflows/osv-scanner.yml).
+
+Like the metrics gate, `osv-scanner` is a **standalone Go binary**, not an npm
+package — so this gate runs **host-only** and is deliberately **not** part of
+`make lint` or `CI_LINT_TARGETS` (it resolves advisories over the network, and
+the static lane is otherwise hermetic).
+[`scripts/ci/ensure-osv.sh`](scripts/ci/ensure-osv.sh) provisions the pinned,
+SHA256-verified binary to `./bin`;
+[`scripts/ci/scan-vulns.sh`](scripts/ci/scan-vulns.sh) only produces JSON, and
+[`scripts/ci/check-osv-report.ts`](scripts/ci/check-osv-report.ts) owns every
+pass/fail decision.
+
+### The gate is differential, not absolute
+
+The pull-request leg scans the **base branch's** `bun.lock` and the pull
+request's, and fails only on advisories the pull request **introduces**.
+
+That is deliberate. The tree carries a large pre-existing advisory backlog, and
+OSV publishes new advisories against code nobody touched every week, so an
+absolute gate would be red on day one and would keep reddening unrelated pull
+requests until somebody hand-edited an ignore file. That failure mode is worse
+than no gate: it trains reviewers to click past a security check. Comparing head
+against base means the only way to turn this gate red is to actually add
+exposure.
+
+Findings are keyed by ecosystem + package + advisory id, **without** the
+version: bumping a package to a version that still carries the same advisory is
+not new exposure and must not block the bump, while adding a package — or moving
+to a version carrying an _additional_ advisory — does.
+
+The nightly leg (`make scan-vulns-census`) covers what the diff cannot see. It
+reports the whole backlog into one refreshed tracking issue labelled
+`dependency-cve` and stays green by design; a red nightly would page somebody for
+debt no author caused.
+
+```bash
+make lint-vulns          # blocking: advisories this branch adds vs origin/main
+make scan-vulns-census   # advisory: every known advisory in bun.lock
+```
+
+### Accepting an advisory
+
+Fix it first: upgrade to a patched version. When an advisory genuinely does not
+apply, record it in [`osv-scanner.toml`](osv-scanner.toml) with an `id`, a
+`reason`, and a `ignoreUntil` re-triage date. All three are **enforced**, and the
+gate fails once `ignoreUntil` has passed — the same contract
+`src/test/memory-leak/leak-baseline.json` applies to memlab allowances. Never add
+an entry for an advisory your own change introduced, and never push the date out
+to keep a build green.
 
 ## Routing
 

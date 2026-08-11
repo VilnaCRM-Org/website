@@ -1,0 +1,31 @@
+# osv-scanner configuration — dependency-CVE gate (issue #356).
+#
+# `make lint-vulns` and .github/workflows/osv-scanner.yml scan bun.lock against the OSV
+# database. The pull-request leg is DIFFERENTIAL: it compares the head lockfile against the
+# base branch's and fails only on advisories the pull request itself introduces. Advisories
+# that already exist on `main` are tracked by the nightly census issue (label
+# `dependency-cve`), not by this file.
+#
+# So an entry here is NOT how the existing backlog is silenced. It is for the narrow case
+# where a pull request would legitimately introduce a finding that does not apply — a
+# dev-only tool with no fixed release, or an advisory whose vulnerable code path this site
+# cannot reach.
+#
+# Every entry MUST carry:
+#   id           the advisory id, exactly as osv-scanner reports it (GHSA-…, CVE-…)
+#   reason       why it is accepted, and what unblocks the real fix
+#   ignoreUntil  a YYYY-MM-DD re-triage date
+#
+# scripts/ci/check-osv-report.ts enforces all three and FAILS the gate once ignoreUntil has
+# passed, exactly as src/test/memory-leak/leak-baseline.json does for memlab allowances
+# (#354). Never add an entry for an advisory your own change introduced, and never push the
+# date out to keep a build green — upgrade the dependency instead.
+#
+# Template:
+#
+#   [[IgnoredVulns]]
+#   id = "GHSA-xxxx-xxxx-xxxx"
+#   ignoreUntil = 2026-12-31
+#   reason = "dev-only transitive via <tool>; no fixed release upstream; tracked in #NNN"
+#
+# There are intentionally no entries: nothing has needed one yet.

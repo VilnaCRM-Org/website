@@ -100,9 +100,10 @@ make lint-md    # markdownlint
 make lint-deps  # dependency-cruiser on src, pages, tests
 ```
 
-Two gates sit deliberately outside `make lint`: `make lint-metrics` (host-only Rust
-binary) and `make lint-contracts` (needs network for its drift check). Each has its own
-workflow — `rust-code-analysis.yml` and `contract-testing.yml`.
+Three gates sit deliberately outside `make lint`: `make lint-metrics` (host-only Rust
+binary), `make lint-contracts` (needs network for its drift check), and `make lint-vulns`
+(host-only Go binary, needs network for the OSV database). Each has its own workflow —
+`rust-code-analysis.yml`, `contract-testing.yml`, and `osv-scanner.yml`.
 
 Run `make format` before `make lint`; formatting is intentionally separate from the lint
 verification suite. Git hooks are managed by Husky. CI phases are mirrored locally by
@@ -130,6 +131,25 @@ instead. Read the policy file for the current numbers rather than memorizing the
 the [`complexity-management`](.claude/skills/complexity-management/SKILL.md) skill for the
 refactoring moves (extract helper, lookup map, typed options object, split file, consolidate
 exits).
+
+### Dependency CVEs (osv-scanner, issue #356)
+
+Issue #356 added the repository's only SCA gate — `make lint-vulns`, the ignore policy in
+`osv-scanner.toml`, and the CI workflow `.github/workflows/osv-scanner.yml`. The binary is
+pinned and SHA256-verified into the gitignored `./bin` by `scripts/ci/ensure-osv.sh`.
+
+The PR leg is **differential**: it scans the base branch's `bun.lock` and the PR's, and
+fails only on advisories the PR _introduces_. An absolute gate would be red on day one (the
+tree carries a large backlog) and would redden unrelated PRs as OSV publishes advisories
+against untouched code. Findings are keyed by ecosystem + package + advisory id, without
+the version, so bumping to a version carrying the _same_ advisory never blocks the bump.
+The nightly `dependency cve census` leg reports the whole backlog into one refreshed
+`dependency-cve` issue and stays green.
+
+Never add an `osv-scanner.toml` ignore for an advisory your own change introduced, and
+never push an `ignoreUntil` date out to keep a build green — upgrade the dependency. Every
+ignore needs an `id`, a `reason`, and an unexpired `ignoreUntil`; all three are enforced by
+`scripts/ci/check-osv-report.ts`.
 
 ## Continuous Integration (parallel PR pipeline)
 
