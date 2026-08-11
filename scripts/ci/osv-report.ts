@@ -205,7 +205,7 @@ export function renderFindings(findings: readonly OsvFinding[], empty: string): 
     .join('\n')}\n`;
 }
 
-/** One `[[IgnoredVulns]]` entry read out of `osv-scanner.toml`. */
+/** One `[[IgnoredVulns]]` entry read out of `config/osv-scanner.toml`. */
 export interface IgnoreEntry {
   /** 1-based line number of the entry's `[[IgnoredVulns]]` header, for error messages. */
   line: number;
@@ -244,7 +244,7 @@ const TABLE_HEADER = /^\[/;
  * Strip a trailing `#` comment, leaving any `#` that sits inside a quoted value alone.
  *
  * A naive `replace(/#.*$/, '')` truncates `reason = "… tracked in #391"` mid-value, which the
- * documented template in osv-scanner.toml would hit the first time anyone used it — and,
+ * documented template in config/osv-scanner.toml would hit the first time anyone used it —
  * because this reader fails closed, that would take the whole gate down rather than degrade
  * quietly. A `"` toggles quoted state; escaped quotes are not part of the accepted subset, so
  * a value containing one falls through to ENTRY_FIELD and is rejected there.
@@ -263,7 +263,7 @@ function stripComment(line: string): string {
 }
 
 /**
- * Read the `[[IgnoredVulns]]` entries out of `osv-scanner.toml`.
+ * Read the `[[IgnoredVulns]]` entries out of `config/osv-scanner.toml`.
  *
  * This is a deliberately restricted reader rather than a general TOML parser: the repository
  * has no TOML dependency, and pulling one in to read a file whose format we ourselves control
@@ -295,7 +295,7 @@ export function parseIgnoreEntries(toml: string): IgnoreEntry[] {
       // exactly what this policy exists to prevent. A near-miss such as `[IgnoredVulns]` is
       // caught by the same rule instead of silently dropping a real entry out of validation.
       throw new Error(
-        `osv-scanner.toml line ${index + 1}: unsupported table "${rawLine.trim()}". This ` +
+        `config/osv-scanner.toml line ${index + 1}: unsupported table "${rawLine.trim()}". This ` +
           'repository allows only `[[IgnoredVulns]]`, so that every suppression carries a ' +
           'reason and an expiry date.'
       );
@@ -307,7 +307,7 @@ export function parseIgnoreEntries(toml: string): IgnoreEntry[] {
       // so ignoring root keys here would leave a way to reach suppressions this reader never
       // sees. The policy is one file, one mechanism.
       throw new Error(
-        `osv-scanner.toml line ${index + 1}: "${rawLine.trim()}" sits outside any ` +
+        `config/osv-scanner.toml line ${index + 1}: "${rawLine.trim()}" sits outside any ` +
           '`[[IgnoredVulns]]` entry. Top-level settings are not part of this repository’s ' +
           'ignore policy.'
       );
@@ -316,7 +316,7 @@ export function parseIgnoreEntries(toml: string): IgnoreEntry[] {
     const field = ENTRY_FIELD.exec(line);
     if (field === null) {
       throw new Error(
-        `osv-scanner.toml line ${index + 1}: cannot read "${rawLine.trim()}". ` +
+        `config/osv-scanner.toml line ${index + 1}: cannot read "${rawLine.trim()}". ` +
           'Entries must be simple `key = "value"` or `key = value` lines.'
       );
     }
@@ -396,7 +396,7 @@ export function validateIgnores(entries: readonly IgnoreEntry[], today: string):
   const seen = new Set<string>();
 
   for (const entry of entries) {
-    const where = `osv-scanner.toml line ${entry.line}`;
+    const where = `config/osv-scanner.toml line ${entry.line}`;
     const id = entry.id?.trim() ?? '';
 
     // An entry with no id cannot be matched to an advisory or deduplicated against one, so

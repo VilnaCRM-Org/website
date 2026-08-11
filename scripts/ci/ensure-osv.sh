@@ -68,10 +68,16 @@ curl -fsSL \
   "$url" -o "$tmp/$asset"
 # macOS ships `shasum` rather than GNU coreutils' `sha256sum`; both read the same
 # "<digest>  <path>" manifest format on stdin.
+#
+# Provisioning diagnostics go to STDERR, not stdout: `make lint-vulns` runs this inside a
+# recipe whose stdout the workflow tees into the job summary and, for the census, verbatim
+# into a GitHub issue body. On stdout this chatter would head every nightly issue comment
+# with a random /tmp/osv-install.XXXXXX path. `set -eu` still aborts on a digest mismatch,
+# and the FAILED line stays visible.
 if command -v sha256sum >/dev/null 2>&1; then
-  printf '%s  %s\n' "$expected" "$tmp/$asset" | sha256sum -c -
+  printf '%s  %s\n' "$expected" "$tmp/$asset" | sha256sum -c - >&2
 else
-  printf '%s  %s\n' "$expected" "$tmp/$asset" | shasum -a 256 -c -
+  printf '%s  %s\n' "$expected" "$tmp/$asset" | shasum -a 256 -c - >&2
 fi
 install -m 0755 "$tmp/$asset" "$OSV_BIN"
-"$OSV_BIN" --version
+"$OSV_BIN" --version >&2

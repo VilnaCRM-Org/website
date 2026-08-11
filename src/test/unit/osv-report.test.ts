@@ -562,11 +562,11 @@ describe('osv-report dependency CVE gate', () => {
     });
   });
 
-  describe('the committed osv-scanner.toml', () => {
+  describe('the committed config/osv-scanner.toml', () => {
     // Guards the real file, not a fixture: an entry that lands without a reason or with a
     // stale date would fail the gate for everyone, and this catches it at unit-test time
     // rather than on the next unlucky pull request.
-    const config = readFileSync('osv-scanner.toml', 'utf8');
+    const config = readFileSync('config/osv-scanner.toml', 'utf8');
 
     it('is readable by the gate and carries no policy violations', () => {
       expect(

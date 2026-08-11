@@ -17,6 +17,10 @@ OSV_BIN="${OSV_BIN:-./bin/osv-scanner}"
 OSV_MODE="${OSV_MODE:-diff}"
 OSV_LOCKFILE="${OSV_LOCKFILE:-bun.lock}"
 OSV_BASE_REF="${OSV_BASE_REF:-origin/main}"
+# Kept under config/ beside metrics-policy.json rather than at the repository root: the root
+# name `osv-scanner.toml` is what qlty auto-discovers for its own osv-scanner plugin, and two
+# tools fighting over one config file is a needless collision.
+OSV_CONFIG="${OSV_CONFIG:-config/osv-scanner.toml}"
 OSV_REPORT_DIR="${OSV_REPORT_DIR:-reports/osv}"
 
 mkdir -p "$OSV_REPORT_DIR"
@@ -28,7 +32,7 @@ scan() {
   scan_lockfile="$1"
   scan_out="$2"
   set +e
-  "$OSV_BIN" scan source --lockfile="$scan_lockfile" --config="osv-scanner.toml" \
+  "$OSV_BIN" scan source --lockfile="$scan_lockfile" --config="$OSV_CONFIG" \
     --format=json >"$scan_out"
   scan_status=$?
   set -e
@@ -59,4 +63,5 @@ if [ "$OSV_MODE" = 'diff' ]; then
 fi
 
 export OSV_MODE
+export OSV_CONFIG
 exec bun x tsx scripts/ci/check-osv-report.ts

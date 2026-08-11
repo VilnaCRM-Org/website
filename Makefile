@@ -46,6 +46,7 @@ OSV_BIN                     = ./bin/osv-scanner
 OSV_MODE                    ?= diff
 OSV_BASE_REF                ?= origin/main
 OSV_LOCKFILE                = bun.lock
+OSV_CONFIG                  = config/osv-scanner.toml
 OSV_REPORT_DIR              = reports/osv
 
 NEXT_BUILD                  = $(NEXT_BIN) build --webpack
@@ -384,6 +385,7 @@ lint-vulns: ## Fail on dependency CVEs this branch adds versus $(OSV_BASE_REF) (
 	@scripts/ci/ensure-osv.sh
 	@OSV_BIN="$(OSV_BIN)" OSV_VERSION="$(OSV_VERSION)" OSV_MODE="$(OSV_MODE)" \
 	 OSV_BASE_REF="$(OSV_BASE_REF)" OSV_LOCKFILE="$(OSV_LOCKFILE)" \
+	 OSV_CONFIG="$(OSV_CONFIG)" \
 	 OSV_REPORT_DIR="$(OSV_REPORT_DIR)" \
 	 sh scripts/ci/scan-vulns.sh
 

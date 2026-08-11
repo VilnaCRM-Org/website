@@ -135,7 +135,7 @@ exits).
 ### Dependency CVEs (osv-scanner, issue #356)
 
 Issue #356 added the repository's only SCA gate — `make lint-vulns`, the ignore policy in
-`osv-scanner.toml`, and the CI workflow `.github/workflows/osv-scanner.yml`. The binary is
+`config/osv-scanner.toml`, and the CI workflow `.github/workflows/osv-scanner.yml`. The binary is
 pinned and SHA256-verified into the gitignored `./bin` by `scripts/ci/ensure-osv.sh`.
 
 The PR leg is **differential**: it scans the base branch's `bun.lock` and the PR's, and
@@ -146,7 +146,7 @@ the version, so bumping to a version carrying the _same_ advisory never blocks t
 The nightly `dependency cve census` leg reports the whole backlog into one refreshed
 `dependency-cve` issue and stays green.
 
-Never add an `osv-scanner.toml` ignore for an advisory your own change introduced, and
+Never add a `config/osv-scanner.toml` ignore for an advisory your own change introduced, and
 never push an `ignoreUntil` date out to keep a build green — upgrade the dependency. Every
 ignore needs an `id`, a `reason`, and an unexpired `ignoreUntil`; all three are enforced by
 `scripts/ci/check-osv-report.ts`.

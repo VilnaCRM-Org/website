@@ -32,7 +32,8 @@ const MODES = ['diff', 'census'] as const;
 
 type Mode = (typeof MODES)[number];
 
-const IGNORE_CONFIG = 'osv-scanner.toml';
+/** Ignore policy, under config/ beside metrics-policy.json. See scripts/ci/scan-vulns.sh. */
+const IGNORE_CONFIG = process.env.OSV_CONFIG ?? 'config/osv-scanner.toml';
 
 /** Read and validate the mode so a typo fails closed instead of silently gating nothing. */
 function resolveMode(): Mode {
@@ -113,9 +114,17 @@ function enforceIgnorePolicy(): void {
   );
 }
 
-/** Emit a GitHub Actions annotation; harmless plain text off CI. */
+/**
+ * Emit a GitHub Actions annotation; harmless plain text off CI.
+ *
+ * Annotations go to stderr so they reach the runner (which parses workflow commands on both
+ * streams) without landing in stdout — stdout is teed into the job summary and, for the
+ * census, verbatim into a GitHub issue body, where a `::warning::` echo of every finding
+ * would double the length of the report for no benefit. This matches how
+ * `enforceIgnorePolicy` already emits its own annotation.
+ */
 function annotate(level: 'warning' | 'error', finding: OsvFinding): void {
-  process.stdout.write(`::${level}::${describeFinding(finding)}\n`);
+  process.stderr.write(`::${level}::${describeFinding(finding)}\n`);
 }
 
 /** Append Markdown to the job summary when running on GitHub Actions. */

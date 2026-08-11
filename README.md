@@ -423,7 +423,7 @@ make scan-vulns-census   # advisory: every known advisory in bun.lock
 ### Accepting an advisory
 
 Fix it first: upgrade to a patched version. When an advisory genuinely does not
-apply, record it in [`osv-scanner.toml`](osv-scanner.toml) with an `id`, a
+apply, record it in [`config/osv-scanner.toml`](config/osv-scanner.toml) with an `id`, a
 `reason`, and a `ignoreUntil` re-triage date. All three are **enforced**, and the
 gate fails once `ignoreUntil` has passed — the same contract
 `src/test/memory-leak/leak-baseline.json` applies to memlab allowances. Never add
