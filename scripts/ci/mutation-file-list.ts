@@ -5,6 +5,7 @@ import { dirname, resolve } from 'node:path';
 import {
   type MutationScope,
   capFiles,
+  digestFiles,
   loadMutationPolicy,
   parseScope,
   resolveGate,
@@ -87,21 +88,28 @@ function candidatePaths(scope: MutationScope, baseRef: string): string[] {
  * never silently scored.
  */
 function hasRelatedTests(file: string, scope: MutationScope): boolean {
+  // `--listTests` exits 0 whether or not it resolves a spec, and non-zero only
+  // on a real failure (unreadable config, missing dependency, OOM). So a throw
+  // here is a broken runner, never an uncovered file — and it must NOT be
+  // collapsed into "unmeasurable". Doing so would empty the mutate list, turn
+  // the decision into `skip`, and let the blocking changed leg exit green on
+  // exactly the misconfiguration everything else here fails closed on.
+  let stdout: string;
   try {
-    return (
-      execFileSync(
-        'bun',
-        ['x', 'jest', '-c', 'jest.mutation.config.ts', '--findRelatedTests', file, '--listTests'],
-        { encoding: 'utf8', env: { ...process.env, MUTATION_SCOPE: scope }, stdio: 'pipe' }
-      )
-        .split('\n')
-        .filter(line => line.trim().endsWith('.ts') || line.trim().endsWith('.tsx')).length > 0
+    stdout = execFileSync(
+      'bun',
+      ['x', 'jest', '-c', 'jest.mutation.config.ts', '--findRelatedTests', file, '--listTests'],
+      { encoding: 'utf8', env: { ...process.env, MUTATION_SCOPE: scope }, stdio: 'pipe' }
     );
-  } catch {
-    // A crashed resolution is not evidence of coverage; treat it as unmeasurable
-    // so the run reports the file instead of scoring it as fully survived.
-    return false;
+  } catch (error) {
+    throw new Error(
+      `Could not resolve related tests for "${file}"; the mutation runner is broken, ` +
+        `so the scope cannot be trusted: ${String(error)}`
+    );
   }
+  return stdout
+    .split('\n')
+    .some(line => line.trim().endsWith('.ts') || line.trim().endsWith('.tsx'));
 }
 
 function main(): void {
@@ -126,7 +134,11 @@ function main(): void {
   writeFileSync(LIST_PATH, files.length > 0 ? `${files.join('\n')}\n` : '', 'utf8');
   writeFileSync(
     GATE_PATH,
-    `${JSON.stringify({ ...decision, scope, fileCount: files.length, unmeasured }, null, 2)}\n`,
+    `${JSON.stringify(
+      { ...decision, scope, fileCount: files.length, digest: digestFiles(files), unmeasured },
+      null,
+      2
+    )}\n`,
     'utf8'
   );
 

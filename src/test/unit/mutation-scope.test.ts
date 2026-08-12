@@ -6,6 +6,7 @@ import {
   type MutationPolicy,
   capFiles,
   isMutablePath,
+  digestFiles,
   loadMutationPolicy,
   parseGateArtifact,
   parseScope,
@@ -157,6 +158,24 @@ describe('capFiles', () => {
   });
 });
 
+describe('digestFiles', () => {
+  it('is stable for the same list', () => {
+    expect(digestFiles(['a.ts', 'b.ts'])).toBe(digestFiles(['a.ts', 'b.ts']));
+  });
+
+  it('differs for a different list of the same length', () => {
+    expect(digestFiles(['a.ts', 'b.ts'])).not.toBe(digestFiles(['a.ts', 'c.ts']));
+  });
+
+  it('differs for the same files in a different order', () => {
+    expect(digestFiles(['a.ts', 'b.ts'])).not.toBe(digestFiles(['b.ts', 'a.ts']));
+  });
+
+  it('produces a SHA-256 hex digest for the empty list', () => {
+    expect(digestFiles([])).toMatch(/^[0-9a-f]{64}$/);
+  });
+});
+
 describe('parseGateArtifact', () => {
   const gate = (over: Record<string, unknown> = {}): string =>
     JSON.stringify({
@@ -165,6 +184,7 @@ describe('parseGateArtifact', () => {
       reason: 'because',
       scope: 'changed',
       fileCount: 2,
+      digest: digestFiles(['a.ts', 'b.ts']),
       unmeasured: [],
       ...over,
     });
@@ -176,6 +196,7 @@ describe('parseGateArtifact', () => {
       reason: 'because',
       scope: 'changed',
       fileCount: 2,
+      digest: digestFiles(['a.ts', 'b.ts']),
       unmeasured: [],
     });
   });
@@ -212,6 +233,14 @@ describe('parseGateArtifact', () => {
 
   it('rejects a non-integer fileCount', () => {
     expect(() => parseGateArtifact(gate({ fileCount: 1.5 }), 'changed')).toThrow(/fileCount/);
+  });
+
+  it('rejects a decision with no mutate-list digest', () => {
+    expect(() => parseGateArtifact(gate({ digest: undefined }), 'changed')).toThrow(/digest/);
+  });
+
+  it('rejects a digest that is not a SHA-256 hex string', () => {
+    expect(() => parseGateArtifact(gate({ digest: 'nope' }), 'changed')).toThrow(/digest/);
   });
 
   it('defaults a missing unmeasured list to empty', () => {

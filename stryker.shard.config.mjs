@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 
 import base from './stryker.config.mjs';
@@ -49,10 +50,17 @@ function assertListMatchesDecision(files) {
         `run is "${scope}"; re-run \`make mutation-file-list\`.`
     );
   }
-  if (decision.fileCount !== files.length) {
+  // A count is not an identity: two different lists of the same length — a
+  // re-resolved `changed` scope after a new push, a restored cache — would pass
+  // a count check while this shard mutated one set and the merge gate enforced a
+  // threshold resolved for another. The digest ties them together.
+  const digest = createHash('sha256')
+    .update(`${files.join('\n')}\n`)
+    .digest('hex');
+  if (decision.digest !== digest) {
     throw new Error(
-      `reports/mutation/gate.json counts ${decision.fileCount} file(s) but the mutate ` +
-        `list holds ${files.length}; the two artifacts are out of step.`
+      'reports/mutation/gate.json was resolved for a different mutate list ' +
+        `(${decision.digest} vs ${digest}); re-run \`make mutation-file-list\`.`
     );
   }
 }

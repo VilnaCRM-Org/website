@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -239,10 +240,27 @@ export function resolveGate(
   };
 }
 
+/**
+ * Identity of a resolved mutate list.
+ *
+ * A file *count* is not an identity: two different lists of the same length —
+ * a re-resolved `changed` scope after a new push, a restored cache — would pass
+ * a count check while the shard mutated one set and the merge gate enforced a
+ * threshold resolved for another. The digest makes the two artifacts
+ * inseparable.
+ */
+export function digestFiles(files: readonly string[]): string {
+  return createHash('sha256')
+    .update(`${files.join('\n')}\n`)
+    .digest('hex');
+}
+
 /** The gate decision as persisted to `reports/mutation/gate.json`. */
 export interface GateArtifact extends GateDecision {
   scope: MutationScope;
   fileCount: number;
+  /** SHA-256 of the exact mutate list this decision was resolved for. */
+  digest: string;
   /** Mutable files dropped because no spec in the runner's test set reaches them. */
   unmeasured: string[];
 }
@@ -280,6 +298,9 @@ export function parseGateArtifact(raw: string, expectedScope: MutationScope): Ga
   if (!Number.isInteger(doc.fileCount) || (doc.fileCount as number) < 0) {
     throw new Error(`Gate decision has a non-integer fileCount (${String(doc.fileCount)}).`);
   }
+  if (typeof doc.digest !== 'string' || !/^[0-9a-f]{64}$/.test(doc.digest)) {
+    throw new Error(`Gate decision has no SHA-256 digest of the mutate list it was resolved for.`);
+  }
   if (doc.mode === 'gate' && !Number.isFinite(doc.break)) {
     throw new Error(`Gate decision gates but has a non-numeric break (${String(doc.break)}).`);
   }
@@ -293,6 +314,7 @@ export function parseGateArtifact(raw: string, expectedScope: MutationScope): Ga
     reason: doc.reason ?? '',
     scope: expectedScope,
     fileCount: doc.fileCount as number,
+    digest: doc.digest,
     unmeasured: Array.isArray(doc.unmeasured) ? doc.unmeasured : [],
   };
 }
