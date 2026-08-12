@@ -7,6 +7,7 @@ import {
   capFiles,
   isMutablePath,
   digestFiles,
+  hasRelatedTests,
   loadMutationPolicy,
   parseGateArtifact,
   parseScope,
@@ -155,6 +156,50 @@ describe('capFiles', () => {
 
   it('handles an empty list', () => {
     expect(capFiles([], 'changed', POLICY)).toEqual([]);
+  });
+});
+
+describe('hasRelatedTests', () => {
+  it('reports coverage when the runner lists a spec', () => {
+    expect(
+      hasRelatedTests(
+        'src/features/landing/helpers/normalizeLink.ts',
+        () => '/repo/src/test/unit/normalizeLink.test.ts\n'
+      )
+    ).toBe(true);
+  });
+
+  it('accepts a .tsx spec', () => {
+    expect(hasRelatedTests('src/x.ts', () => '/repo/src/test/testing-library/Foo.test.tsx\n')).toBe(
+      true
+    );
+  });
+
+  it('reports no coverage when the runner exits cleanly with no spec', () => {
+    expect(hasRelatedTests('src/features/landing/api/graphql/apollo.ts', () => '')).toBe(false);
+  });
+
+  it('ignores runner chatter that is not a spec path', () => {
+    expect(hasRelatedTests('src/x.ts', () => 'info - loaded config\nNo tests found\n')).toBe(false);
+  });
+
+  it('re-raises a runner failure instead of calling the file unmeasurable', () => {
+    // The gate-hole this guards: swallowing a broken Jest would drop every
+    // candidate, empty the mutate list, resolve the decision to `skip`, and let
+    // the blocking changed leg exit green.
+    expect(() =>
+      hasRelatedTests('src/x.ts', () => {
+        throw new Error('Command failed: bun x jest');
+      })
+    ).toThrow(/the mutation runner is broken/);
+  });
+
+  it('names the file it could not resolve', () => {
+    expect(() =>
+      hasRelatedTests('src/features/landing/helpers/scrollToAnchor.ts', () => {
+        throw new Error('ENOMEM');
+      })
+    ).toThrow(/scrollToAnchor\.ts/);
   });
 });
 

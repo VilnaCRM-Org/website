@@ -240,6 +240,39 @@ export function resolveGate(
   };
 }
 
+/** Runs `jest --findRelatedTests <file> --listTests` and returns its stdout. */
+export type ListTestsRunner = (file: string) => string;
+
+/**
+ * True when at least one spec in the runner's test set reaches `file`.
+ *
+ * Stryker runs with `enableFindRelatedTests`. When Jest resolves no related spec
+ * it runs nothing, exits 0, and every mutant in the file is reported SURVIVED —
+ * indistinguishable from a genuinely weak test. `api/graphql/apollo.ts` is the
+ * live example: its only coverage is the integration layer, which this runner
+ * does not collect, so it would score 0% and redden a pull request that merely
+ * touched it.
+ *
+ * A thrown runner is a *broken* runner, never an uncovered file: `--listTests`
+ * exits 0 whether or not it resolves a spec, and non-zero only on a real failure
+ * (unreadable config, missing dependency, OOM). Swallowing that would drop every
+ * candidate, empty the mutate list, resolve the decision to `skip`, and let the
+ * blocking changed leg exit green on exactly the misconfiguration the rest of
+ * this module fails closed on — so it is re-raised.
+ */
+export function hasRelatedTests(file: string, runListTests: ListTestsRunner): boolean {
+  let stdout: string;
+  try {
+    stdout = runListTests(file);
+  } catch (error) {
+    throw new Error(
+      `Could not resolve related tests for "${file}"; the mutation runner is broken, ` +
+        `so the scope cannot be trusted: ${String(error)}`
+    );
+  }
+  return stdout.split('\n').some(line => /\.tsx?$/.test(line.trim()));
+}
+
 /**
  * Identity of a resolved mutate list.
  *

@@ -6,6 +6,7 @@ import {
   type MutationScope,
   capFiles,
   digestFiles,
+  hasRelatedTests,
   loadMutationPolicy,
   parseScope,
   resolveGate,
@@ -76,40 +77,13 @@ function candidatePaths(scope: MutationScope, baseRef: string): string[] {
   return runLines('git', ['ls-files', '--', 'src']);
 }
 
-/**
- * True when at least one spec in the runner's test set reaches `file`.
- *
- * Stryker runs with `enableFindRelatedTests`. When Jest resolves no related
- * spec it runs nothing, exits 0, and every mutant in the file is reported
- * SURVIVED — indistinguishable from a genuinely weak test. `api/graphql/apollo.ts`
- * is the live example: its only coverage is in the integration layer, which this
- * runner does not collect, so it would score 0% and redden a pull request that
- * merely touched it. A file this runner cannot measure is dropped and named,
- * never silently scored.
- */
-function hasRelatedTests(file: string, scope: MutationScope): boolean {
-  // `--listTests` exits 0 whether or not it resolves a spec, and non-zero only
-  // on a real failure (unreadable config, missing dependency, OOM). So a throw
-  // here is a broken runner, never an uncovered file — and it must NOT be
-  // collapsed into "unmeasurable". Doing so would empty the mutate list, turn
-  // the decision into `skip`, and let the blocking changed leg exit green on
-  // exactly the misconfiguration everything else here fails closed on.
-  let stdout: string;
-  try {
-    stdout = execFileSync(
-      'bun',
-      ['x', 'jest', '-c', 'jest.mutation.config.ts', '--findRelatedTests', file, '--listTests'],
-      { encoding: 'utf8', env: { ...process.env, MUTATION_SCOPE: scope }, stdio: 'pipe' }
-    );
-  } catch (error) {
-    throw new Error(
-      `Could not resolve related tests for "${file}"; the mutation runner is broken, ` +
-        `so the scope cannot be trusted: ${String(error)}`
-    );
-  }
-  return stdout
-    .split('\n')
-    .some(line => line.trim().endsWith('.ts') || line.trim().endsWith('.tsx'));
+/** Ask Jest which specs in the current scope's test set reach `file`. */
+function listRelatedTests(file: string, scope: MutationScope): string {
+  return execFileSync(
+    'bun',
+    ['x', 'jest', '-c', 'jest.mutation.config.ts', '--findRelatedTests', file, '--listTests'],
+    { encoding: 'utf8', env: { ...process.env, MUTATION_SCOPE: scope }, stdio: 'pipe' }
+  );
 }
 
 function main(): void {
@@ -124,7 +98,9 @@ function main(): void {
   const baseRef = process.env.MUTATION_BASE_REF ?? 'origin/main';
   const candidates = selectMutableFiles(candidatePaths(scope, baseRef), policy.mutableDirectories);
 
-  const measurable = candidates.filter(file => hasRelatedTests(file, scope));
+  const measurable = candidates.filter(file =>
+    hasRelatedTests(file, candidate => listRelatedTests(candidate, scope))
+  );
   const unmeasured = candidates.filter(file => !measurable.includes(file));
 
   const files = capFiles(measurable, scope, policy);
