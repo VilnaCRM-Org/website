@@ -60,9 +60,6 @@ exclude_patterns = [
   # They are Prettier-formatted via `make format`.
   ".dependency-cruiser.js",
   "jest.config.ts",
-  "jest.mutation.config.ts",
-  "stryker.config.mjs",
-  "stryker.shard.config.mjs",
 ]
 
 test_patterns = [

@@ -55,6 +55,7 @@ const NON_MUTABLE = [
   /\.d\.ts$/,
   /\.stories\.tsx?$/,
   /\.test\.tsx?$/,
+  /\.spec\.tsx?$/,
   /(^|\/)types?(\/|\.tsx?$)/,
   /(^|\/)styles?(\/|\.tsx?$)/,
   /(^|\/)i18n\//,
@@ -121,9 +122,16 @@ export function loadMutationPolicy(path: string = POLICY_PATH): MutationPolicy {
   };
 }
 
-/** Narrow an arbitrary string to a known scope, failing loud on a typo in a CI job. */
+/**
+ * Narrow an arbitrary string to a known scope, failing loud on a typo in a CI job.
+ *
+ * A blank value is the default, not an error: `make` forwards `MUTATION_SCOPE=`
+ * verbatim when a caller overrides it with nothing, and two call sites disagreeing
+ * on whether that means "curated" or "invalid" is how a run ends up mutating one
+ * file set while being gated against another.
+ */
 export function parseScope(value: string | undefined): MutationScope {
-  const scope = value ?? 'curated';
+  const scope = value?.trim() || 'curated';
   if (!SCOPES.includes(scope as MutationScope)) {
     throw new Error(
       `Unsupported MUTATION_SCOPE: "${scope}". Expected one of: ${SCOPES.join(', ')}.`
@@ -170,18 +178,19 @@ export function selectMutableFiles(
 }
 
 /**
- * Round-robin slice of `files` for one shard. The union of every index in
- * `[0, total)` is exactly `files`, so a sharded run scores identically to an
- * unsharded one — no file is dropped or counted twice.
+ * Trim a file list to the scope's cap, worst-case first by path order.
+ *
+ * Degrading the *verdict* to advisory does not bound the *run*: Stryker would
+ * still mutate every file and could hit the job timeout, which reddens the check
+ * the cap exists to keep off the critical path. Truncating bounds both.
  */
-export function partitionFiles(files: readonly string[], total: number, index: number): string[] {
-  if (!Number.isInteger(total) || total < 1) {
-    throw new Error(`MUTATION_SHARD_TOTAL (${total}) must be a positive integer.`);
-  }
-  if (!Number.isInteger(index) || index < 0 || index >= total) {
-    throw new Error(`MUTATION_SHARD_INDEX (${index}) must be an integer in [0, ${total}).`);
-  }
-  return [...files].sort((a, b) => a.localeCompare(b)).filter((_, i) => i % total === index);
+export function capFiles(
+  files: readonly string[],
+  scope: MutationScope,
+  policy: MutationPolicy
+): string[] {
+  const { maxFiles } = policy.scopes[scope];
+  return maxFiles === undefined ? [...files] : files.slice(0, maxFiles);
 }
 
 /**
@@ -227,5 +236,63 @@ export function resolveGate(
     mode: 'gate',
     break: entry.break,
     reason: `Scope "${scope}" gates ${fileCount} file(s) at a ${entry.break}% mutation score.`,
+  };
+}
+
+/** The gate decision as persisted to `reports/mutation/gate.json`. */
+export interface GateArtifact extends GateDecision {
+  scope: MutationScope;
+  fileCount: number;
+  /** Mutable files dropped because no spec in the runner's test set reaches them. */
+  unmeasured: string[];
+}
+
+const GATE_MODES: readonly GateMode[] = ['gate', 'advisory', 'skip'];
+
+/**
+ * Parse and validate a persisted gate decision.
+ *
+ * Every field is checked because this artifact *is* the gate: a `break` of
+ * `null` on a `gate` verdict, a non-numeric `break` that slips through JavaScript's
+ * `<` coercion, or a decision left over from a different scope would each let a
+ * blocking run pass without enforcing anything.
+ */
+export function parseGateArtifact(raw: string, expectedScope: MutationScope): GateArtifact {
+  let doc: Partial<GateArtifact>;
+  try {
+    doc = JSON.parse(raw) as Partial<GateArtifact>;
+  } catch (error) {
+    throw new Error(`The gate decision is not valid JSON: ${String(error)}`);
+  }
+
+  if (doc.mode === undefined || !GATE_MODES.includes(doc.mode)) {
+    throw new Error(
+      `Gate decision has mode "${String(doc.mode)}"; expected one of: ${GATE_MODES.join(', ')}.`
+    );
+  }
+  if (doc.scope !== expectedScope) {
+    throw new Error(
+      `Gate decision was resolved for scope "${String(doc.scope)}" but this run ` +
+        `is "${expectedScope}"; ` +
+        're-run `make mutation-file-list` rather than scoring against a stale decision.'
+    );
+  }
+  if (!Number.isInteger(doc.fileCount) || (doc.fileCount as number) < 0) {
+    throw new Error(`Gate decision has a non-integer fileCount (${String(doc.fileCount)}).`);
+  }
+  if (doc.mode === 'gate' && !Number.isFinite(doc.break)) {
+    throw new Error(`Gate decision gates but has a non-numeric break (${String(doc.break)}).`);
+  }
+  if (doc.mode !== 'gate' && doc.break !== null) {
+    throw new Error(`Gate decision is "${doc.mode}" but carries a break of ${String(doc.break)}.`);
+  }
+
+  return {
+    mode: doc.mode,
+    break: doc.mode === 'gate' ? (doc.break as number) : null,
+    reason: doc.reason ?? '',
+    scope: expectedScope,
+    fileCount: doc.fileCount as number,
+    unmeasured: Array.isArray(doc.unmeasured) ? doc.unmeasured : [],
   };
 }

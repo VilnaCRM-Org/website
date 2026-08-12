@@ -26,8 +26,16 @@ const CLIENT_LAYER_TESTS = [
   '<rootDir>/src/test/testing-library/**/*.test.tsx',
 ];
 
-const testMatch =
-  (process.env.MUTATION_SCOPE ?? 'curated') === 'curated' ? CURATED_TESTS : CLIENT_LAYER_TESTS;
+// `?.trim() || 'curated'`, deliberately matching parseScope() in
+// scripts/ci/mutation-scope.ts: `make` forwards an overridden-to-nothing
+// MUTATION_SCOPE as an empty string, and if these two disagreed about what that
+// means the gate would score one file set while the runner collected the tests
+// for another. Importing parseScope directly is not possible — Jest's TypeScript
+// config loader cannot resolve an extensionless relative import — so the shared
+// default is pinned by a test instead (`parseScope treats an empty string as the
+// curated default`).
+const scope = process.env.MUTATION_SCOPE?.trim() || 'curated';
+const testMatch = scope === 'curated' ? CURATED_TESTS : CLIENT_LAYER_TESTS;
 
 const config: Config = {
   clearMocks: true,

@@ -4,7 +4,16 @@ import base from './stryker.config.mjs';
 
 const total = Math.max(1, Number.parseInt(process.env.MUTATION_SHARD_TOTAL ?? '1', 10) || 1);
 const index = Math.max(0, Number.parseInt(process.env.MUTATION_SHARD_INDEX ?? '0', 10) || 0);
-const scope = process.env.MUTATION_SCOPE ?? 'curated';
+const SCOPES = ['curated', 'changed', 'full'];
+const scope = process.env.MUTATION_SCOPE?.trim() || 'curated';
+
+// Reject a typo here rather than at the merge gate. Without this, an unknown
+// scope falls through to the "not curated" branch, mutates whatever list happens
+// to be on disk for minutes, and only then fails — with a message about the wrong
+// thing.
+if (!SCOPES.includes(scope)) {
+  throw new Error(`Unsupported MUTATION_SCOPE: "${scope}". Expected one of: ${SCOPES.join(', ')}.`);
+}
 
 // Fail loud on an out-of-range index instead of letting `index % total` wrap and
 // silently collide with another shard — that would produce a plausible (correct
@@ -16,6 +25,37 @@ if (index >= total) {
 }
 
 const LIST_PATH = new URL('./reports/mutation/mutate-list.txt', import.meta.url);
+const GATE_PATH = new URL('./reports/mutation/gate.json', import.meta.url);
+
+/**
+ * Refuse a mutate list this run did not ask for.
+ *
+ * Both artifacts are fixed paths, so a leftover pair from a different scope — a
+ * local `full` census before a `changed` run, a restored cache in CI — would be
+ * mutated happily while the merge gate enforced a threshold resolved for
+ * something else. Cross-checking the scope and the count makes that fail closed.
+ */
+function assertListMatchesDecision(files) {
+  if (!existsSync(GATE_PATH)) {
+    throw new Error(
+      `MUTATION_SCOPE="${scope}" needs reports/mutation/gate.json alongside the ` +
+        'mutate list; run `make mutation-file-list` first.'
+    );
+  }
+  const decision = JSON.parse(readFileSync(GATE_PATH, 'utf8'));
+  if (decision.scope !== scope) {
+    throw new Error(
+      `reports/mutation/gate.json was resolved for scope "${decision.scope}" but this ` +
+        `run is "${scope}"; re-run \`make mutation-file-list\`.`
+    );
+  }
+  if (decision.fileCount !== files.length) {
+    throw new Error(
+      `reports/mutation/gate.json counts ${decision.fileCount} file(s) but the mutate ` +
+        `list holds ${files.length}; the two artifacts are out of step.`
+    );
+  }
+}
 
 /**
  * The file set this shard partitions.
@@ -45,6 +85,7 @@ function scopedFiles() {
         'the caller must skip the run, not mutate nothing.'
     );
   }
+  assertListMatchesDecision(files);
   return files;
 }
 

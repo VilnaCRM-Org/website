@@ -167,24 +167,34 @@ Stryker shard config, the Jest test set, and the merge gate — reads that one d
 
 A file is "mutable" when it lives under an `api`/`helpers`/`hooks`/`utils`/`validations`
 **path segment** and is not a spec, story, type, style, i18n bundle, asset, constant, mock,
-or fixture (`scripts/ci/mutation-scope.ts`). Presentational `.tsx` is deliberately out of
-scope: mutating a style object yields equivalent mutants no test can kill, which would make
-the gate unfalsifiable rather than strict.
+or fixture (`scripts/ci/mutation-scope.ts`). The filter is on directories, not on file
+extension: a `.tsx` under `hooks/` is logic and is mutated, while a presentational component
+is excluded because it does not sit under one of those segments. That boundary is the point
+— mutating a style object yields equivalent mutants no test can kill, which renders a gate
+unfalsifiable rather than strict.
+
+A mutable file whose behaviour no spec in the mutation runner's test set reaches is dropped
+from the list and named in the run log, never scored. Stryker runs with
+`enableFindRelatedTests`; when Jest resolves no related spec it runs nothing, exits 0, and
+every mutant reads as _survived_ — identical to a genuinely weak test.
+`api/graphql/apollo.ts`, whose only coverage is the integration layer, is the live example.
+Reporting a survivor for a test that exists is how a gate gets its threshold lowered.
 
 The `changed` leg gates below 100% on purpose. A file mutated for the first time carries
 pre-existing debt its author did not create, and blocking on that only teaches reviewers to
 click past the check; the nightly census is where that backlog is tracked. When a PR touches
-more mutable files than `changed.maxFiles`, the leg degrades to advisory so a wide refactor
-is not blocked by a run that cannot finish in time.
+more mutable files than `changed.maxFiles`, the leg degrades to advisory **and** truncates
+the list to the cap — degrading the verdict alone would leave the run free to hit the job
+timeout, reddening the very check the cap exists to keep off the critical path.
 
 Locally: `make test-mutation-changed` (add `MUTATION_BASE_REF=<ref>` to diff against
 something other than `origin/main`). Never lower a `break`, widen the exclusion list, or add
 a scope to dodge a surviving mutant — write the assertion the mutant proves is missing.
 
-One acceptance criterion of #345 — adding the PR leg to `main`'s required-status-checks
-ruleset — needs repository-admin access and cannot be committed from a PR. It is tracked by
-the separate ci-health ruleset issue; until that lands, every check on `main` is advisory at
-merge time.
+One acceptance criterion of #345 — adding the changed-files leg to `main`'s
+required-status-checks ruleset — needs repository-admin access and cannot be committed from
+a PR. Until the separate ci-health ruleset issue lands, that check is advisory at merge time
+(as is every other check on `main`, which carries no required checks today).
 
 ## Architecture
 

@@ -11,6 +11,7 @@ import {
   type GateDecision,
   type MutationScope,
   loadMutationPolicy,
+  parseGateArtifact,
   parseScope,
   resolveGate,
 } from './mutation-scope';
@@ -65,11 +66,7 @@ function resolveDecision(scope: MutationScope, fileCount: number): GateDecision 
       `MUTATION_SCOPE="${scope}" needs the gate decision at "${GATE_PATH}": ${String(error)}`
     );
   }
-  const decision = JSON.parse(raw) as Partial<GateDecision>;
-  if (decision.mode === undefined || !('break' in decision)) {
-    throw new Error(`"${GATE_PATH}" is not a gate decision; refusing to score without one.`);
-  }
-  return { mode: decision.mode, break: decision.break ?? null, reason: decision.reason ?? '' };
+  return parseGateArtifact(raw, scope);
 }
 
 /** Verify every expected shard produced a report, so a missing shard cannot pass vacuously. */

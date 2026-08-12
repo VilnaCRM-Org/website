@@ -590,6 +590,11 @@ merge-mutation-reports: ## Union the per-shard mutation reports and re-enforce M
 	MUTATION_SCOPE=$(MUTATION_SCOPE) MUTATION_SHARD_TOTAL=$(MUTATION_SHARD_TOTAL) $(MERGE_MUTATION_REPORTS_CMD)
 
 test-mutation-changed: ## Mutate only the files this branch changes against MUTATION_BASE_REF and gate on the changed-files threshold (host; assumes deps installed)
+	@# Drop shard reports from an earlier run: the merge gate counts every
+	@# mutation-shard-*.json in the directory, so a leftover shard 1 from a
+	@# two-shard census makes this one-shard run fail as "found 2, expected 1".
+	@# CI containers start clean; this keeps repeated local runs repeatable.
+	rm -f reports/mutation/mutation-shard-*.json
 	$(MAKE) mutation-file-list MUTATION_SCOPE=changed MUTATION_BASE_REF=$(MUTATION_BASE_REF)
 	@# An empty mutate list is the `skip` decision: no mutable file changed, so
 	@# there is nothing to mutate and nothing to gate on.

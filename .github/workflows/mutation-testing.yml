@@ -214,9 +214,11 @@ jobs:
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    # No `issues: write`: this job runs repository source through Stryker for up
+    # to two hours. Every issue operation lives in `census-report`, which does no
+    # code execution.
     permissions:
       contents: read
-      issues: write
     strategy:
       fail-fast: false
       matrix:
@@ -345,7 +347,16 @@ jobs:
             --description "Nightly mutation census findings" 2>/dev/null || true
           title='mutation testing backlog'
           run_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-          body="$(printf '%s\n\n%s\n' "$(cat reports/mutation/summary.md)" "Census run: $run_url")"
+          # GitHub rejects an issue body over 65536 characters, and the summary
+          # carries one table row per file with an undetected mutant. Left
+          # uncapped, a large enough backlog would make `gh` exit non-zero under
+          # `set -e` and redden the leg that exists to stay green. 60000 leaves
+          # room for the footer; the full table is always in the artifact.
+          summary="$(head -c 60000 reports/mutation/summary.md)"
+          if [ "$(wc -c < reports/mutation/summary.md)" -gt 60000 ]; then
+            summary="$summary"$'\n\n_Table truncated; the full report is in this run'"'"'s artifact._'
+          fi
+          body="$(printf '%s\n\n%s\n' "$summary" "Census run: $run_url")"
           # `.[0].number` over an empty array prints the literal string "null",
           # which would pass the -n test and run `gh issue comment null`, so the
           # tracking issue would never be created on the first census.

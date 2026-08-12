@@ -4,10 +4,11 @@ import { join } from 'node:path';
 
 import {
   type MutationPolicy,
+  capFiles,
   isMutablePath,
   loadMutationPolicy,
+  parseGateArtifact,
   parseScope,
-  partitionFiles,
   resolveGate,
   selectMutableFiles,
 } from '../../../scripts/ci/mutation-scope';
@@ -64,6 +65,8 @@ describe('isMutablePath', () => {
     ['a constants module', 'src/features/landing/helpers/constants.ts'],
     ['a manual mock', 'src/features/landing/api/__mocks__/client.ts'],
     ['a fixture', 'src/features/landing/api/__fixtures__/user.ts'],
+    ['a co-located spec', 'src/features/landing/helpers/normalizeLink.spec.ts'],
+    ['a co-located tsx spec', 'src/features/landing/hooks/use-thing.spec.tsx'],
   ])('rejects %s', (_label, path) => {
     expect(isMutablePath(path, DIRS)).toBe(false);
   });
@@ -129,41 +132,90 @@ describe('selectMutableFiles', () => {
   });
 });
 
-describe('partitionFiles', () => {
-  const files = ['e.ts', 'a.ts', 'd.ts', 'b.ts', 'c.ts'];
+describe('capFiles', () => {
+  const files = ['a.ts', 'b.ts', 'c.ts', 'd.ts'];
 
-  it('returns every file for a single shard, sorted', () => {
-    expect(partitionFiles(files, 1, 0)).toEqual(['a.ts', 'b.ts', 'c.ts', 'd.ts', 'e.ts']);
+  it('truncates to the cap so an advisory verdict also bounds the run', () => {
+    expect(capFiles(files, 'changed', POLICY)).toEqual(['a.ts', 'b.ts', 'c.ts']);
   });
 
-  it('partitions without dropping or duplicating a file', () => {
-    const shards = [0, 1, 2].map(index => partitionFiles(files, 3, index));
-    expect(shards.flat().sort((a, b) => a.localeCompare(b))).toEqual([
-      'a.ts',
-      'b.ts',
-      'c.ts',
-      'd.ts',
-      'e.ts',
-    ]);
-    expect(new Set(shards.flat()).size).toBe(files.length);
+  it('returns the list unchanged at exactly the cap', () => {
+    expect(capFiles(files.slice(0, 3), 'changed', POLICY)).toEqual(['a.ts', 'b.ts', 'c.ts']);
   });
 
-  it('yields an empty slice when there are more shards than files', () => {
-    expect(partitionFiles(['a.ts'], 3, 2)).toEqual([]);
+  it('leaves a scope without a cap untouched', () => {
+    expect(capFiles(files, 'full', POLICY)).toEqual(files);
   });
 
-  it.each([
-    ['a zero total', 0, 0],
-    ['a fractional total', 1.5, 0],
-  ])('rejects %s', (_label, total, index) => {
-    expect(() => partitionFiles(files, total, index)).toThrow(/MUTATION_SHARD_TOTAL/);
+  it('copies rather than aliasing the input', () => {
+    const input = ['a.ts'];
+    expect(capFiles(input, 'full', POLICY)).not.toBe(input);
   });
 
-  it.each([
-    ['a negative index', 2, -1],
-    ['an index equal to the total', 2, 2],
-  ])('rejects %s', (_label, total, index) => {
-    expect(() => partitionFiles(files, total, index)).toThrow(/MUTATION_SHARD_INDEX/);
+  it('handles an empty list', () => {
+    expect(capFiles([], 'changed', POLICY)).toEqual([]);
+  });
+});
+
+describe('parseGateArtifact', () => {
+  const gate = (over: Record<string, unknown> = {}): string =>
+    JSON.stringify({
+      mode: 'gate',
+      break: 85,
+      reason: 'because',
+      scope: 'changed',
+      fileCount: 2,
+      unmeasured: [],
+      ...over,
+    });
+
+  it('accepts a well-formed gating decision', () => {
+    expect(parseGateArtifact(gate(), 'changed')).toEqual({
+      mode: 'gate',
+      break: 85,
+      reason: 'because',
+      scope: 'changed',
+      fileCount: 2,
+      unmeasured: [],
+    });
+  });
+
+  it('accepts an advisory decision with a null break', () => {
+    expect(parseGateArtifact(gate({ mode: 'advisory', break: null }), 'changed').break).toBeNull();
+  });
+
+  it('rejects malformed JSON', () => {
+    expect(() => parseGateArtifact('{ nope', 'changed')).toThrow(/not valid JSON/);
+  });
+
+  it('rejects an unknown mode', () => {
+    expect(() => parseGateArtifact(gate({ mode: 'warn' }), 'changed')).toThrow(/expected one of/);
+  });
+
+  it('rejects a decision resolved for another scope', () => {
+    expect(() => parseGateArtifact(gate({ scope: 'full' }), 'changed')).toThrow(/stale decision/);
+  });
+
+  it('rejects a gating decision with a null break', () => {
+    expect(() => parseGateArtifact(gate({ break: null }), 'changed')).toThrow(/non-numeric break/);
+  });
+
+  it('rejects a gating decision whose break is a numeric string', () => {
+    expect(() => parseGateArtifact(gate({ break: '85' }), 'changed')).toThrow(/non-numeric break/);
+  });
+
+  it('rejects a non-gating decision that still carries a break', () => {
+    expect(() => parseGateArtifact(gate({ mode: 'skip', break: 85 }), 'changed')).toThrow(
+      /carries a break/
+    );
+  });
+
+  it('rejects a non-integer fileCount', () => {
+    expect(() => parseGateArtifact(gate({ fileCount: 1.5 }), 'changed')).toThrow(/fileCount/);
+  });
+
+  it('defaults a missing unmeasured list to empty', () => {
+    expect(parseGateArtifact(gate({ unmeasured: undefined }), 'changed').unmeasured).toEqual([]);
   });
 });
 
@@ -197,6 +249,17 @@ describe('resolveGate', () => {
 describe('parseScope', () => {
   it('defaults to the curated scope', () => {
     expect(parseScope(undefined)).toBe('curated');
+  });
+
+  it.each([
+    ['an empty string', ''],
+    ['whitespace', '   '],
+  ])('treats %s as the curated default, not an error', (_label, value) => {
+    expect(parseScope(value)).toBe('curated');
+  });
+
+  it('trims a value that make forwarded with padding', () => {
+    expect(parseScope(' full ')).toBe('full');
   });
 
   it.each(['curated', 'changed', 'full'] as const)('accepts %s', scope => {
