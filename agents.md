@@ -52,10 +52,18 @@ strength), `make test-bats` (Makefile and CI shell flows), `make test-memory-lea
 In CI these suites are fanned out to run in parallel (issue #316): every workflow declares a
 `concurrency` group (PR checks cancel superseded runs; deploy/release/sandbox do not),
 the Playwright e2e suite, Lighthouse, and the K6 load suites run as matrices, and mutation
-testing runs as a shard matrix whose `merge` job re-enforces the **exact** Stryker `break`
-threshold over the union of shards (`make merge-mutation-reports`). The thresholds and the
-test set are unchanged — locally you still run the single `make test-e2e` / `make
-test-mutation`.
+testing runs as a shard matrix whose `merge` job re-enforces the **exact** `break`
+threshold for the scope over the union of shards (`make merge-mutation-reports`). The
+thresholds and the test set are unchanged — locally you still run the single `make test-e2e`
+/ `make test-mutation`.
+
+Mutation testing also runs a blocking changed-files leg on every pull request and an
+advisory full-tree census nightly (issue #345). If you change a file under an
+`api`/`helpers`/`hooks`/`utils`/`validations` directory, run `make test-mutation-changed`
+before pushing: a surviving mutant means a test executes your code without asserting on it.
+Fix it by adding the missing assertion — never by widening
+[`config/mutation-policy.json`](config/mutation-policy.json)'s exclusions or lowering a
+`break`.
 
 ### Step 2 — Cover Every Applicable Scenario Class
 

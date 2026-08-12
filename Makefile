@@ -51,7 +51,13 @@ STRYKER_CMD                 = bun x stryker run
 STRYKER_SHARD_CONFIG        = stryker.shard.config.mjs
 MUTATION_SHARD_TOTAL        ?= 1
 MUTATION_SHARD_INDEX        ?= 0
+# Which slice of the tree a mutation run covers (#345): curated (the fixed list
+# in stryker.config.mjs), changed (only the mutable files a PR touches), or full
+# (every mutable file — the nightly census). See config/mutation-policy.json.
+MUTATION_SCOPE              ?= curated
+MUTATION_BASE_REF           ?= origin/main
 MERGE_MUTATION_REPORTS_CMD  = bun x tsx scripts/ci/merge-mutation-reports.ts
+MUTATION_FILE_LIST_CMD      = bun x tsx scripts/ci/mutation-file-list.ts
 
 SERVE_CMD                   = --collect.startServerCommand="$(SERVE_BIN) -l $(NEXT_PUBLIC_PROD_PORT) out" \
                               --collect.startServerReadyPattern="Accepting connections"
@@ -300,7 +306,10 @@ build-out: ## Build production artifacts to ./out directory
 	echo "✅ Build artifacts extracted to ./out directory"
 
 format: ## This command executes Prettier formatting
-	$(PRETTIER_BIN) "**/*.{js,jsx,ts,tsx,json,css,scss,md}" --write --ignore-path .prettierignore
+	@# `mjs` is in the glob because Qlty's Prettier checks .mjs and this target is
+	@# the only way contributors format; without it the Stryker/ESLint root configs
+	@# could only ever be fixed by hand, after CI flagged them.
+	$(PRETTIER_BIN) "**/*.{js,jsx,mjs,ts,tsx,json,css,scss,md}" --write --ignore-path .prettierignore
 
 lint-next: ## This command executes ESLint
 	$(PM_EXEC) $(ESLINT_BIN)
@@ -461,7 +470,7 @@ ci-test-integration: ## Run integration tests directly assuming deps are install
 	ci-test-memory-leak ci-test-load ci-test-lighthouse-desktop \
 	ci-test-lighthouse-mobile ci-test-prod ensure-dev start-prod-clean \
 	test-load test-load-swagger test-mutation-shard merge-mutation-reports \
-	pr-comments
+	mutation-file-list test-mutation-changed pr-comments
 
 ci-setup: create-network ## Prepare the shared dev environment for CI-oriented checks
 	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) up $(CI_SETUP_UP_FLAGS) dev && $(MAKE) wait-for-dev
@@ -568,13 +577,28 @@ memory-leak-dind: start-prod ## Run Memlab tests in isolated compose project (DI
 test-mutation: build ## Run mutation tests using Stryker after building the app
 	$(STRYKER_CMD)
 
-test-mutation-shard: ## Run mutation shard MUTATION_SHARD_INDEX of MUTATION_SHARD_TOTAL (host; assumes deps installed) — writes reports/mutation/mutation-shard-<index>.json with break disabled
+mutation-file-list: ## Resolve the mutate list + gate decision for MUTATION_SCOPE (changed|full) into reports/mutation/
+	MUTATION_SCOPE=$(MUTATION_SCOPE) MUTATION_BASE_REF=$(MUTATION_BASE_REF) $(MUTATION_FILE_LIST_CMD)
+
+test-mutation-shard: ## Run mutation shard MUTATION_SHARD_INDEX of MUTATION_SHARD_TOTAL for MUTATION_SCOPE (host; assumes deps installed) — writes reports/mutation/mutation-shard-<index>.json with break disabled
 	node scripts/generateLocalization.mjs
-	MUTATION_SHARD_INDEX=$(MUTATION_SHARD_INDEX) MUTATION_SHARD_TOTAL=$(MUTATION_SHARD_TOTAL) \
+	MUTATION_SCOPE=$(MUTATION_SCOPE) \
+		MUTATION_SHARD_INDEX=$(MUTATION_SHARD_INDEX) MUTATION_SHARD_TOTAL=$(MUTATION_SHARD_TOTAL) \
 		$(STRYKER_CMD) $(STRYKER_SHARD_CONFIG)
 
-merge-mutation-reports: ## Union the per-shard mutation reports and re-enforce the exact Stryker break gate over the whole set (host; assumes deps installed)
-	MUTATION_SHARD_TOTAL=$(MUTATION_SHARD_TOTAL) $(MERGE_MUTATION_REPORTS_CMD)
+merge-mutation-reports: ## Union the per-shard mutation reports and re-enforce MUTATION_SCOPE's break gate over the whole set (host; assumes deps installed)
+	MUTATION_SCOPE=$(MUTATION_SCOPE) MUTATION_SHARD_TOTAL=$(MUTATION_SHARD_TOTAL) $(MERGE_MUTATION_REPORTS_CMD)
+
+test-mutation-changed: ## Mutate only the files this branch changes against MUTATION_BASE_REF and gate on the changed-files threshold (host; assumes deps installed)
+	$(MAKE) mutation-file-list MUTATION_SCOPE=changed MUTATION_BASE_REF=$(MUTATION_BASE_REF)
+	@# An empty mutate list is the `skip` decision: no mutable file changed, so
+	@# there is nothing to mutate and nothing to gate on.
+	@if [ ! -s reports/mutation/mutate-list.txt ]; then \
+		echo "⏭️  No mutable files changed against $(MUTATION_BASE_REF); nothing to mutate."; \
+	else \
+		$(MAKE) test-mutation-shard MUTATION_SCOPE=changed MUTATION_SHARD_TOTAL=1 MUTATION_SHARD_INDEX=0 && \
+		$(MAKE) merge-mutation-reports MUTATION_SCOPE=changed MUTATION_SHARD_TOTAL=1; \
+	fi
 
 wait-for-prod-health: ## Wait for the prod container to reach a healthy state.
 	@echo "Waiting for prod container to become healthy (timeout: 60s)..."

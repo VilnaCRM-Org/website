@@ -143,7 +143,7 @@ EOF
   reset_command_log
   run_make_target format CI=1
   [ "$status" -eq 0 ]
-  assert_log_contains 'prettier **/*.{js,jsx,ts,tsx,json,css,scss,md} --write --ignore-path .prettierignore'
+  assert_log_contains 'prettier **/*.{js,jsx,mjs,ts,tsx,json,css,scss,md} --write --ignore-path .prettierignore'
 
   reset_command_log
   run_make_target husky

@@ -4,6 +4,7 @@ import {
   mutationScore,
   scoreReports,
   tallyMutants,
+  undetectedByFile,
 } from '../../../scripts/ci/mutation-report';
 
 function report(files: Record<string, string[]>): MutationReport {
@@ -100,6 +101,44 @@ describe('mutation-report merge gate', () => {
       const result = scoreReports([{}, report({ 'a.ts': ['Killed'] })]);
       expect(result.fileCount).toBe(1);
       expect(result.mutationScore).toBe(100);
+    });
+  });
+
+  describe('undetectedByFile drives the nightly census breakdown', () => {
+    it('lists only files with undetected mutants, worst first', () => {
+      const rows = undetectedByFile(
+        mergeReportFiles([
+          report({
+            'clean.ts': ['Killed', 'Killed'],
+            'weak.ts': ['Killed', 'Survived'],
+            'weakest.ts': ['Survived', 'Survived', 'NoCoverage'],
+          }),
+        ])
+      );
+      expect(rows).toEqual([
+        { file: 'weakest.ts', survived: 2, noCoverage: 1 },
+        { file: 'weak.ts', survived: 1, noCoverage: 0 },
+      ]);
+    });
+
+    it('breaks ties on the file path so the census issue is stable between runs', () => {
+      const rows = undetectedByFile(
+        mergeReportFiles([report({ 'b.ts': ['Survived'], 'a.ts': ['NoCoverage'] })])
+      );
+      expect(rows.map(row => row.file)).toEqual(['a.ts', 'b.ts']);
+    });
+
+    it('ignores statuses that are not undetected', () => {
+      const rows = undetectedByFile(
+        mergeReportFiles([
+          report({ 'a.ts': ['CompileError', 'RuntimeError', 'Ignored', 'Timeout'] }),
+        ])
+      );
+      expect(rows).toEqual([]);
+    });
+
+    it('returns an empty list for a report with no files', () => {
+      expect(undetectedByFile(mergeReportFiles([{}]))).toEqual([]);
     });
   });
 });

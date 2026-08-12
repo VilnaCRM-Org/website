@@ -60,6 +60,9 @@ exclude_patterns = [
   # They are Prettier-formatted via `make format`.
   ".dependency-cruiser.js",
   "jest.config.ts",
+  "jest.mutation.config.ts",
+  "stryker.config.mjs",
+  "stryker.shard.config.mjs",
 ]
 
 test_patterns = [
@@ -92,6 +95,13 @@ mode = "comment"
 name = "eslint"
 package_file = "package.json"
 package_filters = ["eslint", "jest", "prettier"]
+# Pinned to the same ESLint the repo runs (see `eslint` in package.json). Left
+# unpinned, newer Qlty CLIs default to their own ESLint 10.x while still
+# installing this repo's eslint-plugin-react 7.x through `package_filters`; that
+# plugin calls `context.getFilename()`, which ESLint 10 removed, so every build
+# dies with "Error while loading rule 'react/display-name'". Keep in step with
+# package.json so Qlty and `make lint-next` stay the same check.
+version = "9.39.4"
 
 [[plugin]]
 name = "hadolint"

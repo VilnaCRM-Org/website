@@ -1,7 +1,10 @@
+import { existsSync, readFileSync } from 'node:fs';
+
 import base from './stryker.config.mjs';
 
 const total = Math.max(1, Number.parseInt(process.env.MUTATION_SHARD_TOTAL ?? '1', 10) || 1);
 const index = Math.max(0, Number.parseInt(process.env.MUTATION_SHARD_INDEX ?? '0', 10) || 0);
+const scope = process.env.MUTATION_SCOPE ?? 'curated';
 
 // Fail loud on an out-of-range index instead of letting `index % total` wrap and
 // silently collide with another shard — that would produce a plausible (correct
@@ -12,13 +15,44 @@ if (index >= total) {
   );
 }
 
-// The base config enumerates the mutated files explicitly (an array, not a
-// glob), so the shard slices that array deterministically. Sorting first makes
-// the partition stable regardless of source order, and the round-robin split
-// (`i % total === index`) guarantees the union of every shard equals the full
-// list exactly — no file is dropped or double-counted — so the merged score is
-// identical to an unsharded run.
-const sliced = [...base.mutate]
+const LIST_PATH = new URL('./reports/mutation/mutate-list.txt', import.meta.url);
+
+/**
+ * The file set this shard partitions.
+ *
+ * `curated` is the explicit list in the base config. `changed` and `full` are
+ * resolved ahead of the run by `scripts/ci/mutation-file-list.ts`, which writes
+ * `reports/mutation/mutate-list.txt` and the matching gate decision — one
+ * resolution step, so the mutated files and the enforced threshold agree.
+ */
+function scopedFiles() {
+  if (scope === 'curated') {
+    return base.mutate;
+  }
+  if (!existsSync(LIST_PATH)) {
+    throw new Error(
+      `MUTATION_SCOPE="${scope}" needs reports/mutation/mutate-list.txt; ` +
+        'run `make mutation-file-list` first.'
+    );
+  }
+  const files = readFileSync(LIST_PATH, 'utf8')
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => line.length > 0);
+  if (files.length === 0) {
+    throw new Error(
+      `MUTATION_SCOPE="${scope}" resolved no mutable files; ` +
+        'the caller must skip the run, not mutate nothing.'
+    );
+  }
+  return files;
+}
+
+// Sorting first makes the partition stable regardless of source order, and the
+// round-robin split (`i % total === index`) guarantees the union of every shard
+// equals the full list exactly — no file is dropped or double-counted — so the
+// merged score is identical to an unsharded run.
+const sliced = [...scopedFiles()]
   .sort((a, b) => a.localeCompare(b))
   .filter((_, i) => i % total === index);
 
@@ -28,7 +62,7 @@ const config = {
   mutate: sliced,
   // Emit a machine-readable per-shard report the merge job unions; `break: null`
   // lets an individual shard finish without gating — the merge job re-enforces
-  // the real `thresholds.break` from stryker.config.mjs over the union.
+  // the real threshold for the scope over the union.
   reporters: ['json', 'clear-text', 'progress'],
   jsonReporter: { fileName: `reports/mutation/mutation-shard-${index}.json` },
   thresholds: { ...base.thresholds, break: null },

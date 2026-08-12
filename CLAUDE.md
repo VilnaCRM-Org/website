@@ -150,9 +150,41 @@ tiered off, weakened, or removed.
 - **Mutation sharding.** `make test-mutation-shard` (with `MUTATION_SHARD_INDEX` /
   `MUTATION_SHARD_TOTAL`) writes a per-shard report (`stryker.shard.config.mjs`, with
   `break` disabled); `make merge-mutation-reports` unions the shards and re-enforces the
-  exact `break` from `stryker.config.mjs` (`scripts/ci/merge-mutation-reports.ts`). The
-  split is a total partition, so the merged score equals an unsharded run and the merge job
-  fails closed.
+  scope's `break` (`scripts/ci/merge-mutation-reports.ts`). The split is a total partition,
+  so the merged score equals an unsharded run and the merge job fails closed.
+
+### Mutation scope (issue #345)
+
+`config/mutation-policy.json` is the single source of truth for what gets mutated and at
+what threshold. `MUTATION_SCOPE` selects one of three slices; everything downstream — the
+Stryker shard config, the Jest test set, and the merge gate — reads that one decision.
+
+| Scope     | What it mutates                           | Gate                             | Where           |
+| --------- | ----------------------------------------- | -------------------------------- | --------------- |
+| `curated` | the fixed list in `stryker.config.mjs`    | blocking at 100%                 | PR              |
+| `changed` | mutable files the PR touches vs. its base | blocking at 85%, cap → advisory  | PR              |
+| `full`    | every mutable file in `src/`              | advisory; files a tracking issue | nightly `02:00` |
+
+A file is "mutable" when it lives under an `api`/`helpers`/`hooks`/`utils`/`validations`
+**path segment** and is not a spec, story, type, style, i18n bundle, asset, constant, mock,
+or fixture (`scripts/ci/mutation-scope.ts`). Presentational `.tsx` is deliberately out of
+scope: mutating a style object yields equivalent mutants no test can kill, which would make
+the gate unfalsifiable rather than strict.
+
+The `changed` leg gates below 100% on purpose. A file mutated for the first time carries
+pre-existing debt its author did not create, and blocking on that only teaches reviewers to
+click past the check; the nightly census is where that backlog is tracked. When a PR touches
+more mutable files than `changed.maxFiles`, the leg degrades to advisory so a wide refactor
+is not blocked by a run that cannot finish in time.
+
+Locally: `make test-mutation-changed` (add `MUTATION_BASE_REF=<ref>` to diff against
+something other than `origin/main`). Never lower a `break`, widen the exclusion list, or add
+a scope to dodge a surviving mutant — write the assertion the mutant proves is missing.
+
+One acceptance criterion of #345 — adding the PR leg to `main`'s required-status-checks
+ruleset — needs repository-admin access and cannot be committed from a PR. It is tracked by
+the separate ci-health ruleset issue; until that lands, every check on `main` is advisory at
+merge time.
 
 ## Architecture
 

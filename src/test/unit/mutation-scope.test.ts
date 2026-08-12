@@ -1,0 +1,290 @@
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+import {
+  type MutationPolicy,
+  isMutablePath,
+  loadMutationPolicy,
+  parseScope,
+  partitionFiles,
+  resolveGate,
+  selectMutableFiles,
+} from '../../../scripts/ci/mutation-scope';
+
+const DIRS = ['api', 'helpers', 'hooks', 'utils', 'validations'];
+
+const POLICY: MutationPolicy = {
+  mutableDirectories: DIRS,
+  scopes: {
+    curated: { break: 100, advisory: false },
+    changed: { break: 85, advisory: false, maxFiles: 3 },
+    full: { break: 100, advisory: true },
+  },
+};
+
+let scratch: string;
+
+beforeAll(() => {
+  scratch = mkdtempSync(join(tmpdir(), 'mutation-policy-'));
+});
+
+afterAll(() => {
+  rmSync(scratch, { recursive: true, force: true });
+});
+
+/** Write a policy document into the scratch dir and return its path. */
+function policyFile(name: string, contents: unknown): string {
+  const path = join(scratch, name);
+  writeFileSync(path, typeof contents === 'string' ? contents : JSON.stringify(contents), 'utf8');
+  return path;
+}
+
+describe('isMutablePath', () => {
+  it.each([
+    'src/features/landing/helpers/normalizeLink.ts',
+    'src/features/landing/hooks/useFormReset.ts',
+    'src/features/landing/api/graphql/apollo.ts',
+    'src/features/landing/components/auth-section/validations/email.ts',
+    'src/utils/format.tsx',
+  ])('accepts logic under a mutable directory: %s', path => {
+    expect(isMutablePath(path, DIRS)).toBe(true);
+  });
+
+  it.each([
+    ['a spec', 'src/test/unit/email-validation.test.ts'],
+    ['a declaration file', 'src/features/landing/helpers/env.d.ts'],
+    ['a story', 'src/features/landing/hooks/use-thing.stories.tsx'],
+    ['a co-located test', 'src/features/landing/helpers/normalizeLink.test.ts'],
+    ['a types folder', 'src/features/landing/api/types/user.ts'],
+    ['a types module', 'src/features/landing/helpers/types.ts'],
+    ['a styles folder', 'src/features/landing/helpers/styles/link.ts'],
+    ['an i18n bundle', 'src/features/landing/api/i18n/en.ts'],
+    ['an assets folder', 'src/features/landing/utils/assets/icon.ts'],
+    ['a constants module', 'src/features/landing/helpers/constants.ts'],
+    ['a manual mock', 'src/features/landing/api/__mocks__/client.ts'],
+    ['a fixture', 'src/features/landing/api/__fixtures__/user.ts'],
+  ])('rejects %s', (_label, path) => {
+    expect(isMutablePath(path, DIRS)).toBe(false);
+  });
+
+  it('rejects files outside src/', () => {
+    expect(isMutablePath('scripts/ci/mutation-scope.ts', DIRS)).toBe(false);
+    expect(isMutablePath('pages/api/health.ts', DIRS)).toBe(false);
+  });
+
+  it('rejects non-TypeScript sources', () => {
+    expect(isMutablePath('src/features/landing/helpers/legacy.js', DIRS)).toBe(false);
+    expect(isMutablePath('src/features/landing/helpers/data.json', DIRS)).toBe(false);
+  });
+
+  it('matches whole path segments, so a presentational api-documentation/ is not "api"', () => {
+    expect(isMutablePath('src/features/swagger/components/api-documentation/index.ts', DIRS)).toBe(
+      false
+    );
+  });
+
+  it('rejects a mutable directory name that only appears in the file name', () => {
+    expect(isMutablePath('src/features/landing/components/hooks.ts', DIRS)).toBe(false);
+  });
+
+  it('normalises a ./ prefix and Windows separators', () => {
+    expect(isMutablePath('./src/features/landing/helpers/normalizeLink.ts', DIRS)).toBe(true);
+    expect(isMutablePath('src\\features\\landing\\helpers\\normalizeLink.ts', DIRS)).toBe(true);
+  });
+
+  it('rejects the empty path', () => {
+    expect(isMutablePath('', DIRS)).toBe(false);
+  });
+
+  it('honours an empty mutable-directory list by matching nothing', () => {
+    expect(isMutablePath('src/features/landing/helpers/normalizeLink.ts', [])).toBe(false);
+  });
+});
+
+describe('selectMutableFiles', () => {
+  it('filters, de-duplicates, and sorts', () => {
+    expect(
+      selectMutableFiles(
+        [
+          'src/features/landing/hooks/useFormReset.ts',
+          './src/features/landing/helpers/normalizeLink.ts',
+          'src/features/landing/helpers/normalizeLink.ts',
+          'README.md',
+          '',
+          '   ',
+        ],
+        DIRS
+      )
+    ).toEqual([
+      'src/features/landing/helpers/normalizeLink.ts',
+      'src/features/landing/hooks/useFormReset.ts',
+    ]);
+  });
+
+  it('returns an empty list when nothing is mutable', () => {
+    expect(
+      selectMutableFiles(['docs/readme.md', 'src/components/ui-button/index.tsx'], DIRS)
+    ).toEqual([]);
+  });
+});
+
+describe('partitionFiles', () => {
+  const files = ['e.ts', 'a.ts', 'd.ts', 'b.ts', 'c.ts'];
+
+  it('returns every file for a single shard, sorted', () => {
+    expect(partitionFiles(files, 1, 0)).toEqual(['a.ts', 'b.ts', 'c.ts', 'd.ts', 'e.ts']);
+  });
+
+  it('partitions without dropping or duplicating a file', () => {
+    const shards = [0, 1, 2].map(index => partitionFiles(files, 3, index));
+    expect(shards.flat().sort((a, b) => a.localeCompare(b))).toEqual([
+      'a.ts',
+      'b.ts',
+      'c.ts',
+      'd.ts',
+      'e.ts',
+    ]);
+    expect(new Set(shards.flat()).size).toBe(files.length);
+  });
+
+  it('yields an empty slice when there are more shards than files', () => {
+    expect(partitionFiles(['a.ts'], 3, 2)).toEqual([]);
+  });
+
+  it.each([
+    ['a zero total', 0, 0],
+    ['a fractional total', 1.5, 0],
+  ])('rejects %s', (_label, total, index) => {
+    expect(() => partitionFiles(files, total, index)).toThrow(/MUTATION_SHARD_TOTAL/);
+  });
+
+  it.each([
+    ['a negative index', 2, -1],
+    ['an index equal to the total', 2, 2],
+  ])('rejects %s', (_label, total, index) => {
+    expect(() => partitionFiles(files, total, index)).toThrow(/MUTATION_SHARD_INDEX/);
+  });
+});
+
+describe('resolveGate', () => {
+  it('skips an empty file set rather than passing it vacuously', () => {
+    const decision = resolveGate('changed', 0, POLICY);
+    expect(decision).toMatchObject({ mode: 'skip', break: null });
+  });
+
+  it('gates a changed set at or below the cap', () => {
+    expect(resolveGate('changed', 1, POLICY)).toMatchObject({ mode: 'gate', break: 85 });
+    expect(resolveGate('changed', 3, POLICY)).toMatchObject({ mode: 'gate', break: 85 });
+  });
+
+  it('degrades to advisory one file above the cap', () => {
+    const decision = resolveGate('changed', 4, POLICY);
+    expect(decision.mode).toBe('advisory');
+    expect(decision.break).toBeNull();
+    expect(decision.reason).toContain('3-file cap');
+  });
+
+  it('never gates an advisory scope', () => {
+    expect(resolveGate('full', 200, POLICY)).toMatchObject({ mode: 'advisory', break: null });
+  });
+
+  it('gates the curated scope at 100', () => {
+    expect(resolveGate('curated', 4, POLICY)).toMatchObject({ mode: 'gate', break: 100 });
+  });
+});
+
+describe('parseScope', () => {
+  it('defaults to the curated scope', () => {
+    expect(parseScope(undefined)).toBe('curated');
+  });
+
+  it.each(['curated', 'changed', 'full'] as const)('accepts %s', scope => {
+    expect(parseScope(scope)).toBe(scope);
+  });
+
+  it('rejects an unknown scope instead of silently running the wrong slice', () => {
+    expect(() => parseScope('chnaged')).toThrow(/Unsupported MUTATION_SCOPE/);
+  });
+});
+
+describe('loadMutationPolicy', () => {
+  it('loads the policy the repository actually ships', () => {
+    const policy = loadMutationPolicy();
+    expect(policy.mutableDirectories.length).toBeGreaterThan(0);
+    expect(policy.scopes.curated.break).toBe(100);
+    expect(policy.scopes.curated.advisory).toBe(false);
+    expect(policy.scopes.full.advisory).toBe(true);
+  });
+
+  it('keeps the shipped curated threshold in step with the changed-files threshold', () => {
+    const policy = loadMutationPolicy();
+    expect(policy.scopes.changed.break).toBeLessThanOrEqual(policy.scopes.curated.break);
+    expect(policy.scopes.changed.maxFiles).toBeGreaterThan(0);
+  });
+
+  it('rejects a missing policy file', () => {
+    expect(() => loadMutationPolicy(join(scratch, 'absent.json'))).toThrow(
+      /Could not read the mutation policy/
+    );
+  });
+
+  it('rejects malformed JSON', () => {
+    expect(() => loadMutationPolicy(policyFile('broken.json', '{ nope'))).toThrow(
+      /Could not read the mutation policy/
+    );
+  });
+
+  it('rejects an empty mutableDirectories list', () => {
+    const path = policyFile('empty-dirs.json', { ...POLICY, mutableDirectories: [] });
+    expect(() => loadMutationPolicy(path)).toThrow(/mutableDirectories/);
+  });
+
+  it('rejects a non-numeric break', () => {
+    const path = policyFile('bad-break.json', {
+      ...POLICY,
+      scopes: { ...POLICY.scopes, changed: { break: '85', advisory: false } },
+    });
+    expect(() => loadMutationPolicy(path)).toThrow(/numeric "break"/);
+  });
+
+  it('rejects a break outside [0, 100]', () => {
+    const path = policyFile('out-of-range.json', {
+      ...POLICY,
+      scopes: { ...POLICY.scopes, changed: { break: 101, advisory: false } },
+    });
+    expect(() => loadMutationPolicy(path)).toThrow(/numeric "break"/);
+  });
+
+  it('rejects a non-boolean advisory flag', () => {
+    const path = policyFile('bad-advisory.json', {
+      ...POLICY,
+      scopes: { ...POLICY.scopes, full: { break: 100, advisory: 'yes' } },
+    });
+    expect(() => loadMutationPolicy(path)).toThrow(/boolean "advisory"/);
+  });
+
+  it('rejects a non-positive maxFiles', () => {
+    const path = policyFile('bad-cap.json', {
+      ...POLICY,
+      scopes: { ...POLICY.scopes, changed: { break: 85, advisory: false, maxFiles: 0 } },
+    });
+    expect(() => loadMutationPolicy(path)).toThrow(/"maxFiles"/);
+  });
+
+  it('rejects a missing scope', () => {
+    const path = policyFile('missing-scope.json', {
+      mutableDirectories: DIRS,
+      scopes: { curated: POLICY.scopes.curated, changed: POLICY.scopes.changed },
+    });
+    expect(() => loadMutationPolicy(path)).toThrow(/scope "full"/);
+  });
+
+  it('accepts a scope without the optional maxFiles cap', () => {
+    const path = policyFile('no-cap.json', {
+      ...POLICY,
+      scopes: { ...POLICY.scopes, changed: { break: 85, advisory: false } },
+    });
+    expect(loadMutationPolicy(path).scopes.changed.maxFiles).toBeUndefined();
+  });
+});
