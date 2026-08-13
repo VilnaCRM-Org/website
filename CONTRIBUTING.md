@@ -53,7 +53,7 @@ If you find an issue to work on, you are welcome to open a PR with a fix.
     it to [fork the repo](https://docs.github.com/en/desktop/contributing-and-collaborating-using-github-desktop/cloning-and-forking-repositories-from-github-desktop)!
 
 - Using the command line:
-  - [Fork the repo](https://docs.github.com/en/github/getting-started-with-github/fork-a-repo#fork-an-example-repository)
+  - [Fork the repo](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/fork-a-repo#forking-a-repository)
     so that you can make your changes without affecting the original project until
     you're ready to merge them.
 
@@ -203,6 +203,23 @@ If you're unsure about how to proceed with your changes, you have two options:
 - **Contact your team lead** for guidance.
 - **Push your changes** to a branch and **open a pull request** — this will trigger
   an automated code review.
+
+### 🔗 Link Checking
+
+`.github/workflows/link-check.yml` runs [lychee](https://lychee.cli.rs/) in two legs, and
+they have deliberately different jobs:
+
+- **Offline (blocking, every PR).** Resolves relative links and `#fragment` anchors across
+  every git-tracked Markdown file, with external URLs skipped so a third party's outage can
+  never flake a required check. This is also the leg that rejects root-relative Markdown
+  links (`/some/path`) outright — keep them relative.
+- **External (advisory, Mondays).** Resolves external URLs too, over Markdown plus the built
+  `out/` export, and files or refreshes the _Weekly link check failures_ tracking issue
+  instead of blocking.
+
+Because the weekly leg reports rather than blocks, treat a noisy report as a bug in the leg:
+it is only useful while every entry is a real dead link. Fix the link, or fix the checker —
+never let phantom findings accumulate.
 
 ### 🤖 Automatic Code Review
 

@@ -2,8 +2,6 @@
 
 # Template for modern SSR applications
 
-[![CodeScene Code Health](https://codescene.io/projects/43861/status-badges/code-health)](https://codescene.io/projects/43861)
-[![CodeScene System Mastery](https://codescene.io/projects/43861/status-badges/system-mastery)](https://codescene.io/projects/43861)
 [![codecov](https://codecov.io/gh/VilnaCRM-Org/frontend-ssr-template/graph/badge.svg?token=MPFDUSMZ2I)](https://codecov.io/gh/VilnaCRM-Org/frontend-ssr-template)
 
 ## Possibilities
@@ -403,7 +401,7 @@ folder, and documentation will appear in the `docs` folder, though you'll need t
 [API-Extractor](https://api-extractor.com/) installed.
 
 If the documentation doesn't cover what you need, search the
-[many questions on Stack Overflow](http://stackoverflow.com/questions/tagged/vilnacrm),
+[existing issues](https://github.com/VilnaCRM-Org/website/issues),
 and before you ask a question,
 [read the troubleshooting guide](https://github.com/VilnaCRM-Org/frontend-ssr-template/wiki/Troubleshooting).
 
