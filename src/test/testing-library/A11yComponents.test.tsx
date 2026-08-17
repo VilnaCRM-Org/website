@@ -7,7 +7,7 @@ import React from 'react';
 import { UiButton, UiCheckbox, UiInput, UiLink, UiTypography } from '@/components';
 import { theme } from '@/components/app-theme';
 
-import { FORCED_RULES, WCAG_AA_TAGS } from '../a11y/axe-config';
+import { FORCED_RULES, JSDOM_UNSUPPORTED_RULES, WCAG_AA_TAGS } from '../a11y/axe-config';
 import { expectNoA11yViolations } from '../a11y/expect-no-a11y-violations';
 
 import { testText } from './constants';
@@ -104,10 +104,24 @@ describe('component accessibility (WCAG 2.1 AA)', () => {
       </UiButton>
     );
 
+    // `JSDOM_UNSUPPORTED_RULES` is merged into every run here for the same reason
+    // `expectNoA11yViolations` applies it: a tag-based `runOnly` overrides axe's
+    // global `enabled` flag, so without it `color-contrast` and
+    // `link-in-text-block` execute in jsdom, land in `incomplete`, and emit
+    // `Not implemented: HTMLCanvasElement.prototype.getContext`. This test runs
+    // axe twice, so the noise was doubled — and a meta-test that validates the
+    // gate config has to use it, not diverge from it. It cannot affect the
+    // assertions below: neither colour rule is `label-content-name-mismatch`.
+    //
+    // One `getContext` warning survives on purpose. It comes from
+    // `_isIconLigature` inside `label-content-name-mismatch` itself — the rule
+    // under test renders the label text to a canvas to decide whether it is an
+    // icon ligature. Silencing that one would mean disabling the rule this test
+    // exists to prove is running.
     const evaluatedRules: (rules?: RuleObject) => Promise<string[]> = async rules => {
       const results: AxeResults = (await axe(container, {
         runOnly: { type: 'tag', values: [...WCAG_AA_TAGS] },
-        ...(rules === undefined ? {} : { rules }),
+        rules: { ...JSDOM_UNSUPPORTED_RULES, ...rules },
       })) as AxeResults;
 
       return [...results.violations, ...results.passes, ...results.incomplete].map(
