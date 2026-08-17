@@ -123,9 +123,14 @@ function CustomDrawer({
         `link` role and oblige the full APG menu keyboard model (arrows, Home/End,
         type-ahead), and moving `role="menu"` onto the inner `<nav>` would destroy the
         navigation landmark. This is site navigation inside a modal dialog, which is
-        exactly what MUI already exposes — `role="dialog"` and `aria-modal="true"` on
-        the paper for `variant="temporary"`, with a real `<nav>` list inside. Locate
-        the open drawer by the `dialog` role.
+        exactly what MUI already exposes — `role="dialog"`, `aria-modal="true"` and
+        `tabIndex={-1}` on the paper slot whenever `variant` is `temporary` (its
+        default), with a real `<nav>` list inside. Locate the open drawer by the
+        `dialog` role: four tests do, in jsdom and in all three browsers, so if an
+        MUI upgrade ever stopped emitting it they fail loudly instead of silently
+        losing dialog semantics. Naming that dialog is tracked in #435 — and the
+        name has to go on the paper slot, since props land on the modal root, where
+        `aria-label` is prohibited on `role="presentation"`.
       */}
       <Drawer sx={styles.drawer} anchor="right" open={isDrawerOpen} onClose={handleCloseDrawer}>
         <DrawerContent onClose={handleCloseDrawer} handleLinkClick={handleLinkClick} />

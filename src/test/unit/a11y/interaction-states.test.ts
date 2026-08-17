@@ -72,9 +72,9 @@ describe('accessibility interaction-state registry', () => {
     expect(new Set(descriptions).size).toBe(descriptions.length);
   });
 
-  it('covers the three interaction states the gate was created for', () => {
-    // Named explicitly rather than counted: #369 commits to these three states,
-    // and a rename or a removal has to be a visible, reviewed change.
+  it('covers the three interaction states #369 requires', () => {
+    // Named explicitly rather than counted: #369 commits to these three as the
+    // floor, so a rename or a removal has to be a visible, reviewed change.
     expect(registeredNames).toEqual(
       expect.arrayContaining([
         'registrationSubmitError',
@@ -82,6 +82,20 @@ describe('accessibility interaction-state registry', () => {
         'swaggerOperationExpanded',
       ])
     );
+  });
+
+  it('registers exactly the five states this repo scans', () => {
+    // The assertion above is a floor and would pass while an extra state was
+    // added or dropped unnoticed. This one pins the whole registry, so growing
+    // or shrinking the scanned surface is a deliberate, reviewed edit — the same
+    // contract `routes.test.ts` enforces for pages.
+    expect([...registeredNames].sort()).toEqual([
+      'mobileDrawerOpen',
+      'registrationSubmitError',
+      'registrationValidationErrors',
+      'swaggerAuthorizeDialog',
+      'swaggerOperationExpanded',
+    ]);
   });
 
   it('spans both the landing and the swagger surface', () => {

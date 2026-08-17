@@ -6,10 +6,14 @@ import { A11Y_ROUTES } from './routes';
  * Single source of truth for the accessibility acceptance standard
  * (`docs/accessibility/acceptance-standard.md`, issue #317).
  *
- * Both a11y layers import from this module so the conformance target cannot
+ * All three a11y layers import from this module so the conformance target cannot
  * drift between them:
- *   - component level — `expect-no-a11y-violations.ts` (jest-axe, jsdom)
- *   - route level     — `scan-route.ts` (@axe-core/playwright, real browsers)
+ *   - component level     — `expect-no-a11y-violations.ts` (jest-axe, jsdom)
+ *   - route level         — `scan-route.ts`, at initial load (issue #317)
+ *   - interaction states  — `scan-interaction-state.ts`, mid-journey (issue #369)
+ *
+ * The two browser layers share their axe invocation through `run-axe.ts`, which
+ * is the only place the tag filter and the rule overrides are applied.
  *
  * No spec may re-declare the tag list or the allowlist inline.
  */
