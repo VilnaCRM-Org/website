@@ -32,6 +32,7 @@ than one. Match the change to the suite and run its verification command.
 | End-to-end (e2e)  | User-facing flows end to end (Mockoon API) | `make test-e2e`         |
 | Visual regression | Any change to rendered UI or styling       | `make test-visual`      |
 | Accessibility     | Any change to rendered UI or a new route   | `make test-a11y`        |
+| A11y interaction  | A new or changed dialog, drawer, or state  | `make test-e2e`         |
 
 Client unit tests run on Jest with React Testing Library in a jsdom env
 (`TEST_ENV=client`); specs live in `src/test/testing-library/**/*.test.tsx` and
@@ -45,9 +46,10 @@ chromium, firefox, and webkit (`src/test/e2e/**/*.spec.ts`, `src/test/visual/**/
 visual snapshots sit in adjacent `*-snapshots/` folders. Run all three unit layers with
 `make test-unit-all`.
 
-The accessibility layer (issue #317) is two halves of one contract: `jest-axe` over rendered
-components, and `@axe-core/playwright` over every registered route in all three browsers
-(`src/test/a11y/**`). `make test-a11y` runs the dedicated component suite
+The accessibility layer is three parts of one contract: `jest-axe` over rendered components
+and `@axe-core/playwright` over every registered route in all three browsers
+(`src/test/a11y/**`, issue #317), plus axe at runtime **interaction states** inside the
+existing e2e journeys (issue #369). `make test-a11y` runs the dedicated component suite
 (`src/test/testing-library/A11yComponents.test.tsx`) and the route suite; the per-component
 axe assertions that live inside `UiButton`, `UiInput`, `UiCheckBox`, `Header` and `AuthForm`
 run with the rest of the client layer under `make test-unit-client`. The binding target is
@@ -58,6 +60,16 @@ axe tags, and the exception process live in
 tag list and allowlist have a single home in `src/test/a11y/axe-config.ts`. Adding a page
 means adding it to `src/test/a11y/routes.ts` — a unit test fails if the registry drifts from
 `pages/`.
+
+The interaction-state scans ride `make test-e2e`, not `make test-a11y`: they are added
+assertions inside the journeys that already drive a validation-error form, an open mobile
+drawer, an expanded Swagger operation and its authorize dialog, because static lint sees one
+component's JSX and the route scan only ever sees a page at initial load. Reach for
+`scanInteractionState(page, INTERACTION_STATES.<state>)` and register the state in
+`src/test/a11y/interaction-states.ts`; a unit test reads the specs and fails when a registered
+state stops being scanned. Only serious/critical impacts fail these scans — moderate and minor
+are attached to the Playwright report — because they run inside behavioural journeys over
+composed DOM; the route layer still gates every impact at initial load.
 
 Never make an a11y gate pass by suppressing it: no `eslint-disable`, no axe rule removal, no
 `test.skip`, and no `if (count > 0)` / `if (isVisible())` wrapper around an assertion — a
@@ -136,7 +148,7 @@ pass. Run the layer commands you touched, then the project lint gate.
 make format                  # Prettier formatting (run before lint)
 CI=1 make test-unit-client   # Client unit suite (jsdom)
 CI=1 make test-unit-server   # Server unit suite (node)
-make test-e2e                # User-facing flows (for UI or behavior changes)
+make test-e2e                # User-facing flows + the interaction-state a11y scans
 make test-visual             # Visual regression (for UI or styling changes)
 make test-a11y               # WCAG 2.1 AA gates (for UI changes or a new route)
 make lint                    # Full gate: ESLint, TypeScript, and markdownlint
@@ -189,6 +201,8 @@ A change to tests is done only when every statement below is true.
 - Localized text and accessibility-visible behavior are asserted where the UI changed.
 - Changed UI passes `make test-a11y` at WCAG 2.1 AA, with no new exception added to the
   allowlist and no suppression used to get there.
+- A new or changed interaction state (dialog, drawer, error state, expanded panel) is
+  registered in `src/test/a11y/interaction-states.ts` and scanned from its e2e journey.
 - New or changed `ui-*` primitives and exported feature components have a `*.stories.tsx`.
 - The relevant test commands above were run and passed, including `make lint`.
 - Commits follow Conventional Commits.

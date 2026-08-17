@@ -112,13 +112,22 @@ function CustomDrawer({
       >
         <Image src={Bars} alt={t('header.drawer.image_alt.bars')} width={24} height={24} />
       </Button>
-      <Drawer
-        sx={styles.drawer}
-        anchor="right"
-        open={isDrawerOpen}
-        onClose={handleCloseDrawer}
-        role="menu"
-      >
+      {/*
+        No `role` override here. `role="menu"` used to be set on the Drawer, and MUI
+        forwards it to the modal root — the wrapper holding the backdrop and the
+        paper. ARIA gives `menu` required owned elements (`menuitem` and friends), so
+        a backdrop and a `[role=dialog]` made that root fail axe's
+        `aria-required-children` at critical impact (SC 1.3.1), found by the
+        interaction-state scan added in #369.
+        Neither alternative works: `menuitem` on the nav links would override their
+        `link` role and oblige the full APG menu keyboard model (arrows, Home/End,
+        type-ahead), and moving `role="menu"` onto the inner `<nav>` would destroy the
+        navigation landmark. This is site navigation inside a modal dialog, which is
+        exactly what MUI already exposes — `role="dialog"` and `aria-modal="true"` on
+        the paper for `variant="temporary"`, with a real `<nav>` list inside. Locate
+        the open drawer by the `dialog` role.
+      */}
+      <Drawer sx={styles.drawer} anchor="right" open={isDrawerOpen} onClose={handleCloseDrawer}>
         <DrawerContent onClose={handleCloseDrawer} handleLinkClick={handleLinkClick} />
       </Drawer>
     </Box>

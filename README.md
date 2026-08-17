@@ -116,11 +116,11 @@ Testing
   make test-bats: runs the Bats shell regression suite for Makefile targets and CI helper scripts
   make test-memory-leak: runs memory leak tests using Memlab
   make load-tests: executes load tests using the K6 library
-  make test-e2e: runs end-to-end tests inside the prod container
+  make test-e2e: runs end-to-end tests (with the interaction-state a11y scans) inside the prod container
   make test-e2e-ui: runs end-to-end tests with UI inside the prod container
   make test-visual: runs visual tests inside the prod container
   make test-visual-ui: runs visual tests with UI inside the prod container
-  make test-a11y: runs both WCAG 2.1 AA gates (jest-axe components + axe/keyboard routes)
+  make test-a11y: runs the component and route WCAG 2.1 AA gates (jest-axe + axe/keyboard routes)
   make test-a11y-components: runs the jest-axe component scans only
   make test-a11y-routes: runs the axe route scans inside the prod container
   make test-load: alias for load-tests (K6 homepage load tests)
@@ -401,8 +401,8 @@ as it's frequently updated.
 For production deploys, the post-deploy smoke test, and the rollback procedure,
 see the [deployment and rollback runbook](docs/deployment-runbook.md).
 
-For the accessibility conformance target, the automated gates behind `make test-a11y`, and
-the exception process, see the
+For the accessibility conformance target, the automated gates behind `make test-a11y` and the
+interaction-state scans inside `make test-e2e`, and the exception process, see the
 [accessibility acceptance standard](docs/accessibility/acceptance-standard.md).
 
 You can generate complete API-level documentation by running `doc` in the top-level

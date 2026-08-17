@@ -1,5 +1,8 @@
 import { test, expect, type Locator } from '@playwright/test';
 
+import { INTERACTION_STATES } from '../../a11y/interaction-states';
+import { scanInteractionState } from '../../a11y/scan-interaction-state';
+
 import { getLocators, TEST_CONSTANTS, SwaggerLocators, USER_ENDPOINTS } from './utils';
 import { locators } from './utils/locators';
 
@@ -34,6 +37,11 @@ test.describe('Swagger UI Enhanced Interactions', () => {
   });
 
   test('should handle authorization modal', async ({ page }) => {
+    // Swagger is the heaviest page in the suite and this test also runs an axe
+    // scan over it, so give it the slow-test budget rather than risk a timeout
+    // flake on a loaded CI runner.
+    test.slow();
+
     await elements.authorizeButton.first().click();
 
     const authModal: Locator = page.locator('.modal-ux');
@@ -59,11 +67,20 @@ test.describe('Swagger UI Enhanced Interactions', () => {
     await expect(authModal.locator('label[for="client_id_authorizationCode"]')).toBeVisible();
     await expect(authModal.locator('label[for="client_secret_authorizationCode"]')).toBeVisible();
 
+    // A dialog layered over the documentation is the hardest state for a11y to
+    // get right and the one no initial-load scan sees (#369): the assertions
+    // above check the two labels this spec knows about, the scan checks every
+    // rule against the whole composed page.
+    await scanInteractionState(page, INTERACTION_STATES.swaggerAuthorizeDialog);
+
     await authModal.locator('button:has-text("Close")').click();
     await expect(authModal).not.toBeVisible();
   });
 
   test('should handle response examples', async ({ page }) => {
+    // Carries the expanded-operation axe scan; see the note above.
+    test.slow();
+
     // Pin the endpoint rather than taking whichever renders first: document
     // order is a property of the upstream spec, not of this behaviour.
     const endpoint: Locator = page.locator(USER_ENDPOINTS.GET_COLLECTION);
@@ -75,6 +92,11 @@ test.describe('Swagger UI Enhanced Interactions', () => {
 
     await expect(documentedResponses.first()).toBeVisible();
     expect(await documentedResponses.count()).toBeGreaterThan(0);
+
+    // An expanded operation is the interaction state the Swagger page exists
+    // for, and all of it — the response table, the tab pair, the try-it-out
+    // controls — is mounted only by this click (#369).
+    await scanInteractionState(page, INTERACTION_STATES.swaggerOperationExpanded);
 
     const exampleValue: Locator = endpoint.locator('.responses-inner .model-example').first();
     await expect(exampleValue).toBeVisible();
