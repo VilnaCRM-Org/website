@@ -21,6 +21,15 @@ const TAB_ORDER_ATTRIBUTE: string = 'data-a11y-tab-order';
  * Upper bound on Tab presses in one sweep. Swagger renders well over a hundred
  * controls; the assertions below are properties of adjacent trace entries, so
  * truncating the sweep preserves them while keeping the test fast.
+ *
+ * The bound is a documented limit, not full coverage: on a route with more than
+ * this many tabbable controls the sweep verifies the first
+ * `MAX_SWEEP_STEPS` positions, so a trap or a back-jump introduced beyond the
+ * cut-off is not detected here. That is a deliberate trade — a full sweep of
+ * `/swagger` is hundreds of round trips per browser — and it is bounded, not
+ * silent: raise this number if the untested tail starts mattering, and note that
+ * the axe scans (`scan-route.ts`, `scan-interaction-state.ts`) cover the whole
+ * page regardless of how far the keyboard walk reaches.
  */
 const MAX_SWEEP_STEPS: number = 120;
 
