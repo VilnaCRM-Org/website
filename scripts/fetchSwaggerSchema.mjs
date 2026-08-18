@@ -164,9 +164,7 @@ export function findMarkup(value) {
   if (scannable.includes(HTML_COMMENT)) {
     return HTML_COMMENT;
   }
-  const tag = [...scannable.matchAll(TAG)].find(match =>
-    HTML_ELEMENTS.has(match[1].toLowerCase())
-  );
+  const tag = [...scannable.matchAll(TAG)].find(match => HTML_ELEMENTS.has(match[1].toLowerCase()));
   return tag ? tag[0] : null;
 }
 
