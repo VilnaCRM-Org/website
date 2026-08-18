@@ -254,6 +254,8 @@ describe('swagger utils', () => {
       ['summary', { summary: '<span>Create a user</span>' }],
       ['html comment', { description: 'ok <!-- injected' }],
       ['self-closing tag', { description: 'line<br/>break' }],
+      ['an obsolete element', { description: 'legacy <acronym title="x">CRM</acronym>' }],
+      ['a legacy nobr', { description: 'keep <nobr>together</nobr>' }],
     ])('rejects markup in a %s', (_label, doc) => {
       expect(() => assertNoMarkup(doc)).toThrow(/HTML markup/);
     });
@@ -291,9 +293,26 @@ describe('swagger utils', () => {
     });
 
     test('ignores markup outside the prose fields', () => {
-      // `example` and `default` are data, not rendered markdown — flagging them
+      // `example` and `default` are data, not rendered Markdown — flagging them
       // would fail the build on a legitimate XML/HTML payload example.
       expect(() => assertNoMarkup({ example: '<html></html>', default: '<p>x</p>' })).not.toThrow();
+    });
+
+    // The walk must not descend into sample payloads: an example object may carry
+    // its own `description`/`title` field whose value is sample content.
+    test.each([
+      ['example', { example: { description: 'Renders a <div> wrapper' } }],
+      ['examples', { examples: { ok: { summary: 'Shows a <b>bold</b> label' } } }],
+      ['default', { default: { title: '<h1>Heading</h1>' } }],
+      ['a deeply nested example', { schema: { example: { a: { title: '<script>x</script>' } } } }],
+    ])('does not apply the prose check inside %s data', (_label, doc) => {
+      expect(() => assertNoMarkup(doc)).not.toThrow();
+    });
+
+    test('still flags a description that sits beside an example, not inside it', () => {
+      expect(() =>
+        assertNoMarkup({ description: '<b>real</b>', example: { description: '<b>sample</b>' } })
+      ).toThrow('$.description');
     });
 
     test.each([
@@ -306,6 +325,38 @@ describe('swagger utils', () => {
       ['a bare host', 'attacker.example'],
     ])('rejects %s in externalDocs', (_label, url) => {
       expect(() => assertNoMarkup({ externalDocs: { url } })).toThrow('non-http(s)');
+    });
+
+    // swagger-ui renders all of these as clickable anchors, so a guard that only
+    // covered externalDocs left three doors open to the same sink.
+    test.each([
+      ['info.termsOfService', { info: { termsOfService: 'file:///etc/passwd' } }],
+      ['info.contact.url', { info: { contact: { url: 'file:///etc/passwd' } } }],
+      ['info.license.url', { info: { license: { url: 'file:///etc/passwd' } } }],
+      ['a nested externalDocs', { paths: { '/u': { externalDocs: { url: 'file:///x' } } } }],
+    ])('rejects a non-http(s) %s', (_label, doc) => {
+      expect(() => assertNoMarkup(doc)).toThrow('non-http(s)');
+    });
+
+    test.each([
+      ['info.termsOfService', { info: { termsOfService: 'https://vilnacrm.com/terms' } }],
+      ['info.contact.url', { info: { contact: { url: 'https://vilnacrm.com' } } }],
+      ['info.license.url', { info: { license: { url: 'http://spdx.org/licenses/MIT' } } }],
+    ])('accepts an http(s) %s', (_label, doc) => {
+      expect(() => assertNoMarkup(doc)).not.toThrow();
+    });
+
+    test('rejects a link field that is not a string at all', () => {
+      expect(() => assertNoMarkup({ externalDocs: { url: { $ref: '#/x' } } })).toThrow(
+        'non-http(s)'
+      );
+      expect(() => assertNoMarkup({ info: { termsOfService: 42 } })).toThrow('non-http(s)');
+    });
+
+    // `servers[].url` is rewritten wholesale by patchSwaggerServer.mjs and is not
+    // rendered as a link, so it must stay outside the scheme check.
+    test('leaves servers[].url alone', () => {
+      expect(() => assertNoMarkup({ servers: [{ url: 'mockoon:8080' }] })).not.toThrow();
     });
 
     test('accepts an https externalDocs url', () => {

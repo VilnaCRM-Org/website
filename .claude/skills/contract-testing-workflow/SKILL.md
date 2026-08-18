@@ -102,7 +102,7 @@ something.
 
 **`Upstream spec carries HTML markup at $…`** — `make update-contracts` refused to
 vendor a spec whose `description`/`title`/`summary` contains a real HTML element.
-Those fields are rendered as markdown by swagger-ui on the public `/swagger` page,
+Those fields are rendered as Markdown by swagger-ui on the public `/swagger` page,
 so this is a deliberate stop-and-read, not a formatting nit: confirm upstream
 meant it before doing anything else. The check matches HTML **element names**, not
 "anything in angle brackets", so ordinary prose like `Array<User>` or

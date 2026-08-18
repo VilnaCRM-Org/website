@@ -28,9 +28,9 @@ import {
   OPENAPI_ARTIFACT,
   SCHEMA_ARTIFACT,
   buildChecksumsFile,
-  isImmutableRef,
   verifyCommittedDigests,
 } from './checksums.mjs';
+import { immutableRefError, isImmutableRef } from './refs.mjs';
 
 // checksums.mjs owns these paths: they are also the keys in checksums.json, so a
 // second declaration here could drift from the digests that attest to them.
@@ -163,11 +163,7 @@ function checkPinIntegrity() {
   if (!version) {
     fail('integrity', 'USER_SERVICE_VERSION is not set — define it in .env');
   } else if (!isImmutableRef(version)) {
-    fail(
-      'integrity',
-      `USER_SERVICE_VERSION="${version}" is not an immutable ref — use a 40-character ` +
-        'commit SHA or a vMAJOR.MINOR.PATCH release tag, never a branch'
-    );
+    fail('integrity', immutableRefError(version));
   }
 
   let problems;

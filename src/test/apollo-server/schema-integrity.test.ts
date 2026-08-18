@@ -182,17 +182,25 @@ describe('apollo mock schema integrity', () => {
   });
 
   describe('against the committed contract', () => {
-    test('the vendored schema passes its own recorded digest', () => {
-      const sdl: string = fs.readFileSync(SCHEMA_ARTIFACT, 'utf-8');
+    // SCHEMA_ARTIFACT is a key in the checksums map, not a filesystem path, so it
+    // is resolved next to the located checksums file rather than against the Jest
+    // working directory — otherwise these two tests would pass or fail based on
+    // where the runner was started.
+    const vendoredSchema = (): string =>
+      fs.readFileSync(path.resolve(path.dirname(CHECKSUMS_PATH), 'schema.graphql'), 'utf-8');
 
-      expect(() => assertSchemaIntegrity(sdl, readExpectedSchemaDigest())).not.toThrow();
+    test('the vendored schema passes its own recorded digest', () => {
+      expect(() =>
+        assertSchemaIntegrity(vendoredSchema(), readExpectedSchemaDigest())
+      ).not.toThrow();
     });
 
     test('appending one line to the vendored schema fails the check', () => {
-      const sdl: string = fs.readFileSync(SCHEMA_ARTIFACT, 'utf-8');
-
       expect(() =>
-        assertSchemaIntegrity(`${sdl}type Backdoor { token: String }\n`, readExpectedSchemaDigest())
+        assertSchemaIntegrity(
+          `${vendoredSchema()}type Backdoor { token: String }\n`,
+          readExpectedSchemaDigest()
+        )
       ).toThrow(SchemaIntegrityError);
     });
   });

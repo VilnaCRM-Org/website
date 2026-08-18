@@ -31,10 +31,12 @@ const CHECKSUMS_RELATIVE: string = path.join('contracts', 'user-service', 'check
  * The depth differs between the two layouts this file runs in — `out/docker/
  * apollo-server/` inside the image, `docker/apollo-server/` in the source tree
  * the unit suite imports — so counting `..` segments is wrong in one of them.
- * Falls back to the deepest candidate so a missing file still produces a path in
- * the error message rather than an empty string.
+ * When nothing is found, falls back to the compiled layout's root — but only if
+ * walking up that far stays inside `from`, so a shallow path cannot report an
+ * expected file at the filesystem root.
  */
 export function locateChecksums(from: string = __dirname): string {
+  const candidates: string[] = [];
   let dir: string = from;
 
   for (let up: number = 0; up < 6; up += 1) {
@@ -42,10 +44,18 @@ export function locateChecksums(from: string = __dirname): string {
     if (fs.existsSync(candidate)) {
       return candidate;
     }
-    dir = path.dirname(dir);
+    candidates.push(candidate);
+
+    const parent: string = path.dirname(dir);
+    if (parent === dir) {
+      break;
+    }
+    dir = parent;
   }
 
-  return path.join(path.resolve(from, '..', '..', '..'), CHECKSUMS_RELATIVE);
+  // Name the compiled layout's root (out/docker/apollo-server -> /app) when the
+  // walk got that far, otherwise the deepest directory it actually reached.
+  return candidates[Math.min(3, candidates.length - 1)] as string;
 }
 
 export const CHECKSUMS_PATH: string = locateChecksums();
@@ -55,9 +65,12 @@ export function sha256(text: string): string {
 }
 
 /**
- * Reads the digest recorded for the GraphQL SDL. Returns `null` only when the
- * checksums file is absent or unreadable — callers treat that as "cannot
- * verify" and must fail closed rather than accept the document.
+ * Reads the digest recorded for the GraphQL SDL.
+ *
+ * Returns `null` when the checksums file is absent, unreadable, not valid JSON,
+ * records no `artifacts` object, or records no entry for the schema artifact.
+ * Callers treat every one of those as "cannot verify" and must fail closed
+ * rather than accept the document.
  */
 export function readExpectedSchemaDigest(checksumsPath: string = CHECKSUMS_PATH): string | null {
   let raw: string;

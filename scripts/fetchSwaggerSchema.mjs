@@ -3,23 +3,17 @@ import { writeFile } from 'node:fs/promises';
 
 import { load } from 'js-yaml';
 
+import { requireImmutableUserServiceVersion } from './contracts/refs.mjs';
+
 const swaggerPath = './contracts/user-service/openapi.json';
 
 // USER_SERVICE_VERSION is the single pin for every user-service contract and
 // lives in .env. Refuse to fall back to a hidden default: a silent default would
 // let a refresh or the drift check run against the wrong generation of the spec.
-function requireUserServiceVersion() {
-  const version = process.env.USER_SERVICE_VERSION;
-  if (!version) {
-    throw new Error(
-      'USER_SERVICE_VERSION is not set — define it in .env (the single user-service pin).'
-    );
-  }
-  return version;
-}
-
+// The ref SHAPE is checked here rather than only in the gate, so a branch-shaped
+// pin cannot be downloaded, vendored and digested before anything complains.
 export function buildSpecUrl() {
-  return `https://raw.githubusercontent.com/VilnaCRM-Org/user-service/${requireUserServiceVersion()}/.github/openapi-spec/spec.yaml`;
+  return `https://raw.githubusercontent.com/VilnaCRM-Org/user-service/${requireImmutableUserServiceVersion()}/.github/openapi-spec/spec.yaml`;
 }
 
 export async function fetchSwaggerYaml(url) {
@@ -65,28 +59,50 @@ export function normalizeSpec(node) {
   return node;
 }
 
-// Prose fields swagger-ui renders as markdown, and therefore the fields an
+// Prose fields swagger-ui renders as Markdown, and therefore the fields an
 // upstream compromise would use to land markup in every /swagger visitor's DOM.
 // `externalDocs.description` is a `description`, so it is covered by the walk.
 const PROSE_KEYS = new Set(['description', 'title', 'summary']);
 
-// Matched against the HTML element names below rather than "anything in angle
-// brackets". API prose legitimately contains `Array<User>`, `<your token>` and
-// `<support@vilnacrm.com>`, none of which a markdown renderer treats as HTML — a
+// `example`, `default` and `examples` hold DATA, not rendered prose: a payload
+// example legitimately contains a `description`/`title` field of its own, whose
+// value is sample content rather than something swagger-ui renders as Markdown.
+// The walk stops at these so a sample value like `{ description: 'Renders a
+// <div> wrapper' }` cannot fail an otherwise clean contract refresh.
+const DATA_KEYS = new Set(['example', 'examples', 'default']);
+
+// Every field swagger-ui turns into a clickable anchor. `externalDocs.url` was
+// only one of them: `info.termsOfService` renders in the info block and
+// `info.contact.url` / `info.license.url` render in the topbar, so a
+// `javascript:`/`data:` URL in any of them reaches the same sink. `servers[].url`
+// is deliberately absent — the build rewrites it wholesale in
+// patchSwaggerServer.mjs, and it is not rendered as a link.
+const LINK_PARENTS = ['.externalDocs', '.contact', '.license'];
+const isLinkField = (key, path) =>
+  key === 'termsOfService' || (key === 'url' && LINK_PARENTS.some(p => path.endsWith(p)));
+
+// Matched against HTML element names rather than "anything in angle brackets".
+// API prose legitimately contains `Array<User>`, `<your token>` and
+// `<support@vilnacrm.com>`, none of which a Markdown renderer treats as HTML — a
 // guard that rejected them would fail `make update-contracts` on valid upstream
-// text, and the next person would loosen the gate to get unblocked. Only a name
-// the renderer would actually turn into an element counts.
+// text, and the next person would loosen the gate to get unblocked.
+//
+// The policy is fail-closed, so a name MISSING from this set is a bypass rather
+// than a nuisance. It is therefore the WHATWG element index plus every obsolete
+// element the spec still requires parsers to recognise (`acronym`, `blink`,
+// `nobr`, `spacer`, …) — a renderer will happily build a node for those too.
 const HTML_ELEMENTS = new Set(
   (
-    'a abbr address applet area article aside audio b base basefont bdi bdo big blockquote body ' +
-    'br button canvas caption center cite code col colgroup data datalist dd del details dfn ' +
-    'dialog dir div dl dt em embed fieldset figcaption figure font footer form frame frameset ' +
-    'h1 h2 h3 h4 h5 h6 head header hgroup hr html i iframe img input ins kbd label legend li ' +
-    'link main map mark marquee math menu meta meter nav noembed noframes noscript object ol ' +
-    'optgroup option output p param picture plaintext pre progress q rb rp rt rtc ruby s samp ' +
-    'script search section select slot small source span strike strong style sub summary sup ' +
-    'svg table tbody td template textarea tfoot th thead time title tr track tt u ul var video ' +
-    'wbr xmp'
+    'a abbr acronym address applet area article aside audio b base basefont bdi bdo bgsound big ' +
+    'blink blockquote body br button canvas caption center cite code col colgroup command data ' +
+    'datalist dd del details dfn dialog dir div dl dt element em embed fencedframe fieldset ' +
+    'figcaption figure font footer form frame frameset h1 h2 h3 h4 h5 h6 head header hgroup hr ' +
+    'html i iframe image img input ins isindex kbd keygen label legend li link listing main map ' +
+    'mark marquee math menu menuitem meta meter multicol nav nextid nobr noembed noframes ' +
+    'noscript object ol optgroup option output p param picture plaintext portal pre progress q ' +
+    'rb rp rt rtc ruby s samp script search section select selectedcontent slot small source ' +
+    'spacer span strike strong style sub summary sup svg table tbody td template textarea tfoot ' +
+    'th thead time title tr track tt u ul var video wbr xmp'
   ).split(' ')
 );
 
@@ -129,6 +145,12 @@ export function assertNoMarkup(node, path = '$') {
   Object.entries(node).forEach(([key, value]) => {
     const here = `${path}.${key}`;
 
+    if (isLinkField(key, path) && (typeof value !== 'string' || isUnsafeUrl(value))) {
+      throw new Error(`Upstream spec carries a non-http(s) ${here}: ${JSON.stringify(value)}`);
+    }
+    if (DATA_KEYS.has(key)) {
+      return;
+    }
     if (typeof value !== 'string') {
       assertNoMarkup(value, here);
       return;
@@ -140,9 +162,6 @@ export function assertNoMarkup(node, path = '$') {
           `Upstream spec carries HTML markup at ${here} — refusing to vendor it: ${markup}`
         );
       }
-    }
-    if (key === 'url' && path.endsWith('.externalDocs') && isUnsafeUrl(value)) {
-      throw new Error(`Upstream spec carries a non-http(s) ${here}: ${value}`);
     }
   });
 }

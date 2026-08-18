@@ -1,27 +1,10 @@
 import { readFileSync } from 'node:fs';
 
-type ReadFile = (path: string, encoding: 'utf8') => string;
-
-type ChecksumsModule = {
-  CHECKSUMS_PATH: string;
-  OPENAPI_ARTIFACT: string;
-  SCHEMA_ARTIFACT: string;
-  ALGORITHM: string;
-  isImmutableRef: (ref: string) => boolean;
-  digest: (text: string) => string;
-  canonicalizeOpenapiDocument: (doc: unknown) => string;
-  openapiDigestFromJson: (jsonText: string) => string;
-  openapiDigestFromYaml: (yamlText: string) => string;
-  graphqlDigest: (sdl: string) => string;
-  readChecksums: (readFile?: ReadFile) => Record<string, string>;
-  computeCommittedDigests: (readFile?: ReadFile) => Record<string, string>;
-  verifyCommittedDigests: (readFile?: ReadFile) => string[];
-  buildChecksumsFile: (readFile?: ReadFile) => {
-    comment: string;
-    algorithm: string;
-    artifacts: Record<string, string>;
-  };
-};
+// Types come from the declaration shim next to the script
+// (scripts/contracts/checksums.d.mts) rather than a hand-copied duplicate, so the
+// spec cannot drift from the module's exported surface.
+type ChecksumsModule = typeof import('../../../../scripts/contracts/checksums.mjs');
+type ReadFile = Parameters<ChecksumsModule['verifyCommittedDigests']>[0] & object;
 
 // Digests of the vendored user-service contracts (#376). The committed artifacts
 // are the trust anchor for the swagger page, the Mockoon fixture and the Apollo
@@ -60,34 +43,6 @@ describe('contract checksums', () => {
 
   beforeAll(async () => {
     checksums = await import('../../../../scripts/contracts/checksums.mjs');
-  });
-
-  describe('isImmutableRef', () => {
-    test.each([
-      ['a 40-character commit SHA', 'a'.repeat(40)],
-      ['a mixed-hex commit SHA', '0f3373291abcdef0123456789abcdef012345678'],
-      ['a release tag', 'v2.6.0'],
-      ['a double-digit release tag', 'v12.30.400'],
-      ['a pre-release tag', 'v2.6.0-rc.1'],
-    ])('accepts %s', (_label, ref) => {
-      expect(checksums.isImmutableRef(ref)).toBe(true);
-    });
-
-    test.each([
-      ['a default branch', 'main'],
-      ['a long-lived branch', 'develop'],
-      ['HEAD', 'HEAD'],
-      ['a floating alias', 'latest'],
-      ['a short SHA', '0f33732'],
-      ['a 41-character string', 'a'.repeat(41)],
-      ['an uppercase SHA', 'A'.repeat(40)],
-      ['a partial version tag', 'v2.6'],
-      ['a tag without the v prefix', '2.6.0'],
-      ['an empty ref', ''],
-      ['a branch that starts like a tag', 'v2.6.0-branch/feature'],
-    ])('rejects %s', (_label, ref) => {
-      expect(checksums.isImmutableRef(ref)).toBe(false);
-    });
   });
 
   describe('digest', () => {

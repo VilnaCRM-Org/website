@@ -45,7 +45,10 @@ export function patchSwaggerServerUrl(doc, url) {
 
 export function writeSwaggerSchema(path, doc) {
   fs.writeFileSync(path, JSON.stringify(doc, null, 2));
-  return `✅ Swagger server URL patched to: ${doc.servers[0].url}`;
+  // Read through optional access: `servers` is optional on the exported type, so
+  // a caller passing a document without one must not get a TypeError *after* the
+  // file has already been written.
+  return `✅ Swagger server URL patched to: ${doc.servers?.[0]?.url}`;
 }
 
 // Read the committed, pristine contract and emit the patched copy the swagger

@@ -11,20 +11,6 @@ export const SCHEMA_ARTIFACT = 'contracts/user-service/schema.graphql';
 
 export const ALGORITHM = 'sha256';
 
-/**
- * A ref that cannot silently change under a committed digest. A 40-character
- * commit SHA is immutable by construction; a release tag is immutable by
- * convention plus the digest recorded here, which is what makes a moved tag a
- * loud failure instead of a silent swap. Anything branch-shaped (`main`,
- * `develop`, `HEAD`, `latest`) floats by design and is rejected outright.
- */
-const COMMIT_SHA = /^[0-9a-f]{40}$/;
-const RELEASE_TAG = /^v\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
-
-export function isImmutableRef(ref) {
-  return COMMIT_SHA.test(ref) || RELEASE_TAG.test(ref);
-}
-
 export function digest(text) {
   return createHash(ALGORITHM).update(text, 'utf8').digest('hex');
 }

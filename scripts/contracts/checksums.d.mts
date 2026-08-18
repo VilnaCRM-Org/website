@@ -9,7 +9,6 @@ export const OPENAPI_ARTIFACT: string;
 export const SCHEMA_ARTIFACT: string;
 export const ALGORITHM: string;
 
-export function isImmutableRef(ref: string): boolean;
 export function digest(text: string): string;
 export function canonicalizeOpenapiDocument(doc: unknown): string;
 export function openapiDigestFromJson(jsonText: string): string;
