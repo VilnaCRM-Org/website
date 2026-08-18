@@ -272,6 +272,16 @@ describe('swagger utils', () => {
       expect(findMarkup('<i>y</i>')).toBe('<i>');
     });
 
+    // The element set must stay a superset of the allowlist in the DOMPurify that
+    // swagger-ui-react bundles — that is the set which actually survives
+    // sanitising and reaches the DOM. These three were missing from it.
+    test.each([['content'], ['decorator'], ['shadow']])(
+      'detects <%s>, which DOMPurify preserves',
+      element => {
+        expect(findMarkup(`x <${element}>y</${element}> z`)).toBe(`<${element}>`);
+      }
+    );
+
     test('findMarkup returns null for prose with no element', () => {
       expect(findMarkup('Returns Array<User> when maxLength < 10')).toBeNull();
     });
