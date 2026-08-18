@@ -30,6 +30,30 @@ export function readSwaggerSchema(path) {
 }
 
 /**
+ * Strips every `servers` array nested below the document root.
+ *
+ * OpenAPI allows a `servers` override on a Path Item and on an Operation, and
+ * swagger-ui offers those in the same "Try it out" dropdown as the root array.
+ * Rebuilding only the root would leave that lower-level sink open, and the
+ * ingestion guard cannot close it either: an injected
+ * `https://attacker.example` is a perfectly well-formed https URL. The build
+ * knows exactly one correct origin, so every other declaration is discarded.
+ */
+function stripNestedServers(node) {
+  if (Array.isArray(node)) {
+    return node.map(stripNestedServers);
+  }
+  if (!node || typeof node !== 'object') {
+    return node;
+  }
+  return Object.fromEntries(
+    Object.entries(node)
+      .filter(([key]) => key !== 'servers')
+      .map(([key, value]) => [key, stripNestedServers(value)])
+  );
+}
+
+/**
  * Replaces `servers` wholesale with the single build-controlled entry.
  *
  * Overriding only `servers[0]` (the previous behaviour) let every other entry in
@@ -37,10 +61,11 @@ export function readSwaggerSchema(path) {
  * swagger "Try it out" console offers them in its server dropdown. An extra
  * `servers[1]` pointing at an attacker origin is therefore one click away from
  * receiving a token a user types into the live API console. The build knows
- * exactly one correct origin, so the array is rebuilt rather than patched.
+ * exactly one correct origin, so the array is rebuilt rather than patched — at
+ * the root and at every nested override.
  */
 export function patchSwaggerServerUrl(doc, url) {
-  return { ...doc, servers: [{ url }] };
+  return { ...stripNestedServers(doc), servers: [{ url }] };
 }
 
 export function writeSwaggerSchema(path, doc) {

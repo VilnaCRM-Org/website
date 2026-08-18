@@ -292,70 +292,82 @@ describe('swagger utils', () => {
       expect(() => assertNoMarkup({ description })).not.toThrow();
     });
 
-    test('ignores markup outside the prose fields', () => {
-      // `example` and `default` are data, not rendered Markdown — flagging them
-      // would fail the build on a legitimate XML/HTML payload example.
-      expect(() => assertNoMarkup({ example: '<html></html>', default: '<p>x</p>' })).not.toThrow();
+    // There are deliberately NO payload carve-outs. OpenAPI reuses the same key
+    // names for different things depending on the parent — `default` is a schema
+    // keyword in a Schema Object but a RESPONSE KEY in a Responses Object, and
+    // `example`/`value`/`summary` are keywords in some positions but user-chosen
+    // names in `properties`, `$defs` and every `components.*` map. Three attempts
+    // at carving out "payload" positions each closed one bypass and opened
+    // another, so every string is now checked and there is nothing to bypass.
+    test.each([
+      [
+        'a response keyed default',
+        { paths: { '/u': { get: { responses: { default: { description: '<b>x</b>' } } } } } },
+      ],
+      [
+        'a component named example',
+        { components: { schemas: { example: { title: '<b>x</b>' } } } },
+      ],
+      [
+        'a component named default',
+        { components: { responses: { default: { description: '<i>x</i>' } } } },
+      ],
+      [
+        'a property named value',
+        { schema: { properties: { value: { description: '<b>x</b>' } } } },
+      ],
+      ['a property named example', { schema: { properties: { example: { title: '<i>x</i>' } } } }],
+      ['an Example Object description', { examples: { ok: { description: '<b>bold</b>' } } }],
+      ['an Example Object summary', { examples: { ok: { summary: '<script>x</script>' } } }],
+      ['a schema example payload', { example: { description: 'Renders a <div> wrapper' } }],
+      ['a 3.1 schema examples array', { schema: { examples: [{ description: '<b>p</b>' }] } }],
+      ['a patternProperties entry', { patternProperties: { '^x': { description: '<b>x</b>' } } }],
+      ['a $defs entry', { $defs: { A: { title: '<i>x</i>' } } }],
+      ['a bare string inside an array', { tags: ['<script>x</script>'] }],
+    ])('flags markup in %s', (_label, doc) => {
+      expect(() => assertNoMarkup(doc)).toThrow(/HTML markup/);
     });
 
-    // The walk must not descend into sample payloads: an example object may carry
-    // its own `description`/`title` field whose value is sample content.
+    // Keys are rendered too — a path name and a schema property name both appear
+    // in the swagger UI — so "every string" has to include them.
     test.each([
-      ['example', { example: { description: 'Renders a <div> wrapper' } }],
-      ['default', { default: { title: '<h1>Heading</h1>' } }],
-      ['an Example Object value', { examples: { ok: { value: { title: '<b>payload</b>' } } } }],
-      ['an Example Object externalValue', { examples: { ok: { externalValue: '<b>x</b>' } } }],
-      ['a deeply nested example', { schema: { example: { a: { title: '<script>x</script>' } } } }],
-      // OpenAPI 3.1 Schema Object `examples` is an ARRAY of sample values, not a
-      // map of Example Objects — all payload.
-      ['a 3.1 schema examples array', { schema: { examples: [{ description: '<b>p</b>' }] } }],
-      ['a 3.1 examples array of scalars', { schema: { examples: ['<b>p</b>', '<i>q</i>'] } }],
-    ])('does not apply the prose check inside %s data', (_label, doc) => {
+      ['a path name', { paths: { '/users<img src=x onerror=alert(1)>': { get: {} } } }],
+      ['a property name', { properties: { '<script>alert(1)</script>': { type: 'string' } } }],
+      ['a component name', { components: { schemas: { '<iframe src=//x>': {} } } }],
+    ])('flags markup in %s', (_label, doc) => {
+      expect(() => assertNoMarkup(doc)).toThrow(/HTML markup in the key/);
+    });
+
+    test.each([
+      ['a media type', { content: { 'application/json': { schema: {} } } }],
+      ['a path template', { paths: { '/api/users/{id}': { get: {} } } }],
+      ['a status code', { responses: { '200': { description: 'ok' } } }],
+      ['a vendor extension', { 'x-vilna-internal': { note: 'fine' } }],
+    ])('leaves an ordinary key alone: %s', (_label, doc) => {
       expect(() => assertNoMarkup(doc)).not.toThrow();
     });
 
-    // Key names under `properties` are user-chosen, so a property legitimately
-    // called `value`/`example`/`default` must NOT inherit the keyword's payload
-    // exemption — that would be a markup bypass through an ordinary field name.
+    // A Markdown code fence or inline span escapes its contents, so markup written
+    // inside one is displayed as text. `<code>` matters here in particular — it is
+    // this service's OAuth parameter name.
     test.each([
-      ['value', { schema: { properties: { value: { description: '<b>markup</b>' } } } }],
-      ['example', { schema: { properties: { example: { title: '<i>markup</i>' } } } }],
-      ['default', { schema: { properties: { default: { description: '<div>x</div>' } } } }],
-      ['examples', { schema: { properties: { examples: { summary: '<b>x</b>' } } } }],
-      [
-        'summary',
-        { components: { schemas: { S: { properties: { summary: { title: '<b>x</b>' } } } } } },
-      ],
-    ])('still checks a schema property named %s', (_label, doc) => {
-      expect(() => assertNoMarkup(doc)).toThrow(/HTML markup/);
+      ['an inline code span', 'Send the `<code>` parameter'],
+      ['a backticked generic', 'Returns `Array<Object>` ordered by id'],
+      ['a fenced block', 'Example:\n\n```html\n<div>x</div>\n```'],
+      ['a tilde fence', 'Example:\n\n~~~\n<script>x</script>\n~~~'],
+      ['a double-backtick span', 'Use ``<b>`` for bold'],
+    ])('accepts markup inside %s', (_label, description) => {
+      expect(() => assertNoMarkup({ description })).not.toThrow();
     });
 
-    test('checks properties reached through patternProperties and $defs too', () => {
-      expect(() =>
-        assertNoMarkup({ patternProperties: { '^x': { description: '<b>x</b>' } } })
-      ).toThrow(/HTML markup/);
-      expect(() => assertNoMarkup({ $defs: { A: { title: '<i>x</i>' } } })).toThrow(/HTML markup/);
-    });
-
-    // `examples` maps names to Example Objects, and an Example Object's own
-    // summary/description IS rendered as Markdown by swagger-ui — only its
-    // `value` payload is data. Skipping the whole `examples` subtree would have
-    // let markup through exactly where the guard is supposed to bite.
+    // An unclosed backtick is not a code span to a Markdown renderer either, so
+    // it must not be usable to hide markup from the scan.
     test.each([
-      ['an Example Object description', { examples: { ok: { description: '<b>bold</b>' } } }],
-      ['an Example Object summary', { examples: { ok: { summary: '<script>x</script>' } } }],
-      [
-        'a nested Example Object description',
-        { content: { 'application/json': { examples: { a: { description: '<div>x</div>' } } } } },
-      ],
-    ])('still flags %s', (_label, doc) => {
-      expect(() => assertNoMarkup(doc)).toThrow(/HTML markup/);
-    });
-
-    test('still flags a description that sits beside an example, not inside it', () => {
-      expect(() =>
-        assertNoMarkup({ description: '<b>real</b>', example: { description: '<b>sample</b>' } })
-      ).toThrow('$.description');
+      ['an unclosed inline span', 'oops ` <script>x</script>'],
+      ['an unclosed fence', 'Example:\n\n```html\n<script>x</script>'],
+      ['markup outside a closed span', '`ok` and then <script>x</script>'],
+    ])('still flags markup with %s', (_label, description) => {
+      expect(() => assertNoMarkup({ description })).toThrow(/HTML markup/);
     });
 
     test.each([
@@ -389,27 +401,41 @@ describe('swagger utils', () => {
       expect(() => assertNoMarkup(doc)).not.toThrow();
     });
 
-    test('rejects a link field that is not a string at all', () => {
-      expect(() => assertNoMarkup({ externalDocs: { url: { $ref: '#/x' } } })).toThrow(
-        'non-http(s)'
-      );
-      expect(() => assertNoMarkup({ info: { termsOfService: 42 } })).toThrow('non-http(s)');
+    // Only strings are inspected: a non-string `url` is invalid OpenAPI that
+    // spectral already reports, and it cannot be an href sink.
+    test('walks past a non-string link field instead of rejecting it', () => {
+      expect(() => assertNoMarkup({ externalDocs: { url: { $ref: '#/x' } } })).not.toThrow();
+      expect(() => assertNoMarkup({ info: { termsOfService: 42 } })).not.toThrow();
     });
 
-    // `servers[].url` is rewritten wholesale by patchSwaggerServer.mjs and is not
-    // rendered as a link, so it must stay outside the scheme check.
-    test('leaves servers[].url alone', () => {
-      expect(() => assertNoMarkup({ servers: [{ url: 'mockoon:8080' }] })).not.toThrow();
+    // `servers[].url` is rewritten wholesale by patchSwaggerServer.mjs, is not
+    // rendered as a link, and a relative server URL is legal OpenAPI.
+    test.each([
+      ['a container hostname', 'mockoon:8080'],
+      ['a relative path', '/api/v1'],
+      ['an empty string', ''],
+    ])('leaves servers[].url alone when it is %s', (_label, url) => {
+      expect(() => assertNoMarkup({ servers: [{ url }] })).not.toThrow();
+    });
+
+    // The link check is positional, so a bare `url` key elsewhere — a sample
+    // payload, a vendor extension, a schema property that happens to be named
+    // `url` — keeps its relative URI without tripping the scheme rule.
+    test.each([
+      ['termsOfService', { properties: { termsOfService: { type: 'string' } } }],
+      ['contact', { properties: { contact: { properties: { url: { type: 'string' } } } } }],
+      ['license', { properties: { license: { type: 'string', pattern: 'MIT' } } }],
+      ['a relative url in a sample payload', { example: { url: '/api/users/a1b2' } }],
+      ['a relative url in a vendor extension', { 'x-links': { url: '/errors/500' } }],
+      ['a urn in an example', { examples: { a: { value: { url: 'urn:vilna:user:1' } } } }],
+    ])('does not link-check %s', (_label, doc) => {
+      expect(() => assertNoMarkup(doc)).not.toThrow();
     });
 
     test('accepts an https externalDocs url', () => {
       expect(() =>
         assertNoMarkup({ externalDocs: { url: 'https://docs.vilnacrm.com' } })
       ).not.toThrow();
-    });
-
-    test('leaves a url outside externalDocs alone', () => {
-      expect(() => assertNoMarkup({ servers: [{ url: 'mockoon:8080' }] })).not.toThrow();
     });
 
     test.each([

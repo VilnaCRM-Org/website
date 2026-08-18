@@ -59,32 +59,42 @@ export function normalizeSpec(node) {
   return node;
 }
 
-// Prose fields swagger-ui renders as Markdown, and therefore the fields an
-// upstream compromise would use to land markup in every /swagger visitor's DOM.
-// `externalDocs.description` is a `description`, so it is covered by the walk.
-const PROSE_KEYS = new Set(['description', 'title', 'summary']);
+// swagger-ui renders a lot of this document as Markdown — `description`,
+// `title` and `summary` on the info block, tags, paths, operations, parameters,
+// request bodies, responses (including `responses.default`), headers, schemas,
+// security schemes and Example Objects. Those are the strings an upstream
+// compromise would use to land markup in every /swagger visitor's DOM.
+//
+// This checks EVERY string instead of trying to name that list, because the list
+// cannot be expressed by key name. OpenAPI reuses the same names for different
+// things depending on the parent: `default` is a schema keyword in a Schema
+// Object but a response key in a Responses Object; `example`, `value` and
+// `summary` are keywords in some positions and user-chosen names in others
+// (`properties`, `patternProperties`, `$defs`, and every `components.*` map).
+// Three successive attempts to carve out "payload" positions each closed one
+// bypass and opened another, so there are now no carve-outs to get wrong.
+//
+// The cost is a false positive if upstream ever puts real HTML in a sample
+// payload. That is affordable and deliberate: this runs at ingestion, inside a
+// maintainer's `make update-contracts`, not on every PR — so the failure mode is
+// one loud, reviewable message during a deliberate refresh, against a document
+// that today holds 712 strings and not one `<`. Widening it is a decision for a
+// reviewer to record, not something to pre-emptively guess at.
 
-// Schema keywords whose value is a sample PAYLOAD rather than rendered prose. A
-// payload legitimately contains its own `description`/`title` field holding
-// sample content, so the walk stops there and `{ example: { description:
-// 'Renders a <div> wrapper' } }` cannot fail an otherwise clean refresh.
-const PAYLOAD_KEYWORDS = new Set(['example', 'default']);
+// The exact positions swagger-ui turns into a clickable anchor: the info block's
+// terms link, the topbar's contact and license links, and externalDocs wherever
+// it appears. Matched by POSITION rather than by key name, because a bare `url`
+// key occurs all over a spec — in sample payloads, in vendor extensions, in a
+// schema property that merely happens to be named `url` — where a relative URI is
+// correct and nothing is ever rendered as a link.
+const LINK_PATHS = [
+  /^\$\.info\.termsOfService$/,
+  /^\$\.info\.contact\.url$/,
+  /^\$\.info\.license\.url$/,
+  /\.externalDocs\.url$/,
+];
 
-// Keywords whose children are USER-CHOSEN NAMES, not keywords. Without this, a
-// schema property legitimately named `value`, `example` or `default` would be
-// mistaken for the keyword above and its prose skipped — a markup bypass through
-// an ordinary property name.
-const NAME_MAPS = new Set(['properties', 'patternProperties', 'definitions', '$defs']);
-
-// Every field swagger-ui turns into a clickable anchor. `externalDocs.url` was
-// only one of them: `info.termsOfService` renders in the info block and
-// `info.contact.url` / `info.license.url` render in the topbar, so a
-// `javascript:`/`data:` URL in any of them reaches the same sink. `servers[].url`
-// is deliberately absent — the build rewrites it wholesale in
-// patchSwaggerServer.mjs, and it is not rendered as a link.
-const LINK_PARENTS = ['.externalDocs', '.contact', '.license'];
-const isLinkField = (key, path) =>
-  key === 'termsOfService' || (key === 'url' && LINK_PARENTS.some(p => path.endsWith(p)));
+const isLinkPosition = here => LINK_PATHS.some(pattern => pattern.test(here));
 
 // Matched against HTML element names rather than "anything in angle brackets".
 // API prose legitimately contains `Array<User>`, `<your token>` and
@@ -117,38 +127,36 @@ const HTML_ELEMENTS = new Set(
 const TAG = /<\/?([a-zA-Z][a-zA-Z0-9]*)(?=[\s/>])[^>]*>/g;
 const HTML_COMMENT = '<!--';
 
+// A Markdown code fence or inline span escapes its contents, so `<code>` written
+// inside one is displayed as text and never becomes an element. Blanking those
+// regions keeps the guard from rejecting the normal way an API spec talks about
+// markup — and `<code>` in particular, which is this service's OAuth parameter
+// name. Only BALANCED delimiters are blanked: an unclosed backtick is not a code
+// span to a Markdown renderer either, so it must stay visible to the scan.
+const CODE_FENCE = /^([ \t]*)(```+|~~~+)[^\n]*\n[\s\S]*?\n[ \t]*\2[ \t]*$/gm;
+const CODE_SPAN = /(`+)(?!`)[\s\S]*?[^`]\1(?!`)/g;
+
+const blankCode = value => value.replace(CODE_FENCE, ' ').replace(CODE_SPAN, ' ');
+
 export function findMarkup(value) {
-  if (value.includes(HTML_COMMENT)) {
+  const scannable = blankCode(value);
+
+  if (scannable.includes(HTML_COMMENT)) {
     return HTML_COMMENT;
   }
-  const tag = [...value.matchAll(TAG)].find(match => HTML_ELEMENTS.has(match[1].toLowerCase()));
+  const tag = [...scannable.matchAll(TAG)].find(match =>
+    HTML_ELEMENTS.has(match[1].toLowerCase())
+  );
   return tag ? tag[0] : null;
 }
 
 const isUnsafeUrl = value => !/^https?:\/\//i.test(value);
 
-/**
- * Rejects the document instead of rewriting it.
- *
- * The obvious alternative — strip the tags — cannot be done safely: prose like
- * `maxLength < 10 and format > 0` is indistinguishable from `<b and c>` to any
- * tag regex, so a stripper silently mutates legitimate text. The spec is
- * vendored and enters the repo through a reviewed `make update-contracts` diff,
- * so markup appearing in a description is a review-worthy event, not something
- * to paper over. Failing closed keeps the committed contract provably
- * markup-free without ever mangling upstream prose.
- *
- * The walk is STRUCTURAL rather than name-based, because matching bare key names
- * at any depth is wrong in both directions: `properties.value` is an ordinary
- * schema property whose prose must be checked, while a 3.1 Schema Object's
- * `examples` ARRAY is all payload. `mode` carries that structure down:
- *
- *   default       — a schema/metadata object; keys are OpenAPI keywords
- *   names         — children are user-chosen names (`properties` et al)
- *   exampleMap    — children are Example Objects (`examples` as a map)
- *   exampleObject — `summary`/`description` are rendered; `value` is payload
- */
-function checkProse(key, value, here) {
+function assertStringIsSafe(value, here) {
+  if (isLinkPosition(here) && isUnsafeUrl(value)) {
+    throw new Error(`Upstream spec carries a non-http(s) ${here}: ${JSON.stringify(value)}`);
+  }
+
   const markup = findMarkup(value);
   if (markup !== null) {
     throw new Error(
@@ -157,71 +165,44 @@ function checkProse(key, value, here) {
   }
 }
 
-function checkLink(key, value, path, here) {
-  if (isLinkField(key, path) && (typeof value !== 'string' || isUnsafeUrl(value))) {
-    throw new Error(`Upstream spec carries a non-http(s) ${here}: ${JSON.stringify(value)}`);
+/**
+ * Rejects the document instead of rewriting it.
+ *
+ * The obvious alternative — strip the tags — cannot be done safely: prose like
+ * `maxLength < 10 and format > 0` is indistinguishable from `<b and c>` to any
+ * tag regex, so a stripper silently mutates legitimate text. The spec is
+ * vendored and enters the repo through a reviewed `make update-contracts` diff,
+ * so markup appearing anywhere in it is a review-worthy event, not something to
+ * paper over. Failing closed keeps the committed contract provably markup-free
+ * without ever mangling upstream prose.
+ *
+ * See the note above `LINK_KEYS` for why this checks every string rather than a
+ * curated set of rendered fields.
+ */
+export function assertNoMarkup(node, path = '$') {
+  if (typeof node === 'string') {
+    assertStringIsSafe(node, path);
+    return;
   }
-}
-
-/** `examples` is two different things. As a map it holds Example Objects, whose
- *  summary/description swagger-ui renders. As an array (OpenAPI 3.1 Schema
- *  Object) it holds sample values, which are payload. */
-const examplesMode = value => (Array.isArray(value) ? null : 'exampleMap');
-
-function nextMode(key, value, mode) {
-  if (mode === 'names') {
-    return 'default';
-  }
-  if (mode === 'exampleMap') {
-    return 'exampleObject';
-  }
-  if (mode === 'exampleObject') {
-    return key === 'value' || key === 'externalValue' ? null : 'default';
-  }
-  if (PAYLOAD_KEYWORDS.has(key)) {
-    return null;
-  }
-  if (key === 'examples') {
-    return examplesMode(value);
-  }
-  return NAME_MAPS.has(key) ? 'names' : 'default';
-}
-
-function isProseHere(key, mode) {
-  if (mode === 'names') {
-    return false;
-  }
-  if (mode === 'exampleObject') {
-    return key === 'summary' || key === 'description';
-  }
-  return PROSE_KEYS.has(key);
-}
-
-export function assertNoMarkup(node, path = '$', mode = 'default') {
   if (Array.isArray(node)) {
-    node.forEach((value, index) => assertNoMarkup(value, `${path}[${index}]`, mode));
+    node.forEach((value, index) => assertNoMarkup(value, `${path}[${index}]`));
     return;
   }
   if (!node || typeof node !== 'object') {
     return;
   }
 
-  Object.entries(node).forEach(([key, value]) => {
-    const here = `${path}.${key}`;
-
-    checkLink(key, value, path, here);
-
-    const descend = nextMode(key, value, mode);
-    if (descend === null) {
-      return;
+  Object.entries(node).forEach(([childKey, value]) => {
+    // Keys are rendered too — a path name and a schema property name both appear
+    // in the swagger UI — so "every string" has to mean the keys as well.
+    const markup = findMarkup(childKey);
+    if (markup !== null) {
+      throw new Error(
+        `Upstream spec carries HTML markup in the key ${path}.${childKey} — ` +
+          `refusing to vendor it: ${markup}`
+      );
     }
-    if (typeof value !== 'string') {
-      assertNoMarkup(value, here, descend);
-      return;
-    }
-    if (isProseHere(key, mode)) {
-      checkProse(key, value, here);
-    }
+    assertNoMarkup(value, `${path}.${childKey}`);
   });
 }
 

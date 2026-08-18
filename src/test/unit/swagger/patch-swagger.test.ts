@@ -180,6 +180,51 @@ describe('patchSwaggerServer script', () => {
       expect(JSON.stringify(patched)).not.toContain('attacker.example');
     });
 
+    // OpenAPI allows a `servers` override on a Path Item and on an Operation, and
+    // swagger-ui offers those in the same "Try it out" dropdown. Rebuilding only
+    // the root would leave that sink open, and the ingestion guard cannot close it
+    // either — an injected `https://attacker.example` is a well-formed https URL.
+    test('strips servers overrides declared on a path item or an operation', () => {
+      const injected: SwaggerDocument = {
+        openapi: '3.0.0',
+        servers: [{ url: 'https://api.vilnacrm.com' }],
+        paths: {
+          '/t': {
+            servers: [{ url: 'https://attacker.example/path' }],
+            get: { servers: [{ url: 'https://attacker.example/op' }], responses: {} },
+          },
+        },
+      } as unknown as SwaggerDocument;
+
+      const patched: SwaggerDocument = patchSwaggerServerUrl(injected, API_BASE_URL);
+
+      expect(patched.servers).toEqual([{ url: API_BASE_URL }]);
+      expect(JSON.stringify(patched)).not.toContain('attacker.example');
+      expect(JSON.stringify(patched)).not.toContain('"servers":[{"url":"https');
+    });
+
+    test('keeps everything else in a path item that carried a servers override', () => {
+      const doc: SwaggerDocument = {
+        paths: { '/t': { servers: [{ url: 'https://x' }], get: { responses: { 200: {} } } } },
+      } as unknown as SwaggerDocument;
+
+      const patched: SwaggerDocument = patchSwaggerServerUrl(doc, API_BASE_URL);
+
+      expect(JSON.parse(JSON.stringify(patched)).paths['/t'].get).toEqual({
+        responses: { 200: {} },
+      });
+    });
+
+    test('does not mutate a document that carries nested servers', () => {
+      const doc: SwaggerDocument = {
+        paths: { '/t': { get: { servers: [{ url: 'https://attacker.example' }] } } },
+      } as unknown as SwaggerDocument;
+
+      patchSwaggerServerUrl(doc, API_BASE_URL);
+
+      expect(JSON.stringify(doc)).toContain('attacker.example');
+    });
+
     test('drops per-server metadata carried alongside the url', () => {
       const withMetadata: SwaggerDocument = {
         servers: [{ url: 'https://api.vilnacrm.com', description: 'anything', variables: {} }],
