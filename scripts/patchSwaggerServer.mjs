@@ -38,6 +38,26 @@ const isPlainObject = node => Boolean(node) && typeof node === 'object' && !Arra
 const withoutServers = node =>
   Object.fromEntries(Object.entries(node).filter(([key]) => key !== 'servers'));
 
+/**
+ * Drops an Operation's own `servers`, then recurses through its callbacks.
+ *
+ * A Callback Object maps a runtime expression to a full Path Item, which may
+ * carry its own `servers` and its own operations with theirs — and those may
+ * declare further callbacks, so this is mutually recursive with the container
+ * walker below.
+ */
+function stripOperationServers(operation) {
+  if (!isPlainObject(operation)) {
+    return operation;
+  }
+  const stripped = withoutServers(operation);
+
+  if (!isPlainObject(stripped.callbacks)) {
+    return stripped;
+  }
+  return { ...stripped, callbacks: stripCallbacks(stripped.callbacks) };
+}
+
 /** Drops a Path Item's own `servers` and each of its operations'. */
 function stripPathItemServers(pathItem) {
   if (!isPlainObject(pathItem)) {
@@ -45,10 +65,15 @@ function stripPathItemServers(pathItem) {
   }
   return Object.fromEntries(
     Object.entries(withoutServers(pathItem)).map(([key, value]) =>
-      HTTP_METHODS.has(key.toLowerCase()) && isPlainObject(value)
-        ? [key, withoutServers(value)]
-        : [key, value]
+      HTTP_METHODS.has(key.toLowerCase()) ? [key, stripOperationServers(value)] : [key, value]
     )
+  );
+}
+
+/** Each entry of a callbacks map is itself a container of Path Items. */
+function stripCallbacks(callbacks) {
+  return Object.fromEntries(
+    Object.entries(callbacks).map(([name, callback]) => [name, stripPathItemContainer(callback)])
   );
 }
 
@@ -96,11 +121,16 @@ export function patchSwaggerServerUrl(doc, url) {
   if (isPlainObject(patched.webhooks)) {
     patched.webhooks = stripPathItemContainer(patched.webhooks);
   }
-  if (isPlainObject(patched.components) && isPlainObject(patched.components.pathItems)) {
-    patched.components = {
-      ...patched.components,
-      pathItems: stripPathItemContainer(patched.components.pathItems),
-    };
+  if (isPlainObject(patched.components)) {
+    const components = { ...patched.components };
+
+    if (isPlainObject(components.pathItems)) {
+      components.pathItems = stripPathItemContainer(components.pathItems);
+    }
+    if (isPlainObject(components.callbacks)) {
+      components.callbacks = stripCallbacks(components.callbacks);
+    }
+    patched.components = components;
   }
 
   return patched;

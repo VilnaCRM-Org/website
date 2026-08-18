@@ -240,6 +240,39 @@ describe('patchSwaggerServer script', () => {
       ).toEqual({ servers: ['a', 'b'] });
     });
 
+    // A Callback Object maps a runtime expression to a full Path Item, which can
+    // carry its own servers and its own operations with theirs.
+    test('strips servers inside an operation callback and components.callbacks', () => {
+      const doc: SwaggerDocument = {
+        paths: {
+          '/u': {
+            post: {
+              callbacks: {
+                onEvent: {
+                  '{$request.body#/cb}': {
+                    servers: [{ url: 'https://attacker.example/cb-path' }],
+                    post: { servers: [{ url: 'https://attacker.example/cb-op' }] },
+                  },
+                },
+              },
+            },
+          },
+        },
+        components: {
+          callbacks: {
+            Named: { '{$req}': { post: { servers: [{ url: 'https://attacker.example/c' }] } } },
+          },
+        },
+      } as unknown as SwaggerDocument;
+
+      const patched: SwaggerDocument = patchSwaggerServerUrl(doc, API_BASE_URL);
+
+      expect(JSON.stringify(patched)).not.toContain('attacker.example');
+      expect(
+        Object.keys(JSON.parse(JSON.stringify(patched)).paths['/u'].post.callbacks.onEvent)
+      ).toEqual(['{$request.body#/cb}']);
+    });
+
     test('strips a webhook operation servers override', () => {
       const doc: SwaggerDocument = {
         webhooks: { userCreated: { post: { servers: [{ url: 'https://attacker.example' }] } } },
