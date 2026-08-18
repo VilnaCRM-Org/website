@@ -38,14 +38,24 @@ const isPlainObject = node => Boolean(node) && typeof node === 'object' && !Arra
 const withoutServers = node =>
   Object.fromEntries(Object.entries(node).filter(([key]) => key !== 'servers'));
 
-// A specification extension is arbitrary user data, never a Path Item, so the
-// walk passes it through untouched — an `x-` entry holding its own `servers`
-// field is not a server override.
+// `x-` means "specification extension" only inside an OpenAPI *Object* that
+// declares extension support — the Paths Object and a Callback Object. It does
+// NOT mean that in a map whose keys are user-chosen identifiers: a component
+// name matches `^[a-zA-Z0-9._-]+$`, so `x-foo` is a perfectly legal name for a
+// reusable Path Item, and skipping it would leave a `$ref`-able override intact.
 const isExtension = key => key.startsWith('x-');
 
-const PATH_ITEM_CONTAINER = 'container';
+// Keys are paths or runtime expressions, alongside `x-` extensions.
+const EXTENSION_MAP = 'extensionMap';
+// Keys are user-chosen names (webhooks, components.pathItems); no extensions.
+const NAME_MAP = 'nameMap';
+// Keys are user-chosen names whose values are Callback Objects.
+const CALLBACK_NAME_MAP = 'callbackNameMap';
 const PATH_ITEM = 'pathItem';
 const OPERATION = 'operation';
+
+const mapValues = (node, fn) =>
+  Object.fromEntries(Object.entries(node).map(([key, value]) => [key, fn(key, value)]));
 
 /**
  * Strips the `servers` overrides swagger-ui would offer alongside the root list.
@@ -57,33 +67,34 @@ const OPERATION = 'operation';
  * cannot close it either: an injected `https://attacker.example` is a perfectly
  * well-formed https URL.
  *
- * `kind` says what the node IS, so the walk only removes `servers` where OpenAPI
- * actually defines one. A blanket recursive filter over every key named `servers`
- * also deleted a schema property and an example payload field that merely happened
- * to be called `servers`, silently changing the vendored document.
+ * `kind` says what the node IS, so the walk removes `servers` exactly where
+ * OpenAPI defines one and nowhere else. A blanket filter over every key named
+ * `servers` also deleted a schema property and an example payload field that
+ * merely happened to be called `servers`, silently changing the document.
  *
- * One self-recursive function rather than a set of mutually recursive helpers:
- * a Callback Object maps a runtime expression to a Path Item, whose operations
- * may declare further callbacks, so the cycle has no valid declaration order.
+ * One self-recursive function rather than mutually recursive helpers: a Callback
+ * Object maps a runtime expression to a Path Item whose operations may declare
+ * further callbacks, so that cycle has no valid declaration order.
  */
 function stripServers(node, kind) {
   if (!isPlainObject(node)) {
     return node;
   }
 
-  if (kind === PATH_ITEM_CONTAINER) {
-    return Object.fromEntries(
-      Object.entries(node).map(([key, value]) =>
-        isExtension(key) ? [key, value] : [key, stripServers(value, PATH_ITEM)]
-      )
+  if (kind === EXTENSION_MAP) {
+    return mapValues(node, (key, value) =>
+      isExtension(key) ? value : stripServers(value, PATH_ITEM)
     );
   }
-
+  if (kind === NAME_MAP) {
+    return mapValues(node, (_key, value) => stripServers(value, PATH_ITEM));
+  }
+  if (kind === CALLBACK_NAME_MAP) {
+    return mapValues(node, (_key, value) => stripServers(value, EXTENSION_MAP));
+  }
   if (kind === PATH_ITEM) {
-    return Object.fromEntries(
-      Object.entries(withoutServers(node)).map(([key, value]) =>
-        HTTP_METHODS.has(key.toLowerCase()) ? [key, stripServers(value, OPERATION)] : [key, value]
-      )
+    return mapValues(withoutServers(node), (key, value) =>
+      HTTP_METHODS.has(key.toLowerCase()) ? stripServers(value, OPERATION) : value
     );
   }
 
@@ -91,22 +102,8 @@ function stripServers(node, kind) {
   if (!isPlainObject(operation.callbacks)) {
     return operation;
   }
-  return {
-    ...operation,
-    callbacks: Object.fromEntries(
-      Object.entries(operation.callbacks).map(([name, callback]) =>
-        isExtension(name) ? [name, callback] : [name, stripServers(callback, PATH_ITEM_CONTAINER)]
-      )
-    ),
-  };
+  return { ...operation, callbacks: stripServers(operation.callbacks, CALLBACK_NAME_MAP) };
 }
-
-const stripCallbackMap = callbacks =>
-  Object.fromEntries(
-    Object.entries(callbacks).map(([name, callback]) =>
-      isExtension(name) ? [name, callback] : [name, stripServers(callback, PATH_ITEM_CONTAINER)]
-    )
-  );
 
 /**
  * Replaces `servers` wholesale with the single build-controlled entry.
@@ -123,19 +120,19 @@ export function patchSwaggerServerUrl(doc, url) {
   const patched = { ...doc, servers: [{ url }] };
 
   if (isPlainObject(patched.paths)) {
-    patched.paths = stripServers(patched.paths, PATH_ITEM_CONTAINER);
+    patched.paths = stripServers(patched.paths, EXTENSION_MAP);
   }
   if (isPlainObject(patched.webhooks)) {
-    patched.webhooks = stripServers(patched.webhooks, PATH_ITEM_CONTAINER);
+    patched.webhooks = stripServers(patched.webhooks, NAME_MAP);
   }
   if (isPlainObject(patched.components)) {
     const components = { ...patched.components };
 
     if (isPlainObject(components.pathItems)) {
-      components.pathItems = stripServers(components.pathItems, PATH_ITEM_CONTAINER);
+      components.pathItems = stripServers(components.pathItems, NAME_MAP);
     }
     if (isPlainObject(components.callbacks)) {
-      components.callbacks = stripCallbackMap(components.callbacks);
+      components.callbacks = stripServers(components.callbacks, CALLBACK_NAME_MAP);
     }
     patched.components = components;
   }

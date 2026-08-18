@@ -279,7 +279,7 @@ describe('patchSwaggerServer script', () => {
       const doc: SwaggerDocument = {
         paths: {
           'x-vendor': { servers: ['keep-me'] },
-          '/u': { post: { callbacks: { 'x-ext': { servers: ['keep-me-too'] } } } },
+          '/u': { post: { callbacks: { cb: { 'x-ext': { servers: ['keep-me-too'] } } } } },
         },
         components: { callbacks: { 'x-c': { servers: ['keep-three'] } } },
       } as unknown as SwaggerDocument;
@@ -287,8 +287,55 @@ describe('patchSwaggerServer script', () => {
       const patched = JSON.parse(JSON.stringify(patchSwaggerServerUrl(doc, API_BASE_URL)));
 
       expect(patched.paths['x-vendor']).toEqual({ servers: ['keep-me'] });
-      expect(patched.paths['/u'].post.callbacks['x-ext']).toEqual({ servers: ['keep-me-too'] });
+      expect(patched.paths['/u'].post.callbacks.cb['x-ext']).toEqual({ servers: ['keep-me-too'] });
       expect(patched.components.callbacks['x-c']).toEqual({ servers: ['keep-three'] });
+    });
+
+    // `x-` means "specification extension" only inside an Object that declares
+    // extension support. A component name matches ^[a-zA-Z0-9._-]+$, so `x-foo`
+    // is a legal name for a reusable Path Item — skipping it would leave a
+    // $ref-able override intact.
+    test.each([
+      [
+        'components.pathItems',
+        {
+          components: {
+            pathItems: { 'x-foo': { get: { servers: [{ url: 'https://attacker.example' }] } } },
+          },
+        },
+      ],
+      [
+        'components.callbacks',
+        {
+          components: {
+            callbacks: {
+              'x-bar': { '{$r}': { post: { servers: [{ url: 'https://attacker.example' }] } } },
+            },
+          },
+        },
+      ],
+      [
+        'webhooks',
+        { webhooks: { 'x-baz': { post: { servers: [{ url: 'https://attacker.example' }] } } } },
+      ],
+      [
+        'an operation callbacks map',
+        {
+          paths: {
+            '/u': {
+              post: {
+                callbacks: {
+                  'x-ext': { '{$r}': { post: { servers: [{ url: 'https://attacker.example' }] } } },
+                },
+              },
+            },
+          },
+        },
+      ],
+    ])('still strips a servers override under an x- named entry in %s', (_label, doc) => {
+      expect(
+        JSON.stringify(patchSwaggerServerUrl(doc as unknown as SwaggerDocument, API_BASE_URL))
+      ).not.toContain('attacker.example');
     });
 
     test('strips a webhook operation servers override', () => {
