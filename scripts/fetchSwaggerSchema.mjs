@@ -138,9 +138,20 @@ const CODE_SPAN = /(`+)(?!`)[\s\S]*?[^`]\1(?!`)/g;
 
 const blankCode = value => value.replace(CODE_FENCE, ' ').replace(CODE_SPAN, ' ');
 
+// swagger-ui renders these fields as Markdown, so markup is not the only way in:
+// `![](https://attacker.example/beacon.png)` needs no angle bracket and loads a
+// cross-origin request from every visitor's browser with no interaction at all.
+// Markdown LINKS are deliberately not blocked — they are legitimate in a spec
+// (docs references), they require a click, and they show up in the reviewed
+// `make update-contracts` diff. An auto-loading remote resource does not.
+const MARKDOWN_IMAGE = /!\[[^\]]*\]\(/;
+
 export function findMarkup(value) {
   const scannable = blankCode(value);
 
+  if (MARKDOWN_IMAGE.test(scannable)) {
+    return scannable.match(MARKDOWN_IMAGE)[0];
+  }
   if (scannable.includes(HTML_COMMENT)) {
     return HTML_COMMENT;
   }

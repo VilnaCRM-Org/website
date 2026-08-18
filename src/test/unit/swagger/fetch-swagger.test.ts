@@ -360,6 +360,27 @@ describe('swagger utils', () => {
       expect(() => assertNoMarkup({ description })).not.toThrow();
     });
 
+    // Markup is not the only way in: swagger-ui renders these fields as Markdown,
+    // and `![](https://attacker.example/beacon.png)` loads a cross-origin request
+    // from every visitor with no angle bracket and no interaction. Markdown LINKS
+    // stay allowed — legitimate in a spec, they need a click, and they appear in
+    // the reviewed `make update-contracts` diff.
+    test.each([
+      ['a bare image beacon', 'Users API.\n\n![](https://attacker.example/beacon.png)'],
+      ['an image with alt text', '![diagram](https://attacker.example/x.png)'],
+      ['a relative image', '![](./diagram.png)'],
+    ])('rejects %s', (_label, description) => {
+      expect(() => assertNoMarkup({ description })).toThrow(/HTML markup/);
+    });
+
+    test.each([
+      ['a docs link', '[Get your API key](https://vilnacrm.com/login)'],
+      ['a bare url', 'See https://docs.vilnacrm.com for details'],
+      ['backticked image syntax', 'Write `![](url)` to embed an image'],
+    ])('accepts %s', (_label, description) => {
+      expect(() => assertNoMarkup({ description })).not.toThrow();
+    });
+
     // An unclosed backtick is not a code span to a Markdown renderer either, so
     // it must not be usable to hide markup from the scan.
     test.each([
