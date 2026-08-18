@@ -7,9 +7,11 @@
  *   2. the pinned OpenAPI document lints clean against spectral:oas relative to
  *      a committed baseline, so new defects fail while known upstream ones do
  *      not silently disappear;
- *   3. the committed artifacts still match the tag in USER_SERVICE_VERSION.
+ *   3. the pin is an immutable ref and every committed artifact still matches
+ *      the SHA-256 digest recorded next to it (#376);
+ *   4. the committed artifacts still match the tag in USER_SERVICE_VERSION.
  *
- * Step 3 is the only one that needs network. Pass --offline to skip it (used by
+ * Step 4 is the only one that needs network. Pass --offline to skip it (used by
  * the local `make lint-contracts`); CI runs the full set.
  */
 import 'dotenv/config';
@@ -21,10 +23,19 @@ import { buildSchema, parse, validate } from 'graphql';
 
 import { buildSpecUrl, fetchSwaggerYaml, normalizeSpec } from '../fetchSwaggerSchema.mjs';
 import { buildSchemaUrl, fetchGraphqlSchema } from '../fetchGraphqlSchema.mjs';
+import {
+  CHECKSUMS_PATH,
+  OPENAPI_ARTIFACT,
+  SCHEMA_ARTIFACT,
+  buildChecksumsFile,
+  isImmutableRef,
+  verifyCommittedDigests,
+} from './checksums.mjs';
 
-const CONTRACTS_DIR = 'contracts/user-service';
-const SCHEMA_PATH = path.join(CONTRACTS_DIR, 'schema.graphql');
-const OPENAPI_PATH = path.join(CONTRACTS_DIR, 'openapi.json');
+// checksums.mjs owns these paths: they are also the keys in checksums.json, so a
+// second declaration here could drift from the digests that attest to them.
+const SCHEMA_PATH = SCHEMA_ARTIFACT;
+const OPENAPI_PATH = OPENAPI_ARTIFACT;
 const BASELINE_PATH = 'contracts/spectral-baseline.json';
 
 // Client operations only. src/test/apollo-server defines its own inline SDL as a
@@ -138,6 +149,42 @@ function checkOpenapiSpec() {
   );
 }
 
+/**
+ * The hermetic half of the supply-chain gate (#376).
+ *
+ * The drift check below is stronger but needs `raw.githubusercontent.com`; this
+ * one needs nothing, so a tampered `contracts/` artifact — or a pin repointed at
+ * a branch that floats under the committed digests — fails on every lane,
+ * including an offline run and a network outage.
+ */
+function checkPinIntegrity() {
+  const version = process.env.USER_SERVICE_VERSION;
+
+  if (!version) {
+    fail('integrity', 'USER_SERVICE_VERSION is not set — define it in .env');
+  } else if (!isImmutableRef(version)) {
+    fail(
+      'integrity',
+      `USER_SERVICE_VERSION="${version}" is not an immutable ref — use a 40-character ` +
+        'commit SHA or a vMAJOR.MINOR.PATCH release tag, never a branch'
+    );
+  }
+
+  let problems;
+  try {
+    problems = verifyCommittedDigests();
+  } catch (error) {
+    fail('integrity', error.message);
+    return;
+  }
+
+  problems.forEach(problem => fail('integrity', problem));
+
+  if (problems.length === 0) {
+    console.log(`   verified ${CHECKSUMS_PATH} against the committed artifacts`);
+  }
+}
+
 async function checkArtifactsMatchPin() {
   const [openapiYaml, sdl] = await Promise.all([
     fetchSwaggerYaml(buildSpecUrl()),
@@ -160,6 +207,12 @@ async function checkArtifactsMatchPin() {
   }
 
   console.log(`   artifacts match ${process.env.USER_SERVICE_VERSION}`);
+}
+
+if (process.argv.includes('--update-checksums')) {
+  writeFileSync(CHECKSUMS_PATH, `${JSON.stringify(buildChecksumsFile(), null, 2)}\n`);
+  console.log(`✅ Wrote artifact digests to ${CHECKSUMS_PATH}`);
+  process.exit(0);
 }
 
 if (process.argv.includes('--update-baseline')) {
@@ -187,6 +240,7 @@ console.log('🔎 Validating user-service contracts');
 
 checkGraphqlOperations();
 checkOpenapiSpec();
+checkPinIntegrity();
 
 if (offline) {
   console.log('   drift check skipped (--offline)');

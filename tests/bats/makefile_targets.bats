@@ -493,7 +493,7 @@ STUB
   [ "$status" -ne 0 ]
 }
 
-@test "contract targets shell out to Node and cover fetch, lint and baseline refresh" {
+@test "contract targets shell out to Node and cover fetch, lint, checksum and baseline refresh" {
   reset_command_log
 
   run_make_target lint-contracts CI=1
@@ -506,5 +506,6 @@ STUB
   [ "$status" -eq 0 ]
   assert_log_contains 'node scripts/fetchSwaggerSchema.mjs'
   assert_log_contains 'node scripts/fetchGraphqlSchema.mjs'
+  assert_log_contains 'node scripts/contracts/lint-contracts.mjs --update-checksums'
   assert_log_contains 'node scripts/contracts/lint-contracts.mjs --update-baseline'
 }

@@ -29,6 +29,8 @@ type SwaggerModule = {
   buildSpecUrl: () => string;
   fetchSwaggerYaml: (url: string) => Promise<string>;
   normalizeSpec: (node: unknown) => unknown;
+  assertNoMarkup: (node: unknown, path?: string) => void;
+  findMarkup: (value: string) => string | null;
   refreshSwaggerSchema: (url: string, filePath: string) => Promise<boolean>;
   saveSwaggerJson: (yamlText: string, filePath: string) => Promise<void>;
 };
@@ -40,6 +42,8 @@ describe('swagger utils', () => {
   let buildSpecUrl: () => string;
   let fetchSwaggerYaml: (url: string) => Promise<string>;
   let normalizeSpec: (node: unknown) => unknown;
+  let assertNoMarkup: (node: unknown, path?: string) => void;
+  let findMarkup: (value: string) => string | null;
   let refreshSwaggerSchema: (url: string, filePath: string) => Promise<boolean>;
   let saveSwaggerJson: (yamlText: string, filePath: string) => Promise<void>;
 
@@ -55,6 +59,8 @@ describe('swagger utils', () => {
     buildSpecUrl = swaggerModule.buildSpecUrl;
     fetchSwaggerYaml = swaggerModule.fetchSwaggerYaml;
     normalizeSpec = swaggerModule.normalizeSpec;
+    assertNoMarkup = swaggerModule.assertNoMarkup;
+    findMarkup = swaggerModule.findMarkup;
     refreshSwaggerSchema = swaggerModule.refreshSwaggerSchema;
     saveSwaggerJson = swaggerModule.saveSwaggerJson;
   });
@@ -128,6 +134,18 @@ describe('swagger utils', () => {
     expect(jsYaml.load).toHaveBeenCalledWith(yamlText);
     expect(mockWriteFile).toHaveBeenCalledWith(
       outputPath,
+      `${JSON.stringify({ swagger: '2.0' }, null, 2)}\n`
+    );
+  });
+
+  test('refreshSwaggerSchema writes the fetched document and reports success', async () => {
+    await expect(
+      refreshSwaggerSchema(expectedUrl, './contracts/user-service/openapi.json')
+    ).resolves.toBe(true);
+
+    expect(mockFetch).toHaveBeenCalledWith(expectedUrl);
+    expect(mockWriteFile).toHaveBeenCalledWith(
+      './contracts/user-service/openapi.json',
       `${JSON.stringify({ swagger: '2.0' }, null, 2)}\n`
     );
   });
@@ -218,6 +236,117 @@ describe('swagger utils', () => {
     expect(normalizeSpec('text')).toBe('text');
     expect(normalizeSpec(42)).toBe(42);
     expect(normalizeSpec(null)).toBeNull();
+  });
+
+  // #376 F1: the prose fields swagger-ui renders as markdown are the sink an
+  // upstream compromise would use. The vendored document must be provably free of
+  // markup, and the guard must never mangle legitimate spec prose.
+  describe('assertNoMarkup', () => {
+    test.each([
+      ['description', { description: 'See <script>alert(1)</script>' }],
+      ['title', { title: 'User <img src=x onerror=alert(1)>' }],
+      [
+        'nested description',
+        { paths: { '/users': { get: { description: '<a href="#">x</a>' } } } },
+      ],
+      ['description inside an array', { servers: [{ description: '<b>prod</b>' }] }],
+      ['externalDocs description', { externalDocs: { description: '<i>docs</i>' } }],
+      ['summary', { summary: '<span>Create a user</span>' }],
+      ['html comment', { description: 'ok <!-- injected' }],
+      ['self-closing tag', { description: 'line<br/>break' }],
+    ])('rejects markup in a %s', (_label, doc) => {
+      expect(() => assertNoMarkup(doc)).toThrow(/HTML markup/);
+    });
+
+    // The tag matcher is a module-level /g regex. `matchAll` clones it rather than
+    // advancing `lastIndex`, but that is exactly the kind of thing that breaks
+    // silently on the second document, so it is pinned here.
+    test('gives the same answer however many times it is called', () => {
+      const value: string = 'x <script>a</script> y';
+
+      expect(findMarkup(value)).toBe('<script>');
+      expect(findMarkup(value)).toBe('<script>');
+      expect(findMarkup('a'.repeat(200))).toBeNull();
+      expect(findMarkup('<i>y</i>')).toBe('<i>');
+    });
+
+    test('findMarkup returns null for prose with no element', () => {
+      expect(findMarkup('Returns Array<User> when maxLength < 10')).toBeNull();
+    });
+
+    test('names the path of the offending field', () => {
+      expect(() => assertNoMarkup({ paths: { '/users': { get: { title: '<b>x</b>' } } } })).toThrow(
+        '$.paths./users.get.title'
+      );
+    });
+
+    test.each([
+      ['a comparison', 'maxLength < 10 and format > 0'],
+      ['a placeholder in angle brackets', 'Pass <your token> in the Authorization header'],
+      ['a bare less-than', 'value < limit'],
+      ['a generic-looking type', 'Returns Array<User> ordered by id'],
+      ['an email in angle brackets', 'Contact <support@vilnacrm.com>'],
+    ])('accepts %s in prose', (_label, description) => {
+      expect(() => assertNoMarkup({ description })).not.toThrow();
+    });
+
+    test('ignores markup outside the prose fields', () => {
+      // `example` and `default` are data, not rendered markdown — flagging them
+      // would fail the build on a legitimate XML/HTML payload example.
+      expect(() => assertNoMarkup({ example: '<html></html>', default: '<p>x</p>' })).not.toThrow();
+    });
+
+    test.each([
+      // Assembled rather than written inline: `no-script-url` rightly bans the
+      // literal, and the point of the case is the scheme, not the payload.
+      ['a javascript: url', `${['java', 'script'].join('')}:alert(1)`],
+      ['a data: url', 'data:text/html;base64,PHNjcmlwdD4='],
+      ['a file: url', 'file:///etc/passwd'],
+      ['a protocol-relative url', '//attacker.example/docs'],
+      ['a bare host', 'attacker.example'],
+    ])('rejects %s in externalDocs', (_label, url) => {
+      expect(() => assertNoMarkup({ externalDocs: { url } })).toThrow('non-http(s)');
+    });
+
+    test('accepts an https externalDocs url', () => {
+      expect(() =>
+        assertNoMarkup({ externalDocs: { url: 'https://docs.vilnacrm.com' } })
+      ).not.toThrow();
+    });
+
+    test('leaves a url outside externalDocs alone', () => {
+      expect(() => assertNoMarkup({ servers: [{ url: 'mockoon:8080' }] })).not.toThrow();
+    });
+
+    test.each([
+      ['primitives', 'text'],
+      ['null', null],
+      ['numbers', 42],
+    ])('walks past %s without throwing', (_label, node) => {
+      expect(() => assertNoMarkup(node)).not.toThrow();
+    });
+
+    test('accepts the committed contract as it stands today', () => {
+      // Guards the guard: if this ever fails, the vendored spec gained markup and
+      // the `make update-contracts` diff needs a human read, not a looser regex.
+      const committed: unknown = JSON.parse(
+        jest
+          .requireActual<typeof import('node:fs')>('node:fs')
+          .readFileSync('contracts/user-service/openapi.json', 'utf8')
+      );
+
+      expect(() => assertNoMarkup(committed)).not.toThrow();
+    });
+  });
+
+  test('saveSwaggerJson refuses to vendor a document carrying markup', async () => {
+    const jsYaml: JsYamlMock = jest.requireMock('js-yaml');
+    jsYaml.load.mockReturnValueOnce({ info: { description: '<script>alert(1)</script>' } });
+
+    await expect(saveSwaggerJson('info: {}', './public/swagger-schema.json')).rejects.toThrow(
+      /HTML markup/
+    );
+    expect(mockWriteFile).not.toHaveBeenCalled();
   });
 
   test('saveSwaggerJson throws if filePath is missing or not a string', async () => {

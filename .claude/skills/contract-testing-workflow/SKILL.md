@@ -35,11 +35,19 @@ node scripts/contracts/lint-contracts.mjs --offline
 
 ## What the gate checks
 
-| Layer   | What it does                                                                                                   | Fails when                                                                     |
-| ------- | -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| GraphQL | Parses every `gql` document under `src/features` and validates it against the committed schema with graphql-js | An operation references a field or input the pinned schema does not have       |
-| OpenAPI | Runs the **unmodified** `spectral:oas` ruleset over the committed spec and diffs findings against the baseline | A finding appears that is not baselined, **or** a baselined finding disappears |
-| Drift   | Re-fetches both artifacts from the pinned tag and compares                                                     | A committed artifact no longer matches the tag                                 |
+| Layer     | What it does                                                                                                   | Fails when                                                                     |
+| --------- | -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| GraphQL   | Parses every `gql` document under `src/features` and validates it against the committed schema with graphql-js | An operation references a field or input the pinned schema does not have       |
+| OpenAPI   | Runs the **unmodified** `spectral:oas` ruleset over the committed spec and diffs findings against the baseline | A finding appears that is not baselined, **or** a baselined finding disappears |
+| Integrity | Checks the pin is an immutable ref and each committed artifact against `contracts/user-service/checksums.json` | The pin is branch-shaped, an artifact was edited without refreshing its digest |
+| Drift     | Re-fetches both artifacts from the pinned tag and compares                                                     | A committed artifact no longer matches the tag                                 |
+
+The integrity layer (#376) is the hermetic half: it needs no network, so a
+tampered artifact fails on every lane — including an offline run and a
+`raw.githubusercontent.com` outage that skips the drift check. The digest is
+taken over the **parsed** OpenAPI document and the **verbatim** GraphQL SDL, so
+Prettier reformatting the committed JSON never invalidates it, and one upstream
+YAML document and its committed JSON artifact hash to the same value.
 
 Only `src/features` is validated. `src/test/apollo-server` defines its own inline
 SDL as a deliberate test double — validating it against upstream would compare
@@ -81,6 +89,25 @@ refreshing. `make update-contracts` is the fix. Note that the OpenAPI comparison
 is semantic (parsed), not byte-wise, so Prettier reformatting alone never trips
 it.
 
+**`<file>: sha256 … does not match the recorded …`** — a committed artifact was
+edited without refreshing its digest. `make update-contracts` re-fetches and
+re-records both; if the edit was deliberate, the digest change lands in the same
+reviewable commit. Never hand-edit `checksums.json` to match a modified artifact —
+that is the one move the gate exists to catch.
+
+**`USER_SERVICE_VERSION="…" is not an immutable ref`** — the pin was repointed at
+something that floats (`main`, `HEAD`, a short SHA). Use a `vMAJOR.MINOR.PATCH`
+tag or a full 40-character commit SHA, so the committed digests keep meaning
+something.
+
+**`Upstream spec carries HTML markup at $…`** — `make update-contracts` refused to
+vendor a spec whose `description`/`title`/`summary` contains a real HTML element.
+Those fields are rendered as markdown by swagger-ui on the public `/swagger` page,
+so this is a deliberate stop-and-read, not a formatting nit: confirm upstream
+meant it before doing anything else. The check matches HTML **element names**, not
+"anything in angle brackets", so ordinary prose like `Array<User>` or
+`maxLength < 10` passes.
+
 **`Cannot query field "x" on type "Y"`** — a client operation and the pinned
 schema disagree. The schema is authoritative: fix the operation (see
 [`frontend-component-development`](../frontend-component-development/SKILL.md)),
@@ -88,11 +115,15 @@ or bump the pin if the field genuinely landed upstream.
 
 ## Bumping the pin
 
-1. Edit `USER_SERVICE_VERSION` in `.env` — nowhere else.
-2. `make update-contracts` — re-fetches both artifacts and refreshes the baseline.
+1. Edit `USER_SERVICE_VERSION` in `.env` — nowhere else. It must stay an
+   immutable ref: a `vMAJOR.MINOR.PATCH` tag or a full 40-character commit SHA.
+2. `make update-contracts` — re-fetches both artifacts, re-records their digests
+   in `checksums.json`, and refreshes the spectral baseline.
 3. `make lint-contracts` — expect green.
 4. Commit `contracts/` together with `.env`. That diff **is** the record of what
-   changed upstream; keep it in its own commit so it stays reviewable.
+   changed upstream; keep it in its own commit so it stays reviewable. The
+   refreshed digests belong in the same commit — they are what makes the artifact
+   diff attestable rather than merely present.
 
 Mockoon serves the committed `contracts/user-service/openapi.json` directly (the
 image COPYs it, no build-time download), so a pin bump changes what e2e mocks
@@ -111,6 +142,25 @@ normalizes both sides identically, that deletion would pass silently while
 mutating the committed contract. This is a documented transformation at the
 single point the document enters the repo — not a way to hide findings. If you
 add another normalization, say why in the code and expect to justify it in review.
+
+The same entry point **rejects** (rather than rewrites) HTML markup in
+`description`, `title` and `summary`, and a non-`http(s)` `externalDocs.url`
+(#376 F1). Rewriting was the obvious alternative and is unsafe: no tag regex can
+tell `<b and c>` from prose containing `<`, so a stripper silently mutates
+legitimate upstream text. Failing closed keeps the committed contract provably
+markup-free without ever mangling it.
+
+## The `servers[]` rebuild
+
+`scripts/patchSwaggerServer.mjs` sets `servers` to exactly one build-controlled
+entry rather than overwriting `servers[0]` (#376 F2). Extra entries used to
+survive into `public/swagger-schema.json` and stayed selectable in the swagger
+"Try it out" server dropdown, so an injected `servers[1]` was one click from
+receiving a token typed into the live API console. The script exports its
+functions and only patches when invoked as a script, so
+`src/test/unit/swagger/patch-swagger.test.ts` exercises the real code — an
+earlier version of that spec re-declared its own copies and kept passing while
+the implementation drifted.
 
 ## Related guides
 

@@ -1,0 +1,8 @@
+{
+  "comment": "Canonical SHA-256 digests of the vendored user-service contracts. The digest is taken over the parsed OpenAPI document and the verbatim GraphQL SDL, so Prettier reformatting never invalidates it. lint-contracts verifies these offline and the Apollo mock refuses a fetched schema that does not match — regenerate only through `make update-contracts`, never by hand.",
+  "algorithm": "sha256",
+  "artifacts": {
+    "contracts/user-service/openapi.json": "7268098912721b958e7bc7242a8506c47e0e373818a639e7286b6795d6c78eba",
+    "contracts/user-service/schema.graphql": "b69c3f64702a371d3dd319be25186a25b6a35096b7a45d9f05a64081660fa23b"
+  }
+}

@@ -332,9 +332,10 @@ lint: lint-next lint-tsc lint-md lint-deps ## Runs all linters: ESLint, TypeScri
 lint-contracts: ## Validate the pinned user-service contracts: client GraphQL operations, the OpenAPI spectral baseline, and artifact drift
 	$(PM_EXEC) node scripts/contracts/lint-contracts.mjs
 
-update-contracts: ## Re-fetch the user-service contracts for the pinned USER_SERVICE_VERSION and refresh the spectral baseline
+update-contracts: ## Re-fetch the user-service contracts for the pinned USER_SERVICE_VERSION, refresh the spectral baseline and the artifact digests
 	$(PM_EXEC) node scripts/fetchSwaggerSchema.mjs
 	$(PM_EXEC) node scripts/fetchGraphqlSchema.mjs
+	$(PM_EXEC) node scripts/contracts/lint-contracts.mjs --update-checksums
 	$(PM_EXEC) node scripts/contracts/lint-contracts.mjs --update-baseline
 	$(PRETTIER_BIN) "contracts/**/*.json" --write --ignore-path .prettierignore
 

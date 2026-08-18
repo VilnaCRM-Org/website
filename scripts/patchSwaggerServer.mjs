@@ -6,7 +6,7 @@ import dotenv from 'dotenv';
 const env = dotenv.config();
 dotenvExpand.expand(env);
 
-function ensureEnv(name) {
+export function ensureEnv(name) {
   const value = process.env[name];
   if (!value) {
     console.error(`❌ Missing required environment variable: ${name}`);
@@ -15,11 +15,11 @@ function ensureEnv(name) {
   return value;
 }
 
-function getApiBaseUrl() {
+export function getApiBaseUrl() {
   return ensureEnv('NEXT_PUBLIC_API_BASE_URL');
 }
 
-function readSwaggerSchema(path) {
+export function readSwaggerSchema(path) {
   try {
     const content = fs.readFileSync(path, 'utf8');
     return JSON.parse(content);
@@ -29,20 +29,21 @@ function readSwaggerSchema(path) {
   }
 }
 
-function patchSwaggerServerUrl(doc, url) {
-  const patchedDoc = { ...doc };
-
-  if (Array.isArray(patchedDoc.servers) && patchedDoc.servers.length > 0) {
-    patchedDoc.servers = [...patchedDoc.servers];
-    patchedDoc.servers[0] = { ...patchedDoc.servers[0], url };
-  } else {
-    patchedDoc.servers = [{ url }];
-  }
-
-  return patchedDoc;
+/**
+ * Replaces `servers` wholesale with the single build-controlled entry.
+ *
+ * Overriding only `servers[0]` (the previous behaviour) let every other entry in
+ * the vendored document survive into `public/swagger-schema.json`, where the
+ * swagger "Try it out" console offers them in its server dropdown. An extra
+ * `servers[1]` pointing at an attacker origin is therefore one click away from
+ * receiving a token a user types into the live API console. The build knows
+ * exactly one correct origin, so the array is rebuilt rather than patched.
+ */
+export function patchSwaggerServerUrl(doc, url) {
+  return { ...doc, servers: [{ url }] };
 }
 
-function writeSwaggerSchema(path, doc) {
+export function writeSwaggerSchema(path, doc) {
   fs.writeFileSync(path, JSON.stringify(doc, null, 2));
   return `✅ Swagger server URL patched to: ${doc.servers[0].url}`;
 }
@@ -52,9 +53,18 @@ function writeSwaggerSchema(path, doc) {
 // server URL is environment-specific (it becomes http://mockoon:8080 inside
 // Docker), so patching in place would leave a container hostname in the working
 // tree — and eventually in a commit — after every `make start`.
-const contractPath = './contracts/user-service/openapi.json';
-const outputPath = './public/swagger-schema.json';
-const apiBaseUrl = getApiBaseUrl();
-const doc = readSwaggerSchema(contractPath);
-const updatedDoc = patchSwaggerServerUrl(doc, apiBaseUrl);
-writeSwaggerSchema(outputPath, updatedDoc);
+export const CONTRACT_PATH = './contracts/user-service/openapi.json';
+export const OUTPUT_PATH = './public/swagger-schema.json';
+
+export function patchSwaggerServer(contractPath = CONTRACT_PATH, outputPath = OUTPUT_PATH) {
+  const doc = readSwaggerSchema(contractPath);
+  return writeSwaggerSchema(outputPath, patchSwaggerServerUrl(doc, getApiBaseUrl()));
+}
+
+// Only patch when run as a script, so the unit suite can import the real
+// functions instead of re-implementing them. Matched on argv rather than
+// import.meta because Jest transforms this module to CJS, where import.meta is
+// not available — the same guard fetchSwaggerSchema.mjs uses.
+if (process.argv[1]?.endsWith('patchSwaggerServer.mjs')) {
+  console.log(patchSwaggerServer());
+}

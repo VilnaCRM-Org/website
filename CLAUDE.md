@@ -104,6 +104,20 @@ Two gates sit deliberately outside `make lint`: `make lint-metrics` (host-only R
 binary) and `make lint-contracts` (needs network for its drift check). Each has its own
 workflow — `rust-code-analysis.yml` and `contract-testing.yml`.
 
+### Contract supply chain (issue #376)
+
+Every user-service contract comes from the single `USER_SERVICE_VERSION` pin in `.env`
+and is **vendored** under `contracts/user-service/`, so no build fetches it. On top of
+that, `make lint-contracts` verifies a committed SHA-256 digest of each artifact
+(`contracts/user-service/checksums.json`) and refuses a pin that is not an immutable ref;
+the Apollo mock refuses a downloaded schema that does not match its digest; and
+`scripts/patchSwaggerServer.mjs` rebuilds `servers` as exactly one build-controlled entry
+so an injected `servers[1]` can never appear in the swagger "Try it out" dropdown. Markup
+in a spec `description`/`title`/`summary` is rejected at ingestion rather than stripped.
+
+Refresh artifacts and digests together with `make update-contracts` — never hand-edit
+`checksums.json`, and never loosen the ref check to accept a branch.
+
 Run `make format` before `make lint`; formatting is intentionally separate from the lint
 verification suite. Git hooks are managed by Husky. CI phases are mirrored locally by
 `make ci-lint`, `make ci-test`, and `make ci` (see the Makefile's CI orchestration
