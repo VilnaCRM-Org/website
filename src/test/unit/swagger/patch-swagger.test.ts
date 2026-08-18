@@ -273,6 +273,24 @@ describe('patchSwaggerServer script', () => {
       ).toEqual(['{$request.body#/cb}']);
     });
 
+    // A specification extension is arbitrary user data, never a Path Item, so an
+    // `x-` entry holding its own `servers` field must survive the walk.
+    test('preserves x- specification extensions that carry a servers field', () => {
+      const doc: SwaggerDocument = {
+        paths: {
+          'x-vendor': { servers: ['keep-me'] },
+          '/u': { post: { callbacks: { 'x-ext': { servers: ['keep-me-too'] } } } },
+        },
+        components: { callbacks: { 'x-c': { servers: ['keep-three'] } } },
+      } as unknown as SwaggerDocument;
+
+      const patched = JSON.parse(JSON.stringify(patchSwaggerServerUrl(doc, API_BASE_URL)));
+
+      expect(patched.paths['x-vendor']).toEqual({ servers: ['keep-me'] });
+      expect(patched.paths['/u'].post.callbacks['x-ext']).toEqual({ servers: ['keep-me-too'] });
+      expect(patched.components.callbacks['x-c']).toEqual({ servers: ['keep-three'] });
+    });
+
     test('strips a webhook operation servers override', () => {
       const doc: SwaggerDocument = {
         webhooks: { userCreated: { post: { servers: [{ url: 'https://attacker.example' }] } } },
