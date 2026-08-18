@@ -304,9 +304,37 @@ describe('swagger utils', () => {
       ['example', { example: { description: 'Renders a <div> wrapper' } }],
       ['default', { default: { title: '<h1>Heading</h1>' } }],
       ['an Example Object value', { examples: { ok: { value: { title: '<b>payload</b>' } } } }],
+      ['an Example Object externalValue', { examples: { ok: { externalValue: '<b>x</b>' } } }],
       ['a deeply nested example', { schema: { example: { a: { title: '<script>x</script>' } } } }],
+      // OpenAPI 3.1 Schema Object `examples` is an ARRAY of sample values, not a
+      // map of Example Objects — all payload.
+      ['a 3.1 schema examples array', { schema: { examples: [{ description: '<b>p</b>' }] } }],
+      ['a 3.1 examples array of scalars', { schema: { examples: ['<b>p</b>', '<i>q</i>'] } }],
     ])('does not apply the prose check inside %s data', (_label, doc) => {
       expect(() => assertNoMarkup(doc)).not.toThrow();
+    });
+
+    // Key names under `properties` are user-chosen, so a property legitimately
+    // called `value`/`example`/`default` must NOT inherit the keyword's payload
+    // exemption — that would be a markup bypass through an ordinary field name.
+    test.each([
+      ['value', { schema: { properties: { value: { description: '<b>markup</b>' } } } }],
+      ['example', { schema: { properties: { example: { title: '<i>markup</i>' } } } }],
+      ['default', { schema: { properties: { default: { description: '<div>x</div>' } } } }],
+      ['examples', { schema: { properties: { examples: { summary: '<b>x</b>' } } } }],
+      [
+        'summary',
+        { components: { schemas: { S: { properties: { summary: { title: '<b>x</b>' } } } } } },
+      ],
+    ])('still checks a schema property named %s', (_label, doc) => {
+      expect(() => assertNoMarkup(doc)).toThrow(/HTML markup/);
+    });
+
+    test('checks properties reached through patternProperties and $defs too', () => {
+      expect(() =>
+        assertNoMarkup({ patternProperties: { '^x': { description: '<b>x</b>' } } })
+      ).toThrow(/HTML markup/);
+      expect(() => assertNoMarkup({ $defs: { A: { title: '<i>x</i>' } } })).toThrow(/HTML markup/);
     });
 
     // `examples` maps names to Example Objects, and an Example Object's own

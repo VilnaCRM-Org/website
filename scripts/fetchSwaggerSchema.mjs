@@ -64,17 +64,17 @@ export function normalizeSpec(node) {
 // `externalDocs.description` is a `description`, so it is covered by the walk.
 const PROSE_KEYS = new Set(['description', 'title', 'summary']);
 
-// Sample PAYLOADS, not rendered prose: they legitimately contain a
-// `description`/`title` field of their own whose value is sample content, so the
-// walk stops here and `{ example: { description: 'Renders a <div> wrapper' } }`
-// cannot fail an otherwise clean contract refresh.
-//
-// `examples` is deliberately NOT in this set. It maps names to Example Objects,
-// and an Example Object's own `summary`/`description` IS rendered as Markdown by
-// swagger-ui — skipping the whole subtree would have let markup through exactly
-// where the guard is supposed to bite. Only each Example Object's `value` (which
-// is the payload) is skipped.
-const DATA_KEYS = new Set(['example', 'default', 'value']);
+// Schema keywords whose value is a sample PAYLOAD rather than rendered prose. A
+// payload legitimately contains its own `description`/`title` field holding
+// sample content, so the walk stops there and `{ example: { description:
+// 'Renders a <div> wrapper' } }` cannot fail an otherwise clean refresh.
+const PAYLOAD_KEYWORDS = new Set(['example', 'default']);
+
+// Keywords whose children are USER-CHOSEN NAMES, not keywords. Without this, a
+// schema property legitimately named `value`, `example` or `default` would be
+// mistaken for the keyword above and its prose skipped — a markup bypass through
+// an ordinary property name.
+const NAME_MAPS = new Set(['properties', 'patternProperties', 'definitions', '$defs']);
 
 // Every field swagger-ui turns into a clickable anchor. `externalDocs.url` was
 // only one of them: `info.termsOfService` renders in the info block and
@@ -137,10 +137,69 @@ const isUnsafeUrl = value => !/^https?:\/\//i.test(value);
  * so markup appearing in a description is a review-worthy event, not something
  * to paper over. Failing closed keeps the committed contract provably
  * markup-free without ever mangling upstream prose.
+ *
+ * The walk is STRUCTURAL rather than name-based, because matching bare key names
+ * at any depth is wrong in both directions: `properties.value` is an ordinary
+ * schema property whose prose must be checked, while a 3.1 Schema Object's
+ * `examples` ARRAY is all payload. `mode` carries that structure down:
+ *
+ *   default       — a schema/metadata object; keys are OpenAPI keywords
+ *   names         — children are user-chosen names (`properties` et al)
+ *   exampleMap    — children are Example Objects (`examples` as a map)
+ *   exampleObject — `summary`/`description` are rendered; `value` is payload
  */
-export function assertNoMarkup(node, path = '$') {
+function checkProse(key, value, here) {
+  const markup = findMarkup(value);
+  if (markup !== null) {
+    throw new Error(
+      `Upstream spec carries HTML markup at ${here} — refusing to vendor it: ${markup}`
+    );
+  }
+}
+
+function checkLink(key, value, path, here) {
+  if (isLinkField(key, path) && (typeof value !== 'string' || isUnsafeUrl(value))) {
+    throw new Error(`Upstream spec carries a non-http(s) ${here}: ${JSON.stringify(value)}`);
+  }
+}
+
+/** `examples` is two different things. As a map it holds Example Objects, whose
+ *  summary/description swagger-ui renders. As an array (OpenAPI 3.1 Schema
+ *  Object) it holds sample values, which are payload. */
+const examplesMode = value => (Array.isArray(value) ? null : 'exampleMap');
+
+function nextMode(key, value, mode) {
+  if (mode === 'names') {
+    return 'default';
+  }
+  if (mode === 'exampleMap') {
+    return 'exampleObject';
+  }
+  if (mode === 'exampleObject') {
+    return key === 'value' || key === 'externalValue' ? null : 'default';
+  }
+  if (PAYLOAD_KEYWORDS.has(key)) {
+    return null;
+  }
+  if (key === 'examples') {
+    return examplesMode(value);
+  }
+  return NAME_MAPS.has(key) ? 'names' : 'default';
+}
+
+function isProseHere(key, mode) {
+  if (mode === 'names') {
+    return false;
+  }
+  if (mode === 'exampleObject') {
+    return key === 'summary' || key === 'description';
+  }
+  return PROSE_KEYS.has(key);
+}
+
+export function assertNoMarkup(node, path = '$', mode = 'default') {
   if (Array.isArray(node)) {
-    node.forEach((value, index) => assertNoMarkup(value, `${path}[${index}]`));
+    node.forEach((value, index) => assertNoMarkup(value, `${path}[${index}]`, mode));
     return;
   }
   if (!node || typeof node !== 'object') {
@@ -150,23 +209,18 @@ export function assertNoMarkup(node, path = '$') {
   Object.entries(node).forEach(([key, value]) => {
     const here = `${path}.${key}`;
 
-    if (isLinkField(key, path) && (typeof value !== 'string' || isUnsafeUrl(value))) {
-      throw new Error(`Upstream spec carries a non-http(s) ${here}: ${JSON.stringify(value)}`);
-    }
-    if (DATA_KEYS.has(key)) {
+    checkLink(key, value, path, here);
+
+    const descend = nextMode(key, value, mode);
+    if (descend === null) {
       return;
     }
     if (typeof value !== 'string') {
-      assertNoMarkup(value, here);
+      assertNoMarkup(value, here, descend);
       return;
     }
-    if (PROSE_KEYS.has(key)) {
-      const markup = findMarkup(value);
-      if (markup !== null) {
-        throw new Error(
-          `Upstream spec carries HTML markup at ${here} — refusing to vendor it: ${markup}`
-        );
-      }
+    if (isProseHere(key, mode)) {
+      checkProse(key, value, here);
     }
   });
 }
