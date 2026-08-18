@@ -123,13 +123,22 @@ describe('apollo mock schema integrity', () => {
       }
     });
 
-    test('falls back to a named path when no contracts directory is above it', () => {
-      const orphan: string = path.join(workDir, 'a', 'b', 'c');
+    // The fallback names a module-relative path rather than guessing at an app
+    // root: the image and source layouts sit at different depths, so any fixed
+    // number of `..` segments would point outside the searched tree in one of
+    // them. It must never escape the directory it was asked about.
+    test.each([
+      ['a deeply nested orphan', ['a', 'b', 'c']],
+      ['an orphan one level down', ['a']],
+      ['the search root itself', []],
+    ])('falls back to a path inside %s', (_label, segments) => {
+      const orphan: string = path.join(workDir, ...(segments as string[]));
       fs.mkdirSync(orphan, { recursive: true });
 
       const located: string = locateChecksums(orphan);
 
-      expect(located).toBe(path.join(workDir, CHECKSUMS_RELATIVE_SUFFIX));
+      expect(located).toBe(path.join(orphan, CHECKSUMS_RELATIVE_SUFFIX));
+      expect(located.startsWith(orphan)).toBe(true);
       expect(fs.existsSync(located)).toBe(false);
     });
   });

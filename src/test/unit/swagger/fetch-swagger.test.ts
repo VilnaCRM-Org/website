@@ -302,11 +302,26 @@ describe('swagger utils', () => {
     // its own `description`/`title` field whose value is sample content.
     test.each([
       ['example', { example: { description: 'Renders a <div> wrapper' } }],
-      ['examples', { examples: { ok: { summary: 'Shows a <b>bold</b> label' } } }],
       ['default', { default: { title: '<h1>Heading</h1>' } }],
+      ['an Example Object value', { examples: { ok: { value: { title: '<b>payload</b>' } } } }],
       ['a deeply nested example', { schema: { example: { a: { title: '<script>x</script>' } } } }],
     ])('does not apply the prose check inside %s data', (_label, doc) => {
       expect(() => assertNoMarkup(doc)).not.toThrow();
+    });
+
+    // `examples` maps names to Example Objects, and an Example Object's own
+    // summary/description IS rendered as Markdown by swagger-ui — only its
+    // `value` payload is data. Skipping the whole `examples` subtree would have
+    // let markup through exactly where the guard is supposed to bite.
+    test.each([
+      ['an Example Object description', { examples: { ok: { description: '<b>bold</b>' } } }],
+      ['an Example Object summary', { examples: { ok: { summary: '<script>x</script>' } } }],
+      [
+        'a nested Example Object description',
+        { content: { 'application/json': { examples: { a: { description: '<div>x</div>' } } } } },
+      ],
+    ])('still flags %s', (_label, doc) => {
+      expect(() => assertNoMarkup(doc)).toThrow(/HTML markup/);
     });
 
     test('still flags a description that sits beside an example, not inside it', () => {

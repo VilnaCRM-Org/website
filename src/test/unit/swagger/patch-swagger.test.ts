@@ -240,6 +240,17 @@ describe('patchSwaggerServer script', () => {
       );
       expect(mockWriteFileSync).toHaveBeenCalledWith(OUTPUT_PATH, JSON.stringify(doc, null, 2));
     });
+
+    // `servers` is optional on the exported type, so a caller passing a document
+    // without one must not get a TypeError *after* the file has been written.
+    test.each([
+      ['a document with no servers key', { openapi: '3.0.0' }],
+      ['an empty servers array', { openapi: '3.0.0', servers: [] }],
+    ])('still writes, and does not throw, for %s', (_label, doc) => {
+      expect(() => writeSwaggerSchema(OUTPUT_PATH, doc)).not.toThrow();
+      expect(mockWriteFileSync).toHaveBeenCalledWith(OUTPUT_PATH, JSON.stringify(doc, null, 2));
+      expect(writeSwaggerSchema(OUTPUT_PATH, doc)).toContain('undefined');
+    });
   });
 
   describe('patchSwaggerServer', () => {

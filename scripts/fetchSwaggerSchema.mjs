@@ -64,12 +64,17 @@ export function normalizeSpec(node) {
 // `externalDocs.description` is a `description`, so it is covered by the walk.
 const PROSE_KEYS = new Set(['description', 'title', 'summary']);
 
-// `example`, `default` and `examples` hold DATA, not rendered prose: a payload
-// example legitimately contains a `description`/`title` field of its own, whose
-// value is sample content rather than something swagger-ui renders as Markdown.
-// The walk stops at these so a sample value like `{ description: 'Renders a
-// <div> wrapper' }` cannot fail an otherwise clean contract refresh.
-const DATA_KEYS = new Set(['example', 'examples', 'default']);
+// Sample PAYLOADS, not rendered prose: they legitimately contain a
+// `description`/`title` field of their own whose value is sample content, so the
+// walk stops here and `{ example: { description: 'Renders a <div> wrapper' } }`
+// cannot fail an otherwise clean contract refresh.
+//
+// `examples` is deliberately NOT in this set. It maps names to Example Objects,
+// and an Example Object's own `summary`/`description` IS rendered as Markdown by
+// swagger-ui — skipping the whole subtree would have let markup through exactly
+// where the guard is supposed to bite. Only each Example Object's `value` (which
+// is the payload) is skipped.
+const DATA_KEYS = new Set(['example', 'default', 'value']);
 
 // Every field swagger-ui turns into a clickable anchor. `externalDocs.url` was
 // only one of them: `info.termsOfService` renders in the info block and

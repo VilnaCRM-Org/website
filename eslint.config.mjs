@@ -320,7 +320,10 @@ export default [
     // nested `overrides` scoping and stays silent, while a sandboxed run (qlty)
     // applies only top-level flat config and reports every `console.log` here.
     // Declared last, and scoped to `scripts/`, so both runs are the same check.
-    files: ['scripts/**/*.{js,cjs,mjs}'],
+    // `.ts` is included because the printing entry points are not all plain JS:
+    // `scripts/logger.ts` wraps console itself, and the mutation-report scripts
+    // print their summaries.
+    files: ['scripts/**/*.{js,cjs,mjs,ts}'],
     rules: {
       'no-console': 'off',
     },
