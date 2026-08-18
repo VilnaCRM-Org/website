@@ -215,6 +215,41 @@ describe('patchSwaggerServer script', () => {
       });
     });
 
+    // The strip walks the containers that actually hold Path Items. A blanket
+    // recursive filter also deleted a schema property and an example payload field
+    // that merely happened to be called `servers`, silently changing the document.
+    test('leaves a schema property or example payload named servers untouched', () => {
+      const doc: SwaggerDocument = {
+        components: { schemas: { Config: { properties: { servers: { type: 'array' } } } } },
+        paths: {
+          '/c': {
+            get: {
+              responses: {
+                200: { content: { 'application/json': { example: { servers: ['a', 'b'] } } } },
+              },
+            },
+          },
+        },
+      } as unknown as SwaggerDocument;
+
+      const patched: string = JSON.stringify(patchSwaggerServerUrl(doc, API_BASE_URL));
+
+      expect(JSON.parse(patched).components.schemas.Config.properties.servers).toBeDefined();
+      expect(
+        JSON.parse(patched).paths['/c'].get.responses[200].content['application/json'].example
+      ).toEqual({ servers: ['a', 'b'] });
+    });
+
+    test('strips a webhook operation servers override', () => {
+      const doc: SwaggerDocument = {
+        webhooks: { userCreated: { post: { servers: [{ url: 'https://attacker.example' }] } } },
+      } as unknown as SwaggerDocument;
+
+      expect(JSON.stringify(patchSwaggerServerUrl(doc, API_BASE_URL))).not.toContain(
+        'attacker.example'
+      );
+    });
+
     test('does not mutate a document that carries nested servers', () => {
       const doc: SwaggerDocument = {
         paths: { '/t': { get: { servers: [{ url: 'https://attacker.example' }] } } },

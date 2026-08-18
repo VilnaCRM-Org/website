@@ -153,7 +153,11 @@ const blankCode = value => value.replace(CODE_FENCE, ' ').replace(CODE_SPAN, ' '
 // Markdown LINKS are deliberately not blocked — they are legitimate in a spec
 // (docs references), they require a click, and they show up in the reviewed
 // `make update-contracts` diff. An auto-loading remote resource does not.
-const MARKDOWN_IMAGE = /!\[[^\]]*\]\(/;
+// Every image form Remarkable accepts, not just the inline one: `![alt](url)`,
+// the reference form `![alt][id]`, and the shortcut form `![alt]` with a link
+// definition elsewhere. Matching the `![` opener covers all three; a literal
+// `![` in prose that is not an image is the fail-closed direction.
+const MARKDOWN_IMAGE = /!\[/;
 
 export function findMarkup(value) {
   const scannable = blankCode(value);

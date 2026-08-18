@@ -379,6 +379,9 @@ describe('swagger utils', () => {
       ['a bare image beacon', 'Users API.\n\n![](https://attacker.example/beacon.png)'],
       ['an image with alt text', '![diagram](https://attacker.example/x.png)'],
       ['a relative image', '![](./diagram.png)'],
+      ['a reference-style image', 'see ![alt][beacon] here'],
+      ['a collapsed reference image', 'see ![alt][] here'],
+      ['a shortcut reference image', 'see ![beacon] here'],
     ])('rejects %s', (_label, description) => {
       expect(() => assertNoMarkup({ description })).toThrow(/HTML markup/);
     });
@@ -386,6 +389,8 @@ describe('swagger utils', () => {
     test.each([
       ['a docs link', '[Get your API key](https://vilnacrm.com/login)'],
       ['a bare url', 'See https://docs.vilnacrm.com for details'],
+      ['a reference-style link', 'See [the docs][d] for details'],
+      ['an exclamation before a link', 'Warning! [see the docs](https://vilnacrm.com)'],
       ['backticked image syntax', 'Write `![](url)` to embed an image'],
     ])('accepts %s', (_label, description) => {
       expect(() => assertNoMarkup({ description })).not.toThrow();
