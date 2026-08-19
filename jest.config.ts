@@ -76,16 +76,21 @@ const INTEGRATION_COVERAGE_THRESHOLD = {
   global: { branches: 100, functions: 100, lines: 100, statements: 100 },
 };
 
-// The `edge` layer covers the deployed edge/runtime scripts under `scripts/` that are not
-// part of the Next.js bundle. Today that is the CloudFront Functions handler
-// (`scripts/cloudfront_routing.js`) which fronts every production request: it is the repo's
-// most-fixed file (7 fix commits / 4 production incidents) yet historically shipped with
-// zero test coverage (issue #349). The spec loads that byte-identical ES5.1 file via
-// `node:vm` with its real path as the vm `filename`, so the v8 provider attributes the
-// executed code back to the source file. This layer is isolated from client/server/
-// integration so it enforces 100% on exactly these scripts without touching their coverage
-// reports.
-const EDGE_COVERAGE_FROM = ['<rootDir>/scripts/cloudfront_routing.js'];
+// The `edge` layer covers the deployed runtime scripts that ship outside the Next.js
+// bundle and are therefore invisible to every other coverage scope:
+//
+// - `scripts/cloudfront_routing.js` — the CloudFront Functions handler fronting every
+//   production request; the repo's most-fixed file (7 fix commits / 4 production
+//   incidents) yet historically at zero coverage (issue #349).
+// - `public/sw.js` — the offline-shell service worker (issue #338). It is copied verbatim
+//   into the export, so it is neither imported by `src/` nor collected by the integration
+//   scope, and would otherwise ship with exactly the zero coverage #349 closed.
+//
+// Both specs load the byte-identical shipped file via `node:vm` with its real path as the
+// vm `filename`, so the v8 provider attributes the executed code back to the source file.
+// This layer is isolated from client/server/integration so it enforces 100% on exactly
+// these scripts without touching their coverage reports.
+const EDGE_COVERAGE_FROM = ['<rootDir>/scripts/cloudfront_routing.js', '<rootDir>/public/sw.js'];
 
 const EDGE_COVERAGE_THRESHOLD = {
   global: { branches: 100, functions: 100, lines: 100, statements: 100 },

@@ -217,5 +217,11 @@
       "facebook": "Facebook Icon",
       "linkedin": "Linkedin Icon"
     }
+  },
+  "offline": {
+    "heading": "You are offline",
+    "description": "VilnaCRM cannot reach the network, so this page could not be loaded.",
+    "hint": "Check your connection — everything works again as soon as you are back online.",
+    "home_link": "Back to the home page"
   }
 }

@@ -75,6 +75,11 @@ app.log
 # Dockerfile build-performance gate (scripts/ci/docker_perf.sh) artifacts
 /.docker-perf/
 
+# Host-mode prod server state (scripts/ci/host-stack.sh, HOST_STACK=1): the pid
+# that makes `stop-prod` idempotent and the serve log a background failure would
+# otherwise be lost in.
+/.host-stack/
+
 # rust-code-analysis host binary (scripts/ci/ensure-rca.sh) — provisioned on
 # demand, pinned + SHA256-verified, never committed (it is not an npm dep).
 /bin/

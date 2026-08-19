@@ -10,6 +10,7 @@ import { theme } from '@/components/app-theme';
 import Layout from '@/components/layout';
 import { env } from '@/config/env';
 import { golos } from '@/config/Fonts/golos';
+import { initServiceWorker } from '@/lib/pwa/register-service-worker';
 import { handleWebVitalsMetric } from '@/lib/web-vitals/report-web-vitals';
 
 import 'swagger-ui-react/swagger-ui.css';
@@ -44,6 +45,12 @@ Sentry.init({
 function MyApp({ Component }: { Component: React.ComponentType }): React.ReactElement {
   useEffect(() => {
     document.documentElement.dir = i18n.dir();
+  }, []);
+
+  // Registered from the routing root so the offline shell covers every route. The module
+  // owns the production gate and the deferral to `load`, so this stays a one-line call.
+  useEffect(() => {
+    initServiceWorker();
   }, []);
 
   return (

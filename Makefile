@@ -92,7 +92,12 @@ COMMON_HEALTHCHECKS_FILE    = -f common-healthchecks.yml
 EXEC_DEV_TTYLESS            = $(DOCKER_COMPOSE) exec -T dev
 NEXT_DEV_CMD                = $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) up -d dev && make wait-for-dev
 PLAYWRIGHT_DOCKER_CMD       = $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_TEST_FILE) exec playwright
-PLAYWRIGHT_TEST             = $(PLAYWRIGHT_DOCKER_CMD) sh -c
+# Single seam for how Playwright is invoked: `docker compose exec` by default, a
+# plain host `env` prefix under HOST_STACK=1. Both the `sh -c` form here and the
+# direct `playwright-test` macro below route through it, so host mode overrides
+# one variable instead of every call site.
+PLAYWRIGHT_EXEC             = $(PLAYWRIGHT_DOCKER_CMD)
+PLAYWRIGHT_TEST             = $(PLAYWRIGHT_EXEC) sh -c
 
 MEMLEAK_SERVICE             = memory-leak
 DOCKER_COMPOSE_MEMLEAK_FILE = -f docker-compose.memory-leak.yml
@@ -122,7 +127,7 @@ NETWORK_NAME                = website-network
 # Dev-side lint and test phases are grouped so local developers and agents can
 # run the same CI stages as the pipeline. The parallel runners execute each
 # target concurrently, group their output, and aggregate exit codes.
-CI_LINT_TARGETS             = lint-next lint-tsc lint-md
+CI_LINT_TARGETS             = lint-next lint-tsc lint-md lint-pins
 CI_TEST_TARGETS             = ci-test-unit-client ci-test-unit-server ci-test-integration
 CI_LINT_RUNNER              = ./scripts/ci/run-parallel.sh ci-lint
 CI_TEST_RUNNER              = ./scripts/ci/run-parallel.sh ci-test
@@ -169,6 +174,70 @@ MARKDOWNLINT_BIN            = $(PM_EXEC) $(BIN_DIR)/markdownlint
 
 # To Run in CI mode specify CI variable. Example: make lint-md CI=1
 
+# ===== Host mode (issue #338) =====
+# HOST_STACK=1 runs the Playwright e2e/visual suites and Memlab against a
+# host-served static export instead of the Docker prod stack, so a machine with
+# no Docker daemon can still run them. It is deliberately a switch of its own and
+# NOT CI: GitHub Actions sets CI=true, the block above promotes that to CI=1, and
+# e2e-testing.yml / visual-testing.yml / memory-leak-testing.yml already run the
+# Docker stack in exactly that mode — keying host mode on CI would move all three
+# off Docker without anyone asking.
+HOST_STACK                  ?= 0
+
+# Treat common truthy HOST_STACK values the same, mirroring the CI normalization.
+ifneq (,$(filter 1 true TRUE,$(HOST_STACK)))
+    HOST_STACK := 1
+endif
+
+HOST_STACK_SCRIPT           = ./scripts/ci/host-stack.sh
+HOST_SITE_URL               = http://$(WEBSITE_DOMAIN):$(NEXT_PUBLIC_PROD_PORT)
+# `make` exports .env.production, whose NEXT_PUBLIC_API_BASE_URL is the real
+# production API — but two swagger e2e specs assert the value the container build
+# bakes into servers[0].url. Pin the patch step so the host build emits the same
+# artifact the container build does.
+SWAGGER_SERVER_URL          = http://$(MOCKOON_HOST):$(MOCKOON_PORT)
+HOST_STACK_CMD              = env PORT=$(NEXT_PUBLIC_PROD_PORT) \
+                              WEBSITE_DOMAIN=$(WEBSITE_DOMAIN) \
+                              SWAGGER_SERVER_URL=$(SWAGGER_SERVER_URL) \
+                              BIN_DIR=$(BIN_DIR) \
+                              $(HOST_STACK_SCRIPT)
+
+# Docker stays the default in every mode; only HOST_STACK=1 swaps these out.
+START_PROD_DEPS             = create-network
+define START_PROD_CMD
+node scripts/generateLocalization.mjs
+$(DOCKER_COMPOSE) $(COMMON_HEALTHCHECKS_FILE) $(DOCKER_COMPOSE_TEST_FILE) up -d && make wait-for-prod-health
+endef
+STOP_PROD_CMD               = $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_TEST_FILE) down
+# The leading `+` is load-bearing: make only auto-detects a recursive invocation
+# from a literal `$(MAKE)` in the recipe text, and this one arrives through a
+# variable. Without it the sub-make loses the jobserver under -j and is skipped
+# under -n. Host mode keeps no `+`, so a dry run there stays a dry run.
+MEMLEAK_RUN                 = +$(MAKE) ci-test-memory-leak
+VISUAL_UPDATE_DEPS          = start-prod
+VISUAL_UPDATE_CMD           = $(playwright-test) $(TEST_DIR_VISUAL) --update-snapshots
+PLAYWRIGHT_INSTALL_CMD      = @echo "ℹ️  Browsers ship inside the Playwright image (Playwright.Dockerfile) — nothing to install. Re-run with HOST_STACK=1 to install them on the host."
+
+ifeq ($(HOST_STACK), 1)
+    # playwright.config.ts derives baseURL from NEXT_PUBLIC_API_BASE_URL (the
+    # compose file forces it to http://prod:3001), and src/test/e2e/nav-links.spec.ts
+    # reads the same var for its expected hrefs — one override covers both.
+    # NODE_ENV is deliberately left alone: a production value would un-skip
+    # src/test/e2e/swagger/mocked-production, which is skipped in Docker today.
+    PLAYWRIGHT_EXEC         = env NEXT_PUBLIC_API_BASE_URL=$(HOST_SITE_URL)
+    START_PROD_DEPS         =
+    START_PROD_CMD          = $(HOST_STACK_CMD) start
+    STOP_PROD_CMD           = $(HOST_STACK_CMD) stop
+    MEMLEAK_RUN             = $(HOST_STACK_CMD) memlab
+    PLAYWRIGHT_INSTALL_CMD  = $(HOST_STACK_CMD) browsers
+    # Baselines are produced in mcr.microsoft.com/playwright:v1.57.0-jammy and
+    # Playwright runs with no maxDiffPixels, so host font rasterization would
+    # rewrite every snapshot and immediately red the container-run visual gate.
+    # Fail before the prerequisite so no build is wasted on a refused run.
+    VISUAL_UPDATE_DEPS      =
+    VISUAL_UPDATE_CMD       = @echo "❌ test-visual-update is Docker-only: baselines come from the pinned Playwright image, so host-generated snapshots would red the visual gate." && exit 1
+endif
+
 .DEFAULT_GOAL               = help
 .RECIPEPREFIX               +=
 .PHONY: $(filter-out node_modules,$(MAKECMDGOALS))
@@ -181,7 +250,7 @@ run-e2e                     = $(PLAYWRIGHT_TEST) "$(PLAYWRIGHT_BIN) test $(TEST_
 E2E_SHARD_INDEX             ?= 1
 E2E_SHARD_TOTAL             ?= 1
 run-e2e-shard               = $(PLAYWRIGHT_TEST) "$(PLAYWRIGHT_BIN) test $(TEST_DIR_E2E) --shard=$(E2E_SHARD_INDEX)/$(E2E_SHARD_TOTAL)"
-playwright-test             = $(PLAYWRIGHT_DOCKER_CMD) $(PLAYWRIGHT_BIN) test
+playwright-test             = $(PLAYWRIGHT_EXEC) $(PLAYWRIGHT_BIN) test
 
 help:
 	@printf "\033[33mUsage:\033[0m make [target] [arg=\"val\"...]\n"
@@ -315,7 +384,15 @@ lint-deps: ## Validate architecture/import boundaries with dependency-cruiser
 	node scripts/generateLocalization.mjs
 	$(PM_EXEC) $(DEPCRUISE_BIN) src pages tests --config .dependency-cruiser.js
 
-lint: lint-next lint-tsc lint-md lint-deps ## Runs all linters: ESLint, TypeScript, Markdown, and dependency-cruiser in sequence.
+# Host-side by design, but unlike lint-metrics and lint-contracts this one DOES
+# belong in the `lint` aggregate and CI_LINT_TARGETS: the script is
+# dependency-free (so it also runs before `bun install`), needs no network, and
+# reads repo files — the Dockerfiles and workflows — that the dev image would only
+# ever see a stale copy of.
+lint-pins: ## Verify the Node, Bun and Playwright pins agree across .nvmrc, package.json, the Dockerfiles and the workflows
+	node scripts/ci/check-version-pins.mjs
+
+lint: lint-next lint-tsc lint-md lint-deps lint-pins ## Runs all linters: ESLint, TypeScript, Markdown, dependency-cruiser, and the version-pin drift gate in sequence.
 
 # DELIBERATE DIVERGENCE FROM THE npm-tool LINT GATES (lint-next/tsc/md/deps),
 # for the same reason as lint-metrics below:
@@ -386,15 +463,42 @@ test-visual-ui: start-prod ## Start the production environment and run visual te
 	@echo "Test will be run on: $(UI_MODE_URL)"
 	$(playwright-test) $(TEST_DIR_VISUAL) $(UI_FLAGS)
 
-test-visual-update: start-prod ## Update Playwright visual snapshots
-	$(playwright-test) $(TEST_DIR_VISUAL) --update-snapshots
+test-visual-update: $(VISUAL_UPDATE_DEPS) ## Update Playwright visual snapshots
+	$(VISUAL_UPDATE_CMD)
+
+# K6 has no host equivalent: the runner is a container image built by xk6 with a
+# compiled Go extension, and it addresses the site by its Compose service name.
+# Under HOST_STACK=1 `start-prod` would bring up the host server instead, and the
+# run would then hang in the Docker-only `wait-for-prod-health` before K6 failed
+# to resolve `prod`. Refuse up front rather than time out.
+require-docker-stack: ## Fail fast when a Docker-only target is invoked under HOST_STACK=1
+	@if [ "$(HOST_STACK)" = "1" ]; then \
+		echo "❌ $(or $(firstword $(MAKECMDGOALS)),this target) is Docker-only: the K6 runner is a"; \
+		echo "   container image and addresses the site by its Compose service name."; \
+		echo "   Re-run without HOST_STACK=1."; \
+		exit 1; \
+	fi
 
 create-network: ## Create the external Docker network if it doesn't exist
+	@# This is the first target that touches Docker on every browser-suite path, so
+	@# it is where an unreachable daemon can still be turned into an actionable
+	@# message instead of a raw connection error — HOST_STACK=1 is the way out.
+	@if ! docker info >/dev/null 2>&1; then \
+		echo "❌ The Docker daemon is not reachable."; \
+		echo "   Re-run with HOST_STACK=1 to build and serve the export on the host instead:"; \
+		echo "     HOST_STACK=1 $(MAKE) $(or $(firstword $(MAKECMDGOALS)),start-prod)"; \
+		exit 1; \
+	fi
 	@docker network ls | grep -q $(NETWORK_NAME) || docker network create $(NETWORK_NAME)
 
-start-prod: create-network ## Build image and start container in production mode
-	node scripts/generateLocalization.mjs
-	$(DOCKER_COMPOSE) $(COMMON_HEALTHCHECKS_FILE) $(DOCKER_COMPOSE_TEST_FILE) up -d && make wait-for-prod-health
+start-prod: $(START_PROD_DEPS) ## Build image and start container in production mode
+	$(START_PROD_CMD)
+
+stop-prod: ## Stop the production stack (the Docker test stack, or the host server under HOST_STACK=1)
+	$(STOP_PROD_CMD)
+
+playwright-install: ## Install the Playwright browsers on the host (HOST_STACK=1; the Docker image already ships them)
+	$(PLAYWRIGHT_INSTALL_CMD)
 
 start-prod-clean: create-network ## Force rebuild and recreate all test containers, then wait for health
 	$(DOCKER_COMPOSE) $(COMMON_HEALTHCHECKS_FILE) $(DOCKER_COMPOSE_TEST_FILE) up -d --force-recreate --build && $(MAKE) wait-for-prod-health
@@ -549,7 +653,7 @@ test-bats: ## Run Bats coverage for Makefile shell flows and CI helper scripts
 	$(BATS_BIN) --formatter $(BATS_FORMATTER) -r tests/bats
 
 test-memory-leak: start-prod ## This command executes memory leaks tests using Memlab library.
-	$(MAKE) ci-test-memory-leak
+	$(MEMLEAK_RUN)
 
 memory-leak-dind: start-prod ## Run Memlab tests in isolated compose project (DIND safe)
 	@echo "🧪 Starting memory leak test environment (isolated project)..."
@@ -601,11 +705,11 @@ all: build ## Default aggregate target to build the project
 
 clean: down ## Clean up running containers and artifacts
 
-load-tests: start-prod wait-for-prod-health ## This command executes load tests using K6 library. Note: The target host is determined by the service URL
+load-tests: require-docker-stack start-prod wait-for-prod-health ## This command executes load tests using K6 library. Note: The target host is determined by the service URL
                        ## using $(NEXT_PUBLIC_PROD_PORT), which maps to the production service in Docker Compose.
 	$(LOAD_TESTS_RUN)
 
-load-tests-swagger: start-prod wait-for-prod-health ## Execute comprehensive load tests for the Swagger page. Use environment variables to run specific scenarios:
+load-tests-swagger: require-docker-stack start-prod wait-for-prod-health ## Execute comprehensive load tests for the Swagger page. Use environment variables to run specific scenarios:
                        ## run_smoke=true, run_average=true, run_stress=true, run_spike=true. If none set, runs all scenarios.
 	$(LOAD_TESTS_RUN_SWAGGER)
 

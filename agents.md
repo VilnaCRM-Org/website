@@ -7,7 +7,9 @@ update tests.
 
 The stack is Next.js 16, React 19, TypeScript 6, MUI 9 with Emotion, Apollo Client 4 with
 Apollo Server 5, react-hook-form, i18next, and Storybook 10. The package manager is
-`bun@1.3.5` and Node `>=20`. The project structure is adapted from bulletproof-react. All
+`bun@1.3.5` and Node is the LTS pinned in `.nvmrc` (24.18.0), which `package.json`
+`engines` (`^24`) and every Dockerfile agree on — `make lint-pins` fails when they drift.
+The project structure is adapted from bulletproof-react. All
 commands are Makefile targets run from the repository root.
 
 ## Mandatory Test-Scenario Coverage Policy
@@ -37,12 +39,18 @@ Client unit tests run on Jest with React Testing Library in a jsdom env
 `src/test/unit/**/*.test.ts`. Server unit tests run on Jest in a node env
 (`TEST_ENV=server`); specs live in `src/test/apollo-server/**/*.test.ts`. Edge unit tests
 run on Jest in a node env (`TEST_ENV=edge`) and cover the deployed edge/runtime scripts
-under `scripts/` that ship outside the Next.js bundle (today the CloudFront Functions
-handler `scripts/cloudfront_routing.js`); specs live in `src/test/edge/**/*.test.ts` and
-the layer is pinned at 100% per-file coverage. E2E and visual specs are Playwright across
-chromium, firefox, and webkit (`src/test/e2e/**/*.spec.ts`, `src/test/visual/**/*.spec.ts`);
-visual snapshots sit in adjacent `*-snapshots/` folders. Run all three unit layers with
-`make test-unit-all`.
+that ship outside the Next.js bundle: the CloudFront Functions handler
+(`scripts/cloudfront_routing.js`) and the offline service worker (`public/sw.js`). Specs
+live in `src/test/edge/**/*.test.ts` and the layer is pinned at 100% per-file coverage —
+put any future hand-written runtime file that Next.js does not bundle in this layer rather
+than shipping it uncovered. E2E and visual specs are Playwright
+(`src/test/e2e/**/*.spec.ts`, `src/test/visual/**/*.spec.ts`) across chromium, firefox, and
+webkit, plus a fourth `mobile-chrome` project that runs `src/test/e2e/mobile/**` under real
+Pixel 7 emulation (touch, mobile user agent, devicePixelRatio 2.625). That project is
+scoped to that one directory on purpose: Playwright interpolates the project name into
+screenshot paths, so an unscoped project would demand a second full set of visual
+baselines. Visual snapshots sit in adjacent `*-snapshots/` folders. Run all three unit
+layers with `make test-unit-all`.
 
 Add a specialized suite when the change touches its concern: `make test-mutation` (test
 strength), `make test-bats` (Makefile and CI shell flows), `make test-memory-leak` (leaks),
@@ -53,9 +61,10 @@ In CI these suites are fanned out to run in parallel (issue #316): every workflo
 `concurrency` group (PR checks cancel superseded runs; deploy/release/sandbox do not),
 the Playwright e2e suite, Lighthouse, and the K6 load suites run as matrices, and mutation
 testing runs as a shard matrix whose `merge` job re-enforces the **exact** Stryker `break`
-threshold over the union of shards (`make merge-mutation-reports`). The thresholds and the
-test set are unchanged — locally you still run the single `make test-e2e` / `make
-test-mutation`.
+threshold over the union of shards (`make merge-mutation-reports`). The e2e shard matrix
+covers every Playwright project, so the `mobile-chrome` emulation specs are gated on each
+PR alongside the three desktop engines. The thresholds and the test set are unchanged —
+locally you still run the single `make test-e2e` / `make test-mutation`.
 
 ### Step 2 — Cover Every Applicable Scenario Class
 
@@ -115,16 +124,57 @@ pass. Run the layer commands you touched, then the project lint gate.
 make format                  # Prettier formatting (run before lint)
 CI=1 make test-unit-client   # Client unit suite (jsdom)
 CI=1 make test-unit-server   # Server unit suite (node)
+CI=1 make test-unit-edge     # Edge/runtime scripts (cloudfront_routing.js, public/sw.js)
+CI=1 make test-integration   # Integration layer (global 100% coverage)
 make test-e2e                # User-facing flows (for UI or behavior changes)
 make test-visual             # Visual regression (for UI or styling changes)
-make lint                    # Full gate: ESLint, TypeScript, and markdownlint
+make lint                    # ESLint, TypeScript, markdownlint, dependency-cruiser, pins
 make lint-contracts          # Upstream contracts (when .env pins or gql documents change)
 ```
 
-Run only the suites the change affects, but never skip a suite that does apply. Any unit
-command runs locally WITHOUT Docker when prefixed with `CI=1` (for example,
-`CI=1 make test-unit-all`). If a deliberate, reviewed UI change makes visual baselines
-stale, regenerate them with `make test-visual-update` and review the diff before committing.
+Run only the suites the change affects, but never skip a suite that does apply. If a
+deliberate, reviewed UI change makes visual baselines stale, regenerate them with
+`make test-visual-update` and review the diff before committing.
+
+#### Which suite runs where
+
+Docker is the default substrate for the suites that need a browser or the prod stack. Some
+targets are host-only in every mode and never touch a daemon — `lint-metrics` (a Rust
+binary absent from the image), `test-bats`, and the build/localization helpers — so the two
+switches below do not change their meaning. Neither switch is interchangeable with the
+other, and both are additive: without them no target changes behaviour.
+
+- `CI=1` swaps `docker compose exec dev` for the host toolchain.
+- `HOST_STACK=1` additionally replaces the Docker prod stack with a host one: it builds the
+  static export, serves it with `serve`, and runs Playwright from `node_modules`.
+
+`HOST_STACK` is deliberately not folded into `CI`: GitHub Actions sets `CI=true` on every
+runner, which the Makefile normalises to `CI=1`, so the e2e, visual, and memory-leak
+workflows already run in that mode against the containers their baselines were produced
+in.
+
+| Suite                   | Docker-free command                  |
+| ----------------------- | ------------------------------------ |
+| Unit, integration, lint | `CI=1 make <target>`                 |
+| e2e                     | `HOST_STACK=1 make test-e2e`         |
+| Visual (see caveat)     | `HOST_STACK=1 make test-visual`      |
+| Memory leak             | `HOST_STACK=1 make test-memory-leak` |
+| Load (K6)               | Docker only                          |
+
+Before the first host run, fetch the browsers once with
+`HOST_STACK=1 make playwright-install`; tear the stack down with
+`HOST_STACK=1 make stop-prod`.
+
+Two caveats, both deliberate:
+
+- **Visual comparisons are advisory on the host.** Baselines are produced inside the pinned
+  Playwright image and Playwright runs with no `maxDiffPixels`, so host font rasterization
+  can diff a snapshot that is genuinely unchanged. The container run is the gate of record,
+  and `make test-visual-update` refuses to run under `HOST_STACK=1` so host-rendered
+  baselines can never be committed.
+- **K6 load tests are Docker-only.** The runner is a container image built by `xk6` with a
+  compiled Go extension and it addresses the site by its compose service name; there is no
+  host equivalent to keep in parity.
 
 ## Behavior-First Assertions
 

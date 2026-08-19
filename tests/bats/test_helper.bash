@@ -43,6 +43,16 @@ create_docker_stub() {
 #!/usr/bin/env bash
 printf 'docker %s\n' "$*" >> "${COMMAND_LOG:?}"
 
+# Lets a test stand in for a machine with no running daemon, which is the one
+# state the Makefile turns into a HOST_STACK=1 hint rather than a raw error.
+if [ "$1" = "info" ]; then
+  if [ "${FAKE_DOCKER_DAEMON_DOWN:-0}" = "1" ]; then
+    printf 'Cannot connect to the Docker daemon.\n' >&2
+    exit 1
+  fi
+  exit 0
+fi
+
 if [ "$1" = "network" ] && [ "$2" = "ls" ]; then
   if [ "${FAKE_DOCKER_NETWORK_EXISTS:-0}" = "1" ]; then
     printf '%s\n' "${FAKE_DOCKER_NETWORK_NAME:-website-network}"
@@ -185,4 +195,21 @@ assert_output_contains() {
     printf '%s\n' "$actual_output" >&2
     return 1
   fi
+}
+
+# The host stack starts `serve` in the background, so its stub can append to the
+# command log a beat after the command under test has already returned.
+assert_log_contains_eventually() {
+  local expected="$1"
+
+  # `_` rather than a named counter: the loop only bounds the number of retries,
+  # nothing reads the value.
+  for _ in 1 2 3 4 5; do
+    if grep -F -- "$expected" "$COMMAND_LOG" >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 0.2
+  done
+
+  assert_log_contains "$expected"
 }

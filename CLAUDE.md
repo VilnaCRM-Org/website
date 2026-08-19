@@ -58,6 +58,13 @@ make storybook-build  # Build static Storybook
 Append `CI=1` to run a target on the host without Docker (for example `CI=1 make start`
 runs `next dev` directly).
 
+`.devcontainer/devcontainer.json` boots the same toolchain in Codespaces, VS Code Dev
+Containers, or an agent sandbox: it builds the repo `Dockerfile`'s `base` stage (so Node,
+Bun and the build toolchain are declared exactly once) and sets `CI=1`, so every `make`
+target inside runs host mode instead of trying to `docker compose exec` into itself. The
+browser suites are the one gap — `base` is Alpine/musl and Playwright ships no musl
+browser builds, which is why the repo runs Playwright from a separate glibc image.
+
 ## Testing
 
 ```bash
@@ -78,8 +85,15 @@ make lighthouse-mobile  # Lighthouse audit (mobile)
 ```
 
 Unit suites accept `CI=1` to run on the host without Docker (e.g. `CI=1 make
-test-unit-all`). E2E and visual specs run Playwright inside the prod/test compose stack;
-E2E uses Mockoon to mock the API. The test-layer map and coverage policy live in
+test-unit-all`). E2E and visual specs default to Playwright inside the prod/test compose
+stack, where E2E uses Mockoon to mock the API; `HOST_STACK=1` runs them (and memlab)
+against a host-built static export instead, for machines with no Docker daemon. Fetch the
+browsers once with `HOST_STACK=1 make playwright-install`. `HOST_STACK` is deliberately
+separate from `CI` — GitHub Actions sets `CI=true`, so folding the two together would move
+the e2e, visual, and memory-leak jobs off the containers their baselines come from. K6 load
+tests stay Docker-only. Playwright runs four projects: chromium, firefox, webkit, and
+`mobile-chrome` (Pixel 7 emulation — touch, mobile UA, DPR 2.625) scoped to
+`src/test/e2e/mobile/**`. The test-layer map and coverage policy live in
 [`agents.md`](agents.md).
 
 ### Running a single unit test
@@ -93,11 +107,12 @@ TEST_ENV=server bun x jest src/test/apollo-server/<spec>.test.ts
 
 ```bash
 make format     # Prettier (run before lint)
-make lint       # lint-next + lint-tsc + lint-md + lint-deps
+make lint       # lint-next + lint-tsc + lint-md + lint-deps + lint-pins
 make lint-next  # ESLint (flat config, eslint.config.mjs)
 make lint-tsc   # TypeScript (tsc, no emit)
 make lint-md    # markdownlint
 make lint-deps  # dependency-cruiser on src, pages, tests
+make lint-pins  # Node/Bun/Playwright pin drift across .nvmrc, engines, Dockerfiles, CI
 ```
 
 Two gates sit deliberately outside `make lint`: `make lint-metrics` (host-only Rust
@@ -131,6 +146,30 @@ the [`complexity-management`](.claude/skills/complexity-management/SKILL.md) ski
 refactoring moves (extract helper, lookup map, typed options object, split file, consolidate
 exits).
 
+### Offline posture and the service worker (issue #338)
+
+`public/layout/favicon/site.webmanifest` declares `display: "standalone"`, so the site is
+installable. `public/sw.js` is what makes that promise honest: it precaches exactly one
+document (`/offline.html`, exported from `pages/offline.tsx`) and serves it only when a
+same-origin **navigation** fails. Every other request returns before `respondWith`, so the
+browser handles it as if no worker existed — that is what keeps the Playwright `page.route`
+mocks and the Mockoon-backed e2e stack observing real requests, and what stops a stale
+build being served after a deploy. Nothing is written to the cache at runtime.
+
+Constraints to respect when touching it:
+
+- Write the worker through `globalThis` member access only. `public/` is linted, and bare
+  `self`/`addEventListener` are `no-restricted-globals` errors while `clients`/`skipWaiting`
+  are `no-undef` errors. Suppressing either is banned.
+- The fallback is reached as `/offline.html`, never `/offline`: the CloudFront edge function
+  hard-404s an extensionless single-segment path.
+- `public/sw.js` is covered by the `edge` Jest layer at 100% per-file
+  (`make test-unit-edge`), the same way `scripts/cloudfront_routing.js` is. Never ship a
+  hand-written runtime file that no layer covers.
+- Every navigable URL in the manifest is asserted against the real route set by
+  `src/test/unit/pwa/manifest-contract.test.ts` — that gate exists because the manifest once
+  shipped a shortcut to a `/dashboard` route that does not exist.
+
 ## Continuous Integration (parallel PR pipeline)
 
 Each PR check is its own workflow on its own runner, so they run in parallel and a PR is
@@ -145,7 +184,8 @@ tiered off, weakened, or removed.
 - **Caching.** Node jobs restore the Bun cache (`~/.bun/install/cache`, keyed on the Node version
   and `bun.lock`).
 - **Matrices.** The Playwright e2e suite splits across a `--shard` matrix
-  (`test-e2e-shard`), Lighthouse runs `desktop`/`mobile` in parallel, the K6 load suites run
+  (`test-e2e-shard`) covering all four projects, so the `mobile-chrome` emulation specs are
+  gated on every PR; Lighthouse runs `desktop`/`mobile` in parallel, the K6 load suites run
   in parallel, and mutation testing runs as a shard matrix plus a merge gate.
 - **Mutation sharding.** `make test-mutation-shard` (with `MUTATION_SHARD_INDEX` /
   `MUTATION_SHARD_TOTAL`) writes a per-shard report (`stryker.shard.config.mjs`, with
