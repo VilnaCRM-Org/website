@@ -316,11 +316,14 @@ lint-deps: ## Validate architecture/import boundaries with dependency-cruiser
 	$(PM_EXEC) $(DEPCRUISE_BIN) src pages tests --config .dependency-cruiser.js
 
 # Unlike lint-metrics and lint-contracts below, this one IS in the `lint` aggregate
-# and in CI_LINT_TARGETS: it is pure POSIX shell over files already in the checkout,
-# so it needs no extra binary and touches no network. `make lint` is what
+# and in CI_LINT_TARGETS: it is plain shell over files already in the checkout, so
+# it needs no extra binary and touches no network. `make lint` is what
 # static-testing.yml runs on every PR, so that is where the gate actually bites.
-# It checks the repo's Node version sources against each other; the separate
-# check-node-version target checks the *running* Node against package.json engines.
+# It carries no $(PM_EXEC) for the same reason lint-metrics does not: nothing here
+# comes from node_modules, so requiring the dev container to be up would only slow
+# the check down. It reads the repo's Node version sources and compares them with
+# each other; the separate check-node-version target compares the *running* Node
+# with package.json engines.
 lint-node-version: ## Fail when .nvmrc, the Dockerfile base images, package.json engines, and the setup-node steps disagree
 	./scripts/ci/check-node-version-sources.sh
 
