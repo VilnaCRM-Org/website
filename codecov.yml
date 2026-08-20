@@ -84,24 +84,25 @@ coverage:
         if_ci_failed: error
         only_pulls: true
 
+# `carryforward` is deliberately left off every flag. All four reports are uploaded from
+# the single `codecov` job, so a flag going missing means that job failed — and carrying
+# the previous commit's report forward would paper over exactly the dropped layer these
+# statuses exist to catch, posting green from stale coverage. Without it, a missing
+# report surfaces as an absent or failing status instead.
 flags:
   client:
     paths:
       - src/
-    carryforward: true
   server:
     paths:
       - src/
       - docker/
-    carryforward: true
   edge:
     paths:
       - scripts/
-    carryforward: true
   integration:
     paths:
       - src/
-    carryforward: true
 
 # Mirrors the non-product exclusions the Jest layers already apply: declaration files,
 # Storybook stories, and the fixtures/helpers that only exist to support other tests.

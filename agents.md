@@ -160,9 +160,12 @@ the job is triage that tells you the failure is intermittent; it is never the fi
 
 ### What to do about one
 
-1. Download the run's `playwright-report/` artifact and open the trace for the failed
-   attempt. The trace has the DOM, network, and console for the failing run — enough to
-   name the race without reproducing it.
+1. Get the diagnostic artifact. For a Playwright flake that is the run's
+   `playwright-report/` artifact: open the trace for the failed attempt, which carries
+   the DOM, network, and console for that run — enough to name the race without
+   reproducing it. The other suites produce no trace, so capture what they do emit:
+   the failing job log, plus the Memlab retainer trace, the K6 summary, or the Stryker
+   report for those suites.
 2. File an issue. Record the spec, the browser project, the run URL, and the trace.
    A flake nobody wrote down is a flake nobody fixes.
 3. Fix the cause. Await the state the test needs — a role-and-name locator, a response,
@@ -184,7 +187,10 @@ that outlives its sprint, is an unlogged coverage hole and blocks review.
 
 - Raise `retries`, in the config or per spec. Retries exist to surface the flake, not to
   absorb it; raising them deletes the signal this policy runs on.
-- Add a fixed `waitForTimeout`, or widen a timeout, to give the race more room.
+- Add a fixed `waitForTimeout`, or widen a test, expect, or step timeout, to give the
+  race more room. A workflow **job** `timeout-minutes` is a different thing — it caps a
+  hung runner and may be raised when the suite legitimately got longer, never to let a
+  racing test eventually settle.
 - Loosen an assertion, make it conditional, or add `maxDiffPixels` to a visual diff.
 - Refresh visual baselines with `make test-visual-update` to make an unexplained diff go
   away — that target is only for a deliberate, reviewed UI change.
@@ -214,8 +220,9 @@ A change to tests is done only when every statement below is true.
 - Positive, negative, and edge/boundary cases are present for every applicable class.
 - Every skipped scenario class has a concrete `Not applicable: <reason>` justification.
 - Bug fixes include a regression test that fails before the fix and passes after it.
-- No suite was made green by a re-run, a raised retry count, or a widened timeout; any
-  flake seen along the way has an issue and a trace attached to it.
+- No suite was made green by a re-run, a raised retry count, or a test/expect/step
+  timeout widened to hide a flake; any flake seen along the way has an issue and the
+  suite's diagnostic artifact attached to it.
 - Assertions check user-facing behavior, not implementation details or snapshots alone.
 - Localized text and accessibility-visible behavior are asserted where the UI changed.
 - New or changed `ui-*` primitives and exported feature components have a `*.stories.tsx`.

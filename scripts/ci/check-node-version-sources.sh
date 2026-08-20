@@ -39,15 +39,21 @@ abort() {
 # --- 1. The authoritative version ---------------------------------------------
 [ -f .nvmrc ] || abort ".nvmrc is missing; it is the authoritative Node version"
 
-nvmrc_version="$(tr -d '[:space:]' <.nvmrc)"
+# Only surrounding whitespace is trimmed, never whitespace *inside* the value: a
+# `.nvmrc` reading "24. 18.0" is malformed and must fail the format check below
+# rather than be silently repaired into something that passes.
+nvmrc_version="$(sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' <.nvmrc | head -n 1)"
 
 echo "$nvmrc_version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' ||
   abort ".nvmrc must pin an exact MAJOR.MINOR.PATCH version, found '${nvmrc_version}'"
 
 # --- 2. Docker base images ------------------------------------------------------
 # Matches `FROM <registry>/node:<version>-<variant>` and the bare `FROM node:…`,
-# but not an unrelated image whose name merely ends in "node".
-docker_image_pattern='^[[:space:]]*FROM[[:space:]]\+\([^[:space:]]*\/\)\?node:'
+# with any number of leading flags (`FROM --platform=$BUILDPLATFORM node:…`), and
+# case-insensitively because `from` is legal Dockerfile syntax. It does NOT match an
+# unrelated image whose name merely ends in "node": the optional registry group has
+# to end in `/`, so `mynode:` cannot satisfy the literal `node:` that follows it.
+docker_image_pattern='^[[:space:]]*FROM[[:space:]]+(--[^[:space:]]+[[:space:]]+)*([^[:space:]]*/)?node:'
 dockerfiles_checked=0
 node_bases_checked=0
 
@@ -58,14 +64,17 @@ while IFS= read -r dockerfile; do
     [ -n "$from_line" ] || continue
     node_bases_checked=$((node_bases_checked + 1))
 
+    # The tag ends at the first variant separator, digest, or whitespace, so all of
+    # `node:24.18.0-alpine3.23 AS base`, `node:24.18.0 AS base` and
+    # `node:24.18.0@sha256:…` reduce to the same version.
     tag="${from_line#*node:}"
-    image_version="${tag%%-*}"
+    image_version="$(printf '%s' "$tag" | sed 's/[-@[:space:]].*$//')"
 
     if [ "$image_version" != "$nvmrc_version" ]; then
       fail "${dockerfile} pins node:${image_version}, .nvmrc pins ${nvmrc_version}"
     fi
   done <<EOF
-$(grep "$docker_image_pattern" "$dockerfile" || true)
+$(grep -iE "$docker_image_pattern" "$dockerfile" || true)
 EOF
 done <<EOF
 $(find . -name node_modules -prune -o -type f \( -name Dockerfile -o -name '*.Dockerfile' \) -print | sort)
@@ -93,6 +102,49 @@ if [ "$engines_node" != "^${nvmrc_version}" ]; then
 fi
 
 # --- 4. GitHub Actions Node setup -----------------------------------------------
+# Each `actions/setup-node` step is validated as its own YAML block, not by comparing
+# whole-file counts of two greps. Counting is fail-open in both directions: a quoted
+# `uses: "actions/setup-node@…"` is not counted as a step, and a commented-out
+# `# node-version-file: '.nvmrc'` counts as an input — so a step pinning a literal
+# version could balance the totals and pass.
+#
+# The scanner below drops comments, then treats a `- ` list item as opening a step and
+# any later `- ` at the same or shallower indent as closing it (deeper ones are nested
+# sequences inside the step, not new steps). A step that uses setup-node must carry its
+# own `node-version-file` whose value, quoted or bare, is exactly `.nvmrc`.
+scan_setup_node_steps() {
+  awk '
+    function close_step() {
+      if (in_step && has_setup) {
+        steps++
+        if (!has_nvmrc) bad++
+      }
+      in_step = 0; has_setup = 0; has_nvmrc = 0
+    }
+    {
+      line = $0
+      sub(/[[:space:]]+#.*$/, "", line)
+      if (line ~ /^[[:space:]]*#/) next
+      if (line ~ /^[[:space:]]*$/) next
+
+      first = match(line, /[^[:space:]]/)
+      indent = first - 1
+
+      if (substr(line, first, 2) == "- ") {
+        if (!in_step || indent <= step_indent) {
+          close_step()
+          in_step = 1
+          step_indent = indent
+        }
+      }
+
+      if (line ~ /uses:[[:space:]]*["'\'']?actions\/setup-node@/) has_setup = 1
+      if (line ~ /node-version-file:[[:space:]]*["'\'']?\.nvmrc["'\'']?[[:space:]]*$/) has_nvmrc = 1
+    }
+    END { close_step(); print steps + 0, bad + 0 }
+  ' "$1"
+}
+
 workflow_dir='.github/workflows'
 setup_node_steps=0
 
@@ -100,12 +152,13 @@ if [ -d "$workflow_dir" ]; then
   while IFS= read -r workflow; do
     [ -n "$workflow" ] || continue
 
-    uses_count="$(grep -c 'uses:[[:space:]]*actions/setup-node@' "$workflow" || true)"
-    nvmrc_count="$(grep -c "node-version-file:[[:space:]]*'\.nvmrc'" "$workflow" || true)"
-    setup_node_steps=$((setup_node_steps + uses_count))
+    read -r file_steps file_bad <<EOF
+$(scan_setup_node_steps "$workflow")
+EOF
+    setup_node_steps=$((setup_node_steps + file_steps))
 
-    if [ "$uses_count" -ne "$nvmrc_count" ]; then
-      fail "${workflow} has ${uses_count} actions/setup-node step(s) but ${nvmrc_count} \`node-version-file: '.nvmrc'\` input(s)"
+    if [ "$file_bad" -gt 0 ]; then
+      fail "${workflow} has ${file_bad} actions/setup-node step(s) without \`node-version-file: '.nvmrc'\`"
     fi
 
     if grep -q 'vars\.NODE_VERSION' "$workflow"; then
@@ -114,6 +167,9 @@ if [ -d "$workflow_dir" ]; then
   done <<EOF
 $(find "$workflow_dir" -type f \( -name '*.yml' -o -name '*.yaml' \) | sort)
 EOF
+
+  [ "$setup_node_steps" -gt 0 ] ||
+    abort "no actions/setup-node step found in any workflow; the check would pass vacuously"
 fi
 
 # --- Result ---------------------------------------------------------------------

@@ -135,6 +135,110 @@ EOF
   assert_output_contains "node-version-file: '.nvmrc'"
 }
 
+@test "fails when a flagged FROM drifts, rather than skipping the line" {
+  make_consistent_repo "$REPO"
+  cat >"$REPO/Apollo.Dockerfile" <<'EOF'
+FROM --platform=linux/amd64 public.ecr.aws/docker/library/node:23.11.1-alpine3.21 AS base
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 1 ]
+  assert_output_contains 'pins node:23.11.1'
+}
+
+@test "accepts the bare 'FROM node:<version> AS <stage>' form" {
+  make_consistent_repo "$REPO"
+  cat >"$REPO/Apollo.Dockerfile" <<EOF
+FROM node:${NVMRC_VERSION} AS base
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 0 ]
+  assert_output_contains 'node-version: OK'
+}
+
+@test "accepts a digest-pinned base image" {
+  make_consistent_repo "$REPO"
+  cat >"$REPO/Apollo.Dockerfile" <<EOF
+FROM public.ecr.aws/docker/library/node:${NVMRC_VERSION}-alpine3.23@sha256:0000000000000000000000000000000000000000000000000000000000000000 AS base
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 0 ]
+  assert_output_contains 'node-version: OK'
+}
+
+@test "counts a quoted actions/setup-node reference as a step" {
+  make_consistent_repo "$REPO"
+  cat >"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+jobs:
+  unit:
+    steps:
+      - name: Set up Node.js
+        uses: "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020"
+        with:
+          node-version: 24.18.0
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 1 ]
+  assert_output_contains "without \`node-version-file: '.nvmrc'\`"
+}
+
+@test "does not accept a commented-out node-version-file as the input" {
+  make_consistent_repo "$REPO"
+  cat >"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+jobs:
+  unit:
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.18.0
+      # node-version-file: '.nvmrc'
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 1 ]
+  assert_output_contains "without \`node-version-file: '.nvmrc'\`"
+}
+
+@test "judges each setup-node step on its own inputs" {
+  make_consistent_repo "$REPO"
+  # One compliant step and one that pins a literal version: whole-file counting would
+  # balance out to zero, per-step checking must still fail.
+  cat >"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+jobs:
+  unit:
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+      - name: Set up a second Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.18.0
+      - name: Something with its own nested list
+        with:
+          paths:
+            - '.nvmrc'
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 1 ]
+  assert_output_contains '1 actions/setup-node step(s)'
+}
+
+@test "aborts rather than passing vacuously when no setup-node step is found" {
+  make_consistent_repo "$REPO"
+  rm "$REPO/.github/workflows/unit-testing.yml"
+
+  run_checker "$REPO"
+  [ "$status" -eq 1 ]
+  assert_output_contains 'no actions/setup-node step found'
+}
+
 @test "fails when a workflow reintroduces vars.NODE_VERSION" {
   make_consistent_repo "$REPO"
   cat >>"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
@@ -163,6 +267,16 @@ EOF
   run_checker "$REPO"
   [ "$status" -eq 1 ]
   assert_output_contains 'exact MAJOR.MINOR.PATCH'
+}
+
+@test "aborts rather than repairing whitespace inside .nvmrc" {
+  make_consistent_repo "$REPO"
+  printf '  24. 18.0  \n' >"$REPO/.nvmrc"
+
+  run_checker "$REPO"
+  [ "$status" -eq 1 ]
+  assert_output_contains 'exact MAJOR.MINOR.PATCH'
+  assert_output_contains '24. 18.0'
 }
 
 @test "aborts rather than passing vacuously when no Node base image is found" {

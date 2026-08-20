@@ -21,7 +21,7 @@ lint-next	ci	.github/workflows/static-testing.yml	Executed through `make lint`, 
 lint-tsc	ci	.github/workflows/static-testing.yml	Executed through `make lint`, which depends on `lint-tsc`.
 lint-md	ci	.github/workflows/static-testing.yml	Executed through `make lint`, which depends on `lint-md`.
 lint	ci	.github/workflows/static-testing.yml	Executed directly by the static testing workflow.
-lint-node-version	bats	tests/bats/node_version_sources.bats	Executed through `make lint`, which depends on `lint-node-version`; every drift and vacuity path is pinned by the Bats spec for scripts/ci/check-node-version-sources.sh.
+lint-node-version	ci	.github/workflows/static-testing.yml	Executed through `make lint`, which depends on `lint-node-version`; every drift and vacuity path of scripts/ci/check-node-version-sources.sh is additionally pinned by tests/bats/node_version_sources.bats.
 husky	bats	tests/bats/makefile_targets.bats	Validated with a stubbed bun invocation.
 storybook-start	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Storybook binary.
 storybook-build	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Storybook binary.
@@ -71,7 +71,7 @@ lint-deps	ci	.github/workflows/static-testing.yml	Executed through `make lint`, 
 lint-contracts	bats	tests/bats/makefile_targets.bats	Executed directly by contract-testing.yml; deliberately outside `make lint` because the drift check needs network.
 update-contracts	bats	tests/bats/makefile_targets.bats	Maintainer command for bumping USER_SERVICE_VERSION; refreshes both artifacts and the spectral baseline.
 run-deps-lint-tests-dind	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker exec calls.
-test-integration	bats	tests/bats/makefile_targets.bats	Validated by invoking Jest with TEST_ENV=integration through a stubbed jest binary.
+test-integration	ci	.github/workflows/codecov.yml	Executed directly by the codecov workflow so the integration coverage report can be uploaded; also validated in tests/bats/makefile_targets.bats with a stubbed jest binary.
 test-integration-watch	bats	tests/bats/makefile_targets.bats	Validated by invoking Jest in watch mode with TEST_ENV=integration through a stubbed jest binary.
 ci-test-integration	ci	.github/workflows/integration-testing.yml	Executed directly by the integration testing workflow.
 ci-setup	bats	tests/bats/makefile_targets.bats	Validated by bringing up the stubbed dev service and asserting the readiness wait.

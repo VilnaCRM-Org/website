@@ -211,12 +211,16 @@ are _running_ satisfies `engines`.
 
 #### Coverage reporting
 
-`make test-unit-all` runs the client, server and edge Jest layers, and each writes its
-own report under `coverage/<layer>/`. Each layer also enforces its own
-`coverageThreshold` in [`jest.config.ts`](jest.config.ts); those thresholds are the
-gate, and they only ever move up. `.github/workflows/codecov.yml` uploads the three
-reports under matching Codecov flags, and [`codecov.yml`](codecov.yml) turns the
-resulting project and patch statuses into real, non-informational checks. Uploads fail
+`make test-unit-all` runs the client, server and edge Jest layers and `make
+test-integration` runs the fourth; each writes its own report under `coverage/<layer>/`.
+Every layer also enforces its own `coverageThreshold` in
+[`jest.config.ts`](jest.config.ts); those thresholds are the gate, and they only ever
+move up. `.github/workflows/codecov.yml` runs all four suites and uploads all four
+reports under matching Codecov flags — `client`, `server`, `edge` and `integration` —
+and [`codecov.yml`](codecov.yml) turns the resulting project and patch statuses into
+real, non-informational checks. The integration report is the only one collected over
+the whole of `src/**`; the other three measure just the files their tests import, so
+without it the uploaded picture cannot see a module with no test at all. Uploads fail
 closed once the `CODECOV_TOKEN` repository secret is configured; until then the job
 prints a warning saying so rather than reporting a discarded upload as success.
 
