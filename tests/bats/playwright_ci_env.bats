@@ -14,6 +14,14 @@
 # matching, so the prose in playwright.config.ts that quotes `trace: 'on-first-retry'`
 # cannot stand in for the setting itself, and the artifact assertions are scoped to a
 # single upload step rather than to the file as a whole.
+#
+# These are text assertions on purpose, and they do pin the single-line shape of the
+# settings they name: hoisting `retries: process.env.CI ? 2 : 0` into a variable or
+# splitting it across lines will fail this suite even though the behaviour is intact.
+# That is the cheap trade. The alternative — importing playwright.config.ts to inspect
+# the resolved object — cannot see the bug this file exists for, because the config
+# resolves identically in both worlds; only the container's environment differs. When a
+# refactor legitimately changes the shape, update the pattern here in the same commit.
 
 load './test_helper.bash'
 

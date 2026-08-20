@@ -7,7 +7,9 @@ update tests.
 
 The stack is Next.js 16, React 19, TypeScript 6, MUI 9 with Emotion, Apollo Client 4 with
 Apollo Server 5, react-hook-form, i18next, and Storybook 10. The package manager is
-`bun@1.3.5` and Node `>=20`. The project structure is adapted from bulletproof-react. All
+`bun@1.3.5` and Node is the version pinned in `.nvmrc` (`24.18.0`), which `make
+lint-node-version` holds every other pin site to. The project structure is adapted from
+bulletproof-react. All
 commands are Makefile targets run from the repository root.
 
 ## Mandatory Test-Scenario Coverage Policy
@@ -177,11 +179,15 @@ the job is triage that tells you the failure is intermittent; it is never the fi
 
 ### Quarantine is a last resort, and it expires
 
-If a flake blocks a release and the cause is not yet understood, quarantine the single
-spec with `test.fixme(true, 'flaky — #NNN')` — never `test.skip` without a reason string,
-and never a whole file or project. The annotation must name an open issue, and the
-quarantine is expected to be lifted within one sprint. A quarantine with no issue, or one
-that outlives its sprint, is an unlogged coverage hole and blocks review.
+If a flake blocks a release and the cause is not yet understood, quarantine that one spec
+by changing its own declaration from `test(...)` to `test.fixme(...)`, with the issue
+number in a comment directly above it. Do not reach for the conditional
+`test.fixme(condition, description)` form: at file or `describe` scope that one fixmes
+every test in the enclosing block, so it quarantines far more than the flake and drops
+coverage for specs that were never failing. Never quarantine a whole file or a whole
+project. The quarantine must name an open issue and is expected to be lifted within one
+sprint; one with no issue, or one that outlives its sprint, is an unlogged coverage hole
+and blocks review.
 
 ### Never do these
 

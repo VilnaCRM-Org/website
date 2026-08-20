@@ -148,29 +148,32 @@ scan_setup_node_steps() {
 workflow_dir='.github/workflows'
 setup_node_steps=0
 
-if [ -d "$workflow_dir" ]; then
-  while IFS= read -r workflow; do
-    [ -n "$workflow" ] || continue
+# An absent workflow directory is not "nothing to check" — it is the check losing its
+# subject, which is how a gate quietly stops enforcing anything.
+[ -d "$workflow_dir" ] ||
+  abort "${workflow_dir} is missing; the setup-node rule would not be enforced at all"
 
-    read -r file_steps file_bad <<EOF
+while IFS= read -r workflow; do
+  [ -n "$workflow" ] || continue
+
+  read -r file_steps file_bad <<EOF
 $(scan_setup_node_steps "$workflow")
 EOF
-    setup_node_steps=$((setup_node_steps + file_steps))
+  setup_node_steps=$((setup_node_steps + file_steps))
 
-    if [ "$file_bad" -gt 0 ]; then
-      fail "${workflow} has ${file_bad} actions/setup-node step(s) without \`node-version-file: '.nvmrc'\`"
-    fi
+  if [ "$file_bad" -gt 0 ]; then
+    fail "${workflow} has ${file_bad} actions/setup-node step(s) without \`node-version-file: '.nvmrc'\`"
+  fi
 
-    if grep -q 'vars\.NODE_VERSION' "$workflow"; then
-      fail "${workflow} reads vars.NODE_VERSION; pin Node through .nvmrc, whose value is reviewable"
-    fi
-  done <<EOF
+  if grep -q 'vars\.NODE_VERSION' "$workflow"; then
+    fail "${workflow} reads vars.NODE_VERSION; pin Node through .nvmrc, whose value is reviewable"
+  fi
+done <<EOF
 $(find "$workflow_dir" -type f \( -name '*.yml' -o -name '*.yaml' \) | sort)
 EOF
 
-  [ "$setup_node_steps" -gt 0 ] ||
-    abort "no actions/setup-node step found in any workflow; the check would pass vacuously"
-fi
+[ "$setup_node_steps" -gt 0 ] ||
+  abort "no actions/setup-node step found in any workflow; the check would pass vacuously"
 
 # --- Result ---------------------------------------------------------------------
 if [ "$failures" -gt 0 ]; then

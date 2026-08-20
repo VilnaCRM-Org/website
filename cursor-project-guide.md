@@ -11,8 +11,9 @@ the mandatory test-coverage contract; this guide assumes it and points back to i
 React 19 with TypeScript 6. The UI uses MUI 9 with Emotion; data is fetched with Apollo Client 4
 against a local Apollo Server 5 GraphQL mock; forms use react-hook-form; copy is localized with
 i18next and react-i18next; components are documented in Storybook 10. The package manager is
-`bun@1.3.5` and Node is `>=20`. The folder layout is adapted from bulletproof-react, and every
-command runs through a Makefile target from the repository root.
+`bun@1.3.5` and Node is the version pinned in `.nvmrc` (`24.18.0`). The folder layout is
+adapted from bulletproof-react, and every command runs through a Makefile target from the
+repository root.
 
 There is no Redux, no Zustand, and no dependency-injection container, and there is no
 `src/modules/` layer. State is local or served by Apollo's cache, and code is organized by

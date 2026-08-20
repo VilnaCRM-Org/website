@@ -239,6 +239,15 @@ EOF
   assert_output_contains 'no actions/setup-node step found'
 }
 
+@test "aborts when the workflow directory itself is absent" {
+  make_consistent_repo "$REPO"
+  rm -r "$REPO/.github"
+
+  run_checker "$REPO"
+  [ "$status" -eq 1 ]
+  assert_output_contains '.github/workflows is missing'
+}
+
 @test "fails when a workflow reintroduces vars.NODE_VERSION" {
   make_consistent_repo "$REPO"
   cat >>"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
