@@ -122,7 +122,7 @@ NETWORK_NAME                = website-network
 # Dev-side lint and test phases are grouped so local developers and agents can
 # run the same CI stages as the pipeline. The parallel runners execute each
 # target concurrently, group their output, and aggregate exit codes.
-CI_LINT_TARGETS             = lint-next lint-tsc lint-md
+CI_LINT_TARGETS             = lint-next lint-tsc lint-md lint-node-version
 CI_TEST_TARGETS             = ci-test-unit-client ci-test-unit-server ci-test-integration
 CI_LINT_RUNNER              = ./scripts/ci/run-parallel.sh ci-lint
 CI_TEST_RUNNER              = ./scripts/ci/run-parallel.sh ci-test
@@ -315,7 +315,16 @@ lint-deps: ## Validate architecture/import boundaries with dependency-cruiser
 	node scripts/generateLocalization.mjs
 	$(PM_EXEC) $(DEPCRUISE_BIN) src pages tests --config .dependency-cruiser.js
 
-lint: lint-next lint-tsc lint-md lint-deps ## Runs all linters: ESLint, TypeScript, Markdown, and dependency-cruiser in sequence.
+# Unlike lint-metrics and lint-contracts below, this one IS in the `lint` aggregate
+# and in CI_LINT_TARGETS: it is pure POSIX shell over files already in the checkout,
+# so it needs no extra binary and touches no network. `make lint` is what
+# static-testing.yml runs on every PR, so that is where the gate actually bites.
+# It checks the repo's Node version sources against each other; the separate
+# check-node-version target checks the *running* Node against package.json engines.
+lint-node-version: ## Fail when .nvmrc, the Dockerfile base images, package.json engines, and the setup-node steps disagree
+	./scripts/ci/check-node-version-sources.sh
+
+lint: lint-next lint-tsc lint-md lint-deps lint-node-version ## Runs all linters: ESLint, TypeScript, Markdown, dependency-cruiser, and the Node version drift gate in sequence.
 
 # DELIBERATE DIVERGENCE FROM THE npm-tool LINT GATES (lint-next/tsc/md/deps),
 # for the same reason as lint-metrics below:

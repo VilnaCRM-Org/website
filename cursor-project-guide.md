@@ -38,22 +38,24 @@ Import a feature only through its `index.ts` barrel, never through a deep intern
 ## Command surface
 
 Run everything through `make`; the targets are the single source of truth and the same ones CI
-runs. The aggregate gate is `make lint`, which runs ESLint, TypeScript, markdownlint, and
-dependency-cruiser in sequence.
+runs. The aggregate gate is `make lint`, which runs ESLint, TypeScript, markdownlint,
+dependency-cruiser, and the Node version drift gate in sequence.
 
 ```bash
-make format     # Prettier formatting; run before lint
-make lint       # Full gate: lint-next + lint-tsc + lint-md + lint-deps
-make lint-next  # ESLint only
-make lint-tsc   # TypeScript type-check only
-make lint-md    # markdownlint only
-make lint-deps  # dependency-cruiser architecture/import boundaries
-make build      # Production build
+make format             # Prettier formatting; run before lint
+make lint               # Full gate: lint-next + lint-tsc + lint-md + lint-deps + lint-node-version
+make lint-next          # ESLint only
+make lint-tsc           # TypeScript type-check only
+make lint-md            # markdownlint only
+make lint-deps          # dependency-cruiser architecture/import boundaries
+make lint-node-version  # .nvmrc vs Dockerfile bases, engines.node, and setup-node steps
+make build              # Production build
 ```
 
 ## Development setup
 
-Requirements: Node `>=20`, `bun@1.3.5`, and Docker for the containerized dev and test stacks.
+Requirements: the Node version pinned in `.nvmrc` (`24.18.0`), `bun@1.3.5`, and Docker for the
+containerized dev and test stacks.
 
 ```bash
 make check-node-version   # Verify the Node version
@@ -177,6 +179,10 @@ make lint-md    # Markdown issues
 make lint-deps  # Architecture/import-boundary violations
 make lint       # Confirm the full gate is green
 ```
+
+`make lint-node-version` fails when `.nvmrc`, a Dockerfile base image, `package.json`
+`engines.node`, or an `actions/setup-node` step disagree about the Node version. Fix the
+lagging source; never loosen `.nvmrc`.
 
 ### Updating dependencies
 

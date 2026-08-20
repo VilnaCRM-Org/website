@@ -129,6 +129,15 @@ setup_makefile_test_env() {
   # CI orchestration targets (ci-lint, ci-test, pr-comments) shell out to
   # repository scripts; copy them so recursive make runs resolve their paths.
   cp -R "$PROJECT_ROOT/scripts" "$MAKEFILE_SANDBOX/scripts"
+  # lint-node-version reads the repository's Node version sources directly rather
+  # than through a stubbed binary, so the sandbox needs them too. Copying the real
+  # files keeps the sandbox agreeing with the repository by construction; the
+  # drift cases are covered against fixtures in node_version_sources.bats.
+  cp "$PROJECT_ROOT/.nvmrc" "$MAKEFILE_SANDBOX/.nvmrc"
+  cp "$PROJECT_ROOT/package.json" "$MAKEFILE_SANDBOX/package.json"
+  cp "$PROJECT_ROOT"/*.Dockerfile "$PROJECT_ROOT/Dockerfile" "$MAKEFILE_SANDBOX/"
+  mkdir -p "$MAKEFILE_SANDBOX/.github/workflows"
+  cp -R "$PROJECT_ROOT/.github/workflows/." "$MAKEFILE_SANDBOX/.github/workflows/"
 }
 
 setup_ci_script_test_env() {

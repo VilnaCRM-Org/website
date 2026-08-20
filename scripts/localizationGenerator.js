@@ -1,6 +1,15 @@
 const fs = require('fs');
 const path = require('path');
 
+// `fs.readdirSync` returns entries in filesystem order — hash order on ext4, inode
+// order elsewhere — so the bundle this class emits would otherwise depend on which
+// machine built it: feature folders would merge in a different sequence and the JSON
+// keys would land in a different order, producing different bytes from identical
+// sources (#335). Every directory listing is therefore sorted before it is consumed.
+//
+// The sorts below are the comparator-less `Array.prototype.sort()`, which orders by
+// UTF-16 code units. That is deliberate: `localeCompare` would order by the host's ICU
+// data and so reintroduce the machine-dependence the sort exists to remove.
 class LocalizationGenerator {
   i18nPath;
 
@@ -71,23 +80,26 @@ class LocalizationGenerator {
 
     return featureDirectories
       .filter(directory => directory.isDirectory())
-      .map(directory => directory.name);
+      .map(directory => directory.name)
+      .sort();
   }
 
   getLocalizationFromFolder(folder) {
-    const localizationFiles = fs.readdirSync(this.pathToI18nFolder.replace('{folder}', folder), {
-      withFileTypes: true,
-    });
+    const localizationFileNames = fs
+      .readdirSync(this.pathToI18nFolder.replace('{folder}', folder), {
+        withFileTypes: true,
+      })
+      .filter(file => file.isFile())
+      .map(file => file.name)
+      .sort();
 
-    return localizationFiles.reduce((localizations, file) => {
-      if (!file.isFile()) return localizations;
-
-      const [language, fileType] = file.name.split('.');
+    return localizationFileNames.reduce((localizations, fileName) => {
+      const [language, fileType] = fileName.split('.');
 
       if (fileType !== this.jsonFileType) return localizations;
 
       const localizationContent = fs.readFileSync(
-        this.pathToI18nFile.replace('{folder}', folder).replace('{file.name}', file.name),
+        this.pathToI18nFile.replace('{folder}', folder).replace('{file.name}', fileName),
         'utf8'
       );
       const parsedLocalization = JSON.parse(localizationContent);

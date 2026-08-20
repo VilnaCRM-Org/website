@@ -318,6 +318,7 @@ STUB
   assert_output_contains '===== lint-next ====='
   assert_output_contains '===== lint-tsc ====='
   assert_output_contains '===== lint-md ====='
+  assert_output_contains '===== lint-node-version ====='
 }
 
 @test "ci-test runs the dev-side test phase through the parallel runner" {

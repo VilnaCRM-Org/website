@@ -92,13 +92,24 @@ TEST_ENV=server bun x jest src/test/apollo-server/<spec>.test.ts
 ## Code Quality
 
 ```bash
-make format     # Prettier (run before lint)
-make lint       # lint-next + lint-tsc + lint-md + lint-deps
-make lint-next  # ESLint (flat config, eslint.config.mjs)
-make lint-tsc   # TypeScript (tsc, no emit)
-make lint-md    # markdownlint
-make lint-deps  # dependency-cruiser on src, pages, tests
+make format             # Prettier (run before lint)
+make lint               # lint-next + lint-tsc + lint-md + lint-deps + lint-node-version
+make lint-next          # ESLint (flat config, eslint.config.mjs)
+make lint-tsc           # TypeScript (tsc, no emit)
+make lint-md            # markdownlint
+make lint-deps          # dependency-cruiser on src, pages, tests
+make lint-node-version  # .nvmrc vs Dockerfile bases, engines.node, and setup-node steps
 ```
+
+`.nvmrc` is the single authoritative Node version. `make lint-node-version`
+(`scripts/ci/check-node-version-sources.sh`, issue #335) fails when any other source
+disagrees with it — a `FROM …node:<version>` base image in any Dockerfile,
+`package.json` `engines.node` (which must be the caret over the exact `.nvmrc` version,
+not a looser range that merely admits it), an `actions/setup-node` step that does not
+read `node-version-file: '.nvmrc'`, or a workflow reaching for a `vars.NODE_VERSION`
+repository variable. Bump `.nvmrc` first, then let the gate name whatever still lags.
+Do not confuse it with `make check-node-version`, which checks the _running_ Node
+against `engines`.
 
 Two gates sit deliberately outside `make lint`: `make lint-metrics` (host-only Rust
 binary) and `make lint-contracts` (needs network for its drift check). Each has its own

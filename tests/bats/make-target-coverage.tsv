@@ -21,6 +21,7 @@ lint-next	ci	.github/workflows/static-testing.yml	Executed through `make lint`, 
 lint-tsc	ci	.github/workflows/static-testing.yml	Executed through `make lint`, which depends on `lint-tsc`.
 lint-md	ci	.github/workflows/static-testing.yml	Executed through `make lint`, which depends on `lint-md`.
 lint	ci	.github/workflows/static-testing.yml	Executed directly by the static testing workflow.
+lint-node-version	bats	tests/bats/node_version_sources.bats	Executed through `make lint`, which depends on `lint-node-version`; every drift and vacuity path is pinned by the Bats spec for scripts/ci/check-node-version-sources.sh.
 husky	bats	tests/bats/makefile_targets.bats	Validated with a stubbed bun invocation.
 storybook-start	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Storybook binary.
 storybook-build	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Storybook binary.

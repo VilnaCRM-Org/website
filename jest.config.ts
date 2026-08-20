@@ -113,9 +113,13 @@ const config: Config = {
   // jest.setup.ts imports the i18n stack that requires it.
   globalSetup: '<rootDir>/jest.global-setup.js',
   collectCoverage: true,
-  // The edge layer writes to its own coverage dir so its scripts-only report never
-  // clobbers the product coverage the client/server runs write to `coverage/`.
-  coverageDirectory: isEdge ? 'coverage/edge' : 'coverage',
+  // Every layer writes to its own directory, named for the layer (#335). Before that,
+  // only `edge` was separated and client, server and integration all wrote to
+  // `coverage/`: `make test-unit-all` runs client -> server -> edge in sequence, so the
+  // server run overwrote the client run's `lcov.info` and the report Codecov received
+  // was the small apollo-server surface presented as the whole project. Per-layer
+  // directories also let Codecov carry each layer as its own flag.
+  coverageDirectory: `coverage/${TEST_ENV}`,
   // The integration layer uses the `babel` coverage provider so coverage is
   // instrumented on the same babel-jest-transformed output the tests run
   // against; this keeps the strict 100% threshold measured against the exact

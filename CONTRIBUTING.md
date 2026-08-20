@@ -189,6 +189,43 @@ any baselined finding that disappears, so an upstream fix shrinks the baseline
 instead of leaving it stale. Never add an entry to silence a defect in code we
 own — fix the code.
 
+#### One Node version (`.nvmrc`)
+
+[`.nvmrc`](.nvmrc) is the single authoritative Node version for this repository.
+Everything else must agree with it, and `make lint-node-version` — part of the
+aggregate `make lint`, so it runs on every pull request through
+`static-testing.yml` — fails when anything does not:
+
+- a `FROM …node:<version>` base image in any Dockerfile;
+- `package.json` `engines.node`, which must be the caret over the exact `.nvmrc`
+  version (`^24.18.0`), not a looser range like `^24` that merely admits it;
+- an `actions/setup-node` step that pins a version instead of reading
+  `node-version-file: '.nvmrc'`;
+- any workflow reaching for a `vars.NODE_VERSION` repository variable, whose value
+  cannot be seen or reviewed from inside the repository.
+
+To move Node, edit `.nvmrc` first and then run the gate: it names every source that
+still lags. Never loosen a source to make it pass. The separate
+`make check-node-version` target answers a different question — whether the Node you
+are _running_ satisfies `engines`.
+
+#### Coverage reporting
+
+`make test-unit-all` runs the client, server and edge Jest layers, and each writes its
+own report under `coverage/<layer>/`. Each layer also enforces its own
+`coverageThreshold` in [`jest.config.ts`](jest.config.ts); those thresholds are the
+gate, and they only ever move up. `.github/workflows/codecov.yml` uploads the three
+reports under matching Codecov flags, and [`codecov.yml`](codecov.yml) turns the
+resulting project and patch statuses into real, non-informational checks. Uploads fail
+closed once the `CODECOV_TOKEN` repository secret is configured; until then the job
+prints a warning saying so rather than reporting a discarded upload as success.
+
+#### Flaky tests
+
+A test that passes only on a retry is a defect. The detection, triage, quarantine and
+never-do rules live in the [`agents.md`](agents.md) "Flaky Tests" section and apply to
+human contributors and AI agents alike.
+
 ### Commit your update
 
 Commit the changes once you are happy with them.

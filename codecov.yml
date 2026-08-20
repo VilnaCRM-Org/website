@@ -1,0 +1,119 @@
+# Codecov configuration (issue #335 — testability).
+#
+# Before this file existed the Codecov upload was purely decorative: the action ran
+# with `fail_ci_if_error` unset, so a rejected upload still reported success, and with
+# no repository config every status Codecov could have posted defaulted to
+# informational. Coverage could fall to zero and nothing here would have said so.
+#
+# The Jest layers remain the load-bearing gate — each enforces its own
+# `coverageThreshold` in jest.config.ts and fails the build locally and in CI. These
+# statuses are the second line: they catch a drop that stays above the floor.
+
+codecov:
+  # A run that failed before producing coverage must not be scored as a coverage drop;
+  # the failing suite is the signal to act on.
+  require_ci_to_pass: true
+  notify:
+    # Deliberately no `after_n_builds`: the four uploads all come from the one
+    # `codecov` job, and a threshold there turns a single failed upload into a status
+    # that stays pending forever — a merge block nobody can clear. Codecov instead
+    # recomputes the statuses as each report lands, so an early partial verdict
+    # corrects itself once the rest arrive.
+    wait_for_ci: true
+
+coverage:
+  precision: 2
+  round: down
+  range: '90...100'
+
+  status:
+    project:
+      default:
+        # `auto` compares against the base commit: coverage may hold or rise, and may
+        # only fall by `threshold`. It is a ratchet, so it can never be satisfied by
+        # committing a lower number — unlike a fixed target.
+        target: auto
+        threshold: 1%
+        informational: false
+        if_ci_failed: error
+        only_pulls: true
+      client:
+        flags:
+          - client
+        target: auto
+        threshold: 1%
+        informational: false
+        if_ci_failed: error
+        only_pulls: true
+      server:
+        flags:
+          - server
+        target: auto
+        threshold: 1%
+        informational: false
+        if_ci_failed: error
+        only_pulls: true
+      edge:
+        flags:
+          - edge
+        # The edge layer fronts every production request and is pinned at 100% by
+        # jest.config.ts; mirror that exactly rather than allowing a slip.
+        target: 100%
+        threshold: 0%
+        informational: false
+        if_ci_failed: error
+        only_pulls: true
+      integration:
+        flags:
+          - integration
+        # Also pinned at 100% by jest.config.ts, and over the whole of src/**.
+        target: 100%
+        threshold: 0%
+        informational: false
+        if_ci_failed: error
+        only_pulls: true
+
+    patch:
+      default:
+        # New and changed lines carry their own tests. The target sits below the
+        # measured whole-project figure so a legitimately hard-to-cover line does not
+        # block a PR, while an untested feature still does.
+        target: 90%
+        threshold: 0%
+        informational: false
+        if_ci_failed: error
+        only_pulls: true
+
+flags:
+  client:
+    paths:
+      - src/
+    carryforward: true
+  server:
+    paths:
+      - src/
+      - docker/
+    carryforward: true
+  edge:
+    paths:
+      - scripts/
+    carryforward: true
+  integration:
+    paths:
+      - src/
+    carryforward: true
+
+# Mirrors the non-product exclusions the Jest layers already apply: declaration files,
+# Storybook stories, and the fixtures/helpers that only exist to support other tests.
+ignore:
+  - '**/*.d.ts'
+  - '**/*.stories.tsx'
+  - '**/__fixtures__/**'
+  - '**/__mocks__/**'
+  - 'src/test/**'
+  - 'tests/**'
+
+comment:
+  layout: 'condensed_header, condensed_files, condensed_footer'
+  behavior: default
+  require_changes: true

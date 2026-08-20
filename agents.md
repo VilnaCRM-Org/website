@@ -139,6 +139,57 @@ Prefer meaningful behavior assertions over shallow rendering or snapshot-only co
 - Treat snapshots and screenshots as a supplement that guards appearance; the load-bearing
   assertions must check behavior.
 
+## Flaky Tests
+
+A test that passes only on a retry is a defect, not noise. It is a race the suite happened
+to win, and the product code is usually where the race lives. Diagnose it; never re-run it
+until it is green and merge.
+
+### How a flake reaches you
+
+Playwright retries twice in CI and never locally (`retries: process.env.CI ? 2 : 0` in
+`playwright.config.ts`), so a spec that goes green on the second attempt is reported as
+`flaky` rather than `passed`, and `trace: 'on-first-retry'` records the attempt that
+failed. That trace travels inside the `playwright-report/` artifact which
+`e2e-testing.yml` and `visual-testing.yml` upload on every run, passing runs included —
+so the evidence exists before anyone asks for it.
+
+Every other suite — Jest (client, server, edge, integration), Stryker, Bats, Memlab, and
+K6 — runs with no retries at all. An intermittent failure there is a hard red. Re-running
+the job is triage that tells you the failure is intermittent; it is never the fix.
+
+### What to do about one
+
+1. Download the run's `playwright-report/` artifact and open the trace for the failed
+   attempt. The trace has the DOM, network, and console for the failing run — enough to
+   name the race without reproducing it.
+2. File an issue. Record the spec, the browser project, the run URL, and the trace.
+   A flake nobody wrote down is a flake nobody fixes.
+3. Fix the cause. Await the state the test needs — a role-and-name locator, a response,
+   an animation settling — rather than a duration. Most flakes here are a missing await
+   on an async boundary, a shared fixture two specs mutate, or an assertion that races a
+   re-render.
+4. Add the regression coverage the fix deserves, exactly as for any other bug fix
+   (Step 4 above), and say in the pull request which flake it closes.
+
+### Quarantine is a last resort, and it expires
+
+If a flake blocks a release and the cause is not yet understood, quarantine the single
+spec with `test.fixme(true, 'flaky — #NNN')` — never `test.skip` without a reason string,
+and never a whole file or project. The annotation must name an open issue, and the
+quarantine is expected to be lifted within one sprint. A quarantine with no issue, or one
+that outlives its sprint, is an unlogged coverage hole and blocks review.
+
+### Never do these
+
+- Raise `retries`, in the config or per spec. Retries exist to surface the flake, not to
+  absorb it; raising them deletes the signal this policy runs on.
+- Add a fixed `waitForTimeout`, or widen a timeout, to give the race more room.
+- Loosen an assertion, make it conditional, or add `maxDiffPixels` to a visual diff.
+- Refresh visual baselines with `make test-visual-update` to make an unexplained diff go
+  away — that target is only for a deliberate, reviewed UI change.
+- Merge on a re-run without an issue filed.
+
 ## Storybook Story Coverage
 
 Storybook is the composability and visual-review contract for the UI. Story coverage is
@@ -163,6 +214,8 @@ A change to tests is done only when every statement below is true.
 - Positive, negative, and edge/boundary cases are present for every applicable class.
 - Every skipped scenario class has a concrete `Not applicable: <reason>` justification.
 - Bug fixes include a regression test that fails before the fix and passes after it.
+- No suite was made green by a re-run, a raised retry count, or a widened timeout; any
+  flake seen along the way has an issue and a trace attached to it.
 - Assertions check user-facing behavior, not implementation details or snapshots alone.
 - Localized text and accessibility-visible behavior are asserted where the UI changed.
 - New or changed `ui-*` primitives and exported feature components have a `*.stories.tsx`.
