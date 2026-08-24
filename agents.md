@@ -56,6 +56,19 @@ strength), `make test-bats` (Makefile and CI shell flows), `make test-memory-lea
 `make load-tests` (traffic, K6), and `make lighthouse-desktop` / `make lighthouse-mobile`
 (performance, accessibility, best practices).
 
+Two of those suites assert on more than their own exit code, so a change that touches them
+needs a second look (issues #359 and #354):
+
+- **When you change an e2e spec**, CI re-runs it with `make test-e2e-burnin`
+  (`--repeat-each=5 --retries=0`) and fails at two or more failures. A separate gate job
+  fails if that spec passed only on a retry. Both legs are scoped to the specs in the diff.
+  Fix the race — never add a wait, widen `retries`, or make the assertion conditional to
+  get through.
+- **When a change adds a leak**, `make test-memory-leak` fails with the retainer trace.
+  Accepted, pre-existing clusters live in `src/test/memory-leak/leak-baseline.json`, each
+  with a reason, a tracking issue, and a `validUntil` expiry. An allowance is for debt that
+  predates the gate, never for a leak your change introduced.
+
 In CI these suites are fanned out to run in parallel (issue #316): every workflow declares a
 `concurrency` group (PR checks cancel superseded runs; deploy/release/sandbox do not),
 the Playwright e2e suite, Lighthouse, and the K6 load suites run as matrices, and mutation

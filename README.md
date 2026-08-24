@@ -117,9 +117,11 @@ Testing
   make test-integration-watch: runs the integration layer in watch mode
   make test-contract: checks the Mockoon mock against the committed OpenAPI contract
   make test-bats: runs the Bats shell regression suite for Makefile targets and CI helper scripts
-  make test-memory-leak: runs memory leak tests using Memlab
+  make test-memory-leak: runs memory leak tests using Memlab and fails on unaccounted leak clusters
   make load-tests: executes load tests using the K6 library
   make test-e2e: runs end-to-end tests inside the prod container
+  make test-e2e-burnin: repeats E2E_BURNIN_SPECS with retries off to expose flaky specs
+  make check-e2e-flakes: grades a Playwright JSON report for retry-passes and burn-in flakes
   make test-e2e-ui: runs end-to-end tests with UI inside the prod container
   make test-visual: runs visual tests inside the prod container
   make test-visual-ui: runs visual tests with UI inside the prod container

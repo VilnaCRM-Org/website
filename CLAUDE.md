@@ -68,6 +68,8 @@ make test-unit-edge     # Edge-script unit tests (TEST_ENV=edge, node; scripts/,
 make test-integration   # Integration layer (TEST_ENV=integration)
 make test-contract      # Mockoon mock vs. the committed OpenAPI contract (TEST_ENV=contract)
 make test-e2e           # Playwright E2E (prod stack + Mockoon API mock)
+make test-e2e-burnin    # Repeat E2E_BURNIN_SPECS with retries off to expose flaky specs
+make check-e2e-flakes   # Grade a Playwright JSON report (FLAKE_MODE=retry-pass|burn-in|census)
 make test-visual        # Playwright visual regression
 make test-visual-update # Refresh visual snapshots after a reviewed UI change
 make test-mutation      # Stryker mutation testing
@@ -82,6 +84,24 @@ Unit suites accept `CI=1` to run on the host without Docker (e.g. `CI=1 make
 test-unit-all`). E2E and visual specs run Playwright inside the prod/test compose stack;
 E2E uses Mockoon to mock the API. The test-layer map and coverage policy live in
 [`agents.md`](agents.md).
+
+### Flake and leak gates (issues #359, #354)
+
+Two suites that used to run without asserting anything now fail closed:
+
+- **E2E flakes.** `playwright.config.ts` retries twice in CI, so a spec that passes only on
+  a retry is reported green. The JSON reporter feeds `scripts/ci/flaky-report.ts`; the
+  `e2e flake gate` job fails when a spec **the PR changed** passed on a retry, and the
+  `burn in changed e2e specs` job re-runs those specs with `--repeat-each=5 --retries=0`
+  and fails at two or more failures. Flakes in untouched specs are annotated, not blocked,
+  and the nightly `e2e flake census` tracks them in a labelled issue.
+- **Memory leaks.** `src/test/memory-leak/runMemlabTests.js` reads the leak clusters memlab
+  returns and exits non-zero for any cluster not recorded in
+  `src/test/memory-leak/leak-baseline.json`. Every baseline entry needs a reason, a
+  tracking issue, and a `validUntil` date; the gate fails once that date passes.
+
+Never widen a retry budget, raise a leak allowance, or add an allowance for a leak your
+change introduced — fix the race or the retainer instead.
 
 ### Running a single unit test
 
