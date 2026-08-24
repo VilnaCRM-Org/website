@@ -37,6 +37,22 @@ RCA_EXCLUDES                = */test/* *.d.ts */assets/* */config/*
 METRICS_POLICY_PATH         = config/metrics-policy.json
 RCA_SHA256_LINUX            = 9ec2a217b8ff191e02dab5d5f2eee6158b63fd975c532b2c5d67c2e6c7249894
 
+# oasdiff is a host-installed Go binary provisioned exactly like RCA above: pinned
+# version + pinned digest, installed to the gitignored ./bin. Never resolve it as
+# "latest" at install time — that would silently defeat the checksum pin. The
+# digest is the one oasdiff publishes in the release's checksums.txt for
+# oasdiff_$(OASDIFF_VERSION)_linux_amd64.tar.gz (note: the asset name carries no
+# leading "v"; only the tag does).
+OASDIFF_VERSION             = 1.27.0
+OASDIFF_BIN                 = ./bin/oasdiff
+OASDIFF_SHA256_LINUX        = 335de79be8df706735f7ab3edc35186e853c8add93d489d67e4e7fd70a07d08a
+# The upstream repo whose newest release the nightly leg compares the committed
+# baseline against. The pin the repo actually consumes stays USER_SERVICE_VERSION
+# in .env — this is only the moving target the drift report is written about.
+USER_SERVICE_REPO           = VilnaCRM-Org/user-service
+USER_SERVICE_SPEC_PATH      = .github/openapi-spec/spec.yaml
+OPENAPI_BASELINE            = contracts/user-service/openapi.json
+
 NEXT_BUILD                  = $(NEXT_BIN) build --webpack
 NEXT_BUILD_CMD              = $(NEXT_BUILD) && $(IMG_OPTIMIZE)
 STORYBOOK_BUILD_CMD         = $(STORYBOOK_BIN) build --output-dir storybook-static-ci
@@ -123,7 +139,7 @@ NETWORK_NAME                = website-network
 # run the same CI stages as the pipeline. The parallel runners execute each
 # target concurrently, group their output, and aggregate exit codes.
 CI_LINT_TARGETS             = lint-next lint-tsc lint-md
-CI_TEST_TARGETS             = ci-test-unit-client ci-test-unit-server ci-test-integration
+CI_TEST_TARGETS             = ci-test-unit-client ci-test-unit-server ci-test-integration ci-test-contract
 CI_LINT_RUNNER              = ./scripts/ci/run-parallel.sh ci-lint
 CI_TEST_RUNNER              = ./scripts/ci/run-parallel.sh ci-test
 
@@ -335,6 +351,30 @@ lint: lint-next lint-tsc lint-md lint-deps lint-docker-policy ## Runs all linter
 lint-contracts: ## Validate the pinned user-service contracts: client GraphQL operations, the OpenAPI spectral baseline, and artifact drift
 	$(PM_EXEC) node scripts/contracts/lint-contracts.mjs
 
+# DELIBERATE DIVERGENCE FROM THE npm-tool LINT GATES, for both of the reasons
+# lint-contracts and lint-metrics each cite one of:
+#   * Host-only: oasdiff is a Go binary absent from the node:*-alpine dev image,
+#     so this target does NOT use $(PM_EXEC) and runs on the host in both modes.
+#   * Network: it resolves the newest upstream release and downloads that spec.
+#   * Therefore NOT in the `lint` aggregate and NOT in CI_LINT_TARGETS — both
+#     route through the dev container / run-parallel.sh, and static-testing.yml
+#     is hermetic by design. Its CI surface is .github/workflows/openapi-drift.yml.
+# ADVISORY BY DESIGN: upstream moving on is not a PR author's fault, so the
+# nightly turns breaking drift into a tracking issue rather than a red check.
+# The BLOCKING contract gate is `make test-contract`.
+# This target is the HUMAN-FACING surface. GNU make collapses every recipe
+# failure to its own exit 2, so it cannot distinguish "breaking drift" (1) from
+# "the check could not run" (2) — openapi-drift.yml therefore calls the script
+# directly. Both paths run the identical script; only the exit-code fidelity
+# differs. The script provisions the pinned binary itself.
+lint-openapi: ## Report breaking changes between the committed OpenAPI baseline and the newest upstream release (host-only, network; advisory)
+	@OASDIFF_BIN="$(OASDIFF_BIN)" OASDIFF_VERSION="$(OASDIFF_VERSION)" \
+	 OASDIFF_SHA256_LINUX="$(OASDIFF_SHA256_LINUX)" \
+	 OPENAPI_BASELINE="$(OPENAPI_BASELINE)" \
+	 USER_SERVICE_REPO="$(USER_SERVICE_REPO)" \
+	 USER_SERVICE_SPEC_PATH="$(USER_SERVICE_SPEC_PATH)" \
+	 bash scripts/ci/openapi-drift.sh
+
 update-contracts: ## Re-fetch the user-service contracts for the pinned USER_SERVICE_VERSION and refresh the spectral baseline
 	$(PM_EXEC) node scripts/fetchSwaggerSchema.mjs
 	$(PM_EXEC) node scripts/fetchGraphqlSchema.mjs
@@ -432,6 +472,19 @@ test-integration-watch: ## Run integration tests in watch mode (TEST_ENV=integra
 
 ci-test-integration: ## Run integration tests directly assuming deps are installed (CI entrypoint)
 	env TEST_ENV=integration $(JEST_BIN) $(JEST_FLAGS)
+
+# The contract layer (#350) boots the Mockoon mock e2e runs against — in-process,
+# via @mockoon/commons-server, the same libraries Mockoon.Dockerfile's CLI wraps —
+# and holds every response against the committed user-service OpenAPI document.
+# It is hermetic: no network, no Docker, no compose stack, so it runs identically
+# on a bare CI runner and inside the dev container. Kept OUT of the integration
+# layer because that layer's charter is a global 100% coverage sweep over src/**,
+# which a spec about an HTTP mock's wire format contributes nothing to.
+test-contract: ## Run the mock-vs-OpenAPI contract parity layer using Jest (TEST_ENV=contract, target: tests/contract)
+	$(UNIT_TESTS) TEST_ENV=contract $(JEST_BIN) $(JEST_FLAGS)
+
+ci-test-contract: ## Run contract parity tests directly assuming deps are installed (CI entrypoint)
+	env TEST_ENV=contract $(JEST_BIN) $(JEST_FLAGS)
 
 # ============================================================================
 # CI orchestration (issue #305 — CRM command-surface parity)

@@ -182,6 +182,33 @@ update-contracts` — it re-fetches both artifacts and refreshes the spectral
 baseline. Commit the resulting diff; it is the reviewable record of what
 changed upstream.
 
+Two further gates keep the **mock** honest, because the whole Playwright suite
+talks to Mockoon rather than a real backend and a green e2e run therefore only
+proves the app agrees with the mock:
+
+- **`make test-contract` (blocking, every PR).** Boots Mockoon in-process from
+  the committed document and holds every documented operation's response against
+  it — status, media type, schema, and no property the schema never declares.
+  Its CI home is
+  [`contract-parity-testing.yml`](.github/workflows/contract-parity-testing.yml);
+  the status-check name a maintainer must add to the `main` required-checks
+  ruleset is **`contract parity testing / mock-contract-parity`** (branch
+  protection is a repository setting and cannot be committed).
+  It also validates the swagger e2e fixtures against the same schema and pins the
+  `@mockoon/*` libraries to the `@mockoon/cli` version `Mockoon.Dockerfile`
+  installs. When it goes red, fix the mock or the contract — never relax a rule.
+  If you bump one Mockoon pin, bump both in the same commit.
+- **`make lint-openapi` (advisory, nightly).** Reports breaking changes between
+  the committed baseline and the newest upstream **release** using a pinned,
+  SHA256-verified `oasdiff`. Upstream moving on is not a PR author's fault, so
+  [`openapi-drift.yml`](.github/workflows/openapi-drift.yml) files or refreshes an
+  `api-contract` tracking issue instead of failing a check, and closes it once
+  the baseline is current again. Like `lint-contracts` and `lint-metrics` it sits
+  outside `make lint` — it needs the network and a host binary.
+
+Both gates read the single committed baseline. Do not add a second copy of the
+spec: it would drift with nothing watching it.
+
 The baseline in [`contracts/spectral-baseline.json`](contracts/spectral-baseline.json)
 records defects in the upstream spec that this repo does not control. It is not
 a suppression list: the gate fails on any finding **not** in it, and equally on

@@ -66,6 +66,7 @@ make test-unit-client   # Client unit tests (TEST_ENV=client, jsdom)
 make test-unit-server   # Apollo server unit tests (TEST_ENV=server, node)
 make test-unit-edge     # Edge-script unit tests (TEST_ENV=edge, node; scripts/, 100% per-file)
 make test-integration   # Integration layer (TEST_ENV=integration)
+make test-contract      # Mockoon mock vs. the committed OpenAPI contract (TEST_ENV=contract)
 make test-e2e           # Playwright E2E (prod stack + Mockoon API mock)
 make test-visual        # Playwright visual regression
 make test-visual-update # Refresh visual snapshots after a reviewed UI change
@@ -100,9 +101,10 @@ make lint-md    # markdownlint
 make lint-deps  # dependency-cruiser on src, pages, tests
 ```
 
-Two gates sit deliberately outside `make lint`: `make lint-metrics` (host-only Rust
-binary) and `make lint-contracts` (needs network for its drift check). Each has its own
-workflow — `rust-code-analysis.yml` and `contract-testing.yml`.
+Three gates sit deliberately outside `make lint`: `make lint-metrics` (host-only Rust
+binary), `make lint-contracts` (needs network for its drift check), and
+`make lint-openapi` (both — a host Go binary plus the network). Each has its own workflow
+— `rust-code-analysis.yml`, `contract-testing.yml` and `openapi-drift.yml`.
 
 Run `make format` before `make lint`; formatting is intentionally separate from the lint
 verification suite. Git hooks are managed by Husky. CI phases are mirrored locally by
@@ -112,6 +114,34 @@ PR review comments.
 
 Never satisfy a gate with `eslint-disable`, `prettier-ignore`, a markdownlint disable, or a
 lowered threshold — fix the root cause.
+
+### API contract parity (issue #350)
+
+Every Playwright e2e run talks to Mockoon, so a green e2e suite alone only proves the app
+agrees with the **mock**. Two gates anchored on the single committed baseline
+`contracts/user-service/openapi.json` — the artifact `lint-contracts` drift-gates and
+`Mockoon.Dockerfile` serves — keep that mock honest. Never add a second copy of the spec.
+
+- **`make test-contract` — blocking, every PR** (`contract-parity-testing.yml`). The
+  `TEST_ENV=contract` Jest layer (`tests/contract/**/*.contract.test.ts`) boots Mockoon
+  in-process via `@mockoon/commons-server`, replays every documented operation, and asserts
+  four rules per response: the status is documented, the media type is declared, the body
+  validates against the schema, and the body carries **no property the schema never
+  declares**. That last rule is stricter than OpenAPI's permissive default on purpose — it
+  is the only one that catches a renamed field here, because upstream misplaces `required`
+  on the array schema of `GET /api/users` rather than on its `items`.
+  `parity-detects-drift.contract.test.ts` seeds real defects into **copies** of the mock
+  data and asserts each turns the gate red; never seed a defect into the committed
+  contract, which `lint-contracts` guards. The `@mockoon/*` devDependencies are pinned
+  **exactly** to the `@mockoon/cli` version `Mockoon.Dockerfile` installs and a spec
+  enforces it — move both pins in the same commit, never relax the assertion.
+- **`make lint-openapi` — advisory, nightly** (`openapi-drift.yml`). A pinned,
+  SHA256-verified `oasdiff` compares the baseline to the newest upstream **release**
+  (resolved from the releases API, not by semver-sorting tags — upstream restarted its
+  numbering). `scripts/ci/openapi-drift.sh` exits three ways on purpose: `0` clean, `1`
+  breaking drift, `2` the check could not run, so an outage is never published as an API
+  change. GNU Make discards a recipe's exit status, so the workflow calls the script
+  directly. Breaking drift files/refreshes an `api-contract` issue instead of failing.
 
 ### Code Metrics (rust-code-analysis, issue #224)
 
