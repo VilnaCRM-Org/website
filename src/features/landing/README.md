@@ -33,6 +33,27 @@ side effects to feature hooks; the hooks call the typed service in `api/service`
 issues the mutation through the Apollo client in `api/graphql`. GraphQL errors are
 normalized by `helpers/handleApolloError.ts` into localized messages.
 
+## Sign-up form contract
+
+The sign-up form is the only surface on this site that accepts user input, so a few of its
+rules are load-bearing rather than incidental (issues #382 and #378):
+
+- **Credential fields.** `FullName`, `Email`, `Password` and `ConfirmPassword` each forward
+  an `id`, a `name` and an `autocomplete` token to the rendered input, so labels resolve and
+  password managers can offer a generated password. `ConfirmPassword` is a client-side typo
+  guard only — it never reaches the `createUser` mutation.
+- **Password policy.** 8–64 characters with at least one digit, one uppercase and one
+  lowercase letter (Unicode-aware, so Cyrillic passwords are treated the same). The rules are
+  stated up front in a visually-hidden description tied to the field, not only in the
+  pointer-only tooltip.
+- **Error copy.** Auth-flow failures always render a generic localized message. Never surface
+  `graphQLErrors[].message` verbatim: it turns the form into an account-enumeration oracle.
+- **Telemetry.** A failed submission calls `reportHandledError` (`src/lib/telemetry`), which
+  reports the exception with static `feature`/`action` tags and nothing derived from the
+  submitted values.
+- **Transport.** The endpoint the form POSTs to is validated in `src/config/env.ts`: remote
+  cleartext `http://` fails the build; `http://` is accepted only for loopback.
+
 ## Internationalisation
 
 Localized strings live in `src/features/landing/i18n/en.json` and `uk.json` and are read

@@ -187,15 +187,20 @@ describe('integration: handleApolloError helpers', () => {
       expect(handleApolloError(props)).toBe(messages[CLIENT_ERROR_KEYS.UNAUTHORIZED]);
     });
 
-    it('joins multiple GraphQL error messages', () => {
+    it('replaces unmapped GraphQL error text with a generic message (#378 F2)', () => {
       const graphQLErrors: GraphQLFormattedError[] = [
-        { message: 'Error 1' },
-        { message: 'Error 2' },
+        { message: 'user with this email already exists' },
+        { message: 'constraint users_email_key violated' },
       ];
       const props: HandleApolloErrorProps = {
         error: createMockCombinedGraphQLErrors(graphQLErrors),
       };
-      expect(handleApolloError(props)).toBe('Error 1, Error 2');
+
+      const result: string = handleApolloError(props);
+
+      expect(result).toBe(messages[CLIENT_ERROR_KEYS.WENT_WRONG]);
+      expect(result).not.toContain('email');
+      expect(result).not.toContain('constraint');
     });
 
     it('falls through to later handlers when the GraphQL error list is empty', () => {
@@ -205,12 +210,12 @@ describe('integration: handleApolloError helpers', () => {
       expect(handleApolloError(props)).toBe(messages[CLIENT_ERROR_KEYS.UNEXPECTED]);
     });
 
-    it('falls through when GraphQL errors yield only empty messages', () => {
+    it('maps a GraphQL error with an empty message to the generic message', () => {
       const graphQLErrors: GraphQLFormattedError[] = [{ message: '' }];
       const props: HandleApolloErrorProps = {
         error: createMockCombinedGraphQLErrors(graphQLErrors),
       };
-      expect(handleApolloError(props)).toBe(messages[CLIENT_ERROR_KEYS.UNEXPECTED]);
+      expect(handleApolloError(props)).toBe(messages[CLIENT_ERROR_KEYS.WENT_WRONG]);
     });
 
     it('handles a direct server error carrying a statusCode', () => {

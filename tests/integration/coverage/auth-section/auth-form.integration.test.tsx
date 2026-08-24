@@ -32,7 +32,7 @@ function AuthFormHarness({ onSubmit, loading }: WrapperProps): React.ReactElemen
     formState: { errors },
   } = useForm<RegisterItem>({
     mode: 'onTouched',
-    defaultValues: { FullName: '', Email: '', Password: '', Privacy: false },
+    defaultValues: { FullName: '', Email: '', Password: '', ConfirmPassword: '', Privacy: false },
   });
 
   return (
@@ -58,6 +58,7 @@ function renderHarness(overrides: Partial<WrapperProps> = {}): ReturnType<typeof
 const fullNamePlaceholder: string = t('sign_up.form.name_input.placeholder');
 const emailPlaceholder: string = t('sign_up.form.email_input.placeholder');
 const passwordPlaceholder: string = t('sign_up.form.password_input.placeholder');
+const confirmPasswordPlaceholder: string = t('sign_up.form.confirm_password_input.placeholder');
 const submitText: string = t('sign_up.form.button_text');
 
 describe('integration: AuthForm', () => {
@@ -94,6 +95,9 @@ describe('integration: AuthForm', () => {
     fireEvent.change(screen.getByPlaceholderText(passwordPlaceholder), {
       target: { value: 'Password123' },
     });
+    fireEvent.change(screen.getByPlaceholderText(confirmPasswordPlaceholder), {
+      target: { value: 'Password123' },
+    });
     fireEvent.click(screen.getByRole('checkbox'));
     fireEvent.click(screen.getByRole('button', { name: submitText }));
 
@@ -103,6 +107,7 @@ describe('integration: AuthForm', () => {
         FullName: 'John Doe',
         Email: 'john@example.com',
         Password: 'Password123',
+        ConfirmPassword: 'Password123',
         Privacy: true,
       });
     });
@@ -116,11 +121,11 @@ describe('integration: AuthForm', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('checkbox')).toHaveAttribute('aria-invalid', 'true');
-      // FullName, Email and Password each use their own required-message key
-      // (name_input/email_input/password_input.required), but all three keys
-      // intentionally resolve to the same text ("This field is required"), so a
-      // single key's text matches all three rendered error nodes.
-      expect(screen.getAllByText(t('sign_up.form.name_input.required'))).toHaveLength(3);
+      // Each field uses its own required-message key
+      // (name_input/email_input/password_input/confirm_password_input.required),
+      // but every key intentionally resolves to the same text ("This field is
+      // required"), so one key's text matches all four rendered error nodes.
+      expect(screen.getAllByText(t('sign_up.form.name_input.required'))).toHaveLength(4);
     });
     expect(onSubmit).not.toHaveBeenCalled();
   });
