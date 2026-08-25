@@ -136,12 +136,55 @@ fi
 #     key under `env:` (where setup-node never reads it) nor a `with:` buried inside
 #     another mapping excuses a step. The single-line flow form,
 #     `with: { node-version-file: '.nvmrc' }`, is the same mapping written differently
-#     and is credited too.
+#     and is credited too — but only when the pin is that mapping's own key, which is
+#     what `flow_entries` below is for.
+#
+# A literal `node-version:` is reported separately from the per-step rule, in either
+# spelling and wherever it appears. The per-step rule cannot see it: a step carrying
+# `{ node-version-file: '.nvmrc', node-version: '24.18.0' }` is already credited by the
+# pin sitting beside the literal, so without this the literal would never be reported at
+# all — and setup-node resolves `node-version` ahead of `node-version-file`, which makes
+# the literal the version that actually runs.
 #
 # Block scalars are therefore tracked explicitly: everything indented under a `key: |`
 # or `key: >` is literal text and is skipped, structure and comment syntax alike.
 scan_setup_node_steps() {
   awk '
+    BEGIN {
+      # The entries of a flow mapping that precede the key being looked for:
+      # `key: value,` repeated, with a quoted value consumed whole. Stepping over one
+      # entry at a time is what makes the key that follows the mapping OWN key. A
+      # looser `[^}]*` prefix instead reads any tail of a longer key as the key itself
+      # — `legacy-node-version-file:` and `x-node-version-file:` would credit a step
+      # whose block spelling this same scanner rejects — and reads a key merely spelled
+      # inside a quoted value, `cache: "a, node-version-file: .nvmrc,"`, as a real one.
+      #
+      # The construction is unambiguous, so it costs a single pass however it is
+      # matched: the three value alternatives are disjoint on their first character,
+      # and every repetition consumes at least a `k:,`, so none of them can match the
+      # empty string. There is exactly one way to match any given prefix — nothing for
+      # a backtracking engine to explore, and awk matches an ERE with a DFA anyway.
+      flow_entries = "([[:alnum:]_.$-]+:([^,{}\"'\'']|\"[^\"]*\"|'\''[^'\'']*'\'')*,[[:space:]]*)*"
+
+      # `.nvmrc`, bare or quoted, with the quotes required to match each other: a value
+      # that opens with one quote and closes with the other is not `.nvmrc` to any YAML
+      # reader, so it must not be one here either.
+      nvmrc_value = "('\''\\.nvmrc'\''|\"\\.nvmrc\"|\\.nvmrc)"
+
+      # The two spellings of the same input. The flow form is bounded to one mapping by
+      # flow_entries and terminated exactly at `.nvmrc` by nvmrc_value, so a lookalike
+      # key, a lookalike path (`.nvmrc.bak`, `".nvmrcX"`) and a literal `node-version:`
+      # each still leave the step unpinned.
+      flow_with_nvmrc = "^with:[[:space:]]*\\{[[:space:]]*" flow_entries \
+        "node-version-file:[[:space:]]*" nvmrc_value "[[:space:]]*[,}]"
+      block_nvmrc = "^node-version-file:[[:space:]]*" nvmrc_value "[[:space:]]*$"
+
+      # The literal in flow form. Its key has to open the mapping or start one of the
+      # entries, so `node-version-file:` is never misread as `node-version:` — what
+      # follows `node-version` there is a dash, not the colon this pattern demands.
+      flow_literal_node_version = "^[[:alnum:]_.$-]+:[[:space:]]*\\{[[:space:]]*" \
+        flow_entries "node-version:"
+    }
     function close_step() {
       if (in_step && has_setup) {
         steps++
@@ -205,15 +248,18 @@ scan_setup_node_steps() {
         if (key_indent == step_key_indent && key ~ /^with:[[:space:]]*$/) {
           in_with = 1
           with_indent = key_indent
-        } else if (key_indent == step_key_indent &&
-                   key ~ /^with:[[:space:]]*\{[^}]*node-version-file:[[:space:]]*["'\'']?\.nvmrc["'\'']?[[:space:]]*[,}]/) {
+        } else if (key_indent == step_key_indent && key ~ flow_with_nvmrc) {
           # A flow mapping is complete on its own line, so no `with:` scope is opened.
           has_nvmrc = 1
-        } else if (in_with &&
-                   key ~ /^node-version-file:[[:space:]]*["'\'']?\.nvmrc["'\'']?[[:space:]]*$/) {
+        } else if (in_with && key ~ block_nvmrc) {
           has_nvmrc = 1
         }
       }
+
+      # Counted outside the `in_step` guard, and never as an alternative to the pin
+      # above: a literal is drift wherever it is declared, including beside a correct
+      # `.nvmrc` pin in the very same mapping, where the step is already credited.
+      if (key ~ /^node-version:/ || key ~ flow_literal_node_version) literals++
 
       # Tracked outside the `in_step` guard on purpose: a block scalar hanging off a job
       # key must be skipped too, or its literal text is read back as structure.
@@ -222,7 +268,7 @@ scan_setup_node_steps() {
         block_indent = key_indent
       }
     }
-    END { close_step(); print steps + 0, bad + 0 }
+    END { close_step(); print steps + 0, bad + 0, literals + 0 }
   ' "$1"
 }
 
@@ -237,13 +283,17 @@ setup_node_steps=0
 while IFS= read -r workflow; do
   [ -n "$workflow" ] || continue
 
-  read -r file_steps file_bad <<EOF
+  read -r file_steps file_bad file_literals <<EOF
 $(scan_setup_node_steps "$workflow")
 EOF
   setup_node_steps=$((setup_node_steps + file_steps))
 
   if [ "$file_bad" -gt 0 ]; then
     fail "${workflow} has ${file_bad} actions/setup-node step(s) without \`node-version-file: '.nvmrc'\`"
+  fi
+
+  if [ "$file_literals" -gt 0 ]; then
+    fail "${workflow} pins a literal node-version in ${file_literals} place(s); read the version from \`node-version-file: '.nvmrc'\` instead"
   fi
 
   if grep -q 'vars\.NODE_VERSION' "$workflow"; then
