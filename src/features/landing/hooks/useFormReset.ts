@@ -14,7 +14,13 @@ interface UseFormResetProps {
 
 type UseFormResetHook = (props: UseFormResetProps) => void;
 
-const initialFormValues: RegisterItem = { Email: '', FullName: '', Password: '', Privacy: false };
+const initialFormValues: RegisterItem = {
+  Email: '',
+  FullName: '',
+  Password: '',
+  ConfirmPassword: '',
+  Privacy: false,
+};
 
 const useFormReset: UseFormResetHook = ({
   formState,

@@ -1,0 +1,60 @@
+name: contract parity testing
+
+on:
+  pull_request:
+    # No paths filter. The obvious filter would be the Mockoon data file, the
+    # swagger e2e utils and the baseline — but the gate also depends on
+    # jest.config.ts, package.json/bun.lock (the pinned Mockoon libraries) and
+    # its own harness, so a narrow filter would let a PR that breaks the gate
+    # merge with the gate never running. This repo has twice widened a paths
+    # filter for exactly that reason (see link-check.yml). A path-filtered
+    # REQUIRED check also never reports on non-matching PRs, leaving them
+    # permanently pending.
+    branches:
+      - main
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mock-contract-parity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: Cache Bun cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('.nvmrc') }}-${{ hashFiles('**/bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-${{ hashFiles('.nvmrc') }}-
+
+      - name: Setup Bun and install dependencies
+        run: |
+          # Install the exact Bun pinned in package.json's packageManager field,
+          # so the version is declared in exactly one place. Corepack does not
+          # manage Bun, so it is installed globally via `npm install -g`.
+          npm install -g "$(node -p "require('./package.json').packageManager.split('+')[0]")"
+          bun install --frozen-lockfile
+
+      # Blocking by design: this is the leg that proves the Mockoon mock the e2e
+      # suite runs against still matches the committed user-service contract.
+      # Fully hermetic — Mockoon is booted in-process from the committed OpenAPI
+      # document, so there is no network call and no container to flake.
+      - name: Run mock-vs-contract parity tests
+        run: make ci-test-contract

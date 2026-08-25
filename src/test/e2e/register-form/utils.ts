@@ -2,8 +2,11 @@ import { Locator, Page, Response, expect, Route } from '@playwright/test';
 import winston, { Logger } from 'winston';
 
 import {
+  confirmPasswordMismatchError,
   expectationsEmail,
   expectationsPassword,
+  mismatchedPassword,
+  placeholderConfirmPassword,
   placeholderInitials,
   placeholderEmail,
   placeholderPassword,
@@ -45,6 +48,17 @@ export async function fillPasswordInput(page: Page, user: User): Promise<void> {
   await passwordInput.fill(user.password);
 }
 
+export async function fillConfirmPasswordInput(page: Page, user: User): Promise<void> {
+  const confirmPasswordInput: Locator = page.getByPlaceholder(placeholderConfirmPassword);
+  await confirmPasswordInput.fill(mismatchedPassword);
+  await confirmPasswordInput.blur();
+  await expect(page.getByText(confirmPasswordMismatchError)).toBeVisible();
+
+  await confirmPasswordInput.fill(user.password);
+  await confirmPasswordInput.blur();
+  await expect(page.getByText(confirmPasswordMismatchError)).toBeHidden();
+}
+
 export function responseFilter(resp: Response): boolean {
   return resp.url().includes(graphqlUrlFragment) && resp.status() === 200;
 }
@@ -81,6 +95,7 @@ type GetFormFields = {
   initialsInput: Locator;
   emailInput: Locator;
   passwordInput: Locator;
+  confirmPasswordInput: Locator;
   policyTextCheckbox: Locator;
   signupButton: Locator;
 };
@@ -89,10 +104,18 @@ export function getFormFields(page: Page): GetFormFields {
   const initialsInput: Locator = page.getByPlaceholder(placeholderInitials);
   const emailInput: Locator = page.getByPlaceholder(placeholderEmail);
   const passwordInput: Locator = page.getByPlaceholder(placeholderPassword);
+  const confirmPasswordInput: Locator = page.getByPlaceholder(placeholderConfirmPassword);
   const policyTextCheckbox: Locator = page.getByLabel(policyText);
   const signupButton: Locator = page.getByRole('button', { name: signUpButton });
 
-  return { initialsInput, emailInput, passwordInput, policyTextCheckbox, signupButton };
+  return {
+    initialsInput,
+    emailInput,
+    passwordInput,
+    confirmPasswordInput,
+    policyTextCheckbox,
+    signupButton,
+  };
 }
 
 export async function successResponse(route: Route): Promise<void> {

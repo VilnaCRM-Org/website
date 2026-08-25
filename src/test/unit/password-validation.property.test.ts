@@ -41,14 +41,32 @@ describe('validatePassword property tests', () => {
     ).not.toThrow();
   });
 
-  it('accepts any value that satisfies every rule (length, digit, uppercase)', () => {
+  it('accepts any value that satisfies every rule (length, digit, uppercase, lowercase)', () => {
     expect(() =>
       fc.assert(
         fc.property(fc.string(), (filler: string): boolean => {
-          // 'A' → uppercase rule, '1' → digit rule, padEnd/slice → length range.
+          // 'A' → uppercase rule, 'a' → lowercase rule, '1' → digit rule,
+          // padEnd/slice → length range.
           const password: string = `Aa1${filler}`.padEnd(MIN_LENGTH, 'x').slice(0, MAX_LENGTH);
           return validatePassword(password) === true;
         }),
+        { numRuns }
+      )
+    ).not.toThrow();
+  });
+
+  it('rejects any value that carries no lowercase letter', () => {
+    expect(() =>
+      fc.assert(
+        fc.property(
+          fc.string().filter((s: string): boolean => !/\p{Ll}/u.test(s)),
+          (input: string): boolean => {
+            // Uppercase, digit and length are satisfied, so only the lowercase
+            // rule can reject — and it must.
+            const password: string = `A1${input}`.padEnd(MIN_LENGTH, 'X').slice(0, MAX_LENGTH);
+            return /\p{Ll}/u.test(password) || validatePassword(password) !== true;
+          }
+        ),
         { numRuns }
       )
     ).not.toThrow();

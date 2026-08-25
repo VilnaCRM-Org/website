@@ -2,8 +2,6 @@
 
 # Template for modern SSR applications
 
-[![CodeScene Code Health](https://codescene.io/projects/43861/status-badges/code-health)](https://codescene.io/projects/43861)
-[![CodeScene System Mastery](https://codescene.io/projects/43861/status-badges/system-mastery)](https://codescene.io/projects/43861)
 [![codecov](https://codecov.io/gh/VilnaCRM-Org/frontend-ssr-template/graph/badge.svg?token=MPFDUSMZ2I)](https://codecov.io/gh/VilnaCRM-Org/frontend-ssr-template)
 
 ## Possibilities
@@ -99,9 +97,11 @@ Linting & Formatting
   make lint-tsc: runs static type checking with TypeScript
   make lint-md: lints all markdown files (excluding CHANGELOG.md) using markdownlint
   make lint-deps: validates architecture/import boundaries with dependency-cruiser
-  make lint: runs all linters (ESLint, TypeScript, markdownlint, and dependency-cruiser)
+  make lint-docker-policy: enforces the Dockerfile registry + digest-pin policy
+  make lint: runs all linters (ESLint, TypeScript, markdownlint, dependency-cruiser, Docker policy)
   make lint-metrics: runs the rust-code-analysis complexity gate (host-only, not in make lint)
   make lint-contracts: validates the pinned user-service contracts (not in make lint; needs network)
+  make lint-openapi: reports breaking upstream OpenAPI drift (host-only, needs network; advisory)
   make update-contracts: re-fetches the contracts after bumping USER_SERVICE_VERSION
   make lint-vulns: fails on dependency CVEs this branch adds vs main (host-only, not in make lint)
   make scan-vulns-census: reports every known dependency CVE in bun.lock without failing
@@ -115,10 +115,13 @@ Testing
   make test-unit-server: runs unit tests for the server using Jest
   make test-integration: runs the integration layer (real Apollo transport, network stubbed)
   make test-integration-watch: runs the integration layer in watch mode
+  make test-contract: checks the Mockoon mock against the committed OpenAPI contract
   make test-bats: runs the Bats shell regression suite for Makefile targets and CI helper scripts
-  make test-memory-leak: runs memory leak tests using Memlab
+  make test-memory-leak: runs memory leak tests using Memlab and fails on unaccounted leak clusters
   make load-tests: executes load tests using the K6 library
   make test-e2e: runs end-to-end tests inside the prod container
+  make test-e2e-burnin: repeats E2E_BURNIN_SPECS with retries off to expose flaky specs
+  make check-e2e-flakes: grades a Playwright JSON report for retry-passes and burn-in flakes
   make test-e2e-ui: runs end-to-end tests with UI inside the prod container
   make test-visual: runs visual tests inside the prod container
   make test-visual-ui: runs visual tests with UI inside the prod container
@@ -168,6 +171,10 @@ the future—you'll need to update the API configuration accordingly.
 To run tests locally, the Mockoon mock server is automatically started via
 `make test-e2e`. For manual setup, see the Mockoon configuration in
 `docker-compose.test.yml`.
+
+Because the entire Playwright suite talks to Mockoon rather than a real backend,
+the mock is itself gated — see
+[API contract parity](#api-contract-parity-mockoon-vs-openapi) below.
 
 Lighthouse
 
@@ -313,6 +320,108 @@ adjust the relevant rule in `.dependency-cruiser.js` — narrow its `from`/`to`
 globs, add a `pathNot` entry, or (only for unavoidable cases) lower its
 `severity` to `warn` — and leave a comment explaining why so the boundary intent
 stays clear.
+
+## API Contract Parity (Mockoon vs OpenAPI)
+
+Every Playwright e2e run talks to Mockoon, never to a real backend, so a green
+e2e suite on its own only proves the app agrees with the **mock**. Two gates keep
+that mock honest, both anchored on the single committed baseline
+[`contracts/user-service/openapi.json`](contracts/user-service/openapi.json) —
+the same artifact `make lint-contracts` drift-gates against `USER_SERVICE_VERSION`
+and the same one `Mockoon.Dockerfile` serves. There is deliberately no second
+baseline file: a copy would be a drift source with nothing watching it.
+
+### Blocking: mock-vs-contract parity
+
+```bash
+make test-contract
+```
+
+Boots Mockoon in-process from the committed document — through
+`@mockoon/commons-server`, the libraries the container's `@mockoon/cli` wraps —
+replays every documented operation, and holds each response against the contract:
+
+- the status served must be one the operation documents;
+- a body must arrive under a media type that status declares;
+- a body must validate against that media type's schema; and
+- a body must not carry a property the schema never declares.
+
+The last rule is stricter than OpenAPI's permissive default on purpose. A mock
+offering a field the contract does not describe is precisely the "e2e certifies
+behavior the real API does not have" defect, and it is the only rule that catches
+a renamed field here, because the upstream document misplaces `required` on the
+array schema of `GET /api/users` instead of on its `items`.
+
+Two further checks ride along: the swagger e2e fixtures in
+`src/test/e2e/swagger/utils/constants.ts` are validated against the same schema,
+and the `@mockoon/*` versions in `package.json` are pinned to the `@mockoon/cli`
+version `Mockoon.Dockerfile` installs, so the gate can never certify a Mockoon
+the e2e stack does not run.
+
+`tests/contract/parity-detects-drift.contract.test.ts` proves the gate bites: it
+writes corrupted **copies** of the mock data — a renamed field, a retyped field,
+an added field, a moved status — boots Mockoon on each, and asserts every one
+turns the gate red. The gate is hermetic (no Docker, no network) and runs on
+every pull request via
+[`.github/workflows/contract-parity-testing.yml`](.github/workflows/contract-parity-testing.yml).
+
+**Scope, honestly stated.** Mockoon derives its responses from the same document
+the validator checks against, so this cannot detect "the mock disagrees with the
+real API" in general. What it does catch is divergence the converter introduces:
+a schema the generated mock can no longer satisfy after a version bump, a Mockoon
+upgrade that changes generation, a status or media type the mock stops serving,
+and e2e fixtures written against a shape the contract has dropped.
+
+Its reach is bounded in three ways, all deliberate and all guarded:
+
+- **One response per operation.** Mockoon serves the first response an operation
+  declares and honours neither `Accept` nor `Prefer`, so the documented 4xx/5xx
+  shapes are never exercised. 12 responses are observed out of 43 declared
+  (status, media-type) pairs.
+- **Body only, not headers.** Response headers — including the `Location` on the
+  302 — are served but not asserted.
+- **Schema-bearing responses only.** 7 of the 12 reach the schema and
+  undeclared-property rules; the rest declare `example: ""` with no schema, or
+  are bodyless 204s. A committed floor assertion fails if that 7 ever drops, so
+  the gate cannot quietly shrink toward validating nothing.
+
+Composed schemas (`allOf`, `oneOf`, `prefixItems`, …) and `$ref` are likewise a
+tripwire rather than a silent gap: the undeclared-property rule walks
+`properties`/`items` only, so the spec fails loudly if upstream introduces one
+instead of quietly checking less.
+
+The "is the contract itself current?" question is the second gate's job.
+
+### Advisory: upstream drift
+
+```bash
+make lint-openapi
+```
+
+Downloads a pinned, SHA256-verified `oasdiff` binary (the same provisioning
+pattern as the rust-code-analysis CLI) and reports breaking changes between the
+committed baseline and the newest `VilnaCRM-Org/user-service` **release**. Latest
+is resolved from the releases API rather than by semver-sorting tags, because
+upstream restarted its numbering: the highest tag by semver is `v2.8.0`
+(Aug 2025), while the newest release is `v0.8.0` (Feb 2026). Semver-sorting
+would compare against months-old content and report "no drift" indefinitely.
+
+This leg is **advisory by design**: upstream moving on is not a pull request
+author's fault, so it never blocks a PR. It runs nightly via
+[`.github/workflows/openapi-drift.yml`](.github/workflows/openapi-drift.yml),
+which files or refreshes an `api-contract` tracking issue on breaking drift and
+closes it once the baseline is current again. Adopt a new contract by bumping
+`USER_SERVICE_VERSION` in `.env` and running `make update-contracts`.
+
+[`scripts/ci/openapi-drift.sh`](scripts/ci/openapi-drift.sh) exits three ways on
+purpose — `0` clean, `1` breaking drift, `2` the check could not run — so a
+network outage is never published as an API change. GNU Make discards a recipe's
+own exit status, so the workflow calls the script directly while
+`make lint-openapi` stays the human-facing surface.
+
+Like `make lint-contracts` and `make lint-metrics`, `make lint-openapi` is
+deliberately **outside** `make lint`: it needs the network and a host binary, and
+the static lint lane is hermetic by design.
 
 ## Code Metrics (rust-code-analysis)
 
@@ -474,7 +583,7 @@ folder, and documentation will appear in the `docs` folder, though you'll need t
 [API-Extractor](https://api-extractor.com/) installed.
 
 If the documentation doesn't cover what you need, search the
-[many questions on Stack Overflow](http://stackoverflow.com/questions/tagged/vilnacrm),
+[existing issues](https://github.com/VilnaCRM-Org/website/issues),
 and before you ask a question,
 [read the troubleshooting guide](https://github.com/VilnaCRM-Org/frontend-ssr-template/wiki/Troubleshooting).
 

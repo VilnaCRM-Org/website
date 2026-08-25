@@ -11,6 +11,8 @@ const createJestConfig = nextJest({ dir: './' });
  * - `server`               — Apollo server tests (Node) + pure unit tests.
  * - `integration`          — the cross-module / API-boundary layer that lives
  *                            in `tests/integration/**`.
+ * - `contract`             — the mock-vs-contract parity layer in
+ *                            `tests/contract/**` (#350).
  *
  * The integration layer is intentionally isolated from the unit globs: it is
  * the "missing middle" between unit and e2e and must not silently absorb unit
@@ -23,11 +25,14 @@ const INTEGRATION_GLOB = '<rootDir>/tests/integration/**/*.integration.test.{ts,
 
 const EDGE_GLOB = '<rootDir>/src/test/edge/**/*.test.ts';
 
+const CONTRACT_GLOB = '<rootDir>/tests/contract/**/*.contract.test.ts';
+
 const testMatchByEnv: Record<string, string[]> = {
   server: ['<rootDir>/src/test/apollo-server**/*.test.ts', UNIT_GLOB],
   integration: [INTEGRATION_GLOB],
   client: ['<rootDir>/src/test/testing-library**/*.test.tsx', UNIT_GLOB],
   edge: [EDGE_GLOB],
+  contract: [CONTRACT_GLOB],
 };
 
 // Fail fast on an unrecognised TEST_ENV (e.g. a typo in a CI job) instead of
@@ -47,6 +52,7 @@ const isIntegration = TEST_ENV === 'integration';
 const isServer = TEST_ENV === 'server';
 const isEdge = TEST_ENV === 'edge';
 const isClient = TEST_ENV === 'client';
+const isContract = TEST_ENV === 'contract';
 
 // jsdom lacks the Fetch API; the integration layer drives the real Apollo
 // HttpLink, so it runs in a jsdom variant that injects Node's fetch globals.
@@ -107,15 +113,31 @@ const SERVER_COVERAGE_THRESHOLD = {
   global: { branches: 55, functions: 70, lines: 90, statements: 90 },
 };
 
+// The `contract` layer (#350) boots the Mockoon mock the e2e suite runs against
+// and holds every response against the committed user-service OpenAPI document.
+// Its subject is an HTTP mock's runtime behaviour, not repo source: it imports
+// nothing from `src/` except the swagger e2e fixtures it validates, so it is
+// isolated from the other layers exactly as `edge` is — a coverage threshold
+// here would measure the wrong thing, and folding it into `integration` would
+// dilute that layer's "exercise every shipped module" charter. The harness
+// itself is proven live by `parity-detects-drift.contract.test.ts`, which seeds
+// real defects into the mock data and asserts the gate turns red.
+
+const COVERAGE_DIRECTORY_BY_ENV: Record<string, string> = {
+  edge: 'coverage/edge',
+  contract: 'coverage/contract',
+};
+
 const config: Config = {
   clearMocks: true,
   // Generate the gitignored pages/i18n/localization.json (#328) before
   // jest.setup.ts imports the i18n stack that requires it.
   globalSetup: '<rootDir>/jest.global-setup.js',
   collectCoverage: true,
-  // The edge layer writes to its own coverage dir so its scripts-only report never
-  // clobbers the product coverage the client/server runs write to `coverage/`.
-  coverageDirectory: isEdge ? 'coverage/edge' : 'coverage',
+  // The edge and contract layers write to their own coverage dirs so their
+  // narrowly-scoped reports never clobber the product coverage the client/server
+  // runs write to `coverage/`.
+  coverageDirectory: COVERAGE_DIRECTORY_BY_ENV[TEST_ENV] ?? 'coverage',
   // The integration layer uses the `babel` coverage provider so coverage is
   // instrumented on the same babel-jest-transformed output the tests run
   // against; this keeps the strict 100% threshold measured against the exact
@@ -146,7 +168,8 @@ const config: Config = {
     '<rootDir>/src/test/testing-library/.*\\/utils\\.tsx$',
   ],
   preset: 'ts-jest',
-  testEnvironment: isServer || isEdge ? 'node' : isIntegration ? INTEGRATION_ENVIRONMENT : 'jsdom',
+  testEnvironment:
+    isServer || isEdge || isContract ? 'node' : isIntegration ? INTEGRATION_ENVIRONMENT : 'jsdom',
   transform: {
     '^.+\\.(js|jsx|mjs|cjs|ts|tsx)$': [
       'babel-jest',

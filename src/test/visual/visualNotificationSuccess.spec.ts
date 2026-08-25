@@ -27,6 +27,7 @@ test.describe('Form Submission Visual Test', () => {
       await nameInput.fill('John Doe');
       await page.getByPlaceholder(placeholders.email).fill('johndoe@example.com');
       await page.getByPlaceholder(placeholders.password).fill('SecurePassword123');
+      await page.getByPlaceholder(placeholders.confirmPassword).fill('SecurePassword123');
       await page.getByRole('checkbox').check();
 
       const submitButton: Locator = page.locator('button[type="submit"]');
@@ -37,6 +38,17 @@ test.describe('Form Submission Visual Test', () => {
 
       const imagesWithAlt: Locator = successBox.locator('img[alt]');
       await expect(imagesWithAlt).toHaveCount(3);
+
+      // Centre the notification card so the whole card lands in the shot. Framing
+      // by the *name input* (as the fill step does) ties the screenshot to the
+      // height of the sign-up form above it, so any change to the form pushes the
+      // notification out of the captured viewport — which is exactly what the
+      // confirm-password field did. `instant` because global.css sets
+      // `scroll-behavior: smooth`, which would still be animating at capture time.
+      const notificationCard: Locator = page.locator('div[role="alert"]');
+      await notificationCard.evaluate(node =>
+        node.scrollIntoView({ block: 'center', behavior: 'instant' })
+      );
 
       await page.evaluate(() =>
         Promise.all(document.getAnimations().map(animation => animation.finished.catch(() => null)))

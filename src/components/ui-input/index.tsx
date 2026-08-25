@@ -1,30 +1,36 @@
-import { TextField, ThemeProvider } from '@mui/material';
+import { TextField, TextFieldProps, ThemeProvider } from '@mui/material';
 import React from 'react';
 
 import { theme } from './theme';
 import { UiInputProps } from './types';
 
+/**
+ * ARIA attributes have to land on the rendered `<input>`; passed as top-level
+ * TextField props they would decorate the wrapping FormControl instead, where
+ * assistive tech never reads them. Each is emitted only when it carries meaning
+ * — `aria-required="false"` and an empty `aria-describedby` are noise.
+ */
+function buildInputSlotProps(
+  describedBy: string | undefined,
+  required: boolean | undefined
+): TextFieldProps['slotProps'] {
+  return {
+    htmlInput: {
+      ...(describedBy ? { 'aria-describedby': describedBy } : {}),
+      ...(required ? { 'aria-required': true } : {}),
+    },
+  };
+}
+
 const UiInput: React.ForwardRefExoticComponent<
   UiInputProps & React.RefAttributes<HTMLInputElement>
 > = React.forwardRef<HTMLInputElement, UiInputProps>(
-  (
-    { sx, placeholder, error, onBlur, type, fullWidth, value, onChange, disabled, onInput, id },
-    ref
-  ) => (
+  ({ describedBy, required, ...textFieldProps }, ref) => (
     <ThemeProvider theme={theme}>
       <TextField
-        sx={sx}
-        placeholder={placeholder}
+        {...textFieldProps}
         inputRef={ref}
-        error={error}
-        type={type}
-        onChange={onChange}
-        onBlur={onBlur}
-        value={value}
-        fullWidth={fullWidth}
-        disabled={disabled}
-        onInput={onInput}
-        id={id}
+        slotProps={buildInputSlotProps(describedBy, required)}
       />
     </ThemeProvider>
   )
