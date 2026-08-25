@@ -341,6 +341,23 @@ function yamlKeyLines(lines) {
 const SETUP_NODE_USES = /^\s*(?:-\s+)?uses:\s*actions\/setup-node[@\s]/;
 const LITERAL_NODE_VERSION = /^\s*(?:-\s+)?node-version:/;
 
+// The entries of a flow mapping that precede the key being looked for: `key: value,`
+// repeated, with a quoted value consumed whole. Stepping over one entry at a time is
+// what makes the key that follows the mapping's OWN key. A looser `[^}]*` prefix reads
+// any tail of a longer key as the key itself — `legacy-node-version-file:` would credit
+// a step the block spelling of the same input correctly rejects — and reads a key
+// spelled inside a quoted value as a real one.
+const FLOW_ENTRIES = String.raw`(?:[\w.$-]+:(?:[^,{}'"]|'[^']*'|"[^"]*")*,\s*)*`;
+
+// The same literal written inside a flow mapping, `with: { node-version: '24.18.0' }`.
+// Without it the two spellings disagree: a flow mapping that carries the `.nvmrc` pin
+// AND a literal beside it would be credited and never reported, while the block form
+// of the very same step is. The key has to open the mapping or start an entry, so
+// `node-version-file:` is never read as a literal.
+const FLOW_LITERAL_NODE_VERSION = new RegExp(
+  String.raw`^\s*(?:-\s+)?[\w.$-]+:\s*\{\s*${FLOW_ENTRIES}node-version:`
+);
+
 // The step's own `node-version-file:` key, on a real key line, whose complete value
 // is `.nvmrc`. Anchored at both ends for the same reason LITERAL_NODE_VERSION is:
 // an unanchored search over the step's raw text accepts a `#` comment quoting the
@@ -349,6 +366,30 @@ const LITERAL_NODE_VERSION = /^\s*(?:-\s+)?node-version:/;
 // each of which lets a genuinely unpinned setup-node step through.
 const NODE_VERSION_FILE_NVMRC =
   /^\s*(?:-\s+)?node-version-file:\s*(?:'\.nvmrc'|"\.nvmrc"|\.nvmrc)\s*(?:#.*)?$/;
+
+// The step's own `with:` mapping, in either YAML spelling — both are the same
+// mapping, and setup-node reads its inputs from nowhere else. Block style opens a
+// scope whose deeper keys NODE_VERSION_FILE_NVMRC is matched against; a flow
+// mapping is complete on its own line, so the pin is read straight out of it and no
+// scope opens. FLOW_ENTRIES bounds the scan to that one mapping and makes the key its
+// own, and the value alternation terminates exactly at `.nvmrc`, so a lookalike key
+// (`legacy-node-version-file:`), a lookalike path (`.nvmrc.bak`, `".nvmrcX"`) or a
+// literal `node-version:` all still leave the step unpinned.
+const BLOCK_WITH = /^with:\s*(?:#.*)?$/;
+const FLOW_WITH_NVMRC = new RegExp(
+  String.raw`^with:\s*\{\s*${FLOW_ENTRIES}node-version-file:\s*(?:'\.nvmrc'|"\.nvmrc"|\.nvmrc)\s*[,}]`
+);
+
+// The mapping key a line carries, with any sequence dash removed, and the column it
+// really starts at: in `- uses: x` the key is nested one level below the dash, and
+// that column is what tells a step's own `with:` apart from a `with:` nested inside
+// another of its mappings — an `env:`, say, where setup-node never looks.
+function mappingKey(line) {
+  const parts = /^([ \t]*)(-[ \t]+)?(\S.*)$/.exec(line);
+  return parts === null
+    ? null
+    : { column: parts[1].length + (parts[2] ?? '').length, text: parts[3] };
+}
 
 function setupNodeSteps(lines, isKeyLine) {
   return lines.flatMap((line, index) => {
@@ -364,10 +405,39 @@ function setupNodeSteps(lines, isKeyLine) {
   });
 }
 
+// The column of the step's first mapping key (the one its dash introduces) is the
+// column every direct key of the step sits at, so a `with:` found there is the
+// step's own and one found deeper is not. Any key deeper than an open block `with:`
+// is one of its inputs; a key at or left of it has dedented back out.
 function stepPinsNvmrc(lines, isKeyLine, step) {
-  return lines
-    .slice(step.start, step.end)
-    .some((line, offset) => isKeyLine[step.start + offset] && NODE_VERSION_FILE_NVMRC.test(line));
+  let stepColumn = -1;
+  let withColumn = -1;
+
+  for (let index = step.start; index < step.end; index += 1) {
+    const key = isKeyLine[index] ? mappingKey(lines[index]) : null;
+    if (key === null) {
+      continue;
+    }
+
+    if (stepColumn < 0) {
+      stepColumn = key.column;
+    }
+    if (withColumn >= 0 && key.column <= withColumn) {
+      withColumn = -1;
+    }
+
+    if (key.column === stepColumn) {
+      if (BLOCK_WITH.test(key.text)) {
+        withColumn = key.column;
+      } else if (FLOW_WITH_NVMRC.test(key.text)) {
+        return true;
+      }
+    } else if (withColumn >= 0 && NODE_VERSION_FILE_NVMRC.test(key.text)) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 // A workflow that never calls setup-node yields no steps, so the pin check is
@@ -392,7 +462,10 @@ function checkWorkflowNodePin(file) {
     });
 
   lines.forEach((line, index) => {
-    if (isKeyLine[index] && LITERAL_NODE_VERSION.test(line)) {
+    if (
+      isKeyLine[index] &&
+      (LITERAL_NODE_VERSION.test(line) || FLOW_LITERAL_NODE_VERSION.test(line))
+    ) {
       fail(
         'workflows',
         `${file}:${index + 1} pins a literal node-version; use node-version-file: ${NVMRC}`

@@ -552,6 +552,83 @@ YAML
   [ "$status" -eq 0 ]
 }
 
+# `with: { node-version-file: '.nvmrc' }` is the same mapping as the block form and
+# equally valid YAML, so reading only the block spelling fails a compliant workflow —
+# as broken as failing open on a bad one. Reading both is safe only while the mapping
+# is the step's own: a `with:` nested under `env:` is an environment variable named
+# "with", which setup-node never looks at.
+@test "check-version-pins.mjs credits either with: spelling, and only the step's own" {
+  setup_pin_sandbox
+
+  local probe="$PIN_SANDBOX/.github/workflows/with-forms.yml"
+
+  write_setup_node_step() {
+    cat > "$probe" <<YAML
+name: with-forms
+on: push
+jobs:
+  a:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+$1
+YAML
+  }
+
+  write_setup_node_step "        with: { cache: 'bun', node-version-file: '.nvmrc' }"
+  run_pin_gate
+  if [ "$status" -ne 0 ]; then
+    echo 'the pin gate rejected a flow-style with: that pins .nvmrc' >&2
+    printf '%s\n' "${output-}" >&2
+    return 1
+  fi
+
+  # The flow spelling has to make the pin the mapping's OWN key, exactly as the block
+  # spelling does: a longer key that merely ends in `node-version-file`, and the key
+  # spelled inside a quoted value, are both text the gate must not read as the pin.
+  local hole
+  for hole in \
+    "        with: { node-version: '24.18.0' }" \
+    '        with: { node-version-file: .nvmrc.bak }' \
+    "        with: { legacy-node-version-file: '.nvmrc' }" \
+    '        with: { cache: bun, x-node-version-file: .nvmrc }' \
+    "        with: { cache: 'a, node-version-file: .nvmrc,' }" \
+    "        env:"$'\n'"          with:"$'\n'"            node-version-file: '.nvmrc'" \
+    "        env:"$'\n'"          with: { node-version-file: '.nvmrc' }"; do
+    write_setup_node_step "$hole"
+    run_pin_gate
+    if [ "$status" -eq 0 ]; then
+      echo "an unpinned setup-node step passed the gate: $hole" >&2
+      return 1
+    fi
+    assert_output_contains 'without node-version-file'
+  done
+
+  # A literal beside the pin is still drift, and the flow spelling must not be the
+  # one place it goes unreported.
+  write_setup_node_step \
+    "        with: { node-version-file: '.nvmrc', node-version: '24.18.0' }"
+  run_pin_gate
+  [ "$status" -ne 0 ]
+  assert_output_contains 'pins a literal node-version'
+
+  # ...and the converse: a quoted value that merely spells the literal is not one, so
+  # a pinned step keeps passing rather than being told to rewrite correct YAML.
+  write_setup_node_step \
+    "        with: { node-version-file: .nvmrc, cache: 'a, node-version: 1' }"
+  run_pin_gate
+  if [ "$status" -ne 0 ]; then
+    echo 'the pin gate read a quoted value as a literal node-version pin' >&2
+    printf '%s\n' "${output-}" >&2
+    return 1
+  fi
+
+  rm -f "$probe"
+  run_pin_gate
+  [ "$status" -eq 0 ]
+}
+
 @test "check-version-pins.mjs requires the committed devcontainer and rejects a fifth pin" {
   setup_pin_sandbox
 
