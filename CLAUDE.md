@@ -66,7 +66,10 @@ make test-unit-client   # Client unit tests (TEST_ENV=client, jsdom)
 make test-unit-server   # Apollo server unit tests (TEST_ENV=server, node)
 make test-unit-edge     # Edge-script unit tests (TEST_ENV=edge, node; scripts/, 100% per-file)
 make test-integration   # Integration layer (TEST_ENV=integration)
+make test-contract      # Mockoon mock vs. the committed OpenAPI contract (TEST_ENV=contract)
 make test-e2e           # Playwright E2E (prod stack + Mockoon API mock)
+make test-e2e-burnin    # Repeat E2E_BURNIN_SPECS with retries off to expose flaky specs
+make check-e2e-flakes   # Grade a Playwright JSON report (FLAKE_MODE=retry-pass|burn-in|census)
 make test-visual        # Playwright visual regression
 make test-visual-update # Refresh visual snapshots after a reviewed UI change
 make test-mutation      # Stryker mutation testing
@@ -81,6 +84,24 @@ Unit suites accept `CI=1` to run on the host without Docker (e.g. `CI=1 make
 test-unit-all`). E2E and visual specs run Playwright inside the prod/test compose stack;
 E2E uses Mockoon to mock the API. The test-layer map and coverage policy live in
 [`agents.md`](agents.md).
+
+### Flake and leak gates (issues #359, #354)
+
+Two suites that used to run without asserting anything now fail closed:
+
+- **E2E flakes.** `playwright.config.ts` retries twice in CI, so a spec that passes only on
+  a retry is reported green. The JSON reporter feeds `scripts/ci/flaky-report.ts`; the
+  `e2e flake gate` job fails when a spec **the PR changed** passed on a retry, and the
+  `burn in changed e2e specs` job re-runs those specs with `--repeat-each=5 --retries=0`
+  and fails at two or more failures. Flakes in untouched specs are annotated, not blocked,
+  and the nightly `e2e flake census` tracks them in a labelled issue.
+- **Memory leaks.** `src/test/memory-leak/runMemlabTests.js` reads the leak clusters memlab
+  returns and exits non-zero for any cluster not recorded in
+  `src/test/memory-leak/leak-baseline.json`. Every baseline entry needs a reason, a
+  tracking issue, and a `validUntil` date; the gate fails once that date passes.
+
+Never widen a retry budget, raise a leak allowance, or add an allowance for a leak your
+change introduced — fix the race or the retainer instead.
 
 ### Running a single unit test
 
@@ -109,9 +130,10 @@ The static export makes Next's `headers()` a no-op, so the edge is the only
 enforcement point — see [`docs/security-headers.md`](docs/security-headers.md). Never
 drop or weaken a header to make the gate pass.
 
-Two gates sit deliberately outside `make lint`: `make lint-metrics` (host-only Rust
-binary) and `make lint-contracts` (needs network for its drift check). Each has its own
-workflow — `rust-code-analysis.yml` and `contract-testing.yml`.
+Three gates sit deliberately outside `make lint`: `make lint-metrics` (host-only Rust
+binary), `make lint-contracts` (needs network for its drift check), and
+`make lint-openapi` (both — a host Go binary plus the network). Each has its own workflow
+— `rust-code-analysis.yml`, `contract-testing.yml` and `openapi-drift.yml`.
 
 Run `make format` before `make lint`; formatting is intentionally separate from the lint
 verification suite. Git hooks are managed by Husky. CI phases are mirrored locally by
@@ -121,6 +143,34 @@ PR review comments.
 
 Never satisfy a gate with `eslint-disable`, `prettier-ignore`, a markdownlint disable, or a
 lowered threshold — fix the root cause.
+
+### API contract parity (issue #350)
+
+Every Playwright e2e run talks to Mockoon, so a green e2e suite alone only proves the app
+agrees with the **mock**. Two gates anchored on the single committed baseline
+`contracts/user-service/openapi.json` — the artifact `lint-contracts` drift-gates and
+`Mockoon.Dockerfile` serves — keep that mock honest. Never add a second copy of the spec.
+
+- **`make test-contract` — blocking, every PR** (`contract-parity-testing.yml`). The
+  `TEST_ENV=contract` Jest layer (`tests/contract/**/*.contract.test.ts`) boots Mockoon
+  in-process via `@mockoon/commons-server`, replays every documented operation, and asserts
+  four rules per response: the status is documented, the media type is declared, the body
+  validates against the schema, and the body carries **no property the schema never
+  declares**. That last rule is stricter than OpenAPI's permissive default on purpose — it
+  is the only one that catches a renamed field here, because upstream misplaces `required`
+  on the array schema of `GET /api/users` rather than on its `items`.
+  `parity-detects-drift.contract.test.ts` seeds real defects into **copies** of the mock
+  data and asserts each turns the gate red; never seed a defect into the committed
+  contract, which `lint-contracts` guards. The `@mockoon/*` devDependencies are pinned
+  **exactly** to the `@mockoon/cli` version `Mockoon.Dockerfile` installs and a spec
+  enforces it — move both pins in the same commit, never relax the assertion.
+- **`make lint-openapi` — advisory, nightly** (`openapi-drift.yml`). A pinned,
+  SHA256-verified `oasdiff` compares the baseline to the newest upstream **release**
+  (resolved from the releases API, not by semver-sorting tags — upstream restarted its
+  numbering). `scripts/ci/openapi-drift.sh` exits three ways on purpose: `0` clean, `1`
+  breaking drift, `2` the check could not run, so an outage is never published as an API
+  change. GNU Make discards a recipe's exit status, so the workflow calls the script
+  directly. Breaking drift files/refreshes an `api-contract` issue instead of failing.
 
 ### Code Metrics (rust-code-analysis, issue #224)
 

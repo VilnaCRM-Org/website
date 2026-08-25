@@ -16,7 +16,11 @@ const nextConfig = withExportImages({
 
   compiler: {
     reactRemoveProperties: true,
-    removeConsole: process.env.NODE_ENV === 'production',
+    // Strip `console.log`/`debug` from the production bundle but keep
+    // `console.error`/`warn`: removing every console call left the shipped
+    // client with no diagnostic channel whatsoever, so a failure on the
+    // credential form surfaced nowhere (#378 F3).
+    removeConsole: process.env.NODE_ENV === 'production' ? { exclude: ['error', 'warn'] } : false,
   },
 
   webpack: config => {

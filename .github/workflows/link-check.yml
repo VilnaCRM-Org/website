@@ -65,10 +65,26 @@ jobs:
         id: lychee
         continue-on-error: true
         run: |
+          # --root-dir resolves root-relative hrefs (`/layout/favicon/favicon.svg`,
+          # `/_next/static/...`) against the site root. Without it every one of them is
+          # reported as "Cannot resolve root-relative link", which is what made this leg
+          # file 105 phantom errors a week and buried the four real ones (issue #409).
+          # `out/` IS the deployed site root, so it is the correct resolution base for
+          # Markdown and exported HTML alike. The path is the CONTAINER path -- the
+          # workspace is mounted at /repo -- and lychee requires it to be absolute.
+          #
+          # --exclude-loopback drops `http://localhost:3000`, which README.md documents as
+          # the dev-server address. It is prose that must stay, and nothing is listening on
+          # the runner, so it can only ever report "Connection refused".
+          #
+          # The blocking `offline` leg above deliberately gets neither flag: it has no
+          # `out/` to resolve against, so it keeps rejecting root-relative Markdown links
+          # outright and they never reach this leg in the first place.
           mapfile -d '' markdown_files < <(git ls-files -z '*.md')
           docker run --rm -v "$GITHUB_WORKSPACE:/repo" -w /repo \
             lycheeverse/lychee@sha256:eaff3e0a13603c9a701accfcc84f44158bb77bf36ecfa4622b626056c3463892 \
             --include-fragments --no-progress --output /repo/lychee-report.md \
+            --root-dir /repo/out --exclude-loopback \
             -- "${markdown_files[@]}" './out/**/*.html'
 
       - name: File or refresh the tracking issue on failures

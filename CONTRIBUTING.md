@@ -53,7 +53,7 @@ If you find an issue to work on, you are welcome to open a PR with a fix.
     it to [fork the repo](https://docs.github.com/en/desktop/contributing-and-collaborating-using-github-desktop/cloning-and-forking-repositories-from-github-desktop)!
 
 - Using the command line:
-  - [Fork the repo](https://docs.github.com/en/github/getting-started-with-github/fork-a-repo#fork-an-example-repository)
+  - [Fork the repo](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/fork-a-repo#forking-a-repository)
     so that you can make your changes without affecting the original project until
     you're ready to merge them.
 
@@ -130,6 +130,54 @@ full list and the sharded score is identical to an unsharded run — the gate is
 preserved, never relaxed. The merge job runs even when a shard fails, so the
 gate fails closed rather than passing vacuously.
 
+#### E2E flakes are detected, not retried away
+
+`playwright.config.ts` sets `retries: 2` in CI, so a spec that fails and then
+passes is reported green and the flake signal is thrown away. That is how the
+WebKit swagger flake in #290 reached the production CodePipeline. Two jobs in
+`e2e-testing.yml` recover the signal, both scoped to the specs your pull request
+actually changed:
+
+- **`e2e flake gate`** reads every shard's Playwright JSON report
+  (`test-results/results.json`) through
+  [`scripts/ci/flaky-report.ts`](scripts/ci/flaky-report.ts) and fails when a
+  changed spec carries Playwright's `flaky` status — i.e. it only passed on a
+  retry. Like the mutation merge gate, it runs even when a shard failed so it
+  cannot pass vacuously.
+- **`burn in changed e2e specs`** runs `make test-e2e-burnin` on those specs with
+  `--repeat-each=5 --retries=0`. Two or more failures out of five is a flake;
+  a single failure is tolerated so one-off infrastructure blips do not block a
+  pull request.
+
+Flaky specs you did **not** touch are reported as annotations rather than
+failures, so the pre-existing backlog does not block unrelated work; the nightly
+`e2e flake census` workflow repeats the whole suite off the PR path and records
+what it finds in an `e2e-flake`-labelled issue.
+
+If a burn-in goes red, fix the nondeterminism at its source. Adding a
+`waitForTimeout`, widening `retries`, or wrapping the assertion in a condition
+defeats the gate and is not an acceptable fix.
+
+#### Memory leaks fail the job
+
+`make test-memory-leak` used to run memlab and discard its findings, so a run
+that detected fifty leak clusters exited 0 exactly like a clean one. The runner
+now reads the clusters and exits non-zero, printing the retainer traces for the
+scenarios that failed.
+
+Clusters that already existed when the gate was armed are recorded in
+[`src/test/memory-leak/leak-baseline.json`](src/test/memory-leak/leak-baseline.json),
+each with a reason, a tracking issue, and a `validUntil` date — the gate fails
+once that date passes, so accepted debt cannot become permanent. An allowance is
+only ever for debt that predates the gate: if your change introduces a leak, fix
+the retainer.
+
+Cluster counts differ between environments — `swaggerInteractions` clusters at
+13 on a GitHub-hosted runner and 28–29 locally — so an allowance records the
+maximum seen anywhere. A run below its allowance therefore prints a `ratchet`
+notice rather than failing. Do not act on a single low reading: lowering an
+allowance to a CI-only figure turns every local run red.
+
 #### Dockerfile build performance
 
 If your change touches a `Dockerfile` (or the gate's own config), a CI gate
@@ -182,6 +230,33 @@ update-contracts` — it re-fetches both artifacts and refreshes the spectral
 baseline. Commit the resulting diff; it is the reviewable record of what
 changed upstream.
 
+Two further gates keep the **mock** honest, because the whole Playwright suite
+talks to Mockoon rather than a real backend and a green e2e run therefore only
+proves the app agrees with the mock:
+
+- **`make test-contract` (blocking, every PR).** Boots Mockoon in-process from
+  the committed document and holds every documented operation's response against
+  it — status, media type, schema, and no property the schema never declares.
+  Its CI home is
+  [`contract-parity-testing.yml`](.github/workflows/contract-parity-testing.yml);
+  the status-check name a maintainer must add to the `main` required-checks
+  ruleset is **`contract parity testing / mock-contract-parity`** (branch
+  protection is a repository setting and cannot be committed).
+  It also validates the swagger e2e fixtures against the same schema and pins the
+  `@mockoon/*` libraries to the `@mockoon/cli` version `Mockoon.Dockerfile`
+  installs. When it goes red, fix the mock or the contract — never relax a rule.
+  If you bump one Mockoon pin, bump both in the same commit.
+- **`make lint-openapi` (advisory, nightly).** Reports breaking changes between
+  the committed baseline and the newest upstream **release** using a pinned,
+  SHA256-verified `oasdiff`. Upstream moving on is not a PR author's fault, so
+  [`openapi-drift.yml`](.github/workflows/openapi-drift.yml) files or refreshes an
+  `api-contract` tracking issue instead of failing a check, and closes it once
+  the baseline is current again. Like `lint-contracts` and `lint-metrics` it sits
+  outside `make lint` — it needs the network and a host binary.
+
+Both gates read the single committed baseline. Do not add a second copy of the
+spec: it would drift with nothing watching it.
+
 The baseline in [`contracts/spectral-baseline.json`](contracts/spectral-baseline.json)
 records defects in the upstream spec that this repo does not control. It is not
 a suppression list: the gate fails on any finding **not** in it, and equally on
@@ -203,6 +278,23 @@ If you're unsure about how to proceed with your changes, you have two options:
 - **Contact your team lead** for guidance.
 - **Push your changes** to a branch and **open a pull request** — this will trigger
   an automated code review.
+
+### 🔗 Link Checking
+
+`.github/workflows/link-check.yml` runs [lychee](https://lychee.cli.rs/) in two legs, and
+they have deliberately different jobs:
+
+- **Offline (blocking, every PR).** Resolves relative links and `#fragment` anchors across
+  every git-tracked Markdown file, with external URLs skipped so a third party's outage can
+  never flake a required check. This is also the leg that rejects root-relative Markdown
+  links (`/some/path`) outright — keep them relative.
+- **External (advisory, Mondays).** Resolves external URLs too, over Markdown plus the built
+  `out/` export, and files or refreshes the _Weekly link check failures_ tracking issue
+  instead of blocking.
+
+Because the weekly leg reports rather than blocks, treat a noisy report as a bug in the leg:
+it is only useful while every entry is a real dead link. Fix the link, or fix the checker —
+never let phantom findings accumulate.
 
 ### 🤖 Automatic Code Review
 

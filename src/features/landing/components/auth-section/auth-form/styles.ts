@@ -79,6 +79,15 @@ export default {
     },
   },
 
+  // `overflow: hidden` + `contain: content` clip rather than scroll, so the two
+  // maxHeight caps below are sized against the field count. Both were raised by
+  // one input row when the confirm-password field landed (#382 F4) — by the row
+  // height that actually applies at each breakpoint, which is not the same
+  // number: ≤1130px renders a 4.938rem input (see ui-input/theme.ts) for a
+  // ~123.8px row, while ≤sm falls back to the 4.5rem `inputWrapper` minimum for
+  // an 87px row. Sizing both from the mobile row would leave the submit button
+  // flush against the card edge on every tablet/laptop width, a band no visual
+  // baseline covers.
   formContent: {
     minHeight: '40.438rem',
     height: 'auto',
@@ -97,13 +106,13 @@ export default {
     [`@media (max-width: 1130px)`]: {
       padding: '2.5rem 2.563rem 3.5rem 2.563rem',
       minWidth: '39.75rem',
-      maxHeight: '42.875rem',
+      maxHeight: '50.625rem',
     },
     [`@media (max-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
       minHeight: '100%',
       minWidth: '100%',
       maxWidth: '21.563rem',
-      maxHeight: '512px',
+      maxHeight: '599px',
       padding: '1.5rem 1.5rem 2rem 1.5rem',
     },
   },
@@ -114,6 +123,21 @@ export default {
     [`@media (max-width: 1130px)`]: {
       gap: '0.9375rem',
     },
+  },
+
+  // Available to screen readers, painted nowhere: an absolutely positioned,
+  // 1px clipped box takes part in no flex layout, so it adds no gap and moves
+  // no pixel in the visual baselines.
+  visuallyHidden: {
+    position: 'absolute',
+    width: '1px',
+    height: '1px',
+    padding: 0,
+    margin: '-1px',
+    overflow: 'hidden',
+    clipPath: 'inset(50%)',
+    whiteSpace: 'nowrap',
+    border: 0,
   },
 
   inputWrapper: {

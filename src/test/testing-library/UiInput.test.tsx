@@ -50,4 +50,43 @@ describe('UiInput', () => {
     const inputElement: HTMLElement = getByRole('textbox');
     expect(inputElement).toBeDisabled();
   });
+
+  // #382 F3: without `name` + `autocomplete` a password manager cannot see the
+  // credential fields, so it never offers to generate a strong password.
+  it('forwards identity and autofill attributes to the rendered input', () => {
+    const { getByRole } = render(<UiInput id="Email" name="Email" autoComplete="email" />);
+    const inputElement: HTMLElement = getByRole('textbox');
+
+    expect(inputElement).toHaveAttribute('id', 'Email');
+    expect(inputElement).toHaveAttribute('name', 'Email');
+    expect(inputElement).toHaveAttribute('autocomplete', 'email');
+  });
+
+  it('puts aria-describedby on the input itself, not on the wrapper', () => {
+    const { getByRole } = render(<UiInput describedBy="hint-id" />);
+    const inputElement: HTMLElement = getByRole('textbox');
+
+    expect(inputElement).toHaveAttribute('aria-describedby', 'hint-id');
+    expect(inputElement.closest('.MuiFormControl-root')).not.toHaveAttribute('aria-describedby');
+  });
+
+  it('omits the optional attributes entirely when they are not supplied', () => {
+    const { getByRole } = render(<UiInput />);
+    const inputElement: HTMLElement = getByRole('textbox');
+
+    expect(inputElement).not.toHaveAttribute('aria-describedby');
+    expect(inputElement).not.toBeRequired();
+  });
+
+  it('marks a required field for assistive tech without enabling native validation', () => {
+    const { getByRole } = render(<UiInput required />);
+    const inputElement: HTMLElement = getByRole('textbox');
+
+    expect(inputElement).toBeRequired();
+    // Required is announced through ARIA only: the native attribute would let
+    // the browser block submission before react-hook-form ever produced its
+    // localized message.
+    expect(inputElement.getAttributeNames()).toContain('aria-required');
+    expect(inputElement.getAttributeNames()).not.toContain('required');
+  });
 });

@@ -4,6 +4,8 @@ import React from 'react';
 import { useForm } from 'react-hook-form';
 import { v4 as uuidv4 } from 'uuid';
 
+import { reportHandledError } from '@/lib/telemetry/report-error';
+
 import { SignUpInput } from '../../../api/service/types';
 import SIGNUP_MUTATION from '../../../api/service/userService';
 import { animationTimeout } from '../../../constants';
@@ -60,6 +62,11 @@ function onSignupSuccess(notif: NotificationState): void {
 }
 
 function onSignupError(notif: NotificationState, error: unknown): void {
+  // The failure has to leave a trace beyond the toast: this is the only
+  // PII-collecting surface on the site, and without a telemetry sink abuse of it
+  // produces no signal at all (#378 F3). Only the error and static tags are
+  // sent — never the submitted credentials.
+  reportHandledError(error, { feature: 'landing', action: 'signup' });
   notif.setErrorText(handleApolloError({ error }));
   notif.setNotificationType(NotificationStatus.ERROR);
   notif.setIsNotificationOpen(true);
@@ -90,7 +97,7 @@ function useSignupForm() {
     formState: { errors },
   } = useForm<RegisterItem>({
     mode: 'onTouched',
-    defaultValues: { FullName: '', Password: '', Email: '', Privacy: false },
+    defaultValues: { FullName: '', Password: '', ConfirmPassword: '', Email: '', Privacy: false },
   });
   const [signupMutation, { loading }] = useMutation<CreateUserPayload, SignupVariables>(
     SIGNUP_MUTATION
