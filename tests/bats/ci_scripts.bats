@@ -807,6 +807,96 @@ YAML
   [ "$status" -eq 0 ]
 }
 
+# YAML ends an implicit key with `s-separate-in-line?` — a space OR a tab — so
+# `node-version : "20"` is the ordinary key `node-version` and a runner honours it. A
+# scanner that demands the colon touch the key saw NO key on that line, which fails open
+# on the literal and the spaced `uses:` (a step never counted is a step never checked) and
+# fails closed on a spaced pin. And YAML escapes `'` inside a single-quoted key by
+# DOUBLING it, so `'it''s'` is one key: closing it at the first half desynchronises the
+# flow-entry walk and everything after it — the literal included — becomes invisible.
+@test "check-version-pins.mjs allows whitespace before a colon and a doubled quote in a key" {
+  setup_pin_sandbox
+
+  local probe="$PIN_SANDBOX/.github/workflows/spaced-keys.yml"
+  local tab=$'\t'
+
+  write_spaced_key_step() {
+    {
+      printf 'name: spaced-keys\non: push\njobs:\n  a:\n    runs-on: ubuntu-latest\n    steps:\n'
+      printf '%s\n' "$1"
+    } > "$probe"
+  }
+
+  run_pin_gate
+  [ "$status" -eq 0 ]
+
+  # Correct YAML the unspaced-only matcher rejected: a spaced pin in either mapping
+  # style, a spaced `with:`, a spaced `uses:` whose step IS pinned, a tab before the
+  # colon, a spaced `run: |` header (whose body must stay prose rather than be read back
+  # as structure), and a doubled-quote key beside a real pin the walk has to step over.
+  local pinned
+  for pinned in \
+    '      - uses: actions/setup-node@v6'$'\n''        with:'$'\n'"          node-version-file : '.nvmrc'" \
+    '      - uses: actions/setup-node@v6'$'\n''        with :'$'\n'"          node-version-file: '.nvmrc'" \
+    '      - uses: actions/setup-node@v6'$'\n''        with : { cache : bun, node-version-file : .nvmrc }' \
+    '      - uses : actions/setup-node@v6'$'\n''        with:'$'\n'"          node-version-file: '.nvmrc'" \
+    '      - uses: actions/setup-node@v6'$'\n''        with:'$'\n'"          node-version-file${tab}: '.nvmrc'" \
+    '      - name: Explain the pin'$'\n''        run : |'$'\n''          uses: actions/setup-node@v6'$'\n''          node-version: 24.18.0' \
+    '      - uses: actions/setup-node@v6'$'\n'"        with: { 'it''s': 1, node-version-file: .nvmrc }"; do
+    write_spaced_key_step "$pinned"
+    run_pin_gate
+    if [ "$status" -ne 0 ]; then
+      echo "the pin gate rejected correct YAML: $pinned" >&2
+      printf '%s\n' "${output-}" >&2
+      return 1
+    fi
+  done
+
+  # The spacing widens the colon, never the key: a spaced `uses:` is a real step that
+  # still has to be pinned, a spaced lookalike key pins nothing, and a spaced `run: |`
+  # owns only what is indented past its own key — so the step behind it stays visible.
+  local hole
+  for hole in \
+    '      - uses : actions/setup-node@v6'$'\n''        with:'$'\n''          cache: bun' \
+    "      - 'uses' : actions/setup-node@v6"$'\n''        with:'$'\n''          cache: bun' \
+    '      - uses: actions/setup-node@v6'$'\n''        with:'$'\n'"          legacy-node-version-file : '.nvmrc'" \
+    '      - uses: actions/setup-node@v6'$'\n'"        with : { legacy-node-version-file : '.nvmrc' }" \
+    '      - uses: actions/setup-node@v6'$'\n''        env :'$'\n''          with :'$'\n'"            node-version-file : '.nvmrc'" \
+    '      - run : |'$'\n''          echo build'$'\n''        uses: actions/setup-node@v6'$'\n''        with:'$'\n''          cache: bun'; do
+    write_spaced_key_step "$hole"
+    run_pin_gate
+    if [ "$status" -eq 0 ]; then
+      echo "an unpinned setup-node step passed the gate: $hole" >&2
+      return 1
+    fi
+    assert_output_contains 'without node-version-file'
+  done
+
+  # The literal is what actually runs — setup-node resolves `node-version` ahead of
+  # `node-version-file` — so it has to be reported however its key is spelled: spaced,
+  # quoted AND spaced, tab-separated, in flow style, and after a doubled-quote key that
+  # used to end the walk before the literal was ever looked at.
+  local literal
+  for literal in \
+    '      - uses: actions/setup-node@v6'$'\n''        with:'$'\n'"          node-version-file: '.nvmrc'"$'\n''          node-version : "20"' \
+    '      - uses: actions/setup-node@v6'$'\n''        with:'$'\n'"          node-version-file: '.nvmrc'"$'\n'"          \"node-version\" : '20'" \
+    '      - uses: actions/setup-node@v6'$'\n''        with:'$'\n'"          node-version-file: '.nvmrc'"$'\n'"          node-version${tab}: '20'" \
+    '      - uses: actions/setup-node@v6'$'\n''        with : { node-version-file : .nvmrc, node-version : "20" }' \
+    '      - uses: actions/setup-node@v6'$'\n''        with: { node-version-file: .nvmrc }'$'\n'"        extra: { 'it''s': 1, node-version: '20' }"; do
+    write_spaced_key_step "$literal"
+    run_pin_gate
+    if [ "$status" -eq 0 ]; then
+      echo "a literal node-version passed the gate: $literal" >&2
+      return 1
+    fi
+    assert_output_contains 'pins a literal node-version'
+  done
+
+  rm -f "$probe"
+  run_pin_gate
+  [ "$status" -eq 0 ]
+}
+
 @test "check-version-pins.mjs requires the committed devcontainer and rejects a fifth pin" {
   setup_pin_sandbox
 

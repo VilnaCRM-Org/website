@@ -296,6 +296,17 @@ const WITH_KEY = yamlKey('with');
 const NODE_VERSION_KEY = yamlKey('node-version');
 const NODE_VERSION_FILE_KEY = yamlKey('node-version-file');
 
+// The whitespace YAML permits between a key and its colon. `node-version : "20"` is the
+// ordinary key `node-version`, and a runner honours it; a scanner that demands the colon
+// touch the key sees no key on that line at all and waves the literal straight through.
+// A TAB counts: YAML 1.2 ends an implicit key with `s-separate-in-line?`, which is a
+// space OR a tab, and js-yaml — what a runner's own tooling reads with — accepts
+// `node-version\t: '20'`. (PyYAML is the stricter outlier here, and is wrong per spec.)
+// Every key match below ends `${WS}:` and is built from this one constant, so the spacing
+// cannot be allowed in one spelling and forgotten in the next. Mirrors `ws` in the
+// sibling gate scripts/ci/check-node-version-sources.sh.
+const WS = String.raw`[ \t]*`;
+
 // A double-quoted YAML scalar, consumed whole. `\"` is an escaped quote INSIDE the
 // scalar, not the end of it: a run that stopped there would hand the remainder of the
 // string back to the walk as structure, and `{ "k\": v, node-version-file: .nvmrc, z" }`
@@ -304,18 +315,40 @@ const NODE_VERSION_FILE_KEY = yamlKey('node-version-file');
 // is still a single deterministic pass.
 const DQ_SCALAR = String.raw`"(?:[^"\\]|\\.)*"`;
 
-// A single-quoted YAML scalar. YAML escapes `'` by doubling it, and this run stops at
-// the first half of a `''` — deliberately: the walk then fails to find the `:` that must
-// follow a key, gives the mapping up, and the step stays UNPINNED. Widening it the way
-// the double-quoted run is widened would buy nothing but a second way to be wrong, since
-// the narrow reading already errs closed.
+// A single-quoted YAML scalar in KEY position. YAML escapes `'` by doubling it, so
+// `'it''s'` is one key and a run that stopped at the first half of the `''` desynchronises
+// the flow-entry walk: the entry never finds the `:` that must follow its key, the walk
+// gives up, and every key AFTER it becomes invisible. That is a fail-OPEN, not merely a
+// fail-closed one — `extra: { 'it''s': 1, node-version: '20' }` is a literal pin the gate
+// would never report, and setup-node resolves `node-version` ahead of `node-version-file`,
+// so the unreported literal is the version that actually runs.
+const SQ_KEY_SCALAR = String.raw`'[^']*(?:''[^']*)*'`;
+
+// The same scalar in VALUE position, where the naive pairing is kept DELIBERATELY. It is
+// correct there: doubling always adds quotes two at a time, so naive pairing splits
+// `'it''s'` into the two ADJACENT scalars `'it'` and `'s'`, which span exactly the
+// characters the one real scalar does — no comma or colon is ever left outside a scalar,
+// and the walk cannot desynchronise.
+//
+// It is also required. This scalar sits inside the repeating value alternation of
+// FLOW_ENTRIES, where a doubling-aware form is ambiguous with itself (a scalar holding one
+// doubled quote reads as that one scalar or as two adjacent ones) and the readings
+// multiply per entry. MEASURED on this file's own patterns, a doubling-aware scalar in
+// value position DOUBLES its backtracking with every added entry — 0.36 ms at 14 entries,
+// 1.42 at 16, 5.62 at 18, 22.8 at 20, 88.9 at 22, 354 at 24, a ratio of 1.95-2.05 at every
+// step — so a 40-entry line takes hours. The shipped shape does the same 40 entries in
+// under 0.01 ms, and a 4000-entry line in under 1 ms.
+// Key position has no such repetition to pair with, and an early close there is refuted
+// by the very next character (the second quote of the pair is neither the space nor the
+// colon that has to follow a key), so it costs one step. Do not "unify" the two.
 const SQ_SCALAR = String.raw`'[^']*'`;
 
 // Any key at all, for the flow entries that are merely stepped over, for the key a flow
 // mapping hangs off, and for the key a block scalar hangs off. A quoted key is consumed
 // whole, so a colon or a comma INSIDE a key is part of that key rather than structure
-// the walk could be desynchronised by.
-const ANY_KEY = String.raw`(?:[\w.$-]+|${DQ_SCALAR}|${SQ_SCALAR})`;
+// the walk could be desynchronised by — and, now that the single-quoted form knows its
+// doubling, so is a quote the key escapes rather than closes.
+const ANY_KEY = String.raw`(?:[\w.$-]+|${DQ_SCALAR}|${SQ_KEY_SCALAR})`;
 
 // `.nvmrc`, bare or quoted, with the quotes required to match each other: a value that
 // opens with one quote and closes with the other is not `.nvmrc` to any YAML reader, so
@@ -327,8 +360,11 @@ const NVMRC_VALUE = String.raw`(?:'\.nvmrc'|"\.nvmrc"|\.nvmrc)`;
 // looks) so a shell pipe at the end of an inline value — `cache: bun # see: |` — cannot
 // open a block scalar and swallow the rest of the step. Capture 1 is everything before
 // the key, so the scalar can be scoped to the column the KEY starts at.
+// A spaced header (`      - run : |`) opens a block scalar exactly as an unspaced one
+// does; missing it leaves the scalar closed and reads its prose back as YAML structure —
+// the "prose poses as a step" failure this function exists to prevent.
 const BLOCK_SCALAR_HEADER = new RegExp(
-  String.raw`^(\s*(?:-\s+)?)${ANY_KEY}:\s*[|>][-+]?\d*\s*(?:#.*)?$`
+  String.raw`^(\s*(?:-\s+)?)${ANY_KEY}${WS}:\s*[|>][-+]?\d*\s*(?:#.*)?$`
 );
 
 /**
@@ -409,9 +445,9 @@ function yamlKeyLines(lines) {
 // `- ` that opens a list item — has to be the `uses:` key itself, in any of its three
 // spellings. The action reference may be quoted too, exactly as the sibling gate allows.
 const SETUP_NODE_USES = new RegExp(
-  String.raw`^\s*(?:-\s+)?${USES_KEY}:\s*["']?actions/setup-node[@\s]`
+  String.raw`^\s*(?:-\s+)?${USES_KEY}${WS}:\s*["']?actions/setup-node[@\s]`
 );
-const LITERAL_NODE_VERSION = new RegExp(String.raw`^\s*(?:-\s+)?${NODE_VERSION_KEY}:`);
+const LITERAL_NODE_VERSION = new RegExp(String.raw`^\s*(?:-\s+)?${NODE_VERSION_KEY}${WS}:`);
 
 // The entries of a flow mapping that precede the key being looked for: `key: value,`
 // repeated, with a quoted key or value consumed whole. Stepping over one entry at a time
@@ -425,7 +461,7 @@ const LITERAL_NODE_VERSION = new RegExp(String.raw`^\s*(?:-\s+)?${NODE_VERSION_K
 // character, and every repetition consumes at least a `k:,`, so none of them can match
 // the empty string. There is exactly one way to match any given prefix — nothing for a
 // backtracking engine to explore.
-const FLOW_ENTRIES = String.raw`(?:${ANY_KEY}:(?:[^,{}'"]|${SQ_SCALAR}|${DQ_SCALAR})*,\s*)*`;
+const FLOW_ENTRIES = String.raw`(?:${ANY_KEY}${WS}:(?:[^,{}'"]|${SQ_SCALAR}|${DQ_SCALAR})*,\s*)*`;
 
 // The same literal written inside a flow mapping, `with: { node-version: '24.18.0' }`.
 // Without it the two spellings disagree: a flow mapping that carries the `.nvmrc` pin
@@ -433,7 +469,7 @@ const FLOW_ENTRIES = String.raw`(?:${ANY_KEY}:(?:[^,{}'"]|${SQ_SCALAR}|${DQ_SCAL
 // of the very same step is. The key has to open the mapping or start an entry, so
 // `node-version-file:` is never read as a literal.
 const FLOW_LITERAL_NODE_VERSION = new RegExp(
-  String.raw`^\s*(?:-\s+)?${ANY_KEY}:\s*\{\s*${FLOW_ENTRIES}${NODE_VERSION_KEY}:`
+  String.raw`^\s*(?:-\s+)?${ANY_KEY}${WS}:\s*\{\s*${FLOW_ENTRIES}${NODE_VERSION_KEY}${WS}:`
 );
 
 // The step's own `node-version-file:` key, on a real key line, whose complete value
@@ -443,7 +479,7 @@ const FLOW_LITERAL_NODE_VERSION = new RegExp(
 // (`.nvmrc.example`), and a similarly suffixed key (`legacy-node-version-file:`) —
 // each of which lets a genuinely unpinned setup-node step through.
 const NODE_VERSION_FILE_NVMRC = new RegExp(
-  String.raw`^\s*(?:-\s+)?${NODE_VERSION_FILE_KEY}:\s*${NVMRC_VALUE}\s*(?:#.*)?$`
+  String.raw`^\s*(?:-\s+)?${NODE_VERSION_FILE_KEY}${WS}:\s*${NVMRC_VALUE}\s*(?:#.*)?$`
 );
 
 // The step's own `with:` mapping, in either mapping style — both are the same
@@ -454,9 +490,9 @@ const NODE_VERSION_FILE_NVMRC = new RegExp(
 // own, and the value alternation terminates exactly at `.nvmrc`, so a lookalike key
 // (`legacy-node-version-file:`), a lookalike path (`.nvmrc.bak`, `".nvmrcX"`) or a
 // literal `node-version:` all still leave the step unpinned.
-const BLOCK_WITH = new RegExp(String.raw`^${WITH_KEY}:\s*(?:#.*)?$`);
+const BLOCK_WITH = new RegExp(String.raw`^${WITH_KEY}${WS}:\s*(?:#.*)?$`);
 const FLOW_WITH_NVMRC = new RegExp(
-  String.raw`^${WITH_KEY}:\s*\{\s*${FLOW_ENTRIES}${NODE_VERSION_FILE_KEY}:\s*${NVMRC_VALUE}\s*[,}]`
+  String.raw`^${WITH_KEY}${WS}:\s*\{\s*${FLOW_ENTRIES}${NODE_VERSION_FILE_KEY}${WS}:\s*${NVMRC_VALUE}\s*[,}]`
 );
 
 // The mapping key a line carries, with any sequence dash removed, and the column it
