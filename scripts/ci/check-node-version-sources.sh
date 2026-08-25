@@ -39,10 +39,21 @@ abort() {
 # --- 1. The authoritative version ---------------------------------------------
 [ -f .nvmrc ] || abort ".nvmrc is missing; it is the authoritative Node version"
 
+# The whole file is read, not just its first line. nvm, `actions/setup-node` and this
+# check all consume line 1, so a second version line below it is drift that no consumer
+# obeys but every reader believes — exactly the disagreement this gate exists to catch.
+# Anything past the one version line is rejected rather than discarded. (Trailing blank
+# lines are not content: `$(cat …)` has already dropped them.)
+nvmrc_contents="$(cat .nvmrc)"
+
+nvmrc_extra_lines="$(printf '%s\n' "$nvmrc_contents" | sed -n '2,$p' | grep -c '[^[:space:]]' || true)"
+[ "$nvmrc_extra_lines" -eq 0 ] ||
+  abort ".nvmrc must hold nothing but one version line; found ${nvmrc_extra_lines} further non-empty line(s), which every consumer silently ignores"
+
 # Only surrounding whitespace is trimmed, never whitespace *inside* the value: a
 # `.nvmrc` reading "24. 18.0" is malformed and must fail the format check below
 # rather than be silently repaired into something that passes.
-nvmrc_version="$(sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' <.nvmrc | head -n 1)"
+nvmrc_version="$(printf '%s\n' "$nvmrc_contents" | head -n 1 | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
 
 echo "$nvmrc_version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' ||
   abort ".nvmrc must pin an exact MAJOR.MINOR.PATCH version, found '${nvmrc_version}'"
@@ -108,10 +119,23 @@ fi
 # `# node-version-file: '.nvmrc'` counts as an input — so a step pinning a literal
 # version could balance the totals and pass.
 #
-# The scanner below drops comments, then treats a `- ` list item as opening a step and
-# any later `- ` at the same or shallower indent as closing it (deeper ones are nested
-# sequences inside the step, not new steps). A step that uses setup-node must carry its
-# own `node-version-file` whose value, quoted or bare, is exactly `.nvmrc`.
+# The scanner below drops comments, then treats a `- ` list item as opening a step,
+# closing it at the next line that is not more indented — the next `- ` of the same
+# sequence, or the job key the sequence ends at (deeper `- ` items are nested sequences
+# inside the step, not new steps). A step that uses setup-node must carry its own
+# `node-version-file` whose value, quoted or bare, is exactly `.nvmrc`.
+#
+# Both keys are matched as real YAML mapping keys of that step, never as loose text:
+#
+#   * `uses:` must open the line (after an optional sequence dash), so a shell command
+#     printing `uses: actions/setup-node@…` inside a `run: |` block cannot conjure a step
+#     that nothing runs — which would satisfy the "at least one setup-node step" vacuity
+#     guard while the repository has none;
+#   * `node-version-file:` counts only inside the step's own `with:` mapping, so the same
+#     key under `env:` (where setup-node never reads it) no longer excuses a step.
+#
+# Block scalars are therefore tracked explicitly: everything indented under a `key: |`
+# or `key: >` is literal text and is skipped, structure and comment syntax alike.
 scan_setup_node_steps() {
   awk '
     function close_step() {
@@ -120,9 +144,21 @@ scan_setup_node_steps() {
         if (!has_nvmrc) bad++
       }
       in_step = 0; has_setup = 0; has_nvmrc = 0
+      in_with = 0; in_block = 0
     }
     {
-      line = $0
+      raw = $0
+
+      # Everything indented under a `key: |` / `key: >` header is literal scalar text,
+      # not YAML structure, so it is skipped wholesale — a shell script that prints
+      # `- uses: actions/setup-node@…` cannot conjure a step nothing runs.
+      if (in_block) {
+        if (raw ~ /^[[:space:]]*$/) next
+        if (match(raw, /[^[:space:]]/) - 1 > block_indent) next
+        in_block = 0
+      }
+
+      line = raw
       sub(/[[:space:]]+#.*$/, "", line)
       if (line ~ /^[[:space:]]*#/) next
       if (line ~ /^[[:space:]]*$/) next
@@ -130,16 +166,47 @@ scan_setup_node_steps() {
       first = match(line, /[^[:space:]]/)
       indent = first - 1
 
+      # A step ends at the next `- ` item at its own indent, and at any line that dedents
+      # out of the sequence entirely (the next job key, say) — without the second rule a
+      # step would absorb whatever follows its list and be credited with those keys.
+      # Deeper `- ` items are nested sequences inside the step, not new steps.
+      if (in_step && indent <= step_indent) close_step()
+      if (!in_step && substr(line, first, 2) == "- ") {
+        in_step = 1
+        step_indent = indent
+      }
+
+      # The mapping key on this line, with any sequence dash removed, and the column it
+      # really starts at: in `- uses: x` the key is nested one level below the dash, and
+      # that nesting is what separates a `with:` input from a sibling `env:` entry.
+      key = substr(line, first)
+      key_indent = indent
       if (substr(line, first, 2) == "- ") {
-        if (!in_step || indent <= step_indent) {
-          close_step()
-          in_step = 1
-          step_indent = indent
+        off = match(substr(line, first + 1), /[^[:space:]]/)
+        key = substr(line, first + off)
+        key_indent = first + off - 1
+      }
+
+      if (in_with && key_indent <= with_indent) in_with = 0
+
+      if (in_step) {
+        if (key ~ /^uses:[[:space:]]*["'\'']?actions\/setup-node@/) has_setup = 1
+
+        if (key ~ /^with:[[:space:]]*$/) {
+          in_with = 1
+          with_indent = key_indent
+        } else if (in_with &&
+                   key ~ /^node-version-file:[[:space:]]*["'\'']?\.nvmrc["'\'']?[[:space:]]*$/) {
+          has_nvmrc = 1
         }
       }
 
-      if (line ~ /uses:[[:space:]]*["'\'']?actions\/setup-node@/) has_setup = 1
-      if (line ~ /node-version-file:[[:space:]]*["'\'']?\.nvmrc["'\'']?[[:space:]]*$/) has_nvmrc = 1
+      # Tracked outside the `in_step` guard on purpose: a block scalar hanging off a job
+      # key must be skipped too, or its literal text is read back as structure.
+      if (key ~ /:[[:space:]]*[|>][-+0-9]*[[:space:]]*$/) {
+        in_block = 1
+        block_indent = key_indent
+      }
     }
     END { close_step(); print steps + 0, bad + 0 }
   ' "$1"

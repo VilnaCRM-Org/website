@@ -230,6 +230,47 @@ EOF
   assert_output_contains '1 actions/setup-node step(s)'
 }
 
+@test "does not read a setup-node step out of the text of a run: block" {
+  make_consistent_repo "$REPO"
+  # A `run:` script is literal scalar content, not YAML structure. Reading it as
+  # structure would let a workflow that never sets Node up satisfy the vacuity guard.
+  cat >"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+jobs:
+  unit:
+    steps:
+      - name: Print the setup we are supposed to have
+        run: |
+          echo "- uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020"
+          echo "  with:"
+          echo "    node-version-file: '.nvmrc'"
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 1 ]
+  assert_output_contains 'no actions/setup-node step found'
+}
+
+@test "does not accept node-version-file declared outside the step's with: mapping" {
+  make_consistent_repo "$REPO"
+  # `setup-node` reads its inputs from `with:` only; the same key under `env:` is a
+  # plain environment variable the action never looks at.
+  cat >"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+jobs:
+  unit:
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        env:
+          node-version-file: '.nvmrc'
+        with:
+          node-version: 24.18.0
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 1 ]
+  assert_output_contains "without \`node-version-file: '.nvmrc'\`"
+}
+
 @test "aborts rather than passing vacuously when no setup-node step is found" {
   make_consistent_repo "$REPO"
   rm "$REPO/.github/workflows/unit-testing.yml"
@@ -286,6 +327,26 @@ EOF
   [ "$status" -eq 1 ]
   assert_output_contains 'exact MAJOR.MINOR.PATCH'
   assert_output_contains '24. 18.0'
+}
+
+@test "aborts when .nvmrc carries anything beyond its one version line" {
+  make_consistent_repo "$REPO"
+  # nvm, actions/setup-node and this check all read line 1 only, so a second line is
+  # drift that every consumer discards and every reader believes.
+  printf '%s\n20.11.0\n' "$NVMRC_VERSION" >"$REPO/.nvmrc"
+
+  run_checker "$REPO"
+  [ "$status" -eq 1 ]
+  assert_output_contains 'nothing but one version line'
+}
+
+@test "tolerates trailing blank lines in .nvmrc" {
+  make_consistent_repo "$REPO"
+  printf '%s\n\n\n' "$NVMRC_VERSION" >"$REPO/.nvmrc"
+
+  run_checker "$REPO"
+  [ "$status" -eq 0 ]
+  assert_output_contains 'node-version: OK'
 }
 
 @test "aborts rather than passing vacuously when no Node base image is found" {
