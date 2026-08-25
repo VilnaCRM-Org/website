@@ -405,34 +405,54 @@ function setupNodeSteps(lines, isKeyLine) {
   });
 }
 
+// The mapping keys the step actually declares, in source order. Prose declares
+// none: a comment or a block-scalar body is not a key line, and a line that carries
+// no key at all (a bare list item, say) yields nothing — so neither can open a
+// `with:` mapping nor carry the pin.
+function stepKeys(lines, isKeyLine, step) {
+  return lines
+    .slice(step.start, step.end)
+    .map((line, offset) => (isKeyLine[step.start + offset] ? mappingKey(line) : null))
+    .filter(key => key !== null);
+}
+
+// Whether a key opens the step's OWN block `with:` — the only mapping setup-node
+// reads its inputs from. It has to sit at the step's own column: a `with:` deeper
+// than that is nested inside another of the step's mappings (an `env:`, say), where
+// the action never looks.
+function opensBlockWith(key, stepColumn) {
+  return key.column === stepColumn && BLOCK_WITH.test(key.text);
+}
+
+// The two places the `.nvmrc` pin can legitimately sit. At the step's own column it
+// has to be a flow `with: { … }` carrying the pin, complete on that one line —
+// `node-version-file:` spelled as a direct key of the step is an input of nothing.
+// Deeper, it has to be a `node-version-file:` input of an open block `with:`; the
+// caller clears `inWith` at every key that dedents back to the step, so a pin under
+// `env:`, or after the mapping has closed, credits no step.
+function keyPinsNvmrc(key, stepColumn, inWith) {
+  return key.column === stepColumn
+    ? FLOW_WITH_NVMRC.test(key.text)
+    : inWith && NODE_VERSION_FILE_NVMRC.test(key.text);
+}
+
 // The column of the step's first mapping key (the one its dash introduces) is the
 // column every direct key of the step sits at, so a `with:` found there is the
 // step's own and one found deeper is not. Any key deeper than an open block `with:`
-// is one of its inputs; a key at or left of it has dedented back out.
+// is one of its inputs; a key at or left of it has dedented back out and closes the
+// mapping — which is why the scope is recomputed, never merely kept, at those keys.
+// The same walk as the sibling gate scripts/ci/check-node-version-sources.sh, whose
+// awk carries `step_key_indent` / `in_with` for `stepColumn` / `inWith`.
 function stepPinsNvmrc(lines, isKeyLine, step) {
-  let stepColumn = -1;
-  let withColumn = -1;
+  const keys = stepKeys(lines, isKeyLine, step);
+  const stepColumn = keys.length === 0 ? -1 : keys[0].column;
+  let inWith = false;
 
-  for (let index = step.start; index < step.end; index += 1) {
-    const key = isKeyLine[index] ? mappingKey(lines[index]) : null;
-    if (key === null) {
-      continue;
+  for (const key of keys) {
+    if (key.column <= stepColumn) {
+      inWith = opensBlockWith(key, stepColumn);
     }
-
-    if (stepColumn < 0) {
-      stepColumn = key.column;
-    }
-    if (withColumn >= 0 && key.column <= withColumn) {
-      withColumn = -1;
-    }
-
-    if (key.column === stepColumn) {
-      if (BLOCK_WITH.test(key.text)) {
-        withColumn = key.column;
-      } else if (FLOW_WITH_NVMRC.test(key.text)) {
-        return true;
-      }
-    } else if (withColumn >= 0 && NODE_VERSION_FILE_NVMRC.test(key.text)) {
+    if (keyPinsNvmrc(key, stepColumn, inWith)) {
       return true;
     }
   }
