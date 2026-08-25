@@ -31,11 +31,17 @@ SWAGGER_SERVER_URL="${SWAGGER_SERVER_URL:-http://mockoon:8080}"
 
 SITE_URL="http://${WEBSITE_DOMAIN}:${PORT}"
 
-# Gitignored scratch dir: the pid lets `stop` be idempotent, and the log is the
-# only place a background `serve` failure would otherwise be lost.
+# Gitignored scratch dir: the pid lets `stop` be idempotent, the recorded start
+# command lets `stop` prove the pid is still ours, and the log is the only place
+# a background `serve` failure would otherwise be lost.
 STATE_DIR="${HOST_STACK_STATE_DIR:-.host-stack}"
 PID_FILE="${STATE_DIR}/serve.pid"
+CMD_FILE="${STATE_DIR}/serve.cmd"
 LOG_FILE="${STATE_DIR}/serve.log"
+
+# The one invocation this script ever starts, written to CMD_FILE at `start` and
+# compared against the live process at `stop`.
+SERVE_COMMAND="${BIN_DIR}/serve -l ${PORT} out"
 
 # Same budget as the Makefile's wait-for-prod-health target: 30 attempts x 2s.
 READY_ATTEMPTS=30
@@ -74,31 +80,72 @@ wait_for_site() {
   return 1
 }
 
+# `ps -p <pid> -o args=` is POSIX and reports the full argument vector on Linux,
+# macOS and the BSDs alike. /proc/<pid>/cmdline is Linux-only: reading it made
+# every identity check fall through to "no match" on a macOS host, so `stop`
+# quietly refused to signal anything and leaked the server it was asked to stop.
+#
+# `-ww` first because several `ps` implementations (macOS among them) clip the
+# last column to the terminal width, which would truncate a long BIN_DIR out of
+# the very argument vector being matched; the bare form is the fallback for a
+# `ps` that rejects the flag.
+process_command() {
+  ps -ww -p "$1" -o args= 2>/dev/null || ps -p "$1" -o args= 2>/dev/null || true
+}
+
 # `kill -0` only proves *some* process holds that pid. Pids are recycled, so a
 # stale pidfile — left by a reboot, a `kill -9`, or a crashed run — can name a
 # process that has nothing to do with this stack, and `start` calls `stop` on
-# every invocation. Confirm the pid is still the `serve` we launched before
-# signalling it, and otherwise drop the pidfile without touching anything.
+# every invocation. Confirm the pid still runs the exact invocation `start`
+# recorded before signalling it, and otherwise drop the pidfile without touching
+# anything: killing the wrong process is far worse than leaving a stale file.
 serve_process_matches() {
   pid="$1"
-  command_line="$(tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null || true)"
+  expected="$2"
 
+  # No recorded start command (a pidfile from a crashed or foreign run) is not
+  # an identity we can prove, so it never authorises a kill.
+  [ -n "$expected" ] || return 1
+
+  command_line="$(process_command "$pid")"
+  # Some `ps` implementations pad the last column.
+  command_line="${command_line%"${command_line##*[! ]}"}"
+  [ -n "$command_line" ] || return 1
+
+  # Anchored on the whole invocation rather than a `serve` substring: a loose
+  # `*serve*<port>*` also matches `.../server -l 3001 out`, a `tail -f` on this
+  # stack's log, or any command that merely mentions the port — all of which
+  # become plausible pid holders once the pid has been recycled. The
+  # leading-space alternative is the interpreter a shebang prepends, e.g.
+  # `node ./node_modules/.bin/serve -l 3001 out`.
   case "$command_line" in
-    *serve*"$PORT"*) return 0 ;;
+    "$expected" | *" $expected") return 0 ;;
     *) return 1 ;;
   esac
 }
 
 cmd_stop() {
   if [ ! -f "$PID_FILE" ]; then
+    rm -f "$CMD_FILE"
     return 0
   fi
 
-  pid="$(cat "$PID_FILE")"
-  if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null && serve_process_matches "$pid"; then
-    kill "$pid" 2>/dev/null || true
+  pid="$(cat "$PID_FILE" 2>/dev/null || true)"
+  expected="$(cat "$CMD_FILE" 2>/dev/null || true)"
+
+  if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+    if serve_process_matches "$pid" "$expected"; then
+      kill "$pid" 2>/dev/null || true
+    else
+      printf '⚠️  %s names pid %s, which is not the serve this stack started;\n' \
+        "$PID_FILE" "$pid" >&2
+      printf '   dropping the stale pidfile without signalling it.\n' >&2
+      printf '   expected: %s\n' "${expected:-<no recorded start command>}" >&2
+      printf '   running:  %s\n' "$(process_command "$pid")" >&2
+    fi
   fi
-  rm -f "$PID_FILE"
+
+  rm -f "$PID_FILE" "$CMD_FILE"
 }
 
 cmd_start() {
@@ -110,6 +157,10 @@ cmd_start() {
   NEXT_PUBLIC_API_BASE_URL="$SWAGGER_SERVER_URL" node scripts/patchSwaggerServer.mjs
   "$BIN_DIR/next" build --webpack
   "$BIN_DIR/next-export-optimize-images"
+
+  # Recorded before the launch, never after: a crash between the two writes must
+  # leave `stop` unable to prove the pid is ours rather than free to guess.
+  printf '%s\n' "$SERVE_COMMAND" >"$CMD_FILE"
 
   # nohup so the server outlives the parent Make process that started it.
   nohup "$BIN_DIR/serve" -l "$PORT" out >"$LOG_FILE" 2>&1 &

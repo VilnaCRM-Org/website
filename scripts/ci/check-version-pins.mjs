@@ -282,11 +282,54 @@ function stepEnd(lines, startIndex) {
   return lines.length;
 }
 
-function setupNodeSteps(text) {
-  const lines = text.split('\n');
+/**
+ * Flag every line that can carry a real YAML key, so prose never poses as a step.
+ *
+ * `uses: actions/setup-node@v6` and `node-version:` both show up in workflows as
+ * documentation — a `#` comment quoting the canonical snippet, or a `run: |`
+ * block echoing a fragment into a heredoc or an error message. Matching those
+ * invents a pin failure in a workflow that never calls setup-node, and the only
+ * way to "fix" it is to delete the prose. A block scalar (`run: |`, `script: >`)
+ * owns every following line that is blank or indented deeper than the key that
+ * opened it; everything else is data.
+ */
+function yamlKeyLines(lines) {
+  const isKeyLine = [];
+  let blockIndent = null;
 
+  lines.forEach((line, index) => {
+    const indent = line.search(/\S/);
+
+    if (blockIndent !== null && (indent === -1 || indent > blockIndent)) {
+      isKeyLine[index] = false;
+      return;
+    }
+    blockIndent = null;
+
+    if (indent === -1 || /^\s*#/.test(line)) {
+      isKeyLine[index] = false;
+      return;
+    }
+
+    isKeyLine[index] = true;
+    // `run: |`, `run: >-`, `run: |2` — with an optional trailing comment. Anchored
+    // on the key so a shell pipe inside an inline `run:` cannot open a block.
+    if (/^\s*(?:-\s+)?[\w.$-]+:\s*[|>][-+]?\d*\s*(?:#.*)?$/.test(line)) {
+      blockIndent = indent;
+    }
+  });
+
+  return isKeyLine;
+}
+
+// A real step, not a mention: the first token on the line — after the optional
+// `- ` that opens a list item — has to be the `uses:` key itself.
+const SETUP_NODE_USES = /^\s*(?:-\s+)?uses:\s*actions\/setup-node[@\s]/;
+const LITERAL_NODE_VERSION = /^\s*(?:-\s+)?node-version:/;
+
+function setupNodeSteps(lines, isKeyLine) {
   return lines.flatMap((line, index) => {
-    if (!/uses:\s*actions\/setup-node[@\s]/.test(line)) {
+    if (!isKeyLine[index] || !SETUP_NODE_USES.test(line)) {
       return [];
     }
     // `with:` is a sibling key of `uses:`, not nested under it, so the step's
@@ -297,20 +340,19 @@ function setupNodeSteps(text) {
   });
 }
 
-// A workflow that never calls setup-node has nothing to pin, so it returns early
-// rather than being filtered out of the list — the reason stays next to the check.
+// A workflow that never calls setup-node yields no steps, so the pin check is
+// simply vacuous for it — but the literal `node-version:` check still runs over
+// every workflow, because a literal pin is drift wherever it is declared.
 function checkWorkflowNodePin(file) {
   const text = readText(file);
   if (text === null) {
     return;
   }
 
-  const steps = setupNodeSteps(text);
-  if (steps.length === 0) {
-    return;
-  }
+  const lines = text.split('\n');
+  const isKeyLine = yamlKeyLines(lines);
 
-  steps
+  setupNodeSteps(lines, isKeyLine)
     .filter(step => !/node-version-file:\s*['"]?\.nvmrc['"]?/.test(step.body))
     .forEach(step => {
       fail(
@@ -319,9 +361,14 @@ function checkWorkflowNodePin(file) {
       );
     });
 
-  if (/^\s*node-version:/m.test(text)) {
-    fail('workflows', `${file} pins a literal node-version; use node-version-file: ${NVMRC}`);
-  }
+  lines.forEach((line, index) => {
+    if (isKeyLine[index] && LITERAL_NODE_VERSION.test(line)) {
+      fail(
+        'workflows',
+        `${file}:${index + 1} pins a literal node-version; use node-version-file: ${NVMRC}`
+      );
+    }
+  });
 }
 
 workflowFiles.forEach(checkWorkflowNodePin);
