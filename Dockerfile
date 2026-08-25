@@ -1,7 +1,7 @@
 FROM public.ecr.aws/docker/library/node:24.18.0-alpine3.23@sha256:595398b0081eacda8e1c4c5b97b76cd1020e4d58a8ebcb4843b9bca1e79e7436 AS base
 
 RUN apk add --no-cache \
-    python3=3.12.13-r0\
+    python3=3.12.14-r0\
     make=4.4.1-r3 \
     g++=15.2.0-r2 \
     curl=8.20.0-r0 && \
