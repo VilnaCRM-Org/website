@@ -13,14 +13,21 @@ const successButtonText: string = t('notifications.success.button');
 const confettiAltText: string = t('notifications.success.images.confetti');
 
 test('Submit the registration form and verify success notification', async ({ page }) => {
-  const { initialsInput, emailInput, passwordInput, policyTextCheckbox, signupButton } =
-    getFormFields(page);
+  const {
+    initialsInput,
+    emailInput,
+    passwordInput,
+    confirmPasswordInput,
+    policyTextCheckbox,
+    signupButton,
+  } = getFormFields(page);
 
   await page.goto('/');
 
   await fillInput(initialsInput, userData.fullName);
   await fillInput(emailInput, userData.email);
   await fillInput(passwordInput, userData.password);
+  await fillInput(confirmPasswordInput, userData.password);
   await checkCheckbox(policyTextCheckbox);
 
   await page.route(graphqlEndpoint, successResponse);
@@ -46,5 +53,6 @@ test('Submit the registration form and verify success notification', async ({ pa
   await expect(initialsInput).toHaveValue('');
   await expect(emailInput).toHaveValue('');
   await expect(passwordInput).toHaveValue('');
+  await expect(confirmPasswordInput).toHaveValue('');
   await expect(policyTextCheckbox).not.toBeChecked();
 });

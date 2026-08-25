@@ -23,6 +23,8 @@ on `raw.githubusercontent.com` being reachable.
 ```bash
 make lint-contracts     # the gate (needs network — see below)
 make lint-api-versions  # the pin invariant (hermetic; part of `make lint`)
+make test-contract      # the Mockoon mock still matches that contract (#350)
+make lint-openapi       # advisory: is the pin itself behind upstream? (#350)
 make update-contracts   # re-fetch after bumping the pin, then commit the diff
 ```
 
@@ -136,6 +138,50 @@ normalizes both sides identically, that deletion would pass silently while
 mutating the committed contract. This is a documented transformation at the
 single point the document enters the repo — not a way to hide findings. If you
 add another normalization, say why in the code and expect to justify it in review.
+
+## The mock is gated too (#350)
+
+`lint-contracts` proves the committed artifacts match the pin. It says nothing
+about whether the **mock built from them** still behaves like the contract, and
+the whole Playwright suite runs against that mock.
+
+`make test-contract` closes that gap. The `TEST_ENV=contract` layer
+(`tests/contract/**/*.contract.test.ts`) boots Mockoon in-process from
+`contracts/user-service/openapi.json` and asserts, per documented operation:
+the status served is documented, the body's media type is declared, the body
+validates against that media type's schema, and the body carries **no property
+the schema never declares**.
+
+That last rule is stricter than OpenAPI's default on purpose, and it is
+load-bearing: upstream puts `required` on the _array_ schema of `GET /api/users`
+instead of on its `items`, so ajv alone accepts a response with every property
+renamed. Do not "fix" a red run by dropping it.
+
+Reading a red run:
+
+- **`[undeclared-property]`** — the mock serves a field the contract does not
+  declare. The contract is authoritative: refresh it, or fix the mock.
+- **`[schema-violation]`** — Mockoon cannot generate a value the schema accepts.
+  Usually a pin bump that added a constraint; read the new schema.
+- **`[undocumented-status]`** — Mockoon's first-declared response moved, i.e. a
+  response was reordered or removed upstream.
+- **`[undocumented-media-type]`** — the status no longer declares the media type
+  the mock serves.
+- **`@mockoon/commons… matches the CLI…`** — the two Mockoon pins drifted. Move
+  `Mockoon.Dockerfile` and `package.json` together, in the same commit.
+- **`unsupportedResponseConstructs`** — upstream introduced a `$ref` or a
+  composed schema (`allOf`, `oneOf`, `prefixItems`, …). Extend the parity rules;
+  never extend the exemption list.
+
+Seed a defect only into a **temporary copy** of the contract, never into the
+committed file — `lint-contracts` guards it, and
+`parity-detects-drift.contract.test.ts` already does this properly.
+
+`make lint-openapi` answers the other question: is the pin itself behind? It
+runs a pinned, SHA256-verified `oasdiff` against the newest upstream **release**
+and is **advisory** — the nightly `openapi-drift.yml` files an `api-contract`
+tracking issue rather than failing a check, because upstream moving on is not a
+PR author's fault. Acting on that issue is a normal pin bump (see above).
 
 ## Related guides
 
