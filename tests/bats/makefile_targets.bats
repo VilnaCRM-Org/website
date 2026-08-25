@@ -108,7 +108,7 @@ EOF
   reset_command_log
   run_make_target memory-leak-dind
   [ "$status" -eq 0 ]
-  assert_log_contains 'docker compose -p memleak -f docker-compose.memory-leak.yml up -d --wait memory-leak'
+  assert_log_contains 'docker compose -p memleak -f docker-compose.memory-leak.yml up -d --wait --build memory-leak'
   assert_log_contains 'docker compose -p memleak -f docker-compose.memory-leak.yml exec -T memory-leak rm -rf ./src/test/memory-leak/results'
   assert_log_contains 'docker compose -p memleak -f docker-compose.memory-leak.yml exec -T memory-leak sh -lc unset DISPLAY;'
   assert_log_contains 'docker compose -p memleak -f docker-compose.memory-leak.yml down'
@@ -209,6 +209,24 @@ EOF
   assert_log_contains 'playwright test ./src/test/e2e'
 }
 
+@test "e2e flake targets repeat the changed specs and grade the report" {
+  reset_command_log
+  run_make_target test-e2e-burnin
+  [ "$status" -eq 0 ]
+  assert_log_contains 'playwright test ./src/test/e2e --repeat-each=5 --retries=0'
+  assert_log_contains 'PLAYWRIGHT_JSON_REPORT=burn-in-results/results.json'
+
+  reset_command_log
+  run_make_target test-e2e-burnin E2E_BURNIN_SPECS=src/test/e2e/a.spec.ts E2E_BURNIN_REPEATS=3
+  [ "$status" -eq 0 ]
+  assert_log_contains 'playwright test src/test/e2e/a.spec.ts --repeat-each=3 --retries=0'
+
+  reset_command_log
+  run_make_target check-e2e-flakes
+  [ "$status" -eq 0 ]
+  assert_log_contains 'bun x tsx scripts/ci/check-flaky-report.ts'
+}
+
 @test "maintenance targets shell out through Docker and Bun as expected" {
   reset_command_log
   run_make_target lighthouse-desktop-dind
@@ -297,6 +315,19 @@ STUB
   assert_log_contains 'jest TEST_ENV=integration --watch'
 }
 
+@test "test-contract runs Jest in the contract environment" {
+  cat > "$STUB_BIN_DIR/jest" <<'STUB'
+#!/usr/bin/env bash
+printf 'jest TEST_ENV=%s %s\n' "${TEST_ENV:-unset}" "$*" >> "${COMMAND_LOG:?}"
+exit 0
+STUB
+  chmod +x "$STUB_BIN_DIR/jest"
+
+  run_make_target test-contract CI=1
+  [ "$status" -eq 0 ]
+  assert_log_contains 'jest TEST_ENV=contract --verbose'
+}
+
 @test "ensure-dev starts the dev service when it is not already running" {
   run_make_target ensure-dev CI=1
   [ "$status" -eq 0 ]
@@ -326,6 +357,7 @@ STUB
   assert_output_contains '===== ci-test-unit-client ====='
   assert_output_contains '===== ci-test-unit-server ====='
   assert_output_contains '===== ci-test-integration ====='
+  assert_output_contains '===== ci-test-contract ====='
 }
 
 @test "ci-test split targets invoke Jest directly with the right TEST_ENV" {
@@ -383,7 +415,7 @@ STUB
   run_make_target ci-test-memory-leak
   [ "$status" -eq 0 ]
   # --wait avoids racing the exec against an unready container.
-  assert_log_contains 'docker compose -p memleak -f docker-compose.memory-leak.yml up -d --wait memory-leak'
+  assert_log_contains 'docker compose -p memleak -f docker-compose.memory-leak.yml up -d --wait --build memory-leak'
   assert_log_contains 'node ./src/test/memory-leak/runMemlabTests.js'
   # Teardown must be scoped to the isolated memleak project so it never removes
   # the shared prod stack as an orphan mid-sequence in ci-test-prod, and the
@@ -491,6 +523,115 @@ STUB
   # Host-only: never routed through the dev container (docker) or the package manager (bun).
   run grep -E 'docker|bun' "$COMMAND_LOG"
   [ "$status" -ne 0 ]
+}
+
+# Provisions the lint-openapi sandbox: an already-installed oasdiff stub whose
+# `breaking` exit code the caller chooses, the committed baseline, and a curl
+# stub that "downloads" the upstream spec. UPSTREAM_REF short-circuits the
+# releases-API lookup, so the target is exercised without touching the network.
+setup_openapi_drift_sandbox() {
+  local breaking_exit="$1"
+
+  reset_command_log
+
+  mkdir -p "$MAKEFILE_SANDBOX/bin"
+  cat > "$MAKEFILE_SANDBOX/bin/oasdiff" <<STUB
+#!/usr/bin/env bash
+if [ "\$1" = "--version" ]; then
+  echo "oasdiff version 1.27.0"
+  exit 0
+fi
+echo 'stubbed oasdiff output'
+exit ${breaking_exit}
+STUB
+  chmod +x "$MAKEFILE_SANDBOX/bin/oasdiff"
+
+  mkdir -p "$MAKEFILE_SANDBOX/contracts/user-service"
+  cp "$PROJECT_ROOT/contracts/user-service/openapi.json" \
+    "$MAKEFILE_SANDBOX/contracts/user-service/"
+
+  cat > "$STUB_BIN_DIR/curl" <<'STUB'
+#!/usr/bin/env bash
+printf 'curl %s\n' "$*" >> "${COMMAND_LOG:?}"
+destination=""
+previous=""
+for argument in "$@"; do
+  [ "$previous" = "-o" ] && destination="$argument"
+  previous="$argument"
+done
+if [ -n "$destination" ] && [ -n "${STUB_SPEC_SOURCE:-}" ]; then
+  cp "$STUB_SPEC_SOURCE" "$destination"
+fi
+exit 0
+STUB
+  chmod +x "$STUB_BIN_DIR/curl"
+
+  export STUB_SPEC_SOURCE="$MAKEFILE_SANDBOX/contracts/user-service/openapi.json"
+  export UPSTREAM_REF="v0.0.0-stub"
+}
+
+# GNU make collapses every recipe failure to its own exit 2, so the three-way
+# contract can only be asserted against the script. openapi-drift.yml calls it
+# the same way for the same reason.
+run_openapi_drift_script() {
+  run env -C "$MAKEFILE_SANDBOX" \
+    PATH="$STUB_BIN_DIR:$PATH" \
+    COMMAND_LOG="$COMMAND_LOG" \
+    OASDIFF_BIN="./bin/oasdiff" \
+    STUB_SPEC_SOURCE="$STUB_SPEC_SOURCE" \
+    UPSTREAM_REF="$UPSTREAM_REF" \
+    bash scripts/ci/openapi-drift.sh
+}
+
+@test "lint-openapi provisions the pinned oasdiff then reports a clean baseline host-only" {
+  setup_openapi_drift_sandbox 0
+
+  run_make_target lint-openapi
+  [ "$status" -eq 0 ]
+  assert_output_contains 'No breaking changes'
+
+  # Host-only: never routed through the dev container (docker) or the package manager (bun).
+  run grep -E 'docker|bun' "$COMMAND_LOG"
+  [ "$status" -ne 0 ]
+}
+
+@test "the drift script writes a report and exits 1 when upstream has breaking changes" {
+  setup_openapi_drift_sandbox 1
+
+  run_openapi_drift_script
+  [ "$status" -eq 1 ]
+  assert_output_contains 'Breaking changes found'
+  [ -s "$MAKEFILE_SANDBOX/reports/openapi-drift.md" ]
+}
+
+@test "the drift script reports a tool failure as unavailable, never as drift" {
+  # oasdiff exits 100 on flag misuse and 102 when it cannot load a spec. Either
+  # must surface as "unavailable" (2), never as an upstream API change (1) —
+  # otherwise a broken nightly is indistinguishable from a clean one.
+  setup_openapi_drift_sandbox 100
+
+  run_openapi_drift_script
+  [ "$status" -eq 2 ]
+  assert_output_contains 'this is not a drift report'
+}
+
+@test "the oasdiff pin is identical in the Makefile and its provisioning script" {
+  # The Makefile documents the pin at the top and passes it down; the script
+  # carries the same values as defaults so the nightly, which calls the script
+  # directly, provisions the very same verified binary. They must never drift.
+  local makefile_version script_version makefile_digest script_digest
+
+  makefile_version="$(sed -n 's/^OASDIFF_VERSION[[:space:]]*=[[:space:]]*//p' "$PROJECT_ROOT/Makefile")"
+  makefile_digest="$(sed -n 's/^OASDIFF_SHA256_LINUX[[:space:]]*=[[:space:]]*//p' "$PROJECT_ROOT/Makefile")"
+  script_version="$(sed -n 's/^OASDIFF_VERSION="\${OASDIFF_VERSION:-\(.*\)}"$/\1/p' \
+    "$PROJECT_ROOT/scripts/ci/ensure-oasdiff.sh")"
+  script_digest="$(sed -n 's/^OASDIFF_SHA256_LINUX="\${OASDIFF_SHA256_LINUX:-\(.*\)}"$/\1/p' \
+    "$PROJECT_ROOT/scripts/ci/ensure-oasdiff.sh")"
+
+  [ -n "$makefile_version" ]
+  [ -n "$makefile_digest" ]
+  [ "$makefile_version" = "$script_version" ]
+  [ "$makefile_digest" = "$script_digest" ]
 }
 
 @test "contract targets shell out to Node and cover fetch, lint, checksum and baseline refresh" {

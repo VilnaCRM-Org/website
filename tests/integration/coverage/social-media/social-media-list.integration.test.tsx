@@ -15,10 +15,12 @@ const socialLinks: SocialMedia[] = [testSocialDrawerItem, testSocialNoDrawerItem
 
 describe('SocialMediaList (integration)', () => {
   it('renders one social media item per link', () => {
-    const { getAllByRole } = render(<SocialMediaList socialLinks={socialLinks} />);
+    const { getAllByRole, container } = render(<SocialMediaList socialLinks={socialLinks} />);
 
     expect(getAllByRole(linkRole)).toHaveLength(socialLinks.length);
-    expect(getAllByRole(imageRole)).toHaveLength(socialLinks.length);
+    // The icons are decorative (`alt=""` + `aria-hidden`), so they are counted
+    // in the DOM rather than through the accessibility tree (#382).
+    expect(container.querySelectorAll('img')).toHaveLength(socialLinks.length);
   });
 
   it('renders no items when the socialLinks array is empty', () => {

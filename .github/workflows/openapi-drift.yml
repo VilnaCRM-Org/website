@@ -1,0 +1,113 @@
+name: openapi drift
+
+on:
+  schedule:
+    - cron: '15 4 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  # cancel-in-progress: false — this workflow mutates shared state (a tracking
+  # issue), so a superseding run must never abort one mid-write.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  upstream-drift:
+    # Advisory by design. Upstream moving on is not a pull request author's
+    # fault, so breaking drift files a tracking issue instead of turning a check
+    # red. The blocking contract leg is `contract parity testing`.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Compare the committed baseline against the newest upstream release
+        id: drift
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # The script is invoked directly rather than through `make
+          # lint-openapi` (the equivalent human-facing target): GNU make collapses
+          # every recipe failure to its own exit 2, and this leg depends on the
+          # script's three-way code so a network outage is never published as an
+          # API change. 0 = clean, 1 = breaking drift, anything higher = the check
+          # could not run. Only exit 1 is advisory; a broken gate must be visible,
+          # so it fails the workflow.
+          set +e
+          bash scripts/ci/openapi-drift.sh
+          status=$?
+          set -e
+          if [ "$status" -gt 1 ]; then
+            echo "::error::the upstream drift check could not run (exit $status)"
+            exit "$status"
+          fi
+          echo "drift=$status" >>"$GITHUB_OUTPUT"
+
+      - name: File or refresh the tracking issue on breaking drift
+        if: steps.drift.outputs.drift == '1'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # `api-contract` is an existing repository label; `gh issue create
+          # --label <unknown>` errors and would silently drop the report.
+          #
+          # Dedup is an EXACT title match, not `--search "<title> in:title"`:
+          # GitHub's search ORs the terms, so a loose search would match any other
+          # open api-contract issue (the tracking issue for this gate itself, for
+          # one) and the nightly would comment on the wrong thread. `// empty`
+          # matters too — `.[0].number` on no matches yields the string "null",
+          # which is truthy in the test below.
+          title='Upstream OpenAPI drift in the pinned user-service contract'
+          # Fail rather than guess: a `gh issue list` that errors (rate limit,
+          # API blip) writes nothing to stdout, which reads as "no tracking issue
+          # exists" and would file a duplicate every night it happens.
+          # The `--search` phrase only NARROWS the candidate set (a quoted string
+          # is a phrase match, not the OR-of-terms a bare search does); the jq
+          # exact-title comparison below stays the authority. Narrowing matters:
+          # a plain `--limit` window would stop finding this gate's own issue
+          # once enough other open api-contract issues accumulate, and every
+          # breaking run would then open a duplicate.
+          if ! open_issues="$(gh issue list --label api-contract --state open --limit 200 \
+            --search "\"$title\" in:title" --json number,title)"; then
+            echo "::error::could not list open api-contract issues; not filing a possible duplicate"
+            exit 1
+          fi
+          existing="$(printf '%s' "$open_issues" |
+            jq -r --arg title "$title" 'map(select(.title == $title)) | .[0].number // empty')"
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body-file reports/openapi-drift.md
+          else
+            gh issue create --label api-contract --title "$title" \
+              --body-file reports/openapi-drift.md
+          fi
+
+      - name: Close the tracking issue once the baseline is current again
+        if: steps.drift.outputs.drift == '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          title='Upstream OpenAPI drift in the pinned user-service contract'
+          # A failed list here is harmless (nothing gets closed), so it warns
+          # instead of failing — unlike the filing step, where the same failure
+          # would create a duplicate. The warning matters: without it a stale
+          # tracking issue would stay open with the run still reporting success.
+          if ! open_issues="$(gh issue list --label api-contract --state open --limit 200 \
+            --search "\"$title\" in:title" --json number,title)"; then
+            echo "::warning::could not list open api-contract issues; no tracking issue was closed"
+            open_issues='[]'
+          fi
+          existing="$(printf '%s' "$open_issues" |
+            jq -r --arg title "$title" 'map(select(.title == $title)) | .[0].number // empty')"
+          if [ -n "$existing" ]; then
+            gh issue close "$existing" \
+              --comment 'The committed baseline matches the newest upstream release again.'
+          fi
