@@ -16,6 +16,18 @@ const compat = new FlatCompat({
 const nextRecommended = { ...nextPlugin.configs.recommended };
 delete nextRecommended.name;
 
+// Stated literally rather than left as `'detect'`. Both resolve to the same
+// version, but `'detect'` makes eslint-plugin-react probe the filesystem
+// through `context.getFilename()`, which ESLint 10 removed — so a sandboxed
+// runner on ESLint 10 (Qlty's, currently) dies with "Error while loading rule
+// 'react/display-name'" on the first TypeScript file it lints. A literal also
+// avoids resolving anything from this file's own directory, which tools that
+// copy the config into a cache dir (Qlty again, see `tsconfigRootDir` below)
+// would resolve differently.
+//
+// Keep in step with the `react` version in package.json.
+const REACT_VERSION = '19.2';
+
 export default [
   nextRecommended,
   ...storybook.configs['flat/recommended'],
@@ -74,7 +86,8 @@ export default [
       'docker/**/*.{js,ts,mts}',
       '**/*.stories.@(js|jsx|ts|tsx)',
       'src/test/**/*',
-      'tests/integration/**/*.{ts,tsx}',
+      // Every layer under tests/ — integration (#328) and contract (#350).
+      'tests/**/*.{ts,tsx}',
     ],
     languageOptions: {
       parser: '@typescript-eslint/parser',
@@ -149,7 +162,14 @@ export default [
         parser: '@typescript-eslint/parser',
         plugins: ['@typescript-eslint'],
         settings: {
-          react: { version: 'detect' },
+          react: { version: REACT_VERSION },
+          // `react/jsx-no-target-blank` only inspects components it knows are
+          // links, which by default means a raw `<a>`. Every new-tab link here
+          // goes through MUI's `<Link>`, so without this the rule had nothing to
+          // check (#382 F2). `UiLink` is deliberately NOT listed: it merges
+          // `noopener noreferrer` in itself, so a bare `target="_blank"` on it is
+          // already safe and flagging it would only demand redundant markup.
+          linkComponents: [{ name: 'Link', linkAttribute: 'href' }],
           'import/resolver': {
             node: {
               extensions: ['.ts', '.tsx', '.js', '.jsx', '.mjs'],
@@ -178,6 +198,19 @@ export default [
         ],
         rules: {
           'eslint-comments/no-use': ['error', { allow: [] }],
+          // Regression gate for the referrer-leak / reverse-tabnabbing fix:
+          // a `target="_blank"` without `rel="noopener noreferrer"` fails
+          // `make lint-next` (#382 F2).
+          'react/jsx-no-target-blank': [
+            'error',
+            {
+              allowReferrer: false,
+              enforceDynamicLinks: 'always',
+              warnOnSpreadAttributes: true,
+              links: true,
+              forms: true,
+            },
+          ],
           'react/jsx-no-bind': 'warn',
           'no-await-in-loop': 'off',
           'no-restricted-syntax': 'off',
@@ -271,11 +304,11 @@ export default [
   },
 
   {
-    // Integration tests resolve via tsconfig paths + .ts/.tsx extensions and use
+    // Specs under tests/ resolve via tsconfig paths + .ts/.tsx extensions and use
     // test-only fetch/observer stubs. The FlatCompat-nested overrides above set
     // these rules, but sandboxed eslint runs (qlty/CI) only apply top-level flat
     // config, so re-declare them here as the last matching block for these files.
-    files: ['tests/integration/**/*.{js,ts,tsx}'],
+    files: ['tests/**/*.{js,ts,tsx}'],
     rules: {
       'import/no-unresolved': 'off',
       'react/jsx-filename-extension': ['error', { extensions: ['.jsx', '.tsx'] }],
@@ -310,5 +343,16 @@ export default [
         },
       ],
     },
+  },
+
+  {
+    // Same React version as the FlatCompat override above, restated at the top
+    // level and last so it wins everywhere. `eslint-config-airbnb` sets
+    // `version: 'detect'` itself, and a runner that applies the converted
+    // top-level blocks but not the nested overrides would keep that value — on
+    // ESLint 10 `'detect'` resolves through `context.getFilename()`, which no
+    // longer exists, and the run dies loading the first React rule.
+    files: ['**/*.{js,jsx,mjs,cjs,ts,tsx}'],
+    settings: { react: { version: REACT_VERSION } },
   },
 ];

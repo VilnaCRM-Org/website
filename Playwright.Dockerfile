@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/playwright:v1.57.0-jammy
+FROM mcr.microsoft.com/playwright:v1.57.0-jammy@sha256:6aca677c27a967caf7673d108ac67ffaf8fed134f27e17b27a05464ca0ace831
 
 RUN apt-get update && apt-get install -y --no-install-recommends --fix-missing \
     python3=3.10.6-1~22.04.1 \

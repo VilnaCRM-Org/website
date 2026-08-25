@@ -29,6 +29,8 @@ than one. Match the change to the suite and run its verification command.
 | Client unit       | Components, hooks, and pure client logic   | `make test-unit-client` |
 | Server unit       | Apollo resolvers and server-side logic     | `make test-unit-server` |
 | Edge unit         | Deployed edge/runtime scripts (`scripts/`) | `make test-unit-edge`   |
+| Integration       | Cross-module / API-boundary wiring         | `make test-integration` |
+| Contract          | The Mockoon mock vs. the OpenAPI contract  | `make test-contract`    |
 | End-to-end (e2e)  | User-facing flows end to end (Mockoon API) | `make test-e2e`         |
 | Visual regression | Any change to rendered UI or styling       | `make test-visual`      |
 
@@ -42,7 +44,13 @@ handler `scripts/cloudfront_routing.js`); specs live in `src/test/edge/**/*.test
 the layer is pinned at 100% per-file coverage. That handler is **deny-by-default** since
 issue #383 — a path outside its allow-list gets a synthetic 404 rather than reaching the
 S3 origin — so an edge spec must cover both halves: that every shape the export ships
-still passes through, and that everything else is blocked. E2E and visual specs are Playwright across
+still passes through, and that everything else is blocked. Integration specs run in a
+jsdom-with-fetch env (`TEST_ENV=integration`) from
+`tests/integration/**/*.integration.test.{ts,tsx}` and enforce a global 100% coverage sweep
+over `src/`. Contract specs run in a node env (`TEST_ENV=contract`) from
+`tests/contract/**/*.contract.test.ts`; they boot the Mockoon mock the e2e suite runs
+against and hold every response against the committed
+`contracts/user-service/openapi.json` (issue #350). E2E and visual specs are Playwright across
 chromium, firefox, and webkit (`src/test/e2e/**/*.spec.ts`, `src/test/visual/**/*.spec.ts`);
 visual snapshots sit in adjacent `*-snapshots/` folders. Run all three unit layers with
 `make test-unit-all`.
@@ -53,6 +61,19 @@ flows — required when you add a Make target or change a workflow's `name:`),
 `make test-memory-leak` (leaks),
 `make load-tests` (traffic, K6), and `make lighthouse-desktop` / `make lighthouse-mobile`
 (performance, accessibility, best practices).
+
+Two of those suites assert on more than their own exit code, so a change that touches them
+needs a second look (issues #359 and #354):
+
+- **When you change an e2e spec**, CI re-runs it with `make test-e2e-burnin`
+  (`--repeat-each=5 --retries=0`) and fails at two or more failures. A separate gate job
+  fails if that spec passed only on a retry. Both legs are scoped to the specs in the diff.
+  Fix the race — never add a wait, widen `retries`, or make the assertion conditional to
+  get through.
+- **When a change adds a leak**, `make test-memory-leak` fails with the retainer trace.
+  Accepted, pre-existing clusters live in `src/test/memory-leak/leak-baseline.json`, each
+  with a reason, a tracking issue, and a `validUntil` expiry. An allowance is for debt that
+  predates the gate, never for a leak your change introduced.
 
 In CI these suites are fanned out to run in parallel (issue #316): every workflow declares a
 `concurrency` group (PR checks cancel superseded runs; deploy/release/sandbox do not),
@@ -120,6 +141,7 @@ pass. Run the layer commands you touched, then the project lint gate.
 make format                  # Prettier formatting (run before lint)
 CI=1 make test-unit-client   # Client unit suite (jsdom)
 CI=1 make test-unit-server   # Server unit suite (node)
+make test-contract           # Mockoon mock vs. the committed OpenAPI contract
 make test-e2e                # User-facing flows (for UI or behavior changes)
 make test-visual             # Visual regression (for UI or styling changes)
 make lint                    # Full gate: ESLint, TypeScript, and markdownlint

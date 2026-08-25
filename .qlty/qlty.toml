@@ -99,6 +99,13 @@ mode = "comment"
 
 [[plugin]]
 name = "eslint"
+# Pinned to the same ESLint the repo runs (see `eslint` in package.json). Left
+# unpinned, newer Qlty CLIs default to their own ESLint 10.x while still
+# installing this repo's eslint-plugin-react 7.x through `package_filters`; that
+# plugin calls `context.getFilename()`, which ESLint 10 removed, so every build
+# dies with "Error while loading rule 'react/display-name'". Keep in step with
+# package.json so Qlty and `make lint-next` stay the same check.
+version = "9.39.4"
 package_file = "package.json"
 package_filters = ["eslint", "jest", "prettier"]
 

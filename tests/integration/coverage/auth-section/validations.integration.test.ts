@@ -9,6 +9,7 @@
 import { t } from 'i18next';
 
 import {
+  validateConfirmPassword,
   validateEmail,
   validateFullName,
   validatePassword,
@@ -22,6 +23,10 @@ const emailInvalidError: string = t('sign_up.form.email_input.invalid_message');
 const passwordLengthError: string = t('sign_up.form.password_input.error_length');
 const passwordNumbersError: string = t('sign_up.form.password_input.error_numbers');
 const passwordUppercaseError: string = t('sign_up.form.password_input.error_uppercase');
+const passwordLowercaseError: string = t('sign_up.form.password_input.error_lowercase');
+const confirmPasswordMismatchError: string = t(
+  'sign_up.form.confirm_password_input.error_mismatch'
+);
 
 describe('integration: AuthSection validators', () => {
   describe('isValidEmailFormat', () => {
@@ -73,6 +78,28 @@ describe('integration: AuthSection validators', () => {
 
     it('returns the uppercase error when no uppercase letter present', () => {
       expect(validatePassword('password1')).toBe(passwordUppercaseError);
+    });
+
+    it('returns the lowercase error when no lowercase letter present (#382 F4)', () => {
+      expect(validatePassword('PASSWORD1')).toBe(passwordLowercaseError);
+      expect(validatePassword('ПАРОЛЬ123')).toBe(passwordLowercaseError);
+    });
+  });
+
+  describe('validateConfirmPassword', () => {
+    it('accepts an identical confirmation', () => {
+      expect(validateConfirmPassword('ValidPassword123', { Password: 'ValidPassword123' })).toBe(
+        true
+      );
+    });
+
+    it('returns the mismatch error for any difference', () => {
+      expect(validateConfirmPassword('ValidPassword124', { Password: 'ValidPassword123' })).toBe(
+        confirmPasswordMismatchError
+      );
+      expect(validateConfirmPassword('', { Password: 'ValidPassword123' })).toBe(
+        confirmPasswordMismatchError
+      );
     });
   });
 
