@@ -136,6 +136,23 @@ fi
 # a different key that setup-node never reads, and `"node-version':` is a key to no YAML
 # reader at all.
 #
+# Two further spellings of the same key and the same value are matched for the same
+# reason, and are the two fail-opens this pass closes:
+#
+#   * a quoted scalar carries its style's escapes — a backslash escape in a double-quoted
+#     scalar (`"he said \" and continued"`) and a doubled quote in a single-quoted one
+#     (`'it''s fine'`). A scanner that closes a scalar at the first quote it meets ends
+#     that value early, and every entry after it on the line is then read at the wrong
+#     offset, so a `node-version` literal further along the mapping is never looked at;
+#   * YAML allows whitespace between a key and its colon, so `node-version : "20"` and
+#     `"node-version" : '20'` are the ordinary key written with a space. Every key match
+#     below therefore ends `ws ":"` — block form, flow form, the entry walk, and the
+#     block-scalar header alike — so the spacing cannot be allowed in one spelling and
+#     forgotten in the next.
+#
+# Neither widens the key: escapes are only ever consumed *inside* a quoted scalar, so a
+# key spelled inside a quoted value is still swallowed by that value rather than read.
+#
 # Both keys are matched as real YAML mapping keys of that step, never as loose text:
 #
 #   * `uses:` must open the line (after an optional sequence dash), so a shell command
@@ -176,9 +193,58 @@ scan_setup_node_steps() {
     # The three alternatives are disjoint on their first character, so choosing between
     # them is never a guess a matcher has to unwind.
     function yaml_key(name) {
-      return "(" name "|\"" name "\"|'\''" name "'\'')"
+      return "(" name "|" dq name dq "|" sq name sq ")"
     }
     BEGIN {
+      # The two quote characters, as one-character strings. Every pattern below is built
+      # from these instead of spelling a quote inline, so the shell quoting it takes to
+      # get a single quote into this program is paid once rather than at every use — and
+      # so the two styles stay visibly symmetric.
+      sq = "'\''"
+      dq = "\""
+
+      # The whitespace YAML permits between a key and its colon. `node-version : "20"` is
+      # the key `node-version`; a scanner that demands the colon touch the key sees no key
+      # there at all and waves the literal through. Every key match below ends `ws ":"`.
+      ws = "[[:space:]]*"
+
+      # A quoted scalar. Closing one at the first quote met is wrong in both YAML quoting
+      # styles, and wrong in a way that does not stay local: the value ends early, the
+      # rest of the line is read at the wrong offset, and the entry walk below stops
+      # matching altogether — so a literal `node-version` further along the mapping is
+      # never looked at at all, and a step already credited by a real pin beside it keeps
+      # the gate green while the literal is the version that actually runs.
+      #
+      # A double-quoted scalar escapes with a backslash, which escapes any character
+      # including itself: `"a\""` continues past that quote, `"a\\"` ends at its own. The
+      # unrolled "plain run, then (escape, plain run) repeated" form below is unambiguous
+      # — a backslash is excluded from the plain run, so it can only ever begin an escape,
+      # and at every position exactly one alternative applies.
+      dq_scalar = dq "[^" dq "\\\\]*(\\\\.[^" dq "\\\\]*)*" dq
+
+      # A single-quoted scalar has no backslash escapes at all: it escapes a quote by
+      # doubling it, `'\''it'\'''\''s fine'\''`. That needs the doubling-aware form only
+      # where the scalar stands alone — as a KEY. In VALUE position the naive
+      # `'\''[^'\'']*'\''` below is already right, and deliberately kept: the value
+      # alternatives repeat, and naive pairing splits `'\''it'\'''\''s'\''` into the two
+      # adjacent scalars `'\''it'\''` and `'\''s'\''`, which are contiguous and so consume
+      # exactly the characters the one real scalar does. Doubling always adds quotes two
+      # at a time, so that pairing can never leave a comma or a colon outside a scalar,
+      # and the walk cannot desynchronise.
+      #
+      # Keeping it naive there is not only harmless, it is required. A doubling-aware
+      # scalar repeated by the value alternation is ambiguous with itself — a scalar
+      # holding one doubled quote reads either as that one scalar or as two adjacent
+      # ones — and the readings multiply per entry, which mawk explores one at a time:
+      # twenty such entries on a line already cost seconds, and twenty-five do not
+      # finish. The key position has no such repetition to pair with, and an early close
+      # there is refuted by the very next character (the second quote of the pair is
+      # neither the space nor the colon that has to follow a key), so it costs one step.
+      # Both are pinned by the pathological-line timing case in
+      # tests/bats/node_version_sources.bats.
+      sq_key_scalar = sq "[^" sq "]*(" sq sq "[^" sq "]*)*" sq
+      sq_value_scalar = sq "[^" sq "]*" sq
+
       uses_key = yaml_key("uses")
       with_key = yaml_key("with")
       nv_key = yaml_key("node-version")
@@ -187,8 +253,14 @@ scan_setup_node_steps() {
       # Any key at all, for the flow entries that are merely stepped over and for the
       # key a flow mapping hangs off. A quoted key is consumed whole, so a colon or a
       # comma *inside* a key is part of that key rather than structure the walk could
-      # be desynchronised by.
-      any_key = "([[:alnum:]_.$-]+|\"[^\"]*\"|'\''[^'\'']*'\'')"
+      # be desynchronised by — and, now that the scalars know their escapes, so is a
+      # quote the key escapes rather than closes.
+      any_key = "([[:alnum:]_.$-]+|" dq_scalar "|" sq_key_scalar ")"
+
+      # The value of one flow entry: plain characters, or a quoted scalar consumed whole.
+      # The three alternatives are disjoint on their first character, and none of them
+      # matches the empty string, so the walk always advances.
+      flow_value = "([^,{}" dq sq "]|" dq_scalar "|" sq_value_scalar ")*"
 
       # The entries of a flow mapping that precede the key being looked for:
       # `key: value,` repeated, with a quoted key or value consumed whole. Stepping over
@@ -198,40 +270,42 @@ scan_setup_node_steps() {
       # whose block spelling this same scanner rejects — and reads a key merely spelled
       # inside a quoted value, `cache: "a, node-version-file: .nvmrc,"`, as a real one.
       #
-      # The construction is unambiguous, so it costs a single pass however it is
-      # matched: the key alternatives and the three value alternatives are each disjoint
-      # on their first character, and every repetition consumes at least a `k:,`, so
-      # none of them can match the empty string. There is exactly one way to match any
-      # given prefix — nothing for a backtracking engine to explore, and awk matches an
-      # ERE with a DFA anyway.
-      flow_entries = "(" any_key ":([^,{}\"'\'']|\"[^\"]*\"|'\''[^'\'']*'\'')*,[[:space:]]*)*"
+      # Every repetition consumes at least a `k:,`, so none of them can match the empty
+      # string and the walk always advances.
+      flow_entries = "(" any_key ws ":" flow_value "," ws ")*"
 
       # `.nvmrc`, bare or quoted, with the quotes required to match each other: a value
       # that opens with one quote and closes with the other is not `.nvmrc` to any YAML
       # reader, so it must not be one here either.
-      nvmrc_value = "('\''\\.nvmrc'\''|\"\\.nvmrc\"|\\.nvmrc)"
+      nvmrc_value = "(" sq "\\.nvmrc" sq "|" dq "\\.nvmrc" dq "|\\.nvmrc)"
 
       # `uses: actions/setup-node@…`, with the action reference optionally quoted too.
-      uses_setup_node = "^" uses_key ":[[:space:]]*[\"'\'']?actions/setup-node@"
+      uses_setup_node = "^" uses_key ws ":" ws "[" dq sq "]?actions/setup-node@"
 
       # The step'\''s own `with:` opening a block mapping, and nothing else on the line.
-      block_with = "^" with_key ":[[:space:]]*$"
+      block_with = "^" with_key ws ":" ws "$"
 
       # The two spellings of the same input. The flow form is bounded to one mapping by
       # flow_entries and terminated exactly at `.nvmrc` by nvmrc_value, so a lookalike
       # key, a lookalike path (`.nvmrc.bak`, `".nvmrcX"`) and a literal `node-version:`
       # each still leave the step unpinned.
-      flow_with_nvmrc = "^" with_key ":[[:space:]]*\\{[[:space:]]*" flow_entries \
-        nvf_key ":[[:space:]]*" nvmrc_value "[[:space:]]*[,}]"
-      block_nvmrc = "^" nvf_key ":[[:space:]]*" nvmrc_value "[[:space:]]*$"
+      flow_with_nvmrc = "^" with_key ws ":" ws "\\{" ws flow_entries \
+        nvf_key ws ":" ws nvmrc_value ws "[,}]"
+      block_nvmrc = "^" nvf_key ws ":" ws nvmrc_value ws "$"
 
       # The literal, in either spelling. In flow form its key has to open the mapping or
       # start one of the entries, so `node-version-file:` is never misread as
-      # `node-version:` — what follows `node-version` there is a dash, not the colon
-      # this pattern demands (nor the closing quote a quoted spelling demands).
-      block_literal_node_version = "^" nv_key ":"
-      flow_literal_node_version = "^" any_key ":[[:space:]]*\\{[[:space:]]*" \
-        flow_entries nv_key ":"
+      # `node-version:` — what follows `node-version` there is a dash, which is neither
+      # the optional space nor the colon this pattern demands (nor the closing quote a
+      # quoted spelling demands).
+      block_literal_node_version = "^" nv_key ws ":"
+      flow_literal_node_version = "^" any_key ws ":" ws "\\{" ws \
+        flow_entries nv_key ws ":"
+
+      # A block-scalar header, `key: |` or `key: >`, with the same optional space before
+      # the colon. The colon is matched wherever it sits on the line rather than anchored
+      # to the key, so the leading `ws` keeps the shape uniform without widening it.
+      block_scalar_header = ws ":" ws "[|>][-+0-9]*" ws "$"
     }
     function close_step() {
       if (in_step && has_setup) {
@@ -311,7 +385,7 @@ scan_setup_node_steps() {
 
       # Tracked outside the `in_step` guard on purpose: a block scalar hanging off a job
       # key must be skipped too, or its literal text is read back as structure.
-      if (key ~ /:[[:space:]]*[|>][-+0-9]*[[:space:]]*$/) {
+      if (key ~ block_scalar_header) {
         in_block = 1
         block_indent = key_indent
       }

@@ -757,6 +757,390 @@ EOF
   assert_output_contains "without \`node-version-file: '.nvmrc'\`"
 }
 
+# --- Escaped quotes inside a scalar -------------------------------------------------
+#
+# A quoted scalar does not end at the first quote inside it. YAML gives each quoting
+# style its own escape -- a backslash in a double-quoted scalar, a doubled quote in a
+# single-quoted one -- and a scanner that ignores them ends the value early and reads
+# the rest of the line at the wrong offset. What is lost is not the value: it is every
+# key after it, including a `node-version` literal the step is already credited past.
+
+@test "reads past a backslash-escaped quote to the literal that follows it" {
+  make_consistent_repo "$REPO"
+  # The step is pinned, so only the literal rule can see the drift -- and the literal sits
+  # behind a value whose `\"` used to end it early, taking the rest of the line with it.
+  cat >"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+jobs:
+  unit:
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+          extra: { cache: "npm \", x", node-version: '20' }
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 1 ]
+  assert_output_contains 'pins a literal node-version'
+}
+
+@test "reads past a doubled single quote in a key to the literal that follows it" {
+  make_consistent_repo "$REPO"
+  # `'it''s'` is the single key `it's`; splitting it at the doubled quote desynchronises
+  # the entry walk exactly as the backslash case does.
+  cat >"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+jobs:
+  unit:
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+          extra: { 'it''s': 1, node-version: '20' }
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 1 ]
+  assert_output_contains 'pins a literal node-version'
+}
+
+@test "fails a flow-style literal declared after a backslash-escaped quote" {
+  make_consistent_repo "$REPO"
+  cat >"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+jobs:
+  unit:
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with: { cache: "npm \", x", node-version: '20' }
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 1 ]
+  assert_output_contains 'pins a literal node-version'
+}
+
+@test "fails a flow-style literal declared after a doubled single quote" {
+  make_consistent_repo "$REPO"
+  cat >"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+jobs:
+  unit:
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with: { cache: 'it''s, fine', node-version: '20' }
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 1 ]
+  assert_output_contains 'pins a literal node-version'
+}
+
+@test "still credits a pin declared after a backslash-escaped quote" {
+  make_consistent_repo "$REPO"
+  # The strictness above must not cost a true positive: the pin really is this mapping's
+  # own key, and the `\"` before it is a character of somebody else's value.
+  cat >"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+jobs:
+  unit:
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with: { cache: "npm \", x", node-version-file: .nvmrc }
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 0 ]
+  assert_output_contains 'node-version: OK'
+}
+
+@test "still credits a pin declared after a doubled single quote" {
+  make_consistent_repo "$REPO"
+  cat >"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+jobs:
+  unit:
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with: { cache: 'it''s, fine', 'a''b': 1, node-version-file: .nvmrc }
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 0 ]
+  assert_output_contains 'node-version: OK'
+}
+
+@test "still credits a pin declared after a value ending in an escaped backslash" {
+  make_consistent_repo "$REPO"
+  # `"C:\\"` ends at its own closing quote -- the backslash escapes the backslash, not
+  # the quote -- so treating every backslash as escaping the next character would run the
+  # value on and lose the pin behind it.
+  cat >"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+jobs:
+  unit:
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with: { cache: "C:\\", node-version-file: .nvmrc }
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 0 ]
+  assert_output_contains 'node-version: OK'
+}
+
+@test "does not read a pin out of a value whose quote is escaped" {
+  make_consistent_repo "$REPO"
+  # Reading escapes must not re-open the hole it sits next to: the whole scalar is the
+  # value of `cache:`, escaped quote and all, so setup-node receives no input from it.
+  cat >"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+jobs:
+  unit:
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with: { cache: "a\", node-version-file: .nvmrc, b" }
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 1 ]
+  assert_output_contains "without \`node-version-file: '.nvmrc'\`"
+}
+
+@test "does not read a pin out of a value that doubles its quote" {
+  make_consistent_repo "$REPO"
+  cat >"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+jobs:
+  unit:
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with: { cache: 'x'', node-version-file: .nvmrc, y' }
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 1 ]
+  assert_output_contains "without \`node-version-file: '.nvmrc'\`"
+}
+
+@test "does not accept a lookalike key that follows an escaped quote" {
+  make_consistent_repo "$REPO"
+  cat >"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+jobs:
+  unit:
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with: { cache: "npm \", x", legacy-node-version-file: .nvmrc }
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 1 ]
+  assert_output_contains "without \`node-version-file: '.nvmrc'\`"
+}
+
+@test "scans a pathological flow mapping without backtracking" {
+  make_consistent_repo "$REPO"
+  # Escape handling is where nested quantifiers creep in, and a scanner that has to
+  # explore two readings of every entry is exponential in the number of entries rather
+  # than merely slow. Four thousand entries of each shape, on one line, must stay a
+  # single pass; the bound is loose enough not to flake and tight enough that a blowup
+  # (seconds at twenty entries) cannot hide under it.
+  # One repeated unit: a double-quoted value with a backslash-escaped quote, a
+  # single-quoted value with a doubled quote, and a single-quoted key with a doubled
+  # quote -- the three shapes whose escapes this pass taught the scanner to read.
+  local unit line
+  unit=$'k: "a\\", b", m: \'c\'\'d\', \'e\'\'f\': g, '
+  line="$(UNIT="$unit" awk 'BEGIN { u = ENVIRON["UNIT"]; for (i = 0; i < 4000; i++) printf "%s", u }')"
+  cat >"$REPO/.github/workflows/unit-testing.yml" <<EOF
+jobs:
+  unit:
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with: { ${line}node-version-file: .nvmrc }
+EOF
+
+  local started elapsed
+  started="$SECONDS"
+  run_checker "$REPO"
+  elapsed=$((SECONDS - started))
+
+  [ "$status" -eq 0 ]
+  assert_output_contains 'node-version: OK'
+  [ "$elapsed" -lt 15 ]
+}
+
+# --- Whitespace between a key and its colon ------------------------------------------
+#
+# YAML lets a key and its colon be separated by spaces. `node-version : "20"` is the
+# ordinary key written with one, and a scanner that demands the colon touch the key sees
+# no key at all -- which is the literal pin going through unreported.
+
+@test "fails a literal Node version whose key is spaced from its colon" {
+  make_consistent_repo "$REPO"
+  cat >"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+jobs:
+  unit:
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version : "20"
+          node-version-file: '.nvmrc'
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 1 ]
+  assert_output_contains 'pins a literal node-version'
+}
+
+@test "fails a quoted literal Node version whose key is spaced from its colon" {
+  make_consistent_repo "$REPO"
+  cat >"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+jobs:
+  unit:
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          "node-version" : '20'
+          node-version-file: '.nvmrc'
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 1 ]
+  assert_output_contains 'pins a literal node-version'
+}
+
+@test "fails a flow-style literal whose key is spaced from its colon" {
+  make_consistent_repo "$REPO"
+  cat >"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+jobs:
+  unit:
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+          extra: { cache : bun, node-version : '20' }
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 1 ]
+  assert_output_contains 'pins a literal node-version'
+}
+
+@test "credits a pin whose key is spaced from its colon" {
+  make_consistent_repo "$REPO"
+  cat >"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+jobs:
+  unit:
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file : .nvmrc
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 0 ]
+  assert_output_contains 'node-version: OK'
+}
+
+@test "credits a quoted pin whose key is spaced from its colon" {
+  make_consistent_repo "$REPO"
+  cat >"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+jobs:
+  unit:
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          "node-version-file" : '.nvmrc'
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 0 ]
+  assert_output_contains 'node-version: OK'
+}
+
+@test "credits a step whose uses: and with: keys are spaced from their colons" {
+  make_consistent_repo "$REPO"
+  # The spacing has to be understood at every key, not only at the two inputs: a `uses :`
+  # the scanner cannot read is a setup-node step it never counted, which is the vacuity
+  # guard being fed a smaller repository than the one on disk.
+  cat >"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+jobs:
+  unit:
+    steps:
+      - name: Set up Node.js
+        uses : actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with : { cache : bun, node-version-file : .nvmrc }
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 0 ]
+  assert_output_contains 'node-version: OK'
+  assert_output_contains '1 setup-node step(s)'
+}
+
+@test "does not accept a spaced lookalike key as the node-version-file input" {
+  make_consistent_repo "$REPO"
+  # The spacing widens the colon, never the key: `legacy-node-version-file` is still a
+  # different key, quoted or bare.
+  cat >"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+jobs:
+  unit:
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          "legacy-node-version-file" : '.nvmrc'
+          x-node-version-file : .nvmrc
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 1 ]
+  assert_output_contains "without \`node-version-file: '.nvmrc'\`"
+}
+
+@test "does not accept a spaced pin whose value is a .nvmrc lookalike" {
+  make_consistent_repo "$REPO"
+  cat >"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+jobs:
+  unit:
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file : '.nvmrc.bak'
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 1 ]
+  assert_output_contains "without \`node-version-file: '.nvmrc'\`"
+}
+
+@test "skips a block scalar whose header key is spaced from its colon" {
+  make_consistent_repo "$REPO"
+  # `run : |` opens the same block scalar `run: |` does, and its content is literal text.
+  cat >"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+jobs:
+  unit:
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        run : |
+          node-version-file: '.nvmrc'
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 1 ]
+  assert_output_contains "without \`node-version-file: '.nvmrc'\`"
+}
+
 @test "aborts rather than passing vacuously when no setup-node step is found" {
   make_consistent_repo "$REPO"
   rm "$REPO/.github/workflows/unit-testing.yml"
