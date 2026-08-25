@@ -267,6 +267,71 @@ try {
 }
 
 /**
+ * One YAML key, in the three spellings that name it: bare, single-quoted and
+ * double-quoted. `"node-version": '20'` is the same literal pin `node-version: '20'`
+ * is, so a scanner that knows only the bare spelling reads it as an unrelated key and
+ * waves it through — and, in the other direction, reports a correctly written
+ * `"node-version-file": '.nvmrc'` as unpinned.
+ *
+ * Every key this scanner matches is built here, so no key can be taught a spelling the
+ * others do not know — the failure mode that has cost this family of gates three
+ * separate fail-opens, each one key wide.
+ *
+ * Quoting widens nothing else. Each alternative is anchored at its opening quote and
+ * must close with the SAME quote, so `"legacy-node-version-file"` is still a key
+ * setup-node never reads (a prefix cannot be consumed and the tail read as the key),
+ * and `"node-version'` is a key to no YAML reader at all. The three alternatives are
+ * disjoint on their first character, so choosing between them is never a guess the
+ * engine has to unwind.
+ *
+ * Mirrors `yaml_key()` in the sibling gate scripts/ci/check-node-version-sources.sh;
+ * the two must stay one design.
+ */
+function yamlKey(name) {
+  return `(?:${name}|"${name}"|'${name}')`;
+}
+
+const USES_KEY = yamlKey('uses');
+const WITH_KEY = yamlKey('with');
+const NODE_VERSION_KEY = yamlKey('node-version');
+const NODE_VERSION_FILE_KEY = yamlKey('node-version-file');
+
+// A double-quoted YAML scalar, consumed whole. `\"` is an escaped quote INSIDE the
+// scalar, not the end of it: a run that stopped there would hand the remainder of the
+// string back to the walk as structure, and `{ "k\": v, node-version-file: .nvmrc, z" }`
+// — one key, pinning nothing — would credit the step. The two alternatives are disjoint
+// on their first character and neither matches the empty string, so consuming the scalar
+// is still a single deterministic pass.
+const DQ_SCALAR = String.raw`"(?:[^"\\]|\\.)*"`;
+
+// A single-quoted YAML scalar. YAML escapes `'` by doubling it, and this run stops at
+// the first half of a `''` — deliberately: the walk then fails to find the `:` that must
+// follow a key, gives the mapping up, and the step stays UNPINNED. Widening it the way
+// the double-quoted run is widened would buy nothing but a second way to be wrong, since
+// the narrow reading already errs closed.
+const SQ_SCALAR = String.raw`'[^']*'`;
+
+// Any key at all, for the flow entries that are merely stepped over, for the key a flow
+// mapping hangs off, and for the key a block scalar hangs off. A quoted key is consumed
+// whole, so a colon or a comma INSIDE a key is part of that key rather than structure
+// the walk could be desynchronised by.
+const ANY_KEY = String.raw`(?:[\w.$-]+|${DQ_SCALAR}|${SQ_SCALAR})`;
+
+// `.nvmrc`, bare or quoted, with the quotes required to match each other: a value that
+// opens with one quote and closes with the other is not `.nvmrc` to any YAML reader, so
+// it must not be one here either.
+const NVMRC_VALUE = String.raw`(?:'\.nvmrc'|"\.nvmrc"|\.nvmrc)`;
+
+// `run: |`, `run: >-`, `run: |2`, `"run": |` — with an optional trailing comment.
+// Anchored on the key (unlike the sibling's awk, which strips inline comments before it
+// looks) so a shell pipe at the end of an inline value — `cache: bun # see: |` — cannot
+// open a block scalar and swallow the rest of the step. Capture 1 is everything before
+// the key, so the scalar can be scoped to the column the KEY starts at.
+const BLOCK_SCALAR_HEADER = new RegExp(
+  String.raw`^(\s*(?:-\s+)?)${ANY_KEY}:\s*[|>][-+]?\d*\s*(?:#.*)?$`
+);
+
+/**
  * Slice a workflow into the `with:` block of each `actions/setup-node` step.
  *
  * Counting `setup-node` and `node-version-file` occurrences file-wide would let a
@@ -326,10 +391,14 @@ function yamlKeyLines(lines) {
     }
 
     isKeyLine[index] = true;
-    // `run: |`, `run: >-`, `run: |2` — with an optional trailing comment. Anchored
-    // on the key so a shell pipe inside an inline `run:` cannot open a block.
-    if (/^\s*(?:-\s+)?[\w.$-]+:\s*[|>][-+]?\d*\s*(?:#.*)?$/.test(line)) {
-      blockIndent = indent;
+    const header = BLOCK_SCALAR_HEADER.exec(line);
+    if (header) {
+      // The column of the KEY, not of the sequence dash that may precede it. `- run: |`
+      // owns only what is indented past `run`, and the step's own sibling keys — its
+      // `uses:` and `with:` — sit at exactly that column. Scoping the scalar to the dash
+      // instead swallows the entire rest of the step, hiding an unpinned setup-node call
+      // behind any leading `run:`. The sibling gate scopes it to the key too.
+      blockIndent = header[1].length;
     }
   });
 
@@ -337,17 +406,26 @@ function yamlKeyLines(lines) {
 }
 
 // A real step, not a mention: the first token on the line — after the optional
-// `- ` that opens a list item — has to be the `uses:` key itself.
-const SETUP_NODE_USES = /^\s*(?:-\s+)?uses:\s*actions\/setup-node[@\s]/;
-const LITERAL_NODE_VERSION = /^\s*(?:-\s+)?node-version:/;
+// `- ` that opens a list item — has to be the `uses:` key itself, in any of its three
+// spellings. The action reference may be quoted too, exactly as the sibling gate allows.
+const SETUP_NODE_USES = new RegExp(
+  String.raw`^\s*(?:-\s+)?${USES_KEY}:\s*["']?actions/setup-node[@\s]`
+);
+const LITERAL_NODE_VERSION = new RegExp(String.raw`^\s*(?:-\s+)?${NODE_VERSION_KEY}:`);
 
 // The entries of a flow mapping that precede the key being looked for: `key: value,`
-// repeated, with a quoted value consumed whole. Stepping over one entry at a time is
-// what makes the key that follows the mapping's OWN key. A looser `[^}]*` prefix reads
+// repeated, with a quoted key or value consumed whole. Stepping over one entry at a time
+// is what makes the key that follows the mapping's OWN key. A looser `[^}]*` prefix reads
 // any tail of a longer key as the key itself — `legacy-node-version-file:` would credit
 // a step the block spelling of the same input correctly rejects — and reads a key
 // spelled inside a quoted value as a real one.
-const FLOW_ENTRIES = String.raw`(?:[\w.$-]+:(?:[^,{}'"]|'[^']*'|"[^"]*")*,\s*)*`;
+//
+// The construction stays a single deterministic pass however it is matched: the key
+// alternatives and the three value alternatives are each disjoint on their first
+// character, and every repetition consumes at least a `k:,`, so none of them can match
+// the empty string. There is exactly one way to match any given prefix — nothing for a
+// backtracking engine to explore.
+const FLOW_ENTRIES = String.raw`(?:${ANY_KEY}:(?:[^,{}'"]|${SQ_SCALAR}|${DQ_SCALAR})*,\s*)*`;
 
 // The same literal written inside a flow mapping, `with: { node-version: '24.18.0' }`.
 // Without it the two spellings disagree: a flow mapping that carries the `.nvmrc` pin
@@ -355,7 +433,7 @@ const FLOW_ENTRIES = String.raw`(?:[\w.$-]+:(?:[^,{}'"]|'[^']*'|"[^"]*")*,\s*)*`
 // of the very same step is. The key has to open the mapping or start an entry, so
 // `node-version-file:` is never read as a literal.
 const FLOW_LITERAL_NODE_VERSION = new RegExp(
-  String.raw`^\s*(?:-\s+)?[\w.$-]+:\s*\{\s*${FLOW_ENTRIES}node-version:`
+  String.raw`^\s*(?:-\s+)?${ANY_KEY}:\s*\{\s*${FLOW_ENTRIES}${NODE_VERSION_KEY}:`
 );
 
 // The step's own `node-version-file:` key, on a real key line, whose complete value
@@ -364,10 +442,11 @@ const FLOW_LITERAL_NODE_VERSION = new RegExp(
 // canonical snippet, a longer path that merely starts with `.nvmrc`
 // (`.nvmrc.example`), and a similarly suffixed key (`legacy-node-version-file:`) —
 // each of which lets a genuinely unpinned setup-node step through.
-const NODE_VERSION_FILE_NVMRC =
-  /^\s*(?:-\s+)?node-version-file:\s*(?:'\.nvmrc'|"\.nvmrc"|\.nvmrc)\s*(?:#.*)?$/;
+const NODE_VERSION_FILE_NVMRC = new RegExp(
+  String.raw`^\s*(?:-\s+)?${NODE_VERSION_FILE_KEY}:\s*${NVMRC_VALUE}\s*(?:#.*)?$`
+);
 
-// The step's own `with:` mapping, in either YAML spelling — both are the same
+// The step's own `with:` mapping, in either mapping style — both are the same
 // mapping, and setup-node reads its inputs from nowhere else. Block style opens a
 // scope whose deeper keys NODE_VERSION_FILE_NVMRC is matched against; a flow
 // mapping is complete on its own line, so the pin is read straight out of it and no
@@ -375,9 +454,9 @@ const NODE_VERSION_FILE_NVMRC =
 // own, and the value alternation terminates exactly at `.nvmrc`, so a lookalike key
 // (`legacy-node-version-file:`), a lookalike path (`.nvmrc.bak`, `".nvmrcX"`) or a
 // literal `node-version:` all still leave the step unpinned.
-const BLOCK_WITH = /^with:\s*(?:#.*)?$/;
+const BLOCK_WITH = new RegExp(String.raw`^${WITH_KEY}:\s*(?:#.*)?$`);
 const FLOW_WITH_NVMRC = new RegExp(
-  String.raw`^with:\s*\{\s*${FLOW_ENTRIES}node-version-file:\s*(?:'\.nvmrc'|"\.nvmrc"|\.nvmrc)\s*[,}]`
+  String.raw`^${WITH_KEY}:\s*\{\s*${FLOW_ENTRIES}${NODE_VERSION_FILE_KEY}:\s*${NVMRC_VALUE}\s*[,}]`
 );
 
 // The mapping key a line carries, with any sequence dash removed, and the column it
