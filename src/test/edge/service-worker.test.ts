@@ -151,6 +151,19 @@ describe('install', () => {
 
     expect(sandbox.skipWaiting).toHaveBeenCalledTimes(1);
   });
+
+  it('still activates when the precache fetch fails', async () => {
+    // A rejected `waitUntil` discards the installing worker, so `register()` rejects and no
+    // worker exists at all — the standalone window then falls back to the browser's own
+    // network-error page, the one this worker exists to replace.
+    cache.add.mockRejectedValue(new Error('net::ERR_INTERNET_DISCONNECTED'));
+
+    const event: LifecycleEvent = lifecycleEvent();
+    listenerFor('install')(event);
+
+    await expect(firstArgument(event.waitUntil) as Promise<unknown>).resolves.toBeUndefined();
+    expect(sandbox.skipWaiting).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('activate', () => {
@@ -192,7 +205,9 @@ describe('fetch', () => {
     caches.match.mockResolvedValue(shell);
 
     await expect(dispatchNavigation(`${ORIGIN}/swagger`)).resolves.toBe(shell);
-    expect(caches.match).toHaveBeenCalledWith(OFFLINE_URL);
+    // Scoped to this worker's own cache: the whole origin shares one CacheStorage, so an
+    // unscoped lookup could resolve with another owner's copy of the same path.
+    expect(caches.match).toHaveBeenCalledWith(OFFLINE_URL, { cacheName: CACHE });
   });
 
   it('synthesizes a shell when the precache is gone, never a network error', async () => {

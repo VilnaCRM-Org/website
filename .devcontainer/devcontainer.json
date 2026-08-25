@@ -41,15 +41,16 @@
   // "engines" here, instead of as a confusing failure inside a later build.
   "onCreateCommand": "node checkNodeVersion.js",
 
-  // Three things the container is unusable without, in order:
-  //   * bash — the Alpine base ships only busybox ash, but `devcontainer exec`
-  //     (how CI and editors run a command in here) hardcodes `bash -c`.
+  // Two things the container is unusable without, in order:
   //   * node_modules — the bind mount shadows the image's build-time install.
   //     `make install` is deliberately not used: it re-runs the Node guard above.
   //   * pages/i18n/localization.json — generated and gitignored (#328), and
   //     dependency-cruiser resolves its `require` statically, so `make lint`
   //     fails on a fresh container without it.
-  "postCreateCommand": "apk add --no-cache bash && bun install --frozen-lockfile && node scripts/generateLocalization.mjs",
+  // bash is deliberately NOT installed here: it is a version-pinned apk in the
+  // Dockerfile base stage, where the same policy that pins every other package
+  // applies to it.
+  "postCreateCommand": "bun install --frozen-lockfile && node scripts/generateLocalization.mjs",
 
   "forwardPorts": [3000, 3001, 4000, 6006, 8080],
   "portsAttributes": {

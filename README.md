@@ -250,7 +250,8 @@ Docker
   make wait-for-prod: waits for the prod service to be ready on port 3001
 ```
 
-Note: these commands run against the Docker stack and ignore the `CI=1` prefix:
+Note: these commands run against the Docker prod stack and ignore the `CI=1` prefix. They
+take `HOST_STACK=1` instead — see below.
 
 ```bash
   make test-e2e: starts production and runs end-to-end tests inside the prod container
@@ -258,15 +259,18 @@ Note: these commands run against the Docker stack and ignore the `CI=1` prefix:
   make test-e2e-ui: runs end-to-end tests with UI inside the prod container
   make test-visual-ui: runs visual tests with UI inside the prod container
   make test-memory-leak: runs memory leak tests using Memlab inside the prod container
-
-  make load-tests: executes load tests using the K6 library
-  (uses "prod" as hostname, which maps to the Docker service)
-
-  make git-hooks-install: installs husky Git hooks locally
-  make update: runs locally on the host machine, not in a container
 ```
 
-They take `HOST_STACK=1` instead — see below.
+These take neither switch:
+
+```bash
+  make load-tests: executes load tests using the K6 library — Docker only, and
+  require-docker-stack refuses HOST_STACK=1 (uses "prod" as hostname, which maps to the
+  Docker service)
+
+  make husky: installs the Husky Git hooks — host toolchain in every mode
+  make update: runs bun update on the host machine, not in a container, in every mode
+```
 
 ### Host mode (running without Docker)
 

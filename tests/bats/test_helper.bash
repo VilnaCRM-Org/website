@@ -28,6 +28,21 @@ EOF
   chmod +x "$STUB_BIN_DIR/$name"
 }
 
+# A `serve` stub that stays up. `host-stack.sh start` only reports success while
+# the pid it recorded is still running its own invocation — a stub that exits at
+# once is (correctly) read as "the port is answered by somebody else" — and `stop`
+# needs a live process to identify. `sleep` is bounded rather than infinite: a test
+# that fails before killing it must not leave a process behind.
+create_long_running_serve_stub() {
+  cat > "$STUB_BIN_DIR/serve" <<'EOF'
+#!/usr/bin/env bash
+printf 'serve %s\n' "$*" >> "${COMMAND_LOG:?}"
+sleep 20
+EOF
+
+  chmod +x "$STUB_BIN_DIR/serve"
+}
+
 create_curl_stub() {
   cat > "$STUB_BIN_DIR/curl" <<'EOF'
 #!/usr/bin/env bash
@@ -127,7 +142,7 @@ setup_makefile_test_env() {
   create_generic_stub markdownlint
   create_generic_stub storybook
   create_generic_stub jest
-  create_generic_stub serve
+  create_long_running_serve_stub
   create_generic_stub playwright
   create_generic_stub lhci
   create_generic_stub node

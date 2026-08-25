@@ -98,13 +98,27 @@ if (nodeVersion !== null && !/^\d+\.\d+\.\d+$/.test(nodeVersion)) {
 
 // One file at a time, so an unreadable or base-image-less Dockerfile reports and
 // returns rather than skipping onward through the shared loop body.
+//
+// The matcher mirrors scripts/ci/check-node-version-sources.sh: `m` + `^[ \t]*`
+// anchors to the start of an instruction line, so a FROM quoted in a comment or a
+// RUN heredoc is not read as a pin; `i` accepts the legal lowercase `from`;
+// `(?:--\S+[ \t]+)*` consumes leading flags such as `FROM --platform=$BUILDPLATFORM`;
+// and `(?:\S*\/)?` makes a registry prefix end in `/` so an unrelated `mynode:` image
+// is not mistaken for Node. Missing any of those forms is fail-open on a multi-stage
+// file: one drifted stage would simply stop being seen while its siblings keep the
+// "declares no base image" check quiet. Both added groups are non-capturing, so 1/2
+// stay version/alpineTag.
 function collectNodeImages(file) {
   const text = readRequired('node-images', file);
   if (text === null) {
     return [];
   }
 
-  const matches = [...text.matchAll(/FROM\s+\S*node:(\d+\.\d+\.\d+)-alpine(\S*)/g)];
+  const matches = [
+    ...text.matchAll(
+      /^[ \t]*FROM[ \t]+(?:--\S+[ \t]+)*(?:\S*\/)?node:(\d+\.\d+\.\d+)-alpine(\S*)/gim
+    ),
+  ];
   if (matches.length === 0) {
     fail('node-images', `${file} declares no node:<version>-alpine<tag> base image`);
     return [];
@@ -327,17 +341,33 @@ function yamlKeyLines(lines) {
 const SETUP_NODE_USES = /^\s*(?:-\s+)?uses:\s*actions\/setup-node[@\s]/;
 const LITERAL_NODE_VERSION = /^\s*(?:-\s+)?node-version:/;
 
+// The step's own `node-version-file:` key, on a real key line, whose complete value
+// is `.nvmrc`. Anchored at both ends for the same reason LITERAL_NODE_VERSION is:
+// an unanchored search over the step's raw text accepts a `#` comment quoting the
+// canonical snippet, a longer path that merely starts with `.nvmrc`
+// (`.nvmrc.example`), and a similarly suffixed key (`legacy-node-version-file:`) —
+// each of which lets a genuinely unpinned setup-node step through.
+const NODE_VERSION_FILE_NVMRC =
+  /^\s*(?:-\s+)?node-version-file:\s*(?:'\.nvmrc'|"\.nvmrc"|\.nvmrc)\s*(?:#.*)?$/;
+
 function setupNodeSteps(lines, isKeyLine) {
   return lines.flatMap((line, index) => {
     if (!isKeyLine[index] || !SETUP_NODE_USES.test(line)) {
       return [];
     }
     // `with:` is a sibling key of `uses:`, not nested under it, so the step's
-    // extent is the whole `- ` list item that encloses the `uses:` line.
+    // extent is the whole `- ` list item that encloses the `uses:` line. The
+    // range, not a joined blob: the caller still needs isKeyLine per line.
     const start = stepStart(lines, index);
     const end = stepEnd(lines, start);
-    return [{ line: index + 1, body: lines.slice(start, end).join('\n') }];
+    return [{ line: index + 1, start, end }];
   });
+}
+
+function stepPinsNvmrc(lines, isKeyLine, step) {
+  return lines
+    .slice(step.start, step.end)
+    .some((line, offset) => isKeyLine[step.start + offset] && NODE_VERSION_FILE_NVMRC.test(line));
 }
 
 // A workflow that never calls setup-node yields no steps, so the pin check is
@@ -353,7 +383,7 @@ function checkWorkflowNodePin(file) {
   const isKeyLine = yamlKeyLines(lines);
 
   setupNodeSteps(lines, isKeyLine)
-    .filter(step => !/node-version-file:\s*['"]?\.nvmrc['"]?/.test(step.body))
+    .filter(step => !stepPinsNvmrc(lines, isKeyLine, step))
     .forEach(step => {
       fail(
         'workflows',
@@ -378,9 +408,14 @@ workflowFiles.forEach(checkWorkflowNodePin);
 const playwrightDockerfile = readRequired('playwright', PLAYWRIGHT_DOCKERFILE);
 
 if (playwrightDockerfile !== null) {
-  const image = /FROM\s+mcr\.microsoft\.com\/playwright:v(\d+\.\d+\.\d+)-jammy/.exec(
-    playwrightDockerfile
-  );
+  // Anchored and flag-tolerant for the same reasons as collectNodeImages above:
+  // `FROM --platform=…` and a lowercase `from` are both legal Dockerfile syntax and
+  // must not read as "does not build on the playwright image", while a commented-out
+  // FROM must not read as a pin.
+  const image =
+    /^[ \t]*FROM[ \t]+(?:--\S+[ \t]+)*mcr\.microsoft\.com\/playwright:v(\d+\.\d+\.\d+)-jammy/im.exec(
+      playwrightDockerfile
+    );
   if (!image) {
     fail(
       'playwright',

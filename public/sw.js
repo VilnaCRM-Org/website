@@ -34,8 +34,9 @@ const CACHE = `${CACHE_PREFIX}v1`;
 // bar keeps the URL the visitor actually asked for.
 const OFFLINE_URL = '/offline.html';
 
-// Last resort for the window where the worker is live but the precache is not (install
-// raced a failed fetch, or the user agent evicted the entry under storage pressure).
+// Last resort for the window where the worker is live but the precache is not: `install`
+// precached nothing (the cache then stays empty until the script bytes change and the
+// browser reinstalls), or the user agent evicted the entry under storage pressure.
 // `respondWith` treats a missing response as a network error, which would surface the very
 // browser error page this worker exists to replace.
 const OFFLINE_FALLBACK_HTML =
@@ -44,7 +45,12 @@ const OFFLINE_FALLBACK_HTML =
   '<body><h1>You are offline</h1></body></html>';
 
 function offlineShell() {
-  return globalThis.caches.match(OFFLINE_URL).then(
+  // Anchored to this worker's own cache for the same reason `activate` only evicts its own
+  // prefix: the whole origin shares one CacheStorage, and an unscoped `caches.match` resolves
+  // with the first hit in creation order — another same-origin owner's copy of
+  // `/offline.html` would win over the one this worker precached. A missing cache resolves
+  // undefined, so the 503 fallback still covers the empty-precache/evicted window.
+  return globalThis.caches.match(OFFLINE_URL, { cacheName: CACHE }).then(
     cached =>
       cached ??
       new globalThis.Response(OFFLINE_FALLBACK_HTML, {
@@ -70,6 +76,12 @@ globalThis.addEventListener('install', event => {
     globalThis.caches
       .open(CACHE)
       .then(cache => cache.add(new globalThis.Request(OFFLINE_URL, { cache: 'reload' })))
+      // A failed precache must not fail the install: a rejected `waitUntil` discards the
+      // installing worker, which leaves the browser's own network-error page in an
+      // address-bar-less standalone window — exactly what this worker exists to replace.
+      // The worker activates with an empty cache and serves OFFLINE_FALLBACK_HTML until a
+      // later generation reinstalls it.
+      .catch(() => undefined)
       .then(() => globalThis.skipWaiting())
   );
 });

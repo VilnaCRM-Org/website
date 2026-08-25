@@ -127,13 +127,14 @@ TEST_ENV=server bun x jest src/test/apollo-server/<spec>.test.ts
 ## Code Quality
 
 ```bash
-make format     # Prettier (run before lint)
-make lint       # lint-next + lint-tsc + lint-md + lint-deps + lint-pins
-make lint-next  # ESLint (flat config, eslint.config.mjs)
-make lint-tsc   # TypeScript (tsc, no emit)
-make lint-md    # markdownlint
-make lint-deps  # dependency-cruiser on src, pages, tests
-make lint-pins  # Node/Bun/Playwright pin drift across .nvmrc, engines, Dockerfiles, CI
+make format             # Prettier (run before lint)
+make lint               # lint-next, lint-tsc, lint-md, lint-deps, lint-docker-policy, lint-pins
+make lint-next          # ESLint (flat config, eslint.config.mjs)
+make lint-tsc           # TypeScript (tsc, no emit)
+make lint-md            # markdownlint
+make lint-deps          # dependency-cruiser on src, pages, tests
+make lint-docker-policy # Dockerfile registry (no Docker Hub) + digest-pin policy
+make lint-pins          # Node/Bun/Playwright pin drift across .nvmrc, engines, Dockerfiles, CI
 ```
 
 Three gates sit deliberately outside `make lint`: `make lint-metrics` (host-only Rust

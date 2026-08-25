@@ -60,9 +60,31 @@ site_answers() {
   curl -s -f "$SITE_URL" >/dev/null 2>&1
 }
 
+dump_serve_log() {
+  if [ -f "$LOG_FILE" ]; then
+    printf -- '--- %s ---\n' "$LOG_FILE" >&2
+    cat "$LOG_FILE" >&2
+  fi
+}
+
+# Takes the pid `start` just launched. A bare `site_answers` probe proves only
+# that *something* holds the port: the Docker prod stack publishes the same 3001,
+# and so does a stray `serve` or a second host-stack run whose pidfile was
+# removed. Our own `serve` then dies on EADDRINUSE while the probe stays green,
+# and the browser suites silently run against a foreign `out/`. So every
+# iteration re-proves the recorded pid is still running the invocation we
+# started (`serve_process_matches` is defined below; sh resolves it at call
+# time) before the answer is allowed to mean success.
 wait_for_site() {
+  serve_pid="$1"
   attempt=1
   while [ "$attempt" -le "$READY_ATTEMPTS" ]; do
+    if ! serve_process_matches "$serve_pid" "$SERVE_COMMAND"; then
+      printf '❌ The serve started by this run (pid %s) is no longer running; %s is being answered by another process.\n' \
+        "$serve_pid" "$SITE_URL" >&2
+      dump_serve_log
+      return 1
+    fi
     if site_answers; then
       printf '✅ Host prod stack is serving %s\n' "$SITE_URL"
       return 0
@@ -73,10 +95,7 @@ wait_for_site() {
 
   printf '❌ Timed out after %ss waiting for %s\n' \
     "$((READY_ATTEMPTS * READY_INTERVAL))" "$SITE_URL" >&2
-  if [ -f "$LOG_FILE" ]; then
-    printf -- '--- %s ---\n' "$LOG_FILE" >&2
-    cat "$LOG_FILE" >&2
-  fi
+  dump_serve_log
   return 1
 }
 
@@ -164,9 +183,10 @@ cmd_start() {
 
   # nohup so the server outlives the parent Make process that started it.
   nohup "$BIN_DIR/serve" -l "$PORT" out >"$LOG_FILE" 2>&1 &
-  printf '%s\n' "$!" >"$PID_FILE"
+  serve_pid=$!
+  printf '%s\n' "$serve_pid" >"$PID_FILE"
 
-  wait_for_site
+  wait_for_site "$serve_pid"
 }
 
 cmd_status() {

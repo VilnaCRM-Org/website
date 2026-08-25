@@ -157,7 +157,10 @@ run_pin_gate() {
   create_curl_stub
   create_generic_stub next
   create_generic_stub next-export-optimize-images
-  create_generic_stub serve
+  # A serve that stays up: `start` only reports success while the pid it recorded
+  # is still running its own invocation, so a stub that exits immediately would
+  # (correctly) fail the readiness wait.
+  create_long_running_serve_stub
 
   # A node stub that records the API base URL: the swagger patch step must run
   # against the container's value, not whatever the shell already exports.
@@ -182,6 +185,45 @@ STUB
   # Same static site the prod container serves — and nothing else.
   run grep -F 'docker' "$COMMAND_LOG"
   [ "$status" -ne 0 ]
+
+  run_host_stack stop
+}
+
+# A curl stub that refuses the first probe and answers every one after it. The
+# refusal forces `start` through a full wait iteration, so the immediately
+# exiting `serve` below is reliably dead by the time the second probe answers —
+# without it the test would race the stub's own exit.
+create_late_answering_curl_stub() {
+  cat > "$STUB_BIN_DIR/curl" <<'STUB'
+#!/usr/bin/env bash
+printf 'curl %s\n' "$*" >> "${COMMAND_LOG:?}"
+
+attempts="${COMMAND_LOG:?}.curl-attempts"
+count=$(( $(cat "$attempts" 2>/dev/null || printf '0') + 1 ))
+printf '%s\n' "$count" > "$attempts"
+
+[ "$count" -gt 1 ]
+STUB
+
+  chmod +x "$STUB_BIN_DIR/curl"
+}
+
+# The port is the Docker prod stack's own 3001, so "something answers it" is not
+# evidence that OUR server came up. When a foreign listener already holds it,
+# `serve` dies on EADDRINUSE while the probe stays green — and `start` used to
+# print "✅ Host prod stack is serving …" and hand the browser suites whatever
+# `out/` that other process was publishing.
+@test "host-stack.sh start fails when the port is answered by a foreign process" {
+  create_late_answering_curl_stub
+  create_generic_stub next
+  create_generic_stub next-export-optimize-images
+  create_generic_stub node
+  # Stands in for a `serve` that exits at once, the way it does on EADDRINUSE.
+  create_generic_stub serve
+
+  run_host_stack start
+  [ "$status" -ne 0 ]
+  assert_output_contains 'no longer running'
 }
 
 @test "host-stack.sh stop is idempotent and an unknown subcommand fails with usage" {
@@ -196,19 +238,6 @@ STUB
   run_host_stack browse-the-web
   [ "$status" -ne 0 ]
   assert_output_contains 'Usage:'
-}
-
-# A `serve` stub that stays up, so `stop` has a live process to identify instead
-# of a pid that has already exited. `sleep` is bounded rather than infinite: a
-# test that fails before killing it must not leave a process behind.
-create_long_running_serve_stub() {
-  cat > "$STUB_BIN_DIR/serve" <<'STUB'
-#!/usr/bin/env bash
-printf 'serve %s\n' "$*" >> "${COMMAND_LOG:?}"
-sleep 20
-STUB
-
-  chmod +x "$STUB_BIN_DIR/serve"
 }
 
 host_stack_pid_gone() {
@@ -427,7 +456,100 @@ devcontainer build target|.devcontainer/devcontainer.json|sed -i 's#"target": "b
 devcontainer source Dockerfile|.devcontainer/devcontainer.json|sed -i 's#"dockerfile": "../Dockerfile"#"dockerfile": "../Playwright.Dockerfile"#' .devcontainer/devcontainer.json
 devcontainer host-mode flag|.devcontainer/devcontainer.json|sed -i 's#"CI": "1"#"CI": "0"#' .devcontainer/devcontainer.json
 devcontainer embeds a version|.devcontainer/devcontainer.json|sed -i 's#"name": "VilnaCRM website"#"name": "VilnaCRM website 1.2.3"#' .devcontainer/devcontainer.json
+node image behind a platform flag|Dockerfile|sed -i 's#^FROM .* AS production#FROM --platform=linux/amd64 node:99.0.0-alpine3.23 AS production#' Dockerfile
+node image on a lowercase from|Apollo.Dockerfile|sed -i 's#^FROM #from #; s#node:[0-9.]*-alpine#node:99.0.0-alpine#' Apollo.Dockerfile
+playwright image behind a platform flag|Playwright.Dockerfile|sed -i 's#^FROM #FROM --platform=linux/amd64 #; s#playwright:v[0-9.]*-jammy#playwright:v99.0.0-jammy#' Playwright.Dockerfile
 EOF
+}
+
+# `FROM --platform=$BUILDPLATFORM …` and a lowercase `from` are both legal
+# Dockerfile syntax, and a commented-out FROM is not a pin at all. A matcher that
+# reads any of the three wrongly is fail-open on a multi-stage file: the drifted
+# stage stops being seen while a sibling keeps the "declares no base image" check
+# quiet — or, in the other direction, it invents a drift from a comment.
+@test "check-version-pins.mjs reads FROM instructions, not flags, case, or comments" {
+  setup_pin_sandbox
+
+  run_pin_gate
+  [ "$status" -eq 0 ]
+
+  # Legal spellings of the very images the gate already accepts.
+  (cd "$PIN_SANDBOX" && sed -i 's#^FROM #FROM --platform=linux/amd64 #' Playwright.Dockerfile)
+  (cd "$PIN_SANDBOX" && sed -i 's#^FROM #from #' Mockoon.Dockerfile)
+  run_pin_gate
+  if [ "$status" -ne 0 ]; then
+    echo 'the pin gate stopped recognising a flagged or lowercase FROM' >&2
+    printf '%s\n' "${output-}" >&2
+    return 1
+  fi
+
+  # A FROM inside a comment names no image the build ever pulls.
+  (cd "$PIN_SANDBOX" && sed -i '1i # FROM node:99.0.0-alpine3.23' MemoryLeak.Dockerfile)
+  run_pin_gate
+  if [ "$status" -ne 0 ]; then
+    echo 'the pin gate read a commented-out FROM as a pin' >&2
+    printf '%s\n' "${output-}" >&2
+    return 1
+  fi
+
+  # An unrelated image whose name merely ends in "node" is not a Node base image.
+  (cd "$PIN_SANDBOX" && sed -i '1i FROM mynode:99.0.0-alpine3.23 AS unrelated' Apollo.Dockerfile)
+  run_pin_gate
+  if [ "$status" -ne 0 ]; then
+    echo 'the pin gate read "mynode:" as the node image' >&2
+    printf '%s\n' "${output-}" >&2
+    return 1
+  fi
+}
+
+# Every other check in this section is gated on `isKeyLine`, but the
+# node-version-file test used to run an unanchored regex over the step's raw text.
+# A comment quoting the canonical snippet, a longer path that starts with `.nvmrc`,
+# or a similarly suffixed key each satisfied it while the step stayed unpinned.
+@test "check-version-pins.mjs requires a real node-version-file key valued exactly .nvmrc" {
+  setup_pin_sandbox
+
+  local probe="$PIN_SANDBOX/.github/workflows/probe.yml"
+
+  write_setup_node_probe() {
+    cat > "$probe" <<YAML
+name: probe
+on: push
+jobs:
+  a:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v6
+        with:
+$1
+YAML
+  }
+
+  write_setup_node_probe "          node-version-file: '.nvmrc'"
+  run_pin_gate
+  if [ "$status" -ne 0 ]; then
+    echo 'the pin gate rejected the canonical node-version-file step' >&2
+    printf '%s\n' "${output-}" >&2
+    return 1
+  fi
+
+  local hole
+  for hole in \
+    '          # node-version-file: .nvmrc'$'\n''          cache: bun' \
+    '          node-version-file: .nvmrc.example' \
+    '          legacy-node-version-file: .nvmrc'; do
+    write_setup_node_probe "$hole"
+    run_pin_gate
+    if [ "$status" -eq 0 ]; then
+      echo "an unpinned setup-node step passed the gate: $hole" >&2
+      return 1
+    fi
+    assert_output_contains 'without node-version-file'
+  done
+
+  rm -f "$probe"
+  run_pin_gate
+  [ "$status" -eq 0 ]
 }
 
 @test "check-version-pins.mjs requires the committed devcontainer and rejects a fifth pin" {

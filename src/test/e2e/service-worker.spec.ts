@@ -111,7 +111,10 @@ test.describe('Offline shell service worker', () => {
         const keys: string[] = await caches.keys();
         const cache: Cache = await caches.open(keys[0] as string);
         const requests: readonly Request[] = await cache.keys();
-        const hit: Response | undefined = await caches.match(offlineUrl);
+        // Read through the worker's own cache rather than the origin-wide
+        // `caches.match`, which resolves with the first hit across every cache in the
+        // origin: the probe must not depend on there being exactly one.
+        const hit: Response | undefined = await cache.match(offlineUrl);
 
         return {
           keys,
