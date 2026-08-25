@@ -31,7 +31,15 @@ const DynamicHeader: ComponentType = dynamic(() => import('@/features/landing/co
 
 Sentry.init({
   dsn: env.NEXT_PUBLIC_SENTRY_DSN,
-  integrations: [Sentry.browserTracingIntegration(), Sentry.replayIntegration()],
+  // The only interactive surface on this site is the sign-up form, so an
+  // unmasked session replay would record a password field keystroke by
+  // keystroke. Masking is Sentry's default; pinning it here means an upstream
+  // default change cannot silently start capturing credentials (#378 F3).
+  sendDefaultPii: false,
+  integrations: [
+    Sentry.browserTracingIntegration(),
+    Sentry.replayIntegration({ maskAllInputs: true, maskAllText: true, blockAllMedia: true }),
+  ],
   // Drop empty origins so Sentry never receives '' (which substring-matches
   // every URL and would attach trace headers to all outbound requests).
   tracePropagationTargets: [env.NEXT_PUBLIC_DEVELOPMENT_API_URL, env.NEXT_PUBLIC_API_URL].filter(

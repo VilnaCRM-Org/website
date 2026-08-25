@@ -31,6 +31,8 @@ than one. Match the change to the suite and run its verification command.
 | Client unit       | Components, hooks, and pure client logic   | `make test-unit-client` |
 | Server unit       | Apollo resolvers and server-side logic     | `make test-unit-server` |
 | Edge unit         | Deployed edge/runtime scripts (`scripts/`) | `make test-unit-edge`   |
+| Integration       | Cross-module / API-boundary wiring         | `make test-integration` |
+| Contract          | The Mockoon mock vs. the OpenAPI contract  | `make test-contract`    |
 | End-to-end (e2e)  | User-facing flows end to end (Mockoon API) | `make test-e2e`         |
 | Visual regression | Any change to rendered UI or styling       | `make test-visual`      |
 
@@ -43,7 +45,12 @@ that ship outside the Next.js bundle: the CloudFront Functions handler
 (`scripts/cloudfront_routing.js`) and the offline service worker (`public/sw.js`). Specs
 live in `src/test/edge/**/*.test.ts` and the layer is pinned at 100% per-file coverage —
 put any future hand-written runtime file that Next.js does not bundle in this layer rather
-than shipping it uncovered. E2E and visual specs are Playwright
+than shipping it uncovered. Integration specs run in a jsdom-with-fetch env
+(`TEST_ENV=integration`) from `tests/integration/**/*.integration.test.{ts,tsx}` and
+enforce a global 100% coverage sweep over `src/`. Contract specs run in a node env
+(`TEST_ENV=contract`) from `tests/contract/**/*.contract.test.ts`; they boot the Mockoon
+mock the e2e suite runs against and hold every response against the committed
+`contracts/user-service/openapi.json` (issue #350). E2E and visual specs are Playwright
 (`src/test/e2e/**/*.spec.ts`, `src/test/visual/**/*.spec.ts`) across chromium, firefox, and
 webkit, plus a fourth `mobile-chrome` project that runs `src/test/e2e/mobile/**` under real
 Pixel 7 emulation (touch, mobile user agent, devicePixelRatio 2.625). That project is
@@ -56,6 +63,19 @@ Add a specialized suite when the change touches its concern: `make test-mutation
 strength), `make test-bats` (Makefile and CI shell flows), `make test-memory-leak` (leaks),
 `make load-tests` (traffic, K6), and `make lighthouse-desktop` / `make lighthouse-mobile`
 (performance, accessibility, best practices).
+
+Two of those suites assert on more than their own exit code, so a change that touches them
+needs a second look (issues #359 and #354):
+
+- **When you change an e2e spec**, CI re-runs it with `make test-e2e-burnin`
+  (`--repeat-each=5 --retries=0`) and fails at two or more failures. A separate gate job
+  fails if that spec passed only on a retry. Both legs are scoped to the specs in the diff.
+  Fix the race — never add a wait, widen `retries`, or make the assertion conditional to
+  get through.
+- **When a change adds a leak**, `make test-memory-leak` fails with the retainer trace.
+  Accepted, pre-existing clusters live in `src/test/memory-leak/leak-baseline.json`, each
+  with a reason, a tracking issue, and a `validUntil` expiry. An allowance is for debt that
+  predates the gate, never for a leak your change introduced.
 
 In CI these suites are fanned out to run in parallel (issue #316): every workflow declares a
 `concurrency` group (PR checks cancel superseded runs; deploy/release/sandbox do not),
@@ -126,9 +146,10 @@ CI=1 make test-unit-client   # Client unit suite (jsdom)
 CI=1 make test-unit-server   # Server unit suite (node)
 CI=1 make test-unit-edge     # Edge/runtime scripts (cloudfront_routing.js, public/sw.js)
 CI=1 make test-integration   # Integration layer (global 100% coverage)
+make test-contract           # Mockoon mock vs. the committed OpenAPI contract
 make test-e2e                # User-facing flows (for UI or behavior changes)
 make test-visual             # Visual regression (for UI or styling changes)
-make lint                    # ESLint, TypeScript, markdownlint, dependency-cruiser, pins
+make lint                    # ESLint, TypeScript, markdownlint, deps, Docker policy, pins
 make lint-contracts          # Upstream contracts (when .env pins or gql documents change)
 ```
 

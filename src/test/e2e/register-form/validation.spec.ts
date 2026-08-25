@@ -4,6 +4,7 @@ import { Response } from 'playwright';
 
 import { signUpButton, policyText, userData, graphqlEndpoint } from './constants';
 import {
+  fillConfirmPasswordInput,
   fillEmailInput,
   fillInitialsInput,
   fillPasswordInput,
@@ -19,6 +20,7 @@ test('Should display error messages for invalid inputs', async ({ page }) => {
   await fillInitialsInput(page, userData);
   await fillEmailInput(page, userData);
   await fillPasswordInput(page, userData);
+  await fillConfirmPasswordInput(page, userData);
   await page.getByLabel(policyText).check();
 
   await page.route(graphqlEndpoint, successResponse);

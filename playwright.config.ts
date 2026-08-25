@@ -36,7 +36,14 @@ export default defineConfig({
   // Omit `workers` off-CI (Playwright's own default) rather than passing an
   // explicit `undefined`, which `exactOptionalPropertyTypes` rejects.
   ...(process.env.CI ? { workers: 1 } : {}),
-  reporter: [['html', { open: 'never' }]],
+  // The HTML report is for humans; the JSON one is what the flake gate (#359) reads. Without
+  // it a retry-pass (`status: 'flaky'`) is indistinguishable from a clean pass, which is how
+  // the WebKit swagger flake in #290 reached the production pipeline. The path is
+  // overridable so the burn-in leg can keep its report separate from the shard run's.
+  reporter: [
+    ['html', { open: 'never' }],
+    ['json', { outputFile: process.env.PLAYWRIGHT_JSON_REPORT ?? 'test-results/results.json' }],
+  ],
   use: {
     trace: 'on-first-retry',
     ignoreHTTPSErrors: true,
