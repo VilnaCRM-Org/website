@@ -74,10 +74,12 @@ interface PlaceholderFields {
   name: string;
   email: string;
   password: string;
+  confirmPassword: string;
 }
 
 export const placeholders: PlaceholderFields = {
   name: 'Михайло Светський',
   email: 'vilnaCRM@gmail.com',
   password: 'Створіть пароль',
+  confirmPassword: 'Повторіть пароль',
 };
