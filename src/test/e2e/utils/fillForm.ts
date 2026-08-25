@@ -10,6 +10,7 @@ interface FillFormProps {
   initialsInput: Locator;
   emailInput: Locator;
   passwordInput: Locator;
+  confirmPasswordInput: Locator;
   policyTextCheckbox: Locator;
 }
 type FillFormFunction = (params: FillFormProps) => Promise<void>;
@@ -18,11 +19,13 @@ const fillForm: FillFormFunction = async ({
   initialsInput,
   emailInput,
   passwordInput,
+  confirmPasswordInput,
   policyTextCheckbox,
 }: FillFormProps): Promise<void> => {
   await fillInput(initialsInput, userData.fullName);
   await fillInput(emailInput, userData.email);
   await fillInput(passwordInput, userData.password);
+  await fillInput(confirmPasswordInput, userData.password);
   await checkCheckbox(policyTextCheckbox);
 };
 

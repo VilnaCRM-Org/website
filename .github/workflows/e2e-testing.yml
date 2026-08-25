@@ -12,6 +12,58 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changed-specs:
+    # The flake legs (#359) only block on specs this pull request touched, so the diff is
+    # resolved once here and shared. Full history is needed for the merge-base diff; the
+    # shard jobs keep their shallow checkout.
+    name: changed e2e specs
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      specs: ${{ steps.diff.outputs.specs }}
+      any: ${{ steps.diff.outputs.any }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Resolve the e2e specs this pull request changed
+        id: diff
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          # --diff-filter=d drops deletions: a spec that no longer exists cannot be burned in.
+          # The suffix is filtered with grep rather than a `**/*.spec.ts` pathspec — git
+          # pathspecs are not globstar-aware, so that pattern silently misses every spec
+          # sitting directly in src/test/e2e (11 of 29 today).
+          # The diff runs on its own so a git failure (e.g. an unfetched base) still aborts
+          # the job; only grep's "no match" exit code is tolerated.
+          changed="$(git diff --name-only --diff-filter=d "$BASE_SHA"...HEAD -- src/test/e2e)"
+          spec_lines="$(printf '%s\n' "$changed" | grep -E '\.spec\.ts$')" || true
+          # The list is space-separated downstream, so a spec path containing whitespace would
+          # be split into two nonexistent paths and its flakes would silently drop to advisory.
+          # Refuse loudly instead of gating nothing. Only the filtered spec list is checked:
+          # non-spec files under src/test/e2e never reach the downstream list, so a fixture
+          # with a space in its name must not hard-fail this job and cascade into both legs.
+          if printf '%s\n' "$spec_lines" | grep -qE '[[:space:]]'; then
+            echo "::error::e2e spec paths must not contain whitespace: $spec_lines"
+            exit 1
+          fi
+          specs="$(printf '%s\n' "$spec_lines" | tr '\n' ' ' | sed 's/ *$//')"
+          echo "specs=$specs" >> "$GITHUB_OUTPUT"
+          if [ -n "$specs" ]; then
+            echo "any=true" >> "$GITHUB_OUTPUT"
+            echo "Changed e2e specs: $specs"
+          else
+            echo "any=false" >> "$GITHUB_OUTPUT"
+            echo "No e2e specs changed; the burn-in leg will be skipped."
+          fi
+
   test:
     # The Playwright config pins workers: 1 in CI (Docker cross-container
     # stability), so the whole suite otherwise runs serially in one job. Instead
@@ -54,5 +106,147 @@ jobs:
         if: always()
         with:
           name: playwright-report-e2e-shard-${{ matrix.shardIndex }}-${{ github.run_id }}-${{ github.run_attempt }}
-          path: playwright-report/
+          # test-results/results.json is the machine-readable sibling the flake gate reads;
+          # the HTML report alone cannot distinguish a retry-pass from a clean pass.
+          path: |
+            playwright-report/
+            test-results/results.json
           retention-days: 14
+
+  flake-gate:
+    # `retries: 2` in CI means a spec that fails and then passes is reported green (#359).
+    # This job reads every shard's JSON report and fails when a spec the pull request changed
+    # only passed on a retry; flakes in untouched specs are annotated, not blocked.
+    name: e2e flake gate
+    needs: [test, changed-specs]
+    # Run even when a shard failed so the gate fails CLOSED rather than being skipped —
+    # branch protection treats a skipped required check as passing.
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Fail if a dependency did not succeed
+        # Both dependencies must be checked. A failed `changed-specs` yields an empty spec
+        # list, which would send every retry-pass to the advisory set and report success —
+        # one broken diff job would silently disarm the gate.
+        if: needs.test.result != 'success' || needs.changed-specs.result != 'success'
+        env:
+          SHARD_RESULT: ${{ needs.test.result }}
+          DIFF_RESULT: ${{ needs.changed-specs.result }}
+        run: |
+          echo "::error::e2e prerequisites did not succeed (shards=$SHARD_RESULT," \
+            "changed-specs=$DIFF_RESULT); failing the gate closed."
+          exit 1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: Cache Bun cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('.nvmrc') }}-${{ hashFiles('**/bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-${{ hashFiles('.nvmrc') }}-
+
+      - name: Setup Bun and install dependencies
+        run: |
+          # Install the exact Bun pinned in package.json's packageManager field,
+          # so the version is declared in exactly one place. Corepack does not
+          # manage Bun, so it is installed globally via `npm install -g`.
+          npm install -g "$(node -p "require('./package.json').packageManager.split('+')[0]")"
+          bun install --frozen-lockfile
+
+      - name: Download shard reports
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: playwright-report-e2e-shard-*
+          path: flake-reports
+
+      - name: Fail on a retry-pass in a changed spec
+        env:
+          CHANGED_SPECS: ${{ needs.changed-specs.outputs.specs }}
+        run: |
+          make check-e2e-flakes FLAKE_MODE=retry-pass FLAKE_REPORT_DIR=flake-reports \
+            FLAKE_CHANGED_SPECS="$CHANGED_SPECS"
+
+  burn-in:
+    # Re-runs only the specs the pull request changed, with retries off, so nondeterminism
+    # shows up as some-but-not-all failures. Skipped entirely when no e2e spec changed.
+    name: burn in changed e2e specs
+    needs: changed-specs
+    # Skipped only when the diff genuinely resolved to no e2e specs. If `changed-specs`
+    # itself failed the job still runs and fails closed below, because branch protection
+    # counts a skipped required check as passing.
+    if: ${{ !cancelled() && (needs.changed-specs.result != 'success' || needs.changed-specs.outputs.any == 'true') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      contents: read
+    steps:
+      - name: Fail if the changed-spec diff did not succeed
+        if: needs.changed-specs.result != 'success'
+        env:
+          DIFF_RESULT: ${{ needs.changed-specs.result }}
+        run: |
+          echo "::error::changed-specs did not succeed (result=$DIFF_RESULT);" \
+            "cannot know what to burn in, so failing closed."
+          exit 1
+
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: Cache Bun cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('.nvmrc') }}-${{ hashFiles('**/bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-${{ hashFiles('.nvmrc') }}-
+
+      - name: Setup Bun and install dependencies
+        run: |
+          npm install -g "$(node -p "require('./package.json').packageManager.split('+')[0]")"
+          bun install --frozen-lockfile
+
+      - name: Repeat the changed specs with retries off
+        # A partial failure is the signal, so the run's own exit code is not the verdict —
+        # the verdict step below grades the report and owns the outcome.
+        continue-on-error: true
+        env:
+          CHANGED_SPECS: ${{ needs.changed-specs.outputs.specs }}
+        run: make test-e2e-burnin E2E_BURNIN_SPECS="$CHANGED_SPECS"
+
+      - name: Grade the burn-in
+        env:
+          CHANGED_SPECS: ${{ needs.changed-specs.outputs.specs }}
+        run: |
+          make check-e2e-flakes FLAKE_MODE=burn-in FLAKE_REPORT_DIR=burn-in-results \
+            FLAKE_CHANGED_SPECS="$CHANGED_SPECS"
+
+      - name: Upload burn-in report
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: playwright-report-e2e-burn-in-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            playwright-report/
+            burn-in-results/results.json
+          retention-days: 14
+          if-no-files-found: ignore

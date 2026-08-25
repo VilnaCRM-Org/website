@@ -1,0 +1,23 @@
+{
+  "description": "Accepted memlab leak clusters (issue #354). Every entry is time-boxed debt recorded from the first honest run of the armed gate; allowedClusters is a ceiling, not a target. Adding an entry for a leak your change introduced is not allowed — fix the retainer instead. See src/test/memory-leak/utils/leakGate.js for the rules the gate applies, and CONTRIBUTING.md for the workflow.",
+  "scenarios": {
+    "servicesTooltip": {
+      "allowedClusters": 1,
+      "reason": "Pre-existing on main: hovering the services tooltip leaves one cluster of detached MUI nodes (~12KB retained). Measured by running the armed gate against an empty baseline, which correctly went red.",
+      "issue": "https://github.com/VilnaCRM-Org/website/issues/426",
+      "validUntil": "2027-02-10"
+    },
+    "swaggerInteractions": {
+      "allowedClusters": 29,
+      "reason": "Pre-existing on main and by far the largest of the three: expanding Swagger UI operations retains ~1MB across swagger-ui-react internals. The count is environment-dependent — 29 on four isolated local runs, 28 in the full local suite, and 13 on a GitHub-hosted runner (run 31416963140) — so the ceiling is the cross-environment maximum. That deliberately makes this one entry loose on CI: it will not catch a regression from 13 up to 29 there. Pinning the CI figure instead would turn every local run red and pressure the next person into raising the allowance, which is worse. Burning the clusters down in issue #426 is what tightens this; do not raise it.",
+      "issue": "https://github.com/VilnaCRM-Org/website/issues/426",
+      "validUntil": "2027-02-10"
+    },
+    "toggleMobileMenu": {
+      "allowedClusters": 1,
+      "reason": "Pre-existing on main: opening and closing the mobile drawer leaves one cluster of detached nodes. Measured by running the armed gate against an empty baseline, which correctly went red.",
+      "issue": "https://github.com/VilnaCRM-Org/website/issues/426",
+      "validUntil": "2027-02-10"
+    }
+  }
+}
