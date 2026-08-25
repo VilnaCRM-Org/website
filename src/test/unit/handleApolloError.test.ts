@@ -154,7 +154,7 @@ describe('Error Handling', () => {
       expect(handleApolloError(error)).toBe(messages[CLIENT_ERROR_KEYS.UNAUTHORIZED]);
     });
 
-    it('should handle multiple graphQLErrors and join messages', () => {
+    it('never surfaces raw server messages, however many arrive (#378 F2)', () => {
       const graphQLErrors: GraphQLFormattedError[] = [
         { message: 'Error 1' },
         { message: 'Error 2' },
@@ -162,7 +162,24 @@ describe('Error Handling', () => {
       const error: HandleApolloErrorProps = {
         error: createMockCombinedGraphQLErrors(graphQLErrors),
       };
-      expect(handleApolloError(error)).toBe('Error 1, Error 2');
+
+      const result: string = handleApolloError(error);
+
+      expect(result).toBe(messages[CLIENT_ERROR_KEYS.WENT_WRONG]);
+      expect(result).not.toContain('Error 1');
+      expect(result).not.toContain('Error 2');
+    });
+
+    it('does not leak an account-enumeration signal from an unmapped server error', () => {
+      const enumerationMessage: string = 'user with this email already exists';
+      const error: HandleApolloErrorProps = {
+        error: createMockCombinedGraphQLErrors([{ message: enumerationMessage }]),
+      };
+
+      const result: string = handleApolloError(error);
+
+      expect(result).toBe(messages[CLIENT_ERROR_KEYS.WENT_WRONG]);
+      expect(result).not.toContain('email');
     });
 
     it('should return unexpected error for non-ApolloError', () => {
