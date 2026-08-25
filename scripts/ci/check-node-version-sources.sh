@@ -131,8 +131,12 @@ fi
 #     printing `uses: actions/setup-node@…` inside a `run: |` block cannot conjure a step
 #     that nothing runs — which would satisfy the "at least one setup-node step" vacuity
 #     guard while the repository has none;
-#   * `node-version-file:` counts only inside the step's own `with:` mapping, so the same
-#     key under `env:` (where setup-node never reads it) no longer excuses a step.
+#   * `node-version-file:` counts only inside the step's own `with:` mapping — a `with:`
+#     sitting at the step's own key column, never one nested deeper — so neither the same
+#     key under `env:` (where setup-node never reads it) nor a `with:` buried inside
+#     another mapping excuses a step. The single-line flow form,
+#     `with: { node-version-file: '.nvmrc' }`, is the same mapping written differently
+#     and is credited too.
 #
 # Block scalars are therefore tracked explicitly: everything indented under a `key: |`
 # or `key: >` is literal text and is skipped, structure and comment syntax alike.
@@ -174,6 +178,7 @@ scan_setup_node_steps() {
       if (!in_step && substr(line, first, 2) == "- ") {
         in_step = 1
         step_indent = indent
+        step_key_indent = -1
       }
 
       # The mapping key on this line, with any sequence dash removed, and the column it
@@ -187,14 +192,23 @@ scan_setup_node_steps() {
         key_indent = first + off - 1
       }
 
+      # The column of the first mapping key of the step (the one the dash introduces) is
+      # the column every direct key of that step sits at — which is how the own `with:` of
+      # a step is told apart from a `with:` nested inside some other mapping of it.
+      if (in_step && step_key_indent < 0) step_key_indent = key_indent
+
       if (in_with && key_indent <= with_indent) in_with = 0
 
       if (in_step) {
         if (key ~ /^uses:[[:space:]]*["'\'']?actions\/setup-node@/) has_setup = 1
 
-        if (key ~ /^with:[[:space:]]*$/) {
+        if (key_indent == step_key_indent && key ~ /^with:[[:space:]]*$/) {
           in_with = 1
           with_indent = key_indent
+        } else if (key_indent == step_key_indent &&
+                   key ~ /^with:[[:space:]]*\{[^}]*node-version-file:[[:space:]]*["'\'']?\.nvmrc["'\'']?[[:space:]]*[,}]/) {
+          # A flow mapping is complete on its own line, so no `with:` scope is opened.
+          has_nvmrc = 1
         } else if (in_with &&
                    key ~ /^node-version-file:[[:space:]]*["'\'']?\.nvmrc["'\'']?[[:space:]]*$/) {
           has_nvmrc = 1

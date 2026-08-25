@@ -271,6 +271,61 @@ EOF
   assert_output_contains "without \`node-version-file: '.nvmrc'\`"
 }
 
+@test "does not accept a with: mapping nested below the step's own keys" {
+  make_consistent_repo "$REPO"
+  # `with:` is an input mapping only where it is a direct key of the step. Buried under
+  # `env:` it is an environment variable named "with", which setup-node never reads --
+  # accepting it would let the contrived shape below sneak an unpinned step past the gate.
+  cat >"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+jobs:
+  unit:
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        env:
+          with:
+            node-version-file: '.nvmrc'
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 1 ]
+  assert_output_contains "without \`node-version-file: '.nvmrc'\`"
+}
+
+@test "accepts a with: mapping written in single-line flow style" {
+  make_consistent_repo "$REPO"
+  # `with: { node-version-file: '.nvmrc' }` is the same mapping as the block form and is
+  # equally valid YAML, so the gate must credit it rather than report a compliant step.
+  cat >"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+jobs:
+  unit:
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with: { cache: 'bun', node-version-file: '.nvmrc' }
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 0 ]
+  assert_output_contains 'node-version: OK'
+}
+
+@test "fails a flow-style with: mapping that pins a literal Node version" {
+  make_consistent_repo "$REPO"
+  cat >"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+jobs:
+  unit:
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with: { node-version: '20' }
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 1 ]
+  assert_output_contains "without \`node-version-file: '.nvmrc'\`"
+}
+
 @test "aborts rather than passing vacuously when no setup-node step is found" {
   make_consistent_repo "$REPO"
   rm "$REPO/.github/workflows/unit-testing.yml"
