@@ -125,6 +125,17 @@ fi
 # inside the step, not new steps). A step that uses setup-node must carry its own
 # `node-version-file` whose value, quoted or bare, is exactly `.nvmrc`.
 #
+# Every key the scanner matches — `uses`, `with`, `node-version`, `node-version-file`,
+# and each key it merely steps over inside a flow mapping — is matched in all three of
+# the spellings YAML treats as the same key: bare, single-quoted and double-quoted.
+# `"node-version": '20'` is the literal pin that `node-version: '20'` is, and a scanner
+# that knows only the bare spelling reads it as some unrelated key and waves it through.
+# The spellings are built from one shared `yaml_key()` construction so they cannot drift
+# apart from each other one key at a time. Quoting a key widens nothing else: the quotes
+# have to match and to enclose the *whole* key, so `"legacy-node-version-file":` is still
+# a different key that setup-node never reads, and `"node-version':` is a key to no YAML
+# reader at all.
+#
 # Both keys are matched as real YAML mapping keys of that step, never as loose text:
 #
 #   * `uses:` must open the line (after an optional sequence dash), so a shell command
@@ -150,40 +161,77 @@ fi
 # or `key: >` is literal text and is skipped, structure and comment syntax alike.
 scan_setup_node_steps() {
   awk '
+    # One YAML key, in the three spellings that name it: bare, single-quoted and
+    # double-quoted. Every key this scanner matches goes through here, so no key can be
+    # taught a spelling the others do not know — the mistake that has now cost this gate
+    # three separate fail-opens, each one key wide.
+    #
+    # The quotes are required to match each other and to enclose the whole key, which is
+    # what keeps the added spellings from widening the key itself: `"node-version-file"`
+    # is this key, `"legacy-node-version-file"` is not (the alternative is anchored at
+    # the opening quote, so a prefix cannot be consumed and the tail read as the key),
+    # and `"node-version-file'\''` is neither, because no alternative closes with the
+    # quote it did not open with.
+    #
+    # The three alternatives are disjoint on their first character, so choosing between
+    # them is never a guess a matcher has to unwind.
+    function yaml_key(name) {
+      return "(" name "|\"" name "\"|'\''" name "'\'')"
+    }
     BEGIN {
+      uses_key = yaml_key("uses")
+      with_key = yaml_key("with")
+      nv_key = yaml_key("node-version")
+      nvf_key = yaml_key("node-version-file")
+
+      # Any key at all, for the flow entries that are merely stepped over and for the
+      # key a flow mapping hangs off. A quoted key is consumed whole, so a colon or a
+      # comma *inside* a key is part of that key rather than structure the walk could
+      # be desynchronised by.
+      any_key = "([[:alnum:]_.$-]+|\"[^\"]*\"|'\''[^'\'']*'\'')"
+
       # The entries of a flow mapping that precede the key being looked for:
-      # `key: value,` repeated, with a quoted value consumed whole. Stepping over one
-      # entry at a time is what makes the key that follows the mapping OWN key. A
+      # `key: value,` repeated, with a quoted key or value consumed whole. Stepping over
+      # one entry at a time is what makes the key that follows the mapping OWN key. A
       # looser `[^}]*` prefix instead reads any tail of a longer key as the key itself
       # — `legacy-node-version-file:` and `x-node-version-file:` would credit a step
       # whose block spelling this same scanner rejects — and reads a key merely spelled
       # inside a quoted value, `cache: "a, node-version-file: .nvmrc,"`, as a real one.
       #
       # The construction is unambiguous, so it costs a single pass however it is
-      # matched: the three value alternatives are disjoint on their first character,
-      # and every repetition consumes at least a `k:,`, so none of them can match the
-      # empty string. There is exactly one way to match any given prefix — nothing for
-      # a backtracking engine to explore, and awk matches an ERE with a DFA anyway.
-      flow_entries = "([[:alnum:]_.$-]+:([^,{}\"'\'']|\"[^\"]*\"|'\''[^'\'']*'\'')*,[[:space:]]*)*"
+      # matched: the key alternatives and the three value alternatives are each disjoint
+      # on their first character, and every repetition consumes at least a `k:,`, so
+      # none of them can match the empty string. There is exactly one way to match any
+      # given prefix — nothing for a backtracking engine to explore, and awk matches an
+      # ERE with a DFA anyway.
+      flow_entries = "(" any_key ":([^,{}\"'\'']|\"[^\"]*\"|'\''[^'\'']*'\'')*,[[:space:]]*)*"
 
       # `.nvmrc`, bare or quoted, with the quotes required to match each other: a value
       # that opens with one quote and closes with the other is not `.nvmrc` to any YAML
       # reader, so it must not be one here either.
       nvmrc_value = "('\''\\.nvmrc'\''|\"\\.nvmrc\"|\\.nvmrc)"
 
+      # `uses: actions/setup-node@…`, with the action reference optionally quoted too.
+      uses_setup_node = "^" uses_key ":[[:space:]]*[\"'\'']?actions/setup-node@"
+
+      # The step'\''s own `with:` opening a block mapping, and nothing else on the line.
+      block_with = "^" with_key ":[[:space:]]*$"
+
       # The two spellings of the same input. The flow form is bounded to one mapping by
       # flow_entries and terminated exactly at `.nvmrc` by nvmrc_value, so a lookalike
       # key, a lookalike path (`.nvmrc.bak`, `".nvmrcX"`) and a literal `node-version:`
       # each still leave the step unpinned.
-      flow_with_nvmrc = "^with:[[:space:]]*\\{[[:space:]]*" flow_entries \
-        "node-version-file:[[:space:]]*" nvmrc_value "[[:space:]]*[,}]"
-      block_nvmrc = "^node-version-file:[[:space:]]*" nvmrc_value "[[:space:]]*$"
+      flow_with_nvmrc = "^" with_key ":[[:space:]]*\\{[[:space:]]*" flow_entries \
+        nvf_key ":[[:space:]]*" nvmrc_value "[[:space:]]*[,}]"
+      block_nvmrc = "^" nvf_key ":[[:space:]]*" nvmrc_value "[[:space:]]*$"
 
-      # The literal in flow form. Its key has to open the mapping or start one of the
-      # entries, so `node-version-file:` is never misread as `node-version:` — what
-      # follows `node-version` there is a dash, not the colon this pattern demands.
-      flow_literal_node_version = "^[[:alnum:]_.$-]+:[[:space:]]*\\{[[:space:]]*" \
-        flow_entries "node-version:"
+      # The literal, in either spelling. In flow form its key has to open the mapping or
+      # start one of the entries, so `node-version-file:` is never misread as
+      # `node-version:` — what follows `node-version` there is a dash, not the colon
+      # this pattern demands (nor the closing quote a quoted spelling demands).
+      block_literal_node_version = "^" nv_key ":"
+      flow_literal_node_version = "^" any_key ":[[:space:]]*\\{[[:space:]]*" \
+        flow_entries nv_key ":"
     }
     function close_step() {
       if (in_step && has_setup) {
@@ -243,9 +291,9 @@ scan_setup_node_steps() {
       if (in_with && key_indent <= with_indent) in_with = 0
 
       if (in_step) {
-        if (key ~ /^uses:[[:space:]]*["'\'']?actions\/setup-node@/) has_setup = 1
+        if (key ~ uses_setup_node) has_setup = 1
 
-        if (key_indent == step_key_indent && key ~ /^with:[[:space:]]*$/) {
+        if (key_indent == step_key_indent && key ~ block_with) {
           in_with = 1
           with_indent = key_indent
         } else if (key_indent == step_key_indent && key ~ flow_with_nvmrc) {
@@ -259,7 +307,7 @@ scan_setup_node_steps() {
       # Counted outside the `in_step` guard, and never as an alternative to the pin
       # above: a literal is drift wherever it is declared, including beside a correct
       # `.nvmrc` pin in the very same mapping, where the step is already credited.
-      if (key ~ /^node-version:/ || key ~ flow_literal_node_version) literals++
+      if (key ~ block_literal_node_version || key ~ flow_literal_node_version) literals++
 
       # Tracked outside the `in_step` guard on purpose: a block scalar hanging off a job
       # key must be skipped too, or its literal text is read back as structure.

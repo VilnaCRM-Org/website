@@ -457,6 +457,306 @@ EOF
   assert_output_contains 'pins a literal node-version'
 }
 
+@test "fails a double-quoted node-version key declared beside the .nvmrc pin" {
+  make_consistent_repo "$REPO"
+  # `"node-version": '24.18.0'` is the same mapping key as `node-version:` to every YAML
+  # reader, and setup-node still resolves it ahead of node-version-file. A scanner that
+  # knows only the bare spelling reads this as some other key and passes the literal.
+  cat >"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+jobs:
+  unit:
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+          "node-version": '24.18.0'
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 1 ]
+  assert_output_contains 'pins a literal node-version'
+}
+
+@test "fails a single-quoted node-version key declared beside the .nvmrc pin" {
+  make_consistent_repo "$REPO"
+  cat >"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+jobs:
+  unit:
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+          'node-version': "24.18.0"
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 1 ]
+  assert_output_contains 'pins a literal node-version'
+}
+
+@test "fails a quoted node-version key inside a flow-style with: mapping" {
+  make_consistent_repo "$REPO"
+  # The same key, the same quoting, written in the other spelling of the mapping: the
+  # flow walker has to know all three spellings too, or the hole simply moves onto one line.
+  cat >"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+jobs:
+  unit:
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with: { node-version-file: '.nvmrc', "node-version": '20' }
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 1 ]
+  assert_output_contains 'pins a literal node-version'
+}
+
+@test "credits a quoted node-version-file key in block style" {
+  make_consistent_repo "$REPO"
+  # The other half of the same rule: quoting a key must not turn a compliant step into a
+  # reported one either, or the gate starts failing correct workflows.
+  cat >"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+jobs:
+  unit:
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          "node-version-file": '.nvmrc'
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 0 ]
+  assert_output_contains 'node-version: OK'
+}
+
+@test "credits a quoted key inside the flow mapping exactly as the bare one" {
+  make_consistent_repo "$REPO"
+  # Bare `cache-dependency-path: 'a,b', node-version-file: .nvmrc` is already credited;
+  # quoting the keys changes nothing about what setup-node receives, so it must not change
+  # the verdict -- including for the entries the walker only steps over.
+  cat >"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+jobs:
+  unit:
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with: { "cache-dependency-path": 'a,b', 'node-version-file': ".nvmrc" }
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 0 ]
+  assert_output_contains 'node-version: OK'
+}
+
+@test "credits a step whose uses: and with: keys are quoted too" {
+  make_consistent_repo "$REPO"
+  # `uses` and `with` are keys like any other. Missing their quoted spellings hides the
+  # whole step -- which is worse than a wrong verdict: the step stops being counted, and a
+  # repository whose only setup-node steps are written this way passes on an empty subject.
+  cat >"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+jobs:
+  unit:
+    steps:
+      - name: Set up Node.js
+        "uses": "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020"
+        'with':
+          node-version-file: '.nvmrc'
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 0 ]
+  assert_output_contains 'node-version: OK'
+  assert_output_contains '1 setup-node step(s)'
+}
+
+@test "counts a step with quoted keys that pins a literal version" {
+  make_consistent_repo "$REPO"
+  cat >"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+jobs:
+  unit:
+    steps:
+      - name: Set up Node.js
+        'uses': 'actions/setup-node@820762786026740c76f36085b0efc47a31fe5020'
+        "with": { "node-version": '20' }
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 1 ]
+  assert_output_contains "without \`node-version-file: '.nvmrc'\`"
+  assert_output_contains 'pins a literal node-version'
+}
+
+@test "does not accept a quoted key that merely ends in node-version-file" {
+  make_consistent_repo "$REPO"
+  # Accepting quoted keys must not widen the key itself. The quoted alternative is anchored
+  # at the opening quote, so a longer key cannot have its tail read as this one -- exactly
+  # the rule the bare spelling already enforces.
+  cat >"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+jobs:
+  unit:
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          "legacy-node-version-file": '.nvmrc'
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 1 ]
+  assert_output_contains "without \`node-version-file: '.nvmrc'\`"
+}
+
+@test "does not accept a quoted lookalike key inside a flow mapping" {
+  make_consistent_repo "$REPO"
+  cat >"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+jobs:
+  unit:
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with: { cache: bun, 'x-node-version-file': .nvmrc }
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 1 ]
+  assert_output_contains "without \`node-version-file: '.nvmrc'\`"
+}
+
+@test "does not accept a key whose own quotes do not match" {
+  make_consistent_repo "$REPO"
+  # `"node-version-file'` opens with one quote and closes with the other, so it is not this
+  # key -- nor any key -- to a YAML reader, and must not credit the step.
+  cat >"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+jobs:
+  unit:
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          "node-version-file': '.nvmrc'
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 1 ]
+  assert_output_contains "without \`node-version-file: '.nvmrc'\`"
+}
+
+@test "does not accept mismatched key quotes inside a flow mapping" {
+  make_consistent_repo "$REPO"
+  cat >"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+jobs:
+  unit:
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with: { "node-version-file': '.nvmrc' }
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 1 ]
+  assert_output_contains "without \`node-version-file: '.nvmrc'\`"
+}
+
+@test "does not accept a quoted with: nested below the step's own keys" {
+  make_consistent_repo "$REPO"
+  # The `with:` scope rule is about the key's column, not its spelling: quoting it must not
+  # smuggle an `env:`-nested mapping back in as an input mapping.
+  cat >"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+jobs:
+  unit:
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        env:
+          "with":
+            "node-version-file": '.nvmrc'
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 1 ]
+  assert_output_contains "without \`node-version-file: '.nvmrc'\`"
+}
+
+@test "does not accept a quoted key spelled inside a quoted flow value" {
+  make_consistent_repo "$REPO"
+  # The whole scalar is the value of `cache:`; the quoted key inside it is text, and the
+  # entry walk has to step over it as one entry rather than read into it.
+  cat >"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+jobs:
+  unit:
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with: { cache: 'a, "node-version-file": .nvmrc,' }
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 1 ]
+  assert_output_contains "without \`node-version-file: '.nvmrc'\`"
+}
+
+@test "does not read the tail of a quoted key as the node-version-file input" {
+  make_consistent_repo "$REPO"
+  # One key, quoted, that happens to contain a colon and a comma: `node-version-file` here
+  # is the end of the KEY, not an entry of its own, so setup-node receives no such input.
+  cat >"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+jobs:
+  unit:
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with: { "cache: bun, node-version-file": .nvmrc }
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 1 ]
+  assert_output_contains "without \`node-version-file: '.nvmrc'\`"
+}
+
+@test "fails a quoted literal node-version declared outside any step" {
+  make_consistent_repo "$REPO"
+  # The literal rule is deliberately position-independent, and quoting must not move a
+  # declaration out of its reach.
+  cat >"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+jobs:
+  unit:
+    env:
+      "node-version": '18'
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 1 ]
+  assert_output_contains 'pins a literal node-version'
+}
+
+@test "does not read a step out of a block scalar hanging off a quoted key" {
+  make_consistent_repo "$REPO"
+  # `"run": |` is the same block-scalar header as `run: |`; its content is literal text and
+  # must not be read back as the step's inputs.
+  cat >"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+jobs:
+  unit:
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        "run": |
+          "node-version-file": '.nvmrc'
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 1 ]
+  assert_output_contains "without \`node-version-file: '.nvmrc'\`"
+}
+
 @test "aborts rather than passing vacuously when no setup-node step is found" {
   make_consistent_repo "$REPO"
   rm "$REPO/.github/workflows/unit-testing.yml"
