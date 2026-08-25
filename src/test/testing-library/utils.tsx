@@ -8,6 +8,7 @@ import {
   fullNamePlaceholder,
   emailPlaceholder,
   passwordPlaceholder,
+  confirmPasswordPlaceholder,
   submitButtonText,
   buttonRole,
 } from './constants';
@@ -26,6 +27,7 @@ export interface GetElementsResult {
   fullNameInput: HTMLInputElement | null;
   emailInput: HTMLInputElement | null;
   passwordInput: HTMLInputElement | null;
+  confirmPasswordInput: HTMLInputElement | null;
   privacyCheckbox: HTMLInputElement | null;
 }
 interface ExtendedGetElementsResult extends GetElementsResult {
@@ -55,6 +57,10 @@ export const getFormElements: () => ExtendedGetElementsResult = () => {
     passwordInput: getElementSafe(
       () => screen.getByPlaceholderText(passwordPlaceholder),
       'passwordInput'
+    ),
+    confirmPasswordInput: getElementSafe(
+      () => screen.getByPlaceholderText(confirmPasswordPlaceholder),
+      'confirmPasswordInput'
     ),
     privacyCheckbox: getElementSafe(() => screen.getByRole(checkboxRole), 'privacyCheckbox'),
     signUpButton: getElementSafe(
@@ -96,19 +102,29 @@ export const fillForm: (
   fullNameValue?: string,
   emailValue?: string,
   passwordValue?: string,
-  acceptPrivacyPolicy?: boolean
+  acceptPrivacyPolicy?: boolean,
+  confirmPasswordValue?: string
 ) => GetElementsResult = (
   fullNameValue = '',
   emailValue = '',
   passwordValue = '',
-  acceptPrivacyPolicy = false
+  acceptPrivacyPolicy = false,
+  // A real user repeats the password; callers pass a different value only to
+  // exercise the mismatch branch.
+  confirmPasswordValue = passwordValue
 ) => {
   // Allow empty form testing when all fields are intentionally empty
-  const allowEmpty = !fullNameValue && !emailValue && !passwordValue;
+  const allowEmpty = !fullNameValue && !emailValue && !passwordValue && !confirmPasswordValue;
   validateFormInput(fullNameValue, emailValue, passwordValue, allowEmpty);
 
-  const { fullNameInput, emailInput, passwordInput, privacyCheckbox, signUpButton } =
-    getFormElements();
+  const {
+    fullNameInput,
+    emailInput,
+    passwordInput,
+    confirmPasswordInput,
+    privacyCheckbox,
+    signUpButton,
+  } = getFormElements();
 
   if (fullNameInput) {
     fireEvent.change(fullNameInput, { target: { value: fullNameValue } });
@@ -122,6 +138,10 @@ export const fillForm: (
     fireEvent.change(passwordInput, { target: { value: passwordValue } });
   }
 
+  if (confirmPasswordInput) {
+    fireEvent.change(confirmPasswordInput, { target: { value: confirmPasswordValue } });
+  }
+
   if (acceptPrivacyPolicy && privacyCheckbox) {
     fireEvent.click(privacyCheckbox);
   }
@@ -130,7 +150,7 @@ export const fillForm: (
     fireEvent.click(signUpButton);
   }
 
-  return { fullNameInput, emailInput, passwordInput, privacyCheckbox };
+  return { fullNameInput, emailInput, passwordInput, confirmPasswordInput, privacyCheckbox };
 };
 
 export const checkElementsInDocument: (...elements: (HTMLElement | null)[]) => void = (
