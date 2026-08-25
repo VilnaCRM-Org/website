@@ -1,4 +1,4 @@
-import { Controller, FieldValues } from 'react-hook-form';
+import { Controller, ControllerRenderProps, FieldError, FieldValues } from 'react-hook-form';
 
 import UiInput from '../ui-input';
 import UiTypography from '../ui-typography';
@@ -6,36 +6,118 @@ import UiTypography from '../ui-typography';
 import styles from './styles';
 import { CustomTextField } from './types';
 
-function UiTextFieldForm<T extends FieldValues>({
-  control,
-  rules,
-  placeholder,
-  type,
-  name,
-  fullWidth,
-}: CustomTextField<T>): React.ReactElement {
+function composeDescribedBy(...ids: (string | undefined)[]): string | undefined {
+  const present: string[] = ids.filter((id): id is string => Boolean(id));
+  return present.length > 0 ? present.join(' ') : undefined;
+}
+
+/**
+ * react-hook-form accepts `required` either as a message/boolean or as a
+ * `{ value, message }` object, and the object form can carry `value: false`.
+ * Coercing the object itself would announce every such field as required.
+ */
+function isRequiredRule(required: unknown): boolean {
+  if (typeof required === 'object' && required !== null) {
+    return Boolean((required as { value?: unknown }).value);
+  }
+  return Boolean(required);
+}
+
+function FieldMessage({
+  errorId,
+  message,
+}: {
+  errorId: string;
+  message: string;
+}): React.ReactElement {
+  return (
+    <UiTypography
+      id={errorId}
+      aria-live="polite"
+      aria-atomic
+      variant="medium14"
+      sx={styles.errorText}
+    >
+      {message}
+    </UiTypography>
+  );
+}
+
+interface FieldViewProps<T extends FieldValues> {
+  field: ControllerRenderProps<T>;
+  error: FieldError | undefined;
+  config: CustomTextField<T>;
+  inputId: string;
+  errorId: string;
+}
+
+/**
+ * The rendered field: the input plus its validation message.
+ *
+ * Two details are load-bearing. The input receives `field.name` (not the prop)
+ * so the submitted name always tracks the registered field, and `field.ref` so
+ * react-hook-form can move focus to the first invalid input on submit.
+ *
+ * The message container is rendered unconditionally: a live region has to exist
+ * in the accessibility tree before its content changes, otherwise mounting and
+ * filling it in the same commit is announced inconsistently across screen
+ * readers. `aria-live="polite"` rather than `role="alert"` keeps
+ * blur-triggered validation from interrupting the label of the field the user
+ * has just moved to. The node is absolutely positioned inside a fixed-height
+ * row, so an empty one occupies no space.
+ */
+function FieldView<T extends FieldValues>({
+  field,
+  error,
+  config,
+  inputId,
+  errorId,
+}: FieldViewProps<T>): React.ReactElement {
+  const { placeholder, type, fullWidth, autoComplete, describedBy, rules } = config;
+  // `ref` here is react-hook-form's callback ref, not a ref object: it is what
+  // lets the library move focus to the first invalid input on submit.
+  const { name, value, onChange, onBlur, ref: registerInput } = field;
+
+  return (
+    <>
+      <UiInput
+        id={inputId}
+        name={name}
+        ref={registerInput}
+        autoComplete={autoComplete}
+        describedBy={composeDescribedBy(describedBy, error ? errorId : undefined)}
+        required={isRequiredRule(rules.required)}
+        type={type}
+        placeholder={placeholder}
+        onChange={onChange}
+        onBlur={onBlur}
+        value={value}
+        error={!!error}
+        fullWidth={fullWidth}
+      />
+      <FieldMessage errorId={errorId} message={error?.message ?? ''} />
+    </>
+  );
+}
+
+function UiTextFieldForm<T extends FieldValues>(config: CustomTextField<T>): React.ReactElement {
+  const { control, rules, name, id } = config;
+  const inputId: string = id ?? String(name);
+  const errorId: string = `${inputId}-error`;
+
   return (
     <Controller
       control={control}
       name={name}
       rules={rules}
       render={({ field, fieldState: { error } }) => (
-        <>
-          <UiInput
-            type={type}
-            placeholder={placeholder}
-            onChange={e => field.onChange(e)}
-            onBlur={field.onBlur}
-            value={field.value}
-            error={!!error}
-            fullWidth={fullWidth}
-          />
-          {error && (
-            <UiTypography variant="medium14" sx={styles.errorText}>
-              {error.message}
-            </UiTypography>
-          )}
-        </>
+        <FieldView
+          field={field}
+          error={error}
+          config={config}
+          inputId={inputId}
+          errorId={errorId}
+        />
       )}
     />
   );

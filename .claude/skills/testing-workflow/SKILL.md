@@ -40,6 +40,7 @@ one row.
 | Apollo resolvers, server-side logic   | Server unit (node)         | `make test-unit-server`   |
 | Both unit layers at once              | All unit                   | `make test-unit-all`      |
 | Cross-layer API/flow wiring           | Integration                | `make test-integration`   |
+| The Mockoon mock, or the OpenAPI pin  | Contract parity            | `make test-contract`      |
 | A user-facing flow, end to end        | E2E (Playwright + Mockoon) | `make test-e2e`           |
 | Rendered UI or styling                | Visual regression          | `make test-visual`        |
 | Reviewed UI change, refresh baselines | Visual snapshots           | `make test-visual-update` |
@@ -54,15 +55,23 @@ Second variants and the CI-phase aliases (`make ci-test`, `make ci-test-prod`,
 
 ## Jest env selection
 
-The three unit-style suites share one Jest install and switch on `TEST_ENV`:
+The Jest-based suites share one Jest install and switch on `TEST_ENV`:
 
 - `TEST_ENV=client` — jsdom env for components, hooks, and pure client logic.
   Specs: `src/test/testing-library/**/*.test.tsx` and `src/test/unit/**/*.test.ts`.
 - `TEST_ENV=server` — node env for Apollo resolvers and server-side logic.
   Specs: `src/test/apollo-server/**/*.test.ts`.
+- `TEST_ENV=edge` — node env for the deployed edge scripts under `scripts/`.
+  Specs: `src/test/edge/**/*.test.ts`, pinned at 100% per-file coverage.
 - `TEST_ENV=integration` — jsdom env with the real Fetch API (via
   `tests/integration/jsdom-fetch.environment.js`) for the cross-layer integration
-  suite under `tests/integration`.
+  suite under `tests/integration`. Enforces a global 100% coverage sweep over
+  `src/`, so put helpers under `tests/`, never under `src/`.
+- `TEST_ENV=contract` — node env for the mock-vs-OpenAPI parity layer under
+  `tests/contract` (#350). It boots Mockoon in-process from
+  `contracts/user-service/openapi.json`; see
+  [contract-testing-workflow](../contract-testing-workflow/SKILL.md) for how to
+  read a failure.
 
 Use the `make` targets above rather than setting `TEST_ENV` by hand; they wire
 it for you. Unit suites run locally WITHOUT Docker when prefixed with `CI=1`
