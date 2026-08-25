@@ -25,7 +25,10 @@ export function readSwaggerSchema(path) {
     return JSON.parse(content);
   } catch (error) {
     console.error(`❌ Failed to read or parse swagger schema at "${path}":`, error.message);
-    process.exit(1);
+    // `process.exit` never returns, but returning its (never produced) value
+    // keeps every path of this function an explicit `return` rather than an
+    // implicit `undefined` fall-through.
+    return process.exit(1);
   }
 }
 
@@ -72,37 +75,43 @@ const mapValues = (node, fn) =>
  * `servers` also deleted a schema property and an example payload field that
  * merely happened to be called `servers`, silently changing the document.
  *
- * One self-recursive function rather than mutually recursive helpers: a Callback
- * Object maps a runtime expression to a Path Item whose operations may declare
- * further callbacks, so that cycle has no valid declaration order.
+ * One self-recursive function rather than mutually recursive helpers or a table
+ * of per-kind strippers: a Callback Object maps a runtime expression to a Path
+ * Item whose operations may declare further callbacks, so that cycle has no
+ * valid declaration order — anything lifted out of this body would have to be
+ * referenced before it is defined.
+ *
+ * The kinds are therefore selected through one `if`/`else` chain that assigns
+ * the rebuilt node and falls through to a single `return`, rather than through a
+ * run of early exits. `OPERATION` is the trailing `else` because it is what a
+ * node with no more specific kind is: the last branch of the previous early-exit
+ * form, unchanged.
  */
 function stripServers(node, kind) {
-  if (!isPlainObject(node)) {
-    return node;
-  }
+  let stripped;
 
-  if (kind === EXTENSION_MAP) {
-    return mapValues(node, (key, value) =>
+  if (!isPlainObject(node)) {
+    stripped = node;
+  } else if (kind === EXTENSION_MAP) {
+    stripped = mapValues(node, (key, value) =>
       isExtension(key) ? value : stripServers(value, PATH_ITEM)
     );
-  }
-  if (kind === NAME_MAP) {
-    return mapValues(node, (_key, value) => stripServers(value, PATH_ITEM));
-  }
-  if (kind === CALLBACK_NAME_MAP) {
-    return mapValues(node, (_key, value) => stripServers(value, EXTENSION_MAP));
-  }
-  if (kind === PATH_ITEM) {
-    return mapValues(withoutServers(node), (key, value) =>
+  } else if (kind === NAME_MAP) {
+    stripped = mapValues(node, (_key, value) => stripServers(value, PATH_ITEM));
+  } else if (kind === CALLBACK_NAME_MAP) {
+    stripped = mapValues(node, (_key, value) => stripServers(value, EXTENSION_MAP));
+  } else if (kind === PATH_ITEM) {
+    stripped = mapValues(withoutServers(node), (key, value) =>
       HTTP_METHODS.has(key.toLowerCase()) ? stripServers(value, OPERATION) : value
     );
+  } else {
+    const operation = withoutServers(node);
+    stripped = isPlainObject(operation.callbacks)
+      ? { ...operation, callbacks: stripServers(operation.callbacks, CALLBACK_NAME_MAP) }
+      : operation;
   }
 
-  const operation = withoutServers(node);
-  if (!isPlainObject(operation.callbacks)) {
-    return operation;
-  }
-  return { ...operation, callbacks: stripServers(operation.callbacks, CALLBACK_NAME_MAP) };
+  return stripped;
 }
 
 /**
