@@ -32,7 +32,7 @@ jobs:
       url: ${{ vars.PRODUCTION_SITE_URL }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v7
+        uses: actions/checkout@v7.0.1
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v6
