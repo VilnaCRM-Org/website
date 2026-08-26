@@ -40,7 +40,10 @@ Client unit tests run on Jest with React Testing Library in a jsdom env
 (`TEST_ENV=server`); specs live in `src/test/apollo-server/**/*.test.ts`. Edge unit tests
 run on Jest in a node env (`TEST_ENV=edge`) and cover the deployed edge/runtime scripts
 under `scripts/` that ship outside the Next.js bundle (today the CloudFront Functions
-handler `scripts/cloudfront_routing.js`); specs live in `src/test/edge/**/*.test.ts` and
+handlers `scripts/cloudfront_routing.js` and `scripts/cloudfront_security_headers.js`,
+the latter applying `config/security-headers.json` to every production response —
+see [docs/security-headers.md](docs/security-headers.md)); specs live in
+`src/test/edge/**/*.test.ts` and
 the layer is pinned at 100% per-file coverage. Integration specs run in a jsdom-with-fetch
 env (`TEST_ENV=integration`) from `tests/integration/**/*.integration.test.{ts,tsx}` and
 enforce a global 100% coverage sweep over `src/`. Contract specs run in a node env
