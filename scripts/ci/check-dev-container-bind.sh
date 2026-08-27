@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Refuse to reuse a dev container that belongs to a different checkout (#399).
+# Refuse to reuse a dev container that is not bound to THIS checkout (#399).
 #
 # docker-compose.yml pins `name: website` so the Compose project — and every
 # container, volume and network prefix — is stable wherever the repo is cloned,
@@ -17,27 +17,68 @@
 # server (and its anonymous node_modules volume) without asking, so refuse and
 # let the developer decide.
 #
-# Fails OPEN on anything it cannot determine — no container, no docker, an
-# inspect error, or an empty mount list. This is an ergonomics guard against a
-# confusing local state, not a security boundary, and it runs ahead of every
-# gate: it must never be the reason a working checkout stops building.
+# ensure-dev calls this TWICE: once before `up` so a foreign container is never
+# even started, and once after, because the pre-check alone loses a race — two
+# checkouts starting concurrently while no container exists both pass it, and
+# the loser would otherwise run its gates against the winner's bind. The
+# post-`up` call is the one that actually holds; the pre-`up` call is courtesy.
+#
+# Fails OPEN whenever it cannot determine the answer — no such container, no
+# docker, an inspect error. It runs ahead of every containerised gate, so a
+# false positive would be far more expensive than the case it catches; this is
+# an ergonomics guard against a confusing local state, not a security boundary.
+# It does NOT fail open on a container that exists with no `/app` bind at all:
+# that one is positively wrong, not unknown.
 set -euo pipefail
 
 CONTAINER="${DEV_CONTAINER:-website-dev}"
-EXPECTED="${EXPECTED_BIND:-$PWD}"
 
 command -v docker >/dev/null 2>&1 || exit 0
 
-# Empty when the container does not exist, when it has no /app bind, or when
-# inspect fails for any reason — all of which mean "nothing to contradict".
-mounted="$(
+# Compare PHYSICAL paths on both sides. Docker reports the mount source with
+# every symlink already resolved, while $PWD deliberately preserves them, so a
+# symlinked ancestor anywhere in the checkout path (/tmp -> /private/tmp on
+# macOS, /home -> /System/Volumes/Data/home, a symlinked worktree) would leave a
+# perfectly good checkout looking foreign and block every gate.
+expected_raw="${EXPECTED_BIND:-$PWD}"
+EXPECTED="$(cd "${expected_raw}" 2>/dev/null && pwd -P)" || EXPECTED="${expected_raw}"
+[ -n "${EXPECTED}" ] || EXPECTED="${expected_raw}"
+
+# A non-zero exit means "no such container" or a broken/absent daemon — both
+# unknown, so fail open. A zero exit means the container exists and the output
+# is authoritative, including when it is empty.
+if ! mounted="$(
   docker inspect \
     -f '{{range .Mounts}}{{if eq .Destination "/app"}}{{.Source}}{{end}}{{end}}' \
-    "${CONTAINER}" 2>/dev/null || true
-)"
+    "${CONTAINER}" 2>/dev/null
+)"; then
+  exit 0
+fi
 
-[ -n "${mounted}" ] || exit 0
-[ "${mounted}" != "${EXPECTED}" ] || exit 0
+if [ -z "${mounted}" ]; then
+  cat >&2 <<MSG
+ensure-dev: the existing '${CONTAINER}' container has no /app bind mount.
+
+It was created from a different compose definition, so \`up -d --no-recreate\`
+would keep it and every gate would run against the source baked into the image
+instead of this checkout (${EXPECTED}).
+
+Replace it:
+
+  docker rm -f ${CONTAINER}
+
+then re-run this target. To run without Docker instead, prefix with EXEC_MODE=host.
+MSG
+  exit 1
+fi
+
+# Resolve the reported source too: it is already physical on every runtime seen
+# so far, but normalising both sides costs nothing and cannot introduce a false
+# positive — a path that does not exist here falls back to its literal value.
+resolved_mounted="$(cd "${mounted}" 2>/dev/null && pwd -P)" || resolved_mounted="${mounted}"
+[ -n "${resolved_mounted}" ] || resolved_mounted="${mounted}"
+
+[ "${resolved_mounted}" != "${EXPECTED}" ] || exit 0
 
 cat >&2 <<MSG
 ensure-dev: the running '${CONTAINER}' container belongs to a different checkout.

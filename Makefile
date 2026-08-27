@@ -295,11 +295,20 @@ start: ## Start the application
 # and replace it with a Next dev server under `restart: unless-stopped`,
 # discarding both the overlay's whole purpose and its fail-fast restart policy.
 # It still creates or starts the container when it is missing or stopped.
+#
+# check-dev-container-bind.sh runs on BOTH sides of `up` (#399). The pre-`up`
+# call keeps a foreign checkout's container from being started at all; the
+# post-`up` call is the one that actually holds, because the pre-`up` check
+# passes in BOTH checkouts when neither has created the container yet — two
+# concurrent starts would otherwise leave the loser running every gate against
+# the winner's /app bind. After `up` the container exists and the answer is
+# decidable.
 ensure-dev: ## Reconcile the dev container (builds the image if absent; does not wait for the dev server)
 	@bash ./scripts/ci/check-dev-container-bind.sh
 	@docker image inspect $(DEV_IMAGE) >/dev/null 2>&1 || \
 		$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) build dev
 	@$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) up -d --no-recreate dev
+	@bash ./scripts/ci/check-dev-container-bind.sh
 
 # Bounded on purpose. Every migrated workflow calls `make start` first, so an
 # unbounded wait here would turn any dev-service boot failure into a job that
