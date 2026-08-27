@@ -97,9 +97,10 @@ Linting & Formatting
   make lint-tsc: runs static type checking with TypeScript
   make lint-md: lints all markdown files (excluding CHANGELOG.md) using markdownlint
   make lint-deps: validates architecture/import boundaries with dependency-cruiser
+  make lint-api-versions: verifies OpenAPI and GraphQL reference the same pinned user-service release
   make lint-docker-policy: enforces the Dockerfile registry + digest-pin policy
   make lint-headers: verifies the edge security-header policy reaches every response
-  make lint: runs all linters (ESLint, TypeScript, markdownlint, deps, Docker policy, security headers)
+  make lint: all linters (ESLint, TS, markdownlint, deps, API versions, Docker policy, headers)
   make lint-metrics: runs the rust-code-analysis complexity gate (host-only, not in make lint)
   make lint-contracts: validates the pinned user-service contracts (not in make lint; needs network)
   make lint-openapi: reports breaking upstream OpenAPI drift (host-only, needs network; advisory)

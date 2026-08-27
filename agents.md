@@ -37,7 +37,9 @@ than one. Match the change to the suite and run its verification command.
 Client unit tests run on Jest with React Testing Library in a jsdom env
 (`TEST_ENV=client`); specs live in `src/test/testing-library/**/*.test.tsx` and
 `src/test/unit/**/*.test.ts`. Server unit tests run on Jest in a node env
-(`TEST_ENV=server`); specs live in `src/test/apollo-server/**/*.test.ts`. Edge unit tests
+(`TEST_ENV=server`); specs live in `src/test/apollo-server/**/*.test.ts` and boot the
+shipped Apollo mock through `mock-server.ts` against the pinned schema — see the Apollo
+mock security invariants in `CLAUDE.md` before changing it. Edge unit tests
 run on Jest in a node env (`TEST_ENV=edge`) and cover the deployed edge/runtime scripts
 under `scripts/` that ship outside the Next.js bundle (today the CloudFront Functions
 handlers `scripts/cloudfront_routing.js` and `scripts/cloudfront_security_headers.js`,
@@ -141,7 +143,7 @@ CI=1 make test-unit-server   # Server unit suite (node)
 make test-contract           # Mockoon mock vs. the committed OpenAPI contract
 make test-e2e                # User-facing flows (for UI or behavior changes)
 make test-visual             # Visual regression (for UI or styling changes)
-make lint                    # Full gate: ESLint, TypeScript, and markdownlint
+make lint                    # Full gate: ESLint, TypeScript, markdownlint, deps, API versions
 make lint-contracts          # Upstream contracts (when .env pins or gql documents change)
 ```
 

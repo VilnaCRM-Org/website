@@ -168,7 +168,7 @@ What are you trying to do?
 **Use**: [frontend-quality-workflow](frontend-quality-workflow/SKILL.md).
 
 Runs `make format` (Prettier) first so the mutating formatter does not race the read-only
-`make lint` gate (`lint-next` + `lint-tsc` + `lint-md` + `lint-deps`).
+`make lint` gate (`lint-next` + `lint-tsc` + `lint-md` + `lint-deps` + `lint-api-versions`).
 
 **NOT**: `complexity-management` unless the rust-code-analysis metrics gate specifically fails.
 
