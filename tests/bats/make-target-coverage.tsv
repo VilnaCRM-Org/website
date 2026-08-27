@@ -70,6 +70,7 @@ stop	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Docker Compo
 check-node-version	bats	tests/bats/makefile_targets.bats	Validated with a stubbed node invocation.
 lint-deps	ci	.github/workflows/static-testing.yml	Executed through `make lint`, which depends on `lint-deps`.
 generate-localization	ci	.github/workflows/static-testing.yml	Executed through `make lint`, whose `lint-deps` leg depends on it; also a prerequisite of `storybook-build`, `ci-test-mutation` and `test-mutation-shard`.
+lint-headers	ci	.github/workflows/static-testing.yml	Executed through `make lint`, which depends on `lint-headers`.
 lint-contracts	bats	tests/bats/makefile_targets.bats	Executed directly by contract-testing.yml; deliberately outside `make lint` because the drift check needs network.
 lint-openapi	bats	tests/bats/makefile_targets.bats	Validated host-only: ensure-oasdiff.sh provisioning (idempotent) plus openapi-drift.sh three-way exit handling with a stubbed oasdiff binary.
 update-contracts	bats	tests/bats/makefile_targets.bats	Maintainer command for bumping USER_SERVICE_VERSION; refreshes both artifacts and the spectral baseline.

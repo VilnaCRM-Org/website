@@ -163,7 +163,7 @@ NETWORK_NAME                = website-network
 # Dev-side lint and test phases are grouped so local developers and agents can
 # run the same CI stages as the pipeline. The parallel runners execute each
 # target concurrently, group their output, and aggregate exit codes.
-CI_LINT_TARGETS             = lint-next lint-tsc lint-md
+CI_LINT_TARGETS             = lint-next lint-tsc lint-md lint-headers
 CI_TEST_TARGETS             = ci-test-unit-client ci-test-unit-server ci-test-integration ci-test-contract
 CI_LINT_RUNNER              = ./scripts/ci/run-parallel.sh ci-lint
 CI_TEST_RUNNER              = ./scripts/ci/run-parallel.sh ci-test
@@ -445,8 +445,16 @@ lint-md: ## This command executes Markdown linter
 generate-localization: ## Regenerate the gitignored pages/i18n/localization.json bundle (#328) — host-only
 	node scripts/generateLocalization.mjs
 
+.PHONY: lint lint-headers lint-docker-policy
+
 lint-deps: generate-localization ## Validate architecture/import boundaries with dependency-cruiser
 	$(DEV_READY) $(PM_EXEC) $(DEPCRUISE_BIN) src pages tests --config .dependency-cruiser.js
+
+# Runs through the package manager like the other node gates, so it obeys
+# EXEC_MODE: in container mode it executes inside the dev image the rest of the
+# lint lane already uses, rather than needing a host node_modules.
+lint-headers: ## Verify the edge security-header policy (config/security-headers.json) reaches every production response
+	$(DEV_READY) $(PM_EXEC) node scripts/ci/lint-headers.mjs
 
 # Host-only by nature, in either EXEC_MODE: it is a self-contained shell script
 # that reads the Dockerfiles from the worktree, needs no node_modules, and the
@@ -458,7 +466,7 @@ lint-docker-policy: ## Enforce the registry (no Docker Hub) + digest-pin policy 
 # first linter reads it. It is also a prerequisite of lint-deps, but that is
 # the LAST sub-target, which on a clean checkout left eslint and tsc resolving
 # a module that had not been written yet.
-lint: generate-localization lint-next lint-tsc lint-md lint-deps lint-docker-policy ## Runs all linters: ESLint, TypeScript, Markdown, dependency-cruiser, and the Dockerfile registry/digest policy in sequence.
+lint: generate-localization lint-next lint-tsc lint-md lint-deps lint-docker-policy lint-headers ## Runs all linters: ESLint, TypeScript, Markdown, dependency-cruiser, the Dockerfile registry/digest policy, and the security-header gate in sequence.
 
 # DELIBERATE DIVERGENCE FROM THE npm-tool LINT GATES (lint-next/tsc/md/deps),
 # for the same reason as lint-metrics below:
