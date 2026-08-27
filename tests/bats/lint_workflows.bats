@@ -234,8 +234,15 @@ EOF
   [ "$status" -eq 1 ]
   assert_output_contains 'not 64 lowercase hex characters'
 
-  # Right length, wrong alphabet -- a truncated-then-padded digest must not pass.
-  export ZIZMOR_IMAGE="ghcr.io/zizmorcore/zizmor@sha256:ZZ${DIGEST_IMAGE##*@sha256:}"
+  # Right LENGTH, wrong alphabet, so this sub-case actually reaches the hex check
+  # rather than short-circuiting on the length check: two non-hex characters
+  # replace the first two of the real digest, keeping it at exactly 64.
+  local real_digest="${DIGEST_IMAGE##*@sha256:}"
+  [ "${#real_digest}" -eq 64 ]
+  local wrong_alphabet="ZZ${real_digest:2}"
+  [ "${#wrong_alphabet}" -eq 64 ]
+
+  export ZIZMOR_IMAGE="ghcr.io/zizmorcore/zizmor@sha256:${wrong_alphabet}"
   run_lint_workflows
   [ "$status" -eq 1 ]
   assert_output_contains 'not 64 lowercase hex characters'
