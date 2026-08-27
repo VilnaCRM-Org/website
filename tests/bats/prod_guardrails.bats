@@ -357,7 +357,11 @@ JS
 @test "fails when the edge script is dropped from the 100% coverage layer" {
   # Unpinning coverage first would let a later routing regression land unnoticed,
   # so the pin itself is part of the contract.
-  sed -i "s#const EDGE_COVERAGE_FROM = \['<rootDir>/scripts/cloudfront_routing.js'\];#const EDGE_COVERAGE_FROM = ['<rootDir>/scripts/other.js'];#" \
+  # Repoint just the routing entry. EDGE_COVERAGE_FROM became a multi-entry array
+  # when #377 added cloudfront_security_headers.js to the same 100% layer, so match
+  # the quoted entry rather than the whole declaration -- a declaration-shaped
+  # pattern silently stops mutating the fixture and the test passes vacuously.
+  sed -i "s#'<rootDir>/scripts/cloudfront_routing.js'#'<rootDir>/scripts/other.js'#" \
     "$FIXTURE/jest.config.ts"
 
   run_guardrails
