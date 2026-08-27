@@ -446,7 +446,8 @@ lint-metrics: ## Run rust-code-analysis complexity gate on src (host-only; auto-
 #   * Its online audits reach the GitHub API to resolve tags, so a GitHub
 #     outage must not turn the whole static lane red.
 #   * Its CI surface is .github/workflows/workflow-security.yml, which runs it
-#     on every PR that touches .github/.
+#     on every PR to main -- deliberately NOT path-filtered, because a skipped
+#     check cannot be a meaningful required status check (#343).
 # The script degrades to --offline when no GitHub token is available, so a
 # local run without `gh auth login` still works (offline is a strict subset).
 lint-workflows: ## Audit the GitHub Actions workflows for security defects with zizmor (host-only, Docker)

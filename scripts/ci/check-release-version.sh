@@ -54,6 +54,13 @@ fi
 # version tags may exist too; normalise the prefix and keep only plain semver,
 # because only those can collide with a computed release tag.
 #
+# The filter is the SAME strict regex the version check above uses, leading zeros
+# included. A stray `v01.999.0` is not semver, so the changelog action can never
+# compute it as a release tag and it cannot collide with anything -- but `sort -V`
+# compares components numerically, so it would still be picked as the highest tag
+# and would block every release below 999. Filtering it out here is what keeps the
+# comparison set to tags a release can actually collide with.
+#
 # `git tag --list` is captured on its own so its failure is fatal. Folding it into
 # the pipeline below would let `|| true` swallow a broken or missing repository as
 # "no tags yet" -- the guard would pass precisely when it can no longer see the
@@ -64,7 +71,7 @@ raw_tags="$(git -C "${repo_dir}" tag --list)" ||
 tags="$(
   printf '%s\n' "${raw_tags}" |
     sed 's/^v//' |
-    grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' || true
+    grep -E '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$' || true
 )"
 
 if [ -z "${tags}" ]; then

@@ -14,6 +14,25 @@
 set -euo pipefail
 
 image="${ZIZMOR_IMAGE:?ZIZMOR_IMAGE must be set (see the Makefile)}"
+
+# Enforce the digest pin the header above promises, rather than only documenting
+# it. A tag -- or a truncated/garbled digest -- would let whatever the registry
+# currently serves decide what this security gate enforces, and the failure is
+# silent: a repointed tag still runs, still exits 0, and still reports a green
+# check while auditing something nobody reviewed. Fail closed instead.
+case "${image}" in
+  *@sha256:*) ;;
+  *)
+    echo "lint-workflows: ZIZMOR_IMAGE '${image}' is not digest-pinned;" \
+      "the gate must run an immutable image (expected <image>@sha256:<64 hex>)" >&2
+    exit 1
+    ;;
+esac
+digest="${image##*@sha256:}"
+if [ "${#digest}" -ne 64 ] || [ -n "${digest//[0-9a-f]/}" ]; then
+  echo "lint-workflows: ZIZMOR_IMAGE digest '${digest}' is not 64 lowercase hex characters" >&2
+  exit 1
+fi
 targets="${ZIZMOR_TARGETS:-.github/workflows/}"
 persona="${ZIZMOR_PERSONA:-regular}"
 min_severity="${ZIZMOR_MIN_SEVERITY:-medium}"

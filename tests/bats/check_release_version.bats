@@ -88,6 +88,26 @@ setup() {
   assert_output_contains 'highest tag v1.6.0'
 }
 
+@test "ignores a zero-padded tag instead of letting it block the release" {
+  # The mirror of "rejects zero-padded components", on the tag side. `v01.999.0`
+  # is not semver, so the changelog action can never compute it and nothing can
+  # collide with it -- but `sort -V` compares components numerically, so a loose
+  # filter would elect it as the highest tag and block every release below 999.
+  make_repo "$REPO" '1.500.0' v1.6.0 v01.999.0
+
+  run_guard "$REPO"
+  [ "$status" -eq 0 ]
+  assert_output_contains 'highest tag v1.6.0'
+}
+
+@test "a zero-padded tag is not treated as the highest even when it is the only one" {
+  make_repo "$REPO" '1.0.0' v01.2.3
+
+  run_guard "$REPO"
+  [ "$status" -eq 0 ]
+  assert_output_contains 'no release tags yet'
+}
+
 # --- Negative ------------------------------------------------------------------
 
 @test "fails when a tag is ahead of the version" {

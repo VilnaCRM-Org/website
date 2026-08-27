@@ -46,10 +46,15 @@ run_lint_workflows() {
     bash "$PROJECT_ROOT/$SCRIPT_REL"
 }
 
-# A docker stub that also records the GH_TOKEN it was handed via the environment,
-# so a test can prove the token actually reaches the container rather than only
-# proving it is absent from argv -- a typo'd `-e GH_TOKENN` would satisfy the
-# absence assertions while silently disabling every online audit.
+# A docker stub that records the GH_TOKEN the container would actually receive, so
+# a test can prove the token reaches it rather than only proving it is absent from
+# argv -- a typo'd `-e GH_TOKENN` would satisfy the absence assertions while
+# silently disabling every online audit.
+#
+# It records the value ONLY when the exact `-e GH_TOKEN` argument pair is present.
+# Reading GH_TOKEN straight out of the stub's own environment would be a fail-open:
+# lint-workflows.sh `export`s GH_TOKEN before invoking docker, so the stub inherits
+# it either way and the assertion would hold even with the flag misspelled or gone.
 create_token_recording_docker_stub() {
   export TOKEN_SEEN="$BATS_TEST_TMPDIR/token-seen"
   : >"$TOKEN_SEEN"
@@ -57,7 +62,17 @@ create_token_recording_docker_stub() {
   cat >"$STUB_BIN_DIR/docker" <<'EOF'
 #!/usr/bin/env bash
 printf 'docker %s\n' "$*" >> "${COMMAND_LOG:?}"
-printf '%s' "${GH_TOKEN-}" > "${TOKEN_SEEN:?}"
+forwarded=false
+while [ "$#" -gt 0 ]; do
+  if [ "$1" = '-e' ] && [ "${2-}" = 'GH_TOKEN' ]; then
+    forwarded=true
+    break
+  fi
+  shift
+done
+if [ "$forwarded" = true ]; then
+  printf '%s' "${GH_TOKEN-}" > "${TOKEN_SEEN:?}"
+fi
 exit 0
 EOF
   chmod +x "$STUB_BIN_DIR/docker"
@@ -163,6 +178,29 @@ EOF
   ! grep -Fq 'secret-from-env' "$COMMAND_LOG"
 }
 
+@test "the token-recording stub reports nothing when -e GH_TOKEN is not passed" {
+  # Guards the guard. lint-workflows.sh `export`s GH_TOKEN before calling docker,
+  # so a stub that read the variable from its own environment would record it even
+  # with the flag misspelled (`-e GH_TOKENN`) or dropped entirely -- the two tests
+  # above would stay green while every online audit was silently disabled. Drive
+  # the stub directly, with the token exported exactly as the script exports it,
+  # and confirm it only reports a token when the real flag pair is on the argv.
+  create_token_recording_docker_stub
+  export GH_TOKEN='secret-from-env'
+
+  COMMAND_LOG="$COMMAND_LOG" TOKEN_SEEN="$TOKEN_SEEN" \
+    "$STUB_BIN_DIR/docker" run --rm -e GH_TOKENN some-image --no-progress
+  [ -z "$(cat "$TOKEN_SEEN")" ]
+
+  COMMAND_LOG="$COMMAND_LOG" TOKEN_SEEN="$TOKEN_SEEN" \
+    "$STUB_BIN_DIR/docker" run --rm some-image --no-progress
+  [ -z "$(cat "$TOKEN_SEEN")" ]
+
+  COMMAND_LOG="$COMMAND_LOG" TOKEN_SEEN="$TOKEN_SEEN" \
+    "$STUB_BIN_DIR/docker" run --rm -e GH_TOKEN some-image --no-progress
+  [ "$(cat "$TOKEN_SEEN")" = 'secret-from-env' ]
+}
+
 # --- Negative ------------------------------------------------------------------
 
 @test "fails when ZIZMOR_IMAGE is not set" {
@@ -171,6 +209,36 @@ EOF
   run_lint_workflows
   [ "$status" -ne 0 ]
   assert_output_contains 'ZIZMOR_IMAGE'
+}
+
+@test "refuses a tag-pinned image instead of auditing whatever the tag points at" {
+  # The header of lint-workflows.sh promises the image is pinned by digest so a
+  # repointed tag cannot change what the security gate enforces. Documenting that
+  # is not enforcing it: a tag still runs, still exits 0, and still reports green
+  # while auditing something nobody reviewed. It must fail closed.
+  export GH_TOKEN='token-from-env'
+  export ZIZMOR_IMAGE='ghcr.io/zizmorcore/zizmor:1.28.0'
+
+  run_lint_workflows
+  [ "$status" -eq 1 ]
+  assert_output_contains 'not digest-pinned'
+  # And it must refuse BEFORE reaching docker.
+  [ ! -s "$COMMAND_LOG" ]
+}
+
+@test "refuses a digest that is not 64 lowercase hex characters" {
+  export GH_TOKEN='token-from-env'
+
+  export ZIZMOR_IMAGE='ghcr.io/zizmorcore/zizmor@sha256:abc123'
+  run_lint_workflows
+  [ "$status" -eq 1 ]
+  assert_output_contains 'not 64 lowercase hex characters'
+
+  # Right length, wrong alphabet -- a truncated-then-padded digest must not pass.
+  export ZIZMOR_IMAGE="ghcr.io/zizmorcore/zizmor@sha256:ZZ${DIGEST_IMAGE##*@sha256:}"
+  run_lint_workflows
+  [ "$status" -eq 1 ]
+  assert_output_contains 'not 64 lowercase hex characters'
 }
 
 @test "propagates a nonzero zizmor exit code instead of swallowing it" {
