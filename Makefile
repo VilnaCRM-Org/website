@@ -53,6 +53,16 @@ USER_SERVICE_REPO           = VilnaCRM-Org/user-service
 USER_SERVICE_SPEC_PATH      = .github/openapi-spec/spec.yaml
 OPENAPI_BASELINE            = contracts/user-service/openapi.json
 
+# zizmor is the GitHub Actions security linter (issue #360). Like gitleaks and
+# lychee it ships as a CLI container pinned BY DIGEST, so a repointed tag can
+# never change what the security gate enforces. Digest is zizmor 1.28.0.
+# The gate blocks on medium-and-above findings that zizmor reports with high
+# confidence; see scripts/ci/lint-workflows.sh and the workflow-security.yml
+# job comment for what that deliberately leaves out and why.
+ZIZMOR_IMAGE                = ghcr.io/zizmorcore/zizmor@sha256:8e6b3e4fb74d1aa5d23e83ea369f386c66eced0d1fb944d32cd8b2aac100b00d
+ZIZMOR_MIN_SEVERITY         = medium
+ZIZMOR_MIN_CONFIDENCE       = high
+
 NEXT_BUILD                  = $(NEXT_BIN) build --webpack
 NEXT_BUILD_CMD              = $(NEXT_BUILD) && $(IMG_OPTIMIZE)
 STORYBOOK_BUILD_CMD         = $(STORYBOOK_BIN) build --output-dir storybook-static-ci
@@ -425,6 +435,26 @@ lint-metrics: ## Run rust-code-analysis complexity gate on src (host-only; auto-
 	 RCA_SHA256_LINUX="$(RCA_SHA256_LINUX)" \
 	 METRICS_POLICY="$(METRICS_POLICY_PATH)" \
 	 sh scripts/ci/lint-metrics.sh
+
+# DELIBERATE DIVERGENCE FROM THE npm-tool LINT GATES (lint-next/tsc/md/deps),
+# for the same reasons as lint-contracts and lint-metrics above:
+#   * Host-only: zizmor is a Rust CLI shipped as a container image, absent from
+#     the dev image, so this target does NOT use $(PM_EXEC) and runs docker on
+#     the host in both modes.
+#   * NOT in the `lint` aggregate and NOT in CI_LINT_TARGETS (both route through
+#     the dev container / run-parallel.sh, which cannot run docker).
+#   * Its online audits reach the GitHub API to resolve tags, so a GitHub
+#     outage must not turn the whole static lane red.
+#   * Its CI surface is .github/workflows/workflow-security.yml, which runs it
+#     on every PR to main -- deliberately NOT path-filtered, because a skipped
+#     check cannot be a meaningful required status check (#343).
+# The script degrades to --offline when no GitHub token is available, so a
+# local run without `gh auth login` still works (offline is a strict subset).
+lint-workflows: ## Audit the GitHub Actions workflows for security defects with zizmor (host-only, Docker)
+	@ZIZMOR_IMAGE="$(ZIZMOR_IMAGE)" \
+	 ZIZMOR_MIN_SEVERITY="$(ZIZMOR_MIN_SEVERITY)" \
+	 ZIZMOR_MIN_CONFIDENCE="$(ZIZMOR_MIN_CONFIDENCE)" \
+	 bash scripts/ci/lint-workflows.sh
 
 husky: ## One-time Husky setup to enable Git hooks (deprecated if already set)
 	bun x husky install

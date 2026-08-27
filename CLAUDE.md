@@ -130,10 +130,12 @@ The static export makes Next's `headers()` a no-op, so the edge is the only
 enforcement point — see [`docs/security-headers.md`](docs/security-headers.md). Never
 drop or weaken a header to make the gate pass.
 
-Three gates sit deliberately outside `make lint`: `make lint-metrics` (host-only Rust
-binary), `make lint-contracts` (needs network for its drift check), and
-`make lint-openapi` (both — a host Go binary plus the network). Each has its own workflow
-— `rust-code-analysis.yml`, `contract-testing.yml` and `openapi-drift.yml`.
+Four gates sit deliberately outside `make lint`: `make lint-metrics` (host-only Rust
+binary), `make lint-contracts` (needs network for its drift check), `make lint-openapi`
+(both — a host Go binary plus the network), and `make lint-workflows` (host-only zizmor
+container; its online audits reach the GitHub API). Each has its own workflow —
+`rust-code-analysis.yml`, `contract-testing.yml`, `openapi-drift.yml`, and
+`workflow-security.yml`.
 
 Run `make format` before `make lint`; formatting is intentionally separate from the lint
 verification suite. Git hooks are managed by Husky. CI phases are mirrored locally by
@@ -171,6 +173,17 @@ agrees with the **mock**. Two gates anchored on the single committed baseline
   breaking drift, `2` the check could not run, so an outage is never published as an API
   change. GNU Make discards a recipe's exit status, so the workflow calls the script
   directly. Breaking drift files/refreshes an `api-contract` issue instead of failing.
+
+### Workflow security (zizmor, issue #360)
+
+`make lint-workflows` audits `.github/workflows` with zizmor, pinned by image digest in
+the Makefile. It blocks on medium-and-above findings at high confidence
+(`ZIZMOR_MIN_SEVERITY` / `ZIZMOR_MIN_CONFIDENCE`). Every `uses:` must be a full 40-char
+SHA whose trailing comment names the tag that SHA actually points at, copied verbatim
+(upstream may write it `v1.5.0` or `1.5.0` — zizmor flags a mismatch); `permissions:`
+belong on the job that needs them; never interpolate `${{ }}` into a `run:` body. Fix
+findings at the root — never add a `zizmor.yml` ignore, a `# zizmor: ignore[...]`
+comment, or lower the thresholds.
 
 ### Code Metrics (rust-code-analysis, issue #224)
 
