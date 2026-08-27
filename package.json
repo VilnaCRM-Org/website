@@ -119,5 +119,5 @@
     ],
     "*.{json,css,scss,md}": "prettier --write --ignore-path .prettierignore"
   },
-  "version": "1.6.0"
+  "version": "1.7.0"
 }
