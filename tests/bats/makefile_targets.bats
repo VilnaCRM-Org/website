@@ -349,6 +349,7 @@ STUB
   assert_output_contains '===== lint-next ====='
   assert_output_contains '===== lint-tsc ====='
   assert_output_contains '===== lint-md ====='
+  assert_output_contains '===== lint-headers ====='
   assert_output_contains '===== lint-prod-guardrails ====='
 }
 

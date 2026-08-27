@@ -153,7 +153,7 @@ NETWORK_NAME                = website-network
 # Dev-side lint and test phases are grouped so local developers and agents can
 # run the same CI stages as the pipeline. The parallel runners execute each
 # target concurrently, group their output, and aggregate exit codes.
-CI_LINT_TARGETS             = lint-next lint-tsc lint-md lint-prod-guardrails
+CI_LINT_TARGETS             = lint-next lint-tsc lint-md lint-headers lint-prod-guardrails
 CI_TEST_TARGETS             = ci-test-unit-client ci-test-unit-server ci-test-integration ci-test-contract
 CI_LINT_RUNNER              = ./scripts/ci/run-parallel.sh ci-lint
 CI_TEST_RUNNER              = ./scripts/ci/run-parallel.sh ci-test
@@ -359,6 +359,11 @@ lint-deps: ## Validate architecture/import boundaries with dependency-cruiser
 	node scripts/generateLocalization.mjs
 	$(PM_EXEC) $(DEPCRUISE_BIN) src pages tests --config .dependency-cruiser.js
 
+.PHONY: lint lint-headers lint-docker-policy lint-security-txt lint-prod-guardrails
+
+lint-headers: ## Verify the edge security-header policy (config/security-headers.json) reaches every production response
+	$(PM_EXEC) node scripts/ci/lint-headers.mjs
+
 lint-docker-policy: ## Enforce the registry (no Docker Hub) + digest-pin policy on every Dockerfile
 	./scripts/ci/lint-dockerfile-policy.sh
 
@@ -372,10 +377,10 @@ lint-prod-guardrails: ## Enforce the production-safety invariants (privileged-wo
 # unlike lint-contracts and lint-metrics: both read only committed files (no
 # network, no host binary, no Docker), so they are hermetic and cannot make the
 # static lane flaky. lint-prod-guardrails additionally joins CI_LINT_TARGETS
-# because it needs `node` + js-yaml, which the parallel ci-lint runner provides;
-# lint-security-txt is pure bash and needs no package manager, mirroring how
-# lint-deps stays out of that list.
-lint: lint-next lint-tsc lint-md lint-deps lint-docker-policy lint-security-txt lint-prod-guardrails ## Runs all linters: ESLint, TypeScript, Markdown, dependency-cruiser, the Dockerfile registry/digest policy, the RFC 9116 security.txt gate, and the production-safety guardrails in sequence.
+# because it needs `node` + js-yaml, which the parallel ci-lint runner provides
+# — the same reason main's lint-headers is in that list; lint-security-txt is
+# pure bash and needs no package manager, mirroring how lint-deps stays out.
+lint: lint-next lint-tsc lint-md lint-deps lint-docker-policy lint-headers lint-security-txt lint-prod-guardrails ## Runs all linters: ESLint, TypeScript, Markdown, dependency-cruiser, the Dockerfile registry/digest policy, the security-header gate, the RFC 9116 security.txt gate, and the production-safety guardrails in sequence.
 
 # DELIBERATE DIVERGENCE FROM THE npm-tool LINT GATES (lint-next/tsc/md/deps),
 # for the same reason as lint-metrics below:

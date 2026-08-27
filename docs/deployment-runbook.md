@@ -24,6 +24,11 @@ fails if it does not serve valid content:
 - `GET /` — expects HTTP `200` and HTML containing `__next` (the Next.js root)
   or a `<title>`.
 - `GET /swagger` — expects HTTP `200` and a body mentioning `swagger`.
+- `HEAD /` and `HEAD /favicon.svg` — expect every header in
+  `config/security-headers.json` (see
+  [the security-headers guide](security-headers.md)). This is the only check that
+  can catch the CloudFront functions being unassociated from the distribution; the
+  in-repo `make lint-headers` gate only proves the functions themselves are correct.
 
 Because CodePipeline deploys asynchronously, each probe retries (up to roughly
 ten minutes) until the CDN serves the new build or the job times out.
@@ -92,6 +97,7 @@ To check production by hand at any time (replace the host with the value of
 ```bash
 curl -fsSI https://vilnacrm.com/ | head -n 1
 curl -fsS https://vilnacrm.com/swagger | grep -i swagger
+curl -fsSI https://vilnacrm.com/ | grep -Ei 'frame-options|frame-ancestors'
 
 # The RFC 9116 policy must be published, and a path outside the edge
 # allow-list must return the site 404 rather than an S3 error document.

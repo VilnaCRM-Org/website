@@ -40,12 +40,14 @@ Client unit tests run on Jest with React Testing Library in a jsdom env
 (`TEST_ENV=server`); specs live in `src/test/apollo-server/**/*.test.ts`. Edge unit tests
 run on Jest in a node env (`TEST_ENV=edge`) and cover the deployed edge/runtime scripts
 under `scripts/` that ship outside the Next.js bundle (today the CloudFront Functions
-handler `scripts/cloudfront_routing.js`); specs live in `src/test/edge/**/*.test.ts` and
-the layer is pinned at 100% per-file coverage. That handler is **deny-by-default** since
-issue #383 — a path outside its allow-list gets a synthetic 404 rather than reaching the
-S3 origin — so an edge spec must cover both halves: that every shape the export ships
-still passes through, and that everything else is blocked. Integration specs run in a
-jsdom-with-fetch env (`TEST_ENV=integration`) from
+handlers `scripts/cloudfront_routing.js` and `scripts/cloudfront_security_headers.js`,
+the latter applying `config/security-headers.json` to every production response —
+see [docs/security-headers.md](docs/security-headers.md)); specs live in
+`src/test/edge/**/*.test.ts` and the layer is pinned at 100% per-file coverage. The
+routing handler is **deny-by-default** since issue #383 — a path outside its allow-list
+gets a synthetic 404 rather than reaching the S3 origin — so an edge spec must cover both
+halves: that every shape the export ships still passes through, and that everything else
+is blocked. Integration specs run in a jsdom-with-fetch env (`TEST_ENV=integration`) from
 `tests/integration/**/*.integration.test.{ts,tsx}` and enforce a global 100% coverage sweep
 over `src/`. Contract specs run in a node env (`TEST_ENV=contract`) from
 `tests/contract/**/*.contract.test.ts`; they boot the Mockoon mock the e2e suite runs

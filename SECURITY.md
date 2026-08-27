@@ -58,8 +58,11 @@ reach a human — never by lowering the threshold in
 In scope:
 
 - The production website and its static export.
-- The CloudFront edge function (`scripts/cloudfront_routing.js`), including its
-  fail-closed routing allow-list — a path outside that allow-list must be
+- The CloudFront edge functions (`scripts/cloudfront_routing.js` for routing and
+  `scripts/cloudfront_security_headers.js` for the security-header policy in
+  `config/security-headers.json` — see
+  [docs/security-headers.md](docs/security-headers.md)), including the routing
+  handler's fail-closed allow-list — a path outside that allow-list must be
   answered with the site 404 rather than reaching the S3 origin.
 - The CI/CD workflows under `.github/workflows/`.
 - This repository's dependency tree.

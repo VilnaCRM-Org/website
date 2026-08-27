@@ -16,22 +16,47 @@
  * every PR by `scripts/ci/verify-edge-allowlist.mjs`, which runs this handler over every
  * file of a freshly built export. If that gate fails, add the new path here — do NOT widen
  * the tables beyond what the export actually ships.
+ *
+ * Security headers for real responses are owned by the viewer-response handler
+ * (`scripts/cloudfront_security_headers.js`). A viewer-response function does NOT run when
+ * a viewer-request function returns its own response, so every synthetic 404 this handler
+ * returns — and after #383 that is every blocked path, not just unknown single-segment ones
+ * — carries the same header set inline. Both copies are verified against the single source
+ * of truth, `config/security-headers.json`, by `make lint-headers` (issue #377).
  */
 'use strict';
 
 var NOT_FOUND_BODY =
   '<!DOCTYPE html><html><head><title>404 Not Found</title></head><body><h1>404 - Page Not Found</h1></body></html>';
 
+var SECURITY_HEADERS = Object.freeze({
+  'content-security-policy': "frame-ancestors 'none'",
+  'x-frame-options': 'DENY',
+  'x-content-type-options': 'nosniff',
+  'referrer-policy': 'strict-origin-when-cross-origin',
+  'strict-transport-security': 'max-age=63072000; includeSubDomains; preload',
+});
+
 function buildNotFoundHeaders() {
-  return {
+  var headers = {
     'cache-control': { value: 'public, max-age=60' },
     'content-type': { value: 'text/html; charset=utf-8' },
   };
+  var names = Object.keys(SECURITY_HEADERS);
+  var i;
+
+  for (i = 0; i < names.length; i++) {
+    headers[names[i]] = { value: SECURITY_HEADERS[names[i]] };
+  }
+
+  return headers;
 }
 
 // The synthetic 404 is constructed in exactly one place: every blocked path must return the
 // identical shape, and past incidents came from a response missing one field (#249 missing
-// `body` -> 5xx, #235 missing `content-type` -> Safari downloaded the page).
+// `body` -> 5xx, #235 missing `content-type` -> Safari downloaded the page). Routing it
+// through buildNotFoundHeaders is also what keeps the security headers on the fail-closed
+// 404s #383 added — a viewer-response function never runs for a response we return here.
 function buildNotFoundResponse() {
   return {
     statusCode: 404,
