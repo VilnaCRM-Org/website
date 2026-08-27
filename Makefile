@@ -296,6 +296,7 @@ start: ## Start the application
 # discarding both the overlay's whole purpose and its fail-fast restart policy.
 # It still creates or starts the container when it is missing or stopped.
 ensure-dev: ## Reconcile the dev container (builds the image if absent; does not wait for the dev server)
+	@bash ./scripts/ci/check-dev-container-bind.sh
 	@docker image inspect $(DEV_IMAGE) >/dev/null 2>&1 || \
 		$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) build dev
 	@$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) up -d --no-recreate dev
@@ -625,6 +626,13 @@ ci-test-integration: ## Run integration tests assuming ci-setup already started 
 test-contract: ## Run the mock-vs-OpenAPI contract parity layer using Jest (TEST_ENV=contract, target: tests/contract)
 	$(UNIT_TESTS) TEST_ENV=contract $(JEST_BIN) $(JEST_FLAGS)
 
+# DELIBERATELY host-side -- the only CI_TEST_TARGETS entry that does not go
+# through $(CI_TESTS). contract-parity-testing.yml provisions the HOST toolchain
+# (setup-node + `bun install`) and never starts the dev container, because this
+# layer boots Mockoon in-process from the committed OpenAPI document and needs
+# no container at all. Routing it through $(CI_TESTS) would exec into a
+# container that workflow never created. Convert the workflow first if this
+# should move.
 ci-test-contract: ## Run contract parity tests directly assuming deps are installed (CI entrypoint)
 	env TEST_ENV=contract $(JEST_BIN) $(JEST_FLAGS)
 

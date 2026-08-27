@@ -221,7 +221,7 @@ itself, the prod/test compose stack, or the host toolchain directly:
   make load-tests: executes load tests using the K6 library
   (uses "prod" as hostname, which maps to the Docker service)
 
-  make git-hooks-install: installs husky Git hooks locally
+  make husky: installs husky Git hooks locally
   make update: runs locally on the host machine, not in a container
 ```
 

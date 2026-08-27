@@ -96,7 +96,7 @@ ci-test-lighthouse-desktop	bats	tests/bats/makefile_targets.bats	Validated with 
 ci-test-lighthouse-mobile	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker Compose LHCI commands.
 ci-test-prod	bats	tests/bats/makefile_targets.bats	Validated by running every prod-side phase against stubbed commands.
 ci	bats	tests/bats/makefile_targets.bats	Validated by running the full CI pipeline against stubbed tooling.
-ensure-dev	bats	tests/bats/makefile_targets.bats	Validated by asserting the dev service starts when it is not already running.
+ensure-dev	bats	tests/bats/makefile_targets.bats	Validated by asserting the dev service starts when it is not already running. Its foreign-checkout preflight (scripts/ci/check-dev-container-bind.sh) has its own suite in tests/bats/check_dev_container_bind.bats.
 start-prod-clean	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Docker Compose force-recreate invocation.
 test-load	bats	tests/bats/makefile_targets.bats	Validated as an alias that runs the load-tests target with stubbed K6 commands.
 test-load-swagger	bats	tests/bats/makefile_targets.bats	Validated as an alias that runs the load-tests-swagger target with stubbed K6 commands.

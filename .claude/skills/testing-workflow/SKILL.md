@@ -83,7 +83,11 @@ against the Docker prod stack the targets bring up.
 ## Triage
 
 1. Re-run the smallest failing unit, e.g.
-   `TEST_ENV=client bun x jest src/test/unit/email-validation.test.ts`.
+   `TEST_ENV=client bun x jest src/test/unit/email-validation.test.ts`. That direct form
+   runs against the **host** `node_modules`, not the dev container the gates use, so it can
+   mask or invent environment drift; reproduce through `make test-unit-client` (or
+   `EXEC_MODE=host make test-unit-client` to pin the host toolchain deliberately) when the
+   failure looks environmental rather than logical.
 2. Read the first real failure before editing anything downstream of it.
 3. Classify the cause: app logic, test data (Faker builder), mock state (Mockoon
    fixture or Apollo mock), visual snapshot drift, or environment drift.

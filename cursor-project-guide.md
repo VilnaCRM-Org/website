@@ -64,12 +64,18 @@ make start                # Start the dev server
 
 ## Running commands on the host
 
-The unit suites and the four `make lint` gates run inside the dev container by default —
-the same command CI runs — and start that container if it is not already up.
-`make lint-metrics` and the `generate-localization` prerequisite of `lint-deps` are
-host-only in both modes. Prefix with `EXEC_MODE=host` to run
-the local `node_modules/.bin` binaries directly instead of execing into the container; that
-path needs a host `bun install`, which `make install` performs alongside the container one.
+The unit suites and the five npm-tool `make lint` gates — `lint-next`, `lint-tsc`,
+`lint-md`, `lint-deps` and `lint-headers` — run inside the dev container by default, the
+same command CI runs, and start that container if it is not already up. `make lint` also
+depends on two host-only steps that never exec into the container in either mode: the
+`generate-localization` prerequisite of `lint-deps` (writing the gitignored bundle from
+inside the root-running container would leave it root-owned in the bind mount) and
+`lint-docker-policy` (a self-contained shell script that reads the Dockerfiles from the
+worktree — and the dev image it would exec into is one of the things it audits).
+`make lint-metrics` sits outside `make lint` entirely and is host-only too. Prefix with
+`EXEC_MODE=host` to run the local `node_modules/.bin` binaries directly instead of execing
+into the container; that path needs a host `bun install`, which `make install` performs
+alongside the container one.
 
 ```bash
 make test-unit-all                                 # All unit suites, in the container

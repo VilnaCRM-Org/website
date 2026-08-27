@@ -25,6 +25,10 @@ on:
       - 'Dockerfile'
       - '.dockerignore'
       - 'docker-compose.yml'
+      # Tracked, and interpolated into docker-compose.yml (WEBSITE_DOMAIN,
+      # DEV_PORT, ...), so editing it changes how the container is built and
+      # started without touching any file above.
+      - '.env'
       - 'docker-compose.ci.yml'
       - '.github/actions/dev-container/**'
       - 'next.config.js'
