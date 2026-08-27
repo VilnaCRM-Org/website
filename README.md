@@ -99,7 +99,8 @@ Linting & Formatting
   make lint-deps: validates architecture/import boundaries with dependency-cruiser
   make lint-api-versions: verifies OpenAPI and GraphQL reference the same pinned user-service release
   make lint-docker-policy: enforces the Dockerfile registry + digest-pin policy
-  make lint: runs ESLint, TypeScript, markdownlint, dependency-cruiser, API versions, Docker policy
+  make lint-headers: verifies the edge security-header policy reaches every response
+  make lint: runs all linters (ESLint, TypeScript, markdownlint, deps, API versions, Docker policy, security headers)
   make lint-metrics: runs the rust-code-analysis complexity gate (host-only, not in make lint)
   make lint-contracts: validates the pinned user-service contracts (not in make lint; needs network)
   make lint-openapi: reports breaking upstream OpenAPI drift (host-only, needs network; advisory)
@@ -497,6 +498,21 @@ For detailed information, check the [routing script](scripts/cloudfront_routing.
 
 This routing logic is useful for SSR (Server-Side Rendered) applications,
 particularly when hosted on platforms like AWS CloudFront.
+
+## Security headers
+
+The production site is a static export, so Next's `headers()` API is a no-op and the
+CloudFront edge is the only place security headers can be attached. The policy lives
+in [`config/security-headers.json`](config/security-headers.json) and is applied to
+every response by the viewer-response function
+[`scripts/cloudfront_security_headers.js`](scripts/cloudfront_security_headers.js)
+(the synthetic 404 in the routing function carries the same set inline, because
+CloudFront skips viewer-response functions for a short-circuited request).
+
+`make lint-headers` — part of `make lint` — runs the checked-in functions and fails if
+they stop emitting the policy; the post-deploy smoke test then verifies the live
+responses with `curl -I`, which is what catches the functions not being associated with
+the distribution. See [the security-headers guide](docs/security-headers.md).
 
 ## Documentation
 

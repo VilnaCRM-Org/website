@@ -153,7 +153,7 @@ NETWORK_NAME                = website-network
 # Dev-side lint and test phases are grouped so local developers and agents can
 # run the same CI stages as the pipeline. The parallel runners execute each
 # target concurrently, group their output, and aggregate exit codes.
-CI_LINT_TARGETS             = lint-next lint-tsc lint-md lint-api-versions
+CI_LINT_TARGETS             = lint-next lint-tsc lint-md lint-api-versions lint-headers
 CI_TEST_TARGETS             = ci-test-unit-client ci-test-unit-server ci-test-integration ci-test-contract
 CI_LINT_RUNNER              = ./scripts/ci/run-parallel.sh ci-lint
 CI_TEST_RUNNER              = ./scripts/ci/run-parallel.sh ci-test
@@ -351,6 +351,8 @@ lint-deps: ## Validate architecture/import boundaries with dependency-cruiser
 	node scripts/generateLocalization.mjs
 	$(PM_EXEC) $(DEPCRUISE_BIN) src pages tests --config .dependency-cruiser.js
 
+.PHONY: lint lint-api-versions lint-headers lint-docker-policy
+
 # The user-service inventory invariant (issue #381, F4): every consumer of the
 # upstream contracts — the GraphQL schema behind the Apollo mock and the OpenAPI
 # spec behind /swagger — must derive from the single USER_SERVICE_VERSION pin.
@@ -360,10 +362,13 @@ lint-deps: ## Validate architecture/import boundaries with dependency-cruiser
 lint-api-versions: ## Verify OpenAPI and GraphQL reference the same pinned user-service release
 	$(PM_EXEC) node scripts/contracts/check-api-versions.mjs
 
+lint-headers: ## Verify the edge security-header policy (config/security-headers.json) reaches every production response
+	$(PM_EXEC) node scripts/ci/lint-headers.mjs
+
 lint-docker-policy: ## Enforce the registry (no Docker Hub) + digest-pin policy on every Dockerfile
 	./scripts/ci/lint-dockerfile-policy.sh
 
-lint: lint-next lint-tsc lint-md lint-deps lint-api-versions lint-docker-policy ## Runs all linters: ESLint, TypeScript, Markdown, dependency-cruiser, the API version invariant, and the Dockerfile registry/digest policy in sequence.
+lint: lint-next lint-tsc lint-md lint-deps lint-api-versions lint-docker-policy lint-headers ## Runs all linters: ESLint, TypeScript, Markdown, dependency-cruiser, the API version invariant, the Dockerfile registry/digest policy, and the security-header gate in sequence.
 
 # DELIBERATE DIVERGENCE FROM THE npm-tool LINT GATES (lint-next/tsc/md/deps),
 # for the same reason as lint-metrics below:

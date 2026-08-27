@@ -29,7 +29,10 @@ the report to make sure it was not missed.
 In scope:
 
 - The production website and its static export.
-- The CloudFront edge function (`scripts/cloudfront_routing.js`).
+- The CloudFront edge functions (`scripts/cloudfront_routing.js` for routing and
+  `scripts/cloudfront_security_headers.js` for the security-header policy in
+  `config/security-headers.json` — see
+  [docs/security-headers.md](docs/security-headers.md)).
 - The CI/CD workflows under `.github/workflows/`.
 - This repository's dependency tree.
 
