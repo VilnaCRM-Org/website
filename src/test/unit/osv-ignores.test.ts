@@ -173,10 +173,20 @@ describe('osv-scanner ignore policy', () => {
       );
     });
 
-    it('keeps only the keys the gate governs, so an unrelated key is not stored', () => {
-      const entries = parseIgnoreEntries(['[[IgnoredVulns]]', 'ecosystem = "npm"'].join('\n'));
-
-      expect(entries).toEqual([{ line: 1 }]);
+    it('rejects an unsupported key rather than dropping it from the entry', () => {
+      // The blocking diff scans under the rendered policy, so osv-scanner never sees this file
+      // on a pull request — it would exit 127 on the key, but only in the nightly census.
+      expect(() =>
+        parseIgnoreEntries(
+          [
+            '[[IgnoredVulns]]',
+            'id = "GHSA-a"',
+            'reason = "why"',
+            'ignoreUntil = 2026-12-31',
+            'ecosystem = "npm"',
+          ].join('\n')
+        )
+      ).toThrow(/unsupported key "ecosystem"/);
     });
 
     it('fails closed on a line it cannot read rather than skipping the entry', () => {

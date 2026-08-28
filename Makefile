@@ -38,10 +38,12 @@ METRICS_POLICY_PATH         = config/metrics-policy.json
 RCA_SHA256_LINUX            = 9ec2a217b8ff191e02dab5d5f2eee6158b63fd975c532b2c5d67c2e6c7249894
 
 # Dependency-CVE gate (#356). osv-scanner is a host-installed Go binary provisioned exactly
-# like RCA above: pinned, SHA256-verified, installed into the gitignored ./bin.
+# like RCA above: pinned, SHA256-verified, installed into the gitignored ./bin. Unlike RCA,
+# the version and its four platform digests are ONE fact and live together in
+# scripts/ci/ensure-osv.sh, deliberately not overridable from here — a version set apart
+# from its digests could only ever fail verification.
 # OSV_MODE=diff fails only on advisories a change ADDS versus OSV_BASE_REF; OSV_MODE=census
 # reports the whole backlog and stays green. See scripts/ci/osv-report.ts for the rationale.
-OSV_VERSION                 = 2.5.0
 OSV_BIN                     = ./bin/osv-scanner
 OSV_MODE                    ?= diff
 OSV_BASE_REF                ?= origin/main
@@ -470,7 +472,7 @@ lint-metrics: ## Run rust-code-analysis complexity gate on src (host-only; auto-
 # decision (unit-tested in src/test/unit/osv-report.test.ts).
 lint-vulns: ## Fail on dependency CVEs this branch adds versus $(OSV_BASE_REF) (host-only; auto-installs the pinned osv-scanner to ./bin)
 	@scripts/ci/ensure-osv.sh
-	@OSV_BIN="$(OSV_BIN)" OSV_VERSION="$(OSV_VERSION)" OSV_MODE="$(OSV_MODE)" \
+	@OSV_BIN="$(OSV_BIN)" OSV_MODE="$(OSV_MODE)" \
 	 OSV_BASE_REF="$(OSV_BASE_REF)" OSV_LOCKFILE="$(OSV_LOCKFILE)" \
 	 OSV_CONFIG="$(OSV_CONFIG)" \
 	 OSV_REPORT_DIR="$(OSV_REPORT_DIR)" \

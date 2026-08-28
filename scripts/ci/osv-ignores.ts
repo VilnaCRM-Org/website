@@ -100,8 +100,10 @@ function stripComment(line: string): string {
  * has no TOML dependency, and pulling one in to read a file whose format we ourselves control
  * is not worth the supply-chain surface — in a change whose whole point is dependency risk,
  * least of all. It therefore FAILS CLOSED, throwing on any construct it does not recognise,
- * so an entry can never be silently skipped and thereby escape validation. osv-scanner itself
- * rejects unknown keys, so a typo is caught by the scanner as well as here.
+ * so an entry can never be silently skipped and thereby escape validation. osv-scanner rejects
+ * unknown keys too (exit 127, verified against 2.5.0), but only in the census, which reads this
+ * file directly; the blocking diff scans under the RENDERED policy, so this reader is the only
+ * check a pull request gets.
  */
 export function parseIgnoreEntries(toml: string, source = DEFAULT_CONFIG): IgnoreEntry[] {
   const entries: IgnoreEntry[] = [];
@@ -154,9 +156,18 @@ export function parseIgnoreEntries(toml: string, source = DEFAULT_CONFIG): Ignor
 
     const [, key, basic, literal, bare] = field;
     const value = basic ?? literal ?? bare ?? '';
-    if (key === 'id' || key === 'reason' || key === 'ignoreUntil') {
-      current[key] = value;
+    if (key !== 'id' && key !== 'reason' && key !== 'ignoreUntil') {
+      // Rejected, not dropped. The blocking diff hands osv-scanner the RENDERED policy, which
+      // by construction carries only these three keys, so the scanner's own unknown-key check
+      // never sees this file on a pull request — only the nightly census does. Dropping the key
+      // here merges a config the census then cannot parse (exit 127), and would silently WIDEN
+      // an entry the day osv-scanner adds a narrowing key to `[[IgnoredVulns]]`.
+      throw new Error(
+        `${source} line ${index + 1}: unsupported key "${key}". An \`[[IgnoredVulns]]\` entry ` +
+          'may carry only `id`, `reason` and `ignoreUntil`.'
+      );
     }
+    current[key] = value;
   });
 
   return entries;
