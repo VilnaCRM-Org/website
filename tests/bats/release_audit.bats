@@ -901,6 +901,26 @@ Co-authored-by: dependabot[bot] <support@github.com>'
   [ -n "$output" ]
 }
 
+@test "the recovery step cannot fail the green run it is cleaning up after" {
+  # This step only runs on success(), and the job's failure() handler files the
+  # very alert it is closing -- so a rejected mutation, or an alert somebody
+  # closed between the lookup and the close, must warn and leave it open rather
+  # than turn the audit red and re-file the alert.
+  run awk '
+    /^ +- name:/ { in_success = 0 }
+    /^ +if: success\(\)/ { in_success = 1 }
+    in_success && /gh issue (list|comment|close)/ { calls++ }
+    in_success && /^ +if ! .*gh issue (list|comment|close)/ { guarded++ }
+    END { printf "%d %d\n", calls, guarded }
+  ' "$PROJECT_ROOT/$WORKFLOW_REL"
+  [ "$status" -eq 0 ]
+  calls="${output%% *}"
+  guarded="${output##* }"
+  # Every gh call in the step is wrapped in a tolerant `if !` branch.
+  [ "$calls" -eq 3 ]
+  [ "$guarded" -eq 3 ]
+}
+
 @test "the recovery step and the failure alert share one exact title" {
   # The close matches on an EXACT title, so the moment the two drift the failure
   # alert stops being closed and silently accumulates comments forever.

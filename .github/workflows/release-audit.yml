@@ -196,9 +196,19 @@ jobs:
           existing="$(printf '%s' "$listed" |
             jq -r --arg t "$ALERT_TITLE" 'map(select(.title == $t)) | .[0].number // empty')"
           [ -n "$existing" ] || exit 0
-          gh issue comment "$existing" --repo "$AUDIT_REPO" \
-            --body "Recovered: the audit run for a \`${AUDIT_EVENT_NAME}\` event succeeded. Run: ${AUDIT_RUN_URL}" >/dev/null
-          gh issue close "$existing" --repo "$AUDIT_REPO" >/dev/null
+          # Same reasoning as the list above, for the same reason: these are the
+          # last two calls in a step whose whole job is cleanup, so a rejected
+          # mutation -- or an alert someone closed between the lookup and here --
+          # must warn and leave the alert open, never fail the green run and trip
+          # the failure handler into re-filing it.
+          if ! gh issue comment "$existing" --repo "$AUDIT_REPO" \
+            --body "Recovered: the audit run for a \`${AUDIT_EVENT_NAME}\` event succeeded. Run: ${AUDIT_RUN_URL}" >/dev/null; then
+            echo "::warning::could not comment on audit alert #${existing}; it stays open"
+            exit 0
+          fi
+          if ! gh issue close "$existing" --repo "$AUDIT_REPO" >/dev/null; then
+            echo "::warning::could not close audit alert #${existing}; it stays open"
+          fi
 
       # The script only alerts on runs that SUCCEED, so a failed audit -- an API
       # outage, a bad token, a broken script -- would otherwise be a red X nobody
