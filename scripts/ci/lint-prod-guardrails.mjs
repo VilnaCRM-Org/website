@@ -270,10 +270,17 @@ function assertEdgeCoverageStaysPinned() {
   // inside a comment would truncate either capture below.
   const code = stripComments(config);
   const collectFrom = /const EDGE_COVERAGE_FROM[^;]*;/.exec(code)?.[0] ?? '';
-  // A quoted array element rather than a bare substring, so a longer path that
-  // merely contains this one (`...cloudfront_routing.js.map`) cannot satisfy the pin.
-  const edgeEntry = new RegExp(`(['"])[^'"]*${EDGE_SCRIPT.replace(/\./g, '\\.')}\\1`);
-  if (!edgeEntry.test(collectFrom)) {
+  // Compare against the extracted quoted elements rather than building a regex out
+  // of a path: hand-escaping only `.` leaves every other metacharacter (a backslash
+  // above all) unescaped, which is the incomplete-escaping defect CodeQL flags. An
+  // exact match on the element is also stricter than a substring, so a longer path
+  // that merely contains this one (`...cloudfront_routing.js.map`) cannot satisfy
+  // the pin, and `<rootDir>/` prefixes still count.
+  const collectedEntries = [...collectFrom.matchAll(/(['"])([^'"]*)\1/g)].map(match => match[2]);
+  const pinsEdgeScript = collectedEntries.some(
+    entry => entry === EDGE_SCRIPT || entry.endsWith(`/${EDGE_SCRIPT}`)
+  );
+  if (!pinsEdgeScript) {
     fail(
       'B',
       `${JEST_CONFIG} no longer collects edge coverage from ${EDGE_SCRIPT}; ` +
