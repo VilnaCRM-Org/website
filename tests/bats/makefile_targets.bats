@@ -209,6 +209,45 @@ EOF
   assert_log_contains 'playwright test ./src/test/e2e'
 }
 
+@test "accessibility targets run both gates through Jest and Playwright" {
+  # `env TEST_ENV=...` is consumed by the real `env` before the stub sees argv,
+  # so echo the variable from the stub instead — the same technique the
+  # ci-test split-target test uses, and the only one that holds in both the
+  # host (CI=1) and container (CI=0) modes.
+  cat > "$STUB_BIN_DIR/jest" <<'STUB'
+#!/usr/bin/env bash
+printf 'jest TEST_ENV=%s %s\n' "${TEST_ENV:-unset}" "$*" >> "${COMMAND_LOG:?}"
+exit 0
+STUB
+  chmod +x "$STUB_BIN_DIR/jest"
+
+  reset_command_log
+  run_make_target test-a11y-components CI=1
+  [ "$status" -eq 0 ]
+  # The component leg is the client Jest layer, scoped to the a11y spec. Coverage
+  # is off because the client suite's global floor cannot be met by one spec; it
+  # stays enforced on the full test-unit-client run.
+  assert_log_contains 'jest TEST_ENV=client --verbose --coverage=false ./src/test/testing-library/A11yComponents.test.tsx'
+
+  reset_command_log
+  run_make_target test-a11y-routes CI=1
+  [ "$status" -eq 0 ]
+  # The route leg boots the prod stack before scanning, exactly like e2e/visual.
+  assert_log_contains 'docker compose -f common-healthchecks.yml -f docker-compose.test.yml up -d'
+  assert_log_contains 'playwright test ./src/test/a11y'
+
+  reset_command_log
+  run_make_target ci-test-a11y CI=1
+  [ "$status" -eq 0 ]
+  assert_log_contains 'playwright test ./src/test/a11y'
+
+  reset_command_log
+  run_make_target test-a11y CI=1
+  [ "$status" -eq 0 ]
+  assert_log_contains 'jest TEST_ENV=client --verbose --coverage=false ./src/test/testing-library/A11yComponents.test.tsx'
+  assert_log_contains 'playwright test ./src/test/a11y'
+}
+
 @test "e2e flake targets repeat the changed specs and grade the report" {
   reset_command_log
   run_make_target test-e2e-burnin
@@ -440,6 +479,7 @@ STUB
   [ "$status" -eq 0 ]
   assert_log_contains 'playwright test ./src/test/e2e'
   assert_log_contains 'playwright test ./src/test/visual'
+  assert_log_contains 'playwright test ./src/test/a11y'
   assert_log_contains 'lhci autorun --config=lighthouserc.desktop.js'
   assert_log_contains 'lhci autorun --config=lighthouserc.mobile.js'
 }

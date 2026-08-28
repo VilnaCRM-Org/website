@@ -110,6 +110,7 @@ make test-e2e-burnin    # Repeat E2E_BURNIN_SPECS with retries off to expose fla
 make check-e2e-flakes   # Grade a Playwright JSON report (FLAKE_MODE=retry-pass|burn-in|census)
 make test-visual        # Playwright visual regression
 make test-visual-update # Refresh visual snapshots after a reviewed UI change
+make test-a11y          # WCAG 2.1 AA gates: jest-axe components + axe/keyboard routes
 make test-mutation      # Stryker mutation testing
 make test-bats          # Bats coverage for Makefile / CI shell flows
 make test-memory-leak   # memlab leak detection
@@ -140,6 +141,24 @@ Two suites that used to run without asserting anything now fail closed:
 
 Never widen a retry budget, raise a leak allowance, or add an allowance for a leak your
 change introduced — fix the race or the retainer instead.
+
+### Accessibility (issue #317)
+
+The binding conformance target is **WCAG 2.1 AA**, enforced per rule at two layers by
+`make test-a11y` and by `.github/workflows/a11y-testing.yml`: `jest-axe` over rendered
+components in the client Jest suite, and `@axe-core/playwright` plus a keyboard sweep over
+every route in `src/test/a11y/routes.ts`. Lighthouse's accessibility score is a weighted
+category heuristic on two URLs and is defence in depth, not a substitute.
+
+Read [`docs/accessibility/acceptance-standard.md`](docs/accessibility/acceptance-standard.md)
+before changing UI. The axe tag list and the exception allowlist have exactly one home,
+`src/test/a11y/axe-config.ts`. Adding a page means adding it to `src/test/a11y/routes.ts`; a
+unit test fails if that registry drifts from `pages/`.
+
+Never make the gate pass by suppressing it — no `eslint-disable`, no axe rule removal, no
+`test.skip`, and never an `if (count > 0)` / `if (isVisible())` wrapper around an assertion.
+Accepted debt goes through the documented allowlist with a rule id, a scope, a reason, and a
+tracking issue.
 
 ### Running a single unit test
 
