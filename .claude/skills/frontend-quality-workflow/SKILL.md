@@ -36,17 +36,18 @@ and Markdown (honoring `.prettierignore`). `make lint` never mutates; it fails i
 anything is off. Formatting before linting means the gate validates already-formatted
 code, so a Prettier rewrite can never invalidate a green run.
 
-The aggregate `make lint` is `lint-next` + `lint-tsc` + `lint-md` + `lint-deps`. The
-rust-code-analysis metrics gate (`make lint-metrics`) is a **separate, host-only** gate
-(delivered by issue #224); it is intentionally not part of `make lint`. Run it
-explicitly when a change to `src/` could grow complexity.
+The aggregate `make lint` is eight prerequisites: `generate-localization` + `lint-next` +
+`lint-tsc` + `lint-md` + `lint-deps` + `lint-api-versions` + `lint-docker-policy` +
+`lint-headers`. The rust-code-analysis metrics gate (`make lint-metrics`) is a
+**separate, host-only** gate (delivered by issue #224); it is intentionally not part of
+`make lint`. Run it explicitly when a change to `src/` could grow complexity.
 
-The five npm-tool `make lint` gates — `lint-next`, `lint-tsc`, `lint-md`, `lint-deps`
-and `lint-headers` — run inside the dev container by default, locally and in CI alike;
-prefix with `EXEC_MODE=host` to run one directly on the host instead (for example
-`EXEC_MODE=host make lint-next`), which needs a host `bun install`. The aggregate's other
-two prerequisites, `generate-localization` and `lint-docker-policy`, are host-only in both
-modes and ignore `EXEC_MODE`, as is `lint-metrics`.
+The six npm-tool `make lint` gates — `lint-next`, `lint-tsc`, `lint-md`, `lint-deps`,
+`lint-api-versions` and `lint-headers` — run inside the dev container by default, locally
+and in CI alike; prefix with `EXEC_MODE=host` to run one directly on the host instead (for
+example `EXEC_MODE=host make lint-next`), which needs a host `bun install`. The aggregate's
+other two prerequisites, `generate-localization` and `lint-docker-policy`, are host-only in
+both modes and ignore `EXEC_MODE`, as is `lint-metrics`.
 
 ## Fix Each Gate At Its Source
 
@@ -68,6 +69,9 @@ modes and ignore `EXEC_MODE`, as is `lint-metrics`.
   shared UI from importing features (`no-shared-layers-to-features`,
   `no-shared-ui-to-features`), and keep feature directories kebab-case
   (`src-feature-name-kebab-case`). Move the code instead of relaxing the rule.
+- **API version invariant** (`make lint-api-versions`) — every user-service artifact must
+  derive from the single `USER_SERVICE_VERSION` pin. Move that one pin; never hardcode a
+  tag in a consumer URL or introduce a second version variable to make the check pass.
 - **Metrics gate** (`make lint-metrics`) — Mozilla rust-code-analysis enforces complexity
   budgets from `config/metrics-policy.json`. Reduce
   the complexity (extract a helper, use a typed lookup map, split a file by owner); never

@@ -67,13 +67,19 @@ setup() {
   assert_output_contains 'docker rm -f website-dev'
 }
 
-@test "names the container from DEV_CONTAINER when it is overridden" {
+@test "ignores a DEV_CONTAINER override and still inspects website-dev" {
+  # The container name is pinned by `container_name:` in docker-compose.yml, so an
+  # override could only ever point the guard at a container that does not exist --
+  # the fail-open path -- while `up` adopted the real website-dev unchecked. Pin
+  # that bypass shut.
   create_inspect_stub '/somewhere/else'
 
   run env PATH="$STUB_BIN_DIR:$PATH" EXPECTED_BIND='/home/dev/website' \
     DEV_CONTAINER='website-dev-alt' bash "$PROJECT_ROOT/$SCRIPT_REL"
   [ "$status" -eq 1 ]
-  assert_output_contains 'website-dev-alt'
+  assert_output_contains 'belongs to a different checkout'
+  assert_output_contains 'docker rm -f website-dev'
+  [[ "$output" != *'website-dev-alt'* ]]
 }
 
 # --- Everything else must fail OPEN --------------------------------------------

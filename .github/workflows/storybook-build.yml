@@ -24,6 +24,15 @@ on:
       # a story.
       - 'Dockerfile'
       - '.dockerignore'
+      # COPYed into the `base` stage the dev service runs from, so editing
+      # either rebuilds the image this job's Storybook binary comes from.
+      # dev-image-cache.yml watches the same pair for the same reason.
+      - 'checkNodeVersion.js'
+      - 'scripts/*.mjs'
+      # $(DEV_READY) runs `make ensure-dev`, which runs this guard on both sides
+      # of `up` and exits non-zero on a foreign or bindless container — so it can
+      # fail this job before Storybook is ever invoked.
+      - 'scripts/ci/check-dev-container-bind.sh'
       - 'docker-compose.yml'
       # Tracked, and interpolated into docker-compose.yml (WEBSITE_DOMAIN,
       # DEV_PORT, ...), so editing it changes how the container is built and

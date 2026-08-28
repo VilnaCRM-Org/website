@@ -412,6 +412,18 @@ STUB
   assert_log_contains 'docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d --no-recreate --wait dev'
 }
 
+@test "ci-setup refuses a dev container bound to a different checkout" {
+  # ci-setup is the documented precondition of every ci-test-* entrypoint, and
+  # those carry no $(DEV_READY) -- so if `--no-recreate` adopted another
+  # checkout's website-dev here, the whole CI lane would run against its /app
+  # bind and report green for the wrong source tree.
+  run_make_target ci-setup FAKE_DOCKER_APP_BIND=/somewhere/else
+  [ "$status" -ne 0 ]
+  assert_output_contains 'belongs to a different checkout'
+  run grep -cF -- '--wait dev' "$COMMAND_LOG"
+  [ "$output" -eq 0 ]
+}
+
 @test "ci-lint runs the lint phase through the parallel runner with grouped output" {
   run_make_target ci-lint
   [ "$status" -eq 0 ]
@@ -462,6 +474,18 @@ STUB
   run_make_target ci-mutation EXEC_MODE=host
   [ "$status" -eq 0 ]
   assert_log_contains 'bun x stryker run'
+}
+
+@test "test-mutation refuses a dev container bound to a different checkout" {
+  # This target force-recreates with --renew-anon-volumes, so from a second
+  # checkout it would DESTROY the other one's container and its anonymous
+  # node_modules volume rather than merely adopt it. The guard has to refuse
+  # before the recreate is ever issued.
+  run_make_target test-mutation FAKE_DOCKER_APP_BIND=/somewhere/else
+  [ "$status" -ne 0 ]
+  assert_output_contains 'belongs to a different checkout'
+  run grep -cF -- '--force-recreate' "$COMMAND_LOG"
+  [ "$output" -eq 0 ]
 }
 
 @test "ci-prod-setup starts prod and installs Chromium" {

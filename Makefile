@@ -73,7 +73,6 @@ TEST_DIR_EDGE               = $(TEST_DIR_BASE)/edge
 TEST_DIR_E2E                = $(TEST_DIR_BASE)/e2e
 TEST_DIR_VISUAL             = $(TEST_DIR_BASE)/visual
 
-# STRYKER_CMD is assembled with the executor prefix below, next to EXEC_MODE.
 STRYKER_SHARD_CONFIG        = stryker.shard.config.mjs
 MUTATION_SHARD_TOTAL        ?= 1
 MUTATION_SHARD_INDEX        ?= 0
@@ -247,7 +246,6 @@ endif
 # runner does not re-probe compose once per target.
 UNIT_TESTS                  = $(DEV_READY) $(PM_EXEC_ENV)
 CI_TESTS                    = $(PM_EXEC_ENV)
-STRYKER_CMD                 = $(DEV_READY) $(PM_EXEC) bun x stryker run
 
 PRETTIER_BIN                = $(PM_EXEC) $(BIN_DIR)/prettier
 MARKDOWNLINT_BIN            = $(PM_EXEC) $(BIN_DIR)/markdownlint
@@ -491,10 +489,15 @@ lint-headers: ## Verify the edge security-header policy (config/security-headers
 lint-docker-policy: ## Enforce the registry (no Docker Hub) + digest-pin policy on every Dockerfile
 	./scripts/ci/lint-dockerfile-policy.sh
 
-# generate-localization leads so the gitignored i18n bundle exists before the
-# first linter reads it. It is also a prerequisite of lint-deps, but that is
-# the LAST sub-target, which on a clean checkout left eslint and tsc resolving
-# a module that had not been written yet.
+# A SEQUENTIAL aggregate, as the help string says: generate-localization leads
+# so the gitignored i18n bundle exists before eslint and tsc read it. It is also
+# a prerequisite of lint-deps, but that is the LAST sub-target, which on a clean
+# checkout left eslint and tsc resolving a module that had not been written yet.
+# Parallelism is provided by `make ci-lint` (scripts/ci/run-parallel.sh), never
+# by `make -j` — under -j prerequisite ORDER is not a guarantee, and adding
+# generate-localization to each linter instead would race: run-parallel.sh runs
+# every lint target as its own make process, and the generator writes the single
+# pages/i18n/localization.json with a non-atomic fs.writeFileSync.
 lint: generate-localization lint-next lint-tsc lint-md lint-deps lint-api-versions lint-docker-policy lint-headers ## Runs all linters: ESLint, TypeScript, Markdown, dependency-cruiser, the API version invariant, the Dockerfile registry/digest policy, and the security-header gate in sequence.
 
 # DELIBERATE DIVERGENCE FROM THE npm-tool LINT GATES (lint-next/tsc/md/deps),
@@ -722,8 +725,18 @@ ci-test-contract: ## Run contract parity tests directly assuming deps are instal
 # command), so a gate does not pay for a Next dev server it never calls. There
 # is no HTTP endpoint to poll afterwards — `--wait` returns once the container
 # is running — so this deliberately does not depend on wait-for-dev.
+#
+# check-dev-container-bind.sh brackets the `up` exactly as ensure-dev does
+# (#399). `--no-recreate` adopts a foreign checkout's `website-dev` here too, and
+# this is the documented precondition of every ci-test-* entrypoint — those carry
+# no $(DEV_READY), so without the check a second checkout would run the whole CI
+# lane against the first one's /app bind. The pre-`up` call keeps a foreign
+# container from being started at all; the post-`up` call is the one that
+# actually holds, because two concurrent starts both pass the pre-check.
 ci-setup: create-network ## Prepare the shared dev environment for CI-oriented checks (idle container, no dev server)
+	@bash ./scripts/ci/check-dev-container-bind.sh
 	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_CI_DEV_FILE) up $(CI_SETUP_UP_FLAGS) --wait dev
+	@bash ./scripts/ci/check-dev-container-bind.sh
 
 ci-lint: $(DEV_PREREQ) ## Run the CI lint phase (ESLint, TypeScript, Markdown) with grouped, aggregated output
 	$(CI_LINT_RUNNER) $(CI_LINT_TARGETS)
@@ -827,8 +840,15 @@ memory-leak-dind: start-prod ## Run Memlab tests in isolated compose project (DI
 # ensure-dev deliberately will not do that (see its comment), so this target
 # reconciles explicitly — otherwise Stryker would run against a container still
 # made from the pre-build image and miss a just-added dependency.
+# The recreate needs check-dev-container-bind.sh even more than the
+# `--no-recreate` paths do: run from a second checkout it would DESTROY the other
+# one's container and its anonymous node_modules volume rather than merely adopt
+# it. Pre-`up` so it refuses before anything is torn down, post-`up` so a
+# concurrent recreate cannot hand this run someone else's container.
 test-mutation: build ## Run mutation tests using Stryker after building the app
+	@bash ./scripts/ci/check-dev-container-bind.sh
 	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) up -d --force-recreate --renew-anon-volumes dev
+	@bash ./scripts/ci/check-dev-container-bind.sh
 	$(PM_EXEC) bun x stryker run
 
 # The shard variables are injected with `env` INSIDE the executor, not as a

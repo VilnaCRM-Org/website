@@ -31,7 +31,14 @@
 # that one is positively wrong, not unknown.
 set -euo pipefail
 
-CONTAINER="${DEV_CONTAINER:-website-dev}"
+# Not overridable. The name is pinned by `container_name: website-dev` on the
+# dev service in docker-compose.yml, and every recipe passes an explicit
+# `-f docker-compose.yml`, so nothing this repo runs can start the container
+# under another name. An override could therefore only point the guard at a
+# container that does not exist — the fail-open path — while `up` adopted the
+# real `website-dev` unchecked. EXPECTED_BIND stays overridable; the bats suite
+# genuinely needs it.
+CONTAINER='website-dev'
 
 command -v docker >/dev/null 2>&1 || exit 0
 

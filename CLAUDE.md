@@ -96,10 +96,13 @@ make storybook-build  # Build static Storybook
 Every gate that drives an npm tool — ESLint, tsc, markdownlint, dependency-cruiser, Jest,
 Stryker, Storybook, the contract linter — runs **inside the dev container**, locally and in
 CI alike (issue #399), so `make lint-tsc` on a laptop and `make lint-tsc` on a runner are
-the same command against the same image. Targets that drive Docker itself or a toolchain
-the image does not ship stay on the host in both modes: `lint-metrics`, `test-bats`,
-`generate-localization`, `build-out`, and the prod-stack suites (`test-e2e`, `test-visual`,
-`test-memory-leak`, `load-tests`, `lighthouse-*`). Append `EXEC_MODE=host` to bypass Docker and run a target
+the same command against the same image. Targets that drive Docker itself, audit the dev
+image, or need a toolchain the image does not ship stay on the host in both modes — among
+them `lint-metrics`, `test-bats`, `generate-localization`, `build-out`, the prod-stack
+suites (`test-e2e`, `test-visual`, `test-memory-leak`, `load-tests`, `lighthouse-*`), and
+the host-only lint gates `lint-docker-policy`, `lint-openapi` and `lint-workflows`. Watch
+`lint-docker-policy`: it is a member of the `make lint` aggregate, so part of that run
+executes on the host by design. Append `EXEC_MODE=host` to bypass Docker and run a target
 straight from `node_modules/.bin` (for example `EXEC_MODE=host make start` runs `next dev`
 directly); that escape hatch exists for the Husky hooks, the `run-*-dind` wrappers, and the
 Lighthouse audits, and it requires a host `bun install`. `EXEC_MODE` accepts only
