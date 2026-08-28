@@ -141,7 +141,7 @@ Run before claiming the move is done:
 ```bash
 make format     # Prettier — run first
 make lint-deps  # dependency-cruiser boundary + naming rules
-make lint       # full gate: ESLint, TypeScript, markdownlint, lint-deps
+make lint       # full gate: ESLint, TypeScript, markdownlint, lint-deps, lint-api-versions
 ```
 
 `make format` normalizes formatting (Prettier `printWidth` 100), so there is no

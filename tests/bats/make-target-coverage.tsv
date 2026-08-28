@@ -69,6 +69,7 @@ new-logs	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Docker C
 stop	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Docker Compose invocation.
 check-node-version	bats	tests/bats/makefile_targets.bats	Validated with a stubbed node invocation.
 lint-deps	ci	.github/workflows/static-testing.yml	Executed through `make lint`, which depends on `lint-deps`.
+lint-api-versions	bats	tests/bats/makefile_targets.bats	Hermetic user-service version invariant (#381); runs inside `make lint` and CI_LINT_TARGETS, unlike the network-bound lint-contracts.
 generate-localization	ci	.github/workflows/static-testing.yml	Executed through `make lint`, whose `lint-deps` leg depends on it; also a prerequisite of `storybook-build`, `ci-test-mutation` and `test-mutation-shard`.
 lint-headers	ci	.github/workflows/static-testing.yml	Executed through `make lint`, which depends on `lint-headers`.
 lint-contracts	bats	tests/bats/makefile_targets.bats	Executed directly by contract-testing.yml; deliberately outside `make lint` because the drift check needs network.
@@ -103,3 +104,4 @@ test-load-swagger	bats	tests/bats/makefile_targets.bats	Validated as an alias th
 pr-comments	bats	tests/bats/makefile_targets.bats	Validated with a stubbed get-pr-comments.sh helper and PR/FORMAT argument dispatch.
 lint-metrics	bats	tests/bats/makefile_targets.bats	Validated host-only: ensure-rca.sh provisioning (idempotent) plus lint-metrics.sh policy enforcement against the committed policy with a stubbed analyzer.
 lint-docker-policy	ci	.github/workflows/static-testing.yml	Executed through `make lint`, which depends on `lint-docker-policy`.
+lint-workflows	bats	tests/bats/makefile_targets.bats	Validated host-only: the digest-pinned zizmor image, the committed severity/confidence floor, and the .github/workflows target, with docker stubbed. Script-level behaviour is covered by tests/bats/lint_workflows.bats.

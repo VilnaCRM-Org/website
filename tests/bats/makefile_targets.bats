@@ -709,6 +709,30 @@ run_openapi_drift_script() {
   [ "$makefile_digest" = "$script_digest" ]
 }
 
+@test "lint-workflows audits the workflows through the digest-pinned zizmor image host-only" {
+  reset_command_log
+
+  mkdir -p "$MAKEFILE_SANDBOX/.github/workflows"
+
+  # A token is supplied so the target does not fall back to `gh auth token` and
+  # pull a real credential into the command log.
+  run_make_target lint-workflows GH_TOKEN=stub-token
+  [ "$status" -eq 0 ]
+
+  # The gate must reach zizmor by immutable digest, at the committed floor, and
+  # aimed at the workflows -- a dropped threshold or a tag pin would leave a
+  # green check that audits nothing.
+  assert_log_contains 'ghcr.io/zizmorcore/zizmor@sha256:'
+  assert_log_contains '--min-severity medium'
+  assert_log_contains '--min-confidence high'
+  assert_log_contains '.github/workflows/'
+
+  # Host-only: zizmor is a container CLI, never routed through the dev
+  # container's package manager.
+  run grep -E 'bun|npm' "$COMMAND_LOG"
+  [ "$status" -ne 0 ]
+}
+
 @test "contract targets shell out to Node and cover fetch, lint and baseline refresh" {
   reset_command_log
 
@@ -723,4 +747,22 @@ run_openapi_drift_script() {
   assert_log_contains 'node scripts/fetchSwaggerSchema.mjs'
   assert_log_contains 'node scripts/fetchGraphqlSchema.mjs'
   assert_log_contains 'node scripts/contracts/lint-contracts.mjs --update-baseline'
+}
+
+# Issue #381 / F4: the user-service version invariant is hermetic, so unlike
+# lint-contracts it is part of the `lint` aggregate and runs on every PR.
+@test "lint-api-versions shells out to the hermetic version-invariant check" {
+  reset_command_log
+
+  run_make_target lint-api-versions EXEC_MODE=host
+  [ "$status" -eq 0 ]
+  assert_log_contains 'node scripts/contracts/check-api-versions.mjs'
+}
+
+@test "the lint aggregate includes the API version invariant" {
+  run grep -E '^lint: .*lint-api-versions' "$PROJECT_ROOT/Makefile"
+  [ "$status" -eq 0 ]
+
+  run grep -E '^CI_LINT_TARGETS .*lint-api-versions' "$PROJECT_ROOT/Makefile"
+  [ "$status" -eq 0 ]
 }

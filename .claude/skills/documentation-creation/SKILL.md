@@ -96,8 +96,8 @@ make lint
 ```
 
 `make format` is Prettier and MUST run before any lint target. `make lint` aggregates
-`lint-next` (ESLint), `lint-tsc` (TypeScript), `lint-md` (markdownlint), and `lint-deps`
-(dependency-cruiser). If the doc documents a code change, also run the test suites the
+`lint-next` (ESLint), `lint-tsc` (TypeScript), `lint-md` (markdownlint), `lint-deps`
+(dependency-cruiser), and `lint-api-versions` (the user-service pin invariant). If the doc documents a code change, also run the test suites the
 change touches (`make test-unit-client`, `make test-unit-server`, `make test-e2e`,
 `make test-visual`); prefix unit runs with `EXEC_MODE=host` to run locally without
 Docker.

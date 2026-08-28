@@ -76,6 +76,24 @@ the underlying binary with relaxed flags to bypass a gate.
 - **Never:** weaken a rule in `.dependency-cruiser.js`; move the code to the layer
   that is allowed to own it.
 
+## API inventory — `make lint-api-versions` (issue #381)
+
+- **Command:** `make lint-api-versions`
+  (`node scripts/contracts/check-api-versions.mjs`). Hermetic — no network, no
+  Docker — so it is part of the `lint` aggregate and `CI_LINT_TARGETS`, unlike the
+  network-bound `make lint-contracts`.
+- **Config:** `.env` and `.env.example`; the single pin is `USER_SERVICE_VERSION`.
+- **Enforces:** every user-service consumer derives from one pin — no second
+  version variable, no hardcoded tag in a root config file, no consumer pointing
+  at a different repository or ref, and no disagreement between `.env` and
+  `.env.example`.
+- **Common failures:** bumping the pin in `.env` but not `.env.example`; pasting a
+  literal tag into a URL instead of interpolating `${USER_SERVICE_VERSION}`.
+- **Owner:**
+  [../../contract-testing-workflow/SKILL.md](../../contract-testing-workflow/SKILL.md).
+- **Never:** add a second version variable or exclude a file from the scan; make
+  the consumer derive from the pin.
+
 ## Metrics — `make lint-metrics` (planned, issue #224)
 
 This gate is introduced by issue #224 and is **not yet present on `main`**; the
