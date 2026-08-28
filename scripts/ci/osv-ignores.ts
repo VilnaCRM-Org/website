@@ -94,18 +94,6 @@ function stripComment(line: string): string {
 }
 
 /**
- * Read the `[[IgnoredVulns]]` entries out of `config/osv-scanner.toml`.
- *
- * This is a deliberately restricted reader rather than a general TOML parser: the repository
- * has no TOML dependency, and pulling one in to read a file whose format we ourselves control
- * is not worth the supply-chain surface — in a change whose whole point is dependency risk,
- * least of all. It therefore FAILS CLOSED, throwing on any construct it does not recognise,
- * so an entry can never be silently skipped and thereby escape validation. osv-scanner rejects
- * unknown keys too (exit 127, verified against 2.5.0), but only in the census, which reads this
- * file directly; the blocking diff scans under the RENDERED policy, so this reader is the only
- * check a pull request gets.
- */
-/**
  * Validate one `key = value` line and record it on the open `[[IgnoredVulns]]` entry.
  *
  * Split out of parseIgnoreEntries so both stay inside the repo's complexity budget, and along
@@ -168,6 +156,18 @@ function readEntryField(
   return { key, value };
 }
 
+/**
+ * Read the `[[IgnoredVulns]]` entries out of `config/osv-scanner.toml`.
+ *
+ * This is a deliberately restricted reader rather than a general TOML parser: the repository
+ * has no TOML dependency, and pulling one in to read a file whose format we ourselves control
+ * is not worth the supply-chain surface — in a change whose whole point is dependency risk,
+ * least of all. It therefore FAILS CLOSED, throwing on any construct it does not recognise,
+ * so an entry can never be silently skipped and thereby escape validation. osv-scanner rejects
+ * unknown keys too (exit 127, verified against 2.5.0), but only in the census, which reads this
+ * file directly; the blocking diff scans under the RENDERED policy, so this reader is the only
+ * check a pull request gets.
+ */
 export function parseIgnoreEntries(toml: string, source = DEFAULT_CONFIG): IgnoreEntry[] {
   const entries: IgnoreEntry[] = [];
   let current: IgnoreEntry | undefined;
