@@ -1,0 +1,246 @@
+name: release audit
+
+# Audit trail and alerting for release creation and automated pushes to main
+# (issue #383).
+#
+# LOOP SAFETY -- the single most important property of this file. This workflow
+# is triggered BY pushes to main, and the autorelease bot pushes CHANGELOG.md to
+# main, so it must never itself write to the repository. It holds contents: read
+# only, checks out with persist-credentials: false, and its only writes are
+# issues/comments made with GITHUB_TOKEN. Events raised by GITHUB_TOKEN do not
+# start new workflow runs, so neither the ledger comment nor the alert issue can
+# re-enter this workflow. The `contents` scope is deliberately never elevated
+# past read anywhere in this file.
+#
+# WHY THREE EVENT PATHS -- the release bot commits `chore(release): vX.Y.Z
+# [skip ci]`, and GitHub skips push-triggered runs whose head commit message
+# contains [skip ci]. A push-only audit would therefore be blind to exactly the
+# push it exists to audit. `release` is not skip-ci-able and carries the tag from
+# which that commit is resolved; the daily sweep is the backstop for whatever
+# both miss.
+#
+# The `release` path additionally depends on autorelease.yml creating the release
+# under a GitHub App installation token rather than the default GITHUB_TOKEN --
+# events raised by GITHUB_TOKEN do not start workflow runs. If that ever changes,
+# the release path goes silent and only the sweep still records the commit.
+on:
+  release:
+    types:
+      - published
+      - created
+      - edited
+      - deleted
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: '17 5 * * *'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Audit path to exercise'
+        type: choice
+        options:
+          - sweep
+          - push
+          - release
+        default: sweep
+      ref:
+        description: 'Commit SHA (mode=push) or tag (mode=release) to audit'
+        type: string
+        default: ''
+      dry_run:
+        description: 'Print the record to the job summary instead of writing the ledger'
+        type: boolean
+        default: true
+
+permissions: {}
+
+# Deliberately NOT keyed on github.ref, unlike the rest of this repo: a release
+# event runs on refs/tags/vX.Y.Z while a push runs on refs/heads/main, and both
+# mutate the same ledger issue, so a ref-keyed group would let two runs race to
+# create it. A constant group serializes every run of this workflow against that
+# shared state. cancel-in-progress is false so an audit already in flight is never
+# aborted -- but GitHub keeps only ONE pending run per group, so a third event
+# arriving during a run evicts the pending one. The sweep re-derives dropped push
+# records from main's commit history; a dropped release `edited`/`deleted`
+# escalation is not recoverable, which is one more reason the ledger is a monitored
+# projection rather than a system of record (docs/release-audit.md).
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      # Read commits (author, committer, signature verification) via the API.
+      contents: read
+      # The ledger comment and the ci-alert escalation. This is the ONLY write
+      # scope in this workflow.
+      issues: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      AUDIT_REPO: ${{ github.repository }}
+      AUDIT_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      AUDIT_WORKFLOW_REF: ${{ github.workflow_ref }}
+      AUDIT_ACTOR: ${{ github.actor }}
+      AUDIT_TRIGGERING_ACTOR: ${{ github.triggering_actor }}
+      # Login of the GitHub App autorelease.yml authenticates as, e.g.
+      # `vilnacrm-release[bot]`. Set it under Settings -> Secrets and variables
+      # -> Actions -> Variables. While unset, bot pushes and releases are still
+      # RECORDED and only the "unexpected bot" escalation is suppressed -- a
+      # guessed default would raise a false alert on every single release.
+      AUDIT_EXPECTED_BOT: ${{ vars.RELEASE_BOT_ACTOR }}
+    steps:
+      # Always run the script as it exists on main, never a tagged or PR revision.
+      # This bounds the `release` and `schedule` paths to reviewed code, but note
+      # the honest limit: on the `push` trigger `main` IS the pushed commit, so a
+      # merged change to this script does audit its own push. That is acceptable
+      # because reaching main requires review, and because the ledger is a
+      # monitored projection rather than a tamper-evident record — the
+      # organisation audit log is (see docs/release-audit.md).
+      # Sparse checkout keeps this to one file; no credentials are persisted.
+      - name: Check out the audit script from main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          persist-credentials: false
+          sparse-checkout: scripts/ci/release-audit.sh
+          sparse-checkout-cone-mode: false
+
+      # Every event value reaches the script through env:. Nothing derived from
+      # a release body, tag, or commit message is interpolated with ${{ }} inside
+      # a run: block -- release notes are built from attacker-influencable commit
+      # messages, which is the template-injection class.
+      - name: Record the release event
+        if: github.event_name == 'release'
+        env:
+          AUDIT_EVENT: release
+          AUDIT_RELEASE_ACTION: ${{ github.event.action }}
+          AUDIT_RELEASE_ID: ${{ github.event.release.id }}
+          AUDIT_RELEASE_TAG: ${{ github.event.release.tag_name }}
+          AUDIT_RELEASE_URL: ${{ github.event.release.html_url }}
+          AUDIT_RELEASE_AUTHOR: ${{ github.event.release.author.login }}
+          AUDIT_RELEASE_AUTHOR_TYPE: ${{ github.event.release.author.type }}
+          AUDIT_RELEASE_DRAFT: ${{ github.event.release.draft }}
+          AUDIT_RELEASE_PRERELEASE: ${{ github.event.release.prerelease }}
+          AUDIT_RELEASE_UPDATED_AT: ${{ github.event.release.updated_at }}
+          AUDIT_SENDER: ${{ github.event.sender.login }}
+          AUDIT_SENDER_TYPE: ${{ github.event.sender.type }}
+        run: bash scripts/ci/release-audit.sh
+
+      - name: Record the push to main
+        if: github.event_name == 'push'
+        env:
+          AUDIT_EVENT: push
+          AUDIT_BEFORE: ${{ github.event.before }}
+          AUDIT_AFTER: ${{ github.event.after }}
+          AUDIT_FORCED: ${{ github.event.forced }}
+          AUDIT_PUSHER_NAME: ${{ github.event.pusher.name }}
+          # github.event.pusher.email is deliberately NOT passed: it is the
+          # account's push email and the ledger issue is public, indexed, and
+          # mailed to every subscriber. Do not restore it by symmetry.
+          AUDIT_SENDER: ${{ github.event.sender.login }}
+          AUDIT_SENDER_TYPE: ${{ github.event.sender.type }}
+        run: bash scripts/ci/release-audit.sh
+
+      # Closes the [skip ci] hole: reconciles the last day of main against the
+      # ledger and records anything the push trigger never saw.
+      - name: Sweep main for unaudited commits
+        if: github.event_name == 'schedule'
+        env:
+          AUDIT_EVENT: sweep
+        run: bash scripts/ci/release-audit.sh
+
+      # Manual exercise path. Defaults to a dry run, which prints the record to
+      # the job summary and writes nothing, so the pipeline can be proven
+      # end-to-end against a real past commit or tag without cutting a release.
+      - name: Manual audit run
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          AUDIT_EVENT: ${{ inputs.mode }}
+          AUDIT_AFTER: ${{ inputs.ref }}
+          AUDIT_RELEASE_TAG: ${{ inputs.ref }}
+          AUDIT_RELEASE_ACTION: published
+          AUDIT_SENDER: ${{ github.actor }}
+          AUDIT_DRY_RUN: ${{ inputs.dry_run && '1' || '0' }}
+        run: bash scripts/ci/release-audit.sh
+
+      # The failure handler below files one issue per outage, and until now
+      # nothing ever closed it: the exact-title refresh would then comment onto a
+      # stale alert forever, which is the alert fatigue ci-health-alerts.yml and
+      # openapi-drift.yml both close their issues to avoid. A later successful run
+      # is the recovery signal, so it does the closing here. The constant
+      # concurrency group above serializes every run of this workflow, so unlike
+      # ci-health-alerts.yml no stale-success guard is needed -- no older run can
+      # still be in flight to close an alert a newer failure just filed.
+      - name: Close the failure alert once the audit recovers
+        if: success() && (github.event_name != 'workflow_dispatch' || inputs.dry_run != true)
+        env:
+          # Byte-identical to the failure step's title, because the lookup below
+          # matches on it exactly; a bats guard pins the two together.
+          ALERT_TITLE: 'Release audit: the audit workflow failed'
+          AUDIT_EVENT_NAME: ${{ github.event_name }}
+        run: |
+          # A cleanup blip must never turn a green audit run red -- that would trip
+          # the failure handler and file the very alert this step is closing.
+          if ! listed="$(gh issue list --repo "$AUDIT_REPO" --label ci-alert --state open \
+            --search "$ALERT_TITLE in:title" --json number,title)"; then
+            echo "::warning::could not list open audit alerts; any open one stays open"
+            exit 0
+          fi
+          # The exact-title filter is load-bearing: `--search ... in:title` is fuzzy,
+          # so a sloppy match would close a force-push or unexpected-bot escalation.
+          existing="$(printf '%s' "$listed" |
+            jq -r --arg t "$ALERT_TITLE" 'map(select(.title == $t)) | .[0].number // empty')"
+          [ -n "$existing" ] || exit 0
+          # Same reasoning as the list above, for the same reason: these are the
+          # last two calls in a step whose whole job is cleanup, so a rejected
+          # mutation -- or an alert someone closed between the lookup and here --
+          # must warn and leave the alert open, never fail the green run and trip
+          # the failure handler into re-filing it.
+          if ! gh issue comment "$existing" --repo "$AUDIT_REPO" \
+            --body "Recovered: the audit run for a \`${AUDIT_EVENT_NAME}\` event succeeded. Run: ${AUDIT_RUN_URL}" >/dev/null; then
+            echo "::warning::could not comment on audit alert #${existing}; it stays open"
+            exit 0
+          fi
+          if ! gh issue close "$existing" --repo "$AUDIT_REPO" >/dev/null; then
+            echo "::warning::could not close audit alert #${existing}; it stays open"
+          fi
+
+      # The script only alerts on runs that SUCCEED, so a failed audit -- an API
+      # outage, a bad token, a broken script -- would otherwise be a red X nobody
+      # is notified about, and the ledger would stop recording in silence. This
+      # step files it onto the same ci-alert label the escalations use, with the
+      # same exact-title refresh, and needs no scope the job does not already hold.
+      # It lives here rather than in ci-health-alerts.yml because that workflow's
+      # workflow_run trigger filters on branches: main, and a release run's
+      # head_branch is the tag.
+      - name: Alert on a failed audit run
+        if: failure()
+        env:
+          ALERT_TITLE: 'Release audit: the audit workflow failed'
+          AUDIT_EVENT_NAME: ${{ github.event_name }}
+        run: |
+          gh label create ci-alert --repo "$AUDIT_REPO" --color B60205 \
+            --description 'Deploy/release/red-main CI health alerts' >/dev/null 2>&1 || true
+          # `gh issue create` resolves every --label against the repo and errors on
+          # an unknown one, and the script provisions this one only on a non-dry run
+          # that gets far enough -- which the very first failure, by definition, did
+          # not. Same idempotent idiom, same colour and description as ensure_label.
+          gh label create release-audit --repo "$AUDIT_REPO" --color 0E8A16 \
+            --description 'Audit trail of releases and pushes to main' >/dev/null 2>&1 || true
+          existing="$(gh issue list --repo "$AUDIT_REPO" --label ci-alert --state open \
+            --search "$ALERT_TITLE in:title" --json number,title |
+            jq -r --arg t "$ALERT_TITLE" 'map(select(.title == $t)) | .[0].number // empty')"
+          body="$(printf '%s\n\n%s\n' \
+            "The audit run for a \`${AUDIT_EVENT_NAME}\` event failed, so its ledger record is missing -- or partial, if the run died after the ledger comment was posted. Check the ledger issue rather than assuming either. The daily sweep re-derives commits on \`main\`, but not a release edit or deletion." \
+            "Run: ${AUDIT_RUN_URL}")"
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$AUDIT_REPO" --body "$body" >/dev/null
+          else
+            gh issue create --repo "$AUDIT_REPO" --label ci-alert --label release-audit \
+              --title "$ALERT_TITLE" --body "$body" >/dev/null
+          fi

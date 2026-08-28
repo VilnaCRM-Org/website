@@ -143,7 +143,7 @@ EOF
   reset_command_log
   run_make_target format CI=1
   [ "$status" -eq 0 ]
-  assert_log_contains 'prettier **/*.{js,jsx,ts,tsx,json,css,scss,md} --write --ignore-path .prettierignore'
+  assert_log_contains 'prettier **/*.{js,jsx,mjs,ts,tsx,json,css,scss,md} --write --ignore-path .prettierignore'
 
   reset_command_log
   run_make_target husky
@@ -350,6 +350,7 @@ STUB
   assert_output_contains '===== lint-tsc ====='
   assert_output_contains '===== lint-md ====='
   assert_output_contains '===== lint-headers ====='
+  assert_output_contains '===== lint-prod-guardrails ====='
 }
 
 @test "ci-test runs the dev-side test phase through the parallel runner" {
@@ -656,6 +657,36 @@ run_openapi_drift_script() {
   # Host-only: zizmor is a container CLI, never routed through the dev
   # container's package manager.
   run grep -E 'bun|npm' "$COMMAND_LOG"
+  [ "$status" -ne 0 ]
+}
+
+@test "lint-security-txt validates the committed RFC 9116 security.txt" {
+  reset_command_log
+
+  # Run the real gate against the real committed policy file (the lint-metrics
+  # precedent): a stubbed check would prove only that the recipe fires, not that
+  # the shipped security.txt still satisfies RFC 9116 and has expiry runway.
+  mkdir -p "$MAKEFILE_SANDBOX/public/.well-known"
+  cp "$PROJECT_ROOT/public/.well-known/security.txt" "$MAKEFILE_SANDBOX/public/.well-known/"
+
+  run_make_target lint-security-txt
+  [ "$status" -eq 0 ]
+  assert_output_contains 'security-txt: OK'
+
+  # Pure bash: never routed through the dev container or the package manager.
+  run grep -E 'docker|bun' "$COMMAND_LOG"
+  [ "$status" -ne 0 ]
+}
+
+@test "lint-prod-guardrails shells out to the hermetic policy script" {
+  reset_command_log
+
+  run_make_target lint-prod-guardrails CI=1
+  [ "$status" -eq 0 ]
+  assert_log_contains 'node scripts/ci/lint-prod-guardrails.mjs'
+
+  # Hermetic: no container, no package manager, and no network client.
+  run grep -E 'docker|bun|curl' "$COMMAND_LOG"
   [ "$status" -ne 0 ]
 }
 

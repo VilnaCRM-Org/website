@@ -45,19 +45,24 @@ under `scripts/` that ship outside the Next.js bundle (today the CloudFront Func
 handlers `scripts/cloudfront_routing.js` and `scripts/cloudfront_security_headers.js`,
 the latter applying `config/security-headers.json` to every production response —
 see [docs/security-headers.md](docs/security-headers.md)); specs live in
-`src/test/edge/**/*.test.ts` and
-the layer is pinned at 100% per-file coverage. Integration specs run in a jsdom-with-fetch
-env (`TEST_ENV=integration`) from `tests/integration/**/*.integration.test.{ts,tsx}` and
-enforce a global 100% coverage sweep over `src/`. Contract specs run in a node env
-(`TEST_ENV=contract`) from `tests/contract/**/*.contract.test.ts`; they boot the Mockoon
-mock the e2e suite runs against and hold every response against the committed
+`src/test/edge/**/*.test.ts` and the layer is pinned at 100% per-file coverage. The
+routing handler is **deny-by-default** since issue #383 — a path outside its allow-list
+gets a synthetic 404 rather than reaching the S3 origin — so an edge spec must cover both
+halves: that every shape the export ships still passes through, and that everything else
+is blocked. Integration specs run in a jsdom-with-fetch env (`TEST_ENV=integration`) from
+`tests/integration/**/*.integration.test.{ts,tsx}` and enforce a global 100% coverage sweep
+over `src/`. Contract specs run in a node env (`TEST_ENV=contract`) from
+`tests/contract/**/*.contract.test.ts`; they boot the Mockoon mock the e2e suite runs
+against and hold every response against the committed
 `contracts/user-service/openapi.json` (issue #350). E2E and visual specs are Playwright across
 chromium, firefox, and webkit (`src/test/e2e/**/*.spec.ts`, `src/test/visual/**/*.spec.ts`);
 visual snapshots sit in adjacent `*-snapshots/` folders. Run all three unit layers with
 `make test-unit-all`.
 
 Add a specialized suite when the change touches its concern: `make test-mutation` (test
-strength), `make test-bats` (Makefile and CI shell flows), `make test-memory-leak` (leaks),
+strength), `make test-bats` (Makefile targets, `scripts/ci/` policy scripts, and CI shell
+flows — required when you add a Make target or change a workflow's `name:`),
+`make test-memory-leak` (leaks),
 `make load-tests` (traffic, K6), and `make lighthouse-desktop` / `make lighthouse-mobile`
 (performance, accessibility, best practices).
 

@@ -23,6 +23,15 @@ jobs:
         with:
           persist-credentials: false
 
+      # The validator shells out to `node scripts/ci/verify-edge-allowlist.mjs`,
+      # which uses readdirSync({recursive:true}) string returns (Node >= 20.1).
+      # Without this the gate would run on whatever Node the runner image happens
+      # to ship, so a runner-image bump could break or silently weaken it.
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+
       - name: Build the production static export
         run: make build-out
 

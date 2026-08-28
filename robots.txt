@@ -1,12 +1,28 @@
-User-agent: *
-Disallow: /cgi-bin/
-Disallow: /tmp/
-Disallow: /junk/
-Disallow: /private/
-Disallow: /hidden/
+# robots.txt for the VilnaCRM public marketing site.
+#
+# NOT PUBLISHED YET. Production is a Next.js static export (next.config.js sets
+# `output: 'export'`), which copies only `public/` into `out/`. This file lives at
+# the repo root, so it is not part of the deployed artifact and no crawler reads
+# it today. Moving it under `public/` and shipping the sitemap.xml it references
+# is issue #339 (the SEO surface); this file is kept correct so that move stays a
+# pure `git mv`.
+#
+# Until issue #383 the Sitemap directive pointed at a foreign preview-hosting
+# project subdomain on a shared, self-service namespace — a host anyone could
+# register, on a site deployed to S3 + CloudFront. It was never ours to point at,
+# and whoever claimed that project would have inherited the brand association
+# this file granted it. The five placeholder `Disallow:` directories removed
+# alongside it (/cgi-bin/, /tmp/, /junk/, /private/, /hidden/) existed in no
+# build of this site; robots.txt is world-readable, so they advertised
+# "interesting" paths while protecting nothing.
 
-# Allow all agents to access the public content
+User-agent: *
 Allow: /
 
-# Sitemap location
-Sitemap: https://uk-deploy.vercel.app/
+# Absolute URL on the canonical production origin. Crawlers discard a Sitemap
+# declared on a host other than the one serving the robots.txt, so this must
+# track the origin the site is actually deployed to (the `PROD_BUCKET_NAME`
+# repository variable, documented in docs/deployment-runbook.md). A static file
+# cannot interpolate that, so src/test/unit/robots-txt.test.ts keeps the
+# two in step. The sitemap itself ships with issue #339.
+Sitemap: https://vilnacrm.com/sitemap.xml

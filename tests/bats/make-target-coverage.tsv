@@ -104,3 +104,6 @@ pr-comments	bats	tests/bats/makefile_targets.bats	Validated with a stubbed get-p
 lint-metrics	bats	tests/bats/makefile_targets.bats	Validated host-only: ensure-rca.sh provisioning (idempotent) plus lint-metrics.sh policy enforcement against the committed policy with a stubbed analyzer.
 lint-docker-policy	ci	.github/workflows/static-testing.yml	Executed through `make lint`, which depends on `lint-docker-policy`.
 lint-workflows	bats	tests/bats/makefile_targets.bats	Validated host-only: the digest-pinned zizmor image, the committed severity/confidence floor, and the .github/workflows target, with docker stubbed. Script-level behaviour is covered by tests/bats/lint_workflows.bats.
+lint-security-txt	bats	tests/bats/makefile_targets.bats	Executed through `make lint`; the target itself is validated against the committed RFC 9116 file, and check-security-txt.sh has its own suite in check_security_txt.bats.
+lint-prod-guardrails	bats	tests/bats/makefile_targets.bats	Executed through `make lint` and `make ci-lint`; the target shells out to the hermetic policy script, whose assertions are covered by prod_guardrails.bats.
+release-audit-dry-run	bats	tests/bats/release_audit.bats	Host-only dry run of the release audit; the script it wraps is covered end to end (record, dedup, escalation, sweep, no-git invariant) by release_audit.bats.

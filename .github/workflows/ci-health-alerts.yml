@@ -5,8 +5,21 @@ on:
     workflows:
       - website
       - Generate Changelog and Create Release
+      # CodeQL, so a scan that fails on main (a new blocking alert, or the
+      # weekly re-scan finding one) reaches the same tracking issue (#383).
+      - security testing
     types:
       - completed
+    # `security testing` also runs on every pull request; without this filter
+    # every PR run would dispatch this workflow and queue on its shared
+    # concurrency group. workflow_run.branches filters on the branch the
+    # TRIGGERING run executed on, and `website` / `Generate Changelog and Create
+    # Release` both trigger only on push to main, so this is behaviour-neutral
+    # for them. The step-level `event != 'pull_request'` guard below covers the
+    # one case this filter cannot: a fork pull request whose head branch is
+    # itself named `main`.
+    branches:
+      - main
   schedule:
     - cron: '0 6 * * *'
 
@@ -34,13 +47,17 @@ jobs:
       contents: read
       issues: write
       # commits/{ref}/check-runs (red-main sweep) needs Checks read; gh run list
-      # (recovery confirmation) needs Actions read.
+      # (recovery confirmation) needs Actions read; code-scanning/alerts (the
+      # finding digest attached to a failed security scan) needs Security-events
+      # read.
       checks: read
       actions: read
+      security-events: read
     steps:
-      - name: Alert on a failed or timed-out deploy or release run
+      - name: Alert on a failed or timed-out monitored run
         if: >-
           github.event_name == 'workflow_run' &&
+          github.event.workflow_run.event != 'pull_request' &&
           (github.event.workflow_run.conclusion == 'failure' ||
           github.event.workflow_run.conclusion == 'timed_out')
         env:
@@ -56,16 +73,43 @@ jobs:
           title="CI health: '$WORKFLOW_NAME' workflow is failing"
           existing="$(gh issue list --label ci-alert --state open \
             --search "$title in:title" --json number --jq '.[0].number')"
+          # A failed scan is only actionable with the findings attached, so list
+          # them inline. The predicate mirrors scripts/ci/code-scanning-gate.sh
+          # (security severity critical/high, or rule severity error);
+          # tests/bats/security_workflows.bats pins the pair against drift.
+          # Failing to read is not fatal -- the issue is still worth filing with
+          # just the run link.
+          digest=""
+          if [ "$WORKFLOW_NAME" = "security testing" ]; then
+            digest="$(gh api -X GET "repos/$GITHUB_REPOSITORY/code-scanning/alerts" \
+              -f ref=refs/heads/main -f state=open -f tool_name=CodeQL \
+              -F per_page=100 --paginate --jq '
+                .[]
+                | (.rule.security_severity_level // "" | ascii_downcase) as $sec
+                | (.rule.severity // "" | ascii_downcase) as $sev
+                | select($sec == "critical" or $sec == "high" or $sev == "error")
+                | (if $sec == "" then $sev else $sec end) as $label
+                | (.most_recent_instance.location.path // "n/a") as $path
+                | "- [\($label)] \(.rule.id) in \($path) — \(.html_url)"
+              ' || true)"
+          fi
+          # Empty for every other monitored workflow, so their message bodies are
+          # byte-identical to before this step learned about code scanning.
+          suffix=""
+          if [ -n "$digest" ]; then
+            suffix="$(printf '\n\nOpen blocking code-scanning alerts on main:\n\n%s' "$digest")"
+          fi
           if [ -n "$existing" ]; then
-            gh issue comment "$existing" --body "Still failing: $RUN_URL"
+            gh issue comment "$existing" --body "Still failing: ${RUN_URL}${suffix}"
           else
             gh issue create --label ci-alert --title "$title" \
-              --body "The '$WORKFLOW_NAME' workflow failed. Latest run: $RUN_URL"
+              --body "The '$WORKFLOW_NAME' workflow failed. Latest run: ${RUN_URL}${suffix}"
           fi
 
       - name: Close the alert when the workflow recovers
         if: >-
           github.event_name == 'workflow_run' &&
+          github.event.workflow_run.event != 'pull_request' &&
           github.event.workflow_run.conclusion == 'success'
         env:
           GH_TOKEN: ${{ github.token }}

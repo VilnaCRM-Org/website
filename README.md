@@ -100,7 +100,10 @@ Linting & Formatting
   make lint-api-versions: verifies OpenAPI and GraphQL reference the same pinned user-service release
   make lint-docker-policy: enforces the Dockerfile registry + digest-pin policy
   make lint-headers: verifies the edge security-header policy reaches every response
-  make lint: all linters (ESLint, TS, markdownlint, deps, API versions, Docker policy, headers)
+  make lint-security-txt: validates the RFC 9116 security.txt fields and Expires runway
+  make lint-prod-guardrails: enforces the production-safety invariants (issue #383)
+  make lint: runs all linters (ESLint, TypeScript, markdownlint, dependency-cruiser,
+    API versions, Docker policy, security headers, security.txt, production guardrails)
   make lint-metrics: runs the rust-code-analysis complexity gate (host-only, not in make lint)
   make lint-contracts: validates the pinned user-service contracts (not in make lint; needs network)
   make lint-openapi: reports breaking upstream OpenAPI drift (host-only, needs network; advisory)
@@ -538,12 +541,27 @@ For detailed information, check the [routing script](scripts/cloudfront_routing.
 
 ### How It Works
 
-- Mapping: Specific URL paths are mapped to corresponding HTML files.
-- Fallback Logic: For undefined routes, the script appends /index.html to handle directory-like paths.
-- Error Handling: If an error occurs, the script logs it and returns the original request.
+The handler is a CloudFront Functions **viewer-request** script and is
+**fail-closed** (issue #383): it is the only in-repo layer in front of the S3
+origin, so anything it does not recognise must not reach the bucket.
 
-This routing logic is useful for SSR (Server-Side Rendered) applications,
-particularly when hosted on platforms like AWS CloudFront.
+- Mapping: specific URL paths are rewritten to their exported HTML files
+  (`/swagger` to `/swagger.html`, and so on).
+- Allow-list: every other request passes through only if it is an exact
+  allow-listed file, or lives under an allow-listed top-level directory
+  (`_next/`, `en/`, `images/`, `layout/`) **and** carries an allow-listed file
+  extension.
+- Fail-closed default: everything else — `/secret.json`, `/.env`, any `*.map`,
+  any unknown nested path — is answered with the site's synthetic 404 instead of
+  being forwarded to the origin.
+- Completeness gate: `scripts/ci/verify-edge-allowlist.mjs` runs the real handler
+  over every file of a freshly built export on each PR, so the allow-list can
+  never drift narrower than what the site actually ships.
+- Error handling: if the handler itself throws, it logs and returns the original
+  request, so a bug in this function can never black-hole the whole site.
+
+This routing logic serves the statically exported site (`output: 'export'`) from
+AWS CloudFront in front of an S3 origin.
 
 ## Security headers
 
