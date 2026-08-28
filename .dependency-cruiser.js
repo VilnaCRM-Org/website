@@ -44,7 +44,7 @@ module.exports = {
           '(^|/)jest[.]config[.]ts$',
           '(^|/)jest[.]mutation[.]config[.]ts$',
           '(^|/)babel-jest[.]config[.]js$',
-          '(^|/)i18n[.]js$',
+          '(^|/)i18n[.]ts$',
           '(^|/)mutation[.]js$',
           '(^|/)checkNodeVersion[.]js$',
           '(^|/)lighthouserc[.][^/]+[.]js$',
@@ -269,7 +269,7 @@ module.exports = {
     },
     skipAnalysisNotInRules: true,
     // Website load tests import k6 (resolved by the k6 runtime, not Node).
-    // Intentionally no bun built-ins — the website is node/pnpm.
+    // Intentionally no bun built-ins — the website runs on Node (Bun is only the package manager).
     builtInModules: { add: ['k6', 'k6/http'] },
     reporterOptions: {
       dot: { collapsePattern: 'node_modules/(?:@[^/]+/[^/]+|[^/]+)' },

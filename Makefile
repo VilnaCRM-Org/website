@@ -22,7 +22,7 @@ STORYBOOK_BIN               = $(BIN_DIR)/storybook
 JEST_BIN                    = $(BIN_DIR)/jest
 SERVE_BIN                   = $(BIN_DIR)/serve
 PLAYWRIGHT_BIN              = $(BIN_DIR)/playwright
-BATS_BIN                    = pnpm exec bats
+BATS_BIN                    = bun x bats
 DEPCRUISE_BIN               = $(BIN_DIR)/depcruise
 
 # rust-code-analysis is a host-installed Rust binary (release tarball / cargo),
@@ -37,6 +37,32 @@ RCA_EXCLUDES                = */test/* *.d.ts */assets/* */config/*
 METRICS_POLICY_PATH         = config/metrics-policy.json
 RCA_SHA256_LINUX            = 9ec2a217b8ff191e02dab5d5f2eee6158b63fd975c532b2c5d67c2e6c7249894
 
+# oasdiff is a host-installed Go binary provisioned exactly like RCA above: pinned
+# version + pinned digest, installed to the gitignored ./bin. Never resolve it as
+# "latest" at install time — that would silently defeat the checksum pin. The
+# digest is the one oasdiff publishes in the release's checksums.txt for
+# oasdiff_$(OASDIFF_VERSION)_linux_amd64.tar.gz (note: the asset name carries no
+# leading "v"; only the tag does).
+OASDIFF_VERSION             = 1.27.0
+OASDIFF_BIN                 = ./bin/oasdiff
+OASDIFF_SHA256_LINUX        = 335de79be8df706735f7ab3edc35186e853c8add93d489d67e4e7fd70a07d08a
+# The upstream repo whose newest release the nightly leg compares the committed
+# baseline against. The pin the repo actually consumes stays USER_SERVICE_VERSION
+# in .env — this is only the moving target the drift report is written about.
+USER_SERVICE_REPO           = VilnaCRM-Org/user-service
+USER_SERVICE_SPEC_PATH      = .github/openapi-spec/spec.yaml
+OPENAPI_BASELINE            = contracts/user-service/openapi.json
+
+# zizmor is the GitHub Actions security linter (issue #360). Like gitleaks and
+# lychee it ships as a CLI container pinned BY DIGEST, so a repointed tag can
+# never change what the security gate enforces. Digest is zizmor 1.28.0.
+# The gate blocks on medium-and-above findings that zizmor reports with high
+# confidence; see scripts/ci/lint-workflows.sh and the workflow-security.yml
+# job comment for what that deliberately leaves out and why.
+ZIZMOR_IMAGE                = ghcr.io/zizmorcore/zizmor@sha256:8e6b3e4fb74d1aa5d23e83ea369f386c66eced0d1fb944d32cd8b2aac100b00d
+ZIZMOR_MIN_SEVERITY         = medium
+ZIZMOR_MIN_CONFIDENCE       = high
+
 NEXT_BUILD                  = $(NEXT_BIN) build --webpack
 NEXT_BUILD_CMD              = $(NEXT_BUILD) && $(IMG_OPTIMIZE)
 STORYBOOK_BUILD_CMD         = $(STORYBOOK_BIN) build --output-dir storybook-static-ci
@@ -47,15 +73,30 @@ TEST_DIR_EDGE               = $(TEST_DIR_BASE)/edge
 TEST_DIR_E2E                = $(TEST_DIR_BASE)/e2e
 TEST_DIR_VISUAL             = $(TEST_DIR_BASE)/visual
 
-STRYKER_CMD                 = pnpm exec stryker run
+STRYKER_CMD                 = bun x stryker run
 STRYKER_SHARD_CONFIG        = stryker.shard.config.mjs
 MUTATION_SHARD_TOTAL        ?= 1
 MUTATION_SHARD_INDEX        ?= 0
-MERGE_MUTATION_REPORTS_CMD  = pnpm exec tsx scripts/ci/merge-mutation-reports.ts
+MERGE_MUTATION_REPORTS_CMD  = bun x tsx scripts/ci/merge-mutation-reports.ts
+
+# E2E flake detection (#359). The burn-in re-runs the specs a PR changed with retries off, so
+# nondeterminism shows up as some-but-not-all failures instead of being absorbed by the
+# blanket `retries: 2` the CI Playwright config sets.
+E2E_BURNIN_SPECS            ?= $(TEST_DIR_E2E)
+E2E_BURNIN_REPEATS          ?= 5
+# The burn-in report deliberately sits OUTSIDE test-results: the grader walks its report
+# directory recursively, so nesting it would make a local `make check-e2e-flakes` parse the
+# shard report and the burn-in report together as one cohort under a single FLAKE_MODE.
+E2E_BURNIN_REPORT_DIR       ?= burn-in-results
+FLAKE_MODE                  ?= retry-pass
+FLAKE_REPORT_DIR            ?= test-results
+FLAKE_CHANGED_SPECS         ?=
+FLAKE_THRESHOLD             ?= 2
+CHECK_FLAKY_REPORT_CMD      = bun x tsx scripts/ci/check-flaky-report.ts
 
 SERVE_CMD                   = --collect.startServerCommand="$(SERVE_BIN) -l $(NEXT_PUBLIC_PROD_PORT) out" \
                               --collect.startServerReadyPattern="Accepting connections"
-LHCI                        = pnpm lhci autorun
+LHCI                        = bun x lhci autorun
 LHCI_CONFIG_DESKTOP         = --config=lighthouserc.desktop.js
 LHCI_CONFIG_MOBILE          = --config=lighthouserc.mobile.js
 LHCI_DESKTOP_SERVE          = $(LHCI_CONFIG_DESKTOP) $(SERVE_CMD)
@@ -122,8 +163,8 @@ NETWORK_NAME                = website-network
 # Dev-side lint and test phases are grouped so local developers and agents can
 # run the same CI stages as the pipeline. The parallel runners execute each
 # target concurrently, group their output, and aggregate exit codes.
-CI_LINT_TARGETS             = lint-next lint-tsc lint-md
-CI_TEST_TARGETS             = ci-test-unit-client ci-test-unit-server ci-test-integration
+CI_LINT_TARGETS             = lint-next lint-tsc lint-md lint-api-versions lint-headers
+CI_TEST_TARGETS             = ci-test-unit-client ci-test-unit-server ci-test-integration ci-test-contract
 CI_LINT_RUNNER              = ./scripts/ci/run-parallel.sh ci-lint
 CI_TEST_RUNNER              = ./scripts/ci/run-parallel.sh ci-test
 
@@ -139,7 +180,9 @@ ifneq (,$(filter 1 true TRUE,$(CI)))
 endif
 
 ifeq ($(CI), 1)
-    PNPM_EXEC               = pnpm
+    # Host CI mode: bins carry a Node shebang and run directly (Bun is the
+    # package manager, not the runtime). No executor prefix is needed.
+    PM_EXEC                 =
     NEXT_DEV_CMD            = $(NEXT_BIN) dev
     UNIT_TESTS              = env
     CI_SETUP_UP_FLAGS       = -d --build
@@ -150,8 +193,8 @@ ifeq ($(CI), 1)
     LHCI_DESKTOP            = $(LHCI_BUILD_CMD) $(LHCI_DESKTOP_SERVE)
     LHCI_MOBILE             = $(LHCI_BUILD_CMD) $(LHCI_MOBILE_SERVE)
 else
-    PNPM_EXEC               = $(EXEC_DEV_TTYLESS)
-    STRYKER_CMD             = make start && $(EXEC_DEV_TTYLESS) pnpm exec stryker run
+    PM_EXEC                 = $(EXEC_DEV_TTYLESS)
+    STRYKER_CMD             = make start && $(EXEC_DEV_TTYLESS) bun x stryker run
     UNIT_TESTS              = make start && $(EXEC_DEV_TTYLESS) env
     CI_SETUP_UP_FLAGS       = -d --no-recreate
 
@@ -162,8 +205,8 @@ else
     LHCI_MOBILE             = $(LHCI_BUILD_CMD) $(LHCI_CONFIG_MOBILE)
 endif
 
-PRETTIER_BIN                = $(PNPM_EXEC) ./node_modules/.bin/prettier
-MARKDOWNLINT_BIN            = $(PNPM_EXEC) ./node_modules/.bin/markdownlint
+PRETTIER_BIN                = $(PM_EXEC) $(BIN_DIR)/prettier
+MARKDOWNLINT_BIN            = $(PM_EXEC) $(BIN_DIR)/markdownlint
 
 # To Run in CI mode specify CI variable. Example: make lint-md CI=1
 
@@ -179,6 +222,11 @@ run-e2e                     = $(PLAYWRIGHT_TEST) "$(PLAYWRIGHT_BIN) test $(TEST_
 E2E_SHARD_INDEX             ?= 1
 E2E_SHARD_TOTAL             ?= 1
 run-e2e-shard               = $(PLAYWRIGHT_TEST) "$(PLAYWRIGHT_BIN) test $(TEST_DIR_E2E) --shard=$(E2E_SHARD_INDEX)/$(E2E_SHARD_TOTAL)"
+# Burn-in: repeat each spec with retries off so a flake surfaces as a partial failure. The
+# JSON report goes to its own top-level directory so it neither overwrites the shard run's
+# report nor gets swept up by a recursive walk of test-results.
+run-e2e-burnin              = $(PLAYWRIGHT_TEST) "PLAYWRIGHT_JSON_REPORT=$(E2E_BURNIN_REPORT_DIR)/results.json \
+                              $(PLAYWRIGHT_BIN) test $(E2E_BURNIN_SPECS) --repeat-each=$(E2E_BURNIN_REPEATS) --retries=0"
 playwright-test             = $(PLAYWRIGHT_DOCKER_CMD) $(PLAYWRIGHT_BIN) test
 
 help:
@@ -228,7 +276,7 @@ copy-source-to-container-dind: ## Copy source code to container for DIND testing
 install-deps-in-container-dind: ## Install dependencies in container for DIND testing (TEMP_CONTAINER_NAME required)
 	$(call REQUIRE_ENV_VAR,TEMP_CONTAINER_NAME,my-container)
 	@echo "📦 Installing deps in container $(TEMP_CONTAINER_NAME)..."
-	$(call EXEC_IN_CONTAINER,TEMP_CONTAINER_NAME,cd /app && npm install -g pnpm && pnpm install --frozen-lockfile)
+	$(call EXEC_IN_CONTAINER,TEMP_CONTAINER_NAME,cd /app && npm install -g bun@1.3.5 && bun install --frozen-lockfile)
 
 run-unit-tests-dind: ## Run unit tests in DIND container (TEMP_CONTAINER_NAME required)
 	$(call REQUIRE_ENV_VAR,TEMP_CONTAINER_NAME,my-container)
@@ -240,7 +288,7 @@ run-unit-tests-dind: ## Run unit tests in DIND container (TEMP_CONTAINER_NAME re
 run-mutation-tests-dind: ## Run mutation tests in DIND container (TEMP_CONTAINER_NAME required)
 	$(call REQUIRE_ENV_VAR,TEMP_CONTAINER_NAME,my-container)
 	@echo "🧬 Running Stryker mutation tests in container $(TEMP_CONTAINER_NAME)..."
-	$(call EXEC_IN_CONTAINER,TEMP_CONTAINER_NAME,cd /app && pnpm stryker run)
+	$(call EXEC_IN_CONTAINER,TEMP_CONTAINER_NAME,cd /app && bun x stryker run)
 
 run-eslint-tests-dind: ## Run ESLint tests in DIND container (TEMP_CONTAINER_NAME required)
 	$(call REQUIRE_ENV_VAR,TEMP_CONTAINER_NAME,my-container)
@@ -301,19 +349,36 @@ format: ## This command executes Prettier formatting
 	$(PRETTIER_BIN) "**/*.{js,jsx,ts,tsx,json,css,scss,md}" --write --ignore-path .prettierignore
 
 lint-next: ## This command executes ESLint
-	$(PNPM_EXEC) $(ESLINT_BIN)
+	$(PM_EXEC) $(ESLINT_BIN)
 
 lint-tsc: ## This command executes Typescript linter
-	$(PNPM_EXEC) $(TS_BIN)
+	$(PM_EXEC) $(TS_BIN)
 
 lint-md: ## This command executes Markdown linter
 	$(MARKDOWNLINT_BIN) $(MD_LINT_ARGS) "**/*.md"
 
 lint-deps: ## Validate architecture/import boundaries with dependency-cruiser
 	node scripts/generateLocalization.mjs
-	$(PNPM_EXEC) $(DEPCRUISE_BIN) src pages tests --config .dependency-cruiser.js
+	$(PM_EXEC) $(DEPCRUISE_BIN) src pages tests --config .dependency-cruiser.js
 
-lint: lint-next lint-tsc lint-md lint-deps ## Runs all linters: ESLint, TypeScript, Markdown, and dependency-cruiser in sequence.
+.PHONY: lint lint-api-versions lint-headers lint-docker-policy
+
+# The user-service inventory invariant (issue #381, F4): every consumer of the
+# upstream contracts — the GraphQL schema behind the Apollo mock and the OpenAPI
+# spec behind /swagger — must derive from the single USER_SERVICE_VERSION pin.
+# Unlike lint-contracts this check is HERMETIC (no network, no Docker), so it
+# belongs in the `lint` aggregate and in CI_LINT_TARGETS: the drift that produced
+# the defect (docs on v2.6.0, GraphQL on v2.4.1) is caught on every PR.
+lint-api-versions: ## Verify OpenAPI and GraphQL reference the same pinned user-service release
+	$(PM_EXEC) node scripts/contracts/check-api-versions.mjs
+
+lint-headers: ## Verify the edge security-header policy (config/security-headers.json) reaches every production response
+	$(PM_EXEC) node scripts/ci/lint-headers.mjs
+
+lint-docker-policy: ## Enforce the registry (no Docker Hub) + digest-pin policy on every Dockerfile
+	./scripts/ci/lint-dockerfile-policy.sh
+
+lint: lint-next lint-tsc lint-md lint-deps lint-api-versions lint-docker-policy lint-headers ## Runs all linters: ESLint, TypeScript, Markdown, dependency-cruiser, the API version invariant, the Dockerfile registry/digest policy, and the security-header gate in sequence.
 
 # DELIBERATE DIVERGENCE FROM THE npm-tool LINT GATES (lint-next/tsc/md/deps),
 # for the same reason as lint-metrics below:
@@ -326,19 +391,43 @@ lint: lint-next lint-tsc lint-md lint-deps ## Runs all linters: ESLint, TypeScri
 # This target deliberately runs the full check, drift included. To validate the
 # GraphQL operations and the spectral baseline without touching the network,
 # invoke the script directly:
-#   pnpm node scripts/contracts/lint-contracts.mjs --offline
+#   node scripts/contracts/lint-contracts.mjs --offline
 lint-contracts: ## Validate the pinned user-service contracts: client GraphQL operations, the OpenAPI spectral baseline, and artifact drift
-	$(PNPM_EXEC) node scripts/contracts/lint-contracts.mjs
+	$(PM_EXEC) node scripts/contracts/lint-contracts.mjs
+
+# DELIBERATE DIVERGENCE FROM THE npm-tool LINT GATES, for both of the reasons
+# lint-contracts and lint-metrics each cite one of:
+#   * Host-only: oasdiff is a Go binary absent from the node:*-alpine dev image,
+#     so this target does NOT use $(PM_EXEC) and runs on the host in both modes.
+#   * Network: it resolves the newest upstream release and downloads that spec.
+#   * Therefore NOT in the `lint` aggregate and NOT in CI_LINT_TARGETS — both
+#     route through the dev container / run-parallel.sh, and static-testing.yml
+#     is hermetic by design. Its CI surface is .github/workflows/openapi-drift.yml.
+# ADVISORY BY DESIGN: upstream moving on is not a PR author's fault, so the
+# nightly turns breaking drift into a tracking issue rather than a red check.
+# The BLOCKING contract gate is `make test-contract`.
+# This target is the HUMAN-FACING surface. GNU make collapses every recipe
+# failure to its own exit 2, so it cannot distinguish "breaking drift" (1) from
+# "the check could not run" (2) — openapi-drift.yml therefore calls the script
+# directly. Both paths run the identical script; only the exit-code fidelity
+# differs. The script provisions the pinned binary itself.
+lint-openapi: ## Report breaking changes between the committed OpenAPI baseline and the newest upstream release (host-only, network; advisory)
+	@OASDIFF_BIN="$(OASDIFF_BIN)" OASDIFF_VERSION="$(OASDIFF_VERSION)" \
+	 OASDIFF_SHA256_LINUX="$(OASDIFF_SHA256_LINUX)" \
+	 OPENAPI_BASELINE="$(OPENAPI_BASELINE)" \
+	 USER_SERVICE_REPO="$(USER_SERVICE_REPO)" \
+	 USER_SERVICE_SPEC_PATH="$(USER_SERVICE_SPEC_PATH)" \
+	 bash scripts/ci/openapi-drift.sh
 
 update-contracts: ## Re-fetch the user-service contracts for the pinned USER_SERVICE_VERSION and refresh the spectral baseline
-	$(PNPM_EXEC) node scripts/fetchSwaggerSchema.mjs
-	$(PNPM_EXEC) node scripts/fetchGraphqlSchema.mjs
-	$(PNPM_EXEC) node scripts/contracts/lint-contracts.mjs --update-baseline
+	$(PM_EXEC) node scripts/fetchSwaggerSchema.mjs
+	$(PM_EXEC) node scripts/fetchGraphqlSchema.mjs
+	$(PM_EXEC) node scripts/contracts/lint-contracts.mjs --update-baseline
 	$(PRETTIER_BIN) "contracts/**/*.json" --write --ignore-path .prettierignore
 
 # DELIBERATE DIVERGENCE FROM THE npm-tool LINT GATES (lint-next/tsc/md/deps):
 #   * Host-only: rust-code-analysis is a Rust binary absent from the dev image,
-#     so this target does NOT use $(PNPM_EXEC) and runs on the host in both modes.
+#     so this target does NOT use $(PM_EXEC) and runs on the host in both modes.
 #   * NOT in the `lint` aggregate (line above) and NOT in CI_LINT_TARGETS (both
 #     route through the dev container / run-parallel.sh, which cannot run the
 #     binary). Its only CI surface is .github/workflows/rust-code-analysis.yml.
@@ -356,20 +445,48 @@ lint-metrics: ## Run rust-code-analysis complexity gate on src (host-only; auto-
 	 METRICS_POLICY="$(METRICS_POLICY_PATH)" \
 	 sh scripts/ci/lint-metrics.sh
 
+# DELIBERATE DIVERGENCE FROM THE npm-tool LINT GATES (lint-next/tsc/md/deps),
+# for the same reasons as lint-contracts and lint-metrics above:
+#   * Host-only: zizmor is a Rust CLI shipped as a container image, absent from
+#     the dev image, so this target does NOT use $(PM_EXEC) and runs docker on
+#     the host in both modes.
+#   * NOT in the `lint` aggregate and NOT in CI_LINT_TARGETS (both route through
+#     the dev container / run-parallel.sh, which cannot run docker).
+#   * Its online audits reach the GitHub API to resolve tags, so a GitHub
+#     outage must not turn the whole static lane red.
+#   * Its CI surface is .github/workflows/workflow-security.yml, which runs it
+#     on every PR to main -- deliberately NOT path-filtered, because a skipped
+#     check cannot be a meaningful required status check (#343).
+# The script degrades to --offline when no GitHub token is available, so a
+# local run without `gh auth login` still works (offline is a strict subset).
+lint-workflows: ## Audit the GitHub Actions workflows for security defects with zizmor (host-only, Docker)
+	@ZIZMOR_IMAGE="$(ZIZMOR_IMAGE)" \
+	 ZIZMOR_MIN_SEVERITY="$(ZIZMOR_MIN_SEVERITY)" \
+	 ZIZMOR_MIN_CONFIDENCE="$(ZIZMOR_MIN_CONFIDENCE)" \
+	 bash scripts/ci/lint-workflows.sh
+
 husky: ## One-time Husky setup to enable Git hooks (deprecated if already set)
-	pnpm husky install
+	bun x husky install
 
 storybook-start: ## Start Storybook UI and open in browser
-	$(PNPM_EXEC) $(STORYBOOK_START)
+	$(PM_EXEC) $(STORYBOOK_START)
 
 storybook-build: ## Build Storybook UI.
-	$(PNPM_EXEC) $(STORYBOOK_BUILD_CMD)
+	$(PM_EXEC) $(STORYBOOK_BUILD_CMD)
 
 test-e2e: start-prod  ## Start production and run E2E tests (Playwright)
 	$(run-e2e)
 
 test-e2e-shard: start-prod ## Start production and run one E2E shard (E2E_SHARD_INDEX of E2E_SHARD_TOTAL; used by the e2e workflow matrix)
 	$(run-e2e-shard)
+
+test-e2e-burnin: start-prod ## Re-run E2E_BURNIN_SPECS E2E_BURNIN_REPEATS times with retries off to expose flaky specs (#359)
+	$(run-e2e-burnin)
+
+check-e2e-flakes: ## Grade a Playwright JSON report for flakes, host-only (FLAKE_MODE=retry-pass|burn-in|census, FLAKE_CHANGED_SPECS=<specs>)
+	FLAKE_MODE="$(FLAKE_MODE)" FLAKE_REPORT_DIR="$(FLAKE_REPORT_DIR)" \
+	FLAKE_CHANGED_SPECS="$(FLAKE_CHANGED_SPECS)" FLAKE_THRESHOLD="$(FLAKE_THRESHOLD)" \
+	$(CHECK_FLAKY_REPORT_CMD)
 
 test-e2e-ui: start-prod ## Start the production environment and run E2E tests with the UI available at $(UI_MODE_URL)
 	@echo "🚀 Starting Playwright UI tests..."
@@ -413,6 +530,12 @@ test-unit-server: ## Run server-side unit tests for Apollo using Jest (Node.js e
 test-unit-edge: ## Run edge-script unit tests using Jest (Node.js env, TEST_ENV=edge, target: $(TEST_DIR_EDGE))
 	$(UNIT_TESTS) TEST_ENV=edge $(JEST_BIN) $(JEST_FLAGS) $(TEST_DIR_EDGE)
 
+test-fuzz: ## Run the client unit suite with the property suites at high fast-check run counts (FC_NUM_RUNS, default 100000) — the nightly fuzz leg of #347
+	# Runs the full client suite so Jest coverage and its thresholds stay
+	# enforced; FC_NUM_RUNS raises only the fast-check property suites' iteration
+	# count (other suites ignore it), turning this into the deep fuzz pass.
+	$(UNIT_TESTS) TEST_ENV=client FC_NUM_RUNS=$${FC_NUM_RUNS:-100000} $(JEST_BIN) $(JEST_FLAGS)
+
 test-integration: ## Run the integration layer using Jest (TEST_ENV=integration, target: tests/integration)
 	$(UNIT_TESTS) TEST_ENV=integration $(JEST_BIN) $(JEST_FLAGS)
 
@@ -422,11 +545,24 @@ test-integration-watch: ## Run integration tests in watch mode (TEST_ENV=integra
 ci-test-integration: ## Run integration tests directly assuming deps are installed (CI entrypoint)
 	env TEST_ENV=integration $(JEST_BIN) $(JEST_FLAGS)
 
+# The contract layer (#350) boots the Mockoon mock e2e runs against — in-process,
+# via @mockoon/commons-server, the same libraries Mockoon.Dockerfile's CLI wraps —
+# and holds every response against the committed user-service OpenAPI document.
+# It is hermetic: no network, no Docker, no compose stack, so it runs identically
+# on a bare CI runner and inside the dev container. Kept OUT of the integration
+# layer because that layer's charter is a global 100% coverage sweep over src/**,
+# which a spec about an HTTP mock's wire format contributes nothing to.
+test-contract: ## Run the mock-vs-OpenAPI contract parity layer using Jest (TEST_ENV=contract, target: tests/contract)
+	$(UNIT_TESTS) TEST_ENV=contract $(JEST_BIN) $(JEST_FLAGS)
+
+ci-test-contract: ## Run contract parity tests directly assuming deps are installed (CI entrypoint)
+	env TEST_ENV=contract $(JEST_BIN) $(JEST_FLAGS)
+
 # ============================================================================
 # CI orchestration (issue #305 — CRM command-surface parity)
 # ----------------------------------------------------------------------------
 # These targets give local developers and agents the same grouped CI phases the
-# pipeline runs, adapted to website's pnpm + Next.js toolchain.
+# pipeline runs, adapted to website's Bun + Next.js toolchain.
 #
 # Intentionally NOT ported from crm/Makefile (rationale):
 #   * lint-dup (jscpd), fmt-qlty / qlty: not configured in this repo; website's
@@ -453,7 +589,7 @@ ci-test-integration: ## Run integration tests directly assuming deps are install
 	ci-test-memory-leak ci-test-load ci-test-lighthouse-desktop \
 	ci-test-lighthouse-mobile ci-test-prod ensure-dev start-prod-clean \
 	test-load test-load-swagger test-mutation-shard merge-mutation-reports \
-	pr-comments
+	test-e2e-burnin check-e2e-flakes pr-comments lint lint-api-versions
 
 ci-setup: create-network ## Prepare the shared dev environment for CI-oriented checks
 	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) up $(CI_SETUP_UP_FLAGS) dev && $(MAKE) wait-for-dev
@@ -472,7 +608,7 @@ ci-test-unit-server: ## Run server-side unit tests directly assuming deps are in
 
 ci-test-mutation: ## Run mutation tests directly assuming deps are installed (CI entrypoint)
 	node scripts/generateLocalization.mjs
-	pnpm exec stryker run
+	bun x stryker run
 
 ci-mutation: ## Run mutation testing in isolation after the parallel dev-side tests (heavy; not parallelized)
 	$(MAKE) ci-test-mutation
@@ -502,7 +638,7 @@ ci-test-memory-leak: ## Run Memlab memory leak tests against the dedicated compo
 	}; \
 	trap cleanup EXIT; \
 	echo "🧪 Starting memory leak test environment..."; \
-	$(DOCKER_COMPOSE) -p memleak $(DOCKER_COMPOSE_MEMLEAK_FILE) up -d --wait $(MEMLEAK_SERVICE); \
+	$(DOCKER_COMPOSE) -p memleak $(DOCKER_COMPOSE_MEMLEAK_FILE) up -d --wait --build $(MEMLEAK_SERVICE); \
 	echo "🧹 Cleaning up previous memory leak results..."; \
 	$(DOCKER_COMPOSE) -p memleak $(DOCKER_COMPOSE_MEMLEAK_FILE) exec -T $(MEMLEAK_SERVICE) rm -rf $(MEMLEAK_RESULTS_DIR); \
 	echo "🚀 Running memory leak tests..."; \
@@ -545,7 +681,7 @@ test-memory-leak: start-prod ## This command executes memory leaks tests using M
 
 memory-leak-dind: start-prod ## Run Memlab tests in isolated compose project (DIND safe)
 	@echo "🧪 Starting memory leak test environment (isolated project)..."
-	$(DOCKER_COMPOSE) -p memleak $(DOCKER_COMPOSE_MEMLEAK_FILE) up -d --wait $(MEMLEAK_SERVICE)
+	$(DOCKER_COMPOSE) -p memleak $(DOCKER_COMPOSE_MEMLEAK_FILE) up -d --wait --build $(MEMLEAK_SERVICE)
 	@echo "🧹 Cleaning up previous memory leak results..."
 	$(DOCKER_COMPOSE) -p memleak $(DOCKER_COMPOSE_MEMLEAK_FILE) exec -T $(MEMLEAK_SERVICE) rm -rf $(MEMLEAK_RESULTS_DIR)
 	@echo "🚀 Running memory leak tests..."
@@ -621,8 +757,8 @@ lighthouse-mobile-dind: ## Run Lighthouse mobile audit in DIND mode using prod c
 	$(LHCI_DIND_BIN) --config=lighthouserc.mobile.js $(LHCI_DIND_COMMON)
 	@echo "✅ Lighthouse mobile DIND tests completed"
 
-install: check-node-version ## Install node modules using pnpm (CI=1 runs locally, default runs in container) — uses frozen lockfile and affects node_modules via volumes
-	$(PNPM_EXEC) pnpm install --frozen-lockfile
+install: check-node-version ## Install node modules using Bun (CI=1 runs locally, default runs in container) — uses frozen lockfile and affects node_modules via volumes
+	$(PM_EXEC) bun install --frozen-lockfile
 
 install-chromium-lhci: ## Install Chromium and Lighthouse CLI in the prod container for DIND testing
 	@echo "📦 Installing Chromium and Lighthouse CLI in prod container..."
@@ -639,7 +775,7 @@ test-chromium: ## Test Chromium browser installation and version in the prod con
 	fi
 
 update: ## Update node modules to latest allowed versions — always runs locally, updates lockfile (run before committing dependency changes)
-	pnpm update
+	bun update
 
 down: ## Stop the docker containers
 	$(DOCKER_COMPOSE) down --remove-orphans
@@ -660,7 +796,7 @@ stop: ## Stop docker
 	$(DOCKER_COMPOSE) stop
 
 check-node-version: ## Check if the correct Node.js version is installed
-	$(PNPM_EXEC) exec node checkNodeVersion.js
+	$(PM_EXEC) node checkNodeVersion.js
 
 pr-comments: ## Retrieve unresolved PR review comments (PR=<num> FORMAT=<text|json|markdown>)
 	@if [ -n "$(PR)" ] && [ -n "$(FORMAT)" ]; then \

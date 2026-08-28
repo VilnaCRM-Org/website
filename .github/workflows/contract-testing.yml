@@ -30,26 +30,21 @@ jobs:
         with:
           node-version-file: '.nvmrc'
 
-      - name: Cache pnpm dependencies
-        id: cache-pnpm-dependencies
+      - name: Cache Bun cache
         uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
         with:
-          path: node_modules
-          key: ${{ runner.os }}-dependencies-${{ hashFiles('.nvmrc') }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('.nvmrc') }}-${{ hashFiles('**/bun.lock') }}
           restore-keys: |
-            ${{ runner.os }}-dependencies-
+            ${{ runner.os }}-bun-${{ hashFiles('.nvmrc') }}-
 
-      - name: Install pnpm
-        # Install the exact pnpm pinned in package.json's packageManager field
-        # (not the latest global) so the version is declared in exactly one place
-        # and lockfile resolution matches every other job. Corepack is avoided
-        # because `npm install -g` carries the registry signing keys that the
-        # pinned Node's bundled corepack lacks.
-        run: npm install -g "$(node -p "require('./package.json').packageManager.split('+')[0]")"
-
-      - name: Install dependencies
-        run: make install
-        if: steps.cache-pnpm-dependencies.outputs.cache-hit != 'true'
+      - name: Setup Bun and install dependencies
+        run: |
+          # Install the exact Bun pinned in package.json's packageManager field,
+          # so the version is declared in exactly one place. Corepack does not
+          # manage Bun, so it is installed globally via `npm install -g`.
+          npm install -g "$(node -p "require('./package.json').packageManager.split('+')[0]")"
+          bun install --frozen-lockfile
 
       # This is the one job allowed to reach raw.githubusercontent.com: it
       # re-fetches the tag in USER_SERVICE_VERSION and fails if the committed

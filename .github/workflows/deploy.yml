@@ -8,9 +8,7 @@ on:
 env:
   AWS_REGION: ${{ vars.AWS_REGION }}
 
-permissions:
-  id-token: write
-  contents: read
+permissions: {}
 
 # Serialize deploys per ref without cancelling: aborting an in-flight production
 # CodePipeline trigger mid-run is unsafe, so a newer push queues behind the
@@ -23,6 +21,11 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      # Only this job assumes the AWS deploy role, so `id-token: write` is
+      # scoped to it rather than handed to every job in the workflow.
+      id-token: write
+      contents: read
     # Gate the prod deploy behind a GitHub Environment so protection rules
     # (required reviewers / wait timer) can be enforced from repo Settings →
     # Environments → production. `url` surfaces the live site in the deployment
@@ -32,10 +35,12 @@ jobs:
       url: ${{ vars.PRODUCTION_SITE_URL }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v6
+        uses: aws-actions/configure-aws-credentials@517a711dbcd0e402f90c77e7e2f81e849156e31d # v6.2.2
         with:
           role-to-assume: arn:aws:iam::${{vars.PROD_AWS_ACCOUNT_ID}}:role/website-deploy-trigger-role
           role-session-name: GitHub_to_AWS_via_FederatedOIDC
@@ -58,6 +63,11 @@ jobs:
     permissions:
       contents: read
     steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
       - name: Smoke-test homepage and /swagger
         env:
           # CodePipeline deploys asynchronously, so the probe retries until the
@@ -98,4 +108,72 @@ jobs:
           rc=0
           wait "$home_pid" || rc=1
           wait "$swagger_pid" || rc=1
+          exit "$rc"
+
+      # Issue #377: the static export cannot honour Next `headers()`, so the CloudFront
+      # edge functions are the only enforcement point. `make lint-headers` proves the
+      # in-repo policy reaches every response the functions produce; this step proves the
+      # deployed distribution actually associates them — on a real PAGE and a real ASSET,
+      # not just the synthetic 404.
+      - name: Verify security headers on a real page and an asset
+        env:
+          SITE_URL: ${{ vars.PRODUCTION_SITE_URL }}
+        run: |
+          set -euo pipefail
+
+          base="${SITE_URL%/}"
+          rc=0
+
+          # Header names + expected values come from the single in-repo source of truth.
+          policy="$(jq -r '.headers | to_entries[] | "\(.key)\t\(.value)"' config/security-headers.json)"
+
+          # CodePipeline (and any CloudFront function association) propagates
+          # asynchronously, so — like the readiness probes above — each path is retried
+          # until the FULL policy is present rather than failing on a single early miss.
+          check_path() {
+            path="$1"
+            label="$2"
+            url="${base}${path}"
+            attempts=12
+            delay=15
+
+            for i in $(seq 1 "$attempts"); do
+              gaps=''
+
+              if headers="$(curl -fsSI --max-time 15 "$url" | tr -d '\r')"; then
+                while IFS="$(printf '\t')" read -r name expected; do
+                  # `|| true`: a missing header makes grep exit 1, which under `set -e` +
+                  # `pipefail` would abort the step instead of reporting the gap.
+                  actual="$(printf '%s\n' "$headers" \
+                    | grep -i "^${name}:" \
+                    | head -n 1 \
+                    | cut -d: -f2- \
+                    | sed 's/^ *//' || true)"
+                  if [ "$actual" != "$expected" ]; then
+                    gaps="${gaps}${name}: expected '${expected}', got '${actual:-<missing>}'; "
+                  fi
+                done <<EOF
+          $policy
+          EOF
+              else
+                gaps='could not fetch response headers; '
+              fi
+
+              if [ -z "$gaps" ]; then
+                echo "✓ ${label} (${url}) carries the full security-header policy"
+                return 0
+              fi
+
+              echo "… ${label} headers not ready (attempt ${i}/${attempts}): ${gaps}"
+              if [ "$i" -lt "$attempts" ]; then
+                sleep "$delay"
+              fi
+            done
+
+            echo "::error::${label} (${url}) — ${gaps}"
+            return 1
+          }
+
+          check_path "/" "homepage" || rc=1
+          check_path "/favicon.svg" "static asset" || rc=1
           exit "$rc"

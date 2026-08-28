@@ -137,7 +137,11 @@ describe('AuthLayout', () => {
         query: fulfilledMockResponse.request.query,
         variables: mockVariableMatcher,
       },
-      result: fulfilledMockResponse.result,
+      // Omit `result` when the source mock has none — `exactOptionalPropertyTypes`
+      // rejects an explicit `undefined` on the optional `result` field.
+      ...(fulfilledMockResponse.result !== undefined && {
+        result: fulfilledMockResponse.result,
+      }),
     };
 
     renderAuthLayout([mockWithVariableCapture]);
@@ -146,7 +150,9 @@ describe('AuthLayout', () => {
 
     await waitFor(() => {
       expect(mockVariableMatcher).toHaveBeenCalled();
-      const capturedVariables: { input: CreateUserInput } = mockVariableMatcher.mock.calls[0][0];
+      const firstCall = mockVariableMatcher.mock.calls[0];
+      if (firstCall === undefined) throw new Error('mockVariableMatcher was not called');
+      const capturedVariables: { input: CreateUserInput } = firstCall[0];
       const { input } = capturedVariables;
 
       expect(input).not.toBeUndefined();
@@ -415,7 +421,7 @@ describe('AuthLayoutWithNotification', () => {
     });
   });
   it('does not reset the form when notification type is error', async () => {
-    const { getByText } = renderAuthLayout([mockInternalServerErrorResponse]);
+    const { getByText, queryByText } = renderAuthLayout([mockInternalServerErrorResponse]);
 
     fillForm(testInitials, testEmail, testPassword, true);
     const { fullNameInput, emailInput, passwordInput, privacyCheckbox } = getFormElements();
@@ -427,10 +433,13 @@ describe('AuthLayoutWithNotification', () => {
 
     await waitFor(() => {
       const errorBox: HTMLElement = getByText(errorTitleText);
-      const serverError: HTMLElement = getByText('Internal Server Error.');
 
       expect(errorBox).toBeVisible();
-      expect(serverError).toBeInTheDocument();
+      // The unmapped server wording is replaced by a generic localized message
+      // so the form cannot be used to enumerate accounts or leak internals
+      // (#378 F2).
+      expect(getByText(messages[CLIENT_ERROR_KEYS.WENT_WRONG])).toBeInTheDocument();
+      expect(queryByText('Internal Server Error.')).not.toBeInTheDocument();
     });
   });
   it('shows success notification after successful authentication', async () => {
@@ -509,7 +518,11 @@ describe('AuthLayoutWithNotification', () => {
         query: fulfilledMockResponse.request.query,
         variables: mockVariableMatcher,
       },
-      result: fulfilledMockResponse.result,
+      // Omit `result` when the source mock has none — `exactOptionalPropertyTypes`
+      // rejects an explicit `undefined` on the optional `result` field.
+      ...(fulfilledMockResponse.result !== undefined && {
+        result: fulfilledMockResponse.result,
+      }),
     };
 
     renderAuthLayout([mockWithVariableCapture]);
@@ -518,7 +531,9 @@ describe('AuthLayoutWithNotification', () => {
 
     await waitFor(() => {
       expect(mockVariableMatcher).toHaveBeenCalled();
-      const capturedVariables: { input: CreateUserInput } = mockVariableMatcher.mock.calls[0][0];
+      const firstCall = mockVariableMatcher.mock.calls[0];
+      if (firstCall === undefined) throw new Error('mockVariableMatcher was not called');
+      const capturedVariables: { input: CreateUserInput } = firstCall[0];
       const { input } = capturedVariables;
 
       expect(input.email).toBe(uppercaseEmail.toLowerCase());

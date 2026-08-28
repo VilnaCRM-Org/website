@@ -16,8 +16,17 @@ export default defineConfig({
   // instead of failing the run; this also activates `trace: 'on-first-retry'`
   // below (dead config while retries were 0). Locally retries stay at 0.
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
-  reporter: [['html', { open: 'never' }]],
+  // Omit `workers` off-CI (Playwright's own default) rather than passing an
+  // explicit `undefined`, which `exactOptionalPropertyTypes` rejects.
+  ...(process.env.CI ? { workers: 1 } : {}),
+  // The HTML report is for humans; the JSON one is what the flake gate (#359) reads. Without
+  // it a retry-pass (`status: 'flaky'`) is indistinguishable from a clean pass, which is how
+  // the WebKit swagger flake in #290 reached the production pipeline. The path is
+  // overridable so the burn-in leg can keep its report separate from the shard run's.
+  reporter: [
+    ['html', { open: 'never' }],
+    ['json', { outputFile: process.env.PLAYWRIGHT_JSON_REPORT ?? 'test-results/results.json' }],
+  ],
   use: {
     trace: 'on-first-retry',
     ignoreHTTPSErrors: true,

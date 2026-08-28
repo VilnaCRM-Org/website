@@ -53,18 +53,22 @@ function renderRegistration(): void {
   );
 }
 
-// Inputs are located by placeholder: the production inputs do not yet expose a
-// programmatic label association (tracked separately), so placeholder is the
-// only working accessible query for the text fields. The checkbox and submit
-// button are queried by role + accessible name.
+// Inputs are located by label: the sign-up fields now forward their `id` to the
+// rendered input, so the `<label htmlFor>` association resolves and the whole
+// form is reachable through the same query a screen reader user relies on
+// (#382 F3). The checkbox and submit button are queried by role + accessible
+// name.
 function fillAndSubmitRegistrationForm(): void {
-  fireEvent.change(screen.getByPlaceholderText(t('sign_up.form.name_input.placeholder')), {
+  fireEvent.change(screen.getByLabelText(t('sign_up.form.name_input.label')), {
     target: { value: credentials.fullName },
   });
-  fireEvent.change(screen.getByPlaceholderText(t('sign_up.form.email_input.placeholder')), {
+  fireEvent.change(screen.getByLabelText(t('sign_up.form.email_input.label')), {
     target: { value: credentials.email },
   });
-  fireEvent.change(screen.getByPlaceholderText(t('sign_up.form.password_input.placeholder')), {
+  fireEvent.change(screen.getByLabelText(t('sign_up.form.password_input.label')), {
+    target: { value: credentials.password },
+  });
+  fireEvent.change(screen.getByLabelText(t('sign_up.form.confirm_password_input.label')), {
     target: { value: credentials.password },
   });
   fireEvent.click(screen.getByRole('checkbox'));
@@ -106,7 +110,12 @@ describe('integration: registration form submission flow', () => {
     });
 
     const request = readGraphQLRequest(fetchMock);
-    const input = request.body.variables.input as Record<string, string>;
+    const input = request.body.variables.input as {
+      email: string;
+      initials: string;
+      password: string;
+      clientMutationId: string;
+    };
     expect(input.email).toBe(expectedEmail);
     expect(input.initials).toBe(credentials.fullName);
     expect(input.password).toBe(credentials.password);

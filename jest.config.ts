@@ -11,6 +11,8 @@ const createJestConfig = nextJest({ dir: './' });
  * - `server`               — Apollo server tests (Node) + pure unit tests.
  * - `integration`          — the cross-module / API-boundary layer that lives
  *                            in `tests/integration/**`.
+ * - `contract`             — the mock-vs-contract parity layer in
+ *                            `tests/contract/**` (#350).
  *
  * The integration layer is intentionally isolated from the unit globs: it is
  * the "missing middle" between unit and e2e and must not silently absorb unit
@@ -23,16 +25,25 @@ const INTEGRATION_GLOB = '<rootDir>/tests/integration/**/*.integration.test.{ts,
 
 const EDGE_GLOB = '<rootDir>/src/test/edge/**/*.test.ts';
 
+const CONTRACT_GLOB = '<rootDir>/tests/contract/**/*.contract.test.ts';
+
 const testMatchByEnv: Record<string, string[]> = {
   server: ['<rootDir>/src/test/apollo-server**/*.test.ts', UNIT_GLOB],
   integration: [INTEGRATION_GLOB],
   client: ['<rootDir>/src/test/testing-library**/*.test.tsx', UNIT_GLOB],
   edge: [EDGE_GLOB],
+  contract: [CONTRACT_GLOB],
 };
 
 // Fail fast on an unrecognised TEST_ENV (e.g. a typo in a CI job) instead of
-// silently falling back to the client layer and running the wrong suite.
-if (!(TEST_ENV in testMatchByEnv)) {
+// silently falling back to the client layer and running the wrong suite. Guard
+// on an own key so inherited names like `constructor`/`toString` don't resolve
+// to Object.prototype members; the value-based check also narrows the lookup to
+// a definite `string[]` under `noUncheckedIndexedAccess`.
+const resolvedTestMatch: string[] | undefined = Object.hasOwn(testMatchByEnv, TEST_ENV)
+  ? testMatchByEnv[TEST_ENV]
+  : undefined;
+if (resolvedTestMatch === undefined) {
   const supported = Object.keys(testMatchByEnv).join(', ');
   throw new Error(`Unsupported TEST_ENV: "${TEST_ENV}". Expected one of: ${supported}.`);
 }
@@ -40,6 +51,8 @@ if (!(TEST_ENV in testMatchByEnv)) {
 const isIntegration = TEST_ENV === 'integration';
 const isServer = TEST_ENV === 'server';
 const isEdge = TEST_ENV === 'edge';
+const isClient = TEST_ENV === 'client';
+const isContract = TEST_ENV === 'contract';
 
 // jsdom lacks the Fetch API; the integration layer drives the real Apollo
 // HttpLink, so it runs in a jsdom variant that injects Node's fetch globals.
@@ -78,10 +91,44 @@ const INTEGRATION_COVERAGE_THRESHOLD = {
 // executed code back to the source file. This layer is isolated from client/server/
 // integration so it enforces 100% on exactly these scripts without touching their coverage
 // reports.
-const EDGE_COVERAGE_FROM = ['<rootDir>/scripts/cloudfront_routing.js'];
+const EDGE_COVERAGE_FROM = [
+  '<rootDir>/scripts/cloudfront_routing.js',
+  '<rootDir>/scripts/cloudfront_security_headers.js',
+];
 
 const EDGE_COVERAGE_THRESHOLD = {
   global: { branches: 100, functions: 100, lines: 100, statements: 100 },
+};
+
+// Bind the client (jsdom) and server (node) suites to a coverage floor (#351). Before
+// this, only the integration and edge layers had a threshold, so the bulk of the test
+// estate could lose tests or gain untested code indefinitely with no CI signal — coverage
+// could only ratchet down invisibly. These floors sit below the measured baseline
+// (client ~99% lines / ~94% branches, server ~93% lines / 60% branches over the small
+// apollo-server surface) with headroom for line-attribution variance; they are a ratchet
+// against erosion, not an aspirational target. Never lower them; raise them as coverage
+// improves.
+const CLIENT_COVERAGE_THRESHOLD = {
+  global: { branches: 92, functions: 95, lines: 97, statements: 97 },
+};
+
+const SERVER_COVERAGE_THRESHOLD = {
+  global: { branches: 55, functions: 70, lines: 90, statements: 90 },
+};
+
+// The `contract` layer (#350) boots the Mockoon mock the e2e suite runs against
+// and holds every response against the committed user-service OpenAPI document.
+// Its subject is an HTTP mock's runtime behaviour, not repo source: it imports
+// nothing from `src/` except the swagger e2e fixtures it validates, so it is
+// isolated from the other layers exactly as `edge` is — a coverage threshold
+// here would measure the wrong thing, and folding it into `integration` would
+// dilute that layer's "exercise every shipped module" charter. The harness
+// itself is proven live by `parity-detects-drift.contract.test.ts`, which seeds
+// real defects into the mock data and asserts the gate turns red.
+
+const COVERAGE_DIRECTORY_BY_ENV: Record<string, string> = {
+  edge: 'coverage/edge',
+  contract: 'coverage/contract',
 };
 
 const config: Config = {
@@ -90,9 +137,10 @@ const config: Config = {
   // jest.setup.ts imports the i18n stack that requires it.
   globalSetup: '<rootDir>/jest.global-setup.js',
   collectCoverage: true,
-  // The edge layer writes to its own coverage dir so its scripts-only report never
-  // clobbers the product coverage the client/server runs write to `coverage/`.
-  coverageDirectory: isEdge ? 'coverage/edge' : 'coverage',
+  // The edge and contract layers write to their own coverage dirs so their
+  // narrowly-scoped reports never clobber the product coverage the client/server
+  // runs write to `coverage/`.
+  coverageDirectory: COVERAGE_DIRECTORY_BY_ENV[TEST_ENV] ?? 'coverage',
   // The integration layer uses the `babel` coverage provider so coverage is
   // instrumented on the same babel-jest-transformed output the tests run
   // against; this keeps the strict 100% threshold measured against the exact
@@ -111,14 +159,28 @@ const config: Config = {
         coverageThreshold: EDGE_COVERAGE_THRESHOLD,
       }
     : {}),
-  testMatch: testMatchByEnv[TEST_ENV],
+  // Client/server keep their default (imported-file) coverage scope; only the enforcement
+  // floor is added here (#351). Coverage is already collected globally, so this is zero
+  // added CI cost.
+  ...(isClient ? { coverageThreshold: CLIENT_COVERAGE_THRESHOLD } : {}),
+  ...(isServer ? { coverageThreshold: SERVER_COVERAGE_THRESHOLD } : {}),
+  testMatch: resolvedTestMatch,
+  // The Apollo mock under `docker/apollo-server` is compiled by
+  // `tsconfig.server.json` with `moduleResolution: NodeNext`, where a relative
+  // import MUST carry the emitted `.js` extension. Jest's resolver does not
+  // perform that `.js` -> `.ts` substitution, so map it here; without this the
+  // server suite cannot import the real modules and would be reduced to testing
+  // hand-written doubles again (#381). Requests that genuinely point at a `.js`
+  // file still resolve to it — `.js` leads `moduleFileExtensions`.
+  moduleNameMapper: { '^(\\.{1,2}/.*)\\.js$': '$1' },
   testPathIgnorePatterns: [
     '/node_modules/',
     '/.next/',
     '<rootDir>/src/test/testing-library/.*\\/utils\\.tsx$',
   ],
   preset: 'ts-jest',
-  testEnvironment: isServer || isEdge ? 'node' : isIntegration ? INTEGRATION_ENVIRONMENT : 'jsdom',
+  testEnvironment:
+    isServer || isEdge || isContract ? 'node' : isIntegration ? INTEGRATION_ENVIRONMENT : 'jsdom',
   transform: {
     '^.+\\.(js|jsx|mjs|cjs|ts|tsx)$': [
       'babel-jest',
@@ -142,8 +204,8 @@ export default async () => {
   return {
     ...nextJestConfig,
     transformIgnorePatterns: [
-      // Allow transforming ESM packages from pnpm's .pnpm folder
-      '/node_modules/.pnpm/(?!(uuid|@faker-js\\+faker)@)',
+      // Allow transforming these ESM-only packages from the hoisted node_modules
+      '/node_modules/(?!(uuid|@faker-js/faker)/)',
     ],
   };
 };

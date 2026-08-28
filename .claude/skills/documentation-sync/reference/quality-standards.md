@@ -14,7 +14,7 @@
 ## Quality rules
 
 - Keep commands copy-pasteable as make targets (e.g. `make test-unit-client`),
-  not raw `pnpm`/`eslint` invocations.
+  not raw `bun`/`eslint` invocations.
 - Name the smallest useful verification command for the change.
 - Keep examples on real repo paths (`src/features/<feature>`,
   `src/test/testing-library/`, `src/test/apollo-server/`).

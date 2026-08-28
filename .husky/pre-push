@@ -1,0 +1,9 @@
+set -e
+
+# Full local gate before the commits leave the machine. This is a strict
+# superset of the previous pre-commit surface (it adds lint-deps via `make
+# lint`). CI=1 runs the host toolchain directly, so the hook works without the
+# Docker dev stack.
+CI=1 make format
+CI=1 make lint
+CI=1 make test-unit-all

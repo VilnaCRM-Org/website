@@ -90,25 +90,24 @@ function handleGraphQLErrors(
   graphQLErrors: readonly GraphQLFormattedError[],
   messages: ClientErrorMessages
 ): string | null {
-  if (graphQLErrors.length === 0) return null;
-
   const firstError = graphQLErrors[0];
+  if (firstError === undefined) return null;
+
   const { extensions, message } = firstError;
   const statusCode = extensions?.statusCode as number | undefined;
-
   const statusMessage = getMessageByStatusCode(statusCode, messages);
-  if (statusMessage) return statusMessage;
+  const isUnauthorized = message?.toUpperCase?.().includes('UNAUTHORIZED') === true;
 
-  if (message?.toUpperCase?.().includes('UNAUTHORIZED')) {
-    return messages[CLIENT_ERROR_KEYS.UNAUTHORIZED];
-  }
+  // Anything the status/`UNAUTHORIZED` mapping does not recognise falls back to
+  // a generic localized message. Echoing `graphQLErrors[].message` verbatim —
+  // as this branch used to — turns the sign-up form into an account-enumeration
+  // oracle ("user with this email already exists") and pipes internal server
+  // wording straight into the UI (#378 F2, CWE-209).
+  const fallback = isUnauthorized
+    ? messages[CLIENT_ERROR_KEYS.UNAUTHORIZED]
+    : messages[CLIENT_ERROR_KEYS.WENT_WRONG];
 
-  const combinedMessages = graphQLErrors
-    .map((e: GraphQLFormattedError) => e.message || '')
-    .filter(Boolean)
-    .join(', ');
-
-  return combinedMessages || null;
+  return statusMessage ?? fallback;
 }
 
 function resolveErrorMessage(error: object, messages: ClientErrorMessages): string {

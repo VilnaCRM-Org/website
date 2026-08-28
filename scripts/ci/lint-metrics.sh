@@ -14,7 +14,7 @@
 #
 # Ported from VilnaCRM-Org/crm scripts/lint-metrics.sh. Website divergences:
 #   * runs host-only (the Makefile invokes it directly, never `docker compose
-#     run rca` / $(PNPM_EXEC) — the dev image has no Rust toolchain);
+#     run rca` / $(PM_EXEC) — the dev image has no Rust toolchain);
 #   * adds an -I include loop so only *.ts / *.tsx are analyzed.
 
 set -eu

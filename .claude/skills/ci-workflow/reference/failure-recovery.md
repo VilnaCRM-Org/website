@@ -58,7 +58,7 @@ Fix the import graph; do not relax a rule in `.dependency-cruiser.js`.
 ## Jest unit suites
 
 - Reproduce the single failing spec before editing code, e.g.
-  `CI=1 TEST_ENV=client pnpm exec jest src/test/unit/email-validation.test.ts`.
+  `CI=1 TEST_ENV=client bun x jest src/test/unit/email-validation.test.ts`.
 - Client specs run in jsdom (`TEST_ENV=client`); Apollo/server specs run in node
   (`TEST_ENV=server`, under `src/test/apollo-server`).
 - Assert user-facing behavior and localized `t()` output, not implementation details —

@@ -1,0 +1,68 @@
+name: workflow security
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  # Several zizmor audits resolve actions against the GitHub API
+  # (known-vulnerable-actions, stale-action-refs, ref-version-mismatch), so a
+  # workflow that was clean at merge time can become vulnerable with no repo
+  # change at all. The weekly run catches that drift.
+  schedule:
+    - cron: '0 4 * * 1'
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  zizmor:
+    # Audits .github/workflows for supply-chain and privilege defects — the one
+    # part of the repo no other gate reads (ESLint, tsc, dependency-cruiser and
+    # the metrics gate all stop at src/, and the qlty zizmor/actionlint plugins
+    # are inert because .qlty/qlty.toml excludes .github/** and every *.yml).
+    # Issue #360.
+    #
+    # Deliberately NOT path-filtered even though zizmor only reads .github/: a
+    # skipped check cannot be a meaningful required status check (#343), and the
+    # whole audit takes seconds.
+    #
+    # The gate blocks on medium-and-above findings reported with high
+    # confidence. Landing this PR took the repo from 30 findings to 14; the two
+    # clusters that remain sit below the floor and are recorded here rather
+    # than silenced — no finding is ignored or suppressed anywhere, and both
+    # stay visible in a `make lint-workflows ZIZMOR_MIN_SEVERITY=low` run:
+    #   * adhoc-packages (Low severity) x13 — the shared
+    #     `npm install -g "$(node -p ...packageManager)"` Bun bootstrap. The fix
+    #     is a hash-pinned setup-bun step, which rewrites that block in 12
+    #     workflows at once and would put every CI job's dependency install in a
+    #     security PR's blast radius. Its own PR.
+    #   * dangerous-triggers (High severity, MEDIUM confidence) x1 —
+    #     ci-health-alerts.yml's `workflow_run`. Reviewed and not applicable
+    #     here: it never checks out the triggering ref and reads only
+    #     workflow_run.name / html_url through `env:`, so the privilege-crossing
+    #     pattern the audit warns about is absent.
+    # Raise the floor in the Makefile (ZIZMOR_MIN_SEVERITY / _CONFIDENCE) as
+    # those are cleared; never lower it to make a finding go away.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      # Reading the workflows is all the audit needs; kept on the job so the
+      # workflow default stays empty for anything added later.
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Audit the workflows with zizmor
+        env:
+          # Enables the online audits; read-only, and scoped to this run.
+          GH_TOKEN: ${{ github.token }}
+        run: make lint-workflows

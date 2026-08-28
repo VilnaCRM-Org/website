@@ -129,7 +129,7 @@ describe('Apollo Server - createUser mutation', () => {
       clientMutationId: 'test-error',
     });
 
-    expect(errors?.[0].message).toContain('Database connection lost');
+    expect(errors?.[0]?.message).toContain('Database connection lost');
   });
   it('should successfully create a user', async () => {
     const createUserMock: jest.Mock = jest.fn(
@@ -184,7 +184,7 @@ describe('Apollo Server - createUser mutation', () => {
 
     expect(errors).toBeDefined();
     expect(errors?.length).toBeGreaterThan(0);
-    expect(errors?.[0].message).toContain(
+    expect(errors?.[0]?.message).toContain(
       'Field "email" of required type "String!" was not provided'
     );
     expect(response.status).toBe(400);
@@ -202,7 +202,7 @@ describe('Apollo Server - createUser mutation', () => {
 
     expect(response.status).toBe(400);
     expect(result.errors).toBeDefined();
-    expect(errors?.[0].message).toContain(
+    expect(errors?.[0]?.message).toContain(
       'Field "email" of required type "String!" was not provided'
     );
   });
@@ -282,7 +282,7 @@ describe('Apollo Server - createUser mutation', () => {
 
     expect(response.status).toBe(200);
     expect(result.errors).toBeDefined();
-    expect(errors?.[0].message).toContain('A user with this email already exists.');
+    expect(errors?.[0]?.message).toContain('A user with this email already exists.');
   });
 
   it('should handle unexpected errors gracefully', async () => {
@@ -305,6 +305,6 @@ describe('Apollo Server - createUser mutation', () => {
     });
 
     expect(errors).toBeDefined();
-    expect(errors?.[0].message).toContain('Database connection lost');
+    expect(errors?.[0]?.message).toContain('Database connection lost');
   });
 });

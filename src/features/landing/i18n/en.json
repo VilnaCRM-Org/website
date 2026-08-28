@@ -145,7 +145,15 @@
         "required": "This field is required",
         "error_length": "Please enter a password between 8 and 64 characters",
         "error_numbers": "Please include at least one number",
-        "error_uppercase": "Please include at least one uppercase letter"
+        "error_uppercase": "Please include at least one uppercase letter",
+        "error_lowercase": "Please include at least one lowercase letter",
+        "requirements": "Use 8 to 64 characters, including at least one number, one uppercase letter and one lowercase letter"
+      },
+      "confirm_password_input": {
+        "label": "Confirm password",
+        "placeholder": "Repeat the password",
+        "required": "This field is required",
+        "error_mismatch": "Passwords do not match"
       },
       "password_tip": {
         "alt": "Password tip mark",
@@ -158,7 +166,7 @@
         }
       },
       "confidential_text": {
-        "fullText": "I have read and accept the <1>Privacy Policy</1> and the <1>Use Policy</1> VilnaCRM Service"
+        "fullText": "I have read and accept the <1>Privacy Policy</1> and the <3>Use Policy</3> VilnaCRM Service"
       },
       "button_text": "Sign-Up",
       "error_text": "There was an error. Please check again"

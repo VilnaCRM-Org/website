@@ -1,0 +1,87 @@
+name: commit hygiene
+
+on:
+  pull_request:
+    branches:
+      - main
+    # Re-run on title/body edits too (default types miss `edited`), so a title
+    # fixed or broken after opening is always re-validated.
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - edited
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  commitlint:
+    # Skip bot-authored PRs: Dependabot/renovate use `deps(deps):` messages whose
+    # type is outside the allowed list and whose issue number sits after the
+    # colon, so they fail the repo's custom check-task-number-rule. Gating them
+    # would red-wall the weekly dependency PRs. Keyed on the PR author (not
+    # github.actor) so a human reopening a bot PR still skips. Human commits and
+    # PR titles must follow `type(#NNN): summary`.
+    if: >-
+      github.event.pull_request.user.login != 'dependabot[bot]' &&
+      github.event.pull_request.user.login != 'renovate[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    env:
+      CI: 1
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Full history so the PR commit range is resolvable.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: Cache Bun cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('.nvmrc') }}-${{ hashFiles('**/bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-${{ hashFiles('.nvmrc') }}-
+
+      - name: Setup Bun and install dependencies
+        run: |
+          # Install the exact Bun pinned in package.json's packageManager field,
+          # then install locked deps (mirrors static-testing.yml). commitlint and
+          # its config-conventional preset resolve from bun.lock.
+          npm install -g "$(node -p "require('./package.json').packageManager.split('+')[0]")"
+          bun install --frozen-lockfile
+
+      - name: Extract the trusted base commitlint config
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        # Validate against the base branch's config, never the PR's own copy, so a
+        # PR cannot weaken the very rules it must satisfy. Written into the repo
+        # root so `extends: @commitlint/config-conventional` resolves from
+        # node_modules; .cjs keeps it CommonJS regardless of package.json type.
+        run: git show "$BASE_SHA:commitlint.config.js" > commitlint.base.config.cjs
+
+      - name: Lint the PR commit range
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: bun x commitlint --config commitlint.base.config.cjs --from "$BASE_SHA" --to "$HEAD_SHA" --verbose
+
+      - name: Lint the PR title (squash merges use it as the commit message)
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        # Title passed via env, never interpolated into the script body.
+        run: printf '%s' "$PR_TITLE" | bun x commitlint --config commitlint.base.config.cjs --verbose

@@ -1,14 +1,25 @@
 {
   "compilerOptions": {
-    "target": "ES6",
+    "target": "ES2022",
     "lib": ["dom", "dom.iterable", "esnext"],
-    "allowJs": true,
+    "allowJs": false,
+    // skipLibCheck stays true: third-party declaration files fail a full lib
+    // check on this toolchain — playwright-core/types/protocol.d.ts uses the
+    // deprecated `module` keyword for namespaces (TS1540), @mui/material's
+    // createTypography.d.mts has a TypographyVariants/CSSProperties variance
+    // clash with React 19's types (TS2430), and @memlab/* pull in the untyped
+    // `minimist` (TS7016, no bundled or @types declarations). None are fixable
+    // from this repo. Revisit when those upstreams ship corrected types.
     "skipLibCheck": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitReturns": true,
+    "noImplicitOverride": true,
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
     "module": "esnext",
@@ -41,7 +52,6 @@
     "*.tsx",
     ".next/types/**/.ts",
     "playwright",
-    "src/components/UiFooter/.stories.tsx",
     "memoryLeak"
   ],
   "exclude": ["node_modules", ".next", "out"]

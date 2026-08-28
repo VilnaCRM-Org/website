@@ -42,12 +42,12 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ github.workspace }}/codeql_databases
-          key: ${{ runner.os }}-codeql-${{ hashFiles('**/pnpm-lock.yaml') }}
+          key: ${{ runner.os }}-codeql-${{ hashFiles('**/bun.lock') }}
           restore-keys: |
             ${{ runner.os }}-codeql-
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@7188fc363630916deb702c7fdcf4e481b751f97a # v3
+        uses: github/codeql-action/init@7188fc363630916deb702c7fdcf4e481b751f97a # v4.37.1
         with:
           languages: ${{ matrix.language }}
           # Pin the database directory to the cached path; the action otherwise
@@ -55,9 +55,9 @@ jobs:
           db-location: ${{ github.workspace }}/codeql_databases
 
       - name: Autobuild
-        uses: github/codeql-action/autobuild@7188fc363630916deb702c7fdcf4e481b751f97a # v3
+        uses: github/codeql-action/autobuild@7188fc363630916deb702c7fdcf4e481b751f97a # v4.37.1
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@7188fc363630916deb702c7fdcf4e481b751f97a # v3
+        uses: github/codeql-action/analyze@7188fc363630916deb702c7fdcf4e481b751f97a # v4.37.1
         with:
           category: '/language:${{matrix.language}}'

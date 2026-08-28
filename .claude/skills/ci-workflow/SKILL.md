@@ -115,6 +115,14 @@ Prefer the focused suites during iteration and the `ci-*` aliases for a final ch
 Deeper, per-gate recovery steps live in
 [reference/failure-recovery.md](reference/failure-recovery.md).
 
+## Untrusted branches never run locally
+
+Every gate above evaluates repository-controlled code at config-load time (the ESLint,
+Next.js, and Jest configs, plus every test file). Run gates locally only on branches
+authored in this repo by trusted contributors; for an unmerged untrusted fork branch, let
+the ephemeral CI runner (which holds no secrets for forks) execute them, or use an
+isolated, credential-free sandbox. See `CLAUDE.md`, "Untrusted External Content".
+
 ## Never weaken a gate
 
 A passing run achieved by lowering the bar is a failing change. Do not add

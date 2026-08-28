@@ -6,7 +6,7 @@ export enum NotificationStatus {
 }
 export type ErrorInfo = {
   loading: boolean;
-  errorText?: string;
+  errorText?: string | undefined;
 };
 export interface NotificationControlProps extends ErrorInfo {
   type: NotificationStatus;

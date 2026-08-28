@@ -1,7 +1,6 @@
 .lighthouseci
 
 node_modules
-.pnpm-store
 
 .next
 out

@@ -1,0 +1,75 @@
+name: storybook build
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.storybook/**'
+      # Stories glob over the whole src tree (.storybook/main.ts:
+      # '../src/**/*.stories.*' and '../src/**/*.mdx') and import the components
+      # they render, so an ordinary source edit can break the Storybook build
+      # without touching a story file. Watch the tree those stories import.
+      - 'src/**'
+      - '**/*.stories.*'
+      - 'package.json'
+      - 'bun.lock'
+      # Direct inputs of the job below — a change to any of these can break the
+      # build without touching a story, so they must re-trigger this check too.
+      - 'Makefile'
+      - 'scripts/generateLocalization.mjs'
+      - '.nvmrc'
+      - 'next.config.js'
+      - 'tsconfig.json'
+      - '.github/workflows/storybook-build.yml'
+  schedule:
+    - cron: '0 5 * * 1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CI: 1
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: Cache Bun cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('.nvmrc') }}-${{ hashFiles('**/bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-${{ hashFiles('.nvmrc') }}-
+
+      - name: Setup Bun and install dependencies
+        run: |
+          npm install -g "$(node -p "require('./package.json').packageManager.split('+')[0]")"
+          bun install --frozen-lockfile
+
+      - name: Generate the localization bundle
+        # pages/i18n/localization.json is generated (#328) and gitignored; the
+        # Storybook build imports the i18n stack that requires it, so it must be
+        # produced first (other CI recipes do the same before their builds).
+        run: node scripts/generateLocalization.mjs
+
+      - name: Build Storybook
+        run: make storybook-build
+
+      - name: Verify the Storybook output
+        run: test -s storybook-static-ci/index.html

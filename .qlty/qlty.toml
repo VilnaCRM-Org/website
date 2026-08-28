@@ -54,11 +54,13 @@ exclude_patterns = [
   # scope: an ES5.1 CloudFront function (uses `var` by design) and a server
   # bootstrap that configures dotenv before its other imports load.
   "scripts/cloudfront_routing.js",
+  "scripts/cloudfront_security_headers.js",
   "docker/apollo-server/server.mts",
-  # Root dependency-cruiser config: not under any eslint config block (it lives
-  # at the repo root, outside src/), so qlty's eslint only emits a "file ignored"
-  # warning. It is Prettier-formatted via `make format`.
+  # Root config files not under any eslint config block (they live at the repo
+  # root, outside src/), so qlty's eslint only emits a "file ignored" warning.
+  # They are Prettier-formatted via `make format`.
   ".dependency-cruiser.js",
+  "jest.config.ts",
 ]
 
 test_patterns = [
@@ -89,6 +91,13 @@ mode = "comment"
 
 [[plugin]]
 name = "eslint"
+# Pinned to the same ESLint the repo runs (see `eslint` in package.json). Left
+# unpinned, newer Qlty CLIs default to their own ESLint 10.x while still
+# installing this repo's eslint-plugin-react 7.x through `package_filters`; that
+# plugin calls `context.getFilename()`, which ESLint 10 removed, so every build
+# dies with "Error while loading rule 'react/display-name'". Keep in step with
+# package.json so Qlty and `make lint-next` stay the same check.
+version = "9.39.4"
 package_file = "package.json"
 package_filters = ["eslint", "jest", "prettier"]
 

@@ -1,4 +1,4 @@
-FROM public.ecr.aws/docker/library/node:24.18.0-alpine3.23 AS base
+FROM public.ecr.aws/docker/library/node:24.18.0-alpine3.23@sha256:595398b0081eacda8e1c4c5b97b76cd1020e4d58a8ebcb4843b9bca1e79e7436 AS base
 
 RUN apk add --no-cache \
     chromium=149.0.7827.53-r0 \
@@ -13,7 +13,7 @@ RUN apk add --no-cache \
     libxcomposite=0.4.6-r5 \
     libxdamage=1.1.6-r5 \
     libxext=1.3.6-r2 \
-    && npm install -g pnpm@10.6.5
+    && npm install -g bun@1.3.5
 
 ENV DISPLAY=:99 \
     PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser \
@@ -26,8 +26,8 @@ WORKDIR /app
 
 FROM base AS build
 
-COPY package.json pnpm-lock.yaml checkNodeVersion.js ./
-RUN pnpm install
+COPY package.json bun.lock checkNodeVersion.js ./
+RUN bun install --frozen-lockfile
 
 
 FROM base AS final

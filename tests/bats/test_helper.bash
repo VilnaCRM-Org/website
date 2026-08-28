@@ -107,12 +107,14 @@ setup_makefile_test_env() {
   create_docker_stub
   create_curl_stub
   create_generic_stub npm
-  create_generic_stub pnpm
+  create_generic_stub bun
   create_generic_stub tar
   create_generic_stub next
   create_generic_stub next-export-optimize-images
   create_generic_stub eslint
   create_generic_stub tsc
+  create_generic_stub prettier
+  create_generic_stub markdownlint
   create_generic_stub storybook
   create_generic_stub jest
   create_generic_stub serve

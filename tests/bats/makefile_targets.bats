@@ -54,7 +54,7 @@ EOF
   reset_command_log
   run_make_target install-deps-in-container-dind TEMP_CONTAINER_NAME=website-dev-test
   [ "$status" -eq 0 ]
-  assert_log_contains 'docker exec website-dev-test sh -lc cd /app && npm install -g pnpm && pnpm install --frozen-lockfile'
+  assert_log_contains 'docker exec website-dev-test sh -lc cd /app && npm install -g bun@1.3.5 && bun install --frozen-lockfile'
 
   reset_command_log
   run_make_target run-unit-tests-dind TEMP_CONTAINER_NAME=website-dev-test
@@ -65,7 +65,7 @@ EOF
   reset_command_log
   run_make_target run-mutation-tests-dind TEMP_CONTAINER_NAME=website-dev-test
   [ "$status" -eq 0 ]
-  assert_log_contains 'docker exec website-dev-test sh -lc cd /app && pnpm stryker run'
+  assert_log_contains 'docker exec website-dev-test sh -lc cd /app && bun x stryker run'
 
   reset_command_log
   run_make_target run-eslint-tests-dind TEMP_CONTAINER_NAME=website-dev-test
@@ -108,7 +108,7 @@ EOF
   reset_command_log
   run_make_target memory-leak-dind
   [ "$status" -eq 0 ]
-  assert_log_contains 'docker compose -p memleak -f docker-compose.memory-leak.yml up -d --wait memory-leak'
+  assert_log_contains 'docker compose -p memleak -f docker-compose.memory-leak.yml up -d --wait --build memory-leak'
   assert_log_contains 'docker compose -p memleak -f docker-compose.memory-leak.yml exec -T memory-leak rm -rf ./src/test/memory-leak/results'
   assert_log_contains 'docker compose -p memleak -f docker-compose.memory-leak.yml exec -T memory-leak sh -lc unset DISPLAY;'
   assert_log_contains 'docker compose -p memleak -f docker-compose.memory-leak.yml down'
@@ -143,12 +143,12 @@ EOF
   reset_command_log
   run_make_target format CI=1
   [ "$status" -eq 0 ]
-  assert_log_contains 'pnpm ./node_modules/.bin/prettier **/*.{js,jsx,ts,tsx,json,css,scss,md} --write --ignore-path .prettierignore'
+  assert_log_contains 'prettier **/*.{js,jsx,ts,tsx,json,css,scss,md} --write --ignore-path .prettierignore'
 
   reset_command_log
   run_make_target husky
   [ "$status" -eq 0 ]
-  assert_log_contains 'pnpm husky install'
+  assert_log_contains 'bun x husky install'
 
   reset_command_log
   run_make_target storybook-start CI=1
@@ -163,12 +163,12 @@ EOF
   reset_command_log
   run_make_target check-node-version CI=1
   [ "$status" -eq 0 ]
-  assert_log_contains 'pnpm exec node checkNodeVersion.js'
+  assert_log_contains 'node checkNodeVersion.js'
 
   reset_command_log
   run_make_target update
   [ "$status" -eq 0 ]
-  assert_log_contains 'pnpm update'
+  assert_log_contains 'bun update'
 }
 
 @test "prod-side wrapper targets invoke the expected Docker and Playwright flows" {
@@ -209,7 +209,25 @@ EOF
   assert_log_contains 'playwright test ./src/test/e2e'
 }
 
-@test "maintenance targets shell out through Docker and pnpm as expected" {
+@test "e2e flake targets repeat the changed specs and grade the report" {
+  reset_command_log
+  run_make_target test-e2e-burnin
+  [ "$status" -eq 0 ]
+  assert_log_contains 'playwright test ./src/test/e2e --repeat-each=5 --retries=0'
+  assert_log_contains 'PLAYWRIGHT_JSON_REPORT=burn-in-results/results.json'
+
+  reset_command_log
+  run_make_target test-e2e-burnin E2E_BURNIN_SPECS=src/test/e2e/a.spec.ts E2E_BURNIN_REPEATS=3
+  [ "$status" -eq 0 ]
+  assert_log_contains 'playwright test src/test/e2e/a.spec.ts --repeat-each=3 --retries=0'
+
+  reset_command_log
+  run_make_target check-e2e-flakes
+  [ "$status" -eq 0 ]
+  assert_log_contains 'bun x tsx scripts/ci/check-flaky-report.ts'
+}
+
+@test "maintenance targets shell out through Docker and Bun as expected" {
   reset_command_log
   run_make_target lighthouse-desktop-dind
   [ "$status" -eq 0 ]
@@ -297,6 +315,19 @@ STUB
   assert_log_contains 'jest TEST_ENV=integration --watch'
 }
 
+@test "test-contract runs Jest in the contract environment" {
+  cat > "$STUB_BIN_DIR/jest" <<'STUB'
+#!/usr/bin/env bash
+printf 'jest TEST_ENV=%s %s\n' "${TEST_ENV:-unset}" "$*" >> "${COMMAND_LOG:?}"
+exit 0
+STUB
+  chmod +x "$STUB_BIN_DIR/jest"
+
+  run_make_target test-contract CI=1
+  [ "$status" -eq 0 ]
+  assert_log_contains 'jest TEST_ENV=contract --verbose'
+}
+
 @test "ensure-dev starts the dev service when it is not already running" {
   run_make_target ensure-dev CI=1
   [ "$status" -eq 0 ]
@@ -318,6 +349,7 @@ STUB
   assert_output_contains '===== lint-next ====='
   assert_output_contains '===== lint-tsc ====='
   assert_output_contains '===== lint-md ====='
+  assert_output_contains '===== lint-headers ====='
 }
 
 @test "ci-test runs the dev-side test phase through the parallel runner" {
@@ -326,6 +358,7 @@ STUB
   assert_output_contains '===== ci-test-unit-client ====='
   assert_output_contains '===== ci-test-unit-server ====='
   assert_output_contains '===== ci-test-integration ====='
+  assert_output_contains '===== ci-test-contract ====='
 }
 
 @test "ci-test split targets invoke Jest directly with the right TEST_ENV" {
@@ -348,13 +381,13 @@ STUB
   reset_command_log
   run_make_target ci-test-mutation CI=1
   [ "$status" -eq 0 ]
-  assert_log_contains 'pnpm exec stryker run'
+  assert_log_contains 'bun x stryker run'
 }
 
 @test "ci-mutation delegates to ci-test-mutation" {
   run_make_target ci-mutation CI=1
   [ "$status" -eq 0 ]
-  assert_log_contains 'pnpm exec stryker run'
+  assert_log_contains 'bun x stryker run'
 }
 
 @test "ci-prod-setup starts prod and installs Chromium" {
@@ -383,7 +416,7 @@ STUB
   run_make_target ci-test-memory-leak
   [ "$status" -eq 0 ]
   # --wait avoids racing the exec against an unready container.
-  assert_log_contains 'docker compose -p memleak -f docker-compose.memory-leak.yml up -d --wait memory-leak'
+  assert_log_contains 'docker compose -p memleak -f docker-compose.memory-leak.yml up -d --wait --build memory-leak'
   assert_log_contains 'node ./src/test/memory-leak/runMemlabTests.js'
   # Teardown must be scoped to the isolated memleak project so it never removes
   # the shared prod stack as an orphan mid-sequence in ci-test-prod, and the
@@ -488,23 +521,174 @@ STUB
   [ "$status" -eq 0 ]
   assert_output_contains 'all hard checks pass'
 
-  # Host-only: never routed through the dev container (docker) or pnpm.
-  run grep -E 'docker|pnpm' "$COMMAND_LOG"
+  # Host-only: never routed through the dev container (docker) or the package manager (bun).
+  run grep -E 'docker|bun' "$COMMAND_LOG"
   [ "$status" -ne 0 ]
 }
 
-@test "contract targets route through pnpm and cover fetch, lint and baseline refresh" {
+# Provisions the lint-openapi sandbox: an already-installed oasdiff stub whose
+# `breaking` exit code the caller chooses, the committed baseline, and a curl
+# stub that "downloads" the upstream spec. UPSTREAM_REF short-circuits the
+# releases-API lookup, so the target is exercised without touching the network.
+setup_openapi_drift_sandbox() {
+  local breaking_exit="$1"
+
+  reset_command_log
+
+  mkdir -p "$MAKEFILE_SANDBOX/bin"
+  cat > "$MAKEFILE_SANDBOX/bin/oasdiff" <<STUB
+#!/usr/bin/env bash
+if [ "\$1" = "--version" ]; then
+  echo "oasdiff version 1.27.0"
+  exit 0
+fi
+echo 'stubbed oasdiff output'
+exit ${breaking_exit}
+STUB
+  chmod +x "$MAKEFILE_SANDBOX/bin/oasdiff"
+
+  mkdir -p "$MAKEFILE_SANDBOX/contracts/user-service"
+  cp "$PROJECT_ROOT/contracts/user-service/openapi.json" \
+    "$MAKEFILE_SANDBOX/contracts/user-service/"
+
+  cat > "$STUB_BIN_DIR/curl" <<'STUB'
+#!/usr/bin/env bash
+printf 'curl %s\n' "$*" >> "${COMMAND_LOG:?}"
+destination=""
+previous=""
+for argument in "$@"; do
+  [ "$previous" = "-o" ] && destination="$argument"
+  previous="$argument"
+done
+if [ -n "$destination" ] && [ -n "${STUB_SPEC_SOURCE:-}" ]; then
+  cp "$STUB_SPEC_SOURCE" "$destination"
+fi
+exit 0
+STUB
+  chmod +x "$STUB_BIN_DIR/curl"
+
+  export STUB_SPEC_SOURCE="$MAKEFILE_SANDBOX/contracts/user-service/openapi.json"
+  export UPSTREAM_REF="v0.0.0-stub"
+}
+
+# GNU make collapses every recipe failure to its own exit 2, so the three-way
+# contract can only be asserted against the script. openapi-drift.yml calls it
+# the same way for the same reason.
+run_openapi_drift_script() {
+  run env -C "$MAKEFILE_SANDBOX" \
+    PATH="$STUB_BIN_DIR:$PATH" \
+    COMMAND_LOG="$COMMAND_LOG" \
+    OASDIFF_BIN="./bin/oasdiff" \
+    STUB_SPEC_SOURCE="$STUB_SPEC_SOURCE" \
+    UPSTREAM_REF="$UPSTREAM_REF" \
+    bash scripts/ci/openapi-drift.sh
+}
+
+@test "lint-openapi provisions the pinned oasdiff then reports a clean baseline host-only" {
+  setup_openapi_drift_sandbox 0
+
+  run_make_target lint-openapi
+  [ "$status" -eq 0 ]
+  assert_output_contains 'No breaking changes'
+
+  # Host-only: never routed through the dev container (docker) or the package manager (bun).
+  run grep -E 'docker|bun' "$COMMAND_LOG"
+  [ "$status" -ne 0 ]
+}
+
+@test "the drift script writes a report and exits 1 when upstream has breaking changes" {
+  setup_openapi_drift_sandbox 1
+
+  run_openapi_drift_script
+  [ "$status" -eq 1 ]
+  assert_output_contains 'Breaking changes found'
+  [ -s "$MAKEFILE_SANDBOX/reports/openapi-drift.md" ]
+}
+
+@test "the drift script reports a tool failure as unavailable, never as drift" {
+  # oasdiff exits 100 on flag misuse and 102 when it cannot load a spec. Either
+  # must surface as "unavailable" (2), never as an upstream API change (1) —
+  # otherwise a broken nightly is indistinguishable from a clean one.
+  setup_openapi_drift_sandbox 100
+
+  run_openapi_drift_script
+  [ "$status" -eq 2 ]
+  assert_output_contains 'this is not a drift report'
+}
+
+@test "the oasdiff pin is identical in the Makefile and its provisioning script" {
+  # The Makefile documents the pin at the top and passes it down; the script
+  # carries the same values as defaults so the nightly, which calls the script
+  # directly, provisions the very same verified binary. They must never drift.
+  local makefile_version script_version makefile_digest script_digest
+
+  makefile_version="$(sed -n 's/^OASDIFF_VERSION[[:space:]]*=[[:space:]]*//p' "$PROJECT_ROOT/Makefile")"
+  makefile_digest="$(sed -n 's/^OASDIFF_SHA256_LINUX[[:space:]]*=[[:space:]]*//p' "$PROJECT_ROOT/Makefile")"
+  script_version="$(sed -n 's/^OASDIFF_VERSION="\${OASDIFF_VERSION:-\(.*\)}"$/\1/p' \
+    "$PROJECT_ROOT/scripts/ci/ensure-oasdiff.sh")"
+  script_digest="$(sed -n 's/^OASDIFF_SHA256_LINUX="\${OASDIFF_SHA256_LINUX:-\(.*\)}"$/\1/p' \
+    "$PROJECT_ROOT/scripts/ci/ensure-oasdiff.sh")"
+
+  [ -n "$makefile_version" ]
+  [ -n "$makefile_digest" ]
+  [ "$makefile_version" = "$script_version" ]
+  [ "$makefile_digest" = "$script_digest" ]
+}
+
+@test "lint-workflows audits the workflows through the digest-pinned zizmor image host-only" {
+  reset_command_log
+
+  mkdir -p "$MAKEFILE_SANDBOX/.github/workflows"
+
+  # A token is supplied so the target does not fall back to `gh auth token` and
+  # pull a real credential into the command log.
+  run_make_target lint-workflows GH_TOKEN=stub-token
+  [ "$status" -eq 0 ]
+
+  # The gate must reach zizmor by immutable digest, at the committed floor, and
+  # aimed at the workflows -- a dropped threshold or a tag pin would leave a
+  # green check that audits nothing.
+  assert_log_contains 'ghcr.io/zizmorcore/zizmor@sha256:'
+  assert_log_contains '--min-severity medium'
+  assert_log_contains '--min-confidence high'
+  assert_log_contains '.github/workflows/'
+
+  # Host-only: zizmor is a container CLI, never routed through the dev
+  # container's package manager.
+  run grep -E 'bun|npm' "$COMMAND_LOG"
+  [ "$status" -ne 0 ]
+}
+
+@test "contract targets shell out to Node and cover fetch, lint and baseline refresh" {
   reset_command_log
 
   run_make_target lint-contracts CI=1
   [ "$status" -eq 0 ]
-  assert_log_contains 'pnpm node scripts/contracts/lint-contracts.mjs'
+  assert_log_contains 'node scripts/contracts/lint-contracts.mjs'
 
   reset_command_log
 
   run_make_target update-contracts CI=1
   [ "$status" -eq 0 ]
-  assert_log_contains 'pnpm node scripts/fetchSwaggerSchema.mjs'
-  assert_log_contains 'pnpm node scripts/fetchGraphqlSchema.mjs'
-  assert_log_contains 'pnpm node scripts/contracts/lint-contracts.mjs --update-baseline'
+  assert_log_contains 'node scripts/fetchSwaggerSchema.mjs'
+  assert_log_contains 'node scripts/fetchGraphqlSchema.mjs'
+  assert_log_contains 'node scripts/contracts/lint-contracts.mjs --update-baseline'
+}
+
+# Issue #381 / F4: the user-service version invariant is hermetic, so unlike
+# lint-contracts it is part of the `lint` aggregate and runs on every PR.
+@test "lint-api-versions shells out to the hermetic version-invariant check" {
+  reset_command_log
+
+  run_make_target lint-api-versions CI=1
+  [ "$status" -eq 0 ]
+  assert_log_contains 'node scripts/contracts/check-api-versions.mjs'
+}
+
+@test "the lint aggregate includes the API version invariant" {
+  run grep -E '^lint: .*lint-api-versions' "$PROJECT_ROOT/Makefile"
+  [ "$status" -eq 0 ]
+
+  run grep -E '^CI_LINT_TARGETS .*lint-api-versions' "$PROJECT_ROOT/Makefile"
+  [ "$status" -eq 0 ]
 }
