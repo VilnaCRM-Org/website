@@ -53,11 +53,14 @@ identity, which for an App-token push really is `<app-slug>[bot]` — while the
 commit-level author, committer and signature fields are recorded as evidence
 rather than used as a bot test.
 
-Each record embeds an HTML-comment dedup marker (`release-audit:commit:<sha>` or
-`release-audit:release:<id>:<class>`). Before writing, the script scans the ledger's
-comments from the last 48 hours for that marker, so the three event paths below can
-overlap without producing duplicate entries. The lookup is bounded by time, not by ledger
-size, so its cost does not grow as the ledger fills.
+Each record embeds HTML-comment dedup markers (`release-audit:commit:<sha>` and
+`release-audit:release:<id>:<class>`). A release record carries **both** — its own marker
+and the commit marker for the tag it resolved — which is what keeps the daily sweep from
+re-recording that same `[skip ci]` commit as a second entry. Before writing, the script
+scans the ledger's comments from the last 48 hours for the marker, so the three event
+paths below can overlap without producing duplicate entries. That window is fetched once
+per run and bounded by time rather than by ledger size, so its cost grows neither with the
+ledger nor with the number of commits in the event.
 
 ## Why there are three event paths
 
@@ -82,7 +85,11 @@ audit, and would look green forever while auditing nothing.
 | ------------------ | ----------------------------------- | ------------------------------------ |
 | `release`          | the release, plus its tagged commit | releases that fail before publishing |
 | `push` to `main`   | merges, force-pushes, other bots    | anything marked `[skip ci]`          |
-| `schedule` (daily) | whatever the other two missed       | up to 24 h of latency                |
+| `schedule` (daily) | commits the other two paths missed  | release edits/deletions; 24 h lag    |
+
+The sweep reads `main`'s commit history and nothing else, so it re-derives a missed commit
+but never a missed release edit or deletion. That distinction matters for dropped events —
+see [what the ledger cannot prove](#what-the-ledger-cannot-prove).
 
 The `release` path also depends on `autorelease.yml` creating the release under a GitHub
 App installation token rather than the default `GITHUB_TOKEN`: events raised by
@@ -107,15 +114,25 @@ workflow here: a release event runs on `refs/tags/vX.Y.Z` while a push runs on
 `refs/heads/main`, and both mutate the same ledger issue, so a ref-keyed group would let
 two runs race to create it. Please do not "standardise" it.
 
+`cancel-in-progress` is `false`, so an audit already in flight is never aborted. It does
+**not** mean every queued event survives: GitHub keeps at most one _pending_ run per group,
+and a third event arriving during a run evicts the pending one.
+
 ## Escalations
 
 Routine events produce a ledger comment only — anyone subscribed to the ledger issue is
-notified. These three additionally open or refresh a `ci-alert` issue:
+notified. These additionally open or refresh a `ci-alert` issue:
 
 - `main` was force-pushed;
 - a release was `edited` or `deleted` (releases are immutable by convention here);
 - the release author, or a `[bot]` actor pushing to `main`, is not the declared release
-  App. This one is **opt-in** and stays silent until `RELEASE_BOT_ACTOR` is configured.
+  App. This one is **opt-in** and stays silent until `RELEASE_BOT_ACTOR` is configured;
+- the compare API could not enumerate a push, so only its head commit was recorded. That
+  ledger entry is labelled an incomplete record rather than reading like a one-commit push;
+- the daily sweep could not list `main`, so the `[skip ci]` backstop recorded nothing that
+  cycle. One blip is reconciled by the next run; a repeat means the gap is open;
+- the audit run itself failed. The script can only alert from a run that succeeds, so the
+  workflow files this one from an `if: failure()` step of its own.
 
 ## What the ledger cannot prove
 
@@ -137,6 +154,14 @@ checks the header matches `type(#123):`; nothing in this repository produces, re
 verifies an agent-attribution trailer. The ledger reports whatever trailers exist, labelled
 unverified, and prints `none` otherwise — it does not invent a convention that nothing
 enforces.
+
+**A dropped event is not always recoverable.** Every run of this workflow serializes on one
+concurrency group, and GitHub keeps at most one pending run per group, so a burst of three
+events evicts the pending one. A dropped `push` costs nothing — the daily sweep re-derives
+it from `main`'s commit history — and the `created`/`published` pair for one release is a
+designed no-op. A dropped release `edited` or `deleted` escalation is simply gone: no path
+re-reads the releases API. This is one more reason the organisation audit log, not this
+ledger, is the record to reach for.
 
 **The ledger is not tamper-evident.** Any maintainer with write access can edit or delete
 an issue comment, and no record is signed. The tamper-evident record is GitHub's

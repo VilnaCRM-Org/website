@@ -25,6 +25,18 @@ extract_job() {
   ' "$1"
 }
 
+# Print the `permissions:` mapping of the job body on stdin. Job-level keys sit
+# at a four-space indent, so the next four-space key ends the block. A comment
+# elsewhere in the job -- the gate step explains the grant in prose -- must not
+# be able to satisfy a permission assertion.
+extract_job_permissions() {
+  awk '
+    /^    permissions:[[:space:]]*$/ { inside = 1; next }
+    inside && /^    [A-Za-z0-9_-]+:/ { inside = 0 }
+    inside { print }
+  '
+}
+
 # Print the code-scanning severity predicate lines shared by the gate script and
 # the ci-health-alerts digest, normalised to a single space so indentation
 # differences between a shell script and a YAML block scalar do not matter.
@@ -70,12 +82,14 @@ extract_severity_predicate() {
 }
 
 @test "the analyze job keeps the security-events permission the gate reads with" {
-  local analyze
-  analyze="$(extract_job "$WORKFLOWS_DIR/security-testing.yml" analyze)"
+  local perms
+  perms="$(extract_job "$WORKFLOWS_DIR/security-testing.yml" analyze |
+    extract_job_permissions)"
 
   # write subsumes read, so no separate grant is needed -- but losing it would
   # break both the upload and the gate.
-  [[ "$analyze" == *'security-events: write'* ]]
+  [ -n "$perms" ]
+  printf '%s\n' "$perms" | grep -qE '^      security-events: write[[:space:]]*$'
 }
 
 @test "ci-health-alerts monitors security testing and ignores pull-request runs" {

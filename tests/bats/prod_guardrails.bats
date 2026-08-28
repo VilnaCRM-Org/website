@@ -338,6 +338,25 @@ JS
   assert_output_contains 'mutable'
 }
 
+@test "fails when an asset allow-list table is deleted outright" {
+  # Deleting a table slips past the freeze audit, which only inspects the tables it
+  # finds. The handler still reads ALLOWED_FILES, and the file is 'use strict', so
+  # the missing binding throws inside the try and the catch hands every path to the
+  # origin -- the exact pass-through this assertion exists to prevent.
+  python3 - "$FIXTURE/scripts/cloudfront_routing.js" <<'PY'
+import re
+import sys
+p = sys.argv[1]
+s = open(p).read()
+open(p, 'w').write(re.sub(r'var ALLOWED_FILES = Object\.freeze\(\{[\s\S]*?\n\}\);\n', '', s))
+PY
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains 'ALLOWED_FILES'
+  assert_output_contains 'no longer declares'
+}
+
 @test "fails when the synthetic 404 response is removed" {
   sed -i 's/statusCode: 404,/statusCode: 200,/' "$FIXTURE/scripts/cloudfront_routing.js"
 
@@ -371,6 +390,28 @@ JS
 
 @test "fails when an edge coverage threshold drops below 100" {
   sed -i '/const EDGE_COVERAGE_THRESHOLD/,/};/ s/branches: 100/branches: 95/' \
+    "$FIXTURE/jest.config.ts"
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains 'threshold branches at 100'
+}
+
+@test "a commented-out coverage entry does not count as a live pin" {
+  # The pin used to be read off the raw file, so commenting the entry out left the
+  # gate green while Jest had already stopped collecting from the edge script.
+  sed -i "s#^  '<rootDir>/scripts/cloudfront_routing.js',#  // '<rootDir>/scripts/cloudfront_routing.js',#" \
+    "$FIXTURE/jest.config.ts"
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains 'no longer collects edge coverage'
+}
+
+@test "a commented-out threshold does not mask a lowered live one" {
+  # Keeping the 100% line as a comment above a lowered live one satisfied the
+  # `branches: 100` search while the enforced floor was 95.
+  sed -i '/const EDGE_COVERAGE_THRESHOLD/,/^};/ s#^  global: { branches: 100,#  // global: { branches: 100,\n  global: { branches: 95,#' \
     "$FIXTURE/jest.config.ts"
 
   run_guardrails

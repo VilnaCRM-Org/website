@@ -28,6 +28,12 @@ readonly MIN_DAYS_REMAINING=60
 # RFC 9116 section 2.5.5 recommends less than a year. This closes the obvious
 # cheat: the fix for a red gate must not be `Expires: 2099-01-01`.
 readonly MAX_DAYS_AHEAD=366
+# The URI this policy is published at. RFC 9116 section 2.5.2 tells consumers to
+# distrust a file whose `Canonical` does not name the location they fetched, so a
+# foreign or typo'd host silently invalidates the whole policy while still
+# reading fine. Pinned here for the same reason robots.txt pins its `Sitemap`
+# origin (src/test/unit/robots-txt.test.ts); move it only with the deployed one.
+readonly CANONICAL_URI='https://vilnacrm.com/.well-known/security.txt'
 
 # Injected clock (UTC calendar date, YYYY-MM-DD). Only the Bats suite sets it,
 # to pin the near-expiry boundaries without waiting a year. No Makefile target
@@ -39,7 +45,34 @@ fail() {
   exit 1
 }
 
-if ! printf '%s' "${today}" | grep -qE '^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$'; then
+# A YYYY-MM-DD date that a Gregorian calendar actually has. The day-delta
+# arithmetic below normalises an impossible one (2027-02-31 -> 3 March) instead
+# of rejecting it, so both the injected clock and `Expires` are checked here.
+is_real_calendar_date() {
+  awk -v d="$1" '
+    BEGIN {
+      split(d, p, "-")
+      y = p[1] + 0; m = p[2] + 0; day = p[3] + 0
+      leap = (y % 4 == 0 && y % 100 != 0) || (y % 400 == 0)
+      split("31 28 31 30 31 30 31 31 30 31 30 31", len, " ")
+      if (m == 2 && leap) len[2] = 29
+      exit (day >= 1 && day <= len[m]) ? 0 : 1
+    }'
+}
+
+# RFC 9116 section 4 writes the field names as ABNF string literals, which
+# RFC 5234 section 2.3 makes case-insensitive, so `expires:` is as much an
+# `Expires` field as `Expires:` is -- and a lookup that misses it reports a
+# duplicate as unique. Fold the NAME only; every value pattern below stays
+# byte-exact, matched after this `Field:` prefix.
+field_lines() {
+  grep -iE "^${1}:" "${file}" || true
+}
+field_prefix_re='^[A-Za-z0-9_-]+:[[:space:]]*'
+field_prefix_sed='s/^[A-Za-z0-9_-]*:[[:space:]]*//p'
+
+if ! printf '%s' "${today}" | grep -qE '^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$' ||
+  ! is_real_calendar_date "${today}"; then
   fail "SECURITY_TXT_TODAY='${today}' is not a YYYY-MM-DD calendar date"
 fi
 
@@ -54,25 +87,42 @@ if bad_line="$(grep -nvE "${line_re}" "${file}")"; then
 fi
 
 # --- Contact (REQUIRED, may repeat; the first listed is the preferred one) ------
-contacts="$(grep -cE '^Contact:[[:space:]]*(https://|mailto:|tel:)[^[:space:]]' "${file}" || true)"
+contact_re="${field_prefix_re}(https://|mailto:|tel:)[^[:space:]]"
+contacts="$(field_lines Contact | grep -cE "${contact_re}" || true)"
 if [ "${contacts}" -eq 0 ]; then
   fail "${file}: no 'Contact:' field with an https://, mailto: or tel: URI (RFC 9116 section 2.5.3)"
 fi
 
+# Counting only the usable values would let a malformed sibling -- a bare email
+# address, a plaintext http URI -- ship unnoticed behind a good one, so every
+# Contact line has to carry a URI a reporter can actually use.
+if bad_contact="$(field_lines Contact | grep -vE "${contact_re}")"; then
+  fail "${file}: 'Contact:' value is not an https://, mailto: or tel: URI: ${bad_contact}"
+fi
+
 # --- Canonical must name the URI the file is actually served from --------------
-grep -qE '^Canonical:[[:space:]]*https://[^[:space:]]+/\.well-known/security\.txt$' "${file}" ||
-  fail "${file}: 'Canonical:' must be an https URI ending in /.well-known/security.txt"
+# Every value, not just one of them: a second, foreign Canonical carries exactly
+# the hazard CANONICAL_URI is pinned against.
+canonical_count="$(field_lines Canonical | grep -c . || true)"
+canonical_ok="$(field_lines Canonical | sed -n "${field_prefix_sed}" |
+  grep -cxF "${CANONICAL_URI}" || true)"
+if [ "${canonical_count}" -eq 0 ] || [ "${canonical_ok}" -ne "${canonical_count}" ]; then
+  fail "${file}: 'Canonical:' must be an https URI naming the published policy location ${CANONICAL_URI}"
+fi
 
 # --- Expires (REQUIRED, MUST NOT repeat) ---------------------------------------
-expires_count="$(grep -cE '^Expires:' "${file}" || true)"
+expires_count="$(field_lines Expires | grep -c . || true)"
 if [ "${expires_count}" -ne 1 ]; then
   fail "${file}: expected exactly one 'Expires:' field, found ${expires_count} (RFC 9116 section 2.5.5)"
 fi
 
-expires_value="$(sed -n 's/^Expires:[[:space:]]*//p' "${file}")"
+expires_value="$(field_lines Expires | sed -n "${field_prefix_sed}")"
 expires_re='^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])'
-# `60` in the seconds field is a leap second, which RFC 3339 section 5.6 permits.
-expires_re="${expires_re}T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)Z$"
+# `60` in the seconds field is a leap second, which RFC 3339 section 5.6 permits
+# -- but one is only ever inserted as the LAST second of a UTC day, so 23:59:60
+# is a real instant and :60 at any other time is not, however permissive the bare
+# ABNF is.
+expires_re="${expires_re}T(([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]|23:59:60)Z$"
 if ! printf '%s' "${expires_value}" | grep -qE "${expires_re}"; then
   fail "${file}: Expires '${expires_value}' is not an RFC 3339 UTC timestamp (YYYY-MM-DDThh:mm:ssZ)"
 fi
@@ -82,15 +132,7 @@ fi
 # (3 March). Reject impossible calendar dates outright rather than publishing a
 # policy whose stated expiry is not the one enforced.
 expires_date="${expires_value%%T*}"
-if ! awk -v d="${expires_date}" '
-  BEGIN {
-    split(d, p, "-")
-    y = p[1] + 0; m = p[2] + 0; day = p[3] + 0
-    leap = (y % 4 == 0 && y % 100 != 0) || (y % 400 == 0)
-    split("31 28 31 30 31 30 31 31 30 31 30 31", len, " ")
-    if (m == 2 && leap) len[2] = 29
-    exit (day >= 1 && day <= len[m]) ? 0 : 1
-  }'; then
+if ! is_real_calendar_date "${expires_date}"; then
   fail "${file}: Expires '${expires_value}' is not a real calendar date"
 fi
 

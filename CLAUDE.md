@@ -153,12 +153,14 @@ TEST_ENV=server bun x jest src/test/apollo-server/<spec>.test.ts
 ```bash
 make format               # Prettier (run before lint)
 make lint                 # lint-next + lint-tsc + lint-md + lint-deps + lint-api-versions
-                          #   + lint-headers + lint-security-txt + lint-prod-guardrails
+                          #   + lint-docker-policy + lint-headers + lint-security-txt
+                          #   + lint-prod-guardrails
 make lint-next            # ESLint (flat config, eslint.config.mjs)
 make lint-tsc             # TypeScript (tsc, no emit)
 make lint-md              # markdownlint
 make lint-deps            # dependency-cruiser on src, pages, tests
 make lint-api-versions    # user-service version invariant (hermetic; see below)
+make lint-docker-policy   # Dockerfile registry (no Docker Hub) + digest-pin policy
 make lint-headers         # edge security-header policy (config/security-headers.json)
 make lint-security-txt    # RFC 9116 security.txt fields + Expires runway
 make lint-prod-guardrails # production-safety invariants (see #383 below)

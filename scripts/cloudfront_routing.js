@@ -135,12 +135,13 @@ function firstSegment(uri) {
   return parts.length > 1 ? parts[1] : '';
 }
 
-// `lastDot <= 0` covers both "no dot at all" and a leading-dot segment (`/.env`), so
-// dotfiles are never treated as carrying an extension.
+// `lastDot <= 0` covers "no dot at all"; the leading-dot test covers every dotfile,
+// including one carrying a second dot (`/images/.env.js`), so dotfiles are never treated as
+// carrying an extension.
 function extensionOf(uri) {
   var lastSegment = uri.substring(uri.lastIndexOf('/') + 1);
   var lastDot = lastSegment.lastIndexOf('.');
-  if (lastDot <= 0) {
+  if (lastDot <= 0 || lastSegment.charAt(0) === '.') {
     return '';
   }
   return lastSegment.substring(lastDot + 1).toLowerCase();

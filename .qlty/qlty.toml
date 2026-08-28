@@ -56,8 +56,9 @@ exclude_patterns = [
   "scripts/cloudfront_routing.js",
   "scripts/cloudfront_security_headers.js",
   "docker/apollo-server/server.mts",
-  # Node CLI helpers under scripts/. eslint.config.mjs:120 already ignores
-  # `scripts/**`, so these are outside the repo's declared eslint scope and this
+  # Node CLI helpers under scripts/. eslint.config.mjs already ignores
+  # `scripts/**` (the FlatCompat `ignorePatterns` block, which ESLint turns into
+  # a global ignore), so these are outside the repo's declared eslint scope and this
   # keeps the two configs agreeing rather than qlty applying application-code
   # rules to build tooling. Concretely, `no-console` is wrong here: these are CI
   # gates whose product IS their stdout/stderr, and their `::error::` lines are

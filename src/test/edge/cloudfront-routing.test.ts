@@ -132,10 +132,15 @@ describe('cloudfront_routing handler', () => {
     });
   });
 
-  // The heart of issue #383. Every one of these reached the S3 origin before the fail-closed
-  // rewrite; each must now be answered by this function instead. `/secret.json` is the
-  // acceptance criterion's own example, and `.js.map` is the source-map leak the allow-list
-  // exists to make impossible even if `productionBrowserSourceMaps` is ever flipped on.
+  // The heart of issue #383. Most of these rows reached the S3 origin before the fail-closed
+  // rewrite and must now be answered by this function instead; the extension-less single-segment
+  // rows (`/images/`, `/Swagger`, `/swaggerx`, `/about-x`, `/toString`, `/constructor`,
+  // `/__proto__`, `no-leading-slash`) were already 404'd by the old segment-count branch and are
+  // pinned here so the allow-list rewrite cannot regress them. `/secret.json` is the acceptance
+  // criterion's own example, `.js.map` is the source-map leak the allow-list exists to make
+  // impossible even if `productionBrowserSourceMaps` is ever flipped on, and the dotfiles that
+  // carry a second dot are the ones that borrowed an allow-listed extension until `extensionOf`
+  // learned to reject a leading-dot segment.
   describe('fail-closed allowlist', () => {
     test.each([
       '/secret.json',
@@ -148,6 +153,9 @@ describe('cloudfront_routing handler', () => {
       '/one/two/three',
       '/en/docs',
       '/en/.hidden',
+      '/en/.hidden.html',
+      '/images/.env.js',
+      '/_next/.eslintrc.js',
       '/images/',
       '/_next/static/chunks/main-0f1e2d.js.map',
       '/_NEXT/static/chunks/main.js',

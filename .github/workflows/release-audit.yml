@@ -60,8 +60,12 @@ permissions: {}
 # event runs on refs/tags/vX.Y.Z while a push runs on refs/heads/main, and both
 # mutate the same ledger issue, so a ref-keyed group would let two runs race to
 # create it. A constant group serializes every run of this workflow against that
-# shared state. cancel-in-progress is false so a queued audit record is never
-# dropped.
+# shared state. cancel-in-progress is false so an audit already in flight is never
+# aborted -- but GitHub keeps only ONE pending run per group, so a third event
+# arriving during a run evicts the pending one. The sweep re-derives dropped push
+# records from main's commit history; a dropped release `edited`/`deleted`
+# escalation is not recoverable, which is one more reason the ledger is a monitored
+# projection rather than a system of record (docs/release-audit.md).
 concurrency:
   group: ${{ github.workflow }}
   cancel-in-progress: false
@@ -135,7 +139,9 @@ jobs:
           AUDIT_AFTER: ${{ github.event.after }}
           AUDIT_FORCED: ${{ github.event.forced }}
           AUDIT_PUSHER_NAME: ${{ github.event.pusher.name }}
-          AUDIT_PUSHER_EMAIL: ${{ github.event.pusher.email }}
+          # github.event.pusher.email is deliberately NOT passed: it is the
+          # account's push email and the ledger issue is public, indexed, and
+          # mailed to every subscriber. Do not restore it by symmetry.
           AUDIT_SENDER: ${{ github.event.sender.login }}
           AUDIT_SENDER_TYPE: ${{ github.event.sender.type }}
         run: bash scripts/ci/release-audit.sh
@@ -161,3 +167,32 @@ jobs:
           AUDIT_SENDER: ${{ github.actor }}
           AUDIT_DRY_RUN: ${{ inputs.dry_run && '1' || '0' }}
         run: bash scripts/ci/release-audit.sh
+
+      # The script only alerts on runs that SUCCEED, so a failed audit -- an API
+      # outage, a bad token, a broken script -- would otherwise be a red X nobody
+      # is notified about, and the ledger would stop recording in silence. This
+      # step files it onto the same ci-alert label the escalations use, with the
+      # same exact-title refresh, and needs no scope the job does not already hold.
+      # It lives here rather than in ci-health-alerts.yml because that workflow's
+      # workflow_run trigger filters on branches: main, and a release run's
+      # head_branch is the tag.
+      - name: Alert on a failed audit run
+        if: failure()
+        env:
+          ALERT_TITLE: 'Release audit: the audit workflow failed'
+          AUDIT_EVENT_NAME: ${{ github.event_name }}
+        run: |
+          gh label create ci-alert --repo "$AUDIT_REPO" --color B60205 \
+            --description 'Deploy/release/red-main CI health alerts' >/dev/null 2>&1 || true
+          existing="$(gh issue list --repo "$AUDIT_REPO" --label ci-alert --state open \
+            --search "$ALERT_TITLE in:title" --json number,title |
+            jq -r --arg t "$ALERT_TITLE" 'map(select(.title == $t)) | .[0].number // empty')"
+          body="$(printf '%s\n\n%s\n' \
+            "The audit run for a \`${AUDIT_EVENT_NAME}\` event failed, so nothing was recorded in the ledger for it. The daily sweep re-derives commits on \`main\`, but not a release edit or deletion." \
+            "Run: ${AUDIT_RUN_URL}")"
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$AUDIT_REPO" --body "$body" >/dev/null
+          else
+            gh issue create --repo "$AUDIT_REPO" --label ci-alert --label release-audit \
+              --title "$ALERT_TITLE" --body "$body" >/dev/null
+          fi

@@ -182,6 +182,9 @@ function assertPrivilegedWorkflowsAreAlerted(workflows) {
 // before this is applied rather than being tolerated by the pattern.
 const ORIGIN_PASSTHROUGH_TAIL = /return\s+request(?:\.uri)?\s*;?$/;
 
+// The handler dereferences all four tables, so every one of them is load-bearing.
+const REQUIRED_EDGE_TABLES = ['ROUTE_MAP', 'ALLOWED_DIRS', 'ALLOWED_FILES', 'ALLOWED_EXTENSIONS'];
+
 // Line and block comments only — enough to normalise a tail like
 // `return request; // TODO` without pulling in a JS parser for one assertion.
 function stripComments(source) {
@@ -207,9 +210,18 @@ function assertEdgeAllowListIntact() {
   const maps = [
     ...code.matchAll(/(?:var|let|const)\s+(ROUTE_MAP|ALLOW(?:ED)?_[A-Z0-9_]+)\s*=\s*(\S+)/g),
   ];
-  if (!maps.some(([, name]) => name === 'ROUTE_MAP')) {
-    fail('B', `${EDGE_SCRIPT} no longer declares a ROUTE_MAP allow-list.`);
-  }
+  // Deleting a table is as dangerous as unfreezing one: the file is `'use strict'`,
+  // so the reads left behind in the handler throw a ReferenceError inside the try
+  // and the catch turns that into the unconditional origin pass-through this
+  // assertion exists to prevent. Checking only ROUTE_MAP left three tables open.
+  REQUIRED_EDGE_TABLES.forEach(table => {
+    if (maps.some(([, name]) => name === table)) return;
+    fail(
+      'B',
+      `${EDGE_SCRIPT} no longer declares the ${table} allow-list, but the handler still ` +
+        'reads it. The missing binding throws and the catch falls through to the origin.'
+    );
+  });
   maps
     .filter(([, , initialiser]) => !initialiser.startsWith('Object.freeze('))
     .forEach(([, name]) => {
@@ -253,15 +265,22 @@ function assertEdgeCoverageStaysPinned() {
     fail('B', `${JEST_CONFIG} is missing; the edge coverage pin cannot be verified.`);
     return;
   }
-  const collectFrom = /const EDGE_COVERAGE_FROM[^;]*;/.exec(config)?.[0] ?? '';
-  if (!collectFrom.includes(EDGE_SCRIPT)) {
+  // Same comment-stripped copy as the allow-list audit, for the same reason: a
+  // commented-out entry or threshold must not count as a live one, and a `;`
+  // inside a comment would truncate either capture below.
+  const code = stripComments(config);
+  const collectFrom = /const EDGE_COVERAGE_FROM[^;]*;/.exec(code)?.[0] ?? '';
+  // A quoted array element rather than a bare substring, so a longer path that
+  // merely contains this one (`...cloudfront_routing.js.map`) cannot satisfy the pin.
+  const edgeEntry = new RegExp(`(['"])[^'"]*${EDGE_SCRIPT.replace(/\./g, '\\.')}\\1`);
+  if (!edgeEntry.test(collectFrom)) {
     fail(
       'B',
       `${JEST_CONFIG} no longer collects edge coverage from ${EDGE_SCRIPT}; ` +
         'the 100% edge layer would stop guarding the routing allow-list.'
     );
   }
-  const threshold = /const EDGE_COVERAGE_THRESHOLD[^;]*;/.exec(config)?.[0] ?? '';
+  const threshold = /const EDGE_COVERAGE_THRESHOLD[^;]*;/.exec(code)?.[0] ?? '';
   ['branches', 'functions', 'lines', 'statements'].forEach(counter => {
     if (!new RegExp(`${counter}:\\s*100\\b`).test(threshold)) {
       fail('B', `${JEST_CONFIG} no longer pins the edge coverage threshold ${counter} at 100.`);

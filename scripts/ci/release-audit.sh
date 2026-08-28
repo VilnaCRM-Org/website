@@ -96,13 +96,31 @@ for what this ledger can and cannot prove.
 SEED
 }
 
-# Time-bounded so the lookup cost does not grow with the ledger. A pure-bash
-# substring test (not `grep -q`) so a short-circuited pipe cannot trip pipefail.
+# Time-bounded so the lookup cost does not grow with the ledger, and fetched once
+# per run rather than once per commit: the window is identical for every marker,
+# and the only write is post_record, which runs after the record loop. The cache
+# lives in a file because record_commits runs inside a command substitution, so a
+# shell variable would not survive back to the caller. Only a SUCCESSFUL fetch is
+# cached -- freezing an empty result would leave every commit looking unrecorded.
+ledger_comments() {
+  local cache="$WORK/ledger-$1-comments"
+  if [ ! -f "$cache" ]; then
+    if ! gh api \
+      "repos/$REPO/issues/$1/comments?per_page=100&since=$(iso_since "$DEDUP_HOURS")" \
+      --paginate --jq '.[].body' >"$cache.tmp" 2>/dev/null; then
+      rm -f "$cache.tmp"
+      return 1
+    fi
+    mv "$cache.tmp" "$cache"
+  fi
+  cat "$cache"
+}
+
+# A pure-bash substring test (not `grep -q`) so a short-circuited pipe cannot trip
+# pipefail.
 already_recorded() {
   local bodies
-  bodies="$(gh api \
-    "repos/$REPO/issues/$1/comments?per_page=100&since=$(iso_since "$DEDUP_HOURS")" \
-    --paginate --jq '.[].body' 2>/dev/null || true)"
+  bodies="$(ledger_comments "$1" || true)"
   case "$bodies" in
     *"$2"*) return 0 ;;
     *) return 1 ;;
@@ -174,11 +192,15 @@ is_bot() {
 # author vs committer, the linked GitHub login and account type, and the
 # signature verification state. Message trailers are reported when present and
 # labelled self-declared, because they are unauthenticated even when they exist.
+# Returns non-zero when the lookup failed, so a caller that is about to claim the
+# commit as audited can decline to. The error text is captured rather than
+# discarded: a 502 and a deleted ref are the same line otherwise.
 describe_commit() {
-  local sha="$1"
-  if ! gh api "repos/$REPO/commits/$sha" >"$WORK/commit.json" 2>/dev/null; then
-    add "- commit \`$sha\`: could not be resolved (deleted tag or unreachable ref)"
-    return 0
+  local sha="$1" err
+  if ! gh api "repos/$REPO/commits/$sha" >"$WORK/commit.json" 2>"$WORK/commit.err"; then
+    err="$(head -n 1 "$WORK/commit.err")"
+    add "- commit \`$sha\`: could not be resolved (${err:-deleted tag or unreachable ref})"
+    return 1
   fi
   jq -r '
     def txt(v): (v // "unknown");
@@ -212,11 +234,22 @@ provenance() {
 
 handle_release() {
   local action="${AUDIT_RELEASE_ACTION:-unknown}" id="${AUDIT_RELEASE_ID:-0}"
-  local tag="${AUDIT_RELEASE_TAG:-}" class marker ledger
+  local tag="${AUDIT_RELEASE_TAG:-}" class marker ledger resolved_sha
   # `created` and `published` both fire when a release is published without a
   # draft; collapsing them into one class makes the second event a no-op.
   case "$action" in
-    created | published | prereleased | released) class='created' ;;
+    created | published | prereleased | released)
+      # Saving a DRAFT also arrives as `created`, on the same release id, so it
+      # must not occupy the marker the later `published` event needs -- the
+      # publication would dedup against the draft and the ledger would say the
+      # release is still a draft. Non-draft `created`/`published` keep collapsing,
+      # because both carry draft=false.
+      if [ "${AUDIT_RELEASE_DRAFT:-false}" = 'true' ]; then
+        class='draft'
+      else
+        class='created'
+      fi
+      ;;
     edited) class="edited:${AUDIT_RELEASE_UPDATED_AT:-unknown}" ;;
     *) class="$action" ;;
   esac
@@ -242,7 +275,17 @@ handle_release() {
     add ""
     add "Tagged commit (for a bot release this is the \`[skip ci]\` push to main,"
     add "which no push-triggered workflow can observe):"
-    describe_commit "$tag"
+    # A release must be recorded even when its tag cannot be resolved, so the
+    # failure describe_commit now reports is noted in the body, not fatal here.
+    describe_commit "$tag" || true
+    # The push and sweep paths dedup on the commit marker, so the release record
+    # has to carry it for the tagged commit -- otherwise the next daily sweep
+    # re-records the same `[skip ci]` commit as a second entry. An unresolvable
+    # tag leaves commit.json empty and simply produces no marker.
+    resolved_sha="$(jq -r '.sha // empty' "$WORK/commit.json" 2>/dev/null || true)"
+    if [ -n "$resolved_sha" ]; then
+      mark "release-audit:commit:${resolved_sha}"
+    fi
   fi
   provenance
   post_record "$ledger"
@@ -261,16 +304,24 @@ handle_release() {
 # truncating reader would SIGPIPE gh and trip pipefail. compare returns commits
 # oldest-first, so the newest MAX_COMMITS are the tail of the array.
 list_pushed_commits() {
-  local before="$1" after="$2"
+  local before="$1" after="$2" shas
   case "$before" in
     '' | 0000000000000000000000000000000000000000)
       printf '%s\n' "$after"
       return 0
       ;;
   esac
-  gh api "repos/$REPO/compare/${before}...${after}" \
-    --jq "[.commits[].sha] | .[-${MAX_COMMITS}:] | .[]" 2>/dev/null ||
+  # A failed compare must not be downgraded to a silent one-commit record: the
+  # result would be an ordinary-looking push entry missing every commit but the
+  # head. Capture the error the way handle_sweep does, still emit the one SHA that
+  # is known, and tell the caller the enumeration was incomplete.
+  if ! shas="$(gh api "repos/$REPO/compare/${before}...${after}" \
+    --jq "[.commits[].sha] | .[-${MAX_COMMITS}:] | .[]" 2>&1)"; then
+    note "release-audit: compare ${before}...${after} failed (${shas}); only the head commit can be enumerated"
     printf '%s\n' "$after"
+    return 3
+  fi
+  printf '%s\n' "$shas"
 }
 
 record_commits() {
@@ -278,9 +329,16 @@ record_commits() {
   while read -r sha; do
     [ -n "$sha" ] || continue
     if already_recorded "$ledger" "release-audit:commit:${sha}"; then continue; fi
-    mark "release-audit:commit:${sha}"
-    describe_commit "$sha"
-    recorded=$((recorded + 1))
+    # Describe FIRST, mark only on success. A marker written for a commit whose
+    # metadata never arrived would claim it as audited with no attribution at all,
+    # and unrecoverably: the marker outlives the sweep window, so the commit is
+    # never described again.
+    if describe_commit "$sha"; then
+      mark "release-audit:commit:${sha}"
+      recorded=$((recorded + 1))
+    else
+      note "release-audit: could not describe ${sha}; leaving it unaudited for the next sweep"
+    fi
   done
   printf '%s' "$recorded"
 }
@@ -302,7 +360,7 @@ escalate_push_anomalies() {
 }
 
 handle_push() {
-  local ledger recorded actor="${AUDIT_ACTOR:-unknown}"
+  local ledger recorded shas actor="${AUDIT_ACTOR:-unknown}"
   ledger="$(ledger_number)"
   add "## Push to \`main\` by \`${actor}\`"
   add ""
@@ -314,8 +372,17 @@ handle_push() {
   add "- sender type: \`${AUDIT_SENDER_TYPE:-unknown}\` ($(actor_class "$actor"))"
   add "- force-push: \`${AUDIT_FORCED:-false}\`"
   add ""
-  recorded="$(list_pushed_commits "${AUDIT_BEFORE:-}" "${AUDIT_AFTER:-}" |
-    record_commits "$ledger")"
+  # Called OUTSIDE the pipeline so its exit status survives pipefail, and inside an
+  # `if` so `set -e` cannot abort before escalate_push_anomalies runs. The alert is
+  # raised before the dedup early return below, for the same reason.
+  if ! shas="$(list_pushed_commits "${AUDIT_BEFORE:-}" "${AUDIT_AFTER:-}")"; then
+    add "- **incomplete record: the compare API failed, so the commits between"
+    add "  \`${AUDIT_BEFORE:-?}\` and \`${AUDIT_AFTER:-?}\` could not be enumerated**"
+    add ""
+    raise_alert "Release audit: could not enumerate the commits of a push to main" \
+      "\`repos/${REPO}/compare/${AUDIT_BEFORE:-?}...${AUDIT_AFTER:-?}\` failed, so only the head commit was recorded. The daily sweep reconciles the same window; confirm the missing commits appear there."
+  fi
+  recorded="$(printf '%s\n' "$shas" | record_commits "$ledger")"
   if [ "$recorded" -eq 0 ]; then
     note "release-audit: every pushed commit is already in the ledger"
     : >"$BODY"
@@ -343,12 +410,16 @@ handle_sweep() {
   # The sweep is the backstop for [skip ci] commits no push event can observe, so
   # a transient API blip must not take the whole run down with `set -e`: log it
   # loudly and record nothing this cycle. The next scheduled run reconciles the
-  # same window (SWEEP_HOURS > the 24h cadence), so no commit is lost.
+  # same window (SWEEP_HOURS > the 24h cadence), so no commit is lost. But the
+  # exit code is green either way, so a SUSTAINED outage would reopen the [skip ci]
+  # hole in silence -- the alert, not the exit code, is what makes that visible.
   local shas
   if ! shas="$(gh api \
     "repos/$REPO/commits?sha=main&per_page=100&since=$(iso_since "$SWEEP_HOURS")" \
     --jq "[.[].sha] | .[0:${MAX_COMMITS}] | .[]" 2>&1)"; then
     note "release-audit: sweep could not list commits (${shas}); the next run retries the same window"
+    raise_alert "Release audit: daily sweep could not list commits on main" \
+      "Listing \`main\` failed (\`${shas}\`), so the \`[skip ci]\` backstop recorded nothing this cycle. One blip is reconciled by the next run; a repeat means the audit gap is open."
     : >"$BODY"
     return 0
   fi

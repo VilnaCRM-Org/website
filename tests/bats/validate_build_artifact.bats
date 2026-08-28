@@ -154,6 +154,21 @@ setup() {
   assert_output_contains 'byte-identical'
 }
 
+@test "fails when the committed source policy is missing" {
+  # Run a copy of the script from a tree with no public/.well-known/ above it, so
+  # the source it compares against does not exist. Skipping the comparison there
+  # would leave only the shape checks, which the altered-policy fixture above
+  # passes -- so the missing source has to be a hard failure, not a no-op.
+  local sandbox="$BATS_TEST_TMPDIR/scripts/ci"
+  mkdir -p "$sandbox"
+  cp "$PROJECT_ROOT/scripts/ci/"*.sh "$PROJECT_ROOT/scripts/ci/"*.mjs "$sandbox/"
+  make_valid_artifact "$ARTIFACT"
+
+  run bash "$sandbox/$(basename "$SCRIPT_REL")" "$ARTIFACT"
+  [ "$status" -eq 1 ]
+  assert_output_contains 'cannot be verified against its reviewed source'
+}
+
 @test "accepts a lowercase RFC 9116 field name" {
   # RFC 9116 field names are case-insensitive; the exported file is compared to
   # the source byte-for-byte, so exercise the case rule on its own.

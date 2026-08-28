@@ -74,8 +74,20 @@ case "$sub" in
     empty_compare='{"commits":[]}'
     case "$endpoint" in
       */issues/*/comments*) emit "${FAKE_LEDGER_COMMENTS:-[]}" ;;
-      */compare/*) emit "${FAKE_COMPARE_JSON:-$empty_compare}" ;;
-      */commits\?*) emit "${FAKE_COMMIT_LIST:-[]}" ;;
+      */compare/*)
+        if [ -n "${FAKE_COMPARE_FAIL:-}" ]; then
+          echo 'gh: 502 Bad Gateway' >&2
+          exit 1
+        fi
+        emit "${FAKE_COMPARE_JSON:-$empty_compare}"
+        ;;
+      */commits\?*)
+        if [ -n "${FAKE_COMMIT_LIST_FAIL:-}" ]; then
+          echo 'gh: 503 Service Unavailable' >&2
+          exit 1
+        fi
+        emit "${FAKE_COMMIT_LIST:-[]}"
+        ;;
       */commits/*)
         ref="${endpoint##*/commits/}"
         if [ -n "${FAKE_COMMIT_DIR:-}" ] && [ -f "$FAKE_COMMIT_DIR/$ref.json" ]; then
@@ -239,6 +251,91 @@ setup() {
   refute_log_contains 'gh issue comment'
 }
 
+@test "does not collapse the publication of a release that was saved as a draft" {
+  # `created` fires both when a DRAFT is saved and when a release is published
+  # without one, on the same release id. Keying the class on the action alone let
+  # the draft save occupy the marker, so the publication deduped against it and the
+  # ledger's last word on the release stayed `draft=true`.
+  write_release_bot_commit v0.4.0
+
+  # Save the draft, then feed the record it wrote back as the ledger the
+  # publication deduplicates against -- the sequence a maintainer actually
+  # produces, inside the 48h dedup window.
+  run_audit \
+    FAKE_ISSUE_LIST="$LEDGER_EXISTS" \
+    AUDIT_EVENT=release \
+    AUDIT_RELEASE_ACTION=created \
+    AUDIT_RELEASE_DRAFT=true \
+    AUDIT_RELEASE_ID=42 \
+    AUDIT_RELEASE_TAG=v0.4.0
+  [ "$status" -eq 0 ]
+
+  local draft_record
+  draft_record="$(jq -nc --arg b "$output" '[{body: $b}]')"
+
+  reset_command_log
+  run_audit \
+    FAKE_ISSUE_LIST="$LEDGER_EXISTS" \
+    FAKE_LEDGER_COMMENTS="$draft_record" \
+    AUDIT_EVENT=release \
+    AUDIT_RELEASE_ACTION=published \
+    AUDIT_RELEASE_DRAFT=false \
+    AUDIT_RELEASE_ID=42 \
+    AUDIT_RELEASE_TAG=v0.4.0
+
+  [ "$status" -eq 0 ]
+  [[ "$output" != *'already recorded'* ]]
+  assert_output_contains 'draft=`false`'
+  assert_log_contains 'gh issue comment 7'
+}
+
+@test "records a saved draft under its own marker" {
+  write_release_bot_commit v0.4.0
+
+  run_audit \
+    FAKE_ISSUE_LIST="$LEDGER_EXISTS" \
+    AUDIT_EVENT=release \
+    AUDIT_RELEASE_ACTION=created \
+    AUDIT_RELEASE_DRAFT=true \
+    AUDIT_RELEASE_ID=42 \
+    AUDIT_RELEASE_TAG=v0.4.0
+
+  [ "$status" -eq 0 ]
+  assert_output_contains '<!-- release-audit:release:42:draft -->'
+  assert_output_contains 'draft=`true`'
+}
+
+@test "a release record carries the tagged commit marker the sweep dedups on" {
+  # Only the release marker used to be written, so the daily sweep found no
+  # `release-audit:commit:<sha>` for the tagged [skip ci] commit and posted a
+  # second entry describing the identical commit -- and a second notification.
+  write_release_bot_commit v0.4.0
+  jq '.sha = "1091cc12"' "$COMMIT_DIR/v0.4.0.json" >"$COMMIT_DIR/resolved.json"
+  mv "$COMMIT_DIR/resolved.json" "$COMMIT_DIR/v0.4.0.json"
+
+  run_audit \
+    FAKE_ISSUE_LIST="$LEDGER_EXISTS" \
+    AUDIT_EVENT=release \
+    AUDIT_RELEASE_ACTION=published \
+    AUDIT_RELEASE_ID=42 \
+    AUDIT_RELEASE_TAG=v0.4.0
+
+  [ "$status" -eq 0 ]
+  assert_output_contains '<!-- release-audit:commit:1091cc12 -->'
+
+  # ...and the sweep that follows within the dedup window therefore records nothing.
+  reset_command_log
+  run_audit \
+    FAKE_ISSUE_LIST="$LEDGER_EXISTS" \
+    FAKE_COMMIT_LIST='[{"sha":"1091cc12"}]' \
+    FAKE_LEDGER_COMMENTS='[{"body":"<!-- release-audit:commit:1091cc12 -->"}]' \
+    AUDIT_EVENT=sweep
+
+  [ "$status" -eq 0 ]
+  assert_output_contains 'nothing unaudited'
+  refute_log_contains 'gh issue comment'
+}
+
 @test "escalates a deleted release onto the ci-alert label" {
   run_audit \
     FAKE_ISSUE_LIST="$LEDGER_EXISTS" \
@@ -295,6 +392,8 @@ setup() {
 
   [ "$status" -eq 0 ]
   assert_output_contains 'could not be resolved'
+  # No commit marker either: an unresolved tag must stay eligible for the sweep.
+  [[ "$output" != *'release-audit:commit:'* ]]
 }
 
 # --- push path -----------------------------------------------------------------
@@ -364,6 +463,63 @@ Co-authored-by: dependabot[bot] <support@github.com>'
   assert_log_contains 'compare/aaaaaaa...c0ffee2'
   assert_output_contains 'feat(#383): one'
   assert_output_contains 'feat(#383): two'
+}
+
+@test "leaves a commit whose metadata never arrived unmarked for the next sweep" {
+  # The marker used to be written BEFORE the lookup, so a transient 5xx claimed the
+  # commit as audited with no attribution at all -- and unrecoverably, because the
+  # marker outlives the sweep window that would otherwise re-describe it.
+  write_human_commit c0ffee1 'feat(#383): resolvable'
+
+  run_audit \
+    FAKE_ISSUE_LIST="$LEDGER_EXISTS" \
+    FAKE_COMPARE_JSON='{"commits":[{"sha":"c0ffee1"},{"sha":"c0ffee9"}]}' \
+    AUDIT_EVENT=push \
+    AUDIT_BEFORE=aaaaaaa \
+    AUDIT_AFTER=c0ffee9
+
+  [ "$status" -eq 0 ]
+  # The captured error distinguishes a deleted ref from an outage.
+  assert_output_contains 'could not be resolved (gh: 404 Not Found)'
+  assert_output_contains '<!-- release-audit:commit:c0ffee1 -->'
+  [[ "$output" != *'release-audit:commit:c0ffee9'* ]]
+}
+
+@test "a failed compare is an incomplete record and an alert, not a silent one" {
+  # The fallback used to substitute the head SHA and say nothing, so a push of ten
+  # commits was recorded as an ordinary-looking single-commit entry.
+  write_human_commit c0ffee2 'feat(#383): head only'
+
+  run_audit \
+    FAKE_ISSUE_LIST="$LEDGER_EXISTS" \
+    FAKE_COMPARE_FAIL=1 \
+    AUDIT_EVENT=push \
+    AUDIT_BEFORE=aaaaaaa \
+    AUDIT_AFTER=c0ffee2
+
+  [ "$status" -eq 0 ]
+  assert_output_contains 'incomplete record'
+  assert_output_contains 'feat(#383): head only'
+  assert_log_contains '--label ci-alert'
+  assert_log_contains 'could not enumerate the commits of a push to main'
+}
+
+@test "fetches the ledger dedup window once per run, not once per commit" {
+  # The window is identical for every marker and the ledger only gains a comment
+  # after the record loop, so the second through fiftieth fetches could never
+  # return anything the first did not.
+  write_human_commit c0ffee1 'feat(#383): one'
+  write_human_commit c0ffee2 'feat(#383): two'
+
+  run_audit \
+    FAKE_ISSUE_LIST="$LEDGER_EXISTS" \
+    FAKE_COMPARE_JSON='{"commits":[{"sha":"c0ffee1"},{"sha":"c0ffee2"}]}' \
+    AUDIT_EVENT=push \
+    AUDIT_BEFORE=aaaaaaa \
+    AUDIT_AFTER=c0ffee2
+
+  [ "$status" -eq 0 ]
+  [ "$(grep -c 'issues/7/comments' "$COMMAND_LOG")" -eq 1 ]
 }
 
 @test "skips a pushed commit that is already in the ledger" {
@@ -482,6 +638,36 @@ Co-authored-by: dependabot[bot] <support@github.com>'
 
   [ "$status" -eq 0 ]
   assert_output_contains 'nothing unaudited'
+  refute_log_contains 'gh issue comment'
+}
+
+@test "a sweep that cannot list main escalates instead of going quietly green" {
+  # The sweep is the LAST path still recording once the release and push paths are
+  # blind, so a sustained outage here reopens the [skip ci] hole. The exit code
+  # stays 0 -- one blip is reconciled by the next run -- and the alert is what makes
+  # a repeat visible.
+  run_audit \
+    FAKE_ISSUE_LIST="$LEDGER_EXISTS" \
+    FAKE_COMMIT_LIST_FAIL=1 \
+    AUDIT_EVENT=sweep
+
+  [ "$status" -eq 0 ]
+  assert_output_contains 'sweep could not list commits'
+  assert_log_contains '--label ci-alert'
+  assert_log_contains 'daily sweep could not list commits on main'
+  refute_log_contains 'gh issue comment'
+}
+
+@test "a dry run of a failing sweep still writes nothing at all" {
+  run_audit \
+    FAKE_ISSUE_LIST="$LEDGER_EXISTS" \
+    FAKE_COMMIT_LIST_FAIL=1 \
+    AUDIT_DRY_RUN=1 \
+    AUDIT_EVENT=sweep
+
+  [ "$status" -eq 0 ]
+  assert_output_contains 'would alert'
+  refute_log_contains 'gh issue create'
   refute_log_contains 'gh issue comment'
 }
 
@@ -604,6 +790,18 @@ Co-authored-by: dependabot[bot] <support@github.com>'
   [ "$status" -eq 0 ]
 
   run grep -n 'cancel-in-progress: false' "$PROJECT_ROOT/$WORKFLOW_REL"
+  [ "$status" -eq 0 ]
+}
+
+@test "the workflow alerts when the audit run itself fails" {
+  # raise_alert only ever fires on a run that SUCCEEDS, so a failed audit -- an API
+  # outage, a bad token, a broken script -- would be a red X nobody is notified
+  # about while the ledger quietly stops recording.
+  run grep -nE '^ +if: failure\(\)$' "$PROJECT_ROOT/$WORKFLOW_REL"
+  [ "$status" -eq 0 ]
+
+  run grep -n 'gh issue create --repo "$AUDIT_REPO" --label ci-alert' \
+    "$PROJECT_ROOT/$WORKFLOW_REL"
   [ "$status" -eq 0 ]
 }
 

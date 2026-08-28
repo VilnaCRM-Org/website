@@ -98,6 +98,35 @@ EOF
   assert_output_contains "no 'Contact:' field"
 }
 
+@test "fails when a second Contact is a bare email address without mailto:" {
+  # A malformed sibling used to hide behind a good one: only the acceptable
+  # Contact lines were counted, and nothing re-read the rest.
+  write_fixture <<'EOF'
+Contact: https://github.com/VilnaCRM-Org/website/security/advisories/new
+Contact: info@vilnacrm.com
+Expires: 2027-06-30T23:59:59Z
+Canonical: https://vilnacrm.com/.well-known/security.txt
+EOF
+
+  run_checker_at 2026-07-31
+  [ "$status" -eq 1 ]
+  assert_output_contains "'Contact:' value is not an https://, mailto: or tel: URI"
+  assert_output_contains 'Contact: info@vilnacrm.com'
+}
+
+@test "fails when a second Contact uses plaintext http" {
+  write_fixture <<'EOF'
+Contact: mailto:info@vilnacrm.com
+Contact: http://insecure.example.com/report
+Expires: 2027-06-30T23:59:59Z
+Canonical: https://vilnacrm.com/.well-known/security.txt
+EOF
+
+  run_checker_at 2026-07-31
+  [ "$status" -eq 1 ]
+  assert_output_contains "'Contact:' value is not an https://, mailto: or tel: URI"
+}
+
 @test "fails when a Contact field has no value at all" {
   write_fixture <<'EOF'
 Contact:
@@ -240,7 +269,7 @@ EOF
 
   run_checker_at 2026-07-31
   [ "$status" -eq 1 ]
-  assert_output_contains "'Canonical:' must be an https URI ending in /.well-known/security.txt"
+  assert_output_contains "'Canonical:' must be an https URI naming the published policy location"
 }
 
 @test "fails when Canonical is missing entirely" {
@@ -248,6 +277,43 @@ EOF
 Contact: mailto:info@vilnacrm.com
 Expires: 2027-06-30T23:59:59Z
 EOF
+
+  run_checker_at 2026-07-31
+  [ "$status" -eq 1 ]
+  assert_output_contains "'Canonical:' must be an https URI"
+}
+
+@test "fails when Canonical names a foreign host" {
+  # Only the PATH was pinned before, so a policy canonicalised to someone else's
+  # origin shipped green -- and RFC 9116 section 2.5.2 tells consumers to distrust
+  # a file whose Canonical is not the URI they fetched.
+  write_fixture <<'EOF'
+Contact: mailto:info@vilnacrm.com
+Expires: 2027-06-30T23:59:59Z
+Canonical: https://attacker.example.com/.well-known/security.txt
+EOF
+
+  run_checker_at 2026-07-31
+  [ "$status" -eq 1 ]
+  assert_output_contains "'Canonical:' must be an https URI"
+}
+
+@test "fails when Canonical names a host that merely starts with the real one" {
+  write_fixture <<'EOF'
+Contact: mailto:info@vilnacrm.com
+Expires: 2027-06-30T23:59:59Z
+Canonical: https://vilnacrm.com.evil.example/.well-known/security.txt
+EOF
+
+  run_checker_at 2026-07-31
+  [ "$status" -eq 1 ]
+  assert_output_contains "'Canonical:' must be an https URI"
+}
+
+@test "fails when a second Canonical names a foreign host" {
+  # A correct value must not launder an extra one beside it.
+  write_valid_fixture
+  printf 'Canonical: https://attacker.example.com/.well-known/security.txt\n' >>"$SEC_TXT"
 
   run_checker_at 2026-07-31
   [ "$status" -eq 1 ]
@@ -369,4 +435,68 @@ EOF
   run_checker_at 2026-07-31
   [ "$status" -eq 1 ]
   assert_output_contains 'is not an RFC 3339 UTC timestamp'
+}
+
+@test "rejects an impossible injected clock instead of normalising it" {
+  # 2026-02-30 is well-formed but not a date; days_from_civil would silently
+  # measure the runway from 2 March instead.
+  write_valid_fixture
+
+  run_checker_at 2026-02-30
+  [ "$status" -eq 1 ]
+  assert_output_contains 'is not a YYYY-MM-DD calendar date'
+}
+
+@test "rejects a leap second anywhere but the end of a UTC day" {
+  # A leap second is only ever inserted as the last second of a UTC day, so
+  # 12:30:60 is not an instant that exists.
+  write_valid_fixture
+  sed -i 's/^Expires:.*/Expires: 2027-06-15T12:30:60Z/' "$SEC_TXT"
+
+  run_checker_at 2026-07-31
+  [ "$status" -eq 1 ]
+  assert_output_contains 'is not an RFC 3339 UTC timestamp'
+}
+
+# --- Case-insensitive field names (RFC 9116 section 4 / RFC 5234 section 2.3) ---
+# The names are ABNF string literals, so `expires:` is an Expires field. A
+# case-sensitive lookup both rejects a valid file and, worse, reads a duplicate
+# as unique.
+
+@test "accepts a policy whose field names are lowercase" {
+  write_fixture <<'EOF'
+contact: mailto:info@vilnacrm.com
+expires: 2027-06-30T23:59:59Z
+canonical: https://vilnacrm.com/.well-known/security.txt
+EOF
+
+  run_checker_at 2026-07-31
+  [ "$status" -eq 0 ]
+  assert_output_contains 'security-txt: OK'
+}
+
+@test "fails when Expires repeats in a different case" {
+  write_fixture <<'EOF'
+Contact: mailto:info@vilnacrm.com
+Expires: 2027-06-30T23:59:59Z
+expires: 2020-01-01T00:00:00Z
+Canonical: https://vilnacrm.com/.well-known/security.txt
+EOF
+
+  run_checker_at 2026-07-31
+  [ "$status" -eq 1 ]
+  assert_output_contains "expected exactly one 'Expires:' field, found 2"
+}
+
+@test "still rejects a bad URI scheme when the field name is lowercase" {
+  # Only the NAME is case-folded: the value patterns stay byte-exact.
+  write_fixture <<'EOF'
+contact: http://insecure.example.com/report
+Expires: 2027-06-30T23:59:59Z
+Canonical: https://vilnacrm.com/.well-known/security.txt
+EOF
+
+  run_checker_at 2026-07-31
+  [ "$status" -eq 1 ]
+  assert_output_contains "no 'Contact:' field"
 }

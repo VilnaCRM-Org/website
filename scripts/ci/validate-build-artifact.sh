@@ -50,10 +50,13 @@ grep -qiE '^Expires:[[:space:]]*[^[:space:]]' "${security_txt}" ||
   fail "${security_txt} has no Expires field with a value (RFC 9116 requires exactly one)"
 # The committed file is the one `make lint-security-txt` validates; if the
 # exported copy differs, the deployed disclosure policy is not the reviewed one.
-if [ -f "${source_security_txt}" ]; then
-  cmp -s "${source_security_txt}" "${security_txt}" ||
-    fail "${security_txt} differs from ${source_security_txt}; the published disclosure policy must be byte-identical to its validated source"
-fi
+# Require the source too: without it there is nothing reviewed to compare against,
+# and skipping the comparison would silently degrade this gate to the shape checks
+# above, which a synthetic policy passes.
+[ -s "${source_security_txt}" ] ||
+  fail "missing or empty ${source_security_txt}; the exported policy cannot be verified against its reviewed source"
+cmp -s "${source_security_txt}" "${security_txt}" ||
+  fail "${security_txt} differs from ${source_security_txt}; the published disclosure policy must be byte-identical to its validated source"
 
 # --- Non-trivial export --------------------------------------------------------
 file_count="$(find "${out_dir}" -type f | wc -l)"

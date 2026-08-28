@@ -23,6 +23,6 @@ Allow: /
 # declared on a host other than the one serving the robots.txt, so this must
 # track the origin the site is actually deployed to (the `PROD_BUCKET_NAME`
 # repository variable, documented in docs/deployment-runbook.md). A static file
-# cannot interpolate that, so src/test/unit/hygiene/robots-txt.test.ts keeps the
+# cannot interpolate that, so src/test/unit/robots-txt.test.ts keeps the
 # two in step. The sitemap itself ships with issue #339.
 Sitemap: https://vilnacrm.com/sitemap.xml
