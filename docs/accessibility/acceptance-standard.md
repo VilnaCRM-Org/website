@@ -43,12 +43,17 @@ WCAG 2.1 AA tag and are flagged `experimental`, so a plain tag-based run silentl
 executes them — including `label-content-name-mismatch`, which is the **only** rule in
 axe-core tagged `wcag21a`.
 Without an override, that whole tag matches nothing. `FORCED_RULES` in
-`src/test/a11y/axe-config.ts` re-enables them, and a unit test asserts the list stays correct
-against the installed axe-core:
+`src/test/a11y/axe-config.ts` re-enables **three** of those five, and a unit test asserts the
+list stays correct against the installed axe-core:
 
 - `label-content-name-mismatch` — SC 2.5.3, Label in Name.
 - `td-has-header` — SC 1.3.1, on data tables.
 - `table-fake-caption` — SC 1.3.1.
+
+The remaining two are left disabled on purpose, so the gate does not claim them:
+`p-as-heading` reports on subtitle typography this site uses deliberately, and
+`css-orientation-lock` parses every stylesheet and returns non-deterministic `incomplete`
+results. Both reasons are recorded next to `FORCED_RULES` itself.
 
 ## The two enforced layers
 

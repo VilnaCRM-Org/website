@@ -137,12 +137,19 @@ async function markSettledTabbables(page: Page): Promise<number> {
 /** Reads the sweep marker of whatever currently holds focus, shadow DOM aware. */
 async function readFocusMarker(page: Page, attribute: string): Promise<number> {
   return page.evaluate(orderAttribute => {
-    let active: Element | null = document.activeElement;
-
-    while (active?.shadowRoot?.activeElement != null) {
-      active = active.shadowRoot.activeElement;
-    }
-
+    // Light DOM only, deliberately, to stay consistent with markTabbables: its
+    // `document.querySelectorAll` stops at a shadow boundary, so nothing inside a
+    // shadow root is ever stamped. Walking into one here would read an unstamped
+    // element and record UNMARKED on a conformant control, tripping the "Tab left
+    // the known controls" guard for a reason the route did not cause.
+    //
+    // Making the STAMPING shadow-aware instead is not a drop-in fix: tab order
+    // across a shadow boundary is not document order, so indices assigned by a
+    // naive recursive walk would report false back-jumps. This sweep therefore
+    // covers light-DOM focusables only; a route that puts controls inside a shadow
+    // root needs order-aware stamping before it can be swept, and no route in this
+    // app does today.
+    const active: Element | null = document.activeElement;
     const marker = active?.getAttribute(orderAttribute);
 
     return marker === null || marker === undefined ? -1 : Number.parseInt(marker, 10);
