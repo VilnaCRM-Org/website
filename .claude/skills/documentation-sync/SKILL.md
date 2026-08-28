@@ -3,7 +3,7 @@ name: documentation-sync
 description: >-
   Use when a change touches Makefile targets, the Next.js/Apollo/MUI stack, a
   src/features feature, the GraphQL schema or Apollo resolvers, i18n en/uk copy,
-  dependency-cruiser boundaries, or .claude/skills, and the matching docs (agents.md,
+  dependency-cruiser boundaries, or .claude/skills, and the matching docs (AGENTS.md,
   CLAUDE.md, README.md, CONTRIBUTING.md, feature READMEs, skill files) must be updated in
   the same change. Run make format before make lint-md and make lint.
 ---
@@ -30,7 +30,7 @@ leave them to drift.
 
 ## Where website docs live (check the closest owner first)
 
-- `agents.md` — the root AI-agent contract (test-coverage policy, behavior-first
+- `AGENTS.md` — the root AI-agent contract (test-coverage policy, behavior-first
   assertions, Definition of Done). markdownlint-scanned.
 - `CLAUDE.md` — agent quick-reference. markdownlint-ignored but Prettier-checked.
 - `README.md`, `CONTRIBUTING.md` — contributor-facing. markdownlint-scanned.

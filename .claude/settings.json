@@ -6,6 +6,14 @@
       "Bash(git push -f:*)",
       "Bash(git push*--force*)",
       "Bash(git push* -f*)"
+    ],
+    "allow": [
+      "Bash(bmalph:*)",
+      "Bash(make:*)",
+      "Bash(pnpm:*)",
+      "Bash(docker compose exec dev:*)",
+      "Bash(git:*)",
+      "Bash(gh:*)"
     ]
   }
 }

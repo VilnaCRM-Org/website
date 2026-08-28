@@ -25,7 +25,7 @@ import {
  * The mock previously shipped no `validationRules` at all: no depth bound, no cost
  * budget, no rate limiting. A single deeply-nested or heavily-aliased document could
  * therefore amplify CPU and memory without bound (OWASP API4:2023 — Unrestricted
- * Resource Consumption). The mock is not deployed, but `CLAUDE.md` / `agents.md`
+ * Resource Consumption). The mock is not deployed, but `CLAUDE.md` / `AGENTS.md`
  * point agents at it as the canonical API shape, so it has to model the control.
  *
  * The controls, all built on `graphql-js` and Apollo's own hooks so they compose with

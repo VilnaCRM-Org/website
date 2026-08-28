@@ -11,7 +11,7 @@
  * that class). This spec boots the same mock from the same data file, replays
  * every documented operation, and holds each response against the contract.
  *
- * Scenario coverage (agents.md step 2):
+ * Scenario coverage (AGENTS.md step 2):
  *   - Positive — every documented operation replayed against the live mock.
  *   - Negative / boundary — `parity-detects-drift.contract.test.ts` seeds a
  *     renamed field, a retyped field, an extra field and a removed status into

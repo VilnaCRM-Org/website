@@ -36,7 +36,7 @@ the suite that actually exercises the change.
 | UI or styling change   | Inspect the snapshot diff                 | `make test-visual`           |
 | Architecture concern   | `code-organization` skill                 | `make lint-deps`             |
 | Complexity concern     | `complexity-management` skill             | qlty `[smells]` bot          |
-| Test gap               | Add cases per `agents.md` coverage policy | the touched suite            |
+| Test gap               | Add cases per `AGENTS.md` coverage policy | the touched suite            |
 | Question               | Clarify the code or answer in the thread  | `make lint`                  |
 
 Architecture findings (cross-feature imports, importing past a feature's `index.ts`
@@ -49,7 +49,7 @@ Complexity findings come from the qlty `[smells]` analyzer in `.qlty/qlty.toml`,
 runs in `comment` mode and posts on the PR. Resolve them by extracting helpers or
 simplifying control flow, not by suppressing the bot.
 
-Test-gap findings follow the mandatory coverage policy in `agents.md`: cover positive,
+Test-gap findings follow the mandatory coverage policy in `AGENTS.md`: cover positive,
 negative, and boundary/edge classes at the smallest meaningful layer, assert localized
 `t()` output and user-facing queries, and document any genuinely inapplicable class with
 a concrete `Not applicable: <reason>` note.

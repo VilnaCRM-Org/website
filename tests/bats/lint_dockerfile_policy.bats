@@ -5,7 +5,7 @@
 # throwaway Dockerfile fixtures so a regression in the policy logic is caught
 # without a container build.
 #
-# Scenario-class coverage (agents.md Step 2/3):
+# Scenario-class coverage (AGENTS.md Step 2/3):
 #   - Positive / happy path: compliant explicit-registry + digest-pinned,
 #     multi-line, scratch, --platform, and port-registry FROMs pass.
 #   - Negative / error: Docker Hub (implicit, explicit, uppercase-host),

@@ -6,7 +6,7 @@
 # loses coverage.
 
 /CLAUDE.md @Kravalg
-/agents.md @Kravalg
+/AGENTS.md @Kravalg
 /cursor-project-guide.md @Kravalg
 /.claude/ @Kravalg
 /scripts/get-pr-comments.sh @Kravalg

@@ -13,7 +13,7 @@
  * assertion. `@mockoon/cli` depends on an exact (`=`) `@mockoon/commons-server`
  * of the same version, so "same version string" is the right invariant.
  *
- * Scenario coverage (agents.md step 2):
+ * Scenario coverage (AGENTS.md step 2):
  *   - Positive — the pins agree today.
  *   - Negative — the parse guards below fail loudly if the pin can no longer be
  *     read (a reworded Dockerfile line, a moved dependency), rather than

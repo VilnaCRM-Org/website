@@ -16,5 +16,5 @@ unimplemented. There is no barrel to import yet.
 
 Follow the bulletproof-react layout used by the `landing` and `swagger` slices: add an
 `index.ts` barrel as the only public entry point, keep components under `components/`, and
-place localized copy under `i18n/`. See [`agents.md`](../../../agents.md) and the
+place localized copy under `i18n/`. See [`AGENTS.md`](../../../AGENTS.md) and the
 `architecture` skill for the import boundaries `make lint-deps` enforces.

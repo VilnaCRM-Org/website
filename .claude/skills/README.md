@@ -37,7 +37,7 @@ required.
 3. Identify every skill below that applies to the active task.
 4. Read each matching `SKILL.md` before executing.
 5. Skip a skill only after recording `Not applicable: <reason>` with a concrete
-   reason (this mirrors the test-coverage policy in the root `agents.md`).
+   reason (this mirrors the test-coverage policy in the root `AGENTS.md`).
 
 ## New Feature Verification Gate
 
@@ -115,7 +115,7 @@ implementation**:
 - **documentation-creation** — author feature READMEs, agent guides, and `SKILL.md`
   files that pass the Markdown gates. Key commands: `make format`, `make lint-md`,
   `make lint`.
-- **documentation-sync** — keep `agents.md`, `CLAUDE.md`, READMEs, and skill files
+- **documentation-sync** — keep `AGENTS.md`, `CLAUDE.md`, READMEs, and skill files
   aligned with code, command, and tooling changes. Key commands: `make format`,
   `make lint-md`, `make lint`.
 
@@ -137,11 +137,11 @@ When creating a new skill: use lowercase-hyphen naming, write a precise descript
 with concrete trigger terms, keep `SKILL.md` focused (target < 300 lines), reuse
 `make` commands, and never instruct disabling, ignoring, or suppressing a linter.
 
-## Skill vs CLAUDE.md vs agents.md
+## Skill vs CLAUDE.md vs AGENTS.md
 
 - **CLAUDE.md** (repo root) — concise project instructions auto-loaded by Claude Code:
   stack, command map, and the metrics policy.
-- **agents.md** (repo root) — the comprehensive contract, including the mandatory
+- **AGENTS.md** (repo root) — the comprehensive contract, including the mandatory
   test-coverage policy (positive / negative / edge) and behavior-first assertions.
 - **Skills** (`.claude/skills/`) — modular, task-specific workflows, routed via
   [AI-AGENT-GUIDE.md](AI-AGENT-GUIDE.md) and [SKILL-DECISION-GUIDE.md](SKILL-DECISION-GUIDE.md).

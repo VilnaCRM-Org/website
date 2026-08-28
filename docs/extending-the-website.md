@@ -1,7 +1,7 @@
 # Extending the website
 
 Practical recipes for the three most common changes in this repo: adding a page,
-adding a feature, and adding a locale. They complement [`agents.md`](../agents.md)
+adding a feature, and adding a locale. They complement [`AGENTS.md`](../AGENTS.md)
 (the test-coverage contract) and the skills under [`.claude/skills/`](../.claude/skills).
 
 ## Configuration is typed and validated
@@ -26,7 +26,7 @@ Pages live under `pages/` (Next.js pages router, static export).
    should mostly compose feature components.
 3. Use `useTranslation()` and per-feature i18n keys for copy — never hardcode
    user-facing English (see "Add a locale").
-4. Add tests per [`agents.md`](../agents.md): a client render test and, when the
+4. Add tests per [`AGENTS.md`](../AGENTS.md): a client render test and, when the
    route has behaviour, a Playwright e2e spec under `src/test/e2e`.
 
 ## Add a feature

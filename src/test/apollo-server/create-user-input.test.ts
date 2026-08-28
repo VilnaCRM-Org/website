@@ -13,7 +13,7 @@ import {
 /**
  * Issue #381 / F1 — unit level.
  *
- * Scenario classes (agents.md step 2):
+ * Scenario classes (AGENTS.md step 2):
  *   * positive — a valid input yields a server-generated id and an unconfirmed user;
  *   * negative — mass assignment, malformed email/initials, missing password;
  *   * boundary — initials at and below the minimum, empty strings, empty input object.

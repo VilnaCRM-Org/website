@@ -105,7 +105,7 @@ Before applying this skill, confirm the active task against
 [../AI-AGENT-GUIDE.md](../AI-AGENT-GUIDE.md) and
 [../SKILL-DECISION-GUIDE.md](../SKILL-DECISION-GUIDE.md), and hand telemetry
 work to the `observability-instrumentation` skill. The root
-[`agents.md`](../../../agents.md) test-coverage policy still governs any tests
+[`AGENTS.md`](../../../AGENTS.md) test-coverage policy still governs any tests
 you add (positive, negative, and edge classes; behavior-first assertions).
 
 ## Supporting Files

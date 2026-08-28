@@ -16,7 +16,7 @@ CODEOWNERS_FILE="$PROJECT_ROOT/.github/CODEOWNERS"
 @test "every agent-steering path keeps CODEOWNERS coverage with an owner" {
   local paths=(
     '/CLAUDE.md'
-    '/agents.md'
+    '/AGENTS.md'
     '/cursor-project-guide.md'
     '/.claude/'
     '/scripts/get-pr-comments.sh'
