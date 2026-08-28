@@ -140,7 +140,12 @@ describe('cloudfront_routing handler', () => {
   // criterion's own example, `.js.map` is the source-map leak the allow-list exists to make
   // impossible even if `productionBrowserSourceMaps` is ever flipped on, and the dotfiles that
   // carry a second dot are the ones that borrowed an allow-listed extension until `extensionOf`
-  // learned to reject a leading-dot segment.
+  // learned to reject a leading-dot segment. The `%`-carrying rows are the encoded spelling of
+  // exactly those dotfiles: CloudFront does not decode `request.uri`, so `%2E`/`%2e` hides the
+  // leading dot from `extensionOf` while S3 decodes the key back to `.env.js`, and `%2F` moves
+  // where the last segment begins at all. `%zz` is a malformed escape, pinned because decoding
+  // it would throw into the handler's catch and fail OPEN. The dot-segment rows cover the other
+  // half of the same hole: they satisfy the directory and extension tests yet resolve elsewhere.
   describe('fail-closed allowlist', () => {
     test.each([
       '/secret.json',
@@ -156,6 +161,15 @@ describe('cloudfront_routing handler', () => {
       '/en/.hidden.html',
       '/images/.env.js',
       '/_next/.eslintrc.js',
+      '/en/%2Ehidden.html',
+      '/images/%2Eenv.js',
+      '/images/%2eenv.js',
+      '/images/%252Eenv.js',
+      '/_next/%2Eeslintrc.js',
+      '/images/a%2F.env.js',
+      '/images/%zz.js',
+      '/images/../style.css',
+      '/images/./style.css',
       '/images/',
       '/_next/static/chunks/main-0f1e2d.js.map',
       '/_NEXT/static/chunks/main.js',

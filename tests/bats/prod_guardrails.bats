@@ -388,6 +388,28 @@ PY
   assert_output_contains 'no longer collects edge coverage'
 }
 
+@test "fails when the coverage entry is repointed outside the repository" {
+  # An entry that merely ends in the same tail collects nothing from this file, and
+  # Jest filters the coverage map by collectCoverageFrom, so the 100% edge layer then
+  # measures zero files and passes vacuously while both it and this gate stay green.
+  sed -i "s#'<rootDir>/scripts/cloudfront_routing.js'#'<rootDir>/../../other/scripts/cloudfront_routing.js'#" \
+    "$FIXTURE/jest.config.ts"
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains 'no longer collects edge coverage'
+}
+
+@test "a negated coverage glob does not count as a live pin" {
+  # A leading `!` tells Jest to EXCLUDE the file, which is the opposite of a pin.
+  sed -i "s#'<rootDir>/scripts/cloudfront_routing.js'#'!<rootDir>/scripts/cloudfront_routing.js'#" \
+    "$FIXTURE/jest.config.ts"
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains 'no longer collects edge coverage'
+}
+
 @test "fails when an edge coverage threshold drops below 100" {
   sed -i '/const EDGE_COVERAGE_THRESHOLD/,/};/ s/branches: 100/branches: 95/' \
     "$FIXTURE/jest.config.ts"

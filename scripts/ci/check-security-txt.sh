@@ -87,7 +87,7 @@ if bad_line="$(grep -nvE "${line_re}" "${file}")"; then
 fi
 
 # --- Contact (REQUIRED, may repeat; the first listed is the preferred one) ------
-contact_re="${field_prefix_re}(https://|mailto:|tel:)[^[:space:]]"
+contact_re="${field_prefix_re}(https://|mailto:|tel:)[^[:space:]]+[[:space:]]*$"
 contacts="$(field_lines Contact | grep -cE "${contact_re}" || true)"
 if [ "${contacts}" -eq 0 ]; then
   fail "${file}: no 'Contact:' field with an https://, mailto: or tel: URI (RFC 9116 section 2.5.3)"
@@ -95,7 +95,12 @@ fi
 
 # Counting only the usable values would let a malformed sibling -- a bare email
 # address, a plaintext http URI -- ship unnoticed behind a good one, so every
-# Contact line has to carry a URI a reporter can actually use.
+# Contact line has to carry a URI a reporter can actually use. The pattern is
+# end-anchored for that same reason: unanchored, it matched on a good prefix and
+# let the rest of the line say anything, so a plaintext `http://` URI appended to
+# a good `mailto:` one shipped green on the SAME line. The anchor still allows
+# the trailing `*WSP [CR]` RFC 9116 section 4's `eol` permits, and the `+` still
+# demands at least one character after the scheme.
 if bad_contact="$(field_lines Contact | grep -vE "${contact_re}")"; then
   fail "${file}: 'Contact:' value is not an https://, mailto: or tel: URI: ${bad_contact}"
 fi

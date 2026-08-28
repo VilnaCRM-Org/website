@@ -46,6 +46,13 @@ WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 BODY="$WORK/body.md"
 : >"$BODY"
+# Every commit whose metadata lookup failed, one SHA per line. Like the ledger
+# cache below this has to live in a file rather than a variable: record_commits
+# runs inside a command substitution, so nothing it counted survives back to the
+# caller -- and the caller is the only place "no NEW commits" can be told apart
+# from "not one commit could be described".
+DESCRIBE_FAILURES="$WORK/describe-failures"
+: >"$DESCRIBE_FAILURES"
 
 note() { printf '%s\n' "$*" >&2; }
 add() { printf '%s\n' "$*" >>"$BODY"; }
@@ -337,6 +344,7 @@ record_commits() {
       mark "release-audit:commit:${sha}"
       recorded=$((recorded + 1))
     else
+      printf '%s\n' "$sha" >>"$DESCRIBE_FAILURES"
       note "release-audit: could not describe ${sha}; leaving it unaudited for the next sweep"
     fi
   done
@@ -383,11 +391,23 @@ handle_push() {
       "\`repos/${REPO}/compare/${AUDIT_BEFORE:-?}...${AUDIT_AFTER:-?}\` failed, so only the head commit was recorded. The daily sweep reconciles the same window; confirm the missing commits appear there."
   fi
   recorded="$(printf '%s\n' "$shas" | record_commits "$ledger")"
-  if [ "$recorded" -eq 0 ]; then
+  # Zero recorded commits means "nothing new" ONLY when dedup skipped every one of
+  # them. Zero because every lookup failed is the opposite: the body already holds
+  # the "could not be resolved" lines, and dropping it would report a total outage
+  # of the commits API as an ordinary quiet run -- the same silence the compare
+  # failure above is alerted on.
+  if [ "$recorded" -eq 0 ] && [ ! -s "$DESCRIBE_FAILURES" ]; then
     note "release-audit: every pushed commit is already in the ledger"
     : >"$BODY"
     escalate_push_anomalies "$actor"
     return 0
+  fi
+  if [ "$recorded" -eq 0 ]; then
+    add "- **incomplete record: no commit of this push could be described, so none"
+    add "  is marked audited and the daily sweep still sees them**"
+    add ""
+    raise_alert "Release audit: no commit of a push to main could be described" \
+      "Every \`repos/${REPO}/commits/<sha>\` lookup for this push failed, so nothing was marked audited. The daily sweep reconciles the same window; a repeat means the audit gap is open."
   fi
   provenance
   post_record "$ledger"
@@ -424,10 +444,19 @@ handle_sweep() {
     return 0
   fi
   recorded="$(printf '%s\n' "$shas" | record_commits "$ledger")"
-  if [ "$recorded" -eq 0 ]; then
+  # Same distinction the push path draws: nothing unaudited is a quiet success,
+  # nothing DESCRIBABLE is the [skip ci] backstop failing open.
+  if [ "$recorded" -eq 0 ] && [ ! -s "$DESCRIBE_FAILURES" ]; then
     note "release-audit: sweep found nothing unaudited"
     : >"$BODY"
     return 0
+  fi
+  if [ "$recorded" -eq 0 ]; then
+    add "- **incomplete record: no commit in this window could be described, so"
+    add "  nothing is marked audited**"
+    add ""
+    raise_alert "Release audit: the daily sweep could not describe any commit" \
+      "Every \`repos/${REPO}/commits/<sha>\` lookup in the sweep window failed, so the \`[skip ci]\` backstop marked nothing audited. One blip is reconciled by the next run; a repeat means the audit gap is open."
   fi
   provenance
   post_record "$ledger"

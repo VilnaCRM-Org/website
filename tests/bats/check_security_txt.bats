@@ -127,6 +127,48 @@ EOF
   assert_output_contains "'Contact:' value is not an https://, mailto: or tel: URI"
 }
 
+@test "fails when a Contact carries trailing text after the URI" {
+  # The URI pattern used to have no end anchor, so anything after a good prefix
+  # rode along and a reporter's tooling could pick up the wrong value.
+  write_fixture <<'EOF'
+Contact: mailto:info@vilnacrm.com please also call +380000000000
+Expires: 2027-06-30T23:59:59Z
+Canonical: https://vilnacrm.com/.well-known/security.txt
+EOF
+
+  run_checker_at 2026-07-31
+  [ "$status" -eq 1 ]
+  assert_output_contains "no 'Contact:' field"
+}
+
+@test "fails when a plaintext http URI hides behind a good one on the same Contact line" {
+  # The same hazard the two tests above reject across two lines, smuggled onto
+  # one: without the end anchor this shipped green and handed a reporter exactly
+  # the plaintext channel the scheme check exists to refuse.
+  write_fixture <<'EOF'
+Contact: mailto:info@vilnacrm.com http://insecure.example.com/report
+Expires: 2027-06-30T23:59:59Z
+Canonical: https://vilnacrm.com/.well-known/security.txt
+EOF
+
+  run_checker_at 2026-07-31
+  [ "$status" -eq 1 ]
+  assert_output_contains "no 'Contact:' field"
+}
+
+@test "tolerates the trailing whitespace RFC 9116 section 4's eol permits" {
+  # `eol = *WSP [CR] LF`, so trailing spaces are part of a legal line: the end
+  # anchor must never be tightened to a bare `$`. Written with printf because
+  # .editorconfig and Prettier strip trailing spaces out of a heredoc fixture.
+  printf 'Contact: mailto:info@vilnacrm.com   \n' >"$SEC_TXT"
+  printf 'Expires: 2027-06-30T23:59:59Z\n' >>"$SEC_TXT"
+  printf 'Canonical: https://vilnacrm.com/.well-known/security.txt\n' >>"$SEC_TXT"
+
+  run_checker_at 2026-07-31
+  [ "$status" -eq 0 ]
+  assert_output_contains '1 Contact field(s)'
+}
+
 @test "fails when a Contact field has no value at all" {
   write_fixture <<'EOF'
 Contact:

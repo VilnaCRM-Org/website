@@ -168,6 +168,38 @@ jobs:
           AUDIT_DRY_RUN: ${{ inputs.dry_run && '1' || '0' }}
         run: bash scripts/ci/release-audit.sh
 
+      # The failure handler below files one issue per outage, and until now
+      # nothing ever closed it: the exact-title refresh would then comment onto a
+      # stale alert forever, which is the alert fatigue ci-health-alerts.yml and
+      # openapi-drift.yml both close their issues to avoid. A later successful run
+      # is the recovery signal, so it does the closing here. The constant
+      # concurrency group above serializes every run of this workflow, so unlike
+      # ci-health-alerts.yml no stale-success guard is needed -- no older run can
+      # still be in flight to close an alert a newer failure just filed.
+      - name: Close the failure alert once the audit recovers
+        if: success() && (github.event_name != 'workflow_dispatch' || inputs.dry_run != true)
+        env:
+          # Byte-identical to the failure step's title, because the lookup below
+          # matches on it exactly; a bats guard pins the two together.
+          ALERT_TITLE: 'Release audit: the audit workflow failed'
+          AUDIT_EVENT_NAME: ${{ github.event_name }}
+        run: |
+          # A cleanup blip must never turn a green audit run red -- that would trip
+          # the failure handler and file the very alert this step is closing.
+          if ! listed="$(gh issue list --repo "$AUDIT_REPO" --label ci-alert --state open \
+            --search "$ALERT_TITLE in:title" --json number,title)"; then
+            echo "::warning::could not list open audit alerts; any open one stays open"
+            exit 0
+          fi
+          # The exact-title filter is load-bearing: `--search ... in:title` is fuzzy,
+          # so a sloppy match would close a force-push or unexpected-bot escalation.
+          existing="$(printf '%s' "$listed" |
+            jq -r --arg t "$ALERT_TITLE" 'map(select(.title == $t)) | .[0].number // empty')"
+          [ -n "$existing" ] || exit 0
+          gh issue comment "$existing" --repo "$AUDIT_REPO" \
+            --body "Recovered: the audit run for a \`${AUDIT_EVENT_NAME}\` event succeeded. Run: ${AUDIT_RUN_URL}" >/dev/null
+          gh issue close "$existing" --repo "$AUDIT_REPO" >/dev/null
+
       # The script only alerts on runs that SUCCEED, so a failed audit -- an API
       # outage, a bad token, a broken script -- would otherwise be a red X nobody
       # is notified about, and the ledger would stop recording in silence. This
@@ -184,11 +216,17 @@ jobs:
         run: |
           gh label create ci-alert --repo "$AUDIT_REPO" --color B60205 \
             --description 'Deploy/release/red-main CI health alerts' >/dev/null 2>&1 || true
+          # `gh issue create` resolves every --label against the repo and errors on
+          # an unknown one, and the script provisions this one only on a non-dry run
+          # that gets far enough -- which the very first failure, by definition, did
+          # not. Same idempotent idiom, same colour and description as ensure_label.
+          gh label create release-audit --repo "$AUDIT_REPO" --color 0E8A16 \
+            --description 'Audit trail of releases and pushes to main' >/dev/null 2>&1 || true
           existing="$(gh issue list --repo "$AUDIT_REPO" --label ci-alert --state open \
             --search "$ALERT_TITLE in:title" --json number,title |
             jq -r --arg t "$ALERT_TITLE" 'map(select(.title == $t)) | .[0].number // empty')"
           body="$(printf '%s\n\n%s\n' \
-            "The audit run for a \`${AUDIT_EVENT_NAME}\` event failed, so nothing was recorded in the ledger for it. The daily sweep re-derives commits on \`main\`, but not a release edit or deletion." \
+            "The audit run for a \`${AUDIT_EVENT_NAME}\` event failed, so its ledger record is missing -- or partial, if the run died after the ledger comment was posted. Check the ledger issue rather than assuming either. The daily sweep re-derives commits on \`main\`, but not a release edit or deletion." \
             "Run: ${AUDIT_RUN_URL}")"
           if [ -n "$existing" ]; then
             gh issue comment "$existing" --repo "$AUDIT_REPO" --body "$body" >/dev/null

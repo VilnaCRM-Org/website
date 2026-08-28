@@ -147,7 +147,35 @@ function extensionOf(uri) {
   return lastSegment.substring(lastDot + 1).toLowerCase();
 }
 
+// CloudFront hands this function the URI still percent-encoded and it never normalises
+// dot segments, so both are checks the tables above cannot make for themselves.
+// `/images/%2Eenv.js` has a last segment starting with `%`, not `.`, so `extensionOf` reads
+// a plain `js` and the dotfile test never fires — yet S3 percent-decodes the path to derive
+// the object key and serves `images/.env.js`. `%2F` is worse still: it moves where the last
+// segment even begins (`/images/a%2F.env.js` -> `images/a/.env.js`). Decoding here would
+// need its own try/catch, because decodeURIComponent throws on a malformed escape like
+// `%zz` and a throw inside this handler is caught below and FAILS OPEN, so the whole
+// escaped family is rejected outright instead. Nothing in the static export carries a `%`
+// in its name — `scripts/ci/verify-edge-allowlist.mjs` proves that on every PR — so this
+// costs the site nothing. A `.` or `..` segment is rejected for the same reason: it
+// satisfies the directory and extension tests while resolving somewhere else entirely.
+function isUnsafeUri(uri) {
+  var parts = uri.split('/');
+  var i;
+
+  for (i = 0; i < parts.length; i++) {
+    if (parts[i] === '.' || parts[i] === '..') {
+      return true;
+    }
+  }
+
+  return uri.indexOf('%') !== -1;
+}
+
 function isAllowedAsset(uri) {
+  if (isUnsafeUri(uri)) {
+    return false;
+  }
   if (has(ALLOWED_FILES, uri)) {
     return true;
   }

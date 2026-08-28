@@ -504,6 +504,29 @@ Co-authored-by: dependabot[bot] <support@github.com>'
   assert_log_contains 'could not enumerate the commits of a push to main'
 }
 
+@test "a push whose every commit lookup fails is an incomplete record, not a no-op" {
+  # `recorded -eq 0` used to mean "already in the ledger" unconditionally, so a
+  # total outage of the commits API wiped the body, logged a claim that is
+  # factually false, and exited green -- the same silence the compare failure
+  # above is alerted on, one layer further in. No write_commit here: every lookup
+  # 404s.
+  run_audit \
+    FAKE_ISSUE_LIST="$LEDGER_EXISTS" \
+    FAKE_COMPARE_JSON='{"commits":[{"sha":"c0ffee1"},{"sha":"c0ffee2"}]}' \
+    AUDIT_EVENT=push \
+    AUDIT_BEFORE=aaaaaaa \
+    AUDIT_AFTER=c0ffee2
+
+  [ "$status" -eq 0 ]
+  assert_output_contains 'could not be resolved'
+  assert_output_contains 'incomplete record'
+  assert_log_contains 'gh issue comment 7'
+  assert_log_contains '--label ci-alert'
+  assert_log_contains 'no commit of a push to main could be described'
+  # Nothing is claimed as audited, so the next sweep still sees both commits.
+  [[ "$output" != *'<!-- release-audit:commit:'* ]]
+}
+
 @test "fetches the ledger dedup window once per run, not once per commit" {
   # The window is identical for every marker and the ledger only gains a comment
   # after the record loop, so the second through fiftieth fetches could never
@@ -658,6 +681,24 @@ Co-authored-by: dependabot[bot] <support@github.com>'
   refute_log_contains 'gh issue comment'
 }
 
+@test "a sweep whose every commit lookup fails is an incomplete record, not a no-op" {
+  # Twin of the push case, on the path that has no backstop left behind it: the
+  # sweep IS the [skip ci] backstop, so "found nothing unaudited" must never be
+  # printed over a window in which nothing could be described.
+  run_audit \
+    FAKE_ISSUE_LIST="$LEDGER_EXISTS" \
+    FAKE_COMMIT_LIST='[{"sha":"1091cc12"}]' \
+    AUDIT_EVENT=sweep
+
+  [ "$status" -eq 0 ]
+  assert_output_contains 'could not be resolved'
+  assert_output_contains 'incomplete record'
+  assert_log_contains 'gh issue comment 7'
+  assert_log_contains '--label ci-alert'
+  assert_log_contains 'daily sweep could not describe any commit'
+  [[ "$output" != *'<!-- release-audit:commit:'* ]]
+}
+
 @test "a dry run of a failing sweep still writes nothing at all" {
   run_audit \
     FAKE_ISSUE_LIST="$LEDGER_EXISTS" \
@@ -803,6 +844,70 @@ Co-authored-by: dependabot[bot] <support@github.com>'
   run grep -n 'gh issue create --repo "$AUDIT_REPO" --label ci-alert' \
     "$PROJECT_ROOT/$WORKFLOW_REL"
   [ "$status" -eq 0 ]
+
+  # The failure can land AFTER the ledger comment -- an API blip in a post-record
+  # escalation is enough -- so the alert must not assert a negative it cannot
+  # know, and must send the operator to the ledger instead.
+  run grep -n 'nothing was recorded in the ledger' "$PROJECT_ROOT/$WORKFLOW_REL"
+  [ "$status" -ne 0 ]
+  [ -z "$output" ]
+
+  run grep -n 'Check the ledger issue' "$PROJECT_ROOT/$WORKFLOW_REL"
+  [ "$status" -eq 0 ]
+}
+
+@test "the failure alert creates every label it then passes to gh issue create" {
+  # `gh issue create` resolves each --label against the repo and errors on an
+  # unknown one. release-audit is provisioned only by ensure_label, on a non-dry
+  # script run that got far enough -- which the very first failure, by definition,
+  # did not -- so the alert was dropped in exactly the case it exists for. Walking
+  # the argv rather than grepping one name guards the next label added too.
+  run awk '
+    # Prose, not argv: the comments below quote both commands verbatim.
+    /^[[:space:]]*#/ { next }
+    /^ +- name:/ { step = $0; delete made }
+    {
+      line = $0
+      while (match(line, /gh label create [A-Za-z0-9_-]+/)) {
+        made[substr(line, RSTART + 16, RLENGTH - 16)] = 1
+        line = substr(line, RSTART + RLENGTH)
+      }
+    }
+    /gh issue create/ {
+      n = split($0, tok, /[[:space:]]+/)
+      for (i = 1; i < n; i++) {
+        if (tok[i] == "--label" && !(tok[i + 1] in made)) {
+          print step " passes unprovisioned label " tok[i + 1]
+        }
+      }
+    }
+  ' "$PROJECT_ROOT/$WORKFLOW_REL"
+
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "a later successful audit run closes the failure alert" {
+  # Nothing closed the issue the failure handler files, and no workflow_run
+  # consumer covers this workflow, so the exact-title refresh would comment onto a
+  # stale alert forever -- the alert fatigue the repo's other two alerting
+  # workflows close their issues to avoid.
+  run awk '
+    /^ +- name:/ { in_success = 0 }
+    /^ +if: success\(\)/ { in_success = 1 }
+    in_success && /gh issue close/ { print FNR; exit }
+  ' "$PROJECT_ROOT/$WORKFLOW_REL"
+  [ "$status" -eq 0 ]
+  [ -n "$output" ]
+}
+
+@test "the recovery step and the failure alert share one exact title" {
+  # The close matches on an EXACT title, so the moment the two drift the failure
+  # alert stops being closed and silently accumulates comments forever.
+  run sed -n 's/^ *ALERT_TITLE: //p' "$PROJECT_ROOT/$WORKFLOW_REL"
+  [ "$status" -eq 0 ]
+  [ "$(printf '%s\n' "$output" | wc -l)" -eq 2 ]
+  [ "$(printf '%s\n' "$output" | sort -u | wc -l)" -eq 1 ]
 }
 
 @test "the workflow never interpolates an expression inside a run block" {

@@ -272,13 +272,16 @@ function assertEdgeCoverageStaysPinned() {
   const collectFrom = /const EDGE_COVERAGE_FROM[^;]*;/.exec(code)?.[0] ?? '';
   // Compare against the extracted quoted elements rather than building a regex out
   // of a path: hand-escaping only `.` leaves every other metacharacter (a backslash
-  // above all) unescaped, which is the incomplete-escaping defect CodeQL flags. An
-  // exact match on the element is also stricter than a substring, so a longer path
-  // that merely contains this one (`...cloudfront_routing.js.map`) cannot satisfy
-  // the pin, and `<rootDir>/` prefixes still count.
+  // above all) unescaped, which is the incomplete-escaping defect CodeQL flags. The
+  // pin is matched against exactly the two spellings Jest resolves to the repo file --
+  // the bare path and the `<rootDir>/`-prefixed one -- because anything looser passes
+  // an entry that never collects this file: one merely ending in the same tail
+  // (`<rootDir>/../../other/scripts/cloudfront_routing.js`), a negated glob that tells
+  // Jest to exclude it (`!<rootDir>/scripts/cloudfront_routing.js`), or a longer
+  // sibling (`...cloudfront_routing.js.map`).
   const collectedEntries = [...collectFrom.matchAll(/(['"])([^'"]*)\1/g)].map(match => match[2]);
   const pinsEdgeScript = collectedEntries.some(
-    entry => entry === EDGE_SCRIPT || entry.endsWith(`/${EDGE_SCRIPT}`)
+    entry => entry === EDGE_SCRIPT || entry === `<rootDir>/${EDGE_SCRIPT}`
   );
   if (!pinsEdgeScript) {
     fail(
