@@ -18,9 +18,16 @@ import { expect, type Page } from '@playwright/test';
 const TAB_ORDER_ATTRIBUTE: string = 'data-a11y-tab-order';
 
 /**
- * Upper bound on Tab presses in one sweep. Swagger renders well over a hundred
- * controls; the assertions below are properties of adjacent trace entries, so
- * truncating the sweep preserves them while keeping the test fast.
+ * Upper bound on Tab presses in one sweep, so a control-heavy route cannot make
+ * the gate crawl.
+ *
+ * The cap does not weaken the assertions below: they are properties of adjacent
+ * trace entries, and a shorter trace cannot manufacture a trap or a back-jump
+ * that is not there. It does bound coverage. A route with more tabbable controls
+ * than this is only walked as far as its first `MAX_SWEEP_STEPS` tab positions,
+ * so a trap or a back-jump that first appears past that point is never reached.
+ * This is a bounded sweep, not full keyboard coverage — recorded as such in
+ * `docs/accessibility/acceptance-standard.md`.
  */
 const MAX_SWEEP_STEPS: number = 120;
 
@@ -163,9 +170,10 @@ export async function expectKeyboardOperable(page: Page): Promise<void> {
 
   await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
 
-  // Sweep exactly as many steps as there are controls. Stepping past the last
-  // one is not portable: Chromium hands focus to the browser chrome while
-  // Firefox leaves it on the final control, which reads as a false trap.
+  // Sweep exactly as many steps as there are controls, up to MAX_SWEEP_STEPS.
+  // Stepping past the last one is not portable: Chromium hands focus to the
+  // browser chrome while Firefox leaves it on the final control, which reads as
+  // a false trap.
   const steps: number = Math.min(tabbableCount, MAX_SWEEP_STEPS);
   const trace: number[] = [];
 
@@ -200,7 +208,7 @@ export async function expectKeyboardOperable(page: Page): Promise<void> {
   const trapMessage: string = `focus stopped advancing — keyboard trap? ${readableTrace}`;
   expect(trapped, trapMessage).toBe(false);
 
-  // Zero, not "at most one". The sweep takes exactly as many steps as there are
+  // Zero, not "at most one". The sweep takes at most as many steps as there are
   // controls starting from a blurred document, so a conformant page never wraps
   // and never jumps backwards. A single positive `tabindex` moves exactly one
   // element to the head of the order and so produces exactly ONE back-jump for

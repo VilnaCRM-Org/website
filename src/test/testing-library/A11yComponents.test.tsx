@@ -7,7 +7,7 @@ import React from 'react';
 import { UiButton, UiCheckbox, UiInput, UiLink, UiTypography } from '@/components';
 import { theme } from '@/components/app-theme';
 
-import { FORCED_RULES, WCAG_AA_TAGS } from '../a11y/axe-config';
+import { FORCED_RULES, JSDOM_UNSUPPORTED_RULES, WCAG_AA_TAGS } from '../a11y/axe-config';
 import { expectNoA11yViolations } from '../a11y/expect-no-a11y-violations';
 
 import { testText } from './constants';
@@ -104,10 +104,12 @@ describe('component accessibility (WCAG 2.1 AA)', () => {
       </UiButton>
     );
 
+    // The tag `runOnly` below would otherwise override jest-axe's global
+    // disable of the rules jsdom cannot evaluate, so pass them on every run.
     const evaluatedRules: (rules?: RuleObject) => Promise<string[]> = async rules => {
       const results: AxeResults = (await axe(container, {
         runOnly: { type: 'tag', values: [...WCAG_AA_TAGS] },
-        ...(rules === undefined ? {} : { rules }),
+        rules: { ...rules, ...JSDOM_UNSUPPORTED_RULES },
       })) as AxeResults;
 
       return [...results.violations, ...results.passes, ...results.incomplete].map(

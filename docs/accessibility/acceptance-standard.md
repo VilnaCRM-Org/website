@@ -67,7 +67,9 @@ Both layers run on every pull request and both must pass.
 labelling. jsdom has no layout or paint engine, so `color-contrast` and `link-in-text-block`
 cannot produce a trustworthy result there and are disabled explicitly. A green component test
 is necessary, never sufficient: every criterion that depends on how the page actually renders
-belongs to the route layer.
+belongs to the route layer. `link-in-text-block` is enforced there for real; `color-contrast`
+is not, because it is waived on every registered route until #423 lands — see
+[Current exceptions](#current-exceptions).
 
 ### Route level
 
@@ -81,7 +83,9 @@ against the real production build.
 - Keyboard: `expectKeyboardOperable(page)` in `src/test/a11y/keyboard.ts` walks the route with
   Tab alone and asserts focus keeps moving (SC 2.1.2, keyboard traps) and follows DOM order
   (SC 2.4.3). axe ships no keyboard-trap rule at all, so this is coverage the scan structurally
-  cannot provide.
+  cannot provide. The sweep is capped at the first 120 tab positions of a route
+  (`MAX_SWEEP_STEPS`), so on a longer route those two criteria are asserted over that prefix
+  rather than the whole page.
 - Command: `make test-a11y-routes`.
 
 ### How this relates to the other gates
@@ -141,8 +145,11 @@ Treat these as manual review items on any change that touches UI:
 - Screen-reader output and reading order.
 - Whether alternative text is _correct_, not merely present.
 - Focus visibility and focus-order sanity beyond DOM order.
-- Contrast in hover, focus, active, disabled and placeholder states — the route scan only ever
-  sees the default state.
+- Contrast, in every state. Default-state contrast is waived on all three registered routes
+  until #423 lands, and hover, focus, active, disabled and placeholder contrast is never
+  scanned at all — the route scan only ever sees the default state.
+- Keyboard traps and focus-order defects past the first 120 tab positions of a route, which is
+  where the Tab sweep stops.
 - Reflow, zoom and mobile viewports. The Playwright projects are desktop-only today.
 - `incomplete` axe results, which mean "axe could not decide" — typically contrast over a
   gradient or an image. `scanRoute` attaches them to the Playwright report as an
@@ -189,3 +196,12 @@ exception must be deleted in the same change that fixes its underlying defect.
 Both were surfaced by this gate on the day it landed. The contrast failures come from shared
 brand tokens, and the unnamed select is rendered by third-party `swagger-ui-react`; both are
 tracked for burn-down rather than waived quietly.
+
+Be explicit about what the first row costs: **SC 1.4.3, Contrast (Minimum), is currently
+enforced at neither layer.** The component layer disables `color-contrast` because jsdom has no
+paint engine, and the route layer waives it with a `*` scope on every route in the registry
+until #423 lands. The WCAG 2.1 AA target above therefore excludes contrast today. The
+Lighthouse accessibility score does not fill the gap — it is a weighted average over two URLs
+with no per-rule pass/fail, and its budgets were baselined with these failures already present.
+Closing #423 is what restores the criterion; widening the waiver, or adding a route to it, is
+not.
