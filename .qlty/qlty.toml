@@ -54,6 +54,7 @@ exclude_patterns = [
   # scope: an ES5.1 CloudFront function (uses `var` by design) and a server
   # bootstrap that configures dotenv before its other imports load.
   "scripts/cloudfront_routing.js",
+  "scripts/cloudfront_security_headers.js",
   "docker/apollo-server/server.mts",
   # Root config files not under any eslint config block (they live at the repo
   # root, outside src/), so qlty's eslint only emits a "file ignored" warning.

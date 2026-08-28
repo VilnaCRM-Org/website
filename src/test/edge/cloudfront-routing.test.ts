@@ -35,7 +35,14 @@ interface CloudFrontResponse {
 type CloudFrontEvent = { request?: CloudFrontRequest };
 type CloudFrontHandler = (event: CloudFrontEvent) => CloudFrontRequest | CloudFrontResponse;
 
-const HANDLER_PATH: string = path.resolve(__dirname, '../../../scripts/cloudfront_routing.js');
+const REPO_ROOT: string = path.resolve(__dirname, '../../..');
+const HANDLER_PATH: string = path.join(REPO_ROOT, 'scripts/cloudfront_routing.js');
+
+const policyHeaders: Record<string, string> = (
+  JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'config/security-headers.json'), 'utf8')) as {
+    headers: Record<string, string>;
+  }
+).headers;
 
 const vmConsole: { log: jest.Mock } = { log: jest.fn() };
 
@@ -119,6 +126,16 @@ describe('cloudfront_routing handler', () => {
     test('sets a short cache-control header', () => {
       expect(response.headers['cache-control']?.value).toBe('public, max-age=60');
     });
+
+    // CloudFront does NOT run the viewer-response function when a viewer-request function
+    // short-circuits with its own response, so the synthetic 404 has to carry the security
+    // headers inline (issue #377). `make lint-headers` enforces the same parity.
+    test.each(Object.entries(policyHeaders))(
+      'carries the %s security header from config/security-headers.json',
+      (name, expected) => {
+        expect(response.headers[name]?.value).toBe(expected);
+      }
+    );
   });
 
   describe('unknown nested path (more than one segment)', () => {

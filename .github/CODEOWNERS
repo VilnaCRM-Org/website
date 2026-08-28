@@ -1,0 +1,13 @@
+# Agent-steering files are executable policy for every AI agent working in
+# this repository (issue #374, F3): a single merged edit to any of them
+# persistently changes what those agents do on every future task, so edits
+# here must never land without maintainer review. Keep this list in sync with
+# tests/bats/agent_docs_codeowners.bats, which fails when a steering path
+# loses coverage.
+
+/CLAUDE.md @Kravalg
+/agents.md @Kravalg
+/cursor-project-guide.md @Kravalg
+/.claude/ @Kravalg
+/scripts/get-pr-comments.sh @Kravalg
+/.github/CODEOWNERS @Kravalg

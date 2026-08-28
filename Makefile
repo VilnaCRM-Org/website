@@ -65,6 +65,16 @@ USER_SERVICE_REPO           = VilnaCRM-Org/user-service
 USER_SERVICE_SPEC_PATH      = .github/openapi-spec/spec.yaml
 OPENAPI_BASELINE            = contracts/user-service/openapi.json
 
+# zizmor is the GitHub Actions security linter (issue #360). Like gitleaks and
+# lychee it ships as a CLI container pinned BY DIGEST, so a repointed tag can
+# never change what the security gate enforces. Digest is zizmor 1.28.0.
+# The gate blocks on medium-and-above findings that zizmor reports with high
+# confidence; see scripts/ci/lint-workflows.sh and the workflow-security.yml
+# job comment for what that deliberately leaves out and why.
+ZIZMOR_IMAGE                = ghcr.io/zizmorcore/zizmor@sha256:8e6b3e4fb74d1aa5d23e83ea369f386c66eced0d1fb944d32cd8b2aac100b00d
+ZIZMOR_MIN_SEVERITY         = medium
+ZIZMOR_MIN_CONFIDENCE       = high
+
 NEXT_BUILD                  = $(NEXT_BIN) build --webpack
 NEXT_BUILD_CMD              = $(NEXT_BUILD) && $(IMG_OPTIMIZE)
 STORYBOOK_BUILD_CMD         = $(STORYBOOK_BIN) build --output-dir storybook-static-ci
@@ -165,7 +175,7 @@ NETWORK_NAME                = website-network
 # Dev-side lint and test phases are grouped so local developers and agents can
 # run the same CI stages as the pipeline. The parallel runners execute each
 # target concurrently, group their output, and aggregate exit codes.
-CI_LINT_TARGETS             = lint-next lint-tsc lint-md
+CI_LINT_TARGETS             = lint-next lint-tsc lint-md lint-api-versions lint-headers
 CI_TEST_TARGETS             = ci-test-unit-client ci-test-unit-server ci-test-integration ci-test-contract
 CI_LINT_RUNNER              = ./scripts/ci/run-parallel.sh ci-lint
 CI_TEST_RUNNER              = ./scripts/ci/run-parallel.sh ci-test
@@ -363,10 +373,24 @@ lint-deps: ## Validate architecture/import boundaries with dependency-cruiser
 	node scripts/generateLocalization.mjs
 	$(PM_EXEC) $(DEPCRUISE_BIN) src pages tests --config .dependency-cruiser.js
 
+.PHONY: lint lint-api-versions lint-headers lint-docker-policy
+
+# The user-service inventory invariant (issue #381, F4): every consumer of the
+# upstream contracts — the GraphQL schema behind the Apollo mock and the OpenAPI
+# spec behind /swagger — must derive from the single USER_SERVICE_VERSION pin.
+# Unlike lint-contracts this check is HERMETIC (no network, no Docker), so it
+# belongs in the `lint` aggregate and in CI_LINT_TARGETS: the drift that produced
+# the defect (docs on v2.6.0, GraphQL on v2.4.1) is caught on every PR.
+lint-api-versions: ## Verify OpenAPI and GraphQL reference the same pinned user-service release
+	$(PM_EXEC) node scripts/contracts/check-api-versions.mjs
+
+lint-headers: ## Verify the edge security-header policy (config/security-headers.json) reaches every production response
+	$(PM_EXEC) node scripts/ci/lint-headers.mjs
+
 lint-docker-policy: ## Enforce the registry (no Docker Hub) + digest-pin policy on every Dockerfile
 	./scripts/ci/lint-dockerfile-policy.sh
 
-lint: lint-next lint-tsc lint-md lint-deps lint-docker-policy ## Runs all linters: ESLint, TypeScript, Markdown, dependency-cruiser, and the Dockerfile registry/digest policy in sequence.
+lint: lint-next lint-tsc lint-md lint-deps lint-api-versions lint-docker-policy lint-headers ## Runs all linters: ESLint, TypeScript, Markdown, dependency-cruiser, the API version invariant, the Dockerfile registry/digest policy, and the security-header gate in sequence.
 
 # DELIBERATE DIVERGENCE FROM THE npm-tool LINT GATES (lint-next/tsc/md/deps),
 # for the same reason as lint-metrics below:
@@ -454,6 +478,26 @@ lint-vulns: ## Fail on dependency CVEs this branch adds versus $(OSV_BASE_REF) (
 
 scan-vulns-census: ## Report every known dependency CVE in bun.lock without failing (advisory; feeds the nightly tracking issue)
 	@$(MAKE) lint-vulns OSV_MODE=census
+
+# DELIBERATE DIVERGENCE FROM THE npm-tool LINT GATES (lint-next/tsc/md/deps),
+# for the same reasons as lint-contracts and lint-metrics above:
+#   * Host-only: zizmor is a Rust CLI shipped as a container image, absent from
+#     the dev image, so this target does NOT use $(PM_EXEC) and runs docker on
+#     the host in both modes.
+#   * NOT in the `lint` aggregate and NOT in CI_LINT_TARGETS (both route through
+#     the dev container / run-parallel.sh, which cannot run docker).
+#   * Its online audits reach the GitHub API to resolve tags, so a GitHub
+#     outage must not turn the whole static lane red.
+#   * Its CI surface is .github/workflows/workflow-security.yml, which runs it
+#     on every PR to main -- deliberately NOT path-filtered, because a skipped
+#     check cannot be a meaningful required status check (#343).
+# The script degrades to --offline when no GitHub token is available, so a
+# local run without `gh auth login` still works (offline is a strict subset).
+lint-workflows: ## Audit the GitHub Actions workflows for security defects with zizmor (host-only, Docker)
+	@ZIZMOR_IMAGE="$(ZIZMOR_IMAGE)" \
+	 ZIZMOR_MIN_SEVERITY="$(ZIZMOR_MIN_SEVERITY)" \
+	 ZIZMOR_MIN_CONFIDENCE="$(ZIZMOR_MIN_CONFIDENCE)" \
+	 bash scripts/ci/lint-workflows.sh
 
 husky: ## One-time Husky setup to enable Git hooks (deprecated if already set)
 	bun x husky install
@@ -579,7 +623,8 @@ ci-test-contract: ## Run contract parity tests directly assuming deps are instal
 	ci-test-memory-leak ci-test-load ci-test-lighthouse-desktop \
 	ci-test-lighthouse-mobile ci-test-prod ensure-dev start-prod-clean \
 	test-load test-load-swagger test-mutation-shard merge-mutation-reports \
-	test-e2e-burnin check-e2e-flakes pr-comments lint-vulns scan-vulns-census
+	test-e2e-burnin check-e2e-flakes pr-comments lint lint-api-versions \
+	lint-vulns scan-vulns-census
 
 ci-setup: create-network ## Prepare the shared dev environment for CI-oriented checks
 	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) up $(CI_SETUP_UP_FLAGS) dev && $(MAKE) wait-for-dev
