@@ -424,6 +424,17 @@ STUB
   [ "$output" -eq 0 ]
 }
 
+@test "start refuses a dev container bound to a different checkout" {
+  # `make start` is the developer-facing path that creates or adopts website-dev.
+  # Unguarded, a second checkout would either serve the first one's /app bind or
+  # replace it -- the same hazard ensure-dev, ci-setup and test-mutation guard.
+  run_make_target start FAKE_DOCKER_APP_BIND=/somewhere/else
+  [ "$status" -ne 0 ]
+  assert_output_contains 'belongs to a different checkout'
+  run grep -cF -- 'up -d dev' "$COMMAND_LOG"
+  [ "$output" -eq 0 ]
+}
+
 @test "ci-lint runs the lint phase through the parallel runner with grouped output" {
   run_make_target ci-lint
   [ "$status" -eq 0 ]

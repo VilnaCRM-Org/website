@@ -140,7 +140,16 @@ DOCKER_COMPOSE_DEV_FILE     = -f docker-compose.yml
 DOCKER_COMPOSE_CI_DEV_FILE  = -f docker-compose.yml -f docker-compose.ci.yml
 COMMON_HEALTHCHECKS_FILE    = -f common-healthchecks.yml
 EXEC_DEV_TTYLESS            = $(DOCKER_COMPOSE) exec -T dev
-NEXT_DEV_CMD                = $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) up -d dev && $(MAKE) wait-for-dev
+# Bracketed by check-dev-container-bind.sh on both sides of `up`, exactly as
+# ensure-dev, ci-setup and test-mutation are (#399): `make start` is the one
+# remaining path that creates or adopts the dev container, so leaving it
+# unguarded would let a second checkout serve, or replace, the first one's
+# website-dev. Host mode overrides NEXT_DEV_CMD below with a bare `next dev`,
+# which touches no container and therefore needs no guard.
+NEXT_DEV_CMD                = bash ./scripts/ci/check-dev-container-bind.sh && \
+                              $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) up -d dev && \
+                              bash ./scripts/ci/check-dev-container-bind.sh && \
+                              $(MAKE) wait-for-dev
 PLAYWRIGHT_DOCKER_CMD       = $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_TEST_FILE) exec playwright
 PLAYWRIGHT_TEST             = $(PLAYWRIGHT_DOCKER_CMD) sh -c
 
