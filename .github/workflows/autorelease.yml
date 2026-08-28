@@ -22,30 +22,121 @@ jobs:
       contents: write
 
     steps:
+      # tibdex/github-app-token was archived by its author in favour of this
+      # action, and still targets node20 (force-run on node24 by the runner).
+      # An archived action holding `contents: write` on the release path is the
+      # tag-repoint supply-chain risk issue #366 is about, so it is replaced
+      # rather than merely pinned. `outputs.token` is identical; only the input
+      # names changed (app_id -> app-id, private_key -> private-key), and
+      # VILNACRM_APP_PRIVATE_KEY must hold the raw PEM (see AUTORELEASE.md).
       - name: Generate token
         id: generate_token
-        uses: tibdex/github-app-token@v2
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
-          app_id: ${{ secrets.VILNACRM_APP_ID }}
-          private_key: ${{ secrets.VILNACRM_APP_PRIVATE_KEY }}
+          app-id: ${{ secrets.VILNACRM_APP_ID }}
+          private-key: ${{ secrets.VILNACRM_APP_PRIVATE_KEY }}
+          # Without an explicit permission-* input the token inherits every
+          # permission the installation holds (this App also carries
+          # Administration / Issues / Pull requests read-write). Releasing only
+          # needs to commit the changelog, push the tag, and publish the release.
+          permission-contents: write
+
+      # persist-credentials: false is safe even though the next step pushes:
+      # conventional-changelog-action rewrites `origin` to
+      # https://x-access-token:<github-token>@... in its own init() before every
+      # pull/push (src/helpers/git.js), so it never reads the credentials
+      # checkout would otherwise leave in .git/config. fetch-depth: 0 brings the
+      # full history AND every tag, which both the changelog range and the
+      # version preflight below need.
       - name: Checkout code
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           token: ${{ steps.generate_token.outputs.token }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      # Fails fast when the version the changelog action is about to compute
+      # would collide with an existing tag. Without it, `git tag` aborts with an
+      # opaque exit 128 AFTER the changelog has been committed -- the failure
+      # that stopped every release from 2026-01-20 onward (issue #366).
+      - name: Check the release version cannot collide with an existing tag
+        run: bash scripts/ci/check-release-version.sh .
+
+      # Machine-readable inventory of exactly what this release shipped, so the
+      # next ecosystem-wide advisory is a one-command query instead of lockfile
+      # archaeology (issue #373). A hard step: no release ships without one.
+      #
+      # Deliberately BEFORE the changelog action, and deliberately ungated. The
+      # changelog action commits, tags and PUSHES; anything that can fail after
+      # it strands a tag on main with no release behind it, and the next run's
+      # version preflight then blocks on that orphan. The SBOM is built from
+      # bun.lock, which the changelog action never touches, so building it first
+      # yields a byte-identical artifact while moving both failure modes ahead
+      # of the first irreversible step. The cost when no release is due is one
+      # wasted syft run.
+      #
+      # syft-version is pinned deliberately and must NOT be dropped. Bun lockfile
+      # support arrived in syft v1.46.0, but sbom-action v0.24.0 still defaults
+      # to v1.42.3 (src/SyftVersion.ts) — measured against this repo's bun.lock,
+      # v1.42.3 emits 0 components and v1.50.0 emits 1245. The default would
+      # therefore publish a well-formed but EMPTY inventory and every check
+      # would stay green. Dependabot does not bump this value (it is not an
+      # action ref), so raise it by hand alongside the action.
+      - name: Generate CycloneDX SBOM
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
+        with:
+          file: bun.lock
+          syft-version: v1.50.0
+          format: cyclonedx-json
+          output-file: website-sbom.cdx.json
+          artifact-name: website-sbom.cdx.json
+
+      # Defence in depth for the failure above: a syft that cannot read the
+      # lockfile still writes valid JSON, so "the file exists" proves nothing.
+      # bun.lock resolves ~1245 packages, so a real SBOM clears this floor by an
+      # order of magnitude while an empty one is caught.
+      - name: Verify the SBOM is not empty
+        run: |
+          set -euo pipefail
+
+          components="$(jq '.components | length' website-sbom.cdx.json)"
+          echo "SBOM components: ${components}"
+          if [ "${components}" -lt 100 ]; then
+            echo "::error::SBOM lists only ${components} components; syft did not parse bun.lock"
+            exit 1
+          fi
 
       - name: Conventional Changelog Action
         id: changelog
-        uses: TriPSs/conventional-changelog-action@v6
+        uses: TriPSs/conventional-changelog-action@ee43def3241429afddab215ba89090cbf64fb45c # v6.4.0
         with:
           github-token: ${{ steps.generate_token.outputs.token }}
           output-file: "CHANGELOG.md"
           version-file: "package.json"
+
+      # actions/create-release was archived by GitHub in 2021 and is unmaintained.
+      # Its replacement is the runner's own `gh` CLI rather than another
+      # third-party action, which keeps the release-publishing step -- the most
+      # privileged step in the repo -- free of third-party code entirely.
+      #
+      # The tag and the changelog body reach the script through `env:`, never
+      # through `${{ }}` interpolation inside `run:`, so a crafted commit
+      # message cannot inject shell. The SBOM is uploaded in the same command:
+      # if it is missing or empty the release fails rather than shipping
+      # without an inventory (issue #373).
       - name: Create Release
-        uses: actions/create-release@v1
         if: ${{ steps.changelog.outputs.skipped == 'false' }}
         env:
-          GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
-        with:
-          tag_name: ${{ steps.changelog.outputs.tag }}
-          release_name: ${{ steps.changelog.outputs.tag }}
-          body: ${{ steps.changelog.outputs.clean_changelog }}
+          GH_TOKEN: ${{ steps.generate_token.outputs.token }}
+          RELEASE_TAG: ${{ steps.changelog.outputs.tag }}
+          RELEASE_NOTES: ${{ steps.changelog.outputs.clean_changelog }}
+        run: |
+          set -euo pipefail
+
+          [ -s website-sbom.cdx.json ] ||
+            { echo "::error::SBOM website-sbom.cdx.json is missing or empty"; exit 1; }
+
+          printf '%s\n' "$RELEASE_NOTES" > release-notes.md
+          gh release create "$RELEASE_TAG" website-sbom.cdx.json \
+            --title "$RELEASE_TAG" \
+            --notes-file release-notes.md

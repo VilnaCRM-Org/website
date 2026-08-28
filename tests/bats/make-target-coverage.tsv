@@ -69,6 +69,8 @@ new-logs	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Docker C
 stop	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Docker Compose invocation.
 check-node-version	bats	tests/bats/makefile_targets.bats	Validated with a stubbed node invocation.
 lint-deps	ci	.github/workflows/static-testing.yml	Executed through `make lint`, which depends on `lint-deps`.
+lint-api-versions	bats	tests/bats/makefile_targets.bats	Hermetic user-service version invariant (#381); runs inside `make lint` and CI_LINT_TARGETS, unlike the network-bound lint-contracts.
+lint-headers	ci	.github/workflows/static-testing.yml	Executed through `make lint`, which depends on `lint-headers`.
 lint-contracts	bats	tests/bats/makefile_targets.bats	Executed directly by contract-testing.yml; deliberately outside `make lint` because the drift check needs network.
 lint-openapi	bats	tests/bats/makefile_targets.bats	Validated host-only: ensure-oasdiff.sh provisioning (idempotent) plus openapi-drift.sh three-way exit handling with a stubbed oasdiff binary.
 update-contracts	bats	tests/bats/makefile_targets.bats	Maintainer command for bumping USER_SERVICE_VERSION; refreshes both artifacts and the spectral baseline.
@@ -105,3 +107,4 @@ test-a11y-components	bats	tests/bats/makefile_targets.bats	Validated by invoking
 test-a11y-routes	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker and Playwright commands; also executed in CI through `make test-a11y`.
 ci-test-a11y	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker and Playwright commands.
 lint-docker-policy	ci	.github/workflows/static-testing.yml	Executed through `make lint`, which depends on `lint-docker-policy`.
+lint-workflows	bats	tests/bats/makefile_targets.bats	Validated host-only: the digest-pinned zizmor image, the committed severity/confidence floor, and the .github/workflows target, with docker stubbed. Script-level behaviour is covered by tests/bats/lint_workflows.bats.
