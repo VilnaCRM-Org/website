@@ -192,7 +192,18 @@ describe('osv-scanner ignore policy', () => {
         )
       );
 
-      expect(entries[0].ignoreUntil).toBe('2026-12-31');
+      expect(entries).toEqual([
+        { line: 1, id: 'GHSA-a', reason: 'why', ignoreUntil: '2026-12-31' },
+      ]);
+    });
+
+    it('rejects a date-shaped bare value on a field that is not ignoreUntil', () => {
+      // `id = 2026-12-31` parses as a DATE in real TOML while this reader's renderer emits a
+      // string, so accepting it would again have the census and diff legs reading different
+      // policies — the exact asymmetry the bare-value rule exists to remove.
+      expect(() =>
+        parseIgnoreEntries(['[[IgnoredVulns]]', 'id = 2026-12-31', 'reason = "why"'].join('\n'))
+      ).toThrow(/Only `ignoreUntil` may be written bare/);
     });
 
     it('rejects a repeated key instead of silently keeping the last one', () => {

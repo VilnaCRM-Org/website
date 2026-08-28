@@ -170,13 +170,16 @@ export function parseIgnoreEntries(toml: string, source = DEFAULT_CONFIG): Ignor
     // TOML allows a BARE value only for a date, number or boolean; a bare string such as
     // `id = GHSA-a` is a syntax error. The diff leg never notices, because it hands
     // osv-scanner the policy this reader re-renders with everything quoted — but the nightly
-    // census passes the raw file straight to the scanner, which rejects it. Restricting the
-    // unquoted form to the one bare value this policy legitimately uses, a date, keeps both
-    // legs validating the same file.
-    if (bare !== undefined && !ISO_DATE.test(bare)) {
+    // census passes the raw file straight to the scanner, which rejects it.
+    //
+    // Keying this on `ignoreUntil` rather than merely on the shape matters: `id = 2026-12-31`
+    // is date-SHAPED, so TOML hands osv-scanner a date while this reader's renderer emits a
+    // string, and the two legs would again be reading different policies. `ignoreUntil` is the
+    // only field that is legitimately a bare date, so it is the only one allowed to be bare.
+    if (bare !== undefined && (key !== 'ignoreUntil' || !ISO_DATE.test(bare))) {
       throw new Error(
-        `${source} line ${index + 1}: "${key}" has the unquoted value ${bare}. Only a ` +
-          '`YYYY-MM-DD` date may be written bare; quote every other value.'
+        `${source} line ${index + 1}: "${key}" has the unquoted value ${bare}. Only ` +
+          '`ignoreUntil` may be written bare, and only as a `YYYY-MM-DD` date; quote the rest.'
       );
     }
     // Real TOML rejects a repeated key outright. Keeping the last one silently would let the
