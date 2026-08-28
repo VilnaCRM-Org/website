@@ -105,6 +105,69 @@ function stripComment(line: string): string {
  * file directly; the blocking diff scans under the RENDERED policy, so this reader is the only
  * check a pull request gets.
  */
+/**
+ * Validate one `key = value` line and record it on the open `[[IgnoredVulns]]` entry.
+ *
+ * Split out of parseIgnoreEntries so both stay inside the repo's complexity budget, and along
+ * the natural seam: the loop decides WHICH kind of line it is looking at, this decides whether
+ * a field line is one this policy accepts. The open entry is passed in READ-ONLY, to detect a
+ * repeated key; the caller does the assigning.
+ */
+function readEntryField(
+  entry: IgnoreEntry,
+  line: string,
+  rawLine: string,
+  index: number,
+  source: string
+): { key: 'id' | 'reason' | 'ignoreUntil'; value: string } {
+  const field = ENTRY_FIELD.exec(line);
+  if (field === null) {
+    throw new Error(
+      `${source} line ${index + 1}: cannot read "${rawLine.trim()}". ` +
+        'Entries must be simple `key = "value"` or `key = value` lines.'
+    );
+  }
+
+  const [, key, basic, literal, bare] = field;
+  const value = basic ?? literal ?? bare ?? '';
+  if (key !== 'id' && key !== 'reason' && key !== 'ignoreUntil') {
+    // Rejected, not dropped. The blocking diff hands osv-scanner the RENDERED policy, which
+    // by construction carries only these three keys, so the scanner's own unknown-key check
+    // never sees this file on a pull request — only the nightly census does. Dropping the key
+    // here merges a config the census then cannot parse (exit 127), and would silently WIDEN
+    // an entry the day osv-scanner adds a narrowing key to `[[IgnoredVulns]]`.
+    throw new Error(
+      `${source} line ${index + 1}: unsupported key "${key}". An \`[[IgnoredVulns]]\` entry ` +
+        'may carry only `id`, `reason` and `ignoreUntil`.'
+    );
+  }
+  // TOML allows a BARE value only for a date, number or boolean; a bare string such as
+  // `id = GHSA-a` is a syntax error. The diff leg never notices, because it hands
+  // osv-scanner the policy this reader re-renders with everything quoted — but the nightly
+  // census passes the raw file straight to the scanner, which rejects it.
+  //
+  // Keying this on `ignoreUntil` rather than merely on the shape matters: `id = 2026-12-31`
+  // is date-SHAPED, so TOML hands osv-scanner a date while this reader's renderer emits a
+  // string, and the two legs would again be reading different policies. `ignoreUntil` is the
+  // only field that is legitimately a bare date, so it is the only one allowed to be bare.
+  if (bare !== undefined && (key !== 'ignoreUntil' || !ISO_DATE.test(bare))) {
+    throw new Error(
+      `${source} line ${index + 1}: "${key}" has the unquoted value ${bare}. Only ` +
+        '`ignoreUntil` may be written bare, and only as a `YYYY-MM-DD` date; quote the rest.'
+    );
+  }
+  // Real TOML rejects a repeated key outright. Keeping the last one silently would let the
+  // rendered policy the diff leg scans disagree with the file the census leg scans, which
+  // is the one way an ignore can mean two different things at once.
+  if (Object.prototype.hasOwnProperty.call(entry, key)) {
+    throw new Error(
+      `${source} line ${index + 1}: "${key}" is set more than once in this ` +
+        '`[[IgnoredVulns]]` entry. TOML does not allow a repeated key.'
+    );
+  }
+  return { key, value };
+}
+
 export function parseIgnoreEntries(toml: string, source = DEFAULT_CONFIG): IgnoreEntry[] {
   const entries: IgnoreEntry[] = [];
   let current: IgnoreEntry | undefined;
@@ -146,51 +209,7 @@ export function parseIgnoreEntries(toml: string, source = DEFAULT_CONFIG): Ignor
       );
     }
 
-    const field = ENTRY_FIELD.exec(line);
-    if (field === null) {
-      throw new Error(
-        `${source} line ${index + 1}: cannot read "${rawLine.trim()}". ` +
-          'Entries must be simple `key = "value"` or `key = value` lines.'
-      );
-    }
-
-    const [, key, basic, literal, bare] = field;
-    const value = basic ?? literal ?? bare ?? '';
-    if (key !== 'id' && key !== 'reason' && key !== 'ignoreUntil') {
-      // Rejected, not dropped. The blocking diff hands osv-scanner the RENDERED policy, which
-      // by construction carries only these three keys, so the scanner's own unknown-key check
-      // never sees this file on a pull request — only the nightly census does. Dropping the key
-      // here merges a config the census then cannot parse (exit 127), and would silently WIDEN
-      // an entry the day osv-scanner adds a narrowing key to `[[IgnoredVulns]]`.
-      throw new Error(
-        `${source} line ${index + 1}: unsupported key "${key}". An \`[[IgnoredVulns]]\` entry ` +
-          'may carry only `id`, `reason` and `ignoreUntil`.'
-      );
-    }
-    // TOML allows a BARE value only for a date, number or boolean; a bare string such as
-    // `id = GHSA-a` is a syntax error. The diff leg never notices, because it hands
-    // osv-scanner the policy this reader re-renders with everything quoted — but the nightly
-    // census passes the raw file straight to the scanner, which rejects it.
-    //
-    // Keying this on `ignoreUntil` rather than merely on the shape matters: `id = 2026-12-31`
-    // is date-SHAPED, so TOML hands osv-scanner a date while this reader's renderer emits a
-    // string, and the two legs would again be reading different policies. `ignoreUntil` is the
-    // only field that is legitimately a bare date, so it is the only one allowed to be bare.
-    if (bare !== undefined && (key !== 'ignoreUntil' || !ISO_DATE.test(bare))) {
-      throw new Error(
-        `${source} line ${index + 1}: "${key}" has the unquoted value ${bare}. Only ` +
-          '`ignoreUntil` may be written bare, and only as a `YYYY-MM-DD` date; quote the rest.'
-      );
-    }
-    // Real TOML rejects a repeated key outright. Keeping the last one silently would let the
-    // rendered policy the diff leg scans disagree with the file the census leg scans, which
-    // is the one way an ignore can mean two different things at once.
-    if (Object.prototype.hasOwnProperty.call(current, key)) {
-      throw new Error(
-        `${source} line ${index + 1}: "${key}" is set more than once in this ` +
-          '`[[IgnoredVulns]]` entry. TOML does not allow a repeated key.'
-      );
-    }
+    const { key, value } = readEntryField(current, line, rawLine, index, source);
     current[key] = value;
   });
 
