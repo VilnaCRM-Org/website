@@ -173,6 +173,44 @@ describe('osv-scanner ignore policy', () => {
       );
     });
 
+    it('rejects an unquoted non-date value the census leg would choke on', () => {
+      // The diff leg re-renders the policy with everything quoted, so only the nightly census
+      // hands osv-scanner this file verbatim — and TOML allows a bare value only for a date.
+      expect(() =>
+        parseIgnoreEntries(
+          ['[[IgnoredVulns]]', 'id = GHSA-a', 'reason = "why"', 'ignoreUntil = 2026-12-31'].join(
+            '\n'
+          )
+        )
+      ).toThrow(/unquoted value GHSA-a/);
+    });
+
+    it('still accepts the one bare value TOML allows here, a date', () => {
+      const entries = parseIgnoreEntries(
+        ['[[IgnoredVulns]]', 'id = "GHSA-a"', 'reason = "why"', 'ignoreUntil = 2026-12-31'].join(
+          '\n'
+        )
+      );
+
+      expect(entries[0].ignoreUntil).toBe('2026-12-31');
+    });
+
+    it('rejects a repeated key instead of silently keeping the last one', () => {
+      // Keeping the last value would let the rendered policy the diff leg scans disagree with
+      // the file the census leg scans, so one ignore could mean two things at once.
+      expect(() =>
+        parseIgnoreEntries(
+          [
+            '[[IgnoredVulns]]',
+            'id = "GHSA-a"',
+            'id = "GHSA-b"',
+            'reason = "why"',
+            'ignoreUntil = 2026-12-31',
+          ].join('\n')
+        )
+      ).toThrow(/"id" is set more than once/);
+    });
+
     it('rejects an unsupported key rather than dropping it from the entry', () => {
       // The blocking diff scans under the rendered policy, so osv-scanner never sees this file
       // on a pull request — it would exit 127 on the key, but only in the nightly census.
