@@ -5,6 +5,8 @@ import { t } from 'i18next';
 import { env } from '@/config/env';
 import { OnSubmitType } from '@/test/testing-library/fixtures/auth-test-helpers';
 
+import { expectNoA11yViolations } from '../a11y/expect-no-a11y-violations';
+
 import {
   testInitials,
   testEmail,
@@ -426,5 +428,36 @@ describe('AuthForm', () => {
       expect(queryByText(requiredText)).toBeInTheDocument();
       expect(queryByText(nameRequired)).toBeInTheDocument();
     });
+  });
+
+  it('has no WCAG 2.1 AA violations in its pristine state', async () => {
+    const { container } = renderAuthForm();
+
+    await expectNoA11yViolations(container);
+  });
+
+  it('has no WCAG 2.1 AA violations while showing validation errors', async () => {
+    const { container, queryByText } = renderAuthForm();
+    const { emailInput, passwordInput } = getFormElements();
+
+    // Unconditional by design: an `if (emailInput)` wrapper here would be the
+    // very silent-green pattern this suite exists to remove — a missing field
+    // would skip the interaction and the scan would pass on a pristine form.
+    expect(emailInput).not.toBeNull();
+    expect(passwordInput).not.toBeNull();
+
+    // The error state is where a11y regressions actually hide: the message has
+    // to be associated with its field, not just painted red beside it.
+    fireEvent.change(emailInput!, { target: { value: 'invalid-email' } });
+    fireEvent.blur(emailInput!);
+    fireEvent.change(passwordInput!, { target: { value: '123' } });
+    fireEvent.blur(passwordInput!);
+
+    await waitFor(() => {
+      expect(queryByText(emailMissingSymbols)).toBeInTheDocument();
+      expect(queryByText(passwordErrorLength)).toBeInTheDocument();
+    });
+
+    await expectNoA11yViolations(container);
   });
 });
