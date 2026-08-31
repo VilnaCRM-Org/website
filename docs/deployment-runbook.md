@@ -75,6 +75,20 @@ git push origin main
 example a bad environment variable), re-run `ci-cd-website-prod-pipeline` from
 the AWS CodePipeline console against the last successful source revision.
 
+## Alerting and release audit
+
+A failed deploy is only actionable if somebody is told. `ci-health-alerts.yml`
+watches this workflow by its `name:` (`website`) through `workflow_run` and files
+or refreshes a `ci-alert` tracking issue on a failed or timed-out run, closing it
+on recovery. `release-audit.yml` separately records every release and every
+automated push to `main`, escalating anomalies onto the same label — see
+[the release audit trail](release-audit.md).
+
+That coupling is enforced: `make lint-prod-guardrails` fails a pull request if a
+workflow that assumes the production AWS role runs on a non-pull-request trigger
+without being listed in `ci-health-alerts.yml`. **Renaming this workflow requires
+updating that list in the same commit.**
+
 ## Manual verification
 
 To check production by hand at any time (replace the host with the value of
@@ -84,4 +98,9 @@ To check production by hand at any time (replace the host with the value of
 curl -fsSI https://vilnacrm.com/ | head -n 1
 curl -fsS https://vilnacrm.com/swagger | grep -i swagger
 curl -fsSI https://vilnacrm.com/ | grep -Ei 'frame-options|frame-ancestors'
+
+# The RFC 9116 policy must be published, and a path outside the edge
+# allow-list must return the site 404 rather than an S3 error document.
+curl -fsS https://vilnacrm.com/.well-known/security.txt | head -n 3
+curl -s -o /dev/null -w '%{http_code}\n' https://vilnacrm.com/secret.json
 ```

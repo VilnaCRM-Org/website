@@ -72,6 +72,14 @@ TEST_DIR_APOLLO             = $(TEST_DIR_BASE)/apollo-server
 TEST_DIR_EDGE               = $(TEST_DIR_BASE)/edge
 TEST_DIR_E2E                = $(TEST_DIR_BASE)/e2e
 TEST_DIR_VISUAL             = $(TEST_DIR_BASE)/visual
+# Route-level accessibility scans (issue #317). A peer of e2e/visual rather than
+# a subfolder of e2e, so `make test-e2e` does not run the axe suite a second
+# time on every browser and shard.
+TEST_DIR_A11Y               = $(TEST_DIR_BASE)/a11y
+# The component-level half of the gate lives in the client Jest suite, so it
+# already runs under test-unit-client; this pattern lets `make test-a11y` run
+# just that spec.
+TEST_A11Y_COMPONENT_SPEC    = $(TEST_DIR_BASE)/testing-library/A11yComponents.test.tsx
 
 STRYKER_SHARD_CONFIG        = stryker.shard.config.mjs
 MUTATION_SHARD_TOTAL        ?= 1
@@ -181,7 +189,7 @@ NETWORK_NAME                = website-network
 # Dev-side lint and test phases are grouped so local developers and agents can
 # run the same CI stages as the pipeline. The parallel runners execute each
 # target concurrently, group their output, and aggregate exit codes.
-CI_LINT_TARGETS             = lint-next lint-tsc lint-md lint-api-versions lint-headers
+CI_LINT_TARGETS             = lint-next lint-tsc lint-md lint-api-versions lint-headers lint-prod-guardrails
 CI_TEST_TARGETS             = ci-test-unit-client ci-test-unit-server ci-test-integration ci-test-contract
 CI_LINT_RUNNER              = ./scripts/ci/run-parallel.sh ci-lint
 CI_TEST_RUNNER              = ./scripts/ci/run-parallel.sh ci-test
@@ -189,6 +197,9 @@ CI_TEST_RUNNER              = ./scripts/ci/run-parallel.sh ci-test
 # Arguments for the pr-comments helper (PR=<num> FORMAT=<text|json|markdown>).
 PR                          ?=
 FORMAT                      ?=
+
+# Arguments for the release-audit dry run (AUDIT_EVENT=release|push|sweep, AUDIT_REF=<tag|sha>).
+AUDIT_REF                   ?=
 
 # ===== Executor selection (issue #399 — CRM container-always model) =====
 # Every npm-tool gate runs INSIDE the dev container by default, on a laptop and
@@ -279,6 +290,7 @@ run-e2e                     = $(PLAYWRIGHT_TEST) "$(PLAYWRIGHT_BIN) test $(TEST_
 E2E_SHARD_INDEX             ?= 1
 E2E_SHARD_TOTAL             ?= 1
 run-e2e-shard               = $(PLAYWRIGHT_TEST) "$(PLAYWRIGHT_BIN) test $(TEST_DIR_E2E) --shard=$(E2E_SHARD_INDEX)/$(E2E_SHARD_TOTAL)"
+run-a11y                    = $(PLAYWRIGHT_TEST) "$(PLAYWRIGHT_BIN) test $(TEST_DIR_A11Y)"
 # Burn-in: repeat each spec with retries off so a flake surfaces as a partial failure. The
 # JSON report goes to its own top-level directory so it neither overwrites the shard run's
 # report nor gets swept up by a recursive walk of test-results.
@@ -449,8 +461,13 @@ build-out: ## Build production artifacts to ./out directory
 	docker rm $$container_id && \
 	echo "✅ Build artifacts extracted to ./out directory"
 
+# `mjs` is in the glob deliberately: the Node CLI helpers under scripts/ are
+# excluded from qlty (see .qlty/qlty.toml — they sit outside eslint.config.mjs's
+# scope), so without this nothing would check their formatting and they would
+# have to be hand-run through Prettier. Every tracked .mjs is already clean, so
+# this adds coverage without churn.
 format: ## This command executes Prettier formatting
-	$(DEV_READY) $(PRETTIER_BIN) "**/*.{js,jsx,ts,tsx,json,css,scss,md}" --write --ignore-path .prettierignore
+	$(DEV_READY) $(PRETTIER_BIN) "**/*.{js,jsx,mjs,ts,tsx,json,css,scss,md}" --write --ignore-path .prettierignore
 
 lint-next: ## This command executes ESLint
 	$(DEV_READY) $(PM_EXEC) $(ESLINT_BIN)
@@ -472,7 +489,7 @@ lint-md: ## This command executes Markdown linter
 generate-localization: ## Regenerate the gitignored pages/i18n/localization.json bundle (#328) — host-only
 	node scripts/generateLocalization.mjs
 
-.PHONY: lint lint-api-versions lint-headers lint-docker-policy
+.PHONY: lint lint-api-versions lint-headers lint-docker-policy lint-security-txt lint-prod-guardrails
 
 # The user-service inventory invariant (issue #381, F4): every consumer of the
 # upstream contracts — the GraphQL schema behind the Apollo mock and the OpenAPI
@@ -498,6 +515,12 @@ lint-headers: ## Verify the edge security-header policy (config/security-headers
 lint-docker-policy: ## Enforce the registry (no Docker Hub) + digest-pin policy on every Dockerfile
 	./scripts/ci/lint-dockerfile-policy.sh
 
+lint-security-txt: ## Validate the published RFC 9116 security.txt (fields + Expires runway)
+	@bash scripts/ci/check-security-txt.sh
+
+lint-prod-guardrails: ## Enforce the production-safety invariants (privileged-workflow alerting, fail-closed edge routing, no source maps)
+	$(DEV_READY) $(PM_EXEC) node scripts/ci/lint-prod-guardrails.mjs
+
 # A SEQUENTIAL aggregate, as the help string says: generate-localization leads
 # so the gitignored i18n bundle exists before eslint and tsc read it. It is also
 # a prerequisite of lint-deps, but that is the LAST sub-target, which on a clean
@@ -507,7 +530,15 @@ lint-docker-policy: ## Enforce the registry (no Docker Hub) + digest-pin policy 
 # generate-localization to each linter instead would race: run-parallel.sh runs
 # every lint target as its own make process, and the generator writes the single
 # pages/i18n/localization.json with a non-atomic fs.writeFileSync.
-lint: generate-localization lint-next lint-tsc lint-md lint-deps lint-api-versions lint-docker-policy lint-headers ## Runs all linters: ESLint, TypeScript, Markdown, dependency-cruiser, the API version invariant, the Dockerfile registry/digest policy, and the security-header gate in sequence.
+#
+# lint-security-txt and lint-prod-guardrails DO belong in the aggregate, unlike
+# lint-contracts and lint-metrics: both read only committed files (no network,
+# no host binary, no Docker), so they are hermetic and cannot make the static
+# lane flaky. lint-prod-guardrails additionally joins CI_LINT_TARGETS because it
+# needs `node` + js-yaml, which the parallel ci-lint runner provides — the same
+# reason lint-headers is in that list; lint-security-txt is pure bash and needs
+# no package manager, mirroring how lint-deps stays out.
+lint: generate-localization lint-next lint-tsc lint-md lint-deps lint-api-versions lint-docker-policy lint-headers lint-security-txt lint-prod-guardrails ## Runs all linters: ESLint, TypeScript, Markdown, dependency-cruiser, the API version invariant, the Dockerfile registry/digest policy, the security-header gate, the RFC 9116 security.txt gate, and the production-safety guardrails in sequence.
 
 # DELIBERATE DIVERGENCE FROM THE npm-tool LINT GATES (lint-next/tsc/md/deps),
 # for the same reason as lint-metrics below:
@@ -574,6 +605,23 @@ lint-metrics: ## Run rust-code-analysis complexity gate on src (host-only; auto-
 	 METRICS_POLICY="$(METRICS_POLICY_PATH)" \
 	 sh scripts/ci/lint-metrics.sh
 
+# Host-only, and deliberately OUTSIDE `lint` and CI_LINT_TARGETS for the same
+# reason as lint-metrics above: it drives `gh` against the live GitHub API, so it
+# is neither hermetic nor offline-safe. AUDIT_DRY_RUN is forced to 1 here — this
+# target exists to exercise the audit pipeline end to end against a real past
+# release or commit, and must never write a ledger comment from a developer's
+# machine. Override the target with AUDIT_EVENT=release|push|sweep and AUDIT_REF.
+release-audit-dry-run: ## Dry-run the release audit against the live repo (host-only, writes nothing)
+	@if [ "$${AUDIT_EVENT:-sweep}" != "sweep" ] && [ -z "$(AUDIT_REF)" ]; then \
+		echo "Error: AUDIT_REF is required. Usage: make release-audit-dry-run AUDIT_EVENT=$${AUDIT_EVENT} AUDIT_REF=<tag|sha>"; \
+		exit 1; \
+	fi
+	@AUDIT_EVENT="$${AUDIT_EVENT:-sweep}" \
+	 AUDIT_RELEASE_TAG="$(AUDIT_REF)" \
+	 AUDIT_AFTER="$(AUDIT_REF)" \
+	 AUDIT_DRY_RUN=1 \
+	 bash scripts/ci/release-audit.sh
+
 # DELIBERATE DIVERGENCE FROM THE npm-tool LINT GATES (lint-next/tsc/md/deps),
 # for the same reasons as lint-contracts and lint-metrics above:
 #   * Host-only: zizmor is a Rust CLI shipped as a container image, absent from
@@ -634,6 +682,31 @@ test-visual-ui: start-prod ## Start the production environment and run visual te
 
 test-visual-update: start-prod ## Update Playwright visual snapshots
 	$(playwright-test) $(TEST_DIR_VISUAL) --update-snapshots
+
+# ============================================================================
+# Accessibility gate (issue #317)
+# ----------------------------------------------------------------------------
+# The binding conformance target is WCAG 2.1 AA; the standard, the in-scope axe
+# tags and the exception process live in docs/accessibility/acceptance-standard.md.
+# Two layers, both enforced:
+#   * components — jest-axe over rendered React in jsdom (semantics: roles,
+#     names, states, relationships).
+#   * routes     — @axe-core/playwright over every registered route in real
+#     browsers (everything that needs layout or paint, plus keyboard operability).
+# This is a per-rule contract; the Lighthouse accessibility score is a weighted
+# category heuristic on two URLs and stays as defence in depth, not a substitute.
+# ============================================================================
+
+test-a11y: test-a11y-components test-a11y-routes ## Run both accessibility gates (jest-axe components + Playwright routes)
+
+test-a11y-components: ## Run the jest-axe component accessibility scans (TEST_ENV=client)
+	# --coverage=false: this target runs one spec, and the client suite carries a
+	# global coverage floor that a single-spec run cannot meet. Coverage stays
+	# enforced where it belongs, on the full test-unit-client run.
+	$(UNIT_TESTS) TEST_ENV=client $(JEST_BIN) $(JEST_FLAGS) --coverage=false $(TEST_A11Y_COMPONENT_SPEC)
+
+test-a11y-routes: start-prod ## Start production and run the axe route scans (Playwright)
+	$(run-a11y)
 
 create-network: ## Create the external Docker network if it doesn't exist
 	@docker network ls | grep -q $(NETWORK_NAME) || docker network create $(NETWORK_NAME)
@@ -724,10 +797,12 @@ ci-test-contract: ## Run contract parity tests directly assuming deps are instal
 
 .PHONY: ci ci-setup ci-lint ci-test ci-test-unit-client ci-test-unit-server \
 	ci-test-mutation ci-mutation ci-prod-setup ci-test-e2e ci-test-visual \
-	ci-test-memory-leak ci-test-load ci-test-lighthouse-desktop \
+	ci-test-a11y ci-test-memory-leak ci-test-load ci-test-lighthouse-desktop \
 	ci-test-lighthouse-mobile ci-test-prod ensure-dev start-prod-clean \
+	test-a11y test-a11y-components test-a11y-routes \
 	test-load test-load-swagger test-mutation-shard merge-mutation-reports \
 	test-e2e-burnin check-e2e-flakes pr-comments lint lint-api-versions \
+	lint-security-txt lint-prod-guardrails release-audit-dry-run \
 	generate-localization
 
 # Brings the dev container up IDLE (docker-compose.ci.yml overrides only the
@@ -775,6 +850,9 @@ ci-test-e2e: ## Run E2E tests assuming ci-prod-setup already started the prod en
 ci-test-visual: ## Run visual tests assuming ci-prod-setup already started the prod environment
 	$(run-visual)
 
+ci-test-a11y: ## Run the route accessibility scans assuming ci-prod-setup already started the prod environment
+	$(run-a11y)
+
 ci-test-memory-leak: ## Run Memlab memory leak tests against the dedicated compose stack (assumes prod is running)
 	# Isolate the Memlab stack in its own Compose project (-p memleak) so the
 	# teardown never removes the shared prod stack as an "orphan" — this target
@@ -805,9 +883,10 @@ ci-test-lighthouse-desktop: ## Run Lighthouse desktop audit assuming ci-prod-set
 ci-test-lighthouse-mobile: ## Run Lighthouse mobile audit assuming ci-prod-setup prepared prod + Chromium
 	$(MAKE) lighthouse-mobile-dind
 
-ci-test-prod: ## Run the CI prod-side test phase (e2e, visual, memory-leak, load, lighthouse) sequentially
+ci-test-prod: ## Run the CI prod-side test phase (e2e, visual, a11y, memory-leak, load, lighthouse) sequentially
 	$(MAKE) ci-test-e2e
 	$(MAKE) ci-test-visual
+	$(MAKE) ci-test-a11y
 	$(MAKE) ci-test-memory-leak
 	$(MAKE) ci-test-load
 	$(MAKE) ci-test-lighthouse-desktop

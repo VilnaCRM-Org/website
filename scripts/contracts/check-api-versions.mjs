@@ -133,9 +133,7 @@ function checkDerivesFromPin(name, rawValue, file) {
     return false;
   }
   if (!rawValue.includes(`\${${PIN_NAME}}`)) {
-    fail(
-      `${file}: ${name} does not interpolate \${${PIN_NAME}} — it must derive from the pin.`
-    );
+    fail(`${file}: ${name} does not interpolate \${${PIN_NAME}} — it must derive from the pin.`);
     return false;
   }
   return true;

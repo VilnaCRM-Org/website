@@ -103,5 +103,12 @@ test-load	bats	tests/bats/makefile_targets.bats	Validated as an alias that runs 
 test-load-swagger	bats	tests/bats/makefile_targets.bats	Validated as an alias that runs the load-tests-swagger target with stubbed K6 commands.
 pr-comments	bats	tests/bats/makefile_targets.bats	Validated with a stubbed get-pr-comments.sh helper and PR/FORMAT argument dispatch.
 lint-metrics	bats	tests/bats/makefile_targets.bats	Validated host-only: ensure-rca.sh provisioning (idempotent) plus lint-metrics.sh policy enforcement against the committed policy with a stubbed analyzer.
+test-a11y	bats	tests/bats/makefile_targets.bats	Validated as the aggregate that runs both accessibility legs with stubbed Jest and Playwright commands.
+test-a11y-components	bats	tests/bats/makefile_targets.bats	Validated by invoking Jest with TEST_ENV=client against the component a11y spec through a stubbed jest binary.
+test-a11y-routes	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker and Playwright commands; also executed in CI through `make test-a11y`.
+ci-test-a11y	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker and Playwright commands.
 lint-docker-policy	ci	.github/workflows/static-testing.yml	Executed through `make lint`, which depends on `lint-docker-policy`.
 lint-workflows	bats	tests/bats/makefile_targets.bats	Validated host-only: the digest-pinned zizmor image, the committed severity/confidence floor, and the .github/workflows target, with docker stubbed. Script-level behaviour is covered by tests/bats/lint_workflows.bats.
+lint-security-txt	bats	tests/bats/makefile_targets.bats	Executed through `make lint`; the target itself is validated against the committed RFC 9116 file, and check-security-txt.sh has its own suite in check_security_txt.bats.
+lint-prod-guardrails	bats	tests/bats/makefile_targets.bats	Executed through `make lint` and `make ci-lint`; the target shells out to the hermetic policy script, whose assertions are covered by prod_guardrails.bats.
+release-audit-dry-run	bats	tests/bats/release_audit.bats	Host-only dry run of the release audit; the script it wraps is covered end to end (record, dedup, escalation, sweep, no-git invariant) by release_audit.bats.

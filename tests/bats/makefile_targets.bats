@@ -205,7 +205,7 @@ EOF
   reset_command_log
   run_make_target format EXEC_MODE=host
   [ "$status" -eq 0 ]
-  assert_log_contains 'prettier **/*.{js,jsx,ts,tsx,json,css,scss,md} --write --ignore-path .prettierignore'
+  assert_log_contains 'prettier **/*.{js,jsx,mjs,ts,tsx,json,css,scss,md} --write --ignore-path .prettierignore'
 
   reset_command_log
   run_make_target husky
@@ -269,6 +269,45 @@ EOF
   run_make_target e2e-direct
   [ "$status" -eq 0 ]
   assert_log_contains 'playwright test ./src/test/e2e'
+}
+
+@test "accessibility targets run both gates through Jest and Playwright" {
+  # `env TEST_ENV=...` is consumed by the real `env` before the stub sees argv,
+  # so echo the variable from the stub instead — the same technique the
+  # ci-test split-target test uses, and the only one that holds in both the
+  # host (EXEC_MODE=host) and container (EXEC_MODE=container) modes.
+  cat > "$STUB_BIN_DIR/jest" <<'STUB'
+#!/usr/bin/env bash
+printf 'jest TEST_ENV=%s %s\n' "${TEST_ENV:-unset}" "$*" >> "${COMMAND_LOG:?}"
+exit 0
+STUB
+  chmod +x "$STUB_BIN_DIR/jest"
+
+  reset_command_log
+  run_make_target test-a11y-components EXEC_MODE=host
+  [ "$status" -eq 0 ]
+  # The component leg is the client Jest layer, scoped to the a11y spec. Coverage
+  # is off because the client suite's global floor cannot be met by one spec; it
+  # stays enforced on the full test-unit-client run.
+  assert_log_contains 'jest TEST_ENV=client --verbose --coverage=false ./src/test/testing-library/A11yComponents.test.tsx'
+
+  reset_command_log
+  run_make_target test-a11y-routes EXEC_MODE=host
+  [ "$status" -eq 0 ]
+  # The route leg boots the prod stack before scanning, exactly like e2e/visual.
+  assert_log_contains 'docker compose -f common-healthchecks.yml -f docker-compose.test.yml up -d'
+  assert_log_contains 'playwright test ./src/test/a11y'
+
+  reset_command_log
+  run_make_target ci-test-a11y EXEC_MODE=host
+  [ "$status" -eq 0 ]
+  assert_log_contains 'playwright test ./src/test/a11y'
+
+  reset_command_log
+  run_make_target test-a11y EXEC_MODE=host
+  [ "$status" -eq 0 ]
+  assert_log_contains 'jest TEST_ENV=client --verbose --coverage=false ./src/test/testing-library/A11yComponents.test.tsx'
+  assert_log_contains 'playwright test ./src/test/a11y'
 }
 
 @test "e2e flake targets repeat the changed specs and grade the report" {
@@ -442,6 +481,7 @@ STUB
   assert_output_contains '===== lint-tsc ====='
   assert_output_contains '===== lint-md ====='
   assert_output_contains '===== lint-headers ====='
+  assert_output_contains '===== lint-prod-guardrails ====='
 }
 
 @test "ci-test runs the dev-side test phase through the parallel runner" {
@@ -548,6 +588,7 @@ STUB
   [ "$status" -eq 0 ]
   assert_log_contains 'playwright test ./src/test/e2e'
   assert_log_contains 'playwright test ./src/test/visual'
+  assert_log_contains 'playwright test ./src/test/a11y'
   assert_log_contains 'lhci autorun --config=lighthouserc.desktop.js'
   assert_log_contains 'lhci autorun --config=lighthouserc.mobile.js'
 }
@@ -765,6 +806,36 @@ run_openapi_drift_script() {
   # Host-only: zizmor is a container CLI, never routed through the dev
   # container's package manager.
   run grep -E 'bun|npm' "$COMMAND_LOG"
+  [ "$status" -ne 0 ]
+}
+
+@test "lint-security-txt validates the committed RFC 9116 security.txt" {
+  reset_command_log
+
+  # Run the real gate against the real committed policy file (the lint-metrics
+  # precedent): a stubbed check would prove only that the recipe fires, not that
+  # the shipped security.txt still satisfies RFC 9116 and has expiry runway.
+  mkdir -p "$MAKEFILE_SANDBOX/public/.well-known"
+  cp "$PROJECT_ROOT/public/.well-known/security.txt" "$MAKEFILE_SANDBOX/public/.well-known/"
+
+  run_make_target lint-security-txt
+  [ "$status" -eq 0 ]
+  assert_output_contains 'security-txt: OK'
+
+  # Pure bash: never routed through the dev container or the package manager.
+  run grep -E 'docker|bun' "$COMMAND_LOG"
+  [ "$status" -ne 0 ]
+}
+
+@test "lint-prod-guardrails shells out to the hermetic policy script" {
+  reset_command_log
+
+  run_make_target lint-prod-guardrails EXEC_MODE=host
+  [ "$status" -eq 0 ]
+  assert_log_contains 'node scripts/ci/lint-prod-guardrails.mjs'
+
+  # Hermetic: no container, no package manager, and no network client.
+  run grep -E 'docker|bun|curl' "$COMMAND_LOG"
   [ "$status" -ne 0 ]
 }
 

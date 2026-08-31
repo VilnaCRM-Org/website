@@ -1,0 +1,24 @@
+[
+  {
+    "number": 7,
+    "state": "open",
+    "html_url": "https://github.com/VilnaCRM-Org/website/security/code-scanning/7",
+    "rule": {
+      "id": "js/xss",
+      "severity": "error",
+      "security_severity_level": "high"
+    },
+    "most_recent_instance": { "location": { "path": "src/a.ts" } }
+  },
+  {
+    "number": 8,
+    "state": "open",
+    "html_url": "https://github.com/VilnaCRM-Org/website/security/code-scanning/8",
+    "rule": {
+      "id": "js/unused-local",
+      "severity": "note",
+      "security_severity_level": "low"
+    },
+    "most_recent_instance": { "location": { "path": "src/b.ts" } }
+  }
+]

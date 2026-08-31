@@ -178,6 +178,79 @@ run_ci_script() {
     "$script_path" "$@"
 }
 
+# --- Code-scanning gate helpers (issue #383) ----------------------------------
+
+# A `gh api` double for scripts/ci/code-scanning-gate.sh. It replays a fixture
+# per endpoint + ref and applies the caller's --jq filter with the REAL jq, so
+# the gate's severity predicate is genuinely executed instead of being stubbed
+# away. Fixtures are selected explicitly:
+#   GH_ANALYSES_FIXTURE  path replayed for code-scanning/analyses
+#   GH_ALERTS_FIXTURES   newline-separated "<ref>=<path>" map for
+#                        code-scanning/alerts (an unmapped ref replays [])
+create_gh_stub() {
+  cat >"$STUB_BIN_DIR/gh" <<'EOF'
+#!/usr/bin/env bash
+printf 'gh %s\n' "$*" >>"${COMMAND_LOG:?}"
+
+endpoint=""
+ref=""
+filter="."
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    *code-scanning/analyses) endpoint="analyses" ;;
+    *code-scanning/alerts) endpoint="alerts" ;;
+    ref=*) ref="${1#ref=}" ;;
+    --jq)
+      shift
+      filter="${1:-.}"
+      ;;
+  esac
+  shift
+done
+
+fixture=""
+if [ "$endpoint" = "analyses" ]; then
+  fixture="${GH_ANALYSES_FIXTURE:-}"
+elif [ "$endpoint" = "alerts" ]; then
+  fixture="$(printf '%s\n' "${GH_ALERTS_FIXTURES:-}" |
+    awk -F= -v r="$ref" '$1 == r { print substr($0, length($1) + 2); exit }')"
+fi
+
+if [ -n "$fixture" ] && [ -f "$fixture" ]; then
+  jq -r "$filter" <"$fixture"
+else
+  printf '[]' | jq -r "$filter"
+fi
+EOF
+
+  chmod +x "$STUB_BIN_DIR/gh"
+}
+
+setup_code_scanning_gate_env() {
+  setup_stub_dir
+  create_gh_stub
+
+  export CODE_SCANNING_FIXTURES="$PROJECT_ROOT/tests/bats/fixtures/code-scanning"
+  export GH_TOKEN=stub-token
+  export GH_REPO=VilnaCRM-Org/website
+  export DEFAULT_BRANCH=main
+  # Bounded poll, collapsed so the suite runs instantly.
+  export POLL_ATTEMPTS=2
+  export POLL_DELAY=0
+  export GITHUB_STEP_SUMMARY="$BATS_TEST_TMPDIR/step-summary.md"
+  : >"$GITHUB_STEP_SUMMARY"
+  export GH_ANALYSES_FIXTURE="$CODE_SCANNING_FIXTURES/analyses-pr.json"
+  export GH_ALERTS_FIXTURES=""
+}
+
+run_code_scanning_gate() {
+  run env \
+    PATH="$STUB_BIN_DIR:$PATH" \
+    COMMAND_LOG="$COMMAND_LOG" \
+    "$@" \
+    "$PROJECT_ROOT/scripts/ci/code-scanning-gate.sh"
+}
+
 assert_log_contains() {
   local expected="$1"
 
