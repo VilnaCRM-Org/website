@@ -377,9 +377,14 @@ tiered off, weakened, or removed.
   alpine image, and the suite's subject is the host side of the Makefile), `commitlint`
   (needs `git`, also absent), `rust-code-analysis` (a host-only Rust binary), and the
   prod-stack suites the issue scopes out — `e2e-testing`, `visual-testing`,
-  `memory-leak-testing`, `load-testing` and `performance-testing`, which drive the
-  prod/test compose stacks. `performance-testing` additionally passes `EXEC_MODE=host`,
-  because Lighthouse needs a real Chrome and its budgets are calibrated against that path.
+  `memory-leak-testing`, `load-testing`, `a11y-testing` and `performance-testing`, which
+  drive the prod/test compose stacks. Two of them additionally pass `EXEC_MODE=host`:
+  `performance-testing`, because Lighthouse needs a real Chrome and its budgets are
+  calibrated against that path, and `a11y-testing`, whose two legs cannot straddle the
+  executor boundary — Jest's globalSetup writes the gitignored
+  `pages/i18n/localization.json`, so a containerised component leg leaves it root-owned in
+  the bind mount and the route leg's host `make start-prod` then fails with EACCES
+  regenerating it.
 
 - **Dev-image cache.** `dev-image-cache.yml` warms the shared BuildKit layer cache on `main`
   pushes that touch the image inputs, plus weekly to beat the 7-day eviction window. Only

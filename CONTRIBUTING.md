@@ -127,9 +127,14 @@ removed.
   Staying on the host entirely: `bats-testing` and `commitlint`, which need
   `bash`/`git` that the alpine image does not ship; `rust-code-analysis`, a
   host-only Rust binary; and the prod-stack suites the issue scopes out —
-  `e2e-testing`, `visual-testing`, `memory-leak-testing`, `load-testing` and
-  `performance-testing`, the last of which also passes `EXEC_MODE=host` so its
-  Lighthouse budgets keep measuring the path they were calibrated against.
+  `e2e-testing`, `visual-testing`, `memory-leak-testing`, `load-testing`,
+  `a11y-testing` and `performance-testing`. The last two also pass
+  `EXEC_MODE=host`: Lighthouse so its budgets keep measuring the path they were
+  calibrated against, and the accessibility gate because its two legs cannot
+  straddle the executor boundary — Jest's globalSetup writes the gitignored
+  `pages/i18n/localization.json`, so a containerised component leg would leave it
+  root-owned in the bind mount and the route leg's host `make start-prod` would
+  then fail with EACCES regenerating it.
 
 - **Matrices instead of serial steps.** The Playwright e2e suite splits across a
   Playwright `--shard` matrix (one balanced slice of the ~340 test runs per
