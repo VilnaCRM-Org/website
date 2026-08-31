@@ -4,6 +4,8 @@ import { render, fireEvent } from '@testing-library/react';
 import { UiButton } from '@/components';
 import { theme } from '@/components/ui-button/theme';
 
+import { expectNoA11yViolations } from '../a11y/expect-no-a11y-violations';
+
 import { testText } from './constants';
 
 describe('UiButton', () => {
@@ -83,5 +85,15 @@ describe('UiButton', () => {
     const button: HTMLElement = getByRole('button', { name: testText });
     fireEvent.click(button);
     expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('has no WCAG 2.1 AA violations', async () => {
+    const { container } = render(
+      <ThemeProvider theme={theme}>
+        <UiButton type="button">{testText}</UiButton>
+      </ThemeProvider>
+    );
+
+    await expectNoA11yViolations(container);
   });
 });

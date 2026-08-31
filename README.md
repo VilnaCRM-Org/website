@@ -97,11 +97,17 @@ Linting & Formatting
   make lint-tsc: runs static type checking with TypeScript
   make lint-md: lints all markdown files (excluding CHANGELOG.md) using markdownlint
   make lint-deps: validates architecture/import boundaries with dependency-cruiser
+  make lint-api-versions: verifies OpenAPI and GraphQL reference the same pinned user-service release
   make lint-docker-policy: enforces the Dockerfile registry + digest-pin policy
-  make lint: runs all linters (ESLint, TypeScript, markdownlint, dependency-cruiser, Docker policy)
+  make lint-headers: verifies the edge security-header policy reaches every response
+  make lint-security-txt: validates the RFC 9116 security.txt fields and Expires runway
+  make lint-prod-guardrails: enforces the production-safety invariants (issue #383)
+  make lint: runs all linters (ESLint, TypeScript, markdownlint, dependency-cruiser,
+    API versions, Docker policy, security headers, security.txt, production guardrails)
   make lint-metrics: runs the rust-code-analysis complexity gate (host-only, not in make lint)
   make lint-contracts: validates the pinned user-service contracts (not in make lint; needs network)
   make lint-openapi: reports breaking upstream OpenAPI drift (host-only, needs network; advisory)
+  make lint-workflows: audits the GitHub Actions workflows with zizmor (host-only, not in make lint)
   make update-contracts: re-fetches the contracts after bumping USER_SERVICE_VERSION
 ```
 
@@ -123,6 +129,9 @@ Testing
   make test-e2e-ui: runs end-to-end tests with UI inside the prod container
   make test-visual: runs visual tests inside the prod container
   make test-visual-ui: runs visual tests with UI inside the prod container
+  make test-a11y: runs both WCAG 2.1 AA gates (jest-axe components + axe/keyboard routes)
+  make test-a11y-components: runs the jest-axe component scans only
+  make test-a11y-routes: runs the axe route scans inside the prod container
   make test-load: alias for load-tests (K6 homepage load tests)
   make test-load-swagger: alias for load-tests-swagger (K6 Swagger load tests)
 ```
@@ -140,13 +149,13 @@ full CI run — or any single phase — locally:
   make ci-test: runs the dev-side tests (unit client/server, integration) in parallel
   make ci-mutation: runs Stryker mutation testing in isolation
   make ci-prod-setup: starts the prod stack and installs Chromium/LHCI for prod-side tests
-  make ci-test-prod: runs the prod-side tests (e2e, visual, memory-leak, load, lighthouse) sequentially
+  make ci-test-prod: runs the prod-side tests (e2e, visual, a11y, memory-leak, load, lighthouse) sequentially
   make ensure-dev: starts the dev service only when it is not already running
 ```
 
 The phases are also exposed as individual entrypoints so CI workflows can fan
 them out independently: `ci-test-unit-client`, `ci-test-unit-server`,
-`ci-test-integration` (dev-side) and `ci-test-e2e`, `ci-test-visual`,
+`ci-test-integration` (dev-side) and `ci-test-e2e`, `ci-test-visual`, `ci-test-a11y`,
 `ci-test-memory-leak`, `ci-test-load`, `ci-test-lighthouse-desktop`,
 `ci-test-lighthouse-mobile` (prod-side).
 
@@ -482,6 +491,51 @@ the relevant threshold in `config/metrics-policy.json` (a reviewed, in-repo
 change visible in the PR diff) or confirm the path belongs outside the governed
 scope. Do **not** silence the gate with a local override or a per-line disable.
 
+## Workflow Security (zizmor)
+
+The GitHub Actions workflows are audited for supply-chain and privilege defects
+with [zizmor](https://docs.zizmor.sh). It runs locally via `make lint-workflows`
+and in CI on every pull request, every push to `main`, and weekly, through
+[`.github/workflows/workflow-security.yml`](.github/workflows/workflow-security.yml).
+
+`.github/workflows` is the one part of the repo no other gate reads — ESLint,
+`tsc`, dependency-cruiser and the metrics gate all stop at `src/`, and the qlty
+`zizmor`/`actionlint` plugins are inert here because `.qlty/qlty.toml` excludes
+`.github/**` and every `*.yml`. Without this gate a workflow can hand a
+privileged token to a mutable action tag and nothing says a word.
+
+Like `lint-metrics`, zizmor is a standalone Rust CLI rather than an npm package,
+so the gate runs **host-only** (Docker) and is deliberately **not** part of
+`make lint` or `CI_LINT_TARGETS`. The CLI container is pinned **by digest** in
+the Makefile (`ZIZMOR_IMAGE`), so a repointed tag can never change what the
+security gate enforces.
+
+### What the workflow audit enforces
+
+The gate blocks on findings of **medium severity and above** that zizmor reports
+with **high confidence** (`ZIZMOR_MIN_SEVERITY` / `ZIZMOR_MIN_CONFIDENCE` in the
+Makefile). That covers the defect classes that matter most here: unpinned or
+archived actions, workflow-level over-permissioning, version comments that name
+a tag the pinned SHA does not point at, ad-hoc GitHub App tokens with blanket
+installation permissions, and known-vulnerable action versions.
+
+Findings below that floor are tracked and ratcheted, never silenced — see the
+job comment in `workflow-security.yml` for the current list and why each one is
+still open. Raise the floor as they are cleared; never lower it to make a
+finding go away, and never add a `zizmor.yml` ignore or a
+`# zizmor: ignore[...]` comment.
+
+### Running the workflow audit
+
+```bash
+make lint-workflows
+```
+
+Online audits resolve action tags against the GitHub API. The gate uses
+`GH_TOKEN` (or `GITHUB_TOKEN`) when set and otherwise falls back to the `gh`
+CLI's token; with neither it runs `--offline`, which is a strict subset of the
+CI run.
+
 ## Routing
 
 This project includes a routing script for managing URLs.
@@ -490,12 +544,42 @@ For detailed information, check the [routing script](scripts/cloudfront_routing.
 
 ### How It Works
 
-- Mapping: Specific URL paths are mapped to corresponding HTML files.
-- Fallback Logic: For undefined routes, the script appends /index.html to handle directory-like paths.
-- Error Handling: If an error occurs, the script logs it and returns the original request.
+The handler is a CloudFront Functions **viewer-request** script and is
+**fail-closed** (issue #383): it is the only in-repo layer in front of the S3
+origin, so anything it does not recognise must not reach the bucket.
 
-This routing logic is useful for SSR (Server-Side Rendered) applications,
-particularly when hosted on platforms like AWS CloudFront.
+- Mapping: specific URL paths are rewritten to their exported HTML files
+  (`/swagger` to `/swagger.html`, and so on).
+- Allow-list: every other request passes through only if it is an exact
+  allow-listed file, or lives under an allow-listed top-level directory
+  (`_next/`, `en/`, `images/`, `layout/`) **and** carries an allow-listed file
+  extension.
+- Fail-closed default: everything else — `/secret.json`, `/.env`, any `*.map`,
+  any unknown nested path — is answered with the site's synthetic 404 instead of
+  being forwarded to the origin.
+- Completeness gate: `scripts/ci/verify-edge-allowlist.mjs` runs the real handler
+  over every file of a freshly built export on each PR, so the allow-list can
+  never drift narrower than what the site actually ships.
+- Error handling: if the handler itself throws, it logs and returns the original
+  request, so a bug in this function can never black-hole the whole site.
+
+This routing logic serves the statically exported site (`output: 'export'`) from
+AWS CloudFront in front of an S3 origin.
+
+## Security headers
+
+The production site is a static export, so Next's `headers()` API is a no-op and the
+CloudFront edge is the only place security headers can be attached. The policy lives
+in [`config/security-headers.json`](config/security-headers.json) and is applied to
+every response by the viewer-response function
+[`scripts/cloudfront_security_headers.js`](scripts/cloudfront_security_headers.js)
+(the synthetic 404 in the routing function carries the same set inline, because
+CloudFront skips viewer-response functions for a short-circuited request).
+
+`make lint-headers` — part of `make lint` — runs the checked-in functions and fails if
+they stop emitting the policy; the post-deploy smoke test then verifies the live
+responses with `curl -I`, which is what catches the functions not being associated with
+the distribution. See [the security-headers guide](docs/security-headers.md).
 
 ## Documentation
 
@@ -506,6 +590,10 @@ as it's frequently updated.
 
 For production deploys, the post-deploy smoke test, and the rollback procedure,
 see the [deployment and rollback runbook](docs/deployment-runbook.md).
+
+For the accessibility conformance target, the automated gates behind `make test-a11y`, and
+the exception process, see the
+[accessibility acceptance standard](docs/accessibility/acceptance-standard.md).
 
 You can generate complete API-level documentation by running `doc` in the top-level
 folder, and documentation will appear in the `docs` folder, though you'll need to have
