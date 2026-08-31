@@ -100,9 +100,9 @@ the same command against the same image. Targets that drive Docker itself, audit
 image, or need a toolchain the image does not ship stay on the host in both modes — among
 them `lint-metrics`, `test-bats`, `generate-localization`, `build-out`, the prod-stack
 suites (`test-e2e`, `test-visual`, `test-memory-leak`, `load-tests`, `lighthouse-*`), and
-the host-only lint gates `lint-docker-policy`, `lint-openapi` and `lint-workflows`. Watch
-`lint-docker-policy`: it is a member of the `make lint` aggregate, so part of that run
-executes on the host by design. Append `EXEC_MODE=host` to bypass Docker and run a target
+the host-only lint gates `lint-docker-policy`, `lint-security-txt`, `lint-openapi` and
+`lint-workflows`. Watch `lint-docker-policy` and `lint-security-txt`: both are members of
+the `make lint` aggregate, so part of that run executes on the host by design. Append `EXEC_MODE=host` to bypass Docker and run a target
 straight from `node_modules/.bin` (for example `EXEC_MODE=host make start` runs `next dev`
 directly); that escape hatch exists for the Husky hooks, the `run-*-dind` wrappers, and the
 Lighthouse audits, and it requires a host `bun install`. `EXEC_MODE` accepts only
@@ -342,10 +342,14 @@ Four production-facing invariants that no other gate watches. Extend them; never
   re-confirming the contacts — never by lowering the threshold in
   `scripts/ci/check-security-txt.sh`.
 - **Privileged workflows are monitored.** `make lint-prod-guardrails` fails the PR if a
-  workflow that assumes an AWS role or cuts a release runs on a non-pull-request trigger
-  without being listed in `ci-health-alerts.yml`'s `on.workflow_run.workflows`. A
-  workflow's `name:` is therefore load-bearing — renaming one requires updating that list
-  in the same commit.
+  privileged workflow runs on a non-pull-request trigger without being listed in
+  `ci-health-alerts.yml`'s `on.workflow_run.workflows`. Privileged means it assumes an AWS
+  role, cuts a release, or calls a local composite action under `.github/actions/` — the
+  gate cannot see inside a composite, so it assumes the worst rather than treating it as
+  invisible. That is why the `dev-container` composite's callers that also run on a
+  schedule or a push (`dev image cache`, `fuzz testing`, `storybook build`) are listed
+  there. A workflow's `name:` is therefore load-bearing — renaming one requires updating
+  that list in the same commit.
 - **CodeQL findings are gated and routed.** `scripts/ci/code-scanning-gate.sh` fails the
   run on _new_ high/critical alerts (PRs subtract the default-branch baseline, so
   inherited debt does not block), and a failed scan reaches the `ci-alert` issue. Branch
@@ -372,6 +376,10 @@ tiered off, weakened, or removed.
   `dependency-cruiser`, `storybook-build` and the `mutation-testing` shard — because their
   target reaches the host-only `generate-localization`; that step pins a Node version and
   nothing else, which is not what the issue's acceptance criterion forbids.
+  `contract-parity-testing` is the one test job still on the host toolchain: its layer
+  boots Mockoon in-process from the committed OpenAPI document and needs no container at
+  all, so `ci-test-contract` is deliberately the only `CI_TEST_TARGETS` entry that skips
+  `$(CI_TESTS)`. Converting the workflow is the prerequisite for moving it.
 
   Jobs that stay on the host entirely: `bats-testing` (bats-core needs bash, absent from the
   alpine image, and the suite's subject is the host side of the Makefile), `commitlint`

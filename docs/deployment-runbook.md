@@ -85,9 +85,11 @@ automated push to `main`, escalating anomalies onto the same label — see
 [the release audit trail](release-audit.md).
 
 That coupling is enforced: `make lint-prod-guardrails` fails a pull request if a
-workflow that assumes the production AWS role runs on a non-pull-request trigger
-without being listed in `ci-health-alerts.yml`. **Renaming this workflow requires
-updating that list in the same commit.**
+privileged workflow runs on a non-pull-request trigger without being listed in
+`ci-health-alerts.yml`. Privileged means it assumes an AWS role, cuts a release,
+or calls a local `./.github/actions/**` composite action — the gate cannot see
+inside a composite, so it assumes the worst rather than treating it as invisible.
+**Renaming this workflow requires updating that list in the same commit.**
 
 ## Manual verification
 

@@ -36,18 +36,20 @@ and Markdown (honoring `.prettierignore`). `make lint` never mutates; it fails i
 anything is off. Formatting before linting means the gate validates already-formatted
 code, so a Prettier rewrite can never invalidate a green run.
 
-The aggregate `make lint` is eight prerequisites: `generate-localization` + `lint-next` +
+The aggregate `make lint` is ten prerequisites: `generate-localization` + `lint-next` +
 `lint-tsc` + `lint-md` + `lint-deps` + `lint-api-versions` + `lint-docker-policy` +
-`lint-headers`. The rust-code-analysis metrics gate (`make lint-metrics`) is a
+`lint-headers` + `lint-security-txt` + `lint-prod-guardrails`. The rust-code-analysis
+metrics gate (`make lint-metrics`) is a
 **separate, host-only** gate (delivered by issue #224); it is intentionally not part of
 `make lint`. Run it explicitly when a change to `src/` could grow complexity.
 
-The six npm-tool `make lint` gates — `lint-next`, `lint-tsc`, `lint-md`, `lint-deps`,
-`lint-api-versions` and `lint-headers` — run inside the dev container by default, locally
-and in CI alike; prefix with `EXEC_MODE=host` to run one directly on the host instead (for
-example `EXEC_MODE=host make lint-next`), which needs a host `bun install`. The aggregate's
-other two prerequisites, `generate-localization` and `lint-docker-policy`, are host-only in
-both modes and ignore `EXEC_MODE`, as is `lint-metrics`.
+The seven npm-tool `make lint` gates — `lint-next`, `lint-tsc`, `lint-md`, `lint-deps`,
+`lint-api-versions`, `lint-headers` and `lint-prod-guardrails` — run inside the dev
+container by default, locally and in CI alike; prefix with `EXEC_MODE=host` to run one
+directly on the host instead (for example `EXEC_MODE=host make lint-next`), which needs a
+host `bun install`. The aggregate's other three prerequisites — `generate-localization`,
+`lint-docker-policy` and `lint-security-txt` (pure bash, no package manager) — are
+host-only in both modes and ignore `EXEC_MODE`, as is `lint-metrics`.
 
 ## Fix Each Gate At Its Source
 

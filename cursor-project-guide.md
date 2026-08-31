@@ -40,21 +40,25 @@ Import a feature only through its `index.ts` barrel, never through a deep intern
 Run everything through `make`; the targets are the single source of truth and the same ones CI
 runs. The aggregate gate is `make lint`, which regenerates the i18n bundle and then runs
 ESLint, TypeScript, markdownlint, dependency-cruiser, the user-service API version
-invariant, the Dockerfile registry/digest policy, and the edge security-header gate in
-sequence.
+invariant, the Dockerfile registry/digest policy, the edge security-header gate, the
+RFC 9116 security.txt gate, and the production-safety guardrails in sequence.
 
 ```bash
-make format             # Prettier formatting; run before lint
-make lint               # Full gate: generate-localization + lint-next + lint-tsc + lint-md
-                        #   + lint-deps + lint-api-versions + lint-docker-policy + lint-headers
-make lint-next          # ESLint only
-make lint-tsc           # TypeScript type-check only
-make lint-md            # markdownlint only
-make lint-deps          # dependency-cruiser architecture/import boundaries
-make lint-api-versions  # one USER_SERVICE_VERSION pin for OpenAPI + GraphQL
-make lint-docker-policy # registry (no Docker Hub) + digest-pin policy on every Dockerfile
-make lint-headers       # edge security-header policy (config/security-headers.json)
-make build              # Production build
+make format               # Prettier formatting; run before lint
+make lint                 # Full gate: generate-localization + lint-next + lint-tsc
+                          #   + lint-md + lint-deps + lint-api-versions
+                          #   + lint-docker-policy + lint-headers + lint-security-txt
+                          #   + lint-prod-guardrails
+make lint-next            # ESLint only
+make lint-tsc             # TypeScript type-check only
+make lint-md              # markdownlint only
+make lint-deps            # dependency-cruiser architecture/import boundaries
+make lint-api-versions    # one USER_SERVICE_VERSION pin for OpenAPI + GraphQL
+make lint-docker-policy   # registry (no Docker Hub) + digest-pin policy on every Dockerfile
+make lint-headers         # edge security-header policy (config/security-headers.json)
+make lint-security-txt    # RFC 9116 security.txt fields + Expires runway
+make lint-prod-guardrails # production-safety invariants (issue #383)
+make build                # Production build
 ```
 
 ## Development setup
@@ -70,16 +74,17 @@ make start                # Start the dev server
 
 ## Running commands on the host
 
-The unit suites and the six npm-tool `make lint` gates — `lint-next`, `lint-tsc`,
-`lint-md`, `lint-deps`, `lint-api-versions` and `lint-headers` — run inside the dev
-container by default, the same command CI runs, and start that container if it is not
-already up. `make lint` also depends on two host-only steps that never exec into the
-container in either mode: the `generate-localization` prerequisite of `lint-deps`
-(writing the gitignored bundle from inside the root-running container would leave it
-root-owned in the bind mount) and `lint-docker-policy` (a self-contained shell script
-that reads the Dockerfiles from the worktree — and the dev image it would exec into is
-one of the things it audits). `make lint-metrics` sits outside `make lint` entirely and
-is host-only too. Prefix with `EXEC_MODE=host` to run the local `node_modules/.bin`
+The unit suites and the seven npm-tool `make lint` gates — `lint-next`, `lint-tsc`,
+`lint-md`, `lint-deps`, `lint-api-versions`, `lint-headers` and `lint-prod-guardrails` —
+run inside the dev container by default, the same command CI runs, and start that
+container if it is not already up. `make lint` also depends on three host-only steps that
+never exec into the container in either mode: the `generate-localization` prerequisite of
+`lint-deps` (writing the gitignored bundle from inside the root-running container would
+leave it root-owned in the bind mount), `lint-docker-policy` (a self-contained shell
+script that reads the Dockerfiles from the worktree — and the dev image it would exec into
+is one of the things it audits), and `lint-security-txt` (pure bash over the committed
+RFC 9116 file, with no package manager to reach). `make lint-metrics` sits outside
+`make lint` entirely and is host-only too. Prefix with `EXEC_MODE=host` to run the local `node_modules/.bin`
 binaries directly instead of execing into the container; that path needs a host
 `bun install`, which `make install` performs alongside the container one.
 

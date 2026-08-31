@@ -117,12 +117,15 @@ removed.
   out, runs the `./.github/actions/dev-container` composite action — which builds
   or restores the image through the BuildKit layer cache and starts the dev
   service idle with `make ci-setup` — and then runs the target. No
-  `~/.bun/install/cache` restore and no host `bun install` remain: the image is the
-  single source of truth for the runtime, so a CI failure reproduces locally with
-  the identical command. `dev-image-cache.yml` warms the shared layer cache on
-  `main`. Four of them keep `actions/setup-node` (`static-testing`,
-  `dependency-cruiser`, `storybook-build`, the `mutation-testing` shard) purely to
-  pin the Node that runs the host-only `generate-localization` prerequisite.
+  `~/.bun/install/cache` restore and no host `bun install` remain, the one exception
+  being `contract-parity-testing`, whose layer boots Mockoon in-process and needs no
+  container (`ci-test-contract` is correspondingly the only `CI_TEST_TARGETS` entry
+  that skips `$(CI_TESTS)`). Otherwise the image is the single source of truth for the
+  runtime, so a CI failure reproduces locally with the identical command.
+  `dev-image-cache.yml` warms the shared layer cache on `main`. Four of them keep
+  `actions/setup-node` (`static-testing`, `dependency-cruiser`, `storybook-build`,
+  the `mutation-testing` shard) purely to pin the Node that runs the host-only
+  `generate-localization` prerequisite.
 
   Staying on the host entirely: `bats-testing` and `commitlint`, which need
   `bash`/`git` that the alpine image does not ship; `rust-code-analysis`, a
