@@ -15,7 +15,7 @@ Change: add a rule to a `react-hook-form` field under
 - Run:
 
 ```bash
-CI=1 make test-unit-client
+make test-unit-client
 make test-e2e
 make test-visual
 ```
@@ -33,11 +33,11 @@ Change: edit a resolver or schema under the Apollo server layer.
 - Run:
 
 ```bash
-CI=1 make test-unit-server
+make test-unit-server
 ```
 
 - Reproduce a single file with
-  `CI=1 TEST_ENV=server bun x jest src/test/apollo-server/server.test.ts`.
+  `TEST_ENV=server bun x jest src/test/apollo-server/server.test.ts`.
 - If a client unit also mocks that resolver shape, update the Apollo mock so the
   two stay in sync (mock-state drift, not app logic).
 
@@ -49,7 +49,7 @@ Change: adjust spacing or a breakpoint in a `src/features/landing` component.
 - Run:
 
 ```bash
-CI=1 make test-unit-client
+make test-unit-client
 make test-visual
 ```
 
@@ -80,7 +80,7 @@ Symptom: `make test-mutation` reports a survivor in a small client helper.
 - Run the focused unit file first, then re-run mutation:
 
 ```bash
-CI=1 make test-unit-client
+make test-unit-client
 make test-mutation
 ```
 
@@ -93,7 +93,7 @@ Change touches both a component and the resolver it queries.
 - Run both layers, or the combined target:
 
 ```bash
-CI=1 make test-unit-all
+make test-unit-all
 ```
 
 - Keep the component assertions in the client (jsdom) layer and the resolver

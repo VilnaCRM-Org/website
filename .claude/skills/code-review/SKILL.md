@@ -82,14 +82,15 @@ make format                  # Prettier (run before lint)
 make lint                    # ESLint + tsc + markdownlint + dependency-cruiser
 ```
 
-Add the layer that exercises the change. Prefix unit suites with `CI=1` to run them
-locally without Docker.
+Add the layer that exercises the change. Unit suites run inside the dev container by
+default; prefix with `EXEC_MODE=host` to run them on the host instead (needs a host
+`bun install`).
 
 ```bash
-CI=1 make test-unit-client   # components, hooks, client logic (jsdom)
-CI=1 make test-unit-server   # Apollo resolvers and server logic (node)
-make test-e2e                # user-facing flows (Playwright + Mockoon)
-make test-visual             # rendered UI or styling changes (Playwright)
+EXEC_MODE=host make test-unit-client   # components, hooks, client logic (jsdom)
+EXEC_MODE=host make test-unit-server   # Apollo resolvers and server logic (node)
+make test-e2e                          # user-facing flows (Playwright + Mockoon)
+make test-visual                       # rendered UI or styling changes (Playwright)
 ```
 
 For a deliberate, reviewed UI change that left its baselines stale, regenerate with

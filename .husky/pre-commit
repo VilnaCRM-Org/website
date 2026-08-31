@@ -4,6 +4,6 @@ set -e
 bun x lint-staged
 
 # Types are non-local (a change in one file can break another), so the type
-# check runs over the whole project. CI=1 runs the host toolchain directly, so
-# the hook works without the Docker dev stack.
-CI=1 make lint-tsc
+# check runs over the whole project. EXEC_MODE=host runs the host toolchain
+# directly, so the hook works without the Docker dev stack running.
+EXEC_MODE=host make lint-tsc

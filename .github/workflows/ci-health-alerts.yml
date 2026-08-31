@@ -8,6 +8,16 @@ on:
       # CodeQL, so a scan that fails on main (a new blocking alert, or the
       # weekly re-scan finding one) reaches the same tracking issue (#383).
       - security testing
+      # Since #399 these three run through the local ./.github/actions/dev-container
+      # composite action, which lint-prod-guardrails treats as privileged (it
+      # cannot see inside a composite, so it assumes the worst), and each also
+      # runs on a non-pull-request trigger: `dev image cache` on push to main and
+      # weekly, `fuzz testing` nightly, `storybook build` on a schedule. Without
+      # an entry here a post-merge failure of any of them would be visible to
+      # nobody -- exactly the gap #365 exists to close.
+      - dev image cache
+      - fuzz testing
+      - storybook build
     types:
       - completed
     # `security testing` also runs on every pull request; without this filter

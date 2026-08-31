@@ -150,9 +150,11 @@ Logs are only useful if somebody is told to read them. Two workflows close that
 gap (issue #383):
 
 - `.github/workflows/ci-health-alerts.yml` watches the deploy (`website`),
-  release, and security-scan workflows via `workflow_run`, and files or refreshes
-  a `ci-alert` tracking issue when one fails or when `main` is red — closing it
-  again on recovery.
+  release, and security-scan workflows via `workflow_run` — plus `dev image
+  cache`, `fuzz testing` and `storybook build`, which since #399 run through the
+  local `./.github/actions/dev-container` composite and also fire on non-pull-request
+  triggers — and files or refreshes a `ci-alert` tracking issue when one fails or
+  when `main` is red, closing it again on recovery.
 - `.github/workflows/release-audit.yml` records every release and every automated
   push to `main` to a durable ledger issue, and escalates anomalies (a deleted
   release, an unexpected bot, a force-push) onto the same `ci-alert` label.

@@ -58,7 +58,10 @@ Fix the import graph; do not relax a rule in `.dependency-cruiser.js`.
 ## Jest unit suites
 
 - Reproduce the single failing spec before editing code, e.g.
-  `CI=1 TEST_ENV=client bun x jest src/test/unit/email-validation.test.ts`.
+  `TEST_ENV=client bun x jest src/test/unit/email-validation.test.ts`. That invokes the
+  binary directly, so it runs on the host against the host `node_modules` (populated by
+  `make install`) rather than through the dev container the suite normally uses; run
+  `make test-unit-client` to reproduce against the same toolchain CI does.
 - Client specs run in jsdom (`TEST_ENV=client`); Apollo/server specs run in node
   (`TEST_ENV=server`, under `src/test/apollo-server`).
 - Assert user-facing behavior and localized `t()` output, not implementation details —

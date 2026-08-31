@@ -93,8 +93,21 @@ make storybook-start  # Run Storybook
 make storybook-build  # Build static Storybook
 ```
 
-Append `CI=1` to run a target on the host without Docker (for example `CI=1 make start`
-runs `next dev` directly).
+Every gate that drives an npm tool — ESLint, tsc, markdownlint, dependency-cruiser, Jest,
+Stryker, Storybook, the contract linter — runs **inside the dev container**, locally and in
+CI alike (issue #399), so `make lint-tsc` on a laptop and `make lint-tsc` on a runner are
+the same command against the same image. Targets that drive Docker itself, audit the dev
+image, or need a toolchain the image does not ship stay on the host in both modes — among
+them `lint-metrics`, `test-bats`, `generate-localization`, `build-out`, the prod-stack
+suites (`test-e2e`, `test-visual`, `test-memory-leak`, `load-tests`, `lighthouse-*`), and
+the host-only lint gates `lint-docker-policy`, `lint-security-txt`, `lint-openapi` and
+`lint-workflows`. Watch `lint-docker-policy` and `lint-security-txt`: both are members of
+the `make lint` aggregate, so part of that run executes on the host by design. Append `EXEC_MODE=host` to bypass Docker and run a target
+straight from `node_modules/.bin` (for example `EXEC_MODE=host make start` runs `next dev`
+directly); that escape hatch exists for the Husky hooks, the `run-*-dind` wrappers, and the
+Lighthouse audits, and it requires a host `bun install`. `EXEC_MODE` accepts only
+`container` (default) or `host`; anything else is a hard error. It is deliberately not
+derived from the ambient `CI` variable, which GitHub Actions sets on every step.
 
 ## Testing
 
@@ -119,7 +132,8 @@ make lighthouse-desktop # Lighthouse audit (desktop)
 make lighthouse-mobile  # Lighthouse audit (mobile)
 ```
 
-Unit suites accept `CI=1` to run on the host without Docker (e.g. `CI=1 make
+Unit suites run in the dev container and start it if it is not already up; append
+`EXEC_MODE=host` to run them on the host instead (e.g. `EXEC_MODE=host make
 test-unit-all`). E2E and visual specs run Playwright inside the prod/test compose stack;
 E2E uses Mockoon to mock the API. The test-layer map and coverage policy live in
 [`agents.md`](agents.md).
@@ -328,10 +342,14 @@ Four production-facing invariants that no other gate watches. Extend them; never
   re-confirming the contacts — never by lowering the threshold in
   `scripts/ci/check-security-txt.sh`.
 - **Privileged workflows are monitored.** `make lint-prod-guardrails` fails the PR if a
-  workflow that assumes an AWS role or cuts a release runs on a non-pull-request trigger
-  without being listed in `ci-health-alerts.yml`'s `on.workflow_run.workflows`. A
-  workflow's `name:` is therefore load-bearing — renaming one requires updating that list
-  in the same commit.
+  privileged workflow runs on a non-pull-request trigger without being listed in
+  `ci-health-alerts.yml`'s `on.workflow_run.workflows`. Privileged means it assumes an AWS
+  role, cuts a release, or calls a local composite action under `.github/actions/` — the
+  gate cannot see inside a composite, so it assumes the worst rather than treating it as
+  invisible. That is why the `dev-container` composite's callers that also run on a
+  schedule or a push (`dev image cache`, `fuzz testing`, `storybook build`) are listed
+  there. A workflow's `name:` is therefore load-bearing — renaming one requires updating
+  that list in the same commit.
 - **CodeQL findings are gated and routed.** `scripts/ci/code-scanning-gate.sh` fails the
   run on _new_ high/critical alerts (PRs subtract the default-branch baseline, so
   inherited debt does not block), and a failed scan reaches the `ci-alert` issue. Branch
@@ -349,8 +367,37 @@ tiered off, weakened, or removed.
   use `cancel-in-progress: true` (a new push cancels the superseded run); the deploy,
   release, and sandbox workflows use `false` so a production trigger is never aborted
   mid-run.
-- **Caching.** Node jobs restore the Bun cache (`~/.bun/install/cache`, keyed on the Node version
-  and `bun.lock`).
+- **Container-always execution (issue #399).** The lint and test jobs no longer provision a
+  host toolchain. Each one checks out, runs the `./.github/actions/dev-container` composite
+  action — which builds or restores the `base` image through the BuildKit layer cache and
+  brings the dev service up idle via `make ci-setup` — and then runs the identical
+  `make <target>` a developer runs. No `~/.bun/install/cache` restore and no host
+  `bun install` remain in any of them. Four keep `actions/setup-node` — `static-testing`,
+  `dependency-cruiser`, `storybook-build` and the `mutation-testing` shard — because their
+  target reaches the host-only `generate-localization`; that step pins a Node version and
+  nothing else, which is not what the issue's acceptance criterion forbids.
+  `contract-parity-testing` is the one test job still on the host toolchain: its layer
+  boots Mockoon in-process from the committed OpenAPI document and needs no container at
+  all, so `ci-test-contract` is deliberately the only `CI_TEST_TARGETS` entry that skips
+  `$(CI_TESTS)`. Converting the workflow is the prerequisite for moving it.
+
+  Jobs that stay on the host entirely: `bats-testing` (bats-core needs bash, absent from the
+  alpine image, and the suite's subject is the host side of the Makefile), `commitlint`
+  (needs `git`, also absent), `rust-code-analysis` (a host-only Rust binary), and the
+  prod-stack suites the issue scopes out — `e2e-testing`, `visual-testing`,
+  `memory-leak-testing`, `load-testing`, `a11y-testing` and `performance-testing`, which
+  drive the prod/test compose stacks. Two of them additionally pass `EXEC_MODE=host`:
+  `performance-testing`, because Lighthouse needs a real Chrome and its budgets are
+  calibrated against that path, and `a11y-testing`, whose two legs cannot straddle the
+  executor boundary — Jest's globalSetup writes the gitignored
+  `pages/i18n/localization.json`, so a containerised component leg leaves it root-owned in
+  the bind mount and the route leg's host `make start-prod` then fails with EACCES
+  regenerating it.
+
+- **Dev-image cache.** `dev-image-cache.yml` warms the shared BuildKit layer cache on `main`
+  pushes that touch the image inputs, plus weekly to beat the 7-day eviction window. Only
+  the default branch writes it: a cache written on a PR branch is readable by that PR alone,
+  and the repository shares one 10 GB quota.
 - **Matrices.** The Playwright e2e suite splits across a `--shard` matrix
   (`test-e2e-shard`), Lighthouse runs `desktop`/`mobile` in parallel, the K6 load suites run
   in parallel, and mutation testing runs as a shard matrix plus a merge gate.

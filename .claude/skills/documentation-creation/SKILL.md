@@ -99,7 +99,8 @@ make lint
 `lint-next` (ESLint), `lint-tsc` (TypeScript), `lint-md` (markdownlint), `lint-deps`
 (dependency-cruiser), and `lint-api-versions` (the user-service pin invariant). If the doc documents a code change, also run the test suites the
 change touches (`make test-unit-client`, `make test-unit-server`, `make test-e2e`,
-`make test-visual`); prefix unit runs with `CI=1` to run locally without Docker.
+`make test-visual`); prefix unit runs with `EXEC_MODE=host` to run locally without
+Docker.
 
 ## Align With agents.md
 
