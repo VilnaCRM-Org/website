@@ -208,8 +208,8 @@ describe('accessibility interaction-state registry', () => {
   it('does not count a scan that is only quoted', () => {
     // Documentation and assertion fixtures name the call in prose; neither runs it.
     const quoted: string = [
-      "const doc: string = 'await scanInteractionState(page, INTERACTION_STATES.mobileDrawerOpen);';",
-      'const template: string = `scanInteractionState(page, INTERACTION_STATES.mobileDrawerOpen)`;',
+      "const doc = 'await scanInteractionState(page, INTERACTION_STATES.mobileDrawerOpen);';",
+      'const template = `scanInteractionState(page, INTERACTION_STATES.mobileDrawerOpen)`;',
     ].join('\n');
 
     expect(scanCallArguments('quoted.spec.ts', quoted)).toEqual([]);
