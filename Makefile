@@ -593,9 +593,10 @@ lint-openapi: ## Report breaking changes between the committed OpenAPI baseline 
 	 USER_SERVICE_SPEC_PATH="$(USER_SERVICE_SPEC_PATH)" \
 	 bash scripts/ci/openapi-drift.sh
 
-update-contracts: $(DEV_PREREQ) ## Re-fetch the user-service contracts for the pinned USER_SERVICE_VERSION and refresh the spectral baseline
+update-contracts: $(DEV_PREREQ) ## Re-fetch the user-service contracts for the pinned USER_SERVICE_VERSION, refresh the spectral baseline and the artifact digests
 	$(PM_EXEC) node scripts/fetchSwaggerSchema.mjs
 	$(PM_EXEC) node scripts/fetchGraphqlSchema.mjs
+	$(PM_EXEC) node scripts/contracts/lint-contracts.mjs --update-checksums
 	$(PM_EXEC) node scripts/contracts/lint-contracts.mjs --update-baseline
 	$(PRETTIER_BIN) "contracts/**/*.json" --write --ignore-path .prettierignore
 

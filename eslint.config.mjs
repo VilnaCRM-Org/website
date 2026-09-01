@@ -814,6 +814,23 @@ export default [
   },
 
   {
+    // `scripts/` holds Node CLI entry points whose job is to print progress to a
+    // build log — the same class as `checkNodeVersion.js` and `docker/**`, which
+    // the tooling block above already exempts from `no-console`. Leaving
+    // `scripts/` out made the two runs disagree: `make lint-next` resolves the
+    // nested `overrides` scoping and stays silent, while a sandboxed run (qlty)
+    // applies only top-level flat config and reports every `console.log` here.
+    // Declared last, and scoped to `scripts/`, so both runs are the same check.
+    // `.ts` is included because the printing entry points are not all plain JS:
+    // `scripts/logger.ts` wraps console itself, and the mutation-report scripts
+    // print their summaries.
+    files: ['scripts/**/*.{js,cjs,mjs,ts}'],
+    rules: {
+      'no-console': 'off',
+    },
+  },
+
+  {
     // Same React version as the FlatCompat override above, restated at the top
     // level and last so it wins everywhere. Any `settings.react` a plugin preset
     // or a converted block contributes could still carry `version: 'detect'`, and

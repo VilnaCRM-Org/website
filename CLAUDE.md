@@ -227,6 +227,20 @@ PR review comments.
 Never satisfy a gate with `eslint-disable`, `prettier-ignore`, a markdownlint disable, or a
 lowered threshold — fix the root cause.
 
+### Contract supply chain (issue #376)
+
+Every user-service contract comes from the single `USER_SERVICE_VERSION` pin in `.env`
+and is **vendored** under `contracts/user-service/`, so no build fetches it. On top of
+that, `make lint-contracts` verifies a committed SHA-256 digest of each artifact
+(`contracts/user-service/checksums.json`) and refuses a pin that is not an immutable ref;
+the Apollo mock refuses a downloaded schema that does not match its digest; and
+`scripts/patchSwaggerServer.mjs` rebuilds `servers` as exactly one build-controlled entry
+so an injected `servers[1]` can never appear in the swagger "Try it out" dropdown. Markup
+in a spec `description`/`title`/`summary` is rejected at ingestion rather than stripped.
+
+Refresh artifacts and digests together with `make update-contracts` — never hand-edit
+`checksums.json`, and never loosen the ref check to accept a branch.
+
 ### API contract parity (issue #350)
 
 Every Playwright e2e run talks to Mockoon, so a green e2e suite alone only proves the app
