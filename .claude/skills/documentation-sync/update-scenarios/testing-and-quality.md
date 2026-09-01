@@ -19,7 +19,8 @@ Update docs that mention:
 
 - `make format` (Prettier).
 - `make lint` and its parts: `lint-next` (ESLint), `lint-tsc` (TypeScript),
-  `lint-md` (markdownlint), and `lint-deps` (dependency-cruiser).
+  `lint-md` (markdownlint), `lint-deps` (dependency-cruiser), and
+  `lint-api-versions` (the single-`USER_SERVICE_VERSION` invariant, issue #381).
 - The complexity/metrics gate introduced by issue #224 (rust-code-analysis), not
   yet on `main`, and its policy file `config/metrics-policy.json`. When the gate
   or its thresholds change, sync the docs that describe it and point at the policy

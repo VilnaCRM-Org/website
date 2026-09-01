@@ -32,6 +32,14 @@ jobs:
         with:
           persist-credentials: false
 
+      # DELIBERATELY NOT MIGRATED to the dev container (#399), which scopes the
+      # heavy prod-stack suites out. Lighthouse drives a real Chrome that the
+      # node:alpine dev image does not ship, and its assertion floors are
+      # calibrated against the scores THIS execution path produces — moving the
+      # audit into a different browser/runtime would re-baseline every budget in
+      # lighthouserc.*.js, which is a separate change with its own risk.
+      # `EXEC_MODE=host` on the run step below therefore keeps today's exact
+      # `next build` + `serve` + `lhci` host path.
       - name: Set up Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
@@ -56,7 +64,7 @@ jobs:
       - name: Run ${{ matrix.formFactor }} performance test
         env:
           FORM_FACTOR: ${{ matrix.formFactor }}
-        run: make "lighthouse-$FORM_FACTOR"
+        run: make "lighthouse-$FORM_FACTOR" EXEC_MODE=host
 
       # Publish the raw Lighthouse reports so the measured scores and metric
       # values behind the pass/fail decision are inspectable, and so floors can

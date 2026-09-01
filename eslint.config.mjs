@@ -16,6 +16,450 @@ const compat = new FlatCompat({
 const nextRecommended = { ...nextPlugin.configs.recommended };
 delete nextRecommended.name;
 
+// Issue #398 — `eslint-config-airbnb` / `eslint-config-airbnb-typescript` are gone.
+// The rule *intent* airbnb provided is preserved two ways, so the effective config is
+// unchanged: the recommended sets of the plugins this repo already depends on
+// (`import`, `jsx-a11y`, `react`, `react-hooks`) are extended directly below, and the
+// rules airbnb configured on top of them are re-expressed verbatim here, grouped by the
+// airbnb source file that defined them. Rules Prettier owns are intentionally absent —
+// `eslint-config-prettier` disabled them before this change too. Keep these blocks in
+// the compat config's `rules` (not a later flat block) so the per-file overrides that
+// follow still win, exactly as they did when airbnb sat in `extends`.
+const airbnbBaseRules = {
+  // best practices
+  'array-callback-return': ['error', { allowImplicit: true }],
+  'block-scoped-var': 'error',
+  'consistent-return': 'error',
+  'default-case': ['error', { commentPattern: '^no default$' }],
+  'default-case-last': 'error',
+  'default-param-last': 'error',
+  'dot-notation': ['error', { allowKeywords: true }],
+  eqeqeq: ['error', 'always', { null: 'ignore' }],
+  'grouped-accessor-pairs': 'error',
+  'guard-for-in': 'error',
+  'max-classes-per-file': ['error', 1],
+  'no-alert': 'warn',
+  'no-caller': 'error',
+  'no-constructor-return': 'error',
+  'no-else-return': ['error', { allowElseIf: false }],
+  'no-empty-function': ['error', { allow: ['arrowFunctions', 'functions', 'methods'] }],
+  'no-eval': 'error',
+  'no-extend-native': 'error',
+  'no-extra-bind': 'error',
+  'no-extra-label': 'error',
+  'no-implied-eval': 'error',
+  'no-iterator': 'error',
+  'no-labels': ['error', { allowLoop: false, allowSwitch: false }],
+  'no-lone-blocks': 'error',
+  'no-loop-func': 'error',
+  'no-multi-str': 'error',
+  'no-new': 'error',
+  'no-new-func': 'error',
+  'no-new-wrappers': 'error',
+  'no-octal-escape': 'error',
+  'no-param-reassign': [
+    'error',
+    {
+      props: true,
+      ignorePropertyModificationsFor: [
+        'acc',
+        'accumulator',
+        'e',
+        'ctx',
+        'context',
+        'req',
+        'request',
+        'res',
+        'response',
+        '$scope',
+        'staticContext',
+      ],
+    },
+  ],
+  'no-proto': 'error',
+  'no-restricted-properties': [
+    'error',
+    { object: 'arguments', property: 'callee', message: 'arguments.callee is deprecated' },
+    { object: 'global', property: 'isFinite', message: 'Please use Number.isFinite instead' },
+    { object: 'self', property: 'isFinite', message: 'Please use Number.isFinite instead' },
+    { object: 'window', property: 'isFinite', message: 'Please use Number.isFinite instead' },
+    { object: 'global', property: 'isNaN', message: 'Please use Number.isNaN instead' },
+    { object: 'self', property: 'isNaN', message: 'Please use Number.isNaN instead' },
+    { object: 'window', property: 'isNaN', message: 'Please use Number.isNaN instead' },
+    { property: '__defineGetter__', message: 'Please use Object.defineProperty instead.' },
+    { property: '__defineSetter__', message: 'Please use Object.defineProperty instead.' },
+    { object: 'Math', property: 'pow', message: 'Use the exponentiation operator (**) instead.' },
+  ],
+  'no-return-assign': ['error', 'always'],
+  'no-return-await': 'error',
+  'no-script-url': 'error',
+  'no-self-compare': 'error',
+  'no-sequences': 'error',
+  'no-throw-literal': 'error',
+  'no-useless-concat': 'error',
+  'no-useless-return': 'error',
+  'no-void': 'error',
+  'prefer-promise-reject-errors': ['error', { allowEmptyReject: true }],
+  'prefer-regex-literals': ['error', { disallowRedundantWrapping: true }],
+  radix: 'error',
+  'vars-on-top': 'error',
+  yoda: 'error',
+
+  // possible errors — the tightened options airbnb layered on eslint:recommended
+  'no-cond-assign': ['error', 'always'],
+  'no-console': 'warn',
+  'no-inner-declarations': 'error',
+  'no-promise-executor-return': 'error',
+  'no-template-curly-in-string': 'error',
+  'no-unreachable-loop': ['error', { ignore: [] }],
+  'no-unsafe-optional-chaining': ['error', { disallowArithmeticOperators: true }],
+  'valid-typeof': ['error', { requireStringLiterals: true }],
+
+  // variables
+  'no-label-var': 'error',
+  'no-restricted-globals': [
+    'error',
+    {
+      name: 'isFinite',
+      message:
+        'Use Number.isFinite instead https://github.com/airbnb/javascript#standard-library--isfinite',
+    },
+    {
+      name: 'isNaN',
+      message:
+        'Use Number.isNaN instead https://github.com/airbnb/javascript#standard-library--isnan',
+    },
+    // The `confusing-browser-globals` list, inlined so the rule survives without
+    // airbnb's transitive dependency on that package.
+    'addEventListener',
+    'blur',
+    'close',
+    'closed',
+    'confirm',
+    'defaultStatus',
+    'defaultstatus',
+    'event',
+    'external',
+    'find',
+    'focus',
+    'frameElement',
+    'frames',
+    'history',
+    'innerHeight',
+    'innerWidth',
+    'length',
+    'location',
+    'locationbar',
+    'menubar',
+    'moveBy',
+    'moveTo',
+    'name',
+    'onblur',
+    'onerror',
+    'onfocus',
+    'onload',
+    'onresize',
+    'onunload',
+    'open',
+    'opener',
+    'opera',
+    'outerHeight',
+    'outerWidth',
+    'pageXOffset',
+    'pageYOffset',
+    'parent',
+    'print',
+    'removeEventListener',
+    'resizeBy',
+    'resizeTo',
+    'screen',
+    'screenLeft',
+    'screenTop',
+    'screenX',
+    'screenY',
+    'scroll',
+    'scrollbars',
+    'scrollBy',
+    'scrollTo',
+    'scrollX',
+    'scrollY',
+    'self',
+    'status',
+    'statusbar',
+    'stop',
+    'toolbar',
+    'top',
+  ],
+  'no-shadow': 'error',
+  'no-undef-init': 'error',
+  'no-use-before-define': ['error', { functions: true, classes: true, variables: true }],
+
+  // ES6+
+  'arrow-body-style': ['error', 'as-needed', { requireReturnForObjectLiteral: false }],
+  'no-new-symbol': 'error',
+  'no-restricted-exports': ['error', { restrictedNamedExports: ['default', 'then'] }],
+  'no-useless-computed-key': 'error',
+  'no-useless-constructor': 'error',
+  'no-useless-rename': [
+    'error',
+    { ignoreDestructuring: false, ignoreImport: false, ignoreExport: false },
+  ],
+  'no-var': 'error',
+  'object-shorthand': ['error', 'always', { ignoreConstructors: false, avoidQuotes: true }],
+  'prefer-arrow-callback': ['error', { allowNamedFunctions: false, allowUnboundThis: true }],
+  'prefer-const': ['error', { destructuring: 'any', ignoreReadBeforeAssign: true }],
+  'prefer-destructuring': [
+    'error',
+    {
+      VariableDeclarator: { array: false, object: true },
+      AssignmentExpression: { array: true, object: false },
+    },
+    { enforceForRenamedProperties: false },
+  ],
+  'prefer-numeric-literals': 'error',
+  'prefer-rest-params': 'error',
+  'prefer-spread': 'error',
+  'prefer-template': 'error',
+  'symbol-description': 'error',
+
+  // style — only the rules Prettier does not own
+  camelcase: ['error', { properties: 'never', ignoreDestructuring: false }],
+  'func-names': 'warn',
+  'lines-around-directive': ['error', { before: 'always', after: 'always' }],
+  'lines-between-class-members': ['error', 'always', { exceptAfterSingleLine: false }],
+  'new-cap': [
+    'error',
+    {
+      newIsCap: true,
+      newIsCapExceptions: [],
+      capIsNew: false,
+      capIsNewExceptions: ['Immutable.Map', 'Immutable.Set', 'Immutable.List'],
+    },
+  ],
+  'no-bitwise': 'error',
+  'no-continue': 'error',
+  'no-lonely-if': 'error',
+  'no-multi-assign': 'error',
+  'no-nested-ternary': 'error',
+  'no-new-object': 'error',
+  'no-plusplus': 'error',
+  'no-unneeded-ternary': ['error', { defaultAssignment: false }],
+  'one-var': ['error', 'never'],
+  'operator-assignment': ['error', 'always'],
+  'prefer-exponentiation-operator': 'error',
+  'prefer-object-spread': 'error',
+  'spaced-comment': [
+    'error',
+    'always',
+    {
+      line: { exceptions: ['-', '+'], markers: ['=', '!', '/'] },
+      block: { exceptions: ['-', '+'], markers: ['=', '!', ':', '::'], balanced: true },
+    },
+  ],
+  'unicode-bom': ['error', 'never'],
+
+  // node
+  'global-require': 'error',
+  'no-buffer-constructor': 'error',
+  'no-new-require': 'error',
+  'no-path-concat': 'error',
+
+  // strict mode
+  strict: ['error', 'never'],
+
+  // base rules airbnb re-tightens for React code
+  'class-methods-use-this': [
+    'error',
+    {
+      exceptMethods: [
+        'render',
+        'getInitialState',
+        'getDefaultProps',
+        'getChildContext',
+        'componentWillMount',
+        'UNSAFE_componentWillMount',
+        'componentDidMount',
+        'componentWillReceiveProps',
+        'UNSAFE_componentWillReceiveProps',
+        'shouldComponentUpdate',
+        'componentWillUpdate',
+        'UNSAFE_componentWillUpdate',
+        'componentDidUpdate',
+        'componentWillUnmount',
+        'componentDidCatch',
+        'getSnapshotBeforeUpdate',
+      ],
+    },
+  ],
+  'no-underscore-dangle': [
+    'error',
+    {
+      allow: ['__REDUX_DEVTOOLS_EXTENSION_COMPOSE__'],
+      allowAfterThis: false,
+      allowAfterSuper: false,
+      enforceInMethodNames: true,
+    },
+  ],
+};
+
+const airbnbImportRules = {
+  'import/first': 'error',
+  'import/newline-after-import': 'error',
+  'import/no-absolute-path': 'error',
+  'import/no-amd': 'error',
+  // '∞' is the literal `maxDepth` sentinel this rule's schema accepts for "unbounded".
+  'import/no-cycle': ['error', { maxDepth: '∞' }],
+  'import/no-duplicates': 'error',
+  'import/no-dynamic-require': 'error',
+  'import/no-import-module-exports': ['error', { exceptions: [] }],
+  'import/no-mutable-exports': 'error',
+  'import/no-named-as-default': 'error',
+  'import/no-named-as-default-member': 'error',
+  'import/no-named-default': 'error',
+  'import/no-relative-packages': 'error',
+  'import/no-self-import': 'error',
+  'import/no-useless-path-segments': ['error', { commonjs: true }],
+  'import/no-webpack-loader-syntax': 'error',
+  'import/order': ['error', { groups: [['builtin', 'external', 'internal']] }],
+};
+
+const airbnbReactRules = {
+  // react
+  'react/button-has-type': ['error', { button: true, submit: true, reset: false }],
+  'react/default-props-match-prop-types': ['error', { allowRequiredDefaults: false }],
+  'react/destructuring-assignment': ['error', 'always'],
+  'react/forbid-foreign-prop-types': ['warn', { allowInPropTypes: true }],
+  'react/forbid-prop-types': [
+    'error',
+    { forbid: ['any', 'array', 'object'], checkContextTypes: true, checkChildContextTypes: true },
+  ],
+  'react/function-component-definition': [
+    'error',
+    {
+      namedComponents: ['function-declaration', 'function-expression'],
+      unnamedComponents: 'function-expression',
+    },
+  ],
+  'react/jsx-boolean-value': ['error', 'never', { always: [] }],
+  'react/jsx-curly-brace-presence': ['error', { props: 'never', children: 'never' }],
+  'react/jsx-fragments': ['error', 'syntax'],
+  'react/jsx-no-bind': [
+    'error',
+    {
+      ignoreRefs: true,
+      allowArrowFunctions: true,
+      allowFunctions: false,
+      allowBind: false,
+      ignoreDOMComponents: true,
+    },
+  ],
+  'react/jsx-no-constructed-context-values': 'error',
+  'react/jsx-no-duplicate-props': ['error', { ignoreCase: true }],
+  'react/jsx-no-script-url': ['error', [{ name: 'Link', props: ['to'] }]],
+  'react/jsx-no-useless-fragment': 'error',
+  'react/jsx-pascal-case': ['error', { allowAllCaps: true, ignore: [] }],
+  'react/no-access-state-in-setstate': 'error',
+  'react/no-array-index-key': 'error',
+  'react/no-arrow-function-lifecycle': 'error',
+  'react/no-danger': 'warn',
+  'react/no-did-update-set-state': 'error',
+  'react/no-invalid-html-attribute': 'error',
+  'react/no-namespace': 'error',
+  'react/no-redundant-should-component-update': 'error',
+  'react/no-this-in-sfc': 'error',
+  'react/no-typos': 'error',
+  'react/no-unstable-nested-components': 'error',
+  'react/no-unused-class-component-methods': 'error',
+  'react/no-unused-prop-types': ['error', { customValidators: [], skipShapeProps: true }],
+  'react/no-unused-state': 'error',
+  'react/no-will-update-set-state': 'error',
+  'react/prefer-es6-class': ['error', 'always'],
+  'react/prefer-exact-props': 'error',
+  'react/prefer-stateless-function': ['error', { ignorePureComponents: true }],
+  'react/require-default-props': ['error', { forbidDefaultForRequired: true }],
+  'react/self-closing-comp': 'error',
+  'react/sort-comp': [
+    'error',
+    {
+      order: [
+        'static-variables',
+        'static-methods',
+        'instance-variables',
+        'lifecycle',
+        '/^handle.+$/',
+        '/^on.+$/',
+        'getters',
+        'setters',
+        '/^(get|set)(?!(InitialState$|DefaultProps$|ChildContext$)).+$/',
+        'instance-methods',
+        'everything-else',
+        'rendering',
+      ],
+      groups: {
+        lifecycle: [
+          'displayName',
+          'propTypes',
+          'contextTypes',
+          'childContextTypes',
+          'mixins',
+          'statics',
+          'defaultProps',
+          'constructor',
+          'getDefaultProps',
+          'getInitialState',
+          'state',
+          'getChildContext',
+          'getDerivedStateFromProps',
+          'componentWillMount',
+          'UNSAFE_componentWillMount',
+          'componentDidMount',
+          'componentWillReceiveProps',
+          'UNSAFE_componentWillReceiveProps',
+          'shouldComponentUpdate',
+          'componentWillUpdate',
+          'UNSAFE_componentWillUpdate',
+          'getSnapshotBeforeUpdate',
+          'componentDidUpdate',
+          'componentDidCatch',
+          'componentWillUnmount',
+        ],
+        rendering: ['/^render.+$/', 'render'],
+      },
+    },
+  ],
+  'react/state-in-constructor': ['error', 'always'],
+  'react/static-property-placement': ['error', 'property assignment'],
+  'react/style-prop-object': 'error',
+  'react/void-dom-elements-no-children': 'error',
+
+  // react a11y — the two rules airbnb adds on top of jsx-a11y/recommended
+  'jsx-a11y/control-has-associated-label': [
+    'error',
+    {
+      labelAttributes: ['label'],
+      controlComponents: [],
+      ignoreElements: ['audio', 'canvas', 'embed', 'input', 'textarea', 'tr', 'video'],
+      ignoreRoles: [
+        'grid',
+        'listbox',
+        'menu',
+        'menubar',
+        'radiogroup',
+        'row',
+        'tablist',
+        'toolbar',
+        'tree',
+        'treegrid',
+      ],
+      depth: 5,
+    },
+  ],
+  'jsx-a11y/lang': 'error',
+
+  // react hooks — airbnb/hooks promoted this above the plugin's `warn` default
+  'react-hooks/exhaustive-deps': 'error',
+};
+
 // Stated literally rather than left as `'detect'`. Both resolve to the same
 // version, but `'detect'` makes eslint-plugin-react probe the filesystem
 // through `context.getFilename()`, which ESLint 10 removed — so a sandboxed
@@ -147,15 +591,39 @@ export default [
       'next-env.d.ts',
     ],
 
+    // Storybook flat config is applied above; keep its legacy extend removed to avoid
+    // require() on ESM. The import / jsx-a11y / react-hooks recommended sets are
+    // extended here rather than only in the TypeScript override below, so plain `.js`
+    // files keep the coverage airbnb used to give them (issue #398).
     extends: [
       'eslint:recommended',
-      // Storybook flat config is applied above; keep legacy extend removed to avoid require() on ESM
-      'airbnb',
-      'airbnb/hooks',
+      'plugin:import/errors',
+      'plugin:import/warnings',
+      'plugin:jsx-a11y/recommended',
+      'plugin:react-hooks/recommended',
       'plugin:@typescript-eslint/recommended',
       'plugin:react/recommended',
       'prettier',
     ],
+    // Settings airbnb supplied alongside its rules (issue #398). Without them
+    // eslint-plugin-react has no React version to work from and eslint-plugin-import
+    // resolves differently for plain `.js` files; the per-file overrides below
+    // replace `import/resolver` for TypeScript, exactly as they did before.
+    // airbnb shipped `version: 'detect'` here; `REACT_VERSION` is substituted for
+    // it deliberately — see the constant's comment for why `'detect'` is unsafe.
+    settings: {
+      react: { pragma: 'React', version: REACT_VERSION },
+      propWrapperFunctions: ['forbidExtraProps', 'exact', 'Object.freeze'],
+      'import/resolver': { node: { extensions: ['.js', '.jsx', '.json'] } },
+      'import/extensions': ['.js', '.mjs', '.jsx'],
+      'import/core-modules': [],
+      'import/ignore': ['node_modules', '\\.(coffee|scss|css|less|hbs|svg|json)$'],
+    },
+    rules: {
+      ...airbnbBaseRules,
+      ...airbnbImportRules,
+      ...airbnbReactRules,
+    },
     overrides: [
       {
         files: ['**/*.ts', '**/*.tsx'],
@@ -364,11 +832,12 @@ export default [
 
   {
     // Same React version as the FlatCompat override above, restated at the top
-    // level and last so it wins everywhere. `eslint-config-airbnb` sets
-    // `version: 'detect'` itself, and a runner that applies the converted
-    // top-level blocks but not the nested overrides would keep that value — on
-    // ESLint 10 `'detect'` resolves through `context.getFilename()`, which no
-    // longer exists, and the run dies loading the first React rule.
+    // level and last so it wins everywhere. Any `settings.react` a plugin preset
+    // or a converted block contributes could still carry `version: 'detect'`, and
+    // a runner that applies the converted top-level blocks but not the nested
+    // overrides would keep that value — on ESLint 10 `'detect'` resolves through
+    // `context.getFilename()`, which no longer exists, and the run dies loading
+    // the first React rule.
     files: ['**/*.{js,jsx,mjs,cjs,ts,tsx}'],
     settings: { react: { version: REACT_VERSION } },
   },

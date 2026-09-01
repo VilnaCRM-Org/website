@@ -70,6 +70,36 @@ it that way:
 
 The full checklist is in [reference/a11y-review.md](reference/a11y-review.md).
 
+## The Accessibility Gate (issue #317)
+
+Accessibility is no longer advisory. The binding target is **WCAG 2.1 AA**,
+asserted per rule at two layers by `make test-a11y` and by the
+`accessibility testing` workflow:
+
+```bash
+make test-a11y              # both gates
+make test-a11y-components   # jest-axe over rendered React (jsdom, fast)
+make test-a11y-routes       # axe + a keyboard sweep in all three browsers
+```
+
+- The component layer covers **semantics only** — roles, names, states,
+  relationships. jsdom has no layout engine, so contrast, focus appearance and
+  reflow are unreachable there and belong to the route layer. A green component
+  test is necessary, never sufficient.
+- Adding a page means adding it to `src/test/a11y/routes.ts`; a unit test fails
+  when that registry drifts from `pages/`.
+- The axe tag list and the exception allowlist live only in
+  `src/test/a11y/axe-config.ts`.
+
+Never make the gate pass by suppressing it — no `eslint-disable`, no axe rule
+removal, no `test.skip`, and never an `if (count > 0)` / `if (isVisible())`
+wrapper around an assertion. Accepted debt goes through the documented
+exception allowlist with a rule id, a scope, a reason, and a tracking issue.
+
+Read [docs/accessibility/acceptance-standard.md](../../../docs/accessibility/acceptance-standard.md)
+for the conformance target, what automation cannot see, and the exception
+process.
+
 ## Rendering Rules
 
 - Avoid layout shift from dynamic labels, counters, notifications, and loading
@@ -95,9 +125,10 @@ make lint
 
 `make format` (Prettier) runs before `make lint` (ESLint + TypeScript +
 markdownlint + dependency-cruiser). Any unit suite runs locally without Docker
-when prefixed with `CI=1` (for example `CI=1 make test-unit-client`). If a
-deliberate, reviewed UI change makes screenshots stale, regenerate them with
-`make test-visual-update` and review the diff before committing.
+when prefixed with `EXEC_MODE=host` (for example
+`EXEC_MODE=host make test-unit-client`). If a deliberate, reviewed UI change
+makes screenshots stale, regenerate them with `make test-visual-update` and
+review the diff before committing.
 
 ## Related Guides
 

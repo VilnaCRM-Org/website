@@ -1,0 +1,13 @@
+[
+  {
+    "number": 7,
+    "state": "open",
+    "html_url": "https://github.com/VilnaCRM-Org/website/security/code-scanning/7",
+    "rule": {
+      "id": "js/xss",
+      "severity": "error",
+      "security_severity_level": "high"
+    },
+    "most_recent_instance": { "location": { "path": "src/a.ts" } }
+  }
+]

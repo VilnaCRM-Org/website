@@ -6,105 +6,24 @@ dotenvExpand.expand(env);
 
 import { ApolloServer, BaseContext } from '@apollo/server';
 import { startStandaloneServer } from '@apollo/server/standalone';
-import { GraphQLError } from 'graphql';
-import { ApolloServerErrorCode } from '@apollo/server/errors';
+import { ApolloServerPluginLandingPageDisabled } from '@apollo/server/plugin/disabled';
+import * as landingPage from '@apollo/server/plugin/landingPage/default';
 
-// @ts-ignore - Import path uses .ts extension which is resolved at runtime
-import { CreateUserInput, CreateUserResponse, User } from './type.ts';
+import { formatError } from './error-formatting.js';
+import {
+  createQueryGuardPlugins,
+  createQueryGuardRules,
+  introspectionEnabled,
+  resolveQueryGuardLimits,
+} from './query-guards.js';
+import { resolvers } from './resolvers.js';
 
 import fs from 'node:fs';
 import path, { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import {v4 as uuidv4} from "uuid";
 
 const GRAPHQL_API_PATH = process.env.GRAPHQL_API_PATH || 'graphql';
 const HEALTH_CHECK_PATH = process.env.HEALTH_CHECK_PATH || 'health';
-
-const validateCreateUserInput = (input: CreateUserInput) => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-  if (!input.email || !emailRegex.test(input.email)) {
-    throw new GraphQLError('Invalid email format', {
-      extensions: {
-        code: 'BAD_REQUEST',
-        http: { status: 400 },
-      },
-    });
-  }
-
-  if (!input.initials || input.initials.length < 2) {
-    throw new GraphQLError('Invalid initials', {
-      extensions: {
-        code: 'BAD_REQUEST',
-        http: { status: 400 },
-      },
-    });
-  }
-};
-export const users = new Map<string, User>();
-export const resolvers = {
-  Mutation: {
-    createUser: async (
-      _: unknown,
-      { input }: { input: CreateUserInput }
-    ): Promise<CreateUserResponse> => {
-      validateCreateUserInput(input);
-      try {
-        const newUser: User = {
-          id: input.clientMutationId || uuidv4(),
-          confirmed: true,
-          email: input.email,
-          initials: input.initials,
-        };
-        users.set(newUser.email, newUser);
-        return {
-          data: {
-            createUser: {
-              user: newUser,
-              clientMutationId: input.clientMutationId,
-            },
-          },
-        };
-      } catch (error) {
-        throw new GraphQLError('Internal Server Error: Failed to create user', {
-          extensions: {
-            code: 'INTERNAL_SERVER_ERROR',
-            http: {
-              status: 500,
-              headers: { 'x-error-type': 'server-error' },
-            },
-          },
-        });
-      }
-    },
-  },
-};
-const formatError = (formattedError: any, error: any) => {
-  if (formattedError.extensions.code === 'INTERNAL_SERVER_ERROR') {
-    return {
-      ...formattedError,
-      message: 'Something went wrong on the server. Please try again later.',
-      details: error.message,
-    };
-  }
-
-  if (formattedError.extensions.code === 'BAD_REQUEST') {
-    return {
-      ...formattedError,
-      message: 'The request was invalid. Please check your input.',
-      details: error.message,
-    };
-  }
-
-  if (formattedError.extensions.code === ApolloServerErrorCode.GRAPHQL_VALIDATION_FAILED) {
-    return {
-      ...formattedError,
-      message: "Your query doesn't match the schema. Please check it!",
-    };
-  }
-
-  return formattedError;
-};
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -125,6 +44,9 @@ async function startServer() {
       throw new Error('Resolvers are missing or not defined properly.');
     }
 
+    const isLocalDev = introspectionEnabled();
+    const limits = resolveQueryGuardLimits();
+
     server = new ApolloServer<BaseContext>({
       typeDefs,
       resolvers,
@@ -132,6 +54,26 @@ async function startServer() {
         requestHeaders: ['Apollo-Require-Preflight', 'X-Apollo-Operation-Name'],
       },
       formatError,
+      // Depth + cost budget (issue #381, F3). Without these an unauthenticated
+      // client can amplify CPU/memory with a nested or heavily-aliased document.
+      validationRules: createQueryGuardRules(limits),
+      // graphql-js parses by recursive descent, so a deeply nested document would
+      // crash the parser before any validation rule could run. Bound it too.
+      parseOptions: { maxTokens: limits.maxTokens },
+      // Schema disclosure and the embedded Sandbox console are local-development
+      // affordances only. Everywhere else they are recon surface.
+      introspection: isLocalDev,
+      plugins: [
+        isLocalDev
+          ? landingPage.ApolloServerPluginLandingPageLocalDefault()
+          : ApolloServerPluginLandingPageDisabled(),
+        // Page-size ceiling for variable bounds: validation cannot see variable
+        // values, so it is re-checked at didResolveOperation, before execution.
+        ...createQueryGuardPlugins(limits),
+      ],
+      // Apollo attaches `extensions.stacktrace` outside production/test. Pin it
+      // off so an internal stack can never ride out on an error response.
+      includeStacktraceInErrorResponses: false,
     });
 
     const { url } = await startStandaloneServer(server, {

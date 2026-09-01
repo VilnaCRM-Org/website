@@ -13,7 +13,7 @@ shared `src/test/unit/**/*.test.ts`.
 ```bash
 make test-unit-client
 # local, no Docker:
-CI=1 make test-unit-client
+EXEC_MODE=host make test-unit-client
 ```
 
 ## Server (`TEST_ENV=server`)
@@ -23,7 +23,7 @@ node env, for Apollo Server resolvers and other server-side logic. Matches
 
 ```bash
 make test-unit-server
-CI=1 make test-unit-server
+EXEC_MODE=host make test-unit-server
 ```
 
 Run both unit envs together:

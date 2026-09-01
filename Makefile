@@ -53,6 +53,16 @@ USER_SERVICE_REPO           = VilnaCRM-Org/user-service
 USER_SERVICE_SPEC_PATH      = .github/openapi-spec/spec.yaml
 OPENAPI_BASELINE            = contracts/user-service/openapi.json
 
+# zizmor is the GitHub Actions security linter (issue #360). Like gitleaks and
+# lychee it ships as a CLI container pinned BY DIGEST, so a repointed tag can
+# never change what the security gate enforces. Digest is zizmor 1.28.0.
+# The gate blocks on medium-and-above findings that zizmor reports with high
+# confidence; see scripts/ci/lint-workflows.sh and the workflow-security.yml
+# job comment for what that deliberately leaves out and why.
+ZIZMOR_IMAGE                = ghcr.io/zizmorcore/zizmor@sha256:8e6b3e4fb74d1aa5d23e83ea369f386c66eced0d1fb944d32cd8b2aac100b00d
+ZIZMOR_MIN_SEVERITY         = medium
+ZIZMOR_MIN_CONFIDENCE       = high
+
 NEXT_BUILD                  = $(NEXT_BIN) build --webpack
 NEXT_BUILD_CMD              = $(NEXT_BUILD) && $(IMG_OPTIMIZE)
 STORYBOOK_BUILD_CMD         = $(STORYBOOK_BIN) build --output-dir storybook-static-ci
@@ -62,12 +72,20 @@ TEST_DIR_APOLLO             = $(TEST_DIR_BASE)/apollo-server
 TEST_DIR_EDGE               = $(TEST_DIR_BASE)/edge
 TEST_DIR_E2E                = $(TEST_DIR_BASE)/e2e
 TEST_DIR_VISUAL             = $(TEST_DIR_BASE)/visual
+# Route-level accessibility scans (issue #317). A peer of e2e/visual rather than
+# a subfolder of e2e, so `make test-e2e` does not run the axe suite a second
+# time on every browser and shard.
+TEST_DIR_A11Y               = $(TEST_DIR_BASE)/a11y
+# The component-level half of the gate lives in the client Jest suite, so it
+# already runs under test-unit-client; this pattern lets `make test-a11y` run
+# just that spec.
+TEST_A11Y_COMPONENT_SPEC    = $(TEST_DIR_BASE)/testing-library/A11yComponents.test.tsx
 
-STRYKER_CMD                 = bun x stryker run
 STRYKER_SHARD_CONFIG        = stryker.shard.config.mjs
 MUTATION_SHARD_TOTAL        ?= 1
 MUTATION_SHARD_INDEX        ?= 0
-MERGE_MUTATION_REPORTS_CMD  = bun x tsx scripts/ci/merge-mutation-reports.ts
+# Bun executes .ts directly (issue #397); no tsx/ts-node transpiler runner.
+MERGE_MUTATION_REPORTS_CMD  = bun scripts/ci/merge-mutation-reports.ts
 
 # E2E flake detection (#359). The burn-in re-runs the specs a PR changed with retries off, so
 # nondeterminism shows up as some-but-not-all failures instead of being absorbed by the
@@ -82,7 +100,8 @@ FLAKE_MODE                  ?= retry-pass
 FLAKE_REPORT_DIR            ?= test-results
 FLAKE_CHANGED_SPECS         ?=
 FLAKE_THRESHOLD             ?= 2
-CHECK_FLAKY_REPORT_CMD      = bun x tsx scripts/ci/check-flaky-report.ts
+# Bun executes .ts directly (issue #397); no tsx/ts-node transpiler runner.
+CHECK_FLAKY_REPORT_CMD      = bun scripts/ci/check-flaky-report.ts
 
 SERVE_CMD                   = --collect.startServerCommand="$(SERVE_BIN) -l $(NEXT_PUBLIC_PROD_PORT) out" \
                               --collect.startServerReadyPattern="Accepting connections"
@@ -117,11 +136,28 @@ define EXEC_IN_CONTAINER
 	docker exec "$($(1))" sh -lc "$(2)"
 endef
 
+# Must match `image:` on the dev service in docker-compose.yml and the tag the
+# .github/actions/dev-container step builds.
+DEV_IMAGE                   = website-dev:latest
+
 DOCKER_COMPOSE_TEST_FILE    = -f docker-compose.test.yml
 DOCKER_COMPOSE_DEV_FILE     = -f docker-compose.yml
+# The dev compose file plus the CI overlay that runs the container idle. Only
+# ci-setup uses it; every exec still resolves the service by project + name, so
+# no other recipe needs to know the overlay exists.
+DOCKER_COMPOSE_CI_DEV_FILE  = -f docker-compose.yml -f docker-compose.ci.yml
 COMMON_HEALTHCHECKS_FILE    = -f common-healthchecks.yml
 EXEC_DEV_TTYLESS            = $(DOCKER_COMPOSE) exec -T dev
-NEXT_DEV_CMD                = $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) up -d dev && make wait-for-dev
+# Bracketed by check-dev-container-bind.sh on both sides of `up`, exactly as
+# ensure-dev, ci-setup and test-mutation are (#399): `make start` is the one
+# remaining path that creates or adopts the dev container, so leaving it
+# unguarded would let a second checkout serve, or replace, the first one's
+# website-dev. Host mode overrides NEXT_DEV_CMD below with a bare `next dev`,
+# which touches no container and therefore needs no guard.
+NEXT_DEV_CMD                = bash ./scripts/ci/check-dev-container-bind.sh && \
+                              $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) up -d dev && \
+                              bash ./scripts/ci/check-dev-container-bind.sh && \
+                              $(MAKE) wait-for-dev
 PLAYWRIGHT_DOCKER_CMD       = $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_TEST_FILE) exec playwright
 PLAYWRIGHT_TEST             = $(PLAYWRIGHT_DOCKER_CMD) sh -c
 
@@ -153,7 +189,7 @@ NETWORK_NAME                = website-network
 # Dev-side lint and test phases are grouped so local developers and agents can
 # run the same CI stages as the pipeline. The parallel runners execute each
 # target concurrently, group their output, and aggregate exit codes.
-CI_LINT_TARGETS             = lint-next lint-tsc lint-md
+CI_LINT_TARGETS             = lint-next lint-tsc lint-md lint-api-versions lint-headers lint-prod-guardrails
 CI_TEST_TARGETS             = ci-test-unit-client ci-test-unit-server ci-test-integration ci-test-contract
 CI_LINT_RUNNER              = ./scripts/ci/run-parallel.sh ci-lint
 CI_TEST_RUNNER              = ./scripts/ci/run-parallel.sh ci-test
@@ -162,43 +198,85 @@ CI_TEST_RUNNER              = ./scripts/ci/run-parallel.sh ci-test
 PR                          ?=
 FORMAT                      ?=
 
-CI                          ?= 0
+# Arguments for the release-audit dry run (AUDIT_EVENT=release|push|sweep, AUDIT_REF=<tag|sha>).
+AUDIT_REF                   ?=
 
-# Treat common truthy CI values the same (e.g., CI=true from GitHub Actions/act)
-ifneq (,$(filter 1 true TRUE,$(CI)))
-    CI := 1
-endif
+# ===== Executor selection (issue #399 — CRM container-always model) =====
+# Every npm-tool gate runs INSIDE the dev container by default, on a laptop and
+# on a CI runner alike, so `make lint-tsc` here and `make lint-tsc` there are
+# the same command against the same toolchain. The image is the single source of
+# truth for the runtime; there is no host Node / .nvmrc / node_modules-cache
+# coupling left to drift.
+#
+# EXEC_MODE is deliberately NOT derived from $(CI). GitHub Actions exports
+# CI=true into every step, so the previous `ifeq ($(CI),1)` switch silently
+# routed 100% of CI to the host path — the very bug this issue exists to fix.
+# Nothing under .github/workflows/ may set EXEC_MODE for a migrated gate.
+#
+#   container (default) — run the tool through `docker compose exec -T dev`.
+#   host                — run the tool straight from $(BIN_DIR). Three supported
+#                         callers, all of which have no compose to exec into:
+#                           * .husky/pre-commit and .husky/pre-push, so the hooks
+#                             work with no Docker daemon running;
+#                           * the run-*-dind targets, which already exec into a
+#                             temp container — inside it, "host" IS the container;
+#                           * the Lighthouse targets in performance-testing.yml,
+#                             which need a real Chrome the dev image does not ship
+#                             (see the lighthouse-* targets).
+#
+# The value is an enum, not a boolean, and an unknown value is a hard error: an
+# escape hatch that can be mistyped into silence is the same defect class as
+# CI=true silently selecting the host path.
+EXEC_MODE                   ?= container
 
-ifeq ($(CI), 1)
-    # Host CI mode: bins carry a Node shebang and run directly (Bun is the
-    # package manager, not the runtime). No executor prefix is needed.
-    PM_EXEC                 =
-    NEXT_DEV_CMD            = $(NEXT_BIN) dev
-    UNIT_TESTS              = env
-    CI_SETUP_UP_FLAGS       = -d --build
-
-    STORYBOOK_START         = $(STORYBOOK_BIN) dev -p $(STORYBOOK_PORT)
-
-    LHCI_BUILD_CMD          = $(NEXT_BUILD_CMD) && $(LHCI)
-    LHCI_DESKTOP            = $(LHCI_BUILD_CMD) $(LHCI_DESKTOP_SERVE)
-    LHCI_MOBILE             = $(LHCI_BUILD_CMD) $(LHCI_MOBILE_SERVE)
-else
+ifeq ($(EXEC_MODE),container)
     PM_EXEC                 = $(EXEC_DEV_TTYLESS)
-    STRYKER_CMD             = make start && $(EXEC_DEV_TTYLESS) bun x stryker run
-    UNIT_TESTS              = make start && $(EXEC_DEV_TTYLESS) env
-    CI_SETUP_UP_FLAGS       = -d --no-recreate
-
+    # `env` rather than `docker compose exec -e`, so a recipe that injects
+    # variables is spelled identically in both modes (`env VAR=v cmd` is valid
+    # on the host too). A `VAR=v $(PM_EXEC) cmd` prefix would instead bind the
+    # variable to the host docker CLI and never reach the container.
+    PM_EXEC_ENV             = $(EXEC_DEV_TTYLESS) env
+    # Prefix for targets a developer may invoke cold, before any `make start`.
+    DEV_READY               = $(MAKE) ensure-dev &&
+    # Prerequisite form of the above, for targets that reconcile before their
+    # recipe rather than inside it. Empty in host mode so `EXEC_MODE=host` really
+    # does bypass Docker — otherwise the escape hatch would still need a daemon.
+    DEV_PREREQ              = ensure-dev
     STORYBOOK_START         = $(STORYBOOK_BIN) dev -p $(STORYBOOK_PORT) --host 0.0.0.0
-
-    LHCI_BUILD_CMD          = make start-prod && $(LHCI)
-    LHCI_DESKTOP            = $(LHCI_BUILD_CMD) $(LHCI_CONFIG_DESKTOP)
-    LHCI_MOBILE             = $(LHCI_BUILD_CMD) $(LHCI_CONFIG_MOBILE)
+    LHCI_RUN                = $(MAKE) start-prod && $(LHCI)
+    LHCI_DESKTOP            = $(LHCI_RUN) $(LHCI_CONFIG_DESKTOP)
+    LHCI_MOBILE             = $(LHCI_RUN) $(LHCI_CONFIG_MOBILE)
+else ifeq ($(EXEC_MODE),host)
+    PM_EXEC                 =
+    PM_EXEC_ENV             = env
+    DEV_READY               =
+    DEV_PREREQ              =
+    NEXT_DEV_CMD            = $(NEXT_BIN) dev
+    STORYBOOK_START         = $(STORYBOOK_BIN) dev -p $(STORYBOOK_PORT)
+    LHCI_RUN                = $(NEXT_BUILD_CMD) && $(LHCI)
+    LHCI_DESKTOP            = $(LHCI_RUN) $(LHCI_DESKTOP_SERVE)
+    LHCI_MOBILE             = $(LHCI_RUN) $(LHCI_MOBILE_SERVE)
+else
+    $(error EXEC_MODE must be 'container' or 'host' (got '$(EXEC_MODE)'))
 endif
+
+# Dev-side suites. UNIT_TESTS reconciles the dev container first because a
+# developer may call it cold; the ci-test-* entrypoints assume `make ci-setup`
+# already did (that is what the dev-container action runs), so the parallel
+# runner does not re-probe compose once per target.
+UNIT_TESTS                  = $(DEV_READY) $(PM_EXEC_ENV)
+CI_TESTS                    = $(PM_EXEC_ENV)
 
 PRETTIER_BIN                = $(PM_EXEC) $(BIN_DIR)/prettier
 MARKDOWNLINT_BIN            = $(PM_EXEC) $(BIN_DIR)/markdownlint
 
-# To Run in CI mode specify CI variable. Example: make lint-md CI=1
+# No `--build`, and nothing here keyed on the ambient CI variable: the Makefile
+# is now completely independent of it, so there is no value GitHub Actions can
+# export that changes what a target does. Image freshness is owned by whoever
+# builds the image — the .github/actions/dev-container step on a runner (through
+# the BuildKit layer cache), `make build` on a laptop. Forcing a rebuild here
+# would throw that cached image away and pay a cold build in every job.
+CI_SETUP_UP_FLAGS           = -d --no-recreate
 
 .DEFAULT_GOAL               = help
 .RECIPEPREFIX               +=
@@ -212,6 +290,7 @@ run-e2e                     = $(PLAYWRIGHT_TEST) "$(PLAYWRIGHT_BIN) test $(TEST_
 E2E_SHARD_INDEX             ?= 1
 E2E_SHARD_TOTAL             ?= 1
 run-e2e-shard               = $(PLAYWRIGHT_TEST) "$(PLAYWRIGHT_BIN) test $(TEST_DIR_E2E) --shard=$(E2E_SHARD_INDEX)/$(E2E_SHARD_TOTAL)"
+run-a11y                    = $(PLAYWRIGHT_TEST) "$(PLAYWRIGHT_BIN) test $(TEST_DIR_A11Y)"
 # Burn-in: repeat each spec with retries off so a flake surfaces as a partial failure. The
 # JSON report goes to its own top-level directory so it neither overwrites the shard run's
 # report nor gets swept up by a recursive walk of test-results.
@@ -227,17 +306,62 @@ help:
 start: ## Start the application
 	$(NEXT_DEV_CMD)
 
-ensure-dev: ## Start the dev service only when it is not already running
-	@if $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) ps --status running --services 2>/dev/null | grep -qx dev; then \
-		echo "✅ Dev service is already running."; \
-	else \
-		$(MAKE) start; \
-	fi
+# Reconciles the CONTAINER, not the dev server. A gate only needs something to
+# `docker compose exec` into; none of them fetches a page from port 3000. Calling
+# `make start` here would instead block on wait-for-dev until Next finishes its
+# first full compile — up to WAIT_FOR_DEV_MAX_TRIES × WAIT_FOR_DEV_SLEEP — before
+# a single lint rule ran. Use `make start` when you actually want the dev server.
+# Builds first when the tag is missing, rather than relying on Compose to fall
+# back from `pull_policy: never` to `build:`. Compose v5 does fall back (verified:
+# with no local image, `up -d dev` reports "Image website-dev:latest Built"), but
+# that behaviour has varied across versions and this repo has already been bitten
+# once by a Compose version difference. An explicit build makes a fresh clone
+# work on any of them, and costs one `image inspect` when the tag is present.
+# `--no-recreate` is load-bearing, not an optimisation. This target is invoked
+# with the BASE compose file only, while `ci-setup` creates the container from
+# base + docker-compose.ci.yml — a different config hash. Without it, the first
+# gate in every CI job would tear down the idle container ci-setup just started
+# and replace it with a Next dev server under `restart: unless-stopped`,
+# discarding both the overlay's whole purpose and its fail-fast restart policy.
+# It still creates or starts the container when it is missing or stopped.
+#
+# check-dev-container-bind.sh runs on BOTH sides of `up` (#399). The pre-`up`
+# call keeps a foreign checkout's container from being started at all; the
+# post-`up` call is the one that actually holds, because the pre-`up` check
+# passes in BOTH checkouts when neither has created the container yet — two
+# concurrent starts would otherwise leave the loser running every gate against
+# the winner's /app bind. After `up` the container exists and the answer is
+# decidable.
+ensure-dev: ## Reconcile the dev container (builds the image if absent; does not wait for the dev server)
+	@bash ./scripts/ci/check-dev-container-bind.sh
+	@docker image inspect $(DEV_IMAGE) >/dev/null 2>&1 || \
+		$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) build dev
+	@$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) up -d --no-recreate dev
+	@bash ./scripts/ci/check-dev-container-bind.sh
+
+# Bounded on purpose. Every migrated workflow calls `make start` first, so an
+# unbounded wait here would turn any dev-service boot failure into a job that
+# prints dots until it hits its `timeout-minutes` — with the container's own
+# logs, the actual cause, never shown. Fail fast and dump them instead.
+WAIT_FOR_DEV_MAX_TRIES      ?= 150
+WAIT_FOR_DEV_SLEEP          ?= 2
 
 wait-for-dev: ## Wait for the dev service to be ready on port $(DEV_PORT).
 	@echo "Waiting for dev service to be ready on port $(DEV_PORT)..."
-	@while ! curl -s -f http://$(WEBSITE_DOMAIN):$(DEV_PORT) >/dev/null 2>&1; do printf "."; sleep 1; done
-	@printf '\nDev service is up and running!\n'
+	@i=0; \
+	while [ $$i -lt $(WAIT_FOR_DEV_MAX_TRIES) ]; do \
+		if curl -fsS http://$(WEBSITE_DOMAIN):$(DEV_PORT) >/dev/null 2>&1; then \
+			printf '\n✅ Dev service is up and running!\n'; \
+			exit 0; \
+		fi; \
+		printf "."; \
+		sleep $(WAIT_FOR_DEV_SLEEP); \
+		i=$$((i+1)); \
+	done; \
+	printf '\n❌ Timed out waiting for the dev service after %s seconds\n' \
+		"$$(($(WAIT_FOR_DEV_MAX_TRIES) * $(WAIT_FOR_DEV_SLEEP)))"; \
+	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) logs --tail=50 dev || true; \
+	exit 1
 
 create-temp-dev-container-dind: ## Create a temporary dev container for DIND testing (TEMP_CONTAINER_NAME required)
 	$(call REQUIRE_ENV_VAR,TEMP_CONTAINER_NAME,my-container)
@@ -271,9 +395,9 @@ install-deps-in-container-dind: ## Install dependencies in container for DIND te
 run-unit-tests-dind: ## Run unit tests in DIND container (TEMP_CONTAINER_NAME required)
 	$(call REQUIRE_ENV_VAR,TEMP_CONTAINER_NAME,my-container)
 	@echo "🧪 Running client-side tests in container $(TEMP_CONTAINER_NAME)..."
-	$(call EXEC_IN_CONTAINER,TEMP_CONTAINER_NAME,cd /app && make test-unit-client CI=1)
+	$(call EXEC_IN_CONTAINER,TEMP_CONTAINER_NAME,cd /app && make test-unit-client EXEC_MODE=host)
 	@echo "🧪 Running server-side tests in container $(TEMP_CONTAINER_NAME)..."
-	$(call EXEC_IN_CONTAINER,TEMP_CONTAINER_NAME,cd /app && make test-unit-server CI=1)
+	$(call EXEC_IN_CONTAINER,TEMP_CONTAINER_NAME,cd /app && make test-unit-server EXEC_MODE=host)
 
 run-mutation-tests-dind: ## Run mutation tests in DIND container (TEMP_CONTAINER_NAME required)
 	$(call REQUIRE_ENV_VAR,TEMP_CONTAINER_NAME,my-container)
@@ -283,22 +407,22 @@ run-mutation-tests-dind: ## Run mutation tests in DIND container (TEMP_CONTAINER
 run-eslint-tests-dind: ## Run ESLint tests in DIND container (TEMP_CONTAINER_NAME required)
 	$(call REQUIRE_ENV_VAR,TEMP_CONTAINER_NAME,my-container)
 	@echo "🔍 Running ESLint in container $(TEMP_CONTAINER_NAME)..."
-	$(call EXEC_IN_CONTAINER,TEMP_CONTAINER_NAME,cd /app && make lint-next CI=1)
+	$(call EXEC_IN_CONTAINER,TEMP_CONTAINER_NAME,cd /app && make lint-next EXEC_MODE=host)
 
 run-typescript-tests-dind: ## Run TypeScript tests in DIND container (TEMP_CONTAINER_NAME required)
 	$(call REQUIRE_ENV_VAR,TEMP_CONTAINER_NAME,my-container)
 	@echo "🔍 Running TypeScript check in container $(TEMP_CONTAINER_NAME)..."
-	$(call EXEC_IN_CONTAINER,TEMP_CONTAINER_NAME,cd /app && make lint-tsc CI=1)
+	$(call EXEC_IN_CONTAINER,TEMP_CONTAINER_NAME,cd /app && make lint-tsc EXEC_MODE=host)
 
 run-markdown-lint-tests-dind: ## Run Markdown linting tests in DIND container (TEMP_CONTAINER_NAME required)
 	$(call REQUIRE_ENV_VAR,TEMP_CONTAINER_NAME,my-container)
 	@echo "🔍 Running Markdown linting in container $(TEMP_CONTAINER_NAME)..."
-	$(call EXEC_IN_CONTAINER,TEMP_CONTAINER_NAME,cd /app && make lint-md CI=1)
+	$(call EXEC_IN_CONTAINER,TEMP_CONTAINER_NAME,cd /app && make lint-md EXEC_MODE=host)
 
 run-deps-lint-tests-dind: ## Run dependency-cruiser tests in DIND container (TEMP_CONTAINER_NAME required)
 	$(call REQUIRE_ENV_VAR,TEMP_CONTAINER_NAME,my-container)
 	@echo "🔍 Running dependency-cruiser in container $(TEMP_CONTAINER_NAME)..."
-	$(call EXEC_IN_CONTAINER,TEMP_CONTAINER_NAME,cd /app && make lint-deps CI=1)
+	$(call EXEC_IN_CONTAINER,TEMP_CONTAINER_NAME,cd /app && make lint-deps EXEC_MODE=host)
 
 create-k6-helper-container-dind: ## Create a detached K6 helper container for DIND testing (K6_HELPER_NAME required)
 	$(call REQUIRE_ENV_VAR,K6_HELPER_NAME,my-k6-helper)
@@ -323,8 +447,10 @@ run-load-tests-dind: ## Run K6 load tests in DIND container without starting ser
 build: ## A tool build the project
 	$(DOCKER_COMPOSE) build
 
+# Wrapped in `sh -c` because NEXT_BUILD_CMD is a compound `a && b`: without it the
+# executor would take only the first command and run the second on the host.
 build-analyze: ## Build production bundle and launch bundle-analyzer report (ANALYZE=true)
-	ANALYZE=true $(NEXT_BUILD_CMD)
+	$(DEV_READY) $(PM_EXEC) sh -c 'ANALYZE=true $(NEXT_BUILD_CMD)'
 
 build-out: ## Build production artifacts to ./out directory
 	@echo "🏗️ Building production Docker image..."
@@ -335,26 +461,84 @@ build-out: ## Build production artifacts to ./out directory
 	docker rm $$container_id && \
 	echo "✅ Build artifacts extracted to ./out directory"
 
+# `mjs` is in the glob deliberately: the Node CLI helpers under scripts/ are
+# excluded from qlty (see .qlty/qlty.toml — they sit outside eslint.config.mjs's
+# scope), so without this nothing would check their formatting and they would
+# have to be hand-run through Prettier. Every tracked .mjs is already clean, so
+# this adds coverage without churn.
 format: ## This command executes Prettier formatting
-	$(PRETTIER_BIN) "**/*.{js,jsx,ts,tsx,json,css,scss,md}" --write --ignore-path .prettierignore
+	$(DEV_READY) $(PRETTIER_BIN) "**/*.{js,jsx,mjs,ts,tsx,json,css,scss,md}" --write --ignore-path .prettierignore
 
 lint-next: ## This command executes ESLint
-	$(PM_EXEC) $(ESLINT_BIN)
+	$(DEV_READY) $(PM_EXEC) $(ESLINT_BIN)
 
 lint-tsc: ## This command executes Typescript linter
-	$(PM_EXEC) $(TS_BIN)
+	$(DEV_READY) $(PM_EXEC) $(TS_BIN)
 
 lint-md: ## This command executes Markdown linter
-	$(MARKDOWNLINT_BIN) $(MD_LINT_ARGS) "**/*.md"
+	$(DEV_READY) $(MARKDOWNLINT_BIN) $(MD_LINT_ARGS) "**/*.md"
 
-lint-deps: ## Validate architecture/import boundaries with dependency-cruiser
+# DELIBERATELY HOST-ONLY — no $(PM_EXEC), in either EXEC_MODE.
+# The container runs as root, and writing this gitignored file from inside it
+# creates it root-owned in the bind-mounted worktree. `start-prod` regenerates
+# the same file on the host (the e2e/visual/memory-leak/load stacks have no dev
+# container to reach into), and a host `node` then fails with EACCES on the
+# root-owned file — breaking every prod-stack suite for that developer until
+# they sudo-remove it. The generator imports nothing outside node:fs/node:path,
+# so running it on the host needs no node_modules and no package manager.
+generate-localization: ## Regenerate the gitignored pages/i18n/localization.json bundle (#328) — host-only
 	node scripts/generateLocalization.mjs
-	$(PM_EXEC) $(DEPCRUISE_BIN) src pages tests --config .dependency-cruiser.js
 
+.PHONY: lint lint-api-versions lint-headers lint-docker-policy lint-security-txt lint-prod-guardrails
+
+# The user-service inventory invariant (issue #381, F4): every consumer of the
+# upstream contracts — the GraphQL schema behind the Apollo mock and the OpenAPI
+# spec behind /swagger — must derive from the single USER_SERVICE_VERSION pin.
+# Unlike lint-contracts this check is HERMETIC (no network, no Docker), so it
+# belongs in the `lint` aggregate and in CI_LINT_TARGETS: the drift that produced
+# the defect (docs on v2.6.0, GraphQL on v2.4.1) is caught on every PR.
+lint-api-versions: ## Verify OpenAPI and GraphQL reference the same pinned user-service release
+	$(DEV_READY) $(PM_EXEC) node scripts/contracts/check-api-versions.mjs
+
+lint-deps: generate-localization ## Validate architecture/import boundaries with dependency-cruiser
+	$(DEV_READY) $(PM_EXEC) $(DEPCRUISE_BIN) src pages tests --config .dependency-cruiser.js
+
+# Runs through the package manager like the other node gates, so it obeys
+# EXEC_MODE: in container mode it executes inside the dev image the rest of the
+# lint lane already uses, rather than needing a host node_modules.
+lint-headers: ## Verify the edge security-header policy (config/security-headers.json) reaches every production response
+	$(DEV_READY) $(PM_EXEC) node scripts/ci/lint-headers.mjs
+
+# Host-only by nature, in either EXEC_MODE: it is a self-contained shell script
+# that reads the Dockerfiles from the worktree, needs no node_modules, and the
+# dev image it would exec into is itself one of the things it audits.
 lint-docker-policy: ## Enforce the registry (no Docker Hub) + digest-pin policy on every Dockerfile
 	./scripts/ci/lint-dockerfile-policy.sh
 
-lint: lint-next lint-tsc lint-md lint-deps lint-docker-policy ## Runs all linters: ESLint, TypeScript, Markdown, dependency-cruiser, and the Dockerfile registry/digest policy in sequence.
+lint-security-txt: ## Validate the published RFC 9116 security.txt (fields + Expires runway)
+	@bash scripts/ci/check-security-txt.sh
+
+lint-prod-guardrails: ## Enforce the production-safety invariants (privileged-workflow alerting, fail-closed edge routing, no source maps)
+	$(DEV_READY) $(PM_EXEC) node scripts/ci/lint-prod-guardrails.mjs
+
+# A SEQUENTIAL aggregate, as the help string says: generate-localization leads
+# so the gitignored i18n bundle exists before eslint and tsc read it. It is also
+# a prerequisite of lint-deps, but that is the LAST sub-target, which on a clean
+# checkout left eslint and tsc resolving a module that had not been written yet.
+# Parallelism is provided by `make ci-lint` (scripts/ci/run-parallel.sh), never
+# by `make -j` — under -j prerequisite ORDER is not a guarantee, and adding
+# generate-localization to each linter instead would race: run-parallel.sh runs
+# every lint target as its own make process, and the generator writes the single
+# pages/i18n/localization.json with a non-atomic fs.writeFileSync.
+#
+# lint-security-txt and lint-prod-guardrails DO belong in the aggregate, unlike
+# lint-contracts and lint-metrics: both read only committed files (no network,
+# no host binary, no Docker), so they are hermetic and cannot make the static
+# lane flaky. lint-prod-guardrails additionally joins CI_LINT_TARGETS because it
+# needs `node` + js-yaml, which the parallel ci-lint runner provides — the same
+# reason lint-headers is in that list; lint-security-txt is pure bash and needs
+# no package manager, mirroring how lint-deps stays out.
+lint: generate-localization lint-next lint-tsc lint-md lint-deps lint-api-versions lint-docker-policy lint-headers lint-security-txt lint-prod-guardrails ## Runs all linters: ESLint, TypeScript, Markdown, dependency-cruiser, the API version invariant, the Dockerfile registry/digest policy, the security-header gate, the RFC 9116 security.txt gate, and the production-safety guardrails in sequence.
 
 # DELIBERATE DIVERGENCE FROM THE npm-tool LINT GATES (lint-next/tsc/md/deps),
 # for the same reason as lint-metrics below:
@@ -369,7 +553,7 @@ lint: lint-next lint-tsc lint-md lint-deps lint-docker-policy ## Runs all linter
 # invoke the script directly:
 #   node scripts/contracts/lint-contracts.mjs --offline
 lint-contracts: ## Validate the pinned user-service contracts: client GraphQL operations, the OpenAPI spectral baseline, and artifact drift
-	$(PM_EXEC) node scripts/contracts/lint-contracts.mjs
+	$(DEV_READY) $(PM_EXEC) node scripts/contracts/lint-contracts.mjs
 
 # DELIBERATE DIVERGENCE FROM THE npm-tool LINT GATES, for both of the reasons
 # lint-contracts and lint-metrics each cite one of:
@@ -395,7 +579,7 @@ lint-openapi: ## Report breaking changes between the committed OpenAPI baseline 
 	 USER_SERVICE_SPEC_PATH="$(USER_SERVICE_SPEC_PATH)" \
 	 bash scripts/ci/openapi-drift.sh
 
-update-contracts: ## Re-fetch the user-service contracts for the pinned USER_SERVICE_VERSION, refresh the spectral baseline and the artifact digests
+update-contracts: $(DEV_PREREQ) ## Re-fetch the user-service contracts for the pinned USER_SERVICE_VERSION, refresh the spectral baseline and the artifact digests
 	$(PM_EXEC) node scripts/fetchSwaggerSchema.mjs
 	$(PM_EXEC) node scripts/fetchGraphqlSchema.mjs
 	$(PM_EXEC) node scripts/contracts/lint-contracts.mjs --update-checksums
@@ -422,14 +606,53 @@ lint-metrics: ## Run rust-code-analysis complexity gate on src (host-only; auto-
 	 METRICS_POLICY="$(METRICS_POLICY_PATH)" \
 	 sh scripts/ci/lint-metrics.sh
 
+# Host-only, and deliberately OUTSIDE `lint` and CI_LINT_TARGETS for the same
+# reason as lint-metrics above: it drives `gh` against the live GitHub API, so it
+# is neither hermetic nor offline-safe. AUDIT_DRY_RUN is forced to 1 here — this
+# target exists to exercise the audit pipeline end to end against a real past
+# release or commit, and must never write a ledger comment from a developer's
+# machine. Override the target with AUDIT_EVENT=release|push|sweep and AUDIT_REF.
+release-audit-dry-run: ## Dry-run the release audit against the live repo (host-only, writes nothing)
+	@if [ "$${AUDIT_EVENT:-sweep}" != "sweep" ] && [ -z "$(AUDIT_REF)" ]; then \
+		echo "Error: AUDIT_REF is required. Usage: make release-audit-dry-run AUDIT_EVENT=$${AUDIT_EVENT} AUDIT_REF=<tag|sha>"; \
+		exit 1; \
+	fi
+	@AUDIT_EVENT="$${AUDIT_EVENT:-sweep}" \
+	 AUDIT_RELEASE_TAG="$(AUDIT_REF)" \
+	 AUDIT_AFTER="$(AUDIT_REF)" \
+	 AUDIT_DRY_RUN=1 \
+	 bash scripts/ci/release-audit.sh
+
+# DELIBERATE DIVERGENCE FROM THE npm-tool LINT GATES (lint-next/tsc/md/deps),
+# for the same reasons as lint-contracts and lint-metrics above:
+#   * Host-only: zizmor is a Rust CLI shipped as a container image, absent from
+#     the dev image, so this target does NOT use $(PM_EXEC) and runs docker on
+#     the host in both modes.
+#   * NOT in the `lint` aggregate and NOT in CI_LINT_TARGETS (both route through
+#     the dev container / run-parallel.sh, which cannot run docker).
+#   * Its online audits reach the GitHub API to resolve tags, so a GitHub
+#     outage must not turn the whole static lane red.
+#   * Its CI surface is .github/workflows/workflow-security.yml, which runs it
+#     on every PR to main -- deliberately NOT path-filtered, because a skipped
+#     check cannot be a meaningful required status check (#343).
+# The script degrades to --offline when no GitHub token is available, so a
+# local run without `gh auth login` still works (offline is a strict subset).
+lint-workflows: ## Audit the GitHub Actions workflows for security defects with zizmor (host-only, Docker)
+	@ZIZMOR_IMAGE="$(ZIZMOR_IMAGE)" \
+	 ZIZMOR_MIN_SEVERITY="$(ZIZMOR_MIN_SEVERITY)" \
+	 ZIZMOR_MIN_CONFIDENCE="$(ZIZMOR_MIN_CONFIDENCE)" \
+	 bash scripts/ci/lint-workflows.sh
+
 husky: ## One-time Husky setup to enable Git hooks (deprecated if already set)
 	bun x husky install
 
 storybook-start: ## Start Storybook UI and open in browser
-	$(PM_EXEC) $(STORYBOOK_START)
+	$(DEV_READY) $(PM_EXEC) $(STORYBOOK_START)
 
-storybook-build: ## Build Storybook UI.
-	$(PM_EXEC) $(STORYBOOK_BUILD_CMD)
+# The stories import the i18n stack, which requires the generated bundle, so the
+# target produces it itself rather than relying on a caller to remember.
+storybook-build: generate-localization ## Build Storybook UI.
+	$(DEV_READY) $(PM_EXEC) $(STORYBOOK_BUILD_CMD)
 
 test-e2e: start-prod  ## Start production and run E2E tests (Playwright)
 	$(run-e2e)
@@ -460,6 +683,31 @@ test-visual-ui: start-prod ## Start the production environment and run visual te
 
 test-visual-update: start-prod ## Update Playwright visual snapshots
 	$(playwright-test) $(TEST_DIR_VISUAL) --update-snapshots
+
+# ============================================================================
+# Accessibility gate (issue #317)
+# ----------------------------------------------------------------------------
+# The binding conformance target is WCAG 2.1 AA; the standard, the in-scope axe
+# tags and the exception process live in docs/accessibility/acceptance-standard.md.
+# Two layers, both enforced:
+#   * components — jest-axe over rendered React in jsdom (semantics: roles,
+#     names, states, relationships).
+#   * routes     — @axe-core/playwright over every registered route in real
+#     browsers (everything that needs layout or paint, plus keyboard operability).
+# This is a per-rule contract; the Lighthouse accessibility score is a weighted
+# category heuristic on two URLs and stays as defence in depth, not a substitute.
+# ============================================================================
+
+test-a11y: test-a11y-components test-a11y-routes ## Run both accessibility gates (jest-axe components + Playwright routes)
+
+test-a11y-components: ## Run the jest-axe component accessibility scans (TEST_ENV=client)
+	# --coverage=false: this target runs one spec, and the client suite carries a
+	# global coverage floor that a single-spec run cannot meet. Coverage stays
+	# enforced where it belongs, on the full test-unit-client run.
+	$(UNIT_TESTS) TEST_ENV=client $(JEST_BIN) $(JEST_FLAGS) --coverage=false $(TEST_A11Y_COMPONENT_SPEC)
+
+test-a11y-routes: start-prod ## Start production and run the axe route scans (Playwright)
+	$(run-a11y)
 
 create-network: ## Create the external Docker network if it doesn't exist
 	@docker network ls | grep -q $(NETWORK_NAME) || docker network create $(NETWORK_NAME)
@@ -499,8 +747,8 @@ test-integration: ## Run the integration layer using Jest (TEST_ENV=integration,
 test-integration-watch: ## Run integration tests in watch mode (TEST_ENV=integration)
 	$(UNIT_TESTS) TEST_ENV=integration $(JEST_BIN) --watch
 
-ci-test-integration: ## Run integration tests directly assuming deps are installed (CI entrypoint)
-	env TEST_ENV=integration $(JEST_BIN) $(JEST_FLAGS)
+ci-test-integration: ## Run integration tests assuming ci-setup already started the dev environment (CI entrypoint)
+	$(CI_TESTS) TEST_ENV=integration $(JEST_BIN) $(JEST_FLAGS)
 
 # The contract layer (#350) boots the Mockoon mock e2e runs against — in-process,
 # via @mockoon/commons-server, the same libraries Mockoon.Dockerfile's CLI wraps —
@@ -512,6 +760,13 @@ ci-test-integration: ## Run integration tests directly assuming deps are install
 test-contract: ## Run the mock-vs-OpenAPI contract parity layer using Jest (TEST_ENV=contract, target: tests/contract)
 	$(UNIT_TESTS) TEST_ENV=contract $(JEST_BIN) $(JEST_FLAGS)
 
+# DELIBERATELY host-side -- the only CI_TEST_TARGETS entry that does not go
+# through $(CI_TESTS). contract-parity-testing.yml provisions the HOST toolchain
+# (setup-node + `bun install`) and never starts the dev container, because this
+# layer boots Mockoon in-process from the committed OpenAPI document and needs
+# no container at all. Routing it through $(CI_TESTS) would exec into a
+# container that workflow never created. Convert the workflow first if this
+# should move.
 ci-test-contract: ## Run contract parity tests directly assuming deps are installed (CI entrypoint)
 	env TEST_ENV=contract $(JEST_BIN) $(JEST_FLAGS)
 
@@ -543,31 +798,47 @@ ci-test-contract: ## Run contract parity tests directly assuming deps are instal
 
 .PHONY: ci ci-setup ci-lint ci-test ci-test-unit-client ci-test-unit-server \
 	ci-test-mutation ci-mutation ci-prod-setup ci-test-e2e ci-test-visual \
-	ci-test-memory-leak ci-test-load ci-test-lighthouse-desktop \
+	ci-test-a11y ci-test-memory-leak ci-test-load ci-test-lighthouse-desktop \
 	ci-test-lighthouse-mobile ci-test-prod ensure-dev start-prod-clean \
+	test-a11y test-a11y-components test-a11y-routes \
 	test-load test-load-swagger test-mutation-shard merge-mutation-reports \
-	test-e2e-burnin check-e2e-flakes pr-comments
+	test-e2e-burnin check-e2e-flakes pr-comments lint lint-api-versions \
+	lint-security-txt lint-prod-guardrails release-audit-dry-run \
+	generate-localization
 
-ci-setup: create-network ## Prepare the shared dev environment for CI-oriented checks
-	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) up $(CI_SETUP_UP_FLAGS) dev && $(MAKE) wait-for-dev
+# Brings the dev container up IDLE (docker-compose.ci.yml overrides only the
+# command), so a gate does not pay for a Next dev server it never calls. There
+# is no HTTP endpoint to poll afterwards — `--wait` returns once the container
+# is running — so this deliberately does not depend on wait-for-dev.
+#
+# check-dev-container-bind.sh brackets the `up` exactly as ensure-dev does
+# (#399). `--no-recreate` adopts a foreign checkout's `website-dev` here too, and
+# this is the documented precondition of every ci-test-* entrypoint — those carry
+# no $(DEV_READY), so without the check a second checkout would run the whole CI
+# lane against the first one's /app bind. The pre-`up` call keeps a foreign
+# container from being started at all; the post-`up` call is the one that
+# actually holds, because two concurrent starts both pass the pre-check.
+ci-setup: create-network ## Prepare the shared dev environment for CI-oriented checks (idle container, no dev server)
+	@bash ./scripts/ci/check-dev-container-bind.sh
+	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_CI_DEV_FILE) up $(CI_SETUP_UP_FLAGS) --wait dev
+	@bash ./scripts/ci/check-dev-container-bind.sh
 
-ci-lint: ## Run the CI lint phase (ESLint, TypeScript, Markdown) with grouped, aggregated output
+ci-lint: $(DEV_PREREQ) ## Run the CI lint phase (ESLint, TypeScript, Markdown) with grouped, aggregated output
 	$(CI_LINT_RUNNER) $(CI_LINT_TARGETS)
 
-ci-test: ## Run the CI dev-side test phase (unit client/server, integration) in parallel
+ci-test: $(DEV_PREREQ) ## Run the CI dev-side test phase (unit client/server, integration) in parallel
 	$(CI_TEST_RUNNER) $(CI_TEST_TARGETS)
 
-ci-test-unit-client: ## Run client-side unit tests directly assuming deps are installed (CI entrypoint)
-	env TEST_ENV=client $(JEST_BIN) $(JEST_FLAGS)
+ci-test-unit-client: ## Run client-side unit tests assuming ci-setup already started the dev environment (CI entrypoint)
+	$(CI_TESTS) TEST_ENV=client $(JEST_BIN) $(JEST_FLAGS)
 
-ci-test-unit-server: ## Run server-side unit tests directly assuming deps are installed (CI entrypoint)
-	env TEST_ENV=server $(JEST_BIN) $(JEST_FLAGS) $(TEST_DIR_APOLLO)
+ci-test-unit-server: ## Run server-side unit tests assuming ci-setup already started the dev environment (CI entrypoint)
+	$(CI_TESTS) TEST_ENV=server $(JEST_BIN) $(JEST_FLAGS) $(TEST_DIR_APOLLO)
 
-ci-test-mutation: ## Run mutation tests directly assuming deps are installed (CI entrypoint)
-	node scripts/generateLocalization.mjs
-	bun x stryker run
+ci-test-mutation: generate-localization ## Run mutation tests assuming ci-setup already started the dev environment (CI entrypoint)
+	$(PM_EXEC) bun x stryker run
 
-ci-mutation: ## Run mutation testing in isolation after the parallel dev-side tests (heavy; not parallelized)
+ci-mutation: $(DEV_PREREQ) ## Run mutation testing in isolation after the parallel dev-side tests (heavy; not parallelized)
 	$(MAKE) ci-test-mutation
 
 ci-prod-setup: ## Prepare the prod + Chromium environment for prod-side CI tests
@@ -579,6 +850,9 @@ ci-test-e2e: ## Run E2E tests assuming ci-prod-setup already started the prod en
 
 ci-test-visual: ## Run visual tests assuming ci-prod-setup already started the prod environment
 	$(run-visual)
+
+ci-test-a11y: ## Run the route accessibility scans assuming ci-prod-setup already started the prod environment
+	$(run-a11y)
 
 ci-test-memory-leak: ## Run Memlab memory leak tests against the dedicated compose stack (assumes prod is running)
 	# Isolate the Memlab stack in its own Compose project (-p memleak) so the
@@ -610,9 +884,10 @@ ci-test-lighthouse-desktop: ## Run Lighthouse desktop audit assuming ci-prod-set
 ci-test-lighthouse-mobile: ## Run Lighthouse mobile audit assuming ci-prod-setup prepared prod + Chromium
 	$(MAKE) lighthouse-mobile-dind
 
-ci-test-prod: ## Run the CI prod-side test phase (e2e, visual, memory-leak, load, lighthouse) sequentially
+ci-test-prod: ## Run the CI prod-side test phase (e2e, visual, a11y, memory-leak, load, lighthouse) sequentially
 	$(MAKE) ci-test-e2e
 	$(MAKE) ci-test-visual
+	$(MAKE) ci-test-a11y
 	$(MAKE) ci-test-memory-leak
 	$(MAKE) ci-test-load
 	$(MAKE) ci-test-lighthouse-desktop
@@ -650,16 +925,32 @@ memory-leak-dind: start-prod ## Run Memlab tests in isolated compose project (DI
 	@echo "🧹 Cleaning up memory leak test containers..."
 	$(DOCKER_COMPOSE) -p memleak $(DOCKER_COMPOSE_MEMLEAK_FILE) down
 
+# `build` refreshes the image, so the container has to be recreated FROM it.
+# ensure-dev deliberately will not do that (see its comment), so this target
+# reconciles explicitly — otherwise Stryker would run against a container still
+# made from the pre-build image and miss a just-added dependency.
+# The recreate needs check-dev-container-bind.sh even more than the
+# `--no-recreate` paths do: run from a second checkout it would DESTROY the other
+# one's container and its anonymous node_modules volume rather than merely adopt
+# it. Pre-`up` so it refuses before anything is torn down, post-`up` so a
+# concurrent recreate cannot hand this run someone else's container.
 test-mutation: build ## Run mutation tests using Stryker after building the app
-	$(STRYKER_CMD)
+	@bash ./scripts/ci/check-dev-container-bind.sh
+	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_DEV_FILE) up -d --force-recreate --renew-anon-volumes dev
+	@bash ./scripts/ci/check-dev-container-bind.sh
+	$(PM_EXEC) bun x stryker run
 
-test-mutation-shard: ## Run mutation shard MUTATION_SHARD_INDEX of MUTATION_SHARD_TOTAL (host; assumes deps installed) — writes reports/mutation/mutation-shard-<index>.json with break disabled
-	node scripts/generateLocalization.mjs
-	MUTATION_SHARD_INDEX=$(MUTATION_SHARD_INDEX) MUTATION_SHARD_TOTAL=$(MUTATION_SHARD_TOTAL) \
-		$(STRYKER_CMD) $(STRYKER_SHARD_CONFIG)
+# The shard variables are injected with `env` INSIDE the executor, not as a
+# shell prefix in front of it. A `VAR=v $(PM_EXEC) cmd` prefix binds the variable
+# to the host docker CLI process and never reaches the container, which would
+# silently hand Stryker an unset MUTATION_SHARD_INDEX.
+test-mutation-shard: generate-localization ## Run mutation shard MUTATION_SHARD_INDEX of MUTATION_SHARD_TOTAL — writes reports/mutation/mutation-shard-<index>.json with break disabled
+	$(DEV_READY) $(PM_EXEC_ENV) \
+		MUTATION_SHARD_INDEX=$(MUTATION_SHARD_INDEX) MUTATION_SHARD_TOTAL=$(MUTATION_SHARD_TOTAL) \
+		bun x stryker run $(STRYKER_SHARD_CONFIG)
 
-merge-mutation-reports: ## Union the per-shard mutation reports and re-enforce the exact Stryker break gate over the whole set (host; assumes deps installed)
-	MUTATION_SHARD_TOTAL=$(MUTATION_SHARD_TOTAL) $(MERGE_MUTATION_REPORTS_CMD)
+merge-mutation-reports: ## Union the per-shard mutation reports and re-enforce the exact Stryker break gate over the whole set
+	$(DEV_READY) $(PM_EXEC_ENV) MUTATION_SHARD_TOTAL=$(MUTATION_SHARD_TOTAL) $(MERGE_MUTATION_REPORTS_CMD)
 
 wait-for-prod-health: ## Wait for the prod container to reach a healthy state.
 	@echo "Waiting for prod container to become healthy (timeout: 60s)..."
@@ -714,8 +1005,16 @@ lighthouse-mobile-dind: ## Run Lighthouse mobile audit in DIND mode using prod c
 	$(LHCI_DIND_BIN) --config=lighthouserc.mobile.js $(LHCI_DIND_COMMON)
 	@echo "✅ Lighthouse mobile DIND tests completed"
 
-install: check-node-version ## Install node modules using Bun (CI=1 runs locally, default runs in container) — uses frozen lockfile and affects node_modules via volumes
-	$(PM_EXEC) bun install --frozen-lockfile
+# Installs into BOTH trees on purpose. The dev container keeps node_modules in
+# its own volume (docker-compose.yml), which is what every gate execs into; the
+# host copy is what `bun x lint-staged` in .husky/pre-commit, an editor's
+# TypeScript server, and any EXEC_MODE=host run resolve against. Installing only
+# one of them leaves a fresh clone with a broken commit hook or broken gates.
+install: check-node-version ## Install node modules with Bun into the dev container and the host (frozen lockfile)
+	$(DEV_READY) $(PM_EXEC) bun install --frozen-lockfile
+ifeq ($(EXEC_MODE),container)
+	bun install --frozen-lockfile
+endif
 
 install-chromium-lhci: ## Install Chromium and Lighthouse CLI in the prod container for DIND testing
 	@echo "📦 Installing Chromium and Lighthouse CLI in prod container..."
@@ -752,8 +1051,11 @@ new-logs: ## Show live logs of the dev container
 stop: ## Stop docker
 	$(DOCKER_COMPOSE) stop
 
-check-node-version: ## Check if the correct Node.js version is installed
-	$(PM_EXEC) node checkNodeVersion.js
+# Host-only on purpose: this asserts the Node the developer's own tooling uses —
+# the Husky hooks and every EXEC_MODE=host run. Pointed at the container it would
+# only re-check the version the Dockerfile already pins, and could never fail.
+check-node-version: ## Check that the host Node.js version matches .nvmrc
+	node checkNodeVersion.js
 
 pr-comments: ## Retrieve unresolved PR review comments (PR=<num> FORMAT=<text|json|markdown>)
 	@if [ -n "$(PR)" ] && [ -n "$(FORMAT)" ]; then \
