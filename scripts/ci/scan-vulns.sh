@@ -73,7 +73,7 @@ if [ "$OSV_MODE" = 'diff' ]; then
   effective_config="$OSV_REPORT_DIR/effective-config.toml"
   OSV_BASE_CONFIG="$base_config" OSV_CONFIG="$OSV_CONFIG" \
     OSV_EFFECTIVE_CONFIG="$effective_config" \
-    bun x tsx scripts/ci/write-effective-osv-config.ts
+    bun scripts/ci/write-effective-osv-config.ts
 
   scan "$OSV_LOCKFILE" "$OSV_REPORT_DIR/head.json" "$effective_config"
   scan "$OSV_LOCKFILE:$base_copy" "$OSV_REPORT_DIR/base.json" "$effective_config"
@@ -88,4 +88,4 @@ OSV_HEAD_REPORT="$OSV_REPORT_DIR/head.json"
 export OSV_HEAD_REPORT
 export OSV_MODE
 export OSV_CONFIG
-exec bun x tsx scripts/ci/check-osv-report.ts
+exec bun scripts/ci/check-osv-report.ts

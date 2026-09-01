@@ -909,7 +909,7 @@ STUB
   # The scanner is only ever asked for JSON against the committed config; every pass/fail
   # decision belongs to the checker, which is unit-tested in src/test/unit/osv-report.test.ts.
   assert_log_contains 'osv-scanner scan source --lockfile=bun.lock --config=config/osv-scanner.toml --format=json'
-  assert_log_contains 'bun x tsx scripts/ci/check-osv-report.ts'
+  assert_log_contains 'bun scripts/ci/check-osv-report.ts'
 
   # Census mode never reads the base ref, so it must not diff against one.
   run grep -F -- '--lockfile=bun.lock:' "$COMMAND_LOG"
@@ -954,7 +954,7 @@ JSON
   # Drop the stubbed PATH entry so the real bun runs the real checker.
   run env PATH="${PATH#"$STUB_BIN_DIR":}" \
     OSV_MODE=diff OSV_BASE_REPORT=base.json OSV_HEAD_REPORT=head.json \
-    sh -c "cd '$sandbox' && bun x tsx '$PROJECT_ROOT/scripts/ci/check-osv-report.ts' 2>/dev/null"
+    sh -c "cd '$sandbox' && bun '$PROJECT_ROOT/scripts/ci/check-osv-report.ts' 2>/dev/null"
 
   # An introduced advisory fails the gate and is named in the Markdown.
   [ "$status" -eq 1 ]
