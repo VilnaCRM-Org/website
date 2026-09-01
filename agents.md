@@ -84,8 +84,9 @@ Add a specialized suite when the change touches its concern: `make test-mutation
 strength), `make test-bats` (Makefile targets, `scripts/ci/` policy scripts, and CI shell
 flows — required when you add a Make target or change a workflow's `name:`),
 `make test-memory-leak` (leaks),
-`make load-tests` (traffic, K6), and `make lighthouse-desktop` / `make lighthouse-mobile`
-(performance, accessibility, best practices).
+`make load-tests` (traffic, K6), `make lighthouse-desktop` / `make lighthouse-mobile`
+(performance, accessibility, best practices), and `make lint-vulns` (dependency CVEs —
+run it whenever a change touches `package.json` or `bun.lock`).
 
 Two of those suites assert on more than their own exit code, so a change that touches them
 needs a second look (issues #359 and #354):

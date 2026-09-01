@@ -872,3 +872,96 @@ run_openapi_drift_script() {
   run grep -E '^CI_LINT_TARGETS .*lint-api-versions' "$PROJECT_ROOT/Makefile"
   [ "$status" -eq 0 ]
 }
+
+# Shared fixture for the dependency-CVE gate (#356): a stubbed osv-scanner that satisfies
+# ensure-osv.sh's idempotency probe (so no release is downloaded) and reports one advisory,
+# so the report-formatting assertions have something to find.
+create_osv_scanner_stub() {
+  mkdir -p "$MAKEFILE_SANDBOX/bin"
+  cat > "$MAKEFILE_SANDBOX/bin/osv-scanner" <<'STUB'
+#!/usr/bin/env bash
+if [ "$1" = "--version" ]; then
+  echo "osv-scanner version: 2.5.0"
+  exit 0
+fi
+printf 'osv-scanner %s\n' "$*" >> "${COMMAND_LOG:?}"
+cat <<'JSON'
+{"results":[{"source":{"path":"bun.lock","type":"lockfile"},"packages":[
+  {"package":{"name":"left-pad","version":"1.0.0","ecosystem":"npm"},
+   "groups":[{"ids":["GHSA-test-0000-0000"],"max_severity":"7.5"}]}]}]}
+JSON
+# osv-scanner exits 1 when it finds vulnerabilities; the verdict is the checker's job.
+exit 1
+STUB
+  chmod +x "$MAKEFILE_SANDBOX/bin/osv-scanner"
+}
+
+@test "scan-vulns-census scans the lockfile and hands the JSON to the checker host-only" {
+  reset_command_log
+  create_osv_scanner_stub
+
+  # The stubbed scanner exits 1, as the real one does when it FINDS vulnerabilities. That is
+  # an expected outcome here — the verdict belongs to the checker — so the wrapper must not
+  # read it as a failed scan.
+  run_make_target scan-vulns-census
+  [ "$status" -eq 0 ]
+
+  # The scanner is only ever asked for JSON against the committed config; every pass/fail
+  # decision belongs to the checker, which is unit-tested in src/test/unit/osv-report.test.ts.
+  assert_log_contains 'osv-scanner scan source --lockfile=bun.lock --config=config/osv-scanner.toml --format=json'
+  assert_log_contains 'bun scripts/ci/check-osv-report.ts'
+
+  # Census mode never reads the base ref, so it must not diff against one.
+  run grep -F -- '--lockfile=bun.lock:' "$COMMAND_LOG"
+  [ "$status" -ne 0 ]
+
+  # Host-only: never routed through the dev container.
+  run grep -E 'docker' "$COMMAND_LOG"
+  [ "$status" -ne 0 ]
+}
+
+@test "lint-vulns fails closed when the base ref's lockfile cannot be read" {
+  reset_command_log
+  create_osv_scanner_stub
+
+  # The sandbox is a plain directory, not a work tree, so `git show <ref>:bun.lock` cannot
+  # resolve. A base ref the gate cannot read must fail rather than be treated as "no known
+  # advisories", which would let a vulnerable dependency through on an empty comparison.
+  run_make_target lint-vulns OSV_BASE_REF=refs/heads/definitely-missing
+  [ "$status" -ne 0 ]
+  assert_output_contains 'cannot read "bun.lock"'
+
+  # It failed before reaching the verdict, so the checker was never invoked.
+  run grep -F 'check-osv-report.ts' "$COMMAND_LOG"
+  [ "$status" -ne 0 ]
+}
+
+@test "the checker prints Markdown on stdout and keeps annotations off it" {
+  local sandbox="$BATS_TEST_TMPDIR/osv-cli"
+  mkdir -p "$sandbox"
+  mkdir -p "$sandbox/config"
+  cp "$PROJECT_ROOT/config/osv-scanner.toml" "$sandbox/config/osv-scanner.toml"
+  printf '{"results":[]}\n' > "$sandbox/base.json"
+  cat > "$sandbox/head.json" <<'JSON'
+{"results":[{"source":{"path":"bun.lock","type":"lockfile"},"packages":[
+  {"package":{"name":"left-pad","version":"1.0.0","ecosystem":"npm"},
+   "groups":[{"ids":["GHSA-test-0000-0000"],"max_severity":"7.5"}]}]}]}
+JSON
+
+  # The workflow tees this stdout into the job summary and, for the census, verbatim into a
+  # GitHub issue body. A `::error::`/`::warning::` echo of every finding would double the
+  # report's length, so annotations must go to stderr — which the runner also parses.
+  # Drop the stubbed PATH entry so the real bun runs the real checker.
+  run env PATH="${PATH#"$STUB_BIN_DIR":}" \
+    OSV_MODE=diff OSV_BASE_REPORT=base.json OSV_HEAD_REPORT=head.json \
+    sh -c "cd '$sandbox' && bun '$PROJECT_ROOT/scripts/ci/check-osv-report.ts' 2>/dev/null"
+
+  # An introduced advisory fails the gate and is named in the Markdown.
+  [ "$status" -eq 1 ]
+  assert_output_contains 'left-pad@1.0.0'
+  assert_output_contains 'GHSA-test-0000-0000'
+  assert_output_contains '1 advisory/advisories introduced'
+
+  run grep -F '::' <<< "$output"
+  [ "$status" -ne 0 ]
+}

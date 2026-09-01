@@ -109,6 +109,8 @@ Linting & Formatting
   make lint-openapi: reports breaking upstream OpenAPI drift (host-only, needs network; advisory)
   make lint-workflows: audits the GitHub Actions workflows with zizmor (host-only, not in make lint)
   make update-contracts: re-fetches the contracts after bumping USER_SERVICE_VERSION
+  make lint-vulns: fails on dependency CVEs this branch adds vs main (host-only, not in make lint)
+  make scan-vulns-census: reports every known dependency CVE in bun.lock without failing
 ```
 
 Testing
@@ -540,6 +542,75 @@ Online audits resolve action tags against the GitHub API. The gate uses
 `GH_TOKEN` (or `GITHUB_TOKEN`) when set and otherwise falls back to the `gh`
 CLI's token; with neither it runs `--offline`, which is a strict subset of the
 CI run.
+
+## Dependency CVEs (osv-scanner)
+
+Published advisories against the dependency tree are gated with
+[osv-scanner](https://github.com/google/osv-scanner), run locally via
+`make lint-vulns` and in CI by
+[`.github/workflows/osv-scanner.yml`](.github/workflows/osv-scanner.yml).
+
+Like the metrics gate, `osv-scanner` is a **standalone Go binary**, not an npm
+package — so this gate runs **host-only** and is deliberately **not** part of
+`make lint` or `CI_LINT_TARGETS` (it resolves advisories over the network, and
+the static lane is otherwise hermetic).
+[`scripts/ci/ensure-osv.sh`](scripts/ci/ensure-osv.sh) provisions the pinned,
+SHA256-verified binary to `./bin`;
+[`scripts/ci/scan-vulns.sh`](scripts/ci/scan-vulns.sh) only produces JSON, and
+[`scripts/ci/check-osv-report.ts`](scripts/ci/check-osv-report.ts) owns every
+pass/fail decision.
+
+### The gate is differential, not absolute
+
+The pull-request leg scans the **base branch's** `bun.lock` and the pull
+request's, and fails only on advisories the pull request **introduces**.
+
+That is deliberate. The tree carries a large pre-existing advisory backlog, and
+OSV publishes new advisories against code nobody touched every week, so an
+absolute gate would be red on day one and would keep reddening unrelated pull
+requests until somebody hand-edited an ignore file. That failure mode is worse
+than no gate: it trains reviewers to click past a security check. Comparing head
+against base means the only way to turn this gate red is to actually add
+exposure.
+
+Findings are keyed by ecosystem + package + advisory id, **without** the
+version: bumping a package to a version that still carries the same advisory is
+not new exposure and must not block the bump, while adding a package — or moving
+to a version carrying an _additional_ advisory — does.
+
+The nightly leg (`make scan-vulns-census`) covers what the diff cannot see. It
+reports the whole backlog into one refreshed tracking issue labelled
+`dependency-cve` and stays green by design; a red nightly would page somebody for
+debt no author caused.
+
+```bash
+make lint-vulns          # blocking: advisories this branch adds vs origin/main
+make scan-vulns-census   # advisory: every known advisory in bun.lock
+```
+
+### Accepting an advisory
+
+Fix it first: upgrade to a patched version. When an advisory genuinely does not
+apply, record it in [`config/osv-scanner.toml`](config/osv-scanner.toml) with an `id`, a
+`reason`, and a `ignoreUntil` re-triage date. All three are **enforced**, and the
+gate fails once `ignoreUntil` has passed — the same contract
+`src/test/memory-leak/leak-baseline.json` applies to memlab allowances. Never add
+an entry for an advisory your own change introduced, and never push the date out
+to keep a build green.
+
+`[[IgnoredVulns]]` is the only construct that file may contain. Every other table
+and every top-level key is rejected, because osv-scanner offers suppression
+routes that carry neither a reason nor a date — `[[PackageOverrides]]` with
+`ignore = true` drops a package's findings outright, and `LoadConfigs` pulls in
+further config files the policy check would never see.
+
+A pull request also cannot change what its own blocking scan suppresses. Both
+diff scans run under the **intersection** of the base ref's ignores and the
+working tree's — the policy that will be in force after the merge. An ignore the
+change _adds_ is not applied (or one diff could carry a vulnerable dependency and
+the excuse for it), and an ignore the change _removes_ is not applied either (it
+stops suppressing the moment it merges). Land an ignore in its own reviewed
+commit first, then the dependency.
 
 ## Routing
 
