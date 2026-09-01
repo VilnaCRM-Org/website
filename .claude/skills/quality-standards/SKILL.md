@@ -110,8 +110,9 @@ than one. The root `agents.md` policy governs scenario coverage.
 | Traffic or load        | `make test-load`         |
 | Memory leaks           | `make test-memory-leak`  |
 
-Any unit suite runs locally without Docker when prefixed with `CI=1` (for
-example `CI=1 make test-unit-all`).
+Any unit suite runs inside the dev container by default; add `EXEC_MODE=host` to
+run it directly on the host instead (for example `EXEC_MODE=host make
+test-unit-all`), which needs a host `bun install`.
 
 ## Verification
 

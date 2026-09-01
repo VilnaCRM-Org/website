@@ -54,7 +54,18 @@ exclude_patterns = [
   # scope: an ES5.1 CloudFront function (uses `var` by design) and a server
   # bootstrap that configures dotenv before its other imports load.
   "scripts/cloudfront_routing.js",
+  "scripts/cloudfront_security_headers.js",
   "docker/apollo-server/server.mts",
+  # Node CLI helpers under scripts/. eslint.config.mjs already ignores
+  # `scripts/**` (the FlatCompat `ignorePatterns` block, which ESLint turns into
+  # a global ignore), so these are outside the repo's declared eslint scope and this
+  # keeps the two configs agreeing rather than qlty applying application-code
+  # rules to build tooling. Concretely, `no-console` is wrong here: these are CI
+  # gates whose product IS their stdout/stderr, and their `::error::` lines are
+  # parsed by GitHub Actions to annotate a failing run — routing them through a
+  # logger would break the annotations. Scoped to *.mjs on purpose so shellcheck
+  # still covers scripts/**/*.sh.
+  "scripts/**/*.mjs",
   # Root config files not under any eslint config block (they live at the repo
   # root, outside src/), so qlty's eslint only emits a "file ignored" warning.
   # They are Prettier-formatted via `make format`.

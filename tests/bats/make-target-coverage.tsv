@@ -1,6 +1,6 @@
 target	coverage	evidence	details
 help	bats	tests/bats/makefile_targets.bats	Validated through the help output contract.
-start	bats	tests/bats/makefile_targets.bats	Validated in CI=1 mode with a stubbed Next.js binary.
+start	bats	tests/bats/makefile_targets.bats	Validated in EXEC_MODE=host mode with a stubbed Next.js binary.
 wait-for-dev	bats	tests/bats/makefile_targets.bats	Validated with a stubbed curl readiness check.
 create-temp-dev-container-dind	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker commands and env-var guards.
 copy-source-to-container-dind	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker and tar commands.
@@ -26,6 +26,8 @@ storybook-start	bats	tests/bats/makefile_targets.bats	Validated with a stubbed S
 storybook-build	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Storybook binary.
 test-e2e	ci	.github/workflows/e2e-testing.yml	Executed directly by the Playwright PR workflow.
 test-e2e-shard	ci	.github/workflows/e2e-testing.yml	Executed directly by the e2e testing workflow shard matrix.
+test-e2e-burnin	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker and Playwright commands for the repeat-each burn-in.
+check-e2e-flakes	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Bun invocation of the flake-report grader.
 test-e2e-ui	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker and Playwright commands.
 test-visual	ci	.github/workflows/visual-testing.yml	Executed directly by the visual testing workflow.
 test-visual-ui	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker and Playwright commands.
@@ -41,7 +43,7 @@ test-fuzz	ci	.github/workflows/fuzz-testing.yml	Executed directly by the nightly
 test-bats	ci	.github/workflows/bats-testing.yml	Executed directly by the dedicated Bats PR workflow.
 test-memory-leak	ci	.github/workflows/memory-leak-testing.yml	Executed directly by the memory leak workflow.
 memory-leak-dind	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker Compose commands.
-test-mutation	ci	.github/workflows/mutation-testing.yml	Executed directly by the mutation testing workflow.
+test-mutation	bats	tests/bats/makefile_targets.bats	Validated by asserting the foreign-checkout guard refuses before the force-recreate is issued; the workflow itself runs test-mutation-shard.
 test-mutation-shard	ci	.github/workflows/mutation-testing.yml	Executed directly by the mutation testing shard matrix.
 merge-mutation-reports	ci	.github/workflows/mutation-testing.yml	Executed by the mutation testing merge job to re-enforce the break gate over the shard union.
 wait-for-prod-health	ci	.github/workflows/load-testing.yml	Executed through `make load-tests` and `make load-tests-swagger`, which depend on `wait-for-prod-health`.
@@ -67,13 +69,19 @@ new-logs	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Docker C
 stop	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Docker Compose invocation.
 check-node-version	bats	tests/bats/makefile_targets.bats	Validated with a stubbed node invocation.
 lint-deps	ci	.github/workflows/static-testing.yml	Executed through `make lint`, which depends on `lint-deps`.
+lint-api-versions	bats	tests/bats/makefile_targets.bats	Hermetic user-service version invariant (#381); runs inside `make lint` and CI_LINT_TARGETS, unlike the network-bound lint-contracts.
+generate-localization	ci	.github/workflows/static-testing.yml	Executed through `make lint`, whose `lint-deps` leg depends on it; also a prerequisite of `storybook-build`, `ci-test-mutation` and `test-mutation-shard`.
+lint-headers	ci	.github/workflows/static-testing.yml	Executed through `make lint`, which depends on `lint-headers`.
 lint-contracts	bats	tests/bats/makefile_targets.bats	Executed directly by contract-testing.yml; deliberately outside `make lint` because the drift check needs network.
+lint-openapi	bats	tests/bats/makefile_targets.bats	Validated host-only: ensure-oasdiff.sh provisioning (idempotent) plus openapi-drift.sh three-way exit handling with a stubbed oasdiff binary.
 update-contracts	bats	tests/bats/makefile_targets.bats	Maintainer command for bumping USER_SERVICE_VERSION; refreshes both artifacts and the spectral baseline.
 run-deps-lint-tests-dind	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker exec calls.
 test-integration	bats	tests/bats/makefile_targets.bats	Validated by invoking Jest with TEST_ENV=integration through a stubbed jest binary.
 test-integration-watch	bats	tests/bats/makefile_targets.bats	Validated by invoking Jest in watch mode with TEST_ENV=integration through a stubbed jest binary.
-ci-test-integration	ci	.github/workflows/integration-testing.yml	Executed directly by the integration testing workflow.
-ci-setup	bats	tests/bats/makefile_targets.bats	Validated by bringing up the stubbed dev service and asserting the readiness wait.
+ci-test-integration	bats	tests/bats/makefile_targets.bats	Validated through the ci-test parallel phase and the ci-test split-target assertions; the integration workflow now runs the developer-facing `test-integration`.
+test-contract	bats	tests/bats/makefile_targets.bats	Validated by invoking Jest with TEST_ENV=contract through a stubbed jest binary.
+ci-test-contract	ci	.github/workflows/contract-parity-testing.yml	Executed directly by the contract parity testing workflow.
+ci-setup	bats	tests/bats/makefile_targets.bats	Validated by bringing up the stubbed dev service, asserting the readiness wait, and asserting the foreign-checkout guard refuses.
 ci-lint	bats	tests/bats/makefile_targets.bats	Validated by running the parallel lint runner against stubbed make targets.
 ci-test	bats	tests/bats/makefile_targets.bats	Validated by running the parallel dev-side test runner against stubbed make targets.
 ci-test-unit-client	bats	tests/bats/makefile_targets.bats	Validated by invoking Jest with TEST_ENV=client through a stubbed jest binary.
@@ -89,13 +97,18 @@ ci-test-lighthouse-desktop	bats	tests/bats/makefile_targets.bats	Validated with 
 ci-test-lighthouse-mobile	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker Compose LHCI commands.
 ci-test-prod	bats	tests/bats/makefile_targets.bats	Validated by running every prod-side phase against stubbed commands.
 ci	bats	tests/bats/makefile_targets.bats	Validated by running the full CI pipeline against stubbed tooling.
-ensure-dev	bats	tests/bats/makefile_targets.bats	Validated by asserting the dev service starts when it is not already running.
+ensure-dev	bats	tests/bats/makefile_targets.bats	Validated by asserting the dev service starts when it is not already running. Its foreign-checkout preflight (scripts/ci/check-dev-container-bind.sh) has its own suite in tests/bats/check_dev_container_bind.bats.
 start-prod-clean	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Docker Compose force-recreate invocation.
 test-load	bats	tests/bats/makefile_targets.bats	Validated as an alias that runs the load-tests target with stubbed K6 commands.
 test-load-swagger	bats	tests/bats/makefile_targets.bats	Validated as an alias that runs the load-tests-swagger target with stubbed K6 commands.
 pr-comments	bats	tests/bats/makefile_targets.bats	Validated with a stubbed get-pr-comments.sh helper and PR/FORMAT argument dispatch.
 lint-metrics	bats	tests/bats/makefile_targets.bats	Validated host-only: ensure-rca.sh provisioning (idempotent) plus lint-metrics.sh policy enforcement against the committed policy with a stubbed analyzer.
-test-a11y	ci	.github/workflows/a11y-testing.yml	Executed directly by the accessibility testing workflow.
-test-a11y-components	ci	.github/workflows/a11y-testing.yml	Executed through `make test-a11y`, which depends on `test-a11y-components`.
-test-a11y-routes	ci	.github/workflows/a11y-testing.yml	Executed through `make test-a11y`, which depends on `test-a11y-routes`.
+test-a11y	bats	tests/bats/makefile_targets.bats	Validated as the aggregate that runs both accessibility legs with stubbed Jest and Playwright commands.
+test-a11y-components	bats	tests/bats/makefile_targets.bats	Validated by invoking Jest with TEST_ENV=client against the component a11y spec through a stubbed jest binary.
+test-a11y-routes	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker and Playwright commands; also executed in CI through `make test-a11y`.
 ci-test-a11y	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker and Playwright commands.
+lint-docker-policy	ci	.github/workflows/static-testing.yml	Executed through `make lint`, which depends on `lint-docker-policy`.
+lint-workflows	bats	tests/bats/makefile_targets.bats	Validated host-only: the digest-pinned zizmor image, the committed severity/confidence floor, and the .github/workflows target, with docker stubbed. Script-level behaviour is covered by tests/bats/lint_workflows.bats.
+lint-security-txt	bats	tests/bats/makefile_targets.bats	Executed through `make lint`; the target itself is validated against the committed RFC 9116 file, and check-security-txt.sh has its own suite in check_security_txt.bats.
+lint-prod-guardrails	bats	tests/bats/makefile_targets.bats	Executed through `make lint` and `make ci-lint`; the target shells out to the hermetic policy script, whose assertions are covered by prod_guardrails.bats.
+release-audit-dry-run	bats	tests/bats/release_audit.bats	Host-only dry run of the release audit; the script it wraps is covered end to end (record, dedup, escalation, sweep, no-git invariant) by release_audit.bats.

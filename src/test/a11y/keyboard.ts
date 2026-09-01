@@ -18,18 +18,18 @@ import { expect, type Page } from '@playwright/test';
 const TAB_ORDER_ATTRIBUTE: string = 'data-a11y-tab-order';
 
 /**
- * Upper bound on Tab presses in one sweep. Swagger renders well over a hundred
- * controls; the assertions below are properties of adjacent trace entries, so
- * truncating the sweep preserves them while keeping the test fast.
+ * Upper bound on Tab presses in one sweep, so a control-heavy route cannot make
+ * the gate crawl.
  *
- * The bound is a documented limit, not full coverage: on a route with more than
- * this many tabbable controls the sweep verifies the first
- * `MAX_SWEEP_STEPS` positions, so a trap or a back-jump introduced beyond the
- * cut-off is not detected here. That is a deliberate trade — a full sweep of
- * `/swagger` is hundreds of round trips per browser — and it is bounded, not
- * silent: raise this number if the untested tail starts mattering, and note that
- * the axe scans (`scan-route.ts`, `scan-interaction-state.ts`) cover the whole
- * page regardless of how far the keyboard walk reaches.
+ * The cap does not weaken the assertions below: they are properties of adjacent
+ * trace entries, and a shorter trace cannot manufacture a trap or a back-jump
+ * that is not there. It does bound coverage. A route with more tabbable controls
+ * than this is only walked as far as its first `MAX_SWEEP_STEPS` tab positions,
+ * so a trap or a back-jump that first appears past that point is never reached.
+ * This is a bounded sweep, not full keyboard coverage — recorded as such in
+ * `docs/accessibility/acceptance-standard.md`. The axe scans (`scan-route.ts`,
+ * `scan-interaction-state.ts`) still cover the whole page regardless of how far
+ * the keyboard walk reaches.
  */
 const MAX_SWEEP_STEPS: number = 120;
 
@@ -139,12 +139,19 @@ async function markSettledTabbables(page: Page): Promise<number> {
 /** Reads the sweep marker of whatever currently holds focus, shadow DOM aware. */
 async function readFocusMarker(page: Page, attribute: string): Promise<number> {
   return page.evaluate(orderAttribute => {
-    let active: Element | null = document.activeElement;
-
-    while (active?.shadowRoot?.activeElement != null) {
-      active = active.shadowRoot.activeElement;
-    }
-
+    // Light DOM only, deliberately, to stay consistent with markTabbables: its
+    // `document.querySelectorAll` stops at a shadow boundary, so nothing inside a
+    // shadow root is ever stamped. Walking into one here would read an unstamped
+    // element and record UNMARKED on a conformant control, tripping the "Tab left
+    // the known controls" guard for a reason the route did not cause.
+    //
+    // Making the STAMPING shadow-aware instead is not a drop-in fix: tab order
+    // across a shadow boundary is not document order, so indices assigned by a
+    // naive recursive walk would report false back-jumps. This sweep therefore
+    // covers light-DOM focusables only; a route that puts controls inside a shadow
+    // root needs order-aware stamping before it can be swept, and no route in this
+    // app does today.
+    const active: Element | null = document.activeElement;
     const marker = active?.getAttribute(orderAttribute);
 
     return marker === null || marker === undefined ? -1 : Number.parseInt(marker, 10);
@@ -172,9 +179,10 @@ export async function expectKeyboardOperable(page: Page): Promise<void> {
 
   await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
 
-  // Sweep exactly as many steps as there are controls. Stepping past the last
-  // one is not portable: Chromium hands focus to the browser chrome while
-  // Firefox leaves it on the final control, which reads as a false trap.
+  // Sweep exactly as many steps as there are controls, up to MAX_SWEEP_STEPS.
+  // Stepping past the last one is not portable: Chromium hands focus to the
+  // browser chrome while Firefox leaves it on the final control, which reads as
+  // a false trap.
   const steps: number = Math.min(tabbableCount, MAX_SWEEP_STEPS);
   const trace: number[] = [];
 
@@ -209,7 +217,7 @@ export async function expectKeyboardOperable(page: Page): Promise<void> {
   const trapMessage: string = `focus stopped advancing — keyboard trap? ${readableTrace}`;
   expect(trapped, trapMessage).toBe(false);
 
-  // Zero, not "at most one". The sweep takes exactly as many steps as there are
+  // Zero, not "at most one". The sweep takes at most as many steps as there are
   // controls starting from a blurred document, so a conformant page never wraps
   // and never jumps backwards. A single positive `tabindex` moves exactly one
   // element to the head of the order and so produces exactly ONE back-jump for

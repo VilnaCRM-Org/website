@@ -33,14 +33,21 @@ async function serverErrorResponse(route: Route): Promise<void> {
 test('Submit the registration form, verify error notification, and return to filled form', async ({
   page,
 }) => {
-  const { initialsInput, emailInput, passwordInput, policyTextCheckbox, signupButton } =
-    getFormFields(page);
+  const {
+    initialsInput,
+    emailInput,
+    passwordInput,
+    confirmPasswordInput,
+    policyTextCheckbox,
+    signupButton,
+  } = getFormFields(page);
 
   await page.goto('/');
 
   await fillInput(initialsInput, userData.fullName);
   await fillInput(emailInput, userData.email);
   await fillInput(passwordInput, userData.password);
+  await fillInput(confirmPasswordInput, userData.password);
   await checkCheckbox(policyTextCheckbox);
 
   await page.route(graphqlEndpoint, serverErrorResponse);
@@ -65,6 +72,7 @@ test('Submit the registration form, verify error notification, and return to fil
   await expect(initialsInput).toHaveValue(userData.fullName);
   await expect(emailInput).toHaveValue(userData.email);
   await expect(passwordInput).toHaveValue(userData.password);
+  await expect(confirmPasswordInput).toHaveValue(userData.password);
   await expect(policyTextCheckbox).toBeChecked();
 
   await page.unroute(graphqlEndpoint);
@@ -80,14 +88,21 @@ test('Submit the registration form, verify error notification, and return to fil
 });
 
 test('Submit the registration form, get error, retry submission, and succeed', async ({ page }) => {
-  const { initialsInput, emailInput, passwordInput, policyTextCheckbox, signupButton } =
-    getFormFields(page);
+  const {
+    initialsInput,
+    emailInput,
+    passwordInput,
+    confirmPasswordInput,
+    policyTextCheckbox,
+    signupButton,
+  } = getFormFields(page);
 
   await page.goto('/');
 
   await fillInput(initialsInput, userData.fullName);
   await fillInput(emailInput, userData.email);
   await fillInput(passwordInput, userData.password);
+  await fillInput(confirmPasswordInput, userData.password);
   await checkCheckbox(policyTextCheckbox);
 
   let requestCount: number = 0;
@@ -111,6 +126,7 @@ test('Submit the registration form, get error, retry submission, and succeed', a
   await expect(initialsInput).toHaveValue(userData.fullName);
   await expect(emailInput).toHaveValue(userData.email);
   await expect(passwordInput).toHaveValue(userData.password);
+  await expect(confirmPasswordInput).toHaveValue(userData.password);
   await expect(policyTextCheckbox).toBeChecked();
 
   await signupButton.click();

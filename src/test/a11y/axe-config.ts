@@ -61,8 +61,10 @@ export const FORCED_RULES: RuleObject = {
  * this they would run anyway, report `incomplete`, and spam
  * `Not implemented: HTMLCanvasElement.prototype.getContext`.
  *
- * Both are covered for real by the route-level scan, which drives Chromium,
- * Firefox and WebKit.
+ * `link-in-text-block` is covered for real by the route-level scan, which drives
+ * Chromium, Firefox and WebKit. `color-contrast` runs there too, but every node
+ * it reports is dropped by the `*`-scoped route exception below, so SC 1.4.3 is
+ * enforced at neither layer until #423 lands.
  */
 export const JSDOM_UNSUPPORTED_RULES: RuleObject = {
   'color-contrast': { enabled: false },

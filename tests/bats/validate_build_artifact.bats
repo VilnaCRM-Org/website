@@ -12,17 +12,25 @@ SCRIPT_REL='scripts/ci/validate-build-artifact.sh'
 # Build a minimal-but-valid static export under $1 that satisfies every shape,
 # route-layout, file-count-floor and JS-payload assertion the validator makes.
 # $2 overrides the number of non-JS filler files used to clear the 200-file
-# floor (default 210); base files are 4 (index.html, 404.html, swagger.html,
-# and one .js), so the total file count is 4 + $2.
+# floor (default 210), so the total file count is 5 + $2.
+# Base files are 5 (index.html, 404.html, swagger.html, one .js, and
+# .well-known/security.txt), so a caller pinning an exact total must pass
+# filler = total - 5. Every base path is deliberately allow-list-compatible for
+# the fail-closed edge handler (issue #383): `_next` is an allowed directory and
+# css/js/html are allowed extensions, so the completeness gate the validator runs
+# last stays green for a well-formed fixture.
 make_valid_artifact() {
   local dir="$1"
   local filler="${2:-210}"
 
-  mkdir -p "$dir/_next/static/chunks"
+  mkdir -p "$dir/_next/static/chunks" "$dir/.well-known"
   printf '<!doctype html><title>Home</title>' >"$dir/index.html"
   printf '<!doctype html><title>404</title>' >"$dir/404.html"
   printf '<!doctype html><title>Swagger UI</title>' >"$dir/swagger.html"
   printf 'console.log(1);' >"$dir/_next/static/chunks/main.js"
+  # The REAL committed policy, because the validator now also asserts the exported
+  # copy is byte-identical to it — a synthetic fixture would not exercise that.
+  cp "$PROJECT_ROOT/public/.well-known/security.txt" "$dir/.well-known/security.txt"
 
   local i
   for ((i = 1; i <= filler; i++)); do
@@ -112,6 +120,102 @@ setup() {
   assert_output_contains 'export layout flipped'
 }
 
+@test "fails when the exported security.txt is missing (issue #383)" {
+  # public/.well-known/ is a dot-directory, exactly the kind of path an export or
+  # tooling change drops silently.
+  make_valid_artifact "$ARTIFACT"
+  rm -rf "$ARTIFACT/.well-known"
+
+  run_validator "$ARTIFACT"
+  [ "$status" -eq 1 ]
+  assert_output_contains 'security.txt'
+  assert_output_contains 'did not survive the export'
+}
+
+@test "fails when the exported security.txt has no Contact field" {
+  make_valid_artifact "$ARTIFACT"
+  printf 'Expires: 2027-06-30T23:59:59Z\n' >"$ARTIFACT/.well-known/security.txt"
+
+  run_validator "$ARTIFACT"
+  [ "$status" -eq 1 ]
+  assert_output_contains 'no Contact field'
+}
+
+@test "fails when the exported security.txt differs from the committed source" {
+  # Shape checks alone would pass a policy whose contacts were altered somewhere
+  # between the repository and the bucket, publishing a disclosure channel nobody
+  # reviewed.
+  make_valid_artifact "$ARTIFACT"
+  printf 'Contact: mailto:attacker@example.com\nExpires: 2027-06-30T23:59:59Z\nCanonical: https://vilnacrm.com/.well-known/security.txt\n' \
+    >"$ARTIFACT/.well-known/security.txt"
+
+  run_validator "$ARTIFACT"
+  [ "$status" -eq 1 ]
+  assert_output_contains 'byte-identical'
+}
+
+@test "fails when the committed source policy is missing" {
+  # Run a copy of the script from a tree with no public/.well-known/ above it, so
+  # the source it compares against does not exist. Skipping the comparison there
+  # would leave only the shape checks, which the altered-policy fixture above
+  # passes -- so the missing source has to be a hard failure, not a no-op.
+  local sandbox="$BATS_TEST_TMPDIR/scripts/ci"
+  mkdir -p "$sandbox"
+  cp "$PROJECT_ROOT/scripts/ci/"*.sh "$PROJECT_ROOT/scripts/ci/"*.mjs "$sandbox/"
+  make_valid_artifact "$ARTIFACT"
+
+  run bash "$sandbox/$(basename "$SCRIPT_REL")" "$ARTIFACT"
+  [ "$status" -eq 1 ]
+  assert_output_contains 'cannot be verified against its reviewed source'
+}
+
+@test "accepts a lowercase RFC 9116 field name" {
+  # RFC 9116 field names are case-insensitive; the exported file is compared to
+  # the source byte-for-byte, so exercise the case rule on its own.
+  make_valid_artifact "$ARTIFACT"
+  sed -i 's/^Contact:/contact:/' "$ARTIFACT/.well-known/security.txt"
+
+  run_validator "$ARTIFACT"
+  [ "$status" -eq 1 ]
+  # Fails on the byte-comparison, NOT on "no Contact field" -- proving the field
+  # matcher accepted the lowercase spelling.
+  assert_output_contains 'byte-identical'
+}
+
+@test "fails when a shipped path is blocked by the fail-closed edge allow-list" {
+  # The acceptance criterion's own example: an exported /secret.json would be
+  # 404ed in production by scripts/cloudfront_routing.js, and that must be caught
+  # here rather than at deploy time.
+  make_valid_artifact "$ARTIFACT"
+  printf '{}' >"$ARTIFACT/secret.json"
+
+  run_validator "$ARTIFACT"
+  [ "$status" -eq 1 ]
+  assert_output_contains 'blocked: /secret.json'
+}
+
+@test "fails when the export ships a browser source map" {
+  make_valid_artifact "$ARTIFACT"
+  printf '{"version":3}' >"$ARTIFACT/_next/static/chunks/main.js.map"
+
+  run_validator "$ARTIFACT"
+  [ "$status" -eq 1 ]
+  assert_output_contains 'source maps present'
+}
+
+@test "accepts nested paths under every allow-listed export directory" {
+  make_valid_artifact "$ARTIFACT"
+  mkdir -p "$ARTIFACT/images/swagger" "$ARTIFACT/layout/favicon" "$ARTIFACT/en/docs"
+  : >"$ARTIFACT/images/swagger/lock.svg"
+  : >"$ARTIFACT/layout/favicon/favicon.ico"
+  : >"$ARTIFACT/layout/favicon/browserconfig.xml"
+  : >"$ARTIFACT/en/docs/api.html"
+
+  run_validator "$ARTIFACT"
+  [ "$status" -eq 0 ]
+  assert_output_contains 'build-artifact: OK'
+}
+
 @test "fails when the export is below the file-count floor" {
   make_valid_artifact "$ARTIFACT" 0
 
@@ -122,7 +226,8 @@ setup() {
 }
 
 @test "passes at exactly the file-count floor (200 files)" {
-  make_valid_artifact "$ARTIFACT" 196
+  # 195 filler + the 5 base files = exactly the 200-file floor.
+  make_valid_artifact "$ARTIFACT" 195
 
   run_validator "$ARTIFACT"
   [ "$status" -eq 0 ]
@@ -130,7 +235,7 @@ setup() {
 }
 
 @test "fails one file below the floor (199 files)" {
-  make_valid_artifact "$ARTIFACT" 195
+  make_valid_artifact "$ARTIFACT" 194
 
   run_validator "$ARTIFACT"
   [ "$status" -eq 1 ]

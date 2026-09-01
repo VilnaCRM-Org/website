@@ -53,13 +53,19 @@ If you find an issue to work on, you are welcome to open a PR with a fix.
     it to [fork the repo](https://docs.github.com/en/desktop/contributing-and-collaborating-using-github-desktop/cloning-and-forking-repositories-from-github-desktop)!
 
 - Using the command line:
-  - [Fork the repo](https://docs.github.com/en/github/getting-started-with-github/fork-a-repo#fork-an-example-repository)
+  - [Fork the repo](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/fork-a-repo#forking-a-repository)
     so that you can make your changes without affecting the original project until
     you're ready to merge them.
 
 1. Install or update to **Docker** and **Docker compose**. For more information, see [the README](README.md).
 
-2. Create a working branch and start with your changes!
+2. Run `make install`. It installs into both trees, which is what the tooling
+   needs: the dev container keeps its `node_modules` in its own volume — that is
+   what every lint and test gate execs into — while the host copy is what your
+   editor's TypeScript server, `lint-staged` in the pre-commit hook, and any
+   `EXEC_MODE=host` run resolve against. Re-run it after a `bun.lock` change.
+
+3. Create a working branch and start with your changes!
 
 #### Maintain Makefile shell coverage
 
@@ -70,6 +76,9 @@ sync:
   either Bats-covered or already covered by a pull request workflow.
 - If the target is not already exercised by CI, add or update the relevant test in
   `tests/bats/`.
+- The same applies to a new policy script under `scripts/ci/`: give it its own
+  suite (`prod_guardrails.bats` and `check_security_txt.bats` are the fixture-driven
+  pattern to copy) rather than testing it only through the Makefile target.
 - Run `make test-bats`.
 
 #### Run the CI phases locally
@@ -103,8 +112,33 @@ removed.
   release, and sandbox workflows use `cancel-in-progress: false` — a production
   trigger must never be aborted mid-run, so newer pushes queue behind the
   current one.
-- **Caching.** Node jobs restore the Bun cache (`~/.bun/install/cache`, keyed on the
-  Node version and `bun.lock`) so installs are warm instead of cold.
+- **Container-always execution (issue #399).** The lint and test jobs run the same
+  `make <target>` you run locally, inside the same dev container. Each one checks
+  out, runs the `./.github/actions/dev-container` composite action — which builds
+  or restores the image through the BuildKit layer cache and starts the dev
+  service idle with `make ci-setup` — and then runs the target. No
+  `~/.bun/install/cache` restore and no host `bun install` remain, the one exception
+  being `contract-parity-testing`, whose layer boots Mockoon in-process and needs no
+  container (`ci-test-contract` is correspondingly the only `CI_TEST_TARGETS` entry
+  that skips `$(CI_TESTS)`). Otherwise the image is the single source of truth for the
+  runtime, so a CI failure reproduces locally with the identical command.
+  `dev-image-cache.yml` warms the shared layer cache on `main`. Four of them keep
+  `actions/setup-node` (`static-testing`, `dependency-cruiser`, `storybook-build`,
+  the `mutation-testing` shard) purely to pin the Node that runs the host-only
+  `generate-localization` prerequisite.
+
+  Staying on the host entirely: `bats-testing` and `commitlint`, which need
+  `bash`/`git` that the alpine image does not ship; `rust-code-analysis`, a
+  host-only Rust binary; and the prod-stack suites the issue scopes out —
+  `e2e-testing`, `visual-testing`, `memory-leak-testing`, `load-testing`,
+  `a11y-testing` and `performance-testing`. The last two also pass
+  `EXEC_MODE=host`: Lighthouse so its budgets keep measuring the path they were
+  calibrated against, and the accessibility gate because its two legs cannot
+  straddle the executor boundary — Jest's globalSetup writes the gitignored
+  `pages/i18n/localization.json`, so a containerised component leg would leave it
+  root-owned in the bind mount and the route leg's host `make start-prod` would
+  then fail with EACCES regenerating it.
+
 - **Matrices instead of serial steps.** The Playwright e2e suite splits across a
   Playwright `--shard` matrix (one balanced slice of the ~340 test runs per
   runner), Lighthouse runs `desktop` and `mobile` as parallel cells, the K6 load
@@ -129,6 +163,54 @@ The round-robin split is a total partition of `mutate`, so the union equals the
 full list and the sharded score is identical to an unsharded run — the gate is
 preserved, never relaxed. The merge job runs even when a shard fails, so the
 gate fails closed rather than passing vacuously.
+
+#### E2E flakes are detected, not retried away
+
+`playwright.config.ts` sets `retries: 2` in CI, so a spec that fails and then
+passes is reported green and the flake signal is thrown away. That is how the
+WebKit swagger flake in #290 reached the production CodePipeline. Two jobs in
+`e2e-testing.yml` recover the signal, both scoped to the specs your pull request
+actually changed:
+
+- **`e2e flake gate`** reads every shard's Playwright JSON report
+  (`test-results/results.json`) through
+  [`scripts/ci/flaky-report.ts`](scripts/ci/flaky-report.ts) and fails when a
+  changed spec carries Playwright's `flaky` status — i.e. it only passed on a
+  retry. Like the mutation merge gate, it runs even when a shard failed so it
+  cannot pass vacuously.
+- **`burn in changed e2e specs`** runs `make test-e2e-burnin` on those specs with
+  `--repeat-each=5 --retries=0`. Two or more failures out of five is a flake;
+  a single failure is tolerated so one-off infrastructure blips do not block a
+  pull request.
+
+Flaky specs you did **not** touch are reported as annotations rather than
+failures, so the pre-existing backlog does not block unrelated work; the nightly
+`e2e flake census` workflow repeats the whole suite off the PR path and records
+what it finds in an `e2e-flake`-labelled issue.
+
+If a burn-in goes red, fix the nondeterminism at its source. Adding a
+`waitForTimeout`, widening `retries`, or wrapping the assertion in a condition
+defeats the gate and is not an acceptable fix.
+
+#### Memory leaks fail the job
+
+`make test-memory-leak` used to run memlab and discard its findings, so a run
+that detected fifty leak clusters exited 0 exactly like a clean one. The runner
+now reads the clusters and exits non-zero, printing the retainer traces for the
+scenarios that failed.
+
+Clusters that already existed when the gate was armed are recorded in
+[`src/test/memory-leak/leak-baseline.json`](src/test/memory-leak/leak-baseline.json),
+each with a reason, a tracking issue, and a `validUntil` date — the gate fails
+once that date passes, so accepted debt cannot become permanent. An allowance is
+only ever for debt that predates the gate: if your change introduces a leak, fix
+the retainer.
+
+Cluster counts differ between environments — `swaggerInteractions` clusters at
+13 on a GitHub-hosted runner and 28–29 locally — so an allowance records the
+maximum seen anywhere. A run below its allowance therefore prints a `ratchet`
+notice rather than failing. Do not act on a single low reading: lowering an
+allowance to a CI-only figure turns every local run red.
 
 #### Dockerfile build performance
 
@@ -195,6 +277,69 @@ as a reviewed, in-repo change visible in the PR diff (or confirm the path belong
 outside the governed scope). Never silence the gate with a local override or a
 per-line disable.
 
+#### Workflow security (zizmor)
+
+Anything you change under `.github/workflows` is audited by
+[zizmor](https://docs.zizmor.sh) on every pull request through its own workflow,
+`workflow-security.yml`. Run it locally with `make lint-workflows` (host-only,
+Docker, deliberately outside `make lint`).
+
+The gate fails on medium-and-above findings reported with high confidence. In
+practice that means: pin every `uses:` to a full 40-character commit SHA with a
+trailing comment naming the tag that SHA **actually** points at — copy the tag
+verbatim, including whether upstream writes it `v1.5.0` or `1.5.0`, because
+zizmor compares the comment against the real tag and flags a mismatch —
+keep `permissions:` scoped to the job that needs them, never use an archived
+action, and never interpolate `${{ }}` into a `run:` body — pass values through
+`env:` and reference `"$VAR"`.
+
+If the gate fails, fix the workflow. Never add a `zizmor.yml` ignore rule, a
+`# zizmor: ignore[...]` comment, or lower `ZIZMOR_MIN_SEVERITY` /
+`ZIZMOR_MIN_CONFIDENCE` in the Makefile — those thresholds are a ratchet that
+only moves up as the remaining low-severity clusters are cleared.
+
+#### Code scanning (CodeQL)
+
+Two mechanisms gate CodeQL findings, and only one of them is visible in the diff.
+
+1. GitHub's native `CodeQL` check run, configured under **Settings → Code
+   security → Code scanning**. Its "alert severities that cause a pull request
+   check failure" setting is the default (errors plus critical/high).
+2. `scripts/ci/code-scanning-gate.sh`, the in-repo backstop appended to
+   `security-testing.yml`. It re-derives the same verdict from the code-scanning
+   API so the rule is reviewable, and — unlike the native check — it also fails a
+   push or scheduled run on `main`, which is what routes a finding to the
+   `ci-alert` tracking issue.
+
+On a pull request it subtracts the alert set already open on `main`, so inherited
+debt never fails somebody else's PR. Pull requests from forks skip it with a
+notice, because a fork's token cannot read the code-scanning API.
+
+Branch protection itself **cannot be committed**. The required check names are
+`CodeQL` and `Analyze (typescript)` — the latter is `name: Analyze` plus
+`matrix.language: ['typescript']`, so renaming the job or adding a language
+renames the check run and GitHub silently stops requiring it.
+`tests/bats/security_workflows.bats` pins the `Analyze (typescript)` half against drift.
+The `CodeQL` name comes from GitHub's native code-scanning integration and cannot be
+asserted from inside the repository, so verify it in Settings after any change there.
+
+To dismiss a genuine false positive, use the Security tab's dismiss flow — do not
+weaken the gate.
+
+#### Production safety guardrails
+
+`make lint-prod-guardrails` (inside `make lint`) enforces three invariants that
+otherwise only hold in production:
+
+- Every workflow that assumes an AWS role or cuts a release, on a
+  non-pull-request trigger, is listed under `on.workflow_run.workflows` in
+  `ci-health-alerts.yml`. **A workflow's `name:` is therefore load-bearing** — if
+  you rename one, update that list in the same commit or `make lint` goes red.
+- `scripts/cloudfront_routing.js` keeps its frozen allow-lists and its synthetic
+  404, and stays pinned inside the 100%-coverage `edge` Jest layer, so it cannot
+  regress to passing arbitrary paths to the S3 origin.
+- `next.config.js` does not enable `productionBrowserSourceMaps`.
+
 #### Upstream contracts (user-service)
 
 Every user-service contract this repo consumes — the GraphQL schema behind the
@@ -215,6 +360,33 @@ To bump the upstream version, change `USER_SERVICE_VERSION` and run `make
 update-contracts` — it re-fetches both artifacts and refreshes the spectral
 baseline. Commit the resulting diff; it is the reviewable record of what
 changed upstream.
+
+Two further gates keep the **mock** honest, because the whole Playwright suite
+talks to Mockoon rather than a real backend and a green e2e run therefore only
+proves the app agrees with the mock:
+
+- **`make test-contract` (blocking, every PR).** Boots Mockoon in-process from
+  the committed document and holds every documented operation's response against
+  it — status, media type, schema, and no property the schema never declares.
+  Its CI home is
+  [`contract-parity-testing.yml`](.github/workflows/contract-parity-testing.yml);
+  the status-check name a maintainer must add to the `main` required-checks
+  ruleset is **`contract parity testing / mock-contract-parity`** (branch
+  protection is a repository setting and cannot be committed).
+  It also validates the swagger e2e fixtures against the same schema and pins the
+  `@mockoon/*` libraries to the `@mockoon/cli` version `Mockoon.Dockerfile`
+  installs. When it goes red, fix the mock or the contract — never relax a rule.
+  If you bump one Mockoon pin, bump both in the same commit.
+- **`make lint-openapi` (advisory, nightly).** Reports breaking changes between
+  the committed baseline and the newest upstream **release** using a pinned,
+  SHA256-verified `oasdiff`. Upstream moving on is not a PR author's fault, so
+  [`openapi-drift.yml`](.github/workflows/openapi-drift.yml) files or refreshes an
+  `api-contract` tracking issue instead of failing a check, and closes it once
+  the baseline is current again. Like `lint-contracts` and `lint-metrics` it sits
+  outside `make lint` — it needs the network and a host binary.
+
+Both gates read the single committed baseline. Do not add a second copy of the
+spec: it would drift with nothing watching it.
 
 The baseline in [`contracts/spectral-baseline.json`](contracts/spectral-baseline.json)
 records defects in the upstream spec that this repo does not control. It is not
@@ -237,6 +409,23 @@ If you're unsure about how to proceed with your changes, you have two options:
 - **Contact your team lead** for guidance.
 - **Push your changes** to a branch and **open a pull request** — this will trigger
   an automated code review.
+
+### 🔗 Link Checking
+
+`.github/workflows/link-check.yml` runs [lychee](https://lychee.cli.rs/) in two legs, and
+they have deliberately different jobs:
+
+- **Offline (blocking, every PR).** Resolves relative links and `#fragment` anchors across
+  every git-tracked Markdown file, with external URLs skipped so a third party's outage can
+  never flake a required check. This is also the leg that rejects root-relative Markdown
+  links (`/some/path`) outright — keep them relative.
+- **External (advisory, Mondays).** Resolves external URLs too, over Markdown plus the built
+  `out/` export, and files or refreshes the _Weekly link check failures_ tracking issue
+  instead of blocking.
+
+Because the weekly leg reports rather than blocks, treat a noisy report as a bug in the leg:
+it is only useful while every entry is a real dead link. Fix the link, or fix the checker —
+never let phantom findings accumulate.
 
 ### 🤖 Automatic Code Review
 

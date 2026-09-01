@@ -14,7 +14,15 @@ export default {
     boxShadow: '1px 1px 41px 0px rgba(59, 68, 80, 0.05)',
     overflow: 'hidden',
 
-    maxHeight: '40.438rem',
+    // No maxHeight: the notification replaces the sign-up card in place, so it
+    // has to be exactly as tall as that card. `height: 100%` already resolves
+    // against the form wrapper, which the card sizes. The old
+    // `maxHeight: 40.438rem` was paired with `formContent.minHeight` of the same
+    // value, so it matched only while the form was at its minimum height —
+    // adding the confirm-password field made the card taller and left the
+    // notification ending short of the section, with a gap above the footer on
+    // every viewport wider than `sm` (#382 F4). The per-breakpoint `minHeight`
+    // values below remain as floors.
     maxWidth: '31.375rem',
 
     display: 'flex',

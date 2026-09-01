@@ -1,0 +1,24 @@
+[
+  {
+    "number": 20,
+    "state": "open",
+    "html_url": "https://github.com/VilnaCRM-Org/website/security/code-scanning/20",
+    "rule": {
+      "id": "js/regex-injection",
+      "severity": "warning",
+      "security_severity_level": "medium"
+    },
+    "most_recent_instance": { "location": { "path": "src/c.ts" } }
+  },
+  {
+    "number": 21,
+    "state": "open",
+    "html_url": "https://github.com/VilnaCRM-Org/website/security/code-scanning/21",
+    "rule": {
+      "id": "js/todo-comment",
+      "severity": "note",
+      "security_severity_level": null
+    },
+    "most_recent_instance": { "location": { "path": "src/d.ts" } }
+  }
+]

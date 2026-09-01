@@ -1,4 +1,4 @@
-import { fireEvent, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { UserEvent, userEvent } from '@testing-library/user-event';
 import { t } from 'i18next';
 
@@ -7,7 +7,15 @@ import { OnSubmitType } from '@/test/testing-library/fixtures/auth-test-helpers'
 
 import { expectNoA11yViolations } from '../a11y/expect-no-a11y-violations';
 
-import { testInitials, testEmail, testPassword } from './constants';
+import {
+  testInitials,
+  testEmail,
+  testPassword,
+  fullNameLabel,
+  emailLabel,
+  passwordLabel,
+  confirmPasswordLabel,
+} from './constants';
 import renderAuthForm from './fixtures/auth-form-helper';
 import { checkElementsInDocument, fillForm, getFormElements } from './utils';
 
@@ -30,6 +38,7 @@ interface GetElementsResult {
   fullNameInput: HTMLInputElement | null;
   emailInput: HTMLInputElement | null;
   passwordInput: HTMLInputElement | null;
+  confirmPasswordInput: HTMLInputElement | null;
   privacyCheckbox: HTMLInputElement | null;
 }
 
@@ -107,7 +116,7 @@ describe('AuthForm', () => {
 
       const requiredError: HTMLElement[] = queryAllByText(requiredText);
       expect(requiredError[0]).toBeInTheDocument();
-      expect(requiredError.length).toBe(3);
+      expect(requiredError.length).toBe(4);
       expect(privacyCheckbox).toHaveAttribute('aria-invalid', 'true');
       expect(errorMessage).not.toBeInTheDocument();
       expect(onSubmit).not.toHaveBeenCalled();
@@ -187,17 +196,18 @@ describe('AuthForm', () => {
     const user: UserEvent = userEvent.setup();
     const { getAllByText } = renderAuthForm();
 
-    const { fullNameInput, emailInput, passwordInput } = getFormElements();
+    const { fullNameInput, emailInput, passwordInput, confirmPasswordInput } = getFormElements();
 
     if (fullNameInput) await user.click(fullNameInput);
     if (emailInput) await user.click(emailInput);
     if (passwordInput) await user.click(passwordInput);
+    if (confirmPasswordInput) await user.click(confirmPasswordInput);
     await userEvent.tab();
 
     await waitFor(() => {
       const requiredError: HTMLElement[] = getAllByText(requiredText);
       expect(requiredError[0]).toBeInTheDocument();
-      expect(requiredError.length).toBe(3);
+      expect(requiredError.length).toBe(4);
     });
   });
   it('should render privacy policy links with the correct URLs', () => {
@@ -265,7 +275,7 @@ describe('AuthForm', () => {
 
       const requiredError: HTMLElement[] = getAllByText(requiredText);
       expect(requiredError[0]).toBeInTheDocument();
-      expect(requiredError.length).toBe(3);
+      expect(requiredError.length).toBe(4);
     });
   });
   it('should have isInvalid true for checkbox if it is not checked and other fields are empty', async () => {
@@ -278,7 +288,7 @@ describe('AuthForm', () => {
 
       const requiredError: HTMLElement[] = getAllByText(requiredText);
       expect(requiredError[0]).toBeInTheDocument();
-      expect(requiredError.length).toBe(3);
+      expect(requiredError.length).toBe(4);
     });
   });
   it('should have isInvalid true when Privacy checkbox is not checked on submit', async () => {
@@ -293,7 +303,7 @@ describe('AuthForm', () => {
 
       const requiredError: HTMLElement[] = getAllByText(requiredText);
       expect(requiredError[0]).toBeInTheDocument();
-      expect(requiredError.length).toBe(3);
+      expect(requiredError.length).toBe(4);
     });
     expect(privacyCheckbox).toBeInTheDocument();
   });
@@ -312,6 +322,85 @@ describe('AuthForm', () => {
       expect(privacyCheckbox).not.toHaveAttribute('aria-invalid');
     });
   });
+  // ---------------------------------------------------------------------------
+  // Credential-hygiene hardening (#382 F3/F4).
+  // ---------------------------------------------------------------------------
+  it('exposes every credential field through its own label', () => {
+    const { getByLabelText } = renderAuthForm();
+
+    // Before the id was forwarded to the rendered input, none of these
+    // resolved: the labels pointed at elements that did not exist.
+    checkElementsInDocument(
+      getByLabelText(fullNameLabel),
+      getByLabelText(emailLabel),
+      getByLabelText(passwordLabel),
+      getByLabelText(confirmPasswordLabel)
+    );
+  });
+
+  it('marks the credential fields with the autofill tokens a password manager needs', () => {
+    const { getByLabelText } = renderAuthForm();
+
+    expect(getByLabelText(fullNameLabel)).toHaveAttribute('autocomplete', 'name');
+    expect(getByLabelText(emailLabel)).toHaveAttribute('autocomplete', 'email');
+    expect(getByLabelText(passwordLabel)).toHaveAttribute('autocomplete', 'new-password');
+    expect(getByLabelText(confirmPasswordLabel)).toHaveAttribute('autocomplete', 'new-password');
+  });
+
+  it('describes the password field with the full policy, not only the tooltip', () => {
+    const { getByLabelText, getByText } = renderAuthForm();
+
+    const describedBy: string | null =
+      getByLabelText(passwordLabel).getAttribute('aria-describedby');
+
+    expect(describedBy).toContain('password-requirements');
+    expect(getByText(t('sign_up.form.password_input.requirements'))).toBeInTheDocument();
+  });
+
+  it('blocks submission and reports a mismatched confirmation', async () => {
+    renderAuthForm({ onSubmit });
+
+    fillForm(testInitials, testEmail, testPassword, true, `${testPassword}-typo`);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(t('sign_up.form.confirm_password_input.error_mismatch'))
+      ).toBeInTheDocument();
+      expect(onSubmit).not.toHaveBeenCalled();
+    });
+  });
+
+  it('submits the matching confirmation as part of the client form payload', async () => {
+    renderAuthForm({ onSubmit });
+
+    fillForm(testInitials, testEmail, testPassword, true);
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalled();
+      expect(onSubmit.mock.calls[0]?.[0]).toMatchObject({
+        Password: testPassword,
+        ConfirmPassword: testPassword,
+      });
+    });
+
+    expect(
+      screen.queryByText(t('sign_up.form.confirm_password_input.error_mismatch'))
+    ).not.toBeInTheDocument();
+  });
+
+  it('rejects a password that satisfies every rule except lowercase', async () => {
+    renderAuthForm({ onSubmit });
+
+    fillForm(testInitials, testEmail, 'PASSWORD1', true);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(t('sign_up.form.password_input.error_lowercase'))
+      ).toBeInTheDocument();
+      expect(onSubmit).not.toHaveBeenCalled();
+    });
+  });
+
   it('displays validation errors for incorrect input values and correct for checkbox', async () => {
     const { queryByText } = renderAuthForm();
     const { privacyCheckbox, passwordInput, emailInput, fullNameInput } = getFormElements();

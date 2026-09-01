@@ -1,0 +1,7 @@
+[
+  {
+    "ref": "refs/pull/9/merge",
+    "commit_sha": "HEADSHA",
+    "tool": { "name": "CodeQL" }
+  }
+]

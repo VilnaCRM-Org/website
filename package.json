@@ -41,6 +41,8 @@
     "@memlab/api": "^2.0.3",
     "@memlab/heap-analysis": "^2.0.3",
     "@microsoft/api-extractor": "^7.58.7",
+    "@mockoon/commons": "9.2.0",
+    "@mockoon/commons-server": "9.2.0",
     "@next/bundle-analyzer": "^16.2.6",
     "@next/env": "^16.2.6",
     "@next/eslint-plugin-next": "^16.2.6",
@@ -70,8 +72,6 @@
     "bats": "^1.13.0",
     "dependency-cruiser": "^17.3.7",
     "eslint": "^9.39.4",
-    "eslint-config-airbnb": "^19.0.4",
-    "eslint-config-airbnb-typescript": "^18.0.0",
     "eslint-config-next": "^16.2.6",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-eslint-comments": "^3.2.0",
@@ -98,8 +98,6 @@
     "serve": "^14.2.6",
     "terser-webpack-plugin": "^5.6.1",
     "ts-jest": "^29.4.11",
-    "ts-node": "^10.9.2",
-    "tsx": "^4.22.4",
     "typescript": "^6.0.3",
     "wait-on": "^9.0.10"
   },
@@ -123,5 +121,5 @@
     ],
     "*.{json,css,scss,md}": "prettier --write --ignore-path .prettierignore"
   },
-  "version": "0.3.0"
+  "version": "1.6.0"
 }

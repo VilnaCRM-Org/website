@@ -52,6 +52,9 @@ next-env.d.ts
 storybook-static/
 storybook-static-ci/
 /test-results/
+# Burn-in reports sit outside test-results so the flake grader never sweeps both cohorts
+# into one recursive walk (see E2E_BURNIN_REPORT_DIR in the Makefile).
+/burn-in-results/
 /playwright-report/
 /blob-report/
 /playwright/.cache/
@@ -88,3 +91,11 @@ app.log
 /bmalph/
 /.ralph/
 /.claude/commands/
+
+# draw.io diagrams. An AWS IoT reference architecture unrelated to this
+# S3 + CloudFront static export was committed at the repo root and later moved to
+# docs/ (issue #383); internal infrastructure diagrams aid attacker recon and
+# belong in a private design store, not a public repository.
+*.drawio
+*.drawio.bkp
+*.drawio.dtmp

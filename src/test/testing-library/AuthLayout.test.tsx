@@ -421,7 +421,7 @@ describe('AuthLayoutWithNotification', () => {
     });
   });
   it('does not reset the form when notification type is error', async () => {
-    const { getByText } = renderAuthLayout([mockInternalServerErrorResponse]);
+    const { getByText, queryByText } = renderAuthLayout([mockInternalServerErrorResponse]);
 
     fillForm(testInitials, testEmail, testPassword, true);
     const { fullNameInput, emailInput, passwordInput, privacyCheckbox } = getFormElements();
@@ -433,10 +433,13 @@ describe('AuthLayoutWithNotification', () => {
 
     await waitFor(() => {
       const errorBox: HTMLElement = getByText(errorTitleText);
-      const serverError: HTMLElement = getByText('Internal Server Error.');
 
       expect(errorBox).toBeVisible();
-      expect(serverError).toBeInTheDocument();
+      // The unmapped server wording is replaced by a generic localized message
+      // so the form cannot be used to enumerate accounts or leak internals
+      // (#378 F2).
+      expect(getByText(messages[CLIENT_ERROR_KEYS.WENT_WRONG])).toBeInTheDocument();
+      expect(queryByText('Internal Server Error.')).not.toBeInTheDocument();
     });
   });
   it('shows success notification after successful authentication', async () => {

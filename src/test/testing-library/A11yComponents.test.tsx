@@ -104,13 +104,13 @@ describe('component accessibility (WCAG 2.1 AA)', () => {
       </UiButton>
     );
 
-    // `JSDOM_UNSUPPORTED_RULES` is merged into every run here for the same reason
-    // `expectNoA11yViolations` applies it: a tag-based `runOnly` overrides axe's
-    // global `enabled` flag, so without it `color-contrast` and
-    // `link-in-text-block` execute in jsdom, land in `incomplete`, and emit
-    // `Not implemented: HTMLCanvasElement.prototype.getContext`. This test runs
-    // axe twice, so the noise was doubled — and a meta-test that validates the
-    // gate config has to use it, not diverge from it. It cannot affect the
+    // The tag `runOnly` below would otherwise override jest-axe's global
+    // disable of the rules jsdom cannot evaluate, so pass them on every run, in
+    // the same merge order `expectNoA11yViolations` uses — a meta-test that
+    // validates the gate config must not diverge from it. Without this,
+    // `color-contrast` and `link-in-text-block` run in jsdom, land in
+    // `incomplete`, and spam `HTMLCanvasElement.prototype.getContext` warnings
+    // twice over, because this test runs axe twice. It cannot affect the
     // assertions below: neither colour rule is `label-content-name-mismatch`.
     //
     // One `getContext` warning survives on purpose. It comes from
@@ -121,7 +121,7 @@ describe('component accessibility (WCAG 2.1 AA)', () => {
     const evaluatedRules: (rules?: RuleObject) => Promise<string[]> = async rules => {
       const results: AxeResults = (await axe(container, {
         runOnly: { type: 'tag', values: [...WCAG_AA_TAGS] },
-        rules: { ...JSDOM_UNSUPPORTED_RULES, ...rules },
+        rules: { ...rules, ...JSDOM_UNSUPPORTED_RULES },
       })) as AxeResults;
 
       return [...results.violations, ...results.passes, ...results.incomplete].map(

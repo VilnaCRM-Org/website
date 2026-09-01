@@ -44,12 +44,17 @@ WCAG 2.1 AA tag and are flagged `experimental`, so a plain tag-based run silentl
 executes them — including `label-content-name-mismatch`, which is the **only** rule in
 axe-core tagged `wcag21a`.
 Without an override, that whole tag matches nothing. `FORCED_RULES` in
-`src/test/a11y/axe-config.ts` re-enables them, and a unit test asserts the list stays correct
-against the installed axe-core:
+`src/test/a11y/axe-config.ts` re-enables **three** of those five, and a unit test asserts the
+list stays correct against the installed axe-core:
 
 - `label-content-name-mismatch` — SC 2.5.3, Label in Name.
 - `td-has-header` — SC 1.3.1, on data tables.
 - `table-fake-caption` — SC 1.3.1.
+
+The remaining two are left disabled on purpose, so the gate does not claim them:
+`p-as-heading` reports on subtitle typography this site uses deliberately, and
+`css-orientation-lock` parses every stylesheet and returns non-deterministic `incomplete`
+results. Both reasons are recorded next to `FORCED_RULES` itself.
 
 ## The three enforced layers
 
@@ -68,7 +73,9 @@ Every layer runs on every pull request and every one must pass.
 labelling. jsdom has no layout or paint engine, so `color-contrast` and `link-in-text-block`
 cannot produce a trustworthy result there and are disabled explicitly. A green component test
 is necessary, never sufficient: every criterion that depends on how the page actually renders
-belongs to the route layer.
+belongs to the route layer. `link-in-text-block` is enforced there for real; `color-contrast`
+is not, because it is waived on every registered route until #423 lands — see
+[Current exceptions](#current-exceptions).
 
 ### Route level
 
@@ -82,7 +89,9 @@ against the real production build.
 - Keyboard: `expectKeyboardOperable(page)` in `src/test/a11y/keyboard.ts` walks the route with
   Tab alone and asserts focus keeps moving (SC 2.1.2, keyboard traps) and follows DOM order
   (SC 2.4.3). axe ships no keyboard-trap rule at all, so this is coverage the scan structurally
-  cannot provide.
+  cannot provide. The sweep is capped at the first 120 tab positions of a route
+  (`MAX_SWEEP_STEPS`), so on a longer route those two criteria are asserted over that prefix
+  rather than the whole page.
 - Command: `make test-a11y-routes`.
 
 ### Interaction states
@@ -192,9 +201,12 @@ Treat these as manual review items on any change that touches UI:
 - Screen-reader output and reading order.
 - Whether alternative text is _correct_, not merely present.
 - Focus visibility and focus-order sanity beyond DOM order.
-- Contrast in hover, focus, active, disabled and placeholder states. No scan sees them: the
-  route scan measures a page at rest, and the interaction-state scans see only the states they
-  are registered for.
+- Contrast, in every state. Default-state contrast is waived on all three registered routes
+  until #423 lands, and hover, focus, active, disabled and placeholder contrast is never
+  scanned at all — the route scan sees a page at rest, and the interaction-state scans see only
+  the states they are registered for.
+- Keyboard traps and focus-order defects past the first 120 tab positions of a route, which is
+  where the Tab sweep stops.
 - Reflow and zoom. The Playwright projects are desktop-only; the only scan at a mobile viewport
   is the open navigation drawer, which resizes the page itself.
 - Moderate and minor findings at an interaction state. They are attached to the Playwright
@@ -262,6 +274,15 @@ than includes the visible "Authorize" text in the authorize dialog, a header row
 `<td class="col_header">` instead of `<th>` in the responses table, and the unlabelled servers
 select (#424, #433). All are tracked for burn-down rather than waived quietly, and the fix
 belongs upstream — not in a DOM patch layered over the widget.
+
+Be explicit about what the first row costs: **SC 1.4.3, Contrast (Minimum), is currently
+enforced at neither layer.** The component layer disables `color-contrast` because jsdom has no
+paint engine, and the route layer waives it with a `*` scope on every route in the registry
+until #423 lands. The WCAG 2.1 AA target above therefore excludes contrast today. The
+Lighthouse accessibility score does not fill the gap — it is a weighted average over two URLs
+with no per-rule pass/fail, and its budgets were baselined with these failures already present.
+Closing #423 is what restores the criterion; widening the waiver, or adding a route to it, is
+not.
 
 Interaction-state scanning also found one violation in **our own** code, which was fixed rather
 than waived: the mobile drawer passed `role="menu"` to MUI's `Drawer`, which forwards it to the
