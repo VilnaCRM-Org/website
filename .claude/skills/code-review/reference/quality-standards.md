@@ -27,17 +27,17 @@ a review. All commands are website Makefile targets run from the repo root.
 Categorize each comment, route it to the companion skill that owns the concern, then run
 the suite that actually exercises the change.
 
-| Category               | Route / action                            | Verify with                  |
-| ---------------------- | ----------------------------------------- | ---------------------------- |
-| Committable suggestion | Apply if correct for nearby code          | `CI=1 make test-unit-client` |
-| Bug — client behavior  | Failing test in jsdom, then fix           | `CI=1 make test-unit-client` |
-| Bug — Apollo resolver  | Failing test in node env, then fix        | `CI=1 make test-unit-server` |
-| Bug — user flow        | Reproduce end to end (Mockoon)            | `make test-e2e`              |
-| UI or styling change   | Inspect the snapshot diff                 | `make test-visual`           |
-| Architecture concern   | `code-organization` skill                 | `make lint-deps`             |
-| Complexity concern     | `complexity-management` skill             | qlty `[smells]` bot          |
-| Test gap               | Add cases per `agents.md` coverage policy | the touched suite            |
-| Question               | Clarify the code or answer in the thread  | `make lint`                  |
+| Category               | Route / action                            | Verify with             |
+| ---------------------- | ----------------------------------------- | ----------------------- |
+| Committable suggestion | Apply if correct for nearby code          | `make test-unit-client` |
+| Bug — client behavior  | Failing test in jsdom, then fix           | `make test-unit-client` |
+| Bug — Apollo resolver  | Failing test in node env, then fix        | `make test-unit-server` |
+| Bug — user flow        | Reproduce end to end (Mockoon)            | `make test-e2e`         |
+| UI or styling change   | Inspect the snapshot diff                 | `make test-visual`      |
+| Architecture concern   | `code-organization` skill                 | `make lint-deps`        |
+| Complexity concern     | `complexity-management` skill             | qlty `[smells]` bot     |
+| Test gap               | Add cases per `agents.md` coverage policy | the touched suite       |
+| Question               | Clarify the code or answer in the thread  | `make lint`             |
 
 Architecture findings (cross-feature imports, importing past a feature's `index.ts`
 barrel, shared layers reaching into `src/features`) are encoded as real
@@ -70,7 +70,7 @@ Cite concrete checks you actually ran, narrowest first:
 
 ```bash
 make format
-CI=1 make test-unit-client
+make test-unit-client
 make test-e2e
 make lint
 ```

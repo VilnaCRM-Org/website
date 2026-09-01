@@ -125,9 +125,10 @@ make lint
 
 `make format` (Prettier) runs before `make lint` (ESLint + TypeScript +
 markdownlint + dependency-cruiser). Any unit suite runs locally without Docker
-when prefixed with `CI=1` (for example `CI=1 make test-unit-client`). If a
-deliberate, reviewed UI change makes screenshots stale, regenerate them with
-`make test-visual-update` and review the diff before committing.
+when prefixed with `EXEC_MODE=host` (for example
+`EXEC_MODE=host make test-unit-client`). If a deliberate, reviewed UI change
+makes screenshots stale, regenerate them with `make test-visual-update` and
+review the diff before committing.
 
 ## Related Guides
 

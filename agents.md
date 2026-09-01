@@ -165,8 +165,8 @@ pass. Run the layer commands you touched, then the project lint gate.
 
 ```bash
 make format                  # Prettier formatting (run before lint)
-CI=1 make test-unit-client   # Client unit suite (jsdom)
-CI=1 make test-unit-server   # Server unit suite (node)
+make test-unit-client        # Client unit suite (jsdom)
+make test-unit-server        # Server unit suite (node)
 make test-contract           # Mockoon mock vs. the committed OpenAPI contract
 make test-e2e                # User-facing flows (for UI or behavior changes)
 make test-visual             # Visual regression (for UI or styling changes)
@@ -175,9 +175,11 @@ make lint                    # Full gate: ESLint, TypeScript, markdownlint, deps
 make lint-contracts          # Upstream contracts (when .env pins or gql documents change)
 ```
 
-Run only the suites the change affects, but never skip a suite that does apply. Any unit
-command runs locally WITHOUT Docker when prefixed with `CI=1` (for example,
-`CI=1 make test-unit-all`). If a deliberate, reviewed UI change makes visual baselines
+Run only the suites the change affects, but never skip a suite that does apply. Every unit
+command runs inside the dev container — the same command CI runs — and starts that
+container if it is not already up. Prefix with `EXEC_MODE=host` to run it on the host
+instead (for example, `EXEC_MODE=host make test-unit-all`), which needs a host
+`bun install`. If a deliberate, reviewed UI change makes visual baselines
 stale, regenerate them with `make test-visual-update` and review the diff before committing.
 
 ## Behavior-First Assertions

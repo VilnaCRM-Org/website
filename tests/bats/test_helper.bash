@@ -55,6 +55,20 @@ if [ "$1" = "create" ]; then
   exit 0
 fi
 
+# ensure-dev's foreign-checkout preflight (check-dev-container-bind.sh) asks for
+# the dev container's /app bind source. Answer with the directory make is running
+# from -- "bound to THIS checkout", the state every Makefile test assumes. A bare
+# `exit 0` here would read as "the container exists with no /app bind", which the
+# guard deliberately refuses. Override FAKE_DOCKER_APP_BIND to model a foreign
+# checkout, or FAKE_DOCKER_INSPECT_EXIT=1 to model no such container.
+if [ "$1" = "inspect" ]; then
+  if [ "${FAKE_DOCKER_INSPECT_EXIT:-0}" != "0" ]; then
+    exit "${FAKE_DOCKER_INSPECT_EXIT}"
+  fi
+  printf '%s' "${FAKE_DOCKER_APP_BIND-$PWD}"
+  exit 0
+fi
+
 if [ "$1" = "compose" ]; then
   for arg in "$@"; do
     if [ "$arg" = "ps" ]; then

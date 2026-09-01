@@ -36,13 +36,24 @@ and Markdown (honoring `.prettierignore`). `make lint` never mutates; it fails i
 anything is off. Formatting before linting means the gate validates already-formatted
 code, so a Prettier rewrite can never invalidate a green run.
 
-The aggregate `make lint` is `lint-next` + `lint-tsc` + `lint-md` + `lint-deps`. The
-rust-code-analysis metrics gate (`make lint-metrics`) is a **separate, host-only** gate
-(delivered by issue #224); it is intentionally not part of `make lint`. Run it
-explicitly when a change to `src/` could grow complexity.
+The aggregate `make lint` is ten prerequisites: `generate-localization` + `lint-next` +
+`lint-tsc` + `lint-md` + `lint-deps` + `lint-api-versions` + `lint-docker-policy` +
+`lint-headers` + `lint-security-txt` + `lint-prod-guardrails`. The rust-code-analysis
+metrics gate (`make lint-metrics`) is a
+**separate, host-only** gate (delivered by issue #224); it is intentionally not part of
+`make lint`. Run it explicitly when a change to `src/` could grow complexity.
 
-Locally, prefix any gate with `CI=1` to run it directly without Docker (for example
-`CI=1 make lint-next`).
+The seven npm-tool `make lint` gates — `lint-next`, `lint-tsc`, `lint-md`, `lint-deps`,
+`lint-api-versions`, `lint-headers` and `lint-prod-guardrails` — run inside the dev
+container by default, locally and in CI alike; prefix with `EXEC_MODE=host` to run one
+directly on the host instead (for example `EXEC_MODE=host make lint-next`), which needs a
+host `bun install`. The aggregate's other three prerequisites are host-only in both modes
+and ignore `EXEC_MODE`, each for its own reason: `generate-localization` writes the
+gitignored i18n bundle, which the root-running container would leave root-owned in the
+bind mount; `lint-docker-policy` is a self-contained shell script whose subject includes
+the dev image it would otherwise exec into; and `lint-security-txt` is pure bash over the
+committed RFC 9116 file. None of the three needs `node_modules`. `lint-metrics` is
+host-only too, and sits outside the aggregate entirely.
 
 ## Fix Each Gate At Its Source
 
@@ -64,6 +75,9 @@ Locally, prefix any gate with `CI=1` to run it directly without Docker (for exam
   shared UI from importing features (`no-shared-layers-to-features`,
   `no-shared-ui-to-features`), and keep feature directories kebab-case
   (`src-feature-name-kebab-case`). Move the code instead of relaxing the rule.
+- **API version invariant** (`make lint-api-versions`) — every user-service artifact must
+  derive from the single `USER_SERVICE_VERSION` pin. Move that one pin; never hardcode a
+  tag in a consumer URL or introduce a second version variable to make the check pass.
 - **Metrics gate** (`make lint-metrics`) — Mozilla rust-code-analysis enforces complexity
   budgets from `config/metrics-policy.json`. Reduce
   the complexity (extract a helper, use a typed lookup map, split a file by owner); never

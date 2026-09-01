@@ -38,26 +38,17 @@ jobs:
         with:
           persist-credentials: false
 
+      # `make test-mutation-shard` reaches the host-only `generate-localization` target, which
+      # regenerates the gitignored pages/i18n/localization.json bundle. It imports
+      # nothing outside node:fs/node:path, so this pins the Node version and
+      # nothing else — no dependency cache and no package-manager install.
       - name: Set up Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: '.nvmrc'
 
-      - name: Cache Bun cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.bun/install/cache
-          key: ${{ runner.os }}-bun-${{ hashFiles('.nvmrc') }}-${{ hashFiles('**/bun.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-bun-${{ hashFiles('.nvmrc') }}-
-
-      - name: Setup Bun and install dependencies
-        run: |
-          # Install the exact Bun pinned in package.json's packageManager field,
-          # so the version is declared in exactly one place. Corepack does not
-          # manage Bun, so it is installed globally via `npm install -g`.
-          npm install -g "$(node -p "require('./package.json').packageManager.split('+')[0]")"
-          bun install --frozen-lockfile
+      - name: Start the dev container
+        uses: ./.github/actions/dev-container
 
       - name: Run mutation shard
         env:
@@ -90,11 +81,9 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Set up Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version-file: '.nvmrc'
-
+      # Kept ahead of the container build: when a shard already failed there is
+      # nothing to merge, and the gate should fail immediately rather than after
+      # provisioning an image it will never use.
       - name: Fail if any mutation shard did not succeed
         if: needs.shard.result != 'success'
         env:
@@ -103,21 +92,8 @@ jobs:
           echo "::error::Mutation shards did not all succeed (result=$SHARD_RESULT); failing the gate."
           exit 1
 
-      - name: Cache Bun cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.bun/install/cache
-          key: ${{ runner.os }}-bun-${{ hashFiles('.nvmrc') }}-${{ hashFiles('**/bun.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-bun-${{ hashFiles('.nvmrc') }}-
-
-      - name: Setup Bun and install dependencies
-        run: |
-          # Install the exact Bun pinned in package.json's packageManager field,
-          # so the version is declared in exactly one place. Corepack does not
-          # manage Bun, so it is installed globally via `npm install -g`.
-          npm install -g "$(node -p "require('./package.json').packageManager.split('+')[0]")"
-          bun install --frozen-lockfile
+      - name: Start the dev container
+        uses: ./.github/actions/dev-container
 
       - name: Download shard reports
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1

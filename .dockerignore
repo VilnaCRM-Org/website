@@ -3,6 +3,12 @@
 .vscode
 .stryker-tmp
 
+# The `base` stage installs /app/node_modules itself; without this the
+# `build` stage's `COPY . .` would overwrite it with the host tree — whose
+# native binaries are built for the developer's platform, not the image's —
+# and upload ~1.5 GB of context on every build.
+node_modules
+
 coverage
 playwright-report
 stryker.log
