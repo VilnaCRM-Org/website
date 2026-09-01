@@ -216,6 +216,15 @@ container; its online audits reach the GitHub API). Each has its own workflow �
 precisely because they are hermetic — they read only committed files, with no network, no
 host binary and no Docker.
 
+Run `make format` before `make lint`; formatting is intentionally separate from the lint
+verification suite. Git hooks are managed by Husky. CI phases are mirrored locally by
+`make ci-lint`, `make ci-test`, and `make ci` (see the Makefile's CI orchestration
+section). Use `make pr-comments PR=<num> FORMAT=<text|json|markdown>` to fetch unresolved
+PR review comments.
+
+Never satisfy a gate with `eslint-disable`, `prettier-ignore`, a markdownlint disable, or a
+lowered threshold — fix the root cause.
+
 ### Contract supply chain (issue #376)
 
 Every user-service contract comes from the single `USER_SERVICE_VERSION` pin in `.env`
@@ -229,15 +238,6 @@ in a spec `description`/`title`/`summary` is rejected at ingestion rather than s
 
 Refresh artifacts and digests together with `make update-contracts` — never hand-edit
 `checksums.json`, and never loosen the ref check to accept a branch.
-
-Run `make format` before `make lint`; formatting is intentionally separate from the lint
-verification suite. Git hooks are managed by Husky. CI phases are mirrored locally by
-`make ci-lint`, `make ci-test`, and `make ci` (see the Makefile's CI orchestration
-section). Use `make pr-comments PR=<num> FORMAT=<text|json|markdown>` to fetch unresolved
-PR review comments.
-
-Never satisfy a gate with `eslint-disable`, `prettier-ignore`, a markdownlint disable, or a
-lowered threshold — fix the root cause.
 
 ### API contract parity (issue #350)
 

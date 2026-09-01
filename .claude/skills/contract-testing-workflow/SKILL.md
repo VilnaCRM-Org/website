@@ -123,9 +123,11 @@ reviewable commit. Never hand-edit `checksums.json` to match a modified artifact
 that is the one move the gate exists to catch.
 
 **`USER_SERVICE_VERSION="…" is not an immutable ref`** — the pin was repointed at
-something that floats (`main`, `HEAD`, a short SHA). Use a `vMAJOR.MINOR.PATCH`
-tag or a full 40-character commit SHA, so the committed digests keep meaning
-something.
+something that floats (`main`, `HEAD`, a short SHA). The integrity layer accepts
+either a `vMAJOR.MINOR.PATCH` tag or a full 40-character commit SHA, so the
+committed digests keep meaning something. Take the tag: `make lint-api-versions`
+(above) is the stricter of the two gates and runs on every PR, so an exact
+`vMAJOR.MINOR.PATCH` tag is the only spelling that passes both.
 
 **`Upstream spec carries HTML markup at $…`** — `make update-contracts` refused to
 vendor a spec whose `description`/`title`/`summary` contains a real HTML element.
@@ -142,8 +144,10 @@ or bump the pin if the field genuinely landed upstream.
 
 ## Bumping the pin
 
-1. Edit `USER_SERVICE_VERSION` in `.env` — nowhere else. It must stay an
-   immutable ref: a `vMAJOR.MINOR.PATCH` tag or a full 40-character commit SHA.
+1. Edit `USER_SERVICE_VERSION` in `.env` — nowhere else. It must be an exact
+   `vMAJOR.MINOR.PATCH` release tag — that is what `make lint-api-versions`
+   enforces on every PR, and it satisfies the integrity layer's broader
+   immutable-ref rule (tag **or** 40-character commit SHA) at the same time.
 2. `make update-contracts` — re-fetches both artifacts, re-records their digests
    in `checksums.json`, and refreshes the spectral baseline.
 3. `make lint-contracts` — expect green.

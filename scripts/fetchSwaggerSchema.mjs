@@ -198,7 +198,7 @@ function assertStringIsSafe(value, here) {
  * paper over. Failing closed keeps the committed contract provably markup-free
  * without ever mangling upstream prose.
  *
- * See the note above `LINK_KEYS` for why this checks every string rather than a
+ * See the note above `LINK_PATHS` for why this checks every string rather than a
  * curated set of rendered fields.
  */
 export function assertNoMarkup(node, path = '$') {
