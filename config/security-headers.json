@@ -1,0 +1,12 @@
+{
+  "policyName": "vilnacrm-website-security-headers",
+  "documentation": "docs/security-headers.md",
+  "appliedBy": ["scripts/cloudfront_security_headers.js", "scripts/cloudfront_routing.js"],
+  "headers": {
+    "content-security-policy": "frame-ancestors 'none'",
+    "x-frame-options": "DENY",
+    "x-content-type-options": "nosniff",
+    "referrer-policy": "strict-origin-when-cross-origin",
+    "strict-transport-security": "max-age=63072000; includeSubDomains; preload"
+  }
+}

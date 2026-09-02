@@ -127,10 +127,13 @@ before executing. Example: for PR review work, read
 
 ### Step 4: Follow the execution steps
 
-Run every command as a Makefile target from the repo root so behavior matches CI.
-Unit suites run locally without Docker when prefixed with `CI=1` (for example
-`CI=1 make test-unit-all`); the heavier suites (e2e, visual, memory-leak, load,
-Lighthouse) are Docker-backed and the Makefile starts the prod stack for you.
+Run every command as a Makefile target from the repo root so behavior matches CI —
+`EXEC_MODE=container` is the default executor, locally and in CI alike, and unit
+suites start the dev container themselves if it is not already running.
+`EXEC_MODE=host` is the escape hatch that runs a target on the host instead (for
+example `EXEC_MODE=host make test-unit-all`); it needs a host `bun install`. The
+heavier suites (e2e, visual, memory-leak, load, Lighthouse) are Docker-backed and the
+Makefile starts the prod stack for you.
 
 ### Step 5: Load supporting files only when needed
 
@@ -360,8 +363,8 @@ Each skill directory holds a `SKILL.md` plus optional `reference/`, `examples/`,
 - Read the whole `SKILL.md` before executing, and follow its steps in order.
 - Run `make format` before `make lint`.
 - Respect protected thresholds and the rust-code-analysis complexity gate.
-- Use Makefile targets so behavior matches CI; prefix unit suites with `CI=1` for
-  local non-Docker runs.
+- Use Makefile targets so behavior matches CI; container is the default executor,
+  and `EXEC_MODE=host` is the escape hatch for local non-Docker runs.
 
 ### Do Not
 

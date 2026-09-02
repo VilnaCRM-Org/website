@@ -1,0 +1,46 @@
+[
+  {
+    "number": 7,
+    "state": "open",
+    "html_url": "https://github.com/VilnaCRM-Org/website/security/code-scanning/7",
+    "rule": {
+      "id": "js/xss",
+      "severity": "error",
+      "security_severity_level": "high"
+    },
+    "most_recent_instance": { "location": { "path": "src/a.ts" } }
+  },
+  {
+    "number": 11,
+    "state": "open",
+    "html_url": "https://github.com/VilnaCRM-Org/website/security/code-scanning/11",
+    "rule": {
+      "id": "js/sql-injection",
+      "severity": "error",
+      "security_severity_level": "critical"
+    },
+    "most_recent_instance": { "location": { "path": "src/e.ts" } }
+  },
+  {
+    "number": 12,
+    "state": "open",
+    "html_url": "https://github.com/VilnaCRM-Org/website/security/code-scanning/12",
+    "rule": {
+      "id": "js/incomplete-sanitization",
+      "severity": "error",
+      "security_severity_level": null
+    },
+    "most_recent_instance": { "location": { "path": "src/f.ts" } }
+  },
+  {
+    "number": 13,
+    "state": "open",
+    "html_url": "https://github.com/VilnaCRM-Org/website/security/code-scanning/13",
+    "rule": {
+      "id": "js/regex-injection",
+      "severity": "warning",
+      "security_severity_level": "medium"
+    },
+    "most_recent_instance": { "location": { "path": "src/g.ts" } }
+  }
+]

@@ -1,0 +1,7 @@
+[
+  {
+    "ref": "refs/heads/main",
+    "commit_sha": "MAINSHA",
+    "tool": { "name": "CodeQL" }
+  }
+]

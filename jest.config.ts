@@ -91,7 +91,10 @@ const INTEGRATION_COVERAGE_THRESHOLD = {
 // executed code back to the source file. This layer is isolated from client/server/
 // integration so it enforces 100% on exactly these scripts without touching their coverage
 // reports.
-const EDGE_COVERAGE_FROM = ['<rootDir>/scripts/cloudfront_routing.js'];
+const EDGE_COVERAGE_FROM = [
+  '<rootDir>/scripts/cloudfront_routing.js',
+  '<rootDir>/scripts/cloudfront_security_headers.js',
+];
 
 const EDGE_COVERAGE_THRESHOLD = {
   global: { branches: 100, functions: 100, lines: 100, statements: 100 },
@@ -162,6 +165,14 @@ const config: Config = {
   ...(isClient ? { coverageThreshold: CLIENT_COVERAGE_THRESHOLD } : {}),
   ...(isServer ? { coverageThreshold: SERVER_COVERAGE_THRESHOLD } : {}),
   testMatch: resolvedTestMatch,
+  // The Apollo mock under `docker/apollo-server` is compiled by
+  // `tsconfig.server.json` with `moduleResolution: NodeNext`, where a relative
+  // import MUST carry the emitted `.js` extension. Jest's resolver does not
+  // perform that `.js` -> `.ts` substitution, so map it here; without this the
+  // server suite cannot import the real modules and would be reduced to testing
+  // hand-written doubles again (#381). Requests that genuinely point at a `.js`
+  // file still resolve to it — `.js` leads `moduleFileExtensions`.
+  moduleNameMapper: { '^(\\.{1,2}/.*)\\.js$': '$1' },
   testPathIgnorePatterns: [
     '/node_modules/',
     '/.next/',

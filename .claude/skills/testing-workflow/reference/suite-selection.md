@@ -23,12 +23,14 @@ committed workflows; the targets wire env vars, Docker, and Mockoon for you.
 - `make test-integration-watch` runs the integration layer in watch mode for
   local iteration.
 
-Prefix any unit target with `CI=1` to run it locally WITHOUT Docker
-(`CI=1 make test-unit-all`). To reproduce a single failing file, run Jest
-directly with the same env the target sets, for example:
+Unit targets run inside the dev container by default and start it themselves
+if it is not already running. Run `EXEC_MODE=host make test-unit-all` to run
+it locally without Docker (needs a host `bun install`). To reproduce a single
+failing file, run Jest directly with the same env the target sets, for
+example:
 
 ```bash
-CI=1 TEST_ENV=server bun x jest src/test/apollo-server/server.test.ts
+TEST_ENV=server bun x jest src/test/apollo-server/server.test.ts
 ```
 
 ## Browser suites (Playwright, Docker prod stack)

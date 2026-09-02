@@ -17,39 +17,14 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: read
-    env:
-      CI: 1
     steps:
       - name: Checkout code
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           persist-credentials: false
 
-      - name: Set up Node.js
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version-file: '.nvmrc'
+      - name: Start the dev container
+        uses: ./.github/actions/dev-container
 
-      - name: Cache Bun cache
-        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
-        with:
-          path: ~/.bun/install/cache
-          key: ${{ runner.os }}-bun-${{ hashFiles('.nvmrc') }}-${{ hashFiles('**/bun.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-bun-${{ hashFiles('.nvmrc') }}-
-
-      - name: Setup Bun and install dependencies
-        run: |
-          # Install the exact Bun pinned in package.json's packageManager field,
-          # so the version is declared in exactly one place. Corepack does not
-          # manage Bun, so it is installed globally via `npm install -g`.
-          npm install -g "$(node -p "require('./package.json').packageManager.split('+')[0]")"
-          bun install --frozen-lockfile
-
-      # This is the one job allowed to reach raw.githubusercontent.com: it
-      # re-fetches the tag in USER_SERVICE_VERSION and fails if the committed
-      # artifacts under contracts/ have drifted from it. Everything else — the
-      # docker build, the swagger page, the Apollo mock — reads the committed
-      # copies, so an upstream outage cannot break an unrelated build.
       - name: Validate user-service contracts
         run: make lint-contracts

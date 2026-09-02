@@ -1,0 +1,33 @@
+# CI overlay for the dev service (issue #399).
+#
+# The lint and test gates only ever reach the container through
+# `docker compose exec -T dev <bin>` — none of them talks to the Next dev server
+# on port 3000. Booting it anyway costs 30-90s of pure wait per job (Next
+# compiles the whole page graph on first request, while CHOKIDAR_USEPOLLING
+# polls the bind mount), so on a runner the service comes up idle instead.
+#
+# This overlay deliberately changes only which process is PID 1. The exec
+# surface is untouched: `make lint-next` runs the identical
+# `docker compose exec -T dev ./node_modules/.bin/eslint` locally and in CI,
+# against the same image, the same /app and the same node_modules.
+#
+# Applied by `make ci-setup`; never by `make start`, which must keep serving the
+# developer's dev server on :3000.
+services:
+  dev:
+    command: ['sleep', 'infinity']
+    # A gate that crashes the container must fail the job, not be restarted
+    # underneath it until the workflow's timeout-minutes expires.
+    restart: 'no'
+    # The base healthcheck curls the dev server on :3000, which nothing serves
+    # here, so it must be replaced — but NOT with `disable: true`: `up --wait`
+    # then fails outright on Compose versions that reject a service with no
+    # healthcheck ("container website-dev has no healthcheck configured").
+    # Assert only that the container is up, which is all a gate needs before it
+    # can `docker compose exec` into it.
+    healthcheck:
+      test: ['CMD-SHELL', 'exit 0']
+      interval: 2s
+      timeout: 2s
+      retries: 5
+      start_period: 0s

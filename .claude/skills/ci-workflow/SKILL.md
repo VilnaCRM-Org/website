@@ -31,9 +31,14 @@ make lint     # read-only gate: ESLint + TypeScript + markdownlint + dependency-
 anything is off. Running tests between them means you validate already-formatted code,
 so a formatting rewrite can never invalidate a green test run.
 
-Locally, prefix any unit suite with `CI=1` to run it directly (no Docker):
-`CI=1 make test-unit-client`. E2E, visual, load, memory-leak, and Lighthouse suites
-run against the Docker prod/Mockoon stack and are started by their own targets.
+The npm-tool gates and the Jest suites run inside the dev container by default, locally
+and in CI alike, and start the container themselves if it is not already running.
+`make test-bats` and `make lint-metrics` stay on the host in both modes — bats needs
+bash and the metrics gate is a Rust binary, neither of which the image ships. `EXEC_MODE=host
+make <target>` is the escape hatch that runs a target on the host instead (needs a host
+`bun install`); it backs the Husky hooks, the `run-*-dind` wrappers, and the Lighthouse
+audits. E2E, visual, load, memory-leak, and Lighthouse suites run against the Docker
+prod/Mockoon stack and are started by their own targets.
 
 ## Match the change to suites
 
@@ -43,11 +48,11 @@ Pick the smallest set that actually exercises the change, then always finish wit
 - Markdown / docs only — `make lint-md` (then `make lint`). Note: `.claude/skills/**`
   is not markdownlint-scanned, but it _is_ Prettier-formatted, so still run
   `make format`.
-- React component / hook / client logic — `CI=1 make test-unit-client`. Covers
+- React component / hook / client logic — `make test-unit-client`. Covers
   `src/features/*/components`, `src/components`, `src/hooks`,
   `src/test/testing-library`, and `src/test/unit`.
 - Apollo resolver / GraphQL server-mock logic (`src/test/apollo-server`) —
-  `CI=1 make test-unit-server`. Touched both layers? `CI=1 make test-unit-all`.
+  `make test-unit-server`. Touched both layers? `make test-unit-all`.
 - User-facing flow end to end — `make test-e2e` (Playwright + Mockoon API mock).
 - Rendered UI or styling — `make test-visual` (Playwright snapshots). Only for a
   deliberate, reviewed visual change, refresh baselines with `make test-visual-update`
@@ -80,7 +85,8 @@ Prefer the focused suites during iteration and the `ci-*` aliases for a final ch
 ## Pre-commit checklist
 
 - [ ] `make format` ran after the last edit.
-- [ ] The focused suite(s) for the change ran and passed (`CI=1` locally).
+- [ ] The focused suite(s) for the change ran and passed (dev container starts itself
+      if needed).
 - [ ] `make lint` passed (ESLint, tsc, markdownlint, dependency-cruiser).
 - [ ] `git status --short` shows only intended files.
 - [ ] Commit message follows Conventional Commits (per agents.md).
@@ -114,6 +120,14 @@ Prefer the focused suites during iteration and the `ci-*` aliases for a final ch
 
 Deeper, per-gate recovery steps live in
 [reference/failure-recovery.md](reference/failure-recovery.md).
+
+## Untrusted branches never run locally
+
+Every gate above evaluates repository-controlled code at config-load time (the ESLint,
+Next.js, and Jest configs, plus every test file). Run gates locally only on branches
+authored in this repo by trusted contributors; for an unmerged untrusted fork branch, let
+the ephemeral CI runner (which holds no secrets for forks) execute them, or use an
+isolated, credential-free sandbox. See `CLAUDE.md`, "Untrusted External Content".
 
 ## Never weaken a gate
 

@@ -113,13 +113,15 @@ variable and assert against that variable, keeping each run independent.
 
 ## Verify before done
 
-Run only the suites your change touches, then the lint gate. Any unit suite runs
-locally without Docker when prefixed with `CI=1`.
+Run only the suites your change touches, then the lint gate. Unit-test targets
+run inside the dev container by default (they start it themselves if it is not
+already running); prefix a target with `EXEC_MODE=host` to run it locally
+without Docker (needs a host `bun install`).
 
 ```bash
 make format                   # Prettier (run before lint)
-CI=1 make test-unit-client    # client unit (jsdom)
-CI=1 make test-unit-server    # server unit (node)
+make test-unit-client         # client unit (jsdom)
+make test-unit-server         # server unit (node)
 make test-e2e                 # user-facing flows (UI/behavior changes)
 make test-visual              # visual regression (UI/styling changes)
 make lint                     # ESLint + tsc + markdownlint + dependency-cruiser

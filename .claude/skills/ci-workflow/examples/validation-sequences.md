@@ -1,8 +1,9 @@
 # Validation sequences
 
 Copy-paste command blocks for the common website change kinds. Each follows the core
-order: `make format`, then the focused suite(s), then `make lint`. Prefix unit suites
-with `CI=1` to run them locally without Docker.
+order: `make format`, then the focused suite(s), then `make lint`. Every target below
+runs inside the dev container by default; add `EXEC_MODE=host` only to run it on the
+host instead (needs a host `bun install`).
 
 ## React component, hook, or client logic
 
@@ -11,7 +12,7 @@ For changes under `src/features/*/components`, `src/components`, `src/hooks`, or
 
 ```bash
 make format
-CI=1 make test-unit-client
+make test-unit-client
 make lint
 ```
 
@@ -29,7 +30,7 @@ For changes that touch server-side resolvers or specs under `src/test/apollo-ser
 
 ```bash
 make format
-CI=1 make test-unit-server
+make test-unit-server
 make lint
 ```
 
@@ -37,7 +38,7 @@ When a change spans both client and server layers, run both unit suites at once:
 
 ```bash
 make format
-CI=1 make test-unit-all
+make test-unit-all
 make lint
 ```
 
@@ -57,7 +58,7 @@ For edits to `src/features/*/i18n/{en,uk}.json` or the strings that consume them
 
 ```bash
 make format
-CI=1 make test-unit-client   # assert t() output, both locales
+make test-unit-client   # assert t() output, both locales
 make lint
 ```
 
