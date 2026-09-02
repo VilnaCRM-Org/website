@@ -605,6 +605,51 @@ EOF
   assert_output_contains 'continues a double-quoted scalar past the end of'
 }
 
+@test "reads past a hash inside a quoted value to the literal that follows it" {
+  make_consistent_repo "$REPO"
+  # `#` only opens a comment OUTSIDE a scalar. Cutting the line at the first ` #`
+  # truncates this mapping to `with: { node-version-file: '\''.nvmrc'\'', cache: "a`, which
+  # credits the pin and then never reads the literal sitting after it — the gate passes a
+  # workflow that pins Node literally. Comment stripping is therefore quote-aware.
+  cat >"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+jobs:
+  unit:
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with: { node-version-file: '.nvmrc', cache: "a # b", node-version: '20' }
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 1 ]
+  assert_output_contains 'pins a literal node-version'
+}
+
+@test "does not read a quoted value containing a hash as a continued scalar" {
+  make_consistent_repo "$REPO"
+  # The same truncation in the other direction: cutting at the ` #` also removes the
+  # scalar'''s closing quote, so a perfectly well-formed line would be refused as a
+  # continuation. An apostrophe in a plain scalar is still ordinary text, so the trailing
+  # comment on the third step is still stripped.
+  cat >"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+jobs:
+  unit:
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+      - name: A hash inside a quoted value
+        with: { cache: "a # b" }
+      - name: Don't fail # a real trailing comment
+        run: echo ok
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 0 ]
+  assert_output_contains 'node-version: OK'
+}
+
 @test "keeps quotes that close on their own line green" {
   make_consistent_repo "$REPO"
   # The other half of the continuation rule. A double quote living inside a single-quoted

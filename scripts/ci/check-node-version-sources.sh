@@ -334,6 +334,57 @@ scan_setup_node_steps() {
       # to the key, so the leading `ws` keeps the shape uniform without widening it.
       block_scalar_header = ws ":" ws "[|>][-+0-9]*" ws "$"
     }
+    # Find the closing quote of the scalar that opens at `start`, or 0 when the line
+    # does not close it. A double-quoted scalar escapes with a backslash (which escapes
+    # any character, itself included); a single-quoted one escapes a quote by doubling
+    # it. Returns the index of the closing quote.
+    function scalar_end(text, start, quote,   i, n, ch) {
+      n = length(text)
+      i = start + 1
+      while (i <= n) {
+        ch = substr(text, i, 1)
+        if (quote == dq && ch == "\\") { i += 2; continue }
+        if (ch == quote) {
+          if (quote == sq && substr(text, i + 1, 1) == sq) { i += 2; continue }
+          return i
+        }
+        i++
+      }
+      return 0
+    }
+
+    # Drop a trailing `#` comment without reaching inside a quoted scalar.
+    #
+    # A naive `sub(/[[:space:]]+#.*$/, "")` cuts at the first ` #` on the line, which is
+    # wrong in both directions when the `#` is inside a value: it truncates
+    # `with: { cache: "a # b", node-version: '\''20'\'' }` to `with: { cache: "a`, so the
+    # literal after it is never read (a pin passes), and it strips the closing quote off
+    # a scalar that is perfectly well formed (a continued-scalar refusal for a line that
+    # continues nothing).
+    #
+    # A quote only opens a scalar here if the line also CLOSES it. That matters because
+    # an apostrophe is ordinary text in a YAML plain scalar — `- name: Don'\''t fail # c`
+    # has one single quote and no scalar, and its comment must still be stripped — and
+    # because an unterminated quote is exactly the continuation the caller must still be
+    # able to see.
+    function strip_comment(text,   i, n, ch, stop) {
+      n = length(text)
+      i = 1
+      while (i <= n) {
+        ch = substr(text, i, 1)
+        if (ch == dq || ch == sq) {
+          stop = scalar_end(text, i, ch)
+          if (stop > 0) { i = stop + 1; continue }
+          i++
+          continue
+        }
+        if (ch == "#" && (i == 1 || substr(text, i - 1, 1) ~ /[[:space:]]/)) {
+          return substr(text, 1, i - 1)
+        }
+        i++
+      }
+      return text
+    }
     function close_step() {
       if (in_step && has_setup) {
         steps++
@@ -354,8 +405,7 @@ scan_setup_node_steps() {
         in_block = 0
       }
 
-      line = raw
-      sub(/[[:space:]]+#.*$/, "", line)
+      line = strip_comment(raw)
       if (line ~ /^[[:space:]]*#/) next
       if (line ~ /^[[:space:]]*$/) next
 
