@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 
 import {
@@ -28,53 +28,27 @@ import {
 const LIST_PATH = resolve(process.cwd(), 'reports', 'mutation', 'mutate-list.txt');
 const GATE_PATH = resolve(process.cwd(), 'reports', 'mutation', 'gate.json');
 
-/** Run a command with a fixed argument vector and return its stdout lines. */
-function runLines(command: string, args: readonly string[]): string[] {
-  const stdout = execFileSync(command, [...args], {
-    encoding: 'utf8',
-    maxBuffer: 32 * 1024 * 1024,
-  });
-  return stdout.split('\n').filter(line => line.length > 0);
-}
-
 /**
- * Reject a base ref Git would read as an option.
+ * Candidate paths for this scope, as produced by `make mutation-file-list`.
  *
- * `execFileSync` passes a fixed argument vector, so there is no shell injection
- * here — but `git diff --something...HEAD` is still parsed as a flag, and the
- * resulting failure looks like a broken gate rather than a bad input.
+ * The list is resolved with git on the host and handed over in a file, because
+ * the dev image this runs in ships no git (#399) while the related-tests probe
+ * below needs the node_modules only the image has. A missing or unreadable file
+ * is a hard error: an empty candidate list is indistinguishable from "nothing
+ * changed", which would fail the gate open.
  */
-function assertUsableRef(ref: string): string {
-  if (ref.length === 0 || ref.startsWith('-')) {
-    throw new Error(`MUTATION_BASE_REF ("${ref}") must be a revision, not an option.`);
+function candidatePaths(): string[] {
+  const listPath = process.env.MUTATION_CANDIDATES_FILE;
+  if (listPath === undefined || listPath.length === 0) {
+    throw new Error(
+      'MUTATION_CANDIDATES_FILE is not set; run this through `make mutation-file-list`, ' +
+        'which resolves the candidate paths with git before invoking the resolver.'
+    );
   }
-  try {
-    execFileSync('git', ['rev-parse', '--verify', '--quiet', `${ref}^{commit}`], {
-      stdio: 'ignore',
-    });
-  } catch {
-    throw new Error(`MUTATION_BASE_REF ("${ref}") does not resolve to a commit in this checkout.`);
-  }
-  return ref;
-}
-
-/**
- * Candidate paths for a scope, before the mutable-path filter.
- *
- * `changed` diffs against the merge base (`base...HEAD`) so a busy `main` does
- * not pull unrelated files into a pull request's scope, and drops deletions —
- * a removed file has nothing to mutate.
- */
-function candidatePaths(scope: MutationScope, baseRef: string): string[] {
-  if (scope === 'changed') {
-    return runLines('git', [
-      'diff',
-      '--name-only',
-      '--diff-filter=d',
-      `${assertUsableRef(baseRef)}...HEAD`,
-    ]);
-  }
-  return runLines('git', ['ls-files', '--', 'src']);
+  return readFileSync(resolve(process.cwd(), listPath), 'utf8')
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => line.length > 0);
 }
 
 /** Ask Jest which specs in the current scope's test set reach `file`. */
@@ -95,8 +69,7 @@ function main(): void {
   }
 
   const policy = loadMutationPolicy();
-  const baseRef = process.env.MUTATION_BASE_REF ?? 'origin/main';
-  const candidates = selectMutableFiles(candidatePaths(scope, baseRef), policy.mutableDirectories);
+  const candidates = selectMutableFiles(candidatePaths(), policy.mutableDirectories);
 
   const measurable = candidates.filter(file =>
     hasRelatedTests(file, candidate => listRelatedTests(candidate, scope))

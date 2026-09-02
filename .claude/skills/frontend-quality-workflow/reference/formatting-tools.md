@@ -16,10 +16,11 @@ prettier "**/*.{js,jsx,ts,tsx,json,css,scss,md}" --write --ignore-path .prettier
 
 Run it after the last edit and before any lint gate, so the read-only gates validate
 already-formatted code. By default the target executes inside the dev container; prefix
-`CI=1` to run Prettier directly on the host without Docker:
+`EXEC_MODE=host` to run Prettier directly on the host without Docker. It needs a host
+`bun install`:
 
 ```bash
-CI=1 make format
+EXEC_MODE=host make format
 ```
 
 ## Prettier Configuration

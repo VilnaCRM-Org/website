@@ -99,7 +99,7 @@ variable detail in `extra`, never in tags. Patterns are in
 
 ```bash
 make format
-CI=1 make test-unit-client
+make test-unit-client
 make lint
 ```
 

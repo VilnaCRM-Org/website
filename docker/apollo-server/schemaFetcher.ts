@@ -5,6 +5,12 @@ import dotenv, { DotenvConfigOutput } from 'dotenv';
 import dotenvExpand from 'dotenv-expand';
 import { createLogger, Logger, format, transports } from 'winston';
 
+import {
+  SchemaIntegrityError,
+  assertSchemaIntegrity,
+  readExpectedSchemaDigest,
+} from './schemaIntegrity';
+
 const env: DotenvConfigOutput = dotenv.config();
 
 dotenvExpand.expand(env);
@@ -67,11 +73,27 @@ export async function fetchAndSaveSchema(): Promise<void> {
       }
 
       const data: string = await response.text();
+      assertSchemaIntegrity(data, readExpectedSchemaDigest());
       fs.writeFileSync(OUTPUT_FILE, data, 'utf-8');
 
       logger.info(`Schema successfully saved to: ${OUTPUT_FILE}`);
       return;
     } catch (error) {
+      // A digest mismatch is not a transport failure, so it does not go through
+      // the retry path — a retry re-downloads the same bytes.
+      //
+      // This discards the download and returns, which is not fail-open: the mock
+      // keeps serving the schema Apollo.Dockerfile seeded from `contracts/`, i.e.
+      // the reviewed contract rather than whatever the moved tag now points at.
+      // Exiting instead would crashloop the container (`restart: unless-stopped`
+      // in docker-compose.test.yml) and bury this message behind a healthcheck
+      // timeout. `make lint-contracts` is what turns the same drift into a red PR.
+      if (error instanceof SchemaIntegrityError) {
+        logger.error(error.message);
+        logger.error(`Discarded the download; keeping the vendored schema at ${OUTPUT_FILE}`);
+        return;
+      }
+
       lastError = error as Error;
       retries += 1;
 
