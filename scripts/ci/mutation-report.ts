@@ -97,6 +97,37 @@ export function mutationScore(tally: StatusTally): number {
   return tally.valid > 0 ? (tally.detected / tally.valid) * 100 : Number.NaN;
 }
 
+/** A source file that still has mutants no test detected. */
+export interface UndetectedFile {
+  file: string;
+  survived: number;
+  noCoverage: number;
+}
+
+/**
+ * Files with at least one undetected mutant, worst first.
+ *
+ * The nightly census (#345) reports the whole backlog into one tracking issue,
+ * so it needs the per-file breakdown rather than a single aggregate score —
+ * "82%" is not actionable, "`helpers/scrollToAnchor.ts`: 6 survived" is.
+ */
+export function undetectedByFile(
+  mutantsByFile: ReadonlyMap<string, ReportMutant[]>
+): UndetectedFile[] {
+  const rows: UndetectedFile[] = [];
+  for (const [file, mutants] of mutantsByFile) {
+    const survived = mutants.filter(mutant => mutant.status === 'Survived').length;
+    const noCoverage = mutants.filter(mutant => mutant.status === 'NoCoverage').length;
+    if (survived + noCoverage > 0) {
+      rows.push({ file, survived, noCoverage });
+    }
+  }
+  return rows.sort(
+    (a, b) =>
+      b.survived + b.noCoverage - (a.survived + a.noCoverage) || a.file.localeCompare(b.file)
+  );
+}
+
 /** Merge shard reports and compute the overall mutation score. */
 export function scoreReports(reports: readonly MutationReport[]): ScoreResult {
   const byFile = mergeReportFiles(reports);

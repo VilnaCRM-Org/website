@@ -150,19 +150,34 @@ removed.
 Mutation testing runs as a deterministic shard matrix plus a merge gate:
 
 - Each `shard` cell runs `make test-mutation-shard` (with `MUTATION_SHARD_INDEX`
-  and `MUTATION_SHARD_TOTAL`), which slices the `mutate` list from
-  `stryker.config.mjs` (via `stryker.shard.config.mjs`) and writes
-  `reports/mutation/mutation-shard-<i>.json` with `break` disabled.
+  and `MUTATION_SHARD_TOTAL`), which slices the scope's mutate list via
+  `stryker.shard.config.mjs` — the fixed list in `stryker.config.mjs` for the
+  `curated` scope, `reports/mutation/mutate-list.txt` for `changed` and `full` —
+  and writes `reports/mutation/mutation-shard-<i>.json` with `break` disabled.
 - The `merge` job runs `make merge-mutation-reports` (with `MUTATION_SHARD_TOTAL`),
   which unions the per-shard reports and re-enforces the **exact** `break`
-  threshold read from `stryker.config.mjs`
+  threshold for the scope, resolved from
+  [`config/mutation-policy.json`](config/mutation-policy.json) — the single source
+  of truth for which directories hold mutable code and for every scope's gate
+  (the `curated` slice's file list is the exception: it stays a fixed list in
+  `stryker.config.mjs`, and the policy file supplies only its threshold)
   ([`scripts/ci/merge-mutation-reports.ts`](scripts/ci/merge-mutation-reports.ts),
   unit-tested in `src/test/unit/mutation-report.test.ts`).
 
-The round-robin split is a total partition of `mutate`, so the union equals the
-full list and the sharded score is identical to an unsharded run — the gate is
-preserved, never relaxed. The merge job runs even when a shard fails, so the
-gate fails closed rather than passing vacuously.
+The round-robin split is a total partition of the scope's mutate list, so the
+union equals the full list and the sharded score is identical to an unsharded
+run — the gate is preserved, never relaxed. The merge job runs even when a shard
+fails, so the gate fails closed rather than passing vacuously.
+
+`MUTATION_SCOPE` picks which list is sharded: `curated` (the fixed list, blocking
+at 100%) and `changed` (the mutable files your pull request touches, blocking at
+85% until the `maxFiles` cap is exceeded, past which the leg turns advisory) both
+run on a pull request, and `full` sweeps `src/` nightly as an advisory leg that
+files a tracking issue. `make mutation-file-list` prints the resolved
+list and `make test-mutation-changed` runs the PR's changed-file leg locally. The
+scope table and the definition of a "mutable" file live in CLAUDE.md; never lower
+a threshold or widen an exclusion in `config/mutation-policy.json` to get a leg
+green.
 
 #### E2E flakes are detected, not retried away
 

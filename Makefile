@@ -98,8 +98,18 @@ TEST_A11Y_COMPONENT_SPEC    = $(TEST_DIR_BASE)/testing-library/A11yComponents.te
 STRYKER_SHARD_CONFIG        = stryker.shard.config.mjs
 MUTATION_SHARD_TOTAL        ?= 1
 MUTATION_SHARD_INDEX        ?= 0
+# Which slice of the tree a mutation run covers (#345): curated (the fixed list
+# in stryker.config.mjs), changed (only the mutable files a PR touches), or full
+# (every mutable file — the nightly census). See config/mutation-policy.json.
+MUTATION_SCOPE              ?= curated
+MUTATION_BASE_REF           ?= origin/main
+# The candidate list the scope resolver filters. Git lives on the host and not in
+# the dev image (issue #399), so the Makefile produces this file with git and the
+# containerised resolver reads it instead of shelling out to git itself.
+MUTATION_CANDIDATES_FILE    = reports/mutation/candidates.txt
 # Bun executes .ts directly (issue #397); no tsx/ts-node transpiler runner.
 MERGE_MUTATION_REPORTS_CMD  = bun scripts/ci/merge-mutation-reports.ts
+MUTATION_FILE_LIST_CMD      = bun scripts/ci/mutation-file-list.ts
 
 # E2E flake detection (#359). The burn-in re-runs the specs a PR changed with retries off, so
 # nondeterminism shows up as some-but-not-all failures instead of being absorbed by the
@@ -838,6 +848,7 @@ ci-test-contract: ## Run contract parity tests directly assuming deps are instal
 	ci-test-lighthouse-mobile ci-test-prod ensure-dev start-prod-clean \
 	test-a11y test-a11y-components test-a11y-routes \
 	test-load test-load-swagger test-mutation-shard merge-mutation-reports \
+	mutation-file-list test-mutation-changed \
 	test-e2e-burnin check-e2e-flakes pr-comments lint lint-api-versions \
 	lint-security-txt lint-prod-guardrails release-audit-dry-run \
 	lint-vulns scan-vulns-census generate-localization
@@ -976,17 +987,59 @@ test-mutation: build ## Run mutation tests using Stryker after building the app
 	@bash ./scripts/ci/check-dev-container-bind.sh
 	$(PM_EXEC) bun x stryker run
 
+# The dev image ships neither git nor bash (#399), and the scope resolver needs
+# node_modules to ask Jest which specs reach a candidate file — so the two halves
+# run where each tool actually lives: the host's git produces the candidate paths,
+# the container filters them. A failing git aborts the recipe before the resolver
+# runs, so a broken diff can never be read as "no mutable file changed".
+mutation-file-list: ## Resolve the mutate list + gate decision for MUTATION_SCOPE (changed|full) into reports/mutation/
+	@mkdir -p $(dir $(MUTATION_CANDIDATES_FILE))
+	@# `changed` diffs against the merge base so a busy main does not pull
+	@# unrelated files into a pull request's scope, and drops deletions — a
+	@# removed file has nothing to mutate. The ref is verified first: git parses
+	@# a leading dash as an option, so an unusable MUTATION_BASE_REF must fail
+	@# here as bad input rather than downstream as a broken gate. `full` never
+	@# reads the ref, so it is not required to resolve in a census checkout.
+	@if [ "$(MUTATION_SCOPE)" = "changed" ]; then \
+		git rev-parse --verify --quiet "$(MUTATION_BASE_REF)^{commit}" >/dev/null || { \
+			echo "MUTATION_BASE_REF ($(MUTATION_BASE_REF)) does not resolve to a commit in this checkout." >&2; \
+			exit 1; \
+		}; \
+		git diff --name-only --diff-filter=d "$(MUTATION_BASE_REF)...HEAD"; \
+	else \
+		git ls-files -- src; \
+	fi > $(MUTATION_CANDIDATES_FILE)
+	$(DEV_READY) $(PM_EXEC_ENV) MUTATION_SCOPE=$(MUTATION_SCOPE) \
+		MUTATION_CANDIDATES_FILE=$(MUTATION_CANDIDATES_FILE) $(MUTATION_FILE_LIST_CMD)
+
 # The shard variables are injected with `env` INSIDE the executor, not as a
 # shell prefix in front of it. A `VAR=v $(PM_EXEC) cmd` prefix binds the variable
 # to the host docker CLI process and never reaches the container, which would
 # silently hand Stryker an unset MUTATION_SHARD_INDEX.
-test-mutation-shard: generate-localization ## Run mutation shard MUTATION_SHARD_INDEX of MUTATION_SHARD_TOTAL — writes reports/mutation/mutation-shard-<index>.json with break disabled
-	$(DEV_READY) $(PM_EXEC_ENV) \
+test-mutation-shard: generate-localization ## Run mutation shard MUTATION_SHARD_INDEX of MUTATION_SHARD_TOTAL for MUTATION_SCOPE — writes reports/mutation/mutation-shard-<index>.json with break disabled
+	$(DEV_READY) $(PM_EXEC_ENV) MUTATION_SCOPE=$(MUTATION_SCOPE) \
 		MUTATION_SHARD_INDEX=$(MUTATION_SHARD_INDEX) MUTATION_SHARD_TOTAL=$(MUTATION_SHARD_TOTAL) \
 		bun x stryker run $(STRYKER_SHARD_CONFIG)
 
-merge-mutation-reports: ## Union the per-shard mutation reports and re-enforce the exact Stryker break gate over the whole set
-	$(DEV_READY) $(PM_EXEC_ENV) MUTATION_SHARD_TOTAL=$(MUTATION_SHARD_TOTAL) $(MERGE_MUTATION_REPORTS_CMD)
+merge-mutation-reports: ## Union the per-shard mutation reports and re-enforce MUTATION_SCOPE's break gate over the whole set
+	$(DEV_READY) $(PM_EXEC_ENV) MUTATION_SCOPE=$(MUTATION_SCOPE) \
+		MUTATION_SHARD_TOTAL=$(MUTATION_SHARD_TOTAL) $(MERGE_MUTATION_REPORTS_CMD)
+
+test-mutation-changed: ## Mutate only the files this branch changes against MUTATION_BASE_REF and gate on the changed-files threshold
+	@# Drop shard reports from an earlier run: the merge gate counts every
+	@# mutation-shard-*.json in the directory, so a leftover shard 1 from a
+	@# two-shard census makes this one-shard run fail as "found 2, expected 1".
+	@# CI containers start clean; this keeps repeated local runs repeatable.
+	rm -f reports/mutation/mutation-shard-*.json
+	$(MAKE) mutation-file-list MUTATION_SCOPE=changed MUTATION_BASE_REF=$(MUTATION_BASE_REF)
+	@# An empty mutate list is the `skip` decision: no mutable file changed, so
+	@# there is nothing to mutate and nothing to gate on.
+	@if [ ! -s reports/mutation/mutate-list.txt ]; then \
+		echo "⏭️  No mutable files changed against $(MUTATION_BASE_REF); nothing to mutate."; \
+	else \
+		$(MAKE) test-mutation-shard MUTATION_SCOPE=changed MUTATION_SHARD_TOTAL=1 MUTATION_SHARD_INDEX=0 && \
+		$(MAKE) merge-mutation-reports MUTATION_SCOPE=changed MUTATION_SHARD_TOTAL=1; \
+	fi
 
 wait-for-prod-health: ## Wait for the prod container to reach a healthy state.
 	@echo "Waiting for prod container to become healthy (timeout: 60s)..."

@@ -1,12 +1,27 @@
-import { readdirSync, readFileSync } from 'node:fs';
+import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
-import { type MutationReport, scoreReports } from './mutation-report';
+import {
+  type MutationReport,
+  mergeReportFiles,
+  scoreReports,
+  undetectedByFile,
+} from './mutation-report';
+import {
+  type GateDecision,
+  type MutationScope,
+  loadMutationPolicy,
+  parseGateArtifact,
+  parseScope,
+  resolveGate,
+} from './mutation-scope';
 
 const SHARD_FILE = /^mutation-shard-\d+\.json$/;
 
-/** Fixed shard-report directory; never taken from argv so it stays path-injection safe. */
+/** Fixed report directory; never taken from argv so it stays path-injection safe. */
 const REPORTS_DIR = resolve(process.cwd(), 'reports', 'mutation');
+const GATE_PATH = join(REPORTS_DIR, 'gate.json');
+const SUMMARY_PATH = join(REPORTS_DIR, 'summary.md');
 
 /** Read and parse every `mutation-shard-*.json` report in `dir`, sorted by name. */
 function loadShardReports(dir: string): { name: string; report: MutationReport }[] {
@@ -30,23 +45,68 @@ function loadShardReports(dir: string): { name: string; report: MutationReport }
     });
 }
 
-/** Read the canonical `thresholds.break` from the real Stryker config so it can never drift. */
-async function resolveBreakThreshold(): Promise<number> {
-  const { default: base } = (await import('../../stryker.config.mjs')) as {
-    default: { thresholds?: { break?: number | null } };
-  };
-  const breakThreshold = base.thresholds?.break;
-  if (typeof breakThreshold !== 'number') {
-    throw new TypeError(
-      'stryker.config.mjs has no numeric thresholds.break; refusing to gate without a threshold.'
+/**
+ * The gate this run enforces.
+ *
+ * The `curated` scope is a fixed list, so its threshold comes straight from the
+ * policy. The `changed` and `full` scopes depend on how many files the run
+ * actually resolved, so they reuse the decision `mutation-file-list.ts` already
+ * recorded — re-deriving it here could disagree with the list that was mutated.
+ */
+function resolveDecision(scope: MutationScope, fileCount: number): GateDecision {
+  const policy = loadMutationPolicy();
+  if (scope === 'curated') {
+    return resolveGate(scope, fileCount, policy);
+  }
+  let raw: string;
+  try {
+    raw = readFileSync(GATE_PATH, 'utf8');
+  } catch (error) {
+    throw new Error(
+      `MUTATION_SCOPE="${scope}" needs the gate decision at "${GATE_PATH}": ${String(error)}`
     );
   }
-  return breakThreshold;
+  return parseGateArtifact(raw, scope);
 }
 
-/** Merge shard reports, recompute the score, and exit non-zero if below the break gate. */
-async function main(): Promise<void> {
-  const dir = REPORTS_DIR;
+/** Verify every expected shard produced a report, so a missing shard cannot pass vacuously. */
+function assertShardsComplete(names: readonly string[], expected: number): void {
+  if (names.length !== expected) {
+    throw new Error(
+      `Expected ${expected} shard reports but found ${names.length} (${
+        names.join(', ') || 'none'
+      }). A missing shard must not pass the gate vacuously.`
+    );
+  }
+  const seen = new Set(names.map(name => Number.parseInt(/\d+/.exec(name)?.[0] ?? '-1', 10)));
+  for (let i = 0; i < expected; i += 1) {
+    if (!seen.has(i)) {
+      throw new Error(`Mutation shard ${i} of ${expected} is missing from "${REPORTS_DIR}".`);
+    }
+  }
+}
+
+/** Render the Markdown the step summary and the nightly tracking issue both use. */
+function renderSummary(
+  scope: MutationScope,
+  reports: readonly MutationReport[],
+  score: string
+): string {
+  const rows = undetectedByFile(mergeReportFiles(reports));
+  const table =
+    rows.length === 0
+      ? 'No surviving or uncovered mutants. 🎉'
+      : [
+          '| File | Survived | No coverage |',
+          '| --- | ---: | ---: |',
+          ...rows.map(row => `| \`${row.file}\` | ${row.survived} | ${row.noCoverage} |`),
+        ].join('\n');
+  return `### Mutation score (\`${scope}\` scope): ${score}%\n\n${table}\n`;
+}
+
+/** Merge shard reports, recompute the score, and enforce the scope's gate. */
+function main(): void {
+  const scope = parseScope(process.env.MUTATION_SCOPE);
 
   const expectedShards = Number.parseInt(process.env.MUTATION_SHARD_TOTAL ?? '', 10);
   if (!Number.isInteger(expectedShards) || expectedShards <= 0) {
@@ -55,24 +115,14 @@ async function main(): Promise<void> {
     );
   }
 
-  const shards = loadShardReports(dir);
-  if (shards.length !== expectedShards) {
-    throw new Error(
-      `Expected ${expectedShards} shard reports but found ${shards.length} (${
-        shards.map(s => s.name).join(', ') || 'none'
-      }). A missing shard must not pass the gate vacuously.`
-    );
-  }
+  const shards = loadShardReports(REPORTS_DIR);
+  assertShardsComplete(
+    shards.map(shard => shard.name),
+    expectedShards
+  );
 
-  const seen = new Set(shards.map(s => Number.parseInt(/\d+/.exec(s.name)?.[0] ?? '-1', 10)));
-  for (let i = 0; i < expectedShards; i += 1) {
-    if (!seen.has(i)) {
-      throw new Error(`Mutation shard ${i} of ${expectedShards} is missing from "${dir}".`);
-    }
-  }
-
-  const breakThreshold = await resolveBreakThreshold();
-  const { tally, fileCount, mutationScore } = scoreReports(shards.map(s => s.report));
+  const reports = shards.map(shard => shard.report);
+  const { tally, fileCount, mutationScore } = scoreReports(reports);
 
   if (!Number.isFinite(mutationScore) || tally.valid === 0) {
     throw new Error(
@@ -81,7 +131,10 @@ async function main(): Promise<void> {
     );
   }
 
+  const decision = resolveDecision(scope, fileCount);
+
   const score = mutationScore.toFixed(2);
+  writeFileSync(SUMMARY_PATH, renderSummary(scope, reports, score), 'utf8');
   process.stdout.write(
     [
       `Merged ${shards.length} mutation shard(s) over ${fileCount} source file(s):`,
@@ -90,24 +143,32 @@ async function main(): Promise<void> {
       `  compileError=${tally.compileError} runtimeError=${tally.runtimeError} ` +
         `ignored=${tally.ignored}`,
       `  detected=${tally.detected} valid=${tally.valid} mutationScore=${score}%`,
+      decision.reason,
       '',
     ].join('\n')
   );
 
-  if (mutationScore < breakThreshold) {
+  if (decision.break === null) {
+    process.stdout.write(`Mutation score ${score}% recorded without gating (${decision.mode}).\n`);
+    return;
+  }
+
+  if (mutationScore < decision.break) {
     process.stderr.write(
-      `Mutation score ${score}% is below the break threshold ${breakThreshold}%. Gate failed.\n`
+      `Mutation score ${score}% is below the break threshold ${decision.break}%. Gate failed.\n`
     );
     process.exitCode = 1;
     return;
   }
 
   process.stdout.write(
-    `Mutation score ${score}% meets the break threshold ${breakThreshold}%. Gate passed.\n`
+    `Mutation score ${score}% meets the break threshold ${decision.break}%. Gate passed.\n`
   );
 }
 
-main().catch((error: unknown) => {
+try {
+  main();
+} catch (error: unknown) {
   process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
   process.exitCode = 1;
-});
+}

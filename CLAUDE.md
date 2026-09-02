@@ -378,9 +378,9 @@ Four production-facing invariants that no other gate watches. Extend them; never
   role, cuts a release, or calls a local composite action under `.github/actions/` — the
   gate cannot see inside a composite, so it assumes the worst rather than treating it as
   invisible. That is why the `dev-container` composite's callers that also run on a
-  schedule or a push (`dev image cache`, `fuzz testing`, `storybook build`) are listed
-  there. A workflow's `name:` is therefore load-bearing — renaming one requires updating
-  that list in the same commit.
+  schedule or a push (`dev image cache`, `fuzz testing`, `storybook build`,
+  `mutation testing`) are listed there. A workflow's `name:` is therefore load-bearing —
+  renaming one requires updating that list in the same commit.
 - **CodeQL findings are gated and routed.** `scripts/ci/code-scanning-gate.sh` fails the
   run on _new_ high/critical alerts (PRs subtract the default-branch baseline, so
   inherited debt does not block), and a failed scan reaches the `ci-alert` issue. Branch
@@ -424,10 +424,11 @@ tiered off, weakened, or removed.
   action — which builds or restores the `base` image through the BuildKit layer cache and
   brings the dev service up idle via `make ci-setup` — and then runs the identical
   `make <target>` a developer runs. No `~/.bun/install/cache` restore and no host
-  `bun install` remain in any of them. Four keep `actions/setup-node` — `static-testing`,
-  `dependency-cruiser`, `storybook-build` and the `mutation-testing` shard — because their
-  target reaches the host-only `generate-localization`; that step pins a Node version and
-  nothing else, which is not what the issue's acceptance criterion forbids.
+  `bun install` remain in any of them. Six keep `actions/setup-node` — `static-testing`,
+  `dependency-cruiser`, `storybook-build` and the `mutation-testing` `shard`, `changed` and
+  `census` legs — because their target reaches the host-only `generate-localization`; that
+  step pins a Node version and nothing else, which is not what the issue's acceptance
+  criterion forbids.
   `contract-parity-testing` is the one test job still on the host toolchain: its layer
   boots Mockoon in-process from the committed OpenAPI document and needs no container at
   all, so `ci-test-contract` is deliberately the only `CI_TEST_TARGETS` entry that skips
@@ -456,9 +457,60 @@ tiered off, weakened, or removed.
 - **Mutation sharding.** `make test-mutation-shard` (with `MUTATION_SHARD_INDEX` /
   `MUTATION_SHARD_TOTAL`) writes a per-shard report (`stryker.shard.config.mjs`, with
   `break` disabled); `make merge-mutation-reports` unions the shards and re-enforces the
-  exact `break` from `stryker.config.mjs` (`scripts/ci/merge-mutation-reports.ts`). The
-  split is a total partition, so the merged score equals an unsharded run and the merge job
-  fails closed.
+  scope's `break` (`scripts/ci/merge-mutation-reports.ts`). The split is a total partition,
+  so the merged score equals an unsharded run and the merge job fails closed.
+
+### Mutation scope (issue #345)
+
+`config/mutation-policy.json` is the single source of truth for which directories hold
+mutable code and for every scope's gate. It does not hold the `curated` slice's file list:
+that one is a fixed list in `stryker.config.mjs`, and the policy file supplies only its
+threshold. `MUTATION_SCOPE` selects one of three slices; everything downstream — the
+Stryker shard config, the Jest test set, and the merge gate — reads that one decision.
+
+| Scope     | What it mutates                           | Gate                             | Where           |
+| --------- | ----------------------------------------- | -------------------------------- | --------------- |
+| `curated` | the fixed list in `stryker.config.mjs`    | blocking at 100%                 | PR              |
+| `changed` | mutable files the PR touches vs. its base | blocking at 85%, cap → advisory  | PR              |
+| `full`    | every mutable file in `src/`              | advisory; files a tracking issue | nightly `02:00` |
+
+A file is "mutable" when it lives under an `api`/`helpers`/`hooks`/`utils`/`validations`
+**path segment** and is not a spec, story, type, style, i18n bundle, asset, constant, mock,
+or fixture (`scripts/ci/mutation-scope.ts`). The filter is on directories, not on file
+extension: a `.tsx` under `hooks/` is logic and is mutated, while a presentational component
+is excluded because it does not sit under one of those segments. That boundary is the point
+— mutating a style object yields equivalent mutants no test can kill, which renders a gate
+unfalsifiable rather than strict.
+
+A mutable file whose behaviour no spec in the mutation runner's test set reaches is dropped
+from the list and named in the run log, never scored. Stryker runs with
+`enableFindRelatedTests`; when Jest resolves no related spec it runs nothing, exits 0, and
+every mutant reads as _survived_ — identical to a genuinely weak test.
+`api/graphql/apollo.ts`, whose only coverage is the integration layer, is the live example.
+Reporting a survivor for a test that exists is how a gate gets its threshold lowered.
+
+The `changed` leg gates below 100% on purpose. A file mutated for the first time carries
+pre-existing debt its author did not create, and blocking on that only teaches reviewers to
+click past the check; the nightly census is where that backlog is tracked. When a PR touches
+more mutable files than `changed.maxFiles`, the leg degrades to advisory **and** truncates
+the list to the cap — degrading the verdict alone would leave the run free to hit the job
+timeout, reddening the very check the cap exists to keep off the critical path.
+
+The mutate list is resolved in two halves, because neither tool is available on both sides
+of the #399 executor boundary: `make mutation-file-list` produces the candidate paths with
+the **host's** git (the dev image ships none) into `reports/mutation/candidates.txt`, and
+`scripts/ci/mutation-file-list.ts` filters that list **in the container**, where the
+node_modules its `--findRelatedTests` probe needs actually live. The resolver refuses to run
+without `MUTATION_CANDIDATES_FILE` rather than treating an absent list as an empty diff.
+
+Locally: `make test-mutation-changed` (add `MUTATION_BASE_REF=<ref>` to diff against
+something other than `origin/main`). Never lower a `break`, widen the exclusion list, or add
+a scope to dodge a surviving mutant — write the assertion the mutant proves is missing.
+
+One acceptance criterion of #345 — adding the changed-files leg to `main`'s
+required-status-checks ruleset — needs repository-admin access and cannot be committed from
+a PR. Until the separate ci-health ruleset issue lands, that check is advisory at merge time
+(as is every other check on `main`, which carries no required checks today).
 
 ## Architecture
 
