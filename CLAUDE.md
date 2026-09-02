@@ -363,9 +363,9 @@ Four production-facing invariants that no other gate watches. Extend them; never
   role, cuts a release, or calls a local composite action under `.github/actions/` — the
   gate cannot see inside a composite, so it assumes the worst rather than treating it as
   invisible. That is why the `dev-container` composite's callers that also run on a
-  schedule or a push (`dev image cache`, `fuzz testing`, `storybook build`) are listed
-  there. A workflow's `name:` is therefore load-bearing — renaming one requires updating
-  that list in the same commit.
+  schedule or a push (`dev image cache`, `fuzz testing`, `storybook build`,
+  `mutation testing`) are listed there. A workflow's `name:` is therefore load-bearing —
+  renaming one requires updating that list in the same commit.
 - **CodeQL findings are gated and routed.** `scripts/ci/code-scanning-gate.sh` fails the
   run on _new_ high/critical alerts (PRs subtract the default-branch baseline, so
   inherited debt does not block), and a failed scan reaches the `ci-alert` issue. Branch
