@@ -157,18 +157,33 @@ Two suites that used to run without asserting anything now fail closed:
 Never widen a retry budget, raise a leak allowance, or add an allowance for a leak your
 change introduced — fix the race or the retainer instead.
 
-### Accessibility (issue #317)
+### Accessibility (issues #317, #369)
 
-The binding conformance target is **WCAG 2.1 AA**, enforced per rule at two layers by
-`make test-a11y` and by `.github/workflows/a11y-testing.yml`: `jest-axe` over rendered
-components in the client Jest suite, and `@axe-core/playwright` plus a keyboard sweep over
-every route in `src/test/a11y/routes.ts`. Lighthouse's accessibility score is a weighted
-category heuristic on two URLs and is defence in depth, not a substitute.
+The binding conformance target is **WCAG 2.1 AA**, enforced per rule at three layers:
+
+- **Components** — `jest-axe` over rendered React in the client Jest suite.
+- **Routes** — `@axe-core/playwright` plus a keyboard sweep over every route in
+  `src/test/a11y/routes.ts`. Both run under `make test-a11y` and
+  `.github/workflows/a11y-testing.yml`.
+- **Interaction states** — axe at runtime states inside the existing Playwright e2e journeys
+  (`make test-e2e`, the existing shard matrix): a form showing validation errors, a form
+  showing the submit-error notification, the mobile drawer open, an expanded Swagger operation,
+  the Swagger authorize dialog. Static lint sees one component's JSX and the route scan only
+  ever sees a page at initial load, so composed/conditional DOM is only reachable here. These
+  scans gate on **serious/critical** impact, and on a violation axe reports with **no
+  impact at all** — an unset impact is a gap in axe's own metadata, and the safe reading
+  of "impact unknown" is the blocking one. Moderate and minor findings are attached to the
+  Playwright report instead.
+
+Lighthouse's accessibility score is a weighted category heuristic on two URLs and is defence in
+depth, not a substitute.
 
 Read [`docs/accessibility/acceptance-standard.md`](docs/accessibility/acceptance-standard.md)
 before changing UI. The axe tag list and the exception allowlist have exactly one home,
-`src/test/a11y/axe-config.ts`. Adding a page means adding it to `src/test/a11y/routes.ts`; a
-unit test fails if that registry drifts from `pages/`.
+`src/test/a11y/axe-config.ts`. Adding a page means adding it to `src/test/a11y/routes.ts`;
+adding an interaction state means adding it to `src/test/a11y/interaction-states.ts` and calling
+`scanInteractionState` from the journey that drives it. A unit test fails if either registry
+drifts — from `pages/` for routes, from the e2e specs for interaction states.
 
 Never make the gate pass by suppressing it — no `eslint-disable`, no axe rule removal, no
 `test.skip`, and never an `if (count > 0)` / `if (isVisible())` wrapper around an assertion.

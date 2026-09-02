@@ -6,7 +6,8 @@ how an exception is accepted. It was introduced by issue #317.
 
 If you are adding or changing a page or a component, the short version is: run
 `make test-a11y`, fix what it reports, and read the [Definition of a11y-done](#definition-of-a11y-done)
-before opening the PR.
+before opening the PR. If your change adds or alters an interaction state — a dialog, a drawer,
+an error state, an expanded panel — `make test-e2e` carries a scan for those too.
 
 ## Conformance target
 
@@ -55,9 +56,9 @@ The remaining two are left disabled on purpose, so the gate does not claim them:
 `css-orientation-lock` parses every stylesheet and returns non-deterministic `incomplete`
 results. Both reasons are recorded next to `FORCED_RULES` itself.
 
-## The two enforced layers
+## The three enforced layers
 
-Both layers run on every pull request and both must pass.
+Every layer runs on every pull request and every one must pass.
 
 ### Component level
 
@@ -93,6 +94,49 @@ against the real production build.
   rather than the whole page.
 - Command: `make test-a11y-routes`.
 
+### Interaction states
+
+Introduced by issue #369. The two layers above cannot see composed, conditional DOM: static
+lint reads one component's JSX, and the route scan only ever sees a page at initial load. A
+validation message that is never associated with its field, a drawer that hides the page from
+assistive technology while leaving it focusable, an expanded operation whose control has no
+accessible name — each of those ships with both layers green.
+
+So axe also runs mid-journey, inside the Playwright e2e suite:
+
+- Helper: `scanInteractionState(page, state)` in `src/test/a11y/scan-interaction-state.ts`.
+- Registry: `src/test/a11y/interaction-states.ts` — one entry per scanned state.
+- Where it runs: as an added assertion inside the **existing** e2e journeys that already drive
+  these states, so there is no new job, no new journey and no separate advisory leg. It runs in
+  the existing `--shard` matrix in Chromium, Firefox and WebKit.
+- Command: `make test-e2e` (or `make test-e2e-shard`).
+
+| State                                          | Journey                                   |
+| ---------------------------------------------- | ----------------------------------------- |
+| Registration form, inline validation errors    | `register-form/validation.spec.ts`        |
+| Registration form, submit error notification   | `register-form/submit-error.spec.ts`      |
+| Mobile navigation drawer open (450px viewport) | `drawer-is-visible.spec.ts`               |
+| Swagger operation expanded                     | `swagger/swagger-ui-interactions.spec.ts` |
+| Swagger authorize dialog open                  | `swagger/swagger-ui-interactions.spec.ts` |
+
+Two deliberate differences from the route layer:
+
+- **Only serious and critical impacts are gated.** These scans live inside journeys whose
+  primary job is behavioural, over DOM composed at runtime, where a moderate or minor advisory
+  finding can trip for reasons that have nothing to do with the interaction under test. Keeping
+  the gate at serious/critical is what makes an always-on scan inside a shared journey
+  acceptable. Moderate and minor findings are attached to the Playwright report as
+  `axe-advisory-*` for review, and a violation axe reports _without_ an impact fails closed.
+  The route layer still gates every impact at initial load, so nothing was narrowed — this
+  layer only adds.
+- **The exception context is the state's route.** A waiver already reviewed for `/` applies to
+  every state on `/`, and to no other page. Interaction states do not get their own waiver
+  namespace, so an accepted exception cannot be widened by adding a state.
+
+`src/test/unit/a11y/interaction-states.test.ts` reads the e2e specs and fails when a
+registered state stops being scanned, so a scan cannot be deleted while this document, the
+registry and the CI summary all still claim the state is covered.
+
 ### How this relates to the other gates
 
 | Gate                          | What it actually asserts                             |
@@ -100,16 +144,18 @@ against the real production build.
 | `jsx-a11y` (`make lint-next`) | Static JSX heuristics; no runtime DOM                |
 | Lighthouse a11y category      | A weighted score, on two URLs, no per-rule pass/fail |
 | `make test-a11y`              | Per rule, per component and per route, pass/fail     |
+| `make test-e2e`               | Per rule at runtime interaction states, pass/fail    |
 
-The first two stay exactly as they are. This standard adds the deterministic layer they lack;
+The first two stay exactly as they are. This standard adds the deterministic layers they lack;
 it does not replace them, and neither may be weakened to "avoid duplication".
 
 ## Running it
 
 ```bash
-make test-a11y              # both gates
+make test-a11y              # the component and route gates
 make test-a11y-components   # jest-axe, jsdom, fast
 make test-a11y-routes       # axe + keyboard in real browsers (boots the prod stack)
+make test-e2e               # includes the interaction-state scans
 ```
 
 The route leg reuses the running production stack, exactly like `make test-e2e` and
@@ -119,15 +165,18 @@ bundle. CI always builds from scratch, so this only affects local runs.
 
 CI runs the same target from `.github/workflows/a11y-testing.yml` as a check of its own,
 separate from `static testing` and `performance testing`. The route scans also run in the
-prod-side phase via `make ci-test-a11y`. Whether a check actually blocks a merge is a
-repository ruleset setting rather than something a workflow can declare — `main` has no
-required checks configured yet, which is tracked separately.
+prod-side phase via `make ci-test-a11y`. The interaction-state scans need no workflow of their
+own: they are assertions inside the e2e specs, so they run in every `e2e shard N/4` job and a
+violation fails that job. Whether a check actually blocks a merge is a repository ruleset
+setting rather than something a workflow can declare — `main` has no required checks configured
+yet, which is tracked separately.
 
 ## Definition of a11y-done
 
 A page or component is done when all of the following are true.
 
-1. `make test-a11y` passes with no new entry added to the exception allowlist.
+1. `make test-a11y` passes with no new entry added to the exception allowlist, and so does
+   `make test-e2e` — which carries the interaction-state scans.
 2. Every interactive control is reachable and operable with the keyboard alone, and the focus
    position is visible at every step.
 3. Every control has an accessible name that matches its visible label.
@@ -137,7 +186,9 @@ A page or component is done when all of the following are true.
 6. Images carry meaningful alternative text, or are marked decorative when they carry no
    information.
 7. Colour is never the only way information is conveyed.
-8. Any new page is added to `src/test/a11y/routes.ts`.
+8. Any new page is added to `src/test/a11y/routes.ts`, and any new interaction state that
+   composes or replaces DOM — a dialog, a drawer, an error state, an expanded panel — is added
+   to `src/test/a11y/interaction-states.ts` and scanned from the journey that drives it.
 9. Localised strings are asserted through `t()`, not hardcoded — a missing translation on an
    `aria-*` string is an accessibility regression, not just a copy bug.
 
@@ -152,13 +203,22 @@ Treat these as manual review items on any change that touches UI:
 - Focus visibility and focus-order sanity beyond DOM order.
 - Contrast, in every state. Default-state contrast is waived on all three registered routes
   until #423 lands, and hover, focus, active, disabled and placeholder contrast is never
-  scanned at all — the route scan only ever sees the default state.
+  scanned at all — the route scan sees a page at rest, and the interaction-state scans see only
+  the states they are registered for.
 - Keyboard traps and focus-order defects past the first 120 tab positions of a route, which is
   where the Tab sweep stops.
-- Reflow, zoom and mobile viewports. The Playwright projects are desktop-only today.
+- Reflow and zoom. The Playwright projects are desktop-only; the only scan at a mobile viewport
+  is the open navigation drawer, which resizes the page itself.
+- Moderate and minor findings at an interaction state. They are attached to the Playwright
+  report as `axe-advisory-*` rather than gated — see the interaction-state layer above for why
+  — so reading those attachments is a review task, not an automated one.
+- Anything axe tags `best-practice` rather than as a WCAG criterion. The tag filter is what
+  keeps the gate honest, but it also means real APG requirements are invisible to it: an open
+  dialog with no accessible name is `aria-dialog-name`, which is `best-practice`-tagged, so no
+  layer reports it (#435). Naming a dialog, a region or a landmark stays a review item.
 - `incomplete` axe results, which mean "axe could not decide" — typically contrast over a
-  gradient or an image. `scanRoute` attaches them to the Playwright report as an
-  `axe-incomplete*` artifact for human review; they are not gated, because they are advisory
+  gradient or an image. Every scan attaches them to the Playwright report as an
+  `axe-incomplete-*` artifact for human review; they are not gated, because they are advisory
   by construction.
 
 ## Exception process
@@ -187,20 +247,33 @@ gate. Two bounding rules matter:
   the same rule failing at a different selector.
 - A `*` scope is only accepted on a `route` exception that names its routes. A blanket waiver
   can never silently cover a page nobody reviewed it against.
+- A `route` exception also covers the interaction states reached on that route. There is no
+  per-state waiver namespace, so adding a state can never widen an accepted exception, and a
+  waiver reviewed for one page still never reaches another.
 
 Reviewers should treat any new exception as a design question, not a test question, and every
 exception must be deleted in the same change that fixes its underlying defect.
 
 ### Current exceptions
 
-| Rule             | Scope      | Routes                          | Tracking |
-| ---------------- | ---------- | ------------------------------- | -------- |
-| `color-contrast` | `*`        | `/`, `/swagger`, `/en/docs/api` | #423     |
-| `select-name`    | `#servers` | `/swagger`                      | #424     |
+| Rule and scope                                        | Routes                | Tracking |
+| ----------------------------------------------------- | --------------------- | -------- |
+| `color-contrast`, every node                          | `/`, `/swagger`, docs | #423     |
+| `select-name` on `#servers`                           | `/swagger`            | #424     |
+| `button-name` on `.close-modal`                       | `/swagger`            | #433     |
+| `label-content-name-mismatch` on the authorize submit | `/swagger`            | #433     |
+| `td-has-header` on `#get_api_users_responses`         | `/swagger`            | #433     |
 
-Both were surfaced by this gate on the day it landed. The contrast failures come from shared
-brand tokens, and the unnamed select is rendered by third-party `swagger-ui-react`; both are
-tracked for burn-down rather than waived quietly.
+The exact selectors are in `A11Y_EXCEPTIONS`; "docs" above is `/en/docs/api`, and the authorize
+submit is matched as `button[aria-label="Apply given OAuth2 credentials"]`.
+
+Every one was surfaced by this gate's own output. The contrast failures come from shared brand
+tokens (#423). The rest are all markup rendered by third-party `swagger-ui-react`, where there
+is no local element to fix: an unnamed close button and an `aria-label` that replaces rather
+than includes the visible "Authorize" text in the authorize dialog, a header row built from
+`<td class="col_header">` instead of `<th>` in the responses table, and the unlabelled servers
+select (#424, #433). All are tracked for burn-down rather than waived quietly, and the fix
+belongs upstream — not in a DOM patch layered over the widget.
 
 Be explicit about what the first row costs: **SC 1.4.3, Contrast (Minimum), is currently
 enforced at neither layer.** The component layer disables `color-contrast` because jsdom has no
@@ -210,3 +283,10 @@ Lighthouse accessibility score does not fill the gap — it is a weighted averag
 with no per-rule pass/fail, and its budgets were baselined with these failures already present.
 Closing #423 is what restores the criterion; widening the waiver, or adding a route to it, is
 not.
+
+Interaction-state scanning also found one violation in **our own** code, which was fixed rather
+than waived: the mobile drawer passed `role="menu"` to MUI's `Drawer`, which forwards it to the
+modal root holding the backdrop and the paper, so that root failed `aria-required-children` at
+critical impact. A temporary Drawer is already a dialog (MUI sets `role="dialog"` and
+`aria-modal` on the paper) and its links are a real `<nav>` list, so the override was simply
+wrong.

@@ -3,6 +3,7 @@ import type { NodeResult, Result } from 'axe-core';
 
 import {
   A11Y_EXCEPTIONS,
+  BLOCKING_IMPACTS,
   EXCEPTION_SCOPE_ANY,
   FORCED_RULES,
   JSDOM_UNSUPPORTED_RULES,
@@ -10,8 +11,10 @@ import {
   describeViolations,
   filterAllowedViolations,
   findInvalidExceptions,
+  partitionByImpact,
   selectorTextOf,
   type A11yException,
+  type ImpactPartition,
 } from '../../a11y/axe-config';
 import { A11Y_ROUTES } from '../../a11y/routes';
 
@@ -53,6 +56,11 @@ function makeViolation(id: string, targets: readonly ProbeTarget[]): Result {
     tags: ['wcag2aa'],
     nodes: targets.map(makeNode),
   } as unknown as Result;
+}
+
+/** The same violation at another impact level, for the interaction-scan split. */
+function atImpact(id: string, impact: NonNullable<Result['impact']>): Result {
+  return { ...makeViolation(id, ['.probe']), impact };
 }
 
 /** A route exception; `routes` is always present, as the type requires. */
@@ -333,6 +341,65 @@ describe('accessibility acceptance standard', () => {
 
       expect(remaining?.nodes).toHaveLength(1);
       expect(selectorTextOf(remaining!.nodes[0]!)).toBe('#other-select');
+    });
+  });
+
+  describe('partitionByImpact', () => {
+    it('gates exactly serious and critical', () => {
+      // The interaction-state scans (#369) are deliberately narrower than the
+      // route gate; widening or narrowing this list is a change to the standard.
+      expect([...BLOCKING_IMPACTS]).toEqual(['critical', 'serious']);
+    });
+
+    it('blocks the severe impacts and only reports the advisory ones', () => {
+      const violations: Result[] = [
+        atImpact('button-name', 'critical'),
+        atImpact('select-name', 'serious'),
+        atImpact('region', 'moderate'),
+        atImpact('landmark-unique', 'minor'),
+      ];
+
+      const { blocking, advisory }: ImpactPartition = partitionByImpact(violations);
+
+      expect(blocking.map(violation => violation.id)).toEqual(['button-name', 'select-name']);
+      expect(advisory.map(violation => violation.id)).toEqual(['region', 'landmark-unique']);
+    });
+
+    it('fails closed on a violation axe reports without an impact', () => {
+      // Omit the key entirely rather than setting it to `undefined`, which
+      // `exactOptionalPropertyTypes` rejects — and which is not the shape axe
+      // produces either.
+      const { impact, ...withoutImpact } = makeViolation('region', ['.x']);
+      expect(impact).toBe('serious');
+
+      const { blocking, advisory }: ImpactPartition = partitionByImpact([withoutImpact as Result]);
+
+      expect(blocking).toHaveLength(1);
+      expect(advisory).toEqual([]);
+    });
+
+    it('fails closed on a null impact', () => {
+      const { blocking } = partitionByImpact([
+        { ...makeViolation('region', ['.x']), impact: null },
+      ]);
+
+      expect(blocking).toHaveLength(1);
+    });
+
+    it('keeps every violation on exactly one side of the split', () => {
+      const violations: Result[] = [
+        atImpact('button-name', 'critical'),
+        atImpact('region', 'moderate'),
+      ];
+
+      const { blocking, advisory }: ImpactPartition = partitionByImpact(violations);
+
+      expect(blocking.length + advisory.length).toBe(violations.length);
+      expect(blocking.filter(violation => advisory.includes(violation))).toEqual([]);
+    });
+
+    it('reports nothing for a clean scan', () => {
+      expect(partitionByImpact([])).toEqual({ blocking: [], advisory: [] });
     });
   });
 

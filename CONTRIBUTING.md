@@ -227,16 +227,27 @@ policy, thresholds, and tuning guide.
 #### Accessibility (WCAG 2.1 AA)
 
 If your change renders UI or adds a route, it has to pass the accessibility gate.
-`make test-a11y` runs both halves: `jest-axe` over rendered components in jsdom,
-and `@axe-core/playwright` plus a keyboard sweep over every registered route in
-Chromium, Firefox and WebKit. CI runs the same target as its own required check
-(`.github/workflows/a11y-testing.yml`), separate from `static testing` (the
-`jsx-a11y` lint rules) and `performance testing` (the Lighthouse accessibility
-category score) — those are heuristics, this one asserts per rule.
+`make test-a11y` runs two of its three layers: `jest-axe` over rendered
+components in jsdom, and `@axe-core/playwright` plus a keyboard sweep over every
+registered route in Chromium, Firefox and WebKit. CI runs the same target as its
+own check (`.github/workflows/a11y-testing.yml`), separate from `static testing`
+(the `jsx-a11y` lint rules) and `performance testing` (the Lighthouse
+accessibility category score) — those are heuristics, this one asserts per rule.
 
-A new page must be added to `src/test/a11y/routes.ts`; a unit test fails when
-that registry drifts from `pages/`. The axe tag list and the exception allowlist
-live only in `src/test/a11y/axe-config.ts`.
+The third layer rides `make test-e2e`: axe also scans at **runtime interaction
+states**, as an added assertion inside the e2e journeys that already drive them —
+a form showing validation errors, an open mobile drawer, an expanded panel, a
+dialog. Neither static lint nor a scan of a page at rest can see composed,
+conditional DOM, so that is the only layer that reaches it. These scans gate
+serious/critical impact, and a violation axe reports without an impact fails
+closed; moderate and minor findings are attached to the Playwright report.
+
+A new page must be added to `src/test/a11y/routes.ts`, and a new interaction
+state to `src/test/a11y/interaction-states.ts` plus a
+`scanInteractionState(page, INTERACTION_STATES.<state>)` call in the journey that
+reaches it. A unit test fails when either registry drifts — the route registry
+from `pages/`, the interaction registry from the e2e specs. The axe tag list and
+the exception allowlist live only in `src/test/a11y/axe-config.ts`.
 
 Never make the gate pass by suppressing it — no `eslint-disable`, no axe rule
 removal, no `test.skip`, and never an `if (count > 0)` / `if (isVisible())`
