@@ -74,7 +74,7 @@ generate-localization	ci	.github/workflows/static-testing.yml	Executed through `
 lint-headers	ci	.github/workflows/static-testing.yml	Executed through `make lint`, which depends on `lint-headers`.
 lint-contracts	bats	tests/bats/makefile_targets.bats	Executed directly by contract-testing.yml; deliberately outside `make lint` because the drift check needs network.
 lint-openapi	bats	tests/bats/makefile_targets.bats	Validated host-only: ensure-oasdiff.sh provisioning (idempotent) plus openapi-drift.sh three-way exit handling with a stubbed oasdiff binary.
-update-contracts	bats	tests/bats/makefile_targets.bats	Maintainer command for bumping USER_SERVICE_VERSION; refreshes both artifacts and the spectral baseline.
+update-contracts	bats	tests/bats/makefile_targets.bats	Maintainer command for bumping USER_SERVICE_VERSION; refreshes both artifacts, their SHA-256 digests and the spectral baseline.
 run-deps-lint-tests-dind	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker exec calls.
 test-integration	bats	tests/bats/makefile_targets.bats	Validated by invoking Jest with TEST_ENV=integration through a stubbed jest binary.
 test-integration-watch	bats	tests/bats/makefile_targets.bats	Validated by invoking Jest in watch mode with TEST_ENV=integration through a stubbed jest binary.
@@ -112,3 +112,5 @@ lint-workflows	bats	tests/bats/makefile_targets.bats	Validated host-only: the di
 lint-security-txt	bats	tests/bats/makefile_targets.bats	Executed through `make lint`; the target itself is validated against the committed RFC 9116 file, and check-security-txt.sh has its own suite in check_security_txt.bats.
 lint-prod-guardrails	bats	tests/bats/makefile_targets.bats	Executed through `make lint` and `make ci-lint`; the target shells out to the hermetic policy script, whose assertions are covered by prod_guardrails.bats.
 release-audit-dry-run	bats	tests/bats/release_audit.bats	Host-only dry run of the release audit; the script it wraps is covered end to end (record, dedup, escalation, sweep, no-git invariant) by release_audit.bats.
+lint-vulns	bats	tests/bats/makefile_targets.bats	Validated host-only: ensure-osv.sh provisioning (idempotent) plus scan-vulns.sh census mode with a stubbed scanner that exits 1 as the real one does on findings, and the diff mode's fail-closed guard when the base ref is unreachable.
+scan-vulns-census	bats	tests/bats/makefile_targets.bats	Validated as an alias that runs lint-vulns in advisory census mode with a stubbed scanner.

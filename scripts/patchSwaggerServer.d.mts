@@ -10,7 +10,7 @@ export interface SwaggerInfo {
 export interface SwaggerDocument {
   [key: string]: unknown;
   info?: SwaggerInfo;
-  servers?: Array<{ url: string }>;
+  servers?: Array<{ url: string; [key: string]: unknown }>;
 }
 
 export const CONTRACT_PATH: string;

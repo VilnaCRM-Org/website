@@ -353,13 +353,17 @@ behind the e2e suite — comes from the single `USER_SERVICE_VERSION` pin in
 deliberately outside `make lint` because it needs network) checks that:
 
 - every client GraphQL operation still validates against the pinned schema;
-- the OpenAPI document lints against an unmodified `spectral:oas` ruleset; and
+- the OpenAPI document lints against an unmodified `spectral:oas` ruleset;
+- the pin is an immutable ref and each committed artifact still matches the
+  SHA-256 digest recorded for it in `contracts/user-service/checksums.json`
+  (hermetic — this layer needs no network); and
 - the committed artifacts still match the pinned tag.
 
 To bump the upstream version, change `USER_SERVICE_VERSION` and run `make
-update-contracts` — it re-fetches both artifacts and refreshes the spectral
-baseline. Commit the resulting diff; it is the reviewable record of what
-changed upstream.
+update-contracts` — it re-fetches both artifacts, re-records their digests in
+`checksums.json`, and refreshes the spectral baseline. Commit the resulting
+diff; it is the reviewable record of what changed upstream. Never hand-edit
+`checksums.json` to match a modified artifact.
 
 Two further gates keep the **mock** honest, because the whole Playwright suite
 talks to Mockoon rather than a real backend and a green e2e run therefore only

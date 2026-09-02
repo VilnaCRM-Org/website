@@ -37,6 +37,20 @@ RCA_EXCLUDES                = */test/* *.d.ts */assets/* */config/*
 METRICS_POLICY_PATH         = config/metrics-policy.json
 RCA_SHA256_LINUX            = 9ec2a217b8ff191e02dab5d5f2eee6158b63fd975c532b2c5d67c2e6c7249894
 
+# Dependency-CVE gate (#356). osv-scanner is a host-installed Go binary provisioned exactly
+# like RCA above: pinned, SHA256-verified, installed into the gitignored ./bin. Unlike RCA,
+# the version and its four platform digests are ONE fact and live together in
+# scripts/ci/ensure-osv.sh, deliberately not overridable from here — a version set apart
+# from its digests could only ever fail verification.
+# OSV_MODE=diff fails only on advisories a change ADDS versus OSV_BASE_REF; OSV_MODE=census
+# reports the whole backlog and stays green. See scripts/ci/osv-report.ts for the rationale.
+OSV_BIN                     = ./bin/osv-scanner
+OSV_MODE                    ?= diff
+OSV_BASE_REF                ?= origin/main
+OSV_LOCKFILE                = bun.lock
+OSV_CONFIG                  = config/osv-scanner.toml
+OSV_REPORT_DIR              = reports/osv
+
 # oasdiff is a host-installed Go binary provisioned exactly like RCA above: pinned
 # version + pinned digest, installed to the gitignored ./bin. Never resolve it as
 # "latest" at install time — that would silently defeat the checksum pin. The
@@ -579,9 +593,10 @@ lint-openapi: ## Report breaking changes between the committed OpenAPI baseline 
 	 USER_SERVICE_SPEC_PATH="$(USER_SERVICE_SPEC_PATH)" \
 	 bash scripts/ci/openapi-drift.sh
 
-update-contracts: $(DEV_PREREQ) ## Re-fetch the user-service contracts for the pinned USER_SERVICE_VERSION and refresh the spectral baseline
+update-contracts: $(DEV_PREREQ) ## Re-fetch the user-service contracts for the pinned USER_SERVICE_VERSION, refresh the spectral baseline and the artifact digests
 	$(PM_EXEC) node scripts/fetchSwaggerSchema.mjs
 	$(PM_EXEC) node scripts/fetchGraphqlSchema.mjs
+	$(PM_EXEC) node scripts/contracts/lint-contracts.mjs --update-checksums
 	$(PM_EXEC) node scripts/contracts/lint-contracts.mjs --update-baseline
 	$(PRETTIER_BIN) "contracts/**/*.json" --write --ignore-path .prettierignore
 
@@ -604,6 +619,28 @@ lint-metrics: ## Run rust-code-analysis complexity gate on src (host-only; auto-
 	 RCA_SHA256_LINUX="$(RCA_SHA256_LINUX)" \
 	 METRICS_POLICY="$(METRICS_POLICY_PATH)" \
 	 sh scripts/ci/lint-metrics.sh
+
+# DELIBERATE DIVERGENCE FROM THE npm-tool LINT GATES (lint-next/tsc/md/deps), for the same
+# two reasons as lint-metrics above:
+#   * Host-only: osv-scanner is a Go binary absent from the dev image, so this target does
+#     NOT use $(PM_EXEC) and runs on the host in both modes.
+#   * NOT in the `lint` aggregate and NOT in CI_LINT_TARGETS. It resolves advisories against
+#     the OSV database over the network, and static-testing.yml is otherwise hermetic — an
+#     osv.dev outage must not turn the whole static lane red. Its CI surface is
+#     .github/workflows/osv-scanner.yml, which runs it on every PR and nightly.
+# ensure-osv.sh provisions the pinned, SHA256-verified binary to ./bin if it is missing;
+# scan-vulns.sh only produces JSON, and scripts/ci/check-osv-report.ts owns every pass/fail
+# decision (unit-tested in src/test/unit/osv-report.test.ts).
+lint-vulns: ## Fail on dependency CVEs this branch adds versus $(OSV_BASE_REF) (host-only; auto-installs the pinned osv-scanner to ./bin)
+	@scripts/ci/ensure-osv.sh
+	@OSV_BIN="$(OSV_BIN)" OSV_MODE="$(OSV_MODE)" \
+	 OSV_BASE_REF="$(OSV_BASE_REF)" OSV_LOCKFILE="$(OSV_LOCKFILE)" \
+	 OSV_CONFIG="$(OSV_CONFIG)" \
+	 OSV_REPORT_DIR="$(OSV_REPORT_DIR)" \
+	 sh scripts/ci/scan-vulns.sh
+
+scan-vulns-census: ## Report every known dependency CVE in bun.lock without failing (advisory; feeds the nightly tracking issue)
+	@$(MAKE) lint-vulns OSV_MODE=census
 
 # Host-only, and deliberately OUTSIDE `lint` and CI_LINT_TARGETS for the same
 # reason as lint-metrics above: it drives `gh` against the live GitHub API, so it
@@ -803,7 +840,7 @@ ci-test-contract: ## Run contract parity tests directly assuming deps are instal
 	test-load test-load-swagger test-mutation-shard merge-mutation-reports \
 	test-e2e-burnin check-e2e-flakes pr-comments lint lint-api-versions \
 	lint-security-txt lint-prod-guardrails release-audit-dry-run \
-	generate-localization
+	lint-vulns scan-vulns-census generate-localization
 
 # Brings the dev container up IDLE (docker-compose.ci.yml overrides only the
 # command), so a gate does not pay for a Next dev server it never calls. There

@@ -100,11 +100,12 @@ the same command against the same image. Targets that drive Docker itself, audit
 image, or need a toolchain the image does not ship stay on the host in both modes — among
 them `lint-metrics`, `test-bats`, `generate-localization`, `build-out`, the prod-stack
 suites (`test-e2e`, `test-visual`, `test-memory-leak`, `load-tests`, `lighthouse-*`), and
-the host-only lint gates `lint-docker-policy`, `lint-security-txt`, `lint-openapi` and
-`lint-workflows`. Watch `lint-docker-policy` and `lint-security-txt`: both are members of
-the `make lint` aggregate, so part of that run executes on the host by design. Append `EXEC_MODE=host` to bypass Docker and run a target
-straight from `node_modules/.bin` (for example `EXEC_MODE=host make start` runs `next dev`
-directly); that escape hatch exists for the Husky hooks, the `run-*-dind` wrappers, and the
+the host-only lint gates `lint-docker-policy`, `lint-security-txt`, `lint-openapi`,
+`lint-vulns` and `lint-workflows`. Watch `lint-docker-policy` and `lint-security-txt`:
+both are members of the `make lint` aggregate, so part of that run executes on the host
+by design. Append `EXEC_MODE=host` to bypass Docker and run a target straight from
+`node_modules/.bin` (for example `EXEC_MODE=host make start` runs `next dev` directly);
+that escape hatch exists for the Husky hooks, the `run-*-dind` wrappers, and the
 Lighthouse audits, and it requires a host `bun install`. `EXEC_MODE` accepts only
 `container` (default) or `host`; anything else is a hard error. It is deliberately not
 derived from the ambient `CI` variable, which GitHub Actions sets on every step.
@@ -220,11 +221,12 @@ The static export makes Next's `headers()` a no-op, so the edge is the only
 enforcement point — see [`docs/security-headers.md`](docs/security-headers.md). Never
 drop or weaken a header to make the gate pass.
 
-Four gates sit deliberately outside `make lint`: `make lint-metrics` (host-only Rust
+Five gates sit deliberately outside `make lint`: `make lint-metrics` (host-only Rust
 binary), `make lint-contracts` (needs network for its drift check), `make lint-openapi`
-(both — a host Go binary plus the network), and `make lint-workflows` (host-only zizmor
-container; its online audits reach the GitHub API). Each has its own workflow —
-`rust-code-analysis.yml`, `contract-testing.yml`, `openapi-drift.yml`, and
+(both — a host Go binary plus the network), `make lint-vulns` (host-only Go binary, needs
+network for the OSV database), and `make lint-workflows` (host-only zizmor container; its
+online audits reach the GitHub API). Each has its own workflow — `rust-code-analysis.yml`,
+`contract-testing.yml`, `openapi-drift.yml`, `osv-scanner.yml`, and
 `workflow-security.yml`. The two gates added by issue #383 are _inside_ `make lint`
 precisely because they are hermetic — they read only committed files, with no network, no
 host binary and no Docker.
@@ -237,6 +239,20 @@ PR review comments.
 
 Never satisfy a gate with `eslint-disable`, `prettier-ignore`, a markdownlint disable, or a
 lowered threshold — fix the root cause.
+
+### Contract supply chain (issue #376)
+
+Every user-service contract comes from the single `USER_SERVICE_VERSION` pin in `.env`
+and is **vendored** under `contracts/user-service/`, so no build fetches it. On top of
+that, `make lint-contracts` verifies a committed SHA-256 digest of each artifact
+(`contracts/user-service/checksums.json`) and refuses a pin that is not an immutable ref;
+the Apollo mock refuses a downloaded schema that does not match its digest; and
+`scripts/patchSwaggerServer.mjs` rebuilds `servers` as exactly one build-controlled entry
+so an injected `servers[1]` can never appear in the swagger "Try it out" dropdown. Markup
+in a spec `description`/`title`/`summary` is rejected at ingestion rather than stripped.
+
+Refresh artifacts and digests together with `make update-contracts` — never hand-edit
+`checksums.json`, and never loosen the ref check to accept a branch.
 
 ### API contract parity (issue #350)
 
@@ -368,6 +384,27 @@ Four production-facing invariants that no other gate watches. Extend them; never
   inherited debt does not block), and a failed scan reaches the `ci-alert` issue. Branch
   protection itself is a GitHub setting that cannot be committed — see CONTRIBUTING.md for
   the required check names.
+
+### Dependency CVEs (osv-scanner, issue #356)
+
+Issue #356 added the repository's only SCA gate — `make lint-vulns`, the ignore policy in
+`config/osv-scanner.toml`, and the CI workflow `.github/workflows/osv-scanner.yml`. The binary is
+pinned and SHA256-verified into the gitignored `./bin` by `scripts/ci/ensure-osv.sh`.
+
+The PR leg is **differential**: it scans the base branch's `bun.lock` and the PR's, and
+fails only on advisories the PR _introduces_. An absolute gate would be red on day one (the
+tree carries a large backlog) and would redden unrelated PRs as OSV publishes advisories
+against untouched code. Findings are keyed by ecosystem + package + advisory id, without
+the version, so bumping to a version carrying the _same_ advisory never blocks the bump.
+The nightly `dependency cve census` leg reports the whole backlog into one refreshed
+`dependency-cve` issue and stays green.
+
+Never add a `config/osv-scanner.toml` ignore for an advisory your own change introduced, and
+never push an `ignoreUntil` date out to keep a build green — upgrade the dependency. Every
+ignore needs an `id`, a `reason`, and an unexpired `ignoreUntil`; all three are enforced by
+`scripts/ci/osv-ignores.ts`. The rule is also mechanical, not just documented: both diff scans
+run under the _intersection_ of the base ref's ignores and the working tree's, so an ignore a
+change adds — or removes — cannot alter what its own gate suppresses.
 
 ## Continuous Integration (parallel PR pipeline)
 

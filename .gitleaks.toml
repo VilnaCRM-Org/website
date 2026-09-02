@@ -10,10 +10,15 @@ useDefault = true
 description = "Generated / upstream-fetched artifacts and the single shared integration-test mock password. None are real credentials."
 # Whole-file exemptions are limited to machine-generated / upstream-fetched
 # artifacts that are never a place a human pastes a real credential:
-#   - contracts/user-service/openapi.json — fetched from the pinned user-service contract
-#   - public/swagger-schema.json          — generated build artifact
+#   - contracts/user-service/openapi.json   — fetched from the pinned user-service contract
+#   - contracts/user-service/checksums.json — SHA-256 digests of the vendored
+#     contracts, written only by `make update-contracts` (#376). The 64-char hex
+#     digests trip the generic high-entropy rules; hand-editing this file is
+#     explicitly forbidden, so it is never a place a human pastes a credential.
+#   - public/swagger-schema.json            — generated build artifact
 paths = [
   '''contracts/user-service/openapi\.json''',
+  '''contracts/user-service/checksums\.json''',
   '''public/swagger-schema\.json''',
 ]
 # Hand-edited test fixtures are NOT exempted wholesale — only the specific mock

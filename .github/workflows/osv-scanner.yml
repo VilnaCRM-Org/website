@@ -1,0 +1,160 @@
+name: dependency cve scanning
+
+on:
+  pull_request:
+    branches:
+      - main
+  schedule:
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  # A pull-request scan is superseded by the next push; the nightly census is a measurement
+  # and must never be aborted mid-run for a newer trigger.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # BLOCKING leg (#356). Differential: it scans the base branch's bun.lock and this pull
+  # request's, and fails only on advisories the pull request ADDS. An absolute gate would be
+  # red on day one — the tree carries a large pre-existing backlog — and would keep reddening
+  # unrelated pull requests as OSV publishes advisories against untouched code, which trains
+  # reviewers to click past a security check. See scripts/ci/osv-report.ts.
+  osv-diff:
+    name: dependency cve gate
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # The gate diffs against the base branch, so its lockfile has to be in the object
+          # store. Fetching both tips is enough — no history is walked.
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: Cache Bun cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('.nvmrc') }}-${{ hashFiles('**/bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-${{ hashFiles('.nvmrc') }}-
+
+      - name: Setup Bun and install dependencies
+        run: |
+          # Install the exact Bun pinned in package.json's packageManager field,
+          # so the version is declared in exactly one place. Corepack does not
+          # manage Bun, so it is installed globally via `npm install -g`.
+          npm install -g "$(node -p "require('./package.json').packageManager.split('+')[0]")"
+          bun install --frozen-lockfile
+
+      - name: Fail on dependency CVEs this pull request introduces
+        env:
+          # `github.base_ref` is the branch name; the gate reads the lockfile from the
+          # remote-tracking ref that `actions/checkout` fetched.
+          BASE_REF: origin/${{ github.base_ref }}
+        run: |
+          # pipefail is mandatory: GitHub's default shell is `bash -e`, so without it the
+          # pipeline would exit with tee's status and the gate would fail OPEN.
+          set -euo pipefail
+          make -s lint-vulns OSV_BASE_REF="$BASE_REF" | tee -a "$GITHUB_STEP_SUMMARY"
+
+  # ADVISORY leg. The differential gate above deliberately cannot see the pre-existing
+  # backlog, nor advisories published against a lockfile nobody changed. This run does, and
+  # records them in one refreshed tracking issue instead of turning somebody's unrelated pull
+  # request red. It stays green by design — a red nightly pages for debt no author caused.
+  osv-census:
+    name: nightly dependency cve census
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      issues: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: Cache Bun cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('.nvmrc') }}-${{ hashFiles('**/bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-${{ hashFiles('.nvmrc') }}-
+
+      - name: Setup Bun and install dependencies
+        run: |
+          # Install the exact Bun pinned in package.json's packageManager field,
+          # so the version is declared in exactly one place. Corepack does not
+          # manage Bun, so it is installed globally via `npm install -g`.
+          npm install -g "$(node -p "require('./package.json').packageManager.split('+')[0]")"
+          bun install --frozen-lockfile
+
+      - name: Census the dependency tree
+        id: census
+        run: |
+          set -euo pipefail
+          # -s so make does not echo the recipe into the captured Markdown.
+          make -s scan-vulns-census | tee census.md
+          cat census.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: File or refresh the dependency-CVE tracking issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # Idempotent: also provisioned as repo metadata, but a missing label must not fail
+          # the census.
+          gh label create dependency-cve --color B60205 \
+            --description "Nightly dependency CVE census findings" 2>/dev/null || true
+          title='dependency CVE census'
+          run_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          body="$(printf '%s\n\n%s\n' "$(cat census.md)" "Census run: $run_url")"
+          # `.[0].number` over an empty array prints the literal string "null", which would
+          # pass the -n test and run `gh issue comment null`, so the tracking issue would
+          # never be created on the first census. `first(...) // empty` yields nothing.
+          #
+          # `|| true` because a rate-limited or flaky lookup must not abort the census under
+          # `set -e`. An empty result falls through to `gh issue create`, which either files
+          # the issue or fails loudly on a real permissions problem — the outcome actually
+          # worth being red for. This leg exists to stay green over debt no author caused.
+          existing="$(gh issue list --label dependency-cve --state open \
+            --search "$title in:title" --json number --jq 'first(.[].number) // empty' \
+            || true)"
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "$body"
+          else
+            gh issue create --label dependency-cve --title "$title" --body "$body"
+          fi
+
+      - name: Upload census report
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: dependency-cve-census-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            census.md
+            reports/osv/head.json
+          retention-days: 14
+          if-no-files-found: ignore
