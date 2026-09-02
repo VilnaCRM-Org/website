@@ -158,7 +158,9 @@ Mutation testing runs as a deterministic shard matrix plus a merge gate:
   which unions the per-shard reports and re-enforces the **exact** `break`
   threshold for the scope, resolved from
   [`config/mutation-policy.json`](config/mutation-policy.json) — the single source
-  of truth for what gets mutated and at what threshold
+  of truth for which directories hold mutable code and for every scope's gate
+  (the `curated` slice's file list is the exception: it stays a fixed list in
+  `stryker.config.mjs`, and the policy file supplies only its threshold)
   ([`scripts/ci/merge-mutation-reports.ts`](scripts/ci/merge-mutation-reports.ts),
   unit-tested in `src/test/unit/mutation-report.test.ts`).
 

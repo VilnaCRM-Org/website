@@ -447,8 +447,10 @@ tiered off, weakened, or removed.
 
 ### Mutation scope (issue #345)
 
-`config/mutation-policy.json` is the single source of truth for what gets mutated and at
-what threshold. `MUTATION_SCOPE` selects one of three slices; everything downstream — the
+`config/mutation-policy.json` is the single source of truth for which directories hold
+mutable code and for every scope's gate. It does not hold the `curated` slice's file list:
+that one is a fixed list in `stryker.config.mjs`, and the policy file supplies only its
+threshold. `MUTATION_SCOPE` selects one of three slices; everything downstream — the
 Stryker shard config, the Jest test set, and the merge gate — reads that one decision.
 
 | Scope     | What it mutates                           | Gate                             | Where           |
