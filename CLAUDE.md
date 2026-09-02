@@ -207,9 +207,11 @@ disagrees with it — a `FROM …node:<version>` base image in any Dockerfile,
 `package.json` `engines.node` (which must be the caret over the exact `.nvmrc` version,
 not a looser range that merely admits it), an `actions/setup-node` step that does not
 read `node-version-file: '.nvmrc'`, or a workflow reaching for a `vars.NODE_VERSION`
-repository variable. It also refuses a workflow mapping key spelled with YAML escapes
-(`"node-versio\x6E":`): the gate reads keys, not escapes, so it reports the spelling
-rather than guessing at the decoded one and passing a literal pin it guessed wrong about. Bump `.nvmrc` first, then let the gate name whatever still lags.
+repository variable. It also refuses two spellings it cannot read a line at a
+time: a mapping key written with YAML escapes (`"node-versio\x6E":`) and a double-quoted
+scalar continued onto the next line with a trailing backslash. Both name the same key to
+a YAML parser, so the gate reports the spelling rather than guessing at the decoded one
+and passing a literal pin it guessed wrong about. Bump `.nvmrc` first, then let the gate name whatever still lags.
 Do not confuse it with `make check-node-version`, which checks the _running_ Node
 against `engines`.
 

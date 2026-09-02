@@ -315,6 +315,20 @@ scan_setup_node_steps() {
       escaped_key = "^" escaped_scalar ws ":"
       flow_escaped_key = "^" any_key ws ":" ws "\\{" ws flow_entries escaped_scalar ws ":"
 
+      # The same refusal, one line wider. A double-quoted scalar may be CONTINUED onto
+      # the next line by ending this one with a backslash, and YAML then folds the break
+      # away: `"node-versio\` / `n": '\''20'\''` is the key `node-version`, spelled across
+      # two lines. A line-based scanner never sees that scalar whole, so the key rule
+      # above cannot fire and neither can the literal rule — the pin would simply pass.
+      #
+      # Detected structurally rather than guessed at: strip every scalar that CLOSES on
+      # this line (single-quoted first, so a double quote living inside one is gone
+      # before double-quoted scalars are paired), and any double quote still standing
+      # opened a scalar this line does not close. That is the continuation, and the
+      # scanner refuses it for the same reason it refuses an escape it cannot decode:
+      # from here on the line is not structure it can read.
+      dq_scalar_only = dq "[^" dq "\\\\]*(\\\\.[^" dq "\\\\]*)*" dq
+
       # A block-scalar header, `key: |` or `key: >`, with the same optional space before
       # the colon. The colon is matched wherever it sits on the line rather than anchored
       # to the key, so the leading `ws` keeps the shape uniform without widening it.
@@ -401,6 +415,11 @@ scan_setup_node_steps() {
       # unpinned step from the one before it.
       if (key ~ escaped_key || key ~ flow_escaped_key) escaped++
 
+      closed = line
+      gsub(sq_value_scalar, "", closed)
+      gsub(dq_scalar_only, "", closed)
+      if (index(closed, dq) > 0) continued++
+
       # Tracked outside the `in_step` guard on purpose: a block scalar hanging off a job
       # key must be skipped too, or its literal text is read back as structure.
       if (key ~ block_scalar_header) {
@@ -408,7 +427,7 @@ scan_setup_node_steps() {
         block_indent = key_indent
       }
     }
-    END { close_step(); print steps + 0, bad + 0, literals + 0, escaped + 0 }
+    END { close_step(); print steps + 0, bad + 0, literals + 0, escaped + 0, continued + 0 }
   ' "$1"
 }
 
@@ -423,7 +442,7 @@ setup_node_steps=0
 while IFS= read -r workflow; do
   [ -n "$workflow" ] || continue
 
-  read -r file_steps file_bad file_literals file_escaped <<EOF
+  read -r file_steps file_bad file_literals file_escaped file_continued <<EOF
 $(scan_setup_node_steps "$workflow")
 EOF
   setup_node_steps=$((setup_node_steps + file_steps))
@@ -438,6 +457,10 @@ EOF
 
   if [ "$file_escaped" -gt 0 ]; then
     fail "${workflow} spells ${file_escaped} mapping key(s) with YAML escape sequences; this gate reads keys, not escapes, so spell them plainly"
+  fi
+
+  if [ "$file_continued" -gt 0 ]; then
+    fail "${workflow} continues a double-quoted scalar past the end of ${file_continued} line(s); this gate reads a line at a time, so keep each quoted scalar on one line"
   fi
 
   if grep -q 'vars\.NODE_VERSION' "$workflow"; then

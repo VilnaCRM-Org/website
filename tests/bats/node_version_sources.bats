@@ -555,11 +555,12 @@ EOF
   assert_output_contains 'spells 1 mapping key(s) with YAML escape sequences'
 }
 
-@test "ignores an escaped key printed inside a run block" {
+@test "ignores an escaped key written inside a run block" {
   make_consistent_repo "$REPO"
-  # Everything under a block scalar is literal text, not structure. A shell line that
-  # prints an escaped key must not fail the gate, or the refusal above would redden
-  # workflows that declare nothing of the kind.
+  # Everything under a block scalar is literal text, not structure. The lookalike starts
+  # the content line, exactly where a real key would sit, so the assertion actually
+  # exercises the block-scalar skip: drop the `in_block` tracking and this test goes red.
+  # Both refusals are covered — the escape and the continuation.
   cat >"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
 jobs:
   unit:
@@ -570,7 +571,57 @@ jobs:
           node-version-file: '.nvmrc'
       - name: Print a lookalike
         run: |
-          echo '"node-versio\x6E": 20'
+          "node-versio\x6E": 20
+          "node-versio\
+          n": 20
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 0 ]
+  assert_output_contains 'node-version: OK'
+}
+
+@test "fails a node-version key continued across two lines" {
+  make_consistent_repo "$REPO"
+  # A double-quoted scalar continues when the line ends in a backslash, and YAML folds
+  # the break away: this is the key `node-version`, spelled across two lines. A scanner
+  # that reads one line at a time never sees the scalar whole, so neither the key rule
+  # nor the literal rule can fire and the pin would simply pass. The scanner refuses the
+  # continuation rather than pretending to have read it.
+  cat >"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+jobs:
+  unit:
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+          "node-versio\
+n": '20'
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 1 ]
+  assert_output_contains 'continues a double-quoted scalar past the end of'
+}
+
+@test "keeps quotes that close on their own line green" {
+  make_consistent_repo "$REPO"
+  # The other half of the continuation rule. A double quote living inside a single-quoted
+  # scalar, and one escaped inside a double-quoted value, both close on the line they
+  # open on — refusing either would redden workflows that continue nothing.
+  cat >"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+jobs:
+  unit:
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+      - name: A quote inside a single-quoted scalar
+        run: echo '"' && echo "ok"
+      - name: An escaped quote inside a double-quoted value
+        with: { cache: "a \" b" }
 EOF
 
   run_checker "$REPO"
