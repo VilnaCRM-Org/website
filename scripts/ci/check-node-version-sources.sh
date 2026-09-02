@@ -302,6 +302,19 @@ scan_setup_node_steps() {
       flow_literal_node_version = "^" any_key ws ":" ws "\\{" ws \
         flow_entries nv_key ws ":"
 
+      # A key spelled with YAML escapes. `"node-versio\\x6E"` is the mapping key
+      # `node-version` to every YAML reader and to setup-node, but decoding escapes is a
+      # parser'\''s job, not a scanner'\''s. Rather than guess at the decoded spelling —
+      # and pass a literal pin it guessed wrong about — this reports the spelling and
+      # refuses: an escaped key is either a key this gate cannot read or an obfuscation
+      # of one it must read, and both have to be spelled plainly before the file can be
+      # vouched for. The escape is required (`)+`, not `)*`), so an ordinary quoted key
+      # is untouched, and the check runs only where the scanner already knows it is
+      # looking at structure — never inside a `run: |` block.
+      escaped_scalar = dq "[^" dq "\\\\]*(\\\\.[^" dq "\\\\]*)+" dq
+      escaped_key = "^" escaped_scalar ws ":"
+      flow_escaped_key = "^" any_key ws ":" ws "\\{" ws flow_entries escaped_scalar ws ":"
+
       # A block-scalar header, `key: |` or `key: >`, with the same optional space before
       # the colon. The colon is matched wherever it sits on the line rather than anchored
       # to the key, so the leading `ws` keeps the shape uniform without widening it.
@@ -383,6 +396,11 @@ scan_setup_node_steps() {
       # `.nvmrc` pin in the very same mapping, where the step is already credited.
       if (key ~ block_literal_node_version || key ~ flow_literal_node_version) literals++
 
+      # Counted wherever a key is read, for the same reason the literal is: an escaped
+      # key hides the literal from the rule above just as effectively as it hides an
+      # unpinned step from the one before it.
+      if (key ~ escaped_key || key ~ flow_escaped_key) escaped++
+
       # Tracked outside the `in_step` guard on purpose: a block scalar hanging off a job
       # key must be skipped too, or its literal text is read back as structure.
       if (key ~ block_scalar_header) {
@@ -390,7 +408,7 @@ scan_setup_node_steps() {
         block_indent = key_indent
       }
     }
-    END { close_step(); print steps + 0, bad + 0, literals + 0 }
+    END { close_step(); print steps + 0, bad + 0, literals + 0, escaped + 0 }
   ' "$1"
 }
 
@@ -405,7 +423,7 @@ setup_node_steps=0
 while IFS= read -r workflow; do
   [ -n "$workflow" ] || continue
 
-  read -r file_steps file_bad file_literals <<EOF
+  read -r file_steps file_bad file_literals file_escaped <<EOF
 $(scan_setup_node_steps "$workflow")
 EOF
   setup_node_steps=$((setup_node_steps + file_steps))
@@ -416,6 +434,10 @@ EOF
 
   if [ "$file_literals" -gt 0 ]; then
     fail "${workflow} pins a literal node-version in ${file_literals} place(s); read the version from \`node-version-file: '.nvmrc'\` instead"
+  fi
+
+  if [ "$file_escaped" -gt 0 ]; then
+    fail "${workflow} spells ${file_escaped} mapping key(s) with YAML escape sequences; this gate reads keys, not escapes, so spell them plainly"
   fi
 
   if grep -q 'vars\.NODE_VERSION' "$workflow"; then

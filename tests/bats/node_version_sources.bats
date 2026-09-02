@@ -514,6 +514,70 @@ EOF
   assert_output_contains 'pins a literal node-version'
 }
 
+@test "fails a node-version key spelled with a YAML escape" {
+  make_consistent_repo "$REPO"
+  # `"node-versio\x6E"` is the mapping key `node-version` to every YAML reader, and
+  # setup-node resolves it ahead of node-version-file — so a scanner that matches only
+  # the raw spelling reads some other key here and waves the literal pin through. The
+  # gate does not decode escapes; it refuses the spelling, which closes the hole without
+  # pretending to be a parser.
+  cat >"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+jobs:
+  unit:
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+          "node-versio\x6E": '20'
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 1 ]
+  assert_output_contains 'spells 1 mapping key(s) with YAML escape sequences'
+}
+
+@test "fails an escaped key inside a flow-style with: mapping" {
+  make_consistent_repo "$REPO"
+  # The same spelling on one line: the flow walker consumes a quoted key whole, so the
+  # escape has to be caught where the walk reads keys, not only at the start of a line.
+  cat >"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+jobs:
+  unit:
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with: { node-version-file: '.nvmrc', "node-versio\x6E": '20' }
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 1 ]
+  assert_output_contains 'spells 1 mapping key(s) with YAML escape sequences'
+}
+
+@test "ignores an escaped key printed inside a run block" {
+  make_consistent_repo "$REPO"
+  # Everything under a block scalar is literal text, not structure. A shell line that
+  # prints an escaped key must not fail the gate, or the refusal above would redden
+  # workflows that declare nothing of the kind.
+  cat >"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+jobs:
+  unit:
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+      - name: Print a lookalike
+        run: |
+          echo '"node-versio\x6E": 20'
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 0 ]
+  assert_output_contains 'node-version: OK'
+}
+
 @test "credits a quoted node-version-file key in block style" {
   make_consistent_repo "$REPO"
   # The other half of the same rule: quoting a key must not turn a compliant step into a
