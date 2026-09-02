@@ -170,8 +170,10 @@ The binding conformance target is **WCAG 2.1 AA**, enforced per rule at three la
   showing the submit-error notification, the mobile drawer open, an expanded Swagger operation,
   the Swagger authorize dialog. Static lint sees one component's JSX and the route scan only
   ever sees a page at initial load, so composed/conditional DOM is only reachable here. These
-  scans gate on **serious/critical** impact only; moderate and minor findings are attached to
-  the Playwright report instead.
+  scans gate on **serious/critical** impact, and on a violation axe reports with **no
+  impact at all** — an unset impact is a gap in axe's own metadata, and the safe reading
+  of "impact unknown" is the blocking one. Moderate and minor findings are attached to the
+  Playwright report instead.
 
 Lighthouse's accessibility score is a weighted category heuristic on two URLs and is defence in
 depth, not a substitute.

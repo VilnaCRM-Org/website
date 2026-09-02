@@ -239,8 +239,8 @@ states**, as an added assertion inside the e2e journeys that already drive them 
 a form showing validation errors, an open mobile drawer, an expanded panel, a
 dialog. Neither static lint nor a scan of a page at rest can see composed,
 conditional DOM, so that is the only layer that reaches it. These scans gate
-serious/critical impact only; moderate and minor findings are attached to the
-Playwright report.
+serious/critical impact, and a violation axe reports without an impact fails
+closed; moderate and minor findings are attached to the Playwright report.
 
 A new page must be added to `src/test/a11y/routes.ts`, and a new interaction
 state to `src/test/a11y/interaction-states.ts` plus a

@@ -82,9 +82,10 @@ drawer, an expanded Swagger operation and its authorize dialog, because static l
 component's JSX and the route scan only ever sees a page at initial load. Reach for
 `scanInteractionState(page, INTERACTION_STATES.<state>)` and register the state in
 `src/test/a11y/interaction-states.ts`; a unit test reads the specs and fails when a registered
-state stops being scanned. Only serious/critical impacts fail these scans — moderate and minor
-are attached to the Playwright report — because they run inside behavioural journeys over
-composed DOM; the route layer still gates every impact at initial load.
+state stops being scanned. Serious/critical impacts fail these scans, as does a violation
+axe reports without an impact; moderate and minor are attached to the Playwright report
+instead, because they run inside behavioural journeys over composed DOM. The route layer
+still gates every impact at initial load.
 
 Never make an a11y gate pass by suppressing it: no `eslint-disable`, no axe rule removal, no
 `test.skip`, and no `if (count > 0)` / `if (isVisible())` wrapper around an assertion — a
