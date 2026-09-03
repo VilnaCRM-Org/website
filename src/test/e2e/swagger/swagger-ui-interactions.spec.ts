@@ -1,5 +1,8 @@
 import { test, expect, type Locator } from '@playwright/test';
 
+import { INTERACTION_STATES } from '../../a11y/interaction-states';
+import { scanInteractionState } from '../../a11y/scan-interaction-state';
+
 import { getLocators, TEST_CONSTANTS, SwaggerLocators, USER_ENDPOINTS } from './utils';
 import { locators } from './utils/locators';
 
@@ -22,6 +25,12 @@ const SWAGGER_READY_TIMEOUT: number = 20_000;
 /** Executing against the Mockoon-backed API is a real round trip. */
 const EXECUTE_TIMEOUT: number = TEST_CONSTANTS.API_RESPONSE_TIMEOUT * 5;
 
+/**
+ * Budget for the tag/operation tally to settle. Bounded so a genuinely orphaned
+ * operation reports within the test's own timeout instead of consuming it.
+ */
+const TAG_TALLY_TIMEOUT: number = 10_000;
+
 test.describe('Swagger UI Enhanced Interactions', () => {
   let elements: SwaggerLocators;
 
@@ -34,6 +43,11 @@ test.describe('Swagger UI Enhanced Interactions', () => {
   });
 
   test('should handle authorization modal', async ({ page }) => {
+    // Swagger is the heaviest page in the suite and this test also runs an axe
+    // scan over it, so give it the slow-test budget rather than risk a timeout
+    // flake on a loaded CI runner.
+    test.slow();
+
     await elements.authorizeButton.first().click();
 
     const authModal: Locator = page.locator('.modal-ux');
@@ -59,11 +73,20 @@ test.describe('Swagger UI Enhanced Interactions', () => {
     await expect(authModal.locator('label[for="client_id_authorizationCode"]')).toBeVisible();
     await expect(authModal.locator('label[for="client_secret_authorizationCode"]')).toBeVisible();
 
+    // A dialog layered over the documentation is the hardest state for a11y to
+    // get right and the one no initial-load scan sees (#369): the assertions
+    // above check the two labels this spec knows about, the scan checks every
+    // rule against the whole composed page.
+    await scanInteractionState(page, INTERACTION_STATES.swaggerAuthorizeDialog);
+
     await authModal.locator('button:has-text("Close")').click();
     await expect(authModal).not.toBeVisible();
   });
 
   test('should handle response examples', async ({ page }) => {
+    // Carries the expanded-operation axe scan; see the note above.
+    test.slow();
+
     // Pin the endpoint rather than taking whichever renders first: document
     // order is a property of the upstream spec, not of this behaviour.
     const endpoint: Locator = page.locator(USER_ENDPOINTS.GET_COLLECTION);
@@ -75,6 +98,11 @@ test.describe('Swagger UI Enhanced Interactions', () => {
 
     await expect(documentedResponses.first()).toBeVisible();
     expect(await documentedResponses.count()).toBeGreaterThan(0);
+
+    // An expanded operation is the interaction state the Swagger page exists
+    // for, and all of it — the response table, the tab pair, the try-it-out
+    // controls — is mounted only by this click (#369).
+    await scanInteractionState(page, INTERACTION_STATES.swaggerOperationExpanded);
 
     const exampleValue: Locator = endpoint.locator('.responses-inner .model-example').first();
     await expect(exampleValue).toBeVisible();
@@ -117,18 +145,28 @@ test.describe('Swagger UI Enhanced Interactions', () => {
     const tagSections: Locator = page.locator('.opblock-tag-section');
     await tagSections.first().waitFor({ state: 'visible' });
 
-    const tagCount: number = await tagSections.count();
-    expect(tagCount).toBeGreaterThan(0);
-
-    let taggedOperations: number = 0;
-    for (let index: number = 0; index < tagCount; index += 1) {
-      const operations: number = await tagSections.nth(index).locator('.opblock').count();
-      expect(operations).toBeGreaterThan(0);
-      taggedOperations += operations;
-    }
-
     // Every rendered operation belongs to a tag section — nothing is orphaned.
-    expect(taggedOperations).toBe(await elements.endpoints.count());
+    //
+    // The whole comparison is re-evaluated by `toPass()` rather than assembled
+    // from counts read at three different moments. Swagger mounts its operation
+    // blocks progressively, so a section appearing between the per-section reads
+    // and the final total would fail a strict equality as a flake with an "X is
+    // not Y" diff, not as a real orphan. Retrying the entire tally means both
+    // sides are compared against one settled render, and a genuine orphan still
+    // fails — it just fails after the retries instead of on the first race.
+    await expect(async () => {
+      const sectionCount: number = await tagSections.count();
+      expect(sectionCount).toBeGreaterThan(0);
+
+      let taggedOperations: number = 0;
+      for (let index: number = 0; index < sectionCount; index += 1) {
+        const operations: number = await tagSections.nth(index).locator('.opblock').count();
+        expect(operations).toBeGreaterThan(0);
+        taggedOperations += operations;
+      }
+
+      expect(taggedOperations).toBe(await elements.endpoints.count());
+    }).toPass({ timeout: TAG_TALLY_TIMEOUT });
   });
 
   test('should expose the curl command and its copy control after execute', async ({ page }) => {

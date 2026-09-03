@@ -36,6 +36,7 @@ than one. Match the change to the suite and run its verification command.
 | End-to-end (e2e)  | User-facing flows end to end (Mockoon API) | `make test-e2e`         |
 | Visual regression | Any change to rendered UI or styling       | `make test-visual`      |
 | Accessibility     | Any change to rendered UI or a new route   | `make test-a11y`        |
+| A11y interaction  | A new or changed dialog, drawer, or state  | `make test-e2e`         |
 
 Client unit tests run on Jest with React Testing Library in a jsdom env
 (`TEST_ENV=client`); specs live in `src/test/testing-library/**/*.test.tsx` and
@@ -62,9 +63,10 @@ chromium, firefox, and webkit (`src/test/e2e/**/*.spec.ts`, `src/test/visual/**/
 visual snapshots sit in adjacent `*-snapshots/` folders. Run all three unit layers with
 `make test-unit-all`.
 
-The accessibility layer (issue #317) is two halves of one contract: `jest-axe` over rendered
-components, and `@axe-core/playwright` over every registered route in all three browsers
-(`src/test/a11y/**`). `make test-a11y` runs the dedicated component suite
+The accessibility layer is three parts of one contract: `jest-axe` over rendered components
+and `@axe-core/playwright` over every registered route in all three browsers
+(`src/test/a11y/**`, issue #317), plus axe at runtime **interaction states** inside the
+existing e2e journeys (issue #369). `make test-a11y` runs the dedicated component suite
 (`src/test/testing-library/A11yComponents.test.tsx`) and the route suite; the per-component
 axe assertions that live inside `UiButton`, `UiInput`, `UiCheckBox`, `Header` and `AuthForm`
 run with the rest of the client layer under `make test-unit-client`. The binding target is
@@ -75,6 +77,17 @@ axe tags, and the exception process live in
 tag list and allowlist have a single home in `src/test/a11y/axe-config.ts`. Adding a page
 means adding it to `src/test/a11y/routes.ts` — a unit test fails if the registry drifts from
 `pages/`.
+
+The interaction-state scans ride `make test-e2e`, not `make test-a11y`: they are added
+assertions inside the journeys that already drive a validation-error form, an open mobile
+drawer, an expanded Swagger operation and its authorize dialog, because static lint sees one
+component's JSX and the route scan only ever sees a page at initial load. Reach for
+`scanInteractionState(page, INTERACTION_STATES.<state>)` and register the state in
+`src/test/a11y/interaction-states.ts`; a unit test reads the specs and fails when a registered
+state stops being scanned. Serious/critical impacts fail these scans, as does a violation
+axe reports without an impact; moderate and minor are attached to the Playwright report
+instead, because they run inside behavioural journeys over composed DOM. The route layer
+still gates every impact at initial load.
 
 Never make an a11y gate pass by suppressing it: no `eslint-disable`, no axe rule removal, no
 `test.skip`, and no `if (count > 0)` / `if (isVisible())` wrapper around an assertion — a
@@ -106,10 +119,18 @@ needs a second look (issues #359 and #354):
 In CI these suites are fanned out to run in parallel (issue #316): every workflow declares a
 `concurrency` group (PR checks cancel superseded runs; deploy/release/sandbox do not),
 the Playwright e2e suite, Lighthouse, and the K6 load suites run as matrices, and mutation
-testing runs as a shard matrix whose `merge` job re-enforces the **exact** Stryker `break`
-threshold over the union of shards (`make merge-mutation-reports`). The thresholds and the
-test set are unchanged — locally you still run the single `make test-e2e` / `make
-test-mutation`.
+testing runs as a shard matrix whose `merge` job re-enforces the **exact** `break`
+threshold for the scope over the union of shards (`make merge-mutation-reports`). The
+thresholds and the test set are unchanged — locally you still run the single `make test-e2e`
+/ `make test-mutation`.
+
+Mutation testing also runs a blocking changed-files leg on every pull request and an
+advisory full-tree census nightly (issue #345). If you change a file under an
+`api`/`helpers`/`hooks`/`utils`/`validations` directory, run `make test-mutation-changed`
+before pushing: a surviving mutant means a test executes your code without asserting on it.
+Fix it by adding the missing assertion — never by widening
+[`config/mutation-policy.json`](config/mutation-policy.json)'s exclusions or lowering a
+`break`.
 
 ### Step 2 — Cover Every Applicable Scenario Class
 
@@ -170,7 +191,7 @@ make format                  # Prettier formatting (run before lint)
 make test-unit-client        # Client unit suite (jsdom)
 make test-unit-server        # Server unit suite (node)
 make test-contract           # Mockoon mock vs. the committed OpenAPI contract
-make test-e2e                # User-facing flows (for UI or behavior changes)
+make test-e2e                # User-facing flows + a11y interaction-state scans (UI/behavior)
 make test-visual             # Visual regression (for UI or styling changes)
 make test-a11y               # WCAG 2.1 AA gates (for UI changes or a new route)
 make lint                    # Full gate: ESLint, TypeScript, markdownlint, deps, API versions
@@ -302,6 +323,8 @@ A change to tests is done only when every statement below is true.
 - Localized text and accessibility-visible behavior are asserted where the UI changed.
 - Changed UI passes `make test-a11y` at WCAG 2.1 AA, with no new exception added to the
   allowlist and no suppression used to get there.
+- A new or changed interaction state (dialog, drawer, error state, expanded panel) is
+  registered in `src/test/a11y/interaction-states.ts` and scanned from its e2e journey.
 - New or changed `ui-*` primitives and exported feature components have a `*.stories.tsx`.
 - The relevant test commands above were run and passed, including `make lint`.
 - Commits follow Conventional Commits.

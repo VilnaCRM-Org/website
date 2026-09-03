@@ -1,12 +1,8 @@
-import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
+import type { AxeResults } from 'axe-core';
 
-import {
-  FORCED_RULES,
-  WCAG_AA_TAGS,
-  describeViolations,
-  filterAllowedViolations,
-} from './axe-config';
+import { describeViolations, filterAllowedViolations } from './axe-config';
+import { runAxe } from './run-axe';
 
 /**
  * Route-level half of the accessibility gate (issue #317).
@@ -16,42 +12,15 @@ import {
  * Lighthouse accessibility *category* score, this asserts per rule, so a
  * regression cannot be averaged away.
  *
+ * Every impact level is gated here. The narrower serious/critical gate belongs
+ * to the interaction-state scans (`scan-interaction-state.ts`), which run inside
+ * behavioural journeys; this layer owns the full standard at initial load.
+ *
  * There is deliberately no `if (count > 0)` style guard anywhere in this path:
  * a scan that finds nothing to analyse must fail, not pass silently.
  */
 export async function scanRoute(page: Page, route: string): Promise<void> {
-  // `options()` replaces the builder's option object wholesale, so the tag
-  // filter and the rule overrides must be set in the same call — chaining
-  // `withTags().options()` would silently discard the tags.
-  const results = await new AxeBuilder({ page })
-    .options({
-      runOnly: { type: 'tag', values: [...WCAG_AA_TAGS] },
-      rules: FORCED_RULES,
-    })
-    .analyze();
-
-  expect(
-    results.passes.length + results.violations.length + results.incomplete.length,
-    `axe evaluated no rules on ${route} — the page almost certainly failed to render`
-  ).toBeGreaterThan(0);
-
-  // `incomplete` means axe could not decide — typically contrast over a
-  // gradient or an image. It is advisory by construction, so it is published
-  // for human review rather than gated on; see the acceptance standard.
-  if (results.incomplete.length > 0) {
-    await test.info().attach(`axe-incomplete${route.replace(/\//g, '_')}`, {
-      body: JSON.stringify(
-        results.incomplete.map(result => ({
-          id: result.id,
-          help: result.help,
-          nodes: result.nodes.length,
-        })),
-        null,
-        2
-      ),
-      contentType: 'application/json',
-    });
-  }
+  const results: AxeResults = await runAxe(page, route);
 
   const violations = filterAllowedViolations(results.violations, { layer: 'route', route });
 

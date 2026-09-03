@@ -27,7 +27,9 @@ const TAB_ORDER_ATTRIBUTE: string = 'data-a11y-tab-order';
  * than this is only walked as far as its first `MAX_SWEEP_STEPS` tab positions,
  * so a trap or a back-jump that first appears past that point is never reached.
  * This is a bounded sweep, not full keyboard coverage — recorded as such in
- * `docs/accessibility/acceptance-standard.md`.
+ * `docs/accessibility/acceptance-standard.md`. The axe scans (`scan-route.ts`,
+ * `scan-interaction-state.ts`) still cover the whole page regardless of how far
+ * the keyboard walk reaches.
  */
 const MAX_SWEEP_STEPS: number = 120;
 

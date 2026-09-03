@@ -2,6 +2,8 @@ import { test, Locator, Route, expect } from '@playwright/test';
 import { t } from 'i18next';
 import { Response } from 'playwright';
 
+import { INTERACTION_STATES } from '../../a11y/interaction-states';
+import { scanInteractionState } from '../../a11y/scan-interaction-state';
 import { checkCheckbox } from '../utils/checkCheckbox';
 import { fillInput } from '../utils/fillInput';
 
@@ -57,6 +59,12 @@ test('Submit the registration form, verify error notification, and return to fil
 
   const errorTitle: Locator = page.getByText(errorTitleText);
   await expect(errorTitle).toBeVisible();
+
+  // The failure notification replaces the form with content that only exists
+  // after a rejected submit (#369) — an announcement, a title and two recovery
+  // controls. Static lint never sees this composition and the route scan never
+  // reaches it.
+  await scanInteractionState(page, INTERACTION_STATES.registrationSubmitError);
 
   const backButton: Locator = page.getByRole('button', { name: backToFormButton });
   await expect(backButton).toBeEnabled();

@@ -70,16 +70,17 @@ it that way:
 
 The full checklist is in [reference/a11y-review.md](reference/a11y-review.md).
 
-## The Accessibility Gate (issue #317)
+## The Accessibility Gate (issues #317, #369)
 
 Accessibility is no longer advisory. The binding target is **WCAG 2.1 AA**,
-asserted per rule at two layers by `make test-a11y` and by the
-`accessibility testing` workflow:
+asserted per rule at three layers — two under `make test-a11y` and the
+`accessibility testing` workflow, one inside the e2e suite:
 
 ```bash
-make test-a11y              # both gates
+make test-a11y              # the component and route gates
 make test-a11y-components   # jest-axe over rendered React (jsdom, fast)
 make test-a11y-routes       # axe + a keyboard sweep in all three browsers
+make test-e2e               # carries the interaction-state scans
 ```
 
 - The component layer covers **semantics only** — roles, names, states,
@@ -88,6 +89,15 @@ make test-a11y-routes       # axe + a keyboard sweep in all three browsers
   test is necessary, never sufficient.
 - Adding a page means adding it to `src/test/a11y/routes.ts`; a unit test fails
   when that registry drifts from `pages/`.
+- The interaction-state layer scans axe mid-journey — validation errors, the
+  submit-error notification, the open mobile drawer, an expanded Swagger
+  operation, the authorize dialog — because neither static lint nor an
+  initial-load scan can see composed, conditional DOM. Register a new state in
+  `src/test/a11y/interaction-states.ts` and call
+  `scanInteractionState(page, INTERACTION_STATES.<state>)` from the journey that
+  already drives it; a unit test reads the specs and fails when a registered
+  state stops being scanned. These scans gate serious/critical impacts only, and
+  reuse the route's exception context.
 - The axe tag list and the exception allowlist live only in
   `src/test/a11y/axe-config.ts`.
 

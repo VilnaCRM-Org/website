@@ -150,19 +150,34 @@ removed.
 Mutation testing runs as a deterministic shard matrix plus a merge gate:
 
 - Each `shard` cell runs `make test-mutation-shard` (with `MUTATION_SHARD_INDEX`
-  and `MUTATION_SHARD_TOTAL`), which slices the `mutate` list from
-  `stryker.config.mjs` (via `stryker.shard.config.mjs`) and writes
-  `reports/mutation/mutation-shard-<i>.json` with `break` disabled.
+  and `MUTATION_SHARD_TOTAL`), which slices the scope's mutate list via
+  `stryker.shard.config.mjs` — the fixed list in `stryker.config.mjs` for the
+  `curated` scope, `reports/mutation/mutate-list.txt` for `changed` and `full` —
+  and writes `reports/mutation/mutation-shard-<i>.json` with `break` disabled.
 - The `merge` job runs `make merge-mutation-reports` (with `MUTATION_SHARD_TOTAL`),
   which unions the per-shard reports and re-enforces the **exact** `break`
-  threshold read from `stryker.config.mjs`
+  threshold for the scope, resolved from
+  [`config/mutation-policy.json`](config/mutation-policy.json) — the single source
+  of truth for which directories hold mutable code and for every scope's gate
+  (the `curated` slice's file list is the exception: it stays a fixed list in
+  `stryker.config.mjs`, and the policy file supplies only its threshold)
   ([`scripts/ci/merge-mutation-reports.ts`](scripts/ci/merge-mutation-reports.ts),
   unit-tested in `src/test/unit/mutation-report.test.ts`).
 
-The round-robin split is a total partition of `mutate`, so the union equals the
-full list and the sharded score is identical to an unsharded run — the gate is
-preserved, never relaxed. The merge job runs even when a shard fails, so the
-gate fails closed rather than passing vacuously.
+The round-robin split is a total partition of the scope's mutate list, so the
+union equals the full list and the sharded score is identical to an unsharded
+run — the gate is preserved, never relaxed. The merge job runs even when a shard
+fails, so the gate fails closed rather than passing vacuously.
+
+`MUTATION_SCOPE` picks which list is sharded: `curated` (the fixed list, blocking
+at 100%) and `changed` (the mutable files your pull request touches, blocking at
+85% until the `maxFiles` cap is exceeded, past which the leg turns advisory) both
+run on a pull request, and `full` sweeps `src/` nightly as an advisory leg that
+files a tracking issue. `make mutation-file-list` prints the resolved
+list and `make test-mutation-changed` runs the PR's changed-file leg locally. The
+scope table and the definition of a "mutable" file live in CLAUDE.md; never lower
+a threshold or widen an exclusion in `config/mutation-policy.json` to get a leg
+green.
 
 #### E2E flakes are detected, not retried away
 
@@ -227,16 +242,27 @@ policy, thresholds, and tuning guide.
 #### Accessibility (WCAG 2.1 AA)
 
 If your change renders UI or adds a route, it has to pass the accessibility gate.
-`make test-a11y` runs both halves: `jest-axe` over rendered components in jsdom,
-and `@axe-core/playwright` plus a keyboard sweep over every registered route in
-Chromium, Firefox and WebKit. CI runs the same target as its own required check
-(`.github/workflows/a11y-testing.yml`), separate from `static testing` (the
-`jsx-a11y` lint rules) and `performance testing` (the Lighthouse accessibility
-category score) — those are heuristics, this one asserts per rule.
+`make test-a11y` runs two of its three layers: `jest-axe` over rendered
+components in jsdom, and `@axe-core/playwright` plus a keyboard sweep over every
+registered route in Chromium, Firefox and WebKit. CI runs the same target as its
+own check (`.github/workflows/a11y-testing.yml`), separate from `static testing`
+(the `jsx-a11y` lint rules) and `performance testing` (the Lighthouse
+accessibility category score) — those are heuristics, this one asserts per rule.
 
-A new page must be added to `src/test/a11y/routes.ts`; a unit test fails when
-that registry drifts from `pages/`. The axe tag list and the exception allowlist
-live only in `src/test/a11y/axe-config.ts`.
+The third layer rides `make test-e2e`: axe also scans at **runtime interaction
+states**, as an added assertion inside the e2e journeys that already drive them —
+a form showing validation errors, an open mobile drawer, an expanded panel, a
+dialog. Neither static lint nor a scan of a page at rest can see composed,
+conditional DOM, so that is the only layer that reaches it. These scans gate
+serious/critical impact, and a violation axe reports without an impact fails
+closed; moderate and minor findings are attached to the Playwright report.
+
+A new page must be added to `src/test/a11y/routes.ts`, and a new interaction
+state to `src/test/a11y/interaction-states.ts` plus a
+`scanInteractionState(page, INTERACTION_STATES.<state>)` call in the journey that
+reaches it. A unit test fails when either registry drifts — the route registry
+from `pages/`, the interaction registry from the e2e specs. The axe tag list and
+the exception allowlist live only in `src/test/a11y/axe-config.ts`.
 
 Never make the gate pass by suppressing it — no `eslint-disable`, no axe rule
 removal, no `test.skip`, and never an `if (count > 0)` / `if (isVisible())`

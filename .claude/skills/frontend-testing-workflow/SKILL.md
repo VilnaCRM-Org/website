@@ -91,6 +91,15 @@ A single change often needs more than one layer. Match the change to the suite:
 - Specs run across chromium, firefox, and webkit. See
   [examples/playwright-flow.md](examples/playwright-flow.md) and
   [reference/mockoon-apollo.md](reference/mockoon-apollo.md).
+- E2E journeys also carry the **interaction-state accessibility scans** (issue
+  #369). When a journey reaches a state built from composed or conditional DOM —
+  a form showing validation errors, an open drawer, an expanded panel, a dialog —
+  register it in `src/test/a11y/interaction-states.ts` and add
+  `await scanInteractionState(page, INTERACTION_STATES.<state>)` once the state is
+  asserted visible. It is an added assertion on an existing journey, never a new
+  spec, and never wrapped in a visibility guard. A unit test
+  (`src/test/unit/a11y/interaction-states.test.ts`) fails when a registered state
+  stops being scanned.
 
 ## Visual regression
 

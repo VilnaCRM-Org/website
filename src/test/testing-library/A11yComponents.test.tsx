@@ -105,7 +105,19 @@ describe('component accessibility (WCAG 2.1 AA)', () => {
     );
 
     // The tag `runOnly` below would otherwise override jest-axe's global
-    // disable of the rules jsdom cannot evaluate, so pass them on every run.
+    // disable of the rules jsdom cannot evaluate, so pass them on every run, in
+    // the same merge order `expectNoA11yViolations` uses — a meta-test that
+    // validates the gate config must not diverge from it. Without this,
+    // `color-contrast` and `link-in-text-block` run in jsdom, land in
+    // `incomplete`, and spam `HTMLCanvasElement.prototype.getContext` warnings
+    // twice over, because this test runs axe twice. It cannot affect the
+    // assertions below: neither colour rule is `label-content-name-mismatch`.
+    //
+    // One `getContext` warning survives on purpose. It comes from
+    // `_isIconLigature` inside `label-content-name-mismatch` itself — the rule
+    // under test renders the label text to a canvas to decide whether it is an
+    // icon ligature. Silencing that one would mean disabling the rule this test
+    // exists to prove is running.
     const evaluatedRules: (rules?: RuleObject) => Promise<string[]> = async rules => {
       const results: AxeResults = (await axe(container, {
         runOnly: { type: 'tag', values: [...WCAG_AA_TAGS] },

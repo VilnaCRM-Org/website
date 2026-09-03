@@ -22,6 +22,14 @@ const PAGES_ROOT: string = join(process.cwd(), 'pages');
  */
 const NON_ROUTE_FILES: readonly string[] = ['_app', '_document', '_error', '404', '500'];
 
+/**
+ * Every extension Next.js resolves a page from. `pages/` is all `.tsx` today, but
+ * matching only that would let a page added as `.ts`, `.jsx` or `.js` slip past
+ * the very drift check this file exists to enforce — the guard has to cover what
+ * the framework accepts, not what the tree happens to contain.
+ */
+const PAGE_EXTENSION = /\.(?:tsx|ts|jsx|js)$/;
+
 /** A path segment like `[slug]` or `[...rest]` — a dynamic route. */
 const DYNAMIC_SEGMENT = /\[.+\]/;
 
@@ -33,14 +41,12 @@ function collectPageFiles(directory: string): string[] {
       return collectPageFiles(absolute);
     }
 
-    return /\.tsx$/.test(entry.name) ? [absolute] : [];
+    return PAGE_EXTENSION.test(entry.name) ? [absolute] : [];
   });
 }
 
 function toRoutePath(absolute: string): string {
-  const segments: string[] = relative(PAGES_ROOT, absolute)
-    .replace(/\.tsx$/, '')
-    .split(sep);
+  const segments: string[] = relative(PAGES_ROOT, absolute).replace(PAGE_EXTENSION, '').split(sep);
   const last: string = segments[segments.length - 1] ?? '';
 
   const withoutIndex: string[] = last === 'index' ? segments.slice(0, -1) : segments;
@@ -50,7 +56,13 @@ function toRoutePath(absolute: string): string {
 
 function discoverRoutes(): string[] {
   return collectPageFiles(PAGES_ROOT)
-    .filter(file => !NON_ROUTE_FILES.some(name => file.endsWith(`${sep}${name}.tsx`)))
+    .filter(
+      file =>
+        !NON_ROUTE_FILES.some(
+          name =>
+            PAGE_EXTENSION.test(file) && file.replace(PAGE_EXTENSION, '').endsWith(`${sep}${name}`)
+        )
+    )
     .map(toRoutePath)
     .sort();
 }
