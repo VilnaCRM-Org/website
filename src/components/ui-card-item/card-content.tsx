@@ -32,7 +32,7 @@ function CardContent({
       <UiTypography
         variant={isSmallCard ? 'bodyText16' : 'bodyText18'}
         sx={isSmallCard ? styles.smallText : styles.largeText}
-        id={item.text.includes('text_integrate') ? 'services-label' : undefined}
+        {...(item.text.includes('text_integrate') ? { id: 'services-label' } : {})}
       >
         {isSmallCard ? (
           <Trans i18nKey={item.text}>

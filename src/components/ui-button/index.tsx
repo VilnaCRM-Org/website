@@ -1,44 +1,20 @@
-import { Button, ThemeProvider } from '@mui/material';
+import { UiButton as ToolkitUiButton } from '@vilnacrm/ui-toolkit';
+import React from 'react';
 
-import { theme } from './theme';
 import { UiButtonProps } from './types';
 
-function UiButton({
-  variant,
-  size,
-  disabled,
-  fullWidth,
-  component,
-  onClick,
-  type,
-  href,
-  children,
-  sx,
-  name,
-  ...rest
-}: UiButtonProps): React.ReactElement {
-  const componentProps = component ? { component } : {};
-  const hrefProps = href ? { href } : {};
+/**
+ * `UiButton` renders the `@vilnacrm/ui-toolkit` button. The adapter survives the
+ * swap only to re-add the `rel`/`target` anchor props the toolkit forwards but
+ * does not declare — see `./types`. Everything else passes straight through.
+ */
+function UiButton({ rel, target, ...buttonProps }: UiButtonProps): React.ReactElement {
+  const anchorProps: { rel?: string; target?: string } = {
+    ...(rel ? { rel } : {}),
+    ...(target ? { target } : {}),
+  };
 
-  return (
-    <ThemeProvider theme={theme}>
-      <Button
-        variant={variant}
-        size={size}
-        disabled={disabled}
-        fullWidth={fullWidth}
-        type={type}
-        onClick={onClick}
-        sx={sx}
-        name={name}
-        {...componentProps}
-        {...hrefProps}
-        {...rest}
-      >
-        {children}
-      </Button>
-    </ThemeProvider>
-  );
+  return <ToolkitUiButton {...buttonProps} {...anchorProps} />;
 }
 
 export default UiButton;

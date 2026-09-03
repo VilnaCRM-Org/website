@@ -1,25 +1,17 @@
-import { TextFieldProps } from '@mui/material';
+import type { UiInput } from '@vilnacrm/ui-toolkit';
+import type { ComponentProps } from 'react';
 
-export interface UiInputProps {
-  sx?: React.CSSProperties;
-  placeholder?: string;
-  value?: string;
-  onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  error?: boolean;
-  onBlur?: (event: React.FocusEvent<HTMLInputElement>) => void;
-  type?: string | undefined;
-  fullWidth?: boolean | undefined;
-  disabled?: boolean;
-  onInput?: TextFieldProps['onInput'];
-  id?: string;
-  /**
-   * Submitted field name. Password managers and browser autofill key off `name`
-   * and `autocomplete` together; without both, a credential field is
-   * effectively invisible to them and no strong password is ever offered
-   * (#382 F3).
-   */
-  name?: string | undefined;
-  autoComplete?: string | undefined;
+/**
+ * The toolkit declares its prop interfaces but does not export them, so the
+ * toolkit surface is derived from the component itself rather than imported.
+ *
+ * `slotProps` is withheld because this adapter owns it — it is how the ARIA
+ * attributes below reach the rendered `<input>`. `required` is withheld because
+ * the toolkit would forward it as the native attribute; see below.
+ */
+type ToolkitUiInputProps = Omit<ComponentProps<typeof UiInput>, 'ref' | 'slotProps' | 'required'>;
+
+export type UiInputProps = ToolkitUiInputProps & {
   /**
    * `aria-describedby` for the rendered input. MUI wires this itself only when
    * `helperText` is used, and it has to land on the `<input>` rather than the
@@ -32,4 +24,4 @@ export interface UiInputProps {
    * react-hook-form messages the suites assert.
    */
   required?: boolean;
-}
+};

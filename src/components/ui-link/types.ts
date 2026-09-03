@@ -1,7 +1,4 @@
-export interface UiLinkProps {
-  children: React.ReactNode;
-  href: string;
-  target?: string;
-  sx?: React.CSSProperties;
-  rel?: string;
-}
+import type { UiLink } from '@vilnacrm/ui-toolkit';
+import type { ComponentProps } from 'react';
+
+export type UiLinkProps = ComponentProps<typeof UiLink>;

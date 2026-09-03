@@ -9,7 +9,6 @@ import React, { ComponentType, useEffect } from 'react';
 import { theme } from '@/components/app-theme';
 import Layout from '@/components/layout';
 import { env } from '@/config/env';
-import { golos } from '@/config/Fonts/golos';
 import { handleWebVitalsMetric } from '@/lib/web-vitals/report-web-vitals';
 
 import 'swagger-ui-react/swagger-ui.css';
@@ -57,7 +56,7 @@ function MyApp({ Component }: { Component: React.ComponentType }): React.ReactEl
   return (
     <ThemeProvider theme={theme}>
       <ApolloProvider client={client}>
-        <main className={golos.className}>
+        <main className="app-typeface">
           <Layout header={<DynamicHeader />}>
             <Component />
           </Layout>

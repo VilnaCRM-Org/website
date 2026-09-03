@@ -2,7 +2,7 @@ import { ThemeProvider } from '@mui/material';
 import { render, fireEvent } from '@testing-library/react';
 
 import { UiButton } from '@/components';
-import { theme } from '@/components/ui-button/theme';
+import theme from '@/components/ui-color-theme';
 
 import { expectNoA11yViolations } from '../a11y/expect-no-a11y-violations';
 

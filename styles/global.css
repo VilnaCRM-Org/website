@@ -1,3 +1,89 @@
+/**
+ * Font faces are declared here rather than through `next/font/local` because the
+ * `@vilnacrm/ui-toolkit` themes request the families by their real names
+ * (`Inter` 36x, `Golos Text` 22x). `next/font` generates an opaque family name
+ * per import, which those references can never resolve to. Declaring the faces
+ * under their real names makes the toolkit resolve them, and reuses the exact
+ * same self-hosted `.woff2` assets, so nothing extra is downloaded.
+ */
+
+@font-face {
+  font-family: 'Inter';
+  src: url('../src/assets/fonts/Inter/Inter-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: url('../src/assets/fonts/Inter/Inter-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: url('../src/assets/fonts/Inter/Inter-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Golos Text';
+  src: url('../src/assets/fonts/Golos/GolosText-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Golos Text';
+  src: url('../src/assets/fonts/Golos/GolosText-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Golos Text';
+  src: url('../src/assets/fonts/Golos/GolosText-SemiBold.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Golos Text';
+  src: url('../src/assets/fonts/Golos/GolosText-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Golos Text';
+  src: url('../src/assets/fonts/Golos/GolosText-ExtraBold.woff2') format('woff2');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Golos Text';
+  src: url('../src/assets/fonts/Golos/GolosText-Black.woff2') format('woff2');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* The site's base typeface, applied to the app root in `pages/_app.tsx`. */
+.app-typeface {
+  font-family: 'Golos Text', sans-serif;
+}
+
 html,
 body {
   padding: 0;

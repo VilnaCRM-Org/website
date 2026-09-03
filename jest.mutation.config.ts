@@ -57,6 +57,12 @@ const config: Config = {
   // makes the crawler agree with the runtime. `@swagger/global` is excluded
   // because it points at a stylesheet, which next/jest already mocks.
   moduleNameMapper: {
+    // Mirrors jest.config.ts: `@vilnacrm/ui-toolkit` is ESM-only and its
+    // `exports` map declares no `require` condition, so the CJS resolver cannot
+    // find it without being pointed at the built bundle.
+    '^@vilnacrm/ui-toolkit$': '<rootDir>/node_modules/@vilnacrm/ui-toolkit/build/index.mjs',
+    '^@vilnacrm/ui-toolkit/styles\\.css$':
+      '<rootDir>/node_modules/@vilnacrm/ui-toolkit/build/index.css',
     '^@/(.*)$': '<rootDir>/src/$1',
     '^@landing/(.*)$': '<rootDir>/src/features/landing/components/$1',
     '^@swagger/(?!global$)(.*)$': '<rootDir>/src/features/swagger/$1',
@@ -85,6 +91,6 @@ export default async () => {
   const nextJestConfig = await createJestConfig(config)();
   return {
     ...nextJestConfig,
-    transformIgnorePatterns: ['/node_modules/(?!(uuid|@faker-js/faker)/)'],
+    transformIgnorePatterns: ['/node_modules/(?!(uuid|@faker-js/faker|@vilnacrm/ui-toolkit)/)'],
   };
 };

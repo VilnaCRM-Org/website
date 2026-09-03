@@ -1,35 +1,8 @@
-import { Box, FormControlLabel } from '@mui/material';
-import React from 'react';
+import { UiCheckbox } from '@vilnacrm/ui-toolkit';
 
-import styles from './styles';
-import { UiCheckboxProps } from './types';
-
-function UiCheckbox({
-  label,
-  sx,
-  onChange,
-  error,
-  disabled,
-  checked,
-}: UiCheckboxProps): React.ReactElement {
-  return (
-    <FormControlLabel
-      sx={sx}
-      control={
-        <Box component="span" sx={error ? styles.checkboxWrapperError : styles.checkboxWrapper}>
-          <input
-            type="checkbox"
-            className="PrivateSwitchBase-input"
-            disabled={disabled}
-            checked={checked}
-            onChange={onChange}
-            aria-invalid={error ? 'true' : undefined}
-          />
-        </Box>
-      }
-      label={label}
-    />
-  );
-}
-
+/**
+ * `UiCheckbox` now ships from `@vilnacrm/ui-toolkit`. This module stays as the
+ * import seam so existing `@/components/ui-checkbox` call sites and the
+ * `@/components` barrel are untouched by the swap.
+ */
 export default UiCheckbox;
