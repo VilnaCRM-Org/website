@@ -1561,3 +1561,55 @@ EOF
   [ "$status" -eq 0 ]
   assert_output_contains 'node-version: OK'
 }
+
+# A reference a plain block key owns as its scalar value is data, not an action: GitHub
+# resolves an action from a `uses:` key and nowhere else. Refusing those would be a false
+# rejection — and the multi-line `run: |` spelling of the same text was already skipped,
+# so refusing only the one-line spelling made the verdict depend on scalar style.
+
+@test "does not refuse a one-line run body that names the action" {
+  make_consistent_repo "$REPO"
+  cat >>"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+      - run: echo actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 0 ]
+  assert_output_contains 'node-version: OK'
+}
+
+@test "does not refuse a step name that quotes the action" {
+  make_consistent_repo "$REPO"
+  cat >>"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+      - name: bump actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        run: echo ok
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 0 ]
+  assert_output_contains 'node-version: OK'
+}
+
+@test "does not refuse an env value holding the action reference" {
+  make_consistent_repo "$REPO"
+  cat >>"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+      - env:
+          REF: "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020"
+        run: echo ok
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 0 ]
+  assert_output_contains 'node-version: OK'
+}
+
+@test "still refuses a compact flow step even though the exemption exists" {
+  make_consistent_repo "$REPO"
+  cat >>"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+      - { uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020, with: { node-version-file: '.nvmrc' } }
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 1 ]
+  assert_output_contains 'could not read as a'
+}

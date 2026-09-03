@@ -531,7 +531,25 @@ scan_setup_node_steps() {
       # spelling this gate cannot read is reported and refused, and has to be spelled
       # plainly before the file can be vouched for. The `@` is part of the pattern, so
       # prose merely naming the action is untouched.
-      if (index(line, setup_node_ref) > 0 && !(in_step && key ~ uses_setup_node)) unread++
+      #
+      # A reference that a plain block key plainly owns as its scalar VALUE is data, not
+      # an action: `run: echo actions/setup-node@x`, `name: bump actions/setup-node@x`,
+      # an `env:` entry holding the string. GitHub resolves an action from a `uses:` key
+      # and nowhere else, so refusing those would be a false rejection — and the multi-
+      # line `run: |` spelling of the very same text is already skipped above, so
+      # refusing the one-line spelling made the verdict depend on scalar style rather
+      # than on meaning. The exemption is withheld in exactly the two places the value
+      # may not be what it looks like: when the key is `uses` itself, and when the line
+      # opens a flow mapping, where the reference may belong to a `uses` sitting after a
+      # brace that nothing here can reach.
+      data_value = 0
+      if (index(line, "{") == 0 && match(key, /^[^:{}[]+:[ \t]/) > 0) {
+        key_name = substr(key, 1, RLENGTH - 2)
+        sub(/[ \t]+$/, "", key_name)
+        if (key_name != "uses" && key_name != dq "uses" dq && key_name != sq "uses" sq) \
+          data_value = 1
+      }
+      if (index(line, setup_node_ref) > 0 && !data_value && !(in_step && key ~ uses_setup_node)) unread++
 
       # Counted outside the `in_step` guard, and never as an alternative to the pin
       # above: a literal is drift wherever it is declared, including beside a correct
