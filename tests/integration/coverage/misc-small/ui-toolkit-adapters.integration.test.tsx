@@ -13,6 +13,9 @@ import { UiButton, UiLink } from '@/components';
 const HARDENED_REL: string = 'noopener noreferrer';
 const HREF: string = 'https://example.com';
 const LABEL: string = 'Example';
+// Hoisted: inline, its UTF-8 length puts the JSX line past the 100-byte
+// editorconfig limit, and Prettier cannot break a string attribute.
+const NEW_TAB_LABEL: string = '(відкриється у новій вкладці)';
 
 describe('UiButton adapter', () => {
   it('forwards rel and target onto the anchor MUI renders for an href', () => {
@@ -83,13 +86,11 @@ describe('UiLink adapter', () => {
 
   it('renders a caller-supplied localized new-tab label', () => {
     const { getByRole } = render(
-      <UiLink href={HREF} target="_blank" newTabLabel="(відкриється у новій вкладці)">
+      <UiLink href={HREF} target="_blank" newTabLabel={NEW_TAB_LABEL}>
         {LABEL}
       </UiLink>
     );
 
-    expect(
-      getByRole('link', { name: `${LABEL} (відкриється у новій вкладці)` })
-    ).toBeInTheDocument();
+    expect(getByRole('link', { name: `${LABEL} ${NEW_TAB_LABEL}` })).toBeInTheDocument();
   });
 });
