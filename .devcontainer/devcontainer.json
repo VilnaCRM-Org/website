@@ -26,8 +26,10 @@
   "remoteEnv": {
     // Host mode for the Makefile. Without it every target prefixes itself with a
     // `docker compose exec dev`, i.e. this container trying to exec into itself
-    // with no Docker socket.
-    "CI": "1",
+    // with no Docker socket. This is EXEC_MODE, not CI: #399 made the executor an
+    // explicit switch precisely so it could not be inferred from the ambient CI
+    // variable that GitHub Actions sets on every step.
+    "EXEC_MODE": "host",
     // The rest mirrors what docker-compose.yml gives the `dev` service, so the
     // two environments do not drift: inotify does not propagate through a bind
     // mount on Docker Desktop or Codespaces, and without polling `next dev`

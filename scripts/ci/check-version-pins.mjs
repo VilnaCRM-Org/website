@@ -681,10 +681,11 @@ if (devcontainerText !== null) {
           `Dockerfile), found "${devcontainer.build?.dockerfile}"`
       );
     }
-    if (devcontainer.remoteEnv?.CI !== '1') {
+    if (devcontainer.remoteEnv?.EXEC_MODE !== 'host') {
       fail(
         'devcontainer',
-        `${DEVCONTAINER} remoteEnv.CI must be "1", found "${devcontainer.remoteEnv?.CI}"`
+        `${DEVCONTAINER} remoteEnv.EXEC_MODE must be "host" (#399's explicit executor ` +
+          `switch; CI is deliberately not read), found "${devcontainer.remoteEnv?.EXEC_MODE}"`
       );
     }
   }

@@ -113,9 +113,11 @@ on every step.
 
 `.devcontainer/devcontainer.json` boots the same toolchain in Codespaces, VS Code Dev
 Containers, or an agent sandbox: it builds the repo `Dockerfile`'s `base` stage, so Node,
-Bun and the build toolchain are declared exactly once. Its `remoteEnv` still carries the
-pre-#399 `CI=1`, which no longer selects host mode — run targets inside it with
-`EXEC_MODE=host`, or each one tries to `docker compose exec` into the container itself.
+Bun and the build toolchain are declared exactly once. Its `remoteEnv` sets
+`EXEC_MODE=host` — it IS the container, so a target that routed through
+`docker compose exec` would try to exec into itself with no Docker socket. `make lint-pins`
+asserts that value, and `.github/workflows/devcontainer-smoke.yml` proves it by running
+`make lint` and `make test-unit-all` inside a freshly built container.
 The browser suites are the one gap — `base` is Alpine/musl and Playwright ships no musl
 browser builds, which is why the repo runs Playwright from a separate glibc image.
 

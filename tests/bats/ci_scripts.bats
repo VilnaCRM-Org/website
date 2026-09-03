@@ -462,7 +462,7 @@ playwright runtime devDependency|package.json|sed -i 's#"playwright": "[0-9.]*"#
 unpinned global bun install|Dockerfile|sed -i 's#npm install -g bun@[0-9.]*#npm install -g bun#' Dockerfile
 devcontainer build target|.devcontainer/devcontainer.json|sed -i 's#"target": "base"#"target": "production"#' .devcontainer/devcontainer.json
 devcontainer source Dockerfile|.devcontainer/devcontainer.json|sed -i 's#"dockerfile": "../Dockerfile"#"dockerfile": "../Playwright.Dockerfile"#' .devcontainer/devcontainer.json
-devcontainer host-mode flag|.devcontainer/devcontainer.json|sed -i 's#"CI": "1"#"CI": "0"#' .devcontainer/devcontainer.json
+devcontainer host-mode flag|.devcontainer/devcontainer.json|sed -i 's#"EXEC_MODE": "host"#"EXEC_MODE": "container"#' .devcontainer/devcontainer.json
 devcontainer embeds a version|.devcontainer/devcontainer.json|sed -i 's#"name": "VilnaCRM website"#"name": "VilnaCRM website 1.2.3"#' .devcontainer/devcontainer.json
 node image behind a platform flag|Dockerfile|sed -i 's#^FROM .* AS production#FROM --platform=linux/amd64 node:99.0.0-alpine3.23 AS production#' Dockerfile
 node image on a lowercase from|Apollo.Dockerfile|sed -i 's#^FROM #from #; s#node:[0-9.]*-alpine#node:99.0.0-alpine#' Apollo.Dockerfile

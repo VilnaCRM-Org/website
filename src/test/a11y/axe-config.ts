@@ -120,12 +120,16 @@ export const A11Y_EXCEPTIONS: readonly A11yException[] = [
     ruleId: 'color-contrast',
     scope: EXCEPTION_SCOPE_ANY,
     layer: 'route',
-    routes: ['/', '/swagger', '/en/docs/api'],
+    routes: ['/', '/swagger', '/en/docs/api', '/offline'],
     reason:
       'The brand palette fails SC 1.4.3 at ten distinct token pairs (measured in #423). ' +
       'Fixing it changes shared design tokens and regenerates every visual baseline, ' +
       'which is a design decision outside the scope of the gate that found it. Scoped ' +
-      'to the three routes it was measured against, so a new page still fails closed.',
+      'to the routes it was measured against, so a new page still fails closed. ' +
+      '/offline was added in #338 and measured on CI: every node it reports is the ' +
+      'shared chrome _app.tsx wraps around every page (.MuiButton-contained and the ' +
+      'footer link pairs), i.e. the same debt already waived above, not anything the ' +
+      'page itself introduces — its own control was fixed to 6.96:1 rather than waived.',
     trackingUrl: 'https://github.com/VilnaCRM-Org/website/issues/423',
   },
   {

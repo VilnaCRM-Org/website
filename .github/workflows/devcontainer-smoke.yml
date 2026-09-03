@@ -70,4 +70,4 @@ jobs:
           # runCmd to `bash -c` as a single string, and a newline-separated list
           # would report only the last command's exit code — silently swallowing
           # a lint failure.
-          runCmd: make lint CI=1 && make test-unit-all CI=1
+          runCmd: make lint EXEC_MODE=host && make test-unit-all EXEC_MODE=host
