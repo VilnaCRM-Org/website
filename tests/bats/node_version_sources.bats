@@ -1657,3 +1657,43 @@ EOF
   [ "$status" -eq 0 ]
   assert_output_contains 'node-version: OK'
 }
+
+# YAML node properties — an anchor (`&name`), a tag (`!tag` / `!!tag`), or both in either
+# order — may sit between the colon and the value proper. They must be stripped before
+# asking what the value opens, or an anchored flow mapping reads as a plain scalar and
+# skips the refusal entirely. All three of these exit 0 against the pre-fix script.
+
+@test "still refuses an anchored flow mapping naming the action" {
+  make_consistent_repo "$REPO"
+  cat >>"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+      - with: &node_inputs { cache: "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020" }
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 1 ]
+  assert_output_contains 'could not read as a'
+}
+
+@test "still refuses a tagged flow mapping naming the action" {
+  make_consistent_repo "$REPO"
+  cat >>"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+      - with: !!map { cache: "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020" }
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 1 ]
+  assert_output_contains 'could not read as a'
+}
+
+@test "still refuses an anchored flow sequence naming the action" {
+  make_consistent_repo "$REPO"
+  cat >"$REPO/.github/workflows/rogue-anchor.yml" <<'EOF'
+jobs:
+  rogue:
+    steps: &shared [{ uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 }]
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 1 ]
+  assert_output_contains 'could not read as a'
+}

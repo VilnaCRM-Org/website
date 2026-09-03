@@ -553,6 +553,15 @@ scan_setup_node_steps() {
         # can hide a `uses` key this scanner cannot reach.
         value = substr(key, RLENGTH + 1)
         sub(/^[ \t]+/, "", value)
+        # YAML node properties may sit between the colon and the value proper: an anchor
+        # (`&name`), a tag (`!tag`, `!!tag`, `!<verbatim>`), or both in either order. They
+        # are stripped before asking what the value opens, because `with: &a { uses: … }`
+        # is a flow mapping and would otherwise read as a plain scalar and skip the
+        # refusal. A plain scalar cannot begin with `&` or `!` in YAML — both are
+        # indicators, so a real value starting with one is quoted — which is what makes
+        # stripping them safe rather than another way to lose a line.
+        while (match(value, /^[&!][^ \t]*[ \t]*/) > 0 && RLENGTH > 0) \
+          value = substr(value, RLENGTH + 1)
         opens_flow = (substr(value, 1, 1) == "{" || substr(value, 1, 1) == "[")
         if (!opens_flow && key_name != "uses" && key_name != dq "uses" dq && \
             key_name != sq "uses" sq) \
