@@ -85,18 +85,25 @@ const INTEGRATION_COVERAGE_THRESHOLD = {
 // The `edge` layer covers the deployed runtime scripts that ship outside the Next.js
 // bundle and are therefore invisible to every other coverage scope:
 //
-// - `scripts/cloudfront_routing.js` — the CloudFront Functions handler fronting every
-//   production request; the repo's most-fixed file (7 fix commits / 4 production
-//   incidents) yet historically at zero coverage (issue #349).
+// - `scripts/cloudfront_routing.js` — the CloudFront Functions viewer-request handler
+//   fronting every production request; the repo's most-fixed file (7 fix commits / 4
+//   production incidents) yet historically at zero coverage (issue #349).
+// - `scripts/cloudfront_security_headers.js` — the CloudFront Functions viewer-response
+//   handler that attaches the security-header policy to every production response
+//   (issue #377).
 // - `public/sw.js` — the offline-shell service worker (issue #338). It is copied verbatim
 //   into the export, so it is neither imported by `src/` nor collected by the integration
 //   scope, and would otherwise ship with exactly the zero coverage #349 closed.
 //
-// Both specs load the byte-identical shipped file via `node:vm` with its real path as the
+// Every spec loads the byte-identical shipped file via `node:vm` with its real path as the
 // vm `filename`, so the v8 provider attributes the executed code back to the source file.
 // This layer is isolated from client/server/integration so it enforces 100% on exactly
 // these scripts without touching their coverage reports.
-const EDGE_COVERAGE_FROM = ['<rootDir>/scripts/cloudfront_routing.js', '<rootDir>/public/sw.js'];
+const EDGE_COVERAGE_FROM = [
+  '<rootDir>/scripts/cloudfront_routing.js',
+  '<rootDir>/scripts/cloudfront_security_headers.js',
+  '<rootDir>/public/sw.js',
+];
 
 const EDGE_COVERAGE_THRESHOLD = {
   global: { branches: 100, functions: 100, lines: 100, statements: 100 },
@@ -167,6 +174,14 @@ const config: Config = {
   ...(isClient ? { coverageThreshold: CLIENT_COVERAGE_THRESHOLD } : {}),
   ...(isServer ? { coverageThreshold: SERVER_COVERAGE_THRESHOLD } : {}),
   testMatch: resolvedTestMatch,
+  // The Apollo mock under `docker/apollo-server` is compiled by
+  // `tsconfig.server.json` with `moduleResolution: NodeNext`, where a relative
+  // import MUST carry the emitted `.js` extension. Jest's resolver does not
+  // perform that `.js` -> `.ts` substitution, so map it here; without this the
+  // server suite cannot import the real modules and would be reduced to testing
+  // hand-written doubles again (#381). Requests that genuinely point at a `.js`
+  // file still resolve to it — `.js` leads `moduleFileExtensions`.
+  moduleNameMapper: { '^(\\.{1,2}/.*)\\.js$': '$1' },
   testPathIgnorePatterns: [
     '/node_modules/',
     '/.next/',

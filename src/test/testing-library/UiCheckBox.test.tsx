@@ -3,6 +3,8 @@ import { render, fireEvent } from '@testing-library/react';
 import { UiCheckbox } from '@/components';
 import styles from '@/components/ui-checkbox/styles';
 
+import { expectNoA11yViolations } from '../a11y/expect-no-a11y-violations';
+
 import { testText } from './constants';
 
 const DEFAULT_BORDER_COLOR: string = '#D0D4D8';
@@ -59,5 +61,11 @@ describe('UiCheckbox', () => {
 
     rerender(<UiCheckbox label="Test" onChange={mockOnChange} checked={false} />);
     expect(checkboxInput).not.toBeChecked();
+  });
+
+  it('has no WCAG 2.1 AA violations', async () => {
+    const { container } = render(<UiCheckbox label={testText} onChange={mockOnChange} />);
+
+    await expectNoA11yViolations(container);
   });
 });

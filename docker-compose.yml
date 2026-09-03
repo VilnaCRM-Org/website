@@ -1,6 +1,18 @@
+# Pinned so the project name — and with it every container, volume and network
+# prefix — is the same wherever the repo is cloned, instead of floating with the
+# checkout directory's basename.
+name: website
+
 services:
   dev:
     container_name: website-dev
+    # Naming the built image explicitly lets CI pre-build it once through the
+    # BuildKit layer cache and have `docker compose up` reuse that exact tag
+    # instead of rebuilding per job (#399). `pull_policy: never` keeps Compose
+    # from attempting a doomed registry round-trip for a purely local tag before
+    # falling back to `build:`.
+    image: website-dev:latest
+    pull_policy: never
     build:
       context: .
       target: base
@@ -8,10 +20,28 @@ services:
     restart: unless-stopped
     volumes:
       - .:/app
+      # The bind mount above replaces the WHOLE /app subtree, which would
+      # otherwise hide the node_modules the `base` stage installed — leaving the
+      # container with no dependencies at all on any checkout that has none of
+      # its own (i.e. every CI runner). This anonymous volume restores the
+      # image's copy over the mount, exactly as the playwright service in
+      # docker-compose.test.yml already does. Docker seeds it from the image only
+      # when the volume is CREATED, and `docker compose up` carries the previous
+      # container's anonymous volume forward — so after a bun.lock change refresh
+      # it with `make install`, which reinstalls into the running container (or
+      # recreate it with `docker compose up -d --renew-anon-volumes dev`).
+      - /app/node_modules
     ports:
       - '3000:3000'
     environment:
-      - NODE_ENV=development
+      # NODE_ENV is deliberately NOT set here. `docker compose exec` inherits the
+      # service environment, so pinning it to `development` leaked into every
+      # gate run inside this container and overrode the value each tool picks for
+      # itself — Jest silently ran with NODE_ENV=development instead of `test`,
+      # which flipped next-export-optimize-images and failed an integration spec
+      # that passes on the host. `next dev` sets its own NODE_ENV in-process, so
+      # leaving it unset keeps the dev server identical and makes an exec'd tool
+      # see exactly what it would see on the host.
       - CHOKIDAR_USEPOLLING=true
       - WATCHPACK_POLLING=true
     healthcheck:

@@ -13,6 +13,68 @@ setup() {
   assert_output_contains 'test-bats'
 }
 
+# ---------------------------------------------------------------------------
+# Executor selection (issue #399). These four tests pin the contract that makes
+# a local `make <target>` and the CI invocation the same command: the container
+# is the default everywhere, the host path is reachable only by explicitly
+# asking for it, and no ambient environment variable can silently swap them.
+# ---------------------------------------------------------------------------
+
+@test "npm-tool gates exec into the dev container by default" {
+  reset_command_log
+  run_make_target lint-next
+  [ "$status" -eq 0 ]
+  assert_log_contains 'compose exec -T dev'
+
+  reset_command_log
+  run_make_target ci-test-unit-client
+  [ "$status" -eq 0 ]
+  assert_log_contains 'compose exec -T dev env TEST_ENV=client'
+}
+
+@test "EXEC_MODE=host runs the same gates straight from BIN_DIR" {
+  reset_command_log
+  run_make_target lint-next EXEC_MODE=host
+  [ "$status" -eq 0 ]
+  assert_log_contains 'eslint'
+  run grep -c 'compose exec' "$COMMAND_LOG"
+  [ "$output" -eq 0 ]
+}
+
+@test "the ambient CI variable does not select the host executor" {
+  # The regression this issue exists to fix: GitHub Actions exports CI=true into
+  # every step, and the previous `ifeq ($(CI),1)` switch turned that into "run
+  # on the host", so no CI job ever exercised the container path.
+  local ci_value
+  for ci_value in 1 true TRUE; do
+    reset_command_log
+    CI="$ci_value" run_make_target lint-next
+    [ "$status" -eq 0 ]
+    assert_log_contains 'compose exec -T dev'
+  done
+}
+
+@test "EXEC_MODE=host needs no Docker daemon, even for the CI aggregates" {
+  # The escape hatch exists so the Husky hooks work with Docker stopped. A
+  # container-reconciling PREREQUISITE (as opposed to a recipe prefix) does not
+  # vanish in host mode by itself, so these entrypoints would otherwise still
+  # demand a daemon.
+  local target
+  for target in ci-lint ci-test ci-mutation update-contracts; do
+    reset_command_log
+    run_make_target "$target" EXEC_MODE=host
+    [ "$status" -eq 0 ]
+    run grep -c 'docker' "$COMMAND_LOG"
+    [ "$output" -eq 0 ]
+  done
+}
+
+@test "an unrecognised EXEC_MODE fails loudly instead of falling back" {
+  run_make_target lint-next EXEC_MODE=hostt
+  [ "$status" -ne 0 ]
+  assert_output_contains "EXEC_MODE must be 'container' or 'host'"
+}
+
 @test "container-backed helper targets fail fast when their required names are missing" {
   local target
   local required_var
@@ -59,8 +121,8 @@ EOF
   reset_command_log
   run_make_target run-unit-tests-dind TEMP_CONTAINER_NAME=website-dev-test
   [ "$status" -eq 0 ]
-  assert_log_contains 'docker exec website-dev-test sh -lc cd /app && make test-unit-client CI=1'
-  assert_log_contains 'docker exec website-dev-test sh -lc cd /app && make test-unit-server CI=1'
+  assert_log_contains 'docker exec website-dev-test sh -lc cd /app && make test-unit-client EXEC_MODE=host'
+  assert_log_contains 'docker exec website-dev-test sh -lc cd /app && make test-unit-server EXEC_MODE=host'
 
   reset_command_log
   run_make_target run-mutation-tests-dind TEMP_CONTAINER_NAME=website-dev-test
@@ -70,22 +132,22 @@ EOF
   reset_command_log
   run_make_target run-eslint-tests-dind TEMP_CONTAINER_NAME=website-dev-test
   [ "$status" -eq 0 ]
-  assert_log_contains 'docker exec website-dev-test sh -lc cd /app && make lint-next CI=1'
+  assert_log_contains 'docker exec website-dev-test sh -lc cd /app && make lint-next EXEC_MODE=host'
 
   reset_command_log
   run_make_target run-typescript-tests-dind TEMP_CONTAINER_NAME=website-dev-test
   [ "$status" -eq 0 ]
-  assert_log_contains 'docker exec website-dev-test sh -lc cd /app && make lint-tsc CI=1'
+  assert_log_contains 'docker exec website-dev-test sh -lc cd /app && make lint-tsc EXEC_MODE=host'
 
   reset_command_log
   run_make_target run-markdown-lint-tests-dind TEMP_CONTAINER_NAME=website-dev-test
   [ "$status" -eq 0 ]
-  assert_log_contains 'docker exec website-dev-test sh -lc cd /app && make lint-md CI=1'
+  assert_log_contains 'docker exec website-dev-test sh -lc cd /app && make lint-md EXEC_MODE=host'
 
   reset_command_log
   run_make_target run-deps-lint-tests-dind TEMP_CONTAINER_NAME=website-dev-test
   [ "$status" -eq 0 ]
-  assert_log_contains 'docker exec website-dev-test sh -lc cd /app && make lint-deps CI=1'
+  assert_log_contains 'docker exec website-dev-test sh -lc cd /app && make lint-deps EXEC_MODE=host'
 }
 
 @test "K6 and DIND quality targets invoke the expected Docker commands" {
@@ -116,7 +178,7 @@ EOF
 
 @test "developer convenience targets call the expected local commands" {
   reset_command_log
-  run_make_target start CI=1
+  run_make_target start EXEC_MODE=host
   [ "$status" -eq 0 ]
   assert_log_contains 'next dev'
 
@@ -124,7 +186,7 @@ EOF
   run_make_target wait-for-dev
   [ "$status" -eq 0 ]
   assert_output_contains 'Dev service is up and running!'
-  assert_log_contains 'curl -s -f http://localhost:3000'
+  assert_log_contains 'curl -fsS http://localhost:3000'
 
   reset_command_log
   run_make_target build-analyze
@@ -141,9 +203,9 @@ EOF
   assert_log_contains 'docker rm fake-container-id'
 
   reset_command_log
-  run_make_target format CI=1
+  run_make_target format EXEC_MODE=host
   [ "$status" -eq 0 ]
-  assert_log_contains 'prettier **/*.{js,jsx,ts,tsx,json,css,scss,md} --write --ignore-path .prettierignore'
+  assert_log_contains 'prettier **/*.{js,jsx,mjs,ts,tsx,json,css,scss,md} --write --ignore-path .prettierignore'
 
   reset_command_log
   run_make_target husky
@@ -151,17 +213,17 @@ EOF
   assert_log_contains 'bun x husky install'
 
   reset_command_log
-  run_make_target storybook-start CI=1
+  run_make_target storybook-start EXEC_MODE=host
   [ "$status" -eq 0 ]
   assert_log_contains 'storybook dev -p'
 
   reset_command_log
-  run_make_target storybook-build CI=1
+  run_make_target storybook-build EXEC_MODE=host
   [ "$status" -eq 0 ]
   assert_log_contains 'storybook build --output-dir storybook-static-ci'
 
   reset_command_log
-  run_make_target check-node-version CI=1
+  run_make_target check-node-version EXEC_MODE=host
   [ "$status" -eq 0 ]
   assert_log_contains 'node checkNodeVersion.js'
 
@@ -209,6 +271,45 @@ EOF
   assert_log_contains 'playwright test ./src/test/e2e'
 }
 
+@test "accessibility targets run both gates through Jest and Playwright" {
+  # `env TEST_ENV=...` is consumed by the real `env` before the stub sees argv,
+  # so echo the variable from the stub instead — the same technique the
+  # ci-test split-target test uses, and the only one that holds in both the
+  # host (EXEC_MODE=host) and container (EXEC_MODE=container) modes.
+  cat > "$STUB_BIN_DIR/jest" <<'STUB'
+#!/usr/bin/env bash
+printf 'jest TEST_ENV=%s %s\n' "${TEST_ENV:-unset}" "$*" >> "${COMMAND_LOG:?}"
+exit 0
+STUB
+  chmod +x "$STUB_BIN_DIR/jest"
+
+  reset_command_log
+  run_make_target test-a11y-components EXEC_MODE=host
+  [ "$status" -eq 0 ]
+  # The component leg is the client Jest layer, scoped to the a11y spec. Coverage
+  # is off because the client suite's global floor cannot be met by one spec; it
+  # stays enforced on the full test-unit-client run.
+  assert_log_contains 'jest TEST_ENV=client --verbose --coverage=false ./src/test/testing-library/A11yComponents.test.tsx'
+
+  reset_command_log
+  run_make_target test-a11y-routes EXEC_MODE=host
+  [ "$status" -eq 0 ]
+  # The route leg boots the prod stack before scanning, exactly like e2e/visual.
+  assert_log_contains 'docker compose -f common-healthchecks.yml -f docker-compose.test.yml up -d'
+  assert_log_contains 'playwright test ./src/test/a11y'
+
+  reset_command_log
+  run_make_target ci-test-a11y EXEC_MODE=host
+  [ "$status" -eq 0 ]
+  assert_log_contains 'playwright test ./src/test/a11y'
+
+  reset_command_log
+  run_make_target test-a11y EXEC_MODE=host
+  [ "$status" -eq 0 ]
+  assert_log_contains 'jest TEST_ENV=client --verbose --coverage=false ./src/test/testing-library/A11yComponents.test.tsx'
+  assert_log_contains 'playwright test ./src/test/a11y'
+}
+
 @test "e2e flake targets repeat the changed specs and grade the report" {
   reset_command_log
   run_make_target test-e2e-burnin
@@ -224,7 +325,7 @@ EOF
   reset_command_log
   run_make_target check-e2e-flakes
   [ "$status" -eq 0 ]
-  assert_log_contains 'bun x tsx scripts/ci/check-flaky-report.ts'
+  assert_log_contains 'bun scripts/ci/check-flaky-report.ts'
 }
 
 @test "maintenance targets shell out through Docker and Bun as expected" {
@@ -297,7 +398,7 @@ exit 0
 STUB
   chmod +x "$STUB_BIN_DIR/jest"
 
-  run_make_target test-integration CI=1
+  run_make_target test-integration EXEC_MODE=host
   [ "$status" -eq 0 ]
   assert_log_contains 'jest TEST_ENV=integration --verbose'
 }
@@ -310,7 +411,7 @@ exit 0
 STUB
   chmod +x "$STUB_BIN_DIR/jest"
 
-  run_make_target test-integration-watch CI=1
+  run_make_target test-integration-watch EXEC_MODE=host
   [ "$status" -eq 0 ]
   assert_log_contains 'jest TEST_ENV=integration --watch'
 }
@@ -323,36 +424,68 @@ exit 0
 STUB
   chmod +x "$STUB_BIN_DIR/jest"
 
-  run_make_target test-contract CI=1
+  run_make_target test-contract EXEC_MODE=host
   [ "$status" -eq 0 ]
   assert_log_contains 'jest TEST_ENV=contract --verbose'
 }
 
-@test "ensure-dev starts the dev service when it is not already running" {
-  run_make_target ensure-dev CI=1
+@test "ensure-dev starts the dev container without waiting for the dev server" {
+  run_make_target ensure-dev
   [ "$status" -eq 0 ]
-  # The stubbed docker compose ps does not report a running 'dev' service,
-  # so ensure-dev falls back to 'make start'.
-  assert_log_contains 'next dev'
+  # It must NOT delegate to `make start`: the gates only need something to exec
+  # into, and start would block on wait-for-dev until the Next dev server answers
+  # on port 3000. `--no-recreate` is equally load-bearing — without it this would
+  # tear down the idle container `ci-setup` created through the CI overlay (a
+  # different compose config hash) and replace it with a Next dev server.
+  assert_log_contains 'compose -f docker-compose.yml up -d --no-recreate dev'
+  run grep -c 'next dev' "$COMMAND_LOG"
+  [ "$output" -eq 0 ]
 }
 
-@test "ci-setup brings up the dev service and waits for readiness" {
-  run_make_target ci-setup CI=1
+@test "ci-setup brings the dev service up idle through the CI compose overlay" {
+  run_make_target ci-setup
   [ "$status" -eq 0 ]
-  assert_log_contains 'docker compose -f docker-compose.yml up -d --build dev'
-  assert_output_contains 'Dev service is up and running!'
+  # The overlay replaces the dev server with an idle command, so the container
+  # is ready as soon as it is running -- `--wait` replaces the HTTP poll, and
+  # no `--build` is passed so a pre-built, layer-cached image is reused.
+  assert_log_contains 'docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d --no-recreate --wait dev'
+}
+
+@test "ci-setup refuses a dev container bound to a different checkout" {
+  # ci-setup is the documented precondition of every ci-test-* entrypoint, and
+  # those carry no $(DEV_READY) -- so if `--no-recreate` adopted another
+  # checkout's website-dev here, the whole CI lane would run against its /app
+  # bind and report green for the wrong source tree.
+  run_make_target ci-setup FAKE_DOCKER_APP_BIND=/somewhere/else
+  [ "$status" -ne 0 ]
+  assert_output_contains 'belongs to a different checkout'
+  run grep -cF -- '--wait dev' "$COMMAND_LOG"
+  [ "$output" -eq 0 ]
+}
+
+@test "start refuses a dev container bound to a different checkout" {
+  # `make start` is the developer-facing path that creates or adopts website-dev.
+  # Unguarded, a second checkout would either serve the first one's /app bind or
+  # replace it -- the same hazard ensure-dev, ci-setup and test-mutation guard.
+  run_make_target start FAKE_DOCKER_APP_BIND=/somewhere/else
+  [ "$status" -ne 0 ]
+  assert_output_contains 'belongs to a different checkout'
+  run grep -cF -- 'up -d dev' "$COMMAND_LOG"
+  [ "$output" -eq 0 ]
 }
 
 @test "ci-lint runs the lint phase through the parallel runner with grouped output" {
-  run_make_target ci-lint CI=1
+  run_make_target ci-lint
   [ "$status" -eq 0 ]
   assert_output_contains '===== lint-next ====='
   assert_output_contains '===== lint-tsc ====='
   assert_output_contains '===== lint-md ====='
+  assert_output_contains '===== lint-headers ====='
+  assert_output_contains '===== lint-prod-guardrails ====='
 }
 
 @test "ci-test runs the dev-side test phase through the parallel runner" {
-  run_make_target ci-test CI=1
+  run_make_target ci-test
   [ "$status" -eq 0 ]
   assert_output_contains '===== ci-test-unit-client ====='
   assert_output_contains '===== ci-test-unit-server ====='
@@ -368,25 +501,42 @@ exit 0
 STUB
   chmod +x "$STUB_BIN_DIR/jest"
 
-  run_make_target ci-test-unit-client CI=1
+  run_make_target ci-test-unit-client EXEC_MODE=host
   [ "$status" -eq 0 ]
   assert_log_contains 'jest TEST_ENV=client --verbose'
 
   reset_command_log
-  run_make_target ci-test-unit-server CI=1
+  run_make_target ci-test-integration EXEC_MODE=host
+  [ "$status" -eq 0 ]
+  assert_log_contains 'jest TEST_ENV=integration --verbose'
+
+  reset_command_log
+  run_make_target ci-test-unit-server EXEC_MODE=host
   [ "$status" -eq 0 ]
   assert_log_contains 'jest TEST_ENV=server --verbose ./src/test/apollo-server'
 
   reset_command_log
-  run_make_target ci-test-mutation CI=1
+  run_make_target ci-test-mutation EXEC_MODE=host
   [ "$status" -eq 0 ]
   assert_log_contains 'bun x stryker run'
 }
 
 @test "ci-mutation delegates to ci-test-mutation" {
-  run_make_target ci-mutation CI=1
+  run_make_target ci-mutation EXEC_MODE=host
   [ "$status" -eq 0 ]
   assert_log_contains 'bun x stryker run'
+}
+
+@test "test-mutation refuses a dev container bound to a different checkout" {
+  # This target force-recreates with --renew-anon-volumes, so from a second
+  # checkout it would DESTROY the other one's container and its anonymous
+  # node_modules volume rather than merely adopt it. The guard has to refuse
+  # before the recreate is ever issued.
+  run_make_target test-mutation FAKE_DOCKER_APP_BIND=/somewhere/else
+  [ "$status" -ne 0 ]
+  assert_output_contains 'belongs to a different checkout'
+  run grep -cF -- '--force-recreate' "$COMMAND_LOG"
+  [ "$output" -eq 0 ]
 }
 
 @test "ci-prod-setup starts prod and installs Chromium" {
@@ -438,12 +588,13 @@ STUB
   [ "$status" -eq 0 ]
   assert_log_contains 'playwright test ./src/test/e2e'
   assert_log_contains 'playwright test ./src/test/visual'
+  assert_log_contains 'playwright test ./src/test/a11y'
   assert_log_contains 'lhci autorun --config=lighthouserc.desktop.js'
   assert_log_contains 'lhci autorun --config=lighthouserc.mobile.js'
 }
 
 @test "ci runs the full local CI pipeline end to end" {
-  run_make_target ci CI=1
+  run_make_target ci EXEC_MODE=host
   [ "$status" -eq 0 ]
   assert_output_contains '===== lint-next ====='
   assert_log_contains 'apk add --no-cache chromium'
@@ -634,22 +785,187 @@ run_openapi_drift_script() {
   [ "$makefile_digest" = "$script_digest" ]
 }
 
-@test "contract targets shell out to Node and cover fetch, lint and baseline refresh" {
+@test "lint-workflows audits the workflows through the digest-pinned zizmor image host-only" {
   reset_command_log
 
-  run_make_target lint-contracts CI=1
+  mkdir -p "$MAKEFILE_SANDBOX/.github/workflows"
+
+  # A token is supplied so the target does not fall back to `gh auth token` and
+  # pull a real credential into the command log.
+  run_make_target lint-workflows GH_TOKEN=stub-token
+  [ "$status" -eq 0 ]
+
+  # The gate must reach zizmor by immutable digest, at the committed floor, and
+  # aimed at the workflows -- a dropped threshold or a tag pin would leave a
+  # green check that audits nothing.
+  assert_log_contains 'ghcr.io/zizmorcore/zizmor@sha256:'
+  assert_log_contains '--min-severity medium'
+  assert_log_contains '--min-confidence high'
+  assert_log_contains '.github/workflows/'
+
+  # Host-only: zizmor is a container CLI, never routed through the dev
+  # container's package manager.
+  run grep -E 'bun|npm' "$COMMAND_LOG"
+  [ "$status" -ne 0 ]
+}
+
+@test "lint-security-txt validates the committed RFC 9116 security.txt" {
+  reset_command_log
+
+  # Run the real gate against the real committed policy file (the lint-metrics
+  # precedent): a stubbed check would prove only that the recipe fires, not that
+  # the shipped security.txt still satisfies RFC 9116 and has expiry runway.
+  mkdir -p "$MAKEFILE_SANDBOX/public/.well-known"
+  cp "$PROJECT_ROOT/public/.well-known/security.txt" "$MAKEFILE_SANDBOX/public/.well-known/"
+
+  run_make_target lint-security-txt
+  [ "$status" -eq 0 ]
+  assert_output_contains 'security-txt: OK'
+
+  # Pure bash: never routed through the dev container or the package manager.
+  run grep -E 'docker|bun' "$COMMAND_LOG"
+  [ "$status" -ne 0 ]
+}
+
+@test "lint-prod-guardrails shells out to the hermetic policy script" {
+  reset_command_log
+
+  run_make_target lint-prod-guardrails EXEC_MODE=host
+  [ "$status" -eq 0 ]
+  assert_log_contains 'node scripts/ci/lint-prod-guardrails.mjs'
+
+  # Hermetic: no container, no package manager, and no network client.
+  run grep -E 'docker|bun|curl' "$COMMAND_LOG"
+  [ "$status" -ne 0 ]
+}
+
+@test "contract targets shell out to Node and cover fetch, lint, checksum and baseline refresh" {
+  reset_command_log
+
+  run_make_target lint-contracts EXEC_MODE=host
   [ "$status" -eq 0 ]
   assert_log_contains 'node scripts/contracts/lint-contracts.mjs'
 
   reset_command_log
 
-  run_make_target update-contracts CI=1
+  run_make_target update-contracts EXEC_MODE=host
   [ "$status" -eq 0 ]
   assert_log_contains 'node scripts/fetchSwaggerSchema.mjs'
   assert_log_contains 'node scripts/fetchGraphqlSchema.mjs'
+  assert_log_contains 'node scripts/contracts/lint-contracts.mjs --update-checksums'
   assert_log_contains 'node scripts/contracts/lint-contracts.mjs --update-baseline'
 }
 
+# Issue #381 / F4: the user-service version invariant is hermetic, so unlike
+# lint-contracts it is part of the `lint` aggregate and runs on every PR.
+@test "lint-api-versions shells out to the hermetic version-invariant check" {
+  reset_command_log
+
+  run_make_target lint-api-versions EXEC_MODE=host
+  [ "$status" -eq 0 ]
+  assert_log_contains 'node scripts/contracts/check-api-versions.mjs'
+}
+
+@test "the lint aggregate includes the API version invariant" {
+  run grep -E '^lint: .*lint-api-versions' "$PROJECT_ROOT/Makefile"
+  [ "$status" -eq 0 ]
+
+  run grep -E '^CI_LINT_TARGETS .*lint-api-versions' "$PROJECT_ROOT/Makefile"
+  [ "$status" -eq 0 ]
+}
+
+# Shared fixture for the dependency-CVE gate (#356): a stubbed osv-scanner that satisfies
+# ensure-osv.sh's idempotency probe (so no release is downloaded) and reports one advisory,
+# so the report-formatting assertions have something to find.
+create_osv_scanner_stub() {
+  mkdir -p "$MAKEFILE_SANDBOX/bin"
+  cat > "$MAKEFILE_SANDBOX/bin/osv-scanner" <<'STUB'
+#!/usr/bin/env bash
+if [ "$1" = "--version" ]; then
+  echo "osv-scanner version: 2.5.0"
+  exit 0
+fi
+printf 'osv-scanner %s\n' "$*" >> "${COMMAND_LOG:?}"
+cat <<'JSON'
+{"results":[{"source":{"path":"bun.lock","type":"lockfile"},"packages":[
+  {"package":{"name":"left-pad","version":"1.0.0","ecosystem":"npm"},
+   "groups":[{"ids":["GHSA-test-0000-0000"],"max_severity":"7.5"}]}]}]}
+JSON
+# osv-scanner exits 1 when it finds vulnerabilities; the verdict is the checker's job.
+exit 1
+STUB
+  chmod +x "$MAKEFILE_SANDBOX/bin/osv-scanner"
+}
+
+@test "scan-vulns-census scans the lockfile and hands the JSON to the checker host-only" {
+  reset_command_log
+  create_osv_scanner_stub
+
+  # The stubbed scanner exits 1, as the real one does when it FINDS vulnerabilities. That is
+  # an expected outcome here — the verdict belongs to the checker — so the wrapper must not
+  # read it as a failed scan.
+  run_make_target scan-vulns-census
+  [ "$status" -eq 0 ]
+
+  # The scanner is only ever asked for JSON against the committed config; every pass/fail
+  # decision belongs to the checker, which is unit-tested in src/test/unit/osv-report.test.ts.
+  assert_log_contains 'osv-scanner scan source --lockfile=bun.lock --config=config/osv-scanner.toml --format=json'
+  assert_log_contains 'bun scripts/ci/check-osv-report.ts'
+
+  # Census mode never reads the base ref, so it must not diff against one.
+  run grep -F -- '--lockfile=bun.lock:' "$COMMAND_LOG"
+  [ "$status" -ne 0 ]
+
+  # Host-only: never routed through the dev container.
+  run grep -E 'docker' "$COMMAND_LOG"
+  [ "$status" -ne 0 ]
+}
+
+@test "lint-vulns fails closed when the base ref's lockfile cannot be read" {
+  reset_command_log
+  create_osv_scanner_stub
+
+  # The sandbox is a plain directory, not a work tree, so `git show <ref>:bun.lock` cannot
+  # resolve. A base ref the gate cannot read must fail rather than be treated as "no known
+  # advisories", which would let a vulnerable dependency through on an empty comparison.
+  run_make_target lint-vulns OSV_BASE_REF=refs/heads/definitely-missing
+  [ "$status" -ne 0 ]
+  assert_output_contains 'cannot read "bun.lock"'
+
+  # It failed before reaching the verdict, so the checker was never invoked.
+  run grep -F 'check-osv-report.ts' "$COMMAND_LOG"
+  [ "$status" -ne 0 ]
+}
+
+@test "the checker prints Markdown on stdout and keeps annotations off it" {
+  local sandbox="$BATS_TEST_TMPDIR/osv-cli"
+  mkdir -p "$sandbox"
+  mkdir -p "$sandbox/config"
+  cp "$PROJECT_ROOT/config/osv-scanner.toml" "$sandbox/config/osv-scanner.toml"
+  printf '{"results":[]}\n' > "$sandbox/base.json"
+  cat > "$sandbox/head.json" <<'JSON'
+{"results":[{"source":{"path":"bun.lock","type":"lockfile"},"packages":[
+  {"package":{"name":"left-pad","version":"1.0.0","ecosystem":"npm"},
+   "groups":[{"ids":["GHSA-test-0000-0000"],"max_severity":"7.5"}]}]}]}
+JSON
+
+  # The workflow tees this stdout into the job summary and, for the census, verbatim into a
+  # GitHub issue body. A `::error::`/`::warning::` echo of every finding would double the
+  # report's length, so annotations must go to stderr — which the runner also parses.
+  # Drop the stubbed PATH entry so the real bun runs the real checker.
+  run env PATH="${PATH#"$STUB_BIN_DIR":}" \
+    OSV_MODE=diff OSV_BASE_REPORT=base.json OSV_HEAD_REPORT=head.json \
+    sh -c "cd '$sandbox' && bun '$PROJECT_ROOT/scripts/ci/check-osv-report.ts' 2>/dev/null"
+
+  # An introduced advisory fails the gate and is named in the Markdown.
+  [ "$status" -eq 1 ]
+  assert_output_contains 'left-pad@1.0.0'
+  assert_output_contains 'GHSA-test-0000-0000'
+  assert_output_contains '1 advisory/advisories introduced'
+
+  run grep -F '::' <<< "$output"
+  [ "$status" -ne 0 ]
+}
 
 @test "stop-prod and playwright-install keep Docker as the default and swap under HOST_STACK=1" {
   run_make_target stop-prod

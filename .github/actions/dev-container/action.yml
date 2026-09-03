@@ -1,0 +1,48 @@
+name: dev container
+description: >-
+  Build (or restore from the BuildKit layer cache) the dev image and start the
+  dev service idle, so a job can run the same in-container make targets a
+  developer runs locally.
+
+inputs:
+  cache-write:
+    description: >-
+      Write layers back to the GitHub Actions cache. Only the default branch
+      should do this: a cache written on a PR branch is readable by that PR
+      alone, while one written on main is readable by every branch, and the
+      repository shares a single 10 GB cache quota with the CodeQL and lychee
+      entries.
+    required: false
+    default: 'false'
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+
+    - name: Build or restore the dev image
+      uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+      with:
+        context: .
+        target: base
+        # Must match `image:` on the dev service in docker-compose.yml — that is
+        # what makes `docker compose up` reuse this build instead of running its
+        # own, uncached one.
+        tags: website-dev:latest
+        load: true
+        push: false
+        # `load` exports into the classic image store, which cannot hold the
+        # attestation manifests buildx attaches by default.
+        provenance: false
+        sbom: false
+        # A stable scope, not one keyed on a hash of the build inputs: BuildKit
+        # already invalidates per layer by content, so a PR that only touches
+        # bun.lock still reuses the expensive apk/npm layer beneath it, whereas a
+        # hash-keyed scope would miss the cache wholesale.
+        cache-from: type=gha,scope=dev-image
+        cache-to: ${{ inputs.cache-write == 'true' && 'type=gha,mode=max,scope=dev-image' || '' }}
+
+    - name: Start the dev service
+      shell: bash
+      run: make ci-setup

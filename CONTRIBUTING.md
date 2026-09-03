@@ -62,12 +62,18 @@ If you find an issue to work on, you are welcome to open a PR with a fix.
    Docker is the default substrate, not a hard requirement. The dev container
    (`.devcontainer/devcontainer.json`) covers the lint, unit, and integration layers; it
    cannot run the browser suites, because its Alpine/musl base has no Playwright builds.
-   On the host, `CI=1` covers lint and the unit/integration layers and `HOST_STACK=1`
+   On the host, `EXEC_MODE=host` covers lint and the unit/integration layers and `HOST_STACK=1`
    covers the Playwright and memlab suites; the K6 load suites are Docker-only. The Git
    hooks already use host mode, so committing works without Docker. See
    [Host mode](README.md#host-mode-running-without-docker).
 
-2. Create a working branch and start with your changes!
+2. Run `make install`. It installs into both trees, which is what the tooling
+   needs: the dev container keeps its `node_modules` in its own volume — that is
+   what every lint and test gate execs into — while the host copy is what your
+   editor's TypeScript server, `lint-staged` in the pre-commit hook, and any
+   `EXEC_MODE=host` run resolve against. Re-run it after a `bun.lock` change.
+
+3. Create a working branch and start with your changes!
 
 #### Maintain Makefile shell coverage
 
@@ -78,6 +84,9 @@ sync:
   either Bats-covered or already covered by a pull request workflow.
 - If the target is not already exercised by CI, add or update the relevant test in
   `tests/bats/`.
+- The same applies to a new policy script under `scripts/ci/`: give it its own
+  suite (`prod_guardrails.bats` and `check_security_txt.bats` are the fixture-driven
+  pattern to copy) rather than testing it only through the Makefile target.
 - Run `make test-bats`.
 
 #### Run the CI phases locally
@@ -111,8 +120,33 @@ removed.
   release, and sandbox workflows use `cancel-in-progress: false` — a production
   trigger must never be aborted mid-run, so newer pushes queue behind the
   current one.
-- **Caching.** Node jobs restore the Bun cache (`~/.bun/install/cache`, keyed on the
-  Node version and `bun.lock`) so installs are warm instead of cold.
+- **Container-always execution (issue #399).** The lint and test jobs run the same
+  `make <target>` you run locally, inside the same dev container. Each one checks
+  out, runs the `./.github/actions/dev-container` composite action — which builds
+  or restores the image through the BuildKit layer cache and starts the dev
+  service idle with `make ci-setup` — and then runs the target. No
+  `~/.bun/install/cache` restore and no host `bun install` remain, the one exception
+  being `contract-parity-testing`, whose layer boots Mockoon in-process and needs no
+  container (`ci-test-contract` is correspondingly the only `CI_TEST_TARGETS` entry
+  that skips `$(CI_TESTS)`). Otherwise the image is the single source of truth for the
+  runtime, so a CI failure reproduces locally with the identical command.
+  `dev-image-cache.yml` warms the shared layer cache on `main`. Four of them keep
+  `actions/setup-node` (`static-testing`, `dependency-cruiser`, `storybook-build`,
+  the `mutation-testing` shard) purely to pin the Node that runs the host-only
+  `generate-localization` prerequisite.
+
+  Staying on the host entirely: `bats-testing` and `commitlint`, which need
+  `bash`/`git` that the alpine image does not ship; `rust-code-analysis`, a
+  host-only Rust binary; and the prod-stack suites the issue scopes out —
+  `e2e-testing`, `visual-testing`, `memory-leak-testing`, `load-testing`,
+  `a11y-testing` and `performance-testing`. The last two also pass
+  `EXEC_MODE=host`: Lighthouse so its budgets keep measuring the path they were
+  calibrated against, and the accessibility gate because its two legs cannot
+  straddle the executor boundary — Jest's globalSetup writes the gitignored
+  `pages/i18n/localization.json`, so a containerised component leg would leave it
+  root-owned in the bind mount and the route leg's host `make start-prod` would
+  then fail with EACCES regenerating it.
+
 - **Matrices instead of serial steps.** The Playwright e2e suite splits across a
   Playwright `--shard` matrix (one balanced slice of the ~340 test runs per
   runner), Lighthouse runs `desktop` and `mobile` as parallel cells, the K6 load
@@ -124,19 +158,34 @@ removed.
 Mutation testing runs as a deterministic shard matrix plus a merge gate:
 
 - Each `shard` cell runs `make test-mutation-shard` (with `MUTATION_SHARD_INDEX`
-  and `MUTATION_SHARD_TOTAL`), which slices the `mutate` list from
-  `stryker.config.mjs` (via `stryker.shard.config.mjs`) and writes
-  `reports/mutation/mutation-shard-<i>.json` with `break` disabled.
+  and `MUTATION_SHARD_TOTAL`), which slices the scope's mutate list via
+  `stryker.shard.config.mjs` — the fixed list in `stryker.config.mjs` for the
+  `curated` scope, `reports/mutation/mutate-list.txt` for `changed` and `full` —
+  and writes `reports/mutation/mutation-shard-<i>.json` with `break` disabled.
 - The `merge` job runs `make merge-mutation-reports` (with `MUTATION_SHARD_TOTAL`),
   which unions the per-shard reports and re-enforces the **exact** `break`
-  threshold read from `stryker.config.mjs`
+  threshold for the scope, resolved from
+  [`config/mutation-policy.json`](config/mutation-policy.json) — the single source
+  of truth for which directories hold mutable code and for every scope's gate
+  (the `curated` slice's file list is the exception: it stays a fixed list in
+  `stryker.config.mjs`, and the policy file supplies only its threshold)
   ([`scripts/ci/merge-mutation-reports.ts`](scripts/ci/merge-mutation-reports.ts),
   unit-tested in `src/test/unit/mutation-report.test.ts`).
 
-The round-robin split is a total partition of `mutate`, so the union equals the
-full list and the sharded score is identical to an unsharded run — the gate is
-preserved, never relaxed. The merge job runs even when a shard fails, so the
-gate fails closed rather than passing vacuously.
+The round-robin split is a total partition of the scope's mutate list, so the
+union equals the full list and the sharded score is identical to an unsharded
+run — the gate is preserved, never relaxed. The merge job runs even when a shard
+fails, so the gate fails closed rather than passing vacuously.
+
+`MUTATION_SCOPE` picks which list is sharded: `curated` (the fixed list, blocking
+at 100%) and `changed` (the mutable files your pull request touches, blocking at
+85% until the `maxFiles` cap is exceeded, past which the leg turns advisory) both
+run on a pull request, and `full` sweeps `src/` nightly as an advisory leg that
+files a tracking issue. `make mutation-file-list` prints the resolved
+list and `make test-mutation-changed` runs the PR's changed-file leg locally. The
+scope table and the definition of a "mutable" file live in CLAUDE.md; never lower
+a threshold or widen an exclusion in `config/mutation-policy.json` to get a leg
+green.
 
 #### E2E flakes are detected, not retried away
 
@@ -198,6 +247,40 @@ granted via an inline `# perf-exception: <reason>` marker or the
 [docs/dockerfile-performance.md](docs/dockerfile-performance.md) for the full
 policy, thresholds, and tuning guide.
 
+#### Accessibility (WCAG 2.1 AA)
+
+If your change renders UI or adds a route, it has to pass the accessibility gate.
+`make test-a11y` runs two of its three layers: `jest-axe` over rendered
+components in jsdom, and `@axe-core/playwright` plus a keyboard sweep over every
+registered route in Chromium, Firefox and WebKit. CI runs the same target as its
+own check (`.github/workflows/a11y-testing.yml`), separate from `static testing`
+(the `jsx-a11y` lint rules) and `performance testing` (the Lighthouse
+accessibility category score) — those are heuristics, this one asserts per rule.
+
+The third layer rides `make test-e2e`: axe also scans at **runtime interaction
+states**, as an added assertion inside the e2e journeys that already drive them —
+a form showing validation errors, an open mobile drawer, an expanded panel, a
+dialog. Neither static lint nor a scan of a page at rest can see composed,
+conditional DOM, so that is the only layer that reaches it. These scans gate
+serious/critical impact, and a violation axe reports without an impact fails
+closed; moderate and minor findings are attached to the Playwright report.
+
+A new page must be added to `src/test/a11y/routes.ts`, and a new interaction
+state to `src/test/a11y/interaction-states.ts` plus a
+`scanInteractionState(page, INTERACTION_STATES.<state>)` call in the journey that
+reaches it. A unit test fails when either registry drifts — the route registry
+from `pages/`, the interaction registry from the e2e specs. The axe tag list and
+the exception allowlist live only in `src/test/a11y/axe-config.ts`.
+
+Never make the gate pass by suppressing it — no `eslint-disable`, no axe rule
+removal, no `test.skip`, and never an `if (count > 0)` / `if (isVisible())`
+wrapper around an assertion (a guarded assertion that never runs reports green,
+which is worse than no test). Accepted debt goes through the documented
+exception allowlist with a rule id, a scope, a reason, and a tracking issue. See
+[docs/accessibility/acceptance-standard.md](docs/accessibility/acceptance-standard.md)
+for the conformance target, what automation does not cover, and the exception
+process.
+
 #### Code metrics (rust-code-analysis)
 
 A CI gate runs Mozilla `rust-code-analysis` over `src/` on every pull request to
@@ -217,6 +300,69 @@ as a reviewed, in-repo change visible in the PR diff (or confirm the path belong
 outside the governed scope). Never silence the gate with a local override or a
 per-line disable.
 
+#### Workflow security (zizmor)
+
+Anything you change under `.github/workflows` is audited by
+[zizmor](https://docs.zizmor.sh) on every pull request through its own workflow,
+`workflow-security.yml`. Run it locally with `make lint-workflows` (host-only,
+Docker, deliberately outside `make lint`).
+
+The gate fails on medium-and-above findings reported with high confidence. In
+practice that means: pin every `uses:` to a full 40-character commit SHA with a
+trailing comment naming the tag that SHA **actually** points at — copy the tag
+verbatim, including whether upstream writes it `v1.5.0` or `1.5.0`, because
+zizmor compares the comment against the real tag and flags a mismatch —
+keep `permissions:` scoped to the job that needs them, never use an archived
+action, and never interpolate `${{ }}` into a `run:` body — pass values through
+`env:` and reference `"$VAR"`.
+
+If the gate fails, fix the workflow. Never add a `zizmor.yml` ignore rule, a
+`# zizmor: ignore[...]` comment, or lower `ZIZMOR_MIN_SEVERITY` /
+`ZIZMOR_MIN_CONFIDENCE` in the Makefile — those thresholds are a ratchet that
+only moves up as the remaining low-severity clusters are cleared.
+
+#### Code scanning (CodeQL)
+
+Two mechanisms gate CodeQL findings, and only one of them is visible in the diff.
+
+1. GitHub's native `CodeQL` check run, configured under **Settings → Code
+   security → Code scanning**. Its "alert severities that cause a pull request
+   check failure" setting is the default (errors plus critical/high).
+2. `scripts/ci/code-scanning-gate.sh`, the in-repo backstop appended to
+   `security-testing.yml`. It re-derives the same verdict from the code-scanning
+   API so the rule is reviewable, and — unlike the native check — it also fails a
+   push or scheduled run on `main`, which is what routes a finding to the
+   `ci-alert` tracking issue.
+
+On a pull request it subtracts the alert set already open on `main`, so inherited
+debt never fails somebody else's PR. Pull requests from forks skip it with a
+notice, because a fork's token cannot read the code-scanning API.
+
+Branch protection itself **cannot be committed**. The required check names are
+`CodeQL` and `Analyze (typescript)` — the latter is `name: Analyze` plus
+`matrix.language: ['typescript']`, so renaming the job or adding a language
+renames the check run and GitHub silently stops requiring it.
+`tests/bats/security_workflows.bats` pins the `Analyze (typescript)` half against drift.
+The `CodeQL` name comes from GitHub's native code-scanning integration and cannot be
+asserted from inside the repository, so verify it in Settings after any change there.
+
+To dismiss a genuine false positive, use the Security tab's dismiss flow — do not
+weaken the gate.
+
+#### Production safety guardrails
+
+`make lint-prod-guardrails` (inside `make lint`) enforces three invariants that
+otherwise only hold in production:
+
+- Every workflow that assumes an AWS role or cuts a release, on a
+  non-pull-request trigger, is listed under `on.workflow_run.workflows` in
+  `ci-health-alerts.yml`. **A workflow's `name:` is therefore load-bearing** — if
+  you rename one, update that list in the same commit or `make lint` goes red.
+- `scripts/cloudfront_routing.js` keeps its frozen allow-lists and its synthetic
+  404, and stays pinned inside the 100%-coverage `edge` Jest layer, so it cannot
+  regress to passing arbitrary paths to the S3 origin.
+- `next.config.js` does not enable `productionBrowserSourceMaps`.
+
 #### Upstream contracts (user-service)
 
 Every user-service contract this repo consumes — the GraphQL schema behind the
@@ -230,13 +376,17 @@ behind the e2e suite — comes from the single `USER_SERVICE_VERSION` pin in
 deliberately outside `make lint` because it needs network) checks that:
 
 - every client GraphQL operation still validates against the pinned schema;
-- the OpenAPI document lints against an unmodified `spectral:oas` ruleset; and
+- the OpenAPI document lints against an unmodified `spectral:oas` ruleset;
+- the pin is an immutable ref and each committed artifact still matches the
+  SHA-256 digest recorded for it in `contracts/user-service/checksums.json`
+  (hermetic — this layer needs no network); and
 - the committed artifacts still match the pinned tag.
 
 To bump the upstream version, change `USER_SERVICE_VERSION` and run `make
-update-contracts` — it re-fetches both artifacts and refreshes the spectral
-baseline. Commit the resulting diff; it is the reviewable record of what
-changed upstream.
+update-contracts` — it re-fetches both artifacts, re-records their digests in
+`checksums.json`, and refreshes the spectral baseline. Commit the resulting
+diff; it is the reviewable record of what changed upstream. Never hand-edit
+`checksums.json` to match a modified artifact.
 
 Two further gates keep the **mock** honest, because the whole Playwright suite
 talks to Mockoon rather than a real backend and a green e2e run therefore only

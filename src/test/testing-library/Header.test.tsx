@@ -8,6 +8,7 @@ import Header from '../../features/landing/components/header/header';
 import fallbackNavigate from '../../features/landing/helpers/fallbackNavigate';
 import scrollToAnchor from '../../features/landing/helpers/scrollToAnchor';
 import { NavItemProps } from '../../features/landing/types/header/navigation';
+import { expectNoA11yViolations } from '../a11y/expect-no-a11y-violations';
 
 const logoAltKey: string = 'header.logo_alt';
 const logoAlt: string = i18next.t(logoAltKey);
@@ -249,5 +250,11 @@ describe('Header navigation', () => {
 
     expect(routerMock.events.off).toHaveBeenCalledTimes(1);
     expect(newRouterMock.events.on).toHaveBeenCalledTimes(1);
+  });
+
+  it('has no WCAG 2.1 AA violations', async () => {
+    const { container } = render(<Header />);
+
+    await expectNoA11yViolations(container);
   });
 });

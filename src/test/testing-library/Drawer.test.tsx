@@ -11,7 +11,10 @@ const logInButtonText: string = t('header.actions.log_in');
 const drawerImageAlt: string = t('header.drawer.image_alt.bars');
 const exitImageAlt: string = t('header.drawer.image_alt.exit');
 const logoAlt: string = t('header.logo_alt');
-const drawerContentRole: string = 'menu';
+// `dialog`, not `menu`: the drawer no longer overrides the modal root's role, which
+// failed axe's `aria-required-children` (#369). MUI's temporary Drawer exposes its
+// paper as an `aria-modal` dialog, which is what an open drawer actually is.
+const drawerContentRole: string = 'dialog';
 const listItem: string = 'listitem';
 
 describe('Drawer', () => {

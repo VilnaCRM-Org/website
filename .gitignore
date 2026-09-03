@@ -96,3 +96,11 @@ app.log
 /bmalph/
 /.ralph/
 /.claude/commands/
+
+# draw.io diagrams. An AWS IoT reference architecture unrelated to this
+# S3 + CloudFront static export was committed at the repo root and later moved to
+# docs/ (issue #383); internal infrastructure diagrams aid attacker recon and
+# belong in a private design store, not a public repository.
+*.drawio
+*.drawio.bkp
+*.drawio.dtmp

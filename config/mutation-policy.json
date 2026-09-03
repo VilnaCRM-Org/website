@@ -1,0 +1,18 @@
+{
+  "mutableDirectories": ["api", "helpers", "hooks", "utils", "validations"],
+  "scopes": {
+    "curated": {
+      "break": 100,
+      "advisory": false
+    },
+    "changed": {
+      "break": 85,
+      "advisory": false,
+      "maxFiles": 10
+    },
+    "full": {
+      "break": 100,
+      "advisory": true
+    }
+  }
+}

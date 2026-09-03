@@ -44,7 +44,7 @@ jobs:
             --profile load build
 
       - name: Build and extract the production artifact
-        run: CI=1 make build-out
+        run: make build-out
 
       - name: File or refresh the canary issue on failure
         if: failure()

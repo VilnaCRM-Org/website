@@ -53,7 +53,10 @@ test.describe('Buttons navigation tests', () => {
 
     await page.getByLabel(openDrawerLabel).click();
 
-    const drawerContainer: Locator = page.getByRole('menu');
+    // `dialog`, not `menu`: the drawer no longer overrides the modal root's role
+    // (that failed axe's `aria-required-children`, #369). MUI's temporary Drawer
+    // already exposes its paper as an `aria-modal` dialog.
+    const drawerContainer: Locator = page.getByRole('dialog');
     const drawerTryItNowButton: Locator = drawerContainer.getByRole('link', nameOption);
     await drawerTryItNowButton.click();
   });

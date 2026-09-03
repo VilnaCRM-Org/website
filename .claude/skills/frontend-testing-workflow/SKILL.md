@@ -91,6 +91,15 @@ A single change often needs more than one layer. Match the change to the suite:
 - Specs run across chromium, firefox, and webkit. See
   [examples/playwright-flow.md](examples/playwright-flow.md) and
   [reference/mockoon-apollo.md](reference/mockoon-apollo.md).
+- E2E journeys also carry the **interaction-state accessibility scans** (issue
+  #369). When a journey reaches a state built from composed or conditional DOM —
+  a form showing validation errors, an open drawer, an expanded panel, a dialog —
+  register it in `src/test/a11y/interaction-states.ts` and add
+  `await scanInteractionState(page, INTERACTION_STATES.<state>)` once the state is
+  asserted visible. It is an added assertion on an existing journey, never a new
+  spec, and never wrapped in a visibility guard. A unit test
+  (`src/test/unit/a11y/interaction-states.test.ts`) fails when a registered state
+  stops being scanned.
 
 ## Visual regression
 
@@ -113,13 +122,15 @@ variable and assert against that variable, keeping each run independent.
 
 ## Verify before done
 
-Run only the suites your change touches, then the lint gate. Any unit suite runs
-locally without Docker when prefixed with `CI=1`.
+Run only the suites your change touches, then the lint gate. Unit-test targets
+run inside the dev container by default (they start it themselves if it is not
+already running); prefix a target with `EXEC_MODE=host` to run it locally
+without Docker (needs a host `bun install`).
 
 ```bash
 make format                   # Prettier (run before lint)
-CI=1 make test-unit-client    # client unit (jsdom)
-CI=1 make test-unit-server    # server unit (node)
+make test-unit-client         # client unit (jsdom)
+make test-unit-server         # server unit (node)
 make test-e2e                 # user-facing flows (UI/behavior changes)
 make test-visual              # visual regression (UI/styling changes)
 make lint                     # ESLint + tsc + markdownlint + dependency-cruiser

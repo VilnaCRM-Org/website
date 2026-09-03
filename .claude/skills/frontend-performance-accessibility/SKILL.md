@@ -70,6 +70,46 @@ it that way:
 
 The full checklist is in [reference/a11y-review.md](reference/a11y-review.md).
 
+## The Accessibility Gate (issues #317, #369)
+
+Accessibility is no longer advisory. The binding target is **WCAG 2.1 AA**,
+asserted per rule at three layers — two under `make test-a11y` and the
+`accessibility testing` workflow, one inside the e2e suite:
+
+```bash
+make test-a11y              # the component and route gates
+make test-a11y-components   # jest-axe over rendered React (jsdom, fast)
+make test-a11y-routes       # axe + a keyboard sweep in all three browsers
+make test-e2e               # carries the interaction-state scans
+```
+
+- The component layer covers **semantics only** — roles, names, states,
+  relationships. jsdom has no layout engine, so contrast, focus appearance and
+  reflow are unreachable there and belong to the route layer. A green component
+  test is necessary, never sufficient.
+- Adding a page means adding it to `src/test/a11y/routes.ts`; a unit test fails
+  when that registry drifts from `pages/`.
+- The interaction-state layer scans axe mid-journey — validation errors, the
+  submit-error notification, the open mobile drawer, an expanded Swagger
+  operation, the authorize dialog — because neither static lint nor an
+  initial-load scan can see composed, conditional DOM. Register a new state in
+  `src/test/a11y/interaction-states.ts` and call
+  `scanInteractionState(page, INTERACTION_STATES.<state>)` from the journey that
+  already drives it; a unit test reads the specs and fails when a registered
+  state stops being scanned. These scans gate serious/critical impacts only, and
+  reuse the route's exception context.
+- The axe tag list and the exception allowlist live only in
+  `src/test/a11y/axe-config.ts`.
+
+Never make the gate pass by suppressing it — no `eslint-disable`, no axe rule
+removal, no `test.skip`, and never an `if (count > 0)` / `if (isVisible())`
+wrapper around an assertion. Accepted debt goes through the documented
+exception allowlist with a rule id, a scope, a reason, and a tracking issue.
+
+Read [docs/accessibility/acceptance-standard.md](../../../docs/accessibility/acceptance-standard.md)
+for the conformance target, what automation cannot see, and the exception
+process.
+
 ## Rendering Rules
 
 - Avoid layout shift from dynamic labels, counters, notifications, and loading
@@ -95,9 +135,10 @@ make lint
 
 `make format` (Prettier) runs before `make lint` (ESLint + TypeScript +
 markdownlint + dependency-cruiser). Any unit suite runs locally without Docker
-when prefixed with `CI=1` (for example `CI=1 make test-unit-client`). If a
-deliberate, reviewed UI change makes screenshots stale, regenerate them with
-`make test-visual-update` and review the diff before committing.
+when prefixed with `EXEC_MODE=host` (for example
+`EXEC_MODE=host make test-unit-client`). If a deliberate, reviewed UI change
+makes screenshots stale, regenerate them with `make test-visual-update` and
+review the diff before committing.
 
 ## Related Guides
 

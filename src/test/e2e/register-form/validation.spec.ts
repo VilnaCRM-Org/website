@@ -1,8 +1,17 @@
-import { test, Locator } from '@playwright/test';
+import { test, expect, Locator } from '@playwright/test';
 import { t } from 'i18next';
 import { Response } from 'playwright';
 
-import { signUpButton, policyText, userData, graphqlEndpoint } from './constants';
+import { INTERACTION_STATES } from '../../a11y/interaction-states';
+import { scanInteractionState } from '../../a11y/scan-interaction-state';
+
+import {
+  signUpButton,
+  policyText,
+  requiredNameError,
+  userData,
+  graphqlEndpoint,
+} from './constants';
 import {
   fillConfirmPasswordInput,
   fillEmailInput,
@@ -16,6 +25,15 @@ const confettiAltText: string = t('notifications.success.images.confetti');
 
 test('Should display error messages for invalid inputs', async ({ page }) => {
   await page.goto('/');
+
+  // This journey's first action is a submit with an empty form, which renders
+  // exactly the state axe cannot otherwise reach (#369): the required-field
+  // messages are conditional DOM, invisible to static jsx-a11y lint and absent
+  // from the initial-load route scan. Scanning here asserts the error messages
+  // are actually associated with the fields they describe.
+  await page.getByRole('button', { name: signUpButton }).click();
+  await expect(page.getByText(requiredNameError).first()).toBeVisible();
+  await scanInteractionState(page, INTERACTION_STATES.registrationValidationErrors);
 
   await fillInitialsInput(page, userData);
   await fillEmailInput(page, userData);
