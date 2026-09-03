@@ -88,6 +88,8 @@ describe('UiLink adapter', () => {
       </UiLink>
     );
 
-    expect(getByRole('link', { name: `${LABEL} (відкриється у новій вкладці)` })).toBeInTheDocument();
+    expect(
+      getByRole('link', { name: `${LABEL} (відкриється у новій вкладці)` })
+    ).toBeInTheDocument();
   });
 });
