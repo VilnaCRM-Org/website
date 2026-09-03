@@ -59,6 +59,14 @@ If you find an issue to work on, you are welcome to open a PR with a fix.
 
 1. Install or update to **Docker** and **Docker compose**. For more information, see [the README](README.md).
 
+   Docker is the default substrate, not a hard requirement. The dev container
+   (`.devcontainer/devcontainer.json`) covers the lint, unit, and integration layers; it
+   cannot run the browser suites, because its Alpine/musl base has no Playwright builds.
+   On the host, `EXEC_MODE=host` covers lint and the unit/integration layers and `HOST_STACK=1`
+   covers the Playwright and memlab suites; the K6 load suites are Docker-only. The Git
+   hooks already use host mode, so committing works without Docker. See
+   [Host mode](README.md#host-mode-running-without-docker).
+
 2. Run `make install`. It installs into both trees, which is what the tooling
    needs: the dev container keeps its `node_modules` in its own volume — that is
    what every lint and test gate execs into — while the host copy is what your

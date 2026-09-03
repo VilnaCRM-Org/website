@@ -26,4 +26,5 @@ export const A11Y_ROUTES: readonly A11yRoute[] = [
   { path: '/', name: 'landing', readySelector: 'header' },
   { path: '/swagger', name: 'swagger', readySelector: '.swagger-ui' },
   { path: '/en/docs/api', name: 'api-docs-en', readySelector: 'h1' },
+  { path: '/offline', name: 'offline', readySelector: 'h1' },
 ];

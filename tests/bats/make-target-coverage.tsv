@@ -116,3 +116,7 @@ lint-prod-guardrails	bats	tests/bats/makefile_targets.bats	Executed through `mak
 release-audit-dry-run	bats	tests/bats/release_audit.bats	Host-only dry run of the release audit; the script it wraps is covered end to end (record, dedup, escalation, sweep, no-git invariant) by release_audit.bats.
 lint-vulns	bats	tests/bats/makefile_targets.bats	Validated host-only: ensure-osv.sh provisioning (idempotent) plus scan-vulns.sh census mode with a stubbed scanner that exits 1 as the real one does on findings, and the diff mode's fail-closed guard when the base ref is unreachable.
 scan-vulns-census	bats	tests/bats/makefile_targets.bats	Validated as an alias that runs lint-vulns in advisory census mode with a stubbed scanner.
+stop-prod	bats	tests/bats/makefile_targets.bats	Validated in both modes: Docker Compose down by default, the host-stack helper under HOST_STACK=1.
+playwright-install	bats	tests/bats/makefile_targets.bats	Validated in both modes: a no-op notice by default, the host browser install under HOST_STACK=1.
+lint-pins	ci	.github/workflows/static-testing.yml	Executed through `make lint`, which depends on `lint-pins`; also validated host-only in tests/bats/makefile_targets.bats.
+require-docker-stack	bats	tests/bats/makefile_targets.bats	Validated in both modes: a no-op by default, a fast failure under HOST_STACK=1 for the Docker-only K6 targets.
