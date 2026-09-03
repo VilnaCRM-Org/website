@@ -104,10 +104,28 @@ flags:
     paths:
       - src/
 
-# Mirrors the non-product exclusions the Jest layers already apply: declaration files,
-# Storybook stories, and the fixtures/helpers that only exist to support other tests.
+# Non-product exclusions, applied to every uploaded report: declaration files, Storybook
+# stories, the mocks and fixtures that exist only to support other tests, and the test
+# suites themselves under `src/test/` and `tests/`.
+#
+# Deliberately narrower than the integration layer's `INTEGRATION_COVERAGE_FROM`
+# (jest.config.ts), which additionally drops `types/**`, `types.ts`, `theme.ts`,
+# `styles/**` and co-located `*.test.{ts,tsx}`. The two lists answer different questions:
+# that one scopes what the 100% integration gate is measured against, so it may shed
+# declarative modules no assertion can meaningfully score; this one scopes what is
+# reported at all. Aligning them would either hide product code or change nothing. Hide:
+# a `theme.ts` is executed MUI style objects (`ui-button/index.tsx` imports one as a
+# value) and `notification/types.ts` emits an enum `auth-layout.tsx` reads as a value, so
+# both land in the default-scope client report. Ignoring them would pull covered product
+# code out of the client/server ratchet and out of the `patch` status — which is exactly
+# where a conditional or an `sx` callback added to one of them later would be scored.
+# Change nothing: the `types/**` directories here are type-only and emit no module to
+# report, no `src/**/styles/**` exists, and no co-located test file lives outside the
+# already-ignored `src/test/`. Only add a path here that carries no product behaviour in
+# any layer.
 ignore:
   - '**/*.d.ts'
+  - '**/*.stories.ts'
   - '**/*.stories.tsx'
   - '**/__fixtures__/**'
   - '**/__mocks__/**'

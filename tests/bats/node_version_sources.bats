@@ -1407,3 +1407,157 @@ EOF
   [ "$status" -eq 0 ]
   assert_output_contains 'node-version: OK'
 }
+
+# --- vars.NODE_VERSION is read off the comment-stripped line (cubic P3) --------------
+#
+# The rule used to be a `grep` over the raw file, the one workflow matcher that did not
+# go through the scanner's `strip_comment()` helper, so a YAML comment merely NAMING the
+# variable failed the gate. Routing it through that helper alone, though, opens the
+# opposite hole: the helper walks past a quote it cannot pair and keeps hunting for a
+# `#`, so a read inside a multi-line quoted scalar would be stripped away. Both
+# directions are pinned here.
+
+@test "a run: body reading vars.NODE_VERSION still fails the gate" {
+  make_consistent_repo "$REPO"
+  cat >>"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+      - name: Print it
+        run: |
+          echo "${{ vars.NODE_VERSION }}"
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 1 ]
+  assert_output_contains 'vars.NODE_VERSION'
+}
+
+@test "a full-line comment naming vars.NODE_VERSION does not fail the gate" {
+  make_consistent_repo "$REPO"
+  cat >>"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+      # legacy: this step used to read ${{ vars.NODE_VERSION }} before .nvmrc
+      - name: Something else
+        run: echo ok
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 0 ]
+  assert_output_contains 'node-version: OK'
+}
+
+@test "a trailing comment naming vars.NODE_VERSION does not fail the gate" {
+  make_consistent_repo "$REPO"
+  cat >>"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+      - name: Something else
+        run: echo ok # was ${{ vars.NODE_VERSION }}
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 0 ]
+  assert_output_contains 'node-version: OK'
+}
+
+@test "a # inside a quoted scalar does not shield a vars.NODE_VERSION read on the same line" {
+  make_consistent_repo "$REPO"
+  cat >>"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+      - name: Something else
+        env:
+          NODE: "a # b ${{ vars.NODE_VERSION }}"
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 1 ]
+  assert_output_contains 'vars.NODE_VERSION'
+}
+
+@test "a multi-line single-quoted scalar cannot hide a vars.NODE_VERSION read" {
+  make_consistent_repo "$REPO"
+  cat >>"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+      - name: Something else
+        env:
+          NODE: 'a # ${{ vars.NODE_VERSION }}
+                 b'
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 1 ]
+  assert_output_contains 'vars.NODE_VERSION'
+}
+
+@test "an apostrophe that opens no scalar still lets its comment be stripped" {
+  make_consistent_repo "$REPO"
+  cat >>"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+      - name: Don't fail # unrelated note about ${{ vars.NODE_VERSION }}
+        run: echo ok
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 0 ]
+  assert_output_contains 'node-version: OK'
+}
+
+# --- a setup-node step this gate cannot read is refused, not skipped (cubic P2) -------
+#
+# Every setup-node rule is anchored to a mapping key at the start of its own line, i.e.
+# the block spelling. A step written as one compact flow mapping puts the key after a
+# brace where none of them can reach it — and because the "at least one setup-node step"
+# vacuity guard is satisfied by the plainly spelled steps beside it, such a step used to
+# pass whether or not it was pinned. That is fail-open, so it is now refused outright.
+
+@test "refuses an unpinned setup-node step written as a compact flow mapping" {
+  make_consistent_repo "$REPO"
+  cat >>"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+      - { uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 }
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 1 ]
+  assert_output_contains 'could not read as a'
+}
+
+@test "refuses a compact flow setup-node step even when it carries a valid pin" {
+  make_consistent_repo "$REPO"
+  cat >>"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+      - { uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020, with: { node-version-file: '.nvmrc' } }
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 1 ]
+  assert_output_contains 'could not read as a'
+}
+
+@test "refuses a flow steps sequence containing setup-node" {
+  make_consistent_repo "$REPO"
+  cat >"$REPO/.github/workflows/rogue.yml" <<'EOF'
+jobs:
+  rogue:
+    steps: [{ uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 }]
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 1 ]
+  assert_output_contains 'could not read as a'
+}
+
+@test "does not refuse a third-party action whose name merely ends in setup-node" {
+  make_consistent_repo "$REPO"
+  cat >>"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+      - name: Third party
+        uses: myorg/setup-node@820762786026740c76f36085b0efc47a31fe5020
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 0 ]
+  assert_output_contains 'node-version: OK'
+}
+
+@test "does not refuse a comment that shows the forbidden compact form" {
+  make_consistent_repo "$REPO"
+  cat >>"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+      # Never write this: - { uses: actions/setup-node@abc, with: { node-version: '20' } }
+      - name: Something else
+        run: echo ok
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 0 ]
+  assert_output_contains 'node-version: OK'
+}

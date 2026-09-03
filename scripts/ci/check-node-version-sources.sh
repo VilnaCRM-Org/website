@@ -12,7 +12,9 @@
 #   3. every `actions/setup-node` step, which must read `.nvmrc` rather than carry
 #      a version of its own;
 #   4. no workflow may reintroduce a `vars.NODE_VERSION` repository variable, whose
-#      value cannot be seen — or reviewed — from inside the repository.
+#      value cannot be seen — or reviewed — from inside the repository. Read anywhere
+#      GitHub expands `${{ }}` counts, a `run:` body included; written in a YAML comment
+#      does not, because a comment reintroduces nothing.
 #
 # The check is deliberately dependency-free POSIX-ish bash: it runs identically on
 # the host, inside the dev container, and under Bats with stubbed binaries.
@@ -167,6 +169,12 @@ fi
 #     and is credited too — but only when the pin is that mapping's own key, which is
 #     what `flow_entries` below is for.
 #
+# Both anchors are to a key at the start of its own line, which is the block spelling of
+# a step. An `actions/setup-node@…` reference the scanner did not read that way — a step
+# written as one compact flow mapping, say — is therefore refused rather than skipped,
+# because skipping it is fail-open: the step still runs, and the vacuity guard below is
+# satisfied by the plainly spelled steps beside it.
+#
 # A literal `node-version:` is reported separately from the per-step rule, in either
 # spelling and wherever it appears. The per-step rule cannot see it: a step carrying
 # `{ node-version-file: '.nvmrc', node-version: '24.18.0' }` is already credited by the
@@ -282,6 +290,10 @@ scan_setup_node_steps() {
       # `uses: actions/setup-node@…`, with the action reference optionally quoted too.
       uses_setup_node = "^" uses_key ws ":" ws "[" dq sq "]?actions/setup-node@"
 
+      # The bare reference, unanchored, used only to notice a setup-node step this
+      # scanner did NOT read as a step'\''s own `uses:` key — see the refusal below.
+      setup_node_ref = "actions/setup-node@"
+
       # The step'\''s own `with:` opening a block mapping, and nothing else on the line.
       block_with = "^" with_key ws ":" ws "$"
 
@@ -333,6 +345,15 @@ scan_setup_node_steps() {
       # the colon. The colon is matched wherever it sits on the line rather than anchored
       # to the key, so the leading `ws` keeps the shape uniform without widening it.
       block_scalar_header = ws ":" ws "[|>][-+0-9]*" ws "$"
+
+      # The repository variable this gate refuses, as a literal substring. It is matched
+      # wherever a workflow READS it — an `env:` value, a `with:` input, an `if:`
+      # expression, a `run:` body — because GitHub expands `${{ }}` in all of them and the
+      # value cannot be reviewed from inside the repository. What it is NOT matched in is a
+      # comment, which is why it is counted here rather than by a grep over the raw file:
+      # a note ABOUT the variable reintroduces nothing, and failing a PR for one is a false
+      # rejection. Spelled once because the two call sites below must stay identical.
+      repo_var = "vars.NODE_VERSION"
     }
     # Find the closing quote of the scalar that opens at `start`, or 0 when the line
     # does not close it. A double-quoted scalar escapes with a backslash (which escapes
@@ -367,7 +388,14 @@ scan_setup_node_steps() {
     # has one single quote and no scalar, and its comment must still be stripped — and
     # because an unterminated quote is exactly the continuation the caller must still be
     # able to see.
-    function strip_comment(text,   i, n, ch, stop) {
+    #
+    # Walking past such a quote is recorded in `unclosed_scalar`. When the quote sits
+    # where a VALUE may start, the line may be opening a multi-line quoted scalar, and
+    # every `#` after it is literal text rather than a comment — so from that point on
+    # the strip is a guess, and a caller that must not miss what was cut away can say so
+    # by reading the raw line instead.
+    function strip_comment(text,   i, n, ch, stop, j) {
+      unclosed_scalar = 0
       n = length(text)
       i = 1
       while (i <= n) {
@@ -375,6 +403,12 @@ scan_setup_node_steps() {
         if (ch == dq || ch == sq) {
           stop = scalar_end(text, i, ch)
           if (stop > 0) { i = stop + 1; continue }
+          # Unclosed. It opens a scalar only where a value may start — at the head of the
+          # line, or after `:`, `,`, `{`, `[`, or a sequence dash. An apostrophe anywhere
+          # else is ordinary plain-scalar text, and what follows it is still a comment.
+          j = i - 1
+          while (j > 0 && substr(text, j, 1) ~ /[[:space:]]/) j--
+          if (j == 0 || index(":,{[-", substr(text, j, 1)) > 0) unclosed_scalar = 1
           i++
           continue
         }
@@ -401,11 +435,36 @@ scan_setup_node_steps() {
       # `- uses: actions/setup-node@…` cannot conjure a step nothing runs.
       if (in_block) {
         if (raw ~ /^[[:space:]]*$/) next
-        if (match(raw, /[^[:space:]]/) - 1 > block_indent) next
+        if (match(raw, /[^[:space:]]/) - 1 > block_indent) {
+          # Skipped as structure, but not as text: GitHub substitutes `${{ }}` into a
+          # `run:` body before any shell sees it, so a read here is a real read. Literal
+          # text carries no YAML comment to strip either, so the raw line is what is
+          # searched — stripping one here would open the hole this counter exists to close.
+          if (index(raw, repo_var) > 0) repo_vars++
+          next
+        }
         in_block = 0
       }
 
       line = strip_comment(raw)
+
+      # Counted before the structural rules and outside every scope guard: the variable is
+      # unreviewable wherever it is read, and reading it is not confined to a step. No
+      # line escapes the count on its way here — the block branch above has already
+      # counted its own, and everything dropped below this point is a comment or is blank.
+      #
+      # Read off the stripped line, so a note ABOUT the variable is not a read — except
+      # where `strip_comment` reports having walked past a quote that opens a scalar this
+      # line never closes. There a `#` may be literal text inside a multi-line quoted
+      # value, whose `${{ }}` GitHub still expands, and stripping at it would cut a real
+      # read away. The double-quoted spelling of that is caught by the continued-scalar
+      # refusal below; the single-quoted one cannot be, because an unpaired apostrophe is
+      # too ordinary to refuse — so where the strip is a guess, the raw line is searched.
+      # Over-counting a mention that was only a comment costs a reword; under-counting a
+      # read leaves the gate green on a pin nobody can review.
+      probe = unclosed_scalar ? raw : line
+      if (index(probe, repo_var) > 0) repo_vars++
+
       if (line ~ /^[[:space:]]*#/) next
       if (line ~ /^[[:space:]]*$/) next
 
@@ -455,6 +514,25 @@ scan_setup_node_steps() {
         }
       }
 
+      # A setup-node reference the two rules above did not read as a step'\''s own
+      # `uses:` key is refused, not ignored. Every rule in this scanner is anchored to
+      # the start of a mapping key on its own line, which is the block spelling; a step
+      # written as a compact flow mapping — `- { uses: actions/setup-node@…, with: {
+      # node-version-file: .nvmrc } }`, or a whole `steps: [{ … }]` sequence — puts the
+      # key after a brace where nothing here can reach it. Ignoring that is fail-open in
+      # the one direction that matters: the step runs, the gate never sees it, and the
+      # "at least one setup-node step" guard is satisfied by the plainly spelled steps
+      # beside it, so an unpinned compact step passes.
+      #
+      # Reading the shape instead would mean stepping over nested flow mappings inside
+      # the entry walk, which is the `[^}]*` ambiguity `flow_entries` exists to avoid;
+      # and it would still leave the compact spellings of the escaped-key and
+      # continued-scalar holes open. So this takes the same way out those two took: a
+      # spelling this gate cannot read is reported and refused, and has to be spelled
+      # plainly before the file can be vouched for. The `@` is part of the pattern, so
+      # prose merely naming the action is untouched.
+      if (index(line, setup_node_ref) > 0 && !(in_step && key ~ uses_setup_node)) unread++
+
       # Counted outside the `in_step` guard, and never as an alternative to the pin
       # above: a literal is drift wherever it is declared, including beside a correct
       # `.nvmrc` pin in the very same mapping, where the step is already credited.
@@ -477,7 +555,10 @@ scan_setup_node_steps() {
         block_indent = key_indent
       }
     }
-    END { close_step(); print steps + 0, bad + 0, literals + 0, escaped + 0, continued + 0 }
+    END {
+      close_step()
+      print steps + 0, bad + 0, literals + 0, escaped + 0, continued + 0, repo_vars + 0, unread + 0
+    }
   ' "$1"
 }
 
@@ -492,7 +573,7 @@ setup_node_steps=0
 while IFS= read -r workflow; do
   [ -n "$workflow" ] || continue
 
-  read -r file_steps file_bad file_literals file_escaped file_continued <<EOF
+  read -r file_steps file_bad file_literals file_escaped file_continued file_repo_vars file_unread <<EOF
 $(scan_setup_node_steps "$workflow")
 EOF
   setup_node_steps=$((setup_node_steps + file_steps))
@@ -513,8 +594,12 @@ EOF
     fail "${workflow} continues a double-quoted scalar past the end of ${file_continued} line(s); this gate reads a line at a time, so keep each quoted scalar on one line"
   fi
 
-  if grep -q 'vars\.NODE_VERSION' "$workflow"; then
-    fail "${workflow} reads vars.NODE_VERSION; pin Node through .nvmrc, whose value is reviewable"
+  if [ "$file_repo_vars" -gt 0 ]; then
+    fail "${workflow} reads vars.NODE_VERSION in ${file_repo_vars} place(s); pin Node through .nvmrc, whose value is reviewable"
+  fi
+
+  if [ "$file_unread" -gt 0 ]; then
+    fail "${workflow} names actions/setup-node in ${file_unread} place(s) this gate could not read as a step's own \`uses:\` key; spell every setup-node step in block style, not as a compact flow mapping"
   fi
 done <<EOF
 $(find "$workflow_dir" -type f \( -name '*.yml' -o -name '*.yaml' \) | sort)
