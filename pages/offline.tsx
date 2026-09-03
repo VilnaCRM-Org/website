@@ -57,7 +57,10 @@ const linkStyle: React.CSSProperties = {
   padding: '0.75rem 1.5rem',
   borderRadius: '0.5rem',
   backgroundColor: colorTheme.palette.primary.main,
-  color: colorTheme.palette.white.main,
+  // darkPrimary, not white: white on `primary` is 2.46:1, below the 4.5:1 SC 1.4.3 needs
+  // for this 16px/600 label, and #423's contrast waiver is scoped to the three routes it
+  // was measured against so a new page fails closed. This pair measures 6.96:1.
+  color: colorTheme.palette.darkPrimary.main,
   fontSize: '1rem',
   fontWeight: 600,
   textDecoration: 'none',

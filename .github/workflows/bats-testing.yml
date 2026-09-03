@@ -23,13 +23,16 @@ jobs:
         with:
           persist-credentials: false
 
-      # DELIBERATELY NOT MIGRATED to the dev container (#399). Two hard reasons:
-      #   * bats-core and every stub in tests/bats/test_helper.bash are
-      #     `#!/usr/bin/env bash` scripts, and the node:alpine dev image ships
-      #     only busybox `sh` — no bash.
-      #   * This suite's whole subject is the HOST side of the Makefile: the
-      #     docker/docker-compose command lines the other gates now exec through.
-      #     Running it inside the container would test the wrong machine.
+      # DELIBERATELY NOT MIGRATED to the dev container (#399). This suite's whole
+      # subject is the HOST side of the Makefile: the docker/docker-compose command
+      # lines the other gates now exec through. Running it inside the container
+      # would test the wrong machine.
+      #
+      # The runtime is no longer a second reason. bats-core and every stub in
+      # tests/bats/test_helper.bash are `#!/usr/bin/env bash` scripts, and the
+      # node:alpine base used to ship only busybox `sh`; #338 added a pinned
+      # `bash` apk to the base stage, so the image could run them now. The
+      # host-subject reason above is what keeps this job here.
       - name: Set up Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:

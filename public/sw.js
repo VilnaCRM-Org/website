@@ -27,11 +27,15 @@
 const CACHE_PREFIX = 'vilnacrm-offline-';
 const CACHE = `${CACHE_PREFIX}v1`;
 
-// Reached as `.html` on purpose. The CloudFront edge function
-// (`scripts/cloudfront_routing.js`) hard-404s an extensionless single-segment path, so
-// `/offline` is not routable, while a last path segment containing a dot passes straight
-// through. The worker only ever serves this from cache inside `respondWith`, so the address
-// bar keeps the URL the visitor actually asked for.
+// Reached as `.html` on purpose, and allow-listed for it. The CloudFront edge function
+// (`scripts/cloudfront_routing.js`) is fail-closed since #383: a URI reaches the origin
+// only via an exact `ROUTE_MAP` route, an exact `ALLOWED_FILES` entry, or an allowed
+// directory plus extension. `/offline` is in neither table, so it is not routable; this
+// document is served by the exact `'/offline.html'` entry there, and moving or renaming it
+// means moving that entry in the same commit. (A dot in the last segment no longer grants
+// anything — that was the pre-#383 default-allow behaviour.) The worker only ever serves
+// this from cache inside `respondWith`, so the address bar keeps the URL the visitor
+// actually asked for.
 const OFFLINE_URL = '/offline.html';
 
 // Last resort for the window where the worker is live but the precache is not: `install`

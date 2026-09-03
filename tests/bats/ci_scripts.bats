@@ -435,6 +435,14 @@ STUB
     fi
     run_pin_gate
     [ "$status" -eq 0 ]
+    # The two setup-node cases below drift `.github/workflows/bats-testing.yml`
+    # specifically: #399 moved the lint and test gates into the dev container and
+    # stripped `actions/setup-node` from the workflows that followed, which is how
+    # the earlier target (unit-testing.yml) stopped carrying a pin to drift. The
+    # bats job cannot follow them, because its subject IS the host side of the
+    # Makefile, so it keeps a host Node pin. If that ever changes, this test fails
+    # loudly rather than silently testing nothing; repoint it at another workflow
+    # that still declares `node-version-file`.
   done <<'EOF'
 node version|.nvmrc|printf '99.0.0\n' > .nvmrc
 node image|Apollo.Dockerfile|sed -i 's#node:[0-9.]*-alpine#node:99.0.0-alpine#' Apollo.Dockerfile
@@ -443,8 +451,8 @@ bun version|.bun-version|printf '99.0.0\n' > .bun-version
 bun install in a Dockerfile|MemoryLeak.Dockerfile|sed -i 's#bun@[0-9.]*#bun@99.0.0#' MemoryLeak.Dockerfile
 bun install in the DIND recipe|Makefile|sed -i 's#npm install -g bun@[0-9.]*#npm install -g bun@99.0.0#' Makefile
 playwright image|Playwright.Dockerfile|sed -i 's#playwright:v[0-9.]*-jammy#playwright:v99.0.0-jammy#' Playwright.Dockerfile
-literal node-version in a workflow|.github/workflows/unit-testing.yml|sed -i "s#node-version-file:.*#node-version: '99.0.0'#" .github/workflows/unit-testing.yml
-setup-node step with no version file|.github/workflows/unit-testing.yml|sed -i "/node-version-file:/d" .github/workflows/unit-testing.yml
+literal node-version in a workflow|.github/workflows/bats-testing.yml|sed -i "s#node-version-file:.*#node-version: '99.0.0'#" .github/workflows/bats-testing.yml
+setup-node step with no version file|.github/workflows/bats-testing.yml|sed -i "/node-version-file:/d" .github/workflows/bats-testing.yml
 literal node-version in a .yaml workflow|.github/workflows/rogue.yaml|printf 'jobs:\n  a:\n    steps:\n      - uses: actions/setup-node@abc\n        with:\n          node-version: 20\n' > .github/workflows/rogue.yaml
 packageManager version|package.json|sed -i 's#"bun@[0-9.]*"#"bun@99.0.0"#' package.json
 engines.node range|package.json|sed -i 's#"node": "\^[0-9]*"#"node": "^99"#' package.json

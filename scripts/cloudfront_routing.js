@@ -92,6 +92,11 @@ var ALLOWED_FILES = Object.freeze({
   '/404.html': true,
   '/favicon.svg': true,
   '/index.html': true,
+  // The offline shell `public/sw.js` precaches (issue #338). It is a root-level export,
+  // and `html` is not an allowed extension, so this exact entry is what publishes it —
+  // without it the precache fetch takes the synthetic 404 and the worker silently falls
+  // back to its inline 503 document.
+  '/offline.html': true,
   '/supportUkraine.svg': true,
   '/swagger-schema.json': true,
   '/swagger.html': true,

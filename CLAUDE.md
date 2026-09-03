@@ -475,9 +475,11 @@ tiered off, weakened, or removed.
   all, so `ci-test-contract` is deliberately the only `CI_TEST_TARGETS` entry that skips
   `$(CI_TESTS)`. Converting the workflow is the prerequisite for moving it.
 
-  Jobs that stay on the host entirely: `bats-testing` (bats-core needs bash, absent from the
-  alpine image, and the suite's subject is the host side of the Makefile), `commitlint`
-  (needs `git`, also absent), `rust-code-analysis` (a host-only Rust binary), and the
+  Jobs that stay on the host entirely: `bats-testing` (its subject IS the host side of the
+  Makefile — the docker/docker-compose command lines the other gates now exec through — so
+  running it in the container would test the wrong machine; note the base stage does now
+  install `bash`, so the bats runner itself is no longer the blocker), `commitlint`
+  (needs `git`, absent from the image), `rust-code-analysis` (a host-only Rust binary), and the
   prod-stack suites the issue scopes out — `e2e-testing`, `visual-testing`,
   `memory-leak-testing`, `load-testing`, `a11y-testing` and `performance-testing`, which
   drive the prod/test compose stacks. Two of them additionally pass `EXEC_MODE=host`:
