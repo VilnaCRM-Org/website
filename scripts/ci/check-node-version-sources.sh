@@ -543,10 +543,19 @@ scan_setup_node_steps() {
       # opens a flow mapping, where the reference may belong to a `uses` sitting after a
       # brace that nothing here can reach.
       data_value = 0
-      if (index(line, "{") == 0 && match(key, /^[^:{}[]+:[ \t]/) > 0) {
+      if (match(key, /^[^:{}[]+:[ \t]/) > 0) {
         key_name = substr(key, 1, RLENGTH - 2)
         sub(/[ \t]+$/, "", key_name)
-        if (key_name != "uses" && key_name != dq "uses" dq && key_name != sq "uses" sq) \
+        # Whether the VALUE opens a flow collection, not whether the line contains a
+        # brace anywhere: a brace inside an ordinary scalar (`run: echo {} && …`) opens
+        # nothing, and treating it as a mapping would be the false rejection this
+        # exemption exists to remove. Only a value whose first character is `{` or `[`
+        # can hide a `uses` key this scanner cannot reach.
+        value = substr(key, RLENGTH + 1)
+        sub(/^[ \t]+/, "", value)
+        opens_flow = (substr(value, 1, 1) == "{" || substr(value, 1, 1) == "[")
+        if (!opens_flow && key_name != "uses" && key_name != dq "uses" dq && \
+            key_name != sq "uses" sq) \
           data_value = 1
       }
       if (index(line, setup_node_ref) > 0 && !data_value && !(in_step && key ~ uses_setup_node)) unread++

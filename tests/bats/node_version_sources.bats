@@ -1613,3 +1613,47 @@ EOF
   [ "$status" -eq 1 ]
   assert_output_contains 'could not read as a'
 }
+
+# The exemption is withheld when the key's VALUE opens a flow collection, because a `uses`
+# can hide after that brace where nothing in this scanner reaches it. These three pin both
+# halves of that boundary: a brace that merely appears inside an ordinary scalar opens
+# nothing and must stay exempt, while a value that actually starts one must not.
+#
+# `- { uses: … }` does NOT pin the withholding: its key begins with `{`, so it fails the
+# exemption's key regex regardless and would still be refused if the guard were deleted.
+# A plain block key whose value opens a mapping is what makes the guard load-bearing.
+
+@test "still refuses a plain key whose value opens a flow mapping naming the action" {
+  make_consistent_repo "$REPO"
+  cat >>"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+      - with: { cache: "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020" }
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 1 ]
+  assert_output_contains 'could not read as a'
+}
+
+@test "still refuses a plain key whose value opens a flow sequence naming the action" {
+  make_consistent_repo "$REPO"
+  cat >"$REPO/.github/workflows/rogue-seq.yml" <<'EOF'
+jobs:
+  rogue:
+    steps: [{ uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 }]
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 1 ]
+  assert_output_contains 'could not read as a'
+}
+
+@test "does not refuse a brace sitting inside an ordinary scalar value" {
+  make_consistent_repo "$REPO"
+  cat >>"$REPO/.github/workflows/unit-testing.yml" <<'EOF'
+      - run: echo "{}" && echo actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+EOF
+
+  run_checker "$REPO"
+  [ "$status" -eq 0 ]
+  assert_output_contains 'node-version: OK'
+}
