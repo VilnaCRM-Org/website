@@ -29,7 +29,81 @@ jobs:
       - name: Run unit tests
         run: make test-unit-all
 
-      - name: Upload coverage to Codecov
+      # The integration layer is the only suite whose coverage is collected over the
+      # whole product source (`collectCoverageFrom: src/**` in jest.config.ts); the
+      # client and server layers measure just the files their tests import. Without
+      # it the uploaded picture cannot see a module that has no test at all, which is
+      # the regression the Codecov statuses exist to catch.
+      - name: Run integration tests
+        run: make test-integration
+
+      - name: Check the Codecov token is configured
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        run: |
+          if [ -n "${CODECOV_TOKEN}" ]; then
+            echo "CODECOV_TOKEN is configured; uploads fail closed."
+            exit 0
+          fi
+          # Codecov rejects a tokenless upload on a protected branch
+          # ("Token required because branch is protected"), so every upload from this
+          # repository is currently discarded. Say so loudly instead of leaving it in
+          # the log: the fix is a repository secret, which no commit can supply.
+          echo "::warning title=Codecov token missing::CODECOV_TOKEN is not configured, so coverage uploads are rejected and the codecov statuses in codecov.yml cannot post. Add the secret to enable the gate."
+          {
+            echo "### Codecov upload disabled"
+            echo
+            echo "\`CODECOV_TOKEN\` is not configured for this repository, so the upload"
+            echo "below is rejected by Codecov and \`fail_ci_if_error\` stays off. Add the"
+            echo "secret to turn the coverage statuses in \`codecov.yml\` into a real gate."
+          } >>"$GITHUB_STEP_SUMMARY"
+
+      # One upload per Jest layer. Each layer writes its own coverage directory
+      # (jest.config.ts) precisely so they can be flagged separately here — a single
+      # unflagged upload of the merged directory would let the small apollo-server
+      # report be scored as the whole project.
+      #
+      # `disable_search` is on because Codecov's own search treats any *.tsv it finds
+      # as coverage: it was picking up tests/bats/make-target-coverage.tsv, which is a
+      # documentation ledger, not a report.
+      #
+      # `fail_ci_if_error` must be true for a dropped upload to be visible at all —
+      # that is the point of #335's acceptance criterion. It is expressed against the
+      # secret rather than hard-coded so that a repository without the token does not
+      # turn every pull request red for a configuration gap no pull request can fix;
+      # the moment the secret exists, the gate fails closed on its own.
+      - name: Upload client coverage to Codecov
         uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage/client/lcov.info
+          flags: client
+          disable_search: true
+          fail_ci_if_error: ${{ secrets.CODECOV_TOKEN != '' }}
+
+      - name: Upload server coverage to Codecov
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage/server/lcov.info
+          flags: server
+          disable_search: true
+          fail_ci_if_error: ${{ secrets.CODECOV_TOKEN != '' }}
+
+      - name: Upload edge coverage to Codecov
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage/edge/lcov.info
+          flags: edge
+          disable_search: true
+          fail_ci_if_error: ${{ secrets.CODECOV_TOKEN != '' }}
+
+      - name: Upload integration coverage to Codecov
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage/integration/lcov.info
+          flags: integration
+          disable_search: true
+          fail_ci_if_error: ${{ secrets.CODECOV_TOKEN != '' }}

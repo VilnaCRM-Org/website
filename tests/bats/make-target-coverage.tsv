@@ -78,7 +78,7 @@ lint-contracts	bats	tests/bats/makefile_targets.bats	Executed directly by contra
 lint-openapi	bats	tests/bats/makefile_targets.bats	Validated host-only: ensure-oasdiff.sh provisioning (idempotent) plus openapi-drift.sh three-way exit handling with a stubbed oasdiff binary.
 update-contracts	bats	tests/bats/makefile_targets.bats	Maintainer command for bumping USER_SERVICE_VERSION; refreshes both artifacts, their SHA-256 digests and the spectral baseline.
 run-deps-lint-tests-dind	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker exec calls.
-test-integration	bats	tests/bats/makefile_targets.bats	Validated by invoking Jest with TEST_ENV=integration through a stubbed jest binary.
+test-integration	ci	.github/workflows/codecov.yml	Executed directly by the codecov workflow so the integration coverage report can be uploaded; also validated in tests/bats/makefile_targets.bats with a stubbed jest binary.
 test-integration-watch	bats	tests/bats/makefile_targets.bats	Validated by invoking Jest in watch mode with TEST_ENV=integration through a stubbed jest binary.
 ci-test-integration	bats	tests/bats/makefile_targets.bats	Validated through the ci-test parallel phase and the ci-test split-target assertions; the integration workflow now runs the developer-facing `test-integration`.
 test-contract	bats	tests/bats/makefile_targets.bats	Validated by invoking Jest with TEST_ENV=contract through a stubbed jest binary.

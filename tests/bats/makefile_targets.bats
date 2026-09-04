@@ -482,6 +482,7 @@ STUB
   assert_output_contains '===== lint-md ====='
   assert_output_contains '===== lint-headers ====='
   assert_output_contains '===== lint-prod-guardrails ====='
+  assert_output_contains '===== lint-pins ====='
 }
 
 @test "ci-test runs the dev-side test phase through the parallel runner" {

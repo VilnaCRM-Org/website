@@ -99,8 +99,7 @@ if (nodeVersion !== null && !/^\d+\.\d+\.\d+$/.test(nodeVersion)) {
 // One file at a time, so an unreadable or base-image-less Dockerfile reports and
 // returns rather than skipping onward through the shared loop body.
 //
-// The matcher mirrors scripts/ci/check-node-version-sources.sh: `m` + `^[ \t]*`
-// anchors to the start of an instruction line, so a FROM quoted in a comment or a
+// The matcher is anchored with `m` + `^[ \t]*`, so a FROM quoted in a comment or a
 // RUN heredoc is not read as a pin; `i` accepts the legal lowercase `from`;
 // `(?:--\S+[ \t]+)*` consumes leading flags such as `FROM --platform=$BUILDPLATFORM`;
 // and `(?:\S*\/)?` makes a registry prefix end in `/` so an unrelated `mynode:` image
@@ -114,9 +113,14 @@ function collectNodeImages(file) {
     return [];
   }
 
+  // The `-alpine<tag>` suffix is optional in the MATCH and required by the check below,
+  // which is not the same as leaving it out of the pattern. Demanding it here made a
+  // non-alpine stage invisible rather than invalid: the "declares no base image" guard is
+  // satisfied by any one alpine stage in the file, so a second `FROM node:99.0.0` beside
+  // it matched nothing, drifted from .nvmrc, and was never reported.
   const matches = [
     ...text.matchAll(
-      /^[ \t]*FROM[ \t]+(?:--\S+[ \t]+)*(?:\S*\/)?node:(\d+\.\d+\.\d+)-alpine(\S*)/gim
+      /^[ \t]*FROM[ \t]+(?:--\S+[ \t]+)*(?:\S*\/)?node:(\d+\.\d+\.\d+)(?:-alpine(\S*))?/gim
     ),
   ];
   if (matches.length === 0) {
@@ -127,6 +131,13 @@ function collectNodeImages(file) {
   return matches.map(([, version, alpineTag]) => {
     if (nodeVersion !== null && version !== nodeVersion) {
       fail('node-images', `${file} pins node:${version} but ${NVMRC} says ${nodeVersion}`);
+    }
+    if (alpineTag === undefined) {
+      fail(
+        'node-images',
+        `${file} pins node:${version} on a non-alpine base; every node image here shares ` +
+          'one alpine tag'
+      );
     }
     return { file, version, alpineTag };
   });
@@ -175,6 +186,18 @@ if (typeof enginesNode !== 'string') {
         'engines-node',
         `${PACKAGE_JSON} engines.node "${enginesNode}" targets major ${enginesMajor} ` +
           `but ${NVMRC} says ${nodeVersion}`
+      );
+    } else if (enginesNode.trim() !== `^${nodeVersion}`) {
+      // The caret over the EXACT pin, not merely a range that admits it. `^24` and
+      // `^24.18.0` both accept the .nvmrc version, but only the second says which
+      // version this repository runs: under `^24` a host on 24.0.0 satisfies
+      // `engines` while disagreeing with every other pin site, and the drift this
+      // gate exists to report is invisible to `bun install`. Checked after the major
+      // comparison so a genuinely wrong major still reports as a wrong major.
+      fail(
+        'engines-node',
+        `${PACKAGE_JSON} engines.node is "${enginesNode}", expected "^${nodeVersion}" ` +
+          `— the caret over the exact ${NVMRC} version, not a looser range that merely admits it`
       );
     }
     if (!satisfied) {
@@ -284,8 +307,8 @@ try {
  * disjoint on their first character, so choosing between them is never a guess the
  * engine has to unwind.
  *
- * Mirrors `yaml_key()` in the sibling gate scripts/ci/check-node-version-sources.sh;
- * the two must stay one design.
+ * Every spelling this scanner accepts is built here for that reason; teaching one rule
+ * a spelling the others do not know is what makes a key-anchored gate fail open.
  */
 function yamlKey(name) {
   return `(?:${name}|"${name}"|'${name}')`;
@@ -303,8 +326,7 @@ const NODE_VERSION_FILE_KEY = yamlKey('node-version-file');
 // space OR a tab, and js-yaml — what a runner's own tooling reads with — accepts
 // `node-version\t: '20'`. (PyYAML is the stricter outlier here, and is wrong per spec.)
 // Every key match below ends `${WS}:` and is built from this one constant, so the spacing
-// cannot be allowed in one spelling and forgotten in the next. Mirrors `ws` in the
-// sibling gate scripts/ci/check-node-version-sources.sh.
+// cannot be allowed in one spelling and forgotten in the next.
 const WS = String.raw`[ \t]*`;
 
 // A double-quoted YAML scalar, consumed whole. `\"` is an escaped quote INSIDE the
@@ -407,16 +429,25 @@ function stepEnd(lines, startIndex) {
  * way to "fix" it is to delete the prose. A block scalar (`run: |`, `script: >`)
  * owns every following line that is blank or indented deeper than the key that
  * opened it; everything else is data.
+ *
+ * Returns the block-scalar bodies alongside the key lines, because the two are not
+ * complements: a blank line and a `#` comment are neither. Only one walk may decide
+ * this — a second one that drifted would let a body count as structure in one check
+ * and as prose in the next, which is the fail-open shape this whole scanner is
+ * built to avoid.
  */
 function yamlKeyLines(lines) {
   const isKeyLine = [];
+  const isBlockBody = [];
   let blockIndent = null;
 
   lines.forEach((line, index) => {
     const indent = line.search(/\S/);
+    isBlockBody[index] = false;
 
     if (blockIndent !== null && (indent === -1 || indent > blockIndent)) {
       isKeyLine[index] = false;
+      isBlockBody[index] = true;
       return;
     }
     blockIndent = null;
@@ -438,7 +469,7 @@ function yamlKeyLines(lines) {
     }
   });
 
-  return isKeyLine;
+  return { isKeyLine, isBlockBody };
 }
 
 // A real step, not a mention: the first token on the line — after the optional
@@ -556,8 +587,6 @@ function keyPinsNvmrc(key, stepColumn, inWith) {
 // step's own and one found deeper is not. Any key deeper than an open block `with:`
 // is one of its inputs; a key at or left of it has dedented back out and closes the
 // mapping — which is why the scope is recomputed, never merely kept, at those keys.
-// The same walk as the sibling gate scripts/ci/check-node-version-sources.sh, whose
-// awk carries `step_key_indent` / `in_with` for `stepColumn` / `inWith`.
 function stepPinsNvmrc(lines, isKeyLine, step) {
   const keys = stepKeys(lines, isKeyLine, step);
   const stepColumn = keys.length === 0 ? -1 : keys[0].column;
@@ -575,19 +604,203 @@ function stepPinsNvmrc(lines, isKeyLine, step) {
   return false;
 }
 
+// A double-quoted key spelled with a NUMERIC YAML escape. `"node-versio\x6E"` is the
+// mapping key `node-version` to every YAML reader and to setup-node, but decoding
+// escapes is a parser's job, not a scanner's — and a scanner that reads the key
+// literally sees an unrelated name and waves the literal pin beside it straight
+// through. Rather than guess at the decoded spelling, this reports the spelling and
+// refuses: such a key is either one this gate cannot read or an obfuscation of one it
+// must, and both have to be spelled plainly before the file can be vouched for.
+//
+// Scoped to `\x`, `\u` and `\U` because those are the only escapes that can ENCODE a
+// character of a key name. Every other double-quoted escape produces a character no
+// key this scanner looks for contains — `\"` a quote, `\\` a backslash, `\n`/`\t`/`\0`
+// and friends a control character — so they cannot rename a key, and DQ_SCALAR already
+// consumes them correctly wherever they appear. Refusing those too would reject
+// well-formed YAML the walk reads exactly right, which is a false rejection with no
+// hole behind it.
+//
+// The escape is REQUIRED (`+`, not `*`), so an ordinary quoted key is untouched, and
+// the rule only ever runs on a line already known to be structure — never inside a
+// `run: |` body.
+const ESCAPED_SCALAR = String.raw`"(?:[^"\\]|\\[^xuU])*\\[xuU][^"\\]*(?:\\.[^"\\]*)*"`;
+const ESCAPED_KEY = new RegExp(String.raw`^\s*(?:-\s+)?${ESCAPED_SCALAR}${WS}:`);
+const FLOW_ESCAPED_KEY = new RegExp(
+  String.raw`^\s*(?:-\s+)?${ANY_KEY}${WS}:\s*\{\s*${FLOW_ENTRIES}${ESCAPED_SCALAR}${WS}:`
+);
+
+// The repository variable this gate refuses. It is matched wherever a workflow READS it —
+// an `env:` value, a `with:` input, an `if:` expression, a `run:` body — because GitHub
+// expands `${{ }}` in all of them and the value cannot be seen or reviewed from inside the
+// repository. What it must NOT be matched in is a MENTION: a note about the variable
+// reintroduces nothing, and failing a PR for one is a false rejection.
+//
+// A read is therefore the expression syntax, not the bare name. GitHub substitutes only
+// inside `${{ }}`, so `# never reach for vars.NODE_VERSION` is inert whether it is a YAML
+// comment or a `#` line inside a `run: |` body — and the block-scalar branch below cannot
+// strip the second kind, because the body is shell, not YAML. Requiring the wrapper is
+// what lets both branches share one rule instead of the YAML side stripping comments and
+// the shell side refusing them.
+//
+// Both index spellings are covered: `vars.NODE_VERSION` and `vars['NODE_VERSION']` name
+// the same variable to the expression evaluator, and the bare-substring form this
+// replaces silently missed the second one.
+const REPO_NODE_VERSION_READ =
+  /\$\{\{[^}]*\bvars\s*(?:\.\s*NODE_VERSION\b|\[\s*['"]NODE_VERSION['"]\s*\])/;
+
+// The name alone, for the failure message.
+const REPO_NODE_VERSION_VAR = 'vars.NODE_VERSION';
+
+// The action reference, as a literal substring, for the refusal below.
+const SETUP_NODE_REF = 'actions/setup-node@';
+
+// A plain block key whose VALUE is an ordinary scalar — `run: echo actions/setup-node@x`,
+// `name: bump actions/setup-node@x`, an `env:` entry holding the string. GitHub resolves
+// an action from a `uses:` key and nowhere else, so a reference sitting in one of those is
+// data, and refusing it would be a false rejection — the multi-line `run: |` spelling of
+// the very same text is already skipped as a block body, so refusing the one-line spelling
+// would leave the verdict depending on scalar style rather than on meaning.
+//
+// The exemption is withheld in exactly the two places the value may not be what it looks
+// like: when the key is `uses` itself, and when the value opens a flow collection, where a
+// `uses` key may sit after a brace that nothing here can reach.
+const PLAIN_BLOCK_KEY = /^([^:{}[]+):[ \t]/;
+
+// YAML node properties may sit between the colon and the value proper: an anchor
+// (`&name`), a tag (`!tag`, `!!tag`, `!<verbatim>`), or both in either order. They are
+// stripped before asking what the value opens, because `with: &a { uses: … }` is a flow
+// mapping and would otherwise read as a plain scalar and skip the refusal. A plain scalar
+// cannot begin with `&` or `!` in YAML — both are indicators, so a real value starting
+// with one is quoted — which is what makes stripping them safe rather than another way to
+// lose a line.
+const NODE_PROPERTY = /^[&!]\S*[ \t]*/;
+
+const USES_KEY_NAMES = new Set(['uses', '"uses"', "'uses'"]);
+
+function isDataValue(keyText) {
+  const match = PLAIN_BLOCK_KEY.exec(keyText);
+  if (match === null) {
+    return false;
+  }
+
+  const keyName = match[1].replace(/[ \t]+$/, '');
+  let value = keyText.slice(match[0].length).replace(/^[ \t]+/, '');
+  for (let property = NODE_PROPERTY.exec(value); property !== null; ) {
+    value = value.slice(property[0].length);
+    property = NODE_PROPERTY.exec(value);
+  }
+
+  const opensFlow = value.startsWith('{') || value.startsWith('[');
+  return !opensFlow && !USES_KEY_NAMES.has(keyName);
+}
+
+/**
+ * The index at which the scalar opening at `start` closes, or -1 when the line does not
+ * close it. A double-quoted scalar escapes with a backslash (which escapes any character,
+ * itself included); a single-quoted one escapes a quote by doubling it.
+ */
+function scalarEnd(text, start, quote) {
+  for (let cursor = start + 1; cursor < text.length; cursor += 1) {
+    const character = text[cursor];
+    if (quote === '"' && character === '\\') {
+      cursor += 1;
+      continue;
+    }
+    if (character === quote) {
+      if (quote === "'" && text[cursor + 1] === "'") {
+        cursor += 1;
+        continue;
+      }
+      return cursor;
+    }
+  }
+  return -1;
+}
+
+/**
+ * Drop a trailing `#` comment without reaching inside a quoted scalar.
+ *
+ * A naive `line.replace(/\s+#.*$/, '')` cuts at the first ` #` on the line, which is wrong
+ * in both directions when the `#` is inside a value: it truncates
+ * `with: { cache: "a # b", node-version: '20' }` to `with: { cache: "a`, so the literal
+ * after it is never read (a pin passes), and it strips the closing quote off a scalar that
+ * is perfectly well formed (a continued-scalar refusal for a line that continues nothing).
+ *
+ * A quote only opens a scalar here if the line also CLOSES it. That matters because an
+ * apostrophe is ordinary text in a YAML plain scalar — `- name: Don't fail # c` has one
+ * single quote and no scalar, and its comment must still be stripped — and because an
+ * unterminated quote is exactly the continuation the caller must still be able to see.
+ *
+ * Walking past such a quote is reported as `unclosed`. Where the quote sits where a VALUE
+ * may start, the line may be opening a multi-line quoted scalar, every `#` after it is
+ * literal text rather than a comment, and the strip is a guess — so a caller that must not
+ * miss what was cut away can read the raw line instead.
+ *
+ * `unclosedDouble` narrows that to the DOUBLE-quoted case, the only one that can be a
+ * refusable line continuation: YAML folds a `\`-terminated double-quoted scalar onto the
+ * next line, while an unpaired apostrophe is ordinary plain-scalar text (`Don't`) and far
+ * too common to refuse. Both come out of this one walk on purpose. A second pass that
+ * subtracted "the scalars that close" with a regex would be a separate source of truth for
+ * where a scalar may begin, and would call any leftover `"` a continuation even when it
+ * never sat at a value boundary — a false rejection of well-formed YAML.
+ */
+function stripComment(text) {
+  let unclosed = false;
+  let unclosedDouble = false;
+  let cursor = 0;
+
+  while (cursor < text.length) {
+    const character = text[cursor];
+
+    if (character === '"' || character === "'") {
+      const stop = scalarEnd(text, cursor, character);
+      if (stop >= 0) {
+        cursor = stop + 1;
+        continue;
+      }
+      // Unclosed. It opens a scalar only where a value may start — at the head of the
+      // line, or after `:`, `,`, `{`, `[`, or a sequence dash. An apostrophe anywhere else
+      // is ordinary plain-scalar text, and what follows it is still a comment.
+      let back = cursor - 1;
+      while (back >= 0 && /[ \t]/.test(text[back])) {
+        back -= 1;
+      }
+      if (back < 0 || ':,{[-'.includes(text[back])) {
+        unclosed = true;
+        unclosedDouble = unclosedDouble || character === '"';
+      }
+      cursor += 1;
+      continue;
+    }
+
+    if (character === '#' && (cursor === 0 || /\s/.test(text[cursor - 1]))) {
+      return { text: text.slice(0, cursor), unclosed, unclosedDouble };
+    }
+
+    cursor += 1;
+  }
+
+  return { text, unclosed, unclosedDouble };
+}
+
 // A workflow that never calls setup-node yields no steps, so the pin check is
 // simply vacuous for it — but the literal `node-version:` check still runs over
 // every workflow, because a literal pin is drift wherever it is declared.
+//
+// Returns the number of setup-node steps it read, so the caller can tell "every step is
+// pinned" from "there was no step to check" across the whole directory.
 function checkWorkflowNodePin(file) {
   const text = readText(file);
   if (text === null) {
-    return;
+    return 0;
   }
 
   const lines = text.split('\n');
-  const isKeyLine = yamlKeyLines(lines);
+  const { isKeyLine, isBlockBody } = yamlKeyLines(lines);
+  const steps = setupNodeSteps(lines, isKeyLine);
+  const readableUses = new Set(steps.map(step => step.line - 1));
 
-  setupNodeSteps(lines, isKeyLine)
+  steps
     .filter(step => !stepPinsNvmrc(lines, isKeyLine, step))
     .forEach(step => {
       fail(
@@ -597,19 +810,114 @@ function checkWorkflowNodePin(file) {
     });
 
   lines.forEach((line, index) => {
-    if (
-      isKeyLine[index] &&
-      (LITERAL_NODE_VERSION.test(line) || FLOW_LITERAL_NODE_VERSION.test(line))
-    ) {
+    // Counted first, and outside every structural guard: the variable is unreviewable
+    // wherever it is read, and reading it is not confined to a step or to a key line.
+    // A block-scalar body is skipped as STRUCTURE but not as TEXT — GitHub substitutes
+    // `${{ }}` into a `run:` body before any shell sees it, so a read there is a real
+    // read, and literal text carries no YAML comment to strip.
+    if (isBlockBody[index]) {
+      if (REPO_NODE_VERSION_READ.test(line)) {
+        fail(
+          'workflows',
+          `${file}:${index + 1} reads ${REPO_NODE_VERSION_VAR}; pin Node through ${NVMRC}, ` +
+            'whose value is reviewable'
+        );
+      }
+      return;
+    }
+
+    const { text: stripped, unclosed, unclosedDouble } = stripComment(line);
+
+    // Read off the STRIPPED line, so a note about the variable is not a read — except
+    // where the strip walked past a quote opening a scalar the line never closes. There a
+    // `#` may be literal text inside a multi-line quoted value whose `${{ }}` GitHub still
+    // expands, and cutting at it would hide a real read. Over-counting a mention costs a
+    // reword; under-counting a read leaves the gate green on a pin nobody can review.
+    if (REPO_NODE_VERSION_READ.test(unclosed ? line : stripped)) {
+      fail(
+        'workflows',
+        `${file}:${index + 1} reads ${REPO_NODE_VERSION_VAR}; pin Node through ${NVMRC}, ` +
+          'whose value is reviewable'
+      );
+    }
+
+    if (!isKeyLine[index]) {
+      return;
+    }
+
+    if (LITERAL_NODE_VERSION.test(line) || FLOW_LITERAL_NODE_VERSION.test(line)) {
       fail(
         'workflows',
         `${file}:${index + 1} pins a literal node-version; use node-version-file: ${NVMRC}`
       );
     }
+
+    // Refused wherever a key is read, not only inside a step: an escaped key hides a
+    // literal from the rule above just as effectively as it hides an unpinned step from
+    // the one before it.
+    if (ESCAPED_KEY.test(stripped) || FLOW_ESCAPED_KEY.test(stripped)) {
+      fail(
+        'workflows',
+        `${file}:${index + 1} spells a mapping key with YAML escape sequences; this gate ` +
+          'reads keys, not escapes, so spell them plainly'
+      );
+    }
+
+    // A double-quoted scalar may be CONTINUED onto the next line by ending this one with
+    // a backslash, and YAML folds the break away: `"node-versio\` / `n": '20'` is the key
+    // `node-version` spelled across two lines. A line-based scanner never sees that scalar
+    // whole, so neither the key rule nor the literal rule can fire and the pin passes.
+    // `stripComment`'s walk is what decides this, so a `"` inside a plain scalar or inside
+    // another quoted one is not mistaken for a continuation.
+    if (unclosedDouble) {
+      fail(
+        'workflows',
+        `${file}:${index + 1} continues a double-quoted scalar past the end of the line; ` +
+          'this gate reads a line at a time, so keep every quoted scalar on one line'
+      );
+    }
+
+    // A setup-node reference no rule above read as a step's own `uses:` key is refused,
+    // not ignored. Every rule in this scanner is anchored to a mapping key on its own
+    // line, which is the block spelling; a step written as a compact flow mapping —
+    // `- { uses: actions/setup-node@…, with: { node-version-file: .nvmrc } }`, or a whole
+    // `steps: [{ … }]` sequence — puts the key after a brace nothing here can reach.
+    // Ignoring that is fail-open in the one direction that matters: the step runs, the
+    // gate never sees it, and the directory-wide vacuity guard is satisfied by the plainly
+    // spelled steps beside it. So this takes the way out the two refusals above took — a
+    // spelling this gate cannot read is reported and has to be spelled plainly.
+    const key = mappingKey(stripped);
+    if (
+      stripped.includes(SETUP_NODE_REF) &&
+      !readableUses.has(index) &&
+      !(key !== null && isDataValue(key.text))
+    ) {
+      fail(
+        'workflows',
+        `${file}:${index + 1} names actions/setup-node where this gate cannot read it as a ` +
+          "step's own `uses:` key; spell every setup-node step in block style, not as a " +
+          'compact flow mapping'
+      );
+    }
   });
+
+  return steps.length;
 }
 
-workflowFiles.forEach(checkWorkflowNodePin);
+const setupNodeStepCount = workflowFiles
+  .map(checkWorkflowNodePin)
+  .reduce((total, count) => total + count, 0);
+
+// A directory of workflows that calls setup-node nowhere is not "nothing to check" — it is
+// the pin rule losing its subject, which is how a gate quietly stops enforcing anything.
+// The per-file checks above are all conditional on finding a step; this is the one
+// assertion that a step was found at all.
+if (workflowFiles.length > 0 && setupNodeStepCount === 0) {
+  fail(
+    'workflows',
+    `no actions/setup-node step found under ${WORKFLOWS_DIR}; the pin check would pass vacuously`
+  );
+}
 
 // --- 6. Playwright image tracks the @playwright/test devDependency -----------
 

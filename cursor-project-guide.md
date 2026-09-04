@@ -11,8 +11,9 @@ the mandatory test-coverage contract; this guide assumes it and points back to i
 React 19 with TypeScript 6. The UI uses MUI 9 with Emotion; data is fetched with Apollo Client 4
 against a local Apollo Server 5 GraphQL mock; forms use react-hook-form; copy is localized with
 i18next and react-i18next; components are documented in Storybook 10. The package manager is
-`bun@1.3.5` and Node is `>=20`. The folder layout is adapted from bulletproof-react, and every
-command runs through a Makefile target from the repository root.
+`bun@1.3.5` and Node is the version pinned in `.nvmrc` (`24.18.0`). The folder layout is
+adapted from bulletproof-react, and every command runs through a Makefile target from the
+repository root.
 
 There is no Redux, no Zustand, and no dependency-injection container, and there is no
 `src/modules/` layer. State is local or served by Apollo's cache, and code is organized by
@@ -41,14 +42,15 @@ Run everything through `make`; the targets are the single source of truth and th
 runs. The aggregate gate is `make lint`, which regenerates the i18n bundle and then runs
 ESLint, TypeScript, markdownlint, dependency-cruiser, the user-service API version
 invariant, the Dockerfile registry/digest policy, the edge security-header gate, the
-RFC 9116 security.txt gate, and the production-safety guardrails in sequence.
+RFC 9116 security.txt gate, the production-safety guardrails, and the version-pin drift
+gate in sequence.
 
 ```bash
 make format               # Prettier formatting; run before lint
 make lint                 # Full gate: generate-localization + lint-next + lint-tsc
                           #   + lint-md + lint-deps + lint-api-versions
                           #   + lint-docker-policy + lint-headers + lint-security-txt
-                          #   + lint-prod-guardrails
+                          #   + lint-prod-guardrails + lint-pins
 make lint-next            # ESLint only
 make lint-tsc             # TypeScript type-check only
 make lint-md              # markdownlint only
@@ -58,12 +60,14 @@ make lint-docker-policy   # registry (no Docker Hub) + digest-pin policy on ever
 make lint-headers         # edge security-header policy (config/security-headers.json)
 make lint-security-txt    # RFC 9116 security.txt fields + Expires runway
 make lint-prod-guardrails # production-safety invariants (issue #383)
+make lint-pins            # Node/Bun/Playwright pin drift across .nvmrc, engines, Dockerfiles, CI
 make build                # Production build
 ```
 
 ## Development setup
 
-Requirements: Node `>=20`, `bun@1.3.5`, and Docker for the containerized dev and test stacks.
+Requirements: the Node version pinned in `.nvmrc` (`24.18.0`), `bun@1.3.5`, and Docker for the
+containerized dev and test stacks.
 
 ```bash
 make check-node-version   # Verify the Node version
@@ -207,6 +211,10 @@ make lint-md    # Markdown issues
 make lint-deps  # Architecture/import-boundary violations
 make lint       # Confirm the full gate is green
 ```
+
+`make lint-pins` fails when `.nvmrc`, a Dockerfile base image, `package.json`
+`engines.node`, or an `actions/setup-node` step disagree about the Node version — and
+likewise for the Bun and Playwright pins. Fix the lagging source; never loosen `.nvmrc`.
 
 ### Updating dependencies
 

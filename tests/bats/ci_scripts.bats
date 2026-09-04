@@ -455,7 +455,7 @@ literal node-version in a workflow|.github/workflows/bats-testing.yml|sed -i "s#
 setup-node step with no version file|.github/workflows/bats-testing.yml|sed -i "/node-version-file:/d" .github/workflows/bats-testing.yml
 literal node-version in a .yaml workflow|.github/workflows/rogue.yaml|printf 'jobs:\n  a:\n    steps:\n      - uses: actions/setup-node@abc\n        with:\n          node-version: 20\n' > .github/workflows/rogue.yaml
 packageManager version|package.json|sed -i 's#"bun@[0-9.]*"#"bun@99.0.0"#' package.json
-engines.node range|package.json|sed -i 's#"node": "\^[0-9]*"#"node": "^99"#' package.json
+engines.node range|package.json|sed -i 's#"node": "\^[0-9.]*"#"node": "^99"#' package.json
 engines.bun floor|package.json|sed -i 's#">=[0-9.]*"#">=99.0.0"#' package.json
 playwright devDependency|package.json|sed -i 's#"@playwright/test": "[0-9.]*"#"@playwright/test": "99.0.0"#' package.json
 playwright runtime devDependency|package.json|sed -i 's#"playwright": "[0-9.]*"#"playwright": "99.0.0"#' package.json
@@ -985,6 +985,395 @@ YAML
   rm -f "$PIN_SANDBOX/.github/workflows/prose.yml"
   run_pin_gate
   [ "$status" -eq 0 ]
+}
+
+# --- the four spellings the gate refuses to read (issue #335) -----------------
+# Each one names something a YAML parser resolves and a line-at-a-time scanner
+# cannot. Ignoring any of them is fail-OPEN: the workflow runs the pin the gate
+# never saw. So the gate reports the spelling and refuses it, and these cases
+# prove both directions — the refusal fires, and the plain spelling beside it
+# still passes.
+
+# One well-formed workflow the mutations below are appended to, so a failure is
+# always attributable to the appended lines rather than to the baseline.
+write_pin_workflow() {
+  cat > "$PIN_SANDBOX/.github/workflows/pinned.yml" <<'YAML'
+name: pinned
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: '.nvmrc'
+YAML
+}
+
+@test "check-version-pins.mjs refuses a mapping key spelled with YAML escapes" {
+  setup_pin_sandbox
+  write_pin_workflow
+
+  run_pin_gate
+  [ "$status" -eq 0 ]
+
+  # `"node-versio\x6E"` is the key `node-version` to every YAML reader and to
+  # setup-node. Decoding it is a parser's job; guessing at the decoded spelling is
+  # how a scanner waves through a literal pin it guessed wrong about.
+  cat >> "$PIN_SANDBOX/.github/workflows/pinned.yml" <<'YAML'
+      - uses: ./.github/actions/noop
+        with:
+          "node-versio\x6E": '24.18.0'
+YAML
+
+  run_pin_gate
+  [ "$status" -ne 0 ]
+  assert_output_contains 'spells a mapping key with YAML escape sequences'
+}
+
+@test "check-version-pins.mjs refuses an escaped key inside a flow mapping" {
+  setup_pin_sandbox
+  write_pin_workflow
+
+  cat >> "$PIN_SANDBOX/.github/workflows/pinned.yml" <<'YAML'
+      - uses: ./.github/actions/noop
+        with: { cache: bun, "node-versio\x6E": '24.18.0' }
+YAML
+
+  run_pin_gate
+  [ "$status" -ne 0 ]
+  assert_output_contains 'spells a mapping key with YAML escape sequences'
+}
+
+# The refusal is scoped to the escapes that can ENCODE a character of a key name.
+# `\"` produces a quote, which no key this scanner looks for contains, and the
+# double-quoted scalar pattern already consumes it correctly wherever it appears
+# — refusing it would reject well-formed YAML with no hole behind it. Both
+# spellings are asserted together so the boundary cannot drift in either
+# direction: widen the rule and the second case goes red, narrow it and the first
+# one does.
+@test "check-version-pins.mjs refuses only escapes that can rename a key" {
+  setup_pin_sandbox
+  write_pin_workflow
+
+  cat >> "$PIN_SANDBOX/.github/workflows/pinned.yml" <<'YAML'
+      - uses: ./.github/actions/noop
+        with:
+          "node-versio\U0000006E": '24.18.0'
+YAML
+
+  run_pin_gate
+  [ "$status" -ne 0 ]
+  assert_output_contains 'spells a mapping key with YAML escape sequences'
+
+  setup_pin_sandbox
+  write_pin_workflow
+
+  cat >> "$PIN_SANDBOX/.github/workflows/pinned.yml" <<'YAML'
+      - uses: actions/setup-node@v6
+        with: { "k\": v, z": 'x', node-version-file: '.nvmrc' }
+YAML
+
+  run_pin_gate
+  [ "$status" -eq 0 ]
+}
+
+@test "check-version-pins.mjs ignores an escaped key written inside a run block" {
+  setup_pin_sandbox
+  write_pin_workflow
+
+  # Literal scalar text, not structure. Refusing it would make the verdict depend
+  # on prose, and the only way to "fix" the workflow would be to delete the prose.
+  cat >> "$PIN_SANDBOX/.github/workflows/pinned.yml" <<'YAML'
+      - run: |
+          "node-versio\x6E": '24.18.0'
+YAML
+
+  run_pin_gate
+  [ "$status" -eq 0 ]
+}
+
+@test "check-version-pins.mjs refuses a double-quoted scalar continued across lines" {
+  setup_pin_sandbox
+  write_pin_workflow
+
+  # YAML folds the line break away, so these two lines are the single key
+  # `node-version` — which a line-based scanner never sees whole, so neither the
+  # key rule nor the literal rule can fire and the pin would simply pass.
+  cat >> "$PIN_SANDBOX/.github/workflows/pinned.yml" <<'YAML'
+      - uses: ./.github/actions/noop
+        with:
+          "node-versio\
+n": '24.18.0'
+YAML
+
+  run_pin_gate
+  [ "$status" -ne 0 ]
+  assert_output_contains 'continues a double-quoted scalar past the end of the line'
+}
+
+@test "check-version-pins.mjs keeps quoted scalars that close on their own line green" {
+  setup_pin_sandbox
+  write_pin_workflow
+
+  # A `#` inside a quoted value, a doubled single quote, and a backslash-escaped
+  # quote: all well formed, none a continuation. A naive comment strip cuts at the
+  # first ` #`, which both hides what follows it and reports a continuation that
+  # is not there.
+  cat >> "$PIN_SANDBOX/.github/workflows/pinned.yml" <<'YAML'
+      - name: "a # b"
+        run: echo ok
+      - name: 'it''s fine'
+        run: echo ok
+      - name: "say \"hi\""
+        run: echo ok
+YAML
+
+  run_pin_gate
+  [ "$status" -eq 0 ]
+}
+
+@test "check-version-pins.mjs reads past a hash inside a quoted value to the literal after it" {
+  setup_pin_sandbox
+  write_pin_workflow
+
+  cat >> "$PIN_SANDBOX/.github/workflows/pinned.yml" <<'YAML'
+      - uses: ./.github/actions/noop
+        with: { cache: "a # b", node-version: '24.18.0' }
+YAML
+
+  run_pin_gate
+  [ "$status" -ne 0 ]
+  assert_output_contains 'pins a literal node-version'
+}
+
+@test "check-version-pins.mjs refuses a workflow that reintroduces vars.NODE_VERSION" {
+  setup_pin_sandbox
+  write_pin_workflow
+
+  run_pin_gate
+  [ "$status" -eq 0 ]
+
+  # A repository variable cannot be seen or reviewed from inside the repository,
+  # so it is drift nothing in the tree can catch.
+  cat >> "$PIN_SANDBOX/.github/workflows/pinned.yml" <<'YAML'
+      - uses: ./.github/actions/noop
+        env:
+          NODE: ${{ vars.NODE_VERSION }}
+YAML
+
+  run_pin_gate
+  [ "$status" -ne 0 ]
+  assert_output_contains 'reads vars.NODE_VERSION'
+}
+
+@test "check-version-pins.mjs reads vars.NODE_VERSION out of a run: body too" {
+  setup_pin_sandbox
+  write_pin_workflow
+
+  # GitHub substitutes `${{ }}` into a run body before any shell sees it, so a
+  # read there is a real read even though the body is skipped as structure.
+  cat >> "$PIN_SANDBOX/.github/workflows/pinned.yml" <<'YAML'
+      - run: |
+          echo "${{ vars.NODE_VERSION }}"
+YAML
+
+  run_pin_gate
+  [ "$status" -ne 0 ]
+  assert_output_contains 'reads vars.NODE_VERSION'
+}
+
+# A read is the expression syntax, not the bare name: GitHub substitutes only inside
+# `${{ }}`. The YAML-comment case above is stripped before the check; a `#` line inside a
+# `run: |` body cannot be, because that body is shell rather than YAML — so requiring the
+# wrapper is what keeps both spellings of "a note about the variable" from failing the PR.
+@test "check-version-pins.mjs reads the expression syntax, not a bare mention" {
+  setup_pin_sandbox
+  write_pin_workflow
+
+  cat >> "$PIN_SANDBOX/.github/workflows/pinned.yml" <<'YAML'
+      - run: |
+          # never reach for vars.NODE_VERSION here; .nvmrc is the pin
+          echo ok
+YAML
+
+  run_pin_gate
+  [ "$status" -eq 0 ]
+
+  # The same body, now actually reading it.
+  setup_pin_sandbox
+  write_pin_workflow
+
+  cat >> "$PIN_SANDBOX/.github/workflows/pinned.yml" <<'YAML'
+      - run: |
+          echo "${{ vars.NODE_VERSION }}"
+YAML
+
+  run_pin_gate
+  [ "$status" -ne 0 ]
+  assert_output_contains 'reads vars.NODE_VERSION'
+}
+
+# `vars.NODE_VERSION` and `vars['NODE_VERSION']` name the same variable to the expression
+# evaluator. A bare-substring match saw only the first and let the second through.
+@test "check-version-pins.mjs reads the bracket spelling of the repository variable" {
+  setup_pin_sandbox
+  write_pin_workflow
+
+  cat >> "$PIN_SANDBOX/.github/workflows/pinned.yml" <<'YAML'
+      - uses: ./.github/actions/noop
+        env:
+          NV: ${{ vars['NODE_VERSION'] }}
+YAML
+
+  run_pin_gate
+  [ "$status" -ne 0 ]
+  assert_output_contains 'reads vars.NODE_VERSION'
+}
+
+# The continuation refusal has to come from the scalar walk that already knows where a
+# scalar may BEGIN. Subtracting "the scalars that close" with a regex instead calls any
+# leftover `"` a continuation: in `echo "x'y" 'z'` the single-quoted pass spans from the
+# apostrophe inside the first quoted run to the one opening the last, taking the closing
+# `"` with it and stranding the opening one. That is ordinary plain-scalar text and a
+# perfectly valid workflow.
+@test "check-version-pins.mjs does not mistake quoted plain-scalar text for a continuation" {
+  setup_pin_sandbox
+  write_pin_workflow
+
+  cat >> "$PIN_SANDBOX/.github/workflows/pinned.yml" <<'YAML'
+      - run: echo "x'y" 'z'
+      - name: a'b "c"
+        run: echo ok
+YAML
+
+  run_pin_gate
+  [ "$status" -eq 0 ]
+
+  # …and a real continuation is still refused.
+  cat >> "$PIN_SANDBOX/.github/workflows/pinned.yml" <<'YAML'
+      - "node-versio\
+n": '24.18.0'
+YAML
+
+  run_pin_gate
+  [ "$status" -ne 0 ]
+  assert_output_contains 'continues a double-quoted scalar past the end of the line'
+}
+
+# Requiring `-alpine` in the MATCH made a non-alpine stage invisible instead of invalid:
+# one alpine stage satisfies the "declares no base image" guard for the whole file, so a
+# second `FROM node:<other>` beside it matched nothing and drifted unreported.
+@test "check-version-pins.mjs refuses a non-alpine node base beside an alpine one" {
+  setup_pin_sandbox
+
+  run_pin_gate
+  [ "$status" -eq 0 ]
+
+  printf '\nFROM node:99.0.0 AS drifted\nRUN true\n' >> "$PIN_SANDBOX/Apollo.Dockerfile"
+
+  run_pin_gate
+  [ "$status" -ne 0 ]
+  assert_output_contains 'on a non-alpine base'
+  assert_output_contains 'pins node:99.0.0'
+}
+
+@test "check-version-pins.mjs does not read a comment naming vars.NODE_VERSION as a read" {
+  setup_pin_sandbox
+  write_pin_workflow
+
+  # A note ABOUT the variable reintroduces nothing; failing a PR for one is a
+  # false rejection that can only be "fixed" by deleting the explanation.
+  cat >> "$PIN_SANDBOX/.github/workflows/pinned.yml" <<'YAML'
+      # Never reach for vars.NODE_VERSION here; .nvmrc is the pin.
+      - run: echo ok # not vars.NODE_VERSION either
+YAML
+
+  run_pin_gate
+  [ "$status" -eq 0 ]
+}
+
+@test "check-version-pins.mjs refuses a setup-node step written as a compact flow mapping" {
+  setup_pin_sandbox
+  write_pin_workflow
+
+  # Every rule in the scanner is anchored to a mapping key on its own line. A
+  # compact flow step puts `uses:` after a brace where nothing can reach it, and
+  # the directory-wide vacuity guard is satisfied by the plainly spelled steps
+  # beside it — so ignoring this spelling is fail-open in the one direction that
+  # matters. It is refused whether or not it carries a valid pin.
+  cat >> "$PIN_SANDBOX/.github/workflows/pinned.yml" <<'YAML'
+      - { uses: actions/setup-node@v6, with: { node-version-file: .nvmrc } }
+YAML
+
+  run_pin_gate
+  [ "$status" -ne 0 ]
+  assert_output_contains 'names actions/setup-node where this gate cannot read it'
+}
+
+@test "check-version-pins.mjs does not refuse a setup-node reference that is plain data" {
+  setup_pin_sandbox
+  write_pin_workflow
+
+  # GitHub resolves an action from a `uses:` key and nowhere else. The multi-line
+  # `run: |` spelling of the same text is already skipped as a block body, so
+  # refusing the one-line spelling would make the verdict depend on scalar style.
+  cat >> "$PIN_SANDBOX/.github/workflows/pinned.yml" <<'YAML'
+      - name: bump actions/setup-node@v6
+        run: echo actions/setup-node@v6
+YAML
+
+  run_pin_gate
+  [ "$status" -eq 0 ]
+}
+
+@test "check-version-pins.mjs fails rather than passing vacuously with no setup-node step" {
+  setup_pin_sandbox
+
+  # A workflow directory that calls setup-node nowhere is not "nothing to check"
+  # — it is the pin rule losing its subject, which is how a gate quietly stops
+  # enforcing anything.
+  rm -f "$PIN_SANDBOX"/.github/workflows/*.yml
+  write_pin_workflow
+  run_pin_gate
+  [ "$status" -eq 0 ]
+
+  rm -f "$PIN_SANDBOX"/.github/workflows/*.yml
+  cat > "$PIN_SANDBOX/.github/workflows/none.yml" <<'YAML'
+name: none
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo ok
+YAML
+
+  run_pin_gate
+  [ "$status" -ne 0 ]
+  assert_output_contains 'would pass vacuously'
+}
+
+@test "check-version-pins.mjs requires engines.node to be the caret over the exact pin" {
+  setup_pin_sandbox
+
+  run_pin_gate
+  [ "$status" -eq 0 ]
+
+  # `^24` admits 24.18.0, but it also admits 24.0.0 — so a host disagreeing with
+  # every other pin site still satisfies `engines`, and the drift is invisible to
+  # `bun install`.
+  node -e '
+    const fs = require("node:fs");
+    const path = process.argv[1];
+    const pkg = JSON.parse(fs.readFileSync(path, "utf8"));
+    pkg.engines.node = "^24";
+    fs.writeFileSync(path, `${JSON.stringify(pkg, null, 2)}\n`);
+  ' "$PIN_SANDBOX/package.json"
+
+  run_pin_gate
+  [ "$status" -ne 0 ]
+  assert_output_contains 'the caret over the exact .nvmrc version'
 }
 
 # --- lint-headers.mjs (issue #377) --------------------------------------------

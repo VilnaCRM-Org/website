@@ -234,6 +234,24 @@ make lint-prod-guardrails # production-safety invariants (see #383 below)
 make lint-pins            # Node/Bun/Playwright pin drift across .nvmrc, engines, Dockerfiles, CI
 ```
 
+`.nvmrc` is the single authoritative Node version. `make lint-pins`
+(`scripts/ci/check-version-pins.mjs`, issues #338 and #335) fails when any other source
+disagrees with it — a `FROM …node:<version>` base image in any of the Dockerfiles it
+lists (which must also be alpine-tagged, on one shared tag),
+`package.json` `engines.node` (which must be the caret over the exact `.nvmrc` version,
+not a looser range that merely admits it), an `actions/setup-node` step that does not
+read `node-version-file: '.nvmrc'`, or a workflow reaching for a `vars.NODE_VERSION`
+repository variable, whose value cannot be reviewed from inside the repository. It also
+refuses three spellings it cannot read: a mapping key written with YAML escapes
+(`"node-versio\x6E":`), a double-quoted scalar continued onto the next line with a
+trailing backslash, and a setup-node step written as a compact flow mapping. All three
+name something a YAML parser resolves and a line-at-a-time scanner cannot, so the gate
+reports the spelling rather than guessing and passing a literal pin it guessed wrong
+about. It fails equally when no `actions/setup-node` step is found at all, so the rule
+can never pass vacuously. The same gate covers the Bun and Playwright pins.
+Bump `.nvmrc` first, then let the gate name whatever still lags. Do not confuse it with
+`make check-node-version`, which checks the _running_ Node against `engines`.
+
 `lint-headers` executes the checked-in CloudFront edge functions against representative
 page, asset, and 404 responses and fails if any header in `config/security-headers.json`
 is missing or weakened (issue #377). Live responses — and whether the functions are
