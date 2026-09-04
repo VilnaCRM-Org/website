@@ -5,6 +5,16 @@
  * per import, which those references can never resolve to. Declaring the faces
  * under their real names makes the toolkit resolve them, and reuses the exact
  * same self-hosted `.woff2` assets, so nothing extra is downloaded.
+ *
+ * What `next/font` also gave us, and is re-declared by hand below, is the
+ * metric-adjusted fallback: without it `font-display: swap` paints in Arial at
+ * Arial's metrics and then reflows every line when the real face arrives, which
+ * is a CLS regression on every page. The overrides are the same ones
+ * `next/font` derives — Arial as the sans-serif fallback, `size-adjust` from the
+ * ratio of the two fonts' frequency-weighted average lowercase advance width,
+ * and the ascent/descent/line-gap overrides divided by that adjustment — computed
+ * from the committed `-Regular.woff2` of each family. Recompute them if a family's
+ * regular face is replaced.
  */
 
 @font-face {
@@ -79,9 +89,27 @@
   font-display: swap;
 }
 
+@font-face {
+  font-family: 'Inter Fallback';
+  src: local('Arial');
+  size-adjust: 105.79%;
+  ascent-override: 91.58%;
+  descent-override: 22.83%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: 'Golos Text Fallback';
+  src: local('Arial');
+  size-adjust: 107.22%;
+  ascent-override: 91.4%;
+  descent-override: 20.52%;
+  line-gap-override: 0%;
+}
+
 /* The site's base typeface, applied to the app root in `pages/_app.tsx`. */
 .app-typeface {
-  font-family: 'Golos Text', sans-serif;
+  font-family: 'Golos Text', 'Golos Text Fallback', sans-serif;
 }
 
 html,

@@ -8,6 +8,7 @@ import { testText } from './constants';
 
 const CHECKBOX_BOX_SELECTOR: string = '.ui-checkbox-box';
 const DEFAULT_BORDER_COLOR: string = '#D0D4D8';
+const HOVER_BORDER_COLOR: string = '#1eaeff';
 const ERROR_BORDER_COLOR: string = '#DC3939';
 
 const mockOnChange: () => void = jest.fn();
@@ -46,6 +47,33 @@ describe('UiCheckbox', () => {
     const { container } = render(<UiCheckbox label="Test" onChange={mockOnChange} />);
 
     expect(getCheckboxBox(container)).toHaveStyle(`border-color: ${DEFAULT_BORDER_COLOR}`);
+  });
+
+  // jsdom never applies `:hover`, so the token has to be read off the stylesheet
+  // Emotion emitted rather than off a computed style. The pre-toolkit spec read
+  // it out of the local `styles` object; that object now lives in the toolkit, and
+  // reaching into a dependency's internals would assert the package rather than
+  // what this app ships. The rendered rule is the observable both versions share,
+  // so the hover token keeps its regression guard through the rendering-path
+  // change the PR flags for visual review.
+  it('keeps the hover border token on the styled box', () => {
+    const { container } = render(<UiCheckbox label="Test" onChange={mockOnChange} />);
+    getCheckboxBox(container);
+
+    const emittedCss: string = Array.from(document.querySelectorAll('style'))
+      .map(styleTag => styleTag.textContent ?? '')
+      .join('');
+    const hoverRule: string | undefined = emittedCss
+      .replace(/\s+/g, '')
+      .toLowerCase()
+      .split('}')
+      .find(
+        rule =>
+          rule.includes(':hover') && rule.includes(CHECKBOX_BOX_SELECTOR.slice(1).toLowerCase())
+      );
+
+    expect(hoverRule).toBeDefined();
+    expect(hoverRule).toContain(`border-color:${HOVER_BORDER_COLOR}`);
   });
 
   it('applies error style when error prop is true', () => {

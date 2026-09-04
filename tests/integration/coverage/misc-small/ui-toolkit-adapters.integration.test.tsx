@@ -7,6 +7,7 @@
  * against the REAL toolkit components.
  */
 import { render } from '@testing-library/react';
+import { t } from 'i18next';
 
 import { UiButton, UiLink } from '@/components';
 
@@ -16,6 +17,9 @@ const LABEL: string = 'Example';
 // Hoisted: inline, its UTF-8 length puts the JSX line past the 100-byte
 // editorconfig limit, and Prettier cannot break a string attribute.
 const NEW_TAB_LABEL: string = '(відкриється у новій вкладці)';
+// The default the adapter supplies when the caller passes none.
+const LOCALIZED_NEW_TAB_LABEL: string = t('accessibility.opens_in_new_tab');
+const NEW_TAB_NAME: string = `${LABEL} ${LOCALIZED_NEW_TAB_LABEL}`;
 
 describe('UiButton adapter', () => {
   it('forwards rel and target onto the anchor MUI renders for an href', () => {
@@ -39,6 +43,20 @@ describe('UiButton adapter', () => {
     expect(button).not.toHaveAttribute('target');
     expect(button).not.toHaveAttribute('rel');
   });
+
+  // MUI switches Button to an anchor on the PRESENCE of `href`, not on its value,
+  // so forwarding an empty string turns the button into a destination-less link.
+  // The component this adapter replaced dropped a falsy href for that reason.
+  it('stays a button when href is empty rather than rendering an anchor', () => {
+    const { getByRole, queryByRole } = render(
+      <UiButton type="button" href="">
+        {LABEL}
+      </UiButton>
+    );
+
+    expect(getByRole('button', { name: LABEL })).toBeInTheDocument();
+    expect(queryByRole('link')).not.toBeInTheDocument();
+  });
 });
 
 describe('UiLink adapter', () => {
@@ -49,7 +67,21 @@ describe('UiLink adapter', () => {
       </UiLink>
     );
 
-    expect(getByRole('link', { name: LABEL })).toHaveAttribute('rel', HARDENED_REL);
+    expect(getByRole('link', { name: NEW_TAB_NAME })).toHaveAttribute('rel', HARDENED_REL);
+  });
+
+  // The toolkit's own default for this label is a hardcoded English string, and
+  // this site renders no untranslated copy — but suppressing it, as the first cut
+  // of this adapter did, drops the cue for every caller that forgets to pass one.
+  it('announces a new tab in the active language when the caller passes no label', () => {
+    const { getByRole } = render(
+      <UiLink href={HREF} target="_blank">
+        {LABEL}
+      </UiLink>
+    );
+
+    expect(LOCALIZED_NEW_TAB_LABEL).not.toBe('accessibility.opens_in_new_tab');
+    expect(getByRole('link', { name: NEW_TAB_NAME })).toBeInTheDocument();
   });
 
   it('hardens a case-variant blank target the toolkit would miss', () => {
@@ -69,10 +101,22 @@ describe('UiLink adapter', () => {
       </UiLink>
     );
 
-    expect(getByRole('link', { name: LABEL })).toHaveAttribute(
+    expect(getByRole('link', { name: NEW_TAB_NAME })).toHaveAttribute(
       'rel',
       'nofollow noopener noreferrer'
     );
+  });
+
+  // An explicit empty label is the caller opting out, and must stay opt-out: the
+  // default is only supplied where the caller supplied nothing at all.
+  it('honours an explicitly empty label instead of substituting the default', () => {
+    const { getByRole } = render(
+      <UiLink href={HREF} target="_blank" newTabLabel="">
+        {LABEL}
+      </UiLink>
+    );
+
+    expect(getByRole('link', { name: LABEL })).toBeInTheDocument();
   });
 
   it('leaves a same-tab link alone and adds no new-tab hint to its name', () => {
