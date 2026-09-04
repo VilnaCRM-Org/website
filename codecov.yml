@@ -100,6 +100,13 @@ flags:
   edge:
     paths:
       - scripts/
+      # `public/` because jest.config.ts's EDGE_COVERAGE_FROM is three files, not two:
+      # the two CloudFront scripts plus `public/sw.js` (issue #338). A flag's `paths`
+      # decide which files count toward its status, so leaving this out scored the edge
+      # status on the routing scripts alone and a regression in the offline-shell worker
+      # could not move it — which is not the "mirror jest.config.ts exactly" the status
+      # above claims.
+      - public/
   integration:
     paths:
       - src/

@@ -236,7 +236,8 @@ make lint-pins            # Node/Bun/Playwright pin drift across .nvmrc, engines
 
 `.nvmrc` is the single authoritative Node version. `make lint-pins`
 (`scripts/ci/check-version-pins.mjs`, issues #338 and #335) fails when any other source
-disagrees with it — a `FROM …node:<version>` base image in any Dockerfile,
+disagrees with it — a `FROM …node:<version>` base image in any of the Dockerfiles it
+lists (which must also be alpine-tagged, on one shared tag),
 `package.json` `engines.node` (which must be the caret over the exact `.nvmrc` version,
 not a looser range that merely admits it), an `actions/setup-node` step that does not
 read `node-version-file: '.nvmrc'`, or a workflow reaching for a `vars.NODE_VERSION`

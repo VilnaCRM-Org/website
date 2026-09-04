@@ -1183,6 +1183,101 @@ YAML
   assert_output_contains 'reads vars.NODE_VERSION'
 }
 
+# A read is the expression syntax, not the bare name: GitHub substitutes only inside
+# `${{ }}`. The YAML-comment case above is stripped before the check; a `#` line inside a
+# `run: |` body cannot be, because that body is shell rather than YAML — so requiring the
+# wrapper is what keeps both spellings of "a note about the variable" from failing the PR.
+@test "check-version-pins.mjs reads the expression syntax, not a bare mention" {
+  setup_pin_sandbox
+  write_pin_workflow
+
+  cat >> "$PIN_SANDBOX/.github/workflows/pinned.yml" <<'YAML'
+      - run: |
+          # never reach for vars.NODE_VERSION here; .nvmrc is the pin
+          echo ok
+YAML
+
+  run_pin_gate
+  [ "$status" -eq 0 ]
+
+  # The same body, now actually reading it.
+  setup_pin_sandbox
+  write_pin_workflow
+
+  cat >> "$PIN_SANDBOX/.github/workflows/pinned.yml" <<'YAML'
+      - run: |
+          echo "${{ vars.NODE_VERSION }}"
+YAML
+
+  run_pin_gate
+  [ "$status" -ne 0 ]
+  assert_output_contains 'reads vars.NODE_VERSION'
+}
+
+# `vars.NODE_VERSION` and `vars['NODE_VERSION']` name the same variable to the expression
+# evaluator. A bare-substring match saw only the first and let the second through.
+@test "check-version-pins.mjs reads the bracket spelling of the repository variable" {
+  setup_pin_sandbox
+  write_pin_workflow
+
+  cat >> "$PIN_SANDBOX/.github/workflows/pinned.yml" <<'YAML'
+      - uses: ./.github/actions/noop
+        env:
+          NV: ${{ vars['NODE_VERSION'] }}
+YAML
+
+  run_pin_gate
+  [ "$status" -ne 0 ]
+  assert_output_contains 'reads vars.NODE_VERSION'
+}
+
+# The continuation refusal has to come from the scalar walk that already knows where a
+# scalar may BEGIN. Subtracting "the scalars that close" with a regex instead calls any
+# leftover `"` a continuation: in `echo "x'y" 'z'` the single-quoted pass spans from the
+# apostrophe inside the first quoted run to the one opening the last, taking the closing
+# `"` with it and stranding the opening one. That is ordinary plain-scalar text and a
+# perfectly valid workflow.
+@test "check-version-pins.mjs does not mistake quoted plain-scalar text for a continuation" {
+  setup_pin_sandbox
+  write_pin_workflow
+
+  cat >> "$PIN_SANDBOX/.github/workflows/pinned.yml" <<'YAML'
+      - run: echo "x'y" 'z'
+      - name: a'b "c"
+        run: echo ok
+YAML
+
+  run_pin_gate
+  [ "$status" -eq 0 ]
+
+  # …and a real continuation is still refused.
+  cat >> "$PIN_SANDBOX/.github/workflows/pinned.yml" <<'YAML'
+      - "node-versio\
+n": '24.18.0'
+YAML
+
+  run_pin_gate
+  [ "$status" -ne 0 ]
+  assert_output_contains 'continues a double-quoted scalar past the end of the line'
+}
+
+# Requiring `-alpine` in the MATCH made a non-alpine stage invisible instead of invalid:
+# one alpine stage satisfies the "declares no base image" guard for the whole file, so a
+# second `FROM node:<other>` beside it matched nothing and drifted unreported.
+@test "check-version-pins.mjs refuses a non-alpine node base beside an alpine one" {
+  setup_pin_sandbox
+
+  run_pin_gate
+  [ "$status" -eq 0 ]
+
+  printf '\nFROM node:99.0.0 AS drifted\nRUN true\n' >> "$PIN_SANDBOX/Apollo.Dockerfile"
+
+  run_pin_gate
+  [ "$status" -ne 0 ]
+  assert_output_contains 'on a non-alpine base'
+  assert_output_contains 'pins node:99.0.0'
+}
+
 @test "check-version-pins.mjs does not read a comment naming vars.NODE_VERSION as a read" {
   setup_pin_sandbox
   write_pin_workflow

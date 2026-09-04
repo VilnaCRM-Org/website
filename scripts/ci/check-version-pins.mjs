@@ -113,9 +113,14 @@ function collectNodeImages(file) {
     return [];
   }
 
+  // The `-alpine<tag>` suffix is optional in the MATCH and required by the check below,
+  // which is not the same as leaving it out of the pattern. Demanding it here made a
+  // non-alpine stage invisible rather than invalid: the "declares no base image" guard is
+  // satisfied by any one alpine stage in the file, so a second `FROM node:99.0.0` beside
+  // it matched nothing, drifted from .nvmrc, and was never reported.
   const matches = [
     ...text.matchAll(
-      /^[ \t]*FROM[ \t]+(?:--\S+[ \t]+)*(?:\S*\/)?node:(\d+\.\d+\.\d+)-alpine(\S*)/gim
+      /^[ \t]*FROM[ \t]+(?:--\S+[ \t]+)*(?:\S*\/)?node:(\d+\.\d+\.\d+)(?:-alpine(\S*))?/gim
     ),
   ];
   if (matches.length === 0) {
@@ -126,6 +131,13 @@ function collectNodeImages(file) {
   return matches.map(([, version, alpineTag]) => {
     if (nodeVersion !== null && version !== nodeVersion) {
       fail('node-images', `${file} pins node:${version} but ${NVMRC} says ${nodeVersion}`);
+    }
+    if (alpineTag === undefined) {
+      fail(
+        'node-images',
+        `${file} pins node:${version} on a non-alpine base; every node image here shares ` +
+          'one alpine tag'
+      );
     }
     return { file, version, alpineTag };
   });
@@ -617,19 +629,26 @@ const FLOW_ESCAPED_KEY = new RegExp(
   String.raw`^\s*(?:-\s+)?${ANY_KEY}${WS}:\s*\{\s*${FLOW_ENTRIES}${ESCAPED_SCALAR}${WS}:`
 );
 
-// A double-quoted scalar that CLOSES on the line it opens on. Used only to subtract the
-// well-formed scalars from a line, so that any `"` left standing is one that opened a
-// scalar the line never closes. Same shape as DQ_SCALAR; named apart because this one is
-// a subtraction over a whole line rather than a piece of a larger key pattern.
-const CLOSED_DQ_SCALAR = new RegExp(String.raw`"[^"\\]*(?:\\.[^"\\]*)*"`, 'g');
-const CLOSED_SQ_SCALAR = new RegExp(String.raw`'[^']*'`, 'g');
+// The repository variable this gate refuses. It is matched wherever a workflow READS it —
+// an `env:` value, a `with:` input, an `if:` expression, a `run:` body — because GitHub
+// expands `${{ }}` in all of them and the value cannot be seen or reviewed from inside the
+// repository. What it must NOT be matched in is a MENTION: a note about the variable
+// reintroduces nothing, and failing a PR for one is a false rejection.
+//
+// A read is therefore the expression syntax, not the bare name. GitHub substitutes only
+// inside `${{ }}`, so `# never reach for vars.NODE_VERSION` is inert whether it is a YAML
+// comment or a `#` line inside a `run: |` body — and the block-scalar branch below cannot
+// strip the second kind, because the body is shell, not YAML. Requiring the wrapper is
+// what lets both branches share one rule instead of the YAML side stripping comments and
+// the shell side refusing them.
+//
+// Both index spellings are covered: `vars.NODE_VERSION` and `vars['NODE_VERSION']` name
+// the same variable to the expression evaluator, and the bare-substring form this
+// replaces silently missed the second one.
+const REPO_NODE_VERSION_READ =
+  /\$\{\{[^}]*\bvars\s*(?:\.\s*NODE_VERSION\b|\[\s*['"]NODE_VERSION['"]\s*\])/;
 
-// The repository variable this gate refuses, as a literal substring. It is matched
-// wherever a workflow READS it — an `env:` value, a `with:` input, an `if:` expression,
-// a `run:` body — because GitHub expands `${{ }}` in all of them and the value cannot be
-// seen or reviewed from inside the repository. What it must NOT be matched in is a
-// comment: a note ABOUT the variable reintroduces nothing, and failing a PR for one is a
-// false rejection.
+// The name alone, for the failure message.
 const REPO_NODE_VERSION_VAR = 'vars.NODE_VERSION';
 
 // The action reference, as a literal substring, for the refusal below.
@@ -716,9 +735,18 @@ function scalarEnd(text, start, quote) {
  * may start, the line may be opening a multi-line quoted scalar, every `#` after it is
  * literal text rather than a comment, and the strip is a guess — so a caller that must not
  * miss what was cut away can read the raw line instead.
+ *
+ * `unclosedDouble` narrows that to the DOUBLE-quoted case, the only one that can be a
+ * refusable line continuation: YAML folds a `\`-terminated double-quoted scalar onto the
+ * next line, while an unpaired apostrophe is ordinary plain-scalar text (`Don't`) and far
+ * too common to refuse. Both come out of this one walk on purpose. A second pass that
+ * subtracted "the scalars that close" with a regex would be a separate source of truth for
+ * where a scalar may begin, and would call any leftover `"` a continuation even when it
+ * never sat at a value boundary — a false rejection of well-formed YAML.
  */
 function stripComment(text) {
   let unclosed = false;
+  let unclosedDouble = false;
   let cursor = 0;
 
   while (cursor < text.length) {
@@ -739,32 +767,20 @@ function stripComment(text) {
       }
       if (back < 0 || ':,{[-'.includes(text[back])) {
         unclosed = true;
+        unclosedDouble = unclosedDouble || character === '"';
       }
       cursor += 1;
       continue;
     }
 
     if (character === '#' && (cursor === 0 || /\s/.test(text[cursor - 1]))) {
-      return { text: text.slice(0, cursor), unclosed };
+      return { text: text.slice(0, cursor), unclosed, unclosedDouble };
     }
 
     cursor += 1;
   }
 
-  return { text, unclosed };
-}
-
-// A double-quoted scalar may be CONTINUED onto the next line by ending this one with a
-// backslash, and YAML folds the break away: `"node-versio\` / `n": '20'` is the key
-// `node-version`, spelled across two lines. A line-based scanner never sees that scalar
-// whole, so neither the key rule nor the literal rule can fire — the pin simply passes.
-//
-// Detected structurally rather than guessed at: subtract every scalar that CLOSES on this
-// line (single-quoted first, so a double quote living inside one is gone before
-// double-quoted scalars are paired), and any double quote still standing opened a scalar
-// this line does not close.
-function continuesScalar(text) {
-  return text.replace(CLOSED_SQ_SCALAR, '').replace(CLOSED_DQ_SCALAR, '').includes('"');
+  return { text, unclosed, unclosedDouble };
 }
 
 // A workflow that never calls setup-node yields no steps, so the pin check is
@@ -800,7 +816,7 @@ function checkWorkflowNodePin(file) {
     // `${{ }}` into a `run:` body before any shell sees it, so a read there is a real
     // read, and literal text carries no YAML comment to strip.
     if (isBlockBody[index]) {
-      if (line.includes(REPO_NODE_VERSION_VAR)) {
+      if (REPO_NODE_VERSION_READ.test(line)) {
         fail(
           'workflows',
           `${file}:${index + 1} reads ${REPO_NODE_VERSION_VAR}; pin Node through ${NVMRC}, ` +
@@ -810,14 +826,14 @@ function checkWorkflowNodePin(file) {
       return;
     }
 
-    const { text: stripped, unclosed } = stripComment(line);
+    const { text: stripped, unclosed, unclosedDouble } = stripComment(line);
 
     // Read off the STRIPPED line, so a note about the variable is not a read — except
     // where the strip walked past a quote opening a scalar the line never closes. There a
     // `#` may be literal text inside a multi-line quoted value whose `${{ }}` GitHub still
     // expands, and cutting at it would hide a real read. Over-counting a mention costs a
     // reword; under-counting a read leaves the gate green on a pin nobody can review.
-    if ((unclosed ? line : stripped).includes(REPO_NODE_VERSION_VAR)) {
+    if (REPO_NODE_VERSION_READ.test(unclosed ? line : stripped)) {
       fail(
         'workflows',
         `${file}:${index + 1} reads ${REPO_NODE_VERSION_VAR}; pin Node through ${NVMRC}, ` +
@@ -847,7 +863,13 @@ function checkWorkflowNodePin(file) {
       );
     }
 
-    if (continuesScalar(stripped)) {
+    // A double-quoted scalar may be CONTINUED onto the next line by ending this one with
+    // a backslash, and YAML folds the break away: `"node-versio\` / `n": '20'` is the key
+    // `node-version` spelled across two lines. A line-based scanner never sees that scalar
+    // whole, so neither the key rule nor the literal rule can fire and the pin passes.
+    // `stripComment`'s walk is what decides this, so a `"` inside a plain scalar or inside
+    // another quoted one is not mistaken for a continuation.
+    if (unclosedDouble) {
       fail(
         'workflows',
         `${file}:${index + 1} continues a double-quoted scalar past the end of the line; ` +
