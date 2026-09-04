@@ -1,5 +1,5 @@
 import colorTheme from '@/components/ui-color-theme';
-import { golos } from '@/config/Fonts/golos';
+import { GOLOS_TEXT_FAMILY } from '@/config/Fonts/families';
 
 export default {
   wrapper: {
@@ -48,7 +48,7 @@ export default {
   secondTitle: {
     maxWidth: '23.313rem',
     pb: '2rem',
-    fontFamily: golos.style.fontFamily,
+    fontFamily: GOLOS_TEXT_FAMILY,
     color: colorTheme.palette.darkPrimary.main,
     fontSize: '1.75rem',
     fontStyle: 'normal',

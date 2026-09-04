@@ -1,13 +1,8 @@
-import { Toolbar, ThemeProvider } from '@mui/material';
+import { UiToolbar } from '@vilnacrm/ui-toolkit';
 
-import { theme } from './theme';
-
-function UiToolbar({ children }: { children: React.ReactNode }): React.ReactElement {
-  return (
-    <ThemeProvider theme={theme}>
-      <Toolbar>{children}</Toolbar>
-    </ThemeProvider>
-  );
-}
-
+/**
+ * `UiToolbar` now ships from `@vilnacrm/ui-toolkit`. This module stays as the
+ * import seam so existing `@/components/ui-toolbar` call sites and the
+ * `@/components` barrel are untouched by the swap.
+ */
 export default UiToolbar;

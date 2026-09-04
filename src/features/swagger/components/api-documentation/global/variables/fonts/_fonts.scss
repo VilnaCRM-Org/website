@@ -1,2 +1,6 @@
-$golos: __golos_58e94b, __golos_Fallback_58e94b;
-$inter: __inter_74e140;
+// These referenced `next/font`'s generated family names (`__golos_<hash>`), which
+// only existed while the fonts were declared through `next/font/local` — and which
+// silently changed whenever that hash was regenerated. The faces are now declared
+// under their real names in `styles/global.css`, so reference those instead.
+$golos: 'Golos Text', sans-serif;
+$inter: 'Inter', sans-serif;

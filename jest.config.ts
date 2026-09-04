@@ -181,7 +181,17 @@ const config: Config = {
   // server suite cannot import the real modules and would be reduced to testing
   // hand-written doubles again (#381). Requests that genuinely point at a `.js`
   // file still resolve to it — `.js` leads `moduleFileExtensions`.
-  moduleNameMapper: { '^(\\.{1,2}/.*)\\.js$': '$1' },
+  moduleNameMapper: {
+    '^(\\.{1,2}/.*)\\.js$': '$1',
+    // `@vilnacrm/ui-toolkit` is ESM-only: its `exports` map declares an `import`
+    // condition and no `require` one, so Jest's CJS resolver cannot find it at
+    // all. Point the bare specifier straight at the built bundle (and the
+    // stylesheet subpath) and let `transformIgnorePatterns` below hand the ESM
+    // to babel-jest.
+    '^@vilnacrm/ui-toolkit$': '<rootDir>/node_modules/@vilnacrm/ui-toolkit/build/index.mjs',
+    '^@vilnacrm/ui-toolkit/styles\\.css$':
+      '<rootDir>/node_modules/@vilnacrm/ui-toolkit/build/index.css',
+  },
   testPathIgnorePatterns: [
     '/node_modules/',
     '/.next/',
@@ -214,7 +224,7 @@ export default async () => {
     ...nextJestConfig,
     transformIgnorePatterns: [
       // Allow transforming these ESM-only packages from the hoisted node_modules
-      '/node_modules/(?!(uuid|@faker-js/faker)/)',
+      '/node_modules/(?!(uuid|@faker-js/faker|@vilnacrm/ui-toolkit)/)',
     ],
   };
 };

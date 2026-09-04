@@ -1,39 +1,8 @@
-import { ThemeProvider, Typography } from '@mui/material';
-import React from 'react';
+import { UiTypography } from '@vilnacrm/ui-toolkit';
 
-import theme from './theme';
-import { UiTypographyProps } from './types';
-
-// Props are forwarded through an explicit allowlist, so anything a caller needs
-// on the rendered element has to be named here — `aria-live`/`aria-atomic` are
-// listed because the form validation message is a live region (#382 F3).
-function UiTypography({
-  sx,
-  children,
-  component,
-  variant,
-  id,
-  role,
-  htmlFor,
-  'aria-live': ariaLive,
-  'aria-atomic': ariaAtomic,
-}: UiTypographyProps): React.ReactElement {
-  return (
-    <ThemeProvider theme={theme}>
-      <Typography
-        sx={sx}
-        component={component || 'p'}
-        variant={variant}
-        id={id}
-        role={role}
-        htmlFor={htmlFor}
-        aria-live={ariaLive}
-        aria-atomic={ariaAtomic}
-      >
-        {children}
-      </Typography>
-    </ThemeProvider>
-  );
-}
-
+/**
+ * `UiTypography` now ships from `@vilnacrm/ui-toolkit`. This module stays as the
+ * import seam so existing `@/components/ui-typography` call sites and the
+ * `@/components` barrel are untouched by the swap.
+ */
 export default UiTypography;

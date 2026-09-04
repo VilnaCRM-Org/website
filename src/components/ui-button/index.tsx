@@ -1,44 +1,24 @@
-import { Button, ThemeProvider } from '@mui/material';
+import { UiButton as ToolkitUiButton } from '@vilnacrm/ui-toolkit';
+import React from 'react';
 
-import { theme } from './theme';
 import { UiButtonProps } from './types';
 
-function UiButton({
-  variant,
-  size,
-  disabled,
-  fullWidth,
-  component,
-  onClick,
-  type,
-  href,
-  children,
-  sx,
-  name,
-  ...rest
-}: UiButtonProps): React.ReactElement {
-  const componentProps = component ? { component } : {};
-  const hrefProps = href ? { href } : {};
+/**
+ * `UiButton` renders the `@vilnacrm/ui-toolkit` button. The adapter survives the
+ * swap only to re-add the `rel`/`target` anchor props the toolkit forwards but
+ * does not declare — see `./types` — and to keep MUI's `href` contract the
+ * component this replaced had: an empty `href` makes MUI render an `<a>` with no
+ * destination instead of the `<button>` the caller asked for, so a falsy value
+ * is dropped rather than forwarded. Everything else passes straight through.
+ */
+function UiButton({ rel, target, href, ...buttonProps }: UiButtonProps): React.ReactElement {
+  const anchorProps: { rel?: string; target?: string; href?: string } = {
+    ...(rel ? { rel } : {}),
+    ...(target ? { target } : {}),
+    ...(href ? { href } : {}),
+  };
 
-  return (
-    <ThemeProvider theme={theme}>
-      <Button
-        variant={variant}
-        size={size}
-        disabled={disabled}
-        fullWidth={fullWidth}
-        type={type}
-        onClick={onClick}
-        sx={sx}
-        name={name}
-        {...componentProps}
-        {...hrefProps}
-        {...rest}
-      >
-        {children}
-      </Button>
-    </ThemeProvider>
-  );
+  return <ToolkitUiButton {...buttonProps} {...anchorProps} />;
 }
 
 export default UiButton;
