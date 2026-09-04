@@ -29,6 +29,17 @@ Pages live under `pages/` (Next.js pages router, static export).
 4. Add tests per [`agents.md`](../agents.md): a client render test and, when the
    route has behaviour, a Playwright e2e spec under `src/test/e2e`.
 
+The static export is flat: `pages/contact.tsx` becomes `out/contact.html`, not
+`out/contact/index.html`. Reaching it as `/contact` therefore depends on the CloudFront
+edge function — [`scripts/cloudfront_routing.js`](../scripts/cloudfront_routing.js)
+hard-404s any extensionless single-segment path that is not in its `ROUTE_MAP`, so a
+new top-level route needs an entry there mapping `/contact` to `/contact.html` (and a
+row in the edge spec, which is gated at 100% coverage). Match the flat filename: the
+map's existing `/about` entry points at `/about/index.html`, a shape this export does
+not produce, and there is no `pages/about.tsx` to reach — do not copy it. A page that
+is only ever fetched with its `.html` extension — like `pages/offline.tsx`, which the
+service worker serves from cache as `/offline.html` — needs no edge change.
+
 ## Add a feature
 
 Features follow the bulletproof-react layout, enforced by dependency-cruiser

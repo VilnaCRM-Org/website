@@ -21,7 +21,6 @@ lint-next	ci	.github/workflows/static-testing.yml	Executed through `make lint`, 
 lint-tsc	ci	.github/workflows/static-testing.yml	Executed through `make lint`, which depends on `lint-tsc`.
 lint-md	ci	.github/workflows/static-testing.yml	Executed through `make lint`, which depends on `lint-md`.
 lint	ci	.github/workflows/static-testing.yml	Executed directly by the static testing workflow.
-lint-node-version	ci	.github/workflows/static-testing.yml	Executed through `make lint`, which depends on `lint-node-version`; every drift and vacuity path of scripts/ci/check-node-version-sources.sh is additionally pinned by tests/bats/node_version_sources.bats.
 husky	bats	tests/bats/makefile_targets.bats	Validated with a stubbed bun invocation.
 storybook-start	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Storybook binary.
 storybook-build	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Storybook binary.
@@ -117,3 +116,7 @@ lint-prod-guardrails	bats	tests/bats/makefile_targets.bats	Executed through `mak
 release-audit-dry-run	bats	tests/bats/release_audit.bats	Host-only dry run of the release audit; the script it wraps is covered end to end (record, dedup, escalation, sweep, no-git invariant) by release_audit.bats.
 lint-vulns	bats	tests/bats/makefile_targets.bats	Validated host-only: ensure-osv.sh provisioning (idempotent) plus scan-vulns.sh census mode with a stubbed scanner that exits 1 as the real one does on findings, and the diff mode's fail-closed guard when the base ref is unreachable.
 scan-vulns-census	bats	tests/bats/makefile_targets.bats	Validated as an alias that runs lint-vulns in advisory census mode with a stubbed scanner.
+stop-prod	bats	tests/bats/makefile_targets.bats	Validated in both modes: Docker Compose down by default, the host-stack helper under HOST_STACK=1.
+playwright-install	bats	tests/bats/makefile_targets.bats	Validated in both modes: a no-op notice by default, the host browser install under HOST_STACK=1.
+lint-pins	ci	.github/workflows/static-testing.yml	Executed through `make lint`, which depends on `lint-pins`; also validated host-only in tests/bats/makefile_targets.bats.
+require-docker-stack	bats	tests/bats/makefile_targets.bats	Validated in both modes: a no-op by default, a fast failure under HOST_STACK=1 for the Docker-only K6 targets.

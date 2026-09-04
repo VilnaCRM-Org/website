@@ -100,15 +100,26 @@ the same command against the same image. Targets that drive Docker itself, audit
 image, or need a toolchain the image does not ship stay on the host in both modes — among
 them `lint-metrics`, `test-bats`, `generate-localization`, `build-out`, the prod-stack
 suites (`test-e2e`, `test-visual`, `test-memory-leak`, `load-tests`, `lighthouse-*`), and
-the host-only lint gates `lint-docker-policy`, `lint-security-txt`, `lint-node-version`,
+the host-only lint gates `lint-docker-policy`, `lint-pins`, `lint-security-txt`,
 `lint-openapi`, `lint-vulns` and `lint-workflows`. Watch `lint-docker-policy`,
-`lint-security-txt` and `lint-node-version`: all three are members of the `make lint`
-aggregate, so part of that run executes on the host by design. Append `EXEC_MODE=host` to bypass Docker and run a target straight from
-`node_modules/.bin` (for example `EXEC_MODE=host make start` runs `next dev` directly);
-that escape hatch exists for the Husky hooks, the `run-*-dind` wrappers, and the
-Lighthouse audits, and it requires a host `bun install`. `EXEC_MODE` accepts only
-`container` (default) or `host`; anything else is a hard error. It is deliberately not
-derived from the ambient `CI` variable, which GitHub Actions sets on every step.
+`lint-pins` and `lint-security-txt`: all three are members of the `make lint` aggregate,
+so part of that run executes on the host by design. Append `EXEC_MODE=host` to bypass
+Docker and run a target straight from `node_modules/.bin` (for example `EXEC_MODE=host
+make start` runs `next dev` directly); that escape hatch exists for the Husky hooks, the
+`run-*-dind` wrappers, and the Lighthouse audits, and it requires a host `bun install`.
+`EXEC_MODE` accepts only `container` (default) or `host`; anything else is a hard error.
+It is deliberately not derived from the ambient `CI` variable, which GitHub Actions sets
+on every step.
+
+`.devcontainer/devcontainer.json` boots the same toolchain in Codespaces, VS Code Dev
+Containers, or an agent sandbox: it builds the repo `Dockerfile`'s `base` stage, so Node,
+Bun and the build toolchain are declared exactly once. Its `remoteEnv` sets
+`EXEC_MODE=host` — it IS the container, so a target that routed through
+`docker compose exec` would try to exec into itself with no Docker socket. `make lint-pins`
+asserts that value, and `.github/workflows/devcontainer-smoke.yml` proves it by running
+`make lint` and `make test-unit-all` inside a freshly built container.
+The browser suites are the one gap — `base` is Alpine/musl and Playwright ships no musl
+browser builds, which is why the repo runs Playwright from a separate glibc image.
 
 ## Testing
 
@@ -135,8 +146,15 @@ make lighthouse-mobile  # Lighthouse audit (mobile)
 
 Unit suites run in the dev container and start it if it is not already up; append
 `EXEC_MODE=host` to run them on the host instead (e.g. `EXEC_MODE=host make
-test-unit-all`). E2E and visual specs run Playwright inside the prod/test compose stack;
-E2E uses Mockoon to mock the API. The test-layer map and coverage policy live in
+test-unit-all`). E2E and visual specs default to Playwright inside the prod/test compose
+stack, where E2E uses Mockoon to mock the API; `HOST_STACK=1` runs them (and memlab)
+against a host-built static export instead, for machines with no Docker daemon. Fetch the
+browsers once with `HOST_STACK=1 make playwright-install`. `HOST_STACK` is deliberately
+separate from `CI` — GitHub Actions sets `CI=true`, so folding the two together would move
+the e2e, visual, and memory-leak jobs off the containers their baselines come from. K6 load
+tests stay Docker-only. Playwright runs four projects: chromium, firefox, webkit, and
+`mobile-chrome` (Pixel 7 emulation — touch, mobile UA, DPR 2.625) scoped to
+`src/test/e2e/mobile/**`. The test-layer map and coverage policy live in
 [`agents.md`](agents.md).
 
 ### Flake and leak gates (issues #359, #354)
@@ -203,7 +221,7 @@ TEST_ENV=server bun x jest src/test/apollo-server/<spec>.test.ts
 make format               # Prettier (run before lint)
 make lint                 # lint-next + lint-tsc + lint-md + lint-deps + lint-api-versions
                           #   + lint-docker-policy + lint-headers + lint-security-txt
-                          #   + lint-prod-guardrails + lint-node-version
+                          #   + lint-prod-guardrails + lint-pins
 make lint-next            # ESLint (flat config, eslint.config.mjs)
 make lint-tsc             # TypeScript (tsc, no emit)
 make lint-md              # markdownlint
@@ -213,22 +231,25 @@ make lint-docker-policy   # Dockerfile registry (no Docker Hub) + digest-pin pol
 make lint-headers         # edge security-header policy (config/security-headers.json)
 make lint-security-txt    # RFC 9116 security.txt fields + Expires runway
 make lint-prod-guardrails # production-safety invariants (see #383 below)
-make lint-node-version    # .nvmrc vs Dockerfile bases, engines.node, setup-node steps
+make lint-pins            # Node/Bun/Playwright pin drift across .nvmrc, engines, Dockerfiles, CI
 ```
 
-`.nvmrc` is the single authoritative Node version. `make lint-node-version`
-(`scripts/ci/check-node-version-sources.sh`, issue #335) fails when any other source
+`.nvmrc` is the single authoritative Node version. `make lint-pins`
+(`scripts/ci/check-version-pins.mjs`, issues #338 and #335) fails when any other source
 disagrees with it — a `FROM …node:<version>` base image in any Dockerfile,
 `package.json` `engines.node` (which must be the caret over the exact `.nvmrc` version,
 not a looser range that merely admits it), an `actions/setup-node` step that does not
 read `node-version-file: '.nvmrc'`, or a workflow reaching for a `vars.NODE_VERSION`
-repository variable. It also refuses two spellings it cannot read a line at a
-time: a mapping key written with YAML escapes (`"node-versio\x6E":`) and a double-quoted
-scalar continued onto the next line with a trailing backslash. Both name the same key to
-a YAML parser, so the gate reports the spelling rather than guessing at the decoded one
-and passing a literal pin it guessed wrong about. Bump `.nvmrc` first, then let the gate name whatever still lags.
-Do not confuse it with `make check-node-version`, which checks the _running_ Node
-against `engines`.
+repository variable, whose value cannot be reviewed from inside the repository. It also
+refuses three spellings it cannot read: a mapping key written with YAML escapes
+(`"node-versio\x6E":`), a double-quoted scalar continued onto the next line with a
+trailing backslash, and a setup-node step written as a compact flow mapping. All three
+name something a YAML parser resolves and a line-at-a-time scanner cannot, so the gate
+reports the spelling rather than guessing and passing a literal pin it guessed wrong
+about. It fails equally when no `actions/setup-node` step is found at all, so the rule
+can never pass vacuously. The same gate covers the Bun and Playwright pins.
+Bump `.nvmrc` first, then let the gate name whatever still lags. Do not confuse it with
+`make check-node-version`, which checks the _running_ Node against `engines`.
 
 `lint-headers` executes the checked-in CloudFront edge functions against representative
 page, asset, and 404 responses and fails if any header in `config/security-headers.json`
@@ -423,6 +444,30 @@ ignore needs an `id`, a `reason`, and an unexpired `ignoreUntil`; all three are 
 run under the _intersection_ of the base ref's ignores and the working tree's, so an ignore a
 change adds — or removes — cannot alter what its own gate suppresses.
 
+### Offline posture and the service worker (issue #338)
+
+`public/layout/favicon/site.webmanifest` declares `display: "standalone"`, so the site is
+installable. `public/sw.js` is what makes that promise honest: it precaches exactly one
+document (`/offline.html`, exported from `pages/offline.tsx`) and serves it only when a
+same-origin **navigation** fails. Every other request returns before `respondWith`, so the
+browser handles it as if no worker existed — that is what keeps the Playwright `page.route`
+mocks and the Mockoon-backed e2e stack observing real requests, and what stops a stale
+build being served after a deploy. Nothing is written to the cache at runtime.
+
+Constraints to respect when touching it:
+
+- Write the worker through `globalThis` member access only. `public/` is linted, and bare
+  `self`/`addEventListener` are `no-restricted-globals` errors while `clients`/`skipWaiting`
+  are `no-undef` errors. Suppressing either is banned.
+- The fallback is reached as `/offline.html`, never `/offline`: the CloudFront edge function
+  hard-404s an extensionless single-segment path.
+- `public/sw.js` is covered by the `edge` Jest layer at 100% per-file
+  (`make test-unit-edge`), the same way `scripts/cloudfront_routing.js` is. Never ship a
+  hand-written runtime file that no layer covers.
+- Every navigable URL in the manifest is asserted against the real route set by
+  `src/test/unit/pwa/manifest-contract.test.ts` — that gate exists because the manifest once
+  shipped a shortcut to a `/dashboard` route that does not exist.
+
 ## Continuous Integration (parallel PR pipeline)
 
 Each PR check is its own workflow on its own runner, so they run in parallel and a PR is
@@ -449,9 +494,11 @@ tiered off, weakened, or removed.
   all, so `ci-test-contract` is deliberately the only `CI_TEST_TARGETS` entry that skips
   `$(CI_TESTS)`. Converting the workflow is the prerequisite for moving it.
 
-  Jobs that stay on the host entirely: `bats-testing` (bats-core needs bash, absent from the
-  alpine image, and the suite's subject is the host side of the Makefile), `commitlint`
-  (needs `git`, also absent), `rust-code-analysis` (a host-only Rust binary), and the
+  Jobs that stay on the host entirely: `bats-testing` (its subject IS the host side of the
+  Makefile — the docker/docker-compose command lines the other gates now exec through — so
+  running it in the container would test the wrong machine; note the base stage does now
+  install `bash`, so the bats runner itself is no longer the blocker), `commitlint`
+  (needs `git`, absent from the image), `rust-code-analysis` (a host-only Rust binary), and the
   prod-stack suites the issue scopes out — `e2e-testing`, `visual-testing`,
   `memory-leak-testing`, `load-testing`, `a11y-testing` and `performance-testing`, which
   drive the prod/test compose stacks. Two of them additionally pass `EXEC_MODE=host`:
@@ -467,7 +514,8 @@ tiered off, weakened, or removed.
   the default branch writes it: a cache written on a PR branch is readable by that PR alone,
   and the repository shares one 10 GB quota.
 - **Matrices.** The Playwright e2e suite splits across a `--shard` matrix
-  (`test-e2e-shard`), Lighthouse runs `desktop`/`mobile` in parallel, the K6 load suites run
+  (`test-e2e-shard`) covering all four projects, so the `mobile-chrome` emulation specs are
+  gated on every PR; Lighthouse runs `desktop`/`mobile` in parallel, the K6 load suites run
   in parallel, and mutation testing runs as a shard matrix plus a merge gate.
 - **Mutation sharding.** `make test-mutation-shard` (with `MUTATION_SHARD_INDEX` /
   `MUTATION_SHARD_TOTAL`) writes a per-shard report (`stryker.shard.config.mjs`, with

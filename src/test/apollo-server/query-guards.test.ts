@@ -448,13 +448,42 @@ describe('limit resolution from the environment', () => {
 });
 
 describe('introspection gating', () => {
+  const originalNodeEnv: string | undefined = process.env.NODE_ENV;
+
+  afterEach(() => {
+    if (originalNodeEnv === undefined) {
+      delete process.env.NODE_ENV;
+    } else {
+      process.env.NODE_ENV = originalNodeEnv;
+    }
+  });
+
   it.each([
     ['development', true],
     ['production', false],
     ['test', false],
-    [undefined, false],
   ])('is %s -> %s', (nodeEnv, expected) => {
     expect(introspectionEnabled(nodeEnv)).toBe(expected);
+  });
+
+  // `nodeEnv` is a DEFAULT parameter, and JavaScript cannot tell an omitted argument
+  // from an explicit `undefined` — both fall through to `process.env.NODE_ENV`. So the
+  // fail-closed case has to control the ambient value instead of passing `undefined` and
+  // hoping. Left uncontrolled it asserted whatever the runner happened to export, which
+  // is green under Jest's default `NODE_ENV=test` and red inside the dev container #338
+  // adds, where `remoteEnv` sets `NODE_ENV=development` exactly as the compose dev
+  // service does.
+  it('stays off when NODE_ENV is unset, however the argument is spelled', () => {
+    delete process.env.NODE_ENV;
+
+    expect(introspectionEnabled(undefined)).toBe(false);
+    expect(introspectionEnabled()).toBe(false);
+  });
+
+  it('reads the ambient NODE_ENV when the argument is omitted', () => {
+    process.env.NODE_ENV = 'development';
+
+    expect(introspectionEnabled()).toBe(true);
   });
 });
 

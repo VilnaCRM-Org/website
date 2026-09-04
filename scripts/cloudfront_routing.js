@@ -92,6 +92,14 @@ var ALLOWED_FILES = Object.freeze({
   '/404.html': true,
   '/favicon.svg': true,
   '/index.html': true,
+  // The offline shell and the worker that precaches it (issue #338). Both are
+  // root-level exports, and root-level files are exact-matched rather than
+  // extension-matched, so these two entries are what publish them. Without
+  // `/offline.html` the precache fetch takes the synthetic 404 and the worker falls back
+  // to its inline 503 document; without `/sw.js` the registration itself 404s and no
+  // worker is ever installed.
+  '/offline.html': true,
+  '/sw.js': true,
   '/supportUkraine.svg': true,
   '/swagger-schema.json': true,
   '/swagger.html': true,

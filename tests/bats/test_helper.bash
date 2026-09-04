@@ -28,6 +28,21 @@ EOF
   chmod +x "$STUB_BIN_DIR/$name"
 }
 
+# A `serve` stub that stays up. `host-stack.sh start` only reports success while
+# the pid it recorded is still running its own invocation — a stub that exits at
+# once is (correctly) read as "the port is answered by somebody else" — and `stop`
+# needs a live process to identify. `sleep` is bounded rather than infinite: a test
+# that fails before killing it must not leave a process behind.
+create_long_running_serve_stub() {
+  cat > "$STUB_BIN_DIR/serve" <<'EOF'
+#!/usr/bin/env bash
+printf 'serve %s\n' "$*" >> "${COMMAND_LOG:?}"
+sleep 20
+EOF
+
+  chmod +x "$STUB_BIN_DIR/serve"
+}
+
 create_curl_stub() {
   cat > "$STUB_BIN_DIR/curl" <<'EOF'
 #!/usr/bin/env bash
@@ -42,6 +57,16 @@ create_docker_stub() {
   cat > "$STUB_BIN_DIR/docker" <<'EOF'
 #!/usr/bin/env bash
 printf 'docker %s\n' "$*" >> "${COMMAND_LOG:?}"
+
+# Lets a test stand in for a machine with no running daemon, which is the one
+# state the Makefile turns into a HOST_STACK=1 hint rather than a raw error.
+if [ "$1" = "info" ]; then
+  if [ "${FAKE_DOCKER_DAEMON_DOWN:-0}" = "1" ]; then
+    printf 'Cannot connect to the Docker daemon.\n' >&2
+    exit 1
+  fi
+  exit 0
+fi
 
 if [ "$1" = "network" ] && [ "$2" = "ls" ]; then
   if [ "${FAKE_DOCKER_NETWORK_EXISTS:-0}" = "1" ]; then
@@ -131,7 +156,7 @@ setup_makefile_test_env() {
   create_generic_stub markdownlint
   create_generic_stub storybook
   create_generic_stub jest
-  create_generic_stub serve
+  create_long_running_serve_stub
   create_generic_stub playwright
   create_generic_stub lhci
   create_generic_stub node
@@ -143,15 +168,6 @@ setup_makefile_test_env() {
   # CI orchestration targets (ci-lint, ci-test, pr-comments) shell out to
   # repository scripts; copy them so recursive make runs resolve their paths.
   cp -R "$PROJECT_ROOT/scripts" "$MAKEFILE_SANDBOX/scripts"
-  # lint-node-version reads the repository's Node version sources directly rather
-  # than through a stubbed binary, so the sandbox needs them too. Copying the real
-  # files keeps the sandbox agreeing with the repository by construction; the
-  # drift cases are covered against fixtures in node_version_sources.bats.
-  cp "$PROJECT_ROOT/.nvmrc" "$MAKEFILE_SANDBOX/.nvmrc"
-  cp "$PROJECT_ROOT/package.json" "$MAKEFILE_SANDBOX/package.json"
-  cp "$PROJECT_ROOT"/*.Dockerfile "$PROJECT_ROOT/Dockerfile" "$MAKEFILE_SANDBOX/"
-  mkdir -p "$MAKEFILE_SANDBOX/.github/workflows"
-  cp -R "$PROJECT_ROOT/.github/workflows/." "$MAKEFILE_SANDBOX/.github/workflows/"
 }
 
 setup_ci_script_test_env() {
@@ -281,4 +297,21 @@ assert_output_contains() {
     printf '%s\n' "$actual_output" >&2
     return 1
   fi
+}
+
+# The host stack starts `serve` in the background, so its stub can append to the
+# command log a beat after the command under test has already returned.
+assert_log_contains_eventually() {
+  local expected="$1"
+
+  # `_` rather than a named counter: the loop only bounds the number of retries,
+  # nothing reads the value.
+  for _ in 1 2 3 4 5; do
+    if grep -F -- "$expected" "$COMMAND_LOG" >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 0.2
+  done
+
+  assert_log_contains "$expected"
 }

@@ -1,9 +1,13 @@
 {
+  "id": "/",
   "name": "VilnaCRM",
   "short_name": "VilnaCRM",
   "start_url": "/",
   "scope": "/",
   "description": "VilnaCRM platform for customer relationship management",
+  "lang": "uk",
+  "dir": "ltr",
+  "categories": ["business", "productivity"],
   "orientation": "any",
   "display": "standalone",
   "background_color": "#ffffff",
@@ -20,6 +24,20 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "API documentation",
+      "short_name": "API",
+      "url": "/swagger",
+      "icons": [
+        {
+          "src": "/layout/favicon/web-app-manifest-192x192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     }
   ]
 }
