@@ -592,16 +592,26 @@ function stepPinsNvmrc(lines, isKeyLine, step) {
   return false;
 }
 
-// A double-quoted scalar spelled with YAML escape sequences. `"node-versio\x6E"` is
-// the mapping key `node-version` to every YAML reader and to setup-node, but decoding
-// escapes is a parser's job, not a scanner's. Rather than guess at the decoded
-// spelling — and wave through a literal pin it guessed wrong about — this gate reports
-// the spelling and refuses: an escaped key is either a key it cannot read or an
-// obfuscation of one it must, and both have to be spelled plainly before the file can
-// be vouched for. The escape is REQUIRED (`+`, not `*`), so an ordinary quoted key is
-// untouched, and the rule only ever runs on a line already known to be structure —
-// never inside a `run: |` body.
-const ESCAPED_SCALAR = String.raw`"[^"\\]*(?:\\.[^"\\]*)+"`;
+// A double-quoted key spelled with a NUMERIC YAML escape. `"node-versio\x6E"` is the
+// mapping key `node-version` to every YAML reader and to setup-node, but decoding
+// escapes is a parser's job, not a scanner's — and a scanner that reads the key
+// literally sees an unrelated name and waves the literal pin beside it straight
+// through. Rather than guess at the decoded spelling, this reports the spelling and
+// refuses: such a key is either one this gate cannot read or an obfuscation of one it
+// must, and both have to be spelled plainly before the file can be vouched for.
+//
+// Scoped to `\x`, `\u` and `\U` because those are the only escapes that can ENCODE a
+// character of a key name. Every other double-quoted escape produces a character no
+// key this scanner looks for contains — `\"` a quote, `\\` a backslash, `\n`/`\t`/`\0`
+// and friends a control character — so they cannot rename a key, and DQ_SCALAR already
+// consumes them correctly wherever they appear. Refusing those too would reject
+// well-formed YAML the walk reads exactly right, which is a false rejection with no
+// hole behind it.
+//
+// The escape is REQUIRED (`+`, not `*`), so an ordinary quoted key is untouched, and
+// the rule only ever runs on a line already known to be structure — never inside a
+// `run: |` body.
+const ESCAPED_SCALAR = String.raw`"(?:[^"\\]|\\[^xuU])*\\[xuU][^"\\]*(?:\\.[^"\\]*)*"`;
 const ESCAPED_KEY = new RegExp(String.raw`^\s*(?:-\s+)?${ESCAPED_SCALAR}${WS}:`);
 const FLOW_ESCAPED_KEY = new RegExp(
   String.raw`^\s*(?:-\s+)?${ANY_KEY}${WS}:\s*\{\s*${FLOW_ENTRIES}${ESCAPED_SCALAR}${WS}:`
@@ -630,7 +640,7 @@ const SETUP_NODE_REF = 'actions/setup-node@';
 // an action from a `uses:` key and nowhere else, so a reference sitting in one of those is
 // data, and refusing it would be a false rejection — the multi-line `run: |` spelling of
 // the very same text is already skipped as a block body, so refusing the one-line spelling
-// would make the verdict depend on scalar style rather than on meaning.
+// would leave the verdict depending on scalar style rather than on meaning.
 //
 // The exemption is withheld in exactly the two places the value may not be what it looks
 // like: when the key is `uses` itself, and when the value opens a flow collection, where a

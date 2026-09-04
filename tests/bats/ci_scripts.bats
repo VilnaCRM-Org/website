@@ -455,7 +455,7 @@ literal node-version in a workflow|.github/workflows/bats-testing.yml|sed -i "s#
 setup-node step with no version file|.github/workflows/bats-testing.yml|sed -i "/node-version-file:/d" .github/workflows/bats-testing.yml
 literal node-version in a .yaml workflow|.github/workflows/rogue.yaml|printf 'jobs:\n  a:\n    steps:\n      - uses: actions/setup-node@abc\n        with:\n          node-version: 20\n' > .github/workflows/rogue.yaml
 packageManager version|package.json|sed -i 's#"bun@[0-9.]*"#"bun@99.0.0"#' package.json
-engines.node range|package.json|sed -i 's#"node": "\^[0-9]*"#"node": "^99"#' package.json
+engines.node range|package.json|sed -i 's#"node": "\^[0-9.]*"#"node": "^99"#' package.json
 engines.bun floor|package.json|sed -i 's#">=[0-9.]*"#">=99.0.0"#' package.json
 playwright devDependency|package.json|sed -i 's#"@playwright/test": "[0-9.]*"#"@playwright/test": "99.0.0"#' package.json
 playwright runtime devDependency|package.json|sed -i 's#"playwright": "[0-9.]*"#"playwright": "99.0.0"#' package.json
@@ -1043,6 +1043,39 @@ YAML
   run_pin_gate
   [ "$status" -ne 0 ]
   assert_output_contains 'spells a mapping key with YAML escape sequences'
+}
+
+# The refusal is scoped to the escapes that can ENCODE a character of a key name.
+# `\"` produces a quote, which no key this scanner looks for contains, and the
+# double-quoted scalar pattern already consumes it correctly wherever it appears
+# — refusing it would reject well-formed YAML with no hole behind it. Both
+# spellings are asserted together so the boundary cannot drift in either
+# direction: widen the rule and the second case goes red, narrow it and the first
+# one does.
+@test "check-version-pins.mjs refuses only escapes that can rename a key" {
+  setup_pin_sandbox
+  write_pin_workflow
+
+  cat >> "$PIN_SANDBOX/.github/workflows/pinned.yml" <<'YAML'
+      - uses: ./.github/actions/noop
+        with:
+          "node-versio\U0000006E": '24.18.0'
+YAML
+
+  run_pin_gate
+  [ "$status" -ne 0 ]
+  assert_output_contains 'spells a mapping key with YAML escape sequences'
+
+  setup_pin_sandbox
+  write_pin_workflow
+
+  cat >> "$PIN_SANDBOX/.github/workflows/pinned.yml" <<'YAML'
+      - uses: actions/setup-node@v6
+        with: { "k\": v, z": 'x', node-version-file: '.nvmrc' }
+YAML
+
+  run_pin_gate
+  [ "$status" -eq 0 ]
 }
 
 @test "check-version-pins.mjs ignores an escaped key written inside a run block" {
