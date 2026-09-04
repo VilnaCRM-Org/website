@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/playwright:v1.57.0-jammy@sha256:6aca677c27a967caf7673d108ac67ffaf8fed134f27e17b27a05464ca0ace831
+FROM mcr.microsoft.com/playwright:v1.62.1-jammy@sha256:b3251f7ff1a9fa559a28d1c67eaa15fc1a9800f7845e82756caea7842967f615
 
 RUN apt-get update && apt-get install -y --no-install-recommends --fix-missing \
     python3=3.10.6-1~22.04.1 \
@@ -9,11 +9,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends --fix-missing \
 
 WORKDIR /app
 
-# The base image vendors its own Node (24.11.1 in v1.57.0-jammy), which is both
-# a different version from every other surface and below what the dependency
-# graph requires at runtime — mute-stream, pulled in by Stryker, needs ^24.15.0.
-# Install the exact version from .nvmrc over it so this image resolves the same
-# Node as the Dockerfiles and CI, rather than being exempted from the check.
+# The base image vendors its own Node (24.18.1 in v1.62.1-jammy), a different
+# version from every other surface — and one that moves whenever the image tag
+# does, silently, without touching .nvmrc. Install the exact version from
+# .nvmrc over it so this image resolves the same Node as the Dockerfiles and
+# CI, rather than being exempted from the check.
 #
 # /usr/local/bin precedes /usr/bin on PATH, so this shadows the vendored binary.
 #
