@@ -1,0 +1,73 @@
+name: devcontainer smoke
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.devcontainer/**'
+      # The devcontainer is built from the Dockerfile's `base` stage and installs
+      # from the lockfile, so a change to any of these can break container
+      # creation without touching .devcontainer. .dockerignore is included
+      # because it shapes the build context that stage is built from.
+      - 'Dockerfile'
+      - '.dockerignore'
+      - '.nvmrc'
+      - '.bun-version'
+      - 'package.json'
+      - 'bun.lock'
+      # The acceptance criterion below is two Makefile targets.
+      - 'Makefile'
+      # The lifecycle commands: onCreateCommand runs checkNodeVersion.js and
+      # postCreateCommand generates the localization bundle, so either can break
+      # container creation on its own.
+      - 'checkNodeVersion.js'
+      - 'scripts/generateLocalization.mjs'
+      - 'scripts/localizationGenerator.js'
+      - '.github/workflows/devcontainer-smoke.yml'
+  schedule:
+    - cron: '0 4 * * 1'
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    # Proves the contributor-facing promise of .devcontainer/devcontainer.json:
+    # a fresh clone opened in a dev container reaches a green lint and unit-test
+    # run with no host setup. docker-build-canary.yml builds the same `base`
+    # stage nightly, but only as a compose image — it never applies the
+    # devcontainer definition, never runs its lifecycle commands (the bind mount
+    # shadows the image's node_modules, so the install has to happen again at
+    # create time) and never runs a gate inside the result. This job is the only
+    # check that the definition, the mount and the lifecycle actually compose
+    # into a working environment.
+    #
+    # Scope note: the browser suites deliberately stay out. `base` is Alpine/musl
+    # and Playwright ships no musl browser builds — that is exactly why the repo
+    # runs Playwright from a separate glibc image (Playwright.Dockerfile). E2E
+    # and visual specs run from the host or through the compose test stack.
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Build the dev container and run the gates inside it
+        uses: devcontainers/ci@513af61f4de4f75d37e4438f184ba4358f0fc1ca # v0.3.1900000450
+        with:
+          # No imageName is published from this check; it only has to prove the
+          # container works.
+          push: never
+          # One `&&` chain rather than a multi-line block: the action hands
+          # runCmd to `bash -c` as a single string, and a newline-separated list
+          # would report only the last command's exit code — silently swallowing
+          # a lint failure.
+          runCmd: make lint EXEC_MODE=host && make test-unit-all EXEC_MODE=host

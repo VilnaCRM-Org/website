@@ -42,14 +42,22 @@ Before running the application, make sure the following tools are installed on y
   You can download and install Node.js from the official website, or use a version manager like
   nvm [Node Version Manager](https://github.com/nvm-sh/nvm) to easily manage versions.
 
-- **[Docker](https://docs.docker.com/engine/install/)** required for containerization and managing
+- **[Bun](https://bun.sh/)** (the version pinned in [`.bun-version`](.bun-version) and
+  `package.json`'s `packageManager`). Bun is the package manager, not the runtime — the
+  toolchain still runs on the Node pinned above.
+
+- **[Docker](https://docs.docker.com/engine/install/)** for containerization and managing
   isolated environments. Install Docker according to the instructions
   for your operating system. Follow the guide to ensure Docker is properly
   configured and running on your machine.
 
-- **[Docker Compose](https://docs.docker.com/compose/install/)** is needed to manage multi-container
-  Docker applications. Docker Compose is essential for starting up the
-  development environment and running the services defined in docker-compose.yml.
+- **[Docker Compose](https://docs.docker.com/compose/install/)** to manage multi-container
+  Docker applications. Docker Compose starts up the development environment and runs the
+  services defined in docker-compose.yml.
+
+Docker is the default execution substrate. Every gate except the K6 load suites has a
+Docker-free path documented under [Host mode](#host-mode-running-without-docker), and the
+dev container below packages the whole toolchain for Codespaces and agent sandboxes.
 
 #### 3. Run the Application
 
@@ -68,6 +76,31 @@ The command will:
 - The application will be up and running.
 
 Access the application at <http://localhost:3000>.
+
+#### 4. Or open it in a Dev Container
+
+[`.devcontainer/devcontainer.json`](.devcontainer/devcontainer.json) gives Codespaces, VS
+Code Dev Containers, and agent sandboxes a ready environment with no host setup: open the
+repository in a dev container and the toolchain is already correct.
+
+It builds the `base` stage of the repository [`Dockerfile`](Dockerfile) — the same stage
+`docker-compose.yml` builds for the `dev` service — so Node, Bun, and the build toolchain
+are declared exactly once and cannot drift from a second set of pins. It sets
+`EXEC_MODE=host`, so every `make` target inside the container runs the toolchain directly
+rather than trying to `docker compose exec` into itself.
+
+Inside the container:
+
+```bash
+  make lint EXEC_MODE=host
+  make test-unit-all EXEC_MODE=host
+```
+
+The browser suites are the one gap: the base image is Alpine (musl) and Playwright ships no
+musl browser builds, which is why the repository runs Playwright from a separate glibc
+image. Run the e2e, visual, and memory-leak suites from the host — see
+[Host mode](#host-mode-running-without-docker) — and the K6 load suites through Docker,
+since their runner is a container image.
 
 ## Project Commands
 
@@ -95,15 +128,17 @@ Linting & Formatting
 ```bash
   make lint-next: lints the codebase using Next.js rules
   make lint-tsc: runs static type checking with TypeScript
-  make lint-md: lints all markdown files (excluding CHANGELOG.md) using markdownlint
+  make lint-md: lints tracked markdown with markdownlint (see MD_LINT_ARGS for exclusions)
   make lint-deps: validates architecture/import boundaries with dependency-cruiser
   make lint-api-versions: verifies OpenAPI and GraphQL reference the same pinned user-service release
   make lint-docker-policy: enforces the Dockerfile registry + digest-pin policy
+  make lint-pins: fails when the Node, Bun, or Playwright pins drift between pin sites
   make lint-headers: verifies the edge security-header policy reaches every response
   make lint-security-txt: validates the RFC 9116 security.txt fields and Expires runway
   make lint-prod-guardrails: enforces the production-safety invariants (issue #383)
   make lint: runs all linters (ESLint, TypeScript, markdownlint, dependency-cruiser,
-    API versions, Docker policy, security headers, security.txt, production guardrails)
+    API versions, Docker policy, version pins, security headers, security.txt,
+    production guardrails)
   make lint-metrics: runs the rust-code-analysis complexity gate (host-only, not in make lint)
   make lint-contracts: validates the pinned user-service contracts (not in make lint; needs network)
   make lint-openapi: reports breaking upstream OpenAPI drift (host-only, needs network; advisory)
@@ -116,9 +151,10 @@ Linting & Formatting
 Testing
 
 ```bash
-  make test-unit-all: runs unit tests for both client and server environments
+  make test-unit-all: runs the client, server, and edge unit layers
   make test-unit-client: runs unit tests for the client using Jest
   make test-unit-server: runs unit tests for the server using Jest
+  make test-unit-edge: runs the edge layer (cloudfront_routing.js, public/sw.js; 100%)
   make test-integration: runs the integration layer (real Apollo transport, network stubbed)
   make test-integration-watch: runs the integration layer in watch mode
   make test-contract: checks the Mockoon mock against the committed OpenAPI contract
@@ -136,7 +172,15 @@ Testing
   make test-a11y-routes: runs the axe route scans inside the prod container
   make test-load: alias for load-tests (K6 homepage load tests)
   make test-load-swagger: alias for load-tests-swagger (K6 Swagger load tests)
+  make playwright-install: installs the Playwright browsers for a host-mode run
+  make stop-prod: tears down the prod stack (Docker compose, or the host stack)
 ```
+
+Playwright runs four projects: `chromium`, `firefox`, and `webkit` against the desktop
+viewport, plus `mobile-chrome` — real Pixel 7 emulation with touch input, a mobile user
+agent, and `devicePixelRatio` 2.625 — scoped to `src/test/e2e/mobile/**`. That scoping is
+deliberate: Playwright interpolates the project name into screenshot filenames, so an
+unscoped project would demand a second complete set of visual baselines.
 
 Local CI Orchestration
 
@@ -219,7 +263,9 @@ Docker
 ```
 
 Note: the following commands never run inside the dev container — they drive Docker
-itself, the prod/test compose stack, or the host toolchain directly:
+itself, the prod/test compose stack, or the host toolchain directly, so they ignore
+`EXEC_MODE`. The prod-stack suites below take `HOST_STACK=1` instead (see
+[Host mode](#host-mode-running-without-docker)):
 
 ```bash
   make test-e2e: starts production and runs end-to-end tests inside the prod container
@@ -227,16 +273,21 @@ itself, the prod/test compose stack, or the host toolchain directly:
   make test-e2e-ui: runs end-to-end tests with UI inside the prod container
   make test-visual-ui: runs visual tests with UI inside the prod container
   make test-memory-leak: runs memory leak tests using Memlab inside the prod container
+```
 
-  make load-tests: executes load tests using the K6 library
-  (uses "prod" as hostname, which maps to the Docker service)
+These take neither switch:
 
-  make husky: installs husky Git hooks locally
-  make update: runs locally on the host machine, not in a container
+```bash
+  make load-tests: executes load tests using the K6 library — Docker only, and
+  require-docker-stack refuses HOST_STACK=1 (uses "prod" as hostname, which maps to the
+  Docker service)
+
+  make husky: installs the Husky Git hooks — host toolchain in every mode
+  make update: runs bun update on the host machine, not in a container, in every mode
 ```
 
 💡 Tip: the npm-tool gates listed above run inside the dev container, which is exactly
-what CI does; the targets in the previous block stay on the host in both modes. To bypass
+what CI does; the targets in the two blocks above stay outside it in every mode. To bypass
 Docker and run a container-side one straight from `node_modules/.bin` — what the
 Husky hooks do, so a commit works with no daemon running — prefix it with
 `EXEC_MODE=host`. That path reads the host `node_modules`, which `make install`
@@ -245,6 +296,64 @@ populates alongside the container's.
 ```bash
   EXEC_MODE=host make start
 ```
+
+### Host mode (running without Docker)
+
+Docker is the default substrate for every target. Two independent switches move work onto
+the host. Both are additive: without them, no target changes meaning.
+
+- `EXEC_MODE=host` swaps `docker compose exec dev` for the host toolchain. It covers lint,
+  the unit and integration layers, Storybook, and Lighthouse.
+- `HOST_STACK=1` additionally replaces the Docker prod stack with a host one: it builds the
+  static export, serves it with `serve`, and runs Playwright from `node_modules`. It covers
+  the e2e, visual, and memory-leak suites.
+
+`HOST_STACK` is deliberately a switch of its own rather than another `EXEC_MODE` value.
+`EXEC_MODE` governs the dev container only, while the e2e, visual, and memory-leak
+workflows run against the Docker prod stack their baselines were produced in. Folding the
+two together would move three PR jobs off those containers without anyone asking for it.
+Neither switch is derived from the ambient `CI` variable, which GitHub Actions exports
+into every step.
+
+```bash
+  HOST_STACK=1 make playwright-install   # one-time: fetch the browsers
+  HOST_STACK=1 make test-e2e             # build, serve, and run the e2e suite on the host
+  HOST_STACK=1 make test-visual          # advisory locally, see the caveat below
+  HOST_STACK=1 make test-memory-leak     # memlab against the host-served export
+  HOST_STACK=1 make stop-prod            # tear the host stack down
+```
+
+| Suite                   | Docker-free command                  |
+| ----------------------- | ------------------------------------ |
+| Lint, unit, integration | `EXEC_MODE=host make <target>`       |
+| End-to-end              | `HOST_STACK=1 make test-e2e`         |
+| Visual regression       | `HOST_STACK=1 make test-visual`      |
+| Memory leak (memlab)    | `HOST_STACK=1 make test-memory-leak` |
+| Load (K6)               | Docker only                          |
+
+Two limits, both deliberate:
+
+- **Visual comparisons are advisory on the host.** Baselines are produced inside the pinned
+  Playwright image, and Playwright runs with no `maxDiffPixels`, so host font rasterization
+  can diff a snapshot that is genuinely unchanged. The container run stays the gate of
+  record, and `make test-visual-update` refuses to run under `HOST_STACK=1` so that
+  host-rendered baselines can never be committed.
+- **K6 load tests are Docker-only.** The runner is a container image built by `xk6` with a
+  compiled Go extension, and it addresses the site by its Compose service name. There is no
+  host equivalent that would stay in parity, so none is offered.
+
+`make playwright-install` fetches the browser binaries, but not the OS libraries they link
+against. WebKit is the usual casualty and it fails at launch rather than at install, so a
+missing package shows up as one identical "Host system is missing dependencies" error per
+test. Installing them needs root:
+
+```bash
+  sudo ./node_modules/.bin/playwright install-deps chromium firefox webkit
+```
+
+💡 Tip: the Git hooks already use host mode — `.husky/pre-commit` and
+`.husky/pre-push` run every gate with `EXEC_MODE=host`, so committing works on a machine
+with no Docker daemon.
 
 ### Bats Shell Coverage
 
@@ -611,6 +720,43 @@ change _adds_ is not applied (or one diff could carry a vulnerable dependency an
 the excuse for it), and an ignore the change _removes_ is not applied either (it
 stops suppressing the moment it merges). Land an ignore in its own reviewed
 commit first, then the dependency.
+
+## Progressive Web App
+
+The site is installable: [`public/layout/favicon/site.webmanifest`](public/layout/favicon/site.webmanifest)
+declares `display: "standalone"` with an `id`, an icon set, and a shortcut to `/swagger`.
+
+[`public/sw.js`](public/sw.js) is what keeps that promise honest. Without a worker, an
+installed app launched offline opens straight onto the browser's network-error page, inside
+a window with no address bar to escape from. The worker precaches exactly one document —
+`/offline.html`, exported from [`pages/offline.tsx`](pages/offline.tsx) — and serves it only
+when a same-origin navigation fails.
+
+It is deliberately not a caching layer:
+
+- Nothing is written to the cache at runtime, and hashed `_next/static` chunks are never
+  precached, so a deploy can never be shadowed by a stale entry.
+- Any request that is not a same-origin navigation returns before `respondWith`, so the
+  browser handles it exactly as if no worker were installed. That is what keeps the
+  Playwright `page.route` mocks and the Mockoon-backed e2e stack observing real requests.
+- `activate` evicts every cache generation other than the current one, and the worker calls
+  `skipWaiting()` and `clients.claim()` so an update takes effect on the next navigation
+  rather than after every tab has closed.
+
+Rules for changing any of this:
+
+- Write the worker through `globalThis` member access only. `public/` is linted, and bare
+  `self`/`addEventListener` are `no-restricted-globals` errors while `clients`/`skipWaiting`
+  are `no-undef` errors. Suppressing either is banned.
+- The fallback is reached as `/offline.html`, never `/offline` — the CloudFront edge
+  function hard-404s an extensionless single-segment path.
+- `public/sw.js` is gated at 100% per-file coverage by the edge Jest layer
+  (`make test-unit-edge`), the same layer that covers the CloudFront handler.
+- Every navigable URL in the manifest is checked against the real route set by
+  `src/test/unit/pwa/manifest-contract.test.ts`. That gate exists because the manifest once
+  advertised a shortcut to a `/dashboard` route that does not exist.
+- To retire the worker, ship an `sw.js` that unregisters itself and clears its caches;
+  deleting the file leaves already-installed workers running against clients indefinitely.
 
 ## Routing
 

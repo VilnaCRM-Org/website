@@ -966,3 +966,115 @@ JSON
   run grep -F '::' <<< "$output"
   [ "$status" -ne 0 ]
 }
+
+@test "stop-prod and playwright-install keep Docker as the default and swap under HOST_STACK=1" {
+  run_make_target stop-prod
+  [ "$status" -eq 0 ]
+  assert_log_contains 'docker compose -f docker-compose.test.yml down'
+
+  reset_command_log
+  run_make_target stop-prod HOST_STACK=1
+  [ "$status" -eq 0 ]
+  run grep -F 'docker' "$COMMAND_LOG"
+  [ "$status" -ne 0 ]
+
+  reset_command_log
+  run_make_target playwright-install
+  [ "$status" -eq 0 ]
+  assert_output_contains 'Browsers ship inside the Playwright image'
+
+  reset_command_log
+  run_make_target playwright-install HOST_STACK=1
+  [ "$status" -eq 0 ]
+  assert_log_contains 'playwright install chromium firefox webkit'
+}
+
+@test "HOST_STACK=1 runs the e2e suite against a host-served build with no Docker daemon" {
+  run_make_target test-e2e HOST_STACK=1
+  [ "$status" -eq 0 ]
+
+  assert_log_contains 'node scripts/generateLocalization.mjs'
+  assert_log_contains 'node scripts/patchSwaggerServer.mjs'
+  assert_log_contains 'next build --webpack'
+  assert_log_contains 'next-export-optimize-images'
+  assert_log_contains_eventually 'serve -l 3001 out'
+  assert_log_contains 'playwright test ./src/test/e2e'
+
+  # The whole point of host mode: nothing may reach for a Docker daemon, not even
+  # the create-network prerequisite the Docker path carries.
+  run grep -F 'docker' "$COMMAND_LOG"
+  [ "$status" -ne 0 ]
+}
+
+@test "test-visual-update refuses to run under HOST_STACK=1 before building anything" {
+  run_make_target test-visual-update HOST_STACK=1
+  [ "$status" -ne 0 ]
+  assert_output_contains 'test-visual-update is Docker-only'
+
+  # Host-generated baselines would red the container-run visual gate, so the
+  # refusal has to land before the build the start-prod prerequisite would run.
+  run grep -E 'next|playwright|serve' "$COMMAND_LOG"
+  [ "$status" -ne 0 ]
+}
+
+@test "lint-pins runs the version-pin drift gate on the host" {
+  run_make_target lint-pins
+  [ "$status" -eq 0 ]
+  assert_log_contains 'node scripts/ci/check-version-pins.mjs'
+
+  # Dependency-free and host-side: never routed through the dev container.
+  run grep -F 'docker' "$COMMAND_LOG"
+  [ "$status" -ne 0 ]
+}
+
+@test "create-network turns an unreachable Docker daemon into a HOST_STACK=1 hint" {
+  # The Docker path is the default, so the failure a machine without a daemon
+  # actually hits has to name the way out rather than surfacing a raw connection
+  # error from `docker network ls`.
+  reset_command_log
+  run env \
+    PATH="$STUB_BIN_DIR:$PATH" \
+    COMMAND_LOG="$COMMAND_LOG" \
+    FAKE_DOCKER_DAEMON_DOWN=1 \
+    make -C "$MAKEFILE_SANDBOX" test-e2e BIN_DIR="$STUB_BIN_DIR"
+
+  [ "$status" -ne 0 ]
+  assert_output_contains 'The Docker daemon is not reachable'
+  assert_output_contains 'HOST_STACK=1'
+  assert_output_contains 'test-e2e'
+
+  # It must fail before anything is created or built.
+  run grep -E 'network create|compose|next |playwright' "$COMMAND_LOG"
+  [ "$status" -ne 0 ]
+}
+
+@test "create-network proceeds normally while the Docker daemon is up" {
+  reset_command_log
+  run_make_target create-network
+
+  [ "$status" -eq 0 ]
+  assert_log_contains 'docker info'
+  assert_log_contains 'docker network ls'
+}
+
+@test "the Docker-only K6 targets refuse to run under HOST_STACK=1" {
+  # K6 is a container image that addresses the site by its Compose service name,
+  # so host mode has nothing to point it at. Without this guard `start-prod` would
+  # bring up the host server and the run would hang in `wait-for-prod-health`.
+  reset_command_log
+  run_make_target load-tests HOST_STACK=1
+  [ "$status" -ne 0 ]
+  assert_output_contains 'Docker-only'
+  assert_output_contains 'HOST_STACK=1'
+
+  # It must refuse before anything is built, served or started.
+  run grep -E 'next |serve |docker compose' "$COMMAND_LOG"
+  [ "$status" -ne 0 ]
+}
+
+@test "require-docker-stack is a no-op when HOST_STACK is unset" {
+  reset_command_log
+  run_make_target require-docker-stack
+  [ "$status" -eq 0 ]
+  [ -z "$(cat "$COMMAND_LOG")" ]
+}
