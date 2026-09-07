@@ -425,20 +425,36 @@ own — fix the code.
 #### One Node version (`.nvmrc`)
 
 [`.nvmrc`](.nvmrc) is the single authoritative Node version for this repository.
-Everything else must agree with it, and `make lint-pins` — part of the
-aggregate `make lint`, so it runs on every pull request through
-`static-testing.yml` — fails when anything does not:
+Everything else must agree with it, and two gates — both part of the aggregate
+`make lint`, so both run on every pull request through `static-testing.yml` — fail
+when anything does not.
+
+`make lint-pins` covers the file surface:
 
 - a `FROM …node:<version>` base image in any Dockerfile;
 - `package.json` `engines.node`, which must be the caret over the exact `.nvmrc`
-  version (`^24.18.0`), not a looser range like `^24` that merely admits it;
+  version (`^24.18.0`), not a looser range like `^24` that merely admits it.
+
+`make lint-workflow-pins` covers `.github/workflows`:
+
 - an `actions/setup-node` step that pins a version instead of reading
   `node-version-file: '.nvmrc'`;
+- a literal `node-version` declared anywhere in a workflow, a `strategy.matrix`
+  entry included;
 - any workflow reaching for a `vars.NODE_VERSION` repository variable, whose value
   cannot be seen or reviewed from inside the repository.
 
-To move Node, edit `.nvmrc` first and then run the gate: it names every source that
-still lags. Never loosen a source to make it pass. The separate
+The split is not cosmetic. `lint-pins` stays dependency-free because `make lint`
+reaches it on the host with no `bun install` behind it; `lint-workflow-pins` parses
+the workflow YAML with js-yaml and therefore runs in the dev container. It parses
+rather than pattern-matches because the scanner it replaced needed seven spelling
+fixes in one day and still judged 14 of 45 real-world-shaped documents wrong, five
+of them fail-open (issue #447). Add a case to
+[`tests/bats/check_workflow_pins.bats`](tests/bats/check_workflow_pins.bats) rather
+than a special case to the gate.
+
+To move Node, edit `.nvmrc` first and then run both gates: they name every source
+that still lags. Never loosen a source to make one pass. The separate
 `make check-node-version` target answers a different question — whether the Node you
 are _running_ satisfies `engines`.
 

@@ -36,24 +36,31 @@ and Markdown (honoring `.prettierignore`). `make lint` never mutates; it fails i
 anything is off. Formatting before linting means the gate validates already-formatted
 code, so a Prettier rewrite can never invalidate a green run.
 
-The aggregate `make lint` is ten prerequisites: `generate-localization` + `lint-next` +
+The aggregate `make lint` is twelve prerequisites: `generate-localization` + `lint-next` +
 `lint-tsc` + `lint-md` + `lint-deps` + `lint-api-versions` + `lint-docker-policy` +
-`lint-headers` + `lint-security-txt` + `lint-prod-guardrails`. The rust-code-analysis
+`lint-headers` + `lint-security-txt` + `lint-prod-guardrails` + `lint-pins` +
+`lint-workflow-pins`. The rust-code-analysis
 metrics gate (`make lint-metrics`) is a
 **separate, host-only** gate (delivered by issue #224); it is intentionally not part of
 `make lint`. Run it explicitly when a change to `src/` could grow complexity.
 
-The seven npm-tool `make lint` gates — `lint-next`, `lint-tsc`, `lint-md`, `lint-deps`,
-`lint-api-versions`, `lint-headers` and `lint-prod-guardrails` — run inside the dev
-container by default, locally and in CI alike; prefix with `EXEC_MODE=host` to run one
-directly on the host instead (for example `EXEC_MODE=host make lint-next`), which needs a
-host `bun install`. The aggregate's other three prerequisites are host-only in both modes
-and ignore `EXEC_MODE`, each for its own reason: `generate-localization` writes the
-gitignored i18n bundle, which the root-running container would leave root-owned in the
+The eight npm-tool `make lint` gates — `lint-next`, `lint-tsc`, `lint-md`, `lint-deps`,
+`lint-api-versions`, `lint-headers`, `lint-prod-guardrails` and `lint-workflow-pins` — run
+inside the dev container by default, locally and in CI alike; prefix with `EXEC_MODE=host`
+to run one directly on the host instead (for example `EXEC_MODE=host make lint-next`),
+which needs a host `bun install`. The aggregate's other four prerequisites are host-only in
+both modes and ignore `EXEC_MODE`, each for its own reason: `generate-localization` writes
+the gitignored i18n bundle, which the root-running container would leave root-owned in the
 bind mount; `lint-docker-policy` is a self-contained shell script whose subject includes
-the dev image it would otherwise exec into; and `lint-security-txt` is pure bash over the
-committed RFC 9116 file. None of the three needs `node_modules`. `lint-metrics` is
-host-only too, and sits outside the aggregate entirely.
+the dev image it would otherwise exec into; `lint-security-txt` is pure bash over the
+committed RFC 9116 file; and `lint-pins` is deliberately dependency-free `node`, so it
+works on a runner that never ran `bun install`. None of the four needs `node_modules`.
+
+That last one is the asymmetry worth remembering: `lint-pins` and `lint-workflow-pins`
+enforce halves of the same `.nvmrc` invariant but sit on opposite sides of the executor
+boundary. `lint-workflow-pins` parses workflow YAML with js-yaml (issue #447), so it needs
+the image; `lint-pins` must not, so its half stays regex over Dockerfiles and JSON.
+`lint-metrics` is host-only too, and sits outside the aggregate entirely.
 
 ## Fix Each Gate At Its Source
 

@@ -218,7 +218,7 @@ NETWORK_NAME                = website-network
 # Dev-side lint and test phases are grouped so local developers and agents can
 # run the same CI stages as the pipeline. The parallel runners execute each
 # target concurrently, group their output, and aggregate exit codes.
-CI_LINT_TARGETS             = lint-next lint-tsc lint-md lint-api-versions lint-headers lint-prod-guardrails lint-pins
+CI_LINT_TARGETS             = lint-next lint-tsc lint-md lint-api-versions lint-headers lint-prod-guardrails lint-pins lint-workflow-pins
 CI_TEST_TARGETS             = ci-test-unit-client ci-test-unit-server ci-test-integration ci-test-contract
 CI_LINT_RUNNER              = ./scripts/ci/run-parallel.sh ci-lint
 CI_TEST_RUNNER              = ./scripts/ci/run-parallel.sh ci-test
@@ -587,7 +587,7 @@ lint-md: ## This command executes Markdown linter
 generate-localization: ## Regenerate the gitignored pages/i18n/localization.json bundle (#328) — host-only
 	node scripts/generateLocalization.mjs
 
-.PHONY: lint lint-api-versions lint-headers lint-docker-policy lint-security-txt lint-prod-guardrails lint-pins
+.PHONY: lint lint-api-versions lint-headers lint-docker-policy lint-security-txt lint-prod-guardrails lint-pins lint-workflow-pins
 
 # The user-service inventory invariant (issue #381, F4): every consumer of the
 # upstream contracts — the GraphQL schema behind the Apollo mock and the OpenAPI
@@ -616,10 +616,21 @@ lint-docker-policy: ## Enforce the registry (no Docker Hub) + digest-pin policy 
 # Host-side by design, but unlike lint-metrics and lint-contracts this one DOES
 # belong in the `lint` aggregate and CI_LINT_TARGETS: the script is
 # dependency-free (so it also runs before `bun install`), needs no network, and
-# reads repo files — the Dockerfiles and workflows — that the dev image would only
-# ever see a stale copy of.
-lint-pins: ## Verify the Node, Bun and Playwright pins agree across .nvmrc, package.json, the Dockerfiles and the workflows
+# reads repo files — the Dockerfiles — that the dev image would only ever see a
+# stale copy of.
+lint-pins: ## Verify the Node, Bun and Playwright pins agree across .nvmrc, package.json and the Dockerfiles
 	node scripts/ci/check-version-pins.mjs
+
+# The workflow half of the same invariant, split out by #447 because it is the
+# one rule that must PARSE its input. Regex-scanning workflow YAML cost lint-pins
+# seven spelling fixes in a single day and still judged ~38% of generated
+# real-world-shaped inputs wrong against a parser oracle; js-yaml turns every one
+# of those spellings back into the same document. Parsing needs node_modules, so
+# unlike lint-pins this one runs through the package manager and obeys EXEC_MODE,
+# exactly as lint-headers and lint-prod-guardrails do — the dev container binds
+# this worktree, so it reads the live .github/workflows, not a baked copy.
+lint-workflow-pins: ## Verify every workflow resolves Node through .nvmrc, by parsing the workflow YAML
+	$(DEV_READY) $(PM_EXEC) node scripts/ci/check-workflow-pins.mjs
 
 lint-security-txt: ## Validate the published RFC 9116 security.txt (fields + Expires runway)
 	@bash scripts/ci/check-security-txt.sh
@@ -637,19 +648,21 @@ lint-prod-guardrails: ## Enforce the production-safety invariants (privileged-wo
 # every lint target as its own make process, and the generator writes the single
 # pages/i18n/localization.json with a non-atomic fs.writeFileSync.
 #
-# lint-security-txt, lint-prod-guardrails and lint-pins DO belong in the
-# aggregate, unlike lint-contracts and lint-metrics: all three read only
-# committed files (no network, no host binary, no Docker), so they are hermetic
-# and cannot make the static lane flaky. lint-prod-guardrails additionally joins
-# CI_LINT_TARGETS because it needs `node` + js-yaml, which the parallel ci-lint
-# runner provides — the same reason lint-headers is in that list;
-# lint-security-txt is pure bash and needs no package manager, mirroring how
-# lint-deps stays out. lint-pins is in CI_LINT_TARGETS too, but like
-# lint-docker-policy its recipe runs on the HOST in either EXEC_MODE: it is
-# dependency-free `node`, so it needs neither the image nor a `bun install`, and
-# the Dockerfiles and workflows it reads are worktree files the dev container
-# would only ever see a stale copy of.
-lint: generate-localization lint-next lint-tsc lint-md lint-deps lint-api-versions lint-docker-policy lint-headers lint-security-txt lint-prod-guardrails lint-pins ## Runs all linters: ESLint, TypeScript, Markdown, dependency-cruiser, the API version invariant, the Dockerfile registry/digest policy, the security-header gate, the RFC 9116 security.txt gate, the production-safety guardrails, and the version-pin drift gate in sequence.
+# lint-security-txt, lint-prod-guardrails, lint-pins and lint-workflow-pins DO
+# belong in the aggregate, unlike lint-contracts and lint-metrics: all four read
+# only committed files (no network, no host binary, no Docker daemon of their
+# own), so they are hermetic and cannot make the static lane flaky.
+# lint-prod-guardrails and lint-workflow-pins additionally join CI_LINT_TARGETS
+# because they need `node` + js-yaml, which the parallel ci-lint runner provides
+# — the same reason lint-headers is in that list; lint-security-txt is pure bash
+# and needs no package manager, mirroring how lint-deps stays out. lint-pins is
+# in CI_LINT_TARGETS too, but like lint-docker-policy its recipe runs on the HOST
+# in either EXEC_MODE: it is dependency-free `node`, so it needs neither the
+# image nor a `bun install`, and the Dockerfiles it reads are worktree files the
+# dev container would only ever see a stale copy of. Its workflow half was split
+# into lint-workflow-pins (#447) precisely because parsing the YAML costs a
+# node_modules import that this property forbids.
+lint: generate-localization lint-next lint-tsc lint-md lint-deps lint-api-versions lint-docker-policy lint-headers lint-security-txt lint-prod-guardrails lint-pins lint-workflow-pins ## Runs all linters: ESLint, TypeScript, Markdown, dependency-cruiser, the API version invariant, the Dockerfile registry/digest policy, the security-header gate, the RFC 9116 security.txt gate, the production-safety guardrails, the version-pin drift gate and the workflow Node-pin gate in sequence.
 
 # DELIBERATE DIVERGENCE FROM THE npm-tool LINT GATES (lint-next/tsc/md/deps),
 # for the same reason as lint-metrics below:

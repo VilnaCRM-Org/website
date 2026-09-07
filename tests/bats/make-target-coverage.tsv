@@ -119,4 +119,5 @@ scan-vulns-census	bats	tests/bats/makefile_targets.bats	Validated as an alias th
 stop-prod	bats	tests/bats/makefile_targets.bats	Validated in both modes: Docker Compose down by default, the host-stack helper under HOST_STACK=1.
 playwright-install	bats	tests/bats/makefile_targets.bats	Validated in both modes: a no-op notice by default, the host browser install under HOST_STACK=1.
 lint-pins	ci	.github/workflows/static-testing.yml	Executed through `make lint`, which depends on `lint-pins`; also validated host-only in tests/bats/makefile_targets.bats.
+lint-workflow-pins	bats	tests/bats/makefile_targets.bats	Executed through `make lint` and `make ci-lint`; the target shells out to the parser-driven workflow pin gate, whose assertions are covered by check_workflow_pins.bats.
 require-docker-stack	bats	tests/bats/makefile_targets.bats	Validated in both modes: a no-op by default, a fast failure under HOST_STACK=1 for the Docker-only K6 targets.

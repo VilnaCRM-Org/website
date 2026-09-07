@@ -166,3 +166,83 @@ jobs:
             "name=BRANCH_NAME,value=${BRANCH_NAME}" \
             "name=PR_NUMBER,value=${PR_NUMBER}" \
             "name=IS_PULL_REQUEST,value=1"
+
+  post-create-smoke:
+    name: post-create smoke test
+    needs: [deploy]
+    # The sandbox origin has to be reachable to be probed. Until a maintainer sets
+    # the SANDBOX_SITE_URL_TEMPLATE repository variable (Settings → Secrets and
+    # variables → Actions → Variables) — a URL carrying `{pr}`, e.g.
+    # `https://pr-{pr}.sandbox.example.com` — the job skips cleanly rather
+    # than failing every PR. `needs: deploy` carries the same-repo guard forward:
+    # a fork PR never creates a sandbox, so there is nothing here to probe.
+    if: ${{ vars.SANDBOX_SITE_URL_TEMPLATE != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Issue #363. The same negative-path contract the production deploy asserts,
+      # run where it is cheap to be wrong: a sandbox is the only environment where
+      # a regression in `scripts/cloudfront_routing.js` can be observed through a
+      # real CloudFront distribution before it reaches production. `--expect-noindex`
+      # is the one difference — a sandbox origin must not be indexable, and that
+      # header comes from the infra repository's response-headers policy, so it
+      # warns rather than blocking.
+      - name: Smoke-test the sandbox negative path (404 shape, noindex)
+        env:
+          URL_TEMPLATE: ${{ vars.SANDBOX_SITE_URL_TEMPLATE }}
+          # A sandbox is provisioned end-to-end by CodePipeline, so it is slower to
+          # answer than a production deploy that only swaps objects behind an
+          # existing distribution.
+          SMOKE_ATTEMPTS: '40'
+          SMOKE_DELAY: '15'
+        run: |
+          set -euo pipefail
+
+          # `{pr}` is the only placeholder, and deliberately so. The sandbox hostname
+          # is derived by the infra repository's CodePipeline from the BRANCH_NAME the
+          # deploy job above passes through RAW, so this repository does not know the
+          # branch -> hostname transform: any slug written here would be a guess, and a
+          # guess that is wrong probes an origin the sandbox is not at. That fails the
+          # PR on a healthy deployment, or — worse — passes against a different
+          # sandbox. PR_NUMBER is passed to the same pipeline verbatim and is digits,
+          # so substituting it is an exact reconstruction rather than an inference.
+          case "$URL_TEMPLATE" in
+            *'{branch}'*)
+              echo "::error::SANDBOX_SITE_URL_TEMPLATE holds {branch}, which this workflow cannot resolve: the branch to hostname transform lives in the sandbox pipeline, not in this repository. Use {pr}."
+              exit 1
+              ;;
+          esac
+
+          # A template with no placeholder resolves to ONE fixed origin for every PR,
+          # so a green result would certify somebody else's sandbox — or a stale one.
+          # Refuse before probing rather than report a meaningless pass.
+          case "$URL_TEMPLATE" in
+            *'{pr}'*) ;;
+            *)
+              echo "::error::SANDBOX_SITE_URL_TEMPLATE must contain {pr}; a fixed origin would certify the wrong deployment"
+              exit 1
+              ;;
+          esac
+
+          url="${URL_TEMPLATE//\{pr\}/${PR_NUMBER}}"
+
+          # `{pr}` is the only token substituted, so a brace surviving substitution is
+          # a placeholder this job does not implement — `{host}`, or a mistyped `{pr`.
+          # Probing that URL asks about an origin nobody deployed: the failure would be
+          # reported as a broken sandbox rather than as a misconfigured variable.
+          case "$url" in
+            *'{'*|*'}'*)
+              echo "::error::SANDBOX_SITE_URL_TEMPLATE left an unresolved placeholder in ${url}; {pr} is the only token this job substitutes"
+              exit 1
+              ;;
+          esac
+
+          echo "Probing sandbox origin: ${url}"
+          ./scripts/ci/smoke-response-shape.sh "$url" --expect-noindex

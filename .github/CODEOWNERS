@@ -11,3 +11,56 @@
 /.claude/ @Kravalg
 /scripts/get-pr-comments.sh @Kravalg
 /.github/CODEOWNERS @Kravalg
+
+# --- Approved-by-definition artefacts and the gates themselves (issue #344) ---
+#
+# Three classes of file where a merged mistake stops any automated check from
+# ever catching it again, so the only remaining control is a human reading the
+# diff. The team slugs the issue proposed (@VilnaCRM-Org/design-reviewers,
+# ci-owners, infra-owners) do not exist — `gh api orgs/VilnaCRM-Org/teams`
+# returns an empty list — so coverage is assigned to the maintainer, exactly as
+# the agent-steering block above does. Swap in the teams when they exist.
+#
+# NOTE: CODEOWNERS alone only auto-REQUESTS review. Making it blocking needs
+# "Require review from Code Owners" on the `main` ruleset, which is a repository
+# setting and cannot be committed — see CONTRIBUTING.md, and the ruleset issue.
+
+# Visual baselines. Once a wrong baseline is approved, the visual gate passes BY
+# DEFINITION and can never catch that regression again: #242 (2025-10-06) shipped
+# incorrect swagger HTTP-method badges and the fix had to rewrite ~30 committed
+# PNGs. The `**` form already covers both depths the snapshot directories sit at
+# (`src/test/visual/*.spec.ts-snapshots/` and `src/test/visual/swagger/…`); the
+# explicit depth-1 line is kept beside it so the common case is visible to a
+# reader, and because these paths are worth over- rather than under-matching.
+/src/test/visual/*-snapshots/ @Kravalg
+/src/test/visual/**/*-snapshots/ @Kravalg
+
+# Workflows. autorelease.yml, deploy.yml and the sandbox pair carry
+# `contents: write`-class privileges and assume AWS roles, and every `uses:` here
+# is a supply-chain edge.
+/.github/workflows/ @Kravalg
+
+# The CloudFront edge. scripts/cloudfront_routing.js is the most-fixed file in the
+# repository (four production incidents: #226, #229, #235/#248, #249/#250) and it
+# runs at the edge, where the static export cannot honour Next `headers()` — so it
+# is also the only enforcement point for the security-header policy.
+/scripts/cloudfront_routing.js @Kravalg
+/scripts/cloudfront_security_headers.js @Kravalg
+
+# The gate configs. Weakening one of these is the quietest way to make a red
+# check green: TypeScript strictness, an ESLint rule, the Jest coverage
+# thresholds, the mutation and metrics budgets, the import boundaries, the
+# security-header baseline. config/ is owned as a directory because every file in
+# it is a gate policy, so a new one is covered the day it lands.
+# scripts/ci/ is the other half of the same class: the code that ENFORCES those
+# policies. Editing `-lt 60` in check-security-txt.sh is a quieter way to turn a
+# red check green than editing config/ is, and CLAUDE.md forbids exactly that.
+/scripts/ci/ @Kravalg
+
+/tsconfig.json @Kravalg
+/eslint.config.mjs @Kravalg
+/jest.config.ts @Kravalg
+/stryker.config.mjs @Kravalg
+/playwright.config.ts @Kravalg
+/.dependency-cruiser.js @Kravalg
+/config/ @Kravalg
