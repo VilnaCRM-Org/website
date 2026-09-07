@@ -204,6 +204,28 @@ jobs:
           SMOKE_DELAY: '15'
         run: |
           set -euo pipefail
+
+          # A template with neither placeholder resolves to ONE fixed origin for every
+          # PR, so a green result would certify somebody else's sandbox — or a stale
+          # one. Refuse before probing rather than report a meaningless pass.
+          case "$URL_TEMPLATE" in
+            *'{pr}'*|*'{branch}'*) ;;
+            *)
+              echo "::error::SANDBOX_SITE_URL_TEMPLATE must contain {pr} or {branch}; a fixed origin would certify the wrong deployment"
+              exit 1
+              ;;
+          esac
+
+          # Git allows characters in a branch name that are not safe in a hostname —
+          # `/`, `_`, `.`, uppercase — and an unslugified substitution would silently
+          # probe a different URL than the one the sandbox was provisioned at. Prefer
+          # {pr} in the template; this mapping is a best effort for {branch}.
+          branch_slug="$(printf '%s' "$BRANCH_NAME" \
+            | tr '[:upper:]' '[:lower:]' \
+            | tr -c 'a-z0-9-' '-' \
+            | sed 's/-\{2,\}/-/g; s/^-//; s/-$//')"
+
           url="${URL_TEMPLATE//\{pr\}/${PR_NUMBER}}"
-          url="${url//\{branch\}/${BRANCH_NAME}}"
+          url="${url//\{branch\}/${branch_slug}}"
+          echo "Probing sandbox origin: ${url}"
           ./scripts/ci/smoke-response-shape.sh "$url" --expect-noindex

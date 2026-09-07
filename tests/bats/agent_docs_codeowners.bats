@@ -81,10 +81,18 @@ CODEOWNERS_FILE="$PROJECT_ROOT/.github/CODEOWNERS"
     # CODEOWNERS patterns are repo-root-anchored when they start with `/`.
     target="$PROJECT_ROOT/${pattern#/}"
 
-    # globstar is what makes `**` mean "any number of directories, including
-    # none" — without it bash treats `**` as a single `*` and the deeper
-    # snapshot directory would never be reached, so the assertion would pass
-    # for the wrong reason.
+    # globstar is what makes `**` mean "any number of directories, including none",
+    # which is the gitignore semantics CODEOWNERS follows. Without it bash reads `**`
+    # as a single `*` and expands the pattern to a DIFFERENT set of paths than GitHub
+    # would, so the check would be answering the wrong question.
+    #
+    # What this proves is bounded, deliberately: that the pattern still matches
+    # something in the tree. Because `**` also matches zero directories, deleting
+    # only the deeper `src/test/visual/swagger/*-snapshots/` leaves the depth-1
+    # directories matching and this assertion green. Catching that needs a coverage
+    # rule per snapshot directory, which would have to be regenerated on every new
+    # spec file; the assertion above — an explicit list of patterns that must be
+    # present — is where the depth-2 entry is actually pinned.
     if [[ "$pattern" == *'*'* ]]; then
       shopt -s globstar
       compgen -G "$target" > /dev/null || {

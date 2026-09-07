@@ -140,13 +140,32 @@ GOOD_404='{"status":404,"headers":{"content-type":"text/html; charset=utf-8"},"b
   assert_output_contains 'returned a well-formed 404'
 }
 
-@test "accepts a correct content-type that arrives after a wrong duplicate" {
+@test "accepts a content-type repeated with the same correct value" {
   # A response can carry a header twice — an origin value plus one the response-
-  # headers policy adds. Grading only the first copy fails a correct response.
-  start_origin <<< '{"status":404,"headers":{"content-type":["application/json","text/html; charset=utf-8"]},"body":"<html>404</html>"}'
+  # headers policy adds. Grading only the FIRST copy would be wrong in both
+  # directions, so every value is read.
+  start_origin <<< '{"status":404,"headers":{"content-type":["text/html; charset=utf-8","text/html"]},"body":"<html>404</html>"}'
   run_smoke
   [ "$status" -eq 0 ]
   assert_output_contains 'returned a well-formed 404'
+}
+
+@test "fails when a correct content-type is accompanied by a wrong one" {
+  # `text/html` AND `application/octet-stream` on the same response is precisely the
+  # ambiguity that made Safari download the 404 (#235), so one good value must not
+  # excuse a bad one.
+  start_origin <<< '{"status":404,"headers":{"content-type":["text/html; charset=utf-8","application/octet-stream"]},"body":"<html>404</html>"}'
+  run_smoke
+  [ "$status" -eq 1 ]
+  assert_output_contains 'content-type: expected text/html'
+}
+
+@test "fails a media type that merely starts with the HTML one" {
+  # `text/htmlish` is a different media type; a prefix test would wave it through.
+  start_origin <<< '{"status":404,"headers":{"content-type":"text/htmlish"},"body":"<html>404</html>"}'
+  run_smoke
+  [ "$status" -eq 1 ]
+  assert_output_contains "got 'text/htmlish'"
 }
 
 @test "fails when the origin cannot be reached at all" {
@@ -299,6 +318,23 @@ GOOD_404='{"status":404,"headers":{"content-type":"text/html; charset=utf-8"},"b
   run_smoke --expect-noindex
   [ "$status" -eq 0 ]
   assert_output_contains 'carries X-Robots-Tag: noindex, nofollow'
+}
+
+@test "accepts a noindex directive spelled in upper case" {
+  # The header is a directive LIST and the directives are case-insensitive.
+  start_origin <<< '{"status":404,"headers":{"content-type":"text/html","x-robots-tag":"NOINDEX, NOFOLLOW"},"body":"<html>404</html>"}'
+  run_smoke --expect-noindex
+  [ "$status" -eq 0 ]
+  refute_output_contains 'is not noindexed'
+}
+
+@test "does not accept a directive that merely contains noindex" {
+  # `noindexing` is not `noindex`, and a substring test would call the sandbox
+  # protected when it is indexable.
+  start_origin <<< '{"status":404,"headers":{"content-type":"text/html","x-robots-tag":"noindexing"},"body":"<html>404</html>"}'
+  run_smoke --expect-noindex
+  [ "$status" -eq 0 ]
+  assert_output_contains 'is not noindexed'
 }
 
 @test "does not ask a production origin for noindex" {

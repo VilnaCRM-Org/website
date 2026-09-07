@@ -22,8 +22,10 @@ const server = http.createServer((request, response) => {
   const shape = responses[Math.min(served, responses.length - 1)];
   served += 1;
   const headers = { ...(shape.headers ?? {}) };
-  // Node adds a content-type of its own if none is given, which would mask the
-  // very gap case #235 is about, so an explicit `null` removes it.
+  // `writeHead` stringifies a header value, so a JSON `null` would reach the wire as
+  // the literal `content-type: null` — a header that is present and wrong, when the
+  // case being staged (#235) is a header that is ABSENT. Deleting the key is what
+  // actually omits it; node:http adds no content-type of its own.
   for (const [name, value] of Object.entries(headers)) {
     if (value === null) {
       delete headers[name];

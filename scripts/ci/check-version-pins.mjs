@@ -12,8 +12,9 @@
 // MODULE_NOT_FOUND on a cold checkout and turn a helpful drift message into a
 // confusing crash. The one rule that genuinely needed a parser — the workflow
 // Node pin — moved to scripts/ci/check-workflow-pins.mjs for that reason (#447),
-// and every pin left here is read out of a Dockerfile, a JSON file or a plain
-// version file, where a line-oriented match is the whole grammar.
+// and every pin left here is read out of a Dockerfile, a JSON file, a plain version
+// file, or the Makefile's own DIND recipe — surfaces where a line-oriented match is
+// the whole grammar, unlike the workflow YAML that moved out.
 //
 // Collect-all-then-fail, like scripts/ci/lint-metrics.sh: one run reports every
 // mismatch so a bump is fixed in a single pass.

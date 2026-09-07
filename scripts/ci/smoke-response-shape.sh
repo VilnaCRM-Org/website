@@ -72,7 +72,13 @@ work="$(mktemp -d)"
 # INT/TERM as well as EXIT: a cancelled GitHub job — or the job timeout, which is
 # reachable while this sleeps between retries — signals rather than returns, and the
 # bats suite runs this on a real developer machine on every `make test-bats`.
-trap 'rm -rf "$work"' EXIT INT TERM
+#
+# The signal handlers EXIT. A trap that only cleans up returns control to the line
+# after the interrupted `sleep`, and the script would then grade a $body it had just
+# deleted. 128+signal is the conventional status for each.
+trap 'rm -rf "$work"' EXIT
+trap 'rm -rf "$work"; exit 130' INT
+trap 'rm -rf "$work"; exit 143' TERM
 body="$work/body.out"
 head="$work/headers.out"
 
@@ -126,11 +132,21 @@ for attempt in $(seq 1 "$SMOKE_ATTEMPTS"); do
   #    earlier.
   [ -s "$body" ] || gaps="${gaps}body: expected a non-empty 404 page; "
   # 3. content-type. Without it Safari offers the 404 as a download (#235).
-  #    Matched case-INSENSITIVELY: RFC 9110 media types and subtypes are
-  #    case-insensitive, and this is the blocking half of the script, so reading
-  #    `TEXT/HTML` as wrong would block a production deploy on a correct response.
+  #
+  #    Case-INSENSITIVE, because RFC 9110 media types and subtypes are, and this is
+  #    the blocking half of the script: reading `TEXT/HTML` as wrong would block a
+  #    production deploy on a correct response.
+  #
+  #    Whole-value, not a prefix: `text/htmlish` is a different media type, and a
+  #    prefix test would wave it through.
+  #
+  #    EVERY value, not any: a response carrying `text/html` AND
+  #    `application/octet-stream` is exactly the ambiguity that made Safari download
+  #    the 404 in the first place, so one good value must not excuse a bad one.
   content_type="$(header_value 'content-type')"
-  if ! header_values 'content-type' | tr '[:upper:]' '[:lower:]' | grep -q '^text/html'; then
+  content_types="$(header_values 'content-type' | tr '[:upper:]' '[:lower:]')"
+  if [ -z "$content_types" ] ||
+    printf '%s\n' "$content_types" | grep -qvE '^text/html[[:space:]]*(;.*)?$'; then
     gaps="${gaps}content-type: expected text/html, got '${content_type:-<missing>}'; "
   fi
 
@@ -175,8 +191,17 @@ fi
 
 if [ "$EXPECT_NOINDEX" -eq 1 ]; then
   robots="$(header_value 'x-robots-tag')"
-  case "$robots" in
-    *noindex*) echo "✓ ${url} carries X-Robots-Tag: ${robots}" ;;
-    *) echo "::warning::${url} is not noindexed (X-Robots-Tag: ${robots:-<missing>}); a sandbox origin must not be indexable" ;;
-  esac
+  # A comma-delimited directive, matched whole and case-insensitively: the header is
+  # a directive LIST, `NOINDEX` is the same directive, and `noindexing` is a
+  # different one that a substring test would accept. Read across every occurrence,
+  # because the directives may arrive split over repeated headers.
+  if header_values 'x-robots-tag' |
+    tr '[:upper:]' '[:lower:]' |
+    tr ',' '\n' |
+    sed 's/^[[:space:]]*//; s/[[:space:]]*$//' |
+    grep -qx 'noindex'; then
+    echo "✓ ${url} carries X-Robots-Tag: ${robots}"
+  else
+    echo "::warning::${url} is not noindexed (X-Robots-Tag: ${robots:-<missing>}); a sandbox origin must not be indexable"
+  fi
 fi

@@ -60,7 +60,7 @@ The failure line names every gap in one response, so read all of it:
   committed one.
 
 Reproduce any of these locally against the same script:
-`SMOKE_ATTEMPTS=1 ./scripts/ci/smoke-response-shape.sh https://<origin>`.
+`SMOKE_ATTEMPTS=1 ./scripts/ci/smoke-response-shape.sh https://vilnacrm.com`.
 
 ### One-time setup
 

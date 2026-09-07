@@ -102,7 +102,14 @@ assert_red() {
       rm -f "$real/$file"
     fi
     run node "$PROJECT_ROOT/scripts/ci/check-workflow-pins.mjs" "$real"
-    [ "$status" -eq 0 ]
+    # `return 1`, not a bare `[ ... ]`: a `while read` loop's exit status is only its
+    # LAST body command, so a bare assertion failing on any earlier iteration would be
+    # swallowed and the test would still pass.
+    if [ "$status" -ne 0 ]; then
+      echo "restoring the tree after \"$label\" left the gate red" >&2
+      printf '%s\n' "${output-}" >&2
+      return 1
+    fi
   done <<'EOF'
 literal node-version in a workflow|.github/workflows/bats-testing.yml|sed -i "s#node-version-file:.*#node-version: '99.0.0'#" .github/workflows/bats-testing.yml
 setup-node step with no version file|.github/workflows/bats-testing.yml|sed -i "/node-version-file:/d" .github/workflows/bats-testing.yml
@@ -314,6 +321,50 @@ jobs:
       - uses: actions/setup-node
         with:
           node-version-file: .nvmrc
+Y
+  assert_green
+}
+
+@test "credits a step whose action reference is spelled in mixed case" {
+  # GitHub resolves an action's owner and repository case-insensitively, so this is
+  # the same action — and a case-sensitive gate would skip both the pin rule and the
+  # step count for it.
+  write_probe <<'Y'
+name: p
+on: [push]
+jobs:
+  j:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: Actions/Setup-Node@v6
+        with:
+          node-version-file: .nvmrc
+Y
+  assert_green
+  # Counted, not merely tolerated: a gate that silently skipped this spelling would
+  # also stay green, so the step COUNT is what proves it was read.
+  assert_output_contains '2 actions/setup-node step(s)'
+}
+
+@test "does not read an action input named uses: as a step" {
+  # `with:` inputs are data. Applying the step rules to every mapping in the
+  # document invents a pin failure for an action whose input happens to be called
+  # `uses` — the false-rejection direction.
+  write_probe <<'Y'
+name: p
+on: [push]
+jobs:
+  j:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+      - uses: ./.github/actions/local
+        with:
+          uses:
+            - one
+            - two
 Y
   assert_green
 }
@@ -845,6 +896,20 @@ Y
 
 # --- Fail-closed on anything the gate cannot read -----------------------------------
 
+@test "fails a mixed-case action reference that is unpinned" {
+  write_probe <<'Y'
+name: f
+on: [push]
+jobs:
+  j:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: ACTIONS/SETUP-NODE@v6
+Y
+  assert_red
+  assert_output_contains 'without node-version-file: .nvmrc'
+}
+
 @test "fails a step whose uses: is not a string" {
   # GitHub resolves an action from a string and nothing else, so such a step runs
   # nothing — but the shape also hides the reference from every rule above, which
@@ -946,6 +1011,14 @@ jobs:
 Y
   assert_red
   assert_output_contains 'would pass vacuously'
+}
+
+@test "fails an empty workflow directory rather than reporting a clean run" {
+  # A directory holding no workflow files is the vacuity failure one step earlier
+  # than "no setup-node step": there is nothing at all left to check.
+  rm -f "$FIXTURE"/.github/workflows/*.yml
+  assert_red
+  assert_output_contains 'holds no workflow files'
 }
 
 @test "fails when the workflow directory is missing" {

@@ -95,8 +95,8 @@ function loadWithLines(text) {
  * it also collapses a node reused through several aliases to one visit, which is the
  * right verdict either way — one document node, one finding.
  */
-function* walk(node, pathText, line, lines, seen) {
-  yield { node, path: pathText, line };
+function* walk(node, pathText, line, lines, seen, isStep = false) {
+  yield { node, path: pathText, line, isStep };
 
   if (node === null || typeof node !== 'object') {
     return;
@@ -109,8 +109,21 @@ function* walk(node, pathText, line, lines, seen) {
   const ownLine = lines.get(node) ?? line;
 
   if (Array.isArray(node)) {
+    // An element of a `steps:` sequence is the ONLY place GitHub runs an action
+    // from, which is what lets the `uses:` rules below be scoped rather than
+    // applied to every mapping in the document. Without that scope an action
+    // INPUT that happens to be named `uses` — `with: { uses: … }` — reads as a
+    // step and invents a pin failure.
+    const elementsAreSteps = pathText.endsWith('steps');
     for (const [index, item] of node.entries()) {
-      yield* walk(item, `${pathText}[${index}]`, lines.get(item) ?? ownLine, lines, seen);
+      yield* walk(
+        item,
+        `${pathText}[${index}]`,
+        lines.get(item) ?? ownLine,
+        lines,
+        seen,
+        elementsAreSteps
+      );
     }
     return;
   }
@@ -157,7 +170,7 @@ function isSetupNodeStep(node) {
   if (typeof uses !== 'string') {
     return false;
   }
-  const reference = uses.trim();
+  const reference = uses.trim().toLowerCase();
   if (!reference.startsWith(SETUP_NODE)) {
     return false;
   }
@@ -198,7 +211,7 @@ function checkWorkflow(file, relative) {
 
   let steps = 0;
 
-  for (const { node, path: nodePath, line } of walk(
+  for (const { node, path: nodePath, line, isStep } of walk(
     doc,
     '',
     lines.get(doc) ?? 1,
@@ -227,14 +240,14 @@ function checkWorkflow(file, relative) {
       );
     }
 
-    if (hasUnreadableUses(node)) {
+    if (isStep && hasUnreadableUses(node)) {
       fail(
         `${relative}:${line} declares a non-string \`uses:\` at ${nodePath || '<root>'}; ` +
           'an action reference is a string, and any other node hides it from this gate'
       );
     }
 
-    if (isSetupNodeStep(node)) {
+    if (isStep && isSetupNodeStep(node)) {
       steps += 1;
       if (!stepPinsNvmrc(node)) {
         fail(
@@ -269,7 +282,15 @@ const setupNodeStepCount = workflowFiles
 // it is the pin rule losing its subject, which is how a gate quietly stops enforcing
 // anything. Every per-step check above is conditional on finding a step; this is the
 // one assertion that a step was found at all.
-if (workflowFiles.length > 0 && setupNodeStepCount === 0) {
+//
+// A directory holding no workflow FILES is the same failure one step earlier, so it
+// is refused rather than treated as a clean run. The missing-directory case is
+// already reported above, and reporting it twice would be noise.
+if (workflowFiles.length === 0) {
+  if (fs.existsSync(workflowsDir)) {
+    fail(`${WORKFLOWS_DIR} holds no workflow files; the pin check would pass vacuously`);
+  }
+} else if (setupNodeStepCount === 0) {
   fail(`no ${SETUP_NODE} step found under ${WORKFLOWS_DIR}; the pin check would pass vacuously`);
 }
 

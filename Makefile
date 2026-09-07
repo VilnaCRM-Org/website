@@ -587,7 +587,7 @@ lint-md: ## This command executes Markdown linter
 generate-localization: ## Regenerate the gitignored pages/i18n/localization.json bundle (#328) — host-only
 	node scripts/generateLocalization.mjs
 
-.PHONY: lint lint-api-versions lint-headers lint-docker-policy lint-security-txt lint-prod-guardrails lint-pins
+.PHONY: lint lint-api-versions lint-headers lint-docker-policy lint-security-txt lint-prod-guardrails lint-pins lint-workflow-pins
 
 # The user-service inventory invariant (issue #381, F4): every consumer of the
 # upstream contracts — the GraphQL schema behind the Apollo mock and the OpenAPI
