@@ -299,6 +299,21 @@ assert_output_contains() {
   fi
 }
 
+# The negative form. A gate that must stay QUIET about something needs an
+# assertion for it, or "no warning was emitted" is indistinguishable from "the
+# assertion was never reached".
+refute_output_contains() {
+  local unexpected="$1"
+  local actual_output="${output-}"
+
+  if [[ "$actual_output" == *"$unexpected"* ]]; then
+    echo "Expected output NOT to contain: $unexpected" >&2
+    echo "--- output ---" >&2
+    printf '%s\n' "$actual_output" >&2
+    return 1
+  fi
+}
+
 # The host stack starts `serve` in the background, so its stub can append to the
 # command log a beat after the command under test has already returned.
 assert_log_contains_eventually() {

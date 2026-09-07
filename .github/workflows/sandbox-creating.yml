@@ -166,3 +166,44 @@ jobs:
             "name=BRANCH_NAME,value=${BRANCH_NAME}" \
             "name=PR_NUMBER,value=${PR_NUMBER}" \
             "name=IS_PULL_REQUEST,value=1"
+
+  post-create-smoke:
+    name: post-create smoke test
+    needs: [deploy]
+    # The sandbox origin has to be reachable to be probed. Until a maintainer sets
+    # the SANDBOX_SITE_URL_TEMPLATE repository variable (Settings → Secrets and
+    # variables → Actions → Variables) — a URL carrying `{pr}` and/or `{branch}`,
+    # e.g. `https://pr-{pr}.sandbox.example.com` — the job skips cleanly rather
+    # than failing every PR. `needs: deploy` carries the same-repo guard forward:
+    # a fork PR never creates a sandbox, so there is nothing here to probe.
+    if: ${{ vars.SANDBOX_SITE_URL_TEMPLATE != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Issue #363. The same negative-path contract the production deploy asserts,
+      # run where it is cheap to be wrong: a sandbox is the only environment where
+      # a regression in `scripts/cloudfront_routing.js` can be observed through a
+      # real CloudFront distribution before it reaches production. `--expect-noindex`
+      # is the one difference — a sandbox origin must not be indexable, and that
+      # header comes from the infra repository's response-headers policy, so it
+      # warns rather than blocking.
+      - name: Smoke-test the sandbox negative path (404 shape, noindex)
+        env:
+          URL_TEMPLATE: ${{ vars.SANDBOX_SITE_URL_TEMPLATE }}
+          # A sandbox is provisioned end-to-end by CodePipeline, so it is slower to
+          # answer than a production deploy that only swaps objects behind an
+          # existing distribution.
+          SMOKE_ATTEMPTS: '40'
+          SMOKE_DELAY: '15'
+        run: |
+          set -euo pipefail
+          url="${URL_TEMPLATE//\{pr\}/${PR_NUMBER}}"
+          url="${url//\{branch\}/${BRANCH_NAME}}"
+          ./scripts/ci/smoke-response-shape.sh "$url" --expect-noindex
