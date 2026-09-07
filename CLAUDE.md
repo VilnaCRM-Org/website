@@ -269,11 +269,14 @@ That gate **parses** the YAML with js-yaml instead of scanning it, which is why 
 the one pin gate that runs inside the dev container. The scanner it replaced needed
 seven spelling fixes in a single day — a lookalike key, a key spelled inside a quoted
 value, an over-tightened flow mapping, quoted keys, an escaped quote, block-scalar
-scoping, a doubled single quote — and a 45-case differential matrix
-(`tests/bats/check_workflow_pins.bats`) still scores it wrong 14 times, five of them
-fail-open. Every one of those is the same document to a parser. Do not reintroduce a
-regex reading of workflow YAML here, and add a case to that matrix rather than a
-special case to the gate.
+scoping, a doubled single quote — and the differential matrix in
+`tests/bats/check_workflow_pins.bats`, whose cases are each named for the verdict they
+must produce, still scores it wrong on a large share of them in BOTH directions: some
+refuse a workflow GitHub runs happily, and some — the dangerous half — pass a workflow
+that breaks the pin. Every one of those is the same document to a parser. Read the
+matrix for the current count rather than a number quoted here; do not reintroduce a
+regex reading of workflow YAML, and add a case to that matrix rather than a special
+case to the gate.
 
 Bump `.nvmrc` first, then let the gates name whatever still lags. Do not confuse either
 with `make check-node-version`, which checks the _running_ Node against `engines`.

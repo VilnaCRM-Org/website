@@ -232,5 +232,17 @@ jobs:
           esac
 
           url="${URL_TEMPLATE//\{pr\}/${PR_NUMBER}}"
+
+          # `{pr}` is the only token substituted, so a brace surviving substitution is
+          # a placeholder this job does not implement — `{host}`, or a mistyped `{pr`.
+          # Probing that URL asks about an origin nobody deployed: the failure would be
+          # reported as a broken sandbox rather than as a misconfigured variable.
+          case "$url" in
+            *'{'*|*'}'*)
+              echo "::error::SANDBOX_SITE_URL_TEMPLATE left an unresolved placeholder in ${url}; {pr} is the only token this job substitutes"
+              exit 1
+              ;;
+          esac
+
           echo "Probing sandbox origin: ${url}"
           ./scripts/ci/smoke-response-shape.sh "$url" --expect-noindex
