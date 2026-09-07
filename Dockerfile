@@ -7,7 +7,7 @@ FROM public.ecr.aws/docker/library/node:24.18.0-alpine3.23@sha256:595398b0081eac
 # devcontainer.json is the one place the pin policy cannot see it.
 RUN apk add --no-cache \
     bash=5.3.3-r1 \
-    curl=8.20.0-r0 \
+    curl=8.22.0-r0 \
     g++=15.2.0-r2 \
     make=4.4.1-r3 \
     python3=3.12.14-r0 && \
@@ -39,7 +39,7 @@ RUN node scripts/patchSwaggerServer.mjs && \
 # docker-compose prod healthcheck (`curl -f http://…`) depends on it.
 FROM public.ecr.aws/docker/library/node:24.18.0-alpine3.23@sha256:595398b0081eacda8e1c4c5b97b76cd1020e4d58a8ebcb4843b9bca1e79e7436 AS production
 
-RUN apk add --no-cache curl=8.20.0-r0 && \
+RUN apk add --no-cache curl=8.22.0-r0 && \
     npm install -g serve@14.2.0
 
 WORKDIR /app
