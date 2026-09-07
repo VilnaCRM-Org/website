@@ -369,6 +369,31 @@ Y
   assert_green
 }
 
+@test "does not read an action input named steps: as a steps sequence" {
+  # The mirror of the case above, one level out. Step-ness is a property of the
+  # `jobs.<id>.steps` sequence, not of any key whose name ends in `steps`: an
+  # action input called `steps` carrying mappings with `uses:` is data GitHub
+  # never runs, so applying the step rules to it invents a pin failure whose
+  # only fix is renaming somebody else's action input.
+  write_probe <<'Y'
+name: p
+on: [push]
+jobs:
+  j:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+      - uses: ./.github/actions/local
+        with:
+          steps:
+            - uses: actions/setup-node@v6
+            - uses: 42
+Y
+  assert_green
+}
+
 # --- Prose is not structure ------------------------------------------------------
 
 @test "does not read a run: body quoting the canonical snippet as a step" {

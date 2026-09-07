@@ -75,11 +75,20 @@ job **skips cleanly**, so `main` stays green.
 
 The sandbox leg is configured the same way and is likewise skipped until it is.
 Add a repository variable named `SANDBOX_SITE_URL_TEMPLATE` holding the sandbox
-origin with `{pr}` and/or `{branch}` placeholders — for example
+origin with a `{pr}` placeholder — for example
 `https://pr-{pr}.sandbox.example.com` — and `sandbox-creating.yml`'s
 `post-create-smoke` job will run the same negative-path probe against each PR's
 sandbox, plus an advisory `X-Robots-Tag: noindex` check, since a sandbox origin
 must not be indexable.
+
+`{pr}` is the only placeholder the job substitutes. The sandbox hostname is
+derived from the branch name by the infra repository's CodePipeline, which this
+repository triggers with the raw `BRANCH_NAME`; reconstructing that transform
+here would be a guess, and a wrong guess probes an origin the sandbox is not at —
+reddening a healthy PR, or certifying a different sandbox. A template containing
+`{branch}` is refused with an explicit error rather than probed. If the sandbox
+URL scheme is branch-derived rather than PR-derived, expose a PR-keyed alias in
+the infra repository instead of adding a slug rule here.
 
 ### Environment protection rules
 

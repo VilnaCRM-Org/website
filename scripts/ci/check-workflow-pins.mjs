@@ -66,6 +66,11 @@ function fail(message) {
  * A node reached through an alias is the SAME object as its anchor, so the first
  * sighting — the anchor's own line — is the one kept.
  */
+// The one path a job's steps live at. GitHub job ids are `[A-Za-z_][A-Za-z0-9_-]*`,
+// so no id contains a dot and `[^.]+` cannot swallow a deeper path; array elements
+// are appended as `[n]`, so a step's own subtree never matches either.
+const JOB_STEPS_PATH = /^jobs\.[^.]+\.steps$/;
+
 function loadWithLines(text) {
   const lines = new WeakMap();
   const openLines = [];
@@ -109,12 +114,18 @@ function* walk(node, pathText, line, lines, seen, isStep = false) {
   const ownLine = lines.get(node) ?? line;
 
   if (Array.isArray(node)) {
-    // An element of a `steps:` sequence is the ONLY place GitHub runs an action
-    // from, which is what lets the `uses:` rules below be scoped rather than
-    // applied to every mapping in the document. Without that scope an action
+    // An element of a job's `steps:` sequence is the ONLY place GitHub runs an
+    // action from, which is what lets the `uses:` rules below be scoped rather
+    // than applied to every mapping in the document. Without that scope an action
     // INPUT that happens to be named `uses` — `with: { uses: … }` — reads as a
     // step and invents a pin failure.
-    const elementsAreSteps = pathText.endsWith('steps');
+    //
+    // The scope is the exact path `jobs.<id>.steps` rather than a name ending in
+    // `steps`, because a suffix test re-opens the same hole one level out: an
+    // action input named `steps` fed a list of mappings — `with: { steps: [ {
+    // uses: … } ] }` — is data GitHub never runs, and grading it as a step
+    // invents a pin failure whose only fix is renaming another action's input.
+    const elementsAreSteps = JOB_STEPS_PATH.test(pathText);
     for (const [index, item] of node.entries()) {
       yield* walk(
         item,

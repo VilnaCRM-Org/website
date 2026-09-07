@@ -172,8 +172,8 @@ jobs:
     needs: [deploy]
     # The sandbox origin has to be reachable to be probed. Until a maintainer sets
     # the SANDBOX_SITE_URL_TEMPLATE repository variable (Settings → Secrets and
-    # variables → Actions → Variables) — a URL carrying `{pr}` and/or `{branch}`,
-    # e.g. `https://pr-{pr}.sandbox.example.com` — the job skips cleanly rather
+    # variables → Actions → Variables) — a URL carrying `{pr}`, e.g.
+    # `https://pr-{pr}.sandbox.example.com` — the job skips cleanly rather
     # than failing every PR. `needs: deploy` carries the same-repo guard forward:
     # a fork PR never creates a sandbox, so there is nothing here to probe.
     if: ${{ vars.SANDBOX_SITE_URL_TEMPLATE != '' }}
@@ -205,27 +205,32 @@ jobs:
         run: |
           set -euo pipefail
 
-          # A template with neither placeholder resolves to ONE fixed origin for every
-          # PR, so a green result would certify somebody else's sandbox — or a stale
-          # one. Refuse before probing rather than report a meaningless pass.
+          # `{pr}` is the only placeholder, and deliberately so. The sandbox hostname
+          # is derived by the infra repository's CodePipeline from the BRANCH_NAME the
+          # deploy job above passes through RAW, so this repository does not know the
+          # branch -> hostname transform: any slug written here would be a guess, and a
+          # guess that is wrong probes an origin the sandbox is not at. That fails the
+          # PR on a healthy deployment, or — worse — passes against a different
+          # sandbox. PR_NUMBER is passed to the same pipeline verbatim and is digits,
+          # so substituting it is an exact reconstruction rather than an inference.
           case "$URL_TEMPLATE" in
-            *'{pr}'*|*'{branch}'*) ;;
-            *)
-              echo "::error::SANDBOX_SITE_URL_TEMPLATE must contain {pr} or {branch}; a fixed origin would certify the wrong deployment"
+            *'{branch}'*)
+              echo "::error::SANDBOX_SITE_URL_TEMPLATE holds {branch}, which this workflow cannot resolve: the branch to hostname transform lives in the sandbox pipeline, not in this repository. Use {pr}."
               exit 1
               ;;
           esac
 
-          # Git allows characters in a branch name that are not safe in a hostname —
-          # `/`, `_`, `.`, uppercase — and an unslugified substitution would silently
-          # probe a different URL than the one the sandbox was provisioned at. Prefer
-          # {pr} in the template; this mapping is a best effort for {branch}.
-          branch_slug="$(printf '%s' "$BRANCH_NAME" \
-            | tr '[:upper:]' '[:lower:]' \
-            | tr -c 'a-z0-9-' '-' \
-            | sed 's/-\{2,\}/-/g; s/^-//; s/-$//')"
+          # A template with no placeholder resolves to ONE fixed origin for every PR,
+          # so a green result would certify somebody else's sandbox — or a stale one.
+          # Refuse before probing rather than report a meaningless pass.
+          case "$URL_TEMPLATE" in
+            *'{pr}'*) ;;
+            *)
+              echo "::error::SANDBOX_SITE_URL_TEMPLATE must contain {pr}; a fixed origin would certify the wrong deployment"
+              exit 1
+              ;;
+          esac
 
           url="${URL_TEMPLATE//\{pr\}/${PR_NUMBER}}"
-          url="${url//\{branch\}/${branch_slug}}"
           echo "Probing sandbox origin: ${url}"
           ./scripts/ci/smoke-response-shape.sh "$url" --expect-noindex
