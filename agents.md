@@ -8,7 +8,8 @@ update tests.
 The stack is Next.js 16, React 19, TypeScript 6, MUI 9 with Emotion, Apollo Client 4 with
 Apollo Server 5, react-hook-form, i18next, and Storybook 10. The package manager is
 `bun@1.3.5` and Node is the LTS pinned in `.nvmrc` (24.18.0), which `package.json`
-`engines` (`^24`) and every Dockerfile agree on — `make lint-pins` fails when they drift.
+`engines` (`^24.18.0`) and every Dockerfile agree on — `make lint-pins` fails when they
+drift, and `make lint-workflow-pins` does the same for `.github/workflows`.
 The project structure is adapted from bulletproof-react. All
 commands are Makefile targets run from the repository root.
 

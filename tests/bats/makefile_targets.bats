@@ -1028,6 +1028,17 @@ JSON
   [ "$status" -ne 0 ]
 }
 
+@test "lint-workflow-pins runs the workflow pin gate through the dev container" {
+  # The opposite placement to its sibling above, and deliberately so: this gate
+  # parses workflow YAML with js-yaml, so it needs node_modules and therefore the
+  # image. Routing it host-side would break `make lint` on a CI runner that never
+  # ran `bun install` (#447).
+  run_make_target lint-workflow-pins
+  [ "$status" -eq 0 ]
+  assert_log_contains 'node scripts/ci/check-workflow-pins.mjs'
+  assert_log_contains 'docker'
+}
+
 @test "create-network turns an unreachable Docker daemon into a HOST_STACK=1 hint" {
   # The Docker path is the default, so the failure a machine without a daemon
   # actually hits has to name the way out rather than surfacing a raw connection

@@ -42,8 +42,8 @@ Run everything through `make`; the targets are the single source of truth and th
 runs. The aggregate gate is `make lint`, which regenerates the i18n bundle and then runs
 ESLint, TypeScript, markdownlint, dependency-cruiser, the user-service API version
 invariant, the Dockerfile registry/digest policy, the edge security-header gate, the
-RFC 9116 security.txt gate, the production-safety guardrails, and the version-pin drift
-gate in sequence.
+RFC 9116 security.txt gate, the production-safety guardrails, the version-pin drift gate
+and the workflow Node-pin gate in sequence.
 
 ```bash
 make format               # Prettier formatting; run before lint
@@ -51,6 +51,7 @@ make lint                 # Full gate: generate-localization + lint-next + lint-
                           #   + lint-md + lint-deps + lint-api-versions
                           #   + lint-docker-policy + lint-headers + lint-security-txt
                           #   + lint-prod-guardrails + lint-pins
+                          #   + lint-workflow-pins
 make lint-next            # ESLint only
 make lint-tsc             # TypeScript type-check only
 make lint-md              # markdownlint only
@@ -60,7 +61,8 @@ make lint-docker-policy   # registry (no Docker Hub) + digest-pin policy on ever
 make lint-headers         # edge security-header policy (config/security-headers.json)
 make lint-security-txt    # RFC 9116 security.txt fields + Expires runway
 make lint-prod-guardrails # production-safety invariants (issue #383)
-make lint-pins            # Node/Bun/Playwright pin drift across .nvmrc, engines, Dockerfiles, CI
+make lint-pins            # Node/Bun/Playwright pin drift across .nvmrc, engines, Dockerfiles
+make lint-workflow-pins   # every workflow resolves Node through .nvmrc (parses the YAML)
 make build                # Production build
 ```
 
@@ -212,9 +214,12 @@ make lint-deps  # Architecture/import-boundary violations
 make lint       # Confirm the full gate is green
 ```
 
-`make lint-pins` fails when `.nvmrc`, a Dockerfile base image, `package.json`
-`engines.node`, or an `actions/setup-node` step disagree about the Node version — and
-likewise for the Bun and Playwright pins. Fix the lagging source; never loosen `.nvmrc`.
+`make lint-pins` fails when `.nvmrc`, a Dockerfile base image or `package.json`
+`engines.node` disagree about the Node version — and likewise for the Bun and Playwright
+pins. Its sibling `make lint-workflow-pins` parses `.github/workflows` and fails when an
+`actions/setup-node` step stops reading `node-version-file: '.nvmrc'`, when a literal
+`node-version` is declared anywhere, or when a workflow reaches for a `vars.NODE_VERSION`
+repository variable. Fix the lagging source; never loosen `.nvmrc`.
 
 ### Updating dependencies
 
