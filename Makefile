@@ -976,10 +976,14 @@ ci-test-contract: ## Run contract parity tests directly assuming deps are instal
 # pipeline runs, adapted to website's Bun + Next.js toolchain.
 #
 # Intentionally NOT ported from crm/Makefile (rationale):
-#   * lint-dup (jscpd), fmt-qlty / qlty: not configured in this repo; website's
-#     lint stack is ESLint + tsc + markdownlint + dependency-cruiser (exposed as
-#     lint-deps). Adopting the remaining tools needs new tooling/config and
-#     belongs in a dedicated issue, not a naming-parity change.
+#   * lint-dup (jscpd): not configured in this repo; website's lint stack is
+#     ESLint + tsc + markdownlint + dependency-cruiser (exposed as lint-deps).
+#     Adopting it needs new tooling/config and belongs in a dedicated issue,
+#     not a naming-parity change.
+#   * fmt-qlty / qlty: qlty IS configured here -- .qlty/qlty.toml is committed
+#     and qlty Cloud reviews every PR -- but it runs as a hosted check rather
+#     than a Makefile target, so there is no local entrypoint to port. Do not
+#     read the absence of a target as the absence of the gate.
 #   * lint-metrics (rust-code-analysis): now ported (issue #224), but adapted —
 #     the analyzer is a Rust binary absent from the node:*-alpine dev image, so
 #     the target runs host-only, stays OUT of the `lint` aggregate and
