@@ -33,7 +33,7 @@ jobs:
       - name: Check relative links and fragments (offline)
         run: |
           # Scan only git-tracked Markdown so the cross-referencing docs
-          # (CLAUDE.md, agents.md, .claude/skills/**) are covered while
+          # (CLAUDE.md, AGENTS.md, .claude/skills/**) are covered while
           # node_modules and build output are not. Offline mode skips external
           # URLs, so a third party's outage can never flake this blocking leg.
           # NUL-delimited read keeps paths containing spaces as single inputs.

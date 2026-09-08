@@ -30,7 +30,7 @@ not generic Markdown advice.
       code change touches (`make test-unit-client`, `make test-e2e`, `make test-visual`).
 - [ ] `make lint-md` passes for any scanned doc; `make format` leaves skill docs
       unchanged on a re-run.
-- [ ] The doc links to `agents.md` for the coverage policy instead of restating it.
+- [ ] The doc links to `AGENTS.md` for the coverage policy instead of restating it.
 - [ ] BMAD/planning references point at `.claude/commands/` and `_bmad/` (local-only) and
       are NOT duplicated into `.claude/skills/`.
 - [ ] No linter is disabled or suppressed (no `eslint-disable`, `prettier-ignore`,

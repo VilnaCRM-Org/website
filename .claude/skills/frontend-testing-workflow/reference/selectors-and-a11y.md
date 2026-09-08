@@ -3,7 +3,7 @@
 Tests describe behavior the user can perceive, so they double as accessibility
 pressure: if the UI cannot be selected the way a user reaches it, that is a defect
 in the component, not the test. This matches the behavior-first guidance in the
-repo root [agents.md](../../../../agents.md).
+repo root [AGENTS.md](../../../../AGENTS.md).
 
 ## Locator priority
 

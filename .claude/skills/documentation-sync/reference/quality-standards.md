@@ -20,7 +20,7 @@
   `src/test/testing-library/`, `src/test/apollo-server/`).
 - Keep website docs website-specific — no CRM backend, DI, or RTK Query
   workflows.
-- For markdownlint-scanned docs (`README.md`, `CONTRIBUTING.md`, `agents.md`,
+- For markdownlint-scanned docs (`README.md`, `CONTRIBUTING.md`, `AGENTS.md`,
   `cursor-project-guide.md`) keep fenced blocks `bash`-only and lines at or
   under 100 characters. markdownlint's `**/*.md` glob skips dot-directories, so
   `.claude/skills/**` is not scanned, and `CLAUDE.md` is explicitly ignored in the

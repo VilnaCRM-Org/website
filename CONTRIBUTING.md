@@ -476,7 +476,7 @@ prints a warning saying so rather than reporting a discarded upload as success.
 #### Flaky tests
 
 A test that passes only on a retry is a defect. The detection, triage, quarantine and
-never-do rules live in the [`agents.md`](agents.md) "Flaky Tests" section and apply to
+never-do rules live in the [`AGENTS.md`](AGENTS.md) "Flaky Tests" section and apply to
 human contributors and AI agents alike.
 
 ### Commit your update

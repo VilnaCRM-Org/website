@@ -15,7 +15,7 @@ this file covers the test suites.
 2. Read the first real failure. Later failures are often fallout from the first.
 3. Classify the cause (next section) before changing anything.
 4. Fix the cause. If it is a bug, add a regression test that fails before the
-   fix and passes after it (agents.md, Step 4).
+   fix and passes after it (AGENTS.md, Step 4).
 5. Re-run the focused suite, then `make format` and `make lint`.
 
 ## Classify the cause
@@ -77,6 +77,6 @@ this file covers the test suites.
 
 ## When a class genuinely does not apply
 
-Record it with a concrete `Not applicable: <reason>` per agents.md (in the test
+Record it with a concrete `Not applicable: <reason>` per AGENTS.md (in the test
 file, the PR description, or the task summary). A bare "not applicable" or a
 silent omission does not satisfy the coverage policy.

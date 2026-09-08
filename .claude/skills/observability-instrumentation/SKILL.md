@@ -93,7 +93,7 @@ variable detail in `extra`, never in tags. Patterns are in
 - Reuse the single `Sentry.init`; do not create scattered direct SDK calls.
 - Telemetry must be resilient: a reporting failure must never break a user flow.
 - Add or update tests when wiring or error-handling branches change, per
-  `agents.md` (positive, negative, and edge classes; behavior-first assertions).
+  `AGENTS.md` (positive, negative, and edge classes; behavior-first assertions).
 
 ## Verification
 
@@ -114,7 +114,7 @@ Confirm the task against [../AI-AGENT-GUIDE.md](../AI-AGENT-GUIDE.md) and
 [../SKILL-DECISION-GUIDE.md](../SKILL-DECISION-GUIDE.md). Hand measurement and
 Core Web Vitals diagnosis to
 [../frontend-performance-accessibility/SKILL.md](../frontend-performance-accessibility/SKILL.md).
-The root [`agents.md`](../../../agents.md) test-coverage policy governs any tests
+The root [`AGENTS.md`](../../../AGENTS.md) test-coverage policy governs any tests
 you add.
 
 ## Supporting files

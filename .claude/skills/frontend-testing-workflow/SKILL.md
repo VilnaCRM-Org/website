@@ -16,12 +16,12 @@ How to pick the right test layer, run it through the Makefile, and write
 behavior-first assertions for the VilnaCRM website (Next.js 16 pages router,
 React 19, MUI 9, Apollo Client 4 + Apollo Server 5, react-hook-form, i18next).
 
-## Coverage policy lives in agents.md
+## Coverage policy lives in AGENTS.md
 
 The mandatory scenario-coverage policy (pick the layer, cover positive /
 negative / boundary classes, document skipped classes, add a regression test for
 every bug fix, verify before done) is defined in the repo root
-[agents.md](../../../agents.md). This skill is the _how_; agents.md is the
+[AGENTS.md](../../../AGENTS.md). This skill is the _how_; AGENTS.md is the
 _contract_. Do not restate or weaken it — defer to it for what "covered" means.
 
 ## Test topology
