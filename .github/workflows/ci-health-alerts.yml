@@ -20,6 +20,13 @@ on:
       - fuzz testing
       - storybook build
       - mutation testing
+      # The weekly full-history secret scan (#353). Its PR leg is the
+      # working-tree scan and reports itself on the PR; the history leg runs
+      # only on the Monday schedule and on workflow_dispatch, so without an
+      # entry here a historical credential would be found by a job nobody
+      # watches. Like `security testing` it also runs on pull_request, which the
+      # branches filter below excludes.
+      - secrets scanning
     types:
       - completed
     # `security testing` also runs on every pull request; without this filter

@@ -153,7 +153,7 @@ Before applying this skill, confirm the active task against
 [../AI-AGENT-GUIDE.md](../AI-AGENT-GUIDE.md) and
 [../SKILL-DECISION-GUIDE.md](../SKILL-DECISION-GUIDE.md) (when present) so every
 relevant skill is consulted, and against the repository contract in
-[agents.md](../../../agents.md).
+[AGENTS.md](../../../AGENTS.md).
 
 ## Supporting Files
 

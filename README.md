@@ -2,7 +2,7 @@
 
 # Template for modern SSR applications
 
-[![codecov](https://codecov.io/gh/VilnaCRM-Org/frontend-ssr-template/graph/badge.svg?token=MPFDUSMZ2I)](https://codecov.io/gh/VilnaCRM-Org/frontend-ssr-template)
+[![codecov](https://codecov.io/gh/VilnaCRM-Org/website/graph/badge.svg)](https://codecov.io/gh/VilnaCRM-Org/website)
 
 ## Possibilities
 

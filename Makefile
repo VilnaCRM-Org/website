@@ -73,6 +73,13 @@ OPENAPI_BASELINE            = contracts/user-service/openapi.json
 # The gate blocks on medium-and-above findings that zizmor reports with high
 # confidence; see scripts/ci/lint-workflows.sh and the workflow-security.yml
 # job comment for what that deliberately leaves out and why.
+# gitleaks is the committed-secrets scanner (issue #353). The gitleaks GitHub
+# Action requires a paid licence for organizations, so the CLI container is run
+# directly and pinned BY DIGEST, like zizmor above. Digest is gitleaks 8.30.1;
+# .github/workflows/secrets-scanning.yml consumes the same value through this
+# variable, so the pin has exactly one home.
+GITLEAKS_IMAGE              = ghcr.io/gitleaks/gitleaks@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f
+
 ZIZMOR_IMAGE                = ghcr.io/zizmorcore/zizmor@sha256:8e6b3e4fb74d1aa5d23e83ea369f386c66eced0d1fb944d32cd8b2aac100b00d
 ZIZMOR_MIN_SEVERITY         = medium
 ZIZMOR_MIN_CONFIDENCE       = high
@@ -789,6 +796,25 @@ lint-workflows: ## Audit the GitHub Actions workflows for security defects with 
 	 ZIZMOR_MIN_CONFIDENCE="$(ZIZMOR_MIN_CONFIDENCE)" \
 	 bash scripts/ci/lint-workflows.sh
 
+# Host-only and Docker-driven, so like lint-workflows and lint-vulns it stays
+# OUTSIDE the `lint` aggregate: `make lint` must run inside the dev container,
+# which cannot run docker. Its CI surface is .github/workflows/secrets-scanning.yml.
+#
+# The two modes answer different questions and fail in different places.
+# `lint-secrets` scans the checked-out files and is what gates every PR.
+# `scan-secrets-history` walks every reachable commit -- the mode that catches a
+# credential committed and then "removed" later, where the tree is clean but the
+# object store is not. History runs weekly, not per-PR: a finding in a 2024
+# commit is not the current author's regression, and blocking on it would only
+# teach reviewers to click past a red check.
+lint-secrets: ## Scan the working tree for committed secrets with gitleaks (host-only, Docker)
+	@GITLEAKS_IMAGE="$(GITLEAKS_IMAGE)" SECRETS_MODE=tree \
+	 bash scripts/ci/scan-secrets.sh
+
+scan-secrets-history: ## Scan every reachable commit for secrets (host-only, Docker; needs a full clone)
+	@GITLEAKS_IMAGE="$(GITLEAKS_IMAGE)" SECRETS_MODE=history \
+	 bash scripts/ci/scan-secrets.sh
+
 husky: ## One-time Husky setup to enable Git hooks (deprecated if already set)
 	bun x husky install
 
@@ -950,10 +976,14 @@ ci-test-contract: ## Run contract parity tests directly assuming deps are instal
 # pipeline runs, adapted to website's Bun + Next.js toolchain.
 #
 # Intentionally NOT ported from crm/Makefile (rationale):
-#   * lint-dup (jscpd), fmt-qlty / qlty: not configured in this repo; website's
-#     lint stack is ESLint + tsc + markdownlint + dependency-cruiser (exposed as
-#     lint-deps). Adopting the remaining tools needs new tooling/config and
-#     belongs in a dedicated issue, not a naming-parity change.
+#   * lint-dup (jscpd): not configured in this repo; website's lint stack is
+#     ESLint + tsc + markdownlint + dependency-cruiser (exposed as lint-deps).
+#     Adopting it needs new tooling/config and belongs in a dedicated issue,
+#     not a naming-parity change.
+#   * fmt-qlty / qlty: qlty IS configured here -- .qlty/qlty.toml is committed
+#     and qlty Cloud reviews every PR -- but it runs as a hosted check rather
+#     than a Makefile target, so there is no local entrypoint to port. Do not
+#     read the absence of a target as the absence of the gate.
 #   * lint-metrics (rust-code-analysis): now ported (issue #224), but adapted —
 #     the analyzer is a Rust binary absent from the node:*-alpine dev image, so
 #     the target runs host-only, stays OUT of the `lint` aggregate and

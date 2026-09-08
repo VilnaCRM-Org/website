@@ -19,7 +19,7 @@ from the repo root (this repo exposes its toolchain through the Makefile, not
 Scope boundary: this skill owns the **formatting and lint gates**. For _which test
 suites_ to run and in what order, defer to the `ci-workflow` skill. For the depth of
 _reducing complexity_ to clear `make lint-metrics`, defer to the
-`complexity-management` skill. The root [agents.md](../../../agents.md) test-coverage
+`complexity-management` skill. The root [AGENTS.md](../../../AGENTS.md) test-coverage
 policy applies to any behavior these fixes touch.
 
 ## Required Order
@@ -106,7 +106,7 @@ the image; `lint-pins` must not, so its half stays regex over Dockerfiles and JS
 A passing run achieved by lowering the bar is a failing change. Do not add
 `eslint-disable`, `prettier-ignore`, `@ts-ignore` / `@ts-nocheck`, or markdownlint disable
 directives; do not relax a dependency-cruiser rule or lower a metrics threshold. Fix the
-code, or record a concrete `Not applicable: <reason>` per agents.md.
+code, or record a concrete `Not applicable: <reason>` per AGENTS.md.
 
 ## Related Guides
 

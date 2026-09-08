@@ -1,6 +1,14 @@
 {
   "permissions": {
-    "deny": ["Bash(curl:*)", "Bash(wget:*)", "Bash(nc:*)", "Bash(scp:*)"],
+    "allow": [
+      "Bash(bmalph:*)",
+      "Bash(make:*)",
+      "Bash(bun:*)",
+      "Bash(docker compose exec dev:*)",
+      "Bash(git:*)",
+      "Bash(gh:*)"
+    ],
+    "deny": ["Bash(curl:*)", "Bash(wget:*)", "Bash(nc:*)", "Bash(scp:*)", "Bash(gh gist:*)"],
     "ask": [
       "Bash(git push --force:*)",
       "Bash(git push -f:*)",

@@ -13,7 +13,7 @@
  * and the contract as separate inputs even though production passes the same
  * file to both.
  *
- * Scenario coverage (agents.md step 2):
+ * Scenario coverage (AGENTS.md step 2):
  *   - Negative — a renamed, retyped and added response field, plus an
  *     undocumented status, each replayed through the real mock.
  *   - Boundary — the rules that Mockoon cannot be made to produce (a malformed

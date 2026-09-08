@@ -97,6 +97,12 @@ app.log
 /.ralph/
 /.claude/commands/
 
+# The rooted entries above already ignore these paths. `bmalph doctor` — the preflight
+# gate `/fe-sdlc-setup` aborts on — matches the two literal strings below rather than
+# resolving the patterns, so the duplicates are what make a fresh clone pass it.
+_bmad-output/
+.ralph/logs/
+
 # draw.io diagrams. An AWS IoT reference architecture unrelated to this
 # S3 + CloudFront static export was committed at the repo root and later moved to
 # docs/ (issue #383); internal infrastructure diagrams aid attacker recon and
