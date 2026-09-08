@@ -816,6 +816,10 @@ run_openapi_drift_script() {
   # The scan refuses to run without the committed allowlist rather than falling
   # back to gitleaks' bare defaults, so the sandbox needs a copy.
   cp "$PROJECT_ROOT/.gitleaks.toml" "$MAKEFILE_SANDBOX/.gitleaks.toml"
+  # scan-secrets.sh resolves its workspace as ${GITHUB_WORKSPACE:-$PWD}, and CI
+  # sets GITHUB_WORKSPACE to the real checkout -- so without this the test would
+  # inspect the repository instead of the sandbox it just prepared.
+  export GITHUB_WORKSPACE="$MAKEFILE_SANDBOX"
 
   run_make_target lint-secrets
   [ "$status" -eq 0 ]
@@ -845,6 +849,11 @@ run_openapi_drift_script() {
   # for a path -- so a fake .git is unreadable, answers neither "false" nor
   # "true", and is refused exactly as a shallow clone would be.
   git -C "$MAKEFILE_SANDBOX" init -q
+  # Pin the workspace to the sandbox. scan-secrets.sh reads
+  # ${GITHUB_WORKSPACE:-$PWD}, and the bats job checks out at the default
+  # fetch-depth of 1 -- so on a runner this target would otherwise inspect the
+  # real, SHALLOW checkout and be refused by the very guard it is asserting.
+  export GITHUB_WORKSPACE="$MAKEFILE_SANDBOX"
 
   run_make_target scan-secrets-history
   [ "$status" -eq 0 ]
