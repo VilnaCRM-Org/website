@@ -289,13 +289,14 @@ The static export makes Next's `headers()` a no-op, so the edge is the only
 enforcement point — see [`docs/security-headers.md`](docs/security-headers.md). Never
 drop or weaken a header to make the gate pass.
 
-Five gates sit deliberately outside `make lint`: `make lint-metrics` (host-only Rust
+Six gates sit deliberately outside `make lint`: `make lint-metrics` (host-only Rust
 binary), `make lint-contracts` (needs network for its drift check), `make lint-openapi`
 (both — a host Go binary plus the network), `make lint-vulns` (host-only Go binary, needs
-network for the OSV database), and `make lint-workflows` (host-only zizmor container; its
-online audits reach the GitHub API). Each has its own workflow — `rust-code-analysis.yml`,
-`contract-testing.yml`, `openapi-drift.yml`, `osv-scanner.yml`, and
-`workflow-security.yml`. The two gates added by issue #383 are _inside_ `make lint`
+network for the OSV database), `make lint-workflows` (host-only zizmor container; its
+online audits reach the GitHub API), and `make lint-secrets` (host-only gitleaks
+container). Each has its own workflow — `rust-code-analysis.yml`,
+`contract-testing.yml`, `openapi-drift.yml`, `osv-scanner.yml`,
+`workflow-security.yml`, and `secrets-scanning.yml`. The two gates added by issue #383 are _inside_ `make lint`
 precisely because they are hermetic — they read only committed files, with no network, no
 host binary and no Docker.
 
@@ -465,6 +466,43 @@ Four production-facing invariants that no other gate watches. Extend them; never
   inherited debt does not block), and a failed scan reaches the `ci-alert` issue. Branch
   protection itself is a GitHub setting that cannot be committed — see CONTRIBUTING.md for
   the required check names.
+
+### Committed secrets (gitleaks, issue #353)
+
+`make lint-secrets` scans the working tree and `make scan-secrets-history` scans every
+reachable commit. Both run `scripts/ci/scan-secrets.sh` against the digest-pinned gitleaks
+CLI container — the gitleaks Action needs a paid organization licence, so the image is run
+directly, and `GITLEAKS_IMAGE` in the Makefile is its single home, read by
+`secrets-scanning.yml` through the same `make` targets rather than duplicated in YAML. The
+script refuses a tag or a malformed digest, refuses an unknown mode, and refuses to run
+without the committed `.gitleaks.toml` rather than falling back to gitleaks' bare defaults.
+
+**The two legs answer different questions.** The tree scan is what gates every PR: it sees
+only what the branch ships. The history scan is the one that catches a credential committed
+and then "removed" later, where the tree is clean but the object store is not — the tree
+scan structurally cannot see that. History runs weekly and on `workflow_dispatch`, never on
+`pull_request`: a finding in a 2024 commit is not the current author's regression, and
+blocking an unrelated PR on it would only teach reviewers to click past a red check. That
+is the same differential-on-PR, absolute-on-a-schedule split the dependency-CVE gate uses.
+A red weekly run is not silent — `secrets scanning` is listed in `ci-health-alerts.yml`.
+
+The allowlist is narrow by construction. Whole-file exemptions cover machine-generated or
+upstream-fetched artifacts plus gitignored build output (`.next/`, `out/`,
+`storybook-static-ci/`) — paths git cannot commit, which is the entire justification, and
+`tests/bats/secrets_scanning.bats` asserts each one really is gitignored so the reasoning
+cannot rot. Two former paths of the vendored swagger contract are exempted for the history
+scan only; the findings there are OpenAPI `example:` values, the same artifact and the same
+class of value as the `openapi.json` entry beside them.
+
+Never widen the allowlist to clear a finding your change introduced, and never relax a rule
+to keep a test green: the seeded-credential fixture in `secrets_scanning.bats` is assembled
+at runtime precisely so the test that proves the gate works cannot become a finding in the
+tree it guards. A genuine historical credential is rotated and revoked upstream, not
+allowlisted.
+
+Two halves of #353 cannot be delivered from a commit and remain open: enabling GitHub push
+protection is a repository setting, and adding the check to a `main` required-status-checks
+ruleset belongs to #343 (the repo has no rulesets today).
 
 ### Dependency CVEs (osv-scanner, issue #356)
 
