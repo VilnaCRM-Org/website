@@ -8,7 +8,7 @@
       "Bash(git:*)",
       "Bash(gh:*)"
     ],
-    "deny": ["Bash(curl:*)", "Bash(wget:*)", "Bash(nc:*)", "Bash(scp:*)"],
+    "deny": ["Bash(curl:*)", "Bash(wget:*)", "Bash(nc:*)", "Bash(scp:*)", "Bash(gh gist:*)"],
     "ask": [
       "Bash(git push --force:*)",
       "Bash(git push -f:*)",

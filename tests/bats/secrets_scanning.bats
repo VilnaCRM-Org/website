@@ -134,6 +134,37 @@ run_scan() {
   [[ "$output" == *"fetch-depth: 0"* ]]
 }
 
+@test "history mode refuses a shallow clone instead of scanning past the graft" {
+  # The dangerous case is not a MISSING .git but a shallow one: the directory
+  # exists, gitleaks runs, every commit it can see is clean, and the job reports
+  # green while everything before the graft boundary was never opened.
+  local origin="$BATS_TEST_TMPDIR/origin"
+  mkdir -p "$origin"
+  git -C "$origin" init -q
+  git -C "$origin" config user.email t@example.com
+  git -C "$origin" config user.name Test
+  printf 'one\n' >"$origin/a.txt"
+  git -C "$origin" add a.txt
+  git -C "$origin" commit -qm 'first'
+  printf 'two\n' >"$origin/b.txt"
+  git -C "$origin" add b.txt
+  git -C "$origin" commit -qm 'second'
+
+  rm -rf "$WORKSPACE"
+  git clone -q --depth 1 "file://$origin" "$WORKSPACE"
+  cp "$PROJECT_ROOT/.gitleaks.toml" "$WORKSPACE/.gitleaks.toml"
+  [ "$(git -C "$WORKSPACE" rev-parse --is-shallow-repository)" = "true" ]
+
+  SECRETS_MODE=history run_scan
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"shallow"* ]]
+
+  # It must refuse BEFORE spending a scan. A run that reached gitleaks and then
+  # exited 0 on the visible commits is the vacuous pass this guard exists to stop.
+  run grep -c 'docker' "$COMMAND_LOG"
+  [ "$output" = "0" ]
+}
+
 # --- allowlist invariant ----------------------------------------------------
 
 @test "every build-output path exempted in .gitleaks.toml is genuinely gitignored" {

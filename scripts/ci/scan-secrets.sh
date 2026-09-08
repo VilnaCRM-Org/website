@@ -77,11 +77,23 @@ case "${mode}" in
     ;;
 esac
 
-if [ "${mode}" = "history" ] && [ ! -d "${workspace}/.git" ]; then
-  echo "scan-secrets: SECRETS_MODE=history needs a git directory at '${workspace}/.git'." \
-    "In CI, check out with fetch-depth: 0 -- a shallow clone would silently scan" \
-    "only the tip commit and pass vacuously." >&2
-  exit 1
+if [ "${mode}" = "history" ]; then
+  if [ ! -d "${workspace}/.git" ]; then
+    echo "scan-secrets: SECRETS_MODE=history needs a git directory at '${workspace}/.git'." \
+      "In CI, check out with fetch-depth: 0." >&2
+    exit 1
+  fi
+  # A shallow clone is the dangerous case, not the missing one: `.git` exists,
+  # gitleaks runs, every commit it can see is clean, and the job reports green
+  # while the history before the graft boundary was never opened. That is a
+  # green check that proves nothing -- exactly what this leg exists to prevent
+  # -- so ask git directly rather than trusting the workflow's fetch-depth.
+  if [ "$(git -C "${workspace}" rev-parse --is-shallow-repository 2>/dev/null)" != "false" ]; then
+    echo "scan-secrets: '${workspace}' is a shallow (or unreadable) git repository." \
+      "A history scan there would silently skip every commit before the graft" \
+      "boundary and pass vacuously. Check out with fetch-depth: 0." >&2
+    exit 1
+  fi
 fi
 
 echo "scan-secrets: mode=${mode} config=${config}"
