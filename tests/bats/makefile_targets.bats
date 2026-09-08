@@ -839,9 +839,12 @@ run_openapi_drift_script() {
   reset_command_log
 
   cp "$PROJECT_ROOT/.gitleaks.toml" "$MAKEFILE_SANDBOX/.gitleaks.toml"
-  # The target refuses to run without a git directory, so that a shallow or
-  # missing clone cannot pass vacuously.
-  mkdir -p "$MAKEFILE_SANDBOX/.git"
+  # A REAL repository, not a bare `mkdir .git`. The target refuses both a
+  # missing git directory and a shallow one, and it settles the second question
+  # by asking git (`rev-parse --is-shallow-repository`) rather than by looking
+  # for a path -- so a fake .git is unreadable, answers neither "false" nor
+  # "true", and is refused exactly as a shallow clone would be.
+  git -C "$MAKEFILE_SANDBOX" init -q
 
   run_make_target scan-secrets-history
   [ "$status" -eq 0 ]
