@@ -92,34 +92,44 @@ the infra repository instead of adding a slug rule here.
 
 ### Environment protection rules
 
-Every job in this repository that assumes an AWS role declares an
-`environment:`, and `make lint-prod-guardrails` fails a pull request that adds a
-role-assuming job without one (issue #375).
+No job in this repository declares an `environment:` today. Adding one is a
+**three-step sequence that must be done in order** (issue #375); the steps below
+are the prerequisites, not something already delivered.
 
-The `environment:` key on its own changes no behaviour: until a maintainer
-creates the environment in repository settings and attaches protection rules to
-it, the job runs exactly as before. What the committed key buys is the two
-things a rule needs to exist at all — somewhere to attach the rule, and an OIDC
-subject of the form `repo:VilnaCRM-Org/website:environment:<name>` that the AWS
-role trust policy can pin exactly (see
-[`.github/sandbox_workflows.md`](../.github/sandbox_workflows.md)).
+Naming an environment is not inert. It changes the OIDC subject GitHub mints for
+that job from `repo:VilnaCRM-Org/website:pull_request` to
+`repo:VilnaCRM-Org/website:environment:<name>`, so a role whose trust policy does
+not already accept the new subject stops being assumable. PR #464 added the keys
+first and every sandbox run failed at `sts:AssumeRoleWithWebIdentity`
+([run 34385698159](https://github.com/VilnaCRM-Org/website/actions/runs/34385698159/job/102581269340));
+the keys were reverted.
+
+#### Step 1 — update the role trust policies (infrastructure repository)
+
+Each privileged role's trust policy must accept the exact environment subject it
+will be assumed under, with `StringEquals` and never a `StringLike` wildcard. The
+role-to-subject table lives in
+[`.github/sandbox_workflows.md`](../.github/sandbox_workflows.md). This is an
+out-of-repo change and must land first.
+
+#### Step 2 — create the environments (repository settings)
 
 Create these four environments under _Settings → Environments_, one per
 privileged role, so that approving a sandbox rebuild never also approves a
 production deploy.
 
-- **`production`** — gates `deploy.yml` / `deploy`, which assumes
+- **`production`** — for `deploy.yml` / `deploy`, which assumes
   `website-deploy-trigger-role`. Highest blast radius: it triggers the
   production CodePipeline. Required reviewer: a maintainer from the
   release/infrastructure group.
-- **`sandbox`** — gates `sandbox-creating.yml` / `deploy`, which assumes
+- **`sandbox`** — for `sandbox-creating.yml` / `deploy`, which assumes
   `sandbox-creation-trigger-role`. Runs in the production AWS account on every
   PR synchronize, so a reviewer here is what stops an unreviewed branch
   provisioning prod-account infrastructure. Required reviewer: a maintainer.
-- **`sandbox-tokens`** — gates `sandbox-creating.yml` / `check-tokens`, which
+- **`sandbox-tokens`** — for `sandbox-creating.yml` / `check-tokens`, which
   assumes `github-actions-role` in both the test and production accounts to read
   Secrets Manager. Required reviewer: a maintainer.
-- **`sandbox-teardown`** — gates `sandbox-deleting.yml` /
+- **`sandbox-teardown`** — for `sandbox-deleting.yml` /
   `trigger-sandbox-deletion-pipeline`, which assumes
   `sandbox-deletion-trigger-role`. Destructive, but only against sandbox
   resources; a wait timer is usually enough.
@@ -132,14 +142,20 @@ For each one:
 - **Wait timer** — an optional delay before the job runs.
 - **Deployment branches** — for `production`, restrict to `main`.
 
+#### Step 3 — add the `environment:` keys to the workflows
+
+Only after steps 1 and 2 are in place, add `environment: <name>` to the
+corresponding job in `sandbox-creating.yml` and `sandbox-deleting.yml`, and
+confirm the sandbox pipeline is green on a pull request before merging.
+
 Adding a required reviewer to `sandbox` and `sandbox-tokens` means every pull
 request that pushes a new commit queues for approval before its sandbox
 rebuilds. That is the intended trade-off, and it is why the environments are
 split: the reviewer set for a sandbox rebuild can be broader than the one for a
 production deploy.
 
-Nothing here is enforced by default. Creating the environments and attaching
-their rules is a repository-settings change that cannot be committed.
+Nothing here is enforced by default. Steps 1 and 2 are configuration changes
+that cannot be committed.
 
 ## Rollback procedure
 

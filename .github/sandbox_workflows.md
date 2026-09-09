@@ -14,6 +14,7 @@ This documentation provides an overview of two GitHub Actions workflows used for
   - [Deletion Variables Setup](#deletion-variables-setup)
 - [AWS IAM Role Configuration](#aws-iam-role-configuration)
   - [Why the subject must be exact, and never a wildcard](#why-the-subject-must-be-exact-and-never-a-wildcard)
+    - [Order of operations: trust policy first, `environment:` key second](#order-of-operations-trust-policy-first-environment-key-second)
 - [Additional Notes](#additional-notes)
 
 ## Introduction
@@ -147,10 +148,47 @@ that needs it:
 | `sandbox-deletion-trigger-role` | `sandbox-deleting.yml` / `trigger-sandbox-deletion-pipeline` | `repo:VilnaCRM-Org/website:environment:sandbox-teardown` |
 | `website-deploy-trigger-role` | `deploy.yml` / `deploy` | `repo:VilnaCRM-Org/website:environment:production` |
 
-The `environment:` keys these subjects depend on are committed, and `make lint-prod-guardrails`
-fails a pull request that removes one. Creating the environments themselves, and attaching
-protection rules to them, is a repository-settings change — see [the deployment
-runbook](../docs/deployment-runbook.md).
+This table is the **prescribed** policy, not a description of what is deployed today. The
+deployed sandbox role trust policy is narrower than the wildcard this document used to print:
+it accepts neither the `:*` wildcard nor any `environment:` subject. See the order of
+operations below before changing either half.
+
+### Order of operations: trust policy first, `environment:` key second
+
+> **Do not add an `environment:` key to a role-assuming job before the role's trust policy
+> accepts that job's exact environment subject.** Naming an environment does not merely
+> label the job — it **changes** the OIDC subject GitHub mints, from
+> `repo:VilnaCRM-Org/website:pull_request` to
+> `repo:VilnaCRM-Org/website:environment:<name>`. If the trust policy does not accept the new
+> subject, every run fails at `sts:AssumeRoleWithWebIdentity`.
+
+Evidence: PR #464 added `environment:` keys to the three sandbox jobs on the stated assumption
+that the key was inert until a maintainer created the environments. It was not. The
+`check-tokens` job failed immediately with
+
+```text
+Could not assume role with OIDC: Not authorized to perform sts:AssumeRoleWithWebIdentity
+(12 retries, role arn:aws:iam::891377212104:role/github-actions-role)
+```
+
+([run 34385698159](https://github.com/VilnaCRM-Org/website/actions/runs/34385698159/job/102581269340)).
+The keys were reverted. That failure is also what proves the deployed policy is narrower than
+this document's old template claimed: a genuine `StringLike` `repo:VilnaCRM-Org/website:*`
+condition would have matched the new environment subject and the run would have passed.
+`deploy.yml`'s `environment: production` works, so the *production* role's policy does accept
+an environment subject; the sandbox roles' policies do not.
+
+The correct sequence, therefore, is:
+
+1. In the infrastructure repository, update each sandbox role's trust policy to the
+   `StringEquals` exact subject in the table above.
+2. Create the matching environments under _Settings → Environments_ and attach their
+   protection rules — see [the deployment runbook](../docs/deployment-runbook.md).
+3. Only then add the `environment:` key to the corresponding job, and verify the sandbox
+   pipeline is green on a pull request.
+
+Because step 3 has not happened, no sandbox job declares an `environment:` today, and no gate
+requires one.
 
 Attach Policies to the Role:
 

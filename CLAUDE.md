@@ -514,14 +514,13 @@ Four production-facing invariants that no other gate watches. Extend them; never
   invisible. That is why the `dev-container` composite's callers that also run on a
   schedule or a push (`dev image cache`, `fuzz testing`, `storybook build`,
   `mutation testing`) are listed there. A workflow's `name:` is therefore load-bearing —
-  renaming one requires updating that list in the same commit. Since issue #375 the same
-  gate also fails any job whose steps pass a `role-to-assume` input while declaring no
-  non-empty `environment:` key. The key is the only place a maintainer can attach required
-  reviewers or a wait timer to a credential, and it is what makes the minted OIDC subject
-  `repo:VilnaCRM-Org/website:environment:<name>` rather than a branch ref, which a role
-  trust policy cannot pin to one deployment. The environments themselves are a repository
-  setting and cannot be committed — the committed half is this gate, which stops the key
-  being dropped again once they exist.
+  renaming one requires updating that list in the same commit. The gate does **not** yet
+  require an `environment:` key on jobs that pass a `role-to-assume` input (issue #375),
+  and adding one is not the free improvement it looks like: naming an environment changes
+  the minted OIDC subject to `repo:VilnaCRM-Org/website:environment:<name>`, and the
+  deployed sandbox role's trust policy rejects that subject, so the key fails
+  `sts:AssumeRoleWithWebIdentity` on every PR. The trust policies must be widened first —
+  `.github/sandbox_workflows.md` records the required order and the evidence.
 - **CodeQL findings are gated and routed.** `scripts/ci/code-scanning-gate.sh` fails the
   run on _new_ high/critical alerts (PRs subtract the default-branch baseline, so
   inherited debt does not block), and a failed scan reaches the `ci-alert` issue. Branch

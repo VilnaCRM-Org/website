@@ -45,6 +45,70 @@ extract_severity_predicate() {
     sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]\{1,\}/ /g'
 }
 
+# Print one `<job id>|<if expression>` row per top-level job whose body mentions
+# `role-to-assume`, parsed with js-yaml. This repository bans regex-scanning of
+# workflow YAML (CLAUDE.md, issue #447): a substring search could not tell a real
+# job-level `if:` from the same text inside a comment or a `run:` body, so a job
+# that dropped the guard entirely would still pass.
+role_assuming_jobs() {
+  PROJECT_ROOT="$PROJECT_ROOT" node -e '
+    const yaml = require(process.env.PROJECT_ROOT + "/node_modules/js-yaml");
+    const fs = require("fs");
+    const doc = yaml.load(fs.readFileSync(process.argv[1], "utf8"));
+    const jobs = (doc && doc.jobs) || {};
+    for (const [id, job] of Object.entries(jobs)) {
+      if (!JSON.stringify(job || null).includes("role-to-assume")) continue;
+      const guard = job && typeof job.if === "string" ? job.if : "";
+      process.stdout.write(id + "|" + guard.replace(/\s+/g, " ").trim() + "\n");
+    }
+  ' "$1"
+}
+
+# Print one `<job id>|<step index>|<uses value>` row per `uses:` in the workflow,
+# job-level and step-level alike, parsed with js-yaml. Only the real `uses` VALUE
+# is emitted, so a mutable ref that merely mentions a sha in its trailing comment
+# — `uses: vendor/action@main # pinned to <sha>` — is reported as `@main`.
+workflow_uses() {
+  PROJECT_ROOT="$PROJECT_ROOT" node -e '
+    const yaml = require(process.env.PROJECT_ROOT + "/node_modules/js-yaml");
+    const fs = require("fs");
+    const doc = yaml.load(fs.readFileSync(process.argv[1], "utf8"));
+    const jobs = (doc && doc.jobs) || {};
+    for (const [id, job] of Object.entries(jobs)) {
+      if (job && typeof job.uses === "string") {
+        process.stdout.write(id + "|-|" + job.uses + "\n");
+      }
+      const steps = (job && job.steps) || [];
+      steps.forEach((step, i) => {
+        if (step && typeof step.uses === "string") {
+          process.stdout.write(id + "|" + i + "|" + step.uses + "\n");
+        }
+      });
+    }
+  ' "$1"
+}
+
+# A reference is pinned only when the ref itself is 40 hex characters. A local
+# action (`./.github/actions/<name>`) carries no ref and is pinned by the commit
+# the workflow itself runs at.
+assert_all_uses_pinned() {
+  local file="$1" rows row ref
+  rows="$(workflow_uses "$file")"
+  [ -n "$rows" ] || return 0
+  while read -r row; do
+    ref="${row#*|}"
+    ref="${ref#*|}"
+    case "$ref" in
+      ./*) continue ;;
+    esac
+    if ! printf '%s' "$ref" |
+      grep -qE '^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*@[0-9a-f]{40}$'; then
+      printf 'unpinned uses in %s: %s\n' "$file" "$row" >&2
+      return 1
+    fi
+  done < <(printf '%s\n' "$rows")
+}
+
 @test "the analyze job runs the code-scanning gate and the script is executable" {
   local analyze
   analyze="$(extract_job "$WORKFLOWS_DIR/security-testing.yml" analyze)"
@@ -137,20 +201,22 @@ extract_severity_predicate() {
 @test "every action in the security workflows is pinned to a full commit sha" {
   local file
   for file in "$WORKFLOWS_DIR/security-testing.yml" "$WORKFLOWS_DIR/ci-health-alerts.yml"; do
-    run grep -nE '^\s*uses:' "$file"
-    if [ "$status" -eq 0 ]; then
-      # Every `uses:` line must carry a 40-hex-character ref.
-      [ "$(printf '%s\n' "$output" | grep -cvE '@[0-9a-f]{40}' || true)" -eq 0 ]
-    fi
+    assert_all_uses_pinned "$file"
   done
 }
 
 # --- Sandbox workflows: the prod-account trust boundary (issue #375) ------------
 #
 # `sandbox-creating.yml` and `sandbox-deleting.yml` assume roles in the
-# PRODUCTION AWS account. Three properties keep that reachable only from a
+# PRODUCTION AWS account. These properties keep that reachable only from a
 # reviewed, same-repo pull request, and each one has been absent from this
 # repository at some point in its history.
+#
+# There is deliberately NO assertion that these jobs declare an `environment:`.
+# Naming one changes the minted OIDC subject to
+# `repo:VilnaCRM-Org/website:environment:<name>`, which the deployed sandbox role
+# trust policy does not accept -- see .github/sandbox_workflows.md, "Order of
+# operations".
 
 sandbox_workflows() {
   printf '%s\n' \
@@ -158,20 +224,58 @@ sandbox_workflows() {
     "$WORKFLOWS_DIR/sandbox-deleting.yml"
 }
 
+SAME_REPO_GUARD='github.event.pull_request.head.repo.full_name == github.repository'
+
+# Assert every role-assuming job in $1 carries the same-repo guard as its real
+# job-level `if:` field.
+assert_same_repo_guard() {
+  local file="$1" rows row
+  rows="$(role_assuming_jobs "$file")"
+  [ -n "$rows" ] || return 0
+  while read -r row; do
+    if [[ "${row#*|}" != *"$SAME_REPO_GUARD"* ]]; then
+      printf 'unguarded role-assuming job in %s: %s\n' "$file" "$row" >&2
+      return 1
+    fi
+  done < <(printf '%s\n' "$rows")
+}
+
 @test "every sandbox job that assumes a role carries the same-repo guard" {
   # A fork PR receives no OIDC id-token, so the role assumption would fail --
   # but it would fail LOUDLY on every fork PR, and the guard is what states the
   # boundary rather than relying on that side effect.
-  local file job
+  local file
   while read -r file; do
-    while read -r job; do
-      local body
-      body="$(extract_job "$file" "$job")"
-      [[ "$body" == *'role-to-assume'* ]] || continue
-      [[ "$body" == *'github.event.pull_request.head.repo.full_name == github.repository'* ]]
-    done < <(awk '/^jobs:/ { inside = 1; next }
-                  inside && /^  [A-Za-z0-9_-]+:/ { gsub(/[ :]/, "", $0); print }' "$file")
+    assert_same_repo_guard "$file"
   done < <(sandbox_workflows)
+}
+
+@test "the same-repo guard assertion rejects a guard that exists only in a comment" {
+  # The shape the old substring search let through: the job-level `if:` is gone,
+  # and the guard text survives only in a comment and a `run:` body.
+  local fixture="$BATS_TEST_TMPDIR/comment-guard.yml"
+  cat >"$fixture" <<'YAML'
+name: unguarded
+on:
+  pull_request:
+jobs:
+  deploy:
+    # if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "github.event.pull_request.head.repo.full_name == github.repository"
+      - uses: aws-actions/configure-aws-credentials@517a711dbcd0e402f90c77e7e2f81e849156e31d # v6.2.2
+        with:
+          role-to-assume: arn:aws:iam::1:role/r
+YAML
+
+  run assert_same_repo_guard "$fixture"
+  [ "$status" -ne 0 ]
+
+  # Restoring the real job-level field passes, so the assertion is not vacuous.
+  sed -i 's|^    # if: |    if: |' "$fixture"
+  run assert_same_repo_guard "$fixture"
+  [ "$status" -eq 0 ]
 }
 
 @test "the sandbox workflows are reachable only from pull_request events" {
@@ -189,32 +293,36 @@ sandbox_workflows() {
   done < <(sandbox_workflows)
 }
 
-@test "every sandbox job that assumes a role declares an environment" {
-  # The in-YAML half of the assertion `make lint-prod-guardrails` enforces
-  # repo-wide. Asserted here too so the sandbox files carry it in their own
-  # right: the environment name is what the IAM trust policy pins as the OIDC
-  # subject (see .github/sandbox_workflows.md).
-  local file job
-  while read -r file; do
-    while read -r job; do
-      local body
-      body="$(extract_job "$file" "$job")"
-      [[ "$body" == *'role-to-assume'* ]] || continue
-      printf '%s\n' "$body" | grep -qE '^    environment:[[:space:]]*$'
-      printf '%s\n' "$body" | grep -qE '^      name: (sandbox|sandbox-tokens|sandbox-teardown)[[:space:]]*$'
-    done < <(awk '/^jobs:/ { inside = 1; next }
-                  inside && /^  [A-Za-z0-9_-]+:/ { gsub(/[ :]/, "", $0); print }' "$file")
-  done < <(sandbox_workflows)
-}
-
 @test "every action in the sandbox workflows is pinned to a full commit sha" {
   local file
   while read -r file; do
-    run grep -nE '^\s*uses:' "$file"
-    if [ "$status" -eq 0 ]; then
-      [ "$(printf '%s\n' "$output" | grep -cvE '@[0-9a-f]{40}' || true)" -eq 0 ]
-    fi
+    assert_all_uses_pinned "$file"
   done < <(sandbox_workflows)
+}
+
+@test "the sha-pin assertion rejects a mutable ref that names a sha in its comment" {
+  # The shape the old line-regex let through: the ref is a branch, and the
+  # 40-hex string lives in the trailing comment where it pins nothing.
+  local fixture="$BATS_TEST_TMPDIR/mutable-ref.yml"
+  cat >"$fixture" <<'YAML'
+name: mutable
+on:
+  pull_request:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build
+        uses: vendor/action@main # was vendor/action@3d3c42e5aac5ba805825da76410c181273ba90b1
+YAML
+
+  run assert_all_uses_pinned "$fixture"
+  [ "$status" -ne 0 ]
+
+  # The same step on a real sha ref passes, so the assertion is not vacuous.
+  sed -i 's|@main # was vendor/action@|@|' "$fixture"
+  run assert_all_uses_pinned "$fixture"
+  [ "$status" -eq 0 ]
 }
 
 @test "the sandbox workflows keep permissions least-privilege and non-cancelling" {

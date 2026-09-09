@@ -14,11 +14,6 @@
 //      never silently degrade into an unconditional origin pass-through.
 //   C. `next.config.js` must not enable productionBrowserSourceMaps, which
 //      publishes readable application source to the CDN.
-//   D. Every job that assumes an AWS role through a `role-to-assume` step input
-//      must declare an `environment:` key, so the deployment can be gated by
-//      GitHub Environment protection rules (required reviewers / wait timer) and
-//      so the OIDC subject the job mints is `...:environment:<name>` rather than
-//      a bare branch ref (issue #375, F1/F2).
 //
 // Collect-all-then-fail: every violation is reported in one run.
 import fs from 'node:fs';
@@ -174,51 +169,6 @@ function assertPrivilegedWorkflowsAreAlerted(workflows) {
         `on.workflow_run.workflows. Add it to the alert workflow ` +
         `(${WORKFLOW_DIR}/ci-health-alerts.yml) so a post-merge failure reaches a human.`
     );
-  });
-}
-
-function jobsOf(doc) {
-  return doc?.jobs && typeof doc.jobs === 'object' ? Object.entries(doc.jobs) : [];
-}
-
-// A step carries an explicit role only through the `role-to-assume` input. That is
-// deliberately narrower than `assumesAwsRole` above: assertion A treats a local
-// composite action as privileged because it cannot see inside it, but this
-// assertion must name a concrete role-assuming step to be actionable, and demanding
-// an `environment:` on every composite caller would gate the whole test matrix.
-function declaresRoleToAssume(step) {
-  return Boolean(
-    step?.with && typeof step.with === 'object' && Object.hasOwn(step.with, 'role-to-assume')
-  );
-}
-
-// `environment:` accepts either a bare string or a mapping with `name:`. An empty
-// string, or a mapping with no name, names no environment at all and buys no
-// protection rule, so neither counts.
-function declaresEnvironment(job) {
-  const environment = job?.environment;
-  if (typeof environment === 'string') return environment.trim().length > 0;
-  if (environment && typeof environment === 'object') {
-    return typeof environment.name === 'string' && environment.name.trim().length > 0;
-  }
-  return false;
-}
-
-function assertRoleAssumingJobsAreEnvironmentGated(workflows) {
-  workflows.forEach(workflow => {
-    jobsOf(workflow.doc).forEach(([jobId, job]) => {
-      const steps = Array.isArray(job?.steps) ? job.steps : [];
-      if (!steps.some(declaresRoleToAssume)) return;
-      if (declaresEnvironment(job)) return;
-      fail(
-        'D',
-        `${WORKFLOW_DIR}/${workflow.file}: job "${jobId}" assumes an AWS role ` +
-          '(a step passes `role-to-assume`) but declares no `environment:` key. Without one ' +
-          'no protection rule (required reviewers / wait timer) can stand in front of the ' +
-          'credential, and the OIDC subject it mints is a branch ref rather than ' +
-          '`repo:<org>/<repo>:environment:<name>`, so the role trust policy cannot pin it.'
-      );
-    });
   });
 }
 
@@ -380,7 +330,6 @@ function assertNoProductionSourceMaps() {
 
 const workflows = loadWorkflows();
 assertPrivilegedWorkflowsAreAlerted(workflows);
-assertRoleAssumingJobsAreEnvironmentGated(workflows);
 assertEdgeAllowListIntact();
 assertEdgeCoverageStaysPinned();
 assertNoProductionSourceMaps();

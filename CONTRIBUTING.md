@@ -351,7 +351,7 @@ weaken the gate.
 
 #### Production safety guardrails
 
-`make lint-prod-guardrails` (inside `make lint`) enforces four invariants that
+`make lint-prod-guardrails` (inside `make lint`) enforces three invariants that
 otherwise only hold in production:
 
 - Every workflow that assumes an AWS role or cuts a release, on a
@@ -362,10 +362,13 @@ otherwise only hold in production:
   404, and stays pinned inside the 100%-coverage `edge` Jest layer, so it cannot
   regress to passing arbitrary paths to the S3 origin.
 - `next.config.js` does not enable `productionBrowserSourceMaps`.
-- Every job whose steps pass a `role-to-assume` input declares a non-empty
-  `environment:`, so a maintainer can put required reviewers in front of the
-  credential and the OIDC subject the job mints names an environment rather than
-  a branch ref.
+
+A fourth invariant — that every job passing a `role-to-assume` input names an
+`environment:` — is deliberately **not** enforced yet. Naming an environment
+changes the OIDC subject the job mints, and the deployed sandbox role's trust
+policy does not accept the new subject, so adding the key fails
+`sts:AssumeRoleWithWebIdentity` on every pull request. The trust policies have to
+be widened first; `.github/sandbox_workflows.md` records the required order.
 
 #### Adding a page under `pages/`
 
