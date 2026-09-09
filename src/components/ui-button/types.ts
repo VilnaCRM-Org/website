@@ -9,8 +9,8 @@ import type { HTMLAttributeAnchorTarget } from 'react';
  * anchor-flavoured call sites this repo tests stay type-safe.
  *
  * v0.4.0 exports `UiButtonProps`, so this extends the real type rather than a
- * reconstruction — but the type still does not declare `rel`/`target`. Fold this
- * back into the toolkit's own `UiButtonProps` when it grows them.
+ * reconstruction — but the type still does not declare `rel`/`target`. Tracked
+ * upstream as VilnaCRM-Org/ui-toolkit#153; fold this back when it lands.
  */
 export type UiButtonProps = ToolkitUiButtonProps & {
   rel?: string;

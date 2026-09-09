@@ -12,7 +12,8 @@ import { UiLinkProps } from './types';
  * Rather than suppress the cue — which silently drops the "opens in new tab"
  * announcement for every `_blank` link whose caller forgot to pass one — the
  * default is localized here, on the same principle as `rel` below: a new-tab
- * link must never depend on the caller remembering.
+ * link must never depend on the caller remembering. Tracked upstream as
+ * VilnaCRM-Org/ui-toolkit#154.
  */
 const NEW_TAB_LABEL_KEY: string = 'accessibility.opens_in_new_tab';
 
@@ -24,8 +25,8 @@ function UiLink({ target, rel, newTabLabel, ...linkProps }: UiLinkProps): React.
   // deciding. The toolkit compares `target === '_blank'` exactly, and the HTML
   // keyword is case-insensitive, so `_BLANK` opens a real new tab while
   // receiving no `rel` — the tabnabbing hole this repo already has a regression
-  // test for. Fold this back into the toolkit and drop the override once its own
-  // check case-folds.
+  // test for. Tracked upstream as VilnaCRM-Org/ui-toolkit#152; drop this override
+  // once that lands and the toolkit's own check case-folds.
   const hardenedRel: string | undefined = resolveExternalLinkRel(target, rel);
   const opensNewTab: boolean = target?.toLowerCase() === BLANK_TARGET;
   const resolvedLabel: string = newTabLabel ?? (opensNewTab ? t(NEW_TAB_LABEL_KEY) : '');

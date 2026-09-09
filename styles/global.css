@@ -17,8 +17,21 @@
  * them rather than deriving them again is deliberate: a re-derivation that lands
  * a fraction of a percent away would change how every page paints before the real
  * face swaps in, which is a visual change this migration is supposed not to make.
- * Recompute them only if a family's regular face is actually replaced, and then
- * re-record the built values the same way.
+ * HOW TO RECOMPUTE, if a family's regular face is ever replaced. The original
+ * recipe said "re-record the built values the same way", which is not runnable:
+ * it points at `next/font`, which this change removes. Derive them instead from
+ * the new face's own metrics, which is what `next/font` did:
+ *
+ *   size-adjust      = (new avg lowercase advance width / Arial's) as a percent
+ *   ascent-override  = new ascender  / unitsPerEm / size-adjust
+ *   descent-override = new descender / unitsPerEm / size-adjust
+ *   line-gap-override = new lineGap  / unitsPerEm / size-adjust
+ *
+ * `bunx --bun fontkit` (or any OpenType metrics reader) supplies unitsPerEm,
+ * ascent, descent and lineGap from the `.woff2`; Arial's comparison metrics are
+ * the ones bundled in `next/font`'s own fallback table. Re-verify by rebuilding
+ * and confirming the visual suite is unchanged, since these values only affect
+ * the pre-swap paint.
  */
 
 @font-face {
