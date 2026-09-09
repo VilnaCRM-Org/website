@@ -78,13 +78,17 @@ describe('cloudfront_routing handler', () => {
     vmConsole.log.mockClear();
   });
 
+  // Every row is a route `config/routes.json` derives from `pages/`, rewritten to the flat
+  // object the `trailingSlash`-less export writes. Until issue #333 this table asserted
+  // `/about` -> `/about/index.html` and `/en` -> `/en/index.html`, pinning a drift: neither
+  // object exists in the export, so both rewrites leaked a raw S3 error in production.
+  // `src/test/unit/routes/route-manifest.test.ts` now holds the map to the manifest in both
+  // directions, so a repeat cannot be pinned here again.
   describe('exact route rewrites', () => {
     test.each([
       ['/', '/index.html'],
-      ['/about', '/about/index.html'],
-      ['/about/', '/about/index.html'],
-      ['/en', '/en/index.html'],
-      ['/en/', '/en/index.html'],
+      ['/en/docs/api', '/en/docs/api.html'],
+      ['/en/docs/api/', '/en/docs/api.html'],
       ['/swagger', '/swagger.html'],
       ['/swagger/', '/swagger.html'],
     ])('rewrites %s to %s and passes the request through', (uri, expected) => {
@@ -146,6 +150,8 @@ describe('cloudfront_routing handler', () => {
   // where the last segment begins at all. `%zz` is a malformed escape, pinned because decoding
   // it would throw into the handler's catch and fail OPEN. The dot-segment rows cover the other
   // half of the same hole: they satisfy the directory and extension tests yet resolve elsewhere.
+  // `/about` and `/en` are the two routes issue #333 removed from ROUTE_MAP: neither object
+  // was ever exported, so both must now take the synthetic 404 rather than a broken rewrite.
   describe('fail-closed allowlist', () => {
     test.each([
       '/secret.json',
@@ -176,6 +182,8 @@ describe('cloudfront_routing handler', () => {
       '/Swagger',
       '/swaggerx',
       '/about-x',
+      '/about',
+      '/en',
       '/toString',
       '/constructor',
       '/__proto__',

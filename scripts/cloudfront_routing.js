@@ -15,7 +15,9 @@
  * The three tables below describe the static export in `out/`. They are proved COMPLETE on
  * every PR by `scripts/ci/verify-edge-allowlist.mjs`, which runs this handler over every
  * file of a freshly built export. If that gate fails, add the new path here — do NOT widen
- * the tables beyond what the export actually ships.
+ * the tables beyond what the export actually ships. `ROUTE_MAP` is additionally held to
+ * `config/routes.json` (generated from `pages/`) and proved MINIMAL — every rewrite target
+ * must be a file the export really writes — by that same gate (issue #333).
  *
  * Security headers for real responses are owned by the viewer-response handler
  * (`scripts/cloudfront_security_headers.js`). A viewer-response function does NOT run when
@@ -68,12 +70,23 @@ function buildNotFoundResponse() {
   };
 }
 
+// Extensionless URLs the export serves, mapped to the object the export actually writes
+// (issue #333). `next.config.js` leaves `trailingSlash` unset, so the export is FLAT — one
+// `<route>.html` per route, `/` being the only route whose object is an `index.html`.
+// Until #333 this table mapped `/about` and `/en` at `/about/index.html` and
+// `/en/index.html`, neither of which the export has ever produced: there is no
+// `pages/about`, and `pages/en/` holds only `docs/api.tsx`. Both curated routes therefore
+// rewrote to a missing S3 key and leaked a raw storage error instead of the synthetic 404
+// below, while `/en/docs/api` — the one route under `/en` that does ship — had no entry and
+// was 404'd here. Every entry is now held to `config/routes.json`, which is generated from
+// `pages/`, by `src/test/unit/routes/route-manifest.test.ts`, and every target is proved to
+// exist in a real export by `scripts/ci/verify-edge-allowlist.mjs`.
+// The manifest is deliberately the wider set: `/offline` is exported but intentionally not
+// mapped, because the service worker precaches the fallback as `/offline.html`.
 var ROUTE_MAP = Object.freeze({
   '/': '/index.html',
-  '/about': '/about/index.html',
-  '/about/': '/about/index.html',
-  '/en': '/en/index.html',
-  '/en/': '/en/index.html',
+  '/en/docs/api': '/en/docs/api.html',
+  '/en/docs/api/': '/en/docs/api.html',
   '/swagger': '/swagger.html',
   '/swagger/': '/swagger.html',
 });
