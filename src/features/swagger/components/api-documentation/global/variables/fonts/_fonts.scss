@@ -2,5 +2,11 @@
 // only existed while the fonts were declared through `next/font/local` — and which
 // silently changed whenever that hash was regenerated. The faces are now declared
 // under their real names in `styles/global.css`, so reference those instead.
-$golos: 'Golos Text', sans-serif;
-$inter: 'Inter', sans-serif;
+// The metric-adjusted fallback belongs in the stack, not just the real family:
+// with `font-display: swap` a stack that falls straight through to bare
+// `sans-serif` paints in Arial at Arial's metrics and then reflows every line
+// when the real face arrives. These are the same stacks the rest of the app uses
+// (`src/config/Fonts/families.ts`), so /swagger no longer shifts differently
+// from every other page.
+$golos: 'Golos Text', 'Golos Text Fallback', sans-serif;
+$inter: 'Inter', 'Inter Fallback', sans-serif;
