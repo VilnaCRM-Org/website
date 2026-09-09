@@ -73,6 +73,13 @@ OPENAPI_BASELINE            = contracts/user-service/openapi.json
 # The gate blocks on medium-and-above findings that zizmor reports with high
 # confidence; see scripts/ci/lint-workflows.sh and the workflow-security.yml
 # job comment for what that deliberately leaves out and why.
+# gitleaks is the committed-secrets scanner (issue #353). The gitleaks GitHub
+# Action requires a paid licence for organizations, so the CLI container is run
+# directly and pinned BY DIGEST, like zizmor above. Digest is gitleaks 8.30.1;
+# .github/workflows/secrets-scanning.yml consumes the same value through this
+# variable, so the pin has exactly one home.
+GITLEAKS_IMAGE              = ghcr.io/gitleaks/gitleaks@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f
+
 ZIZMOR_IMAGE                = ghcr.io/zizmorcore/zizmor@sha256:8e6b3e4fb74d1aa5d23e83ea369f386c66eced0d1fb944d32cd8b2aac100b00d
 ZIZMOR_MIN_SEVERITY         = medium
 ZIZMOR_MIN_CONFIDENCE       = high
@@ -218,7 +225,7 @@ NETWORK_NAME                = website-network
 # Dev-side lint and test phases are grouped so local developers and agents can
 # run the same CI stages as the pipeline. The parallel runners execute each
 # target concurrently, group their output, and aggregate exit codes.
-CI_LINT_TARGETS             = lint-next lint-tsc lint-md lint-api-versions lint-headers lint-prod-guardrails lint-pins
+CI_LINT_TARGETS             = lint-next lint-tsc lint-md lint-api-versions lint-headers lint-prod-guardrails lint-pins lint-workflow-pins
 CI_TEST_TARGETS             = ci-test-unit-client ci-test-unit-server ci-test-integration ci-test-contract
 CI_LINT_RUNNER              = ./scripts/ci/run-parallel.sh ci-lint
 CI_TEST_RUNNER              = ./scripts/ci/run-parallel.sh ci-test
@@ -587,7 +594,7 @@ lint-md: ## This command executes Markdown linter
 generate-localization: ## Regenerate the gitignored pages/i18n/localization.json bundle (#328) — host-only
 	node scripts/generateLocalization.mjs
 
-.PHONY: lint lint-api-versions lint-headers lint-docker-policy lint-security-txt lint-prod-guardrails lint-pins
+.PHONY: lint lint-api-versions lint-headers lint-docker-policy lint-security-txt lint-prod-guardrails lint-pins lint-workflow-pins
 
 # The user-service inventory invariant (issue #381, F4): every consumer of the
 # upstream contracts — the GraphQL schema behind the Apollo mock and the OpenAPI
@@ -616,10 +623,21 @@ lint-docker-policy: ## Enforce the registry (no Docker Hub) + digest-pin policy 
 # Host-side by design, but unlike lint-metrics and lint-contracts this one DOES
 # belong in the `lint` aggregate and CI_LINT_TARGETS: the script is
 # dependency-free (so it also runs before `bun install`), needs no network, and
-# reads repo files — the Dockerfiles and workflows — that the dev image would only
-# ever see a stale copy of.
-lint-pins: ## Verify the Node, Bun and Playwright pins agree across .nvmrc, package.json, the Dockerfiles and the workflows
+# reads repo files — the Dockerfiles — that the dev image would only ever see a
+# stale copy of.
+lint-pins: ## Verify the Node, Bun and Playwright pins agree across .nvmrc, package.json and the Dockerfiles
 	node scripts/ci/check-version-pins.mjs
+
+# The workflow half of the same invariant, split out by #447 because it is the
+# one rule that must PARSE its input. Regex-scanning workflow YAML cost lint-pins
+# seven spelling fixes in a single day and still judged ~38% of generated
+# real-world-shaped inputs wrong against a parser oracle; js-yaml turns every one
+# of those spellings back into the same document. Parsing needs node_modules, so
+# unlike lint-pins this one runs through the package manager and obeys EXEC_MODE,
+# exactly as lint-headers and lint-prod-guardrails do — the dev container binds
+# this worktree, so it reads the live .github/workflows, not a baked copy.
+lint-workflow-pins: ## Verify every workflow resolves Node through .nvmrc, by parsing the workflow YAML
+	$(DEV_READY) $(PM_EXEC) node scripts/ci/check-workflow-pins.mjs
 
 lint-security-txt: ## Validate the published RFC 9116 security.txt (fields + Expires runway)
 	@bash scripts/ci/check-security-txt.sh
@@ -637,19 +655,21 @@ lint-prod-guardrails: ## Enforce the production-safety invariants (privileged-wo
 # every lint target as its own make process, and the generator writes the single
 # pages/i18n/localization.json with a non-atomic fs.writeFileSync.
 #
-# lint-security-txt, lint-prod-guardrails and lint-pins DO belong in the
-# aggregate, unlike lint-contracts and lint-metrics: all three read only
-# committed files (no network, no host binary, no Docker), so they are hermetic
-# and cannot make the static lane flaky. lint-prod-guardrails additionally joins
-# CI_LINT_TARGETS because it needs `node` + js-yaml, which the parallel ci-lint
-# runner provides — the same reason lint-headers is in that list;
-# lint-security-txt is pure bash and needs no package manager, mirroring how
-# lint-deps stays out. lint-pins is in CI_LINT_TARGETS too, but like
-# lint-docker-policy its recipe runs on the HOST in either EXEC_MODE: it is
-# dependency-free `node`, so it needs neither the image nor a `bun install`, and
-# the Dockerfiles and workflows it reads are worktree files the dev container
-# would only ever see a stale copy of.
-lint: generate-localization lint-next lint-tsc lint-md lint-deps lint-api-versions lint-docker-policy lint-headers lint-security-txt lint-prod-guardrails lint-pins ## Runs all linters: ESLint, TypeScript, Markdown, dependency-cruiser, the API version invariant, the Dockerfile registry/digest policy, the security-header gate, the RFC 9116 security.txt gate, the production-safety guardrails, and the version-pin drift gate in sequence.
+# lint-security-txt, lint-prod-guardrails, lint-pins and lint-workflow-pins DO
+# belong in the aggregate, unlike lint-contracts and lint-metrics: all four read
+# only committed files (no network, no host binary, no Docker daemon of their
+# own), so they are hermetic and cannot make the static lane flaky.
+# lint-prod-guardrails and lint-workflow-pins additionally join CI_LINT_TARGETS
+# because they need `node` + js-yaml, which the parallel ci-lint runner provides
+# — the same reason lint-headers is in that list; lint-security-txt is pure bash
+# and needs no package manager, mirroring how lint-deps stays out. lint-pins is
+# in CI_LINT_TARGETS too, but like lint-docker-policy its recipe runs on the HOST
+# in either EXEC_MODE: it is dependency-free `node`, so it needs neither the
+# image nor a `bun install`, and the Dockerfiles it reads are worktree files the
+# dev container would only ever see a stale copy of. Its workflow half was split
+# into lint-workflow-pins (#447) precisely because parsing the YAML costs a
+# node_modules import that this property forbids.
+lint: generate-localization lint-next lint-tsc lint-md lint-deps lint-api-versions lint-docker-policy lint-headers lint-security-txt lint-prod-guardrails lint-pins lint-workflow-pins ## Runs all linters: ESLint, TypeScript, Markdown, dependency-cruiser, the API version invariant, the Dockerfile registry/digest policy, the security-header gate, the RFC 9116 security.txt gate, the production-safety guardrails, the version-pin drift gate and the workflow Node-pin gate in sequence.
 
 # DELIBERATE DIVERGENCE FROM THE npm-tool LINT GATES (lint-next/tsc/md/deps),
 # for the same reason as lint-metrics below:
@@ -775,6 +795,25 @@ lint-workflows: ## Audit the GitHub Actions workflows for security defects with 
 	 ZIZMOR_MIN_SEVERITY="$(ZIZMOR_MIN_SEVERITY)" \
 	 ZIZMOR_MIN_CONFIDENCE="$(ZIZMOR_MIN_CONFIDENCE)" \
 	 bash scripts/ci/lint-workflows.sh
+
+# Host-only and Docker-driven, so like lint-workflows and lint-vulns it stays
+# OUTSIDE the `lint` aggregate: `make lint` must run inside the dev container,
+# which cannot run docker. Its CI surface is .github/workflows/secrets-scanning.yml.
+#
+# The two modes answer different questions and fail in different places.
+# `lint-secrets` scans the checked-out files and is what gates every PR.
+# `scan-secrets-history` walks every reachable commit -- the mode that catches a
+# credential committed and then "removed" later, where the tree is clean but the
+# object store is not. History runs weekly, not per-PR: a finding in a 2024
+# commit is not the current author's regression, and blocking on it would only
+# teach reviewers to click past a red check.
+lint-secrets: ## Scan the working tree for committed secrets with gitleaks (host-only, Docker)
+	@GITLEAKS_IMAGE="$(GITLEAKS_IMAGE)" SECRETS_MODE=tree \
+	 bash scripts/ci/scan-secrets.sh
+
+scan-secrets-history: ## Scan every reachable commit for secrets (host-only, Docker; needs a full clone)
+	@GITLEAKS_IMAGE="$(GITLEAKS_IMAGE)" SECRETS_MODE=history \
+	 bash scripts/ci/scan-secrets.sh
 
 husky: ## One-time Husky setup to enable Git hooks (deprecated if already set)
 	bun x husky install
@@ -937,10 +976,14 @@ ci-test-contract: ## Run contract parity tests directly assuming deps are instal
 # pipeline runs, adapted to website's Bun + Next.js toolchain.
 #
 # Intentionally NOT ported from crm/Makefile (rationale):
-#   * lint-dup (jscpd), fmt-qlty / qlty: not configured in this repo; website's
-#     lint stack is ESLint + tsc + markdownlint + dependency-cruiser (exposed as
-#     lint-deps). Adopting the remaining tools needs new tooling/config and
-#     belongs in a dedicated issue, not a naming-parity change.
+#   * lint-dup (jscpd): not configured in this repo; website's lint stack is
+#     ESLint + tsc + markdownlint + dependency-cruiser (exposed as lint-deps).
+#     Adopting it needs new tooling/config and belongs in a dedicated issue,
+#     not a naming-parity change.
+#   * fmt-qlty / qlty: qlty IS configured here -- .qlty/qlty.toml is committed
+#     and qlty Cloud reviews every PR -- but it runs as a hosted check rather
+#     than a Makefile target, so there is no local entrypoint to port. Do not
+#     read the absence of a target as the absence of the gate.
 #   * lint-metrics (rust-code-analysis): now ported (issue #224), but adapted —
 #     the analyzer is a Rust binary absent from the node:*-alpine dev image, so
 #     the target runs host-only, stays OUT of the `lint` aggregate and

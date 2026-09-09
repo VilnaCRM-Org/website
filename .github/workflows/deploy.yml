@@ -177,3 +177,21 @@ jobs:
           check_path "/" "homepage" || rc=1
           check_path "/favicon.svg" "static asset" || rc=1
           exit "$rc"
+
+      # Issue #363: the probes above only ever exercise the POSITIVE path, and
+      # every CloudFront production incident this repository has had was on the
+      # negative one — 500 instead of 404 (#226, and again #229), a 404 Safari
+      # downloaded for want of a content-type (#235), and a synthetic response with
+      # no body that CloudFront turned into a 5xx (#249). The shape assertions block;
+      # the header advisory inside the script warns, because that policy lives in the
+      # infra repository. `scripts/cloudfront_routing.js` is unit-tested at 100% in the
+      # `edge` Jest layer, so this is the other half of that contract: proof the
+      # deployed distribution actually associates the handler.
+      #
+      # LAST on purpose. A step failure stops the job, so a brand-new blocking
+      # assertion placed ahead of the established #377 header check would stop that
+      # check reporting on exactly the deploys where its verdict matters most.
+      - name: Smoke-test the negative path (404 shape)
+        env:
+          SITE_URL: ${{ vars.PRODUCTION_SITE_URL }}
+        run: ./scripts/ci/smoke-response-shape.sh "$SITE_URL"

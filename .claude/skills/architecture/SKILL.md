@@ -195,4 +195,4 @@ make lint        # lint-next + lint-tsc + lint-md + lint-deps
 - `examples/layered-flow.md` — the real landing sign-up flow end to end, the
   `pages/` composition-root exception, and a worked lint-deps fix.
 - `.dependency-cruiser.js` — the source of truth for boundaries.
-- `agents.md` — the repo's test-coverage and Definition-of-Done contract.
+- `AGENTS.md` — the repo's test-coverage and Definition-of-Done contract.

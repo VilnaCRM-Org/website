@@ -2,7 +2,7 @@
 
 This is the orientation guide for Cursor, Claude Code, and any other AI agent working in the
 VilnaCRM `website` repository. It explains what the project is, where code lives, how to run
-every check through `make`, and the conventions a change must honor. Read `agents.md` first for
+every check through `make`, and the conventions a change must honor. Read `AGENTS.md` first for
 the mandatory test-coverage contract; this guide assumes it and points back to it.
 
 ## Project overview
@@ -11,8 +11,9 @@ the mandatory test-coverage contract; this guide assumes it and points back to i
 React 19 with TypeScript 6. The UI uses MUI 9 with Emotion; data is fetched with Apollo Client 4
 against a local Apollo Server 5 GraphQL mock; forms use react-hook-form; copy is localized with
 i18next and react-i18next; components are documented in Storybook 10. The package manager is
-`bun@1.3.5` and Node is `>=20`. The folder layout is adapted from bulletproof-react, and every
-command runs through a Makefile target from the repository root.
+`bun@1.3.5` and Node is the version pinned in `.nvmrc` (`24.18.0`). The folder layout is
+adapted from bulletproof-react, and every command runs through a Makefile target from the
+repository root.
 
 There is no Redux, no Zustand, and no dependency-injection container, and there is no
 `src/modules/` layer. State is local or served by Apollo's cache, and code is organized by
@@ -41,14 +42,16 @@ Run everything through `make`; the targets are the single source of truth and th
 runs. The aggregate gate is `make lint`, which regenerates the i18n bundle and then runs
 ESLint, TypeScript, markdownlint, dependency-cruiser, the user-service API version
 invariant, the Dockerfile registry/digest policy, the edge security-header gate, the
-RFC 9116 security.txt gate, and the production-safety guardrails in sequence.
+RFC 9116 security.txt gate, the production-safety guardrails, the version-pin drift gate
+and the workflow Node-pin gate in sequence.
 
 ```bash
 make format               # Prettier formatting; run before lint
 make lint                 # Full gate: generate-localization + lint-next + lint-tsc
                           #   + lint-md + lint-deps + lint-api-versions
                           #   + lint-docker-policy + lint-headers + lint-security-txt
-                          #   + lint-prod-guardrails
+                          #   + lint-prod-guardrails + lint-pins
+                          #   + lint-workflow-pins
 make lint-next            # ESLint only
 make lint-tsc             # TypeScript type-check only
 make lint-md              # markdownlint only
@@ -58,12 +61,15 @@ make lint-docker-policy   # registry (no Docker Hub) + digest-pin policy on ever
 make lint-headers         # edge security-header policy (config/security-headers.json)
 make lint-security-txt    # RFC 9116 security.txt fields + Expires runway
 make lint-prod-guardrails # production-safety invariants (issue #383)
+make lint-pins            # Node/Bun/Playwright pin drift across .nvmrc, engines, Dockerfiles
+make lint-workflow-pins   # every workflow resolves Node through .nvmrc (parses the YAML)
 make build                # Production build
 ```
 
 ## Development setup
 
-Requirements: Node `>=20`, `bun@1.3.5`, and Docker for the containerized dev and test stacks.
+Requirements: the Node version pinned in `.nvmrc` (`24.18.0`), `bun@1.3.5`, and Docker for the
+containerized dev and test stacks.
 
 ```bash
 make check-node-version   # Verify the Node version
@@ -208,6 +214,13 @@ make lint-deps  # Architecture/import-boundary violations
 make lint       # Confirm the full gate is green
 ```
 
+`make lint-pins` fails when `.nvmrc`, a Dockerfile base image or `package.json`
+`engines.node` disagree about the Node version — and likewise for the Bun and Playwright
+pins. Its sibling `make lint-workflow-pins` parses `.github/workflows` and fails when an
+`actions/setup-node` step stops reading `node-version-file: '.nvmrc'`, when a literal
+`node-version` is declared anywhere, or when a workflow reaches for a `vars.NODE_VERSION`
+repository variable. Fix the lagging source; never loosen `.nvmrc`.
+
 ### Updating dependencies
 
 ```bash
@@ -270,14 +283,14 @@ make build
 
 Before writing code, search for existing patterns with grep or glob, follow the structure of a
 similar feature under `src/features/`, read the related specs to learn the expected behavior,
-and re-read the test-coverage contract in `agents.md`.
+and re-read the test-coverage contract in `AGENTS.md`.
 
 While writing code, import features through their `index.ts` barrel and use the `@/*` alias;
 keep feature directory names kebab-case; give shared UI primitives the `ui-*` prefix; add
 explicit TypeScript types (the config is strict with `noUnusedLocals` and
 `noUnusedParameters`); localize every user-facing string with the i18next `t()` function and
 per-feature `i18n/{en,uk}.json`; and add positive, negative, and edge-case coverage as
-`agents.md` requires.
+`AGENTS.md` requires.
 
 After writing code, run `make format`, then `make lint`, then the affected test suites, verify
 the change in the running app, and update docs when an API or convention changes.
@@ -303,7 +316,7 @@ External Content".
 - Build forms with react-hook-form and fetch data with Apollo Client 4; there is no Redux or
   Zustand store to wire into.
 - Prefer user-facing semantic queries in tests (`getByRole`, `getByLabelText`, `getByAltText`,
-  `getByText`) over `data-testid`, per the guidance in `agents.md`.
+  `getByText`) over `data-testid`, per the guidance in `AGENTS.md`.
 - For a worked example of positive, negative, and empty-input coverage in one place, read
   `src/test/unit/email-validation.test.ts`.
 
@@ -323,7 +336,7 @@ Branch from `main` for new work; a common convention is `feature/<issue>-<short-
 
 ## Where the agent guidance lives
 
-- `agents.md` is the root contract: the mandatory test-coverage policy, behavior-first
+- `AGENTS.md` is the root contract: the mandatory test-coverage policy, behavior-first
   assertions, and Definition of Done. Read it before writing tests.
 - `.claude/skills/` holds the implementation skills: `architecture`, `ci-workflow`,
   `code-organization`, `code-review`, `complexity-management`, `documentation-creation`,
@@ -338,7 +351,7 @@ Branch from `main` for new work; a common convention is `feature/<issue>-<short-
 
 ## Resources
 
-- `agents.md` for the test-coverage contract.
+- `AGENTS.md` for the test-coverage contract.
 - `Makefile` for every available command.
 - `.dependency-cruiser.js` for the architecture and import boundaries.
 - `eslint.config.mjs` and `tsconfig.json` for the lint and type rules.

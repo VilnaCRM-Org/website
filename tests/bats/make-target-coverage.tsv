@@ -78,7 +78,7 @@ lint-contracts	bats	tests/bats/makefile_targets.bats	Executed directly by contra
 lint-openapi	bats	tests/bats/makefile_targets.bats	Validated host-only: ensure-oasdiff.sh provisioning (idempotent) plus openapi-drift.sh three-way exit handling with a stubbed oasdiff binary.
 update-contracts	bats	tests/bats/makefile_targets.bats	Maintainer command for bumping USER_SERVICE_VERSION; refreshes both artifacts, their SHA-256 digests and the spectral baseline.
 run-deps-lint-tests-dind	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker exec calls.
-test-integration	bats	tests/bats/makefile_targets.bats	Validated by invoking Jest with TEST_ENV=integration through a stubbed jest binary.
+test-integration	ci	.github/workflows/codecov.yml	Executed directly by the codecov workflow so the integration coverage report can be uploaded; also validated in tests/bats/makefile_targets.bats with a stubbed jest binary.
 test-integration-watch	bats	tests/bats/makefile_targets.bats	Validated by invoking Jest in watch mode with TEST_ENV=integration through a stubbed jest binary.
 ci-test-integration	bats	tests/bats/makefile_targets.bats	Validated through the ci-test parallel phase and the ci-test split-target assertions; the integration workflow now runs the developer-facing `test-integration`.
 test-contract	bats	tests/bats/makefile_targets.bats	Validated by invoking Jest with TEST_ENV=contract through a stubbed jest binary.
@@ -119,4 +119,7 @@ scan-vulns-census	bats	tests/bats/makefile_targets.bats	Validated as an alias th
 stop-prod	bats	tests/bats/makefile_targets.bats	Validated in both modes: Docker Compose down by default, the host-stack helper under HOST_STACK=1.
 playwright-install	bats	tests/bats/makefile_targets.bats	Validated in both modes: a no-op notice by default, the host browser install under HOST_STACK=1.
 lint-pins	ci	.github/workflows/static-testing.yml	Executed through `make lint`, which depends on `lint-pins`; also validated host-only in tests/bats/makefile_targets.bats.
+lint-workflow-pins	bats	tests/bats/makefile_targets.bats	Executed through `make lint` and `make ci-lint`; the target shells out to the parser-driven workflow pin gate, whose assertions are covered by check_workflow_pins.bats.
 require-docker-stack	bats	tests/bats/makefile_targets.bats	Validated in both modes: a no-op by default, a fast failure under HOST_STACK=1 for the Docker-only K6 targets.
+lint-secrets	bats	tests/bats/makefile_targets.bats	Validated host-only with docker stubbed: the digest-pinned gitleaks image, the committed .gitleaks.toml, --exit-code 1 and the --no-git tree scope. Script-level behaviour, the fail-closed guards and the seeded-credential proof are covered by tests/bats/secrets_scanning.bats.
+scan-secrets-history	bats	tests/bats/makefile_targets.bats	Validated host-only with docker stubbed: the same digest-pinned image and fail-on-findings contract, asserting --no-git is absent so the weekly leg actually walks history. Covered further by tests/bats/secrets_scanning.bats.

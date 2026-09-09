@@ -6,7 +6,7 @@ import type { CreateUserInput, User } from './type.js';
 /**
  * Input handling for the local Apollo mock's `createUser` mutation (issue #381, F1).
  *
- * `CLAUDE.md` / `agents.md` point autonomous agents at this mock as the canonical
+ * `CLAUDE.md` / `AGENTS.md` point autonomous agents at this mock as the canonical
  * shape of the user-service API, so the mock must model the *safe* pattern even
  * though it is never deployed:
  *

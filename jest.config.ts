@@ -135,21 +135,21 @@ const SERVER_COVERAGE_THRESHOLD = {
 // itself is proven live by `parity-detects-drift.contract.test.ts`, which seeds
 // real defects into the mock data and asserts the gate turns red.
 
-const COVERAGE_DIRECTORY_BY_ENV: Record<string, string> = {
-  edge: 'coverage/edge',
-  contract: 'coverage/contract',
-};
-
 const config: Config = {
   clearMocks: true,
   // Generate the gitignored pages/i18n/localization.json (#328) before
   // jest.setup.ts imports the i18n stack that requires it.
   globalSetup: '<rootDir>/jest.global-setup.js',
   collectCoverage: true,
-  // The edge and contract layers write to their own coverage dirs so their
-  // narrowly-scoped reports never clobber the product coverage the client/server
-  // runs write to `coverage/`.
-  coverageDirectory: COVERAGE_DIRECTORY_BY_ENV[TEST_ENV] ?? 'coverage',
+  // Every layer writes to its own directory, named for the layer (#335). Before that,
+  // only `edge` and `contract` were separated and client, server and integration all
+  // wrote to `coverage/`: `make test-unit-all` runs client -> server -> edge in sequence,
+  // so the server run overwrote the client run's `lcov.info` and the report Codecov
+  // received was the small apollo-server surface presented as the whole project. Naming
+  // the directory after the layer keeps the narrowly-scoped `edge` and `contract` reports
+  // where they already were (`coverage/edge`, `coverage/contract`) and gives every other
+  // layer the same isolation, so Codecov can carry each layer as its own flag.
+  coverageDirectory: `coverage/${TEST_ENV}`,
   // The integration layer uses the `babel` coverage provider so coverage is
   // instrumented on the same babel-jest-transformed output the tests run
   // against; this keeps the strict 100% threshold measured against the exact

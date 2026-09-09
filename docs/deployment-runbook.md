@@ -29,9 +29,38 @@ fails if it does not serve valid content:
   [the security-headers guide](security-headers.md)). This is the only check that
   can catch the CloudFront functions being unassociated from the distribution; the
   in-repo `make lint-headers` gate only proves the functions themselves are correct.
+- `GET /smoke-nonexistent-…` — the **negative** path
+  (`scripts/ci/smoke-response-shape.sh`, issue #363). Blocks on three assertions,
+  each of which is a production incident this site has already had: the status is
+  exactly `404` and not `500` (#226, and again #229), the body is non-empty (#249),
+  and `content-type` is `text/html` (#235 — without it Safari _downloads_ the 404).
+  The security-header check on that same response, and the sandbox `noindex` check,
+  emit `::warning::` rather than failing; the script states the condition for
+  promoting them to blocking. Runs last, so a failure here cannot stop the header
+  step above from reporting.
 
-Because CodePipeline deploys asynchronously, each probe retries (up to roughly
-ten minutes) until the CDN serves the new build or the job times out.
+Because CodePipeline deploys asynchronously, each probe retries until the CDN
+serves the new build or the job times out. The readiness probes allow roughly ten
+minutes; the negative-path probe allows twelve attempts fifteen seconds apart,
+overridable with `SMOKE_ATTEMPTS` and `SMOKE_DELAY`.
+
+### Diagnosing a red negative-path probe
+
+The failure line names every gap in one response, so read all of it:
+
+- `expected 404, got 500` — the CloudFront viewer-request function is not
+  associated with the distribution, or it threw. Check the function association
+  before suspecting the code; `make lint-headers` and the `edge` Jest layer already
+  prove the checked-in handler.
+- `expected 404, got 200` — worse: the allow-list in `scripts/cloudfront_routing.js`
+  has stopped fail-closing and the S3 origin is answering for unknown paths.
+- `expected a non-empty 404 page` / `content-type: expected text/html` — the
+  synthetic response lost its `body` or its header. Both are covered at PR time by
+  the `edge` Jest layer, so a failure here means the deployed function is not the
+  committed one.
+
+Reproduce any of these locally against the same script:
+`SMOKE_ATTEMPTS=1 ./scripts/ci/smoke-response-shape.sh https://vilnacrm.com`.
 
 ### One-time setup
 
@@ -41,8 +70,25 @@ job **skips cleanly**, so `main` stays green.
 1. Add a repository **variable** named `PRODUCTION_SITE_URL` set to the site
    origin (for example `https://vilnacrm.com`) under _Settings → Secrets and
    variables → Actions → Variables_.
-2. Confirm the next deploy runs the `post-deploy smoke test` job and that both
-   probes pass.
+2. Confirm the next deploy runs the `post-deploy smoke test` job and that every
+   probe above passes.
+
+The sandbox leg is configured the same way and is likewise skipped until it is.
+Add a repository variable named `SANDBOX_SITE_URL_TEMPLATE` holding the sandbox
+origin with a `{pr}` placeholder — for example
+`https://pr-{pr}.sandbox.example.com` — and `sandbox-creating.yml`'s
+`post-create-smoke` job will run the same negative-path probe against each PR's
+sandbox, plus an advisory `X-Robots-Tag: noindex` check, since a sandbox origin
+must not be indexable.
+
+`{pr}` is the only placeholder the job substitutes. The sandbox hostname is
+derived from the branch name by the infra repository's CodePipeline, which this
+repository triggers with the raw `BRANCH_NAME`; reconstructing that transform
+here would be a guess, and a wrong guess probes an origin the sandbox is not at —
+reddening a healthy PR, or certifying a different sandbox. A template containing
+`{branch}` is refused with an explicit error rather than probed. If the sandbox
+URL scheme is branch-derived rather than PR-derived, expose a PR-keyed alias in
+the infra repository instead of adding a slug rule here.
 
 ### Environment protection rules
 

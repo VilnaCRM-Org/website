@@ -27,6 +27,16 @@ services:
       - '9324:9324'
     environment:
       - NEXT_PUBLIC_API_BASE_URL=http://${NEXT_PUBLIC_PROD_HOST}:${NEXT_PUBLIC_PROD_PORT}
+      # Playwright always runs inside this container, and `docker compose exec`
+      # hands it none of the runner's environment — so `process.env.CI` was
+      # undefined there and every CI-conditional in playwright.config.ts was
+      # inert: `retries: 2` stayed 0, which meant `trace: 'on-first-retry'` could
+      # never fire (the dead-config defect in #335), `workers: 1` never applied
+      # despite the e2e workflow documenting it, and `forbidOnly` never guarded a
+      # committed `.only`. GitHub Actions sets CI=true on the runner; locally the
+      # Makefile's `CI ?= 0` is not exported, so this resolves to empty and the
+      # local run keeps its parallel, retry-free behaviour.
+      - CI=${CI:-}
     healthcheck:
       test: ['CMD', 'curl', '-f', 'http://${WEBSITE_DOMAIN}:${PLAYWRIGHT_TEST_PORT}']
     networks:

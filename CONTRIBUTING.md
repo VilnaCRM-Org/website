@@ -422,6 +422,63 @@ any baselined finding that disappears, so an upstream fix shrinks the baseline
 instead of leaving it stale. Never add an entry to silence a defect in code we
 own — fix the code.
 
+#### One Node version (`.nvmrc`)
+
+[`.nvmrc`](.nvmrc) is the single authoritative Node version for this repository.
+Everything else must agree with it, and two gates — both part of the aggregate
+`make lint`, so both run on every pull request through `static-testing.yml` — fail
+when anything does not.
+
+`make lint-pins` covers the file surface:
+
+- a `FROM …node:<version>` base image in any Dockerfile;
+- `package.json` `engines.node`, which must be the caret over the exact `.nvmrc`
+  version (`^24.18.0`), not a looser range like `^24` that merely admits it.
+
+`make lint-workflow-pins` covers `.github/workflows`:
+
+- an `actions/setup-node` step that pins a version instead of reading
+  `node-version-file: '.nvmrc'`;
+- a literal `node-version` declared anywhere in a workflow, a `strategy.matrix`
+  entry included;
+- any workflow reaching for a `vars.NODE_VERSION` repository variable, whose value
+  cannot be seen or reviewed from inside the repository.
+
+The split is not cosmetic. `lint-pins` stays dependency-free because `make lint`
+reaches it on the host with no `bun install` behind it; `lint-workflow-pins` parses
+the workflow YAML with js-yaml and therefore runs in the dev container. It parses
+rather than pattern-matches because the scanner it replaced needed seven spelling
+fixes in one day and still judged 14 of 45 real-world-shaped documents wrong, five
+of them fail-open (issue #447). Add a case to
+[`tests/bats/check_workflow_pins.bats`](tests/bats/check_workflow_pins.bats) rather
+than a special case to the gate.
+
+To move Node, edit `.nvmrc` first and then run both gates: they name every source
+that still lags. Never loosen a source to make one pass. The separate
+`make check-node-version` target answers a different question — whether the Node you
+are _running_ satisfies `engines`.
+
+#### Coverage reporting
+
+`make test-unit-all` runs the client, server and edge Jest layers and `make
+test-integration` runs the fourth; each writes its own report under `coverage/<layer>/`.
+Every layer also enforces its own `coverageThreshold` in
+[`jest.config.ts`](jest.config.ts); those thresholds are the gate, and they only ever
+move up. `.github/workflows/codecov.yml` runs all four suites and uploads all four
+reports under matching Codecov flags — `client`, `server`, `edge` and `integration` —
+and [`codecov.yml`](codecov.yml) turns the resulting project and patch statuses into
+real, non-informational checks. The integration report is the only one collected over
+the whole of `src/**`; the other three measure just the files their tests import, so
+without it the uploaded picture cannot see a module with no test at all. Uploads fail
+closed once the `CODECOV_TOKEN` repository secret is configured; until then the job
+prints a warning saying so rather than reporting a discarded upload as success.
+
+#### Flaky tests
+
+A test that passes only on a retry is a defect. The detection, triage, quarantine and
+never-do rules live in the [`AGENTS.md`](AGENTS.md) "Flaky Tests" section and apply to
+human contributors and AI agents alike.
+
 ### Commit your update
 
 Commit the changes once you are happy with them.

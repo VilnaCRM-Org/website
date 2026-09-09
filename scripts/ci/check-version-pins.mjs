@@ -6,10 +6,15 @@
 // runs. Each pin below has exactly one source of truth; this gate proves the
 // copies still match it.
 //
-// Deliberately dependency-free (fs + regex, no YAML/JSONC parser): `make
-// install` runs the version guards BEFORE `bun install`, so anything imported
-// from node_modules would throw MODULE_NOT_FOUND on a cold checkout and turn a
-// helpful drift message into a confusing crash.
+// Deliberately dependency-free (fs + regex, no YAML/JSONC parser). `make lint`
+// reaches `make lint-pins` on the HOST, in either EXEC_MODE and with no
+// `bun install` behind it, so anything imported from node_modules would throw
+// MODULE_NOT_FOUND on a cold checkout and turn a helpful drift message into a
+// confusing crash. The one rule that genuinely needed a parser — the workflow
+// Node pin — moved to scripts/ci/check-workflow-pins.mjs for that reason (#447),
+// and every pin left here is read out of a Dockerfile, a JSON file, a plain version
+// file, or the Makefile's own DIND recipe — surfaces where a line-oriented match is
+// the whole grammar, unlike the workflow YAML that moved out.
 //
 // Collect-all-then-fail, like scripts/ci/lint-metrics.sh: one run reports every
 // mismatch so a bump is fixed in a single pass.
@@ -23,7 +28,6 @@ const PLAYWRIGHT_DOCKERFILE = 'Playwright.Dockerfile';
 const DEVCONTAINER = '.devcontainer/devcontainer.json';
 // Relative to .devcontainer/, this is the repository Dockerfile the pins live in.
 const DEVCONTAINER_DOCKERFILE = '../Dockerfile';
-const WORKFLOWS_DIR = '.github/workflows';
 
 // Every image that must track .nvmrc. src/test/load/Dockerfile is deliberately
 // absent: it is the k6 builder (golang + a bare alpine runtime), carries no
@@ -99,8 +103,7 @@ if (nodeVersion !== null && !/^\d+\.\d+\.\d+$/.test(nodeVersion)) {
 // One file at a time, so an unreadable or base-image-less Dockerfile reports and
 // returns rather than skipping onward through the shared loop body.
 //
-// The matcher mirrors scripts/ci/check-node-version-sources.sh: `m` + `^[ \t]*`
-// anchors to the start of an instruction line, so a FROM quoted in a comment or a
+// The matcher is anchored with `m` + `^[ \t]*`, so a FROM quoted in a comment or a
 // RUN heredoc is not read as a pin; `i` accepts the legal lowercase `from`;
 // `(?:--\S+[ \t]+)*` consumes leading flags such as `FROM --platform=$BUILDPLATFORM`;
 // and `(?:\S*\/)?` makes a registry prefix end in `/` so an unrelated `mynode:` image
@@ -114,9 +117,14 @@ function collectNodeImages(file) {
     return [];
   }
 
+  // The `-alpine<tag>` suffix is optional in the MATCH and required by the check below,
+  // which is not the same as leaving it out of the pattern. Demanding it here made a
+  // non-alpine stage invisible rather than invalid: the "declares no base image" guard is
+  // satisfied by any one alpine stage in the file, so a second `FROM node:99.0.0` beside
+  // it matched nothing, drifted from .nvmrc, and was never reported.
   const matches = [
     ...text.matchAll(
-      /^[ \t]*FROM[ \t]+(?:--\S+[ \t]+)*(?:\S*\/)?node:(\d+\.\d+\.\d+)-alpine(\S*)/gim
+      /^[ \t]*FROM[ \t]+(?:--\S+[ \t]+)*(?:\S*\/)?node:(\d+\.\d+\.\d+)(?:-alpine(\S*))?/gim
     ),
   ];
   if (matches.length === 0) {
@@ -127,6 +135,13 @@ function collectNodeImages(file) {
   return matches.map(([, version, alpineTag]) => {
     if (nodeVersion !== null && version !== nodeVersion) {
       fail('node-images', `${file} pins node:${version} but ${NVMRC} says ${nodeVersion}`);
+    }
+    if (alpineTag === undefined) {
+      fail(
+        'node-images',
+        `${file} pins node:${version} on a non-alpine base; every node image here shares ` +
+          'one alpine tag'
+      );
     }
     return { file, version, alpineTag };
   });
@@ -175,6 +190,18 @@ if (typeof enginesNode !== 'string') {
         'engines-node',
         `${PACKAGE_JSON} engines.node "${enginesNode}" targets major ${enginesMajor} ` +
           `but ${NVMRC} says ${nodeVersion}`
+      );
+    } else if (enginesNode.trim() !== `^${nodeVersion}`) {
+      // The caret over the EXACT pin, not merely a range that admits it. `^24` and
+      // `^24.18.0` both accept the .nvmrc version, but only the second says which
+      // version this repository runs: under `^24` a host on 24.0.0 satisfies
+      // `engines` while disagreeing with every other pin site, and the drift this
+      // gate exists to report is invisible to `bun install`. Checked after the major
+      // comparison so a genuinely wrong major still reports as a wrong major.
+      fail(
+        'engines-node',
+        `${PACKAGE_JSON} engines.node is "${enginesNode}", expected "^${nodeVersion}" ` +
+          `— the caret over the exact ${NVMRC} version, not a looser range that merely admits it`
       );
     }
     if (!satisfied) {
@@ -254,362 +281,15 @@ BUN_INSTALL_FILES.forEach(checkBunInstalls);
 
 // --- 5. Workflows resolve Node through .nvmrc, never a literal ---------------
 
-let workflowFiles = [];
-try {
-  workflowFiles = fs
-    .readdirSync(WORKFLOWS_DIR)
-    // GitHub honours both extensions, so checking only .yml would let a .yaml
-    // workflow introduce a literal pin without ever failing this gate.
-    .filter(name => name.endsWith('.yml') || name.endsWith('.yaml'))
-    .map(name => `${WORKFLOWS_DIR}/${name}`);
-} catch {
-  fail('workflows', `${WORKFLOWS_DIR} is missing`);
-}
-
-/**
- * One YAML key, in the three spellings that name it: bare, single-quoted and
- * double-quoted. `"node-version": '20'` is the same literal pin `node-version: '20'`
- * is, so a scanner that knows only the bare spelling reads it as an unrelated key and
- * waves it through — and, in the other direction, reports a correctly written
- * `"node-version-file": '.nvmrc'` as unpinned.
- *
- * Every key this scanner matches is built here, so no key can be taught a spelling the
- * others do not know — the failure mode that has cost this family of gates three
- * separate fail-opens, each one key wide.
- *
- * Quoting widens nothing else. Each alternative is anchored at its opening quote and
- * must close with the SAME quote, so `"legacy-node-version-file"` is still a key
- * setup-node never reads (a prefix cannot be consumed and the tail read as the key),
- * and `"node-version'` is a key to no YAML reader at all. The three alternatives are
- * disjoint on their first character, so choosing between them is never a guess the
- * engine has to unwind.
- *
- * Mirrors `yaml_key()` in the sibling gate scripts/ci/check-node-version-sources.sh;
- * the two must stay one design.
- */
-function yamlKey(name) {
-  return `(?:${name}|"${name}"|'${name}')`;
-}
-
-const USES_KEY = yamlKey('uses');
-const WITH_KEY = yamlKey('with');
-const NODE_VERSION_KEY = yamlKey('node-version');
-const NODE_VERSION_FILE_KEY = yamlKey('node-version-file');
-
-// The whitespace YAML permits between a key and its colon. `node-version : "20"` is the
-// ordinary key `node-version`, and a runner honours it; a scanner that demands the colon
-// touch the key sees no key on that line at all and waves the literal straight through.
-// A TAB counts: YAML 1.2 ends an implicit key with `s-separate-in-line?`, which is a
-// space OR a tab, and js-yaml — what a runner's own tooling reads with — accepts
-// `node-version\t: '20'`. (PyYAML is the stricter outlier here, and is wrong per spec.)
-// Every key match below ends `${WS}:` and is built from this one constant, so the spacing
-// cannot be allowed in one spelling and forgotten in the next. Mirrors `ws` in the
-// sibling gate scripts/ci/check-node-version-sources.sh.
-const WS = String.raw`[ \t]*`;
-
-// A double-quoted YAML scalar, consumed whole. `\"` is an escaped quote INSIDE the
-// scalar, not the end of it: a run that stopped there would hand the remainder of the
-// string back to the walk as structure, and `{ "k\": v, node-version-file: .nvmrc, z" }`
-// — one key, pinning nothing — would credit the step. The two alternatives are disjoint
-// on their first character and neither matches the empty string, so consuming the scalar
-// is still a single deterministic pass.
-const DQ_SCALAR = String.raw`"(?:[^"\\]|\\.)*"`;
-
-// A single-quoted YAML scalar in KEY position. YAML escapes `'` by doubling it, so
-// `'it''s'` is one key and a run that stopped at the first half of the `''` desynchronises
-// the flow-entry walk: the entry never finds the `:` that must follow its key, the walk
-// gives up, and every key AFTER it becomes invisible. That is a fail-OPEN, not merely a
-// fail-closed one — `extra: { 'it''s': 1, node-version: '20' }` is a literal pin the gate
-// would never report, and setup-node resolves `node-version` ahead of `node-version-file`,
-// so the unreported literal is the version that actually runs.
-const SQ_KEY_SCALAR = String.raw`'[^']*(?:''[^']*)*'`;
-
-// The same scalar in VALUE position, where the naive pairing is kept DELIBERATELY. It is
-// correct there: doubling always adds quotes two at a time, so naive pairing splits
-// `'it''s'` into the two ADJACENT scalars `'it'` and `'s'`, which span exactly the
-// characters the one real scalar does — no comma or colon is ever left outside a scalar,
-// and the walk cannot desynchronise.
-//
-// It is also required. This scalar sits inside the repeating value alternation of
-// FLOW_ENTRIES, where a doubling-aware form is ambiguous with itself (a scalar holding one
-// doubled quote reads as that one scalar or as two adjacent ones) and the readings
-// multiply per entry. MEASURED on this file's own patterns, a doubling-aware scalar in
-// value position DOUBLES its backtracking with every added entry — 0.36 ms at 14 entries,
-// 1.42 at 16, 5.62 at 18, 22.8 at 20, 88.9 at 22, 354 at 24, a ratio of 1.95-2.05 at every
-// step — so a 40-entry line takes hours. The shipped shape does the same 40 entries in
-// under 0.01 ms, and a 4000-entry line in under 1 ms.
-// Key position has no such repetition to pair with, and an early close there is refuted
-// by the very next character (the second quote of the pair is neither the space nor the
-// colon that has to follow a key), so it costs one step. Do not "unify" the two.
-const SQ_SCALAR = String.raw`'[^']*'`;
-
-// Any key at all, for the flow entries that are merely stepped over, for the key a flow
-// mapping hangs off, and for the key a block scalar hangs off. A quoted key is consumed
-// whole, so a colon or a comma INSIDE a key is part of that key rather than structure
-// the walk could be desynchronised by — and, now that the single-quoted form knows its
-// doubling, so is a quote the key escapes rather than closes.
-const ANY_KEY = String.raw`(?:[\w.$-]+|${DQ_SCALAR}|${SQ_KEY_SCALAR})`;
-
-// `.nvmrc`, bare or quoted, with the quotes required to match each other: a value that
-// opens with one quote and closes with the other is not `.nvmrc` to any YAML reader, so
-// it must not be one here either.
-const NVMRC_VALUE = String.raw`(?:'\.nvmrc'|"\.nvmrc"|\.nvmrc)`;
-
-// `run: |`, `run: >-`, `run: |2`, `"run": |` — with an optional trailing comment.
-// Anchored on the key (unlike the sibling's awk, which strips inline comments before it
-// looks) so a shell pipe at the end of an inline value — `cache: bun # see: |` — cannot
-// open a block scalar and swallow the rest of the step. Capture 1 is everything before
-// the key, so the scalar can be scoped to the column the KEY starts at.
-// A spaced header (`      - run : |`) opens a block scalar exactly as an unspaced one
-// does; missing it leaves the scalar closed and reads its prose back as YAML structure —
-// the "prose poses as a step" failure this function exists to prevent.
-const BLOCK_SCALAR_HEADER = new RegExp(
-  String.raw`^(\s*(?:-\s+)?)${ANY_KEY}${WS}:\s*[|>][-+]?\d*\s*(?:#.*)?$`
-);
-
-/**
- * Slice a workflow into the `with:` block of each `actions/setup-node` step.
- *
- * Counting `setup-node` and `node-version-file` occurrences file-wide would let a
- * step that omits `.nvmrc` pass whenever a sibling step (or a comment) supplied a
- * second mention. Each step is therefore validated on its own text: from the
- * `uses:` line up to the next line indented no deeper than that `uses:`.
- */
-function stepStart(lines, usesIndex) {
-  const usesIndent = lines[usesIndex].search(/\S/);
-  for (let cursor = usesIndex; cursor >= 0; cursor -= 1) {
-    const indent = lines[cursor].search(/\S/);
-    if (lines[cursor].trim().startsWith('- ') && indent <= usesIndent) {
-      return cursor;
-    }
-  }
-  return usesIndex;
-}
-
-function stepEnd(lines, startIndex) {
-  const itemIndent = lines[startIndex].search(/\S/);
-  for (let cursor = startIndex + 1; cursor < lines.length; cursor += 1) {
-    const line = lines[cursor];
-    if (line.trim() !== '' && line.search(/\S/) <= itemIndent) {
-      return cursor;
-    }
-  }
-  return lines.length;
-}
-
-/**
- * Flag every line that can carry a real YAML key, so prose never poses as a step.
- *
- * `uses: actions/setup-node@v6` and `node-version:` both show up in workflows as
- * documentation — a `#` comment quoting the canonical snippet, or a `run: |`
- * block echoing a fragment into a heredoc or an error message. Matching those
- * invents a pin failure in a workflow that never calls setup-node, and the only
- * way to "fix" it is to delete the prose. A block scalar (`run: |`, `script: >`)
- * owns every following line that is blank or indented deeper than the key that
- * opened it; everything else is data.
- */
-function yamlKeyLines(lines) {
-  const isKeyLine = [];
-  let blockIndent = null;
-
-  lines.forEach((line, index) => {
-    const indent = line.search(/\S/);
-
-    if (blockIndent !== null && (indent === -1 || indent > blockIndent)) {
-      isKeyLine[index] = false;
-      return;
-    }
-    blockIndent = null;
-
-    if (indent === -1 || /^\s*#/.test(line)) {
-      isKeyLine[index] = false;
-      return;
-    }
-
-    isKeyLine[index] = true;
-    const header = BLOCK_SCALAR_HEADER.exec(line);
-    if (header) {
-      // The column of the KEY, not of the sequence dash that may precede it. `- run: |`
-      // owns only what is indented past `run`, and the step's own sibling keys — its
-      // `uses:` and `with:` — sit at exactly that column. Scoping the scalar to the dash
-      // instead swallows the entire rest of the step, hiding an unpinned setup-node call
-      // behind any leading `run:`. The sibling gate scopes it to the key too.
-      blockIndent = header[1].length;
-    }
-  });
-
-  return isKeyLine;
-}
-
-// A real step, not a mention: the first token on the line — after the optional
-// `- ` that opens a list item — has to be the `uses:` key itself, in any of its three
-// spellings. The action reference may be quoted too, exactly as the sibling gate allows.
-const SETUP_NODE_USES = new RegExp(
-  String.raw`^\s*(?:-\s+)?${USES_KEY}${WS}:\s*["']?actions/setup-node[@\s]`
-);
-const LITERAL_NODE_VERSION = new RegExp(String.raw`^\s*(?:-\s+)?${NODE_VERSION_KEY}${WS}:`);
-
-// The entries of a flow mapping that precede the key being looked for: `key: value,`
-// repeated, with a quoted key or value consumed whole. Stepping over one entry at a time
-// is what makes the key that follows the mapping's OWN key. A looser `[^}]*` prefix reads
-// any tail of a longer key as the key itself — `legacy-node-version-file:` would credit
-// a step the block spelling of the same input correctly rejects — and reads a key
-// spelled inside a quoted value as a real one.
-//
-// The construction stays a single deterministic pass however it is matched: the key
-// alternatives and the three value alternatives are each disjoint on their first
-// character, and every repetition consumes at least a `k:,`, so none of them can match
-// the empty string. There is exactly one way to match any given prefix — nothing for a
-// backtracking engine to explore.
-const FLOW_ENTRIES = String.raw`(?:${ANY_KEY}${WS}:(?:[^,{}'"]|${SQ_SCALAR}|${DQ_SCALAR})*,\s*)*`;
-
-// The same literal written inside a flow mapping, `with: { node-version: '24.18.0' }`.
-// Without it the two spellings disagree: a flow mapping that carries the `.nvmrc` pin
-// AND a literal beside it would be credited and never reported, while the block form
-// of the very same step is. The key has to open the mapping or start an entry, so
-// `node-version-file:` is never read as a literal.
-const FLOW_LITERAL_NODE_VERSION = new RegExp(
-  String.raw`^\s*(?:-\s+)?${ANY_KEY}${WS}:\s*\{\s*${FLOW_ENTRIES}${NODE_VERSION_KEY}${WS}:`
-);
-
-// The step's own `node-version-file:` key, on a real key line, whose complete value
-// is `.nvmrc`. Anchored at both ends for the same reason LITERAL_NODE_VERSION is:
-// an unanchored search over the step's raw text accepts a `#` comment quoting the
-// canonical snippet, a longer path that merely starts with `.nvmrc`
-// (`.nvmrc.example`), and a similarly suffixed key (`legacy-node-version-file:`) —
-// each of which lets a genuinely unpinned setup-node step through.
-const NODE_VERSION_FILE_NVMRC = new RegExp(
-  String.raw`^\s*(?:-\s+)?${NODE_VERSION_FILE_KEY}${WS}:\s*${NVMRC_VALUE}\s*(?:#.*)?$`
-);
-
-// The step's own `with:` mapping, in either mapping style — both are the same
-// mapping, and setup-node reads its inputs from nowhere else. Block style opens a
-// scope whose deeper keys NODE_VERSION_FILE_NVMRC is matched against; a flow
-// mapping is complete on its own line, so the pin is read straight out of it and no
-// scope opens. FLOW_ENTRIES bounds the scan to that one mapping and makes the key its
-// own, and the value alternation terminates exactly at `.nvmrc`, so a lookalike key
-// (`legacy-node-version-file:`), a lookalike path (`.nvmrc.bak`, `".nvmrcX"`) or a
-// literal `node-version:` all still leave the step unpinned.
-const BLOCK_WITH = new RegExp(String.raw`^${WITH_KEY}${WS}:\s*(?:#.*)?$`);
-const FLOW_WITH_NVMRC = new RegExp(
-  String.raw`^${WITH_KEY}${WS}:\s*\{\s*${FLOW_ENTRIES}${NODE_VERSION_FILE_KEY}${WS}:\s*${NVMRC_VALUE}\s*[,}]`
-);
-
-// The mapping key a line carries, with any sequence dash removed, and the column it
-// really starts at: in `- uses: x` the key is nested one level below the dash, and
-// that column is what tells a step's own `with:` apart from a `with:` nested inside
-// another of its mappings — an `env:`, say, where setup-node never looks.
-function mappingKey(line) {
-  const parts = /^([ \t]*)(-[ \t]+)?(\S.*)$/.exec(line);
-  return parts === null
-    ? null
-    : { column: parts[1].length + (parts[2] ?? '').length, text: parts[3] };
-}
-
-function setupNodeSteps(lines, isKeyLine) {
-  return lines.flatMap((line, index) => {
-    if (!isKeyLine[index] || !SETUP_NODE_USES.test(line)) {
-      return [];
-    }
-    // `with:` is a sibling key of `uses:`, not nested under it, so the step's
-    // extent is the whole `- ` list item that encloses the `uses:` line. The
-    // range, not a joined blob: the caller still needs isKeyLine per line.
-    const start = stepStart(lines, index);
-    const end = stepEnd(lines, start);
-    return [{ line: index + 1, start, end }];
-  });
-}
-
-// The mapping keys the step actually declares, in source order. Prose declares
-// none: a comment or a block-scalar body is not a key line, and a line that carries
-// no key at all (a bare list item, say) yields nothing — so neither can open a
-// `with:` mapping nor carry the pin.
-function stepKeys(lines, isKeyLine, step) {
-  return lines
-    .slice(step.start, step.end)
-    .map((line, offset) => (isKeyLine[step.start + offset] ? mappingKey(line) : null))
-    .filter(key => key !== null);
-}
-
-// Whether a key opens the step's OWN block `with:` — the only mapping setup-node
-// reads its inputs from. It has to sit at the step's own column: a `with:` deeper
-// than that is nested inside another of the step's mappings (an `env:`, say), where
-// the action never looks.
-function opensBlockWith(key, stepColumn) {
-  return key.column === stepColumn && BLOCK_WITH.test(key.text);
-}
-
-// The two places the `.nvmrc` pin can legitimately sit. At the step's own column it
-// has to be a flow `with: { … }` carrying the pin, complete on that one line —
-// `node-version-file:` spelled as a direct key of the step is an input of nothing.
-// Deeper, it has to be a `node-version-file:` input of an open block `with:`; the
-// caller clears `inWith` at every key that dedents back to the step, so a pin under
-// `env:`, or after the mapping has closed, credits no step.
-function keyPinsNvmrc(key, stepColumn, inWith) {
-  return key.column === stepColumn
-    ? FLOW_WITH_NVMRC.test(key.text)
-    : inWith && NODE_VERSION_FILE_NVMRC.test(key.text);
-}
-
-// The column of the step's first mapping key (the one its dash introduces) is the
-// column every direct key of the step sits at, so a `with:` found there is the
-// step's own and one found deeper is not. Any key deeper than an open block `with:`
-// is one of its inputs; a key at or left of it has dedented back out and closes the
-// mapping — which is why the scope is recomputed, never merely kept, at those keys.
-// The same walk as the sibling gate scripts/ci/check-node-version-sources.sh, whose
-// awk carries `step_key_indent` / `in_with` for `stepColumn` / `inWith`.
-function stepPinsNvmrc(lines, isKeyLine, step) {
-  const keys = stepKeys(lines, isKeyLine, step);
-  const stepColumn = keys.length === 0 ? -1 : keys[0].column;
-  let inWith = false;
-
-  for (const key of keys) {
-    if (key.column <= stepColumn) {
-      inWith = opensBlockWith(key, stepColumn);
-    }
-    if (keyPinsNvmrc(key, stepColumn, inWith)) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-// A workflow that never calls setup-node yields no steps, so the pin check is
-// simply vacuous for it — but the literal `node-version:` check still runs over
-// every workflow, because a literal pin is drift wherever it is declared.
-function checkWorkflowNodePin(file) {
-  const text = readText(file);
-  if (text === null) {
-    return;
-  }
-
-  const lines = text.split('\n');
-  const isKeyLine = yamlKeyLines(lines);
-
-  setupNodeSteps(lines, isKeyLine)
-    .filter(step => !stepPinsNvmrc(lines, isKeyLine, step))
-    .forEach(step => {
-      fail(
-        'workflows',
-        `${file}:${step.line} calls actions/setup-node without node-version-file: ${NVMRC}`
-      );
-    });
-
-  lines.forEach((line, index) => {
-    if (
-      isKeyLine[index] &&
-      (LITERAL_NODE_VERSION.test(line) || FLOW_LITERAL_NODE_VERSION.test(line))
-    ) {
-      fail(
-        'workflows',
-        `${file}:${index + 1} pins a literal node-version; use node-version-file: ${NVMRC}`
-      );
-    }
-  });
-}
-
-workflowFiles.forEach(checkWorkflowNodePin);
+// Moved out to scripts/ci/check-workflow-pins.mjs (`make lint-workflow-pins`,
+// issue #447). That rule reads GitHub workflow YAML, and reading YAML with regex
+// cost this gate seven spelling fixes in one day — a lookalike key, a key spelled
+// inside a quoted value, an over-tightened flow mapping, quoted keys, an escaped
+// quote, block-scalar scoping, a doubled single quote — with the next fix breaking
+// a previous one. The sibling gate parses the document with js-yaml instead, which
+// needs node_modules, which is exactly what this file must not need: `make lint`
+// reaches `make lint-pins` on the HOST, where no `bun install` has run. So the two
+// halves live in two scripts, and only the parsing half runs inside the container.
 
 // --- 6. Playwright image tracks the @playwright/test devDependency -----------
 

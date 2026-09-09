@@ -1,0 +1,145 @@
+# Codecov configuration (issue #335 — testability).
+#
+# Before this file existed the Codecov upload was purely decorative: the action ran
+# with `fail_ci_if_error` unset, so a rejected upload still reported success, and with
+# no repository config every status Codecov could have posted defaulted to
+# informational. Coverage could fall to zero and nothing here would have said so.
+#
+# The Jest layers remain the load-bearing gate — each enforces its own
+# `coverageThreshold` in jest.config.ts and fails the build locally and in CI. These
+# statuses are the second line: they catch a drop that stays above the floor.
+
+codecov:
+  # A run that failed before producing coverage must not be scored as a coverage drop;
+  # the failing suite is the signal to act on.
+  require_ci_to_pass: true
+  notify:
+    # Deliberately no `after_n_builds`: the four uploads all come from the one
+    # `codecov` job, and a threshold there turns a single failed upload into a status
+    # that stays pending forever — a merge block nobody can clear. Codecov instead
+    # recomputes the statuses as each report lands, so an early partial verdict
+    # corrects itself once the rest arrive.
+    wait_for_ci: true
+
+coverage:
+  precision: 2
+  round: down
+  range: '90...100'
+
+  status:
+    project:
+      default:
+        # `auto` compares against the base commit: coverage may hold or rise, and may
+        # only fall by `threshold`. It is a ratchet, so it can never be satisfied by
+        # committing a lower number — unlike a fixed target.
+        target: auto
+        threshold: 1%
+        informational: false
+        if_ci_failed: error
+        only_pulls: true
+      client:
+        flags:
+          - client
+        target: auto
+        threshold: 1%
+        informational: false
+        if_ci_failed: error
+        only_pulls: true
+      server:
+        flags:
+          - server
+        target: auto
+        threshold: 1%
+        informational: false
+        if_ci_failed: error
+        only_pulls: true
+      edge:
+        flags:
+          - edge
+        # The edge layer fronts every production request and is pinned at 100% by
+        # jest.config.ts; mirror that exactly rather than allowing a slip.
+        target: 100%
+        threshold: 0%
+        informational: false
+        if_ci_failed: error
+        only_pulls: true
+      integration:
+        flags:
+          - integration
+        # Also pinned at 100% by jest.config.ts, and over the whole of src/**.
+        target: 100%
+        threshold: 0%
+        informational: false
+        if_ci_failed: error
+        only_pulls: true
+
+    patch:
+      default:
+        # New and changed lines carry their own tests. The target sits below the
+        # measured whole-project figure so a legitimately hard-to-cover line does not
+        # block a PR, while an untested feature still does.
+        target: 90%
+        threshold: 0%
+        informational: false
+        if_ci_failed: error
+        only_pulls: true
+
+# `carryforward` is deliberately left off every flag. All four reports are uploaded from
+# the single `codecov` job, so a flag going missing means that job failed — and carrying
+# the previous commit's report forward would paper over exactly the dropped layer these
+# statuses exist to catch, posting green from stale coverage. Without it, a missing
+# report surfaces as an absent or failing status instead.
+flags:
+  client:
+    paths:
+      - src/
+  server:
+    paths:
+      - src/
+      - docker/
+  edge:
+    paths:
+      - scripts/
+      # `public/` because jest.config.ts's EDGE_COVERAGE_FROM is three files, not two:
+      # the two CloudFront scripts plus `public/sw.js` (issue #338). A flag's `paths`
+      # decide which files count toward its status, so leaving this out scored the edge
+      # status on the routing scripts alone and a regression in the offline-shell worker
+      # could not move it — which is not the "mirror jest.config.ts exactly" the status
+      # above claims.
+      - public/
+  integration:
+    paths:
+      - src/
+
+# Non-product exclusions, applied to every uploaded report: declaration files, Storybook
+# stories, the mocks and fixtures that exist only to support other tests, and the test
+# suites themselves under `src/test/` and `tests/`.
+#
+# Deliberately narrower than the integration layer's `INTEGRATION_COVERAGE_FROM`
+# (jest.config.ts), which additionally drops `types/**`, `types.ts`, `theme.ts`,
+# `styles/**` and co-located `*.test.{ts,tsx}`. The two lists answer different questions:
+# that one scopes what the 100% integration gate is measured against, so it may shed
+# declarative modules no assertion can meaningfully score; this one scopes what is
+# reported at all. Aligning them would either hide product code or change nothing. Hide:
+# a `theme.ts` is executed MUI style objects (`ui-button/index.tsx` imports one as a
+# value) and `notification/types.ts` emits an enum `auth-layout.tsx` reads as a value, so
+# both land in the default-scope client report. Ignoring them would pull covered product
+# code out of the client/server ratchet and out of the `patch` status — which is exactly
+# where a conditional or an `sx` callback added to one of them later would be scored.
+# Change nothing: the `types/**` directories here are type-only and emit no module to
+# report, no `src/**/styles/**` exists, and no co-located test file lives outside the
+# already-ignored `src/test/`. Only add a path here that carries no product behaviour in
+# any layer.
+ignore:
+  - '**/*.d.ts'
+  - '**/*.stories.ts'
+  - '**/*.stories.tsx'
+  - '**/__fixtures__/**'
+  - '**/__mocks__/**'
+  - 'src/test/**'
+  - 'tests/**'
+
+comment:
+  layout: 'condensed_header, condensed_files, condensed_footer'
+  behavior: default
+  require_changes: true

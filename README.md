@@ -2,7 +2,7 @@
 
 # Template for modern SSR applications
 
-[![codecov](https://codecov.io/gh/VilnaCRM-Org/frontend-ssr-template/graph/badge.svg?token=MPFDUSMZ2I)](https://codecov.io/gh/VilnaCRM-Org/frontend-ssr-template)
+[![codecov](https://codecov.io/gh/VilnaCRM-Org/website/graph/badge.svg)](https://codecov.io/gh/VilnaCRM-Org/website)
 
 ## Possibilities
 
@@ -133,6 +133,7 @@ Linting & Formatting
   make lint-api-versions: verifies OpenAPI and GraphQL reference the same pinned user-service release
   make lint-docker-policy: enforces the Dockerfile registry + digest-pin policy
   make lint-pins: fails when the Node, Bun, or Playwright pins drift between pin sites
+  make lint-workflow-pins: fails when a workflow stops resolving Node through .nvmrc
   make lint-headers: verifies the edge security-header policy reaches every response
   make lint-security-txt: validates the RFC 9116 security.txt fields and Expires runway
   make lint-prod-guardrails: enforces the production-safety invariants (issue #383)

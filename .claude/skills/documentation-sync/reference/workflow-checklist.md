@@ -9,7 +9,7 @@
 
 3. Update the closest owning doc first (the feature-local README, then root
    docs).
-4. Touch `agents.md`, `CLAUDE.md`, `README.md`, `CONTRIBUTING.md`, or
+4. Touch `AGENTS.md`, `CLAUDE.md`, `README.md`, `CONTRIBUTING.md`, or
    `.claude/skills` only when the change is cross-cutting.
 5. Run `make format`, then `make lint-md`.
 6. Run `make lint` when docs changed alongside code.

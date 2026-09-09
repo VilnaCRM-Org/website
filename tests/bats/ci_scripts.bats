@@ -132,15 +132,16 @@ run_host_stack() {
 }
 
 # Copy every file the pin gate reads into an isolated tree so a mutation never
-# touches the working copy.
+# touches the working copy. The workflows are deliberately absent: #447 moved the
+# workflow Node pin to scripts/ci/check-workflow-pins.mjs, which has its own
+# sandbox in tests/bats/check_workflow_pins.bats.
 setup_pin_sandbox() {
   PIN_SANDBOX="$BATS_TEST_TMPDIR/pins"
 
-  mkdir -p "$PIN_SANDBOX/.github/workflows" "$PIN_SANDBOX/scripts/ci"
+  mkdir -p "$PIN_SANDBOX/scripts/ci"
   cp "$PROJECT_ROOT/.nvmrc" "$PROJECT_ROOT/.bun-version" "$PROJECT_ROOT/package.json" \
     "$PROJECT_ROOT/Makefile" "$PROJECT_ROOT/Dockerfile" "$PIN_SANDBOX/"
   cp "$PROJECT_ROOT"/*.Dockerfile "$PIN_SANDBOX/"
-  cp "$PROJECT_ROOT"/.github/workflows/*.yml "$PIN_SANDBOX/.github/workflows/"
   cp "$PROJECT_ROOT/scripts/ci/check-version-pins.mjs" "$PIN_SANDBOX/scripts/ci/"
   # The committed devcontainer is part of the pin surface, so the baseline must be
   # the real file: a synthetic stand-in would let a regression in its build target,
@@ -426,23 +427,9 @@ STUB
       return 1
     fi
 
-    # A mutation that ADDS a file (a rogue workflow) has no committed original to
-    # copy back, so restoring means deleting it.
-    if [ -e "$PROJECT_ROOT/$file" ]; then
-      cp "$PROJECT_ROOT/$file" "$PIN_SANDBOX/$file"
-    else
-      rm -f "$PIN_SANDBOX/$file"
-    fi
+    cp "$PROJECT_ROOT/$file" "$PIN_SANDBOX/$file"
     run_pin_gate
     [ "$status" -eq 0 ]
-    # The two setup-node cases below drift `.github/workflows/bats-testing.yml`
-    # specifically: #399 moved the lint and test gates into the dev container and
-    # stripped `actions/setup-node` from the workflows that followed, which is how
-    # the earlier target (unit-testing.yml) stopped carrying a pin to drift. The
-    # bats job cannot follow them, because its subject IS the host side of the
-    # Makefile, so it keeps a host Node pin. If that ever changes, this test fails
-    # loudly rather than silently testing nothing; repoint it at another workflow
-    # that still declares `node-version-file`.
   done <<'EOF'
 node version|.nvmrc|printf '99.0.0\n' > .nvmrc
 node image|Apollo.Dockerfile|sed -i 's#node:[0-9.]*-alpine#node:99.0.0-alpine#' Apollo.Dockerfile
@@ -451,11 +438,8 @@ bun version|.bun-version|printf '99.0.0\n' > .bun-version
 bun install in a Dockerfile|MemoryLeak.Dockerfile|sed -i 's#bun@[0-9.]*#bun@99.0.0#' MemoryLeak.Dockerfile
 bun install in the DIND recipe|Makefile|sed -i 's#npm install -g bun@[0-9.]*#npm install -g bun@99.0.0#' Makefile
 playwright image|Playwright.Dockerfile|sed -i 's#playwright:v[0-9.]*-jammy#playwright:v99.0.0-jammy#' Playwright.Dockerfile
-literal node-version in a workflow|.github/workflows/bats-testing.yml|sed -i "s#node-version-file:.*#node-version: '99.0.0'#" .github/workflows/bats-testing.yml
-setup-node step with no version file|.github/workflows/bats-testing.yml|sed -i "/node-version-file:/d" .github/workflows/bats-testing.yml
-literal node-version in a .yaml workflow|.github/workflows/rogue.yaml|printf 'jobs:\n  a:\n    steps:\n      - uses: actions/setup-node@abc\n        with:\n          node-version: 20\n' > .github/workflows/rogue.yaml
 packageManager version|package.json|sed -i 's#"bun@[0-9.]*"#"bun@99.0.0"#' package.json
-engines.node range|package.json|sed -i 's#"node": "\^[0-9]*"#"node": "^99"#' package.json
+engines.node range|package.json|sed -i 's#"node": "\^[0-9.]*"#"node": "^99"#' package.json
 engines.bun floor|package.json|sed -i 's#">=[0-9.]*"#">=99.0.0"#' package.json
 playwright devDependency|package.json|sed -i 's#"@playwright/test": "[0-9.]*"#"@playwright/test": "99.0.0"#' package.json
 playwright runtime devDependency|package.json|sed -i 's#"playwright": "[0-9.]*"#"playwright": "99.0.0"#' package.json
@@ -510,401 +494,6 @@ EOF
   fi
 }
 
-# Every other check in this section is gated on `isKeyLine`, but the
-# node-version-file test used to run an unanchored regex over the step's raw text.
-# A comment quoting the canonical snippet, a longer path that starts with `.nvmrc`,
-# or a similarly suffixed key each satisfied it while the step stayed unpinned.
-@test "check-version-pins.mjs requires a real node-version-file key valued exactly .nvmrc" {
-  setup_pin_sandbox
-
-  local probe="$PIN_SANDBOX/.github/workflows/probe.yml"
-
-  write_setup_node_probe() {
-    cat > "$probe" <<YAML
-name: probe
-on: push
-jobs:
-  a:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/setup-node@v6
-        with:
-$1
-YAML
-  }
-
-  write_setup_node_probe "          node-version-file: '.nvmrc'"
-  run_pin_gate
-  if [ "$status" -ne 0 ]; then
-    echo 'the pin gate rejected the canonical node-version-file step' >&2
-    printf '%s\n' "${output-}" >&2
-    return 1
-  fi
-
-  local hole
-  for hole in \
-    '          # node-version-file: .nvmrc'$'\n''          cache: bun' \
-    '          node-version-file: .nvmrc.example' \
-    '          legacy-node-version-file: .nvmrc'; do
-    write_setup_node_probe "$hole"
-    run_pin_gate
-    if [ "$status" -eq 0 ]; then
-      echo "an unpinned setup-node step passed the gate: $hole" >&2
-      return 1
-    fi
-    assert_output_contains 'without node-version-file'
-  done
-
-  rm -f "$probe"
-  run_pin_gate
-  [ "$status" -eq 0 ]
-}
-
-# `with: { node-version-file: '.nvmrc' }` is the same mapping as the block form and
-# equally valid YAML, so reading only the block spelling fails a compliant workflow —
-# as broken as failing open on a bad one. Reading both is safe only while the mapping
-# is the step's own: a `with:` nested under `env:` is an environment variable named
-# "with", which setup-node never looks at.
-@test "check-version-pins.mjs credits either with: spelling, and only the step's own" {
-  setup_pin_sandbox
-
-  local probe="$PIN_SANDBOX/.github/workflows/with-forms.yml"
-
-  write_setup_node_step() {
-    cat > "$probe" <<YAML
-name: with-forms
-on: push
-jobs:
-  a:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
-$1
-YAML
-  }
-
-  write_setup_node_step "        with: { cache: 'bun', node-version-file: '.nvmrc' }"
-  run_pin_gate
-  if [ "$status" -ne 0 ]; then
-    echo 'the pin gate rejected a flow-style with: that pins .nvmrc' >&2
-    printf '%s\n' "${output-}" >&2
-    return 1
-  fi
-
-  # The flow spelling has to make the pin the mapping's OWN key, exactly as the block
-  # spelling does: a longer key that merely ends in `node-version-file`, and the key
-  # spelled inside a quoted value, are both text the gate must not read as the pin.
-  local hole
-  for hole in \
-    "        with: { node-version: '24.18.0' }" \
-    '        with: { node-version-file: .nvmrc.bak }' \
-    "        with: { legacy-node-version-file: '.nvmrc' }" \
-    '        with: { cache: bun, x-node-version-file: .nvmrc }' \
-    "        with: { cache: 'a, node-version-file: .nvmrc,' }" \
-    "        env:"$'\n'"          with:"$'\n'"            node-version-file: '.nvmrc'" \
-    "        env:"$'\n'"          with: { node-version-file: '.nvmrc' }"; do
-    write_setup_node_step "$hole"
-    run_pin_gate
-    if [ "$status" -eq 0 ]; then
-      echo "an unpinned setup-node step passed the gate: $hole" >&2
-      return 1
-    fi
-    assert_output_contains 'without node-version-file'
-  done
-
-  # A literal beside the pin is still drift, and the flow spelling must not be the
-  # one place it goes unreported.
-  write_setup_node_step \
-    "        with: { node-version-file: '.nvmrc', node-version: '24.18.0' }"
-  run_pin_gate
-  [ "$status" -ne 0 ]
-  assert_output_contains 'pins a literal node-version'
-
-  # ...and the converse: a quoted value that merely spells the literal is not one, so
-  # a pinned step keeps passing rather than being told to rewrite correct YAML.
-  write_setup_node_step \
-    "        with: { node-version-file: .nvmrc, cache: 'a, node-version: 1' }"
-  run_pin_gate
-  if [ "$status" -ne 0 ]; then
-    echo 'the pin gate read a quoted value as a literal node-version pin' >&2
-    printf '%s\n' "${output-}" >&2
-    return 1
-  fi
-
-  rm -f "$probe"
-  run_pin_gate
-  [ "$status" -eq 0 ]
-}
-
-# YAML lets a mapping key be written bare, single-quoted or double-quoted, and all three
-# name the same key. Matching only the bare spelling holed this gate in both directions at
-# once: `- "uses": actions/setup-node@v6` hid a whole unpinned step, `"node-version": '20'`
-# hid the literal pin the gate exists to catch, and a correctly written
-# `"node-version-file": '.nvmrc'` was reported as unpinned. Quoting must widen the
-# SPELLING of a key and nothing else — a lookalike, a mismatched pair of quotes, and a
-# quoted key that merely swallows a pin all stay wrong.
-@test "check-version-pins.mjs reads every YAML key in all three quote spellings" {
-  setup_pin_sandbox
-
-  local probe="$PIN_SANDBOX/.github/workflows/quoted-keys.yml"
-
-  write_quoted_key_step() {
-    {
-      printf 'name: quoted-keys\non: push\njobs:\n  a:\n    runs-on: ubuntu-latest\n    steps:\n'
-      printf '%s\n' "$1"
-    } > "$probe"
-  }
-
-  run_pin_gate
-  [ "$status" -eq 0 ]
-
-  # Correct YAML that a bare-only matcher failed: the quoted spelling of `uses`, of the
-  # action reference, of `with`, and of `node-version-file`, in block and flow style; a
-  # quoted neighbour inside the flow walk; a quoted key carrying a colon and a comma,
-  # which must be consumed whole so the real pin behind it still credits the step; a
-  # quoted `run: |` header, whose body is literal text and not structure; and a quoted
-  # key that merely looks like the literal.
-  local pinned
-  for pinned in \
-    '      - "uses": actions/setup-node@v6'$'\n''        with:'$'\n'"          node-version-file: '.nvmrc'" \
-    "      - uses: \"actions/setup-node@v6\""$'\n''        with:'$'\n'"          node-version-file: '.nvmrc'" \
-    '      - uses: actions/setup-node@v6'$'\n''        "with":'$'\n'"          node-version-file: '.nvmrc'" \
-    '      - uses: actions/setup-node@v6'$'\n'"        'with': { node-version-file: .nvmrc }" \
-    '      - uses: actions/setup-node@v6'$'\n''        with:'$'\n'"          \"node-version-file\": '.nvmrc'" \
-    '      - uses: actions/setup-node@v6'$'\n''        with:'$'\n'"          'node-version-file': \".nvmrc\"" \
-    '      - uses: actions/setup-node@v6'$'\n'"        with: { 'node-version-file': .nvmrc }" \
-    '      - uses: actions/setup-node@v6'$'\n'"        with: { \"cache\": 'bun', node-version-file: '.nvmrc' }" \
-    '      - uses: actions/setup-node@v6'$'\n'"        with: { \"a, b: c\": 'x', node-version-file: '.nvmrc' }" \
-    '      - name: Explain the pin'$'\n''        "run": |'$'\n''          uses: actions/setup-node@v6'$'\n''          node-version: 24.18.0' \
-    '      - name: Explain the pin'$'\n'"        'run': >-"$'\n''          uses: actions/setup-node@v6'$'\n''          node-version: 24.18.0' \
-    '      - uses: actions/setup-node@v6'$'\n''        with:'$'\n'"          node-version-file: '.nvmrc'"$'\n'"          \"legacy-node-version\": '20'"; do
-    write_quoted_key_step "$pinned"
-    run_pin_gate
-    if [ "$status" -ne 0 ]; then
-      echo "the pin gate rejected correct YAML: $pinned" >&2
-      printf '%s\n' "${output-}" >&2
-      return 1
-    fi
-  done
-
-  # A quoted key never credits a step it does not actually pin: the quoted `uses`
-  # spellings must be visible as steps at all, a lookalike or mismatched-quote key is a
-  # key setup-node never reads, a quoted key that swallows the pin into its own text
-  # pins nothing, and a quoted `with:` under `env:` is still an environment variable.
-  local hole
-  for hole in \
-    '      - "uses": actions/setup-node@v6'$'\n''        with:'$'\n''          cache: bun' \
-    "      - 'uses': actions/setup-node@v6"$'\n''        with:'$'\n''          cache: bun' \
-    '      - uses: "actions/setup-node@v6"'$'\n''        with:'$'\n''          cache: bun' \
-    '      - uses: actions/setup-node@v6'$'\n''        with:'$'\n'"          \"legacy-node-version-file\": '.nvmrc'" \
-    '      - uses: actions/setup-node@v6'$'\n''        with:'$'\n''          "x-node-version-file": .nvmrc' \
-    '      - uses: actions/setup-node@v6'$'\n''        with:'$'\n'"          \"node-version-file': '.nvmrc'" \
-    '      - uses: actions/setup-node@v6'$'\n''        with:'$'\n'"          'node-version-file\": .nvmrc" \
-    '      - uses: actions/setup-node@v6'$'\n'"        \"with':"$'\n'"          node-version-file: '.nvmrc'" \
-    '      - uses: actions/setup-node@v6'$'\n'"        with: { \"a, node-version-file: .nvmrc, b\": 'x' }" \
-    '      - uses: actions/setup-node@v6'$'\n''        env:'$'\n''          "with":'$'\n'"            node-version-file: '.nvmrc'" \
-    '      - name: Explain the pin'$'\n''        "run": |'$'\n''          uses: actions/setup-node@v6'$'\n''      - uses: actions/setup-node@v6'$'\n''        with:'$'\n''          cache: bun'; do
-    write_quoted_key_step "$hole"
-    run_pin_gate
-    if [ "$status" -eq 0 ]; then
-      echo "an unpinned setup-node step passed the gate: $hole" >&2
-      return 1
-    fi
-    assert_output_contains 'without node-version-file'
-  done
-
-  # The literal is drift in every spelling of its key and in both mapping styles — and
-  # in the flow form the entry walk must survive a quoted neighbour to reach it.
-  local literal
-  for literal in \
-    '      - uses: actions/setup-node@v6'$'\n''        with:'$'\n'"          node-version-file: '.nvmrc'"$'\n'"          \"node-version\": '20'" \
-    '      - uses: actions/setup-node@v6'$'\n''        with:'$'\n'"          node-version-file: '.nvmrc'"$'\n'"          'node-version': \"20\"" \
-    '      - uses: actions/setup-node@v6'$'\n'"        with: { \"cache\": 'bun', node-version: '20' }" \
-    '      - uses: actions/setup-node@v6'$'\n'"        with: { \"node-version\": '20' }" \
-    '      - uses: actions/setup-node@v6'$'\n'"        \"with\": { node-version: '20' }"; do
-    write_quoted_key_step "$literal"
-    run_pin_gate
-    if [ "$status" -eq 0 ]; then
-      echo "a literal node-version passed the gate: $literal" >&2
-      return 1
-    fi
-    assert_output_contains 'pins a literal node-version'
-  done
-
-  rm -f "$probe"
-  run_pin_gate
-  [ "$status" -eq 0 ]
-}
-
-# Consuming a quoted scalar WHOLE is what keeps a colon or a comma inside it from being
-# read as structure, so the run has to end where YAML ends it. `\"` is an escaped quote
-# INSIDE a double-quoted scalar, not the end of one: a run that stopped there would hand
-# the remainder of the string back to the entry walk, and a single key that pins nothing
-# would credit the step. And a block scalar belongs to its KEY, not to the sequence dash
-# that may precede it — scoping `- run: |` to the dash swallows the step's own `uses:`
-# and `with:`, hiding an unpinned setup-node call behind any leading `run:`.
-@test "check-version-pins.mjs ends a quoted scalar and a block scalar where YAML does" {
-  setup_pin_sandbox
-
-  local probe="$PIN_SANDBOX/.github/workflows/scalar-extent.yml"
-
-  write_scalar_step() {
-    {
-      printf 'name: scalar-extent\non: push\njobs:\n  a:\n    runs-on: ubuntu-latest\n    steps:\n'
-      printf '%s\n' "$1"
-    } > "$probe"
-  }
-
-  run_pin_gate
-  [ "$status" -eq 0 ]
-
-  # None of these pins anything: every `node-version-file: .nvmrc` below sits inside a
-  # single quoted scalar, and a leading block scalar owns only what is indented past its
-  # own key, so the setup-node step behind it stays visible and stays unpinned.
-  local hole
-  for hole in \
-    '      - uses: actions/setup-node@v6'$'\n'"        with: { \"k\\\": v, node-version-file: .nvmrc, z\": 'x' }" \
-    '      - uses: actions/setup-node@v6'$'\n'"        with: { k: \"a\\\", node-version-file: .nvmrc, z\" }" \
-    '      - uses: actions/setup-node@v6'$'\n''        with:'$'\n'"          cache: \"a\\\", node-version-file: .nvmrc, z\"" \
-    '      - run: |'$'\n''          echo build'$'\n''        uses: actions/setup-node@v6'$'\n''        with:'$'\n''          cache: bun' \
-    '      - "run": |'$'\n''          echo build'$'\n''        uses: actions/setup-node@v6'$'\n''        with:'$'\n''          cache: bun' \
-    "      - 'run': >-"$'\n''          echo build'$'\n''        uses: actions/setup-node@v6'$'\n'"        with: { cache: 'bun' }"; do
-    write_scalar_step "$hole"
-    run_pin_gate
-    if [ "$status" -eq 0 ]; then
-      echo "an unpinned setup-node step passed the gate: $hole" >&2
-      return 1
-    fi
-    assert_output_contains 'without node-version-file'
-  done
-
-  # The same shapes, correctly pinned: the escaped quote must not desynchronise the walk
-  # away from a real pin behind it, and a leading block scalar must not hide one either.
-  local pinned
-  for pinned in \
-    '      - uses: actions/setup-node@v6'$'\n'"        with: { \"k\\\": v, z\": 'x', node-version-file: '.nvmrc' }" \
-    '      - run: |'$'\n''          echo build'$'\n''        uses: actions/setup-node@v6'$'\n''        with:'$'\n'"          node-version-file: '.nvmrc'" \
-    '      - "run": |'$'\n''          echo build'$'\n''        uses: actions/setup-node@v6'$'\n''        with: { node-version-file: .nvmrc }'; do
-    write_scalar_step "$pinned"
-    run_pin_gate
-    if [ "$status" -ne 0 ]; then
-      echo "the pin gate rejected correct YAML: $pinned" >&2
-      printf '%s\n' "${output-}" >&2
-      return 1
-    fi
-  done
-
-  # A block scalar still owns everything indented past its key, so a step quoted inside
-  # a `run:` body is prose in every spelling of the key.
-  local prose
-  for prose in \
-    '      - name: Explain the pin'$'\n''        run: |'$'\n''          uses: actions/setup-node@v6'$'\n''          node-version: 24.18.0' \
-    '      - name: Explain the pin'$'\n''        "run": |'$'\n''          uses: actions/setup-node@v6'$'\n''          node-version: 24.18.0'; do
-    write_scalar_step "$prose"
-    run_pin_gate
-    if [ "$status" -ne 0 ]; then
-      echo "block-scalar prose was read as structure: $prose" >&2
-      printf '%s\n' "${output-}" >&2
-      return 1
-    fi
-  done
-
-  rm -f "$probe"
-  run_pin_gate
-  [ "$status" -eq 0 ]
-}
-
-# YAML ends an implicit key with `s-separate-in-line?` — a space OR a tab — so
-# `node-version : "20"` is the ordinary key `node-version` and a runner honours it. A
-# scanner that demands the colon touch the key saw NO key on that line, which fails open
-# on the literal and the spaced `uses:` (a step never counted is a step never checked) and
-# fails closed on a spaced pin. And YAML escapes `'` inside a single-quoted key by
-# DOUBLING it, so `'it''s'` is one key: closing it at the first half desynchronises the
-# flow-entry walk and everything after it — the literal included — becomes invisible.
-@test "check-version-pins.mjs allows whitespace before a colon and a doubled quote in a key" {
-  setup_pin_sandbox
-
-  local probe="$PIN_SANDBOX/.github/workflows/spaced-keys.yml"
-  local tab=$'\t'
-
-  write_spaced_key_step() {
-    {
-      printf 'name: spaced-keys\non: push\njobs:\n  a:\n    runs-on: ubuntu-latest\n    steps:\n'
-      printf '%s\n' "$1"
-    } > "$probe"
-  }
-
-  run_pin_gate
-  [ "$status" -eq 0 ]
-
-  # Correct YAML the unspaced-only matcher rejected: a spaced pin in either mapping
-  # style, a spaced `with:`, a spaced `uses:` whose step IS pinned, a tab before the
-  # colon, a spaced `run: |` header (whose body must stay prose rather than be read back
-  # as structure), and a doubled-quote key beside a real pin the walk has to step over.
-  local pinned
-  for pinned in \
-    '      - uses: actions/setup-node@v6'$'\n''        with:'$'\n'"          node-version-file : '.nvmrc'" \
-    '      - uses: actions/setup-node@v6'$'\n''        with :'$'\n'"          node-version-file: '.nvmrc'" \
-    '      - uses: actions/setup-node@v6'$'\n''        with : { cache : bun, node-version-file : .nvmrc }' \
-    '      - uses : actions/setup-node@v6'$'\n''        with:'$'\n'"          node-version-file: '.nvmrc'" \
-    '      - uses: actions/setup-node@v6'$'\n''        with:'$'\n'"          node-version-file${tab}: '.nvmrc'" \
-    '      - name: Explain the pin'$'\n''        run : |'$'\n''          uses: actions/setup-node@v6'$'\n''          node-version: 24.18.0' \
-    '      - uses: actions/setup-node@v6'$'\n'"        with: { 'it''s': 1, node-version-file: .nvmrc }"; do
-    write_spaced_key_step "$pinned"
-    run_pin_gate
-    if [ "$status" -ne 0 ]; then
-      echo "the pin gate rejected correct YAML: $pinned" >&2
-      printf '%s\n' "${output-}" >&2
-      return 1
-    fi
-  done
-
-  # The spacing widens the colon, never the key: a spaced `uses:` is a real step that
-  # still has to be pinned, a spaced lookalike key pins nothing, and a spaced `run: |`
-  # owns only what is indented past its own key — so the step behind it stays visible.
-  local hole
-  for hole in \
-    '      - uses : actions/setup-node@v6'$'\n''        with:'$'\n''          cache: bun' \
-    "      - 'uses' : actions/setup-node@v6"$'\n''        with:'$'\n''          cache: bun' \
-    '      - uses: actions/setup-node@v6'$'\n''        with:'$'\n'"          legacy-node-version-file : '.nvmrc'" \
-    '      - uses: actions/setup-node@v6'$'\n'"        with : { legacy-node-version-file : '.nvmrc' }" \
-    '      - uses: actions/setup-node@v6'$'\n''        env :'$'\n''          with :'$'\n'"            node-version-file : '.nvmrc'" \
-    '      - run : |'$'\n''          echo build'$'\n''        uses: actions/setup-node@v6'$'\n''        with:'$'\n''          cache: bun'; do
-    write_spaced_key_step "$hole"
-    run_pin_gate
-    if [ "$status" -eq 0 ]; then
-      echo "an unpinned setup-node step passed the gate: $hole" >&2
-      return 1
-    fi
-    assert_output_contains 'without node-version-file'
-  done
-
-  # The literal is what actually runs — setup-node resolves `node-version` ahead of
-  # `node-version-file` — so it has to be reported however its key is spelled: spaced,
-  # quoted AND spaced, tab-separated, in flow style, and after a doubled-quote key that
-  # used to end the walk before the literal was ever looked at.
-  local literal
-  for literal in \
-    '      - uses: actions/setup-node@v6'$'\n''        with:'$'\n'"          node-version-file: '.nvmrc'"$'\n''          node-version : "20"' \
-    '      - uses: actions/setup-node@v6'$'\n''        with:'$'\n'"          node-version-file: '.nvmrc'"$'\n'"          \"node-version\" : '20'" \
-    '      - uses: actions/setup-node@v6'$'\n''        with:'$'\n'"          node-version-file: '.nvmrc'"$'\n'"          node-version${tab}: '20'" \
-    '      - uses: actions/setup-node@v6'$'\n''        with : { node-version-file : .nvmrc, node-version : "20" }' \
-    '      - uses: actions/setup-node@v6'$'\n''        with: { node-version-file: .nvmrc }'$'\n'"        extra: { 'it''s': 1, node-version: '20' }"; do
-    write_spaced_key_step "$literal"
-    run_pin_gate
-    if [ "$status" -eq 0 ]; then
-      echo "a literal node-version passed the gate: $literal" >&2
-      return 1
-    fi
-    assert_output_contains 'pins a literal node-version'
-  done
-
-  rm -f "$probe"
-  run_pin_gate
-  [ "$status" -eq 0 ]
-}
-
 @test "check-version-pins.mjs requires the committed devcontainer and rejects a fifth pin" {
   setup_pin_sandbox
 
@@ -932,59 +521,40 @@ YAML
   [ "$status" -ne 0 ]
 }
 
-# A gate that cannot tell a step from a sentence has no stable definition of
-# "pinned": the only way to clear a finding raised against a comment or a shell
-# heredoc is to delete the documentation, so the gate ends up teaching people to
-# stop writing it down.
-@test "check-version-pins.mjs reads setup-node keys, not the prose that quotes them" {
+@test "check-version-pins.mjs refuses a non-alpine node base beside an alpine one" {
   setup_pin_sandbox
 
   run_pin_gate
   [ "$status" -eq 0 ]
 
-  # Two mentions, no step: the canonical snippet quoted in a comment, and the
-  # same fragment echoed out of a `run: |` block.
-  cat > "$PIN_SANDBOX/.github/workflows/prose.yml" <<'YAML'
-name: prose
-on: push
-jobs:
-  docs:
-    runs-on: ubuntu-latest
-    steps:
-      # Node jobs must read the version from .nvmrc, never inline it:
-      #   - uses: actions/setup-node@v6
-      #     with:
-      #       node-version: '24.18.0'
-      - name: Explain the pin
-        run: |
-          uses: actions/setup-node@v6
-          node-version: 24.18.0
-          echo 'pin Node through .nvmrc'
-YAML
-
-  run_pin_gate
-  if [ "$status" -ne 0 ]; then
-    echo 'the pin gate invented a failure from a comment / run: block' >&2
-    printf '%s\n' "${output-}" >&2
-    return 1
-  fi
-
-  # Same file, one real step appended: the relaxation must not have opened a hole
-  # for an actual unpinned setup-node, nor for an actual literal node-version.
-  cat >> "$PIN_SANDBOX/.github/workflows/prose.yml" <<'YAML'
-      - uses: actions/setup-node@v6
-        with:
-          node-version: '24.18.0'
-YAML
+  printf '\nFROM node:99.0.0 AS drifted\nRUN true\n' >> "$PIN_SANDBOX/Apollo.Dockerfile"
 
   run_pin_gate
   [ "$status" -ne 0 ]
-  assert_output_contains 'without node-version-file'
-  assert_output_contains 'pins a literal node-version'
+  assert_output_contains 'on a non-alpine base'
+  assert_output_contains 'pins node:99.0.0'
+}
 
-  rm -f "$PIN_SANDBOX/.github/workflows/prose.yml"
+@test "check-version-pins.mjs requires engines.node to be the caret over the exact pin" {
+  setup_pin_sandbox
+
   run_pin_gate
   [ "$status" -eq 0 ]
+
+  # `^24` admits 24.18.0, but it also admits 24.0.0 — so a host disagreeing with
+  # every other pin site still satisfies `engines`, and the drift is invisible to
+  # `bun install`.
+  node -e '
+    const fs = require("node:fs");
+    const path = process.argv[1];
+    const pkg = JSON.parse(fs.readFileSync(path, "utf8"));
+    pkg.engines.node = "^24";
+    fs.writeFileSync(path, `${JSON.stringify(pkg, null, 2)}\n`);
+  ' "$PIN_SANDBOX/package.json"
+
+  run_pin_gate
+  [ "$status" -ne 0 ]
+  assert_output_contains 'the caret over the exact .nvmrc version'
 }
 
 # --- lint-headers.mjs (issue #377) --------------------------------------------

@@ -14,7 +14,10 @@ concurrency:
 jobs:
   visual-test:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    # Raised from 40 with #335: the Playwright container now actually receives CI
+    # (docker-compose.test.yml), so `workers: 1` and `retries: 2` apply for the
+    # first time and the suite runs serially instead of at the runner default.
+    timeout-minutes: 60
     permissions:
       contents: read
     steps:

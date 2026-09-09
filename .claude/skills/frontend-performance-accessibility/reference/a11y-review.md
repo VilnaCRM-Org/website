@@ -35,7 +35,7 @@ test('header logo is reachable by its accessible name', async ({ page }) => {
 
 The same locator priority applies to React Testing Library specs in
 `src/test/testing-library` — prefer `getByRole`/`getByLabelText`/`getByAltText`/
-`getByText` over `data-testid`, per `agents.md`.
+`getByText` over `data-testid`, per `AGENTS.md`.
 
 ## Tooling
 

@@ -482,6 +482,7 @@ STUB
   assert_output_contains '===== lint-md ====='
   assert_output_contains '===== lint-headers ====='
   assert_output_contains '===== lint-prod-guardrails ====='
+  assert_output_contains '===== lint-pins ====='
 }
 
 @test "ci-test runs the dev-side test phase through the parallel runner" {
@@ -809,6 +810,63 @@ run_openapi_drift_script() {
   [ "$status" -ne 0 ]
 }
 
+@test "lint-secrets scans the working tree through the digest-pinned gitleaks image host-only" {
+  reset_command_log
+
+  # The scan refuses to run without the committed allowlist rather than falling
+  # back to gitleaks' bare defaults, so the sandbox needs a copy.
+  cp "$PROJECT_ROOT/.gitleaks.toml" "$MAKEFILE_SANDBOX/.gitleaks.toml"
+  # scan-secrets.sh resolves its workspace as ${GITHUB_WORKSPACE:-$PWD}, and CI
+  # sets GITHUB_WORKSPACE to the real checkout -- so without this the test would
+  # inspect the repository instead of the sandbox it just prepared.
+  export GITHUB_WORKSPACE="$MAKEFILE_SANDBOX"
+
+  run_make_target lint-secrets
+  [ "$status" -eq 0 ]
+
+  # Immutable digest, the committed config, and a non-zero exit on findings.
+  # Dropping --exit-code 1 is the silent failure: gitleaks still prints every
+  # finding and still exits 0, leaving a green check that blocks nothing.
+  assert_log_contains 'ghcr.io/gitleaks/gitleaks@sha256:'
+  assert_log_contains '--config /repo/.gitleaks.toml'
+  assert_log_contains '--exit-code 1'
+  # The PR leg scans files, not history.
+  assert_log_contains '--no-git'
+
+  # Host-only: gitleaks is a container CLI, never routed through the dev
+  # container's package manager.
+  run grep -E 'bun|npm' "$COMMAND_LOG"
+  [ "$status" -ne 0 ]
+}
+
+@test "scan-secrets-history walks git history instead of the checked-out files" {
+  reset_command_log
+
+  cp "$PROJECT_ROOT/.gitleaks.toml" "$MAKEFILE_SANDBOX/.gitleaks.toml"
+  # A REAL repository, not a bare `mkdir .git`. The target refuses both a
+  # missing git directory and a shallow one, and it settles the second question
+  # by asking git (`rev-parse --is-shallow-repository`) rather than by looking
+  # for a path -- so a fake .git is unreadable, answers neither "false" nor
+  # "true", and is refused exactly as a shallow clone would be.
+  git -C "$MAKEFILE_SANDBOX" init -q
+  # Pin the workspace to the sandbox. scan-secrets.sh reads
+  # ${GITHUB_WORKSPACE:-$PWD}, and the bats job checks out at the default
+  # fetch-depth of 1 -- so on a runner this target would otherwise inspect the
+  # real, SHALLOW checkout and be refused by the very guard it is asserting.
+  export GITHUB_WORKSPACE="$MAKEFILE_SANDBOX"
+
+  run_make_target scan-secrets-history
+  [ "$status" -eq 0 ]
+
+  assert_log_contains 'ghcr.io/gitleaks/gitleaks@sha256:'
+  assert_log_contains '--exit-code 1'
+
+  # The distinguishing flag. If --no-git leaked into this leg it would rescan
+  # the tip checkout and report a clean history it never opened.
+  run grep -- '--no-git' "$COMMAND_LOG"
+  [ "$status" -ne 0 ]
+}
+
 @test "lint-security-txt validates the committed RFC 9116 security.txt" {
   reset_command_log
 
@@ -1025,6 +1083,17 @@ JSON
   # Dependency-free and host-side: never routed through the dev container.
   run grep -F 'docker' "$COMMAND_LOG"
   [ "$status" -ne 0 ]
+}
+
+@test "lint-workflow-pins runs the workflow pin gate through the dev container" {
+  # The opposite placement to its sibling above, and deliberately so: this gate
+  # parses workflow YAML with js-yaml, so it needs node_modules and therefore the
+  # image. Routing it host-side would break `make lint` on a CI runner that never
+  # ran `bun install` (#447).
+  run_make_target lint-workflow-pins
+  [ "$status" -eq 0 ]
+  assert_log_contains 'node scripts/ci/check-workflow-pins.mjs'
+  assert_log_contains 'docker'
 }
 
 @test "create-network turns an unreachable Docker daemon into a HOST_STACK=1 hint" {

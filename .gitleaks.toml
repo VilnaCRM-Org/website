@@ -16,10 +16,37 @@ description = "Generated / upstream-fetched artifacts and the single shared inte
 #     digests trip the generic high-entropy rules; hand-editing this file is
 #     explicitly forbidden, so it is never a place a human pastes a credential.
 #   - public/swagger-schema.json            — generated build artifact
+#
+# The remaining entries are gitignored BUILD OUTPUT. They never exist in a CI
+# checkout, so exempting them cannot hide a committed secret -- but they do
+# exist in a developer's working copy, and without them `make lint-secrets`
+# reports findings that CI never sees, which is how a local gate stops being
+# run at all. `tests/bats/secrets_scanning.bats` asserts every one of these is
+# genuinely matched by .gitignore, so the justification stays true rather than
+# merely documented:
+#   - .next/                — Next.js build cache and prerender manifest
+#   - out/                  — the static export (`make build-out`)
+#   - storybook-static-ci/  — the built Storybook bundle
 paths = [
   '''contracts/user-service/openapi\.json''',
   '''contracts/user-service/checksums\.json''',
   '''public/swagger-schema\.json''',
+  # The optional `/repo/` prefix is not cosmetic: `--no-git` (tree mode) reports
+  # the absolute path inside the container mount, while the history scan reports
+  # repo-relative paths from git. Anchoring both spellings keeps each entry
+  # top-level -- an unanchored `out/` would also exempt `layout/`.
+  '''^(/repo/)?\.next/''',
+  '''^(/repo/)?out/''',
+  '''^(/repo/)?storybook-static-ci/''',
+  # The swagger contract under the two paths it occupied before #376 vendored
+  # it. These are OpenAPI `example:` values -- a truncated JWT prefix and
+  # sample hex client_secret/refresh_token strings copied from the upstream
+  # user-service spec -- and they are matched only by the history scan
+  # (SECRETS_MODE=history), since neither path exists in the tree today. Same
+  # artifact and same class of value as the openapi.json entry above; scoped to
+  # these exact former paths so a real credential in any live file still fails.
+  '''^public/swagger-schema\.yaml$''',
+  '''^src/features/swagger/components/ApiDocumentation/spec\.yaml$''',
 ]
 # Hand-edited test fixtures are NOT exempted wholesale — only the specific mock
 # password shared across the integration-test builders is, so a real secret

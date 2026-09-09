@@ -1,6 +1,6 @@
 FROM public.ecr.aws/docker/library/node:24.18.0-alpine3.23@sha256:595398b0081eacda8e1c4c5b97b76cd1020e4d58a8ebcb4843b9bca1e79e7436 AS base
 
-RUN apk add --no-cache curl=8.20.0-r0 && \
+RUN apk add --no-cache curl=8.22.0-r0 && \
     npm install -g bun@1.3.5 typescript@5.8.2
 
 WORKDIR /app
