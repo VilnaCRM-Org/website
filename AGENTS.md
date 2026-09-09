@@ -41,8 +41,12 @@ than one. Match the change to the suite and run its verification command.
 
 Client unit tests run on Jest with React Testing Library in a jsdom env
 (`TEST_ENV=client`); specs live in `src/test/testing-library/**/*.test.tsx` and
-`src/test/unit/**/*.test.ts`. Server unit tests run on Jest in a node env
-(`TEST_ENV=server`); specs live in `src/test/apollo-server/**/*.test.ts` and boot the
+`src/test/unit/**/*.test.ts` — which includes the hermetic build-time gates that assert on
+committed artifacts rather than on rendered UI, such as `src/test/unit/routes/`
+(`config/routes.json` against `pages/` and against the edge `ROUTE_MAP`) and
+`src/test/unit/contracts/` (the contract linters, driven over throwaway fixture trees).
+Server unit tests run on Jest in a node env (`TEST_ENV=server`); specs live in
+`src/test/apollo-server/**/*.test.ts` and boot the
 shipped Apollo mock through `mock-server.ts` against the pinned schema — see the Apollo
 mock security invariants in `CLAUDE.md` before changing it. Edge unit tests
 run on Jest in a node env (`TEST_ENV=edge`) and cover the deployed edge/runtime scripts
@@ -55,7 +59,11 @@ applying `config/security-headers.json` to every production response; see
 bundle in this layer rather than shipping it uncovered. The routing handler is
 **deny-by-default** since issue #383 — a path outside its allow-list gets a synthetic 404
 rather than reaching the S3 origin — so an edge spec must cover both halves: that every
-shape the export ships still passes through, and that everything else is blocked.
+shape the export ships still passes through, and that everything else is blocked. The
+100%-per-file rule applies to its `ROUTE_MAP` branches too: changing a route means the edge
+spec must exercise both spellings of it (bare and trailing-slash) and the removed routes'
+new 404 path, and the parity of that map with `config/routes.json` is asserted separately
+in the client layer (issue #333).
 Integration specs run in a jsdom-with-fetch env (`TEST_ENV=integration`) from
 `tests/integration/**/*.integration.test.{ts,tsx}` and enforce a global 100% coverage sweep
 over `src/`. Contract specs run in a node env (`TEST_ENV=contract`) from

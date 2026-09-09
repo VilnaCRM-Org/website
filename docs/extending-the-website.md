@@ -26,7 +26,10 @@ Pages live under `pages/` (Next.js pages router, static export).
    should mostly compose feature components.
 3. Use `useTranslation()` and per-feature i18n keys for copy — never hardcode
    user-facing English (see "Add a locale").
-4. Add tests per [`AGENTS.md`](../AGENTS.md): a client render test and, when the
+4. Regenerate the route manifest with `make generate-routes` (host-only; it runs
+   `node scripts/ci/generate-route-manifest.mjs`) and commit the resulting
+   [`config/routes.json`](../config/routes.json).
+5. Add tests per [`AGENTS.md`](../AGENTS.md): a client render test and, when the
    route has behaviour, a Playwright e2e spec under `src/test/e2e`.
 
 The static export is flat: `pages/contact.tsx` becomes `out/contact.html`, not
@@ -34,11 +37,19 @@ The static export is flat: `pages/contact.tsx` becomes `out/contact.html`, not
 edge function — [`scripts/cloudfront_routing.js`](../scripts/cloudfront_routing.js)
 hard-404s any extensionless single-segment path that is not in its `ROUTE_MAP`, so a
 new top-level route needs an entry there mapping `/contact` to `/contact.html` (and a
-row in the edge spec, which is gated at 100% coverage). Match the flat filename: the
-map's existing `/about` entry points at `/about/index.html`, a shape this export does
-not produce, and there is no `pages/about.tsx` to reach — do not copy it. A page that
-is only ever fetched with its `.html` extension — like `pages/offline.tsx`, which the
-service worker serves from cache as `/offline.html` — needs no edge change.
+row in the edge spec, which is gated at 100% coverage). Match the flat filename the
+export really writes, the way the nested `/en/docs/api` route maps to
+`/en/docs/api.html`; a target the export never produces rewrites to a missing S3 key.
+A page that is only ever fetched with its `.html` extension — like `pages/offline.tsx`,
+which the service worker serves from cache as `/offline.html` — needs no edge change,
+but it still belongs in the manifest, which records it as a documented exemption.
+
+Both surfaces are gated together by
+[`src/test/unit/routes/route-manifest.test.ts`](../src/test/unit/routes/route-manifest.test.ts):
+it re-runs the generator in `--check` mode and fails unless the committed
+`config/routes.json` matches `pages/` byte for byte, then fails again if a manifest
+route has no `ROUTE_MAP` entry (bar the recorded exemptions) or a `ROUTE_MAP` target is
+not a path the manifest lists. Skipping step 4 reds the client unit suite.
 
 ## Add a feature
 

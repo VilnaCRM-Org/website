@@ -642,6 +642,112 @@ run_headers_gate() {
   assert_output_contains 'x-frame-options'
 }
 
+@test "lint-headers rejects a permissions-policy that re-permits a denied feature" {
+  # `camera=(self)` and `camera=*` are allow-lists, not denials, and `xcamera=()` is a
+  # lookalike that must not satisfy the `camera` requirement. Each has to go red.
+  local value
+  for value in "camera=(self), geolocation=(), microphone=(), payment=(), usb=(), display-capture=()" \
+    "camera=*, geolocation=(), microphone=(), payment=(), usb=(), display-capture=()" \
+    "xcamera=(), geolocation=(), microphone=(), payment=(), usb=(), display-capture=()"; do
+    setup_headers_sandbox
+    node -e '
+      const fs = require("node:fs");
+      const file = process.argv[1];
+      const policy = JSON.parse(fs.readFileSync(file, "utf8"));
+      policy.headers["permissions-policy"] = process.argv[2];
+      fs.writeFileSync(file, JSON.stringify(policy, null, 2));
+    ' "$HEADERS_SANDBOX/config/security-headers.json" "$value"
+
+    run_headers_gate
+    [ "$status" -ne 0 ]
+    assert_output_contains 'permissions-policy'
+  done
+}
+
+@test "lint-headers rejects a permissions-policy a browser would discard or resolve as granted" {
+  # Browsers read this header as an RFC 8941 dictionary. Whitespace around a member's `=`
+  # is a parse error, and a header that fails to parse is dropped ENTIRELY — every feature
+  # reverts to its default allow-list — so `camera =()` and `camera= ()` must go red even
+  # though they read as a denial. Duplicate keys resolve last-wins, so `camera=(), camera=*`
+  # actually grants camera to every origin.
+  local value
+  for value in "camera =(), geolocation=(), microphone=(), payment=(), usb=(), display-capture=()" \
+    "camera= (), geolocation=(), microphone=(), payment=(), usb=(), display-capture=()" \
+    "camera=(), camera=*, geolocation=(), microphone=(), payment=(), usb=(), display-capture=()"; do
+    setup_headers_sandbox
+    node -e '
+      const fs = require("node:fs");
+      const file = process.argv[1];
+      const policy = JSON.parse(fs.readFileSync(file, "utf8"));
+      policy.headers["permissions-policy"] = process.argv[2];
+      fs.writeFileSync(file, JSON.stringify(policy, null, 2));
+    ' "$HEADERS_SANDBOX/config/security-headers.json" "$value"
+
+    run_headers_gate
+    [ "$status" -ne 0 ]
+    assert_output_contains 'permissions-policy'
+  done
+}
+
+@test "lint-headers rejects a permissions-policy with an unbalanced inner list" {
+  # Every required denial is present and well formed, so each feature reads as denied — but
+  # the value as a whole does not parse: the first case leaves an inner list open, the second
+  # closes one that was never opened. A browser discards such a header ENTIRELY, so every
+  # feature reverts to its default allow-list and the policy denies nothing. The assertion is
+  # on the parse diagnostic, not merely on the header name, because a changed policy value
+  # also trips the emitted-header comparison — only the diagnostic proves the PARSE caught it.
+  local case
+  for case in ", x=(|leaves an inner list unclosed" ", x=())|closes an inner list that was never opened"; do
+    setup_headers_sandbox
+    node -e '
+      const fs = require("node:fs");
+      const file = process.argv[1];
+      const policy = JSON.parse(fs.readFileSync(file, "utf8"));
+      policy.headers["permissions-policy"] += process.argv[2];
+      fs.writeFileSync(file, JSON.stringify(policy, null, 2));
+    ' "$HEADERS_SANDBOX/config/security-headers.json" "${case%%|*}"
+
+    run_headers_gate
+    [ "$status" -ne 0 ]
+    assert_output_contains 'permissions-policy'
+    assert_output_contains "${case#*|}"
+  done
+}
+
+@test "lint-headers accepts the committed permissions-policy value verbatim" {
+  # The counterpart to the cases above: the shipped policy is a well-formed dictionary that
+  # denies every required feature, so the stricter parse must still pass it.
+  setup_headers_sandbox
+  node -e '
+    const fs = require("node:fs");
+    const file = process.argv[1];
+    const policy = JSON.parse(fs.readFileSync(file, "utf8"));
+    if (!/(^|, )camera=\(\)(,|$)/.test(policy.headers["permissions-policy"])) {
+      throw new Error("committed permissions-policy no longer denies camera");
+    }
+    fs.writeFileSync(file, JSON.stringify(policy, null, 2));
+  ' "$HEADERS_SANDBOX/config/security-headers.json"
+
+  run_headers_gate
+  [ "$status" -eq 0 ]
+  assert_output_contains 'permissions-policy'
+}
+
+@test "lint-headers fails when permissions-policy is dropped from the policy" {
+  setup_headers_sandbox
+  node -e '
+    const fs = require("node:fs");
+    const file = process.argv[1];
+    const policy = JSON.parse(fs.readFileSync(file, "utf8"));
+    delete policy.headers["permissions-policy"];
+    fs.writeFileSync(file, JSON.stringify(policy, null, 2));
+  ' "$HEADERS_SANDBOX/config/security-headers.json"
+
+  run_headers_gate
+  [ "$status" -ne 0 ]
+  assert_output_contains 'permissions-policy'
+}
+
 @test "lint-headers fails when HSTS drops includeSubDomains or preload" {
   setup_headers_sandbox
   node -e '

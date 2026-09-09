@@ -363,6 +363,25 @@ otherwise only hold in production:
   regress to passing arbitrary paths to the S3 origin.
 - `next.config.js` does not enable `productionBrowserSourceMaps`.
 
+A fourth invariant — that every job passing a `role-to-assume` input names an
+`environment:` — is deliberately **not** enforced yet. Naming an environment
+changes the OIDC subject the job mints, and the deployed sandbox role's trust
+policy does not accept the new subject, so adding the key fails
+`sts:AssumeRoleWithWebIdentity` on every pull request. The trust policies have to
+be widened first; `.github/sandbox_workflows.md` records the required order.
+
+#### Adding a page under `pages/`
+
+Route knowledge is derived, not remembered. After adding or removing a page, run
+`make generate-routes` to regenerate the committed `config/routes.json` from
+`pages/`, and — unless the route is deliberately unreachable at an extensionless
+URL — add its entry (both the bare and the trailing-slash spelling) to
+`ROUTE_MAP` in `scripts/cloudfront_routing.js`. Skipping either turns the client
+suite red: `src/test/unit/routes/route-manifest.test.ts` compares the manifest
+against `pages/` and against `ROUTE_MAP` in both directions. A route left
+unmapped on purpose needs a recorded exemption with its reason in that spec,
+not a deleted assertion.
+
 #### Upstream contracts (user-service)
 
 Every user-service contract this repo consumes — the GraphQL schema behind the

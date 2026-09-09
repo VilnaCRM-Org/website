@@ -296,18 +296,25 @@ is missing or weakened (issue #377). Live responses — and whether the function
 actually associated with the distribution — are verified by the post-deploy smoke test.
 The static export makes Next's `headers()` a no-op, so the edge is the only
 enforcement point — see [`docs/security-headers.md`](docs/security-headers.md). Never
-drop or weaken a header to make the gate pass.
+drop or weaken a header to make the gate pass. The policy carries a `Permissions-Policy`
+since issue #337, and `scripts/ci/lint-headers.mjs` holds a BASELINE assertion over it:
+each unused powerful feature (camera, microphone, geolocation, display-capture, payment,
+usb) must keep an **empty** allow-list. A directive only denies a feature when it reads
+`camera=()`; `camera=(self)` still permits it on this origin and `camera=*` permits it
+everywhere, so both fail the gate rather than passing as a denial. The policy may deny
+more features than the baseline names; it may never deny fewer.
 
-Six gates sit deliberately outside `make lint`: `make lint-metrics` (host-only Rust
+Seven gates sit deliberately outside `make lint`: `make lint-metrics` (host-only Rust
 binary), `make lint-contracts` (needs network for its drift check), `make lint-openapi`
-(both — a host Go binary plus the network), `make lint-vulns` (host-only Go binary, needs
+(both — a host Go binary plus the network), `make lint-graphql-drift` (host-only, needs
+network to reach the upstream release), `make lint-vulns` (host-only Go binary, needs
 network for the OSV database), `make lint-workflows` (host-only zizmor container; its
 online audits reach the GitHub API), and `make lint-secrets` (host-only gitleaks
 container). Each has its own workflow — `rust-code-analysis.yml`,
-`contract-testing.yml`, `openapi-drift.yml`, `osv-scanner.yml`,
-`workflow-security.yml`, and `secrets-scanning.yml`. The two gates added by issue #383 are _inside_ `make lint`
-precisely because they are hermetic — they read only committed files, with no network, no
-host binary and no Docker.
+`contract-testing.yml`, `openapi-drift.yml` (which hosts both drift legs),
+`osv-scanner.yml`, `workflow-security.yml`, and `secrets-scanning.yml`. The two gates added
+by issue #383 are _inside_ `make lint` precisely because they are hermetic — they read only
+committed files, with no network, no host binary and no Docker.
 
 Run `make format` before `make lint`; formatting is intentionally separate from the lint
 verification suite. Git hooks are managed by Husky. CI phases are mirrored locally by
@@ -331,6 +338,16 @@ in a spec `description`/`title`/`summary` is rejected at ingestion rather than s
 
 Refresh artifacts and digests together with `make update-contracts` — never hand-edit
 `checksums.json`, and never loosen the ref check to accept a branch.
+
+The client-operation half of that gate — every `gql` document under `src/features`
+validated against the pinned SDL — now lives in the pure, importable
+`scripts/contracts/graphql-operations.mjs`, with `scripts/contracts/lint-contracts.mjs` as
+a thin CLI around it (issue #348). The split exists so the checker can be pointed at a
+throwaway tree: `src/test/unit/contracts/lint-contracts-graphql.test.ts` seeds an
+undeclared field, an undeclared argument, a parse error and an interpolated template into
+a temporary directory and asserts each one turns the gate red. Never seed a defect into
+the committed artifacts — `contracts/` is digest-gated, so mutating it even transiently is
+indistinguishable from tampering.
 
 ### API contract parity (issue #350)
 
@@ -359,6 +376,21 @@ agrees with the **mock**. Two gates anchored on the single committed baseline
   breaking drift, `2` the check could not run, so an outage is never published as an API
   change. GNU Make discards a recipe's exit status, so the workflow calls the script
   directly. Breaking drift files/refreshes an `api-contract` issue instead of failing.
+- **`make lint-graphql-drift` — advisory, nightly** (issue #348). The GraphQL half of the
+  same pin was watched by nothing, so a field the upstream schema removed stayed invisible
+  until the next version bump. `scripts/ci/graphql-drift.sh` compares
+  `contracts/user-service/schema.graphql` — the same digest-gated artifact, never a second
+  snapshot — against the newest upstream release and classifies with graphql-js
+  `findBreakingChanges` (`scripts/ci/graphql-drift-compare.mjs`). It lives in the existing
+  `openapi-drift.yml` as the `graphql-upstream-drift` job — a sibling of the OpenAPI leg
+  rather than a step of it, so a broken OpenAPI leg cannot hide GraphQL drift — and the
+  workflow's `name:` is deliberately left unchanged. Same three-way exit contract — `0` clean,
+  `1` breaking drift, `2` could not run — and the same reason the workflow calls the script
+  rather than the Make target: Make collapses a recipe's exit status, so a wrapper cannot
+  tell drift from an outage. Breaking drift files or refreshes an `api-contract` issue
+  titled "Upstream GraphQL drift in the pinned user-service schema"; the title is
+  deliberately distinct from the OpenAPI leg's, because dedup is an exact title match and a
+  shared title would make each leg close the other's issue.
 
 ### Workflow security (zizmor, issue #360)
 
@@ -441,7 +473,20 @@ Four production-facing invariants that no other gate watches. Extend them; never
   one exported `.json` is root-level and exact-matched) and `map` must never be added. The
   allow-list is proved to be a **superset of the real export** on every PR by
   `scripts/ci/verify-edge-allowlist.mjs`, which runs the real handler over every file in
-  `out/` — if that gate fails, add the shipped path, do not widen the tables.
+  `out/` — if that gate fails, add the shipped path, do not widen the tables. Since
+  issue #333 that same script also proves `ROUTE_MAP` **minimal**: every rewrite target
+  must exist in the export, because a rewrite replaces the URI instead of granting access,
+  so a target with no object behind it serves S3's raw error document rather than this
+  site's synthetic 404. That is what `/about` and `/en` did — they rewrote to `index.html`
+  objects a `trailingSlash`-less export never produces — while `/en/docs/api`, the one page under
+  `/en` that does ship, had no entry and hard-404'd; the edge spec asserted the mapping as
+  written, so it pinned the drift instead of catching it. The route set is now derived, not
+  remembered: `scripts/ci/generate-route-manifest.mjs` (`make generate-routes`) emits
+  `config/routes.json` from `pages/`, and `src/test/unit/routes/route-manifest.test.ts` is
+  the hermetic two-directional gate — a page with no manifest entry and a `ROUTE_MAP` entry
+  with no page both turn it red. A route may be deliberately unmapped only through a
+  recorded exemption carrying its reason; `/offline` is the one that exists (see the
+  offline-posture section below).
 - **The deployed edge is smoke-tested on the negative path**
   (`scripts/ci/smoke-response-shape.sh`, issue #363). `make lint-headers` and the `edge`
   Jest layer prove the checked-in handler's contract; nothing in the repository can
@@ -469,7 +514,13 @@ Four production-facing invariants that no other gate watches. Extend them; never
   invisible. That is why the `dev-container` composite's callers that also run on a
   schedule or a push (`dev image cache`, `fuzz testing`, `storybook build`,
   `mutation testing`) are listed there. A workflow's `name:` is therefore load-bearing —
-  renaming one requires updating that list in the same commit.
+  renaming one requires updating that list in the same commit. The gate does **not** yet
+  require an `environment:` key on jobs that pass a `role-to-assume` input (issue #375),
+  and adding one is not the free improvement it looks like: naming an environment changes
+  the minted OIDC subject to `repo:VilnaCRM-Org/website:environment:<name>`, and the
+  deployed sandbox role's trust policy rejects that subject, so the key fails
+  `sts:AssumeRoleWithWebIdentity` on every PR. The trust policies must be widened first —
+  `.github/sandbox_workflows.md` records the required order and the evidence.
 - **CodeQL findings are gated and routed.** `scripts/ci/code-scanning-gate.sh` fails the
   run on _new_ high/critical alerts (PRs subtract the default-branch baseline, so
   inherited debt does not block), and a failed scan reaches the `ci-alert` issue. Branch
@@ -550,7 +601,11 @@ Constraints to respect when touching it:
   `self`/`addEventListener` are `no-restricted-globals` errors while `clients`/`skipWaiting`
   are `no-undef` errors. Suppressing either is banned.
 - The fallback is reached as `/offline.html`, never `/offline`: the CloudFront edge function
-  hard-404s an extensionless single-segment path.
+  hard-404s an extensionless single-segment path. That sentence is load-bearing, not
+  incidental — it is the recorded reason `/offline` is the one route exempt from the
+  `ROUTE_MAP` parity rule in `src/test/unit/routes/route-manifest.test.ts` (issue #333). The
+  spec also fails on an exemption recorded for a route that _is_ mapped, so adding a
+  `ROUTE_MAP` entry for `/offline` would red the gate rather than pass it quietly.
 - `public/sw.js` is covered by the `edge` Jest layer at 100% per-file
   (`make test-unit-edge`), the same way `scripts/cloudfront_routing.js` is. Never ship a
   hand-written runtime file that no layer covers.
@@ -666,6 +721,12 @@ a PR. Until the separate ci-health ruleset issue lands, that check is advisory a
 (as is every other check on `main`, which carries no required checks today).
 
 ## Architecture
+
+Load-bearing decisions — what CloudFront serves, why every gate runs in the dev container,
+why each PR check is its own workflow, why the complexity budgets are what they are — are
+recorded as ADRs under [`docs/adr/`](docs/adr/README.md), each one stating the decision
+**and** its cost (issue #341). Read the index before re-litigating one of them, and add a
+record when a change would be expensive to reverse.
 
 The codebase follows a bulletproof-react, feature-based layout.
 

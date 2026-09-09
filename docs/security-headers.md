@@ -33,6 +33,20 @@ of truth. Every other artifact is checked against it.
   later downgrade attempt never carries form input. `preload` is the opt-in signal for
   the browser preload list; until `vilnacrm.com` is actually submitted to and accepted by
   <https://hstspreload.org>, the very first contact with a host is still unprotected.
+- `permissions-policy` — denies every powerful browser feature with an empty allow-list
+  (`feature=()`), because a static marketing landing plus the Swagger page uses none of
+  them, and a denial also binds any frame the page ever embeds. `camera`, `microphone`,
+  `display-capture` — no capture surface exists, and denying them removes the prompt an
+  injected script could use to ask for one; `geolocation` — no location feature, and the
+  denial keeps a third party from fingerprinting visitors by position; `payment` — no
+  payment flow, so a Payment Request sheet on a page that already collects a password
+  could only be a spoof; `usb`, `midi`, `xr-spatial-tracking` — device and sensor APIs
+  with no use here and a large attack surface; `accelerometer`, `gyroscope`,
+  `magnetometer` — motion sensors, denied because they are a passive side channel (input
+  inference), not a feature; `autoplay`, `encrypted-media`, `picture-in-picture`,
+  `fullscreen`, `screen-wake-lock` — the site ships no audio or video, so any use would
+  be uninvited; `publickey-credentials-get` — no WebAuthn flow, and denying it stops a
+  frame from silently invoking a credential ceremony.
 
 The `script-src` / `connect-src` half of the CSP (gtag, Sentry) is deliberately **not**
 in this policy — it is owned by the client-side hardening issue and needs its own
@@ -101,8 +115,11 @@ It checks three things:
    `scripts/ci/lint-headers.mjs`: `frame-ancestors 'none'` and `X-Frame-Options: DENY`
    exactly (`'self'` / `SAMEORIGIN` are rejected — they would still permit same-origin
    framing), `nosniff`, a `Referrer-Policy` from the non-leaking set, and HSTS with
-   `max-age` of at least one year plus `includeSubDomains` and `preload`. Weakening the
-   policy therefore requires editing that baseline in the same reviewed diff.
+   `max-age` of at least one year plus `includeSubDomains` and `preload`, and a
+   `Permissions-Policy` that denies `camera`, `display-capture`, `geolocation`,
+   `microphone`, `payment` and `usb` with an **empty** allow-list (`camera=(self)` and
+   `camera=*` are rejected — they still permit the feature). Weakening the policy
+   therefore requires editing that baseline in the same reviewed diff.
 2. The viewer-response function emits every policy header, with the exact value, on a
    page response, an asset response, and a redirect — the statuses CloudFront actually
    runs it for (see the known gap above).
@@ -125,7 +142,7 @@ in-repo check can see.
 
 ```bash
 policy='content-security-policy|x-frame-options|x-content-type-options'
-policy="$policy|referrer-policy|strict-transport-security"
+policy="$policy|referrer-policy|strict-transport-security|permissions-policy"
 
 curl -fsSI https://vilnacrm.com/ | grep -Ei "$policy"
 curl -fsSI https://vilnacrm.com/favicon.svg | grep -Ei "$policy"

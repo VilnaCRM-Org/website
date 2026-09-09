@@ -12,10 +12,10 @@ SCRIPT_REL='scripts/ci/validate-build-artifact.sh'
 # Build a minimal-but-valid static export under $1 that satisfies every shape,
 # route-layout, file-count-floor and JS-payload assertion the validator makes.
 # $2 overrides the number of non-JS filler files used to clear the 200-file
-# floor (default 210), so the total file count is 5 + $2.
-# Base files are 5 (index.html, 404.html, swagger.html, one .js, and
-# .well-known/security.txt), so a caller pinning an exact total must pass
-# filler = total - 5. Every base path is deliberately allow-list-compatible for
+# floor (default 210), so the total file count is 6 + $2.
+# Base files are 6 (index.html, 404.html, swagger.html, en/docs/api.html, one .js,
+# and .well-known/security.txt), so a caller pinning an exact total must pass
+# filler = total - 6. Every base path is deliberately allow-list-compatible for
 # the fail-closed edge handler (issue #383): `_next` is an allowed directory and
 # css/js/html are allowed extensions, so the completeness gate the validator runs
 # last stays green for a well-formed fixture.
@@ -28,6 +28,11 @@ make_valid_artifact() {
   printf '<!doctype html><title>404</title>' >"$dir/404.html"
   printf '<!doctype html><title>Swagger UI</title>' >"$dir/swagger.html"
   printf 'console.log(1);' >"$dir/_next/static/chunks/main.js"
+  # Every ROUTE_MAP target must exist in the export (issue #333), so a valid fixture
+  # ships the object each curated route rewrites to — /en/docs/api.html as well as the
+  # index and swagger documents above.
+  mkdir -p "$dir/en/docs"
+  printf '<!doctype html><title>API</title>' >"$dir/en/docs/api.html"
   # The REAL committed policy, because the validator now also asserts the exported
   # copy is byte-identical to it — a synthetic fixture would not exercise that.
   cp "$PROJECT_ROOT/public/.well-known/security.txt" "$dir/.well-known/security.txt"
@@ -194,6 +199,39 @@ setup() {
   assert_output_contains 'blocked: /secret.json'
 }
 
+@test "fails when a ROUTE_MAP entry rewrites to an object the export does not ship" {
+  # The live pre-#333 defect: ROUTE_MAP mapped /about and /en at objects no page
+  # produced, so those routes served S3's raw error document instead of the site 404.
+  # A rewrite target is not covered by the completeness check above -- the requested
+  # URI never reaches the origin -- so removing its object must be caught here.
+  make_valid_artifact "$ARTIFACT"
+  rm "$ARTIFACT/en/docs/api.html"
+
+  run_validator "$ARTIFACT"
+  [ "$status" -eq 1 ]
+  assert_output_contains 'dangling: /en/docs/api -> /en/docs/api.html'
+}
+
+@test "the specific swagger contract error wins over the generic dangling report" {
+  make_valid_artifact "$ARTIFACT"
+  rm "$ARTIFACT/en/docs/api.html" "$ARTIFACT/swagger.html"
+
+  run_validator "$ARTIFACT"
+  [ "$status" -eq 1 ]
+  # /swagger -> /swagger.html is also a ROUTE_MAP entry, but swagger.html has its own
+  # earlier, more specific contract check; the operator must get that message rather than
+  # a generic dangling-target report, which would say less about what broke.
+  assert_output_contains 'swagger.html'
+}
+
+@test "accepts an export whose every ROUTE_MAP target is present" {
+  make_valid_artifact "$ARTIFACT"
+
+  run_validator "$ARTIFACT"
+  [ "$status" -eq 0 ]
+  assert_output_contains 'route rewrites resolved'
+}
+
 @test "fails when the export ships a browser source map" {
   make_valid_artifact "$ARTIFACT"
   printf '{"version":3}' >"$ARTIFACT/_next/static/chunks/main.js.map"
@@ -226,8 +264,8 @@ setup() {
 }
 
 @test "passes at exactly the file-count floor (200 files)" {
-  # 195 filler + the 5 base files = exactly the 200-file floor.
-  make_valid_artifact "$ARTIFACT" 195
+  # 194 filler + the 6 base files = exactly the 200-file floor.
+  make_valid_artifact "$ARTIFACT" 194
 
   run_validator "$ARTIFACT"
   [ "$status" -eq 0 ]
@@ -235,7 +273,7 @@ setup() {
 }
 
 @test "fails one file below the floor (199 files)" {
-  make_valid_artifact "$ARTIFACT" 194
+  make_valid_artifact "$ARTIFACT" 193
 
   run_validator "$ARTIFACT"
   [ "$status" -eq 1 ]

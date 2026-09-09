@@ -594,6 +594,23 @@ lint-md: ## This command executes Markdown linter
 generate-localization: ## Regenerate the gitignored pages/i18n/localization.json bundle (#328) — host-only
 	node scripts/generateLocalization.mjs
 
+# Host-only and dependency-free for the same reasons as lint-pins and
+# generate-localization above: the generator imports nothing outside
+# node:fs/node:path, so it needs no node_modules and no dev image, and it reads
+# `pages/` from the worktree — a copy baked into an image would only ever be
+# stale. Deliberately NOT in the `lint` aggregate: this recipe WRITES
+# config/routes.json, and a gate that rewrites the artifact it checks cannot
+# fail. The drift gate is the hermetic Jest spec
+# src/test/unit/routes/route-manifest.test.ts, which already runs in the client
+# suite; the generator's own `--check` flag (verify-only, non-zero on drift) is
+# the same check for a shell caller.
+# ROUTE_MANIFEST_CHECK=1 selects the generator's verify-only `--check` mode. It is
+# a Make variable rather than a passed-through flag because GNU Make parses a
+# trailing `--check` on the command line as its own option, never as a target
+# argument, so `make generate-routes --check` fails before this recipe runs.
+generate-routes: ## Regenerate config/routes.json from pages/ (issue #333) — host-only; ROUTE_MANIFEST_CHECK=1 verifies instead of writing
+	@node scripts/ci/generate-route-manifest.mjs $(if $(filter 1 true TRUE,$(ROUTE_MANIFEST_CHECK)),--check)
+
 .PHONY: lint lint-api-versions lint-headers lint-docker-policy lint-security-txt lint-prod-guardrails lint-pins lint-workflow-pins
 
 # The user-service inventory invariant (issue #381, F4): every consumer of the
@@ -709,6 +726,25 @@ lint-openapi: ## Report breaking changes between the committed OpenAPI baseline 
 	 USER_SERVICE_REPO="$(USER_SERVICE_REPO)" \
 	 USER_SERVICE_SPEC_PATH="$(USER_SERVICE_SPEC_PATH)" \
 	 bash scripts/ci/openapi-drift.sh
+
+# The GraphQL half of the same pin, and a deliberate mirror of lint-openapi
+# above — same host-only/network/advisory reasoning, so the same placement:
+#   * Host-only: the recipe is plain bash, never $(PM_EXEC), in both EXEC_MODEs.
+#   * Network: it resolves the newest upstream release and downloads that SDL.
+#   * Therefore NOT in the `lint` aggregate and NOT in CI_LINT_TARGETS, which
+#     both route through the dev container / run-parallel.sh and stay hermetic.
+#     Its CI surface is the graphql-upstream-drift job in
+#     .github/workflows/openapi-drift.yml.
+# ADVISORY BY DESIGN: upstream moving on is not a PR author's fault, so the
+# nightly files a tracking issue instead of reddening a check. The BLOCKING
+# GraphQL gate is `make lint-contracts`.
+# This target is the HUMAN-FACING surface. GNU make collapses every recipe
+# failure to its own exit 2, so it cannot distinguish "breaking drift" (1) from
+# "the check could not run" (2) — openapi-drift.yml therefore calls the script
+# directly. Both paths run the identical script; only the exit-code fidelity
+# differs.
+lint-graphql-drift: ## Advisory: diff the committed GraphQL SDL snapshot against the newest upstream user-service release
+	bash scripts/ci/graphql-drift.sh
 
 update-contracts: $(DEV_PREREQ) ## Re-fetch the user-service contracts for the pinned USER_SERVICE_VERSION, refresh the spectral baseline and the artifact digests
 	$(PM_EXEC) node scripts/fetchSwaggerSchema.mjs
@@ -1008,7 +1044,7 @@ ci-test-contract: ## Run contract parity tests directly assuming deps are instal
 	mutation-file-list test-mutation-changed \
 	test-e2e-burnin check-e2e-flakes pr-comments lint lint-api-versions \
 	lint-security-txt lint-prod-guardrails release-audit-dry-run \
-	lint-vulns scan-vulns-census generate-localization
+	lint-vulns scan-vulns-census generate-localization generate-routes
 
 # Brings the dev container up IDLE (docker-compose.ci.yml overrides only the
 # command), so a gate does not pay for a Next dev server it never calls. There

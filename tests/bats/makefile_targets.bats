@@ -747,6 +747,102 @@ run_openapi_drift_script() {
   [ "$status" -ne 0 ]
 }
 
+# Provisions the lint-graphql-drift sandbox: the committed SDL snapshot as the
+# baseline, a curl stub that "downloads" an upstream copy of it, and a pinned
+# UPSTREAM_REF so the releases-API lookup is never reached. The comparison helper
+# runs under the generic `node` stub, which exits 0 — the clean verdict — so this
+# asserts the TARGET's wiring; the script's three-way exit contract is covered by
+# tests/bats/graphql_drift.bats.
+setup_graphql_drift_sandbox() {
+  reset_command_log
+
+  mkdir -p "$MAKEFILE_SANDBOX/contracts/user-service"
+  cp "$PROJECT_ROOT/contracts/user-service/schema.graphql" \
+    "$MAKEFILE_SANDBOX/contracts/user-service/"
+
+  cat > "$STUB_BIN_DIR/curl" <<'STUB'
+#!/usr/bin/env bash
+printf 'curl %s\n' "$*" >> "${COMMAND_LOG:?}"
+destination=""
+previous=""
+for argument in "$@"; do
+  [ "$previous" = "-o" ] && destination="$argument"
+  previous="$argument"
+done
+if [ -n "$destination" ] && [ -n "${STUB_SCHEMA_SOURCE:-}" ]; then
+  cp "$STUB_SCHEMA_SOURCE" "$destination"
+fi
+exit 0
+STUB
+  chmod +x "$STUB_BIN_DIR/curl"
+
+  export STUB_SCHEMA_SOURCE="$MAKEFILE_SANDBOX/contracts/user-service/schema.graphql"
+  export UPSTREAM_REF="v0.0.0-stub"
+}
+
+@test "generate-routes regenerates the route manifest with host-side node" {
+  reset_command_log
+
+  run_make_target generate-routes
+  [ "$status" -eq 0 ]
+  assert_log_contains 'node scripts/ci/generate-route-manifest.mjs'
+
+  # Dependency-free and host-only: never the dev container, never the package
+  # manager. It is also a WRITER, so it must never be reached from `make lint`.
+  run grep -E 'docker|bun' "$COMMAND_LOG"
+  [ "$status" -ne 0 ]
+}
+
+@test "generate-routes runs the generator in verify-only mode under ROUTE_MANIFEST_CHECK" {
+  reset_command_log
+
+  # GNU Make would parse a trailing `--check` as one of its own options, so the
+  # verify-only mode is reachable only through this variable.
+  run_make_target generate-routes ROUTE_MANIFEST_CHECK=1
+  [ "$status" -eq 0 ]
+  assert_log_contains 'node scripts/ci/generate-route-manifest.mjs --check'
+
+  reset_command_log
+  run_make_target generate-routes ROUTE_MANIFEST_CHECK=true
+  [ "$status" -eq 0 ]
+  assert_log_contains 'node scripts/ci/generate-route-manifest.mjs --check'
+
+  # Anything else keeps the default writer behaviour rather than silently
+  # verifying: an unrecognised value must not disable the write.
+  reset_command_log
+  run_make_target generate-routes ROUTE_MANIFEST_CHECK=maybe
+  [ "$status" -eq 0 ]
+  run grep -- '--check' "$COMMAND_LOG"
+  [ "$status" -ne 0 ]
+}
+
+@test "the lint aggregate never runs the route-manifest writer" {
+  # generate-routes rewrites config/routes.json; wiring it into a gate would make
+  # that gate unfalsifiable. The drift check is the Jest spec
+  # src/test/unit/routes/route-manifest.test.ts.
+  run grep -E '^lint:.*generate-routes' "$PROJECT_ROOT/Makefile"
+  [ "$status" -ne 0 ]
+}
+
+@test "lint-graphql-drift diffs the committed SDL snapshot host-only" {
+  setup_graphql_drift_sandbox
+
+  run env \
+    PATH="$STUB_BIN_DIR:$PATH" \
+    COMMAND_LOG="$COMMAND_LOG" \
+    STUB_SCHEMA_SOURCE="$STUB_SCHEMA_SOURCE" \
+    UPSTREAM_REF="$UPSTREAM_REF" \
+    make -C "$MAKEFILE_SANDBOX" lint-graphql-drift BIN_DIR="$STUB_BIN_DIR"
+
+  [ "$status" -eq 0 ]
+  assert_output_contains 'No breaking changes'
+  assert_log_contains 'scripts/ci/graphql-drift-compare.mjs'
+
+  # Host-only like its lint-openapi sibling: no dev container, no package manager.
+  run grep -E 'docker|bun' "$COMMAND_LOG"
+  [ "$status" -ne 0 ]
+}
+
 @test "the drift script writes a report and exits 1 when upstream has breaking changes" {
   setup_openapi_drift_sandbox 1
 
