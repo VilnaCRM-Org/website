@@ -30,6 +30,15 @@ jobs:
       # OIDC only: assumes the sandbox-deletion role but never checks out the
       # repo or calls the GitHub API, so no contents/GITHUB_TOKEN scope is needed.
       id-token: write
+    # Gate the prod-account sandbox-deletion trigger behind a GitHub Environment
+    # so protection rules (required reviewers / wait timer) can be enforced from
+    # repo Settings → Environments → sandbox-teardown, and so the OIDC subject this
+    # job mints is `repo:VilnaCRM-Org/website:environment:sandbox-teardown` — an
+    # exact subject the role trust policy can pin, instead of a branch ref any
+    # branch can produce. See .github/sandbox_workflows.md and
+    # docs/deployment-runbook.md.
+    environment:
+      name: sandbox-teardown
     steps:
       # PR_NUMBER comes straight from the pull_request event payload, so no
       # GitHub token or API round-trip is needed to discover it. The teardown

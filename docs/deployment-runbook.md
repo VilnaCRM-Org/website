@@ -92,16 +92,54 @@ the infra repository instead of adding a slug rule here.
 
 ### Environment protection rules
 
-`deploy.yml` references the `production` environment. To require a human
-checkpoint before a production deploy, add protection rules under _Settings →
-Environments → production_:
+Every job in this repository that assumes an AWS role declares an
+`environment:`, and `make lint-prod-guardrails` fails a pull request that adds a
+role-assuming job without one (issue #375).
 
-- **Required reviewers** — the deploy waits for approval before CodePipeline is
-  triggered.
+The `environment:` key on its own changes no behaviour: until a maintainer
+creates the environment in repository settings and attaches protection rules to
+it, the job runs exactly as before. What the committed key buys is the two
+things a rule needs to exist at all — somewhere to attach the rule, and an OIDC
+subject of the form `repo:VilnaCRM-Org/website:environment:<name>` that the AWS
+role trust policy can pin exactly (see
+[`.github/sandbox_workflows.md`](../.github/sandbox_workflows.md)).
+
+Create these four environments under _Settings → Environments_, one per
+privileged role, so that approving a sandbox rebuild never also approves a
+production deploy.
+
+- **`production`** — gates `deploy.yml` / `deploy`, which assumes
+  `website-deploy-trigger-role`. Highest blast radius: it triggers the
+  production CodePipeline. Required reviewer: a maintainer from the
+  release/infrastructure group.
+- **`sandbox`** — gates `sandbox-creating.yml` / `deploy`, which assumes
+  `sandbox-creation-trigger-role`. Runs in the production AWS account on every
+  PR synchronize, so a reviewer here is what stops an unreviewed branch
+  provisioning prod-account infrastructure. Required reviewer: a maintainer.
+- **`sandbox-tokens`** — gates `sandbox-creating.yml` / `check-tokens`, which
+  assumes `github-actions-role` in both the test and production accounts to read
+  Secrets Manager. Required reviewer: a maintainer.
+- **`sandbox-teardown`** — gates `sandbox-deleting.yml` /
+  `trigger-sandbox-deletion-pipeline`, which assumes
+  `sandbox-deletion-trigger-role`. Destructive, but only against sandbox
+  resources; a wait timer is usually enough.
+
+For each one:
+
+- **Required reviewers** — the job waits for approval before the role is
+  assumed and before CodePipeline is triggered. This is the control issue #375
+  F1/F2 asks for; without it the environment is a label and nothing more.
 - **Wait timer** — an optional delay before the job runs.
+- **Deployment branches** — for `production`, restrict to `main`.
 
-No rules are enforced by default; adding them is a repo-settings change and does
-not require a code change.
+Adding a required reviewer to `sandbox` and `sandbox-tokens` means every pull
+request that pushes a new commit queues for approval before its sandbox
+rebuilds. That is the intended trade-off, and it is why the environments are
+split: the reviewer set for a sandbox rebuild can be broader than the one for a
+production deploy.
+
+Nothing here is enforced by default. Creating the environments and attaching
+their rules is a repository-settings change that cannot be committed.
 
 ## Rollback procedure
 

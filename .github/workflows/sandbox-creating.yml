@@ -29,6 +29,14 @@ jobs:
       # OIDC only: these jobs assume AWS roles but never check out the repo or
       # call the GitHub API, so no contents/GITHUB_TOKEN scope is needed.
       id-token: write
+    # Gate the Secrets-Manager reads behind a GitHub Environment so protection
+    # rules (required reviewers / wait timer) can be enforced from repo Settings →
+    # Environments → sandbox-tokens, and so the OIDC subject this job mints is
+    # `repo:VilnaCRM-Org/website:environment:sandbox-tokens` — an exact subject the
+    # role trust policy can pin, instead of a branch ref any branch can produce.
+    # See .github/sandbox_workflows.md and docs/deployment-runbook.md.
+    environment:
+      name: sandbox-tokens
     steps:
       - name: Validate AWS Region
         run: |
@@ -128,6 +136,14 @@ jobs:
       # OIDC only: assumes the sandbox-creation role but never checks out the
       # repo or calls the GitHub API, so no contents/GITHUB_TOKEN scope is needed.
       id-token: write
+    # Gate the prod-account sandbox-creation trigger behind a GitHub Environment
+    # so protection rules (required reviewers / wait timer) can be enforced from
+    # repo Settings → Environments → sandbox, and so the OIDC subject this job
+    # mints is `repo:VilnaCRM-Org/website:environment:sandbox` — an exact subject
+    # the role trust policy can pin, instead of a branch ref any branch can
+    # produce. See .github/sandbox_workflows.md and docs/deployment-runbook.md.
+    environment:
+      name: sandbox
     steps:
       # PR_NUMBER comes straight from the pull_request event payload, so no
       # GitHub token or API round-trip is needed to discover it. This drops the

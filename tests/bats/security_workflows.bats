@@ -144,3 +144,85 @@ extract_severity_predicate() {
     fi
   done
 }
+
+# --- Sandbox workflows: the prod-account trust boundary (issue #375) ------------
+#
+# `sandbox-creating.yml` and `sandbox-deleting.yml` assume roles in the
+# PRODUCTION AWS account. Three properties keep that reachable only from a
+# reviewed, same-repo pull request, and each one has been absent from this
+# repository at some point in its history.
+
+sandbox_workflows() {
+  printf '%s\n' \
+    "$WORKFLOWS_DIR/sandbox-creating.yml" \
+    "$WORKFLOWS_DIR/sandbox-deleting.yml"
+}
+
+@test "every sandbox job that assumes a role carries the same-repo guard" {
+  # A fork PR receives no OIDC id-token, so the role assumption would fail --
+  # but it would fail LOUDLY on every fork PR, and the guard is what states the
+  # boundary rather than relying on that side effect.
+  local file job
+  while read -r file; do
+    while read -r job; do
+      local body
+      body="$(extract_job "$file" "$job")"
+      [[ "$body" == *'role-to-assume'* ]] || continue
+      [[ "$body" == *'github.event.pull_request.head.repo.full_name == github.repository'* ]]
+    done < <(awk '/^jobs:/ { inside = 1; next }
+                  inside && /^  [A-Za-z0-9_-]+:/ { gsub(/[ :]/, "", $0); print }' "$file")
+  done < <(sandbox_workflows)
+}
+
+@test "the sandbox workflows are reachable only from pull_request events" {
+  # A bare `push:` trigger is the #375 F1 path: any branch push reaching the
+  # production account with no pull request and therefore no review.
+  local file triggers
+  while read -r file; do
+    triggers="$(awk '/^on:/ { inside = 1; next }
+                     inside && /^[A-Za-z]/ { inside = 0 }
+                     inside && /^  [A-Za-z_]+:/ { print }' "$file")"
+    [ -n "$triggers" ]
+    printf '%s\n' "$triggers" | grep -qE '^  pull_request:'
+    # Exactly one trigger, and it is the pull_request one.
+    [ "$(printf '%s\n' "$triggers" | wc -l)" -eq 1 ]
+  done < <(sandbox_workflows)
+}
+
+@test "every sandbox job that assumes a role declares an environment" {
+  # The in-YAML half of the assertion `make lint-prod-guardrails` enforces
+  # repo-wide. Asserted here too so the sandbox files carry it in their own
+  # right: the environment name is what the IAM trust policy pins as the OIDC
+  # subject (see .github/sandbox_workflows.md).
+  local file job
+  while read -r file; do
+    while read -r job; do
+      local body
+      body="$(extract_job "$file" "$job")"
+      [[ "$body" == *'role-to-assume'* ]] || continue
+      printf '%s\n' "$body" | grep -qE '^    environment:[[:space:]]*$'
+      printf '%s\n' "$body" | grep -qE '^      name: (sandbox|sandbox-tokens|sandbox-teardown)[[:space:]]*$'
+    done < <(awk '/^jobs:/ { inside = 1; next }
+                  inside && /^  [A-Za-z0-9_-]+:/ { gsub(/[ :]/, "", $0); print }' "$file")
+  done < <(sandbox_workflows)
+}
+
+@test "every action in the sandbox workflows is pinned to a full commit sha" {
+  local file
+  while read -r file; do
+    run grep -nE '^\s*uses:' "$file"
+    if [ "$status" -eq 0 ]; then
+      [ "$(printf '%s\n' "$output" | grep -cvE '@[0-9a-f]{40}' || true)" -eq 0 ]
+    fi
+  done < <(sandbox_workflows)
+}
+
+@test "the sandbox workflows keep permissions least-privilege and non-cancelling" {
+  local file
+  while read -r file; do
+    # A workflow-level `permissions: {}` baseline, so a new job starts with none.
+    grep -Fq 'permissions: {}' "$file"
+    # Aborting an in-flight AWS pipeline trigger mid-run is unsafe.
+    grep -Fq 'cancel-in-progress: false' "$file"
+  done < <(sandbox_workflows)
+}

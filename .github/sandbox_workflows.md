@@ -13,6 +13,7 @@ This documentation provides an overview of two GitHub Actions workflows used for
   - [Deletion Overview](#deletion-overview)
   - [Deletion Variables Setup](#deletion-variables-setup)
 - [AWS IAM Role Configuration](#aws-iam-role-configuration)
+  - [Why the subject must be exact, and never a wildcard](#why-the-subject-must-be-exact-and-never-a-wildcard)
 - [Additional Notes](#additional-notes)
 
 ## Introduction
@@ -94,7 +95,8 @@ Steps to Configure the IAM Role
 
    Set the Trust Policy:
 
-   Update the role's trust relationship with the following policy, replacing placeholders with your information:
+   Update the role's trust relationship with the following policy, replacing placeholders with your
+   information. Note the `StringEquals` condition: the subject must be matched **exactly**.
 
     {
       "Version": "2012-10-17",
@@ -106,10 +108,8 @@ Steps to Configure the IAM Role
           },
           "Action": "sts:AssumeRoleWithWebIdentity",
           "Condition": {
-            "StringLike": {
-              "token.actions.githubusercontent.com:sub": "repo:YOUR_GITHUB_ORG/YOUR_REPO:*"
-            },
             "StringEquals": {
+              "token.actions.githubusercontent.com:sub": "repo:VilnaCRM-Org/website:environment:sandbox",
               "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
             }
           }
@@ -119,8 +119,38 @@ Steps to Configure the IAM Role
 
    Replace:
        YOUR_AWS_ACCOUNT_ID with your AWS account number.
-       YOUR_GITHUB_ORG with your GitHub organization or username.
-       YOUR_REPO with the repository name.
+       repo:VilnaCRM-Org/website with your own GitHub organization and repository if you are reusing these workflows elsewhere.
+
+### Why the subject must be exact, and never a wildcard
+
+Earlier revisions of this document prescribed a `StringLike` condition with the subject
+`repo:YOUR_GITHUB_ORG/YOUR_REPO:*`. Do not use it. The `:*` wildcard matches **every** OIDC subject
+the repository can mint — `repo:ORG/REPO:ref:refs/heads/<any-branch>`, `repo:ORG/REPO:pull_request`,
+and every `repo:ORG/REPO:environment:<any-name>`. Any workflow in the repository that requests
+`id-token: write`, on any branch and from any pull request, can therefore assume the
+production-account role. A collaborator branch push, a bot, or an automated agent with push
+authority reaches production credentials with no review in front of it, and the IAM trust policy —
+the last control that could have stopped it — asserts nothing beyond "this repository".
+
+A `StringEquals` subject of the form `repo:VilnaCRM-Org/website:environment:<env>` is minted only
+when the job declares `environment: <env>`, which in turn is what lets a maintainer attach required
+reviewers and a wait timer to it in repository settings. Branch and pull-request contexts mint a
+different subject and are refused by STS outright.
+
+Give each role its own subject rather than sharing one, so a role can only be assumed by the job
+that needs it:
+
+| Role | Workflow / job | Exact subject |
+| ---- | -------------- | ------------- |
+| `github-actions-role` (test and prod, Secrets Manager reads) | `sandbox-creating.yml` / `check-tokens` | `repo:VilnaCRM-Org/website:environment:sandbox-tokens` |
+| `sandbox-creation-trigger-role` | `sandbox-creating.yml` / `deploy` | `repo:VilnaCRM-Org/website:environment:sandbox` |
+| `sandbox-deletion-trigger-role` | `sandbox-deleting.yml` / `trigger-sandbox-deletion-pipeline` | `repo:VilnaCRM-Org/website:environment:sandbox-teardown` |
+| `website-deploy-trigger-role` | `deploy.yml` / `deploy` | `repo:VilnaCRM-Org/website:environment:production` |
+
+The `environment:` keys these subjects depend on are committed, and `make lint-prod-guardrails`
+fails a pull request that removes one. Creating the environments themselves, and attaching
+protection rules to them, is a repository-settings change — see [the deployment
+runbook](../docs/deployment-runbook.md).
 
 Attach Policies to the Role:
 
@@ -167,7 +197,7 @@ For the updated workflow, ensure that the roles for test and production secret c
   OIDC Authentication:
     By using OIDC, you enhance security by avoiding long-lived AWS credentials.
     Ensure that the IAM role's trust policy is correctly configured to allow GitHub Actions to assume the role.
-    Subject claim conditions (token.actions.githubusercontent.com:sub) should be as specific as possible
+    Subject claim conditions (token.actions.githubusercontent.com:sub) must be matched with StringEquals against the exact environment subject above, never with a StringLike wildcard.
 
   Workflow File Placement:
     Place the workflow files in the .github/workflows/ directory of your repository.
