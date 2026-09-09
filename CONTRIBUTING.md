@@ -351,7 +351,7 @@ weaken the gate.
 
 #### Production safety guardrails
 
-`make lint-prod-guardrails` (inside `make lint`) enforces three invariants that
+`make lint-prod-guardrails` (inside `make lint`) enforces four invariants that
 otherwise only hold in production:
 
 - Every workflow that assumes an AWS role or cuts a release, on a
@@ -362,6 +362,22 @@ otherwise only hold in production:
   404, and stays pinned inside the 100%-coverage `edge` Jest layer, so it cannot
   regress to passing arbitrary paths to the S3 origin.
 - `next.config.js` does not enable `productionBrowserSourceMaps`.
+- Every job whose steps pass a `role-to-assume` input declares a non-empty
+  `environment:`, so a maintainer can put required reviewers in front of the
+  credential and the OIDC subject the job mints names an environment rather than
+  a branch ref.
+
+#### Adding a page under `pages/`
+
+Route knowledge is derived, not remembered. After adding or removing a page, run
+`make generate-routes` to regenerate the committed `config/routes.json` from
+`pages/`, and — unless the route is deliberately unreachable at an extensionless
+URL — add its entry (both the bare and the trailing-slash spelling) to
+`ROUTE_MAP` in `scripts/cloudfront_routing.js`. Skipping either turns the client
+suite red: `src/test/unit/routes/route-manifest.test.ts` compares the manifest
+against `pages/` and against `ROUTE_MAP` in both directions. A route left
+unmapped on purpose needs a recorded exemption with its reason in that spec,
+not a deleted assertion.
 
 #### Upstream contracts (user-service)
 
