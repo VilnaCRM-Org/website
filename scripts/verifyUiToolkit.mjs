@@ -14,7 +14,7 @@
  * can sit inside `make lint` and run on every pull request.
  */
 import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 
 export const CHECKSUMS_PATH = 'config/ui-toolkit-checksums.json';
 export const PACKAGE_ROOT = 'node_modules/@vilnacrm/ui-toolkit';
@@ -28,6 +28,26 @@ export function digest(bytes) {
 
 function readJson(path, readFile) {
   return JSON.parse(readFile(path, 'utf8'));
+}
+
+/**
+ * Every file the package ships under `build/`, relative to it.
+ *
+ * The whole tree, not a chosen few: a subpath entry such as `build/ui-button.mjs`
+ * re-exports out of `build/chunks/*.mjs` and never loads `build/index.mjs`, so a
+ * digest set covering only the barrel would verify code the application never
+ * runs while leaving the code it does run unchecked.
+ */
+export function listBuildFiles(readDir = readdirSync, prefix = '') {
+  const entries = readDir(`${PACKAGE_ROOT}/build${prefix}`, { withFileTypes: true });
+
+  return entries
+    .flatMap(entry =>
+      entry.isDirectory()
+        ? listBuildFiles(readDir, `${prefix}/${entry.name}`)
+        : [`build${prefix}/${entry.name}`]
+    )
+    .sort();
 }
 
 export function readChecksums(readFile = readFileSync) {
@@ -50,13 +70,18 @@ export function readChecksums(readFile = readFileSync) {
  * separate variable: the URL is the only thing that actually decides which
  * bytes are installed, so a second declaration could only ever disagree with it.
  */
-export function pinnedVersion(readFile = readFileSync) {
-  const manifest = readJson(MANIFEST_PATH, readFile);
-  const spec = manifest.dependencies?.['@vilnacrm/ui-toolkit'];
+export function manifestSpec(readFile = readFileSync) {
+  const spec = readJson(MANIFEST_PATH, readFile).dependencies?.['@vilnacrm/ui-toolkit'];
 
   if (typeof spec !== 'string') {
     throw new Error(`${MANIFEST_PATH}: @vilnacrm/ui-toolkit is not a dependency`);
   }
+  return spec;
+}
+
+export function pinnedVersion(readFile = readFileSync) {
+  const spec = manifestSpec(readFile);
+
   const match = /\/releases\/download\/v([^/]+)\//.exec(spec);
   if (!match) {
     throw new Error(
@@ -74,7 +99,7 @@ export function installedVersion(readFile = readFileSync) {
  * Every failure is collected rather than thrown at the first one: a contributor
  * refreshing the pin wants the whole list in a single run.
  */
-export function verify(readFile = readFileSync) {
+export function verify(readFile = readFileSync, readDir = readdirSync) {
   const failures = [];
   const checksums = readChecksums(readFile);
 
@@ -83,6 +108,11 @@ export function verify(readFile = readFileSync) {
     failures.push(
       `${CHECKSUMS_PATH} records version ${checksums.version}, manifest pins ${pinned}`
     );
+  }
+  // The recorded URL is a third statement of the pin, and an unchecked
+  // restatement is exactly the drift this gate exists to catch.
+  if (checksums.tarballUrl !== manifestSpec(readFile)) {
+    failures.push(`${CHECKSUMS_PATH} tarballUrl does not match the manifest's pinned release URL`);
   }
 
   let installed;
@@ -111,18 +141,38 @@ export function verify(readFile = readFileSync) {
     }
   });
 
+  // An ADDED file is tampering too — a digest set that only checks the files it
+  // already knows about can be defeated by shipping an extra module.
+  let installedFiles;
+  try {
+    installedFiles = listBuildFiles(readDir);
+  } catch {
+    failures.push(`${PACKAGE_ROOT}/build is unreadable, so the artifact set cannot be verified`);
+    return failures;
+  }
+  installedFiles
+    .filter(relativePath => !(relativePath in checksums.artifacts))
+    .forEach(relativePath => {
+      failures.push(`${relativePath}: present in the install but absent from ${CHECKSUMS_PATH}`);
+    });
+
   return failures;
 }
 
-export function buildChecksumsFile(readFile = readFileSync) {
+export function buildChecksumsFile(readFile = readFileSync, readDir = readdirSync) {
   const current = readChecksums(readFile);
   const artifacts = {};
 
-  Object.keys(current.artifacts).forEach(relativePath => {
+  [...listBuildFiles(readDir), 'package.json'].forEach(relativePath => {
     artifacts[relativePath] = digest(readFile(`${PACKAGE_ROOT}/${relativePath}`));
   });
 
-  return { ...current, version: pinnedVersion(readFile), artifacts };
+  return {
+    ...current,
+    version: pinnedVersion(readFile),
+    tarballUrl: manifestSpec(readFile),
+    artifacts,
+  };
 }
 
 /**
@@ -132,9 +182,9 @@ export function buildChecksumsFile(readFile = readFileSync) {
  * `process`, which keeps every branch that decides pass or fail reachable from
  * a spec.
  */
-export function main({ readFile = readFileSync, stdout, stderr } = {}) {
+export function main({ readFile = readFileSync, readDir = readdirSync, stdout, stderr } = {}) {
   try {
-    const failures = verify(readFile);
+    const failures = verify(readFile, readDir);
     if (failures.length > 0) {
       stderr(`ui-toolkit integrity: FAIL\n${failures.map(failure => `  - ${failure}\n`).join('')}`);
       return 1;

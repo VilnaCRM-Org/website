@@ -14,6 +14,7 @@ import {
   buildChecksumsFile,
   digest,
   installedVersion,
+  listBuildFiles,
   main,
   pinnedVersion,
   readChecksums,
@@ -22,11 +23,31 @@ import {
 
 const TARBALL_URL: string =
   'https://github.com/VilnaCRM-Org/ui-toolkit/releases/download/v9.9.9/vilnacrm-ui-toolkit-9.9.9.tgz';
-const ARTIFACT: string = 'build/index.mjs';
+const ARTIFACT: string = 'build/ui-button.mjs';
 const CONTENT: string = 'toolkit bytes';
 const CONTENT_DIGEST: string = digest(CONTENT);
 
 type Files = Record<string, string>;
+
+/**
+ * The install tree the fake reads. `readDir` mirrors it so the "extra file"
+ * check has something to disagree with, which is the branch a digest map alone
+ * cannot cover.
+ */
+function fakeReadDir(files: Files) {
+  return (dir: string): { name: string; isDirectory: () => boolean }[] => {
+    const prefix = `${dir.replace(`${'node_modules/@vilnacrm/ui-toolkit'}/`, '')}/`;
+    const names = new Set<string>();
+    Object.keys(files)
+      .map(path => path.replace('node_modules/@vilnacrm/ui-toolkit/', ''))
+      .filter(path => path.startsWith(prefix))
+      .forEach(path => names.add(path.slice(prefix.length).split('/')[0] as string));
+    return [...names].map(name => ({
+      name,
+      isDirectory: () => !name.includes('.'),
+    }));
+  };
+}
 
 function fakeReadFile(files: Files) {
   return (path: string): string => {
@@ -40,6 +61,7 @@ function tree(overrides: Files = {}): Files {
     [CHECKSUMS_PATH]: JSON.stringify({
       algorithm: ALGORITHM,
       version: '9.9.9',
+      tarballUrl: TARBALL_URL,
       artifacts: { [ARTIFACT]: CONTENT_DIGEST },
     }),
     'package.json': JSON.stringify({ dependencies: { '@vilnacrm/ui-toolkit': TARBALL_URL } }),
@@ -51,12 +73,75 @@ function tree(overrides: Files = {}): Files {
 
 describe('ui-toolkit integrity gate', () => {
   it('passes only when every digest, the pin and the installed version agree', () => {
-    expect(verify(fakeReadFile(tree()))).toEqual([]);
+    expect(verify(fakeReadFile(tree()), fakeReadDir(tree()))).toEqual([]);
+  });
+
+  it('covers the subpath entry the application actually loads, not just the barrel', () => {
+    // Regression guard for the gap the FR/NFR gate found: every seam imports
+    // `@vilnacrm/ui-toolkit/<component>`, which resolves to `build/<name>.mjs`
+    // and pulls from `build/chunks/*` — `build/index.mjs` is never loaded. A
+    // digest set covering only the barrel verified code the site never runs.
+    const files: Files = tree({
+      [`node_modules/@vilnacrm/ui-toolkit/${ARTIFACT}`]: 'tampered subpath',
+    });
+
+    expect(verify(fakeReadFile(files), fakeReadDir(files))).toEqual([
+      expect.stringContaining(ARTIFACT),
+    ]);
+  });
+
+  it('rejects a file added to the install that no digest accounts for', () => {
+    const files: Files = tree({
+      'node_modules/@vilnacrm/ui-toolkit/build/evil.mjs': 'payload',
+    });
+
+    expect(verify(fakeReadFile(files), fakeReadDir(files))).toEqual([
+      expect.stringContaining('present in the install but absent'),
+    ]);
+  });
+
+  it('fails closed when the build directory cannot be listed at all', () => {
+    // The artifact SET is half the guarantee: without it an added module goes
+    // unnoticed. If the listing itself fails the gate must say so, not fall
+    // through having checked only the digests it already knew about.
+    const unreadable = (): never => {
+      throw new Error('EACCES');
+    };
+
+    expect(verify(fakeReadFile(tree()), unreadable)).toEqual([
+      expect.stringContaining('build is unreadable'),
+    ]);
+  });
+
+  it('fails when the recorded tarball URL drifts from the manifest pin', () => {
+    const files: Files = tree({
+      [CHECKSUMS_PATH]: JSON.stringify({
+        algorithm: ALGORITHM,
+        version: '9.9.9',
+        tarballUrl: 'https://example.invalid/other.tgz',
+        artifacts: { [ARTIFACT]: CONTENT_DIGEST },
+      }),
+    });
+
+    expect(verify(fakeReadFile(files), fakeReadDir(files))).toEqual([
+      expect.stringContaining('tarballUrl does not match'),
+    ]);
+  });
+
+  it('lists every shipped build file, walking nested directories', () => {
+    const files: Files = tree({
+      'node_modules/@vilnacrm/ui-toolkit/build/chunks/chunk-a.mjs': 'chunk',
+    });
+
+    expect(listBuildFiles(fakeReadDir(files))).toEqual(
+      expect.arrayContaining([ARTIFACT, 'build/chunks/chunk-a.mjs'])
+    );
   });
 
   it('fails when an installed artifact does not match its committed digest', () => {
     const failures: string[] = verify(
-      fakeReadFile(tree({ [`node_modules/@vilnacrm/ui-toolkit/${ARTIFACT}`]: 'tampered' }))
+      fakeReadFile(tree({ [`node_modules/@vilnacrm/ui-toolkit/${ARTIFACT}`]: 'tampered' })),
+      fakeReadDir(tree())
     );
 
     expect(failures).toHaveLength(1);
@@ -68,7 +153,7 @@ describe('ui-toolkit integrity gate', () => {
     const files: Files = tree();
     delete files[`node_modules/@vilnacrm/ui-toolkit/${ARTIFACT}`];
 
-    expect(verify(fakeReadFile(files))).toEqual([
+    expect(verify(fakeReadFile(files), fakeReadDir(files))).toEqual([
       expect.stringContaining('missing from the installed package'),
     ]);
   });
@@ -77,7 +162,9 @@ describe('ui-toolkit integrity gate', () => {
     const files: Files = tree();
     delete files['node_modules/@vilnacrm/ui-toolkit/package.json'];
 
-    expect(verify(fakeReadFile(files))).toEqual([expect.stringContaining('is not installed')]);
+    expect(verify(fakeReadFile(files), fakeReadDir(files))).toEqual([
+      expect.stringContaining('is not installed'),
+    ]);
   });
 
   it('fails when the installed version is not the version the manifest pins', () => {
@@ -85,7 +172,7 @@ describe('ui-toolkit integrity gate', () => {
       'node_modules/@vilnacrm/ui-toolkit/package.json': JSON.stringify({ version: '0.0.1' }),
     });
 
-    expect(verify(fakeReadFile(files))).toEqual([
+    expect(verify(fakeReadFile(files), fakeReadDir(files))).toEqual([
       expect.stringContaining('installed @vilnacrm/ui-toolkit is 0.0.1'),
     ]);
   });
@@ -95,11 +182,12 @@ describe('ui-toolkit integrity gate', () => {
       [CHECKSUMS_PATH]: JSON.stringify({
         algorithm: ALGORITHM,
         version: '1.2.3',
+        tarballUrl: TARBALL_URL,
         artifacts: { [ARTIFACT]: CONTENT_DIGEST },
       }),
     });
 
-    expect(verify(fakeReadFile(files))).toEqual([
+    expect(verify(fakeReadFile(files), fakeReadDir(files))).toEqual([
       expect.stringContaining('records version 1.2.3, manifest pins 9.9.9'),
     ]);
   });
@@ -141,9 +229,10 @@ describe('ui-toolkit integrity gate', () => {
   });
 
   it('rebuilds the digest file from the installed tree, carrying the pin forward', () => {
-    const rebuilt = buildChecksumsFile(
-      fakeReadFile(tree({ [`node_modules/@vilnacrm/ui-toolkit/${ARTIFACT}`]: 'new bytes' }))
-    );
+    const files: Files = tree({
+      [`node_modules/@vilnacrm/ui-toolkit/${ARTIFACT}`]: 'new bytes',
+    });
+    const rebuilt = buildChecksumsFile(fakeReadFile(files), fakeReadDir(files));
 
     expect(rebuilt.version).toBe('9.9.9');
     expect(rebuilt.artifacts[ARTIFACT]).toBe(digest('new bytes'));
@@ -156,6 +245,7 @@ describe('ui-toolkit integrity gate', () => {
 
       const code: number = main({
         readFile: fakeReadFile(tree()),
+        readDir: fakeReadDir(tree()),
         stdout: t => out.push(t),
         stderr: t => err.push(t),
       });
@@ -175,6 +265,7 @@ describe('ui-toolkit integrity gate', () => {
 
       const code: number = main({
         readFile: fakeReadFile(files),
+        readDir: fakeReadDir(files),
         stdout: t => out.push(t),
         stderr: t => err.push(t),
       });
@@ -193,6 +284,7 @@ describe('ui-toolkit integrity gate', () => {
 
       const code: number = main({
         readFile: fakeReadFile(files),
+        readDir: fakeReadDir(files),
         stdout: () => undefined,
         stderr: t => err.push(t),
       });
