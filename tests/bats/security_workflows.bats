@@ -224,6 +224,56 @@ sandbox_workflows() {
     "$WORKFLOWS_DIR/sandbox-deleting.yml"
 }
 
+# Assert the WORKFLOW-level `permissions:` of $1 is a real, empty mapping.
+# Parsed with js-yaml for the reason CLAUDE.md gives (issue #447): a text scan
+# for `permissions: {}` is satisfied by the same characters in a comment or a
+# `run:` body, so a workflow that lost the baseline entirely would still pass.
+assert_root_permissions_empty() {
+  PROJECT_ROOT="$PROJECT_ROOT" node -e '
+    const yaml = require(process.env.PROJECT_ROOT + "/node_modules/js-yaml");
+    const fs = require("fs");
+    const doc = yaml.load(fs.readFileSync(process.argv[1], "utf8"));
+    const perms = doc && doc.permissions;
+    const empty =
+      perms !== null &&
+      typeof perms === "object" &&
+      !Array.isArray(perms) &&
+      Object.keys(perms).length === 0;
+    if (!empty) {
+      console.error(
+        process.argv[1] +
+          ": workflow-level permissions must be an empty mapping, got " +
+          JSON.stringify(perms === undefined ? "<absent>" : perms)
+      );
+      process.exit(1);
+    }
+  ' "$1"
+}
+
+# Assert the real `concurrency.cancel-in-progress` of $1 is the boolean false.
+# Same parser, same reason: aborting an in-flight AWS pipeline trigger mid-run
+# is unsafe, and a reassuring string in a step body must not certify it.
+assert_not_cancelling() {
+  PROJECT_ROOT="$PROJECT_ROOT" node -e '
+    const yaml = require(process.env.PROJECT_ROOT + "/node_modules/js-yaml");
+    const fs = require("fs");
+    const doc = yaml.load(fs.readFileSync(process.argv[1], "utf8"));
+    const concurrency = (doc && doc.concurrency) || undefined;
+    const value =
+      concurrency && typeof concurrency === "object"
+        ? concurrency["cancel-in-progress"]
+        : undefined;
+    if (value !== false) {
+      console.error(
+        process.argv[1] +
+          ": concurrency.cancel-in-progress must be false, got " +
+          JSON.stringify(value === undefined ? "<absent>" : value)
+      );
+      process.exit(1);
+    }
+  ' "$1"
+}
+
 SAME_REPO_GUARD='github.event.pull_request.head.repo.full_name == github.repository'
 
 # Assert every role-assuming job in $1 carries the same-repo guard as its real
@@ -328,9 +378,77 @@ YAML
 @test "the sandbox workflows keep permissions least-privilege and non-cancelling" {
   local file
   while read -r file; do
-    # A workflow-level `permissions: {}` baseline, so a new job starts with none.
-    grep -Fq 'permissions: {}' "$file"
-    # Aborting an in-flight AWS pipeline trigger mid-run is unsafe.
-    grep -Fq 'cancel-in-progress: false' "$file"
+    assert_root_permissions_empty "$file"
+    assert_not_cancelling "$file"
   done < <(sandbox_workflows)
+}
+
+@test "the workflow-level permissions assertion rejects a baseline that exists only in a comment" {
+  # The shape the old `grep -Fq 'permissions: {}'` let through: the real
+  # workflow-level baseline is absent (so a new job inherits the repository
+  # default), and the text survives only in a comment.
+  local fixture="$BATS_TEST_TMPDIR/comment-permissions.yml"
+  cat >"$fixture" <<'YAML'
+name: commented baseline
+on:
+  pull_request:
+# permissions: {}
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+YAML
+
+  # The old text scan is satisfied by the fixture, so this case is a real
+  # differential rather than a restatement of the parsed assertion.
+  grep -Fq 'permissions: {}' "$fixture"
+  run assert_root_permissions_empty "$fixture"
+  [ "$status" -ne 0 ]
+
+  # A broader real baseline is rejected too, so the check is about the value.
+  sed -i 's|^# permissions: {}$|permissions:\n  contents: write|' "$fixture"
+  run assert_root_permissions_empty "$fixture"
+  [ "$status" -ne 0 ]
+
+  # And the real empty mapping passes, so the assertion is not vacuous.
+  printf 'name: baseline\non:\n  pull_request:\npermissions: {}\njobs:\n  deploy:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo hi\n' >"$fixture"
+  run assert_root_permissions_empty "$fixture"
+  [ "$status" -eq 0 ]
+}
+
+@test "the cancel-in-progress assertion rejects the setting appearing only in a run body" {
+  # The shape the old `grep -Fq 'cancel-in-progress: false'` let through: the
+  # real concurrency block cancels in flight, and the reassuring text is a line
+  # of shell output inside a step.
+  local fixture="$BATS_TEST_TMPDIR/run-body-concurrency.yml"
+  cat >"$fixture" <<'YAML'
+name: cancelling
+on:
+  pull_request:
+permissions: {}
+concurrency:
+  group: cancelling-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - run: 'echo "cancel-in-progress: false"'
+YAML
+
+  grep -Fq 'cancel-in-progress: false' "$fixture"
+  run assert_not_cancelling "$fixture"
+  [ "$status" -ne 0 ]
+
+  # A workflow with no concurrency block at all is rejected as well.
+  local missing="$BATS_TEST_TMPDIR/no-concurrency.yml"
+  printf 'name: none\non:\n  pull_request:\npermissions: {}\njobs:\n  deploy:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo hi\n' >"$missing"
+  run assert_not_cancelling "$missing"
+  [ "$status" -ne 0 ]
+
+  # The real setting passes, so the assertion is not vacuous.
+  sed -i 's|  cancel-in-progress: true|  cancel-in-progress: false|' "$fixture"
+  run assert_not_cancelling "$fixture"
+  [ "$status" -eq 0 ]
 }

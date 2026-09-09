@@ -204,10 +204,14 @@ supplied per form factor by `lighthouserc.desktop.js` and `lighthouserc.mobile.j
   changing either budget.
 - Every gated assertion uses `aggregationMethod: 'median-run'` (set once as
   `median` in `lighthouserc.shared.js` and spread into every assertion built by
-  `pageBudgets`), so a gate is judged on the representative run of the collected
-  set rather than the worst or the last one. It damps a single cold or slow run;
-  it does not make the gate deterministic — if the majority of runs breach a
-  budget, the median breaches it too.
+  `pageBudgets`). It does **not** take a median per assertion: LHCI picks a single
+  representative run from the collected set using key performance metrics, and that
+  one run then supplies the value for every assertion. So the gate is judged on a
+  self-consistent report rather than on a per-metric mix of runs, and a single cold
+  or slow outlier is discarded wholesale. What it does not buy is determinism or
+  per-metric smoothing — the representative run is chosen on performance metrics,
+  so an assertion that is noisy independently of them is not damped at all, and if
+  most runs breach a budget the selected run breaches it too.
 - The **ratchet rule** applies: budgets may only move in the stricter direction
   (lower `maxNumericValue`, higher `minScore`). Re-baseline with
   `make lighthouse-desktop` / `make lighthouse-mobile` before changing a number,

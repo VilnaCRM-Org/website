@@ -92,9 +92,10 @@ the infra repository instead of adding a slug rule here.
 
 ### Environment protection rules
 
-No job in this repository declares an `environment:` today. Adding one is a
-**three-step sequence that must be done in order** (issue #375); the steps below
-are the prerequisites, not something already delivered.
+No sandbox job in this repository declares an `environment:` today (the `deploy`
+job in `deploy.yml` does declare `environment: production`). Adding one to a
+sandbox job is a **three-step sequence that must be done in order** (issue #375);
+the steps below are the prerequisites, not something already delivered.
 
 Naming an environment is not inert. It changes the OIDC subject GitHub mints for
 that job from `repo:VilnaCRM-Org/website:pull_request` to

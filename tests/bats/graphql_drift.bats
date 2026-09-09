@@ -193,6 +193,11 @@ SDL
 @test "exits 2 when the report directory is not writable" {
   # A failed redirection exits 1, which would be indistinguishable from
   # "breaking drift found" — the one confusion the check must never make.
+  #
+  # Environment guard, not a suppressed assertion: root ignores the write bit,
+  # so `chmod a-w` cannot make the directory unwritable and the case has no
+  # subject. Every non-root user still runs it and still asserts exit 2.
+  [ "$(id -u)" -ne 0 ] || skip 'root ignores the write bit, so the directory cannot be made unwritable'
   chmod a-w "$REPORT_DIR"
   run_drift
   chmod u+w "$REPORT_DIR"

@@ -110,7 +110,7 @@ Steps to Configure the IAM Role
           "Action": "sts:AssumeRoleWithWebIdentity",
           "Condition": {
             "StringEquals": {
-              "token.actions.githubusercontent.com:sub": "repo:VilnaCRM-Org/website:environment:sandbox",
+              "token.actions.githubusercontent.com:sub": "repo:YOUR_GITHUB_ORG/YOUR_REPO:environment:YOUR_ENVIRONMENT_NAME",
               "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
             }
           }
@@ -118,9 +118,14 @@ Steps to Configure the IAM Role
       ]
     }
 
-   Replace:
+   Replace all three placeholders — the subject is matched exactly, so every segment must be
+   the literal value the job will mint:
        YOUR_AWS_ACCOUNT_ID with your AWS account number.
-       repo:VilnaCRM-Org/website with your own GitHub organization and repository if you are reusing these workflows elsewhere.
+       repo:YOUR_GITHUB_ORG/YOUR_REPO with your own GitHub organization and repository.
+       YOUR_ENVIRONMENT_NAME with the environment for **this specific role**, taken from its row
+       in the role/subject table below. The three sandbox roles use three different environments
+       (`sandbox-tokens`, `sandbox`, `sandbox-teardown`); copying one role's environment into
+       another's policy mints a subject the policy does not match, and the assume-role call fails.
 
 ### Why the subject must be exact, and never a wildcard
 

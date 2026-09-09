@@ -93,7 +93,8 @@ function directiveValue(value, directive) {
  * So a malformed member fails the whole value, and duplicates are resolved last-wins before
  * any feature is judged.
  *
- * Returns `{ members }` on success or `{ error }` describing the first malformed member.
+ * Returns `{ members }` on success or `{ error }` describing the first parse failure —
+ * an unbalanced inner list, or a malformed member.
  */
 function parsePermissionsPolicy(value) {
   const members = new Map();
@@ -107,10 +108,29 @@ function parsePermissionsPolicy(value) {
       depth += 1;
     } else if (char === ')') {
       depth -= 1;
+      // A `)` with no inner list open (`camera=()),microphone=()`) is a parse error, not a
+      // stray character to skip past. Letting depth go negative would also desynchronise
+      // the top-level comma split below, hiding every member that follows.
+      if (depth < 0) {
+        return {
+          error:
+            'closes an inner list that was never opened — a browser discards the WHOLE header (every feature reverts to its default allow-list)',
+        };
+      }
     } else if ((char === ',' && depth === 0) || index === value.length) {
       raw.push(value.slice(start, index));
       start = index + 1;
     }
+  }
+
+  // An inner list left open (`camera=(),x=(`) never terminates, so the dictionary does not
+  // parse. The comma split above still yields plausible-looking members, which is precisely
+  // the fail-open: the required denials read as satisfied while the browser drops the header.
+  if (depth !== 0) {
+    return {
+      error:
+        'leaves an inner list unclosed — a browser discards the WHOLE header (every feature reverts to its default allow-list)',
+    };
   }
 
   for (const entry of raw) {

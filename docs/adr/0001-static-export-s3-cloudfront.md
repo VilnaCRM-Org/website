@@ -31,10 +31,11 @@ We build the site as a fully static export and serve it from S3 through CloudFro
   pipeline is triggered, not when the build is live. The operational detail is in the
   [deployment and rollback runbook](../deployment-runbook.md).
 - Request-time behaviour that a server would normally provide moves to CloudFront
-  functions committed in this repository: `scripts/cloudfront_routing.js` (routing plus a
-  fail-closed allow-list that returns a synthetic 404 for anything not exported) and
-  `scripts/cloudfront_security_headers.js` (the headers declared in
-  `config/security-headers.json`).
+  functions committed in this repository: `scripts/cloudfront_routing.js` (routing plus an
+  allow-list that is fail-closed on the normal path — anything not exported gets a
+  synthetic 404) and `scripts/cloudfront_security_headers.js` (the headers declared in
+  `config/security-headers.json`). Both deliberately fail **open** on their error path; see
+  "Both edge functions fail open on their error path" below.
 - Offline behaviour is a service worker, `public/sw.js`, which precaches exactly one
   document (`/offline.html`) and serves it only when a same-origin navigation fails.
 
@@ -50,11 +51,25 @@ deploy surface is reviewable in-repo, and rollback is re-publishing a previous a
 
 ### What this costs
 
-- **Next's `headers()` is a no-op under `output: 'export'`.** Security headers exist only
-  because an edge function applies them, which is why `make lint-headers` executes the
-  committed functions against representative responses (issue #377) and the post-deploy
-  smoke test probes the live response (issue #363). Nothing in the repository can observe
-  whether CloudFront actually associates those functions.
+- **The `headers` key in `next.config.js` is a no-op under `output: 'export'`.** (This is
+  the build-time config key, not the `next/headers` runtime API, which the pages router
+  does not use.) Security headers exist only because an edge function applies them, which
+  is why `make lint-headers` executes the committed functions against representative
+  responses (issue #377) and the post-deploy smoke test probes the live response (issue
+  #363). Nothing in the repository can observe whether CloudFront actually associates those
+  functions.
+- **Both edge functions fail open on their error path.** The fail-closed property of the
+  routing allow-list holds for every request the handler evaluates normally; it does not
+  hold if the handler itself throws. `scripts/cloudfront_routing.js` catches, logs, and
+  returns the original request — a bug in the handler must never black-hole the whole site,
+  so an unexpected throw sends the request to the S3 origin instead of to the synthetic 404.
+  `scripts/cloudfront_security_headers.js` catches, logs, and returns the response
+  unmodified — a throwing viewer-response function turns every request into a 502, which is
+  worse than one response missing its headers. Both choices are deliberate and commented at
+  the point of use, and both trade a narrow, logged failure window for availability: the
+  cost is that a handler bug degrades to "origin behaviour, no headers" rather than to a
+  visible outage. Breakage surfaces in the functions' CloudWatch metrics and logs, not in a
+  failing request.
 - **Every route is client-rendered on first paint for the parts loaded with
   `ssr: false`.** That is the binding constraint on the mobile Lighthouse score
   documented at length in `lighthouserc.mobile.js`: on Moto G4 emulation the LCP element

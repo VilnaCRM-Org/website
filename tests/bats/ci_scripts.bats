@@ -689,6 +689,31 @@ run_headers_gate() {
   done
 }
 
+@test "lint-headers rejects a permissions-policy with an unbalanced inner list" {
+  # Every required denial is present and well formed, so each feature reads as denied — but
+  # the value as a whole does not parse: the first case leaves an inner list open, the second
+  # closes one that was never opened. A browser discards such a header ENTIRELY, so every
+  # feature reverts to its default allow-list and the policy denies nothing. The assertion is
+  # on the parse diagnostic, not merely on the header name, because a changed policy value
+  # also trips the emitted-header comparison — only the diagnostic proves the PARSE caught it.
+  local case
+  for case in ", x=(|leaves an inner list unclosed" ", x=())|closes an inner list that was never opened"; do
+    setup_headers_sandbox
+    node -e '
+      const fs = require("node:fs");
+      const file = process.argv[1];
+      const policy = JSON.parse(fs.readFileSync(file, "utf8"));
+      policy.headers["permissions-policy"] += process.argv[2];
+      fs.writeFileSync(file, JSON.stringify(policy, null, 2));
+    ' "$HEADERS_SANDBOX/config/security-headers.json" "${case%%|*}"
+
+    run_headers_gate
+    [ "$status" -ne 0 ]
+    assert_output_contains 'permissions-policy'
+    assert_output_contains "${case#*|}"
+  done
+}
+
 @test "lint-headers accepts the committed permissions-policy value verbatim" {
   # The counterpart to the cases above: the shipped policy is a well-formed dictionary that
   # denies every required feature, so the stricter parse must still pass it.

@@ -45,7 +45,13 @@ entries() {
   ' "$1"
 }
 
-# One row per group of the given ecosystem: ecosystem|group-name|applies-to
+# One row per group of the given ecosystem AT THE GIVEN DIRECTORY:
+#   ecosystem|group-name|applies-to
+#
+# The directory filter is load-bearing. Reading groups from every entry of the
+# ecosystem would let a later, non-root bun entry carrying both groups satisfy
+# the presence checks while the '/' entry lost its security group — Dependabot
+# would stop protecting the root lockfile with this suite still green.
 groups_of() {
   node -e '
     const yaml = require(process.env.PROJECT_ROOT + "/node_modules/js-yaml");
@@ -53,13 +59,15 @@ groups_of() {
     const doc = yaml.load(fs.readFileSync(process.argv[1], "utf8"));
     for (const u of doc.updates) {
       if (u["package-ecosystem"] !== process.argv[2]) continue;
+      const dirs = u.directories || (u.directory === undefined ? [] : [u.directory]);
+      if (!dirs.includes(process.argv[3])) continue;
       for (const [name, g] of Object.entries(u.groups || {})) {
         process.stdout.write(
           [u["package-ecosystem"], name, g["applies-to"] || "version-updates"].join("|") + "\n"
         );
       }
     }
-  ' "$1" "$2"
+  ' "$1" "$2" "$3"
 }
 
 # The invariant a "collapse" regression breaks: the bun entry still carries a
@@ -89,7 +97,7 @@ setup() {
 # --- Positive: the security stream exists in the shape GitHub honours ----------
 
 @test "the bun entry declares a security-updates group" {
-  run groups_of "$DEPENDABOT" bun
+  run groups_of "$DEPENDABOT" bun /
   [ "$status" -eq 0 ]
   assert_security_group_present "$output"
 }
@@ -98,7 +106,7 @@ setup() {
   # Explicit rather than defaulted, so neither group's scope is implicit once a
   # sibling group narrows the other half.
   local rows
-  rows="$(groups_of "$DEPENDABOT" bun)"
+  rows="$(groups_of "$DEPENDABOT" bun /)"
   assert_version_group_intact "$rows"
   # And it is spelled out in the file, not inferred by this helper's fallback.
   run node -e '
@@ -174,7 +182,7 @@ setup() {
   ' "$DEPENDABOT" "$mutated"
 
   local rows
-  rows="$(groups_of "$mutated" bun)"
+  rows="$(groups_of "$mutated" bun /)"
   run assert_security_group_present "$rows"
   [ "$status" -ne 0 ]
 }
@@ -194,7 +202,7 @@ setup() {
   ' "$DEPENDABOT" "$mutated"
 
   local rows
-  rows="$(groups_of "$mutated" bun)"
+  rows="$(groups_of "$mutated" bun /)"
   # The security stream is still there...
   assert_security_group_present "$rows"
   # ...but the invariant that matters is red.
@@ -250,9 +258,41 @@ setup() {
   ' "$DEPENDABOT" "$mutated"
 
   local rows
-  rows="$(groups_of "$mutated" bun)"
+  rows="$(groups_of "$mutated" bun /)"
   run assert_security_group_present "$rows"
   [ "$status" -ne 0 ]
   run grep -c 'applies-to: security-updates' "$mutated"
   [ "$output" -ge 1 ]
+}
+
+@test "a second bun entry elsewhere cannot vouch for the root entry's groups" {
+  # The fail-open the directory filter closes: the '/' entry loses its security
+  # group while a bun entry for another directory still declares both. Reading
+  # groups from every bun entry would keep the presence check green even though
+  # the root lockfile is no longer covered.
+  local mutated="$BATS_TEST_TMPDIR/other-directory.yml"
+  node -e '
+    const yaml = require(process.env.PROJECT_ROOT + "/node_modules/js-yaml");
+    const fs = require("fs");
+    const doc = yaml.load(fs.readFileSync(process.argv[1], "utf8"));
+    const bun = doc.updates.find((u) => u["package-ecosystem"] === "bun");
+    const clone = JSON.parse(JSON.stringify(bun));
+    clone.directory = "/src/test/load";
+    for (const [name, g] of Object.entries(bun.groups)) {
+      if (g["applies-to"] === "security-updates") delete bun.groups[name];
+    }
+    doc.updates.push(clone);
+    fs.writeFileSync(process.argv[2], yaml.dump(doc));
+  ' "$DEPENDABOT" "$mutated"
+
+  # The other entry really does carry the security group...
+  local elsewhere
+  elsewhere="$(groups_of "$mutated" bun /src/test/load)"
+  assert_security_group_present "$elsewhere"
+
+  # ...and the root entry, the one that matters, is red.
+  local rows
+  rows="$(groups_of "$mutated" bun /)"
+  run assert_security_group_present "$rows"
+  [ "$status" -ne 0 ]
 }
