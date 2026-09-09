@@ -196,10 +196,18 @@ supplied per form factor by `lighthouserc.desktop.js` and `lighthouserc.mobile.j
   script and 1.35 MB total against budgets of 750 KB / 1.55 MB; swagger measured
   941 KB / 1.26 MB against 1.05 MB / 1.45 MB. Swagger is heavier because Swagger
   UI is third-party markup.
-- Both form factors share the same byte budgets: transfer size does not depend on
-  emulation, so only the score and metric ceilings differ between them.
-- Every gated assertion uses `aggregationMethod: 'median-run'`, so one cold run
-  cannot flip the gate in either direction.
+- Both form factors currently share the same byte budgets, because the two
+  measured baselines came out close enough to gate on one pair of numbers — only
+  the score and metric ceilings differ between them. That is a measurement, not an
+  invariant: responsive image selection and viewport-conditional resources can make
+  a mobile run download different bytes, so re-measure **both** form factors before
+  changing either budget.
+- Every gated assertion uses `aggregationMethod: 'median-run'` (set once as
+  `median` in `lighthouserc.shared.js` and spread into every assertion built by
+  `pageBudgets`), so a gate is judged on the representative run of the collected
+  set rather than the worst or the last one. It damps a single cold or slow run;
+  it does not make the gate deterministic — if the majority of runs breach a
+  budget, the median breaches it too.
 - The **ratchet rule** applies: budgets may only move in the stricter direction
   (lower `maxNumericValue`, higher `minScore`). Re-baseline with
   `make lighthouse-desktop` / `make lighthouse-mobile` before changing a number,

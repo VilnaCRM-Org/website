@@ -42,8 +42,10 @@ We build the site as a fully static export and serve it from S3 through CloudFro
 
 ### What this buys
 
-No origin server to run, patch, or scale. Every response is a CDN hit, which is what
-keeps the desktop Lighthouse budgets in `lighthouserc.desktop.js` reachable. The whole
+No origin server to run, patch, or scale. CloudFront terminates and serves every
+request — a cache hit is answered at the edge, and a miss costs one fetch from the
+static S3 origin rather than a render — which is what keeps the desktop Lighthouse
+budgets in `lighthouserc.desktop.js` reachable. The whole
 deploy surface is reviewable in-repo, and rollback is re-publishing a previous artifact.
 
 ### What this costs

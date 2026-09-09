@@ -169,7 +169,7 @@ jobs:
           # A DISTINCT title from the OpenAPI leg's: dedup below is an exact
           # title match, so a shared title would make the two legs comment on
           # each other's thread and close each other's issue.
-          title='Upstream GraphQL drift in the pinned user-service schema'
+          title='Breaking upstream GraphQL drift in the pinned user-service schema'
           # Fail rather than guess: a `gh issue list` that errors (rate limit,
           # API blip) writes nothing to stdout, which reads as "no tracking issue
           # exists" and would file a duplicate every night it happens.
@@ -187,12 +187,12 @@ jobs:
               --body-file reports/graphql-drift.md
           fi
 
-      - name: Close the tracking issue once the snapshot is current again
+      - name: Close the tracking issue once the breaking changes are gone
         if: steps.drift.outputs.drift == '0'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          title='Upstream GraphQL drift in the pinned user-service schema'
+          title='Breaking upstream GraphQL drift in the pinned user-service schema'
           # A failed list here is harmless (nothing gets closed), so it warns
           # instead of failing — unlike the filing step, where the same failure
           # would create a duplicate.
@@ -205,5 +205,5 @@ jobs:
             jq -r --arg title "$title" 'map(select(.title == $title)) | .[0].number // empty')"
           if [ -n "$existing" ]; then
             gh issue close "$existing" \
-              --comment 'The committed snapshot matches the newest upstream release again.'
+              --comment 'The committed snapshot no longer has breaking changes against the newest upstream release. (This leg compares with findBreakingChanges, so non-breaking upstream additions are not tracked here.)'
           fi

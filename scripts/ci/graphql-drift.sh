@@ -125,10 +125,13 @@ pinned_ref="${pins%%$'\n'*}"
 # literal by definition, so the warning is answered by construction rather than
 # suppressed — and the dynamic values stay in printf arguments, never inline.
 {
-  printf '## Upstream GraphQL drift: %s -> %s\n\n' "${pinned_ref:-unknown}" "$upstream_ref"
-  printf 'The committed snapshot %s no longer matches the newest %s release.\n' \
-    "$GRAPHQL_BASELINE" "$USER_SERVICE_REPO"
+  printf '## Breaking upstream GraphQL drift: %s -> %s\n\n' "${pinned_ref:-unknown}" "$upstream_ref"
+  printf 'The newest %s release makes breaking changes against the committed snapshot %s.\n' \
+    "$USER_SERVICE_REPO" "$GRAPHQL_BASELINE"
   cat <<'PROSE'
+The comparison is `findBreakingChanges`, so this reports BREAKING changes only —
+a non-breaking upstream addition is not drift here and leaves the check green.
+
 This is **advisory**: nothing is broken in this repository. It means the Apollo
 mock and every client operation are validated against an older schema. The
 blocking leg is `make lint-contracts`, which validates the gql documents under

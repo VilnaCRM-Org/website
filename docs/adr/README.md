@@ -63,7 +63,9 @@ edited afterwards except to change its status.
   behind ADR 0001.
 - [Security headers](../security-headers.md) — why the CloudFront edge is the only
   enforcement point under a static export.
-- The image, font, and transfer-size sustainability policy referenced by ADR 0001 lives
-  in the [frontend performance and accessibility skill][perf-skill].
+- The image, font, and transfer-size sustainability policy lives in the
+  [frontend performance and accessibility skill][perf-skill], which cites ADR 0001 as
+  the delivery model its budgets exist inside. ADR 0001 itself does not reference the
+  policy — the cross-reference runs one way, from the skill to the ADR.
 
 [perf-skill]: ../../.claude/skills/frontend-performance-accessibility/SKILL.md

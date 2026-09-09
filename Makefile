@@ -604,8 +604,12 @@ generate-localization: ## Regenerate the gitignored pages/i18n/localization.json
 # src/test/unit/routes/route-manifest.test.ts, which already runs in the client
 # suite; the generator's own `--check` flag (verify-only, non-zero on drift) is
 # the same check for a shell caller.
-generate-routes: ## Regenerate config/routes.json from pages/ (issue #333) — host-only; add --check to verify instead of write
-	@node scripts/ci/generate-route-manifest.mjs
+# ROUTE_MANIFEST_CHECK=1 selects the generator's verify-only `--check` mode. It is
+# a Make variable rather than a passed-through flag because GNU Make parses a
+# trailing `--check` on the command line as its own option, never as a target
+# argument, so `make generate-routes --check` fails before this recipe runs.
+generate-routes: ## Regenerate config/routes.json from pages/ (issue #333) — host-only; ROUTE_MANIFEST_CHECK=1 verifies instead of writing
+	@node scripts/ci/generate-route-manifest.mjs $(if $(filter 1 true TRUE,$(ROUTE_MANIFEST_CHECK)),--check)
 
 .PHONY: lint lint-api-versions lint-headers lint-docker-policy lint-security-txt lint-prod-guardrails lint-pins lint-workflow-pins
 

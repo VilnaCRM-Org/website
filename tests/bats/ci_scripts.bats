@@ -664,6 +664,50 @@ run_headers_gate() {
   done
 }
 
+@test "lint-headers rejects a permissions-policy a browser would discard or resolve as granted" {
+  # Browsers read this header as an RFC 8941 dictionary. Whitespace around a member's `=`
+  # is a parse error, and a header that fails to parse is dropped ENTIRELY — every feature
+  # reverts to its default allow-list — so `camera =()` and `camera= ()` must go red even
+  # though they read as a denial. Duplicate keys resolve last-wins, so `camera=(), camera=*`
+  # actually grants camera to every origin.
+  local value
+  for value in "camera =(), geolocation=(), microphone=(), payment=(), usb=(), display-capture=()" \
+    "camera= (), geolocation=(), microphone=(), payment=(), usb=(), display-capture=()" \
+    "camera=(), camera=*, geolocation=(), microphone=(), payment=(), usb=(), display-capture=()"; do
+    setup_headers_sandbox
+    node -e '
+      const fs = require("node:fs");
+      const file = process.argv[1];
+      const policy = JSON.parse(fs.readFileSync(file, "utf8"));
+      policy.headers["permissions-policy"] = process.argv[2];
+      fs.writeFileSync(file, JSON.stringify(policy, null, 2));
+    ' "$HEADERS_SANDBOX/config/security-headers.json" "$value"
+
+    run_headers_gate
+    [ "$status" -ne 0 ]
+    assert_output_contains 'permissions-policy'
+  done
+}
+
+@test "lint-headers accepts the committed permissions-policy value verbatim" {
+  # The counterpart to the cases above: the shipped policy is a well-formed dictionary that
+  # denies every required feature, so the stricter parse must still pass it.
+  setup_headers_sandbox
+  node -e '
+    const fs = require("node:fs");
+    const file = process.argv[1];
+    const policy = JSON.parse(fs.readFileSync(file, "utf8"));
+    if (!/(^|, )camera=\(\)(,|$)/.test(policy.headers["permissions-policy"])) {
+      throw new Error("committed permissions-policy no longer denies camera");
+    }
+    fs.writeFileSync(file, JSON.stringify(policy, null, 2));
+  ' "$HEADERS_SANDBOX/config/security-headers.json"
+
+  run_headers_gate
+  [ "$status" -eq 0 ]
+  assert_output_contains 'permissions-policy'
+}
+
 @test "lint-headers fails when permissions-policy is dropped from the policy" {
   setup_headers_sandbox
   node -e '

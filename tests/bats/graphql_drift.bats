@@ -81,7 +81,7 @@ run_drift() {
 
 # --- 0: clean ------------------------------------------------------------------
 
-@test "exits 0 when the upstream release still matches the committed snapshot" {
+@test "exits 0 when the upstream release makes no breaking change against the snapshot" {
   run_drift
   [ "$status" -eq 0 ]
   assert_output_contains 'No breaking changes between the snapshot and v0.8.0'
@@ -121,6 +121,10 @@ SDL
   grep -F 'FIELD_REMOVED' "$REPORT"
   grep -F 'User.confirmed was removed' "$REPORT"
   grep -F 'advisory' "$REPORT"
+  # The verdict is `findBreakingChanges`, so the report must claim breaking
+  # drift and not snapshot equality: a non-breaking addition also exits 0.
+  grep -F '## Breaking upstream GraphQL drift' "$REPORT"
+  grep -F 'reports BREAKING changes only' "$REPORT"
 }
 
 @test "a non-breaking upstream addition is not reported as drift" {

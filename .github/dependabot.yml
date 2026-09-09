@@ -7,8 +7,32 @@ updates:
       time: '09:00'
       timezone: 'UTC'
     open-pull-requests-limit: 2
+    # Two groups over one ecosystem (issue #341). `applies-to` is a GROUP key —
+    # it is not a supported key of an `updates` entry, so a "fourth block"
+    # carrying it at entry level would be an unrecognised key on a duplicate
+    # bun `/` entry, not a security stream. Splitting by group is the shape
+    # GitHub actually honours, and it delivers what #341 wanted: an advisory is
+    # raised as its own PR instead of being folded into the monthly grouped
+    # version-update PR.
+    #
+    # `applies-to: version-updates` is spelled out rather than left to the
+    # default, so neither group's scope is implicit.
+    #
+    # NOT YET ACTIVE: the security group stays inert until a maintainer enables
+    # Dependabot security updates for this repository in
+    # Settings -> Code security. Until that switch is on, GitHub never opens a
+    # PR for it, so the "weekly security-update stream" acceptance criterion of
+    # #341 is only half met from the repository side. Note also that security
+    # updates are raised when an advisory matching the lockfile is detected, not
+    # on `schedule.interval`, and they are exempt from
+    # `open-pull-requests-limit`, which caps version updates only.
     groups:
       js-all-updates:
+        applies-to: 'version-updates'
+        patterns:
+          - '*'
+      js-security-updates:
+        applies-to: 'security-updates'
         patterns:
           - '*'
     labels:
@@ -51,34 +75,6 @@ updates:
           - '*'
     labels:
       - 'dependencies'
-      - 'automated'
-    commit-message:
-      prefix: 'deps'
-      include: 'scope'
-
-  # Security-update stream (issue #341). The three blocks above default to
-  # `applies-to: version-updates`; this fourth one carries ONLY security
-  # advisories, so a CVE fix is raised weekly and is not queued behind the
-  # monthly grouped feature bumps or capped by their small PR limit. It is
-  # deliberately ungrouped: one advisory, one reviewable PR.
-  #
-  # NOT YET ACTIVE: `applies-to: security-updates` is inert until a maintainer
-  # enables Dependabot security updates for this repository in
-  # Settings -> Code security. Until that switch is on, this block configures a
-  # stream that GitHub never opens a PR for, so the "weekly security-update
-  # stream" acceptance criterion of #341 is only half met from the repository
-  # side.
-  - package-ecosystem: 'bun'
-    directory: '/'
-    applies-to: 'security-updates'
-    schedule:
-      interval: 'weekly'
-      time: '09:00'
-      timezone: 'UTC'
-    open-pull-requests-limit: 10
-    labels:
-      - 'dependencies'
-      - 'security'
       - 'automated'
     commit-message:
       prefix: 'deps'

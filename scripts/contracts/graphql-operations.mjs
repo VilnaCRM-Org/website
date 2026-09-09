@@ -18,6 +18,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 
 import { buildSchema, parse, validate } from 'graphql';
+import ts from 'typescript';
 
 /** Every file under `dir`, recursively. */
 export function walk(dir) {
@@ -27,17 +28,53 @@ export function walk(dir) {
   });
 }
 
-/** Extracts every gql`...` template body. These are static templates: a `${` inside one is a hard error, not something to interpolate away. */
+/** The tag of a `gql`...`` template: the bare identifier `gql`, or a `x.gql` member access. */
+function isGqlTag(tag) {
+  if (ts.isIdentifier(tag)) {
+    return tag.text === 'gql';
+  }
+  return ts.isPropertyAccessExpression(tag) && tag.name.text === 'gql';
+}
+
+/**
+ * Extracts every `gql`...`` tagged-template body from `file`.
+ *
+ * This walks the TypeScript AST rather than scanning the raw source. A regular
+ * expression over the text cannot tell an executable tagged template from one
+ * sitting inside a line comment, a block comment, or an ordinary string literal,
+ * so a commented-out example used to be collected as a client operation and
+ * could redden `make lint-contracts` although no real operation changed — the
+ * same parser-over-regex rule #447 records for workflow YAML.
+ *
+ * The body is the RAW text between the backticks, so a template carrying
+ * substitutions still reaches the caller with its `${` intact: these are static
+ * documents, and an interpolated one is a hard error rather than something to
+ * interpolate away.
+ */
 export function extractGqlDocuments(file) {
   const source = readFileSync(file, 'utf8');
+  const sourceFile = ts.createSourceFile(
+    file,
+    source,
+    ts.ScriptTarget.Latest,
+    /* setParentNodes */ false,
+    file.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS
+  );
   const documents = [];
-  const pattern = /\bgql`([\s\S]*?)`/g;
-  let match = pattern.exec(source);
 
-  while (match !== null) {
-    documents.push({ file, body: match[1] });
-    match = pattern.exec(source);
-  }
+  const visit = node => {
+    if (ts.isTaggedTemplateExpression(node) && isGqlTag(node.tag)) {
+      const template = node.template;
+      // getStart/getEnd span the backticks; the body is what sits between them.
+      documents.push({
+        file,
+        body: source.slice(template.getStart(sourceFile) + 1, template.getEnd() - 1),
+      });
+    }
+    ts.forEachChild(node, visit);
+  };
+
+  ts.forEachChild(sourceFile, visit);
 
   return documents;
 }

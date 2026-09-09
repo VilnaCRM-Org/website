@@ -3,168 +3,234 @@
 # Coverage for .github/dependabot.yml's security-update stream (issue #341).
 #
 # The stalled-refresh problem #341 records is not "Dependabot is unconfigured" —
-# it is that a CVE fix had to queue behind monthly grouped feature bumps under an
-# `open-pull-requests-limit` of 2. The fix is a FOURTH block that carries only
-# security advisories, weekly, at a higher limit. Two regressions would silently
-# undo it: deleting that block, and "simplifying" the file by moving
-# `applies-to: security-updates` onto an existing block — which converts a
-# version-updates stream into a security one and stops feature bumps entirely,
-# while still leaving a security stream present.
+# it is that a CVE fix was folded into the monthly grouped feature-bump PR. The
+# fix is a SECOND GROUP on the existing bun entry, scoped with
+# `applies-to: security-updates`, so an advisory is raised as its own PR.
 #
-# So the assertions below check both directions, and every one of them reads the
-# file through a YAML parser. This repository bans regex-scanning of workflow
-# YAML (CLAUDE.md, issue #447): a `grep 'applies-to'` here could not tell a real
-# key from the same text inside this file's own comments.
+# `applies-to` is a key of a `groups` entry. GitHub's Dependabot options
+# reference documents it nowhere else, so the same key written directly on an
+# `updates` entry is simply not read — an earlier revision of this file did that
+# on a duplicate bun `/` entry and shipped a stream GitHub never had. Hence the
+# two structural assertions below: no `updates` entry may carry `applies-to`,
+# and there may be exactly one bun entry for '/'.
+#
+# Every assertion reads the file through a YAML parser. This repository bans
+# regex-scanning of config YAML (CLAUDE.md, issue #447): a `grep 'applies-to'`
+# here could not tell a real key from the same text inside this file's own
+# comments.
 
 load './test_helper.bash'
 
 DEPENDABOT="$PROJECT_ROOT/.github/dependabot.yml"
 
-# Emit one pipe-delimited row per update block, parsed with js-yaml:
-#   ecosystem|applies-to|interval|limit|labels|commit-prefix|grouped
-summarize() {
+# One pipe-delimited row per update block:
+#   ecosystem|directories|entry-level-applies-to|interval|limit|labels|prefix
+entries() {
   node -e '
     const yaml = require(process.env.PROJECT_ROOT + "/node_modules/js-yaml");
     const fs = require("fs");
     const doc = yaml.load(fs.readFileSync(process.argv[1], "utf8"));
     for (const u of doc.updates) {
+      const dirs = u.directories || [u.directory];
       process.stdout.write([
         u["package-ecosystem"],
-        u["applies-to"] || "version-updates",
+        dirs.join(","),
+        "applies-to" in u ? u["applies-to"] : "-",
         u.schedule && u.schedule.interval,
         u["open-pull-requests-limit"],
         (u.labels || []).join(","),
         u["commit-message"] && u["commit-message"].prefix,
-        u.groups ? "grouped" : "ungrouped",
       ].join("|") + "\n");
     }
   ' "$1"
 }
 
-# The invariant a "collapse" regression breaks: every ecosystem that had a
-# version-updates stream still has one.
-assert_version_streams_intact() {
+# One row per group of the given ecosystem: ecosystem|group-name|applies-to
+groups_of() {
+  node -e '
+    const yaml = require(process.env.PROJECT_ROOT + "/node_modules/js-yaml");
+    const fs = require("fs");
+    const doc = yaml.load(fs.readFileSync(process.argv[1], "utf8"));
+    for (const u of doc.updates) {
+      if (u["package-ecosystem"] !== process.argv[2]) continue;
+      for (const [name, g] of Object.entries(u.groups || {})) {
+        process.stdout.write(
+          [u["package-ecosystem"], name, g["applies-to"] || "version-updates"].join("|") + "\n"
+        );
+      }
+    }
+  ' "$1" "$2"
+}
+
+# The invariant a "collapse" regression breaks: the bun entry still carries a
+# group that handles ordinary version updates.
+assert_version_group_intact() {
   local rows="$1"
-  local ecosystem
-  for ecosystem in bun github-actions docker; do
-    if ! printf '%s\n' "$rows" | grep -q "^${ecosystem}|version-updates|"; then
-      echo "Expected a version-updates stream for '$ecosystem'" >&2
-      printf '%s\n' "$rows" >&2
-      return 1
-    fi
-  done
+  if ! printf '%s\n' "$rows" | grep -q '^bun|.*|version-updates$'; then
+    echo 'Expected a bun group with applies-to: version-updates' >&2
+    printf '%s\n' "$rows" >&2
+    return 1
+  fi
+}
+
+assert_security_group_present() {
+  local rows="$1"
+  if ! printf '%s\n' "$rows" | grep -q '^bun|.*|security-updates$'; then
+    echo 'Expected a bun group with applies-to: security-updates' >&2
+    printf '%s\n' "$rows" >&2
+    return 1
+  fi
 }
 
 setup() {
   export PROJECT_ROOT
 }
 
-# --- Positive: the security stream exists and is shaped as #341 requires -------
+# --- Positive: the security stream exists in the shape GitHub honours ----------
 
-@test "declares a bun security-updates stream" {
-  run summarize "$DEPENDABOT"
+@test "the bun entry declares a security-updates group" {
+  run groups_of "$DEPENDABOT" bun
   [ "$status" -eq 0 ]
-  assert_output_contains 'bun|security-updates|'
+  assert_security_group_present "$output"
 }
 
-@test "the security stream is weekly, not monthly" {
-  local row
-  row="$(summarize "$DEPENDABOT" | grep '^bun|security-updates|')"
-  [ "$(printf '%s' "$row" | cut -d'|' -f3)" = 'weekly' ]
+@test "the bun entry keeps an explicit version-updates group" {
+  # Explicit rather than defaulted, so neither group's scope is implicit once a
+  # sibling group narrows the other half.
+  local rows
+  rows="$(groups_of "$DEPENDABOT" bun)"
+  assert_version_group_intact "$rows"
+  # And it is spelled out in the file, not inferred by this helper's fallback.
+  run node -e '
+    const yaml = require(process.env.PROJECT_ROOT + "/node_modules/js-yaml");
+    const fs = require("fs");
+    const doc = yaml.load(fs.readFileSync(process.argv[1], "utf8"));
+    const bun = doc.updates.find((u) => u["package-ecosystem"] === "bun");
+    const scopes = Object.values(bun.groups).map((g) => g["applies-to"]);
+    if (scopes.some((s) => s === undefined)) {
+      console.error("a bun group leaves applies-to implicit: " + JSON.stringify(scopes));
+      process.exit(1);
+    }
+  ' "$DEPENDABOT"
+  [ "$status" -eq 0 ]
 }
 
-@test "the security stream carries the dependencies, security and automated labels" {
-  local labels
-  labels="$(summarize "$DEPENDABOT" | grep '^bun|security-updates|' | cut -d'|' -f5)"
-  [[ "$labels" == *dependencies* ]]
-  [[ "$labels" == *security* ]]
-  [[ "$labels" == *automated* ]]
+# --- Positive: the unsupported shape this fix removed must not come back ------
+
+@test "no updates entry carries applies-to, which is a groups-only key" {
+  local rows
+  rows="$(entries "$DEPENDABOT")"
+  # Column 3 is the entry-level `applies-to`; '-' means the key is absent.
+  if printf '%s\n' "$rows" | cut -d'|' -f3 | grep -qv '^-$'; then
+    echo 'An updates entry carries applies-to; GitHub ignores it there' >&2
+    printf '%s\n' "$rows" >&2
+    return 1
+  fi
 }
 
-@test "the security stream uses the same commit-message prefix as the other blocks" {
-  local rows prefixes
-  rows="$(summarize "$DEPENDABOT")"
-  prefixes="$(printf '%s\n' "$rows" | cut -d'|' -f6 | sort -u)"
+@test "there is exactly one bun entry for the root directory" {
+  local rows count
+  rows="$(entries "$DEPENDABOT")"
+  count="$(printf '%s\n' "$rows" | grep -c '^bun|/|')"
+  [ "$count" -eq 1 ]
+}
+
+# --- Positive: the three version-updates blocks survive ------------------------
+
+@test "the bun, github-actions and docker entries are preserved with their cadence" {
+  local rows
+  rows="$(entries "$DEPENDABOT")"
+  printf '%s\n' "$rows" | grep -q '^bun|/|-|monthly|2|'
+  printf '%s\n' "$rows" | grep -q '^github-actions|/|-|weekly|5|'
+  printf '%s\n' "$rows" | grep -q '^docker|/,/src/test/load|-|weekly|5|'
+}
+
+@test "every entry uses the same commit-message prefix" {
+  local prefixes
+  prefixes="$(entries "$DEPENDABOT" | cut -d'|' -f7 | sort -u)"
   [ "$prefixes" = 'deps' ]
 }
 
-@test "the security stream is ungrouped so one advisory is one reviewable PR" {
-  local row
-  row="$(summarize "$DEPENDABOT" | grep '^bun|security-updates|')"
-  [ "$(printf '%s' "$row" | cut -d'|' -f7)" = 'ungrouped' ]
+@test "the bun entry carries the dependencies and automated labels" {
+  local labels
+  labels="$(entries "$DEPENDABOT" | grep '^bun|' | cut -d'|' -f6)"
+  [[ "$labels" == *dependencies* ]]
+  [[ "$labels" == *automated* ]]
 }
 
-# --- Boundary: the limit must be strictly higher than the version-updates one --
+# --- Negative: each regression must be detected --------------------------------
 
-@test "the security PR limit is strictly higher than the bun version-updates limit" {
-  local rows security version
-  rows="$(summarize "$DEPENDABOT")"
-  security="$(printf '%s\n' "$rows" | grep '^bun|security-updates|' | cut -d'|' -f4)"
-  version="$(printf '%s\n' "$rows" | grep '^bun|version-updates|' | cut -d'|' -f4)"
-  [ -n "$security" ]
-  [ -n "$version" ]
-  [ "$security" -gt "$version" ]
-}
+@test "detects the security group being removed" {
+  local mutated="$BATS_TEST_TMPDIR/removed.yml"
+  node -e '
+    const yaml = require(process.env.PROJECT_ROOT + "/node_modules/js-yaml");
+    const fs = require("fs");
+    const doc = yaml.load(fs.readFileSync(process.argv[1], "utf8"));
+    const bun = doc.updates.find((u) => u["package-ecosystem"] === "bun");
+    for (const [name, g] of Object.entries(bun.groups)) {
+      if (g["applies-to"] === "security-updates") delete bun.groups[name];
+    }
+    fs.writeFileSync(process.argv[2], yaml.dump(doc));
+  ' "$DEPENDABOT" "$mutated"
 
-# --- Positive: the three pre-existing version-updates blocks survive -----------
-
-@test "the bun, github-actions and docker version-updates streams are preserved" {
   local rows
-  rows="$(summarize "$DEPENDABOT")"
-  assert_version_streams_intact "$rows"
+  rows="$(groups_of "$mutated" bun)"
+  run assert_security_group_present "$rows"
+  [ "$status" -ne 0 ]
 }
 
-@test "adding the security stream did not change the existing blocks' cadence" {
-  local rows
-  rows="$(summarize "$DEPENDABOT")"
-  printf '%s\n' "$rows" | grep -q '^bun|version-updates|monthly|2|'
-  printf '%s\n' "$rows" | grep -q '^github-actions|version-updates|weekly|5|'
-  printf '%s\n' "$rows" | grep -q '^docker|version-updates|weekly|5|'
-}
-
-# --- Negative: the collapse regression must be detected ------------------------
-
-@test "detects a bun version-updates block collapsed into the security stream" {
-  # The regression: instead of a fourth block, `applies-to: security-updates` is
-  # moved onto the existing bun block. A security stream still exists, so a naive
+@test "detects the version-updates group collapsed into the security scope" {
+  # The regression: rather than a sibling group, the existing group's scope is
+  # narrowed to security-updates. A security stream still exists, so a naive
   # presence check stays green while feature updates have silently stopped.
   local mutated="$BATS_TEST_TMPDIR/collapsed.yml"
   node -e '
     const yaml = require(process.env.PROJECT_ROOT + "/node_modules/js-yaml");
     const fs = require("fs");
     const doc = yaml.load(fs.readFileSync(process.argv[1], "utf8"));
-    doc.updates = doc.updates.filter(u => u["applies-to"] !== "security-updates");
-    doc.updates[0]["applies-to"] = "security-updates";
+    const bun = doc.updates.find((u) => u["package-ecosystem"] === "bun");
+    for (const g of Object.values(bun.groups)) g["applies-to"] = "security-updates";
     fs.writeFileSync(process.argv[2], yaml.dump(doc));
   ' "$DEPENDABOT" "$mutated"
 
   local rows
-  rows="$(summarize "$mutated")"
+  rows="$(groups_of "$mutated" bun)"
   # The security stream is still there...
-  printf '%s\n' "$rows" | grep -q '^bun|security-updates|'
+  assert_security_group_present "$rows"
   # ...but the invariant that matters is red.
-  run assert_version_streams_intact "$rows"
+  run assert_version_group_intact "$rows"
   [ "$status" -ne 0 ]
 }
 
-@test "detects the security stream being removed entirely" {
-  local mutated="$BATS_TEST_TMPDIR/removed.yml"
+@test "detects applies-to moved back onto an updates entry" {
+  # The exact defect this file's history records: a duplicate bun '/' entry
+  # carrying an entry-level `applies-to`, a key GitHub does not read there.
+  local mutated="$BATS_TEST_TMPDIR/entry-level.yml"
   node -e '
     const yaml = require(process.env.PROJECT_ROOT + "/node_modules/js-yaml");
     const fs = require("fs");
     const doc = yaml.load(fs.readFileSync(process.argv[1], "utf8"));
-    doc.updates = doc.updates.filter(u => u["applies-to"] !== "security-updates");
+    const bun = doc.updates.find((u) => u["package-ecosystem"] === "bun");
+    doc.updates.push({
+      "package-ecosystem": "bun",
+      directory: "/",
+      "applies-to": "security-updates",
+      schedule: bun.schedule,
+    });
     fs.writeFileSync(process.argv[2], yaml.dump(doc));
   ' "$DEPENDABOT" "$mutated"
 
-  run summarize "$mutated"
-  [ "$status" -eq 0 ]
-  refute_output_contains 'bun|security-updates|'
+  local rows
+  rows="$(entries "$mutated")"
+  # Both structural guards go red on it: the unsupported key...
+  printf '%s\n' "$rows" | cut -d'|' -f3 | grep -q '^security-updates$'
+  # ...and the duplicated bun '/' entry.
+  [ "$(printf '%s\n' "$rows" | grep -c '^bun|/|')" -eq 2 ]
 }
 
 # --- Negative: the parser, not a text scan, is what decides --------------------
 
-@test "a commented-out security stream does not satisfy the presence check" {
+@test "a commented-out security group does not satisfy the presence check" {
   # Guards the assertions above against being satisfied by the file's own prose:
   # every occurrence of the string in a comment is invisible to js-yaml, which is
   # exactly why this suite parses instead of grepping.
@@ -173,16 +239,20 @@ setup() {
     const yaml = require(process.env.PROJECT_ROOT + "/node_modules/js-yaml");
     const fs = require("fs");
     const doc = yaml.load(fs.readFileSync(process.argv[1], "utf8"));
-    doc.updates = doc.updates.filter(u => u["applies-to"] !== "security-updates");
+    const bun = doc.updates.find((u) => u["package-ecosystem"] === "bun");
+    for (const [name, g] of Object.entries(bun.groups)) {
+      if (g["applies-to"] === "security-updates") delete bun.groups[name];
+    }
     fs.writeFileSync(
       process.argv[2],
       yaml.dump(doc) + "\n# applies-to: security-updates (disabled)\n"
     );
   ' "$DEPENDABOT" "$mutated"
 
-  run summarize "$mutated"
-  [ "$status" -eq 0 ]
-  refute_output_contains 'bun|security-updates|'
+  local rows
+  rows="$(groups_of "$mutated" bun)"
+  run assert_security_group_present "$rows"
+  [ "$status" -ne 0 ]
   run grep -c 'applies-to: security-updates' "$mutated"
   [ "$output" -ge 1 ]
 }

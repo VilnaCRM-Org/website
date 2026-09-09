@@ -120,6 +120,52 @@ describe('client GraphQL operation gate', () => {
     expect(result.documentCount).toBe(1);
   });
 
+  // Parser-over-regex (FINDING: a scan of the raw source cannot tell executable
+  // code from a commented-out or quoted lookalike, so a dead example used to be
+  // collected as a client operation and could redden the gate on its own).
+  it('ignores a gql template inside a line comment', () => {
+    const result = check(
+      `${gqlModule(VALID_DOCUMENT)}\n// const dead = gql\`query Dead { nope }\`;\n`
+    );
+
+    expect(result.failures).toEqual([]);
+    expect(result.documentCount).toBe(1);
+  });
+
+  it('ignores a gql template inside a block comment', () => {
+    const result = check(
+      `${gqlModule(VALID_DOCUMENT)}\n/* legacy: gql\`query Dead { nope }\` */\n`
+    );
+
+    expect(result.failures).toEqual([]);
+    expect(result.documentCount).toBe(1);
+  });
+
+  it('ignores a gql template inside an ordinary string literal', () => {
+    const result = check(
+      `${gqlModule(VALID_DOCUMENT)}\nexport const snippet = 'gql\`query Dead { nope }\`';\n`
+    );
+
+    expect(result.failures).toEqual([]);
+    expect(result.documentCount).toBe(1);
+  });
+
+  it('collects a member-access gql tag, as the previous scanner did', () => {
+    const result = check(
+      `import * as Apollo from '@apollo/client';\n\nexport default Apollo.gql\`${VALID_DOCUMENT}\`;\n`
+    );
+
+    expect(result.failures).toEqual([]);
+    expect(result.documentCount).toBe(1);
+  });
+
+  it('collects a gql template from a .tsx module', () => {
+    const result = check(gqlModule(VALID_DOCUMENT), 'components/form/query.tsx');
+
+    expect(result.failures).toEqual([]);
+    expect(result.documentCount).toBe(1);
+  });
+
   it('rejects a selection the schema does not declare', () => {
     const result = check(gqlModule(VALID_DOCUMENT.replace('initials', 'intials')));
 

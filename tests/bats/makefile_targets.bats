@@ -793,6 +793,29 @@ STUB
   [ "$status" -ne 0 ]
 }
 
+@test "generate-routes runs the generator in verify-only mode under ROUTE_MANIFEST_CHECK" {
+  reset_command_log
+
+  # GNU Make would parse a trailing `--check` as one of its own options, so the
+  # verify-only mode is reachable only through this variable.
+  run_make_target generate-routes ROUTE_MANIFEST_CHECK=1
+  [ "$status" -eq 0 ]
+  assert_log_contains 'node scripts/ci/generate-route-manifest.mjs --check'
+
+  reset_command_log
+  run_make_target generate-routes ROUTE_MANIFEST_CHECK=true
+  [ "$status" -eq 0 ]
+  assert_log_contains 'node scripts/ci/generate-route-manifest.mjs --check'
+
+  # Anything else keeps the default writer behaviour rather than silently
+  # verifying: an unrecognised value must not disable the write.
+  reset_command_log
+  run_make_target generate-routes ROUTE_MANIFEST_CHECK=maybe
+  [ "$status" -eq 0 ]
+  run grep -- '--check' "$COMMAND_LOG"
+  [ "$status" -ne 0 ]
+}
+
 @test "the lint aggregate never runs the route-manifest writer" {
   # generate-routes rewrites config/routes.json; wiring it into a gate would make
   # that gate unfalsifiable. The drift check is the Jest spec
