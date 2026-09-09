@@ -55,3 +55,31 @@ updates:
     commit-message:
       prefix: 'deps'
       include: 'scope'
+
+  # Security-update stream (issue #341). The three blocks above default to
+  # `applies-to: version-updates`; this fourth one carries ONLY security
+  # advisories, so a CVE fix is raised weekly and is not queued behind the
+  # monthly grouped feature bumps or capped by their small PR limit. It is
+  # deliberately ungrouped: one advisory, one reviewable PR.
+  #
+  # NOT YET ACTIVE: `applies-to: security-updates` is inert until a maintainer
+  # enables Dependabot security updates for this repository in
+  # Settings -> Code security. Until that switch is on, this block configures a
+  # stream that GitHub never opens a PR for, so the "weekly security-update
+  # stream" acceptance criterion of #341 is only half met from the repository
+  # side.
+  - package-ecosystem: 'bun'
+    directory: '/'
+    applies-to: 'security-updates'
+    schedule:
+      interval: 'weekly'
+      time: '09:00'
+      timezone: 'UTC'
+    open-pull-requests-limit: 10
+    labels:
+      - 'dependencies'
+      - 'security'
+      - 'automated'
+    commit-message:
+      prefix: 'deps'
+      include: 'scope'
