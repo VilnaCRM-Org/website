@@ -49,6 +49,20 @@ const ROUTING_FN_PATH = path.join(ROOT, 'scripts/cloudfront_routing.js');
 const HSTS_MIN_MAX_AGE = 31536000; // one year — the HSTS preload-list minimum
 
 /**
+ * The powerful features the site never uses and that carry the highest abuse value if a
+ * third-party frame or an injected script ever reaches for one. The policy may deny more;
+ * it may not deny fewer.
+ */
+const MUST_DENY_FEATURES = Object.freeze([
+  'camera',
+  'display-capture',
+  'geolocation',
+  'microphone',
+  'payment',
+  'usb',
+]);
+
+/**
  * Match a whole semicolon-delimited directive, not a substring: `notpreload` and
  * `xincludeSubDomains` must not satisfy a `preload` / `includeSubDomains` requirement.
  */
@@ -59,6 +73,17 @@ function hasDirective(value, directive) {
 function directiveValue(value, directive) {
   const match = new RegExp(String.raw`(?:^|;)\s*${directive}=([^;\s]+)\s*(?:;|$)`, 'i').exec(value);
   return match === null ? null : match[1];
+}
+
+/**
+ * A `Permissions-Policy` directive denies a feature outright only when its allow-list is
+ * EMPTY: `camera=()`. `camera=(self)` still permits the feature on this origin, and
+ * `camera=*` permits it everywhere, so both must fail this check rather than count as a
+ * denial. Directives are comma-delimited, and the whole entry is matched so a lookalike
+ * feature name (`xcamera=()`) can never satisfy `camera`.
+ */
+function deniesFeature(value, feature) {
+  return new RegExp(String.raw`(?:^|,)\s*${feature}\s*=\s*\(\s*\)\s*(?:,|$)`, 'i').test(value);
 }
 
 function checkHsts(value) {
@@ -95,6 +120,10 @@ const BASELINE = {
   'strict-transport-security': {
     requirement: `max-age must be >= ${HSTS_MIN_MAX_AGE} (1 year) and include includeSubDomains and preload`,
     check: value => checkHsts(value),
+  },
+  'permissions-policy': {
+    requirement: `must deny every unused powerful feature with an empty allow-list: ${MUST_DENY_FEATURES.join(', ')}`,
+    check: value => MUST_DENY_FEATURES.every(feature => deniesFeature(value, feature)),
   },
 };
 

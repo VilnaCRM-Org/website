@@ -73,6 +73,7 @@ describe('cloudfront_security_headers handler', () => {
       expect(Object.keys(policy).sort()).toEqual(
         [
           'content-security-policy',
+          'permissions-policy',
           'referrer-policy',
           'strict-transport-security',
           'x-content-type-options',
@@ -81,6 +82,25 @@ describe('cloudfront_security_headers handler', () => {
       );
       expect(policy['content-security-policy']).toContain("frame-ancestors 'none'");
       expect(policy['x-frame-options']).toBe('DENY');
+    });
+
+    test('permissions-policy denies every powerful feature the site does not use', () => {
+      // The exact string, not a substring match: an added `=(self)` allow-list would
+      // still satisfy a `toContain('camera')` assertion while re-permitting the feature.
+      const permissionsPolicy: string = policy['permissions-policy'] ?? '';
+
+      expect(permissionsPolicy).toBe(
+        'accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), ' +
+          'fullscreen=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), ' +
+          'payment=(), picture-in-picture=(), publickey-credentials-get=(), screen-wake-lock=(), ' +
+          'usb=(), xr-spatial-tracking=()'
+      );
+
+      // Every directive is a denial — an empty allow-list — and none of them grants the
+      // feature to this origin (`(self)`) or to everyone (`*`).
+      for (const directive of permissionsPolicy.split(', ')) {
+        expect(directive).toMatch(/^[a-z-]+=\(\)$/);
+      }
     });
   });
 
@@ -124,6 +144,7 @@ describe('cloudfront_security_headers handler', () => {
       headers: {
         'x-frame-options': { value: 'ALLOWALL' },
         'strict-transport-security': { value: 'max-age=0' },
+        'permissions-policy': { value: 'camera=*, geolocation=*' },
       },
     };
 
@@ -133,6 +154,7 @@ describe('cloudfront_security_headers handler', () => {
     expect(result.headers?.['strict-transport-security']?.value).toBe(
       policy['strict-transport-security']
     );
+    expect(result.headers?.['permissions-policy']?.value).toBe(policy['permissions-policy']);
   });
 
   describe('missing or malformed response', () => {
@@ -162,6 +184,7 @@ describe('cloudfront_security_headers handler', () => {
 
       expect(result).toBe(response);
       expect(result.headers?.['x-frame-options']).toBeUndefined();
+      expect(result.headers?.['permissions-policy']).toBeUndefined();
       expect(vmConsole.log).toHaveBeenCalled();
     });
   });

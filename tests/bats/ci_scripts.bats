@@ -642,6 +642,43 @@ run_headers_gate() {
   assert_output_contains 'x-frame-options'
 }
 
+@test "lint-headers rejects a permissions-policy that re-permits a denied feature" {
+  # `camera=(self)` and `camera=*` are allow-lists, not denials, and `xcamera=()` is a
+  # lookalike that must not satisfy the `camera` requirement. Each has to go red.
+  local value
+  for value in "camera=(self), geolocation=(), microphone=(), payment=(), usb=(), display-capture=()" \
+    "camera=*, geolocation=(), microphone=(), payment=(), usb=(), display-capture=()" \
+    "xcamera=(), geolocation=(), microphone=(), payment=(), usb=(), display-capture=()"; do
+    setup_headers_sandbox
+    node -e '
+      const fs = require("node:fs");
+      const file = process.argv[1];
+      const policy = JSON.parse(fs.readFileSync(file, "utf8"));
+      policy.headers["permissions-policy"] = process.argv[2];
+      fs.writeFileSync(file, JSON.stringify(policy, null, 2));
+    ' "$HEADERS_SANDBOX/config/security-headers.json" "$value"
+
+    run_headers_gate
+    [ "$status" -ne 0 ]
+    assert_output_contains 'permissions-policy'
+  done
+}
+
+@test "lint-headers fails when permissions-policy is dropped from the policy" {
+  setup_headers_sandbox
+  node -e '
+    const fs = require("node:fs");
+    const file = process.argv[1];
+    const policy = JSON.parse(fs.readFileSync(file, "utf8"));
+    delete policy.headers["permissions-policy"];
+    fs.writeFileSync(file, JSON.stringify(policy, null, 2));
+  ' "$HEADERS_SANDBOX/config/security-headers.json"
+
+  run_headers_gate
+  [ "$status" -ne 0 ]
+  assert_output_contains 'permissions-policy'
+}
+
 @test "lint-headers fails when HSTS drops includeSubDomains or preload" {
   setup_headers_sandbox
   node -e '

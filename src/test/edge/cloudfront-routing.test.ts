@@ -236,6 +236,27 @@ describe('cloudfront_routing handler', () => {
         expect(response.headers[name]?.value).toBe(expected);
       }
     );
+
+    // The table above is generated from the policy file, so it would pass vacuously if a
+    // header were dropped from the policy instead of from this handler. Naming the set
+    // here keeps that removal visible in the diff.
+    test('the policy the 404 is graded against is the full header set', () => {
+      expect(Object.keys(policyHeaders).sort()).toEqual([
+        'content-security-policy',
+        'permissions-policy',
+        'referrer-policy',
+        'strict-transport-security',
+        'x-content-type-options',
+        'x-frame-options',
+      ]);
+    });
+
+    test('denies every powerful feature on the synthetic 404 too', () => {
+      expect(response.headers['permissions-policy']?.value).toBe(
+        policyHeaders['permissions-policy']
+      );
+      expect(response.headers['permissions-policy']?.value).toContain('camera=()');
+    });
   });
 
   describe('missing or malformed request', () => {
