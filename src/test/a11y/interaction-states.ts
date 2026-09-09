@@ -45,6 +45,18 @@ export const INTERACTION_STATES = {
     route: '/',
     description: 'mobile navigation drawer open',
   },
+  /**
+   * The password-hint tooltip, open over the sign-up form.
+   *
+   * The toolkit's tooltip is a `role="button"` trigger whose `aria-expanded`
+   * and `aria-controls` relationship only exists once it opens, and whose panel
+   * is not in the initial DOM at all — so the route scan, which only ever sees
+   * initial load, can never reach it.
+   */
+  tooltipOpen: {
+    route: '/',
+    description: 'password-hint tooltip open over the sign-up form',
+  },
   /** One Swagger operation expanded to its documented responses. */
   swaggerOperationExpanded: {
     route: '/swagger',

@@ -79,3 +79,45 @@ Work the epics in the order the dependency graph gives, starting with the four L
 stories. The first fix that turns a red check green is the client-layer CSSOM rewrite of the
 checkbox hover-token assertion; the byte budget is measured only over a tree that already
 tests clean.
+
+## FR/NFR Review Outcome (2026-09-09)
+
+The gate ran against the implemented change. Iteration 1 returned 11 findings;
+iteration 2 returned 6, of which 4 were then closed. The plugin runner is flaky
+(its nested `claude` call fails on transport roughly two runs in three), so
+iteration 2 was produced through the reviewer agent under the skill's documented
+degrade path, with the gate run itself recorded as
+`SKIPPED: claude transport failure after retry`.
+
+### Two standing deviations, accepted with reasons
+
+**FR2 — no `UI_TOOLKIT_VERSION` variable.** The requirement asks for the pin to
+live in a single `.env` variable, in the shape `USER_SERVICE_VERSION` uses. It
+does not exist. The version is read from the release URL in `package.json`,
+because that URL is the only thing that decides which bytes install: a second
+declaration could not change the install, only disagree with it. What the
+requirement is actually protecting — an unheld restatement of the pin — is
+covered instead by `verifyUiToolkit.mjs`, which holds both the recorded
+`version` and the recorded `tarballUrl` to the manifest. Recorded here rather
+than resolved silently: if the PRD wants the variable regardless, that is a
+one-line addition plus a gate assertion.
+
+**FR5 — one file changed outside the seam.** FR5's verification method is "0
+changed files outside `src/components/ui-*/index.*` and `types.ts`".
+`src/components/ui-card-item/card-content.tsx` changed: the toolkit's
+`UiTypographyProps` declares `id?: string` with no `| undefined`, and this
+repository compiles under `exactOptionalPropertyTypes`, so a conditional `id`
+had to become a conditional spread. The seam held at the import level and failed
+at the prop level. Tracked upstream as `VilnaCRM-Org/ui-toolkit#153`; the call
+site reverts to its original form when that lands.
+
+### FR28 — open, not deferred silently
+
+The new-tab i18n key still lives in `src/features/landing/i18n`, read by the
+shared `src/components/ui-link`. It resolves today because i18next merges every
+catalogue into one bundle, and the only `_blank` consumer is inside `landing`.
+It is a real boundary defect all the same, and one `dependency-cruiser` cannot
+see because the coupling is a string key rather than an import. Closing it needs
+`scripts/localizationGenerator.js` to walk a shared root, which the architecture
+document already scoped.
+
