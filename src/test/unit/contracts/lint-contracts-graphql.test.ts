@@ -151,9 +151,8 @@ describe('client GraphQL operation gate', () => {
   });
 
   it('collects a member-access gql tag, as the previous scanner did', () => {
-    const result = check(
-      `import * as Apollo from '@apollo/client';\n\nexport default Apollo.gql\`${VALID_DOCUMENT}\`;\n`
-    );
+    const importLine: string = "import * as Apollo from '@apollo/client';";
+    const result = check(`${importLine}\n\nexport default Apollo.gql\`${VALID_DOCUMENT}\`;\n`);
 
     expect(result.failures).toEqual([]);
     expect(result.documentCount).toBe(1);
