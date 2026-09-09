@@ -119,6 +119,15 @@ const EDGE_COVERAGE_THRESHOLD = {
 // improves.
 const CLIENT_COVERAGE_THRESHOLD = {
   global: { branches: 92, functions: 95, lines: 97, statements: 97 },
+  // `scripts/verifyUiToolkit.mjs` is the dependency's only integrity signal, and
+  // the global floor above could not fail on it: one uncovered module barely
+  // moves a repo-wide percentage. A path-keyed group holds it to 100% on its
+  // own. Jest resolves a threshold key with `path.resolve()` and does NOT
+  // interpolate `<rootDir>`, so this stays a plain relative path; an unmatched
+  // key is itself an error ("Coverage data for … was not found"), which is what
+  // makes the criterion fail in both directions — an uncovered branch AND a run
+  // that never loads the module at all.
+  './scripts/verifyUiToolkit.mjs': { branches: 100, functions: 100, lines: 100, statements: 100 },
 };
 
 const SERVER_COVERAGE_THRESHOLD = {

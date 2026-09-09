@@ -225,7 +225,7 @@ NETWORK_NAME                = website-network
 # Dev-side lint and test phases are grouped so local developers and agents can
 # run the same CI stages as the pipeline. The parallel runners execute each
 # target concurrently, group their output, and aggregate exit codes.
-CI_LINT_TARGETS             = lint-next lint-tsc lint-md lint-api-versions lint-headers lint-prod-guardrails lint-pins lint-workflow-pins
+CI_LINT_TARGETS             = lint-next lint-tsc lint-md lint-api-versions lint-ui-toolkit lint-headers lint-prod-guardrails lint-pins lint-workflow-pins
 CI_TEST_TARGETS             = ci-test-unit-client ci-test-unit-server ci-test-integration ci-test-contract
 CI_LINT_RUNNER              = ./scripts/ci/run-parallel.sh ci-lint
 CI_TEST_RUNNER              = ./scripts/ci/run-parallel.sh ci-test
@@ -605,6 +605,20 @@ generate-localization: ## Regenerate the gitignored pages/i18n/localization.json
 lint-api-versions: ## Verify OpenAPI and GraphQL reference the same pinned user-service release
 	$(DEV_READY) $(PM_EXEC) node scripts/contracts/check-api-versions.mjs
 
+# `@vilnacrm/ui-toolkit` is a GitHub release tarball, and bun records NO `sha512`
+# for a remote-tarball dependency, so the lockfile carries no integrity evidence
+# and osv-scanner cannot key the entry either. This gate is the only local proof
+# that the installed bytes are the reviewed bytes. Hermetic like
+# lint-api-versions above — no network, no host binary — so it belongs in the
+# `lint` aggregate and in CI_LINT_TARGETS rather than on a nightly.
+lint-ui-toolkit: ## Verify the installed @vilnacrm/ui-toolkit matches the committed SHA-256 digests
+	$(DEV_READY) $(PM_EXEC) node scripts/verifyUiToolkit.cli.mjs
+
+# The networked half: refreshes the digests from whatever is installed. Run it
+# only after re-reviewing a new release, never to clear a red lint-ui-toolkit.
+update-ui-toolkit: ## Refresh config/ui-toolkit-checksums.json from the installed package
+	$(DEV_READY) $(PM_EXEC) node -e "import('./scripts/verifyUiToolkit.mjs').then(async m => { const { writeFileSync } = await import('node:fs'); writeFileSync(m.CHECKSUMS_PATH, JSON.stringify(m.buildChecksumsFile(), null, 2) + '\n'); process.stdout.write('refreshed ' + m.CHECKSUMS_PATH + '\n'); })"
+
 lint-deps: generate-localization ## Validate architecture/import boundaries with dependency-cruiser
 	$(DEV_READY) $(PM_EXEC) $(DEPCRUISE_BIN) src pages tests --config .dependency-cruiser.js
 
@@ -669,7 +683,7 @@ lint-prod-guardrails: ## Enforce the production-safety invariants (privileged-wo
 # dev container would only ever see a stale copy of. Its workflow half was split
 # into lint-workflow-pins (#447) precisely because parsing the YAML costs a
 # node_modules import that this property forbids.
-lint: generate-localization lint-next lint-tsc lint-md lint-deps lint-api-versions lint-docker-policy lint-headers lint-security-txt lint-prod-guardrails lint-pins lint-workflow-pins ## Runs all linters: ESLint, TypeScript, Markdown, dependency-cruiser, the API version invariant, the Dockerfile registry/digest policy, the security-header gate, the RFC 9116 security.txt gate, the production-safety guardrails, the version-pin drift gate and the workflow Node-pin gate in sequence.
+lint: generate-localization lint-next lint-tsc lint-md lint-deps lint-api-versions lint-ui-toolkit lint-docker-policy lint-headers lint-security-txt lint-prod-guardrails lint-pins lint-workflow-pins ## Runs all linters: ESLint, TypeScript, Markdown, dependency-cruiser, the API version invariant, the Dockerfile registry/digest policy, the security-header gate, the RFC 9116 security.txt gate, the production-safety guardrails, the version-pin drift gate and the workflow Node-pin gate in sequence.
 
 # DELIBERATE DIVERGENCE FROM THE npm-tool LINT GATES (lint-next/tsc/md/deps),
 # for the same reason as lint-metrics below:

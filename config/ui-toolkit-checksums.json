@@ -1,0 +1,12 @@
+{
+  "comment": "SHA-256 digests of the INSTALLED @vilnacrm/ui-toolkit build artifacts. The package is a GitHub release tarball, and bun records no sha512 for a remote-tarball dependency, so these digests are the only local evidence that the bytes behind the pinned URL are the bytes that were reviewed. `make lint-ui-toolkit` verifies them offline; refresh them only through `make update-ui-toolkit` after re-reviewing the release.",
+  "algorithm": "sha256",
+  "version": "0.4.0",
+  "tarballUrl": "https://github.com/VilnaCRM-Org/ui-toolkit/releases/download/v0.4.0/vilnacrm-ui-toolkit-0.4.0.tgz",
+  "artifacts": {
+    "build/index.mjs": "2517bb8a4e651f130f2f68398d2ae488e6c86293c9198bc9af08ff3b37075bac",
+    "build/index.css": "1f64abf0c2203dafbe923dc9b1c520c62de58c7c96f2808022d48db0b6da030d",
+    "build/index.d.ts": "fe355d04b72b6a1f06fab863370403761471a8c31182263b393f88c64846a947",
+    "package.json": "fdddbef689c3568bc093c51207930e05ebff51a16dc8fe6cd151a10771a304f1"
+  }
+}

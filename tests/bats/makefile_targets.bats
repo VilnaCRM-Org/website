@@ -932,6 +932,34 @@ run_openapi_drift_script() {
   [ "$status" -eq 0 ]
 }
 
+# Issue #458: the ui-toolkit ships as a GitHub release tarball, and bun records no
+# `sha512` for a remote-tarball dependency, so the committed digests are the only
+# local evidence that the installed bytes are the reviewed bytes. Hermetic, hence
+# inside the aggregate rather than on a nightly.
+@test "lint-ui-toolkit shells out to the offline integrity check" {
+  reset_command_log
+
+  run_make_target lint-ui-toolkit EXEC_MODE=host
+  [ "$status" -eq 0 ]
+  assert_log_contains 'node scripts/verifyUiToolkit.cli.mjs'
+}
+
+@test "update-ui-toolkit refreshes the digests rather than verifying them" {
+  reset_command_log
+
+  run_make_target update-ui-toolkit EXEC_MODE=host
+  [ "$status" -eq 0 ]
+  assert_log_contains 'buildChecksumsFile'
+}
+
+@test "the lint aggregate includes the ui-toolkit integrity gate" {
+  run grep -E '^lint: .*lint-ui-toolkit' "$PROJECT_ROOT/Makefile"
+  [ "$status" -eq 0 ]
+
+  run grep -E '^CI_LINT_TARGETS .*lint-ui-toolkit' "$PROJECT_ROOT/Makefile"
+  [ "$status" -eq 0 ]
+}
+
 # Shared fixture for the dependency-CVE gate (#356): a stubbed osv-scanner that satisfies
 # ensure-osv.sh's idempotency probe (so no release is downloaded) and reports one advisory,
 # so the report-formatting assertions have something to find.
