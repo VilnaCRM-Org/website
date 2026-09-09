@@ -185,12 +185,17 @@ const config: Config = {
     '^(\\.{1,2}/.*)\\.js$': '$1',
     // `@vilnacrm/ui-toolkit` is ESM-only: its `exports` map declares an `import`
     // condition and no `require` one, so Jest's CJS resolver cannot find it at
-    // all. Point the bare specifier straight at the built bundle (and the
-    // stylesheet subpath) and let `transformIgnorePatterns` below hand the ESM
-    // to babel-jest.
-    '^@vilnacrm/ui-toolkit$': '<rootDir>/node_modules/@vilnacrm/ui-toolkit/build/index.mjs',
+    // all. Point the specifiers straight at the built files and let
+    // `transformIgnorePatterns` below hand the ESM to babel-jest.
+    //
+    // The order matters: `moduleNameMapper` takes the first pattern that
+    // matches, so the stylesheet has to be listed before the component-subpath
+    // rule that would otherwise claim it and resolve it to a non-existent
+    // `styles.css.mjs`.
     '^@vilnacrm/ui-toolkit/styles\\.css$':
       '<rootDir>/node_modules/@vilnacrm/ui-toolkit/build/index.css',
+    '^@vilnacrm/ui-toolkit/([^.]+)$': '<rootDir>/node_modules/@vilnacrm/ui-toolkit/build/$1.mjs',
+    '^@vilnacrm/ui-toolkit$': '<rootDir>/node_modules/@vilnacrm/ui-toolkit/build/index.mjs',
   },
   testPathIgnorePatterns: [
     '/node_modules/',
@@ -205,6 +210,10 @@ const config: Config = {
       'babel-jest',
       { configFile: '<rootDir>/babel-jest.config.js' },
     ],
+    // `next/jest` mocks images and stylesheets but not fonts, so a `.woff2`
+    // imported for its URL arrives as binary and fails to parse. See the
+    // transform for why it echoes the filename instead of one shared stub.
+    '^.+\\.woff2$': '<rootDir>/config/jest/fontAssetTransform.js',
   },
   // For the integration layer, the graphql-endpoint override in
   // tests/integration/setup.ts must run BEFORE jest.setup.ts: the latter boots

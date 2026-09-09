@@ -91,7 +91,12 @@ describe('UiLink adapter', () => {
       </UiLink>
     );
 
-    expect(getByRole('link', { name: LABEL })).toHaveAttribute('rel', HARDENED_REL);
+    // The accessible name carries the new-tab cue here, exactly as it does for a
+    // lowercase `_blank`: the adapter decides `opensNewTab` by case-folding, so a
+    // link that really does open a new tab announces it whatever case the caller
+    // wrote. Asserting the cue-bearing name rather than the bare label is what
+    // keeps that promise covered for the case variant too.
+    expect(getByRole('link', { name: NEW_TAB_NAME })).toHaveAttribute('rel', HARDENED_REL);
   });
 
   it('keeps caller tokens and de-duplicates the hardening ones', () => {

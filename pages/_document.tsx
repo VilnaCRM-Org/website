@@ -1,6 +1,7 @@
 import { Html, Head, Main, NextScript } from 'next/document';
 
 import { env } from '@/config/env';
+import { GOLOS_PRELOAD_HREFS } from '@/config/Fonts/preload';
 
 const mainLanguage: string = env.NEXT_PUBLIC_MAIN_LANGUAGE;
 
@@ -9,6 +10,16 @@ export default function Document(): React.ReactElement {
     <Html lang={mainLanguage}>
       <Head>
         <meta charSet="utf-8" />
+        {GOLOS_PRELOAD_HREFS.map(href => (
+          <link
+            key={href}
+            rel="preload"
+            href={href}
+            as="font"
+            type="font/woff2"
+            crossOrigin="anonymous"
+          />
+        ))}
         <meta name="description" content="VilnaCRM platform for customer relationship management" />
         <meta name="apple-mobile-web-app-title" content="VilnaCRM" />
         <meta name="application-name" content="VilnaCRM" />

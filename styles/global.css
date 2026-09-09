@@ -9,12 +9,16 @@
  * What `next/font` also gave us, and is re-declared by hand below, is the
  * metric-adjusted fallback: without it `font-display: swap` paints in Arial at
  * Arial's metrics and then reflows every line when the real face arrives, which
- * is a CLS regression on every page. The overrides are the same ones
- * `next/font` derives — Arial as the sans-serif fallback, `size-adjust` from the
- * ratio of the two fonts' frequency-weighted average lowercase advance width,
- * and the ascent/descent/line-gap overrides divided by that adjustment — computed
- * from the committed `-Regular.woff2` of each family. Recompute them if a family's
- * regular face is replaced.
+ * is a CLS regression on every page.
+ *
+ * The override values are not recomputed here — they are the exact ones
+ * `next/font` emitted for these same `.woff2` files before this change, read off
+ * the built stylesheet of the commit that still used `next/font/local`. Copying
+ * them rather than deriving them again is deliberate: a re-derivation that lands
+ * a fraction of a percent away would change how every page paints before the real
+ * face swaps in, which is a visual change this migration is supposed not to make.
+ * Recompute them only if a family's regular face is actually replaced, and then
+ * re-record the built values the same way.
  */
 
 @font-face {
@@ -92,18 +96,18 @@
 @font-face {
   font-family: 'Inter Fallback';
   src: local('Arial');
-  size-adjust: 105.79%;
-  ascent-override: 91.58%;
-  descent-override: 22.83%;
+  size-adjust: 107.64%;
+  ascent-override: 90%;
+  descent-override: 22.43%;
   line-gap-override: 0%;
 }
 
 @font-face {
   font-family: 'Golos Text Fallback';
   src: local('Arial');
-  size-adjust: 107.22%;
-  ascent-override: 91.4%;
-  descent-override: 20.52%;
+  size-adjust: 108.83%;
+  ascent-override: 90.05%;
+  descent-override: 20.21%;
   line-gap-override: 0%;
 }
 

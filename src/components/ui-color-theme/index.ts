@@ -1,4 +1,4 @@
-import { UiColorTheme } from '@vilnacrm/ui-toolkit';
+import UiColorTheme from '@vilnacrm/ui-toolkit/ui-color-theme';
 
 /**
  * The website colour palette now ships from `@vilnacrm/ui-toolkit`. This module

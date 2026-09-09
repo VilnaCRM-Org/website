@@ -1,8 +1,8 @@
-import type { UiTooltip } from '@vilnacrm/ui-toolkit';
-import type { ComponentProps } from 'react';
+import type { UiTooltipProps as ToolkitUiTooltipProps } from '@vilnacrm/ui-toolkit/ui-tooltip';
 
 /**
- * The toolkit declares its prop interfaces but does not export them, so the
- * public prop type is derived from the component itself rather than imported.
+ * Re-exported from the toolkit rather than derived from the component's own
+ * signature: since v0.4.0 each subpath publishes its prop type, so the adapter
+ * no longer has to reconstruct one with `ComponentProps`.
  */
-export type UiTooltipProps = ComponentProps<typeof UiTooltip>;
+export type UiTooltipProps = ToolkitUiTooltipProps;

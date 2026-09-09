@@ -15,10 +15,11 @@ specs/
 
 ## Current Specs
 
-| Spec                    | Status      |
-| ----------------------- | ----------- |
-| `dependency-cruiser-ci` | Implemented |
-| `rust-code-analysis`    | Planned     |
+| Spec                       | Status      |
+| -------------------------- | ----------- |
+| `458-ui-toolkit-primitives` | In review   |
+| `dependency-cruiser-ci`     | Implemented |
+| `rust-code-analysis`        | Planned     |
 
 ## Conventions
 

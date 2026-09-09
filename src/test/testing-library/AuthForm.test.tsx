@@ -32,6 +32,9 @@ const passwordErrorLength: string = t('sign_up.form.password_input.error_length'
 const passwordTipAltText: string = t('sign_up.form.password_tip.alt');
 
 const statusRole: string = 'status';
+// Named so the query cannot match the toolkit input's always-present, empty
+// `role="status"` announcement region — only the form's `<output aria-label="Loading">`.
+const loaderName: RegExp = /loading/i;
 const alertRole: string = 'alert';
 
 interface GetElementsResult {
@@ -63,7 +66,7 @@ describe('AuthForm', () => {
     const passwordTipImage: HTMLElement = getByAltText(passwordTipAltText);
 
     const error: HTMLElement | null = queryByRole(alertRole);
-    const loader: HTMLElement | null = queryByRole(statusRole);
+    const loader: HTMLElement | null = queryByRole(statusRole, { name: loaderName });
 
     checkElementsInDocument(
       authForm,

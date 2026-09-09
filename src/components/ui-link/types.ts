@@ -1,4 +1,3 @@
-import type { UiLink } from '@vilnacrm/ui-toolkit';
-import type { ComponentProps } from 'react';
+import type { UiLinkProps as ToolkitUiLinkProps } from '@vilnacrm/ui-toolkit/ui-link';
 
-export type UiLinkProps = ComponentProps<typeof UiLink>;
+export type UiLinkProps = ToolkitUiLinkProps;

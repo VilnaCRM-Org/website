@@ -1,4 +1,4 @@
-import { UiBreakpoints } from '@vilnacrm/ui-toolkit';
+import UiBreakpoints from '@vilnacrm/ui-toolkit/ui-breakpoints';
 
 /**
  * The website breakpoint scale now ships from `@vilnacrm/ui-toolkit`. This module

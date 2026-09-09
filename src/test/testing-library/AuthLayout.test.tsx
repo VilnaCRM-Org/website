@@ -33,6 +33,10 @@ import { NETWORK_FAILURE } from './fixtures/errors';
 import { fillForm, getFormElements, GetElementsResult } from './utils';
 
 const statusRole: string = 'status';
+// The loader is the `<output aria-label="Loading">` in `auth-layout.tsx`. Naming it
+// matters: the toolkit's input renders its own always-present, empty `role="status"`
+// announcement region, so a bare role query matches that too and can never be absent.
+const loaderName: RegExp = /loading/i;
 const alertRole: string = 'alert';
 const checkboxRole: AriaRole = 'checkbox';
 
@@ -114,12 +118,12 @@ describe('AuthLayout', () => {
     fillForm(testInitials, testEmail, testPassword, true);
 
     await waitFor(() => {
-      const loader: HTMLElement = getByRole(statusRole);
+      const loader: HTMLElement = getByRole(statusRole, { name: loaderName });
       expect(loader).toBeInTheDocument();
     });
 
     await waitFor(() => {
-      expect(queryByRole(statusRole)).not.toBeInTheDocument();
+      expect(queryByRole(statusRole, { name: loaderName })).not.toBeInTheDocument();
       expect(getByText(successTitleText)).toBeInTheDocument();
       const alertBox: HTMLElement = getByRole(alertRole);
       expect(alertBox).not.toHaveAttribute('aria-live', 'assertive');
@@ -166,17 +170,17 @@ describe('AuthLayout', () => {
     const { queryByRole } = renderAuthLayout([fulfilledMockResponse]);
 
     await waitFor(() => {
-      expect(queryByRole('status')).not.toBeInTheDocument();
+      expect(queryByRole(statusRole, { name: loaderName })).not.toBeInTheDocument();
     });
 
     fillForm(testInitials, testEmail, testPassword, true);
 
     await waitFor(() => {
-      expect(queryByRole('status')).toBeInTheDocument();
+      expect(queryByRole(statusRole, { name: loaderName })).toBeInTheDocument();
     });
 
     await waitFor(() => {
-      expect(queryByRole('status')).not.toBeInTheDocument();
+      expect(queryByRole(statusRole, { name: loaderName })).not.toBeInTheDocument();
     });
   });
   it('registration with server error: user exist ', async () => {
@@ -218,7 +222,7 @@ describe('AuthLayout', () => {
       testPassword,
       true
     );
-    await findByRole(statusRole);
+    await findByRole(statusRole, { name: loaderName });
 
     await waitFor(() => {
       const errorTitle: HTMLElement = getByText(errorTitleText);
@@ -235,7 +239,7 @@ describe('AuthLayout', () => {
     fireEvent.click(retryButton);
 
     await waitFor(() => {
-      expect(queryByRole('status')).toBeInTheDocument();
+      expect(queryByRole(statusRole, { name: loaderName })).toBeInTheDocument();
     });
   });
   it('should handle alert errors correctly and update state', async () => {
@@ -371,7 +375,7 @@ describe('AuthLayoutWithNotification', () => {
     fillForm(testInitials, testEmail, testPassword, true);
 
     await waitFor(() => {
-      expect(queryByRole('status')).toBeInTheDocument();
+      expect(queryByRole(statusRole, { name: loaderName })).toBeInTheDocument();
     });
 
     await waitFor(() => {
@@ -386,7 +390,7 @@ describe('AuthLayoutWithNotification', () => {
     fireEvent.click(retryButton);
 
     await waitFor(() => {
-      expect(queryByRole('status')).toBeInTheDocument();
+      expect(queryByRole(statusRole, { name: loaderName })).toBeInTheDocument();
     });
 
     await waitFor(() => {

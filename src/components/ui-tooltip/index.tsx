@@ -1,4 +1,4 @@
-import { UiTooltip } from '@vilnacrm/ui-toolkit';
+import UiTooltip from '@vilnacrm/ui-toolkit/ui-tooltip';
 
 /**
  * `UiTooltip` now ships from `@vilnacrm/ui-toolkit`. This module stays as the

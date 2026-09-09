@@ -1,4 +1,4 @@
-import { UiTypography } from '@vilnacrm/ui-toolkit';
+import UiTypography from '@vilnacrm/ui-toolkit/ui-typography';
 
 /**
  * `UiTypography` now ships from `@vilnacrm/ui-toolkit`. This module stays as the

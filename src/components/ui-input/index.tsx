@@ -1,4 +1,4 @@
-import { UiInput as ToolkitUiInput } from '@vilnacrm/ui-toolkit';
+import ToolkitUiInput from '@vilnacrm/ui-toolkit/ui-input';
 import React from 'react';
 
 import { UiInputProps } from './types';

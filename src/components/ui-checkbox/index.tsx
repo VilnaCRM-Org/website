@@ -1,4 +1,4 @@
-import { UiCheckbox } from '@vilnacrm/ui-toolkit';
+import UiCheckbox from '@vilnacrm/ui-toolkit/ui-checkbox';
 
 /**
  * `UiCheckbox` now ships from `@vilnacrm/ui-toolkit`. This module stays as the

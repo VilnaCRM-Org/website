@@ -49,6 +49,28 @@ describe('UiCheckbox', () => {
     expect(getCheckboxBox(container)).toHaveStyle(`border-color: ${DEFAULT_BORDER_COLOR}`);
   });
 
+  // Emotion inserts rules two different ways. In development it writes the CSS text
+  // into the `<style>` element; in production it switches to "speedy" mode and calls
+  // `CSSStyleSheet.insertRule`, which leaves `textContent` empty and puts the rule in
+  // the CSSOM instead. `make` exports `.env.production`, so the production path is the
+  // one this suite actually runs. Reading both sources keeps the assertion true under
+  // either insertion mode rather than passing only in the mode nobody runs.
+  function collectEmittedCss(): string {
+    const fromCssom: string = Array.from(document.styleSheets)
+      .flatMap(sheet => {
+        try {
+          return Array.from(sheet.cssRules).map(rule => rule.cssText);
+        } catch {
+          return [];
+        }
+      })
+      .join('');
+    const fromTextContent: string = Array.from(document.querySelectorAll('style'))
+      .map(styleTag => styleTag.textContent ?? '')
+      .join('');
+    return `${fromCssom}${fromTextContent}`;
+  }
+
   // jsdom never applies `:hover`, so the token has to be read off the stylesheet
   // Emotion emitted rather than off a computed style. The pre-toolkit spec read
   // it out of the local `styles` object; that object now lives in the toolkit, and
@@ -60,9 +82,7 @@ describe('UiCheckbox', () => {
     const { container } = render(<UiCheckbox label="Test" onChange={mockOnChange} />);
     getCheckboxBox(container);
 
-    const emittedCss: string = Array.from(document.querySelectorAll('style'))
-      .map(styleTag => styleTag.textContent ?? '')
-      .join('');
+    const emittedCss: string = collectEmittedCss();
     const hoverRule: string | undefined = emittedCss
       .replace(/\s+/g, '')
       .toLowerCase()

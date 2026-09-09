@@ -1,4 +1,4 @@
-import { UiLink as ToolkitUiLink } from '@vilnacrm/ui-toolkit';
+import ToolkitUiLink from '@vilnacrm/ui-toolkit/ui-link';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 

@@ -1,4 +1,4 @@
-import { UiButton as ToolkitUiButton } from '@vilnacrm/ui-toolkit';
+import ToolkitUiButton from '@vilnacrm/ui-toolkit/ui-button';
 import React from 'react';
 
 import { UiButtonProps } from './types';
