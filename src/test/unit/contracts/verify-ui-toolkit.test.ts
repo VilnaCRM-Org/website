@@ -62,7 +62,7 @@ function tree(overrides: Files = {}): Files {
       algorithm: ALGORITHM,
       version: '9.9.9',
       tarballUrl: TARBALL_URL,
-      artifacts: { [ARTIFACT]: CONTENT_DIGEST },
+      artifacts: [{ path: ARTIFACT, sha256: CONTENT_DIGEST }],
     }),
     'package.json': JSON.stringify({ dependencies: { '@vilnacrm/ui-toolkit': TARBALL_URL } }),
     'node_modules/@vilnacrm/ui-toolkit/package.json': JSON.stringify({ version: '9.9.9' }),
@@ -119,7 +119,7 @@ describe('ui-toolkit integrity gate', () => {
         algorithm: ALGORITHM,
         version: '9.9.9',
         tarballUrl: 'https://example.invalid/other.tgz',
-        artifacts: { [ARTIFACT]: CONTENT_DIGEST },
+        artifacts: [{ path: ARTIFACT, sha256: CONTENT_DIGEST }],
       }),
     });
 
@@ -183,7 +183,7 @@ describe('ui-toolkit integrity gate', () => {
         algorithm: ALGORITHM,
         version: '1.2.3',
         tarballUrl: TARBALL_URL,
-        artifacts: { [ARTIFACT]: CONTENT_DIGEST },
+        artifacts: [{ path: ARTIFACT, sha256: CONTENT_DIGEST }],
       }),
     });
 
@@ -194,15 +194,29 @@ describe('ui-toolkit integrity gate', () => {
 
   it('refuses an unsupported digest algorithm instead of trusting it', () => {
     const files: Files = tree({
-      [CHECKSUMS_PATH]: JSON.stringify({ algorithm: 'md5', version: '9.9.9', artifacts: {} }),
+      [CHECKSUMS_PATH]: JSON.stringify({ algorithm: 'md5', version: '9.9.9', artifacts: [] }),
     });
 
     expect(() => readChecksums(fakeReadFile(files))).toThrow(/unsupported algorithm md5/);
   });
 
+  it('records each digest under a `sha256` key, never under the artifact path', () => {
+    // gitleaks' generic-api-key rule fires on a secret-ish IDENTIFIER beside a
+    // high-entropy value, and the package really does ship `auth-skeleton.mjs`.
+    // A path-keyed map put "auth…" next to a hash and failed the secrets scan;
+    // the fix is this shape, not an allowlist entry that would also blind the
+    // scanner to a real credential in this file.
+    const files: Files = tree();
+    const rebuilt = buildChecksumsFile(fakeReadFile(files), fakeReadDir(files));
+
+    rebuilt.artifacts.forEach(entry => {
+      expect(Object.keys(entry).sort()).toEqual(['path', 'sha256']);
+    });
+  });
+
   it('refuses a digest file that declares no artifacts, which would verify nothing', () => {
     const files: Files = tree({
-      [CHECKSUMS_PATH]: JSON.stringify({ algorithm: ALGORITHM, version: '9.9.9', artifacts: {} }),
+      [CHECKSUMS_PATH]: JSON.stringify({ algorithm: ALGORITHM, version: '9.9.9', artifacts: [] }),
     });
 
     expect(() => readChecksums(fakeReadFile(files))).toThrow(/verify nothing/);
@@ -235,7 +249,9 @@ describe('ui-toolkit integrity gate', () => {
     const rebuilt = buildChecksumsFile(fakeReadFile(files), fakeReadDir(files));
 
     expect(rebuilt.version).toBe('9.9.9');
-    expect(rebuilt.artifacts[ARTIFACT]).toBe(digest('new bytes'));
+    expect(rebuilt.artifacts.find(entry => entry.path === ARTIFACT)?.sha256).toBe(
+      digest('new bytes')
+    );
   });
 
   describe('command-line behaviour', () => {
@@ -279,7 +295,7 @@ describe('ui-toolkit integrity gate', () => {
     it('exits non-zero when the digest file itself cannot be trusted', () => {
       const err: string[] = [];
       const files: Files = tree({
-        [CHECKSUMS_PATH]: JSON.stringify({ algorithm: 'md5', version: '9.9.9', artifacts: {} }),
+        [CHECKSUMS_PATH]: JSON.stringify({ algorithm: 'md5', version: '9.9.9', artifacts: [] }),
       });
 
       const code: number = main({

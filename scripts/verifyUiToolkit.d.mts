@@ -5,11 +5,13 @@ export type ReadFile = (path: string, encoding?: 'utf8') => string;
 export type DirEntry = { name: string; isDirectory: () => boolean };
 export type ReadDir = (path: string, options?: { withFileTypes: true }) => DirEntry[];
 
+export type ChecksumEntry = { path: string; sha256: string };
+
 export type Checksums = {
   algorithm: string;
   version: string;
   tarballUrl: string;
-  artifacts: Record<string, string>;
+  artifacts: ChecksumEntry[];
 };
 
 export const CHECKSUMS_PATH: string;

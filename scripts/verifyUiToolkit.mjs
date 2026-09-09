@@ -59,7 +59,7 @@ export function readChecksums(readFile = readFileSync) {
     );
   }
   const artifacts = parsed.artifacts;
-  if (!artifacts || Object.keys(artifacts).length === 0) {
+  if (!Array.isArray(artifacts) || artifacts.length === 0) {
     throw new Error(`${CHECKSUMS_PATH}: declares no artifacts, so it would verify nothing`);
   }
   return parsed;
@@ -128,7 +128,9 @@ export function verify(readFile = readFileSync, readDir = readdirSync) {
     failures.push(`installed @vilnacrm/ui-toolkit is ${installed}, manifest pins ${pinned}`);
   }
 
-  Object.entries(checksums.artifacts).forEach(([relativePath, expected]) => {
+  const recorded = new Map(checksums.artifacts.map(entry => [entry.path, entry.sha256]));
+
+  recorded.forEach((expected, relativePath) => {
     let actual;
     try {
       actual = digest(readFile(`${PACKAGE_ROOT}/${relativePath}`));
@@ -151,7 +153,7 @@ export function verify(readFile = readFileSync, readDir = readdirSync) {
     return failures;
   }
   installedFiles
-    .filter(relativePath => !(relativePath in checksums.artifacts))
+    .filter(relativePath => !recorded.has(relativePath))
     .forEach(relativePath => {
       failures.push(`${relativePath}: present in the install but absent from ${CHECKSUMS_PATH}`);
     });
@@ -161,11 +163,18 @@ export function verify(readFile = readFileSync, readDir = readdirSync) {
 
 export function buildChecksumsFile(readFile = readFileSync, readDir = readdirSync) {
   const current = readChecksums(readFile);
-  const artifacts = {};
 
-  [...listBuildFiles(readDir), 'package.json'].forEach(relativePath => {
-    artifacts[relativePath] = digest(readFile(`${PACKAGE_ROOT}/${relativePath}`));
-  });
+  // A LIST of `{ path, sha256 }`, not a path-keyed map. The digest is a public
+  // hash of a public build artifact, but with the path as the key, any shipped
+  // filename containing `auth`/`token`/`secret` puts a secret-ish identifier
+  // beside a high-entropy value and trips gitleaks' `generic-api-key` rule
+  // (`build/auth-skeleton.mjs` really does). Keeping `sha256` as the key that
+  // sits next to the hash keeps the scanner honest without an allowlist entry
+  // that would also blind it to a real credential in this file.
+  const artifacts = [...listBuildFiles(readDir), 'package.json'].map(relativePath => ({
+    path: relativePath,
+    sha256: digest(readFile(`${PACKAGE_ROOT}/${relativePath}`)),
+  }));
 
   return {
     ...current,
@@ -189,7 +198,7 @@ export function main({ readFile = readFileSync, readDir = readdirSync, stdout, s
       stderr(`ui-toolkit integrity: FAIL\n${failures.map(failure => `  - ${failure}\n`).join('')}`);
       return 1;
     }
-    const count = Object.keys(readChecksums(readFile).artifacts).length;
+    const count = readChecksums(readFile).artifacts.length;
     stdout(`ui-toolkit integrity: OK (v${pinnedVersion(readFile)}, ${count} artifacts verified)\n`);
     return 0;
   } catch (error) {
