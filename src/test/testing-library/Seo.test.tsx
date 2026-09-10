@@ -128,6 +128,14 @@ describe('Seo', () => {
     expect(contentOf('meta[name="robots"]')).toBe('noindex');
   });
 
+  it('never pairs a canonical link with noindex', () => {
+    renderSeo({ noindex: true });
+
+    // Nominating an index URL while asking not to be indexed is two contradictory
+    // instructions, and which one a search engine honours is its own choice.
+    expect(find('link[rel="canonical"]')).toBeNull();
+  });
+
   it('emits the site-level JSON-LD graph only when asked for it', () => {
     const { unmount }: RenderResult = renderSeo();
     expect(document.querySelector('script[type="application/ld+json"]')).toBeNull();

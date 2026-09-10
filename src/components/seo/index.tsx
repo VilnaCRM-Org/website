@@ -62,8 +62,15 @@ export default function Seo({
     <Head>
       <title>{title}</title>
       <meta name="description" content={description} />
-      <link rel="canonical" href={canonical} />
-      {noindex ? <meta name="robots" content="noindex" /> : null}
+      {/* Canonical and `noindex` are deliberately exclusive. A canonical link nominates the
+          URL a document should be indexed under, so declaring one on a page that also asks
+          not to be indexed sends a search engine two contradictory instructions and leaves
+          which one wins up to it. A `noindex` page states only that. */}
+      {noindex ? (
+        <meta name="robots" content="noindex" />
+      ) : (
+        <link rel="canonical" href={canonical} />
+      )}
 
       <meta property="og:type" content="website" />
       <meta property="og:site_name" content={siteName} />
@@ -85,6 +92,12 @@ export default function Seo({
       <meta name="twitter:description" content={description} />
 
       {siteSchema ? (
+        // `dangerouslySetInnerHTML` is the only way to put JSON in a script element:
+        // React escapes a text child (`&` -> `&amp;`, `"` -> `&quot;`) when it serializes
+        // the export, which would corrupt every JSON string it contains. The payload is
+        // not attacker-controlled — it is built from committed i18n copy — and
+        // `buildSiteStructuredData` escapes `<` to `\u003c` regardless, so no value can
+        // close the element early.
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{

@@ -56,6 +56,8 @@ describe('integration: SEO head', () => {
     render(<Seo title="Title" description="Description" path="/" noindex siteSchema />);
 
     expect(metaContent('meta[name="robots"]')).toBe('noindex');
+    // Exclusive with the canonical link: two contradictory instructions otherwise.
+    expect(document.querySelector('link[rel="canonical"]')).toBeNull();
     const script: Element | null = document.querySelector('script[type="application/ld+json"]');
     const graph: { '@graph': { '@type': string }[] } = JSON.parse(script?.textContent ?? '') as {
       '@graph': { '@type': string }[];
