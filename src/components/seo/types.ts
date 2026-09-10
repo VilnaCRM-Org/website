@@ -23,3 +23,14 @@ export interface SeoProps {
    */
   readonly siteSchema?: boolean;
 }
+
+/** Inputs for the Open Graph / Twitter Card tag set (`social-tags.tsx`). */
+export interface SocialTagOptions {
+  readonly title: string;
+  readonly description: string;
+  /** Absolute URL of the page, already resolved against the canonical origin. */
+  readonly url: string;
+  readonly siteName: string;
+  /** Open Graph locale, e.g. `uk_UA`. */
+  readonly locale: string;
+}
