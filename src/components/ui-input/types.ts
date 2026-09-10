@@ -1,17 +1,33 @@
-import { TextFieldProps } from '@mui/material';
+import type { UiInputProps as ToolkitOwnProps } from '@vilnacrm/ui-toolkit/ui-input';
 
-export interface UiInputProps {
-  sx?: React.CSSProperties;
-  placeholder?: string;
-  value?: string;
-  onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  error?: boolean;
-  onBlur?: (event: React.FocusEvent<HTMLInputElement>) => void;
+/**
+ * An explicit ALLOW-LIST over the toolkit's prop type, not `Omit<…>` of it.
+ *
+ * The distinction is the point. The toolkit's `UiInputProps` extends the whole
+ * of MUI's `TextFieldProps`, so subtracting a few names would hand every call
+ * site several hundred more — including `slotProps` and `inputProps`, the two
+ * seams this adapter owns in order to put `aria-describedby` and
+ * `aria-required` on the rendered `<input>`. A caller that reached for either
+ * would silently defeat #382 F3 while still type-checking.
+ *
+ * `Pick` keeps the listed props' types tied to the toolkit's own declarations,
+ * so a widening upstream still reaches this repo; only the SET is frozen.
+ */
+type AllowedToolkitProps = Pick<
+  ToolkitOwnProps,
+  'sx' | 'placeholder' | 'value' | 'onChange' | 'onBlur' | 'onInput' | 'error' | 'disabled' | 'id'
+>;
+
+export type UiInputProps = AllowedToolkitProps & {
+  /**
+   * Declared here rather than picked because the toolkit writes them without
+   * `| undefined`, and this repository compiles under
+   * `exactOptionalPropertyTypes` — a caller passing an optional value through
+   * cannot satisfy the upstream declaration. Tracked upstream as
+   * VilnaCRM-Org/ui-toolkit#153.
+   */
   type?: string | undefined;
   fullWidth?: boolean | undefined;
-  disabled?: boolean;
-  onInput?: TextFieldProps['onInput'];
-  id?: string;
   /**
    * Submitted field name. Password managers and browser autofill key off `name`
    * and `autocomplete` together; without both, a credential field is
@@ -32,4 +48,4 @@ export interface UiInputProps {
    * react-hook-form messages the suites assert.
    */
   required?: boolean;
-}
+};

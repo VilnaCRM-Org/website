@@ -134,7 +134,7 @@ describe('accessibility interaction-state registry', () => {
     );
   });
 
-  it('registers exactly the five states this repo scans', () => {
+  it('registers exactly the six states this repo scans', () => {
     // The assertion above is a floor and would pass while an extra state was
     // added or dropped unnoticed. This one pins the whole registry, so growing
     // or shrinking the scanned surface is a deliberate, reviewed edit — the same
@@ -145,6 +145,7 @@ describe('accessibility interaction-state registry', () => {
       'registrationValidationErrors',
       'swaggerAuthorizeDialog',
       'swaggerOperationExpanded',
+      'tooltipOpen',
     ]);
   });
 

@@ -19,6 +19,12 @@
     @extend %operationModels;
   }
 }
+// The catch-all that actually paints /swagger: swagger-ui ships its own
+// `font-family` defaults, and this is the declaration that beats them. It named
+// `golos`/`golos Fallback` — the families `next/font` generated — which is why it
+// worked while `$golos` (spelled `__golos_58e94b`, a name no build ever emitted)
+// silently did not. Removing `next/font` deletes those families, so the name has
+// to move with them or every descendant falls through to `sans-serif`.
 .swagger-ui * {
-  font-family: 'golos', 'golos Fallback', sans-serif !important;
+  font-family: $golos !important;
 }

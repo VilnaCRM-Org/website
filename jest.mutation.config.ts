@@ -57,6 +57,14 @@ const config: Config = {
   // makes the crawler agree with the runtime. `@swagger/global` is excluded
   // because it points at a stylesheet, which next/jest already mocks.
   moduleNameMapper: {
+    // Mirrors jest.config.ts: `@vilnacrm/ui-toolkit` is ESM-only and its
+    // `exports` map declares no `require` condition, so the CJS resolver cannot
+    // find it without being pointed at the built files. Stylesheet first — the
+    // subpath rule below would otherwise claim it.
+    '^@vilnacrm/ui-toolkit/styles\\.css$':
+      '<rootDir>/node_modules/@vilnacrm/ui-toolkit/build/index.css',
+    '^@vilnacrm/ui-toolkit/([^.]+)$': '<rootDir>/node_modules/@vilnacrm/ui-toolkit/build/$1.mjs',
+    '^@vilnacrm/ui-toolkit$': '<rootDir>/node_modules/@vilnacrm/ui-toolkit/build/index.mjs',
     '^@/(.*)$': '<rootDir>/src/$1',
     '^@landing/(.*)$': '<rootDir>/src/features/landing/components/$1',
     '^@swagger/(?!global$)(.*)$': '<rootDir>/src/features/swagger/$1',
@@ -76,6 +84,10 @@ const config: Config = {
       'babel-jest',
       { configFile: '<rootDir>/babel-jest.config.js' },
     ],
+    // Mirrors jest.config.ts: a mutable file that transitively imports a `.woff2`
+    // for its URL would otherwise fail to parse here and report every mutant in
+    // its module as survived.
+    '^.+\\.woff2$': '<rootDir>/config/jest/fontAssetTransform.js',
   },
 };
 
@@ -85,6 +97,6 @@ export default async () => {
   const nextJestConfig = await createJestConfig(config)();
   return {
     ...nextJestConfig,
-    transformIgnorePatterns: ['/node_modules/(?!(uuid|@faker-js/faker)/)'],
+    transformIgnorePatterns: ['/node_modules/(?!(uuid|@faker-js/faker|@vilnacrm/ui-toolkit)/)'],
   };
 };

@@ -1,16 +1,15 @@
 /**
  * Integration: UiTooltip WrapperUiTooltip.
  *
- * Renders the REAL `WrapperUiTooltip` with `useMediaQuery` mocked so we can
+ * Renders the REAL toolkit `UiTooltip` with `useMediaQuery` mocked so we can
  * drive every branch: open/close on click (toggleTooltip both directions),
- * close-on-click-away, and the breakpoint-crossing reset that derives state
- * during render.
+ * close-on-click-away, and the breakpoint-crossing reset.
  */
 import { ClickAwayListener } from '@mui/material';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent, { UserEvent } from '@testing-library/user-event';
 
-import WrapperUiTooltip from '@/components/ui-tooltip/tooltip-wrapper';
+import WrapperUiTooltip from '@/components/ui-tooltip';
 
 const useMediaQueryMock: jest.Mock = jest.fn();
 

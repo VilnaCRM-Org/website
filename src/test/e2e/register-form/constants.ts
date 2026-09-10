@@ -11,7 +11,18 @@ export const placeholderPassword: string = t('sign_up.form.password_input.placeh
 export const placeholderConfirmPassword: string = t(
   'sign_up.form.confirm_password_input.placeholder'
 );
-export const policyText: string = removeHtmlTags('sign_up.form.confidential_text.fullText');
+// The consent checkbox is labelled by a <Trans> sentence whose two policy links
+// each append a localized "opens in new tab" cue inside the sentence, so the
+// rendered label is no longer the flattened translation as one contiguous run.
+// Matching the sentence's words in order still identifies exactly this checkbox
+// and keeps asserting that the whole consent copy is present and in sequence.
+export const policyText: RegExp = new RegExp(
+  removeHtmlTags('sign_up.form.confidential_text.fullText')
+    .split(/\s+/)
+    .filter(Boolean)
+    .map(word => word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+    .join('[\\s\\S]*?')
+);
 export const signUpButton: string = t('sign_up.form.button_text');
 
 export const requiredNameError: string = t('sign_up.form.name_input.required');
