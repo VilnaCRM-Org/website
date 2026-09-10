@@ -71,13 +71,22 @@ describe('absoluteUrl', () => {
     expect(absoluteUrl('/')).toBe(`${SITE_ORIGIN}/`);
   });
 
-  it.each([['//other.test/x'], ['https://other.test/x'], ['swagger'], ['']])(
-    'refuses %p, which would resolve against a host other than this site',
+  it.each([['swagger'], [''], ['./swagger'], ['https://other.test/x']])(
+    'refuses %p, which is not a site-relative path',
     (input: string) => {
-      // `new URL(input, base)` discards the base for an absolute or protocol-relative
-      // input, so an unguarded call would publish someone else's host as this site's
-      // canonical URL; a bare relative path would resolve against the current directory.
       expect(() => absoluteUrl(input)).toThrow(/site-relative path/);
+    }
+  );
+
+  it.each([['//other.test/x'], ['/\\other.test/x'], ['/\\\\other.test/x']])(
+    'refuses %p, which resolves to a host other than this site',
+    (input: string) => {
+      // `new URL(input, base)` discards the base whenever the input carries its own
+      // authority. `/\\other.test` is the non-obvious one: it starts with a single slash,
+      // so it passes any leading-`//` test, but a special scheme treats `\\` as `/` and
+      // the WHATWG parser reads it as an authority. Publishing that as a canonical URL
+      // would nominate someone else's host as the address to index this page under.
+      expect(() => absoluteUrl(input)).toThrow(/off-origin/);
     }
   );
 });

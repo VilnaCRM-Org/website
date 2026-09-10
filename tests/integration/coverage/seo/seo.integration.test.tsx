@@ -86,5 +86,8 @@ describe('integration: SEO head', () => {
   it('refuses a path that would resolve against another host', () => {
     expect(absoluteUrl('/swagger')).toBe(`${SITE_ORIGIN}/swagger`);
     expect(() => absoluteUrl('https://other.test/x')).toThrow(/site-relative path/);
+    // A special scheme reads `\\` as `/`, so this carries an authority despite its single
+    // leading slash — which is why the guard compares the resolved origin.
+    expect(() => absoluteUrl('/\\other.test/x')).toThrow(/off-origin/);
   });
 });

@@ -26,16 +26,28 @@ export const SITE_ORIGIN: string = 'https://vilnacrm.com';
  * value is either ignored or resolved against whatever host served the document,
  * which is the drift `SITE_ORIGIN` exists to prevent.
  *
- * The input must be a site-relative path — one leading slash, and not the
- * protocol-relative `//host` form. `new URL(input, base)` treats an absolute or
- * protocol-relative input as the WHOLE url and discards the base, so without
- * this guard a value that ever arrived from outside would publish another host
- * as this site's canonical URL. Nothing passes one today; refusing is what keeps
- * that true as callers are added.
+ * The result is checked against `SITE_ORIGIN` rather than the input being
+ * screened for the spellings that escape it. `new URL(input, base)` discards the
+ * base whenever the input carries its own authority, and the ways to write one
+ * are not obvious: `//host` is the familiar case, but under the WHATWG algorithm
+ * a special scheme treats `\` as `/`, so `/\host` — which starts with a single
+ * slash and passes any leading-`//` test — resolves to `https://host/` as well.
+ * Blocklisting the forms is a guess at that list; comparing the origin the
+ * parser actually produced is total, and it is the same parser the value is then
+ * published through.
+ *
+ * Nothing passes a value from outside today. Refusing is what keeps that true as
+ * callers are added, rather than a canonical URL quietly nominating another host.
  */
 export function absoluteUrl(path: string): string {
-  if (!path.startsWith('/') || path.startsWith('//')) {
+  if (!path.startsWith('/')) {
     throw new Error(`absoluteUrl expects a site-relative path starting with "/", got: ${path}`);
   }
-  return new URL(path, SITE_ORIGIN).toString();
+  const resolved: URL = new URL(path, SITE_ORIGIN);
+  if (resolved.origin !== SITE_ORIGIN) {
+    throw new Error(
+      `absoluteUrl refused a path resolving off-origin (${resolved.origin}): ${path}`
+    );
+  }
+  return resolved.toString();
 }
