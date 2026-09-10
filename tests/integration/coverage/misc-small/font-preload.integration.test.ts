@@ -43,13 +43,10 @@ describe('Golos preload hrefs', () => {
   });
 
   it('preloads the same file the stylesheet declares, for every weight', () => {
-    const stylesheet: string = readFileSync(
-      path.join(process.cwd(), 'styles/global.css'),
-      'utf8'
-    );
-    const declaredFaces: string[] = [...stylesheet.matchAll(/url\('([^']*GolosText-[^']+\.woff2)'\)/g)].map(
-      match => path.basename(match[1] as string)
-    );
+    const stylesheet: string = readFileSync(path.join(process.cwd(), 'styles/global.css'), 'utf8');
+    const declaredFaces: string[] = [
+      ...stylesheet.matchAll(/url\('([^']*GolosText-[^']+\.woff2)'\)/g),
+    ].map(match => path.basename(match[1] as string));
 
     expect(declaredFaces).toHaveLength(GOLOS_WEIGHT_COUNT);
 
