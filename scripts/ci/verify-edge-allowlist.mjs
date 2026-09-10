@@ -9,8 +9,18 @@
  * ES5.1 handler (a bare `function handler(event)` with no `module.exports`, hence `node:vm`
  * rather than `require`) and run it over every file in the built export.
  *
- * This proves COMPLETENESS, not minimality: extra well-known entries (e.g. `/robots.txt`
- * pre-seeded for issue #339) are allowed, each carrying an issue reference in the handler.
+ * For the allow-list tables this proves COMPLETENESS, not minimality: extra well-known
+ * entries (e.g. `/robots.txt` and `/sitemap.xml`, pre-seeded for issue #339) are allowed,
+ * each carrying an issue reference in the handler — they are paths the export is expected
+ * to grow, and failing on them would block the very issue that adds them.
+ *
+ * `ROUTE_MAP` is the one table also proved MINIMAL (issue #333), and only its rewrite
+ * targets are: a rewrite is not permission to reach the origin, it REPLACES the requested
+ * URI, so a target with no object behind it does not 404 politely — S3 answers with its own
+ * raw error document instead of this site's synthetic 404. That is exactly what `/about` ->
+ * `/about/index.html` and `/en` -> `/en/index.html` did in production before #333. The
+ * check is deliberately scoped to rewrite targets and does NOT touch ALLOWED_FILES,
+ * ALLOWED_DIRS or ALLOWED_EXTENSIONS, so the pre-seeded SEO entries stay green.
  *
  * Invoked by `scripts/ci/validate-build-artifact.sh`, which runs on every PR via
  * `.github/workflows/build-artifact.yml`.
@@ -41,7 +51,13 @@ function loadHandler() {
   if (typeof context.resolvedHandler !== 'function') {
     fail(`${HANDLER_PATH} did not expose a handler function`);
   }
-  return context.resolvedHandler;
+  // `var ROUTE_MAP` is a top-level declaration, so evaluating the file in its own context
+  // publishes it as a property of that context — no export and no parsing needed, and the
+  // deployed artifact stays byte-identical.
+  if (context.ROUTE_MAP === undefined || typeof context.ROUTE_MAP !== 'object') {
+    fail(`${HANDLER_PATH} did not declare a ROUTE_MAP object`);
+  }
+  return { handler: context.resolvedHandler, routeMap: context.ROUTE_MAP };
 }
 
 // `readdirSync(recursive: true)` returns paths relative to the root as strings, which is
@@ -65,13 +81,39 @@ function isReachable(handler, uri) {
   return result === request && request.uri === uri;
 }
 
+// Every ROUTE_MAP rewrite target must be a file the export really ships. Scoped to
+// ROUTE_MAP on purpose (see the header): the allow-list tables may legitimately name paths
+// ahead of the export, a rewrite target may not.
+function checkRouteMapTargets(routeMap, exportedUris) {
+  const exported = new Set(exportedUris);
+  const dangling = [];
+  for (const uri of Object.keys(routeMap)) {
+    const target = routeMap[uri];
+    if (!exported.has(target)) {
+      dangling.push(`${uri} -> ${target}`);
+    }
+  }
+  if (dangling.length > 0) {
+    console.error(
+      `::error::edge-allowlist: ${dangling.length} ROUTE_MAP entr(y|ies) in ` +
+        `scripts/cloudfront_routing.js rewrite to an object the export does not contain. ` +
+        `Those routes serve S3's raw error document, not the site 404. Fix the target or ` +
+        `remove the route (see config/routes.json).`
+    );
+    for (const entry of dangling.slice(0, MAX_REPORTED)) {
+      console.error(`  dangling: ${entry}`);
+    }
+    process.exit(1);
+  }
+}
+
 function main() {
   const outDir = path.resolve(process.argv[2] ?? 'out');
   if (!fs.existsSync(outDir)) {
     fail(`${outDir} does not exist; run \`make build-out\` first`);
   }
 
-  const handler = loadHandler();
+  const { handler, routeMap } = loadHandler();
   const uris = listExportedUris(outDir);
   if (uris.length === 0) {
     fail(`${outDir} contains no files; the export is empty`);
@@ -95,7 +137,12 @@ function main() {
     process.exit(1);
   }
 
-  console.log(`edge-allowlist: OK (${uris.length} exported paths reachable)`);
+  checkRouteMapTargets(routeMap, uris);
+
+  console.log(
+    `edge-allowlist: OK (${uris.length} exported paths reachable, ` +
+      `${Object.keys(routeMap).length} route rewrites resolved)`
+  );
 }
 
 main();

@@ -33,6 +33,8 @@ var SECURITY_HEADERS = Object.freeze({
   'x-content-type-options': 'nosniff',
   'referrer-policy': 'strict-origin-when-cross-origin',
   'strict-transport-security': 'max-age=63072000; includeSubDomains; preload',
+  'permissions-policy':
+    'accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-get=(), screen-wake-lock=(), usb=(), xr-spatial-tracking=()',
 });
 
 var SECURITY_HEADER_NAMES = Object.freeze(Object.keys(SECURITY_HEADERS));

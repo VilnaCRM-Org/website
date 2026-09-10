@@ -35,6 +35,7 @@ e2e-direct	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker a
 ensure-dev	bats	tests/bats/makefile_targets.bats	Validated by asserting the dev service starts when it is not already running. Its foreign-checkout preflight (scripts/ci/check-dev-container-bind.sh) has its own suite in tests/bats/check_dev_container_bind.bats.
 format	bats	tests/bats/makefile_targets.bats	Validated with a stubbed prettier invocation.
 generate-localization	ci	.github/workflows/static-testing.yml	Executed through `make lint`, whose `lint-deps` leg depends on it; also a prerequisite of `storybook-build`, `ci-test-mutation` and `test-mutation-shard`.
+generate-routes	bats	tests/bats/makefile_targets.bats	Validated host-only with a stubbed node: the recipe invokes scripts/ci/generate-route-manifest.mjs directly, never through Docker or the package manager, and ROUTE_MANIFEST_CHECK=1/true adds the generator's verify-only --check flag while any other value keeps the default write.
 help	bats	tests/bats/makefile_targets.bats	Validated through the help output contract.
 husky	bats	tests/bats/makefile_targets.bats	Validated with a stubbed bun invocation.
 install	ci	.github/workflows/static-testing.yml	Executed directly by the static testing workflow.
@@ -49,6 +50,7 @@ lint-api-versions	bats	tests/bats/makefile_targets.bats	Hermetic user-service ve
 lint-contracts	bats	tests/bats/makefile_targets.bats	Executed directly by contract-testing.yml; deliberately outside `make lint` because the drift check needs network.
 lint-deps	ci	.github/workflows/static-testing.yml	Executed through `make lint`, which depends on `lint-deps`.
 lint-docker-policy	ci	.github/workflows/static-testing.yml	Executed through `make lint`, which depends on `lint-docker-policy`.
+lint-graphql-drift	bats	tests/bats/makefile_targets.bats	Validated host-only with a stubbed curl, a pinned UPSTREAM_REF and a stubbed node comparison helper: the recipe runs scripts/ci/graphql-drift.sh without touching the network.
 lint-headers	ci	.github/workflows/static-testing.yml	Executed through `make lint`, which depends on `lint-headers`.
 lint-md	ci	.github/workflows/static-testing.yml	Executed through `make lint`, which depends on `lint-md`.
 lint-metrics	bats	tests/bats/makefile_targets.bats	Validated host-only: ensure-rca.sh provisioning (idempotent) plus lint-metrics.sh policy enforcement against the committed policy with a stubbed analyzer.

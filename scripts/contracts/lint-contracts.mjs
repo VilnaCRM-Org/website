@@ -16,10 +16,7 @@
  */
 import 'dotenv/config';
 import { execFileSync } from 'node:child_process';
-import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
-import path from 'node:path';
-
-import { buildSchema, parse, validate } from 'graphql';
+import { readFileSync, writeFileSync } from 'node:fs';
 
 import { buildSpecUrl, fetchSwaggerYaml, normalizeSpec } from '../fetchSwaggerSchema.mjs';
 import { buildSchemaUrl, fetchGraphqlSchema } from '../fetchGraphqlSchema.mjs';
@@ -30,6 +27,7 @@ import {
   buildChecksumsFile,
   verifyCommittedDigests,
 } from './checksums.mjs';
+import { checkGraphqlOperations as checkOperations } from './graphql-operations.mjs';
 import { immutableRefError, isImmutableRef } from './refs.mjs';
 
 // checksums.mjs owns these paths: they are also the keys in checksums.json, so a
@@ -48,57 +46,22 @@ const failures = [];
 
 const fail = (scope, message) => failures.push({ scope, message });
 
-function walk(dir) {
-  return readdirSync(dir).flatMap(entry => {
-    const full = path.join(dir, entry);
-    return statSync(full).isDirectory() ? walk(full) : [full];
-  });
-}
-
-/** Extracts every gql`...` template body. These are static templates: a `${` inside one is a hard error, not something to interpolate away. */
-function extractGqlDocuments(file) {
-  const source = readFileSync(file, 'utf8');
-  const documents = [];
-  const pattern = /\bgql`([\s\S]*?)`/g;
-  let match = pattern.exec(source);
-
-  while (match !== null) {
-    documents.push({ file, body: match[1] });
-    match = pattern.exec(source);
-  }
-
-  return documents;
-}
-
 function checkGraphqlOperations() {
-  const schema = buildSchema(readFileSync(SCHEMA_PATH, 'utf8'));
-  const documents = walk(CLIENT_SOURCE_DIR)
-    .filter(file => /\.tsx?$/.test(file))
-    .flatMap(extractGqlDocuments);
+  // The policy lives in ./graphql-operations.mjs so it can be pointed at a
+  // seeded fixture directory and proved to go red (#348). This wrapper only
+  // adapts its returned failures onto this script's `graphql` scope.
+  const { documentCount, failures: problems } = checkOperations({
+    schemaPath: SCHEMA_PATH,
+    sourceDir: CLIENT_SOURCE_DIR,
+  });
 
-  if (documents.length === 0) {
-    fail('graphql', `no gql documents found under ${CLIENT_SOURCE_DIR} — the extractor is broken`);
+  problems.forEach(message => fail('graphql', message));
+
+  if (documentCount === 0) {
     return;
   }
 
-  documents.forEach(({ file, body }) => {
-    if (body.includes('${')) {
-      fail('graphql', `${file}: interpolated gql template cannot be validated statically`);
-      return;
-    }
-
-    let document;
-    try {
-      document = parse(body);
-    } catch (error) {
-      fail('graphql', `${file}: ${error.message}`);
-      return;
-    }
-
-    validate(schema, document).forEach(error => fail('graphql', `${file}: ${error.message}`));
-  });
-
-  console.log(`   checked ${documents.length} client GraphQL document(s) against ${SCHEMA_PATH}`);
+  console.log(`   checked ${documentCount} client GraphQL document(s) against ${SCHEMA_PATH}`);
 }
 
 const fingerprint = finding => `${finding.code} @ ${finding.path.join('.')}`;
