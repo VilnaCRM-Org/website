@@ -1,8 +1,8 @@
-import Head from 'next/head';
 import Link from 'next/link';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Seo from '@/components/seo';
 import colorTheme from '@/components/ui-color-theme';
 
 /**
@@ -71,9 +71,12 @@ export default function Offline(): React.ReactElement {
 
   return (
     <>
-      <Head>
-        <meta name="robots" content="noindex" />
-      </Head>
+      <Seo
+        title={t('offline.heading')}
+        description={t('offline.description')}
+        path="/offline"
+        noindex
+      />
       <div style={pageStyle}>
         <h1 style={headingStyle}>{t('offline.heading')}</h1>
         <p style={descriptionStyle}>{t('offline.description')}</p>

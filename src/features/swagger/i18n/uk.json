@@ -55,5 +55,11 @@
       "facebook": "Facebook Іконка",
       "linkedin": "Linkedin Іконка"
     }
+  },
+  "seo": {
+    "swagger": {
+      "title": "Документація API — VilnaCRM",
+      "description": "Переглядайте та пробуйте REST API сервісу користувачів VilnaCRM в інтерактивній документації OpenAPI."
+    }
   }
 }

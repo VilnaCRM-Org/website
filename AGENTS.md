@@ -43,7 +43,9 @@ Client unit tests run on Jest with React Testing Library in a jsdom env
 (`TEST_ENV=client`); specs live in `src/test/testing-library/**/*.test.tsx` and
 `src/test/unit/**/*.test.ts` — which includes the hermetic build-time gates that assert on
 committed artifacts rather than on rendered UI, such as `src/test/unit/routes/`
-(`config/routes.json` against `pages/` and against the edge `ROUTE_MAP`) and
+(`config/routes.json` against `pages/` and against the edge `ROUTE_MAP`),
+`src/test/unit/seo/` (`public/sitemap.xml` against the route manifest, and the canonical
+origin against `public/robots.txt` and the deployment runbook) and
 `src/test/unit/contracts/` (the contract linters, driven over throwaway fixture trees).
 Server unit tests run on Jest in a node env (`TEST_ENV=server`); specs live in
 `src/test/apollo-server/**/*.test.ts` and boot the

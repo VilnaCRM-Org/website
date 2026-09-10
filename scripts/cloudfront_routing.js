@@ -28,8 +28,38 @@
  */
 'use strict';
 
+// The document a visitor sees for every blocked or unknown path. It is BRANDED and
+// self-contained (issue #339): a viewer-request function returns a body, it cannot fetch
+// one, so this string is the whole response — no stylesheet, no font, no script. Every rule
+// is therefore inline, and the colours are the site's own (`#1A1C1E` is `darkPrimary` in
+// src/components/ui-color-theme on the white ground the site uses), so the page reads as
+// this site rather than as a storage error. That pair measures 16.8:1, well past the 4.5:1
+// WCAG 2.1 AA needs, which matters because no stylesheet can arrive to correct it.
+//
+// It stays English-only on purpose. This handler runs before anything knows which of the
+// site's two locale bundles the visitor would have been served, and negotiating
+// `accept-language` here would put a parser in front of every 404 to translate one
+// sentence. The link is what resolves that: `/` is served by the site itself, which applies
+// its own locale.
+//
+// `pages/404.tsx` is the same content rendered inside the real site chrome, exported to
+// `/404.html`. It is NOT what this handler serves, and the two are not required to match
+// word for word: a viewer-request function can rewrite the URI or return a response, and a
+// rewrite would serve that document with a `200` — the soft 404 that tells a crawler a
+// mistyped address is a real page. `/404.html` reaches visitors as the S3 bucket's error
+// document; this string is what CloudFront returns for everything the allow-list rejects.
 var NOT_FOUND_BODY =
-  '<!DOCTYPE html><html><head><title>404 Not Found</title></head><body><h1>404 - Page Not Found</h1></body></html>';
+  '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">' +
+  '<meta name="viewport" content="width=device-width, initial-scale=1">' +
+  '<meta name="robots" content="noindex"><title>Page not found - VilnaCRM</title></head>' +
+  '<body style="margin:0;background:#fff;color:#1A1C1E;' +
+  "font-family:system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;line-height:1.5\">" +
+  '<main style="box-sizing:border-box;margin:0 auto;max-width:34rem;padding:4rem 1.5rem;' +
+  'text-align:center">' +
+  '<h1 style="margin:0 0 1rem;font-size:1.75rem">This page does not exist</h1>' +
+  '<p style="margin:0 0 2rem">The address may be mistyped, or the page may have been moved.</p>' +
+  '<a href="/" style="color:#1A1C1E;font-weight:600">Back to the home page</a>' +
+  '</main></body></html>';
 
 var SECURITY_HEADERS = Object.freeze({
   'content-security-policy': "frame-ancestors 'none'",

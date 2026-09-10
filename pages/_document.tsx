@@ -9,7 +9,12 @@ export default function Document(): React.ReactElement {
     <Html lang={mainLanguage}>
       <Head>
         <meta charSet="utf-8" />
-        <meta name="description" content="VilnaCRM platform for customer relationship management" />
+        {/* No `description` here. `_document` renders outside `next/head`, so its tags are
+            never de-duplicated against the ones a page declares — the hardcoded English
+            description that used to sit on this line rendered ALONGSIDE the localized one
+            from `src/components/layout`, giving every page two competing descriptions
+            (#339). The description is owned by `src/components/seo` per page, with the
+            shared Layout as the site-wide default. */}
         <meta name="apple-mobile-web-app-title" content="VilnaCRM" />
         <meta name="application-name" content="VilnaCRM" />
         <meta name="theme-color" content="#ffffff" />

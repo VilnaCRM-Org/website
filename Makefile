@@ -611,6 +611,17 @@ generate-localization: ## Regenerate the gitignored pages/i18n/localization.json
 generate-routes: ## Regenerate config/routes.json from pages/ (issue #333) — host-only; ROUTE_MANIFEST_CHECK=1 verifies instead of writing
 	@node scripts/ci/generate-route-manifest.mjs $(if $(filter 1 true TRUE,$(ROUTE_MANIFEST_CHECK)),--check)
 
+# Host-only and dependency-free for the same reasons as generate-routes above, and
+# deliberately NOT in the `lint` aggregate for the same reason: this recipe WRITES
+# public/sitemap.xml, and a gate that rewrites the artifact it checks cannot fail. The
+# drift gate is the hermetic Jest spec src/test/unit/seo/sitemap.test.ts, which already
+# runs in the client suite; SITEMAP_CHECK=1 selects the generator's verify-only `--check`
+# mode for a shell caller. It is a Make variable rather than a passed-through flag because
+# GNU Make parses a trailing `--check` on the command line as its own option, never as a
+# target argument.
+generate-sitemap: ## Regenerate public/sitemap.xml from config/routes.json (issue #339) — host-only; SITEMAP_CHECK=1 verifies instead of writing
+	@node scripts/ci/generate-sitemap.mjs $(if $(filter 1 true TRUE,$(SITEMAP_CHECK)),--check)
+
 .PHONY: lint lint-api-versions lint-headers lint-docker-policy lint-security-txt lint-prod-guardrails lint-pins lint-workflow-pins
 
 # The user-service inventory invariant (issue #381, F4): every consumer of the
@@ -1044,7 +1055,7 @@ ci-test-contract: ## Run contract parity tests directly assuming deps are instal
 	mutation-file-list test-mutation-changed \
 	test-e2e-burnin check-e2e-flakes pr-comments lint lint-api-versions \
 	lint-security-txt lint-prod-guardrails release-audit-dry-run \
-	lint-vulns scan-vulns-census generate-localization generate-routes
+	lint-vulns scan-vulns-census generate-localization generate-routes generate-sitemap
 
 # Brings the dev container up IDLE (docker-compose.ci.yml overrides only the
 # command), so a gate does not pay for a Next dev server it never calls. There

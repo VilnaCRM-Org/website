@@ -1,6 +1,9 @@
 import { CircularProgress, Container } from '@mui/material';
 import dynamic from 'next/dynamic';
 import React, { ComponentType } from 'react';
+import { useTranslation } from 'react-i18next';
+
+import Seo from '@/components/seo';
 
 const ReactSwagger: ComponentType = dynamic(
   () => import('@/features/swagger').then(mod => mod.Swagger),
@@ -24,5 +27,16 @@ const ReactSwagger: ComponentType = dynamic(
 );
 
 export default function Swagger(): React.ReactElement {
-  return <ReactSwagger />;
+  const { t } = useTranslation();
+
+  return (
+    <>
+      <Seo
+        title={t('seo.swagger.title')}
+        description={t('seo.swagger.description')}
+        path="/swagger"
+      />
+      <ReactSwagger />
+    </>
+  );
 }
