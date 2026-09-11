@@ -1,7 +1,7 @@
 target	coverage	evidence	details
 help	bats	tests/bats/makefile_targets.bats	Validated through the help output contract.
 start	bats	tests/bats/makefile_targets.bats	Validated in EXEC_MODE=host mode with a stubbed Next.js binary.
-wait-for-dev	bats	tests/bats/makefile_targets.bats	Validated with a stubbed curl readiness check.
+wait-for-dev	bats	tests/bats/wait_for_services.bats	Validated with a stubbed curl on both paths: the first healthy probe succeeds, and a curl that never answers exhausts WAIT_FOR_DEV_MAX_TRIES, exits non-zero and dumps the dev container logs.
 create-temp-dev-container-dind	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker commands and env-var guards.
 copy-source-to-container-dind	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker and tar commands.
 install-deps-in-container-dind	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker and npm/bun commands.
@@ -34,7 +34,7 @@ test-visual-ui	bats	tests/bats/makefile_targets.bats	Validated with stubbed Dock
 test-visual-update	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker and Playwright commands.
 create-network	ci	.github/workflows/e2e-testing.yml	Executed through `make test-e2e`, which calls `start-prod` and its `create-network` prerequisite.
 start-prod	ci	.github/workflows/e2e-testing.yml	Executed through `make test-e2e` and other PR workflows that depend on `start-prod`.
-wait-for-prod	bats	tests/bats/makefile_targets.bats	Validated with a stubbed curl readiness check.
+wait-for-prod	bats	tests/bats/wait_for_services.bats	Validated with a stubbed curl on both paths: the first healthy probe succeeds, and a curl that never answers exhausts WAIT_FOR_PROD_MAX_TRIES (bounded since issue #331), exits non-zero and dumps the prod container logs.
 test-unit-all	ci	.github/workflows/unit-testing.yml	Executed directly by the unit testing workflow.
 test-unit-client	ci	.github/workflows/unit-testing.yml	Executed through `make test-unit-all`, which depends on `test-unit-client`.
 test-unit-server	ci	.github/workflows/unit-testing.yml	Executed through `make test-unit-all`, which depends on `test-unit-server`.
@@ -114,6 +114,7 @@ lint-workflows	bats	tests/bats/makefile_targets.bats	Validated host-only: the di
 lint-security-txt	bats	tests/bats/makefile_targets.bats	Executed through `make lint`; the target itself is validated against the committed RFC 9116 file, and check-security-txt.sh has its own suite in check_security_txt.bats.
 lint-prod-guardrails	bats	tests/bats/makefile_targets.bats	Executed through `make lint` and `make ci-lint`; the target shells out to the hermetic policy script, whose assertions are covered by prod_guardrails.bats.
 release-audit-dry-run	bats	tests/bats/release_audit.bats	Host-only dry run of the release audit; the script it wraps is covered end to end (record, dedup, escalation, sweep, no-git invariant) by release_audit.bats.
+rollback-info	bats	tests/bats/rollback_info.bats	Host-only, read-only query of the GitHub Deployments API for the last successful production deployment; the script is covered with a PATH-stubbed gh (success, a newer failed deployment skipped, no deployments, only failed deployments, gh absent, gh unauthenticated, API errors) and the target is driven through make in the sandbox.
 lint-vulns	bats	tests/bats/makefile_targets.bats	Validated host-only: ensure-osv.sh provisioning (idempotent) plus scan-vulns.sh census mode with a stubbed scanner that exits 1 as the real one does on findings, and the diff mode's fail-closed guard when the base ref is unreachable.
 scan-vulns-census	bats	tests/bats/makefile_targets.bats	Validated as an alias that runs lint-vulns in advisory census mode with a stubbed scanner.
 stop-prod	bats	tests/bats/makefile_targets.bats	Validated in both modes: Docker Compose down by default, the host-stack helper under HOST_STACK=1.
