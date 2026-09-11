@@ -1,21 +1,12 @@
-import React from 'react';
-import { useTranslation } from 'react-i18next';
-
-import Seo from '@/components/seo';
+import withSeo from '@/components/seo/with-seo';
 import { OfflineShell } from '@/features/offline';
 
-export default function Offline(): React.ReactElement {
-  const { t } = useTranslation();
-
-  return (
-    <>
-      <Seo
-        title={t('offline.heading')}
-        description={t('offline.description')}
-        path="/offline"
-        noindex
-      />
-      <OfflineShell />
-    </>
-  );
-}
+export default withSeo(
+  {
+    titleKey: 'offline.heading',
+    descriptionKey: 'offline.description',
+    path: '/offline',
+    noindex: true,
+  },
+  OfflineShell
+);

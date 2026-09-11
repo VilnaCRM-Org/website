@@ -127,9 +127,11 @@ a global 100%. Three consequences recur:
 
 Pages live under `pages/` (Next.js pages router, static export).
 
-1. Create `pages/<route>.tsx` exporting a default React component.
-2. Keep presentational UI in a feature (`src/features/<feature>`); the page file
-   should mostly compose feature components.
+1. Create `pages/<route>.tsx` exporting `withSeo(spec, Body)` from
+   `src/components/seo/with-seo` — the spec carries the i18n keys of the title and
+   description, the route path, and the `noindex` / `siteSchema` flags.
+2. Keep presentational UI in a feature (`src/features/<feature>`); `Body` is that
+   feature's component, and the page file holds nothing else.
 3. Use `useTranslation()` and per-feature i18n keys for copy — never hardcode
    user-facing English (see "Add a locale").
 4. Regenerate the route manifest with `make generate-routes` (host-only; it runs

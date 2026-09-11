@@ -1,21 +1,12 @@
-import React from 'react';
-import { useTranslation } from 'react-i18next';
-
-import Seo from '@/components/seo';
+import withSeo from '@/components/seo/with-seo';
 import { LandingComponent } from '@/features/landing';
 
-export default function Home(): React.ReactElement {
-  const { t } = useTranslation();
-
-  return (
-    <>
-      <Seo
-        title={t('seo.landing.title')}
-        description={t('seo.landing.description')}
-        path="/"
-        siteSchema
-      />
-      <LandingComponent />
-    </>
-  );
-}
+export default withSeo(
+  {
+    titleKey: 'seo.landing.title',
+    descriptionKey: 'seo.landing.description',
+    path: '/',
+    siteSchema: true,
+  },
+  LandingComponent
+);

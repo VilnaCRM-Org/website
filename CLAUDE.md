@@ -822,8 +822,8 @@ src/
 └── test/          # Specs: testing-library, unit, apollo-server, e2e, visual, load, memory-leak
 ```
 
-Pages are thin: a route file under `pages/` renders `<Seo>` plus one feature component and
-nothing else (the 404, offline, Swagger and API-docs bodies live in `src/features/not-found`,
+Pages are thin: a route file under `pages/` is `withSeo(spec, FeatureComponent)` from
+`src/components/seo` and nothing else (the 404, offline, Swagger and API-docs bodies live in `src/features/not-found`,
 `src/features/offline`, `src/features/swagger` and `src/features/documentation`). Shared
 primitives are documented in [`src/components/README.md`](src/components/README.md).
 

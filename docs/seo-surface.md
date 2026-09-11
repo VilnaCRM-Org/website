@@ -17,7 +17,11 @@ rendered as bare text.
 ## Per-page head: `src/components/seo`
 
 `Seo` renders the title, the single description, the canonical link, the Open Graph and
-Twitter tags and, on the home page alone, the JSON-LD graph.
+Twitter tags and, on the home page alone, the JSON-LD graph. Every route file under
+`pages/` is built by `withSeo(spec, Body)` from the same directory: the factory resolves
+the spec's `titleKey` / `descriptionKey` through i18n, renders `Seo`, then the feature
+body — so a page is a spec and a component, and the five routes share one shape instead
+of five copies of it.
 
 - **It overrides the Layout, on purpose.** `src/components/layout` still declares the
   site-wide title and description so a route that renders no `Seo` is never title-less.
