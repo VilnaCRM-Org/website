@@ -556,6 +556,15 @@ Four production-facing invariants that no other gate watches. Extend them; never
   protection itself is a GitHub setting that cannot be committed — see CONTRIBUTING.md for
   the required check names.
 
+A fifth, from issue #337, sits in the browser rather than at the edge: the sign-up form is
+the only interactive surface on this site, so `src/test/unit/sentry-replay-masking.test.ts`
+parses `pages/_app.tsx` with the TypeScript compiler and fails unless `Sentry.init` carries
+`sendDefaultPii: false` and its `Sentry.replayIntegration` argument carries
+`{ maskAllInputs: true, maskAllText: true, blockAllMedia: true }` as literals — a flag
+flipped, an option dropped, a value that became a runtime expression, or a second unmasked
+replay integration all turn it red, and an AST walk (never a regex over the rationale
+comment) is what lets it survive a comment-free `_app.tsx`.
+
 ### Committed secrets (gitleaks, issue #353)
 
 `make lint-secrets` scans the working tree and `make scan-secrets-history` scans every
