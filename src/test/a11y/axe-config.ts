@@ -133,17 +133,6 @@ export const A11Y_EXCEPTIONS: readonly A11yException[] = [
     trackingUrl: 'https://github.com/VilnaCRM-Org/website/issues/423',
   },
   {
-    ruleId: 'select-name',
-    scope: '#servers',
-    layer: 'route',
-    routes: ['/swagger'],
-    reason:
-      'The servers dropdown is rendered by third-party swagger-ui-react, so there is no ' +
-      'local element to label; tracked in #424. Scoped to that one selector, so the same ' +
-      'rule still fails on every other control.',
-    trackingUrl: 'https://github.com/VilnaCRM-Org/website/issues/424',
-  },
-  {
     ruleId: 'button-name',
     scope: '.close-modal',
     layer: 'route',
