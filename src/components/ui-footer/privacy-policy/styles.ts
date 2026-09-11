@@ -3,6 +3,7 @@ import colorTheme from '@/components/ui-color-theme';
 
 export default {
   wrapper: {
+    alignItems: 'center',
     gap: '0.5rem',
     flexDirection: 'row',
     [`@media (max-width: ${breakpointsTheme.breakpoints.values.md}px)`]: {

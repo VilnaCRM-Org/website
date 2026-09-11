@@ -7,13 +7,17 @@
  * claimed project would then have served content that the site's own sitemap pointer
  * vouched for: SEO poisoning and phishing under a brand-associated host.
  *
- * Nothing else in the repository would notice that coming back. `robots.txt` is not part
- * of the static export today (only `public/` is copied, so no crawler reads it yet — see
- * issue #339, which publishes the SEO surface), it is outside every formatter and linter
- * glob, and a wrong hostname is invisible in review. Hence this spec.
+ * Nothing else in the repository would notice that coming back: the file is outside every
+ * formatter and linter glob, and a wrong hostname is invisible in review. Hence this spec.
  *
- * It resolves the file from `public/` first so it keeps gating after #339 moves it, and
- * it imports nothing from `src/`, so it adds no files to the client coverage denominator.
+ * Since issue #339 the file lives under `public/` and therefore SHIPS — the static export
+ * copies only `public/` — so this spec now also pins the location. A `robots.txt` that
+ * drifts back to the repository root is not a lint failure, it is a file no crawler ever
+ * reads again, which is the state #339 fixed.
+ *
+ * It imports nothing from `src/`, so it adds no files to the client coverage denominator.
+ * The parity between this file's origin and the one the bundle uses for canonical URLs
+ * (`src/config/site.ts`) is asserted in `src/test/unit/seo/site-origin.test.ts`.
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -25,20 +29,10 @@ const CANONICAL_ORIGIN: string = 'https://vilnacrm.com';
 
 const REPO_ROOT: string = path.resolve(__dirname, '../../..');
 
-function resolveRobotsPath(): string {
-  const candidates: string[] = [
-    path.join(REPO_ROOT, 'public/robots.txt'),
-    path.join(REPO_ROOT, 'robots.txt'),
-  ];
-  const found: string | undefined = candidates.find(candidate => fs.existsSync(candidate));
-  if (found === undefined) {
-    throw new Error(`robots.txt not found in any of: ${candidates.join(', ')}`);
-  }
-  return found;
-}
+const PUBLISHED_PATH: string = path.join(REPO_ROOT, 'public/robots.txt');
+const UNPUBLISHED_PATH: string = path.join(REPO_ROOT, 'robots.txt');
 
-const robotsPath: string = resolveRobotsPath();
-const contents: string = fs.readFileSync(robotsPath, 'utf8');
+const contents: string = fs.readFileSync(PUBLISHED_PATH, 'utf8');
 
 // Comments explain the history and legitimately mention removed values; only real
 // directives are under test.
@@ -55,6 +49,13 @@ function valuesOf(field: string): string[] {
 }
 
 describe('robots.txt', () => {
+  it('ships from public/, the only directory the static export copies', () => {
+    expect(fs.existsSync(PUBLISHED_PATH)).toBe(true);
+    // A second copy at the root is how the file spent its whole life unpublished; one
+    // left behind would be the version a reader edits while production serves the other.
+    expect(fs.existsSync(UNPUBLISHED_PATH)).toBe(false);
+  });
+
   it('declares exactly one Sitemap directive', () => {
     expect(valuesOf('Sitemap')).toHaveLength(1);
   });

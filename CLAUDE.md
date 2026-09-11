@@ -325,6 +325,34 @@ PR review comments.
 Never satisfy a gate with `eslint-disable`, `prettier-ignore`, a markdownlint disable, or a
 lowered threshold — fix the root cause.
 
+### Production-source guards (ADR 0005)
+
+Two ESLint gates inside `make lint-next` hold `src/**` and `pages/**` to the house
+conventions the PR #467 review asked to make deterministic. Specs (`src/test/**`,
+`tests/**`) and stories are exempt; `scripts/` and the root configs are outside the scope.
+
+- **No comments in production source** (`vilnacrm/no-comments`, an inline plugin in
+  `eslint.config.mjs`). Every comment token the parser produces is an error — line,
+  block, JSDoc and JSX alike — so no spelling slips past, and there is no allow-list and
+  no fixer. Rationale goes to an ADR, a design note under `docs/`
+  ([`docs/seo-surface.md`](docs/seo-surface.md), [`docs/offline-shell.md`](docs/offline-shell.md),
+  [`docs/sign-up-hardening.md`](docs/sign-up-hardening.md),
+  [`docs/extending-the-website.md`](docs/extending-the-website.md)), the spec that pins
+  the behaviour, or the commit message; feature-local notes go in the feature README.
+- **No inline styles** (`no-restricted-syntax` selectors on
+  `JSXAttribute[name.name='sx'] ObjectExpression` and its `style` twin, in the same block
+  as the `process.env` guard). Styles live in a sibling `styles.ts` and are referenced —
+  `sx={styles.a}`, `sx={[styles.a, styles.b]}`, `sx={styles.f(value)}` for a runtime
+  value. The descendant selector catches a literal that is bare, spread, inside an array
+  or inside a theme callback. Pages therefore compose a feature component instead of
+  rendering markup: `pages/` cannot hold a `styles.ts`.
+
+`src/test/unit/lint/production-source-gates.test.ts` proves both against the real
+`eslint` binary and the committed config — every banned spelling is reported, the
+allowed forms are not, and the scope is read back with `--print-config` — so a dropped,
+downgraded or re-scoped rule turns the client unit suite red. Never widen the `ignores`
+to clear a finding; relocate the rationale or the style instead.
+
 ### Contract supply chain (issue #376)
 
 Every user-service contract comes from the single `USER_SERVICE_VERSION` pin in `.env`
@@ -486,7 +514,8 @@ Four production-facing invariants that no other gate watches. Extend them; never
   the hermetic two-directional gate — a page with no manifest entry and a `ROUTE_MAP` entry
   with no page both turn it red. A route may be deliberately unmapped only through a
   recorded exemption carrying its reason; `/offline` is the one that exists (see the
-  offline-posture section below).
+  offline-posture section below). Next's error documents (`404`, `500`) are not routes at
+  all for this purpose and are excluded from the manifest — see the SEO-surface section.
 - **The deployed edge is smoke-tested on the negative path**
   (`scripts/ci/smoke-response-shape.sh`, issue #363). `make lint-headers` and the `edge`
   Jest layer prove the checked-in handler's contract; nothing in the repository can
@@ -584,6 +613,53 @@ ignore needs an `id`, a `reason`, and an unexpired `ignoreUntil`; all three are 
 `scripts/ci/osv-ignores.ts`. The rule is also mechanical, not just documented: both diff scans
 run under the _intersection_ of the base ref's ignores and the working tree's, so an ignore a
 change adds — or removes — cannot alter what its own gate suppresses.
+
+### The SEO surface (issue #339)
+
+The public marketing site shipped with no robots.txt, no sitemap, one generic `<title>` on
+every route, two competing meta descriptions and no canonical, Open Graph, Twitter Card or
+structured data at all. Every part of that surface is now **derived from a committed
+artifact and gated**, so it cannot drift back:
+
+- **`public/robots.txt`.** It lived at the repository root until #339, where the static
+  export — which copies only `public/` — never included it, so no crawler ever read it.
+  `src/test/unit/robots-txt.test.ts` now pins the location as well as the directives; a
+  root-level copy fails the gate.
+- **`public/sitemap.xml`.** Committed, and written by `scripts/ci/generate-sitemap.mjs`
+  (`make generate-sitemap`) from `config/routes.json` plus the origin it reads back out of
+  the `Sitemap:` directive in robots.txt. The rules live in the importable
+  `scripts/ci/sitemap.mjs` so `src/test/unit/seo/sitemap.test.ts` can drive them over
+  inputs the repository does not contain, not only over the artifact that already passes.
+  No `<lastmod>`/`<changefreq>`/`<priority>`: the first would rewrite the file on every run
+  and so make drift unprovable, and the other two are hints the major crawlers ignore. A
+  route is excluded only through `EXCLUDED_ROUTES`, carrying its reason, and the spec fails
+  on an exclusion for a route that no longer exists.
+- **Per-page metadata.** `src/components/seo` renders the title, single description,
+  canonical, Open Graph and Twitter tags, and — on the home page alone — the
+  `Organization` + `WebSite` JSON-LD graph. `src/components/layout` keeps the site-wide
+  title and description so a route rendering no `Seo` is never title-less; `next/head`
+  reverses the collected elements before de-duplicating, so the page's declaration wins.
+  The hardcoded English description in `pages/_document.tsx` is gone — `_document` renders
+  outside that dedupe, so it rendered _alongside_ the localized one.
+- **One canonical origin.** `SITE_ORIGIN` in `src/config/site.ts` is a committed constant,
+  not a `NEXT_PUBLIC_*` variable: a canonical URL names the address a document should be
+  indexed under, so a sandbox deploy must not be able to rewrite it to its own host.
+  It is declared a second time by robots.txt, which no build interpolates;
+  `src/test/unit/seo/site-origin.test.ts` holds the two — and `docs/deployment-runbook.md`
+  — in step.
+- **Error pages.** `pages/404.tsx` gives the export a branded, localized `404.html`, and
+  `scripts/cloudfront_routing.js` serves a branded, self-contained document of its own.
+  The edge deliberately does **not** rewrite unknown URIs to `/404.html`: a viewer-request
+  function rewrites the URI, not the status, so that would serve the error document with a
+  `200` — the soft 404 that tells a crawler a mistyped address is a real page. For the same
+  reason `404`/`500` are excluded from `config/routes.json` (an error document is reached
+  by status code, never by navigation), exactly as `src/test/unit/a11y/routes.test.ts`
+  already excluded them.
+
+`/offline` and `/en/docs/api` ship `noindex` and are excluded from the sitemap — the first
+is a network artefact, the second the placeholder stub #339 records. Never fix a red SEO
+gate by widening `EXCLUDED_ROUTES` or by relaxing the origin parity; regenerate the artifact
+and commit it.
 
 ### Offline posture and the service worker (issue #338)
 
@@ -745,6 +821,11 @@ src/
 ├── utils/         # Shared utilities
 └── test/          # Specs: testing-library, unit, apollo-server, e2e, visual, load, memory-leak
 ```
+
+Pages are thin: a route file under `pages/` is `withSeo(spec, FeatureComponent)` from
+`src/components/seo` and nothing else (the 404, offline, Swagger and API-docs bodies live in `src/features/not-found`,
+`src/features/offline`, `src/features/swagger` and `src/features/documentation`). Shared
+primitives are documented in [`src/components/README.md`](src/components/README.md).
 
 Key conventions are enforced by dependency-cruiser in
 [`.dependency-cruiser.js`](.dependency-cruiser.js) and surfaced by `make lint-deps`:

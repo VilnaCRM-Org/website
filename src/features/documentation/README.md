@@ -4,13 +4,24 @@ A reserved feature slice for VilnaCRM product documentation.
 
 ## Status
 
-Scaffold only. This slice currently holds no components, hooks, or public API — the tracked
-`.gitignore` placeholders keep the reserved directory (and its `i18n/` folder) in git while
-the feature is unimplemented. There is no barrel to import yet.
+Placeholder. The slice holds the stub body of `pages/en/docs/api.tsx` — the page that
+issue #339 records as `noindex` and absent from the sitemap until it carries real content,
+because a stub would compete with `/swagger` for the same query. The tracked `.gitignore`
+in `i18n/` keeps that folder in git until the stub is localized.
+
+## Public API
+
+```ts
+import { ApiDocs } from '@/features/documentation';
+```
+
+- `ApiDocs` — the placeholder heading and paragraph. Rendered by `pages/en/docs/api.tsx`,
+  which owns the `<Seo>` head.
 
 ## Structure
 
-- `i18n/` — reserved for localized copy (`en.json` / `uk.json`) once the feature exists.
+- `components/api-docs/` — the stub component and its `styles.ts`.
+- `i18n/` — reserved for localized copy (`en.json` / `uk.json`) once the page has content.
 
 ## When you build this feature
 

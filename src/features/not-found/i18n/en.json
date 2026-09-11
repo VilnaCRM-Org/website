@@ -1,0 +1,9 @@
+{
+  "not_found": {
+    "title": "Page not found — VilnaCRM",
+    "description": "This address does not match any page on the VilnaCRM site.",
+    "heading": "This page does not exist",
+    "hint": "The address may be mistyped, or the page may have been moved.",
+    "home_link": "Back to the home page"
+  }
+}

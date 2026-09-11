@@ -2,6 +2,7 @@ import breakpointsTheme from '@/components/ui-breakpoints';
 
 export default {
   wrapper: {
+    alignItems: 'center',
     pt: '2rem',
     position: 'relative',
     maxWidth: '100dvw',

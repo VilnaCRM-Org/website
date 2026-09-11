@@ -11,7 +11,7 @@ function PrivacyPolicy(): React.ReactElement {
   const { t } = useTranslation();
 
   return (
-    <Stack direction="row" sx={[styles.wrapper, { alignItems: 'center' }]}>
+    <Stack direction="row" sx={styles.wrapper}>
       <Link
         target="_blank"
         rel="noopener noreferrer"

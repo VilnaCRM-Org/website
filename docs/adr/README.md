@@ -19,6 +19,8 @@ justified a decision still holds.
   parallel. _Accepted._
 - [ADR 0004](0004-complexity-gate.md) — gate code complexity with rust-code-analysis, and
   never lower a threshold. _Accepted._
+- [ADR 0005](0005-no-comments-no-inline-styles.md) — production source carries no
+  comments and no inline styles; rationale lives in docs. _Accepted._
 
 The template for a new record is [`0000-template.md`](0000-template.md).
 

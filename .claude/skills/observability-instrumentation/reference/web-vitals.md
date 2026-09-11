@@ -41,6 +41,26 @@ export function reportWebVitals(metric: NextWebVitalsMetric) {
 Send only the metric `name`, `value`, and `id`; that payload is inherently
 PII-free, so keep it that way.
 
+The shipped module's constants and the reasons behind them (this is the rationale
+record; the source itself carries no comments, ADR 0005):
+
+- **`label: 'web-vital'` only.** Next.js reports the field vitals with that label and
+  also emits framework timings (hydration, route-change, render) with `label: 'custom'`;
+  those are dropped so only true field vitals reach analytics.
+- **10% sample.** Field data is statistical, so the sample keeps analytics volume (and
+  cost) bounded while still yielding a representative distribution. The gate takes
+  `isProduction` and the sample as arguments so it stays deterministic and unit-testable.
+- **`gtag` is read off `window`.** The `<GoogleAnalytics />` tag in `_app` injects it;
+  reading the global (rather than importing the dev-only `@next/third-parties` helper
+  into runtime code) keeps `src` free of devDependency imports and lets the forward
+  no-op gracefully before the GA script has loaded.
+- **CLS is scaled by 1000, durations rounded to ms.** GA4 event values must be integers.
+  CLS is a unitless layout-shift ratio (every other forwarded vital is a millisecond
+  duration), so it uses the conventional web-vitals→GA transform.
+- Sentry only records once the DSN is set (#322) and GA only once a real measurement id
+  replaces the placeholder; the hook is wired now so telemetry is live the moment those
+  keys are fixed.
+
 ## Measuring vs. instrumenting
 
 `reportWebVitals` gives real-user _field_ data. Lab diagnosis — Lighthouse

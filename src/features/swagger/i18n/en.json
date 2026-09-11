@@ -55,5 +55,11 @@
       "facebook": "Facebook Icon",
       "linkedin": "Linkedin Icon"
     }
+  },
+  "seo": {
+    "swagger": {
+      "title": "API documentation — VilnaCRM",
+      "description": "Browse and try the VilnaCRM user-service REST API from an interactive OpenAPI reference."
+    }
   }
 }
