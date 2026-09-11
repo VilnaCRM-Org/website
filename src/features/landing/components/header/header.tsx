@@ -27,13 +27,10 @@ async function navigateToLink(router: NextRouter, link: string): Promise<void> {
   }
 }
 
-// Factory bound to the live `router` (never a module-scope constant handler).
 function createLinkClickHandler(router: NextRouter): (link: string) => void {
   return async (link: string): Promise<void> => {
     const normalized: string = normalizeLink(link);
 
-    // Anchor scroll covers same-page nav and the contacts shortcut; any other
-    // route navigates first, then scrolls (navigateToLink owns the fallback).
     if (normalized === 'contacts' || router.pathname === '/') {
       scrollToAnchor(link);
       return;
@@ -47,9 +44,6 @@ function useScrollOnRouteChange(router: NextRouter): void {
   useEffect(() => {
     const handleScroll: (url: string) => void = (url: string): void => {
       if (url.includes('#')) {
-        // Guarded by `includes('#')`, so split always yields a second segment;
-        // assert it (rather than a `?? ''` fallback that adds an unreachable,
-        // coverage-breaking branch) under `noUncheckedIndexedAccess`.
         const id: string = url.split('#')[1]!;
         scrollToAnchor(`#${id}`);
       }
@@ -62,8 +56,6 @@ function useScrollOnRouteChange(router: NextRouter): void {
   }, [router]);
 }
 
-// Keeps the live `router` in scope (it must never be hoisted to module scope)
-// and owns the routeChangeComplete scroll effect; returns the nav click handler.
 function useHeaderNavigation(router: NextRouter): (link: string) => void {
   useScrollOnRouteChange(router);
   return createLinkClickHandler(router);

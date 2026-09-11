@@ -8,7 +8,7 @@ import styles from './styles';
 
 function DeviceImage(): React.ReactElement {
   return (
-    <Stack sx={[styles.wrapper, { justifyContent: 'center', alignItems: 'center' }]}>
+    <Stack sx={styles.wrapper}>
       <Box sx={styles.screenBorder}>
         <Box sx={styles.screenBackground}>
           <Notch />

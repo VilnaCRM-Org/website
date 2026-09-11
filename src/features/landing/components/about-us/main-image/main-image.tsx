@@ -12,9 +12,6 @@ import TabletMainImage from '../../../assets/img/about-vilna/tablet.jpg';
 
 import styles from './styles';
 
-// The concrete props `next-export-optimize-images` emits differ from
-// `next/image`'s `ImageProps` under `exactOptionalPropertyTypes`, so key off the
-// optimizer's own return type instead of the stricter next/image one.
 type OptimizedImageProps = ReturnType<typeof getOptimizedImageProps>['props'];
 
 const IMG_ALT_TEXT: string = 'Main image';

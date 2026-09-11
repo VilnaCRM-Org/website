@@ -1,6 +1,10 @@
 import breakpointsTheme from '@/components/ui-breakpoints';
 
 export default {
+  wrapper: {
+    maxWidth: '39.5rem',
+  },
+
   title: {
     [`@media (max-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
       fontSize: '1.75rem',

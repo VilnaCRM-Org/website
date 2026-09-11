@@ -2,6 +2,8 @@ import { Box, Container } from '@mui/material';
 import dynamic from 'next/dynamic';
 import { ComponentType } from 'react';
 
+import styles from './styles';
+
 const DynamicBackgroundImages: ComponentType = dynamic(() => import('../background-images'), {
   ssr: false,
 });
@@ -19,7 +21,7 @@ const DynamicAuthSection: ComponentType = dynamic(() => import('../auth-section'
 function Landing(): React.ReactElement {
   return (
     <>
-      <Box sx={{ position: 'relative' }}>
+      <Box sx={styles.sections}>
         <DynamicBackgroundImages />
         <DynamicAboutUs />
         <Container maxWidth="xl">

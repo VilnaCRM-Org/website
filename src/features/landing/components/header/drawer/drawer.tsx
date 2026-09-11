@@ -20,7 +20,7 @@ function DrawerHeader({ onClose }: { onClose: () => void }): React.ReactElement 
   const { t } = useTranslation();
 
   return (
-    <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
+    <Stack direction="row" sx={styles.header}>
       <Link
         href="/"
         component={NextLink}
@@ -46,15 +46,7 @@ function DrawerActions({ onClose }: { onClose: () => void }): React.ReactElement
   const { t } = useTranslation();
 
   return (
-    <Stack
-      direction="row"
-      sx={{
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '0.563rem',
-        mt: '0.75rem',
-      }}
-    >
+    <Stack direction="row" sx={styles.actions}>
       <UiButton fullWidth variant="outlined" size="small" disabled>
         {t('header.actions.log_in')}
       </UiButton>
@@ -73,10 +65,7 @@ function DrawerContent({
   handleLinkClick: (link: string) => void;
 }): React.ReactElement {
   return (
-    <Box
-      role="presentation"
-      sx={[styles.drawerContent, { width: '23.4375rem', textAlign: 'center' }]}
-    >
+    <Box role="presentation" sx={styles.drawerContent}>
       <DrawerHeader onClose={onClose} />
       <DrawerActions onClose={onClose} />
       <NavList
@@ -92,30 +81,6 @@ function DrawerContent({
   );
 }
 
-/**
- * The mobile navigation drawer.
- *
- * Deliberately passes no `role` to `Drawer`. `role="menu"` used to be set here, and
- * MUI forwards it to the modal root — the wrapper holding the backdrop and the
- * paper. ARIA gives `menu` required owned elements (`menuitem` and friends), so a
- * backdrop plus a `[role=dialog]` made that root fail axe's
- * `aria-required-children` at critical impact (SC 1.3.1), found by the
- * interaction-state scan added in #369.
- *
- * Neither alternative works: `menuitem` on the nav links would override their
- * `link` role and oblige the full APG menu keyboard model (arrows, Home/End,
- * type-ahead), and moving `role="menu"` onto the inner `<nav>` would destroy the
- * navigation landmark. This is site navigation inside a modal dialog, which is
- * exactly what MUI already exposes: `role="dialog"`, `aria-modal="true"` and
- * `tabIndex={-1}` on the paper slot whenever `variant` is `temporary` (its
- * default), with a real `<nav>` list inside.
- *
- * Locate the open drawer by the `dialog` role — four tests do, in jsdom and in all
- * three browsers, so an MUI upgrade that stopped emitting it fails loudly instead
- * of silently losing dialog semantics. Naming that dialog is tracked in #435, and
- * the name has to go on the paper slot: props land on the modal root, which is
- * `role="presentation"`, where `aria-label` is prohibited.
- */
 function CustomDrawer({
   handleLinkClick,
 }: {
@@ -136,7 +101,6 @@ function CustomDrawer({
       >
         <Image src={Bars} alt={t('header.drawer.image_alt.bars')} width={24} height={24} />
       </Button>
-      {/* No `role` override — see the note on this component. */}
       <Drawer sx={styles.drawer} anchor="right" open={isDrawerOpen} onClose={handleCloseDrawer}>
         <DrawerContent onClose={handleCloseDrawer} handleLinkClick={handleLinkClick} />
       </Drawer>

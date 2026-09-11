@@ -325,6 +325,34 @@ PR review comments.
 Never satisfy a gate with `eslint-disable`, `prettier-ignore`, a markdownlint disable, or a
 lowered threshold — fix the root cause.
 
+### Production-source guards (ADR 0005)
+
+Two ESLint gates inside `make lint-next` hold `src/**` and `pages/**` to the house
+conventions the PR #467 review asked to make deterministic. Specs (`src/test/**`,
+`tests/**`) and stories are exempt; `scripts/` and the root configs are outside the scope.
+
+- **No comments in production source** (`vilnacrm/no-comments`, an inline plugin in
+  `eslint.config.mjs`). Every comment token the parser produces is an error — line,
+  block, JSDoc and JSX alike — so no spelling slips past, and there is no allow-list and
+  no fixer. Rationale goes to an ADR, a design note under `docs/`
+  ([`docs/seo-surface.md`](docs/seo-surface.md), [`docs/offline-shell.md`](docs/offline-shell.md),
+  [`docs/sign-up-hardening.md`](docs/sign-up-hardening.md),
+  [`docs/extending-the-website.md`](docs/extending-the-website.md)), the spec that pins
+  the behaviour, or the commit message; feature-local notes go in the feature README.
+- **No inline styles** (`no-restricted-syntax` selectors on
+  `JSXAttribute[name.name='sx'] ObjectExpression` and its `style` twin, in the same block
+  as the `process.env` guard). Styles live in a sibling `styles.ts` and are referenced —
+  `sx={styles.a}`, `sx={[styles.a, styles.b]}`, `sx={styles.f(value)}` for a runtime
+  value. The descendant selector catches a literal that is bare, spread, inside an array
+  or inside a theme callback. Pages therefore compose a feature component instead of
+  rendering markup: `pages/` cannot hold a `styles.ts`.
+
+`src/test/unit/lint/production-source-gates.test.ts` proves both against the real
+`eslint` binary and the committed config — every banned spelling is reported, the
+allowed forms are not, and the scope is read back with `--print-config` — so a dropped,
+downgraded or re-scoped rule turns the client unit suite red. Never widen the `ignores`
+to clear a finding; relocate the rationale or the style instead.
+
 ### Contract supply chain (issue #376)
 
 Every user-service contract comes from the single `USER_SERVICE_VERSION` pin in `.env`
@@ -793,6 +821,11 @@ src/
 ├── utils/         # Shared utilities
 └── test/          # Specs: testing-library, unit, apollo-server, e2e, visual, load, memory-leak
 ```
+
+Pages are thin: a route file under `pages/` renders `<Seo>` plus one feature component and
+nothing else (the 404, offline, Swagger and API-docs bodies live in `src/features/not-found`,
+`src/features/offline`, `src/features/swagger` and `src/features/documentation`). Shared
+primitives are documented in [`src/components/README.md`](src/components/README.md).
 
 Key conventions are enforced by dependency-cruiser in
 [`.dependency-cruiser.js`](.dependency-cruiser.js) and surfaced by `make lint-deps`:

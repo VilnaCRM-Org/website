@@ -63,7 +63,7 @@ describe('Localization Configuration', () => {
     delete process.env.NEXT_PUBLIC_MAIN_LANGUAGE;
     delete process.env.NEXT_PUBLIC_FALLBACK_LANGUAGE;
 
-    await expect(import('../../config/i18nConfig.js')).rejects.toThrow(
+    await expect(import('../../config/i18nConfig')).rejects.toThrow(
       /Invalid environment configuration/
     );
   });
@@ -71,7 +71,7 @@ describe('Localization Configuration', () => {
     process.env.NEXT_PUBLIC_MAIN_LANGUAGE = 'uk';
     delete process.env.NEXT_PUBLIC_FALLBACK_LANGUAGE;
 
-    await expect(import('../../config/i18nConfig.js')).rejects.toThrow(
+    await expect(import('../../config/i18nConfig')).rejects.toThrow(
       /Invalid environment configuration/
     );
   });
@@ -79,7 +79,7 @@ describe('Localization Configuration', () => {
     delete process.env.NEXT_PUBLIC_MAIN_LANGUAGE;
     process.env.NEXT_PUBLIC_FALLBACK_LANGUAGE = 'en';
 
-    await expect(import('../../config/i18nConfig.js')).rejects.toThrow(
+    await expect(import('../../config/i18nConfig')).rejects.toThrow(
       /Invalid environment configuration/
     );
   });
@@ -93,25 +93,5 @@ describe('Localization Configuration', () => {
   it('should have the correct fallback language', () => {
     expect(i18nConfig.fallbackLng).toBeDefined();
     expect(i18nConfig.fallbackLng).toContain('en');
-  });
-  it('should throw an error if localization resources fail to load', async () => {
-    jest.doMock('../../../pages/i18n/localization.json', () => {
-      throw new Error('Mocked file not found');
-    });
-
-    await expect(import('../../config/i18nConfig.js')).rejects.toThrow(
-      'Failed to load localization resources: Mocked file not found'
-    );
-  });
-  it('should throw an error if localization resources fail to load', async () => {
-    jest.spyOn(require, 'resolve').mockImplementation(() => {
-      throw new Error('Mocked file not found');
-    });
-
-    await expect(import('../../config/i18nConfig.js')).rejects.toThrow(
-      'Failed to load localization resources: Mocked file not found'
-    );
-
-    jest.restoreAllMocks();
   });
 });

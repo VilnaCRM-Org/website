@@ -24,7 +24,6 @@ type ImgAttrs = React.ImgHTMLAttributes<HTMLImageElement>;
 const getImageProps: (src: string, alt?: string) => ImgAttrs = (src, alt = '') =>
   getOptimizedImageProps({ src, alt }).props;
 
-// Decorative shape: empty alt + aria-hidden so assistive tech skips it.
 function DecorativeImage({ src, sx }: { src: string; sx: SxProps<Theme> }): React.ReactElement {
   return <Box component="img" {...getImageProps(src)} aria-hidden="true" sx={sx} loading="lazy" />;
 }

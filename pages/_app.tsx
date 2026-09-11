@@ -22,26 +22,17 @@ import '../src/features/swagger/components/api-documentation/styles.scss';
 import i18n from '../i18n';
 import client from '../src/features/landing/api/graphql/apollo';
 
-// The landing Header is the site-wide chrome. It is composed here at the Next.js
-// routing root so the shared Layout (src/components) stays feature-agnostic and
-// does not import from src/features (enforced by dependency-cruiser).
 const DynamicHeader: ComponentType = dynamic(() => import('@/features/landing/components/header'), {
   ssr: false,
 });
 
 Sentry.init({
   dsn: env.NEXT_PUBLIC_SENTRY_DSN,
-  // The only interactive surface on this site is the sign-up form, so an
-  // unmasked session replay would record a password field keystroke by
-  // keystroke. Masking is Sentry's default; pinning it here means an upstream
-  // default change cannot silently start capturing credentials (#378 F3).
   sendDefaultPii: false,
   integrations: [
     Sentry.browserTracingIntegration(),
     Sentry.replayIntegration({ maskAllInputs: true, maskAllText: true, blockAllMedia: true }),
   ],
-  // Drop empty origins so Sentry never receives '' (which substring-matches
-  // every URL and would attach trace headers to all outbound requests).
   tracePropagationTargets: [env.NEXT_PUBLIC_DEVELOPMENT_API_URL, env.NEXT_PUBLIC_API_URL].filter(
     Boolean
   ),
@@ -55,8 +46,6 @@ function MyApp({ Component }: { Component: React.ComponentType }): React.ReactEl
     document.documentElement.dir = i18n.dir();
   }, []);
 
-  // Registered from the routing root so the offline shell covers every route. The module
-  // owns the production gate and the deferral to `load`, so this stays a one-line call.
   useEffect(() => {
     initServiceWorker();
   }, []);
@@ -77,9 +66,6 @@ function MyApp({ Component }: { Component: React.ComponentType }): React.ReactEl
   );
 }
 
-// Next.js calls this named export for every web-vital it records; the forwarding
-// gate (field-vital filter, production check, sampling) and PII-free payload live
-// in the shared module so the routing root stays a thin wrapper.
 export function reportWebVitals(metric: NextWebVitalsMetric): void {
   handleWebVitalsMetric(metric);
 }

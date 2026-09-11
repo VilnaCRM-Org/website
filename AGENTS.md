@@ -388,6 +388,10 @@ A change to tests is done only when every statement below is true.
   registered in `src/test/a11y/interaction-states.ts` and scanned from its e2e journey.
 - New or changed `ui-*` primitives and exported feature components have a `*.stories.tsx`.
 - The relevant test commands above were run and passed, including `make lint`.
+- Production source under `src/` and `pages/` carries no comments and no inline
+  `sx`/`style` objects (ADR 0005, enforced by `make lint-next`); the reasoning a change
+  needs to record lives in `docs/`, the feature README, or the spec — where a comment
+  beside the assertion is welcome.
 - Commits follow Conventional Commits.
 
 <!-- react-frontend-sdlc:begin -->

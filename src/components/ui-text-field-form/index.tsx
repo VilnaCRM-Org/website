@@ -11,11 +11,6 @@ function composeDescribedBy(...ids: (string | undefined)[]): string | undefined 
   return present.length > 0 ? present.join(' ') : undefined;
 }
 
-/**
- * react-hook-form accepts `required` either as a message/boolean or as a
- * `{ value, message }` object, and the object form can carry `value: false`.
- * Coercing the object itself would announce every such field as required.
- */
 function isRequiredRule(required: unknown): boolean {
   if (typeof required === 'object' && required !== null) {
     return Boolean((required as { value?: unknown }).value);
@@ -51,21 +46,6 @@ interface FieldViewProps<T extends FieldValues> {
   errorId: string;
 }
 
-/**
- * The rendered field: the input plus its validation message.
- *
- * Two details are load-bearing. The input receives `field.name` (not the prop)
- * so the submitted name always tracks the registered field, and `field.ref` so
- * react-hook-form can move focus to the first invalid input on submit.
- *
- * The message container is rendered unconditionally: a live region has to exist
- * in the accessibility tree before its content changes, otherwise mounting and
- * filling it in the same commit is announced inconsistently across screen
- * readers. `aria-live="polite"` rather than `role="alert"` keeps
- * blur-triggered validation from interrupting the label of the field the user
- * has just moved to. The node is absolutely positioned inside a fixed-height
- * row, so an empty one occupies no space.
- */
 function FieldView<T extends FieldValues>({
   field,
   error,
@@ -74,8 +54,6 @@ function FieldView<T extends FieldValues>({
   errorId,
 }: FieldViewProps<T>): React.ReactElement {
   const { placeholder, type, fullWidth, autoComplete, describedBy, rules } = config;
-  // `ref` here is react-hook-form's callback ref, not a ref object: it is what
-  // lets the library move focus to the first invalid input on submit.
   const { name, value, onChange, onBlur, ref: registerInput } = field;
 
   return (

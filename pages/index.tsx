@@ -9,9 +9,6 @@ export default function Home(): React.ReactElement {
 
   return (
     <>
-      {/* The home page is the one page that declares the site-level JSON-LD graph:
-          `Organization` and `WebSite` describe the site as a whole, so repeating them on
-          every route would only restate the same two nodes. */}
       <Seo
         title={t('seo.landing.title')}
         description={t('seo.landing.description')}

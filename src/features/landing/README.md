@@ -54,6 +54,43 @@ rules are load-bearing rather than incidental (issues #382 and #378):
 - **Transport.** The endpoint the form POSTs to is validated in `src/config/env.ts`: remote
   cleartext `http://` fails the build; `http://` is accepted only for loopback.
 
+## Component notes
+
+Rationale that used to live as comments in the source (ADR 0005); the tests named here
+are what pin each behaviour.
+
+- **Header drawer has no `role`.** `role="menu"` used to be set on `Drawer`, and MUI
+  forwards it to the modal root — the wrapper holding the backdrop and the paper. ARIA
+  gives `menu` required owned elements (`menuitem` and friends), so a backdrop plus a
+  `[role=dialog]` made that root fail axe's `aria-required-children` at critical impact
+  (SC 1.3.1), found by the interaction-state scan from #369. Neither alternative works:
+  `menuitem` on the nav links would override their `link` role and oblige the full APG
+  menu keyboard model, and moving `role="menu"` onto the inner `<nav>` would destroy the
+  navigation landmark. This is site navigation inside a modal dialog, which is exactly
+  what MUI already exposes (`role="dialog"`, `aria-modal="true"`, `tabIndex={-1}` on the
+  paper slot for a `temporary` drawer, with a real `<nav>` list inside). Tests locate the
+  open drawer by the `dialog` role — in jsdom and in all three browsers — so an MUI upgrade
+  that stopped emitting it fails loudly. Naming that dialog is tracked in #435; the name
+  has to go on the paper slot, because props land on the modal root, which is
+  `role="presentation"`, where `aria-label` is prohibited.
+- **Header navigation is a factory bound to the live `router`**, never a module-scope
+  handler: `useHeaderNavigation` keeps the router in scope and `useScrollOnRouteChange`
+  owns the `routeChangeComplete` scroll effect. Anchor scroll covers same-page navigation
+  and the contacts shortcut; any other route navigates first, then scrolls
+  (`navigateToLink` owns the fallback).
+- **`scrollToAnchor`** schedules a fallback so the `MutationObserver` never leaks when the
+  target appears late, and disconnects immediately when no valid id is supplied.
+- **For-who shapes are decorative**: empty `alt` plus `aria-hidden`, so assistive tech
+  skips them. In `styles.screens.ts` / `styles.shapes.ts` the waves, hexagon and triangle
+  are hidden on mobile and shown from tablet up; the point group only on desktop.
+- **`NOTIFICATION_ANIMATION_DURATION`** (`constants/index.ts`) is the fade in/out time the
+  Notification component uses, in milliseconds.
+- **`notification/styles.error.ts`** styles the error state; `styles.success.ts` the
+  success state, whose sizing is explained in
+  [`docs/sign-up-hardening.md`](../../../docs/sign-up-hardening.md).
+- The sign-up form, its validations, its telemetry and its shared input primitives are
+  documented finding by finding in that same note.
+
 ## Internationalisation
 
 Localized strings live in `src/features/landing/i18n/en.json` and `uk.json` and are read

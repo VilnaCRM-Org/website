@@ -79,15 +79,6 @@ export default {
     },
   },
 
-  // `overflow: hidden` + `contain: content` clip rather than scroll, so the two
-  // maxHeight caps below are sized against the field count. Both were raised by
-  // one input row when the confirm-password field landed (#382 F4) — by the row
-  // height that actually applies at each breakpoint, which is not the same
-  // number: ≤1130px renders a 4.938rem input (see ui-input/theme.ts) for a
-  // ~123.8px row, while ≤sm falls back to the 4.5rem `inputWrapper` minimum for
-  // an 87px row. Sizing both from the mobile row would leave the submit button
-  // flush against the card edge on every tablet/laptop width, a band no visual
-  // baseline covers.
   formContent: {
     minHeight: '40.438rem',
     height: 'auto',
@@ -125,9 +116,6 @@ export default {
     },
   },
 
-  // Available to screen readers, painted nowhere: an absolutely positioned,
-  // 1px clipped box takes part in no flex layout, so it adds no gap and moves
-  // no pixel in the visual baselines.
   visuallyHidden: {
     position: 'absolute',
     width: '1px',
@@ -150,6 +138,11 @@ export default {
       gap: '0.313rem',
       minHeight: '4.5rem',
     },
+  },
+
+  labelRow: {
+    alignItems: 'center',
+    gap: '0.25rem',
   },
 
   inputTitle: {
