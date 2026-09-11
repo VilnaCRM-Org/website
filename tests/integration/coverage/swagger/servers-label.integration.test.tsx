@@ -11,13 +11,14 @@ import { render, screen } from '@testing-library/react';
 import { t } from 'i18next';
 import React from 'react';
 
-import ApiDocumentation from '../../../../src/features/swagger/components/api-documentation';
+import ApiDocumentation from '@swagger/components/api-documentation';
 import {
+  ServersContainerProps,
+  serversLabelPlugin,
   swaggerPlugins,
   withServersLabel,
-} from '../../../../src/features/swagger/components/api-documentation/servers';
-import { ServersContainerProps } from '../../../../src/features/swagger/components/api-documentation/servers/types';
-import useSwagger from '../../../../src/features/swagger/hooks/useSwagger';
+} from '@swagger/components/api-documentation/servers';
+import useSwagger from '@swagger/hooks/useSwagger';
 
 jest.mock('../../../../src/features/swagger/hooks/useSwagger');
 
@@ -57,6 +58,11 @@ describe('integration: servers label plugin', () => {
     const { container } = render(<Labelled specSelectors={{ servers: () => servers }} />);
 
     expect(container).toBeEmptyDOMElement();
+  });
+
+  it('registers the wrapper under the ServersContainer key swagger-ui looks up', () => {
+    expect(serversLabelPlugin.wrapComponents.ServersContainer).toBe(withServersLabel);
+    expect(swaggerPlugins).toEqual([serversLabelPlugin]);
   });
 
   it('is passed to SwaggerUI by ApiDocumentation', () => {

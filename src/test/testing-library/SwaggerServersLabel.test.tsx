@@ -3,11 +3,11 @@ import { t } from 'i18next';
 import React from 'react';
 
 import {
+  ServersContainerProps,
   serversLabelPlugin,
   swaggerPlugins,
   withServersLabel,
-} from '../../features/swagger/components/api-documentation/servers';
-import { ServersContainerProps } from '../../features/swagger/components/api-documentation/servers/types';
+} from '@swagger/components/api-documentation/servers';
 
 /**
  * Regression coverage for #424: the swagger-ui servers dropdown (`<select id="servers">`)
