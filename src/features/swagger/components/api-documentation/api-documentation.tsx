@@ -5,6 +5,8 @@ import { UiTypography } from '@/components';
 
 import useSwagger from '../../hooks/useSwagger';
 
+import { swaggerPlugins } from './servers';
+
 function ApiDocumentation(): React.ReactElement | null {
   const { swaggerContent, error } = useSwagger();
 
@@ -16,7 +18,7 @@ function ApiDocumentation(): React.ReactElement | null {
     );
   }
 
-  return swaggerContent ? <SwaggerUI spec={swaggerContent} /> : null;
+  return swaggerContent ? <SwaggerUI spec={swaggerContent} plugins={swaggerPlugins} /> : null;
 }
 
 export default ApiDocumentation;
