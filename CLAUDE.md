@@ -249,6 +249,7 @@ make format               # Prettier (run before lint)
 make lint                 # lint-next + lint-tsc + lint-md + lint-deps + lint-api-versions
                           #   + lint-docker-policy + lint-headers + lint-security-txt
                           #   + lint-prod-guardrails + lint-pins + lint-workflow-pins
+                          #   + lint-placeholders
 make lint-next            # ESLint (flat config, eslint.config.mjs)
 make lint-tsc             # TypeScript (tsc, no emit)
 make lint-md              # markdownlint
@@ -260,6 +261,7 @@ make lint-security-txt    # RFC 9116 security.txt fields + Expires runway
 make lint-prod-guardrails # production-safety invariants (see #383 below)
 make lint-pins            # Node/Bun/Playwright pin drift across .nvmrc, engines, Dockerfiles
 make lint-workflow-pins   # every workflow resolves Node through .nvmrc (parses the YAML)
+make lint-placeholders    # no template placeholder token in src/, pages/, public/, .env*, README
 ```
 
 `.nvmrc` is the single authoritative Node version, and two gates hold every copy to it.
@@ -320,7 +322,14 @@ container). Each has its own workflow — `rust-code-analysis.yml`,
 `contract-testing.yml`, `openapi-drift.yml` (which hosts both drift legs),
 `osv-scanner.yml`, `workflow-security.yml`, and `secrets-scanning.yml`. The two gates added
 by issue #383 are _inside_ `make lint` precisely because they are hermetic — they read only
-committed files, with no network, no host binary and no Docker.
+committed files, with no network, no host binary and no Docker. So is `make lint-placeholders`
+(issue #327, `scripts/ci/check-placeholders.sh`): a fixed-string, case-insensitive grep of
+`src/` (minus `src/test`), `pages/`, `public/`, the three committed `.env*` files and
+`README.md` for the template tokens that once shipped — `G-XYZ`, `yourserver.io`,
+`uk-deploy.vercel.app`, `frontend-ssr-template` — that fails closed on a missing scan root.
+Fix a red run by replacing the value at the `file:line` it prints, never by editing the
+token list; and because `README.md` is in scope, a doc line that names a token verbatim is
+itself a hit — describe the gate there, do not quote its tokens.
 
 Run `make format` before `make lint`; formatting is intentionally separate from the lint
 verification suite. Git hooks are managed by Husky. CI phases are mirrored locally by

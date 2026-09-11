@@ -225,7 +225,7 @@ NETWORK_NAME                = website-network
 # Dev-side lint and test phases are grouped so local developers and agents can
 # run the same CI stages as the pipeline. The parallel runners execute each
 # target concurrently, group their output, and aggregate exit codes.
-CI_LINT_TARGETS             = lint-next lint-tsc lint-md lint-api-versions lint-headers lint-prod-guardrails lint-pins lint-workflow-pins
+CI_LINT_TARGETS             = lint-next lint-tsc lint-md lint-api-versions lint-headers lint-prod-guardrails lint-pins lint-workflow-pins lint-placeholders
 CI_TEST_TARGETS             = ci-test-unit-client ci-test-unit-server ci-test-integration ci-test-contract
 CI_LINT_RUNNER              = ./scripts/ci/run-parallel.sh ci-lint
 CI_TEST_RUNNER              = ./scripts/ci/run-parallel.sh ci-test
@@ -622,7 +622,7 @@ generate-routes: ## Regenerate config/routes.json from pages/ (issue #333) — h
 generate-sitemap: ## Regenerate public/sitemap.xml from config/routes.json (issue #339) — host-only; SITEMAP_CHECK=1 verifies instead of writing
 	@node scripts/ci/generate-sitemap.mjs $(if $(filter 1 true TRUE,$(SITEMAP_CHECK)),--check)
 
-.PHONY: lint lint-api-versions lint-headers lint-docker-policy lint-security-txt lint-prod-guardrails lint-pins lint-workflow-pins
+.PHONY: lint lint-api-versions lint-headers lint-docker-policy lint-security-txt lint-placeholders lint-prod-guardrails lint-pins lint-workflow-pins
 
 # The user-service inventory invariant (issue #381, F4): every consumer of the
 # upstream contracts — the GraphQL schema behind the Apollo mock and the OpenAPI
@@ -670,6 +670,19 @@ lint-workflow-pins: ## Verify every workflow resolves Node through .nvmrc, by pa
 lint-security-txt: ## Validate the published RFC 9116 security.txt (fields + Expires runway)
 	@bash scripts/ci/check-security-txt.sh
 
+# Pure bash like lint-security-txt above, and for the same reasons in the
+# `lint` aggregate: it reads only committed files (src/ minus the specs, pages/,
+# public/, the env files Next inlines at build time, and README.md) for the
+# template placeholders that once shipped -- the G-XYZ analytics id, the
+# yourserver.io API host, the uk-deploy.vercel.app sitemap origin, the
+# frontend-ssr-template links (issue #327). It joins CI_LINT_TARGETS too, like
+# lint-pins: dependency-free, so the parallel ci-lint runner can fan it out
+# without a package manager, and the files it reads are worktree files.
+# A red run is fixed by replacing the value the hit names, never by editing the
+# token list in scripts/ci/check-placeholders.sh.
+lint-placeholders: ## Fail on template placeholder tokens in the shipped sources, env files and README (issue #327)
+	@bash scripts/ci/check-placeholders.sh
+
 lint-prod-guardrails: ## Enforce the production-safety invariants (privileged-workflow alerting, fail-closed edge routing, no source maps)
 	$(DEV_READY) $(PM_EXEC) node scripts/ci/lint-prod-guardrails.mjs
 
@@ -697,7 +710,7 @@ lint-prod-guardrails: ## Enforce the production-safety invariants (privileged-wo
 # dev container would only ever see a stale copy of. Its workflow half was split
 # into lint-workflow-pins (#447) precisely because parsing the YAML costs a
 # node_modules import that this property forbids.
-lint: generate-localization lint-next lint-tsc lint-md lint-deps lint-api-versions lint-docker-policy lint-headers lint-security-txt lint-prod-guardrails lint-pins lint-workflow-pins ## Runs all linters: ESLint, TypeScript, Markdown, dependency-cruiser, the API version invariant, the Dockerfile registry/digest policy, the security-header gate, the RFC 9116 security.txt gate, the production-safety guardrails, the version-pin drift gate and the workflow Node-pin gate in sequence.
+lint: generate-localization lint-next lint-tsc lint-md lint-deps lint-api-versions lint-docker-policy lint-headers lint-security-txt lint-prod-guardrails lint-pins lint-workflow-pins lint-placeholders ## Runs all linters: ESLint, TypeScript, Markdown, dependency-cruiser, the API version invariant, the Dockerfile registry/digest policy, the security-header gate, the RFC 9116 security.txt gate, the production-safety guardrails, the version-pin drift gate, the workflow Node-pin gate and the placeholder-token gate in sequence.
 
 # DELIBERATE DIVERGENCE FROM THE npm-tool LINT GATES (lint-next/tsc/md/deps),
 # for the same reason as lint-metrics below:

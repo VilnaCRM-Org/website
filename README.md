@@ -140,9 +140,10 @@ Linting & Formatting
   make lint-headers: verifies the edge security-header policy reaches every response
   make lint-security-txt: validates the RFC 9116 security.txt fields and Expires runway
   make lint-prod-guardrails: enforces the production-safety invariants (issue #383)
+  make lint-placeholders: fails on template placeholder tokens in sources, env files and the README
   make lint: runs all linters (ESLint, TypeScript, markdownlint, dependency-cruiser,
     API versions, Docker policy, version pins, security headers, security.txt,
-    production guardrails)
+    production guardrails, placeholder tokens)
   make lint-metrics: runs the rust-code-analysis complexity gate (host-only, not in make lint)
   make lint-contracts: validates the pinned user-service contracts (not in make lint; needs network)
   make lint-openapi: reports breaking upstream OpenAPI drift (host-only, needs network; advisory)
