@@ -18,14 +18,22 @@ describe('BackgroundImages integration', () => {
     expect(BackgroundImagesBarrel).toBe(BackgroundImages);
   });
 
-  it('exposes the vector style object with the responsive breakpoints', () => {
-    expect(styles.vector).toEqual(
+  it('builds the vector style from the image url without mutating a shared object', () => {
+    // `vector` is a function of the image src (ADR 0005): the component used to
+    // `Object.assign` the url onto the shared style object on every render.
+    const first = styles.vector('/first.svg');
+    const second = styles.vector('/second.svg');
+
+    expect(first).toEqual(
       expect.objectContaining({
         backgroundSize: 'contain',
         backgroundRepeat: 'no-repeat',
         position: 'absolute',
+        backgroundImage: 'url(/first.svg)',
       })
     );
+    expect(second.backgroundImage).toBe('url(/second.svg)');
+    expect(first.backgroundImage).toBe('url(/first.svg)');
   });
 
   it('renders a Box wired with the optimized background image url', () => {
