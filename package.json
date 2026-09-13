@@ -22,7 +22,7 @@
     "react-dom": "^19.2.6",
     "react-hook-form": "^7.76.1",
     "react-i18next": "^17.0.8",
-    "storybook": "^10.4.1",
+    "storybook": "^10.4.6",
     "swagger-ui-react": "^5.32.6",
     "swiper": "^12.2.0",
     "uuid": "^14.0.0",
