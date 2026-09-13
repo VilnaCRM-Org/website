@@ -1,58 +1,9 @@
 import { z } from 'zod';
 
-/**
- * Typed, validated configuration layer (issue #212 / #328).
- *
- * This module is the single place in `src/` and `pages/` that reads
- * `process.env`. Every other module imports the validated `env` object, and an
- * ESLint `no-restricted-syntax` guard blocks direct `process.env` access
- * elsewhere. Validation runs once at module load, so an invalid or missing
- * variable fails `next build` fast with a descriptive error instead of shipping
- * a silent production no-op (placeholder GA id, dev GraphQL endpoint, etc.).
- *
- * IMPORTANT — static export inlining: the site builds with `output: 'export'`,
- * where Next.js inlines `NEXT_PUBLIC_*` values at build time only for *literal*
- * `process.env.NEXT_PUBLIC_X` member expressions. Each variable below is
- * therefore referenced literally; never read them dynamically
- * (`process.env[name]`), or the browser bundle will inline `undefined`.
- */
-/**
- * Transport guard for the endpoints that carry credentials (#378 F1).
- *
- * The sign-up form POSTs a plaintext password to `NEXT_PUBLIC_GRAPHQL_API_URL`.
- * Nothing here previously required that hop to be encrypted, so a deploy that
- * pointed the variable at a remote `http://` host — the repo's own `.env` uses
- * `http://` for every URL — would have leaked the password to any on-path
- * attacker with no build-time signal at all.
- *
- * Cleartext is therefore accepted only for loopback, where there is no network
- * hop to intercept and where the dev and Docker stacks genuinely run. Remote
- * `http://` fails the build. The complementary invariant — that the *committed
- * production* config is `https` and never loopback — is enforced by
- * `src/test/unit/prod-env-transport.test.ts`, because `NODE_ENV` alone cannot
- * distinguish a production export from a Storybook build.
- *
- * `NEXT_PUBLIC_API_URL` is held to the same rule even though the sign-up
- * mutation does not use it: it is a Sentry trace-propagation target, so the
- * browser attaches trace headers to requests bound for that origin, which is
- * not something to hand to a cleartext remote host either.
- */
 const CLEARTEXT_ENDPOINT_MESSAGE =
   'must use https:// — cleartext http:// is accepted only for loopback hosts, ' +
   'because the browser sends user data or trace headers to this endpoint';
 
-/**
- * Matches `https://…` and cleartext loopback only. Written as one pattern
- * rather than a `new URL()` inspection so the check is total: it needs no
- * try/catch for an unparseable value and has no branch that can fall open.
- * Anything it does not recognise — a remote `http://` host, a lookalike such as
- * `http://localhost.example.com`, or `http://user:pass@localhost` — is
- * rejected, which is the safe direction for the endpoint that carries the
- * registration password. The host alternatives are anchored by an optional port
- * and then a path, query, fragment or end-of-string, so a longer hostname such
- * as `localhost.example.com` cannot pass as loopback while a legitimate
- * `http://localhost:4000?trace=1` still can.
- */
 const ENCRYPTED_OR_LOOPBACK =
   /^(https:\/\/|http:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?([/?#]|$))/i;
 
@@ -64,23 +15,17 @@ const credentialEndpoint: () => z.ZodType<string> = () =>
   z.url().refine(isEncryptedOrLoopback, { message: CLEARTEXT_ENDPOINT_MESSAGE });
 
 const clientEnvSchema = z.object({
-  // Endpoints consumed by the browser bundle.
   NEXT_PUBLIC_GRAPHQL_API_URL: credentialEndpoint(),
   NEXT_PUBLIC_API_URL: credentialEndpoint(),
   NEXT_PUBLIC_DEVELOPMENT_API_URL: z.union([z.url(), z.literal('')]).default(''),
 
-  // Locale gates the static export (html lang + i18next). Required and
-  // non-empty so `<html lang>` never collapses to '' (WCAG 3.1.1).
   NEXT_PUBLIC_MAIN_LANGUAGE: z.string().trim().min(1),
   NEXT_PUBLIC_FALLBACK_LANGUAGE: z.string().trim().min(1),
 
-  // Contact + policy links surfaced across the footer, header and auth form.
   NEXT_PUBLIC_VILNACRM_GMAIL: z.email(),
   NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL: z.url(),
   NEXT_PUBLIC_VILNACRM_USE_POLICY_URL: z.url(),
 
-  // Observability / analytics. Optional: an empty value disables the feature
-  // (Sentry no-ops, Google Analytics is not rendered) rather than failing.
   NEXT_PUBLIC_SENTRY_DSN: z.string().trim().default(''),
   NEXT_PUBLIC_GA_MEASUREMENT_ID: z.string().trim().default(''),
 });
@@ -111,13 +56,6 @@ if (!parsed.success) {
 
 export const env: ClientEnv = parsed.data;
 
-/**
- * Build mode. `NODE_ENV` is a Next/webpack build-time constant (inlined into the
- * static export), not a runtime configuration value, so it stays out of the
- * validated schema above. Centralizing the read in this rule-exempt module keeps
- * feature code free of direct `process.env` access (#328). Exposed as a function
- * rather than a const so callers observe the ambient value at call time.
- */
 export function isProductionBuild(): boolean {
   return process.env.NODE_ENV === 'production';
 }

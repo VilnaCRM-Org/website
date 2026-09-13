@@ -29,20 +29,10 @@ type SignupFieldSpec = {
   placeholderKey: string;
   validate: FieldValidator;
   type: string;
-  /**
-   * Autofill token. Without it (and the `name` the field now also emits) a
-   * password manager cannot recognise the credential fields, so it never offers
-   * to generate a strong password (#382 F3). Both password fields use
-   * `new-password`: this is account creation, never a sign-in.
-   */
   autoComplete: string;
-  /** Extra element describing the field, beyond its validation message. */
   describedBy?: string;
 };
 
-// The hidden, always-present statement of the password policy. The tooltip is a
-// pointer-only affordance, so the rules also need a form the keyboard and
-// screen-reader path can reach before the first rejection (#382 F4).
 const PASSWORD_REQUIREMENTS_ID: string = 'password-requirements';
 
 const SIGNUP_FIELDS: readonly SignupFieldSpec[] = [
@@ -116,7 +106,7 @@ function FormField({
   return (
     <Stack sx={styles.inputWrapper}>
       {adornment ? (
-        <Stack direction="row" sx={{ alignItems: 'center', gap: '0.25rem' }}>
+        <Stack direction="row" sx={styles.labelRow}>
           <FieldLabel htmlFor={name} labelKey={labelKey} />
           {adornment}
         </Stack>
@@ -127,12 +117,6 @@ function FormField({
         id={name}
         control={control}
         name={name}
-        // No react-hook-form `deps` between Password and ConfirmPassword: it
-        // would `trigger()` the confirmation field the moment the password is
-        // touched, showing a "required" error on a field the user has not
-        // reached yet, which contradicts the form's `onTouched` mode. A
-        // mismatch can still never be submitted — `handleSubmit` re-validates
-        // every field before calling `onSubmit`.
         rules={{ required: t(requiredKey), validate }}
         placeholder={t(placeholderKey)}
         type={type}

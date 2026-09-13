@@ -7,7 +7,7 @@ import { TextInfo } from './text-info';
 
 function AboutUs(): React.ReactElement {
   return (
-    <Stack component="section" sx={[styles.wrapper, { alignItems: 'center' }]}>
+    <Stack component="section" sx={styles.wrapper}>
       <Container maxWidth="xl" sx={styles.content}>
         <TextInfo />
         <DeviceImage />

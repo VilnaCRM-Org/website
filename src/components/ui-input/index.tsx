@@ -4,12 +4,6 @@ import React from 'react';
 import { theme } from './theme';
 import { UiInputProps } from './types';
 
-/**
- * ARIA attributes have to land on the rendered `<input>`; passed as top-level
- * TextField props they would decorate the wrapping FormControl instead, where
- * assistive tech never reads them. Each is emitted only when it carries meaning
- * — `aria-required="false"` and an empty `aria-describedby` are noise.
- */
 function buildInputSlotProps(
   describedBy: string | undefined,
   required: boolean | undefined

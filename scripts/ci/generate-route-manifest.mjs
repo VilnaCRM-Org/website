@@ -60,7 +60,18 @@ const PAGE_EXTENSIONS = new Set(['.tsx', '.ts', '.jsx', '.js']);
 // bundle. `pages/i18n/localization.json` is a build artifact written by
 // `scripts/localizationGenerator.js`, not a page — and its `.json` extension already
 // excludes it; it is named here so a future `.ts` spelling cannot silently become a route.
-const NON_ROUTE_BASENAMES = new Set(['_app', '_document', '_error']);
+//
+// `404` and `500` are excluded for the reason the a11y route registry already excludes
+// them (`src/test/unit/a11y/routes.test.ts`): an error document is reached by status code,
+// never by navigation. Listing `/404` as a route would leave the ROUTE_MAP parity rule in
+// `src/test/unit/routes/route-manifest.test.ts` demanding an edge rewrite for it — and a
+// rewrite is exactly what must not exist. A CloudFront Functions viewer-request handler
+// rewrites the URI rather than the status, so `/404` -> `/404.html` would serve the error
+// document with a `200`, the soft-404 that tells a crawler the address is a real page. The
+// edge keeps returning its own response with the real `404` status instead; `/404.html` is
+// reachable directly through ALLOWED_FILES, which is what lets S3 serve it as the bucket's
+// error document.
+const NON_ROUTE_BASENAMES = new Set(['_app', '_document', '_error', '404', '500']);
 const NON_ROUTE_DIRS = new Set(['i18n']);
 
 function fail(message) {

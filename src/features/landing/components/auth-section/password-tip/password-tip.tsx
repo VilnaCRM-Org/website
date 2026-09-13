@@ -9,11 +9,11 @@ function PasswordTip(): React.ReactElement {
   const { t } = useTranslation();
 
   return (
-    <Stack direction="column" sx={[styles.wrapper, { gap: '0.25rem' }]}>
+    <Stack direction="column" sx={styles.wrapper}>
       <UiTypography variant="medium14" sx={styles.recommendationText}>
         {t('sign_up.form.password_tip.recommendation_text')}
       </UiTypography>
-      <Stack sx={{ gap: '0.25rem' }}>
+      <Stack sx={styles.options}>
         <UiTypography variant="medium14" sx={styles.optionText}>
           {t('sign_up.form.password_tip.options.option_1')}
         </UiTypography>

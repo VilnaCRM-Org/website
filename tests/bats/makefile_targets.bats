@@ -816,6 +816,51 @@ STUB
   [ "$status" -ne 0 ]
 }
 
+@test "generate-sitemap regenerates the sitemap with host-side node" {
+  reset_command_log
+
+  run_make_target generate-sitemap
+  [ "$status" -eq 0 ]
+  assert_log_contains 'node scripts/ci/generate-sitemap.mjs'
+
+  # Dependency-free and host-only, like its generate-routes sibling: never the dev
+  # container, never the package manager. It is also a WRITER, so it must never be
+  # reached from `make lint`.
+  run grep -E 'docker|bun' "$COMMAND_LOG"
+  [ "$status" -ne 0 ]
+}
+
+@test "generate-sitemap runs the generator in verify-only mode under SITEMAP_CHECK" {
+  reset_command_log
+
+  # GNU Make would parse a trailing `--check` as one of its own options, so the
+  # verify-only mode is reachable only through this variable.
+  run_make_target generate-sitemap SITEMAP_CHECK=1
+  [ "$status" -eq 0 ]
+  assert_log_contains 'node scripts/ci/generate-sitemap.mjs --check'
+
+  reset_command_log
+  run_make_target generate-sitemap SITEMAP_CHECK=true
+  [ "$status" -eq 0 ]
+  assert_log_contains 'node scripts/ci/generate-sitemap.mjs --check'
+
+  # Anything else keeps the default writer behaviour rather than silently
+  # verifying: an unrecognised value must not disable the write.
+  reset_command_log
+  run_make_target generate-sitemap SITEMAP_CHECK=maybe
+  [ "$status" -eq 0 ]
+  run grep -- '--check' "$COMMAND_LOG"
+  [ "$status" -ne 0 ]
+}
+
+@test "the lint aggregate never runs the sitemap writer" {
+  # Same reason as the route-manifest writer below: generate-sitemap rewrites
+  # public/sitemap.xml, and a gate that repairs its own subject cannot fail. The
+  # drift check is the Jest spec src/test/unit/seo/sitemap.test.ts.
+  run grep -E '^lint:.*generate-sitemap' "$PROJECT_ROOT/Makefile"
+  [ "$status" -ne 0 ]
+}
+
 @test "the lint aggregate never runs the route-manifest writer" {
   # generate-routes rewrites config/routes.json; wiring it into a gate would make
   # that gate unfalsifiable. The drift check is the Jest spec

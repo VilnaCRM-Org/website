@@ -69,7 +69,12 @@ the image; `lint-pins` must not, so its half stays regex over Dockerfiles and JS
   which markdownlint skips) is Prettier-formatted, so keep any embedded `ts`/`tsx`/`json`
   fences valid and Prettier-clean; use a `text` fence for partial or pseudo snippets.
 - **ESLint** (`make lint-next`) — fix the flagged rule in code. Type-aware rules run on
-  `src/**/*.{ts,tsx}`. Never add `eslint-disable`.
+  `src/**/*.{ts,tsx}`. Never add `eslint-disable`. Two production-source guards
+  (ADR 0005) need a relocation rather than a rewrite: `vilnacrm/no-comments` means the
+  comment's rationale moves to `docs/`, an ADR, the feature README or the spec that
+  pins it, and the inline-`sx`/`style` `no-restricted-syntax` selectors mean the object
+  literal moves into the sibling `styles.ts` (as a function when it depends on a value).
+  Neither has an allow-list; never widen the block's `ignores`.
 - **TypeScript** (`make lint-tsc`) — fix the type contract; `tsc` runs under `strict` with
   `noUnusedLocals`. Keep types honest and avoid `any` unless an external boundary forces
   it. Never add `@ts-ignore` or `@ts-nocheck`.

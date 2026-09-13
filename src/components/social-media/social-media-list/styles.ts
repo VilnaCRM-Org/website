@@ -2,6 +2,7 @@ import breakpointsTheme from '@/components/ui-breakpoints';
 
 export default {
   listWrapper: {
+    alignItems: 'center',
     gap: '0.5rem',
     justifyContent: 'center',
     [`@media (max-width: ${breakpointsTheme.breakpoints.values.md}px)`]: {

@@ -16,9 +16,22 @@ export default {
 
   drawerContent: {
     maxWidth: '23.4375rem',
-    width: '100dvw',
+    width: '23.4375rem',
+    textAlign: 'center',
     px: '0.938rem',
     py: '0.375rem',
+  },
+
+  header: {
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+
+  actions: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '0.563rem',
+    mt: '0.75rem',
   },
 
   button: {

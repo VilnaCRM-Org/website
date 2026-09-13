@@ -9,22 +9,30 @@ Import the feature only through its barrel (`src/features/swagger/index.ts`); ne
 across features by deep path (enforced by `make lint-deps`).
 
 ```ts
-import { Swagger } from '@/features/swagger';
+import { SwaggerPage } from '@/features/swagger';
 ```
 
-- `Swagger` — the API documentation page. Loaded client-side by `pages/swagger.tsx` through
-  `next/dynamic`, since Swagger UI is browser-only.
+- `SwaggerPage` — the API documentation page behind its own lazy boundary. It wraps the
+  `Swagger` root in `next/dynamic` (`ssr: false`, since Swagger UI is browser-only) and
+  renders the feature's `Loading` spinner while the chunk downloads. The barrel exposes
+  **only** this wrapper on purpose: a static re-export of `Swagger` would pull
+  `swagger-ui-react` into the initial chunk of any page importing the barrel, defeating
+  the split. Tests that need the root import
+  `components/swagger/swagger` by path.
 
 ## Structure
 
-- `components/` — `swagger` (the root), `api-documentation`, `header`, and `navigation`.
+- `components/` — `swagger-page` (the lazy boundary), `swagger` (the root), `loading`
+  (the spinner shown while the chunk loads), `api-documentation`, `header`, and
+  `navigation`.
 - `hooks/` — `useSwagger.ts`, which prepares the spec/state the UI consumes.
 - `assets/` — feature-local static assets.
 - `i18n/` — localized copy.
 
 ## Data flow
 
-`pages/swagger.tsx` dynamically imports the `Swagger` root, which uses `useSwagger` to load
+`pages/swagger.tsx` renders `SwaggerPage`, whose dynamic import resolves the `Swagger`
+root, which uses `useSwagger` to load
 the API specification and renders the documentation UI. The rendered spec comes from the
 pinned user-service contract (see the `contract-testing-workflow` skill), so this feature is
 presentation over that contract rather than a live data source.

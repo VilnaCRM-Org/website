@@ -9,7 +9,6 @@ export default function Document(): React.ReactElement {
     <Html lang={mainLanguage}>
       <Head>
         <meta charSet="utf-8" />
-        <meta name="description" content="VilnaCRM platform for customer relationship management" />
         <meta name="apple-mobile-web-app-title" content="VilnaCRM" />
         <meta name="application-name" content="VilnaCRM" />
         <meta name="theme-color" content="#ffffff" />

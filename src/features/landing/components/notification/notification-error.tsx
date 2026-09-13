@@ -42,7 +42,7 @@ function ErrorActions({
       </UiButton>
 
       <UiButton
-        sx={{ ...styles.errorButton, marginTop: '0.5rem' }}
+        sx={[styles.errorButton, styles.errorCloseButton]}
         variant="outlined"
         type="button"
         size="medium"

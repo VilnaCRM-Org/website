@@ -17,12 +17,9 @@ function FooterTop(): React.ReactElement {
   const { t } = useTranslation();
 
   return (
-    <Stack direction="row" sx={{ height: '4.188rem', alignItems: 'center' }}>
+    <Stack direction="row" sx={styles.top}>
       <Box sx={styles.topWrapper}>
-        <Stack
-          direction="row"
-          sx={[styles.topContent, { justifyContent: 'space-between', alignItems: 'center' }]}
-        >
+        <Stack direction="row" sx={styles.topContent}>
           <Image src={Logo} alt={t('footer.logo_alt')} width={143} height={48} />
           <PrivacyPolicy />
         </Stack>
@@ -47,7 +44,7 @@ function FooterBottom({
           <UiTypography variant="medium15" sx={styles.copyright}>
             {t('footer.copyright')}, <Box component="span">{currentYear}</Box>
           </UiTypography>
-          <Stack direction="row" sx={{ gap: '0.875rem', alignItems: 'center' }}>
+          <Stack direction="row" sx={styles.contacts}>
             <VilnaCRMEmail />
             <SocialMediaList socialLinks={socialLinks} />
           </Stack>

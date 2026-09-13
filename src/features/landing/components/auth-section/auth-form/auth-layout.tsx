@@ -62,10 +62,6 @@ function onSignupSuccess(notif: NotificationState): void {
 }
 
 function onSignupError(notif: NotificationState, error: unknown): void {
-  // The failure has to leave a trace beyond the toast: this is the only
-  // PII-collecting surface on the site, and without a telemetry sink abuse of it
-  // produces no signal at all (#378 F3). Only the error and static tags are
-  // sent — never the submitted credentials.
   reportHandledError(error, { feature: 'landing', action: 'signup' });
   notif.setErrorText(handleApolloError({ error }));
   notif.setNotificationType(NotificationStatus.ERROR);

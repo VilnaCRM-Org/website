@@ -3,6 +3,8 @@ import colorTheme from '@/components/ui-color-theme';
 
 export default {
   wrapper: {
+    justifyContent: 'center',
+    alignItems: 'center',
     position: 'relative',
     overflow: 'hidden',
     width: '100%',

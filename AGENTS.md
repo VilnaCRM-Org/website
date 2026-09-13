@@ -43,7 +43,9 @@ Client unit tests run on Jest with React Testing Library in a jsdom env
 (`TEST_ENV=client`); specs live in `src/test/testing-library/**/*.test.tsx` and
 `src/test/unit/**/*.test.ts` — which includes the hermetic build-time gates that assert on
 committed artifacts rather than on rendered UI, such as `src/test/unit/routes/`
-(`config/routes.json` against `pages/` and against the edge `ROUTE_MAP`) and
+(`config/routes.json` against `pages/` and against the edge `ROUTE_MAP`),
+`src/test/unit/seo/` (`public/sitemap.xml` against the route manifest, and the canonical
+origin against `public/robots.txt` and the deployment runbook) and
 `src/test/unit/contracts/` (the contract linters, driven over throwaway fixture trees).
 Server unit tests run on Jest in a node env (`TEST_ENV=server`); specs live in
 `src/test/apollo-server/**/*.test.ts` and boot the
@@ -386,6 +388,10 @@ A change to tests is done only when every statement below is true.
   registered in `src/test/a11y/interaction-states.ts` and scanned from its e2e journey.
 - New or changed `ui-*` primitives and exported feature components have a `*.stories.tsx`.
 - The relevant test commands above were run and passed, including `make lint`.
+- Production source under `src/` and `pages/` carries no comments and no inline
+  `sx`/`style` objects (ADR 0005, enforced by `make lint-next`); the reasoning a change
+  needs to record lives in `docs/`, the feature README, or the spec — where a comment
+  beside the assertion is welcome.
 - Commits follow Conventional Commits.
 
 <!-- react-frontend-sdlc:begin -->

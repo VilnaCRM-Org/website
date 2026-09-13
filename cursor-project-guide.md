@@ -22,7 +22,11 @@ feature under `src/features/`. Do not document or reach for any of those absent 
 ## Where the code lives
 
 - `pages/` holds the Next.js pages-router entrypoints (`_app.tsx`, `_document.tsx`,
-  `index.tsx`, `swagger.tsx`). Pages are the composition layer that wires features into routes.
+  `index.tsx`, `swagger.tsx`, `404.tsx`, `offline.tsx`, `en/docs/api.tsx`). Pages are the
+  composition layer that wires features into routes: each renders `<Seo>` plus one feature
+  component. Production source under `src/` and `pages/` carries no comments and no inline
+  `sx`/`style` objects (ESLint-enforced, ADR 0005) — styles live in a sibling `styles.ts`
+  and rationale in `docs/`.
 - `src/features/<feature>/` holds feature code. Allowed subfolders are `api`, `assets`,
   `components`, `constants`, `helpers`, `hooks`, `i18n`, `routes`, `types`, and `utils`, plus
   the `index.ts` public-API barrel. Present features: `documentation`, `example`, `landing`,

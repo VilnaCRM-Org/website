@@ -194,7 +194,12 @@ describe('cloudfront_routing handler', () => {
       expect(result).not.toBe(request);
       expect(result.statusCode).toBe(404);
       expect(result.statusDescription).toBe('Not Found');
-      expect(result.body).toContain('404');
+      // A complete document, not merely a non-empty string: #249 shipped a response with
+      // no body at all. The literal "404" left this assertion when the body became the
+      // branded page of #339 — the status line is where a 404 is stated, and a visitor
+      // reading a status code is not the audience this document is for.
+      expect(result.body).toContain('<!DOCTYPE html>');
+      expect(result.body).toContain('</html>');
       // The full documented shape, not just the status: a dropped content-type
       // made Safari download the 404 (#235) and a missing body produced a 5xx
       // (#249). Those regressions must be caught on every blocked path, not only
@@ -222,8 +227,25 @@ describe('cloudfront_routing handler', () => {
 
     test('includes a non-empty body (guards #249: missing body -> 5xx)', () => {
       expect(response.body).toBeTruthy();
-      expect(response.body).toContain('404');
       expect(response.body).toContain('<!DOCTYPE html>');
+    });
+
+    test('serves a branded, self-contained document a visitor can act on (#339)', () => {
+      // A viewer-request function returns a body, it cannot fetch one, so nothing this
+      // document references can load: every rule has to be inline and there must be a way
+      // out that needs no JavaScript. Before #339 the body was one bare `<h1>404 - Page
+      // Not Found</h1>` on the browser's default white, which is what a storage error
+      // looks like.
+      expect(response.body).toContain('<html lang="en">');
+      expect(response.body).toContain('<title>Page not found - VilnaCRM</title>');
+      expect(response.body).toContain('<meta name="robots" content="noindex">');
+      expect(response.body).toMatch(/<h1[^>]*>[^<]+<\/h1>/);
+      expect(response.body).toMatch(/<a href="\/"[^>]*>[^<]+<\/a>/);
+      // `#1A1C1E` is `darkPrimary` in src/components/ui-color-theme; the edge cannot import
+      // it, so the value is pinned here rather than left to drift silently against a theme
+      // change. On the `#fff` ground it measures 16.8:1.
+      expect(response.body).toContain('#1A1C1E');
+      expect(response.body).not.toMatch(/<link\b|<script\b/);
     });
 
     test('sets the content-type header (guards #235: Safari downloads the 404)', () => {

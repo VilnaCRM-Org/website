@@ -33,7 +33,7 @@
       }
     },
     "layout": {
-      "page_title": "VilnaCRM API",
+      "page_title": "VilnaCRM — the first Ukrainian open source CRM",
       "meta_description": "The first Ukrainian open source CRM"
     }
   },
@@ -117,7 +117,9 @@
       "title_for_third": "Image of SmallRuby",
       "title_for_fourth": "Image of Diamond"
     },
-    "button": { "try_it_out": "Try it out" }
+    "button": {
+      "try_it_out": "Try it out"
+    }
   },
   "sign_up": {
     "main_heading": "Sign up now and free up your time to grow your business",
@@ -226,10 +228,15 @@
       "linkedin": "Linkedin Icon"
     }
   },
-  "offline": {
-    "heading": "You are offline",
-    "description": "VilnaCRM cannot reach the network, so this page could not be loaded.",
-    "hint": "Check your connection — everything works again as soon as you are back online.",
-    "home_link": "Back to the home page"
+  "seo": {
+    "site_name": "VilnaCRM",
+    "landing": {
+      "title": "VilnaCRM — the first Ukrainian open source CRM",
+      "description": "A free, open source CRM built for Ukrainian service businesses: set it up in a few clicks, use ready-made templates and connect the integrations you already work with."
+    },
+    "api_docs": {
+      "title": "API documentation (English) — VilnaCRM",
+      "description": "English-language landing page for the VilnaCRM user-service API reference."
+    }
   }
 }

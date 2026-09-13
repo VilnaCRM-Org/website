@@ -94,7 +94,6 @@ export default {
   },
 
   pointGroup: {
-    // The pointgroup is hidden on mobile and tablet but becomes visible on desktop layouts.
     display: 'none',
     [`@media (min-width: 1131px)`]: {
       display: 'block',
