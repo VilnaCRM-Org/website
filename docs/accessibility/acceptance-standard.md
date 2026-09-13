@@ -259,7 +259,6 @@ exception must be deleted in the same change that fixes its underlying defect.
 | Rule and scope                                        | Routes                | Tracking |
 | ----------------------------------------------------- | --------------------- | -------- |
 | `color-contrast`, every node                          | `/`, `/swagger`, docs | #423     |
-| `select-name` on `#servers`                           | `/swagger`            | #424     |
 | `button-name` on `.close-modal`                       | `/swagger`            | #433     |
 | `label-content-name-mismatch` on the authorize submit | `/swagger`            | #433     |
 | `td-has-header` on `#get_api_users_responses`         | `/swagger`            | #433     |
@@ -270,10 +269,18 @@ submit is matched as `button[aria-label="Apply given OAuth2 credentials"]`.
 Every one was surfaced by this gate's own output. The contrast failures come from shared brand
 tokens (#423). The rest are all markup rendered by third-party `swagger-ui-react`, where there
 is no local element to fix: an unnamed close button and an `aria-label` that replaces rather
-than includes the visible "Authorize" text in the authorize dialog, a header row built from
-`<td class="col_header">` instead of `<th>` in the responses table, and the unlabelled servers
-select (#424, #433). All are tracked for burn-down rather than waived quietly, and the fix
-belongs upstream — not in a DOM patch layered over the widget.
+than includes the visible "Authorize" text in the authorize dialog, and a header row built from
+`<td class="col_header">` instead of `<th>` in the responses table (#433). All are tracked for
+burn-down rather than waived quietly, and the fix belongs upstream — not in a DOM patch layered
+over the widget.
+
+The servers select (`#servers`, #424) used to sit in this table. It was fixed rather than
+waived, and without patching the widget's DOM: `swagger-ui` accepts a `wrapComponents` plugin,
+and `withServersLabel` (`src/features/swagger/components/api-documentation/servers`) wraps
+its `ServersContainer` with a visually-hidden `<label for="servers">`. A `for` association
+names the control from anywhere in the document, so the widget's own empty wrapping label is
+left untouched and the visual baselines do not move. That is the pattern to reach for before
+a waiver whenever the widget exposes a supported override for the offending component.
 
 Be explicit about what the first row costs: **SC 1.4.3, Contrast (Minimum), is currently
 enforced at neither layer.** The component layer disables `color-contrast` because jsdom has no
