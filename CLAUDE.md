@@ -635,8 +635,8 @@ artifact and gated**, so it cannot drift back:
   route is excluded only through `EXCLUDED_ROUTES`, carrying its reason, and the spec fails
   on an exclusion for a route that no longer exists.
 - **Per-page metadata.** `src/components/seo` renders the title, single description,
-  canonical, Open Graph and Twitter tags, and — on the home page alone — the
-  `Organization` + `WebSite` JSON-LD graph. `src/components/layout` keeps the site-wide
+  canonical, Open Graph and Twitter tags, the `hreflang` alternates a page declares, and
+  — on the home page alone — the `Organization` + `WebSite` JSON-LD graph. `src/components/layout` keeps the site-wide
   title and description so a route rendering no `Seo` is never title-less; `next/head`
   reverses the collected elements before de-duplicating, so the page's declaration wins.
   The hardcoded English description in `pages/_document.tsx` is gone — `_document` renders
@@ -660,6 +660,29 @@ artifact and gated**, so it cannot drift back:
 is a network artefact, the second the placeholder stub #339 records. Never fix a red SEO
 gate by widening `EXCLUDED_ROUTES` or by relaxing the origin parity; regenerate the artifact
 and commit it.
+
+### Route-scoped locale (`/en`)
+
+Next's i18n routing is unavailable under `output: 'export'`, so the English landing is an
+ordinary page, `pages/en/index.tsx`, and the language of every route is a pure function of
+its pathname — `resolveRouteLocale` in `src/config/locales.ts`: `/en` and everything
+beneath it is English, `/swagger` is English (its embedded OpenAPI reference is
+English-only; the rule replaced a `changeLanguage('en')` effect inside the swagger
+component that would otherwise fight it), everything else is `NEXT_PUBLIC_MAIN_LANGUAGE`.
+`pages/_app.tsx` applies it through `useRouteI18n` (`src/hooks/use-route-i18n.ts`), which
+hands a route-language **clone** of the i18next instance to `I18nextProvider` — so the
+exported HTML is already in the right language and hydration matches — and syncs the
+global instance in an effect for the validators and the Apollo `Accept-Language` link,
+which read it lazily. `pages/_document.tsx` derives `<html lang>` from the same function.
+Internal navigation stays inside the locale prefix (`landingPathOf` / `isLandingPath`): the
+header never sends an English visitor to `/#Contacts`. The two landings declare each other as `hreflang`
+alternates (`LANDING_ALTERNATES`, `x-default` on `/`). Registering a locale page is the
+same checklist as any page — manifest, edge `ROUTE_MAP` **and** a root-level
+`ALLOWED_FILES` entry (the export writes a flat `/en.html`, which the `en` directory entry
+does not cover), the a11y route registry, the sitemap — plus an e2e spec asserting the
+copy really renders in that language. Never sync the language during render, and never
+put the rule back inside a component. Design notes: `docs/extending-the-website.md`
+("Route-scoped locale") and `docs/seo-surface.md`.
 
 ### Offline posture and the service worker (issue #338)
 

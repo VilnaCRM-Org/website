@@ -60,16 +60,18 @@ describe('integration: withSeo', () => {
         path: '/404',
         noindex: true,
         siteSchema: true,
+        alternates: [{ hreflang: 'x-default', path: '/' }],
       },
       Body
     );
 
     render(<Page />);
 
-    expect(document.querySelector('meta[name="robots"]')?.getAttribute('content')).toBe(
-      'noindex'
-    );
+    expect(document.querySelector('meta[name="robots"]')?.getAttribute('content')).toBe('noindex');
     expect(document.querySelector('link[rel="canonical"]')).toBeNull();
     expect(document.querySelector('script[type="application/ld+json"]')).not.toBeNull();
+    expect(
+      document.querySelector('link[rel="alternate"][hreflang="x-default"]')?.getAttribute('href')
+    ).toBe(`${SITE_ORIGIN}/`);
   });
 });

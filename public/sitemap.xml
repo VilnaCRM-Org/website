@@ -4,6 +4,9 @@
     <loc>https://vilnacrm.com/</loc>
   </url>
   <url>
+    <loc>https://vilnacrm.com/en</loc>
+  </url>
+  <url>
     <loc>https://vilnacrm.com/swagger</loc>
   </url>
 </urlset>

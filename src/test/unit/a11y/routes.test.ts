@@ -1,6 +1,8 @@
 import { readdirSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 
+import { resolveRouteLocale } from '@/config/locales';
+
 import { A11Y_ROUTES } from '../../a11y/routes';
 
 /**
@@ -181,6 +183,15 @@ describe('accessibility route registry', () => {
       expect(route.name).not.toHaveLength(0);
       expect(route.readySelector).not.toHaveLength(0);
       expect(route.path.startsWith('/')).toBe(true);
+    });
+  });
+
+  it('declares the language the route rule resolves for each path', () => {
+    // The registry value is asserted against `<html lang>` on the running site; holding
+    // it to the same resolver `_document` uses means a route that drifts between the
+    // two reds this spec before it reaches Playwright.
+    A11Y_ROUTES.forEach(route => {
+      expect(route.lang).toBe(resolveRouteLocale(route.path));
     });
   });
 

@@ -26,4 +26,15 @@ describe('ForWhoSection component', () => {
     const imagesWithAltText: HTMLElement[] = getAllByAltText('Vector');
     expect(imagesWithAltText).toHaveLength(4);
   });
+
+  it('names the two product screenshots from the bundle, never from a raw key', () => {
+    // The screens used to read `t('alts.big_screen')`, a key no bundle declares, so
+    // i18next returned the key itself and screen readers voiced "alts dot big screen".
+    const { getByAltText, queryByAltText } = render(React.createElement(ForWhoSection));
+
+    expect(getByAltText(t('for_who.image_alt.big_screen'))).toBeInTheDocument();
+    expect(getByAltText(t('for_who.image_alt.small_screen'))).toBeInTheDocument();
+    expect(queryByAltText(/^alts\./)).not.toBeInTheDocument();
+    expect(t('for_who.image_alt.big_screen')).not.toMatch(/^for_who\./);
+  });
 });

@@ -46,8 +46,11 @@ function ForWhoShapes(): React.ReactElement {
 function ForWhoScreens(): React.ReactElement {
   const { t } = useTranslation();
 
-  const bigScreenProps: ImgAttrs = getImageProps(bigScreen, t('alts.big_screen'));
-  const smallScreenProps: ImgAttrs = getImageProps(smallScreen, t('alts.small_screen'));
+  const bigScreenProps: ImgAttrs = getImageProps(bigScreen, t('for_who.image_alt.big_screen'));
+  const smallScreenProps: ImgAttrs = getImageProps(
+    smallScreen,
+    t('for_who.image_alt.small_screen')
+  );
 
   return (
     <Box sx={styles.square}>

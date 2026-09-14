@@ -13,6 +13,7 @@
  * translation.
  */
 import { CombinedGraphQLErrors, TypedDocumentNode } from '@apollo/client';
+import i18n from 'i18next';
 
 import { CLIENT_ERROR_KEYS, getClientErrorMessages } from '@/shared/clientErrorMessages';
 
@@ -129,10 +130,29 @@ describe('integration: registration GraphQL API boundary', () => {
       await runSignup();
 
       const request = readGraphQLRequest(fetchMock);
-      // 'uk' is NEXT_PUBLIC_MAIN_LANGUAGE; the client bakes it into the HttpLink
-      // header at import time. Pinned to a literal so the assertion is not
-      // tautological with the i18n global the client itself read.
+      // 'uk' is NEXT_PUBLIC_MAIN_LANGUAGE, the language i18next was initialised
+      // with. Pinned to a literal so the assertion is not tautological with the
+      // i18n global the client itself read.
       expect(request.headers.get('accept-language')).toBe('uk');
+    });
+
+    it('reads the language per request, so /en sign-ups negotiate English', async () => {
+      // The header used to be baked into the HttpLink at import time, which
+      // froze it at the main language for the life of the bundle. The `/en`
+      // landing changes the active language after import, so the link must
+      // resolve it when the operation runs, not when the module loaded.
+      fetchMock.mockResolvedValue(graphqlData(successPayload()));
+      const initialLanguage: string = i18n.language;
+
+      try {
+        await i18n.changeLanguage('en');
+        await runSignup();
+      } finally {
+        await i18n.changeLanguage(initialLanguage);
+      }
+
+      const request = readGraphQLRequest(fetchMock);
+      expect(request.headers.get('accept-language')).toBe('en');
     });
 
     it('falls back to en-US Accept-Language when no i18n language is active', async () => {

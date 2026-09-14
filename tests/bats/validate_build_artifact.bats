@@ -12,10 +12,10 @@ SCRIPT_REL='scripts/ci/validate-build-artifact.sh'
 # Build a minimal-but-valid static export under $1 that satisfies every shape,
 # route-layout, file-count-floor and JS-payload assertion the validator makes.
 # $2 overrides the number of non-JS filler files used to clear the 200-file
-# floor (default 210), so the total file count is 6 + $2.
-# Base files are 6 (index.html, 404.html, swagger.html, en/docs/api.html, one .js,
-# and .well-known/security.txt), so a caller pinning an exact total must pass
-# filler = total - 6. Every base path is deliberately allow-list-compatible for
+# floor (default 210), so the total file count is 7 + $2.
+# Base files are 7 (index.html, en.html, 404.html, swagger.html, en/docs/api.html,
+# one .js, and .well-known/security.txt), so a caller pinning an exact total must
+# pass filler = total - 7. Every base path is deliberately allow-list-compatible for
 # the fail-closed edge handler (issue #383): `_next` is an allowed directory and
 # css/js/html are allowed extensions, so the completeness gate the validator runs
 # last stays green for a well-formed fixture.
@@ -29,10 +29,12 @@ make_valid_artifact() {
   printf '<!doctype html><title>Swagger UI</title>' >"$dir/swagger.html"
   printf 'console.log(1);' >"$dir/_next/static/chunks/main.js"
   # Every ROUTE_MAP target must exist in the export (issue #333), so a valid fixture
-  # ships the object each curated route rewrites to — /en/docs/api.html as well as the
-  # index and swagger documents above.
+  # ships the object each curated route rewrites to — /en/docs/api.html and the flat
+  # /en.html of the English landing (issue #340) as well as the index and swagger
+  # documents above.
   mkdir -p "$dir/en/docs"
   printf '<!doctype html><title>API</title>' >"$dir/en/docs/api.html"
+  printf '<!doctype html><title>Home (en)</title>' >"$dir/en.html"
   # The REAL committed policy, because the validator now also asserts the exported
   # copy is byte-identical to it — a synthetic fixture would not exercise that.
   cp "$PROJECT_ROOT/public/.well-known/security.txt" "$dir/.well-known/security.txt"
@@ -212,6 +214,18 @@ setup() {
   assert_output_contains 'dangling: /en/docs/api -> /en/docs/api.html'
 }
 
+@test "fails when the English landing object behind /en is missing" {
+  # /en is the route the pre-#333 table mapped at a nonexistent /en/index.html; its
+  # real object is the FLAT /en.html, and a build that drops it must be caught before
+  # the edge rewrites a live route to a missing key again.
+  make_valid_artifact "$ARTIFACT"
+  rm "$ARTIFACT/en.html"
+
+  run_validator "$ARTIFACT"
+  [ "$status" -eq 1 ]
+  assert_output_contains 'dangling: /en -> /en.html'
+}
+
 @test "the specific swagger contract error wins over the generic dangling report" {
   make_valid_artifact "$ARTIFACT"
   rm "$ARTIFACT/en/docs/api.html" "$ARTIFACT/swagger.html"
@@ -264,8 +278,8 @@ setup() {
 }
 
 @test "passes at exactly the file-count floor (200 files)" {
-  # 194 filler + the 6 base files = exactly the 200-file floor.
-  make_valid_artifact "$ARTIFACT" 194
+  # 193 filler + the 7 base files = exactly the 200-file floor.
+  make_valid_artifact "$ARTIFACT" 193
 
   run_validator "$ARTIFACT"
   [ "$status" -eq 0 ]
@@ -273,7 +287,7 @@ setup() {
 }
 
 @test "fails one file below the floor (199 files)" {
-  make_valid_artifact "$ARTIFACT" 193
+  make_valid_artifact "$ARTIFACT" 192
 
   run_validator "$ARTIFACT"
   [ "$status" -eq 1 ]

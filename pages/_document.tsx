@@ -1,12 +1,10 @@
-import { Html, Head, Main, NextScript } from 'next/document';
+import { Html, Head, Main, NextScript, DocumentProps } from 'next/document';
 
-import { env } from '@/config/env';
+import { resolveRouteLocale } from '@/config/locales';
 
-const mainLanguage: string = env.NEXT_PUBLIC_MAIN_LANGUAGE;
-
-export default function Document(): React.ReactElement {
+export default function Document({ __NEXT_DATA__ }: DocumentProps): React.ReactElement {
   return (
-    <Html lang={mainLanguage}>
+    <Html lang={resolveRouteLocale(__NEXT_DATA__.page)}>
       <Head>
         <meta charSet="utf-8" />
         <meta name="apple-mobile-web-app-title" content="VilnaCRM" />

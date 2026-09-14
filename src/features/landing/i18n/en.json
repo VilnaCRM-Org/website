@@ -82,6 +82,10 @@
     "card_text_title": "A private entrepreneur is a psychologist, tutor or dropshipper",
     "card_text_business": "Medium-scale local project - online courses, design studio or small outsourcing",
     "vector_alt": "Vector",
+    "image_alt": {
+      "big_screen": "Large digital screen with a blue background",
+      "small_screen": "Small digital screen displaying minimal content"
+    },
     "aria_label": "Link to registration"
   },
   "unlimited_possibilities": {
@@ -94,8 +98,6 @@
       "heading_libraries": "Public <br /> Libraries"
     },
     "image_alt": {
-      "big_screen": "Large digital screen with a blue background",
-      "small_screen": "Small digital screen displaying minimal content",
       "google": "Google",
       "facebook": "Facebook",
       "github": "GitHub",
