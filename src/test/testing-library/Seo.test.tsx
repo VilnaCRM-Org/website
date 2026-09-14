@@ -153,4 +153,41 @@ describe('Seo', () => {
       expect(node.url).toBe(`${SITE_ORIGIN}/`);
     }
   });
+
+  it('declares no hreflang alternates unless the page has language siblings', () => {
+    renderSeo();
+
+    expect(document.querySelectorAll('link[rel="alternate"][hreflang]')).toHaveLength(0);
+  });
+
+  it('renders every alternate the page declares as an absolute hreflang link', () => {
+    renderSeo({
+      path: '/en',
+      alternates: [
+        { hreflang: 'uk', path: '/' },
+        { hreflang: 'en', path: '/en' },
+        { hreflang: 'x-default', path: '/' },
+      ],
+    });
+
+    const alternates: NodeListOf<Element> = document.querySelectorAll(
+      'link[rel="alternate"][hreflang]'
+    );
+    expect(
+      Array.from(alternates).map(link => [link.getAttribute('hreflang'), link.getAttribute('href')])
+    ).toEqual([
+      ['uk', `${SITE_ORIGIN}/`],
+      ['en', `${SITE_ORIGIN}/en`],
+      ['x-default', `${SITE_ORIGIN}/`],
+    ]);
+    // A self-referencing alternate is part of the set, next to the canonical, never
+    // instead of it.
+    expect(find('link[rel="canonical"]')?.getAttribute('href')).toBe(`${SITE_ORIGIN}/en`);
+  });
+
+  it('refuses an alternate that would resolve off the canonical origin', () => {
+    expect(() =>
+      renderSeo({ alternates: [{ hreflang: 'en', path: '//attacker.example/en' }] })
+    ).toThrow(/off-origin/);
+  });
 });

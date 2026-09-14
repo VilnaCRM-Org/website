@@ -5,11 +5,13 @@ import * as Sentry from '@sentry/react';
 import type { NextWebVitalsMetric } from 'next/app';
 import dynamic from 'next/dynamic';
 import React, { ComponentType, useEffect } from 'react';
+import { I18nextProvider } from 'react-i18next';
 
 import { theme } from '@/components/app-theme';
 import Layout from '@/components/layout';
 import { env } from '@/config/env';
 import { golos } from '@/config/Fonts/golos';
+import { RouteI18n, useRouteI18n } from '@/hooks/use-route-i18n';
 import { initServiceWorker } from '@/lib/pwa/register-service-worker';
 import { handleWebVitalsMetric } from '@/lib/web-vitals/report-web-vitals';
 
@@ -19,7 +21,7 @@ import '../styles/global.css';
 
 import '../src/features/swagger/components/api-documentation/styles.scss';
 
-import i18n from '../i18n';
+import '../i18n';
 import client from '../src/features/landing/api/graphql/apollo';
 
 const DynamicHeader: ComponentType = dynamic(() => import('@/features/landing/components/header'), {
@@ -42,27 +44,27 @@ Sentry.init({
 });
 
 function MyApp({ Component }: { Component: React.ComponentType }): React.ReactElement {
-  useEffect(() => {
-    document.documentElement.dir = i18n.dir();
-  }, []);
+  const { locale, instance }: RouteI18n = useRouteI18n();
 
   useEffect(() => {
     initServiceWorker();
   }, []);
 
   return (
-    <ThemeProvider theme={theme}>
-      <ApolloProvider client={client}>
-        <main className={golos.className}>
-          <Layout header={<DynamicHeader />}>
-            <Component />
-          </Layout>
-          {env.NEXT_PUBLIC_GA_MEASUREMENT_ID ? (
-            <GoogleAnalytics gaId={env.NEXT_PUBLIC_GA_MEASUREMENT_ID} />
-          ) : null}
-        </main>
-      </ApolloProvider>
-    </ThemeProvider>
+    <I18nextProvider key={locale} i18n={instance}>
+      <ThemeProvider theme={theme}>
+        <ApolloProvider client={client}>
+          <main className={golos.className}>
+            <Layout header={<DynamicHeader />}>
+              <Component />
+            </Layout>
+            {env.NEXT_PUBLIC_GA_MEASUREMENT_ID ? (
+              <GoogleAnalytics gaId={env.NEXT_PUBLIC_GA_MEASUREMENT_ID} />
+            ) : null}
+          </main>
+        </ApolloProvider>
+      </ThemeProvider>
+    </I18nextProvider>
   );
 }
 

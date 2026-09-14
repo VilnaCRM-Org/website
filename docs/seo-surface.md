@@ -46,7 +46,20 @@ of five copies of it.
   region with `replace` rather than `split(...)[0]` because under
   `noUncheckedIndexedAccess` the indexed read is `string | undefined`, and the `??`
   needed to narrow it is a branch no input can take — exactly what the integration
-  layer's 100% sweep fails on.
+  layer's 100% sweep fails on. The value follows the language the page was rendered
+  in — the route-scoped instance `useTranslation()` hands out, not the global default —
+  so `/en` publishes `en_US` and `/` publishes `uk_UA`.
+- **The two landings are `hreflang` alternates of each other.** `/` (Ukrainian) and
+  `/en` (English) are the same page in two languages, and without alternates a search
+  engine reads them as two competing pages and may serve the wrong one to a visitor —
+  or fold the English page into the Ukrainian one as a duplicate. Each landing renders
+  the full alternate set from `LANDING_ALTERNATES` in `src/config/locales.ts`: a
+  `hreflang="uk"` link to `/`, a `hreflang="en"` link to `/en`, and `x-default` on `/`,
+  because the root is what a visitor with neither language should get. The set is
+  declared once and rendered on **both** pages, including a self-reference, which the
+  hreflang specification requires — a one-way declaration is ignored. `/en/docs/api`
+  declares none: it has no Ukrainian sibling, and it is `noindex` anyway. The
+  alternates are absolute URLs on `SITE_ORIGIN` for the same reason the canonical is.
 - **`src/components` imports nothing from `src/features`** (dependency-cruiser
   `no-shared-ui-to-features`): the copy is passed in by the page, which reads it from its
   own feature i18n bundle.

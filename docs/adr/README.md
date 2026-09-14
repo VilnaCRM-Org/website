@@ -21,6 +21,8 @@ justified a decision still holds.
   never lower a threshold. _Accepted._
 - [ADR 0005](0005-no-comments-no-inline-styles.md) — production source carries no
   comments and no inline styles; rationale lives in docs. _Accepted._
+- [ADR 0006](0006-route-scoped-locale.md) — the locale is a function of the route, and
+  the English landing lives under a static `/en` prefix. _Accepted._
 
 The template for a new record is [`0000-template.md`](0000-template.md).
 

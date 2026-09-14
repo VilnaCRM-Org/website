@@ -21,7 +21,9 @@ describe('Drawer', () => {
   const handleLinkClick: jest.Mock<void, [string]> = jest.fn();
 
   it('renders drawer button', () => {
-    const { getByLabelText, getByAltText } = render(<Drawer handleLinkClick={handleLinkClick} />);
+    const { getByLabelText, getByAltText } = render(
+      <Drawer handleLinkClick={handleLinkClick} landingPath="/" />
+    );
 
     const drawerButton: HTMLElement = getByLabelText(buttonToOpenDrawer);
     const drawerImage: HTMLElement = getByAltText(drawerImageAlt);
@@ -32,7 +34,7 @@ describe('Drawer', () => {
 
   it('opens drawer when button is clicked', async () => {
     const { getByLabelText, getByRole, getByAltText, getByText } = render(
-      <Drawer handleLinkClick={handleLinkClick} />
+      <Drawer handleLinkClick={handleLinkClick} landingPath="/" />
     );
 
     const drawerButton: HTMLElement = getByLabelText(buttonToOpenDrawer);
@@ -48,7 +50,9 @@ describe('Drawer', () => {
   });
 
   it('closes drawer when exit button is clicked', async () => {
-    const { getByLabelText, queryByRole } = render(<Drawer handleLinkClick={handleLinkClick} />);
+    const { getByLabelText, queryByRole } = render(
+      <Drawer handleLinkClick={handleLinkClick} landingPath="/" />
+    );
 
     const drawerButton: HTMLElement = getByLabelText(buttonToOpenDrawer);
     fireEvent.click(drawerButton);
@@ -62,7 +66,9 @@ describe('Drawer', () => {
   });
 
   it('renders logo', () => {
-    const { getByLabelText, getByAltText } = render(<Drawer handleLinkClick={handleLinkClick} />);
+    const { getByLabelText, getByAltText } = render(
+      <Drawer handleLinkClick={handleLinkClick} landingPath="/" />
+    );
     const drawerButton: HTMLElement = getByLabelText(buttonToOpenDrawer);
 
     fireEvent.click(drawerButton);
@@ -71,7 +77,9 @@ describe('Drawer', () => {
   });
 
   it('renders logo link pointing to home with aria-label', () => {
-    const { getByLabelText, getByRole } = render(<Drawer handleLinkClick={handleLinkClick} />);
+    const { getByLabelText, getByRole } = render(
+      <Drawer handleLinkClick={handleLinkClick} landingPath="/" />
+    );
     const drawerButton: HTMLElement = getByLabelText(buttonToOpenDrawer);
 
     fireEvent.click(drawerButton);
@@ -82,8 +90,22 @@ describe('Drawer', () => {
     expect(logoLink).toHaveAttribute('aria-label', logoAlt);
   });
 
+  it('points the logo at the landing of the current locale prefix', () => {
+    // Under `/en` the header hands the drawer `/en`; a Ukrainian-root logo here would
+    // bounce an English visitor to the Ukrainian page from the mobile menu.
+    const { getByLabelText, getByRole } = render(
+      <Drawer handleLinkClick={handleLinkClick} landingPath="/en" />
+    );
+
+    fireEvent.click(getByLabelText(buttonToOpenDrawer));
+
+    expect(getByRole('link', { name: logoAlt })).toHaveAttribute('href', '/en');
+  });
+
   it('renders nav items', () => {
-    const { getByLabelText, getAllByRole } = render(<Drawer handleLinkClick={handleLinkClick} />);
+    const { getByLabelText, getAllByRole } = render(
+      <Drawer handleLinkClick={handleLinkClick} landingPath="/" />
+    );
     const drawerButton: HTMLElement = getByLabelText(buttonToOpenDrawer);
     fireEvent.click(drawerButton);
     const navItems: HTMLElement[] = getAllByRole(listItem);
@@ -92,7 +114,7 @@ describe('Drawer', () => {
 
   it('closes the drawer when handleCloseDrawer is called', async () => {
     const { getByRole, getByLabelText, queryByRole } = render(
-      <Drawer handleLinkClick={handleLinkClick} />
+      <Drawer handleLinkClick={handleLinkClick} landingPath="/" />
     );
 
     const drawerButton: HTMLElement = getByLabelText(buttonToOpenDrawer);
@@ -110,7 +132,7 @@ describe('Drawer', () => {
 
   it('calls handleLinkClick when nav item link is clicked', async () => {
     const { getByLabelText, getByText, queryByRole } = render(
-      <Drawer handleLinkClick={handleLinkClick} />
+      <Drawer handleLinkClick={handleLinkClick} landingPath="/" />
     );
 
     const drawerButton: HTMLElement = getByLabelText(buttonToOpenDrawer);
@@ -127,7 +149,7 @@ describe('Drawer', () => {
 
   it('calls handleLinkClick and closes drawer when nav item is clicked', async () => {
     const { getByLabelText, getByText, queryByRole } = render(
-      <Drawer handleLinkClick={handleLinkClick} />
+      <Drawer handleLinkClick={handleLinkClick} landingPath="/" />
     );
 
     const drawerButton: HTMLElement = getByLabelText(buttonToOpenDrawer);

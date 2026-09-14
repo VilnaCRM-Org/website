@@ -105,16 +105,21 @@ function buildNotFoundResponse() {
 // `<route>.html` per route, `/` being the only route whose object is an `index.html`.
 // Until #333 this table mapped `/about` and `/en` at `/about/index.html` and
 // `/en/index.html`, neither of which the export has ever produced: there is no
-// `pages/about`, and `pages/en/` holds only `docs/api.tsx`. Both curated routes therefore
+// `pages/about`, and `pages/en/` held only `docs/api.tsx`. Both curated routes therefore
 // rewrote to a missing S3 key and leaked a raw storage error instead of the synthetic 404
 // below, while `/en/docs/api` — the one route under `/en` that does ship — had no entry and
 // was 404'd here. Every entry is now held to `config/routes.json`, which is generated from
 // `pages/`, by `src/test/unit/routes/route-manifest.test.ts`, and every target is proved to
 // exist in a real export by `scripts/ci/verify-edge-allowlist.mjs`.
+// `/en` is a real route again since the English landing page (`pages/en/index.tsx`) — and,
+// like every other non-root route, its object is the FLAT `/en.html`, not the
+// `/en/index.html` the pre-#333 entry pointed at.
 // The manifest is deliberately the wider set: `/offline` is exported but intentionally not
 // mapped, because the service worker precaches the fallback as `/offline.html`.
 var ROUTE_MAP = Object.freeze({
   '/': '/index.html',
+  '/en': '/en.html',
+  '/en/': '/en.html',
   '/en/docs/api': '/en/docs/api.html',
   '/en/docs/api/': '/en/docs/api.html',
   '/swagger': '/swagger.html',
@@ -135,6 +140,9 @@ var ALLOWED_DIRS = Object.freeze({
 var ALLOWED_FILES = Object.freeze({
   // Shipped by the export today.
   '/404.html': true,
+  // The English landing page. Root-level like every other flat `<route>.html`, so the `en`
+  // directory entry in ALLOWED_DIRS does not cover it — that covers `/en/docs/api.html`.
+  '/en.html': true,
   '/favicon.svg': true,
   '/index.html': true,
   // The offline shell and the worker that precaches it (issue #338). Both are

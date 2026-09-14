@@ -52,6 +52,28 @@ describe('integration: SEO head', () => {
     expect(document.querySelector('script[type="application/ld+json"]')).toBeNull();
   });
 
+  it('renders the hreflang alternates a multilingual page declares', () => {
+    render(
+      <Seo
+        title="Title"
+        description="Description"
+        path="/en"
+        alternates={[
+          { hreflang: 'uk', path: '/' },
+          { hreflang: 'en', path: '/en' },
+        ]}
+      />
+    );
+
+    const links: Element[] = Array.from(
+      document.querySelectorAll('link[rel="alternate"][hreflang]')
+    );
+    expect(links.map(link => link.getAttribute('href'))).toEqual([
+      `${SITE_ORIGIN}/`,
+      `${SITE_ORIGIN}/en`,
+    ]);
+  });
+
   it('marks a page noindex and emits the site graph when asked', () => {
     render(<Seo title="Title" description="Description" path="/" noindex siteSchema />);
 

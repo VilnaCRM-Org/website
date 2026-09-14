@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 
 import Logo from '@/assets/svg/logo/Logo.svg';
 import { UiToolbar } from '@/components';
+import { isLandingPath, landingPathOf } from '@/config/locales';
 
 import fallbackNavigate from '../../helpers/fallbackNavigate';
 import normalizeLink from '../../helpers/normalizeLink';
@@ -19,11 +20,13 @@ import { NavList } from './nav-list';
 import styles from './styles';
 
 async function navigateToLink(router: NextRouter, link: string): Promise<void> {
+  const target: string = `${landingPathOf(router.pathname)}${link}`;
+
   try {
-    await router.push(`/${link}`, undefined, { scroll: true });
+    await router.push(target, undefined, { scroll: true });
     scrollToAnchor(link);
   } catch {
-    fallbackNavigate(`/${link}`);
+    fallbackNavigate(target);
   }
 }
 
@@ -31,7 +34,7 @@ function createLinkClickHandler(router: NextRouter): (link: string) => void {
   return async (link: string): Promise<void> => {
     const normalized: string = normalizeLink(link);
 
-    if (normalized === 'contacts' || router.pathname === '/') {
+    if (normalized === 'contacts' || isLandingPath(router.pathname)) {
       scrollToAnchor(link);
       return;
     }
@@ -65,18 +68,19 @@ function Header(): React.ReactElement {
   const { t } = useTranslation();
   const router: NextRouter = useRouter();
   const handleLinkClick: (link: string) => void = useHeaderNavigation(router);
+  const landingPath: string = landingPathOf(router.pathname);
 
   return (
     <AppBar sx={styles.headerWrapper}>
       <UiToolbar>
-        <Link href="/" aria-label={t('header.logo_alt')} style={styles.logoLink}>
+        <Link href={landingPath} aria-label={t('header.logo_alt')} style={styles.logoLink}>
           <Box component="span" sx={styles.logo}>
             <Image src={Logo} alt={t('header.logo_alt')} width={131} height={44} />
           </Box>
         </Link>
         <NavList navItems={headerNavList} handleClick={handleLinkClick} />
         <AuthButtons />
-        <Drawer handleLinkClick={handleLinkClick} />
+        <Drawer handleLinkClick={handleLinkClick} landingPath={landingPath} />
       </UiToolbar>
     </AppBar>
   );

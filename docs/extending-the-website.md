@@ -129,7 +129,8 @@ Pages live under `pages/` (Next.js pages router, static export).
 
 1. Create `pages/<route>.tsx` exporting `withSeo(spec, Body)` from
    `src/components/seo/with-seo` — the spec carries the i18n keys of the title and
-   description, the route path, and the `noindex` / `siteSchema` flags.
+   description, the route path, the `noindex` / `siteSchema` flags and, for a page that
+   exists in more than one language, its `alternates`.
 2. Keep presentational UI in a feature (`src/features/<feature>`); `Body` is that
    feature's component, and the page file holds nothing else.
 3. Use `useTranslation()` and per-feature i18n keys for copy — never hardcode
@@ -147,7 +148,11 @@ hard-404s any extensionless single-segment path that is not in its `ROUTE_MAP`, 
 new top-level route needs an entry there mapping `/contact` to `/contact.html` (and a
 row in the edge spec, which is gated at 100% coverage). Match the flat filename the
 export really writes, the way the nested `/en/docs/api` route maps to
-`/en/docs/api.html`; a target the export never produces rewrites to a missing S3 key.
+`/en/docs/api.html` and `/en` — a directory index under `pages/`, but still a flat
+`out/en.html` — maps to `/en.html`; a target the export never produces rewrites to a
+missing S3 key. A root-level `.html` also needs its own `ALLOWED_FILES` entry: root files
+are exact-matched rather than extension-matched, so `/en.html` is not covered by the `en`
+directory entry that serves `/en/docs/api.html`.
 A page that is only ever fetched with its `.html` extension — like `pages/offline.tsx`,
 which the service worker serves from cache as `/offline.html` — needs no edge change,
 but it still belongs in the manifest, which records it as a documented exemption.
@@ -185,7 +190,51 @@ Translations are per-feature JSON merged into a single bundle at build time.
    [`scripts/localizationGenerator.js`](../scripts/localizationGenerator.js). That
    file is generated and gitignored — never edit it by hand. The next.config
    webpack hook and the Jest `globalSetup` regenerate it.
-3. Locale is a build-time input of the static export. Set the active and fallback
-   languages with `NEXT_PUBLIC_MAIN_LANGUAGE` and `NEXT_PUBLIC_FALLBACK_LANGUAGE`
-   (validated in `src/config/env.ts`); they gate `<html lang>` and i18next.
+3. Locale is a build-time input of the static export, and it is a function of the
+   route alone. `NEXT_PUBLIC_MAIN_LANGUAGE` (validated in `src/config/env.ts`) is the
+   language of every route that carries no locale prefix; `NEXT_PUBLIC_FALLBACK_LANGUAGE`
+   is what i18next falls back to for a missing key. The English landing lives at `/en`
+   (`pages/en/index.tsx`), and `src/config/locales.ts` is the single rule that maps a
+   pathname to its language — see "Route-scoped locale" below.
 4. Assert localized strings in tests through the `t()` helper, not hardcoded text.
+
+### Route-scoped locale
+
+Next's built-in i18n routing is unavailable under `output: 'export'`, so the locale
+prefix is an ordinary directory under `pages/` and the language is derived from the
+pathname at render time:
+
+- `resolveRouteLocale(pathname)` in `src/config/locales.ts` returns `en` for `/en` and
+  everything beneath it, `en` for `/swagger` (the OpenAPI reference it embeds is
+  English-only, which used to be a `changeLanguage('en')` effect inside the swagger
+  component and fought any route-level rule), and the main language for everything
+  else. A trailing slash is ignored; case is not, because neither the export nor the
+  edge handler folds case.
+- `useRouteI18n()` in `src/hooks/use-route-i18n.ts` runs once at the routing root
+  (`pages/_app.tsx`). It clones the global i18next instance with the route's language
+  and hands the clone to `I18nextProvider`, so every `useTranslation()` in the tree —
+  including the SSR pass that writes the exported HTML — renders in that language with
+  no flash of the main language and no hydration mismatch. The clone shares the resource
+  store, so nothing is loaded twice. It then syncs the **global** instance in an effect,
+  because the form validators and `src/shared/clientErrorMessages.ts` call `t` from
+  `i18next` directly and the Apollo link reads `i18n.language` per request; both only
+  run after user interaction, so the effect is early enough. The sync is deliberately
+  not done during render: `changeLanguage` notifies every mounted `useTranslation`
+  subscriber, and doing that inside another component's render is the
+  "cannot update a component while rendering a different component" warning.
+- `pages/_document.tsx` derives `<html lang>` from the same function, through
+  `__NEXT_DATA__.page`, so the document language, the rendered copy, `og:locale` and the
+  hreflang alternates cannot disagree.
+- Internal navigation must stay inside the current locale prefix. The landing header
+  resolves the landing path with `landingPathOf(pathname)` for the logo link and for
+  anchor navigation from a non-landing route (`/en/docs/api` → `/en#Contacts`, never
+  `/#Contacts`), and `isLandingPath` treats both `/` and `/en` as "already on the
+  landing", where an anchor click scrolls instead of navigating. The prefix, not the
+  display language, decides: `/swagger` renders in English but its logo still leads to
+  `/`, because no visitor chose a locale to get there.
+- The two landings declare each other as `hreflang` alternates (`LANDING_ALTERNATES`),
+  with `x-default` on the root; `docs/seo-surface.md` records why.
+
+Adding a third locale means a new prefix in `src/config/locales.ts`, a new
+`pages/<prefix>/index.tsx`, and the same route registrations a new page needs (manifest,
+edge `ROUTE_MAP` and `ALLOWED_FILES`, the a11y route registry, the sitemap).

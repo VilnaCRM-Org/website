@@ -20,11 +20,22 @@ export interface A11yRoute {
    * instead of passing with nothing to analyse.
    */
   readonly readySelector: string;
+  /**
+   * The language the route is exported in (WCAG 3.1.1). axe's `html-has-lang`
+   * and `html-lang-valid` only check that a well-formed value exists; nothing
+   * in axe checks that the value matches the content. The route gate asserts
+   * this against `<html lang>` because the language is a function of the
+   * pathname (`src/config/locales.ts`), and a route that renders English copy
+   * under `lang="uk"` — which `/swagger` and `/en/docs/api` did before the
+   * `/en` route landed — is read to a screen-reader user in the wrong voice.
+   */
+  readonly lang: string;
 }
 
 export const A11Y_ROUTES: readonly A11yRoute[] = [
-  { path: '/', name: 'landing', readySelector: 'header' },
-  { path: '/swagger', name: 'swagger', readySelector: '.swagger-ui' },
-  { path: '/en/docs/api', name: 'api-docs-en', readySelector: 'h1' },
-  { path: '/offline', name: 'offline', readySelector: 'h1' },
+  { path: '/', name: 'landing', readySelector: 'header', lang: 'uk' },
+  { path: '/en', name: 'landing-en', readySelector: 'header', lang: 'en' },
+  { path: '/swagger', name: 'swagger', readySelector: '.swagger-ui', lang: 'en' },
+  { path: '/en/docs/api', name: 'api-docs-en', readySelector: 'h1', lang: 'en' },
+  { path: '/offline', name: 'offline', readySelector: 'h1', lang: 'uk' },
 ];

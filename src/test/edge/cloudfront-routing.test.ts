@@ -87,6 +87,8 @@ describe('cloudfront_routing handler', () => {
   describe('exact route rewrites', () => {
     test.each([
       ['/', '/index.html'],
+      ['/en', '/en.html'],
+      ['/en/', '/en.html'],
       ['/en/docs/api', '/en/docs/api.html'],
       ['/en/docs/api/', '/en/docs/api.html'],
       ['/swagger', '/swagger.html'],
@@ -106,6 +108,7 @@ describe('cloudfront_routing handler', () => {
   describe('allowlisted export paths', () => {
     test.each([
       '/index.html',
+      '/en.html',
       '/404.html',
       '/favicon.svg',
       '/supportUkraine.svg',
@@ -183,7 +186,7 @@ describe('cloudfront_routing handler', () => {
       '/swaggerx',
       '/about-x',
       '/about',
-      '/en',
+      '/en.html/',
       '/toString',
       '/constructor',
       '/__proto__',

@@ -17,6 +17,7 @@ export default function withSeo(spec: SeoPageSpec, Body: ComponentType): () => R
           path={spec.path}
           noindex={spec.noindex ?? false}
           siteSchema={spec.siteSchema ?? false}
+          alternates={spec.alternates ?? []}
         />
         <Body />
       </>

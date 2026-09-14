@@ -16,13 +16,19 @@ import NavList from '../nav-list/nav-list';
 import styles from './styles';
 import { VilnaCRMEmail } from './vilna-crm-email';
 
-function DrawerHeader({ onClose }: { onClose: () => void }): React.ReactElement {
+function DrawerHeader({
+  onClose,
+  landingPath,
+}: {
+  onClose: () => void;
+  landingPath: string;
+}): React.ReactElement {
   const { t } = useTranslation();
 
   return (
     <Stack direction="row" sx={styles.header}>
       <Link
-        href="/"
+        href={landingPath}
         component={NextLink}
         sx={styles.logoLink}
         aria-label={t('header.logo_alt') as string}
@@ -60,13 +66,15 @@ function DrawerActions({ onClose }: { onClose: () => void }): React.ReactElement
 function DrawerContent({
   onClose,
   handleLinkClick,
+  landingPath,
 }: {
   onClose: () => void;
   handleLinkClick: (link: string) => void;
+  landingPath: string;
 }): React.ReactElement {
   return (
     <Box role="presentation" sx={styles.drawerContent}>
-      <DrawerHeader onClose={onClose} />
+      <DrawerHeader onClose={onClose} landingPath={landingPath} />
       <DrawerActions onClose={onClose} />
       <NavList
         navItems={drawerNavList}
@@ -83,8 +91,10 @@ function DrawerContent({
 
 function CustomDrawer({
   handleLinkClick,
+  landingPath,
 }: {
   handleLinkClick: (link: string) => void;
+  landingPath: string;
 }): React.ReactElement {
   const { t } = useTranslation();
   const [isDrawerOpen, setIsDrawerOpen] = React.useState(false);
@@ -102,7 +112,11 @@ function CustomDrawer({
         <Image src={Bars} alt={t('header.drawer.image_alt.bars')} width={24} height={24} />
       </Button>
       <Drawer sx={styles.drawer} anchor="right" open={isDrawerOpen} onClose={handleCloseDrawer}>
-        <DrawerContent onClose={handleCloseDrawer} handleLinkClick={handleLinkClick} />
+        <DrawerContent
+          onClose={handleCloseDrawer}
+          handleLinkClick={handleLinkClick}
+          landingPath={landingPath}
+        />
       </Drawer>
     </Box>
   );

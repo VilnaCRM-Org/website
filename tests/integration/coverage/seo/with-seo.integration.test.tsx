@@ -60,6 +60,7 @@ describe('integration: withSeo', () => {
         path: '/404',
         noindex: true,
         siteSchema: true,
+        alternates: [{ hreflang: 'x-default', path: '/' }],
       },
       Body
     );
@@ -71,5 +72,8 @@ describe('integration: withSeo', () => {
     );
     expect(document.querySelector('link[rel="canonical"]')).toBeNull();
     expect(document.querySelector('script[type="application/ld+json"]')).not.toBeNull();
+    expect(
+      document.querySelector('link[rel="alternate"][hreflang="x-default"]')?.getAttribute('href')
+    ).toBe(`${SITE_ORIGIN}/`);
   });
 });

@@ -6,7 +6,7 @@
  * `scripts/cloudfront_routing.js` is the curated subset CloudFront rewrites at the edge.
  * Both used to be maintained by hand and both had drifted: `ROUTE_MAP` mapped `/about` and
  * `/en` at `/about/index.html` and `/en/index.html`, objects the export has never produced
- * (there is no `pages/about`; `pages/en/` holds only `docs/api.tsx`), so those routes
+ * (there is no `pages/about`; `pages/en/` held only `docs/api.tsx`), so those routes
  * rewrote to a missing S3 key and leaked a raw storage error instead of the site's synthetic
  * 404 — while the route that does ship, `/en/docs/api`, had no entry and hard-404'd at the
  * edge. Nothing failed, because nothing derived the route set from the filesystem.
@@ -141,9 +141,13 @@ describe('ROUTE_MAP parity with the manifest', () => {
     expect(routeMap['/']).toBe('/index.html');
   });
 
-  test('the stale pre-#333 entries are gone and the real /en route is mapped', () => {
+  test('the stale pre-#333 /about entry is gone and the real /en routes are mapped', () => {
     expect(Object.hasOwn(routeMap, '/about')).toBe(false);
-    expect(Object.hasOwn(routeMap, '/en')).toBe(false);
     expect(routeMap['/en/docs/api']).toBe('/en/docs/api.html');
+    // `/en` is a route again (the English landing, `pages/en/index.tsx`), but at the FLAT
+    // `/en.html` the export writes — never the `/en/index.html` the pre-#333 entry pointed
+    // at, which is exactly the object that leaked a raw S3 error.
+    expect(routeMap['/en']).toBe('/en.html');
+    expect(routeMap['/en/']).toBe('/en.html');
   });
 });

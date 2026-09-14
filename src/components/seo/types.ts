@@ -1,9 +1,12 @@
+import type { LocaleAlternate } from '@/config/locales';
+
 export interface SeoProps {
   readonly title: string;
   readonly description: string;
   readonly path: string;
   readonly noindex?: boolean;
   readonly siteSchema?: boolean;
+  readonly alternates?: readonly LocaleAlternate[];
 }
 
 export interface SeoPageSpec {
@@ -12,6 +15,7 @@ export interface SeoPageSpec {
   readonly path: string;
   readonly noindex?: boolean;
   readonly siteSchema?: boolean;
+  readonly alternates?: readonly LocaleAlternate[];
 }
 
 export interface SocialTagOptions {
