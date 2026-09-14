@@ -67,9 +67,7 @@ describe('integration: withSeo', () => {
 
     render(<Page />);
 
-    expect(document.querySelector('meta[name="robots"]')?.getAttribute('content')).toBe(
-      'noindex'
-    );
+    expect(document.querySelector('meta[name="robots"]')?.getAttribute('content')).toBe('noindex');
     expect(document.querySelector('link[rel="canonical"]')).toBeNull();
     expect(document.querySelector('script[type="application/ld+json"]')).not.toBeNull();
     expect(

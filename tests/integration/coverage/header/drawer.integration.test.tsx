@@ -21,7 +21,9 @@ describe('integration: Drawer', () => {
   const handleLinkClick: jest.Mock<void, [string]> = jest.fn();
 
   it('renders the drawer toggle button and its icon', () => {
-    const { getByLabelText, getByAltText } = render(<Drawer handleLinkClick={handleLinkClick} landingPath="/" />);
+    const { getByLabelText, getByAltText } = render(
+      <Drawer handleLinkClick={handleLinkClick} landingPath="/" />
+    );
 
     expect(getByLabelText(buttonToOpenDrawer)).toBeInTheDocument();
     expect(getByAltText(drawerImageAlt)).toBeInTheDocument();
@@ -40,7 +42,9 @@ describe('integration: Drawer', () => {
   });
 
   it('closes the drawer when the exit button is clicked', async () => {
-    const { getByLabelText, queryByRole } = render(<Drawer handleLinkClick={handleLinkClick} landingPath="/" />);
+    const { getByLabelText, queryByRole } = render(
+      <Drawer handleLinkClick={handleLinkClick} landingPath="/" />
+    );
 
     fireEvent.click(getByLabelText(buttonToOpenDrawer));
     fireEvent.click(getByLabelText(buttonToCloseDrawer));
@@ -51,7 +55,9 @@ describe('integration: Drawer', () => {
   });
 
   it('renders the logo inside the open drawer', () => {
-    const { getByLabelText, getByAltText } = render(<Drawer handleLinkClick={handleLinkClick} landingPath="/" />);
+    const { getByLabelText, getByAltText } = render(
+      <Drawer handleLinkClick={handleLinkClick} landingPath="/" />
+    );
 
     fireEvent.click(getByLabelText(buttonToOpenDrawer));
 
@@ -59,7 +65,9 @@ describe('integration: Drawer', () => {
   });
 
   it('renders the logo link pointing to home with aria-label', () => {
-    const { getByLabelText, getByRole } = render(<Drawer handleLinkClick={handleLinkClick} landingPath="/" />);
+    const { getByLabelText, getByRole } = render(
+      <Drawer handleLinkClick={handleLinkClick} landingPath="/" />
+    );
 
     fireEvent.click(getByLabelText(buttonToOpenDrawer));
 
@@ -70,7 +78,9 @@ describe('integration: Drawer', () => {
   });
 
   it('renders nav items inside the open drawer', () => {
-    const { getByLabelText, getAllByRole } = render(<Drawer handleLinkClick={handleLinkClick} landingPath="/" />);
+    const { getByLabelText, getAllByRole } = render(
+      <Drawer handleLinkClick={handleLinkClick} landingPath="/" />
+    );
 
     fireEvent.click(getByLabelText(buttonToOpenDrawer));
 
