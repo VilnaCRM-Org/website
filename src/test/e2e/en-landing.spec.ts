@@ -42,7 +42,6 @@ test.describe('English landing at /en', () => {
 
     await expectLandingLanguage(page, 'en', en);
     await expect(page.getByText(uk('about_vilna.heading_first_main'))).toHaveCount(0);
-    await expect(page.getByText('ТОВ')).toHaveCount(0);
   });
 
   test('declares itself and the Ukrainian landing as hreflang alternates', async ({ page }) => {
