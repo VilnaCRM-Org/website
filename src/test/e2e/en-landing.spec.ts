@@ -1,6 +1,8 @@
 import { expect, Locator, Page, test } from '@playwright/test';
 import i18n from 'i18next';
 
+import { absoluteUrl } from '@/config/site';
+
 import './utils/initializeLocalization';
 
 type FixedT = (key: string) => string;
@@ -50,17 +52,17 @@ test.describe('English landing at /en', () => {
     await expect(alternates).toHaveCount(3);
     await expect(page.locator('link[rel="alternate"][hreflang="en"]')).toHaveAttribute(
       'href',
-      /\/en$/
+      absoluteUrl('/en')
     );
     await expect(page.locator('link[rel="alternate"][hreflang="uk"]')).toHaveAttribute(
       'href',
-      /\/$/
+      absoluteUrl('/')
     );
     await expect(page.locator('link[rel="alternate"][hreflang="x-default"]')).toHaveAttribute(
       'href',
-      /\/$/
+      absoluteUrl('/')
     );
-    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', /\/en$/);
+    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', absoluteUrl('/en'));
   });
 
   test('keeps header navigation inside the English page', async ({ page }) => {
@@ -96,7 +98,7 @@ test.describe('English landing at /en', () => {
     await expectLandingLanguage(page, 'uk', uk);
     await expect(page.locator('link[rel="alternate"][hreflang="en"]')).toHaveAttribute(
       'href',
-      /\/en$/
+      absoluteUrl('/en')
     );
   });
 
