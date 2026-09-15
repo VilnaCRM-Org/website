@@ -93,6 +93,17 @@ with the default cache behaviour:
 | `scripts/cloudfront_routing.js`          | Viewer request        |
 | `scripts/cloudfront_security_headers.js` | Viewer response       |
 
+The routing function is published by Terraform in the `website-infrastructure`
+repository (`terraform/app/modules/aws/cloudfront/function.tf`), which fetches the source
+from this repository's `main` branch and publishes it with `publish = true`. A change to
+it reaches the CDN only when that stack is planned and applied against the production
+account — a website deploy alone does not update it. As of September 2026 that module
+declares no resource for the viewer-response function, so its association is the target
+state this table describes, not one the repository has observed; the post-deploy header
+probe is what confirms it. Both files are held under CloudFront's non-adjustable 10 KB
+function quota by `make lint-prod-guardrails`; see [`edge-routing.md`](edge-routing.md)
+for the incident behind that gate and the full deployment path.
+
 A CloudFront **response headers policy** carrying the same values is the stronger
 enforcement point, because CloudFront also applies it to the 400-and-above origin
 responses the viewer-response function never sees. Adopting one is recommended; keep

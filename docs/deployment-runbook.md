@@ -62,6 +62,40 @@ The failure line names every gap in one response, so read all of it:
 Reproduce any of these locally against the same script:
 `SMOKE_ATTEMPTS=1 ./scripts/ci/smoke-response-shape.sh https://vilnacrm.com`.
 
+### How the edge functions reach CloudFront
+
+The website pipeline deploys the **export**, not the edge functions.
+`scripts/cloudfront_routing.js` is published by Terraform in the
+`website-infrastructure` repository (`terraform/app/modules/aws/cloudfront/function.tf`),
+which fetches it from this repository's `main` branch when the website stack is applied
+against the production account. So a merged `ROUTE_MAP` change is live on the CDN only
+after that apply — until then the distribution runs the previously applied function, the
+new `.html` object is in the bucket, and the extensionless URL 404s. That is the exact
+shape `/en` had after #470 merged: `/en.html` served, `/en` did not.
+
+As of September 2026 that module declares **no** resource for
+`scripts/cloudfront_security_headers.js`, so whether the viewer-response function is
+associated at all is something only the post-deploy header probe can answer once
+`PRODUCTION_SITE_URL` is set. Treat the guide's "associate both functions" as the
+target state, not the observed one, until that probe is green.
+
+To roll a routing change out:
+
+1. Merge it to `main`; Terraform reads `main`, not a branch or tag.
+2. In `website-infrastructure`, plan the website stack against production (test
+   first, per that repository's README). The plan must show exactly one change —
+   the `code` of `aws_cloudfront_function.routing_function`. Anything else is
+   unrelated drift to understand before applying.
+3. Apply. `publish = true` makes the new version live on the existing association;
+   no distribution update or invalidation is required, though invalidating the
+   affected paths clears a cached 404.
+4. Fetch each changed route and expect `200`.
+
+CloudFront rejects a function larger than 10 KB, so `make lint-prod-guardrails` holds
+both files under that quota on every PR; an oversized file would fail step 3 and
+leave production on the old version. The design notes for the routing function are in
+[`edge-routing.md`](edge-routing.md).
+
 ### One-time setup
 
 The smoke test needs to know the public site URL. Until it is configured the

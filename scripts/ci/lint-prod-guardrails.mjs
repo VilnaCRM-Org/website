@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Production-safety guardrail gate (issue #383).
 //
-// Three invariants only ever hold in production, where no PR check watches
+// Four invariants only ever hold in production, where no PR check watches
 // them, so each has already regressed silently at least once in this class of
 // repo. This gate is hermetic (it reads committed files, never the network) and
 // therefore runs inside `make lint` on every PR:
@@ -14,6 +14,11 @@
 //      never silently degrade into an unconditional origin pass-through.
 //   C. `next.config.js` must not enable productionBrowserSourceMaps, which
 //      publishes readable application source to the CDN.
+//   D. Every CloudFront Function source must fit the service's 10 KB function
+//      quota, which is not adjustable. The infra repository publishes these files
+//      verbatim from `main`, so an oversized one is rejected at apply time and
+//      the distribution keeps running whatever version it had — which is how the
+//      `/en` rewrite shipped in git and 404'd in production (docs/edge-routing.md).
 //
 // Collect-all-then-fail: every violation is reported in one run.
 import fs from 'node:fs';
@@ -23,7 +28,14 @@ import yaml from 'js-yaml';
 
 const WORKFLOW_DIR = '.github/workflows';
 const EDGE_SCRIPT = 'scripts/cloudfront_routing.js';
+const HEADERS_SCRIPT = 'scripts/cloudfront_security_headers.js';
 const JEST_CONFIG = 'jest.config.ts';
+
+// AWS documents the quota as "10 KB" without saying which kilobyte it means, so
+// the stricter reading is the one enforced: 10,000 bytes of UTF-8 source, which is
+// what the API receives. Comments count — the file is uploaded as written.
+const CLOUDFRONT_FUNCTION_MAX_BYTES = 10_000;
+const CLOUDFRONT_FUNCTIONS = [EDGE_SCRIPT, HEADERS_SCRIPT];
 const NEXT_CONFIG = 'next.config.js';
 
 // A privileged workflow whose triggers are all PR-scoped is already watched: a
@@ -328,11 +340,35 @@ function assertNoProductionSourceMaps() {
     });
 }
 
+// Measured on the committed bytes rather than a comment-stripped copy, because
+// CloudFront receives the committed bytes: a rationale comment is as fatal to the
+// publish as the code is, which is why the rationale lives under docs/ instead.
+function assertEdgeFunctionsFitQuota() {
+  CLOUDFRONT_FUNCTIONS.forEach(relative => {
+    const source = readIfPresent(relative);
+    if (source === null) {
+      fail('D', `${relative} is missing; its CloudFront function size cannot be verified.`);
+      return;
+    }
+    const bytes = Buffer.byteLength(source, 'utf8');
+    if (bytes > CLOUDFRONT_FUNCTION_MAX_BYTES) {
+      fail(
+        'D',
+        `${relative} is ${bytes} bytes, over the ${CLOUDFRONT_FUNCTION_MAX_BYTES}-byte ` +
+          'CloudFront Functions quota; the infra apply would reject it and production ' +
+          'would keep the previous version. Move rationale to docs/edge-routing.md rather ' +
+          'than raising the limit, which AWS does not allow.'
+      );
+    }
+  });
+}
+
 const workflows = loadWorkflows();
 assertPrivilegedWorkflowsAreAlerted(workflows);
 assertEdgeAllowListIntact();
 assertEdgeCoverageStaysPinned();
 assertNoProductionSourceMaps();
+assertEdgeFunctionsFitQuota();
 
 if (failures.length > 0) {
   failures.forEach(failure => console.error(`::error::prod-guardrails: ${failure}`));

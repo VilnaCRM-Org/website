@@ -83,6 +83,12 @@ deploy surface is reviewable in-repo, and rollback is re-publishing a previous a
   the post-deploy smoke job, not the deploy job, is the real signal.
 - **No server-side redirects, rewrites, or per-request logic** without writing another
   edge function and getting it associated by the infra repository.
+- **Edge logic is capped at 10 KB per function, comments included.** CloudFront Functions
+  publish the source verbatim under a non-adjustable quota, so the rationale for the
+  routing handler lives in `docs/edge-routing.md` rather than beside the code, and
+  `make lint-prod-guardrails` refuses a file the service would reject. A function that
+  outgrows the quota is not a build failure here — it is a silent no-op at apply time
+  that leaves the CDN on the previous version.
 
 ### What would reverse it
 

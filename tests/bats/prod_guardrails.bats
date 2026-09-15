@@ -2,10 +2,11 @@
 #
 # Coverage for scripts/ci/lint-prod-guardrails.mjs (issue #383).
 #
-# The three invariants this gate protects only ever hold in production, where no
+# The four invariants this gate protects only ever hold in production, where no
 # other PR check watches them: a privileged workflow whose failure nobody is told
 # about, an edge handler that quietly reverts to passing every path to the S3
-# origin, and browser source maps published to the CDN. A gate for that class of
+# origin, browser source maps published to the CDN, and a CloudFront Function
+# source too large for the service to publish. A gate for that class of
 # regression is only worth having if it is red on the exact regression, so every
 # case below copies the REAL repository files into a fixture and mutates exactly
 # one invariant.
@@ -19,6 +20,23 @@ setup() {
   cp "$PROJECT_ROOT/jest.config.ts" "$FIXTURE/jest.config.ts"
   cp "$PROJECT_ROOT/next.config.js" "$FIXTURE/next.config.js"
   cp "$PROJECT_ROOT/scripts/cloudfront_routing.js" "$FIXTURE/scripts/cloudfront_routing.js"
+  cp "$PROJECT_ROOT/scripts/cloudfront_security_headers.js" \
+    "$FIXTURE/scripts/cloudfront_security_headers.js"
+}
+
+# Grows a fixture file by exactly $2 bytes of block comment. Comments are the
+# point: CloudFront uploads the file as written, so a rationale paragraph counts
+# against the quota exactly as code does.
+pad_with_comment() {
+  local file="$1" bytes="$2"
+  python3 - "$file" "$bytes" <<'PY'
+import sys
+path, bytes_wanted = sys.argv[1], int(sys.argv[2])
+filler = '/*' + 'x' * (bytes_wanted - 5) + '*/\n'
+assert len(filler.encode()) == bytes_wanted
+with open(path, 'a', encoding='utf-8') as fh:
+    fh.write(filler)
+PY
 }
 
 run_guardrails() {
@@ -511,4 +529,76 @@ PY
   run_guardrails
   [ "$status" -eq 1 ]
   assert_output_contains 'source maps'
+}
+
+# --- Assertion D: every CloudFront Function must fit the 10 KB quota ------------
+
+@test "fails when the routing function outgrows the CloudFront Functions quota" {
+  # This is the regression that shipped: three merged PRs grew the routing script
+  # to ~13 KB of mostly comments, so the infra apply could not publish it and the
+  # distribution kept the previous version — `/en` rewrote in git and 404'd on
+  # the CDN.
+  local before
+  before=$(wc -c <"$FIXTURE/scripts/cloudfront_routing.js")
+  pad_with_comment "$FIXTURE/scripts/cloudfront_routing.js" $((10001 - before))
+  [ "$(wc -c <"$FIXTURE/scripts/cloudfront_routing.js")" -eq 10001 ]
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains '[D]'
+  assert_output_contains 'scripts/cloudfront_routing.js is 10001 bytes'
+  assert_output_contains 'CloudFront Functions quota'
+}
+
+@test "accepts a function that sits exactly on the quota boundary" {
+  local before
+  before=$(wc -c <"$FIXTURE/scripts/cloudfront_routing.js")
+  pad_with_comment "$FIXTURE/scripts/cloudfront_routing.js" $((10000 - before))
+  [ "$(wc -c <"$FIXTURE/scripts/cloudfront_routing.js")" -eq 10000 ]
+
+  run_guardrails
+  [ "$status" -eq 0 ]
+}
+
+@test "the quota is measured in bytes, not characters" {
+  # A multi-byte comment can stay under 10,000 characters while exceeding 10,000
+  # bytes, and bytes are what the CloudFront API receives.
+  python3 - "$FIXTURE/scripts/cloudfront_routing.js" <<'PY'
+import sys
+path = sys.argv[1]
+with open(path, encoding='utf-8') as fh:
+    source = fh.read()
+chars_left = 9_990 - len(source)
+filler = '/*' + '—' * (chars_left - 4) + '*/\n'
+padded = source + filler
+assert len(padded) < 10_000, len(padded)
+assert len(padded.encode('utf-8')) > 10_000, len(padded.encode('utf-8'))
+with open(path, 'w', encoding='utf-8') as fh:
+    fh.write(padded)
+PY
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains '[D]'
+  assert_output_contains 'scripts/cloudfront_routing.js'
+}
+
+@test "the security-headers function is held to the same quota" {
+  local before
+  before=$(wc -c <"$FIXTURE/scripts/cloudfront_security_headers.js")
+  pad_with_comment "$FIXTURE/scripts/cloudfront_security_headers.js" $((10001 - before))
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains '[D]'
+  assert_output_contains 'scripts/cloudfront_security_headers.js is 10001 bytes'
+}
+
+@test "fails when the security-headers function is missing" {
+  rm "$FIXTURE/scripts/cloudfront_security_headers.js"
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains '[D]'
+  assert_output_contains 'scripts/cloudfront_security_headers.js is missing'
 }
