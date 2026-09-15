@@ -47,11 +47,47 @@ reach a human — never by lowering the threshold in
   `ci-alert` tracking issue with the findings attached.
 - **Secret scanning** runs gitleaks over the working tree
   (`.github/workflows/secrets-scanning.yml`).
+- **Dependency CVEs (osv-scanner)** are the repository's software-composition
+  analysis stream (`.github/workflows/osv-scanner.yml`, issue #356). The
+  `dependency cve gate` check runs `make lint-vulns` on every pull request and is
+  **differential**: it fails only on advisories the pull request introduces, never
+  on the pre-existing backlog. The `nightly dependency cve census` job scans the
+  whole `bun.lock` and refreshes one `dependency CVE census` issue (label
+  `dependency-cve`) with everything currently known. This is the stream that
+  works here by construction: GitHub ships no Dependabot security updates for
+  the `bun` ecosystem and its dependency graph does not parse `bun.lock`, so
+  Dependabot alerts see none of the resolved tree — `.github/dependabot.yml`
+  records the evidence, and
+  [docs/swagger-highlighter-surface.md](docs/swagger-highlighter-surface.md)
+  walks the one runtime tree that blindness matters most for.
 - **Production guardrails** (`make lint-prod-guardrails`) fail a pull request if
   a privileged workflow loses its alerting, if the edge routing allow-list stops
   failing closed, or if browser source maps are enabled.
 - **Release audit** (`.github/workflows/release-audit.yml`) records every release
   and every automated push to `main`.
+
+## Dependency triage timeline
+
+Repository policy for the automated dependency stream above, set to the same
+clock as the private-report timeline so one calendar governs both:
+
+- **Census issue** (`dependency CVE census`): a refresh that adds an advisory is
+  read within 3 business days, and each new advisory carries a recorded decision
+  within 10 business days — upgrade, replace, or a note on the census issue
+  saying why the vulnerable path is unreachable here and what unblocks the real
+  fix. The ignore list in `config/osv-scanner.toml` is not a census tool: it
+  exists only for an advisory a pull request would legitimately introduce, and
+  every entry there needs a reason and a re-triage date. An advisory whose
+  vulnerable package ships in the static export (the client bundle, not a
+  build-time tool) is triaged first.
+- **Dependency pull requests** (Dependabot's grouped and individual version
+  updates, and manual bumps): merged, split, or closed with a reason within 10
+  business days of opening. A red batch is split, not left to age — one
+  incompatible bump must not hold the others hostage.
+- **A pull request red on `dependency cve gate`** is not merged. The advisory it
+  introduces is resolved before merge, or the ignore is reviewed and landed on
+  `main` first (the gate reads the base branch's ignore list, so an ignore
+  cannot ship in the same change as the dependency it excuses).
 
 ## Scope
 

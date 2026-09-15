@@ -620,7 +620,12 @@ tree carries a large backlog) and would redden unrelated PRs as OSV publishes ad
 against untouched code. Findings are keyed by ecosystem + package + advisory id, without
 the version, so bumping to a version carrying the _same_ advisory never blocks the bump.
 The nightly `dependency cve census` leg reports the whole backlog into one refreshed
-`dependency-cve` issue and stays green.
+`dependency-cve` issue and stays green. It is the repository's only working SCA stream:
+GitHub ships no Dependabot security updates for the `bun` ecosystem and its dependency graph
+never parses `bun.lock`, so Dependabot alerts see none of the resolved tree —
+[`docs/swagger-highlighter-surface.md`](docs/swagger-highlighter-surface.md) records the
+evidence and walks the one runtime tree where that blindness matters most, the `/swagger`
+highlighter chain (highlight.js 10 via lowlight via react-syntax-highlighter).
 
 Never add a `config/osv-scanner.toml` ignore for an advisory your own change introduced, and
 never push an `ignoreUntil` date out to keep a build green — upgrade the dependency. Every
