@@ -49,9 +49,9 @@ reach a human — never by lowering the threshold in
   (`.github/workflows/secrets-scanning.yml`).
 - **Dependency CVEs (osv-scanner)** are the repository's software-composition
   analysis stream (`.github/workflows/osv-scanner.yml`, issue #356). The
-  `dependency cve gate` check runs `make lint-vulns` on every pull request and is
-  **differential**: it fails only on advisories the pull request introduces, never
-  on the pre-existing backlog. The `nightly dependency cve census` job scans the
+  `dependency cve gate` check runs `make lint-vulns` on every pull request targeting
+  `main` and is **differential**: it fails only on advisories the pull request
+  introduces, never on the pre-existing backlog. The `nightly dependency cve census` job scans the
   whole `bun.lock` and refreshes one `dependency CVE census` issue (label
   `dependency-cve`) with everything currently known. This is the stream that
   works here by construction: GitHub ships no Dependabot security updates for
