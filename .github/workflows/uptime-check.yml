@@ -31,8 +31,11 @@ permissions: {}
 concurrency:
   # One probe at a time, never cancelled. Two overlapping runs would race on the
   # shared incident issue — one filing while the other closes — and a cancelled
-  # run could leave the issue half-written.
-  group: ${{ github.workflow }}-${{ github.ref }}
+  # run could leave the issue half-written. The group is the workflow alone, not
+  # the workflow plus ref: the incident issue is repository-wide, so a manual
+  # dispatch from a branch must queue behind the scheduled run on main rather
+  # than run beside it.
+  group: ${{ github.workflow }}
   cancel-in-progress: false
 
 jobs:

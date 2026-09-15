@@ -70,8 +70,10 @@ setup() {
 @test "bounds the job with a timeout and never cancels an in-flight run" {
   [ "$(jq -r '.jobs.probe["timeout-minutes"] | type' "$DOC")" = 'number' ]
   # Two overlapping runs would race on the shared incident issue, and a cancelled
-  # run could leave it half-written.
-  [ -n "$(jq -r '.concurrency.group // empty' "$DOC")" ]
+  # run could leave it half-written. The group must not include the ref: the
+  # issue is repository-wide, so a manual dispatch from a branch has to queue
+  # behind the scheduled run on main, not run beside it.
+  [ "$(jq -r '.concurrency.group // empty' "$DOC")" = '${{ github.workflow }}' ]
   [ "$(jq -c '.concurrency["cancel-in-progress"]' "$DOC")" = 'false' ]
 }
 
