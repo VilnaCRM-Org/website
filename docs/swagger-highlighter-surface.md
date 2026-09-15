@@ -1,0 +1,141 @@
+# The /swagger syntax-highlighter surface
+
+What the `/swagger` page actually ships for syntax highlighting, why it is stuck on an
+end-of-life engine, what the `prismjs` override in `package.json` does and does not cover,
+and why no GitHub-native alert will ever say so. Written for issue #379 (OWASP A06:2021
+Vulnerable and Outdated Components) so the inventory is a checked fact rather than a
+recollection. Every version below was read from `bun.lock`, `node_modules`, and a host
+build of the static export on 2026-09-11; re-verify against the lockfile before relying on
+a number after a dependency bump.
+
+## What ships
+
+The chain, as resolved in `bun.lock`:
+
+```text
+swagger-ui-react@5.32.6            package.json: ^5.32.6
+└── react-syntax-highlighter@16.1.1   swagger-ui-react: ^16.0.0
+    ├── lowlight@1.20.0               react-syntax-highlighter: ^1.17.0
+    │   └── highlight.js@10.7.3       lowlight: ~10.7.0
+    ├── highlight.js@10.7.3           react-syntax-highlighter: ^10.4.1
+    ├── prismjs@1.30.0                react-syntax-highlighter: ^1.30.0   (not shipped)
+    └── refractor@5.0.0               react-syntax-highlighter: ^5.0.0    (not shipped)
+```
+
+Only the highlight.js branch reaches a visitor:
+
+- `swagger-ui-react`'s `#swagger-ui` import map resolves to `swagger-ui-es-bundle-core.js`
+  in the browser. That bundle imports `react-syntax-highlighter/dist/esm/light` plus seven
+  `languages/hljs/*` grammars — bash, http, javascript, json, powershell, xml, yaml — and
+  seven `styles/hljs/*` themes. It imports nothing from the `prism` side of the package.
+- `dist/esm/light.js` wraps `lowlight/lib/core`, and lowlight's core requires
+  `highlight.js/lib/core` — the light build, not the 191-language `lib/index.js`.
+- `react-syntax-highlighter` declares `sideEffects: false`, so webpack drops the unimported
+  `prism*` entry points and, with them, `prismjs` and `refractor`.
+
+The export confirms it. In `out/_next/static/chunks/` the only highlight.js
+`versionString` is `"10.7.3"`; that chunk, the lowlight core (recognisable by its
+`Unknown language` fault message) and the react-syntax-highlighter renderer are pulled in
+by `pages/swagger` alone — the landing page's chunk list contains none of them, because
+`pages/swagger.tsx` loads the feature through `next/dynamic` with `ssr: false`. The
+`registerLanguage` calls in the swagger chunk are exactly the seven grammars above (plus
+the `js` alias). There is no `Prism.languages` and no `refractor` package code; the one
+`refract(` in the export belongs to ApiDOM (`refractorOpts` in the
+`@swagger-api/apidom-parser-adapter-*` packages that swagger-client's OpenAPI 3.1 resolver
+pulls in), an unrelated function that happens to share the name.
+
+Two other packages the census names ship in the same lazy chunks and matter more than the
+highlighter: `dompurify@3.4.7` (its `.version` string is in the export) and
+`immutable@3.8.3` (nested under `swagger-ui-react` in `bun.lock`). See the follow-ups.
+
+## Status of the engine
+
+highlight.js upstream lists `10.7.x` as "No longer supported" in its `SECURITY.md`; only
+`11.x` receives fixes, and the newest release is 11.12.0. The site therefore serves an
+end-of-life highlighter to every `/swagger` visitor. The nightly osv-scanner census
+(issue #455) lists no advisory against `highlight.js`, `lowlight`, `prismjs` or `refractor`
+as of 2026-09-11, so the exposure is unsupported code, not a published CVE — which is
+exactly the kind of debt a CVE-keyed gate cannot see and this document has to carry
+instead.
+
+## The upstream blocker
+
+`react-syntax-highlighter@16.1.1` is the newest release and still declares
+`highlight.js ^10.4.1` and `lowlight ^1.17.0`. `lowlight@1.x` is written against the
+highlight.js 10 emitter API (`openNode` / `closeNode` in `lib/core.js`) and pins
+`highlight.js ~10.7.0`; the lowlight line built for highlight.js 11 is 2.x (`~11.0.0`),
+which the `^1.17.0` range cannot reach. A bare `overrides: { "highlight.js": "11.x" }`
+would therefore break lowlight 1.20.0 at runtime rather than upgrade it — do not add one.
+`swagger-ui-react@5.32.15`, the newest release, still declares
+`react-syntax-highlighter ^16.0.0`, so nothing in range moves the page off highlight.js 10.
+
+## Why the prismjs override exists
+
+`package.json` carries `"overrides": { "prismjs": "1.30.0" }`. It landed in `ccebf1a8`
+(`feat(#29): add swagger page`, PR #195, 2025-06-04) alongside `swagger-ui-react ^5.22.0`.
+At that commit `react-syntax-highlighter@15.6.1` declared `prismjs ^1.27.0` and its
+`refractor@3.6.0` declared `prismjs ~1.27.0`; every prismjs release before 1.30.0 carries
+GHSA-x7hr-w5r2-h6wg (CVE-2024-53382, DOM clobbering, fixed in 1.30.0). The override forced
+both consumers onto 1.30.0 — the pnpm lockfile of that commit shows `refractor@3.6.0`
+resolving `prismjs 1.30.0` — and that was a real fix at the time.
+
+Today it is inert, and it must not be read as coverage of the highlighter tree:
+
+- `react-syntax-highlighter@16.1.1` already requires `prismjs ^1.30.0`, and 1.30.0 is the
+  newest prismjs, so the override changes nothing about that edge.
+- `refractor@5.0.0` lists `prismjs` only as a devDependency and copies `prism-core.js` into
+  its own `lib/`, so the override no longer reaches refractor's engine at all (in 3.x it
+  did, through a real dependency edge).
+- Neither prismjs nor refractor ships — see above — and the override never touched
+  `highlight.js`, the engine that does.
+
+Removing it rewrites `bun.lock`, which open dependency pull requests also rewrite; fold it
+into the next deliberate lockfile change rather than a documentation change.
+
+## Why GitHub-native alerting is blind to this tree
+
+- GitHub's Dependabot supported-ecosystems table lists `bun` as: version updates yes,
+  security updates **no**. No repository setting changes that.
+- The dependency graph does not parse `bun.lock`. The repository SBOM holds 118
+  manifest-level packages read from `package.json` (`swagger-ui-react ^5.32.6` is there;
+  `highlight.js`, `lowlight`, `immutable` and `dompurify` are not), and the graph's only
+  non-workflow manifest is `package.json`.
+- Consequently the repository shows **0** open Dependabot alerts. The 44 alerts that were
+  still open against `pnpm-lock.yaml` flipped to "fixed" at `2026-07-23T22:12Z` — the
+  minute the pnpm → bun migration (#396, commit `17556186`) deleted that lockfile — while
+  the packages they named stayed installed. The nightly census listed 101 advisories on the
+  same day this was checked.
+- `dependency-review-action` would be equally blind: it diffs the same graph.
+
+The watch on this tree is therefore osv-scanner (issue #356): `make lint-vulns` is the
+differential pull-request gate, and `.github/workflows/osv-scanner.yml` carries both it and
+the nightly census. `.github/dependabot.yml` records the same evidence next to the group
+it constrains, and [SECURITY.md](../SECURITY.md) sets the triage timeline for the census.
+
+## Follow-ups
+
+None of these is a documentation change; each rewrites `bun.lock` or the rendered page and
+so belongs in its own reviewed change, after the open dependency pull requests land.
+
+1. **Bump `swagger-ui-react` in range, 5.32.6 → 5.32.15.** The newest release declares
+   `immutable ^5.1.9`, `dompurify ^3.4.13` and `swagger-client ^3.38.0`. That is where the
+   census entries that ship in the public `/swagger` bundle go away: `immutable@3.8.3`
+   carries GHSA-v56q-mh7h-f735 (fixed in 4.3.9 / 5.1.8) and `dompurify@3.4.7` carries
+   GHSA-55q2-fjhq-7xh7 (fixed in 3.4.13). Not hermetic — the releases between change the
+   rendered markup, so the swagger visual baselines and the accessibility route scan must
+   be re-run against the prod stack.
+2. **Take highlight.js 10 out of the export.** Upstream offers no in-range path (above), so
+   the options are a webpack alias that stubs `react-syntax-highlighter/dist/esm/light`
+   with `syntaxHighlight` turned off, or a different renderer. Either changes what
+   `/swagger` shows, needs the prod stack, and re-baselines the swagger visual snapshots.
+3. **Override `tmp` to `0.2.7`.** `bun.lock` resolves `tmp@0.1.0` (via `@lhci/cli@0.15.1`,
+   which declares `^0.1.0`) and `tmp@0.0.33` (via `@lhci/cli` → `inquirer@6.5.2` →
+   `external-editor@3.1.0`). The census lists GHSA-ph9p-34f9-6g65 (CVSS 7.7, fixed in
+   0.2.6) and GHSA-52f5-9888-hmc6 (fixed in 0.2.4) against both. Issue #379 asks for
+   `>= 0.2.4`, which clears only the second advisory; the floor is **0.2.6**, and 0.2.7 is
+   the newest release (no dependencies, Node `>= 14.14`). Both call sites — `tmp.fileSync`
+   in `@lhci/cli`'s `open` command and `tmpNameSync` in `external-editor` — survive in
+   0.2.x, and both are dev-only. Note that the Docker-in-Docker Lighthouse path in the
+   Makefile installs `@lhci/cli@0.14.0` globally inside the prod container, outside
+   `bun.lock`; an override does not reach it, and the lockfile criterion does not need it
+   to. Drop the inert `prismjs` override in the same lockfile change.

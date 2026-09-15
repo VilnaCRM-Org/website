@@ -3,38 +3,156 @@ updates:
   - package-ecosystem: 'bun'
     directory: '/'
     schedule:
-      interval: 'monthly'
+      interval: 'weekly'
       time: '09:00'
       timezone: 'UTC'
-    open-pull-requests-limit: 2
-    # Two groups over one ecosystem (issue #341). `applies-to` is a GROUP key —
-    # it is not a supported key of an `updates` entry, so a "fourth block"
-    # carrying it at entry level would be an unrecognised key on a duplicate
-    # bun `/` entry, not a security stream. Splitting by group is the shape
-    # GitHub actually honours, and it delivers what #341 wanted: an advisory is
-    # raised as its own PR instead of being folded into the monthly grouped
-    # version-update PR.
+    open-pull-requests-limit: 5
+    # Two kinds of group over one ecosystem (issues #341, #379). `applies-to`
+    # is a GROUP key — it is not a supported key of an `updates` entry, so a
+    # "fourth block" carrying it at entry level would be an unrecognised key on
+    # a duplicate bun `/` entry, not a security stream. Splitting by group is
+    # the shape GitHub actually honours.
     #
-    # `applies-to: version-updates` is spelled out rather than left to the
-    # default, so neither group's scope is implicit.
+    # `applies-to: version-updates` is spelled out on every version group
+    # rather than left to the default, so no group's scope is implicit.
     #
-    # NOT YET ACTIVE: the security group stays inert until a maintainer enables
-    # Dependabot security updates for this repository in
-    # Settings -> Code security. Until that switch is on, GitHub never opens a
-    # PR for it, so the "weekly security-update stream" acceptance criterion of
-    # #341 is only half met from the repository side. Note also that security
-    # updates are raised when an advisory matching the lockfile is detected, not
-    # on `schedule.interval`, and they are exempt from
+    # WHAT THE SECURITY GROUP CAN AND CANNOT DO. GitHub's supported-ecosystems
+    # table (docs.github.com, "Supported ecosystems and repositories") lists
+    # `bun` as: version updates ✓, security updates ✗. So no repository
+    # setting activates `js-security-updates` today — the Settings ->
+    # Code security toggle an earlier revision of this comment pointed at
+    # covers ecosystems Dependabot can patch, and bun is not one of them.
+    # Nor does the dependency graph read bun.lock: it parses package.json only
+    # (118 manifest-level packages in the SBOM, no transitives), so Dependabot
+    # ALERTS see none of the resolved tree either. The 44 alerts still open
+    # against pnpm-lock.yaml all flipped to "fixed" at 2026-07-23T22:12Z — the
+    # moment the pnpm -> bun migration (#396, commit 17556186) deleted that
+    # lockfile — while the packages they named stayed installed. Today the
+    # repository shows 0 open Dependabot alerts against 101 advisories in the
+    # nightly osv-scanner census (issue #455, 2026-09-11). GitHub-native
+    # alerting is blind here by construction, and `dependency-review-action`
+    # would be equally blind — it diffs the same bun.lock-less graph.
+    #
+    # The SCA stream that does read bun.lock is osv-scanner (issue #356):
+    # `make lint-vulns` is the differential PR gate and
+    # .github/workflows/osv-scanner.yml carries both it and the nightly census.
+    # SECURITY.md records the triage SLA for that stream.
+    #
+    # The security group is kept, inert, on purpose: it costs nothing while
+    # unsupported, tests/bats/dependabot_config.bats pins its shape, and the
+    # day GitHub extends security updates to `bun` it starts grouping
+    # advisory PRs with no config change and nobody having to remember to add
+    # it. Security updates are raised when an advisory matches the lockfile,
+    # not on `schedule.interval`, and are exempt from
     # `open-pull-requests-limit`, which caps version updates only.
+    #
+    # WHY THE VERSION UPDATES ARE SPLIT. One `*` group over every version
+    # update produced 52-70-package PRs in which a single incompatible bump
+    # failed the whole batch: #454 (70 updates, 15 of them majors — graphql
+    # 16 -> 17, typescript 6 -> 7, eslint 9 -> 10, swiper 12 -> 14, ...) has
+    # sat red on 23 checks since 2026-08-31, and #392, #406, #418, #444 and
+    # #452 before it were all closed unmerged. The last JS batch that merged
+    # was #269 on 2026-01-20. Every version group below is therefore restricted to
+    # `update-types: [minor, patch]`, so a MAJOR matches no group and opens as
+    # its own PR — the one that can be closed or fixed in isolation. Minors
+    # and patches are grouped by the cluster that has to move together, with
+    # a `*` catch-all LAST: Dependabot puts a dependency in the first group it
+    # matches, so the catch-all must not precede the specific groups.
+    #
+    # `dependency-type` (production / development) would be the natural split,
+    # but the options reference lists it as "Supported by: bundler, composer,
+    # mix, maven, npm, and pip" — not bun — hence name patterns.
     groups:
-      js-all-updates:
-        applies-to: 'version-updates'
-        patterns:
-          - '*'
       js-security-updates:
         applies-to: 'security-updates'
         patterns:
           - '*'
+      js-next-react:
+        applies-to: 'version-updates'
+        patterns:
+          - 'next'
+          - '@next/*'
+          - 'eslint-config-next'
+          - 'react'
+          - 'react-dom'
+          - '@types/react'
+          - '@types/react-dom'
+        update-types:
+          - 'minor'
+          - 'patch'
+      js-mui-emotion:
+        applies-to: 'version-updates'
+        patterns:
+          - '@mui/*'
+          - '@emotion/*'
+        update-types:
+          - 'minor'
+          - 'patch'
+      js-storybook:
+        applies-to: 'version-updates'
+        patterns:
+          - 'storybook'
+          - '@storybook/*'
+          - 'eslint-plugin-storybook'
+        update-types:
+          - 'minor'
+          - 'patch'
+      js-test-tooling:
+        applies-to: 'version-updates'
+        patterns:
+          - 'jest'
+          - 'jest-*'
+          - 'babel-jest'
+          - 'babel-preset-jest'
+          - 'ts-jest'
+          - '@types/jest'
+          - '@types/jest-axe'
+          - '@testing-library/*'
+          - 'playwright'
+          - '@playwright/*'
+          - 'axe-core'
+          - '@axe-core/*'
+          - '@stryker-mutator/*'
+          - 'memlab'
+          - '@memlab/*'
+          - '@lhci/cli'
+          - '@mockoon/*'
+          - '@faker-js/*'
+          - 'fast-check'
+        update-types:
+          - 'minor'
+          - 'patch'
+      js-lint-tooling:
+        applies-to: 'version-updates'
+        patterns:
+          - 'eslint'
+          - 'eslint-*'
+          - '@eslint/*'
+          - '@typescript-eslint/*'
+          - 'typescript'
+          - 'prettier'
+          - 'markdownlint-cli'
+          - 'dependency-cruiser'
+          - '@commitlint/*'
+          - 'husky'
+          - 'lint-staged'
+        # Belt and braces: `eslint-*` would also match these two, and they
+        # belong to the cluster whose version they track, declared above.
+        # First-match order already routes them there; the exclusion keeps
+        # that true even if the groups are ever reordered.
+        exclude-patterns:
+          - 'eslint-config-next'
+          - 'eslint-plugin-storybook'
+        update-types:
+          - 'minor'
+          - 'patch'
+      js-minor-patch:
+        applies-to: 'version-updates'
+        patterns:
+          - '*'
+        update-types:
+          - 'minor'
+          - 'patch'
     labels:
       - 'dependencies'
       - 'automated'

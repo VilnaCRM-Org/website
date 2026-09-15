@@ -34,7 +34,7 @@ function envFile(overrides: Record<string, string | null> = {}): string {
   const base: Record<string, string | null> = {
     USER_SERVICE_VERSION: PIN,
     GRAPHQL_SCHEMA_URL: GRAPHQL_URL,
-    NEXT_PUBLIC_USER_SERVICE_OPENAI_SPEC_URL: OPENAPI_URL,
+    USER_SERVICE_OPENAPI_SPEC_URL: OPENAPI_URL,
     ...overrides,
   };
 
@@ -124,12 +124,10 @@ describe('user-service version invariant', () => {
     it('fails when the OpenAPI spec hardcodes an older release than the pin', () => {
       const drifted = OPENAPI_URL.replace(PIN_REF, 'v2.4.1');
 
-      expect(
-        run({ '.env': envFile({ NEXT_PUBLIC_USER_SERVICE_OPENAI_SPEC_URL: drifted }) })
-      ).toEqual(
+      expect(run({ '.env': envFile({ USER_SERVICE_OPENAPI_SPEC_URL: drifted }) })).toEqual(
         expect.arrayContaining([
           expect.stringContaining(
-            `.env: NEXT_PUBLIC_USER_SERVICE_OPENAI_SPEC_URL does not interpolate ${PIN_REF}`
+            `.env: USER_SERVICE_OPENAPI_SPEC_URL does not interpolate ${PIN_REF}`
           ),
           // `.env` is itself a scanned config file, so the stray literal tag is
           // reported a second time by the hardcoded-tag guard.
@@ -142,16 +140,14 @@ describe('user-service version invariant', () => {
       const problems = run({
         '.env': envFile({
           GRAPHQL_SCHEMA_URL: GRAPHQL_URL.replace(PIN_REF, 'v2.4.1'),
-          NEXT_PUBLIC_USER_SERVICE_OPENAI_SPEC_URL: OPENAPI_URL.replace(PIN_REF, 'v2.6.0'),
+          USER_SERVICE_OPENAPI_SPEC_URL: OPENAPI_URL.replace(PIN_REF, 'v2.6.0'),
         }),
       });
 
       expect(problems).toEqual(
         expect.arrayContaining([
           expect.stringContaining('.env: GRAPHQL_SCHEMA_URL does not interpolate'),
-          expect.stringContaining(
-            '.env: NEXT_PUBLIC_USER_SERVICE_OPENAI_SPEC_URL does not interpolate'
-          ),
+          expect.stringContaining('.env: USER_SERVICE_OPENAPI_SPEC_URL does not interpolate'),
           expect.stringContaining('.env hardcodes user-service v2.4.1'),
         ])
       );

@@ -9,6 +9,12 @@
 # loop: the artefacts a merged mistake makes unfalsifiable (an approved visual
 # baseline certifies itself) and the gate configs whose quiet weakening is the
 # easiest way to turn a red check green.
+#
+# Extended by issue #337 with the third: the files that INVOKE those gates. The
+# Makefile recipe, the Dockerfiles the recipes exec into, the composite actions
+# and dependabot config under .github/, and the fetch/patch scripts under
+# scripts/ can each stop a gate from running without touching its config, so
+# the widened patterns are pinned here by name exactly like the first two lists.
 
 load './test_helper.bash'
 
@@ -53,6 +59,30 @@ CODEOWNERS_FILE="$PROJECT_ROOT/.github/CODEOWNERS"
     '/playwright.config.ts'
     '/.dependency-cruiser.js'
     '/config/'
+  )
+
+  local path
+  for path in "${paths[@]}"; do
+    if ! awk -v p="$path" '$1 == p && $2 ~ /^@/ { found = 1 } END { exit found ? 0 : 1 }' \
+      "$CODEOWNERS_FILE"; then
+      echo "Missing CODEOWNERS coverage (pattern + @owner) for: $path" >&2
+      return 1
+    fi
+  done
+}
+
+@test "every gate-invocation surface keeps CODEOWNERS coverage (issue #337)" {
+  # `/*.Dockerfile` is a glob on purpose: the next `<Name>.Dockerfile` at the root
+  # is covered the day it lands, the same reason CODEOWNERS owns config/ as a
+  # directory. The existence test below expands it with globstar, so a root that
+  # no longer holds any `<Name>.Dockerfile` turns that test red as well.
+  local paths=(
+    '/Makefile'
+    '/Dockerfile'
+    '/*.Dockerfile'
+    '/src/test/load/Dockerfile'
+    '/.github/'
+    '/scripts/'
   )
 
   local path

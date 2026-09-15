@@ -345,6 +345,11 @@ renames the check run and GitHub silently stops requiring it.
 `tests/bats/security_workflows.bats` pins the `Analyze (typescript)` half against drift.
 The `CodeQL` name comes from GitHub's native code-scanning integration and cannot be
 asserted from inside the repository, so verify it in Settings after any change there.
+The third check the same ruleset should require is **`dependency cve gate`** — the
+`name:` of the `osv-diff` job in `osv-scanner.yml`, the differential dependency-CVE
+scan from issue #356 (see [SECURITY.md](SECURITY.md)). It is pinned the same way by
+`tests/bats/osv_scanner_check_name.bats`, so renaming the job reddens a pull request
+here instead of silently un-requiring the check.
 
 To dismiss a genuine false positive, use the Security tab's dismiss flow — do not
 weaken the gate.

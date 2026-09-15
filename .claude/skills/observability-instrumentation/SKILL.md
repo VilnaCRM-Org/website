@@ -28,17 +28,48 @@ active telemetry surface is `@sentry/react`.
 
 ## Current wiring (verified)
 
-`pages/_app.tsx` already calls `Sentry.init()` from `@sentry/react` with
-`dsn: process.env.SENTRY_DSN_KEY`, `browserTracingIntegration()` and
-`replayIntegration()`, and these sampling rates:
+Checked against `pages/_app.tsx`, `src/config/env.ts`, `next.config.js`,
+`src/lib/web-vitals/report-web-vitals.ts` and `src/lib/telemetry/report-error.ts`
+(issue #336). Anything not listed here is not wired.
 
-- `tracesSampleRate: 1.0`
-- `replaysSessionSampleRate: 0.1`
-- `replaysOnErrorSampleRate: 1.0`
+- **`Sentry.init` in `pages/_app.tsx`** — the single init, from `@sentry/react`:
+  - `dsn: env.NEXT_PUBLIC_SENTRY_DSN`, read through the zod schema in
+    `src/config/env.ts` (`z.string().trim().default('')`). `.env`, `.env.example`
+    and `.env.production` all declare it **empty**, so the SDK initialises with no
+    DSN and sends nothing until a maintainer commits the real (public) DSN in
+    `.env.production`. `src/test/unit/client-env-contract.test.ts` pins the key's
+    presence in both env files.
+  - `sendDefaultPii: false`, pinned explicitly (#378 F3).
+  - `browserTracingIntegration()` and
+    `replayIntegration({ maskAllInputs: true, maskAllText: true, blockAllMedia: true })`
+    — the masking is pinned so an upstream default change cannot start recording
+    the sign-up form's password field.
+  - `tracePropagationTargets` limited to `NEXT_PUBLIC_DEVELOPMENT_API_URL` and
+    `NEXT_PUBLIC_API_URL`, with empty values filtered out.
+  - `tracesSampleRate: 1.0`, `replaysSessionSampleRate: 0.1`,
+    `replaysOnErrorSampleRate: 1.0`. No `enabled`, `release` or `environment` key,
+    and no `beforeSend` scrubber, yet.
+- **Handled errors** — `reportHandledError` in `src/lib/telemetry/report-error.ts`
+  wraps `Sentry.captureException` with static `feature`/`action` tags only; the
+  sign-up mutation path in `auth-layout.tsx` is its one caller (#378 F3).
+- **Core Web Vitals** — `reportWebVitals` is exported from `pages/_app.tsx` and
+  delegates to `handleWebVitalsMetric` in `src/lib/web-vitals/report-web-vitals.ts`
+  (#332): field vitals only (`LCP`, `INP`, `CLS`, `FCP`, `TTFB`), production builds
+  only (`isProductionBuild()`), a 10% sample, and a `name`/`id`/`value` payload
+  forwarded to `gtag` and `Sentry.setMeasurement`. No `web-vitals` npm package.
+- **Google Analytics** — `<GoogleAnalytics>` from `@next/third-parties` renders only
+  when `NEXT_PUBLIC_GA_MEASUREMENT_ID` is non-empty; it is empty in every committed
+  env file.
+- **Console** — `compiler.removeConsole` in `next.config.js` strips
+  `console.log`/`debug` from production bundles but keeps `console.error` and
+  `console.warn` (#378 F3), so the browser console stays a diagnostic channel.
+- **Not wired** — no `Sentry.ErrorBoundary` or other error boundary; no Apollo
+  `ErrorLink` (`src/features/landing/api/graphql/apollo.ts` builds the client with
+  an `HttpLink` only); and `@sentry/node` is imported by nothing.
 
-Google Analytics is wired separately via `@next/third-parties`. There is no
-`web-vitals` npm package and no error boundary yet — add those through Next.js
-built-ins and `@sentry/react` (below), never a new dependency.
+Add the missing pieces through `@sentry/react` and Next.js built-ins (below), never
+a new dependency. Production monitoring — the scheduled uptime check, the alert
+labels, and what is inert — is documented in `docs/runbooks/monitoring.md`.
 
 ## Signals to instrument
 

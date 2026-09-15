@@ -64,3 +64,24 @@
 /playwright.config.ts @Kravalg
 /.dependency-cruiser.js @Kravalg
 /config/ @Kravalg
+
+# --- The invocation surface of every gate (issue #337) ---
+#
+# config/ and scripts/ci/ above own what a gate CHECKS; these own what INVOKES
+# it. A gate that is never run is as absent as one whose threshold was lowered,
+# and the line that runs it is the quieter of the two places to weaken it: a
+# Makefile recipe that drops a flag or a target from the `lint` aggregate, a
+# Dockerfile that stops installing the tool the recipe execs (every gate runs in
+# the dev image since #399), a composite action or dependabot config under
+# .github/ that changes what CI actually executes, or a fetch/patch script under
+# scripts/ that feeds the artifacts the gates read. None of those edits show up
+# in config/. The root Dockerfiles are owned by glob so the next
+# `<Name>.Dockerfile` is covered the day it lands, the same reason config/ is
+# owned as a directory; the explicit lines above are kept because
+# tests/bats/agent_docs_codeowners.bats pins each one by name.
+/Makefile @Kravalg
+/Dockerfile @Kravalg
+/*.Dockerfile @Kravalg
+/src/test/load/Dockerfile @Kravalg
+/.github/ @Kravalg
+/scripts/ @Kravalg

@@ -44,7 +44,7 @@ const VERSION_PATTERN = /^v\d+\.\d+\.\d+$/;
 export const DEFAULT_ENV_FILES = ['.env', '.env.example'];
 
 /** Every variable whose value must resolve to the pinned user-service release. */
-const PINNED_URL_VARS = ['GRAPHQL_SCHEMA_URL', 'NEXT_PUBLIC_USER_SERVICE_OPENAI_SPEC_URL'];
+const PINNED_URL_VARS = ['GRAPHQL_SCHEMA_URL', 'USER_SERVICE_OPENAPI_SPEC_URL'];
 
 /**
  * A second version variable is the shape the original drift took
