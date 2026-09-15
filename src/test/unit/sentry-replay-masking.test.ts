@@ -29,7 +29,11 @@
  * computed key (either can override or hide the literal beside it), a value that is
  * not the `true` / `false` keyword, a missing option, and a second `replayIntegration`
  * call that does not carry the full mask set all turn the gate red; the negative
- * cases below prove each one against inline source.
+ * cases below prove each one against inline source. The mask check is bound to the
+ * integrations `Sentry.init` actually registers: a registered element the reader
+ * cannot resolve to a `Sentry.<member>(…)` call (a named import, an alias, a spread)
+ * throws, and so does a `replayIntegration(…)` call the init never registers — a
+ * masked decoy elsewhere in the file cannot vouch for the registered one.
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -42,6 +46,7 @@ const APP_PATH = path.join(REPO_ROOT, 'pages', '_app.tsx');
 const SENTRY_MODULE = '@sentry/react';
 const INIT_MEMBER = 'init';
 const REPLAY_MEMBER = 'replayIntegration';
+const INTEGRATIONS_OPTION = 'integrations';
 const PII_OPTION = 'sendDefaultPii';
 const REPLAY_MASK_OPTIONS = ['maskAllInputs', 'maskAllText', 'blockAllMedia'] as const;
 
@@ -133,11 +138,78 @@ function booleanOptionsOf(
 }
 
 /**
+ * The initializer of a top-level `const <name> = …` in the file, so an integration
+ * hoisted out of the init call can be followed to the call that built it. Only the
+ * top level is searched and only one hop is taken: a binding assembled anywhere
+ * else is not a statically known integration.
+ */
+function topLevelInitializerOf(sourceFile: ts.SourceFile, name: string): ts.Node | undefined {
+  const declarations = sourceFile.statements
+    .filter(ts.isVariableStatement)
+    .flatMap(statement => statement.declarationList.declarations);
+  const declaration = declarations.find(
+    candidate => ts.isIdentifier(candidate.name) && candidate.name.text === name
+  );
+  return declaration?.initializer;
+}
+
+/**
+ * The `<namespace>.<member>(…)` call an `integrations` element stands for — the call
+ * itself, or the top-level `const` it was hoisted into. Anything else throws: a call
+ * through a named import or an alias (`replay({})`), a spread, a conditional, or a
+ * binding this file does not declare cannot be verified from here, and an
+ * integration the gate cannot read is one it must not certify.
+ */
+function registeredIntegrationCall(
+  sourceFile: ts.SourceFile,
+  namespace: string,
+  element: ts.Expression
+): ts.CallExpression {
+  const target = ts.isIdentifier(element)
+    ? topLevelInitializerOf(sourceFile, element.text)
+    : element;
+  const isNamespaceMember =
+    target !== undefined &&
+    ts.isCallExpression(target) &&
+    ts.isPropertyAccessExpression(target.expression) &&
+    ts.isIdentifier(target.expression.expression) &&
+    target.expression.expression.text === namespace;
+  if (!isNamespaceMember) {
+    throw new Error(`${element.getText()} is not a statically known ${namespace} integration`);
+  }
+  return target;
+}
+
+/**
+ * Every integration the init call registers, resolved to the namespace call that
+ * builds it. A missing `integrations` key registers nothing; a value that is not an
+ * array literal cannot be enumerated and throws.
+ */
+function registeredIntegrationsOf(
+  sourceFile: ts.SourceFile,
+  namespace: string,
+  initOptions: ts.ObjectLiteralExpression
+): ts.CallExpression[] {
+  const property = initOptions.properties.find(
+    prop => staticPropertyName(prop) === INTEGRATIONS_OPTION
+  );
+  if (property === undefined) return [];
+  const value = ts.isPropertyAssignment(property) ? property.initializer : undefined;
+  if (value === undefined || !ts.isArrayLiteralExpression(value)) {
+    throw new Error(`${property.getText()} is not an array literal`);
+  }
+  return value.elements.map(element => registeredIntegrationCall(sourceFile, namespace, element));
+}
+
+/**
  * Extract the replay privacy contract from `_app.tsx` source: the `sendDefaultPii`
  * literal on the single `Sentry.init(…)` call and the mask options of every
- * `Sentry.replayIntegration(…)` call in the file. Every call is read, not only the
- * one inside `integrations`, so a replay hoisted into a `const` is still checked and
- * a second, unmasked one cannot hide beside the masked one.
+ * `Sentry.replayIntegration(…)` that call registers under `integrations`, whether
+ * written inline or hoisted into a top-level `const`. The check is bound to the
+ * registered set on purpose: a masked call that is never registered must not vouch
+ * for the one that is, so any `replayIntegration(…)` call the init does not register
+ * throws rather than being counted, and so does a registered element the reader
+ * cannot resolve to a namespace call.
  */
 function readSentryReplayContract(source: string): SentryReplayContract {
   const sourceFile = ts.createSourceFile(
@@ -155,8 +227,20 @@ function readSentryReplayContract(source: string): SentryReplayContract {
       `expected exactly one ${namespace}.${INIT_MEMBER}({ … }) call, found ${inits.length}`
     );
   }
-  const initOptions = booleanOptionsOf(optionsArgumentOf(init), [PII_OPTION]);
-  const replayIntegrations = collectCalls(sourceFile, namespace, REPLAY_MEMBER).map(call =>
+  const initArgument = optionsArgumentOf(init);
+  const initOptions = booleanOptionsOf(initArgument, [PII_OPTION]);
+  const registeredReplays = registeredIntegrationsOf(sourceFile, namespace, initArgument).filter(
+    call => isNamespaceCall(call, namespace, REPLAY_MEMBER)
+  );
+  const unregistered = collectCalls(sourceFile, namespace, REPLAY_MEMBER).find(
+    call => !registeredReplays.includes(call)
+  );
+  if (unregistered !== undefined) {
+    throw new Error(
+      `${unregistered.getText()} is not registered under ${namespace}.${INIT_MEMBER} integrations`
+    );
+  }
+  const replayIntegrations = registeredReplays.map(call =>
     booleanOptionsOf(optionsArgumentOf(call), REPLAY_MASK_OPTIONS)
   );
   return { sendDefaultPii: initOptions[PII_OPTION], replayIntegrations };
@@ -349,6 +433,81 @@ describe('Sentry session-replay masking contract helpers', () => {
       expect(() => readSentryReplayContract(source)).toThrow(
         /Sentry\.init\(…\) is not called with an object literal/
       );
+    });
+  });
+
+  describe('fail-closed — the check is bound to what Sentry.init registers', () => {
+    const tracing = 'Sentry.browserTracingIntegration()';
+
+    it('ignores a non-replay integration, inline or hoisted', () => {
+      const source = buildSource(
+        `sendDefaultPii: false, integrations: [${tracing}, tracing, ${fullMask}]`,
+        `const tracing = ${tracing};`
+      );
+      expect(readSentryReplayContract(source).replayIntegrations).toEqual([FULL_MASKING]);
+    });
+
+    it('throws when a masked replay exists but is never registered', () => {
+      const source = buildSource(
+        `sendDefaultPii: false, integrations: [${tracing}]`,
+        `const unused = ${fullMask};`
+      );
+      expect(() => readSentryReplayContract(source)).toThrow(
+        /replayIntegration\(.*\) is not registered under Sentry\.init integrations/
+      );
+    });
+
+    it('throws when the registered replay is called through an alias, decoy or not', () => {
+      // `replay({})` is the unmasked one that ships; the masked namespace call beside
+      // it is the decoy that a file-wide scan would have accepted.
+      const source = buildSource(
+        `sendDefaultPii: false, integrations: [replay({})]`,
+        `const replay = Sentry.replayIntegration;\nconst decoy = ${fullMask};`
+      );
+      expect(() => readSentryReplayContract(source)).toThrow(
+        /replay\(\{\}\) is not a statically known Sentry integration/
+      );
+    });
+
+    it('throws when the registered replay comes from a named import', () => {
+      const source = [
+        SENTRY_IMPORT,
+        `import { replayIntegration } from '${SENTRY_MODULE}';`,
+        `const decoy = ${fullMask};`,
+        'Sentry.init({ sendDefaultPii: false, integrations: [replayIntegration({})] });',
+      ].join('\n');
+      expect(() => readSentryReplayContract(source)).toThrow(
+        /replayIntegration\(\{\}\) is not a statically known Sentry integration/
+      );
+    });
+
+    it('throws on a registered identifier the file does not declare at the top level', () => {
+      const source = buildSource('sendDefaultPii: false, integrations: [importedReplay]');
+      expect(() => readSentryReplayContract(source)).toThrow(
+        /importedReplay is not a statically known Sentry integration/
+      );
+    });
+
+    it('throws on a spread inside integrations, which could register anything', () => {
+      const source = buildSource(
+        `sendDefaultPii: false, integrations: [...extraIntegrations, ${fullMask}]`
+      );
+      expect(() => readSentryReplayContract(source)).toThrow(
+        /\.\.\.extraIntegrations is not a statically known Sentry integration/
+      );
+    });
+
+    it('throws when integrations is not an array literal', () => {
+      const source = buildSource('sendDefaultPii: false, integrations: buildIntegrations()');
+      expect(() => readSentryReplayContract(source)).toThrow(
+        /integrations: buildIntegrations\(\) is not an array literal/
+      );
+    });
+
+    it('reads no replay when init registers no integrations key at all', () => {
+      expect(
+        readSentryReplayContract(buildSource('sendDefaultPii: false')).replayIntegrations
+      ).toEqual([]);
     });
   });
 });
