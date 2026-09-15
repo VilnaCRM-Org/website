@@ -157,6 +157,13 @@ A page that is only ever fetched with its `.html` extension — like `pages/offl
 which the service worker serves from cache as `/offline.html` — needs no edge change,
 but it still belongs in the manifest, which records it as a documented exemption.
 
+The edge function is published by the infra repository from `main`, not by the website
+deploy, so the new entry is live on the CDN only after a Terraform apply there — see
+"How the edge functions reach CloudFront" in the
+[deployment runbook](deployment-runbook.md). Keep additions to the tables themselves:
+the file is capped at 10 KB by CloudFront, and its rationale lives in
+[`edge-routing.md`](edge-routing.md).
+
 Both surfaces are gated together by
 [`src/test/unit/routes/route-manifest.test.ts`](../src/test/unit/routes/route-manifest.test.ts):
 it re-runs the generator in `--check` mode and fails unless the committed

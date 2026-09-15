@@ -802,7 +802,9 @@ CloudFront skips viewer-response functions for a short-circuited request).
 `make lint-headers` — part of `make lint` — runs the checked-in functions and fails if
 they stop emitting the policy; the post-deploy smoke test then verifies the live
 responses with `curl -I`, which is what catches the functions not being associated with
-the distribution. See [the security-headers guide](docs/security-headers.md).
+the distribution. See [the security-headers guide](docs/security-headers.md) and, for
+the routing function's allow-list and the way both functions reach CloudFront,
+[the edge routing note](docs/edge-routing.md).
 
 ## Documentation
 

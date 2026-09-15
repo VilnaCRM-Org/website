@@ -491,7 +491,7 @@ resolvers against the real pinned schema, not a hand-written double),
 
 ### Security hygiene & disclosure (issue #383)
 
-Four production-facing invariants that no other gate watches. Extend them; never relax one.
+Production-facing invariants that no other gate watches. Extend them; never relax one.
 
 - **The edge is fail-closed** (`scripts/cloudfront_routing.js`). A URI reaches the S3
   origin only if it is an exact `ROUTE_MAP` route, an exact `ALLOWED_FILES` entry, or sits
@@ -516,6 +516,17 @@ Four production-facing invariants that no other gate watches. Extend them; never
   recorded exemption carrying its reason; `/offline` is the one that exists (see the
   offline-posture section below). Next's error documents (`404`, `500`) are not routes at
   all for this purpose and are excluded from the manifest — see the SEO-surface section.
+- **Both edge functions fit CloudFront's quota** (`scripts/cloudfront_routing.js`,
+  `scripts/cloudfront_security_headers.js`). CloudFront Functions cap a function at a
+  non-adjustable 10 KB of source, published verbatim, so a comment costs what code costs.
+  The routing script crossed that line after #464/#467/#470 and the infra apply could not
+  publish it, which is why `/en` 404'd in production while its rewrite sat on `main`.
+  Assertion D of `make lint-prod-guardrails` fails either file over 10,000 bytes; the
+  rationale that used to live in the script is in [`docs/edge-routing.md`](docs/edge-routing.md),
+  and new reasoning goes there, never back into the file. Neither function is deployed by
+  this repository: the `website-infrastructure` Terraform fetches the routing function
+  from `main` at apply time, so a merged `ROUTE_MAP` change is live only after that apply,
+  and it declares no resource for the headers function at all (see the runbook).
 - **The deployed edge is smoke-tested on the negative path**
   (`scripts/ci/smoke-response-shape.sh`, issue #363). `make lint-headers` and the `edge`
   Jest layer prove the checked-in handler's contract; nothing in the repository can
