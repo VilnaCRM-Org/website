@@ -231,6 +231,28 @@ setup() {
   assert_output_contains 'holds no files -- nothing was checked'
 }
 
+@test "fails when find reports an error, instead of scanning the partial list it printed" {
+  # A traversal error (an unreadable directory, a file that vanished mid-walk)
+  # makes find print what it could reach and exit non-zero. Read through a
+  # process substitution that status is invisible, and a clean partial list
+  # would certify a tree the gate never saw in full. The stub reproduces exactly
+  # that shape: one real, clean file on stdout, then a failure.
+  local stub="$BATS_TEST_TMPDIR/stub"
+  mkdir -p "$stub"
+  cat >"$stub/find" <<'SH'
+#!/usr/bin/env bash
+printf '%s\n' 'pages/index.tsx'
+echo 'find: unreadable directory' >&2
+exit 1
+SH
+  chmod +x "$stub/find"
+
+  PATH="$stub:$PATH" run_gate
+  [ "$status" -eq 1 ]
+  assert_output_contains "could not enumerate scan root 'src'"
+  refute_output_contains 'placeholders: OK'
+}
+
 @test "PLACEHOLDER_PATHS narrows the scan but cannot relax the token list" {
   printf 'G-XYZ\n' >"$FIXTURE/README.md"
   printf 'yourserver.io\n' >"$FIXTURE/src/features/landing/host.ts"

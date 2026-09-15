@@ -58,13 +58,23 @@ fail() {
   exit 1
 }
 
+# The enumeration is captured into a variable rather than read from a process
+# substitution: a `< <(find …)` loop never sees find's exit status, so a
+# traversal error (an unreadable directory, a vanished file) would leave a
+# partial list behind and the gate would certify a tree it had not read in
+# full. Under `pipefail` the assignment carries find's status, and a non-zero
+# one is a red run, never a shorter scan.
 files=()
 for root in "${scan_roots[@]}"; do
   root="${root#./}"
   [ -e "${root}" ] || fail "scan root '${root}' does not exist -- the gate refuses to certify a tree it cannot see"
+  if ! root_files="$(find "${root}" -path "${EXCLUDED_DIR}" -prune -o -type f -print | sort)"; then
+    fail "could not enumerate scan root '${root}' -- find reported an error, so the file list is not trustworthy"
+  fi
+  [ -n "${root_files}" ] || continue
   while IFS= read -r file; do
     files+=("${file}")
-  done < <(find "${root}" -path "${EXCLUDED_DIR}" -prune -o -type f -print | sort)
+  done <<<"${root_files}"
 done
 
 [ "${#files[@]}" -gt 0 ] || fail "the scan set (${scan_roots[*]}) holds no files -- nothing was checked"
