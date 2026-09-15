@@ -192,6 +192,10 @@ or calls a local `./.github/actions/**` composite action — the gate cannot see
 inside a composite, so it assumes the worst rather than treating it as invisible.
 **Renaming this workflow requires updating that list in the same commit.**
 
+Between deploys, the scheduled synthetic check in `uptime-check.yml` watches the live
+site and files an `uptime-alert` issue — see the [monitoring runbook](runbooks/monitoring.md)
+and the [incident response runbook](runbooks/incident-response.md).
+
 ## Manual verification
 
 To check production by hand at any time (replace the host with the value of

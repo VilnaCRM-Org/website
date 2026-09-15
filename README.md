@@ -814,6 +814,9 @@ as it's frequently updated.
 For production deploys, the post-deploy smoke test, and the rollback procedure,
 see the [deployment and rollback runbook](docs/deployment-runbook.md).
 
+For what watches production (the scheduled uptime check, the alert labels, what is still
+inert) and what to do when the incident issue opens, see the [runbooks](docs/runbooks/README.md).
+
 For the accessibility conformance target, the automated gates behind `make test-a11y` and the
 interaction-state scans inside `make test-e2e`, and the exception process, see the
 [accessibility acceptance standard](docs/accessibility/acceptance-standard.md).

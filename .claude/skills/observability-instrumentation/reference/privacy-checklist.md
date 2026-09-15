@@ -29,7 +29,7 @@ When event shape cannot be guaranteed, scrub in the single `Sentry.init` in
 
 ```ts
 Sentry.init({
-  dsn: process.env.SENTRY_DSN_KEY,
+  dsn: env.NEXT_PUBLIC_SENTRY_DSN,
   beforeSend(event) {
     if (event.request) {
       delete event.request.cookies;
