@@ -211,7 +211,8 @@ describe('Sentry session-replay masking contract helpers', () => {
       const source = [
         `import * as Monitoring from '${SENTRY_MODULE}';`,
         'Monitoring.init({ sendDefaultPii: false, integrations: [',
-        '  Monitoring.replayIntegration({ maskAllInputs: true, maskAllText: true, blockAllMedia: true }),',
+        '  Monitoring.replayIntegration({ maskAllInputs: true, maskAllText: true,',
+        '    blockAllMedia: true }),',
         '] });',
       ].join('\n');
       expect(readSentryReplayContract(source).sendDefaultPii).toBe(false);
@@ -261,7 +262,10 @@ describe('Sentry session-replay masking contract helpers', () => {
     });
 
     it('throws when the namespace comes from a look-alike module', () => {
-      const source = `import * as Sentry from 'sentry-lookalike';\nSentry.init({ sendDefaultPii: false });`;
+      const source = [
+        "import * as Sentry from 'sentry-lookalike';",
+        'Sentry.init({ sendDefaultPii: false });',
+      ].join('\n');
       expect(() => readSentryReplayContract(source)).toThrow(/@sentry\/react/);
     });
 
