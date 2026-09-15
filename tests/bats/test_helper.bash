@@ -168,6 +168,15 @@ setup_makefile_test_env() {
   # CI orchestration targets (ci-lint, ci-test, pr-comments) shell out to
   # repository scripts; copy them so recursive make runs resolve their paths.
   cp -R "$PROJECT_ROOT/scripts" "$MAKEFILE_SANDBOX/scripts"
+  # lint-placeholders (issue #327) is in CI_LINT_TARGETS and is plain bash, so
+  # unlike the node and npm-tool gates it cannot be stubbed away: `make ci-lint`
+  # in this sandbox runs the real scan, and the gate fails closed on a scan
+  # root it cannot see. Seed its default roots -- empty source directories plus
+  # the small committed files -- so it certifies a clean tree here; its own
+  # behaviour over a seeded tree is covered by tests/bats/check_placeholders.bats.
+  mkdir -p "$MAKEFILE_SANDBOX/src" "$MAKEFILE_SANDBOX/pages" "$MAKEFILE_SANDBOX/public"
+  cp "$PROJECT_ROOT/.env.example" "$PROJECT_ROOT/.env.production" "$PROJECT_ROOT/README.md" \
+    "$MAKEFILE_SANDBOX/"
 }
 
 setup_ci_script_test_env() {
