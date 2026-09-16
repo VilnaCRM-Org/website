@@ -14,10 +14,10 @@ import { render } from '@testing-library/react';
 import i18n from 'i18next';
 import { I18nextProvider } from 'react-i18next';
 
-import { EN_LOCALE } from '@/config/locales';
 import MainImage from '@landing/about-us/main-image/main-image';
 import ForWhoSection from '@landing/for-who-section/for-who-section';
 
+import { EN_LOCALE } from '../../../../src/config/locales';
 import {
   EN_SCREENSHOTS,
   productScreenshotsFor,
