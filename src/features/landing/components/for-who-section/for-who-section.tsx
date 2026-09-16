@@ -1,10 +1,9 @@
 import { Box, Container, SxProps, Theme } from '@mui/material';
+import { StaticImageData } from 'next/image';
 import { getOptimizedImageProps } from 'next-export-optimize-images/image';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 
-import bigScreen from '../../assets/img/about-vilna/desktop.jpg';
-import smallScreen from '../../assets/img/about-vilna/mobile.jpg';
 import circle from '../../assets/svg/for-who/circle.svg';
 import hexagon from '../../assets/svg/for-who/hexagon.svg';
 import point10 from '../../assets/svg/for-who/point10.svg';
@@ -14,6 +13,7 @@ import pointGroup from '../../assets/svg/for-who/pointGroup.svg';
 import rhombus from '../../assets/svg/for-who/rhombus.svg';
 import triangle from '../../assets/svg/for-who/triangle.svg';
 import waves from '../../assets/svg/for-who/waves.svg';
+import { ProductScreenshots, productScreenshotsFor } from '../../helpers/productScreenshots';
 
 import { Cards } from './cards';
 import MainTitle from './main-title/main-title';
@@ -21,7 +21,7 @@ import styles from './styles';
 
 type ImgAttrs = React.ImgHTMLAttributes<HTMLImageElement>;
 
-const getImageProps: (src: string, alt?: string) => ImgAttrs = (src, alt = '') =>
+const getImageProps: (src: string | StaticImageData, alt?: string) => ImgAttrs = (src, alt = '') =>
   getOptimizedImageProps({ src, alt }).props;
 
 function DecorativeImage({ src, sx }: { src: string; sx: SxProps<Theme> }): React.ReactElement {
@@ -44,11 +44,15 @@ function ForWhoShapes(): React.ReactElement {
 }
 
 function ForWhoScreens(): React.ReactElement {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const screenshots: ProductScreenshots = productScreenshotsFor(i18n.language);
 
-  const bigScreenProps: ImgAttrs = getImageProps(bigScreen, t('for_who.image_alt.big_screen'));
+  const bigScreenProps: ImgAttrs = getImageProps(
+    screenshots.desktop,
+    t('for_who.image_alt.big_screen')
+  );
   const smallScreenProps: ImgAttrs = getImageProps(
-    smallScreen,
+    screenshots.mobile,
     t('for_who.image_alt.small_screen')
   );
 

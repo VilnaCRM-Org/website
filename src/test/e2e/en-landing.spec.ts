@@ -36,12 +36,41 @@ async function expectLandingLanguage(page: Page, lang: string, t: FixedT): Promi
   ).toBeVisible();
 }
 
+// The product screenshots are rasters with copy baked in, so each landing has to
+// serve the set rendered in its own language. The exported file keeps the source
+// basename (`desktop-en.<hash>_<width>.webp`), which is what pins the set here.
+async function expectProductScreenshots(page: Page, t: FixedT, language: string): Promise<void> {
+  const hero: Locator = page.getByRole('img', { name: 'Main image' });
+  await expect(hero).toHaveAttribute('src', new RegExp(`desktop-${language}\\.`));
+
+  const sources: Locator = page.locator('picture source');
+  await expect(sources).toHaveCount(2);
+  await expect(sources.nth(0)).toHaveAttribute('srcset', new RegExp(`mobile-${language}\\.`));
+  await expect(sources.nth(1)).toHaveAttribute('srcset', new RegExp(`tablet-${language}\\.`));
+
+  await expect(page.getByAltText(t('for_who.image_alt.big_screen'))).toHaveAttribute(
+    'src',
+    new RegExp(`desktop-${language}\\.`)
+  );
+  await expect(page.getByAltText(t('for_who.image_alt.small_screen'))).toHaveAttribute(
+    'src',
+    new RegExp(`mobile-${language}\\.`)
+  );
+}
+
 test.describe('English landing at /en', () => {
   test('renders the whole page in English, with an English document language', async ({ page }) => {
     await page.goto(EN_LANDING);
 
     await expectLandingLanguage(page, 'en', en);
     await expect(page.getByText(uk('about_vilna.heading_first_main'))).toHaveCount(0);
+  });
+
+  test('shows the English product screenshots, never the Ukrainian renders', async ({ page }) => {
+    await page.goto(EN_LANDING);
+
+    await expectProductScreenshots(page, en, 'en');
+    await expect(page.locator('img[src*="desktop-uk."], source[srcset*="-uk."]')).toHaveCount(0);
   });
 
   test('declares itself and the Ukrainian landing as hreflang alternates', async ({ page }) => {
@@ -95,6 +124,7 @@ test.describe('English landing at /en', () => {
     await page.goto(UK_LANDING);
 
     await expectLandingLanguage(page, 'uk', uk);
+    await expectProductScreenshots(page, uk, 'uk');
     await expect(page.locator('link[rel="alternate"][hreflang="en"]')).toHaveAttribute(
       'href',
       absoluteUrl('/en')

@@ -6,9 +6,7 @@ import { useTranslation } from 'react-i18next';
 
 import breakpointsTheme from '@/components/ui-breakpoints';
 
-import MainImageSrc from '../../../assets/img/about-vilna/desktop.jpg';
-import PhoneMainImage from '../../../assets/img/about-vilna/mobile.jpg';
-import TabletMainImage from '../../../assets/img/about-vilna/tablet.jpg';
+import { ProductScreenshots, productScreenshotsFor } from '../../../helpers/productScreenshots';
 
 import styles from './styles';
 
@@ -38,11 +36,12 @@ function PictureSource({
 }
 
 function MainImage(): React.ReactElement {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const screenshots: ProductScreenshots = productScreenshotsFor(i18n.language);
 
-  const mobileProps: OptimizedImageProps = optimizedProps(PhoneMainImage);
-  const tabletProps: OptimizedImageProps = optimizedProps(TabletMainImage);
-  const desktopProps: OptimizedImageProps = optimizedProps(MainImageSrc);
+  const mobileProps: OptimizedImageProps = optimizedProps(screenshots.mobile);
+  const tabletProps: OptimizedImageProps = optimizedProps(screenshots.tablet);
+  const desktopProps: OptimizedImageProps = optimizedProps(screenshots.desktop);
 
   return (
     <Box sx={styles.mainImageWrapper}>
