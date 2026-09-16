@@ -83,6 +83,13 @@ are what pin each behaviour.
 - **For-who shapes are decorative**: empty `alt` plus `aria-hidden`, so assistive tech
   skips them. In `styles.screens.ts` / `styles.shapes.ts` the waves, hexagon and triangle
   are hidden on mobile and shown from tablet up; the point group only on desktop.
+- **Product screenshots are per language.** The hero `<picture>` (`about-us/main-image`)
+  and the for-who screens read their sources from
+  `helpers/productScreenshots.ts`, which maps the `i18n.language` of the surrounding
+  provider to the `assets/img/about-vilna/*-en.jpg` or `*-uk.jpg` set, so `/en` never
+  shows the Ukrainian dashboard. The rule and its tests are described under
+  "Route-scoped locale" in
+  [`docs/extending-the-website.md`](../../../docs/extending-the-website.md).
 - **`NOTIFICATION_ANIMATION_DURATION`** (`constants/index.ts`) is the fade in/out time the
   Notification component uses, in milliseconds.
 - **`notification/styles.error.ts`** styles the error state; `styles.success.ts` the

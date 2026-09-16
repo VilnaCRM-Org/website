@@ -817,8 +817,11 @@ load-bearing decision and its cost, so read the index before re-litigating one o
 The recipes for the most common changes — adding a page, a feature, or a locale — live in
 [extending the website](docs/extending-the-website.md).
 
-For production deploys, the post-deploy smoke test, and the rollback procedure,
-see the [deployment and rollback runbook](docs/deployment-runbook.md).
+For production deploys, the post-deploy smoke test, and the rollback procedure
+(`make rollback-info` prints the last commit handed to the pipeline), see the
+[deployment and rollback runbook](docs/deployment-runbook.md); the topology, failure
+modes and recovery targets behind it are in the
+[availability posture](docs/availability.md).
 
 For what watches production (the scheduled uptime check, the alert labels, what is still
 inert) and what to do when the incident issue opens, see the [runbooks](docs/runbooks/README.md).

@@ -41,7 +41,7 @@ Triggers:
 
   pull_request: When a pull request is opened, reopened, or synchronized (new commits pushed), trigger the sandbox creation/update pipeline. The PR number is read directly from the pull_request event payload (github.event.pull_request.number); no GitHub token or API lookup is used.
 
-New Feature: Before starting the pipeline execution, the workflow checks if secrets managed in AWS Secrets Manager need rotation. If rotation is required, it triggers custom GitHub repository dispatch events (rotate_token_test, rotate_token_prod) that can be handled by another workflow to rotate the secrets accordingly.
+Token check: before starting the pipeline execution, the check-tokens job reads the expires_at of the GitHub-token secret in AWS Secrets Manager for the test and the production account and logs whether each token exists, has expired, or is missing. It reports only; it rotates nothing and dispatches no event.
 
 Key Points:
 
@@ -224,10 +224,20 @@ Attach Policies to the Role:
       YOUR_ACCOUNT_ID with your AWS account number.
       SANDBOX_MANAGEMENT_PIPELINE_NAME and SANDBOX_DELETION_PIPELINE_NAME with your actual pipeline names.
 
-For the updated workflow, ensure that the roles for test and production secret checks (GITHUB_TOKEN_ROTATION_ROLE_TO_ASSUME_TEST and GITHUB_TOKEN_ROTATION_ROLE_TO_ASSUME_PROD) are configured with appropriate policies to:
+The `check-tokens` job assumes `github-actions-role` in the test account and then in the
+production account (`vars.TEST_AWS_ACCOUNT_ID`, `vars.PROD_AWS_ACCOUNT_ID`). Each of those
+roles needs two statements and nothing else: `secretsmanager:ListSecrets` on `"*"` —
+AWS does not support resource-level scoping for that action, so a policy that grants it
+only on the secret's ARN denies the list call and fails the check — and
+`secretsmanager:GetSecretValue` on the GitHub-token secret's ARN alone. No CodePipeline
+permission is required for the check.
 
-  Access the specified secret in AWS Secrets Manager.
-  No additional CodePipeline permissions are needed for these roles unless required by other parts of your process.
+The secret's JSON carries the GitHub token beside its `expires_at`, so the job pipes
+`get-secret-value` straight into `jq` and reads only `expires_at`. The token is never
+bound to a shell variable, and therefore never reachable by a later `set -x`, an
+environment dump or an errored step's log (issue #375); `make lint-prod-guardrails`
+separately fails any step that persists a credential-named variable to `$GITHUB_ENV`
+without masking it first.
 
 ## Additional Notes
 
@@ -256,8 +266,8 @@ For the updated workflow, ensure that the roles for test and production secret c
     Check AWS CodePipeline execution history for pipeline runs initiated by the workflows.
     Check GitHub Actions logs and AWS CodePipeline execution history for troubleshooting.
 
-  Secret Rotation Timing: 
-    The workflow uses a MAX_AGE (currently 601200 seconds, ~7 days) to determine if a secret rotation is needed. Adjust this value as required.
-  
-  Rotation Workflows: 
-    The TriggerRotation job dispatches events to another repository (e.g., website-infrastructure) to handle the actual rotation. Ensure that receiving workflows are configured to handle rotate_token_test and rotate_token_prod events.
+  Token expiry:
+    The check-tokens job only reports. It compares the secret's expires_at with the current
+    time and logs whether the token exists, has expired, or is missing in each account; it
+    does not rotate anything and dispatches no event. Rotation is owned by the
+    website-infrastructure repository.

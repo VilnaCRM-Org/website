@@ -12,6 +12,7 @@
 load './test_helper.bash'
 
 WORKFLOWS_DIR="$PROJECT_ROOT/.github/workflows"
+ALERT_SCRIPT="$PROJECT_ROOT/scripts/ci/ci-health-alert.sh"
 
 # Print the body of the top-level job $2 from workflow file $1. Job keys sit at a
 # two-space indent under `jobs:`, so the next two-space key ends the block. This
@@ -170,32 +171,127 @@ assert_all_uses_pinned() {
   local file="$WORKFLOWS_DIR/ci-health-alerts.yml"
 
   # Out-of-order (stale) success events must not close an issue a newer failed
-  # run opened, and the daily red-main sweep must survive this change.
-  grep -Fq 'gh run list --workflow "$WORKFLOW_NAME" --branch main --limit 1' "$file"
+  # run opened, and the daily red-main sweep must survive this change. The guard
+  # itself lives in the script the workflow calls (issues #325, #329, #331).
+  grep -Fq 'gh run list --workflow "$WORKFLOW_NAME" --branch main --limit 1' "$ALERT_SCRIPT"
   grep -Fq 'name: Sweep for a red default branch' "$file"
   grep -Fq "if: github.event_name == 'schedule'" "$file"
 }
 
 @test "ci-health-alerts leaves the non-security alert bodies byte-identical" {
-  local file="$WORKFLOWS_DIR/ci-health-alerts.yml"
-
   # The digest is appended as ${suffix}, which is empty for every workflow other
   # than security testing, so the deploy/release wording is unchanged.
-  grep -Fq -e 'gh issue comment "$existing" --body "Still failing: ${RUN_URL}${suffix}"' "$file"
-  grep -Fq -e '--body "The '"'"'$WORKFLOW_NAME'"'"' workflow failed. Latest run: ${RUN_URL}${suffix}"' "$file"
-  grep -Fq 'if [ "$WORKFLOW_NAME" = "security testing" ]; then' "$file"
+  grep -Fq -e '"Still failing: ${RUN_URL}${suffix}"' "$ALERT_SCRIPT"
+  grep -Fq -e '"The '"'"'$WORKFLOW_NAME'"'"' workflow failed. Latest run: ${RUN_URL}${suffix}"' "$ALERT_SCRIPT"
+  grep -Fq 'if [ "$WORKFLOW_NAME" = "security testing" ]; then' "$ALERT_SCRIPT"
 }
 
 @test "the ci-health-alerts digest uses the same severity predicate as the gate" {
-  # Two copies of the blocking-alert rule exist by necessity (ci-health-alerts
-  # has no checkout step, so it cannot call the script). Pin them together so a
-  # change to one is a visible failure rather than a silent divergence.
+  # Two copies of the blocking-alert rule exist by necessity: the gate script
+  # renders a TSV for the PR check while the alert script renders an issue
+  # digest, and the two jq programs differ after the predicate. Pin the shared
+  # lines together so a change to one is a visible failure rather than a silent
+  # divergence.
   local gate alerts
   gate="$(extract_severity_predicate "$PROJECT_ROOT/scripts/ci/code-scanning-gate.sh")"
-  alerts="$(extract_severity_predicate "$WORKFLOWS_DIR/ci-health-alerts.yml")"
+  alerts="$(extract_severity_predicate "$ALERT_SCRIPT")"
 
   [ -n "$gate" ]
   [ "$gate" = "$alerts" ]
+}
+
+# Print one `<index>|<name>|<run>` row per step of the `alert` job, parsed with
+# js-yaml. Same reason as role_assuming_jobs: a substring search could not tell a
+# real `run:` from the same text inside a comment.
+alert_job_steps() {
+  PROJECT_ROOT="$PROJECT_ROOT" node -e '
+    const yaml = require(process.env.PROJECT_ROOT + "/node_modules/js-yaml");
+    const fs = require("fs");
+    const doc = yaml.load(fs.readFileSync(process.argv[1], "utf8"));
+    const steps = (doc && doc.jobs && doc.jobs.alert && doc.jobs.alert.steps) || [];
+    steps.forEach((step, i) => {
+      const run = typeof step.run === "string" ? step.run.trim() : "";
+      process.stdout.write(i + "|" + (step.name || "") + "|" + run + "\n");
+    });
+  ' "$1"
+}
+
+@test "ci-health-alerts gives every gh call a repository context at job level" {
+  # The fail-open this closes (issues #325, #329, #331): for its first ~100 runs
+  # the job had no checkout and no GH_REPO, so every gh call died with `failed
+  # to run git: fatal: not a git repository` and no alert was ever filed. The
+  # value must be the real job-level env entry, read with js-yaml, not a string
+  # that could be satisfied from a comment.
+  local file="$WORKFLOWS_DIR/ci-health-alerts.yml" rows row run
+  PROJECT_ROOT="$PROJECT_ROOT" node -e '
+    const yaml = require(process.env.PROJECT_ROOT + "/node_modules/js-yaml");
+    const fs = require("fs");
+    const doc = yaml.load(fs.readFileSync(process.argv[1], "utf8"));
+    const env = doc.jobs.alert.env || {};
+    if (env.GH_REPO !== "${{ github.repository }}") {
+      console.error("jobs.alert.env.GH_REPO must be ${{ github.repository }}, got " +
+        JSON.stringify(env.GH_REPO));
+      process.exit(1);
+    }
+    if (env.GH_TOKEN !== "${{ github.token }}") {
+      console.error("jobs.alert.env.GH_TOKEN must be ${{ github.token }}");
+      process.exit(1);
+    }
+  ' "$file"
+
+  # Every step that runs anything runs the script -- the bare invocation, with
+  # nothing interpolated -- so the bats-covered code path is the only code path.
+  rows="$(alert_job_steps "$file")"
+  [ -n "$rows" ]
+  while read -r row; do
+    run="${row##*|}"
+    [ -z "$run" ] || [ "$run" = 'bash scripts/ci/ci-health-alert.sh' ]
+  done < <(printf '%s\n' "$rows")
+  [ "$(printf '%s\n' "$rows" | grep -c '|bash scripts/ci/ci-health-alert.sh$')" -eq 4 ]
+  [ -x "$ALERT_SCRIPT" ]
+}
+
+@test "ci-health-alerts checks the script out without credentials and can dry-run from a branch" {
+  local file="$WORKFLOWS_DIR/ci-health-alerts.yml"
+
+  PROJECT_ROOT="$PROJECT_ROOT" node -e '
+    const yaml = require(process.env.PROJECT_ROOT + "/node_modules/js-yaml");
+    const fs = require("fs");
+    const doc = yaml.load(fs.readFileSync(process.argv[1], "utf8"));
+    const steps = doc.jobs.alert.steps;
+    const checkout = steps.find(s => typeof s.uses === "string" && s.uses.startsWith("actions/checkout@"));
+    if (!checkout || checkout.with["persist-credentials"] !== false) {
+      console.error("the checkout must set persist-credentials: false");
+      process.exit(1);
+    }
+    if (checkout.with["sparse-checkout"] !== "scripts/ci/ci-health-alert.sh") {
+      console.error("the checkout must be sparse on the alert script");
+      process.exit(1);
+    }
+    // A pinned ref: main would make a dispatch from a branch run the OLD script,
+    // so the dry run could never prove the change under review.
+    if (checkout.with.ref !== undefined) {
+      console.error("the checkout must not pin ref:");
+      process.exit(1);
+    }
+    // YAML 1.1 folds a bare `on:` key to boolean true; js-yaml v4 keeps it a
+    // string. Read both so the assertion is parser-agnostic.
+    const triggers = doc.on || doc[true] || {};
+    const dispatch = triggers.workflow_dispatch;
+    if (!dispatch || !dispatch.inputs || dispatch.inputs.dry_run === undefined) {
+      console.error("workflow_dispatch must declare a dry_run input");
+      process.exit(1);
+    }
+    if (dispatch.inputs.dry_run.type !== "boolean" || dispatch.inputs.dry_run.default !== true) {
+      console.error("dry_run must be a boolean input defaulting to true");
+      process.exit(1);
+    }
+    const manual = steps.find(s => s.if === "github.event_name == '"'"'workflow_dispatch'"'"'");
+    if (!manual || manual.env.ALERT_DRY_RUN !== "${{ inputs.dry_run && '"'"'1'"'"' || '"'"'0'"'"' }}") {
+      console.error("the dispatch step must map inputs.dry_run onto ALERT_DRY_RUN");
+      process.exit(1);
+    }
+  ' "$file"
 }
 
 @test "every action in the security workflows is pinned to a full commit sha" {

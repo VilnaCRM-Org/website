@@ -238,7 +238,7 @@ EOF
   run_make_target wait-for-prod
   [ "$status" -eq 0 ]
   assert_output_contains 'Prod service is up and running!'
-  assert_log_contains 'curl -s -f http://localhost:3001'
+  assert_log_contains 'curl -s -f --connect-timeout 5 --max-time 10 http://localhost:3001'
 
   reset_command_log
   run_make_target test-e2e-ui

@@ -836,6 +836,15 @@ release-audit-dry-run: ## Dry-run the release audit against the live repo (host-
 	 AUDIT_DRY_RUN=1 \
 	 bash scripts/ci/release-audit.sh
 
+# Host-only and OUTSIDE `lint` for the same reason as release-audit-dry-run:
+# it reads the GitHub Deployments API through `gh`, which the `production`
+# environment on deploy.yml populates on every push to main. Read-only by
+# construction; see docs/deployment-runbook.md, "Rollback procedure" (issue
+# #329). The script exits non-zero, with a distinct message, when gh is
+# missing, unauthenticated, or no successful production deployment exists.
+rollback-info: ## Print the last successful production deployment (commit, ref, time, run URL) from the GitHub Deployments API (host-only, needs gh)
+	@bash scripts/ci/rollback-info.sh
+
 # DELIBERATE DIVERGENCE FROM THE npm-tool LINT GATES (lint-next/tsc/md/deps),
 # for the same reasons as lint-contracts and lint-metrics above:
 #   * Host-only: zizmor is a Rust CLI shipped as a container image, absent from
@@ -978,10 +987,37 @@ playwright-install: ## Install the Playwright browsers on the host (HOST_STACK=1
 start-prod-clean: create-network ## Force rebuild and recreate all test containers, then wait for health
 	$(DOCKER_COMPOSE) $(COMMON_HEALTHCHECKS_FILE) $(DOCKER_COMPOSE_TEST_FILE) up -d --force-recreate --build && $(MAKE) wait-for-prod-health
 
+# Bounded for the same reason as wait-for-dev (issue #331): this used to be a
+# bare `while ! curl ...; do sleep 1; done` with no ceiling, so a prod service
+# that never answered turned into a job printing dots until its timeout-minutes
+# -- with the container's own logs, the actual cause, never shown. Fail after
+# WAIT_FOR_PROD_MAX_TRIES and dump them instead. Covered by
+# tests/bats/wait_for_services.bats, timeout path included.
+WAIT_FOR_PROD_MAX_TRIES     ?= 120
+WAIT_FOR_PROD_SLEEP         ?= 1
+# Each probe is bounded on its own: a service that accepts the TCP connection
+# and never answers would otherwise block curl on the first try and the
+# MAX_TRIES bound above would never be reached.
+WAIT_FOR_PROD_CONNECT_TIMEOUT ?= 5
+WAIT_FOR_PROD_MAX_TIME      ?= 10
+
 wait-for-prod: ## Wait for the prod service to be ready on port $(NEXT_PUBLIC_PROD_PORT).
 	@echo "Waiting for prod service to be ready on port $(NEXT_PUBLIC_PROD_PORT)..."
-	@while ! curl -s -f http://$(WEBSITE_DOMAIN):$(NEXT_PUBLIC_PROD_PORT) >/dev/null 2>&1; do printf "."; sleep 1; done
-	@printf '\nProd service is up and running!\n'
+	@i=0; \
+	while [ $$i -lt $(WAIT_FOR_PROD_MAX_TRIES) ]; do \
+		if curl -s -f --connect-timeout $(WAIT_FOR_PROD_CONNECT_TIMEOUT) --max-time $(WAIT_FOR_PROD_MAX_TIME) \
+			http://$(WEBSITE_DOMAIN):$(NEXT_PUBLIC_PROD_PORT) >/dev/null 2>&1; then \
+			printf '\nProd service is up and running!\n'; \
+			exit 0; \
+		fi; \
+		printf "."; \
+		sleep $(WAIT_FOR_PROD_SLEEP); \
+		i=$$((i+1)); \
+	done; \
+	printf '\n❌ Timed out waiting for the prod service after %s seconds\n' \
+		"$$(($(WAIT_FOR_PROD_MAX_TRIES) * $(WAIT_FOR_PROD_SLEEP)))"; \
+	$(DOCKER_COMPOSE) $(DOCKER_COMPOSE_TEST_FILE) logs --tail=50 prod || true; \
+	exit 1
 
 test-unit-all: test-unit-client test-unit-server test-unit-edge ## This command executes unit tests for the client, server, and edge environments.
 
@@ -1067,7 +1103,7 @@ ci-test-contract: ## Run contract parity tests directly assuming deps are instal
 	test-load test-load-swagger test-mutation-shard merge-mutation-reports \
 	mutation-file-list test-mutation-changed \
 	test-e2e-burnin check-e2e-flakes pr-comments lint lint-api-versions \
-	lint-security-txt lint-prod-guardrails release-audit-dry-run \
+	lint-security-txt lint-prod-guardrails release-audit-dry-run rollback-info \
 	lint-vulns scan-vulns-census generate-localization generate-routes generate-sitemap
 
 # Brings the dev container up IDLE (docker-compose.ci.yml overrides only the

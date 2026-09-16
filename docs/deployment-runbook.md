@@ -199,11 +199,29 @@ that cannot be committed.
 Production serves whatever the pipeline last published, so rolling back means
 publishing a known-good revision again.
 
+**Find the last commit that was deployed.** `make rollback-info` (host-only;
+needs an authenticated `gh` and `jq`) reads the GitHub Deployments API that the
+`production` environment on `deploy.yml` populates and prints the newest
+deployment whose job succeeded — commit, ref, timestamp and the run that
+performed it — skipping any newer deployment whose job failed. It is the only
+per-commit deploy record this repository produces, and it is read-only by
+construction; its exit codes tell the cases apart (`2` no `gh`, `3` not
+authenticated, `4` no successful deployment in the window, `5` API error).
+
+Read the output honestly: "success" means the deploy **job** succeeded, that is,
+the CodePipeline execution was _triggered_ (issue #329, ADR 0001). The job does
+not wait for the pipeline, and the post-deploy smoke skips until
+`PRODUCTION_SITE_URL` is set, so this is the last commit handed to the pipeline,
+not the last commit proved live. Confirm what is actually serving with the
+[manual verification](#manual-verification) commands before treating that commit
+as the good one.
+
 **Preferred — revert on `main`.** Identify the last known-good commit, revert
 the offending commit(s), and push. The push re-triggers `deploy.yml`, which
 redeploys the reverted state and re-runs the smoke test:
 
 ```bash
+make rollback-info
 git revert --no-edit <bad-commit-sha>
 git push origin main
 ```
@@ -211,6 +229,12 @@ git push origin main
 **Alternative — re-run the pipeline.** If the fix is not a code change (for
 example a bad environment variable), re-run `ci-cd-website-prod-pipeline` from
 the AWS CodePipeline console against the last successful source revision.
+
+A rollback has not yet been exercised end to end on production; the first one
+should be recorded here — date, trigger, commits, time to recovery — so the
+procedure is evidence rather than intent (#329). The availability posture,
+including the recovery targets a rollback has to meet, is in
+[`docs/availability.md`](availability.md).
 
 ## Alerting and release audit
 

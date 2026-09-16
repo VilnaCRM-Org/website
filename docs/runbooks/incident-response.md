@@ -90,7 +90,8 @@ Pick the smallest action that restores service; diagnosis can continue afterward
 
 - **A bad deploy** (the site broke after the last push to `main`) — roll back by
   reverting on `main`, which redeploys the previous state through the normal pipeline.
-  The exact commands and the alternative of re-running the pipeline against the last good
+  `make rollback-info` prints the last commit the pipeline was handed. The exact
+  commands and the alternative of re-running the pipeline against the last good
   revision are in the
   [rollback procedure](../deployment-runbook.md#rollback-procedure).
 - **A failed or partial publish** (nothing changed in this repository) — re-run the

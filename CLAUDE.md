@@ -565,17 +565,34 @@ Production-facing invariants that no other gate watches. Extend them; never rela
   privileged workflow runs on a non-pull-request trigger without being listed in
   `ci-health-alerts.yml`'s `on.workflow_run.workflows`. Privileged means it assumes an AWS
   role, cuts a release, or calls a local composite action under `.github/actions/` — the
-  gate cannot see inside a composite, so it assumes the worst rather than treating it as
-  invisible. That is why the `dev-container` composite's callers that also run on a
-  schedule or a push (`dev image cache`, `fuzz testing`, `storybook build`,
+  alerting assertion does not look inside a composite, so it assumes the worst rather than
+  treating it as invisible. That is why the `dev-container` composite's callers that also
+  run on a schedule or a push (`dev image cache`, `fuzz testing`, `storybook build`,
   `mutation testing`) are listed there. A workflow's `name:` is therefore load-bearing —
-  renaming one requires updating that list in the same commit. The gate does **not** yet
-  require an `environment:` key on jobs that pass a `role-to-assume` input (issue #375),
-  and adding one is not the free improvement it looks like: naming an environment changes
-  the minted OIDC subject to `repo:VilnaCRM-Org/website:environment:<name>`, and the
-  deployed sandbox role's trust policy rejects that subject, so the key fails
-  `sts:AssumeRoleWithWebIdentity` on every PR. The trust policies must be widened first —
-  `.github/sandbox_workflows.md` records the required order and the evidence.
+  renaming one requires updating that list in the same commit. Since issue #375 the same
+  gate holds two more assertions, lettered after the quota check below. **E — the
+  environment gate:** every job that assumes an
+  AWS role (`aws-actions/configure-aws-credentials`, a `role-to-assume` input, or
+  `aws sts assume-role`; followed through a local composite action, and failing closed on
+  one it cannot read) in a workflow reachable from any trigger other than `pull_request`
+  must declare `environment:` — a string, or a mapping with `name` — so the environment's
+  protection rules stand in front of the role. `pull_request` alone is exempt, and only
+  because of the OIDC-subject trap: naming an environment changes the minted subject to
+  `repo:VilnaCRM-Org/website:environment:<name>`, and the deployed sandbox role's trust
+  policy rejects that subject, so the key fails `sts:AssumeRoleWithWebIdentity` on every
+  PR. Widening those trust policies is the prerequisite for lifting the exemption —
+  `.github/sandbox_workflows.md` records the required order and the evidence — and
+  `pull_request_target`, `merge_group`, `push`, `schedule`, `workflow_dispatch` and
+  `workflow_run` are never exempt. **F — mask before write:** a `run:` step that appends a
+  variable named like a credential (`TOKEN`, `SECRET`, `PASSWORD`, `PRIVATE_KEY`,
+  `CREDENTIAL`) to `$GITHUB_ENV` or `$GITHUB_OUTPUT` must print `::add-mask::` for **that
+  value** earlier in the same step — a mask of some other value covers nothing — and a
+  write whose variable or value the gate cannot read is reported rather than guessed. Only
+  a write counts (`>>`, `>`, `tee`, PowerShell's `Out-File`/`Add-Content`, cmd's
+  `>>%GITHUB_ENV%`); a line that merely reads the file is not one. Both read the parsed `run:` string and the parsed job, never the workflow
+  text, so a key or a mask that survives only in a comment does not count. `make
+lint-workflows` (zizmor) audits `.github/actions/` alongside `.github/workflows/` for the
+  same reason: the composite is where a mutable action tag could otherwise hide.
 - **CodeQL findings are gated and routed.** `scripts/ci/code-scanning-gate.sh` fails the
   run on _new_ high/critical alerts (PRs subtract the default-branch baseline, so
   inherited debt does not block), and a failed scan reaches the `ci-alert` issue. Branch

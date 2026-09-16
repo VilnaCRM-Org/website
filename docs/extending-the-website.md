@@ -241,7 +241,24 @@ pathname at render time:
   `/`, because no visitor chose a locale to get there.
 - The two landings declare each other as `hreflang` alternates (`LANDING_ALTERNATES`),
   with `x-default` on the root; `docs/seo-surface.md` records why.
+- The product screenshots follow the language too. The hero `<picture>` and the
+  for-who screens are rasters with the dashboard copy baked in, so a translated page
+  around a Ukrainian screenshot is still half-Ukrainian. Each render ships once per
+  language under `src/features/landing/assets/img/about-vilna/` (`desktop-uk.jpg`,
+  `desktop-en.jpg`, and the same pair for `tablet` and `mobile`), and
+  `productScreenshotsFor(language)` in `src/features/landing/helpers` picks the set from
+  the `i18n.language` of the provider the component renders under — the same source
+  the copy comes from, so the two cannot disagree. English and its regional variants
+  (`en-GB`) get the English set; anything else falls back to the Ukrainian one the site
+  was designed around. Jest maps every image import to one shared stub, so the unit
+  test tells the sets apart by identity and the e2e spec (`en-landing.spec.ts`) pins
+  which file each landing really serves through the exported basename, which
+  `next-export-optimize-images` preserves (`desktop-en.<hash>_<width>.webp`). The
+  English renders are the Ukrainian ones re-typeset in Inter — no English design
+  frame exists, and the Figma file embeds these screens as image fills — so a new
+  screenshot means regenerating both languages.
 
 Adding a third locale means a new prefix in `src/config/locales.ts`, a new
-`pages/<prefix>/index.tsx`, and the same route registrations a new page needs (manifest,
-edge `ROUTE_MAP` and `ALLOWED_FILES`, the a11y route registry, the sitemap).
+`pages/<prefix>/index.tsx`, a third screenshot set (or a deliberate fallback), and the
+same route registrations a new page needs (manifest, edge `ROUTE_MAP` and
+`ALLOWED_FILES`, the a11y route registry, the sitemap).
