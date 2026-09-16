@@ -13,6 +13,9 @@ alert lands, and what to do when one does (issue #336).
   stays where it is: `deploy.yml` and the README already point at it.
 - [Release and bot-push audit trail](../release-audit.md) — the ledger of every release
   and every automated push to `main`, and what it cannot prove.
+- [Availability posture](../availability.md) — the topology, the three failure modes,
+  the recovery targets each runbook has to meet, and what is owned outside this
+  repository.
 
 The site is a static export on S3 behind CloudFront ([ADR 0001][adr-0001]). There is no
 origin server to restart, no database to fail over, and no status page. An incident is

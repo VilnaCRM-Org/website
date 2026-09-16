@@ -95,7 +95,7 @@ reason.
 To arm it, follow
 [the one-time setup](../deployment-runbook.md#one-time-setup) in the deployment runbook.
 A failed smoke then reaches the `ci-alert` label through `ci-health-alerts.yml`, which
-lists the `website` workflow — subject to the caveat in the next section.
+lists the `website` workflow (see the next section).
 
 ## CI health and the release ledger
 
@@ -107,13 +107,19 @@ on `main`, closes it on recovery, and sweeps `main` daily at 06:00 UTC for a red
 default branch. `make lint-prod-guardrails` fails a pull request if a privileged workflow
 runs on a non-pull-request trigger without being listed there.
 
-**Caveat, verified on 2026-09-11:** the workflow has no checkout step and sets no
-`GH_REPO`, so every `gh issue list` in it fails with
-`failed to run git: fatal: not a git repository`. Of its last hundred runs, one succeeded.
-Until it is fixed — a one-line change to a CODEOWNERS-guarded workflow — a failed deploy
-or release is visible only as a red run in the Actions tab, and the daily red-main sweep
-files nothing. The uptime check puts `GH_REPO: ${{ github.repository }}` on its job
-environment for exactly this reason.
+Until issue #325 it had never delivered: the workflow had no checkout step and set no
+`GH_REPO`, so every `gh issue list` in it failed with
+`failed to run git: fatal: not a git repository` (93 of its last 100 runs red, no
+`ci-alert` ever filed), and the release lane had been red on every push since 2026-08-27
+with nobody told. The alert logic now lives in `scripts/ci/ci-health-alert.sh`, which
+exports `GH_REPO` once and is also set at job level in the workflow; the script is
+checked out sparsely with `persist-credentials: false`. `tests/bats/ci_health_alerts.bats`
+drives every path against a stubbed `gh` — filing, refreshing by exact title, the
+stale-success guard, the red-main sweep, the digest — and `security_workflows.bats` reads
+the job-level env back with js-yaml, so the repository context cannot silently drop out
+again. A `workflow_dispatch` trigger with a `dry_run` input (default `true`) exercises the
+real API path from any branch without writing anything; set `dry_run=false` only to file
+a real alert on purpose.
 
 ### `release-audit.yml`
 
@@ -179,6 +185,9 @@ both keys to stay declared in `.env` and `.env.production`.
   `PRODUCTION_SITE_URL` is set.
 - **No production error telemetry** until the Sentry DSN is committed, and no error
   boundary even then.
-- **CI health alerting is broken** — see the `ci-health-alerts.yml` caveat above.
+- **CI health alerting is only as good as the run that fires it.** `ci-health-alerts.yml`
+  files on a failed `workflow_run` and on the daily red-main sweep; a workflow that is
+  cancelled, skipped, or never listed there fails silently. `make lint-prod-guardrails`
+  guards the list, not the outcome.
 - **Old build or new build?** A probe cannot tell whether the document it received is the
   one the last deploy published; the ledger records what was pushed, not what is served.

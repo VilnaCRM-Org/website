@@ -23,6 +23,8 @@ justified a decision still holds.
   comments and no inline styles; rationale lives in docs. _Accepted._
 - [ADR 0006](0006-route-scoped-locale.md) — the locale is a function of the route, and
   the English landing lives under a static `/en` prefix. _Accepted._
+- [ADR 0007](0007-release-automation-and-tag-invariant.md) — the release lane keeps its
+  orphan tags and enforces a version invariant before it writes. _Accepted._
 
 The template for a new record is [`0000-template.md`](0000-template.md).
 
@@ -65,6 +67,8 @@ edited afterwards except to change its status.
 
 - [Deployment and rollback runbook](../deployment-runbook.md) — the operational detail
   behind ADR 0001.
+- [Availability posture](../availability.md) — the topology, failure modes and recovery
+  targets ADR 0001 implies.
 - [Security headers](../security-headers.md) — why the CloudFront edge is the only
   enforcement point under a static export.
 - The image, font, and transfer-size sustainability policy lives in the
