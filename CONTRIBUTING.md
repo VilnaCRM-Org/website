@@ -356,7 +356,7 @@ weaken the gate.
 
 #### Production safety guardrails
 
-`make lint-prod-guardrails` (inside `make lint`) enforces three invariants that
+`make lint-prod-guardrails` (inside `make lint`) enforces six invariants that
 otherwise only hold in production:
 
 - Every workflow that assumes an AWS role or cuts a release, on a
@@ -367,13 +367,22 @@ otherwise only hold in production:
   404, and stays pinned inside the 100%-coverage `edge` Jest layer, so it cannot
   regress to passing arbitrary paths to the S3 origin.
 - `next.config.js` does not enable `productionBrowserSourceMaps`.
-
-A fourth invariant — that every job passing a `role-to-assume` input names an
-`environment:` — is deliberately **not** enforced yet. Naming an environment
-changes the OIDC subject the job mints, and the deployed sandbox role's trust
-policy does not accept the new subject, so adding the key fails
-`sts:AssumeRoleWithWebIdentity` on every pull request. The trust policies have to
-be widened first; `.github/sandbox_workflows.md` records the required order.
+- Both CloudFront Function sources stay inside the service's 10 KB quota
+  (`docs/edge-routing.md`); a comment costs what code costs.
+- Every job that assumes an AWS role — through
+  `aws-actions/configure-aws-credentials`, a `role-to-assume` input, or
+  `aws sts assume-role`, followed into a local composite action — in a workflow
+  reachable from any trigger other than `pull_request` declares an
+  `environment:`, so its protection rules stand in front of the role (issue
+  #375). `pull_request` alone is exempt: naming an environment changes the OIDC
+  subject the job mints, and the deployed sandbox role's trust policy does not
+  accept the new subject, so the key would fail `sts:AssumeRoleWithWebIdentity`
+  on every pull request. Widening those trust policies is what lifts the
+  exemption; `.github/sandbox_workflows.md` records the required order.
+- A `run:` step that appends a credential-named variable (`TOKEN`, `SECRET`,
+  `PASSWORD`, `PRIVATE_KEY`, `CREDENTIAL`) to `$GITHUB_ENV` or `$GITHUB_OUTPUT`
+  prints `::add-mask::` earlier in the same step, so the value is redacted
+  before it is persisted into every later step's log.
 
 #### Adding a page under `pages/`
 

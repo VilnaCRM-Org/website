@@ -1,12 +1,14 @@
 #!/usr/bin/env bats
 #
-# Coverage for scripts/ci/lint-prod-guardrails.mjs (issue #383).
+# Coverage for scripts/ci/lint-prod-guardrails.mjs (issues #383 and #375).
 #
-# The four invariants this gate protects only ever hold in production, where no
+# The six invariants this gate protects only ever hold in production, where no
 # other PR check watches them: a privileged workflow whose failure nobody is told
 # about, an edge handler that quietly reverts to passing every path to the S3
-# origin, browser source maps published to the CDN, and a CloudFront Function
-# source too large for the service to publish. A gate for that class of
+# origin, browser source maps published to the CDN, a CloudFront Function source
+# too large for the service to publish, a role-assuming job with no environment
+# protection in front of it, and a credential persisted to $GITHUB_ENV before it
+# is masked out of the log. A gate for that class of
 # regression is only worth having if it is red on the exact regression, so every
 # case below copies the REAL repository files into a fixture and mutates exactly
 # one invariant.
@@ -50,6 +52,9 @@ run_guardrails() {
   [ "$status" -eq 0 ]
   assert_output_contains 'prod-guardrails: OK'
   assert_output_contains 'workflows audited'
+  # The dev-container composite is the one local action; it must be followed,
+  # not skipped, for assertions D and E to have seen its steps.
+  assert_output_contains '1 local composite actions followed'
 }
 
 # --- Assertion A: privileged workflows must be alerted on ----------------------
@@ -318,6 +323,376 @@ PY
   assert_output_contains 'is missing'
 }
 
+# --- Assertion D: role-assuming jobs off pull_request need an environment ------
+
+@test "fails when deploy.yml drops its environment key" {
+  # deploy.yml is the one job that assumes a role on a non-pull_request trigger
+  # (push to main) and the one that declares an environment. Losing the key is
+  # the #375 F2 regression: the production trigger runs with no reviewer, wait
+  # timer or deployment-branch rule in front of it.
+  local deploy="$FIXTURE/.github/workflows/deploy.yml"
+  grep -q '^    environment:$' "$deploy"
+  sed -i '/^    environment:$/,/^      url: /d' "$deploy"
+  ! grep -q 'environment' "$deploy"
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains '[E]'
+  assert_output_contains 'deploy.yml job "deploy"'
+  assert_output_contains 'reachable from push'
+  assert_output_contains 'declares no environment'
+  # The remedy names the trap that bit PR #464, not just the missing key.
+  assert_output_contains 'sts:AssumeRoleWithWebIdentity'
+}
+
+@test "fails when a sandbox workflow regains a push trigger" {
+  # The #375 F1 regression: `push: branches-ignore: [main]` reached the
+  # production account from any branch push. The sandbox jobs are exempt only
+  # while pull_request is their sole trigger.
+  local sandbox="$FIXTURE/.github/workflows/sandbox-creating.yml"
+  sed -i '0,/^on:$/s//on:\n  push:\n    branches-ignore:\n      - main/' "$sandbox"
+  grep -q '^  push:$' "$sandbox"
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains '[E]'
+  assert_output_contains 'sandbox-creating.yml job "check-tokens"'
+  assert_output_contains 'sandbox-creating.yml job "deploy"'
+  assert_output_contains 'reachable from push'
+}
+
+@test "an environment key that survives only in a comment does not count" {
+  # The parser never sees a comment, so commenting the block out is the same
+  # regression as deleting it -- and the one a substring search would miss.
+  local deploy="$FIXTURE/.github/workflows/deploy.yml"
+  sed -i '/^    environment:$/,/^      url: /s/^/# /' "$deploy"
+  grep -q '^#     environment:$' "$deploy"
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains '[E]'
+  assert_output_contains 'deploy.yml job "deploy"'
+}
+
+@test "accepts an environment given as a plain string" {
+  local deploy="$FIXTURE/.github/workflows/deploy.yml"
+  sed -i '/^    environment:$/,/^      url: /d' "$deploy"
+  sed -i '0,/^    steps:$/s//    environment: production\n    steps:/' "$deploy"
+  grep -q '^    environment: production$' "$deploy"
+
+  run_guardrails
+  [ "$status" -eq 0 ]
+}
+
+@test "rejects an environment mapping that names no environment" {
+  # `environment: { url: ... }` is a label with nothing to attach protection
+  # rules to. GitHub itself rejects it, but the gate must not wait for a run
+  # on main to say so.
+  local deploy="$FIXTURE/.github/workflows/deploy.yml"
+  sed -i '/^      name: production$/d' "$deploy"
+  grep -q '^    environment:$' "$deploy"
+  ! grep -q 'name: production' "$deploy"
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains '[E]'
+  assert_output_contains 'deploy.yml job "deploy"'
+}
+
+@test "pull_request_target is not exempt from the environment gate" {
+  # Only `pull_request` mints the subject the sandbox trap is about.
+  # pull_request_target runs with the base repository's secrets on a
+  # fork-authored change, which is the opposite of a reason to exempt it.
+  cat >"$FIXTURE/.github/workflows/target-role.yml" <<'YAML'
+name: target role
+on:
+  pull_request_target:
+    types:
+      - labeled
+jobs:
+  provision:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: arn:aws:iam::1234:role/example
+YAML
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains '[E]'
+  assert_output_contains 'target-role.yml job "provision"'
+  assert_output_contains 'reachable from pull_request_target'
+}
+
+@test "follows a local composite action that assumes the role" {
+  # Moving the login step into a composite must not move it out of the audit.
+  # The workflow is added to the alert list so assertion A stays quiet and the
+  # verdict here is D's alone.
+  mkdir -p "$FIXTURE/.github/actions/aws-login"
+  cat >"$FIXTURE/.github/actions/aws-login/action.yml" <<'YAML'
+name: aws login
+runs:
+  using: composite
+  steps:
+    - uses: aws-actions/configure-aws-credentials@v6
+      with:
+        role-to-assume: arn:aws:iam::1234:role/example
+YAML
+  cat >"$FIXTURE/.github/workflows/nightly-sync.yml" <<'YAML'
+name: nightly sync
+on:
+  schedule:
+    - cron: '0 3 * * *'
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: ./.github/actions/aws-login
+      - run: aws s3 sync out/ s3://bucket
+YAML
+  sed -i 's/^      - website$/      - website\n      - nightly sync/' \
+    "$FIXTURE/.github/workflows/ci-health-alerts.yml"
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  refute_output_contains '[A]'
+  assert_output_contains '[E]'
+  assert_output_contains 'nightly-sync.yml job "sync"'
+
+  # The same job with an environment passes, so the composite walk is not what
+  # turned it red.
+  sed -i 's/^    runs-on: ubuntu-latest$/    runs-on: ubuntu-latest\n    environment: staging/' \
+    "$FIXTURE/.github/workflows/nightly-sync.yml"
+  run_guardrails
+  [ "$status" -eq 0 ]
+}
+
+@test "fails closed on a local action it cannot read" {
+  # A `uses: ./...` with no action.yml behind it would otherwise be a job the
+  # gate has silently declared role-free.
+  cat >"$FIXTURE/.github/workflows/opaque.yml" <<'YAML'
+name: opaque
+on:
+  workflow_dispatch:
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: ./.github/actions/does-not-exist
+YAML
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains '[E]'
+  assert_output_contains 'opaque.yml job "run"'
+  assert_output_contains 'does-not-exist'
+  assert_output_contains 'cannot prove'
+}
+
+@test "a pull_request-only job needs no environment even through a composite" {
+  # The exemption is the OIDC-subject trap and nothing else, so it must hold
+  # for the composite spelling of the login too -- the sandbox jobs could be
+  # refactored that way without turning this gate red.
+  mkdir -p "$FIXTURE/.github/actions/aws-login"
+  cat >"$FIXTURE/.github/actions/aws-login/action.yml" <<'YAML'
+name: aws login
+runs:
+  using: composite
+  steps:
+    - uses: aws-actions/configure-aws-credentials@v6
+      with:
+        role-to-assume: arn:aws:iam::1234:role/example
+YAML
+  cat >"$FIXTURE/.github/workflows/pr-composite-login.yml" <<'YAML'
+name: pr composite login
+on:
+  pull_request:
+    types: [opened, synchronize]
+jobs:
+  sandbox:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: ./.github/actions/aws-login
+YAML
+
+  run_guardrails
+  [ "$status" -eq 0 ]
+}
+
+# --- Assertion F: credentials are masked before they are persisted -------------
+
+# A pull_request-only workflow with one job, so assertions A and D have nothing
+# to say and the verdict is E's alone. $1 is the run body, indented as a YAML
+# block scalar; $2 (optional) is a second step's run body.
+write_persisting_workflow() {
+  local first="$1" second="${2-}"
+  {
+    printf 'name: persisting\non:\n  pull_request:\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n'
+    printf '      - name: first\n        run: |\n'
+    printf '%s\n' "$first" | sed 's/^/          /'
+    if [ -n "$second" ]; then
+      printf '      - name: second\n        run: |\n'
+      printf '%s\n' "$second" | sed 's/^/          /'
+    fi
+  } >"$FIXTURE/.github/workflows/persisting.yml"
+}
+
+@test "fails when a token is written to GITHUB_ENV without a preceding mask" {
+  # The #375 F4 regression: the Secrets-Manager token used to be appended to
+  # $GITHUB_ENV in the clear, where any later `set -x`, env dump or errored
+  # step would have printed it.
+  write_persisting_workflow 'GITHUB_TOKEN=$(aws secretsmanager get-secret-value --query SecretString --output text | jq -r .token)
+echo "GITHUB_TOKEN=$GITHUB_TOKEN" >> "$GITHUB_ENV"'
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains '[F]'
+  assert_output_contains 'persisting.yml job "build" step 1 ("first")'
+  assert_output_contains 'writes GITHUB_TOKEN to $GITHUB_ENV'
+  assert_output_contains '::add-mask::'
+}
+
+@test "accepts a token that is masked before it is written" {
+  write_persisting_workflow 'GITHUB_TOKEN=$(get-token)
+echo "::add-mask::$GITHUB_TOKEN"
+echo "GITHUB_TOKEN=$GITHUB_TOKEN" >> "$GITHUB_ENV"'
+
+  run_guardrails
+  [ "$status" -eq 0 ]
+}
+
+@test "GITHUB_OUTPUT is a sink too" {
+  # A step output is rendered into every consumer's expression context and
+  # job summary, so it needs the same mask as an environment variable.
+  write_persisting_workflow 'echo "token=$(get-token)" >> "$GITHUB_OUTPUT"'
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains '[F]'
+  assert_output_contains 'writes token to $GITHUB_OUTPUT'
+}
+
+@test "a mask in a later step does not cover an earlier write" {
+  # By the time the second step runs, the first has already logged and
+  # persisted the value.
+  write_persisting_workflow 'echo "API_TOKEN=$(get-token)" >> "$GITHUB_ENV"' \
+    'echo "::add-mask::$API_TOKEN"'
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains '[F]'
+  assert_output_contains 'step 1 ("first")'
+  refute_output_contains 'step 2 ("second")'
+}
+
+@test "a mask printed after the write on the same line does not count" {
+  write_persisting_workflow 'echo "API_TOKEN=$t" >> "$GITHUB_ENV"; echo "::add-mask::$t"'
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains '[F]'
+  assert_output_contains 'writes API_TOKEN'
+}
+
+@test "a mask that survives only in a shell comment does not count" {
+  # Commenting the mask out is the cheapest way to disable it while leaving
+  # the text on disk for a substring search to find.
+  write_persisting_workflow '# echo "::add-mask::$t"
+echo "API_TOKEN=$t" >> "$GITHUB_ENV"'
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains '[F]'
+  assert_output_contains 'writes API_TOKEN'
+}
+
+@test "a variable not named like a credential may be written unmasked" {
+  # The existing GITHUB_OUTPUT writers on the tree (a drift status, a spec
+  # list, a build matrix) are exactly this shape and must stay green.
+  write_persisting_workflow 'echo "expires_at=$(date -u +%s)" >> "$GITHUB_ENV"
+echo "drift=$status" >>"$GITHUB_OUTPUT"'
+
+  run_guardrails
+  [ "$status" -eq 0 ]
+}
+
+@test "the tee, printf and unquoted spellings are all caught" {
+  write_persisting_workflow 'printf '"'"'DB_PASSWORD=%s\n'"'"' "$p" | tee -a "$GITHUB_ENV"
+echo NPM_TOKEN=$t >>$GITHUB_ENV
+echo "AWS_SECRET_ACCESS_KEY=$k" >> "${GITHUB_ENV}"'
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains 'writes DB_PASSWORD'
+  assert_output_contains 'writes NPM_TOKEN'
+  assert_output_contains 'writes AWS_SECRET_ACCESS_KEY'
+}
+
+@test "the multi-line NAME<<EOF form inside a grouped write is caught" {
+  # The shape dockerfile-performance.yml uses for a non-secret body: the name
+  # is on a line inside the group and the redirection is on the closing brace.
+  write_persisting_workflow '{
+  echo '"'"'PRIVATE_KEY<<KEY_EOF'"'"'
+  cat key.pem
+  echo '"'"'KEY_EOF'"'"'
+} >> "$GITHUB_ENV"'
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains '[F]'
+  assert_output_contains 'writes PRIVATE_KEY'
+}
+
+@test "a heredoc redirected into GITHUB_ENV is read line by line" {
+  write_persisting_workflow 'cat >> "$GITHUB_ENV" <<EOF
+REGION=eu-central-1
+AWS_CREDENTIAL_FILE=$c
+EOF'
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains '[F]'
+  assert_output_contains 'writes AWS_CREDENTIAL_FILE'
+}
+
+@test "a write whose variable the gate cannot read fails closed" {
+  # `cat file >> "$GITHUB_ENV"` persists whatever the file holds; the gate
+  # cannot see the names, so it reports the write rather than guessing.
+  write_persisting_workflow 'cat generated.env >> "$GITHUB_ENV"'
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains '[F]'
+  assert_output_contains 'cannot tell which variable it persists'
+
+  # Masking first makes the same write acceptable, so the fail-closed branch
+  # is not a dead end.
+  write_persisting_workflow 'echo "::add-mask::$(cat generated.env)"
+cat generated.env >> "$GITHUB_ENV"'
+  run_guardrails
+  [ "$status" -eq 0 ]
+}
+
+@test "the run steps of a local composite action are audited too" {
+  mkdir -p "$FIXTURE/.github/actions/leaky"
+  cat >"$FIXTURE/.github/actions/leaky/action.yml" <<'YAML'
+name: leaky
+runs:
+  using: composite
+  steps:
+    - name: persist
+      shell: bash
+      run: echo "REGISTRY_TOKEN=$(get-token)" >> "$GITHUB_ENV"
+YAML
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains '[F]'
+  assert_output_contains '.github/actions/leaky/action.yml'
+  assert_output_contains 'writes REGISTRY_TOKEN'
+}
+
 # --- Assertion B: the edge handler must stay fail-closed -----------------------
 
 @test "fails when the edge handler reverts to origin pass-through" {
@@ -490,16 +865,24 @@ PY
 # --- Reporting -----------------------------------------------------------------
 
 @test "reports every violation in a single run rather than stopping at the first" {
+  local before
   sed -i '/^      - website$/d' "$FIXTURE/.github/workflows/ci-health-alerts.yml"
+  sed -i '/^    environment:$/,/^      url: /d' "$FIXTURE/.github/workflows/deploy.yml"
+  write_persisting_workflow 'echo "API_TOKEN=$t" >> "$GITHUB_ENV"'
   sed -i 's/statusCode: 404,/statusCode: 200,/' "$FIXTURE/scripts/cloudfront_routing.js"
   sed -i "s/  output: 'export',/  output: 'export',\n  productionBrowserSourceMaps: true,/" \
     "$FIXTURE/next.config.js"
+  before=$(wc -c <"$FIXTURE/scripts/cloudfront_routing.js")
+  pad_with_comment "$FIXTURE/scripts/cloudfront_routing.js" $((10001 - before))
 
   run_guardrails
   [ "$status" -eq 1 ]
   assert_output_contains '[A]'
   assert_output_contains '[B]'
   assert_output_contains '[C]'
+  assert_output_contains '[D]'
+  assert_output_contains '[E]'
+  assert_output_contains '[F]'
 }
 
 @test "a block comment cannot hide map in the edge extension allow-list" {
