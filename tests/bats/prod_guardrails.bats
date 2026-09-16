@@ -607,6 +607,65 @@ echo "API_TOKEN=$t" >> "$GITHUB_ENV"'
   assert_output_contains 'writes API_TOKEN'
 }
 
+@test "a mask of an unrelated value does not cover the credential that is persisted" {
+  # Review finding on #375: the first cut set a boolean once any ::add-mask::
+  # had printed, so masking a build id and then persisting $secret in the
+  # clear passed. The mask must name the value the write persists.
+  write_persisting_workflow 'echo "::add-mask::$BUILD_ID"
+echo "API_TOKEN=$secret" >> "$GITHUB_ENV"'
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains '[F]'
+  assert_output_contains 'writes API_TOKEN to $GITHUB_ENV'
+  assert_output_contains 'for secret'
+  assert_output_contains 'A mask of some other value does not cover it'
+
+  # The braced and quoted spellings of the same variable are one value.
+  write_persisting_workflow 'echo "::add-mask::${secret}"
+echo "API_TOKEN=$secret" >> "$GITHUB_ENV"'
+  run_guardrails
+  [ "$status" -eq 0 ]
+}
+
+@test "a printf placeholder is resolved to the argument it prints" {
+  write_persisting_workflow 'echo "::add-mask::$p"
+printf '"'"'DB_PASSWORD=%s\n'"'"' "$p" | tee -a "$GITHUB_ENV"'
+
+  run_guardrails
+  [ "$status" -eq 0 ]
+
+  # Masking a different argument does not cover the one the format prints.
+  write_persisting_workflow 'echo "::add-mask::$q"
+printf '"'"'DB_PASSWORD=%s\n'"'"' "$p" | tee -a "$GITHUB_ENV"'
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains 'writes DB_PASSWORD'
+}
+
+@test "a read of GITHUB_ENV or GITHUB_OUTPUT is not a write" {
+  # Review finding on #375: any mention of the file used to count as a write,
+  # so `test -w "$GITHUB_ENV"` was reported as persisting an unknown variable.
+  write_persisting_workflow 'test -w "$GITHUB_ENV" || exit 1
+grep -q "^API_TOKEN=" "$GITHUB_ENV" && echo "already exported"
+cat "$GITHUB_OUTPUT"'
+
+  run_guardrails
+  [ "$status" -eq 0 ]
+}
+
+@test "the PowerShell and cmd spellings of the write are caught" {
+  write_persisting_workflow '"NPM_TOKEN=$t" | Out-File -FilePath $env:GITHUB_ENV -Append
+Add-Content -Path $env:GITHUB_OUTPUT -Value "DB_PASSWORD=$p"
+echo API_SECRET=%s%>>%GITHUB_ENV%'
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains 'writes NPM_TOKEN'
+  assert_output_contains 'writes DB_PASSWORD'
+  assert_output_contains 'writes API_SECRET'
+}
+
 @test "a variable not named like a credential may be written unmasked" {
   # The existing GITHUB_OUTPUT writers on the tree (a drift status, a spec
   # list, a build matrix) are exactly this shape and must stay green.

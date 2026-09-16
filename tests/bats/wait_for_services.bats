@@ -25,6 +25,27 @@ EOF
   chmod +x "$STUB_BIN_DIR/curl"
 }
 
+# A curl against a service that accepts the connection and never answers: it
+# behaves as real curl does under `--max-time N` -- hangs for N seconds, then
+# exits 28 -- and hangs forever when no `--max-time` was passed, so a recipe
+# that dropped the flag would hang this test instead of passing it.
+create_hanging_curl_stub() {
+  cat >"$STUB_BIN_DIR/curl" <<'EOF'
+#!/usr/bin/env bash
+printf 'curl %s\n' "$*" >> "${COMMAND_LOG:?}"
+max_time=""
+while [ $# -gt 0 ]; do
+  if [ "$1" = "--max-time" ]; then max_time="$2"; shift; fi
+  shift
+done
+if [ -z "$max_time" ]; then sleep infinity; fi
+sleep "$max_time"
+exit 28
+EOF
+
+  chmod +x "$STUB_BIN_DIR/curl"
+}
+
 count_probes() {
   grep -c -F -- "$1" "$COMMAND_LOG" || true
 }
@@ -40,7 +61,7 @@ setup() {
 
   [ "$status" -eq 0 ]
   assert_output_contains 'Prod service is up and running!'
-  [ "$(count_probes 'curl -s -f http://localhost:3001')" -eq 1 ]
+  [ "$(count_probes 'curl -s -f --connect-timeout 5 --max-time 10 http://localhost:3001')" -eq 1 ]
   # Nothing to diagnose, so no log dump.
   run grep -F 'logs --tail=50 prod' "$COMMAND_LOG"
   [ "$status" -ne 0 ]
@@ -57,6 +78,22 @@ setup() {
   assert_log_contains 'docker compose -f docker-compose.test.yml logs --tail=50 prod'
 }
 
+@test "wait-for-prod bounds every probe, so a service that hangs cannot stall the loop" {
+  # Review finding on #331: a server that accepts the TCP connection and never
+  # sends a response blocks curl on the first probe unless the request itself
+  # is bounded, and then WAIT_FOR_PROD_MAX_TRIES is never reached. The stub
+  # hangs forever without --max-time, so this test cannot pass by accident.
+  create_hanging_curl_stub
+
+  run_make_target wait-for-prod WAIT_FOR_PROD_MAX_TRIES=2 WAIT_FOR_PROD_SLEEP=0 \
+    WAIT_FOR_PROD_CONNECT_TIMEOUT=1 WAIT_FOR_PROD_MAX_TIME=1
+
+  [ "$status" -ne 0 ]
+  assert_output_contains 'Timed out waiting for the prod service'
+  assert_log_contains 'curl -s -f --connect-timeout 1 --max-time 1 http://localhost:3001'
+  [ "$(count_probes '--max-time 1 http://localhost:3001')" -eq 2 ]
+}
+
 @test "wait-for-prod probes exactly WAIT_FOR_PROD_MAX_TRIES times before giving up" {
   # The bound is the whole point: an unbounded loop would never reach the
   # assertion at all.
@@ -65,7 +102,7 @@ setup() {
   run_make_target wait-for-prod WAIT_FOR_PROD_MAX_TRIES=2 WAIT_FOR_PROD_SLEEP=0
 
   [ "$status" -ne 0 ]
-  [ "$(count_probes 'curl -s -f http://localhost:3001')" -eq 2 ]
+  [ "$(count_probes 'curl -s -f --connect-timeout 5 --max-time 10 http://localhost:3001')" -eq 2 ]
 }
 
 @test "wait-for-prod reports the budget it exhausted in seconds" {

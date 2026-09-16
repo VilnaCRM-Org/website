@@ -45,16 +45,20 @@ enforced before any write:
 > The `version` in `package.json` is at least as high as every existing tag.
 
 `scripts/ci/check-release-version.sh` runs as the first real step of `autorelease.yml`
-and fails, with the remedy in its message, when a tag at or above the current version
-exists. A collision therefore fails fast and dry instead of half-way through a release.
+and fails, with the remedy in its message, when any existing tag is **above** the
+current version (an equal tag passes: the next bump lands above it). A collision
+therefore fails fast and dry instead of half-way through a release.
 The invariant is restored by advancing `package.json` through an ordinary pull request,
 never by deleting a tag from a workflow.
 
 The push rejection is documented, not worked around: `.github/AUTORELEASE.md` records
 the exact `GH006` output, names the ruleset-with-bypass migration as the admin change
-that unblocks the lane, and states the strict order of the remedy — grant the bypass
-**first**, then either delete `v1.7.0` or bump `package.json` to `1.7.0` — because
-doing either while the push is still rejected simply strands `v1.8.0` next. The App's
+that unblocks the lane — the release App listed as a bypass actor in **Always allow**
+mode, because the workflow pushes to `main` directly and the "For pull requests only"
+mode would still require it to open and merge a pull request — and states the strict
+order of the remedy: grant the bypass **first**, then either delete `v1.7.0` or bump
+`package.json` to `1.7.0`, because doing either while the push is still rejected simply
+strands `v1.8.0` next. The App's
 permission grant is reduced to `Contents: read/write` plus the mandatory metadata read,
 which is everything the workflow's token step requests.
 
@@ -71,8 +75,10 @@ private key to the secrets), and any change to how the version is bumped.
 
 ### What this buys
 
-The lane can no longer corrupt a release: a collision is caught before the changelog is
-written, and the failure names its own fix. Tag history stays intact, so the audit
+A tag collision can no longer corrupt a release: it is caught before the changelog is
+written, and the failure names its own fix. That is the whole of the guarantee — the
+push itself stays non-atomic, so a branch update the ruleset rejects can still strand a
+tag, which is why the remedy above has an order. Tag history stays intact, so the audit
 ledger and any pinned consumer keep resolving. The remaining blocker is one
 well-described repository setting, with the order of operations that avoids a third
 orphan written down where the person applying it will read it.

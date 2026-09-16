@@ -94,7 +94,10 @@ two workable options; either is a settings change that cannot be committed:
 1. **Migrate `main` from classic protection to a ruleset** (_Settings → Rules
    → Rulesets_) that keeps "Require a pull request before merging" and
    "Require signed commits", and lists the release App under **Bypass list**
-   for the ruleset. Ruleset bypass covers every rule in the ruleset, including
+   for the ruleset with the bypass mode left at **Always allow** — the default.
+   The other mode, "For pull requests only", lets the actor merge a pull request
+   past the rules but not push to the branch, and this workflow pushes to
+   `main` directly. Ruleset bypass covers every rule in the ruleset, including
    the signature requirement, which is what makes this the option that works
    without touching the workflow. `gh api repos/VilnaCRM-Org/website/rulesets`
    returns `[]` today, so nothing conflicts with creating one; this is also the

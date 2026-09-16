@@ -995,12 +995,18 @@ start-prod-clean: create-network ## Force rebuild and recreate all test containe
 # tests/bats/wait_for_services.bats, timeout path included.
 WAIT_FOR_PROD_MAX_TRIES     ?= 120
 WAIT_FOR_PROD_SLEEP         ?= 1
+# Each probe is bounded on its own: a service that accepts the TCP connection
+# and never answers would otherwise block curl on the first try and the
+# MAX_TRIES bound above would never be reached.
+WAIT_FOR_PROD_CONNECT_TIMEOUT ?= 5
+WAIT_FOR_PROD_MAX_TIME      ?= 10
 
 wait-for-prod: ## Wait for the prod service to be ready on port $(NEXT_PUBLIC_PROD_PORT).
 	@echo "Waiting for prod service to be ready on port $(NEXT_PUBLIC_PROD_PORT)..."
 	@i=0; \
 	while [ $$i -lt $(WAIT_FOR_PROD_MAX_TRIES) ]; do \
-		if curl -s -f http://$(WEBSITE_DOMAIN):$(NEXT_PUBLIC_PROD_PORT) >/dev/null 2>&1; then \
+		if curl -s -f --connect-timeout $(WAIT_FOR_PROD_CONNECT_TIMEOUT) --max-time $(WAIT_FOR_PROD_MAX_TIME) \
+			http://$(WEBSITE_DOMAIN):$(NEXT_PUBLIC_PROD_PORT) >/dev/null 2>&1; then \
 			printf '\nProd service is up and running!\n'; \
 			exit 0; \
 		fi; \

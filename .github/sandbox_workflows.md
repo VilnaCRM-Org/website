@@ -226,8 +226,11 @@ Attach Policies to the Role:
 
 The `check-tokens` job assumes `github-actions-role` in the test account and then in the
 production account (`vars.TEST_AWS_ACCOUNT_ID`, `vars.PROD_AWS_ACCOUNT_ID`). Each of those
-roles needs only `secretsmanager:ListSecrets` and `secretsmanager:GetSecretValue` on the
-GitHub-token secret; no CodePipeline permission is required for the check.
+roles needs two statements and nothing else: `secretsmanager:ListSecrets` on `"*"` —
+AWS does not support resource-level scoping for that action, so a policy that grants it
+only on the secret's ARN denies the list call and fails the check — and
+`secretsmanager:GetSecretValue` on the GitHub-token secret's ARN alone. No CodePipeline
+permission is required for the check.
 
 The secret's JSON carries the GitHub token beside its `expires_at`, so the job pipes
 `get-secret-value` straight into `jq` and reads only `expires_at`. The token is never

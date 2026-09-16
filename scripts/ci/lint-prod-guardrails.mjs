@@ -39,13 +39,17 @@
 //      out of the audit, and a local action this gate cannot read fails closed.
 //   F. A `run:` step that appends a variable named like a credential
 //      (TOKEN, SECRET, PASSWORD, PRIVATE_KEY, CREDENTIAL) to $GITHUB_ENV or
-//      $GITHUB_OUTPUT must have printed `::add-mask::` earlier in the SAME
-//      step, so the value is redacted from the job log before it is persisted
-//      into every later step. The write is read off the parsed `run:` string
-//      line by line -- `>> "$GITHUB_ENV"`, `>>$GITHUB_ENV`, `tee -a`, printf, a
-//      grouped `{ ...; } >>` block, the `NAME<<EOF` multi-line form and a
-//      heredoc redirected into the file -- and a write whose variable name the
-//      gate cannot read is reported too: fail closed rather than guess.
+//      $GITHUB_OUTPUT must have printed `::add-mask::` for THAT value earlier
+//      in the SAME step, so it is redacted from the job log before it is
+//      persisted into every later step. A mask of some other value vouches
+//      for nothing. The write is read off the parsed `run:` string line by
+//      line -- `>> "$GITHUB_ENV"`, `>>$GITHUB_ENV`, `tee -a`, printf with its
+//      `%s` resolved to the argument it prints, a grouped `{ ...; } >>` block,
+//      the `NAME<<EOF` multi-line form, a heredoc redirected into the file,
+//      PowerShell's Out-File / Add-Content and cmd's `>>%GITHUB_ENV%` -- and a
+//      write whose variable or value the gate cannot read is reported too:
+//      fail closed rather than guess. A line that only reads the file
+//      (`test -w "$GITHUB_ENV"`) is not a write.
 //
 // Collect-all-then-fail: every violation is reported in one run.
 import fs from 'node:fs';
@@ -86,14 +90,23 @@ const LOCAL_ACTION_USES = /^\.\//;
 // Assertion F. The name test is deliberately a substring match, so `GH_TOKEN`,
 // `NPM_TOKEN`, `DB_PASSWORD` and `AWS_SECRET_ACCESS_KEY` all count.
 const CREDENTIAL_NAME = /TOKEN|SECRET|PASSWORD|PRIVATE_KEY|CREDENTIAL/i;
-// Any spelling of the two files GitHub reads back: `$GITHUB_ENV`,
-// `"${GITHUB_ENV}"`, PowerShell's `$env:GITHUB_ENV`, cmd's `%GITHUB_ENV%`.
-const PERSISTED_FILE = /\bGITHUB_(?:ENV|OUTPUT)\b/;
+// A write into one of the two files GitHub reads back, in any spelling of
+// the file (`$GITHUB_ENV`, `"${GITHUB_ENV}"`, PowerShell's `$env:GITHUB_ENV`,
+// cmd's `%GITHUB_ENV%`) and any write operator: `>>`, `>`, `tee [-a]`,
+// PowerShell's `Out-File`/`Add-Content` with their switches. A line that
+// merely reads the file (`test -w "$GITHUB_ENV"`, `cat "$GITHUB_OUTPUT"`)
+// persists nothing and is not a write.
+const PERSISTED_WRITE =
+  /(?:>>?|\btee\b(?:\s+-\w+)*|\b(?:Out-File|Add-Content)\b(?:\s+-\w+(?:\s+[^\s-]\S*)?)*)\s*["']?(?:\$\{?(?:env:)?|%)(GITHUB_(?:ENV|OUTPUT))\b/;
 const ADD_MASK = '::add-mask::';
+// The value half of a `NAME=value` write: a command substitution, a braced or
+// bare variable, a printf placeholder that the format arguments fill, or a
+// literal. Anything else is unreadable and fails closed.
+const VALUE_HEAD = /^(?:\$\(|\$\{|\$[A-Za-z_]|%[sbq]|[^\s"'|;&>]+)/;
 // A `NAME=` or `NAME<<` token that is not itself a variable expansion
 // (`$name=`), so `echo "TOKEN=$x"`, `printf 'TOKEN=%s'`, `echo TOKEN=$x` and
 // `echo 'TOKEN<<EOF'` all yield TOKEN.
-const WRITTEN_NAME = /(?<![\w$])([A-Za-z_][\w-]*)(?:=|<<)/g;
+const WRITTEN_NAME = /(?<![\w$])([A-Za-z_][\w-]*)(=|<<)/g;
 // A shell heredoc redirection (`cat <<EOF`, `tee -a "$GITHUB_ENV" <<'EOF'`),
 // as distinct from the `NAME<<EOF` value form, where `<<` abuts the name, and
 // from a `<<<` here-string.
@@ -371,18 +384,110 @@ function isShellComment(line) {
   return /^\s*#/.test(line);
 }
 
-// The column at which a live `::add-mask::` starts, or -1 when the line prints
-// none -- including when the marker sits behind a `#` and so never reaches
-// stdout.
-function maskColumn(line) {
-  const at = line.indexOf(ADD_MASK);
-  if (at < 0) return -1;
-  const comment = line.search(/(?:^|\s)#/);
-  return comment >= 0 && comment < at ? -1 : at;
+// A balanced `$( ... )` starting at `at`, or null when it never closes.
+function commandSubstitutionAt(text, at) {
+  let depth = 0;
+  for (let index = at + 1; index < text.length; index += 1) {
+    if (text[index] === '(') depth += 1;
+    if (text[index] === ')') {
+      depth -= 1;
+      if (depth === 0) return text.slice(at, index + 1);
+    }
+  }
+  return null;
 }
 
-function writtenNames(text) {
-  return [...text.matchAll(WRITTEN_NAME)].map(match => match[1]);
+// One value expression in the form the mask and the write are compared in:
+// `$VAR`, `${VAR}`, `"$VAR"`, `$env:VAR` and cmd's `%VAR%` all become VAR;
+// `$(cmd)` keeps its command text with whitespace collapsed; a literal is kept
+// verbatim. Two expressions that normalise to the same string name the same
+// value.
+function normaliseValue(raw) {
+  const text = raw.trim().replace(/^(["'])(.*)\1$/, '$2');
+  if (text.startsWith('$(')) {
+    const inner = commandSubstitutionAt(text, 0);
+    return inner === null ? text : `$(${inner.slice(2, -1).replace(/\s+/g, ' ').trim()})`;
+  }
+  const variable = /^(?:\$\{?(?:env:)?([A-Za-z_]\w*)\}?|%([A-Za-z_]\w*)%)$/.exec(text);
+  return variable ? (variable[1] ?? variable[2]) : text;
+}
+
+// The value token that starts at `at` in `text`: the whole `$( ... )`, the
+// `${...}`, the `$NAME`, the printf placeholder, or the literal up to the next
+// shell delimiter. Null when nothing readable starts there.
+function valueTokenAt(text, at) {
+  const rest = text.slice(at);
+  if (rest.startsWith('$(')) return commandSubstitutionAt(text, at);
+  if (rest.startsWith('${')) {
+    const close = rest.indexOf('}');
+    return close < 0 ? null : rest.slice(0, close + 1);
+  }
+  const cmdVariable = /^%[A-Za-z_]\w*%/.exec(rest);
+  if (cmdVariable) return cmdVariable[0];
+  const head = VALUE_HEAD.exec(rest);
+  if (!head) return null;
+  if (head[0].startsWith('$')) return /^\$(?:env:)?[A-Za-z_]\w*/.exec(rest)[0];
+  return head[0];
+}
+
+// The format arguments of a printf on `line`, in order, so `%s` placeholders
+// in a `NAME=%s` format resolve to the values they print.
+function printfArguments(line) {
+  const match = /\bprintf\s+(?:--\s+)?(?:"(?:[^"\\]|\\.)*"|'[^']*'|\S+)\s*([^|>;]*)/.exec(line);
+  if (!match) return [];
+  return match[1].trim().split(/\s+/).filter(Boolean).map(normaliseValue);
+}
+
+// Every masked expression a live `::add-mask::` on `line` prints before column
+// `before` (the whole line when omitted), normalised. A marker behind a `#`
+// never reaches stdout and so masks nothing.
+function maskedValuesOn(line, before = line.length) {
+  const comment = line.search(/(?:^|\s)#/);
+  const values = [];
+  let at = line.indexOf(ADD_MASK);
+  while (at >= 0 && at < before && !(comment >= 0 && comment < at)) {
+    const after = at + ADD_MASK.length;
+    const quote = at > 0 && /["']/.test(line[at - 1]) ? line[at - 1] : null;
+    const end = quote ? line.indexOf(quote, after) : line.slice(after).search(/[\s;|&]|$/) + after;
+    values.push(normaliseValue(line.slice(after, end < 0 ? line.length : end)));
+    at = line.indexOf(ADD_MASK, after);
+  }
+  return values;
+}
+
+// The `{ name, values }` pairs a stretch of text persists through `NAME=value`
+// tokens: the value expression for `=`, and -- for the `NAME<<EOF` form -- the
+// producer lines between the name and its terminator, each treated as a
+// command whose output is the value. A value the gate cannot read is recorded
+// as null, which the caller reports rather than guesses about.
+function assignmentsIn(lines, printfValues = []) {
+  const assignments = [];
+  lines.forEach((line, index) => {
+    for (const match of line.matchAll(WRITTEN_NAME)) {
+      const name = match[1];
+      if (match[2] === '<<') {
+        const terminator = /^['"]?([A-Za-z_]\w*)/.exec(
+          line.slice(match.index + match[0].length)
+        )?.[1];
+        const body = [];
+        for (let next = index + 1; next < lines.length; next += 1) {
+          if (lines[next].trim().replace(/^echo\s+['"]?|['"]$/g, '') === terminator) break;
+          body.push(lines[next].trim());
+        }
+        assignments.push({ name, values: body.map(producer => normaliseValue(`$(${producer})`)) });
+        continue;
+      }
+      const token = valueTokenAt(line, match.index + match[0].length);
+      let values = null;
+      if (token !== null && /^%[sbq]$/.test(token)) {
+        values = printfValues.length ? [printfValues.shift()] : null;
+      } else if (token !== null) {
+        values = [normaliseValue(token)];
+      }
+      assignments.push({ name, values });
+    }
+  });
+  return assignments;
 }
 
 // The lines of a `{ ...; } >> "$GITHUB_ENV"` / `( ... ) >> ...` group whose
@@ -396,7 +501,7 @@ function groupLines(lines, closeIndex) {
   for (let index = closeIndex; index >= 0; index -= 1) {
     const line = lines[index];
     depth += (line.match(/[})]/g) ?? []).length - (line.match(/[{(]/g) ?? []).length;
-    if (index < closeIndex) body.push(line);
+    if (index < closeIndex) body.unshift(line);
     if (depth <= 0) break;
   }
   return body;
@@ -413,50 +518,81 @@ function heredocLines(lines, openIndex, terminator) {
   return body;
 }
 
-// Every variable name the write on `index` persists, gathered from the line
-// itself, from the group it closes, and from the heredoc it opens. An empty
-// result means the gate could not read the write (`cat file >> "$GITHUB_ENV"`,
-// `done >> "$GITHUB_OUTPUT"`), which the caller treats as a violation.
-function namesPersistedAt(lines, index) {
+// What the write on `index` persists: the `{ name, values }` assignments read
+// from the line itself, from the group it closes and from the heredoc it
+// opens, plus -- when no assignment can be read at all -- the command whose
+// output is being appended (`cat generated.env >> "$GITHUB_ENV"`), so a mask
+// of exactly that output (`::add-mask::$(cat generated.env)`) can still vouch
+// for it. An empty result means the gate could not read the write.
+function persistedAt(lines, index) {
   const line = lines[index];
-  const names = writtenNames(line);
-  if (/^\s*[})]/.test(line)) names.push(...writtenNames(groupLines(lines, index).join('\n')));
   const heredoc = HEREDOC_OPENER.exec(line);
-  if (heredoc) names.push(...writtenNames(heredocLines(lines, index, heredoc[2]).join('\n')));
-  return names;
+  const scope = [line];
+  if (/^\s*[})]/.test(line)) scope.unshift(...groupLines(lines, index));
+  if (heredoc) scope.push(...heredocLines(lines, index, heredoc[2]));
+  const assignments = assignmentsIn(scope, printfArguments(line));
+  if (assignments.length > 0) return assignments;
+  const producer = line
+    .slice(0, PERSISTED_WRITE.exec(line).index)
+    .replace(/\s*[|>]+\s*$/, '')
+    .trim();
+  return producer && !heredoc && !/^[})]/.test(producer)
+    ? [{ name: null, values: [normaliseValue(`$(${producer})`)] }]
+    : [];
 }
 
-// The findings for one step's run body, in source order.
+function describeWrite(index, file, line) {
+  return `line ${index + 1} writes to $${file} (\`${line.trim()}\`)`;
+}
+
+// The findings for one step's run body, in source order. `masked` holds every
+// value expression an earlier live `::add-mask::` printed; a credential is
+// covered only when the value it persists is one of them, so masking an
+// unrelated value earlier in the step vouches for nothing.
 function auditRunBody(run) {
   const lines = run.split(/\r?\n/);
   const findings = [];
-  let masked = false;
+  const masked = new Set();
   lines.forEach((line, index) => {
     if (isShellComment(line)) return;
-    const mask = maskColumn(line);
-    const sink = line.search(PERSISTED_FILE);
-    if (sink >= 0) {
-      const file = PERSISTED_FILE.exec(line)[0];
-      const names = namesPersistedAt(lines, index);
-      const credentials = names.filter(name => CREDENTIAL_NAME.test(name));
-      // A mask printed later on the same line lands after the write, so it does
-      // not count for this line.
-      const maskedHere = masked || (mask >= 0 && mask < sink);
-      if (!maskedHere && names.length === 0) {
-        findings.push(
-          `line ${index + 1} writes to $${file} (\`${line.trim()}\`) but the gate cannot tell ` +
-            `which variable it persists; print ${ADD_MASK} first, or spell the write as ` +
-            `echo "NAME=value" >> "$${file}" so the name can be read.`
+    const write = PERSISTED_WRITE.exec(line);
+    if (write) {
+      const file = write[1];
+      // A mask printed later on the same line lands after the write, so only
+      // the ones before it count for this line.
+      maskedValuesOn(line, write.index).forEach(value => masked.add(value));
+      const persisted = persistedAt(lines, index);
+      const credentials = persisted.filter(
+        entry => entry.name === null || CREDENTIAL_NAME.test(entry.name)
+      );
+      const unreadable = persisted.length === 0 || credentials.some(entry => entry.values === null);
+      const uncovered = credentials
+        .filter(entry => entry.values !== null)
+        .flatMap(entry =>
+          entry.values.filter(value => !masked.has(value)).map(value => ({ entry, value }))
         );
-      } else if (!maskedHere && credentials.length > 0) {
+      if (unreadable || uncovered.every(({ entry }) => entry.name === null)) {
+        if (unreadable || uncovered.length > 0) {
+          const outputs = uncovered.map(({ value }) => value);
+          findings.push(
+            `${describeWrite(index, file, line)} but the gate cannot tell ` +
+              `which variable it persists; print ${ADD_MASK} on exactly what is appended` +
+              `${outputs.length ? ` (${outputs.join(', ')})` : ''} first, or spell the write as ` +
+              `echo "NAME=$VALUE" >> "$${file}" so the name and the value can be read.`
+          );
+        }
+      } else if (uncovered.length > 0) {
+        const names = [...new Set(uncovered.map(({ entry }) => entry.name ?? 'its output'))];
+        const values = [...new Set(uncovered.map(({ value }) => value))];
         findings.push(
-          `line ${index + 1} writes ${credentials.join(', ')} to $${file} without printing ` +
-            `${ADD_MASK} earlier in the same step; mask the value ` +
-            `(echo "${ADD_MASK}$VALUE") before it is persisted, or do not persist it.`
+          `line ${index + 1} writes ${names.join(', ')} to $${file} without printing ` +
+            `${ADD_MASK} for ${values.join(', ')} earlier in the same step; mask the value ` +
+            `that is persisted (echo "${ADD_MASK}$VALUE") before it is persisted, or do not ` +
+            'persist it. A mask of some other value does not cover it.'
         );
       }
     }
-    if (mask >= 0) masked = true;
+    maskedValuesOn(line).forEach(value => masked.add(value));
   });
   return findings;
 }

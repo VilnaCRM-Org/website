@@ -381,8 +381,9 @@ otherwise only hold in production:
   exemption; `.github/sandbox_workflows.md` records the required order.
 - A `run:` step that appends a credential-named variable (`TOKEN`, `SECRET`,
   `PASSWORD`, `PRIVATE_KEY`, `CREDENTIAL`) to `$GITHUB_ENV` or `$GITHUB_OUTPUT`
-  prints `::add-mask::` earlier in the same step, so the value is redacted
-  before it is persisted into every later step's log.
+  prints `::add-mask::` for that value earlier in the same step, so it is
+  redacted before it is persisted into every later step's log. Masking a
+  different value does not count, and a read of the file is not a write.
 
 #### Adding a page under `pages/`
 

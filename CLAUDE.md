@@ -585,9 +585,11 @@ Production-facing invariants that no other gate watches. Extend them; never rela
   `pull_request_target`, `merge_group`, `push`, `schedule`, `workflow_dispatch` and
   `workflow_run` are never exempt. **F — mask before write:** a `run:` step that appends a
   variable named like a credential (`TOKEN`, `SECRET`, `PASSWORD`, `PRIVATE_KEY`,
-  `CREDENTIAL`) to `$GITHUB_ENV` or `$GITHUB_OUTPUT` must print `::add-mask::` earlier in
-  the same step, and a write whose variable name the gate cannot read is reported rather
-  than guessed. Both read the parsed `run:` string and the parsed job, never the workflow
+  `CREDENTIAL`) to `$GITHUB_ENV` or `$GITHUB_OUTPUT` must print `::add-mask::` for **that
+  value** earlier in the same step — a mask of some other value covers nothing — and a
+  write whose variable or value the gate cannot read is reported rather than guessed. Only
+  a write counts (`>>`, `>`, `tee`, PowerShell's `Out-File`/`Add-Content`, cmd's
+  `>>%GITHUB_ENV%`); a line that merely reads the file is not one. Both read the parsed `run:` string and the parsed job, never the workflow
   text, so a key or a mask that survives only in a comment does not count. `make
 lint-workflows` (zizmor) audits `.github/actions/` alongside `.github/workflows/` for the
   same reason: the composite is where a mutable action tag could otherwise hide.

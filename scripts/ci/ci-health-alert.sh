@@ -120,18 +120,25 @@ close_alert() {
 # critical/high, or rule severity error); tests/bats/security_workflows.bats
 # pins the pair against drift. Failing to read is not fatal -- the issue is
 # still worth filing with just the run link -- hence the `|| true` at the call.
+#
+# A quoted heredoc, as in code-scanning-gate.sh: $sec / $sev are jq variables
+# and must reach jq unexpanded without the shell ever reading them as
+# parameters. `read -d ''` consumes the whole filter and reports EOF, hence
+# the `|| true`.
+IFS= read -r -d '' JQ_DIGEST <<'JQ_FILTER' || true
+  .[]
+  | (.rule.security_severity_level // "" | ascii_downcase) as $sec
+  | (.rule.severity // "" | ascii_downcase) as $sev
+  | select($sec == "critical" or $sec == "high" or $sev == "error")
+  | (if $sec == "" then $sev else $sec end) as $label
+  | (.most_recent_instance.location.path // "n/a") as $path
+  | "- [\($label)] \(.rule.id) in \($path) — \(.html_url)"
+JQ_FILTER
+
 code_scanning_digest() {
   gh api -X GET "repos/$REPO/code-scanning/alerts" \
     -f ref=refs/heads/main -f state=open -f tool_name=CodeQL \
-    -F per_page=100 --paginate --jq '
-      .[]
-      | (.rule.security_severity_level // "" | ascii_downcase) as $sec
-      | (.rule.severity // "" | ascii_downcase) as $sev
-      | select($sec == "critical" or $sec == "high" or $sev == "error")
-      | (if $sec == "" then $sev else $sec end) as $label
-      | (.most_recent_instance.location.path // "n/a") as $path
-      | "- [\($label)] \(.rule.id) in \($path) — \(.html_url)"
-    '
+    -F per_page=100 --paginate --jq "$JQ_DIGEST"
 }
 
 require_workflow_name() {
