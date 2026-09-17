@@ -29,13 +29,19 @@ const mockUseSwagger = jest.mocked(useSwagger);
 
 describe('integration: Swagger page', () => {
   beforeEach(() => {
-    mockUseSwagger.mockReturnValue({ error: null, swaggerContent: null });
+    mockUseSwagger.mockReturnValue({
+      error: null,
+      swaggerContent: null,
+      loading: true,
+      retry: jest.fn(),
+    });
   });
 
-  it('renders the navigation within the page wrapper and switches language on mount', () => {
+  it('renders the back link within the page wrapper', () => {
     render(<Swagger />);
 
-    expect(screen.getByText(t('navigation.navigate_to_home_page'))).toBeInTheDocument();
-    expect(screen.getByRole('navigation')).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: t('navigation.navigate_to_home_page') })
+    ).toHaveAttribute('href', '/');
   });
 });

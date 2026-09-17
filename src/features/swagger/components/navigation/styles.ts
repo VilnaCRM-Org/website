@@ -7,7 +7,8 @@ export default {
       marginBottom: '1.063rem',
     },
   },
-  navigationButton: {
+  navigationLink: {
+    display: 'flex',
     alignItems: 'center',
     gap: '0.5rem',
     cursor: 'pointer',

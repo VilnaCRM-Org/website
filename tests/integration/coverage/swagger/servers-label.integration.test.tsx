@@ -69,6 +69,8 @@ describe('integration: servers label plugin', () => {
     jest.mocked(useSwagger).mockReturnValue({
       error: null,
       swaggerContent: { openapi: '3.0.0' },
+      loading: false,
+      retry: jest.fn(),
     });
 
     render(<ApiDocumentation />);

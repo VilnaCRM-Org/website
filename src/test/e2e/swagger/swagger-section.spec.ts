@@ -1,4 +1,8 @@
 import { test, expect, type Locator } from '@playwright/test';
+import i18n from 'i18next';
+
+import { INTERACTION_STATES } from '../../a11y/interaction-states';
+import { scanInteractionState } from '../../a11y/scan-interaction-state';
 
 import {
   getLocators,
@@ -131,5 +135,63 @@ test.describe('User Section', () => {
   test('should have navigation working', async ({ page }) => {
     await elements.navigation.click();
     await expect(page).toHaveURL('/');
+  });
+
+  test('the back link is reachable and operable from the keyboard', async ({ page }) => {
+    await elements.navigation.focus();
+    await expect(elements.navigation).toBeFocused();
+
+    await page.keyboard.press('Enter');
+
+    await expect(page).toHaveURL('/');
+  });
+});
+
+test.describe('Swagger schema failure', () => {
+  const en: (key: string) => string = i18n.getFixedT('en');
+  const SCHEMA_ROUTE: string = '**/swagger-schema.json';
+
+  test('shows a localized alert with a working retry when the schema cannot be loaded', async ({
+    page,
+  }) => {
+    await page.route(SCHEMA_ROUTE, route => route.abort());
+    await page.goto(TEST_CONSTANTS.SWAGGER_PATH, { waitUntil: 'domcontentloaded' });
+
+    // Scoped to the page body: Next's route announcer is a second, empty
+    // `role="alert"` outside `main`.
+    const alert: Locator = page.getByRole('main').getByRole('alert');
+    await expect(alert).toHaveText(en('api_documentation.error.message'));
+    const retry: Locator = page.getByRole('button', {
+      name: en('api_documentation.error.retry'),
+    });
+    await expect(retry).toBeVisible();
+    await expect(page.locator(TEST_CONSTANTS.SELECTORS.API_DOCUMENTATION)).toHaveCount(0);
+
+    // The alert and the retry control only exist in this state, which no
+    // initial-load scan ever sees (#369).
+    await scanInteractionState(page, INTERACTION_STATES.swaggerLoadFailed);
+
+    await page.unroute(SCHEMA_ROUTE);
+    await retry.click();
+
+    await expect(page.locator(TEST_CONSTANTS.SELECTORS.API_DOCUMENTATION)).toBeVisible({
+      timeout: 15000,
+    });
+    await expect(alert).toHaveCount(0);
+  });
+
+  test('a retry that fails again hands focus to the retry control', async ({ page }) => {
+    await page.route(SCHEMA_ROUTE, route => route.abort());
+    await page.goto(TEST_CONSTANTS.SWAGGER_PATH, { waitUntil: 'domcontentloaded' });
+
+    const retry: Locator = page.getByRole('button', {
+      name: en('api_documentation.error.retry'),
+    });
+    await expect(retry).toBeVisible();
+    await expect(retry).not.toBeFocused();
+
+    await retry.click();
+
+    await expect(retry).toBeFocused();
   });
 });

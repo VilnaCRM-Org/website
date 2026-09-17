@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 type UseSwaggerReturn = {
   swaggerContent: unknown | null;
   error: Error | null;
+  loading: boolean;
+  retry: () => void;
 };
 
 const DEFAULT_SWAGGER_SCHEMA_URL = '/swagger-schema.json';
@@ -40,10 +42,16 @@ const useSwagger: (schemaUrl?: string) => UseSwaggerReturn = (
 ) => {
   const [swaggerContent, setSwaggerContent] = useState<unknown | null>(null);
   const [error, setError] = useState<Error | null>(null);
+  const [attempt, setAttempt] = useState<number>(0);
 
-  useEffect(() => loadSwaggerSchema(schemaUrl, setSwaggerContent, setError), [schemaUrl]);
+  useEffect(() => loadSwaggerSchema(schemaUrl, setSwaggerContent, setError), [schemaUrl, attempt]);
 
-  return { swaggerContent, error };
+  const retry: () => void = useCallback((): void => {
+    setError(null);
+    setAttempt((previous: number): number => previous + 1);
+  }, []);
+
+  return { swaggerContent, error, loading: swaggerContent === null && error === null, retry };
 };
 
 export default useSwagger;
