@@ -62,7 +62,7 @@ describe('integration: SwaggerPage', () => {
     });
   });
 
-  it('shows a named loading status while the Swagger chunk loads, then renders the page', async () => {
+  it('shows a named loading status while the chunk loads, then renders the page', async () => {
     render(<SwaggerPage />);
 
     // The spinner itself is aria-hidden (an unnamed progressbar is an axe
