@@ -169,6 +169,9 @@
         "fullText": "I have read and accept the <1>Privacy Policy</1> and the <3>Use Policy</3> VilnaCRM Service"
       },
       "button_text": "Sign-Up",
+      "honeypot": {
+        "label": "Leave this field empty"
+      },
       "error_text": "There was an error. Please check again"
     }
   },

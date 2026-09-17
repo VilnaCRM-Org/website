@@ -12,6 +12,8 @@
  *    success notification shown, email lower-cased before submit.
  *  - error: catch path sets error text + ERROR notification, form NOT reset.
  *  - retry: clicking retry re-fires the mutation.
+ *  - honeypot: a filled trap never reaches fetch, yet the UI answers as success
+ *    and the form resets — the response a script cannot tell from a real one.
  *  - AuthSection composition renders SignUpText + AuthForm + social links.
  */
 import { ApolloProvider } from '@apollo/client/react';
@@ -99,6 +101,24 @@ describe('integration: AuthLayout', () => {
 
     expect(screen.getByText(successTitle)).not.toBeVisible();
     expect(screen.queryByText(errorTitle)).not.toBeInTheDocument();
+  });
+
+  it('answers a filled honeypot like a success without ever calling fetch', async () => {
+    renderLayout();
+    const honeypot: HTMLInputElement | null = document.querySelector('input[name="Referral"]');
+    expect(honeypot).not.toBeNull();
+    fireEvent.change(honeypot!, { target: { value: 'https://spam.example' } });
+
+    fillAndSubmit();
+
+    await waitFor(() => expect(screen.getByText(successTitle)).toBeVisible());
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(screen.queryByText(errorTitle)).not.toBeInTheDocument();
+    // The same reset a real success triggers, so the trip is indistinguishable.
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText(emailPlaceholder)).toHaveValue('');
+      expect(honeypot).toHaveValue('');
+    });
   });
 
   it('shows the loader, lower-cases the email, resets the form and shows success', async () => {

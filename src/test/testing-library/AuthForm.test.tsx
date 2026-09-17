@@ -436,6 +436,32 @@ describe('AuthForm', () => {
     await expectNoA11yViolations(container);
   });
 
+  it('carries an anti-automation honeypot that no person or assistive technology reaches', () => {
+    // #380 F1. The field is a real react-hook-form control so a filled value
+    // reaches the submit handler, but it is inert (no focus, no hit-testing, no
+    // AT exposure), hidden from the accessibility tree, out of the Tab order for
+    // engines without `inert`, and opted out of autofill. jsdom cannot run axe's
+    // `aria-hidden-focus`, so the attributes are pinned here one by one.
+    const { container, getAllByRole } = renderAuthForm();
+
+    const honeypot: HTMLInputElement | null = container.querySelector('input[name="Referral"]');
+    expect(honeypot).not.toBeNull();
+    expect(honeypot).toHaveAttribute('type', 'text');
+    expect(honeypot).toHaveAttribute('tabindex', '-1');
+    expect(honeypot).toHaveAttribute('autocomplete', 'off');
+    expect(honeypot!.closest('[aria-hidden="true"]')).not.toBeNull();
+    expect(honeypot!.closest('[inert]')).not.toBeNull();
+    expect(container.querySelector(`label[for="${honeypot!.id}"]`)).toHaveTextContent(
+      t('sign_up.form.honeypot.label')
+    );
+    // Name and email are the form's text boxes (password inputs have no role);
+    // the trap is not a third one.
+    expect(getAllByRole('textbox').map(box => box.getAttribute('name'))).toEqual([
+      'FullName',
+      'Email',
+    ]);
+  });
+
   it('has no WCAG 2.1 AA violations while showing validation errors', async () => {
     const { container, queryByText } = renderAuthForm();
     const { emailInput, passwordInput } = getFormElements();

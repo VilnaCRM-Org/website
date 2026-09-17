@@ -683,7 +683,7 @@ lint-security-txt: ## Validate the published RFC 9116 security.txt (fields + Exp
 lint-placeholders: ## Fail on template placeholder tokens in the shipped sources, env files and README (issue #327)
 	@bash scripts/ci/check-placeholders.sh
 
-lint-prod-guardrails: ## Enforce the production-safety invariants (privileged-workflow alerting, fail-closed edge routing, no source maps)
+lint-prod-guardrails: ## Enforce the production-safety invariants (privileged-workflow alerting, fail-closed edge routing, no source maps, symmetric sandbox lifecycle)
 	$(DEV_READY) $(PM_EXEC) node scripts/ci/lint-prod-guardrails.mjs
 
 # A SEQUENTIAL aggregate, as the help string says: generate-localization leads

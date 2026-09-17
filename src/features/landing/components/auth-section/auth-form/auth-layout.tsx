@@ -68,11 +68,27 @@ function onSignupError(notif: NotificationState, error: unknown): void {
   notif.setIsNotificationOpen(true);
 }
 
+function isAutomatedSubmission(userData: RegisterItem): boolean {
+  return Boolean(userData.Referral);
+}
+
+function onHoneypotTripped(notif: NotificationState): void {
+  reportHandledError(new Error('sign-up honeypot tripped'), {
+    feature: 'landing',
+    action: 'signup-honeypot',
+  });
+  onSignupSuccess(notif);
+}
+
 function buildSubmitHandler(
   signupMutation: SignupMutate,
   notif: NotificationState
 ): (userData: RegisterItem) => Promise<void> {
   return async (userData: RegisterItem): Promise<void> => {
+    if (isAutomatedSubmission(userData)) {
+      onHoneypotTripped(notif);
+      return;
+    }
     const clientID: string = uuidv4();
     try {
       await signupMutation({ variables: { input: buildSignupInput(userData, clientID) } });
@@ -93,7 +109,14 @@ function useSignupForm() {
     formState: { errors },
   } = useForm<RegisterItem>({
     mode: 'onTouched',
-    defaultValues: { FullName: '', Password: '', ConfirmPassword: '', Email: '', Privacy: false },
+    defaultValues: {
+      FullName: '',
+      Password: '',
+      ConfirmPassword: '',
+      Email: '',
+      Privacy: false,
+      Referral: '',
+    },
   });
   const [signupMutation, { loading }] = useMutation<CreateUserPayload, SignupVariables>(
     SIGNUP_MUTATION

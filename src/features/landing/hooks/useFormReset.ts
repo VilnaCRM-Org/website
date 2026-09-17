@@ -20,6 +20,7 @@ const initialFormValues: RegisterItem = {
   Password: '',
   ConfirmPassword: '',
   Privacy: false,
+  Referral: '',
 };
 
 const useFormReset: UseFormResetHook = ({

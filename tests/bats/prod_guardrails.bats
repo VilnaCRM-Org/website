@@ -1,14 +1,15 @@
 #!/usr/bin/env bats
 #
-# Coverage for scripts/ci/lint-prod-guardrails.mjs (issues #383 and #375).
+# Coverage for scripts/ci/lint-prod-guardrails.mjs (issues #383, #375 and #380).
 #
-# The six invariants this gate protects only ever hold in production, where no
+# The seven invariants this gate protects only ever hold in production, where no
 # other PR check watches them: a privileged workflow whose failure nobody is told
 # about, an edge handler that quietly reverts to passing every path to the S3
 # origin, browser source maps published to the CDN, a CloudFront Function source
 # too large for the service to publish, a role-assuming job with no environment
-# protection in front of it, and a credential persisted to $GITHUB_ENV before it
-# is masked out of the log. A gate for that class of
+# protection in front of it, a credential persisted to $GITHUB_ENV before it
+# is masked out of the log, and a sandbox provisioned by an event that no
+# teardown ever pairs with. A gate for that class of
 # regression is only worth having if it is red on the exact regression, so every
 # case below copies the REAL repository files into a fixture and mutates exactly
 # one invariant.
@@ -921,6 +922,105 @@ PY
   [ "$status" -eq 0 ]
 }
 
+# --- Assertion G: the sandbox lifecycle is symmetric ---------------------------
+
+@test "fails when the sandbox creator provisions on a bare branch push" {
+  # The #380 F2 finding: `push: branches-ignore: [main]` provisioned a billed
+  # AWS environment for every branch, and only a pull request closing ever
+  # reaches the deletion pipeline, so a branch that never opened one leaked
+  # its sandbox indefinitely. Assertion E reports the same trigger for the
+  # missing environment; G names the orphaning on its own.
+  local sandbox="$FIXTURE/.github/workflows/sandbox-creating.yml"
+  sed -i '0,/^on:$/s//on:\n  push:\n    branches-ignore:\n      - main/' "$sandbox"
+  grep -q '^  push:$' "$sandbox"
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains '[G]'
+  assert_output_contains 'sandbox-creating.yml starts the "sandbox-creation" pipeline on push'
+  assert_output_contains 'no closed event to tear it down'
+}
+
+@test "a manual dispatch of the sandbox creator is orphaning too" {
+  # workflow_dispatch has no pull request behind it either, so the same
+  # environment is created with nothing to close it.
+  local sandbox="$FIXTURE/.github/workflows/sandbox-creating.yml"
+  sed -i '0,/^on:$/s//on:\n  workflow_dispatch:/' "$sandbox"
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains '[G]'
+  assert_output_contains 'pipeline on workflow_dispatch'
+}
+
+@test "fails when the sandbox deleter drops closed from its pull_request types" {
+  local deleter="$FIXTURE/.github/workflows/sandbox-deleting.yml"
+  sed -i 's/^      - closed$/      - reopened/' "$deleter"
+  grep -q '^      - reopened$' "$deleter"
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains '[G]'
+  assert_output_contains 'sandbox-deleting.yml starts the "sandbox-deletion" pipeline'
+  assert_output_contains 'type "closed"'
+}
+
+@test "a bare pull_request trigger on the deleter does not count as closed" {
+  # Without an explicit types list GitHub runs on opened/synchronize/reopened
+  # only, so the workflow would fire on every push to the PR and never on the
+  # close that reclaims the sandbox.
+  local deleter="$FIXTURE/.github/workflows/sandbox-deleting.yml"
+  sed -i '/^on:$/,/^      - closed$/c\on: [pull_request]' "$deleter"
+  grep -q '^on: \[pull_request\]$' "$deleter"
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains '[G]'
+  assert_output_contains 'type "closed"'
+}
+
+@test "fails closed when no workflow starts the sandbox-deletion pipeline" {
+  rm "$FIXTURE/.github/workflows/sandbox-deleting.yml"
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains '[G]'
+  assert_output_contains 'no workflow under .github/workflows/ starts the "sandbox-deletion" pipeline'
+}
+
+@test "fails closed when no workflow starts the sandbox-creation pipeline" {
+  # A lifecycle the gate cannot see must not pass vacuously: a renamed
+  # pipeline or a provisioning step moved behind a wrapper has to be pointed
+  # at explicitly.
+  sed -i 's/--name "sandbox-creation"/--name "environment-creation"/' \
+    "$FIXTURE/.github/workflows/sandbox-creating.yml"
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains '[G]'
+  assert_output_contains 'no workflow under .github/workflows/ starts the "sandbox-creation" pipeline'
+}
+
+@test "the --name= spelling and a continuation line both identify the pipeline" {
+  # The committed deleter already splits `--name` onto a continuation line; the
+  # creator is rewritten to the `--name=` form so both spellings are proved.
+  sed -i 's/--name "sandbox-creation"/--name=sandbox-creation/' \
+    "$FIXTURE/.github/workflows/sandbox-creating.yml"
+  grep -q -- '--name=sandbox-creation' "$FIXTURE/.github/workflows/sandbox-creating.yml"
+
+  run_guardrails
+  [ "$status" -eq 0 ]
+}
+
+@test "a pipeline name that merely starts with sandbox-creation does not count" {
+  sed -i 's/--name "sandbox-creation"/--name "sandbox-creation-legacy"/' \
+    "$FIXTURE/.github/workflows/sandbox-creating.yml"
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains 'no workflow under .github/workflows/ starts the "sandbox-creation" pipeline'
+}
+
 # --- Reporting -----------------------------------------------------------------
 
 @test "reports every violation in a single run rather than stopping at the first" {
@@ -928,6 +1028,7 @@ PY
   sed -i '/^      - website$/d' "$FIXTURE/.github/workflows/ci-health-alerts.yml"
   sed -i '/^    environment:$/,/^      url: /d' "$FIXTURE/.github/workflows/deploy.yml"
   write_persisting_workflow 'echo "API_TOKEN=$t" >> "$GITHUB_ENV"'
+  sed -i '0,/^on:$/s//on:\n  workflow_dispatch:/' "$FIXTURE/.github/workflows/sandbox-creating.yml"
   sed -i 's/statusCode: 404,/statusCode: 200,/' "$FIXTURE/scripts/cloudfront_routing.js"
   sed -i "s/  output: 'export',/  output: 'export',\n  productionBrowserSourceMaps: true,/" \
     "$FIXTURE/next.config.js"
@@ -942,6 +1043,7 @@ PY
   assert_output_contains '[D]'
   assert_output_contains '[E]'
   assert_output_contains '[F]'
+  assert_output_contains '[G]'
 }
 
 @test "a block comment cannot hide map in the edge extension allow-list" {
