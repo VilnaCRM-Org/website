@@ -44,6 +44,13 @@ serves the new build or the job times out. The readiness probes allow roughly te
 minutes; the negative-path probe allows twelve attempts fifteen seconds apart,
 overridable with `SMOKE_ATTEMPTS` and `SMOKE_DELAY`.
 
+That ten-minute window is also the bound the cache policy has to meet: every
+un-hashed object (the route documents, `sw.js`, `swagger-schema.json`) must reflect
+the new build inside it, while everything under `/_next/static/` is
+content-addressed and cached for a year. The classes, the `cache-control` each one
+needs, and which of them the pipeline is and is not yet observed to honour are in
+[`cdn-cache-strategy.md`](cdn-cache-strategy.md).
+
 ### Diagnosing a red negative-path probe
 
 The failure line names every gap in one response, so read all of it:

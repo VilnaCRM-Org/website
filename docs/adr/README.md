@@ -73,6 +73,8 @@ edited afterwards except to change its status.
   targets ADR 0001 implies.
 - [Security headers](../security-headers.md) — why the CloudFront edge is the only
   enforcement point under a static export.
+- [CDN cache strategy](../cdn-cache-strategy.md) — the cache classes the export
+  produces and the `cache-control` contract the pipeline has to meet.
 - The image, font, and transfer-size sustainability policy lives in the
   [frontend performance and accessibility skill][perf-skill], which cites ADR 0001 as
   the delivery model its budgets exist inside. ADR 0001 itself does not reference the
