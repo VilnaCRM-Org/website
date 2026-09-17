@@ -4,7 +4,8 @@
  * Drives the real `useEffect` lifecycle against a stubbed `fetch` to exercise
  * every branch: success, non-ok response, JSON-parse failure, generic network
  * error, the `AbortError` early-return (both still-mounted and on unmount), the
- * `schemaUrl` refetch, and the abort-on-unmount cleanup.
+ * `schemaUrl` refetch, the abort-on-unmount cleanup, and the `retry` path that
+ * clears a failure and re-issues the same request.
  */
 import { act, renderHook, waitFor } from '@testing-library/react';
 
@@ -28,13 +29,37 @@ describe('integration: useSwagger', () => {
     abortSpy?.mockRestore();
   });
 
-  it('starts with empty state', () => {
+  it('starts with empty, loading state', () => {
     fetchSpy = jest.spyOn(global, 'fetch').mockReturnValue(new Promise(() => {}));
 
     const { result } = renderHook(() => useSwagger());
 
     expect(result.current.swaggerContent).toBeNull();
     expect(result.current.error).toBeNull();
+    expect(result.current.loading).toBe(true);
+  });
+
+  it('recovers from a failed request when retried', async () => {
+    fetchSpy = jest
+      .spyOn(global, 'fetch')
+      .mockResolvedValueOnce(new Response('x', { status: 500, statusText: 'Server Error' }))
+      .mockResolvedValueOnce(new Response(JSON.stringify(schema), { status: 200 }));
+
+    const { result } = renderHook(() => useSwagger());
+
+    await waitFor(() => expect(result.current.error?.message).toBe(SERVER_ERROR_MESSAGE));
+    expect(result.current.loading).toBe(false);
+
+    act(() => result.current.retry());
+
+    expect(result.current.error).toBeNull();
+    expect(result.current.loading).toBe(true);
+    await waitFor(() => expect(result.current.swaggerContent).toEqual(schema));
+    expect(result.current.loading).toBe(false);
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    expect(fetchSpy).toHaveBeenNthCalledWith(2, '/swagger-schema.json', {
+      signal: expect.anything(),
+    });
   });
 
   it('loads the schema from the default url on mount', async () => {

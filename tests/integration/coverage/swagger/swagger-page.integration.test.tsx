@@ -54,16 +54,24 @@ const mockUseSwagger = jest.mocked(useSwagger);
 
 describe('integration: SwaggerPage', () => {
   beforeEach(() => {
-    mockUseSwagger.mockReturnValue({ error: null, swaggerContent: null });
+    mockUseSwagger.mockReturnValue({
+      error: null,
+      swaggerContent: null,
+      loading: true,
+      retry: jest.fn(),
+    });
   });
 
-  it('shows a spinner while the Swagger chunk loads, then renders the page', async () => {
+  it('shows a named loading status while the chunk loads, then renders the page', async () => {
     render(<SwaggerPage />);
 
-    expect(screen.getByRole('progressbar')).toBeInTheDocument();
-
-    expect(await screen.findByRole('navigation')).toBeInTheDocument();
-    expect(screen.getByText(t('navigation.navigate_to_home_page'))).toBeInTheDocument();
+    // The spinner itself is aria-hidden (an unnamed progressbar is an axe
+    // failure); the status region beside it carries the localized message.
+    expect(screen.getByRole('status')).toHaveTextContent(t('api_documentation.loading'));
     expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+
+    expect(
+      await screen.findByRole('link', { name: t('navigation.navigate_to_home_page') })
+    ).toBeInTheDocument();
   });
 });

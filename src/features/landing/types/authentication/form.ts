@@ -4,4 +4,5 @@ export interface RegisterItem {
   Password: string;
   ConfirmPassword: string;
   Privacy: boolean;
+  Referral: string;
 }

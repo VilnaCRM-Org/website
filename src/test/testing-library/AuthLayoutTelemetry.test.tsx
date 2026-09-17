@@ -1,5 +1,5 @@
 import * as Sentry from '@sentry/react';
-import { screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { t } from 'i18next';
 
 import { testInitials, testEmail, testPassword } from './constants';
@@ -44,6 +44,30 @@ describe('AuthLayout telemetry', () => {
     const payload: string = JSON.stringify({ error, context });
     expect(payload).not.toContain(testPassword);
     expect(payload).not.toContain(testEmail);
+  });
+
+  it('reports a tripped honeypot with a static tag and no submitted value', async () => {
+    const { container } = renderAuthLayout([]);
+    const honeypot: HTMLInputElement | null = container.querySelector('input[name="Referral"]');
+    const tripValue: string = 'https://spam.example';
+    fireEvent.change(honeypot!, { target: { value: tripValue } });
+
+    fillForm(testInitials, testEmail, testPassword, true);
+
+    await waitFor(() => {
+      expect(captureException).toHaveBeenCalledTimes(1);
+    });
+
+    const [error, context] = captureException.mock.calls[0] as [
+      unknown,
+      { level: string; tags: Record<string, string> },
+    ];
+
+    expect(context.tags).toEqual({ feature: 'landing', action: 'signup-honeypot' });
+    const payload: string = JSON.stringify({ error: String(error), context });
+    expect(payload).not.toContain(tripValue);
+    expect(payload).not.toContain(testEmail);
+    expect(payload).not.toContain(testPassword);
   });
 
   it('sends nothing when the submission succeeds', async () => {

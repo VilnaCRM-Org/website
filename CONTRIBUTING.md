@@ -356,7 +356,7 @@ weaken the gate.
 
 #### Production safety guardrails
 
-`make lint-prod-guardrails` (inside `make lint`) enforces six invariants that
+`make lint-prod-guardrails` (inside `make lint`) enforces seven invariants that
 otherwise only hold in production:
 
 - Every workflow that assumes an AWS role or cuts a release, on a
@@ -384,6 +384,15 @@ otherwise only hold in production:
   prints `::add-mask::` for that value earlier in the same step, so it is
   redacted before it is persisted into every later step's log. Masking a
   different value does not count, and a read of the file is not a write.
+- The sandbox lifecycle is symmetric (issue #380): the workflow that starts the
+  `sandbox-creation` pipeline triggers on `pull_request` and nothing else, never
+  on the `closed` type (a creator listing it would re-provision the sandbox as
+  the deleter tears it down), and
+  the one that starts `sandbox-deletion` triggers on `pull_request` with
+  `closed` as its only type and on nothing else. A sandbox created by a bare push, a manual dispatch
+  or a schedule has no closing pull request to reclaim it and is billed until
+  someone notices. The gate finds both workflows by the pipeline they start,
+  not by filename, and fails closed when it cannot see either one.
 
 #### Adding a page under `pages/`
 

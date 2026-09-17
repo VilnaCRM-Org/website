@@ -55,7 +55,7 @@ credential stuffing or enumeration probes against the live mutation were invisib
 the application side. `reportHandledError` sends the exception plus two **static** tags
 (`feature`, `action`) and nothing derived from the submitted values; `captureException`
 serialises whatever it is given, so the PII contract is that nothing else is ever passed.
-`auth-layout.tsx` calls it from the submit failure path for the same reason.
+`auth-form/submit-handler.ts` calls it from the submit failure path for the same reason.
 
 **Session replay is masked** (`pages/_app.tsx`). The only interactive surface is this
 form, so an unmasked replay would record the password field keystroke by keystroke.
@@ -133,6 +133,75 @@ English identifier screen readers used to announce verbatim.
   same value, so it matched only while the form was at its minimum height; the extra
   field made the card taller and left the notification ending short of the section on
   every viewport wider than `sm`. The per-breakpoint `minHeight` values remain as floors.
+
+## F5 — Anti-automation and the abuse-case threat model (issue #380)
+
+### Threat model
+
+The form fires `createUser` at an unauthenticated GraphQL endpoint, the one business
+flow on the site (OWASP A04:2021, API4:2023, API6:2023). Every control this repository
+can hold is client-side, so the model is written down here to keep that limit visible.
+
+- **Mail-bombing a victim address with confirmation emails** (a script against the
+  API). Authoritative control: the user-service's per-IP / per-email rate limit and
+  coalesced confirmation emails per address. Held here: the honeypot below, and the
+  mutation is never issued while a submission is in flight.
+- **Squatting attacker-chosen addresses before their owners register** (a script
+  against the API). Authoritative control: confirmation before the address is reserved
+  and expiry of unconfirmed accounts. Held here: nothing — the client cannot decide
+  ownership.
+- **Enumerating registered addresses from error text** (a script or a browser).
+  Authoritative control: generic, non-enumerating server responses. Held here:
+  `handleApolloError` renders one generic message and `graphQLErrors[].message` is never
+  echoed.
+- **Driving transactional-email cost through a headless browser.** Authoritative
+  control: the user-service rate limit. Held here: the honeypot, and the submit and retry
+  buttons are disabled while `loading`.
+- **Credential stuffing.** Not applicable — registration accepts new credentials and
+  verifies none; the password policy (F4) only shapes what can be created.
+
+Scripts that call the API directly bypass every row of the last column; that is why the
+server-side column is marked authoritative and this note is not a substitute for it. The
+sandbox-cost half of #380 (an orphaned AWS environment per branch push) is a CI/CD
+control, held by assertion G of `make lint-prod-guardrails`.
+
+### The honeypot (`auth-form/honeypot-field.tsx`, `auth-form/submit-handler.ts`)
+
+`Referral` is a react-hook-form field that a person never sees and never reaches. Its
+wrapper is `inert`, which removes focus, hit-testing and assistive-technology exposure in
+one attribute (React 19 renders the boolean natively) and is also what keeps browser
+autofill away — Chrome only writes focusable fields. The wrapper is the same 1px clipped
+box as the password-policy statement (F4) rather than `display: none`, which crawlers
+detect and skip. `aria-hidden="true"` and `tabIndex={-1}` on the input back the same
+guarantees on engines without `inert`; `tabindex="-1"` is also what makes `aria-hidden`
+valid — axe's `aria-hidden-focus` accepts a hidden subtree only when nothing in it is
+tabbable. `autoComplete="off"` and a field name that appears in no browser address
+profile and no password-manager identity schema (`Website` and `Company` both do)
+keep a password manager from filling it on a human's behalf. The label is a real
+`<label>` reading "Leave this field empty", so a tool that does surface it still says
+what to do.
+
+The field carries **no validation rule**. A rule would let react-hook-form's
+`shouldFocusError` move focus into the hidden input on submit, where it vanishes for a
+keyboard user and Chromium un-hides the subtree to announce the trap. The check lives at
+the top of `buildSubmitHandler` instead: a submission whose `Referral` is non-empty
+skips the mutation and drives the **same** success path a real submission does — the
+success notification, the form reset. Responding identically is the point; a distinct
+response (an error, a silent no-op) tells a script which of its inputs tripped the
+control. Each trip is reported through `reportHandledError` with the static tag
+`signup-honeypot` and no submitted value, so the false-positive rate is measurable
+rather than assumed. The residual cost is that a person whose extension filled every
+text field, inert or not, sees a success message and receives no email; the accessibility
+review asked for a generic recovery line in the success notification ("if the email has
+not arrived, contact …") to cover that case, and it is left for a copy change with its
+own visual baselines rather than folded into this one.
+
+`src/test/testing-library/AuthForm.test.tsx` pins the field's shape (inert, hidden,
+untabbable, unautofilled, not one of the form's text boxes),
+`AuthLayout.test.tsx` pins that a filled trap never issues the mutation and still
+renders the success notification, and `AuthLayoutTelemetry.test.tsx` pins the tag and
+that the payload carries none of the submitted values. `buildSignupInput` reads the four
+credential fields by name, so the trap's value can never reach the mutation variables.
 
 ## Error copy (`src/features/landing/helpers/handleApolloError.ts`)
 

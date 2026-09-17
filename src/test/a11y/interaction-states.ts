@@ -55,6 +55,11 @@ export const INTERACTION_STATES = {
     route: '/swagger',
     description: 'swagger authorize dialog open',
   },
+  /** The Swagger page after the OpenAPI document failed to load: alert + retry. */
+  swaggerLoadFailed: {
+    route: '/swagger',
+    description: 'swagger schema failed to load, showing the alert and retry control',
+  },
 } as const satisfies Record<string, A11yInteractionState>;
 
 /** The registry key of one scanned interaction state. */

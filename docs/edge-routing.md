@@ -175,3 +175,7 @@ availability.
   export.
 - `scripts/ci/smoke-response-shape.sh` — the deployed distribution's negative path,
   after every production deploy once `PRODUCTION_SITE_URL` is set.
+
+The `cache-control` the function sets on the synthetic 404 is one of three cache classes
+the export produces; the other two, and who owns their headers, are in
+[`cdn-cache-strategy.md`](cdn-cache-strategy.md).

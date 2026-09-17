@@ -34,11 +34,16 @@
     }
   },
   "navigation": {
-    "navigate_to_home_page": "На головну сторінку",
-    "back_arrow_description": "Іконка стрілки назад"
+    "navigate_to_home_page": "На головну сторінку"
   },
   "api_documentation": {
-    "servers_label": "Сервер API"
+    "servers_label": "Сервер API",
+    "loading": "Завантаження документації API",
+    "loaded": "Документацію API завантажено",
+    "error": {
+      "message": "Не вдалося завантажити документацію API.",
+      "retry": "Спробувати ще раз"
+    }
   },
   "footer": {
     "logo_alt": "Vilna логотип",

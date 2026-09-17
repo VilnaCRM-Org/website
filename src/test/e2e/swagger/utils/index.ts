@@ -1,4 +1,11 @@
 import type { Locator, Page } from '@playwright/test';
+import i18n from 'i18next';
+
+import '../../utils/initializeLocalization';
+
+// `/swagger` is an English route (`resolveRouteLocale`), whatever the ambient
+// language the localization bootstrap initialises.
+const en: (key: string) => string = i18n.getFixedT('en');
 
 export type UserEndpoints = {
   GET_COLLECTION: string;
@@ -89,7 +96,6 @@ export const getUserEndpoints: (page: Page) => GetUserEndpoints = (
 
 export type Selectors = {
   API_DOCUMENTATION: string;
-  NAVIGATION: string;
   AUTHORIZE_BUTTON: string;
   ENDPOINTS: string;
   SCHEME_CONTAINER: string;
@@ -101,7 +107,6 @@ export type Selectors = {
 };
 export const SELECTORS: Selectors = {
   API_DOCUMENTATION: '.swagger-ui',
-  NAVIGATION: 'div[role="navigation"]',
   AUTHORIZE_BUTTON: 'button.authorize',
   ENDPOINTS: '.opblock',
   SCHEME_CONTAINER: '.scheme-container',
@@ -125,7 +130,7 @@ export const TEST_CONSTANTS: TestConstants = {
 };
 export const getLocators: (page: Page) => SwaggerLocators = (page: Page): SwaggerLocators => ({
   apiDocumentation: page.locator(TEST_CONSTANTS.SELECTORS.API_DOCUMENTATION),
-  navigation: page.locator(TEST_CONSTANTS.SELECTORS.NAVIGATION),
+  navigation: page.getByRole('link', { name: en('navigation.navigate_to_home_page') }),
   authorizeButton: page.locator(TEST_CONSTANTS.SELECTORS.AUTHORIZE_BUTTON),
   endpoints: page.locator(TEST_CONSTANTS.SELECTORS.ENDPOINTS),
   schemeContainer: page.locator(TEST_CONSTANTS.SELECTORS.SCHEME_CONTAINER),

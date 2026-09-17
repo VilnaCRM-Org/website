@@ -6,6 +6,8 @@
 // take effect at all.
 import { test, expect, Locator, Page } from '@playwright/test';
 
+import { t } from '../utils/initializeLocalization';
+
 // Pixel 7's CSS viewport and pixel ratio, spelled out on purpose: the assertion
 // is that the page adopts the *device* metrics, so reading the expectation back
 // out of the same browser would assert nothing. Keep in sync with the
@@ -13,10 +15,10 @@ import { test, expect, Locator, Page } from '@playwright/test';
 const DEVICE_VIEWPORT_WIDTH: number = 412;
 const DEVICE_PIXEL_RATIO: number = 2.625;
 
-// The picture element is keyed on the viewport, and its `alt` is a literal that
-// the component passes through `t()` with no matching key, so it renders
-// verbatim — it is an identifier here, not localized copy.
-const MAIN_IMAGE_ALT: string = 'Main image';
+// The picture element is keyed on the viewport; its `alt` is the localized
+// product description of the ambient (Ukrainian) landing, which is what names
+// the image for `getByRole`.
+const MAIN_IMAGE_ALT: string = t('about_vilna.image_alt');
 
 type DeviceMetrics = {
   innerWidth: number;

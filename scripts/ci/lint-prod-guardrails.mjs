@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-// Production-safety guardrail gate (issues #383 and #375).
+// Production-safety guardrail gate (issues #383, #375 and #380).
 //
-// Six invariants only ever hold in production, where no PR check watches
+// Seven invariants only ever hold in production, where no PR check watches
 // them, so each has already regressed silently at least once in this class of
 // repo. This gate is hermetic (it reads committed files, never the network) and
 // therefore runs inside `make lint` on every PR:
@@ -50,6 +50,20 @@
 //      write whose variable or value the gate cannot read is reported too:
 //      fail closed rather than guess. A line that only reads the file
 //      (`test -w "$GITHUB_ENV"`) is not a write.
+//   G. The sandbox lifecycle is symmetric. The workflow that starts the
+//      `sandbox-creation` CodePipeline must run on `pull_request` and nothing
+//      else, never on the `closed` type (which would provision the sandbox
+//      again as it is torn down), and the workflow that starts
+//      `sandbox-deletion` must run on `pull_request` with `closed` as its only
+//      type and on nothing else. Every provisioned
+//      environment is billed until the deletion pipeline reclaims it, and
+//      that pipeline is only ever reached through a pull request closing --
+//      so a sandbox created from a bare branch push, a manual dispatch or a
+//      schedule has no matching teardown event and is orphaned at AWS cost
+//      (issue #380 F2, the `push: branches-ignore: [main]` trigger that
+//      #375 removed). The two workflows are found by the pipeline each one
+//      starts, not by filename, and the assertion fails closed when neither
+//      half is found rather than passing over a lifecycle it cannot see.
 //
 // Collect-all-then-fail: every violation is reported in one run.
 import fs from 'node:fs';
@@ -111,6 +125,14 @@ const WRITTEN_NAME = /(?<![\w$])([A-Za-z_][\w-]*)(=|<<)/g;
 // as distinct from the `NAME<<EOF` value form, where `<<` abuts the name, and
 // from a `<<<` here-string.
 const HEREDOC_OPENER = /(?<![\w<])<<(?!<)-?\s*(['"]?)([A-Za-z_]\w*)\1/;
+// Assertion G. The lifecycle is keyed on the pipeline a step starts; the
+// `--name` may sit on a continuation line after `\` or be spelled `--name=`,
+// so the match spans lines and both spellings.
+const SANDBOX_PIPELINE_START = /\baws\s+codepipeline\s+start-pipeline-execution\b/;
+const SANDBOX_CREATION_PIPELINE = 'sandbox-creation';
+const SANDBOX_DELETION_PIPELINE = 'sandbox-deletion';
+const SANDBOX_CREATION_TRIGGER = 'pull_request';
+const SANDBOX_TEARDOWN_TYPE = 'closed';
 const RELEASE_ACTIONS = [
   'actions/create-release',
   'softprops/action-gh-release',
@@ -800,6 +822,110 @@ function assertEdgeFunctionsFitQuota() {
   });
 }
 
+function startsPipeline(step, pipeline) {
+  const run = runOf(step);
+  if (!SANDBOX_PIPELINE_START.test(run)) return false;
+  return new RegExp(`--name[\\s=]+["']?${pipeline}["']?(?![\\w-])`).test(run);
+}
+
+function workflowsStarting(workflows, pipeline) {
+  return workflows.filter(workflow =>
+    stepsOf(workflow.doc).some(step => startsPipeline(step, pipeline))
+  );
+}
+
+function assertSandboxCreationOnlyOnPullRequests(workflows) {
+  const creators = workflowsStarting(workflows, SANDBOX_CREATION_PIPELINE);
+  if (creators.length === 0) {
+    fail(
+      'G',
+      `no workflow under ${WORKFLOW_DIR}/ starts the "${SANDBOX_CREATION_PIPELINE}" pipeline, so ` +
+        'the sandbox lifecycle cannot be audited; if provisioning moved, point this assertion ' +
+        'at it.'
+    );
+    return;
+  }
+  creators.forEach(workflow => {
+    const keys = triggerKeys(workflow.triggers);
+    const extra = keys.filter(key => key !== SANDBOX_CREATION_TRIGGER);
+    if (!keys.includes(SANDBOX_CREATION_TRIGGER) || extra.length > 0) {
+      fail('G', creatorTriggerFailure(workflow.file, extra));
+      return;
+    }
+    if (pullRequestTypesOf(workflow.triggers).includes(SANDBOX_TEARDOWN_TYPE)) {
+      fail(
+        'G',
+        `${WORKFLOW_DIR}/${workflow.file} starts the "${SANDBOX_CREATION_PIPELINE}" pipeline on ` +
+          `${SANDBOX_CREATION_TRIGGER} type "${SANDBOX_TEARDOWN_TYPE}", the event that starts ` +
+          'the deletion pipeline: the sandbox would be provisioned again as it is torn down ' +
+          `and orphaned. Remove "${SANDBOX_TEARDOWN_TYPE}" from its types.`
+      );
+    }
+  });
+}
+
+function pullRequestTypesOf(triggers) {
+  const trigger = triggers?.[SANDBOX_CREATION_TRIGGER];
+  return Array.isArray(trigger?.types) ? trigger.types.map(String) : [];
+}
+
+// A creator with no `pull_request` trigger at all (`on: {}`, or a missing `on`)
+// is the other way the lifecycle breaks: nothing is orphaned, but no pull
+// request ever gets a sandbox, and the workflow is still the one this gate
+// located as the provisioner, so it must not read as compliant.
+function creatorTriggerFailure(file, extra) {
+  const head = `${WORKFLOW_DIR}/${file} starts the "${SANDBOX_CREATION_PIPELINE}" pipeline`;
+  if (extra.length > 0) {
+    return (
+      `${head} on ${extra.join(', ')}; a sandbox provisioned outside a pull request has no ` +
+      'closed event to tear it down and is billed until someone notices. Keep ' +
+      `${SANDBOX_CREATION_TRIGGER} as its only trigger.`
+    );
+  }
+  return (
+    `${head} but has no ${SANDBOX_CREATION_TRIGGER} trigger at all, so no pull request is ever ` +
+    `provisioned a sandbox. Give it ${SANDBOX_CREATION_TRIGGER} as its only trigger.`
+  );
+}
+
+// Exactly `on: pull_request: types: [closed]` and nothing else. A missing
+// `closed` never reclaims a sandbox; an extra type (`opened`) or an extra
+// trigger (`workflow_dispatch`, `push`) starts the deletion pipeline while the
+// pull request's sandbox is still in use, or with no pull request at all.
+function tearsDownOnlyOnClose(triggers) {
+  const keys = triggerKeys(triggers);
+  const types = pullRequestTypesOf(triggers);
+  return (
+    keys.length === 1 &&
+    keys[0] === SANDBOX_CREATION_TRIGGER &&
+    types.length === 1 &&
+    types[0] === SANDBOX_TEARDOWN_TYPE
+  );
+}
+
+function assertSandboxDeletionOnPullRequestClose(workflows) {
+  const deleters = workflowsStarting(workflows, SANDBOX_DELETION_PIPELINE);
+  if (deleters.length === 0) {
+    fail(
+      'G',
+      `no workflow under ${WORKFLOW_DIR}/ starts the "${SANDBOX_DELETION_PIPELINE}" pipeline, so ` +
+        'every sandbox the creation pipeline provisions is orphaned; restore the teardown workflow.'
+    );
+    return;
+  }
+  deleters.forEach(workflow => {
+    if (tearsDownOnlyOnClose(workflow.triggers)) return;
+    fail(
+      'G',
+      `${WORKFLOW_DIR}/${workflow.file} starts the "${SANDBOX_DELETION_PIPELINE}" pipeline ` +
+        `but is not triggered by ${SANDBOX_CREATION_TRIGGER} with "${SANDBOX_TEARDOWN_TYPE}" as ` +
+        'its only type and no other trigger. Without "closed" (the default types are ' +
+        'opened/synchronize/reopened) a closed pull request never reclaims its sandbox; with ' +
+        'any other type or trigger the deletion pipeline runs against a sandbox still in use.'
+    );
+  });
+}
+
 const workflows = loadWorkflows();
 const localActions = loadLocalActions();
 assertPrivilegedWorkflowsAreAlerted(workflows);
@@ -809,6 +935,8 @@ assertNoProductionSourceMaps();
 assertEdgeFunctionsFitQuota();
 assertRoleAssumingJobsDeclareEnvironment(workflows, localActions);
 assertCredentialsMaskedBeforePersisting(workflows, localActions);
+assertSandboxCreationOnlyOnPullRequests(workflows);
+assertSandboxDeletionOnPullRequestClose(workflows);
 
 if (failures.length > 0) {
   failures.forEach(failure => console.error(`::error::prod-guardrails: ${failure}`));

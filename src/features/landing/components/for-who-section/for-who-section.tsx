@@ -21,10 +21,16 @@ import styles from './styles';
 
 type ImgAttrs = React.ImgHTMLAttributes<HTMLImageElement>;
 
-const getImageProps: (src: string | StaticImageData, alt?: string) => ImgAttrs = (src, alt = '') =>
-  getOptimizedImageProps({ src, alt }).props;
+const getImageProps: (src: string | StaticImageData) => ImgAttrs = src =>
+  getOptimizedImageProps({ src, alt: '' }).props;
 
-function DecorativeImage({ src, sx }: { src: string; sx: SxProps<Theme> }): React.ReactElement {
+function DecorativeImage({
+  src,
+  sx,
+}: {
+  src: string | StaticImageData;
+  sx: SxProps<Theme>;
+}): React.ReactElement {
   return <Box component="img" {...getImageProps(src)} aria-hidden="true" sx={sx} loading="lazy" />;
 }
 
@@ -44,22 +50,13 @@ function ForWhoShapes(): React.ReactElement {
 }
 
 function ForWhoScreens(): React.ReactElement {
-  const { t, i18n } = useTranslation();
+  const { i18n } = useTranslation();
   const screenshots: ProductScreenshots = productScreenshotsFor(i18n.language);
-
-  const bigScreenProps: ImgAttrs = getImageProps(
-    screenshots.desktop,
-    t('for_who.image_alt.big_screen')
-  );
-  const smallScreenProps: ImgAttrs = getImageProps(
-    screenshots.mobile,
-    t('for_who.image_alt.small_screen')
-  );
 
   return (
     <Box sx={styles.square}>
-      <Box component="img" {...bigScreenProps} sx={styles.bigScreen} loading="lazy" />
-      <Box component="img" {...smallScreenProps} sx={styles.smallScreen} loading="lazy" />
+      <DecorativeImage src={screenshots.desktop} sx={styles.bigScreen} />
+      <DecorativeImage src={screenshots.mobile} sx={styles.smallScreen} />
       <DecorativeImage src={waves} sx={styles.waves} />
       <DecorativeImage src={hexagon} sx={styles.hexagon} />
       <DecorativeImage src={triangle} sx={styles.triangle} />

@@ -2,14 +2,9 @@ import { useMutation } from '@apollo/client/react';
 import { Box, CircularProgress, Fade } from '@mui/material';
 import React from 'react';
 import { useForm } from 'react-hook-form';
-import { v4 as uuidv4 } from 'uuid';
 
-import { reportHandledError } from '@/lib/telemetry/report-error';
-
-import { SignUpInput } from '../../../api/service/types';
 import SIGNUP_MUTATION from '../../../api/service/userService';
 import { animationTimeout } from '../../../constants';
-import { handleApolloError } from '../../../helpers/handleApolloError';
 import useFormReset from '../../../hooks/useFormReset';
 import { RegisterItem } from '../../../types/authentication/form';
 import Notification from '../../notification/notification';
@@ -17,6 +12,7 @@ import { NotificationStatus } from '../../notification/types';
 
 import AuthForm from './auth-form';
 import styles from './styles';
+import { buildSubmitHandler } from './submit-handler';
 import { CreateUserPayload, SignupVariables } from './types';
 
 function FormLoader(): React.ReactElement {
@@ -44,45 +40,6 @@ function useNotificationState() {
   };
 }
 
-type NotificationState = ReturnType<typeof useNotificationState>;
-type SignupMutate = (options: { variables: SignupVariables }) => Promise<unknown>;
-
-function buildSignupInput(userData: RegisterItem, clientID: string): SignUpInput {
-  return {
-    email: userData.Email.toLowerCase(),
-    initials: userData.FullName,
-    password: userData.Password,
-    clientMutationId: clientID,
-  };
-}
-
-function onSignupSuccess(notif: NotificationState): void {
-  notif.setIsNotificationOpen(true);
-  notif.setNotificationType(NotificationStatus.SUCCESS);
-}
-
-function onSignupError(notif: NotificationState, error: unknown): void {
-  reportHandledError(error, { feature: 'landing', action: 'signup' });
-  notif.setErrorText(handleApolloError({ error }));
-  notif.setNotificationType(NotificationStatus.ERROR);
-  notif.setIsNotificationOpen(true);
-}
-
-function buildSubmitHandler(
-  signupMutation: SignupMutate,
-  notif: NotificationState
-): (userData: RegisterItem) => Promise<void> {
-  return async (userData: RegisterItem): Promise<void> => {
-    const clientID: string = uuidv4();
-    try {
-      await signupMutation({ variables: { input: buildSignupInput(userData, clientID) } });
-      onSignupSuccess(notif);
-    } catch (error) {
-      onSignupError(notif, error);
-    }
-  };
-}
-
 function useSignupForm() {
   const notif = useNotificationState();
   const {
@@ -93,7 +50,14 @@ function useSignupForm() {
     formState: { errors },
   } = useForm<RegisterItem>({
     mode: 'onTouched',
-    defaultValues: { FullName: '', Password: '', ConfirmPassword: '', Email: '', Privacy: false },
+    defaultValues: {
+      FullName: '',
+      Password: '',
+      ConfirmPassword: '',
+      Email: '',
+      Privacy: false,
+      Referral: '',
+    },
   });
   const [signupMutation, { loading }] = useMutation<CreateUserPayload, SignupVariables>(
     SIGNUP_MUTATION

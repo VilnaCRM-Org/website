@@ -25,6 +25,8 @@ justified a decision still holds.
   the English landing lives under a static `/en` prefix. _Accepted._
 - [ADR 0007](0007-release-automation-and-tag-invariant.md) — the release lane keeps its
   orphan tags and enforces a version invariant before it writes. _Accepted._
+- [ADR 0008](0008-light-only-theme.md) — the site ships one light colour scheme and does
+  not follow `prefers-color-scheme`. _Accepted._
 
 The template for a new record is [`0000-template.md`](0000-template.md).
 
@@ -71,6 +73,8 @@ edited afterwards except to change its status.
   targets ADR 0001 implies.
 - [Security headers](../security-headers.md) — why the CloudFront edge is the only
   enforcement point under a static export.
+- [CDN cache strategy](../cdn-cache-strategy.md) — the cache classes the export
+  produces and the `cache-control` contract the pipeline has to meet.
 - The image, font, and transfer-size sustainability policy lives in the
   [frontend performance and accessibility skill][perf-skill], which cites ADR 0001 as
   the delivery model its budgets exist inside. ADR 0001 itself does not reference the

@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react';
 type UseSwaggerReturn = {
   swaggerContent: unknown | null;
   error: Error | null;
+  loading: boolean;
+  retry: () => void;
 };
 
 const DEFAULT_SWAGGER_SCHEMA_URL = '/swagger-schema.json';
@@ -35,15 +37,37 @@ const loadSwaggerSchema: (
   return () => controller.abort();
 };
 
+const useResetOnUrlChange: (schemaUrl: string, reset: () => void) => void = (
+  schemaUrl: string,
+  reset: () => void
+): void => {
+  const [requestedUrl, setRequestedUrl] = useState<string>(schemaUrl);
+  if (requestedUrl !== schemaUrl) {
+    setRequestedUrl(schemaUrl);
+    reset();
+  }
+};
+
 const useSwagger: (schemaUrl?: string) => UseSwaggerReturn = (
   schemaUrl: string = DEFAULT_SWAGGER_SCHEMA_URL
 ) => {
   const [swaggerContent, setSwaggerContent] = useState<unknown | null>(null);
   const [error, setError] = useState<Error | null>(null);
+  const [reload, setReload] = useState<object>({});
 
-  useEffect(() => loadSwaggerSchema(schemaUrl, setSwaggerContent, setError), [schemaUrl]);
+  useResetOnUrlChange(schemaUrl, (): void => {
+    setSwaggerContent(null);
+    setError(null);
+  });
 
-  return { swaggerContent, error };
+  useEffect(() => loadSwaggerSchema(schemaUrl, setSwaggerContent, setError), [schemaUrl, reload]);
+
+  const retry: () => void = (): void => {
+    setError(null);
+    setReload({});
+  };
+
+  return { swaggerContent, error, loading: swaggerContent === null && error === null, retry };
 };
 
 export default useSwagger;

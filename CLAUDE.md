@@ -593,6 +593,21 @@ Production-facing invariants that no other gate watches. Extend them; never rela
   text, so a key or a mask that survives only in a comment does not count. `make
 lint-workflows` (zizmor) audits `.github/actions/` alongside `.github/workflows/` for the
   same reason: the composite is where a mutable action tag could otherwise hide.
+  **G — the sandbox lifecycle is symmetric** (issue #380 F2): the workflow that starts the
+  `sandbox-creation` CodePipeline must trigger on `pull_request` and nothing else, and never
+  on the `closed` type (that is the deleter's event — a creator listing it would provision
+  the sandbox again as it is torn down), and the
+  workflow that starts `sandbox-deletion` must trigger on `pull_request` with `closed` as
+  its only `types` entry and on nothing else — an extra type such as `opened` would tear a
+  sandbox down while its pull request is still open. Only a pull request closing ever
+  reaches the teardown pipeline, so a
+  sandbox provisioned from a bare branch push, a `workflow_dispatch` or a `schedule` is
+  billed with nothing to reclaim it — which is what `push: branches-ignore: [main]` did
+  before #375 removed it. The two workflows are found by the pipeline they start, never by
+  filename, and the assertion fails closed when it cannot find either half. A scheduled
+  reaper for sandboxes whose pipeline run failed, and a cap on concurrent sandboxes, live
+  in the infrastructure repository that owns the pipelines; this gate only holds the
+  in-repo half of the lifecycle.
 - **CodeQL findings are gated and routed.** `scripts/ci/code-scanning-gate.sh` fails the
   run on _new_ high/critical alerts (PRs subtract the default-branch baseline, so
   inherited debt does not block), and a failed scan reaches the `ci-alert` issue. Branch

@@ -53,6 +53,11 @@ rules are load-bearing rather than incidental (issues #382 and #378):
   submitted values.
 - **Transport.** The endpoint the form POSTs to is validated in `src/config/env.ts`: remote
   cleartext `http://` fails the build; `http://` is accepted only for loopback.
+- **Anti-automation.** `Referral` is an inert, `aria-hidden`, untabbable honeypot field
+  (`auth-form/honeypot-field.tsx`); a submission that fills it never issues the mutation
+  and is answered exactly like a success, and is reported with the static
+  `signup-honeypot` tag (issue #380). The authoritative rate limit is server-side; the
+  abuse-case threat model is in `docs/sign-up-hardening.md`.
 
 ## Component notes
 
@@ -90,6 +95,13 @@ are what pin each behaviour.
   shows the Ukrainian dashboard. The rule and its tests are described under
   "Route-scoped locale" in
   [`docs/extending-the-website.md`](../../../docs/extending-the-website.md).
+- **One informative alt, the rest decorative** (issue #479). The hero is the LCP image and
+  the one product screenshot that is described: `about_vilna.image_alt` names what every
+  crop of the `<picture>` shows — the board with its task list open — in the page
+  language. It used to ship the literal `"Main image"` (WCAG 1.1.1, failure F30). The
+  two for-who screens repeat the same rasters beside nine decorative shapes and are
+  `alt=""` + `aria-hidden`, as is the diamond bullet before each card, which was
+  announced as "Vector" — its export-tool name.
 - **`NOTIFICATION_ANIMATION_DURATION`** (`constants/index.ts`) is the fade in/out time the
   Notification component uses, in milliseconds.
 - **`notification/styles.error.ts`** styles the error state; `styles.success.ts` the

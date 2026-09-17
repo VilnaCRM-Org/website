@@ -51,6 +51,8 @@ Key Points:
 
 Additionally, you need to ensure that an AWS_REGION variable is set either at the repository or organization level.
 
+Lifecycle invariant (issue #380): `pull_request` must stay this workflow's only trigger. Every sandbox is billed until the deletion pipeline reclaims it, and that pipeline is only ever started by a pull request closing, so a sandbox created from a bare branch push, a `workflow_dispatch` or a `schedule` has no matching teardown and is orphaned. `make lint-prod-guardrails` (assertion G) fails a pull request that adds any other trigger here (or removes `pull_request`, or lists the `closed` type, which is the deleter's event), or that gives the deletion workflow any trigger other than `pull_request` with `closed` as its only type; it locates both workflows by the pipeline name they start, so renaming the file does not evade it. A reaper for sandboxes whose deletion run failed, and a cap on concurrent sandboxes, belong to the infrastructure repository that owns the pipelines.
+
 ### Creation Variables Setup
 
 - Navigate to **Settings > Secrets and variables > Actions > Variables** in your GitHub organization.

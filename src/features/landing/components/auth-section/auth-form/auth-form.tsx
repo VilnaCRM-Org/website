@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { UiButton, UiTypography } from '@/components';
 
+import HoneypotField from './honeypot-field';
 import PrivacyField from './privacy-field';
 import SignUpFields from './sign-up-fields';
 import styles from './styles';
@@ -27,6 +28,7 @@ function AuthForm({
       </UiTypography>
       <SignUpFields control={control} />
       <PrivacyField control={control} formValidationErrors={formValidationErrors} />
+      <HoneypotField control={control} />
 
       <Box sx={styles.buttonWrapper}>
         <UiButton

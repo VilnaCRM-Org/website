@@ -34,11 +34,16 @@
     }
   },
   "navigation": {
-    "navigate_to_home_page": "To the main page",
-    "back_arrow_description": "Back arrow icon"
+    "navigate_to_home_page": "To the main page"
   },
   "api_documentation": {
-    "servers_label": "API server"
+    "servers_label": "API server",
+    "loading": "Loading the API documentation",
+    "loaded": "API documentation loaded",
+    "error": {
+      "message": "The API documentation could not be loaded.",
+      "retry": "Try again"
+    }
   },
   "footer": {
     "logo_alt": "Vilna logo",
