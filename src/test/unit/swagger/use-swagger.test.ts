@@ -134,6 +134,57 @@ describe('useSwagger', () => {
     });
   });
 
+  test('drops the previous schema and reports loading while a new url is fetched', async () => {
+    const deferred: DeferredPromise<never> = createDeferredPromise<never>();
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async (): Promise<SwaggerSchema> => mockSwaggerSchema,
+      })
+      .mockReturnValueOnce(deferred.promise);
+
+    const { result, rerender } = renderHook(
+      ({ schemaUrl }: { schemaUrl: string }) => useSwagger(schemaUrl),
+      { initialProps: { schemaUrl: '/swagger-schema.json' } }
+    );
+    await waitFor(() => {
+      expect(result.current.swaggerContent).toEqual(mockSwaggerSchema);
+    });
+
+    rerender({ schemaUrl: '/swagger-schema-v2.json' });
+
+    // The previous document must not stay on screen as if it were the new one.
+    expect(result.current.swaggerContent).toBeNull();
+    expect(result.current.error).toBeNull();
+    expect(result.current.loading).toBe(true);
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
+  test('a failure on the new url reports the error without the previous schema', async () => {
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async (): Promise<SwaggerSchema> => mockSwaggerSchema,
+      })
+      .mockRejectedValueOnce(new Error('Network error'));
+
+    const { result, rerender } = renderHook(
+      ({ schemaUrl }: { schemaUrl: string }) => useSwagger(schemaUrl),
+      { initialProps: { schemaUrl: '/swagger-schema.json' } }
+    );
+    await waitFor(() => {
+      expect(result.current.swaggerContent).toEqual(mockSwaggerSchema);
+    });
+
+    rerender({ schemaUrl: '/swagger-schema-v2.json' });
+
+    await waitFor(() => {
+      expect(result.current.error?.message).toBe('Network error');
+    });
+    expect(result.current.swaggerContent).toBeNull();
+    expect(result.current.loading).toBe(false);
+  });
+
   test('handles fetch error when response is not ok', async () => {
     const errorMessage: string = 'Failed to fetch swagger schema – 404 Not Found';
     mockFetch.mockResolvedValueOnce({

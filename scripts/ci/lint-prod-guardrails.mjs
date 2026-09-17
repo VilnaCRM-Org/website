@@ -856,6 +856,22 @@ function assertSandboxCreationOnlyOnPullRequests(workflows) {
   });
 }
 
+// Exactly `on: pull_request: types: [closed]` and nothing else. A missing
+// `closed` never reclaims a sandbox; an extra type (`opened`) or an extra
+// trigger (`workflow_dispatch`, `push`) starts the deletion pipeline while the
+// pull request's sandbox is still in use, or with no pull request at all.
+function tearsDownOnlyOnClose(triggers) {
+  const keys = triggerKeys(triggers);
+  const trigger = triggers?.[SANDBOX_CREATION_TRIGGER];
+  const types = Array.isArray(trigger?.types) ? trigger.types.map(String) : [];
+  return (
+    keys.length === 1 &&
+    keys[0] === SANDBOX_CREATION_TRIGGER &&
+    types.length === 1 &&
+    types[0] === SANDBOX_TEARDOWN_TYPE
+  );
+}
+
 function assertSandboxDeletionOnPullRequestClose(workflows) {
   const deleters = workflowsStarting(workflows, SANDBOX_DELETION_PIPELINE);
   if (deleters.length === 0) {
@@ -867,15 +883,14 @@ function assertSandboxDeletionOnPullRequestClose(workflows) {
     return;
   }
   deleters.forEach(workflow => {
-    const trigger = workflow.triggers?.[SANDBOX_CREATION_TRIGGER];
-    const types = Array.isArray(trigger?.types) ? trigger.types.map(String) : [];
-    if (types.includes(SANDBOX_TEARDOWN_TYPE)) return;
+    if (tearsDownOnlyOnClose(workflow.triggers)) return;
     fail(
       'G',
       `${WORKFLOW_DIR}/${workflow.file} starts the "${SANDBOX_DELETION_PIPELINE}" pipeline ` +
-        `but does not run on ${SANDBOX_CREATION_TRIGGER} type "${SANDBOX_TEARDOWN_TYPE}" ` +
-        '(the default types are opened/synchronize/reopened), so a closed pull request never ' +
-        'reclaims its sandbox.'
+        `but is not triggered by ${SANDBOX_CREATION_TRIGGER} with "${SANDBOX_TEARDOWN_TYPE}" as ` +
+        'its only type and no other trigger. Without "closed" (the default types are ' +
+        'opened/synchronize/reopened) a closed pull request never reclaims its sandbox; with ' +
+        'any other type or trigger the deletion pipeline runs against a sandbox still in use.'
     );
   });
 }

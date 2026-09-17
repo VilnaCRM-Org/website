@@ -43,6 +43,13 @@ const useSwagger: (schemaUrl?: string) => UseSwaggerReturn = (
   const [swaggerContent, setSwaggerContent] = useState<unknown | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const [reload, setReload] = useState<object>({});
+  const [requestedUrl, setRequestedUrl] = useState<string>(schemaUrl);
+
+  if (requestedUrl !== schemaUrl) {
+    setRequestedUrl(schemaUrl);
+    setSwaggerContent(null);
+    setError(null);
+  }
 
   useEffect(() => loadSwaggerSchema(schemaUrl, setSwaggerContent, setError), [schemaUrl, reload]);
 

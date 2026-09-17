@@ -962,7 +962,36 @@ PY
   [ "$status" -eq 1 ]
   assert_output_contains '[G]'
   assert_output_contains 'sandbox-deleting.yml starts the "sandbox-deletion" pipeline'
-  assert_output_contains 'type "closed"'
+  assert_output_contains '"closed" as its only type'
+}
+
+@test "fails when the sandbox deleter adds a second pull_request type beside closed" {
+  # Review finding on #482: `types: [closed, opened]` still contains `closed`,
+  # but the `opened` event starts the deletion pipeline against the sandbox the
+  # creation workflow is provisioning for that same pull request.
+  local deleter="$FIXTURE/.github/workflows/sandbox-deleting.yml"
+  sed -i 's/^      - closed$/      - closed\n      - opened/' "$deleter"
+  grep -q '^      - opened$' "$deleter"
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains '[G]'
+  assert_output_contains 'sandbox-deleting.yml starts the "sandbox-deletion" pipeline'
+  assert_output_contains 'no other trigger'
+}
+
+@test "fails when the sandbox deleter gains a trigger beside pull_request" {
+  # A workflow_dispatch run has no pull request number to hand the pipeline;
+  # a push run would tear down the sandbox of whichever pull request the branch
+  # belongs to on every commit.
+  local deleter="$FIXTURE/.github/workflows/sandbox-deleting.yml"
+  sed -i '0,/^on:$/s//on:\n  workflow_dispatch:/' "$deleter"
+  grep -q '^  workflow_dispatch:$' "$deleter"
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains '[G]'
+  assert_output_contains 'sandbox-deleting.yml starts the "sandbox-deletion" pipeline'
 }
 
 @test "a bare pull_request trigger on the deleter does not count as closed" {
@@ -976,7 +1005,7 @@ PY
   run_guardrails
   [ "$status" -eq 1 ]
   assert_output_contains '[G]'
-  assert_output_contains 'type "closed"'
+  assert_output_contains '"closed" as its only type'
 }
 
 @test "fails closed when no workflow starts the sandbox-deletion pipeline" {
