@@ -968,6 +968,21 @@ PY
   assert_output_contains 'no pull_request trigger at all'
 }
 
+@test "fails when the sandbox creator also provisions on the closed type" {
+  # Review finding on #482: `closed` is the deleter's event. A creator listing it
+  # would start the creation pipeline while the deletion pipeline runs, leaving
+  # a freshly provisioned sandbox with no pull request left to close.
+  local sandbox="$FIXTURE/.github/workflows/sandbox-creating.yml"
+  sed -i 's/^    types: \[opened, reopened, synchronize\]$/    types: [opened, reopened, synchronize, closed]/' "$sandbox"
+  grep -q 'synchronize, closed\]' "$sandbox"
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains '[G]'
+  assert_output_contains 'sandbox-creating.yml starts the "sandbox-creation" pipeline on pull_request type "closed"'
+  assert_output_contains 'provisioned again as it is torn down'
+}
+
 @test "fails when the sandbox creator is triggered by push instead of pull_request" {
   local sandbox="$FIXTURE/.github/workflows/sandbox-creating.yml"
   sed -i 's/^  pull_request:$/  push:/' "$sandbox"

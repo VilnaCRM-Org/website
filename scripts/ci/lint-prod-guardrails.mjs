@@ -52,8 +52,10 @@
 //      (`test -w "$GITHUB_ENV"`) is not a write.
 //   G. The sandbox lifecycle is symmetric. The workflow that starts the
 //      `sandbox-creation` CodePipeline must run on `pull_request` and nothing
-//      else, and the workflow that starts `sandbox-deletion` must run on
-//      `pull_request` with `closed` as its only type and on nothing else. Every provisioned
+//      else, never on the `closed` type (which would provision the sandbox
+//      again as it is torn down), and the workflow that starts
+//      `sandbox-deletion` must run on `pull_request` with `closed` as its only
+//      type and on nothing else. Every provisioned
 //      environment is billed until the deletion pipeline reclaims it, and
 //      that pipeline is only ever reached through a pull request closing --
 //      so a sandbox created from a bare branch push, a manual dispatch or a
@@ -846,9 +848,25 @@ function assertSandboxCreationOnlyOnPullRequests(workflows) {
   creators.forEach(workflow => {
     const keys = triggerKeys(workflow.triggers);
     const extra = keys.filter(key => key !== SANDBOX_CREATION_TRIGGER);
-    if (keys.includes(SANDBOX_CREATION_TRIGGER) && extra.length === 0) return;
-    fail('G', creatorTriggerFailure(workflow.file, extra));
+    if (!keys.includes(SANDBOX_CREATION_TRIGGER) || extra.length > 0) {
+      fail('G', creatorTriggerFailure(workflow.file, extra));
+      return;
+    }
+    if (pullRequestTypesOf(workflow.triggers).includes(SANDBOX_TEARDOWN_TYPE)) {
+      fail(
+        'G',
+        `${WORKFLOW_DIR}/${workflow.file} starts the "${SANDBOX_CREATION_PIPELINE}" pipeline on ` +
+          `${SANDBOX_CREATION_TRIGGER} type "${SANDBOX_TEARDOWN_TYPE}", the event that starts ` +
+          'the deletion pipeline: the sandbox would be provisioned again as it is torn down ' +
+          `and orphaned. Remove "${SANDBOX_TEARDOWN_TYPE}" from its types.`
+      );
+    }
   });
+}
+
+function pullRequestTypesOf(triggers) {
+  const trigger = triggers?.[SANDBOX_CREATION_TRIGGER];
+  return Array.isArray(trigger?.types) ? trigger.types.map(String) : [];
 }
 
 // A creator with no `pull_request` trigger at all (`on: {}`, or a missing `on`)
@@ -876,8 +894,7 @@ function creatorTriggerFailure(file, extra) {
 // pull request's sandbox is still in use, or with no pull request at all.
 function tearsDownOnlyOnClose(triggers) {
   const keys = triggerKeys(triggers);
-  const trigger = triggers?.[SANDBOX_CREATION_TRIGGER];
-  const types = Array.isArray(trigger?.types) ? trigger.types.map(String) : [];
+  const types = pullRequestTypesOf(triggers);
   return (
     keys.length === 1 &&
     keys[0] === SANDBOX_CREATION_TRIGGER &&
