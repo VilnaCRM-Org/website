@@ -953,6 +953,32 @@ PY
   assert_output_contains 'pipeline on workflow_dispatch'
 }
 
+@test "fails when the sandbox creator has no trigger at all" {
+  # Review finding on #482: an empty `on:` mapping produced no "extra" trigger,
+  # so the located provisioner passed while never being able to run for a pull
+  # request. A missing `on:` reaches the parser the same way.
+  local sandbox="$FIXTURE/.github/workflows/sandbox-creating.yml"
+  sed -i '/^on:$/,/^    types: \[opened, reopened, synchronize\]$/c\on: {}' "$sandbox"
+  grep -q '^on: {}$' "$sandbox"
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains '[G]'
+  assert_output_contains 'sandbox-creating.yml starts the "sandbox-creation" pipeline'
+  assert_output_contains 'no pull_request trigger at all'
+}
+
+@test "fails when the sandbox creator is triggered by push instead of pull_request" {
+  local sandbox="$FIXTURE/.github/workflows/sandbox-creating.yml"
+  sed -i 's/^  pull_request:$/  push:/' "$sandbox"
+  grep -q '^  push:$' "$sandbox"
+
+  run_guardrails
+  [ "$status" -eq 1 ]
+  assert_output_contains '[G]'
+  assert_output_contains 'pipeline on push'
+}
+
 @test "fails when the sandbox deleter drops closed from its pull_request types" {
   local deleter="$FIXTURE/.github/workflows/sandbox-deleting.yml"
   sed -i 's/^      - closed$/      - reopened/' "$deleter"

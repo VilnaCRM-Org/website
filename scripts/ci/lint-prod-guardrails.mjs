@@ -51,9 +51,9 @@
 //      fail closed rather than guess. A line that only reads the file
 //      (`test -w "$GITHUB_ENV"`) is not a write.
 //   G. The sandbox lifecycle is symmetric. The workflow that starts the
-//      `sandbox-creation` CodePipeline may run on `pull_request` and nothing
+//      `sandbox-creation` CodePipeline must run on `pull_request` and nothing
 //      else, and the workflow that starts `sandbox-deletion` must run on
-//      `pull_request` with `closed` among its types. Every provisioned
+//      `pull_request` with `closed` as its only type and on nothing else. Every provisioned
 //      environment is billed until the deletion pipeline reclaims it, and
 //      that pipeline is only ever reached through a pull request closing --
 //      so a sandbox created from a bare branch push, a manual dispatch or a
@@ -844,16 +844,30 @@ function assertSandboxCreationOnlyOnPullRequests(workflows) {
     return;
   }
   creators.forEach(workflow => {
-    const extra = triggerKeys(workflow.triggers).filter(key => key !== SANDBOX_CREATION_TRIGGER);
-    if (extra.length === 0) return;
-    fail(
-      'G',
-      `${WORKFLOW_DIR}/${workflow.file} starts the "${SANDBOX_CREATION_PIPELINE}" pipeline on ` +
-        `${extra.join(', ')}; a sandbox provisioned outside a pull request has no closed event ` +
-        `to tear it down and is billed until someone notices. Keep ${SANDBOX_CREATION_TRIGGER} ` +
-        'as its only trigger.'
-    );
+    const keys = triggerKeys(workflow.triggers);
+    const extra = keys.filter(key => key !== SANDBOX_CREATION_TRIGGER);
+    if (keys.includes(SANDBOX_CREATION_TRIGGER) && extra.length === 0) return;
+    fail('G', creatorTriggerFailure(workflow.file, extra));
   });
+}
+
+// A creator with no `pull_request` trigger at all (`on: {}`, or a missing `on`)
+// is the other way the lifecycle breaks: nothing is orphaned, but no pull
+// request ever gets a sandbox, and the workflow is still the one this gate
+// located as the provisioner, so it must not read as compliant.
+function creatorTriggerFailure(file, extra) {
+  const head = `${WORKFLOW_DIR}/${file} starts the "${SANDBOX_CREATION_PIPELINE}" pipeline`;
+  if (extra.length > 0) {
+    return (
+      `${head} on ${extra.join(', ')}; a sandbox provisioned outside a pull request has no ` +
+      'closed event to tear it down and is billed until someone notices. Keep ' +
+      `${SANDBOX_CREATION_TRIGGER} as its only trigger.`
+    );
+  }
+  return (
+    `${head} but has no ${SANDBOX_CREATION_TRIGGER} trigger at all, so no pull request is ever ` +
+    `provisioned a sandbox. Give it ${SANDBOX_CREATION_TRIGGER} as its only trigger.`
+  );
 }
 
 // Exactly `on: pull_request: types: [closed]` and nothing else. A missing

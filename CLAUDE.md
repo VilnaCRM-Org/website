@@ -594,9 +594,11 @@ Production-facing invariants that no other gate watches. Extend them; never rela
 lint-workflows` (zizmor) audits `.github/actions/` alongside `.github/workflows/` for the
   same reason: the composite is where a mutable action tag could otherwise hide.
   **G — the sandbox lifecycle is symmetric** (issue #380 F2): the workflow that starts the
-  `sandbox-creation` CodePipeline may trigger on `pull_request` and nothing else, and the
-  workflow that starts `sandbox-deletion` must trigger on `pull_request` with `closed`
-  among its `types`. Only a pull request closing ever reaches the teardown pipeline, so a
+  `sandbox-creation` CodePipeline must trigger on `pull_request` and nothing else, and the
+  workflow that starts `sandbox-deletion` must trigger on `pull_request` with `closed` as
+  its only `types` entry and on nothing else — an extra type such as `opened` would tear a
+  sandbox down while its pull request is still open. Only a pull request closing ever
+  reaches the teardown pipeline, so a
   sandbox provisioned from a bare branch push, a `workflow_dispatch` or a `schedule` is
   billed with nothing to reclaim it — which is what `push: branches-ignore: [main]` did
   before #375 removed it. The two workflows are found by the pipeline they start, never by

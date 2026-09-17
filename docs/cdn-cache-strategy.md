@@ -74,8 +74,11 @@ these objects longer through `s-maxage` or its cache policy **only if** the depl
 the new build visible inside the readiness window the post-deploy smoke test already
 assumes — about ten minutes (`docs/deployment-runbook.md`, "Post-deploy smoke test").
 The pipeline meets that either by invalidating this class after the upload or by keeping
-the edge TTL under the window; which one is the infrastructure repository's decision,
-and the smoke test is what notices if neither happens.
+the edge TTL under the window; which one is the infrastructure repository's decision.
+The readiness probes only sample this class — they fetch `/` and `/swagger` — so a stale
+un-probed object (`sw.js`, `swagger-schema.json`, another route document) passes them
+today; covering the rest is part of the probe described under
+[verification](#where-the-contract-is-proved).
 
 Two entries in this class are stricter than the rest:
 
@@ -114,7 +117,8 @@ above apply to both distributions identically.
 - _The security headers reach the live edge_ — the `deploy.yml` post-deploy header probe,
   once `PRODUCTION_SITE_URL` is set.
 - _A deploy becomes visible within the window_ — the readiness probes in `deploy.yml`,
-  which retry until the new build is served.
+  which retry until the new build is served on `/` and `/swagger`; the other class-2
+  paths are not sampled.
 - _Classes 1 and 2 carry the headers above_ — **not yet observed**; see below.
 
 The last item is the honest gap. Nothing in this repository can read the S3 metadata

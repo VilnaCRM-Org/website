@@ -387,7 +387,7 @@ otherwise only hold in production:
 - The sandbox lifecycle is symmetric (issue #380): the workflow that starts the
   `sandbox-creation` pipeline triggers on `pull_request` and nothing else, and
   the one that starts `sandbox-deletion` triggers on `pull_request` with
-  `closed` among its types. A sandbox created by a bare push, a manual dispatch
+  `closed` as its only type and on nothing else. A sandbox created by a bare push, a manual dispatch
   or a schedule has no closing pull request to reclaim it and is billed until
   someone notices. The gate finds both workflows by the pipeline they start,
   not by filename, and fails closed when it cannot see either one.
