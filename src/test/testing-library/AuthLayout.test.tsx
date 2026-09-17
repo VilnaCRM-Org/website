@@ -276,12 +276,15 @@ describe('AuthLayout', () => {
     fillForm(testInitials, testEmail, testPassword, true);
 
     await waitFor(() => {
-      const { fullNameInput, emailInput, passwordInput, privacyCheckbox } = getFormElements();
+      const { fullNameInput, emailInput, passwordInput, confirmPasswordInput, privacyCheckbox } =
+        getFormElements();
 
       expect(fullNameInput?.value).toBe('');
       expect(emailInput?.value).toBe('');
       expect(passwordInput?.value).toBe('');
+      expect(confirmPasswordInput?.value).toBe('');
       expect(privacyCheckbox).not.toBeChecked();
+      expect(document.querySelector('input[name="Referral"]')).toHaveValue('');
 
       const successTitle: HTMLElement = getByText(successTitleText);
       const alertBox: HTMLElement | null = getByRole('alert');

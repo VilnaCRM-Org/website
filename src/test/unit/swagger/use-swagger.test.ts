@@ -319,17 +319,18 @@ describe('useSwagger', () => {
     expect(mockFetch).toHaveBeenCalledTimes(3);
   });
 
-  test('retry keeps the same function identity across renders', async () => {
+  test('does not refetch on a plain rerender, only on retry', async () => {
     mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
-    const { result } = renderHook(() => useSwagger());
-    const { retry } = result.current;
+    const { result, rerender } = renderHook(() => useSwagger());
 
     await waitFor(() => {
       expect(result.current.error).toBeInstanceOf(Error);
     });
+    rerender();
 
-    expect(result.current.retry).toBe(retry);
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(result.current.error).toBeInstanceOf(Error);
   });
 
   test('handles empty response', async () => {

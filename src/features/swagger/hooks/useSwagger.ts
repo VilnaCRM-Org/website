@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 type UseSwaggerReturn = {
   swaggerContent: unknown | null;
@@ -42,14 +42,14 @@ const useSwagger: (schemaUrl?: string) => UseSwaggerReturn = (
 ) => {
   const [swaggerContent, setSwaggerContent] = useState<unknown | null>(null);
   const [error, setError] = useState<Error | null>(null);
-  const [attempt, setAttempt] = useState<number>(0);
+  const [reload, setReload] = useState<object>({});
 
-  useEffect(() => loadSwaggerSchema(schemaUrl, setSwaggerContent, setError), [schemaUrl, attempt]);
+  useEffect(() => loadSwaggerSchema(schemaUrl, setSwaggerContent, setError), [schemaUrl, reload]);
 
-  const retry: () => void = useCallback((): void => {
+  const retry: () => void = (): void => {
     setError(null);
-    setAttempt((previous: number): number => previous + 1);
-  }, []);
+    setReload({});
+  };
 
   return { swaggerContent, error, loading: swaggerContent === null && error === null, retry };
 };

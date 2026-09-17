@@ -838,7 +838,8 @@ function assertSandboxCreationOnlyOnPullRequests(workflows) {
     fail(
       'G',
       `no workflow under ${WORKFLOW_DIR}/ starts the "${SANDBOX_CREATION_PIPELINE}" pipeline, so ` +
-        'the sandbox lifecycle cannot be audited; if provisioning moved, point this assertion at it.'
+        'the sandbox lifecycle cannot be audited; if provisioning moved, point this assertion ' +
+        'at it.'
     );
     return;
   }
@@ -871,9 +872,10 @@ function assertSandboxDeletionOnPullRequestClose(workflows) {
     if (types.includes(SANDBOX_TEARDOWN_TYPE)) return;
     fail(
       'G',
-      `${WORKFLOW_DIR}/${workflow.file} starts the "${SANDBOX_DELETION_PIPELINE}" pipeline but does ` +
-        `not run on ${SANDBOX_CREATION_TRIGGER} type "${SANDBOX_TEARDOWN_TYPE}" (the default types ` +
-        'are opened/synchronize/reopened), so a closed pull request never reclaims its sandbox.'
+      `${WORKFLOW_DIR}/${workflow.file} starts the "${SANDBOX_DELETION_PIPELINE}" pipeline ` +
+        `but does not run on ${SANDBOX_CREATION_TRIGGER} type "${SANDBOX_TEARDOWN_TYPE}" ` +
+        '(the default types are opened/synchronize/reopened), so a closed pull request never ' +
+        'reclaims its sandbox.'
     );
   });
 }
