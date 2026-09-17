@@ -55,7 +55,7 @@ credential stuffing or enumeration probes against the live mutation were invisib
 the application side. `reportHandledError` sends the exception plus two **static** tags
 (`feature`, `action`) and nothing derived from the submitted values; `captureException`
 serialises whatever it is given, so the PII contract is that nothing else is ever passed.
-`auth-layout.tsx` calls it from the submit failure path for the same reason.
+`auth-form/submit-handler.ts` calls it from the submit failure path for the same reason.
 
 **Session replay is masked** (`pages/_app.tsx`). The only interactive surface is this
 form, so an unmasked replay would record the password field keystroke by keystroke.
@@ -165,7 +165,7 @@ server-side column is marked authoritative and this note is not a substitute for
 sandbox-cost half of #380 (an orphaned AWS environment per branch push) is a CI/CD
 control, held by assertion G of `make lint-prod-guardrails`.
 
-### The honeypot (`auth-form/honeypot-field.tsx`, `auth-layout.tsx`)
+### The honeypot (`auth-form/honeypot-field.tsx`, `auth-form/submit-handler.ts`)
 
 `Referral` is a react-hook-form field that a person never sees and never reaches. Its
 wrapper is `inert`, which removes focus, hit-testing and assistive-technology exposure in

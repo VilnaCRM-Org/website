@@ -34,14 +34,26 @@ function PictureSource({
   );
 }
 
-function MainImage(): React.ReactElement {
+type OptimizedScreenshots = Record<keyof ProductScreenshots, OptimizedImageProps>;
+
+function useOptimizedScreenshots(): OptimizedScreenshots {
   const { t, i18n } = useTranslation();
   const screenshots: ProductScreenshots = productScreenshotsFor(i18n.language);
   const alt: string = t('about_vilna.image_alt');
 
-  const mobileProps: OptimizedImageProps = optimizedProps(screenshots.mobile, alt);
-  const tabletProps: OptimizedImageProps = optimizedProps(screenshots.tablet, alt);
-  const desktopProps: OptimizedImageProps = optimizedProps(screenshots.desktop, alt);
+  return {
+    mobile: optimizedProps(screenshots.mobile, alt),
+    tablet: optimizedProps(screenshots.tablet, alt),
+    desktop: optimizedProps(screenshots.desktop, alt),
+  };
+}
+
+function MainImage(): React.ReactElement {
+  const {
+    mobile: mobileProps,
+    tablet: tabletProps,
+    desktop: desktopProps,
+  } = useOptimizedScreenshots();
 
   return (
     <Box sx={styles.mainImageWrapper}>
