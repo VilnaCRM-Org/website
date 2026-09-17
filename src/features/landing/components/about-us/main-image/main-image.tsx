@@ -12,11 +12,10 @@ import styles from './styles';
 
 type OptimizedImageProps = ReturnType<typeof getOptimizedImageProps>['props'];
 
-const IMG_ALT_TEXT: string = 'Main image';
-
-const optimizedProps: (src: StaticImageData) => OptimizedImageProps = (
-  src: StaticImageData
-): OptimizedImageProps => getOptimizedImageProps({ src, alt: IMG_ALT_TEXT }).props;
+const optimizedProps: (src: StaticImageData, alt: string) => OptimizedImageProps = (
+  src: StaticImageData,
+  alt: string
+): OptimizedImageProps => getOptimizedImageProps({ src, alt }).props;
 
 function PictureSource({
   imageProps,
@@ -38,10 +37,11 @@ function PictureSource({
 function MainImage(): React.ReactElement {
   const { t, i18n } = useTranslation();
   const screenshots: ProductScreenshots = productScreenshotsFor(i18n.language);
+  const alt: string = t('about_vilna.image_alt');
 
-  const mobileProps: OptimizedImageProps = optimizedProps(screenshots.mobile);
-  const tabletProps: OptimizedImageProps = optimizedProps(screenshots.tablet);
-  const desktopProps: OptimizedImageProps = optimizedProps(screenshots.desktop);
+  const mobileProps: OptimizedImageProps = optimizedProps(screenshots.mobile, alt);
+  const tabletProps: OptimizedImageProps = optimizedProps(screenshots.tablet, alt);
+  const desktopProps: OptimizedImageProps = optimizedProps(screenshots.desktop, alt);
 
   return (
     <Box sx={styles.mainImageWrapper}>
@@ -58,7 +58,7 @@ function MainImage(): React.ReactElement {
           src={desktopProps.src as string}
           width={desktopProps.width}
           height={desktopProps.height}
-          alt={t(`${desktopProps.alt}`)}
+          alt={desktopProps.alt}
         />
       </picture>
     </Box>

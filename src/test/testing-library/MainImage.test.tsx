@@ -1,5 +1,5 @@
 import { render } from '@testing-library/react';
-import i18n from 'i18next';
+import i18n, { t } from 'i18next';
 import { I18nextProvider } from 'react-i18next';
 
 import { EN_LOCALE } from '@/config/locales';
@@ -30,7 +30,8 @@ const actualScreenshots: ScreenshotsModule = jest.requireActual(
 const screenshotsFor: jest.MockedFunction<typeof productScreenshotsFor> =
   productScreenshotsFor as jest.MockedFunction<typeof productScreenshotsFor>;
 
-const mainImageTestId: string = 'Main image';
+const mainImageAlt: string = t('about_vilna.image_alt');
+const englishAlt: (key: string) => string = i18n.getFixedT(EN_LOCALE);
 
 function fakeSet(language: string): ProductScreenshots {
   return {
@@ -51,9 +52,23 @@ describe('MainImage component', () => {
 
     const [smallMediaSource, largeMediaSource] = container.querySelectorAll('source');
 
-    expect(getByAltText(mainImageTestId)).toBeInTheDocument();
+    expect(getByAltText(mainImageAlt)).toBeInTheDocument();
     expect(smallMediaSource).toHaveAttribute('media', '(max-width: 640px)');
     expect(largeMediaSource).toHaveAttribute('media', '(max-width: 1024px)');
+  });
+
+  it('describes the product in the page language, never with a placeholder', () => {
+    // The hero used to ship `alt="Main image"` — WCAG 1.1.1 failure F30 — passed
+    // through `t()` with no key behind it, so every language heard the same two
+    // English words (#479). One alt names the whole <picture>, so it describes
+    // what every crop shows: the board with its task list open.
+    const { getByRole, queryByAltText } = render(<MainImage />);
+
+    expect(getByRole('img')).toHaveAccessibleName(mainImageAlt);
+    expect(mainImageAlt).not.toMatch(/^about_vilna\./);
+    expect(mainImageAlt).not.toBe('Main image');
+    expect(queryByAltText('Main image')).not.toBeInTheDocument();
+    expect(englishAlt('about_vilna.image_alt')).not.toBe(mainImageAlt);
   });
 
   it('serves the English renders when it is rendered under the English provider', () => {
@@ -66,7 +81,7 @@ describe('MainImage component', () => {
     );
 
     expect(screenshotsFor).toHaveBeenCalledWith(EN_LOCALE);
-    expect(getByAltText(mainImageTestId)).toHaveAttribute(
+    expect(getByAltText(englishAlt('about_vilna.image_alt'))).toHaveAttribute(
       'src',
       expect.stringContaining('desktop-en')
     );
@@ -81,7 +96,7 @@ describe('MainImage component', () => {
     const { getByAltText } = render(<MainImage />);
 
     expect(screenshotsFor).toHaveBeenCalledWith(i18n.language);
-    expect(getByAltText(mainImageTestId)).toHaveAttribute(
+    expect(getByAltText(mainImageAlt)).toHaveAttribute(
       'src',
       expect.stringContaining(`desktop-${i18n.language}`)
     );

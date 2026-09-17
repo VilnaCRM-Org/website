@@ -57,9 +57,12 @@ describe('integration: productScreenshotsFor', () => {
       </I18nextProvider>
     );
 
-    expect(getByAltText('Main image')).toHaveAttribute('src');
+    expect(getByAltText(englishAlt('about_vilna.image_alt'))).toHaveAttribute('src');
     expect(container.querySelectorAll('picture source')).toHaveLength(2);
-    expect(getByAltText(englishAlt('for_who.image_alt.big_screen'))).toHaveAttribute('src');
-    expect(getByAltText(englishAlt('for_who.image_alt.small_screen'))).toHaveAttribute('src');
+    const forWhoScreens: NodeListOf<HTMLImageElement> = container.querySelectorAll(
+      '#forWhoSection img[aria-hidden="true"][alt=""]'
+    );
+    expect(forWhoScreens.length).toBeGreaterThanOrEqual(2);
+    forWhoScreens.forEach(screen => expect(screen).toHaveAttribute('src'));
   });
 });

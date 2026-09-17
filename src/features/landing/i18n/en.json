@@ -41,7 +41,8 @@
     "heading_first_main": "The first Ukrainian",
     "heading_second_main": "open source CRM",
     "text_main": "Our goal is to support Ukrainian entrepreneurs. That's why we created Vilna, a convenient and free CRM system - so you can do business, not spend time on settings",
-    "button_main": "Try it out"
+    "button_main": "Try it out",
+    "image_alt": "VilnaCRM management board with the task list open"
   },
   "why_us": {
     "heading": "Why we",
@@ -81,11 +82,6 @@
     "heading_secondary": "Our CRM is ideal if you:",
     "card_text_title": "A private entrepreneur is a psychologist, tutor or dropshipper",
     "card_text_business": "Medium-scale local project - online courses, design studio or small outsourcing",
-    "vector_alt": "Vector",
-    "image_alt": {
-      "big_screen": "Large digital screen with a blue background",
-      "small_screen": "Small digital screen displaying minimal content"
-    },
     "aria_label": "Link to registration"
   },
   "unlimited_possibilities": {

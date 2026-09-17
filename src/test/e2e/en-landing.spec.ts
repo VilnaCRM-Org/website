@@ -39,8 +39,10 @@ async function expectLandingLanguage(page: Page, lang: string, t: FixedT): Promi
 // The product screenshots are rasters with copy baked in, so each landing has to
 // serve the set rendered in its own language. The exported file keeps the source
 // basename (`desktop-en.<hash>_<width>.webp`), which is what pins the set here.
+// The for-who screens are decorative (`alt=""`, #479), so they are located by
+// source rather than by an accessible name.
 async function expectProductScreenshots(page: Page, t: FixedT, language: string): Promise<void> {
-  const hero: Locator = page.getByRole('img', { name: 'Main image' });
+  const hero: Locator = page.getByRole('img', { name: t('about_vilna.image_alt') });
   await expect(hero).toHaveAttribute('src', new RegExp(`desktop-${language}\\.`));
 
   const sources: Locator = page.locator('picture source');
@@ -48,14 +50,9 @@ async function expectProductScreenshots(page: Page, t: FixedT, language: string)
   await expect(sources.nth(0)).toHaveAttribute('srcset', new RegExp(`mobile-${language}\\.`));
   await expect(sources.nth(1)).toHaveAttribute('srcset', new RegExp(`tablet-${language}\\.`));
 
-  await expect(page.getByAltText(t('for_who.image_alt.big_screen'))).toHaveAttribute(
-    'src',
-    new RegExp(`desktop-${language}\\.`)
-  );
-  await expect(page.getByAltText(t('for_who.image_alt.small_screen'))).toHaveAttribute(
-    'src',
-    new RegExp(`mobile-${language}\\.`)
-  );
+  const forWho: Locator = page.locator('#forWhoSection');
+  await expect(forWho.locator(`img[src*="desktop-${language}."]`)).toHaveCount(1);
+  await expect(forWho.locator(`img[src*="mobile-${language}."]`)).toHaveCount(1);
 }
 
 test.describe('English landing at /en', () => {

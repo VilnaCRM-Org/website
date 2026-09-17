@@ -13,7 +13,6 @@ const cardTitle: string = t('for_who.card_text_title');
 const secondaryHeading: string = t('for_who.heading_secondary');
 const businessText: string = t('for_who.card_text_business');
 const cardButton: string = t('for_who.button_text');
-const vectorAlt: string = t('for_who.vector_alt');
 
 describe('Cards integration', () => {
   it('re-exports Cards from its barrel', () => {
@@ -28,10 +27,16 @@ describe('Cards integration', () => {
     expect(getByText(businessText)).toBeInTheDocument();
   });
 
-  it('renders both labelled vector images', () => {
-    const { getAllByAltText } = render(React.createElement(Cards));
+  it('renders both bullet glyphs as decorative images', () => {
+    const { container, queryAllByRole } = render(React.createElement(Cards));
 
-    expect(getAllByAltText(vectorAlt)).toHaveLength(2);
+    const bullets: NodeListOf<HTMLImageElement> = container.querySelectorAll('img');
+    expect(bullets).toHaveLength(2);
+    bullets.forEach(bullet => {
+      expect(bullet).toHaveAttribute('alt', '');
+      expect(bullet).toHaveAttribute('aria-hidden', 'true');
+    });
+    expect(queryAllByRole('img')).toHaveLength(0);
   });
 
   it('renders the CTA as a link without nested button semantics', () => {

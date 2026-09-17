@@ -18,7 +18,8 @@ function CardItem({ textKey }: { textKey: string }): React.ReactElement {
         loading="lazy"
         decoding="async"
         src={Vector.src}
-        alt={t('for_who.vector_alt')}
+        alt=""
+        aria-hidden="true"
         sx={styles.img}
       />
       <UiTypography variant="bodyText18" sx={styles.optionText}>

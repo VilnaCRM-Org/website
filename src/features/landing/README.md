@@ -90,6 +90,13 @@ are what pin each behaviour.
   shows the Ukrainian dashboard. The rule and its tests are described under
   "Route-scoped locale" in
   [`docs/extending-the-website.md`](../../../docs/extending-the-website.md).
+- **One informative alt, the rest decorative** (issue #479). The hero is the LCP image and
+  the one product screenshot that is described: `about_vilna.image_alt` names what every
+  crop of the `<picture>` shows — the board with its task list open — in the page
+  language. It used to ship the literal `"Main image"` (WCAG 1.1.1, failure F30). The
+  two for-who screens repeat the same rasters beside nine decorative shapes and are
+  `alt=""` + `aria-hidden`, as is the diamond bullet before each card, which was
+  announced as "Vector" — its export-tool name.
 - **`NOTIFICATION_ANIMATION_DURATION`** (`constants/index.ts`) is the fade in/out time the
   Notification component uses, in milliseconds.
 - **`notification/styles.error.ts`** styles the error state; `styles.success.ts` the
