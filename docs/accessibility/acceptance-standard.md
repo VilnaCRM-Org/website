@@ -215,7 +215,9 @@ Treat these as manual review items on any change that touches UI:
 - Anything axe tags `best-practice` rather than as a WCAG criterion. The tag filter is what
   keeps the gate honest, but it also means real APG requirements are invisible to it: an open
   dialog with no accessible name is `aria-dialog-name`, which is `best-practice`-tagged, so no
-  layer reports it (#435). Naming a dialog, a region or a landmark stays a review item.
+  layer reports it — the navigation drawer shipped unnamed until #435, and its name is now
+  pinned by its unit spec rather than by a scan. Naming a dialog, a region or a landmark
+  stays a review item.
 - `incomplete` axe results, which mean "axe could not decide" — typically contrast over a
   gradient or an image. Every scan attaches them to the Playwright report as an
   `axe-incomplete-*` artifact for human review; they are not gated, because they are advisory

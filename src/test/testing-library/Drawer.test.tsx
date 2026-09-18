@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom';
-import { render, fireEvent, waitFor } from '@testing-library/react';
+import { render, fireEvent, waitFor, within } from '@testing-library/react';
 import { t } from 'i18next';
 
 import Drawer from '../../features/landing/components/header/drawer/drawer';
@@ -8,8 +8,7 @@ const buttonText: string = t('header.actions.try_it_out');
 const buttonToOpenDrawer: string = t('header.drawer.button_aria_labels.bars');
 const buttonToCloseDrawer: string = t('header.drawer.button_aria_labels.exit');
 const logInButtonText: string = t('header.actions.log_in');
-const drawerImageAlt: string = t('header.drawer.image_alt.bars');
-const exitImageAlt: string = t('header.drawer.image_alt.exit');
+const drawerName: string = t('header.drawer.aria_label');
 const logoAlt: string = t('header.logo_alt');
 // `dialog`, not `menu`: the drawer no longer overrides the modal root's role, which
 // failed axe's `aria-required-children` (#369). MUI's temporary Drawer exposes its
@@ -20,32 +19,36 @@ const listItem: string = 'listitem';
 describe('Drawer', () => {
   const handleLinkClick: jest.Mock<void, [string]> = jest.fn();
 
-  it('renders drawer button', () => {
-    const { getByLabelText, getByAltText } = render(
-      <Drawer handleLinkClick={handleLinkClick} landingPath="/" />
-    );
+  it('renders the open-menu button named by its action, with a decorative icon', () => {
+    const { getByRole } = render(<Drawer handleLinkClick={handleLinkClick} landingPath="/" />);
 
-    const drawerButton: HTMLElement = getByLabelText(buttonToOpenDrawer);
-    const drawerImage: HTMLElement = getByAltText(drawerImageAlt);
+    // The name is the action ("Open menu"), never the widget: screen readers
+    // already announce the role, and a non-empty icon alt would be read a
+    // second time after it (#435).
+    const drawerButton: HTMLElement = getByRole('button', { name: buttonToOpenDrawer });
 
     expect(drawerButton).toBeInTheDocument();
-    expect(drawerImage).toBeInTheDocument();
+    expect(within(drawerButton).queryByRole('img')).not.toBeInTheDocument();
   });
 
-  it('opens drawer when button is clicked', async () => {
-    const { getByLabelText, getByRole, getByAltText, getByText } = render(
+  it('opens a dialog named "Menu" when the button is clicked', async () => {
+    const { getByLabelText, getByRole, getByText } = render(
       <Drawer handleLinkClick={handleLinkClick} landingPath="/" />
     );
 
     const drawerButton: HTMLElement = getByLabelText(buttonToOpenDrawer);
     fireEvent.click(drawerButton);
 
-    const drawer: HTMLElement = getByRole(drawerContentRole);
-    const exitImage: HTMLElement = getByAltText(exitImageAlt);
+    // The name must sit on the paper (the `role="dialog"` element), not on the
+    // modal root: MUI renders that root as `role="presentation"`, where
+    // `aria-label` is prohibited (axe `aria-prohibited-attr`, WCAG 4.1.2).
+    const drawer: HTMLElement = getByRole(drawerContentRole, { name: drawerName });
+    const exitButton: HTMLElement = getByRole('button', { name: buttonToCloseDrawer });
     const logInButton: HTMLElement = getByText(logInButtonText);
 
     expect(drawer).toBeInTheDocument();
-    expect(exitImage).toBeInTheDocument();
+    expect(drawer.closest('[role="presentation"]')).not.toHaveAttribute('aria-label');
+    expect(within(exitButton).queryByRole('img')).not.toBeInTheDocument();
     expect(logInButton).toBeInTheDocument();
   });
 

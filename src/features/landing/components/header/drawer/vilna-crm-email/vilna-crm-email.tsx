@@ -14,7 +14,9 @@ function VilnaCRMEmail(): React.ReactElement {
     <Stack sx={styles.emailWrapper}>
       <Link href={`mailto:${email}`}>
         <Stack direction="row" sx={styles.emailRow}>
-          <UiTypography sx={styles.at}>@</UiTypography>
+          <UiTypography sx={styles.at} aria-hidden>
+            @
+          </UiTypography>
           <UiTypography variant="demi18" sx={styles.emailText}>
             {email}
           </UiTypography>
