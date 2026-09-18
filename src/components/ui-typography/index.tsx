@@ -14,6 +14,7 @@ function UiTypography({
   htmlFor,
   'aria-live': ariaLive,
   'aria-atomic': ariaAtomic,
+  'aria-hidden': ariaHidden,
 }: UiTypographyProps): React.ReactElement {
   return (
     <ThemeProvider theme={theme}>
@@ -26,6 +27,7 @@ function UiTypography({
         htmlFor={htmlFor}
         aria-live={ariaLive}
         aria-atomic={ariaAtomic}
+        aria-hidden={ariaHidden}
       >
         {children}
       </Typography>

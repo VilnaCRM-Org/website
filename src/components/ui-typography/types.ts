@@ -30,4 +30,5 @@ export interface UiTypographyProps {
   htmlFor?: string;
   'aria-live'?: 'off' | 'polite' | 'assertive' | undefined;
   'aria-atomic'?: boolean | undefined;
+  'aria-hidden'?: boolean | undefined;
 }

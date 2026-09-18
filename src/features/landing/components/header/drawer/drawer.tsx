@@ -42,7 +42,7 @@ function DrawerHeader({
         sx={styles.button}
         onClick={onClose}
       >
-        <Image src={CloseImage} alt={t('header.drawer.image_alt.exit')} width={24} height={24} />
+        <Image src={CloseImage} alt="" width={24} height={24} />
       </Button>
     </Stack>
   );
@@ -89,6 +89,20 @@ function DrawerContent({
   );
 }
 
+function DrawerToggle({ onOpen }: { onOpen: () => void }): React.ReactElement {
+  const { t } = useTranslation();
+
+  return (
+    <Button
+      aria-label={t('header.drawer.button_aria_labels.bars')}
+      sx={styles.button}
+      onClick={onOpen}
+    >
+      <Image src={Bars} alt="" width={24} height={24} />
+    </Button>
+  );
+}
+
 function CustomDrawer({
   handleLinkClick,
   landingPath,
@@ -104,14 +118,14 @@ function CustomDrawer({
 
   return (
     <Box sx={styles.wrapper}>
-      <Button
-        aria-label={t('header.drawer.button_aria_labels.bars')}
-        sx={styles.button}
-        onClick={handleOpenDrawer}
+      <DrawerToggle onOpen={handleOpenDrawer} />
+      <Drawer
+        sx={styles.drawer}
+        anchor="right"
+        open={isDrawerOpen}
+        onClose={handleCloseDrawer}
+        slotProps={{ paper: { 'aria-label': t('header.drawer.aria_label') } }}
       >
-        <Image src={Bars} alt={t('header.drawer.image_alt.bars')} width={24} height={24} />
-      </Button>
-      <Drawer sx={styles.drawer} anchor="right" open={isDrawerOpen} onClose={handleCloseDrawer}>
         <DrawerContent
           onClose={handleCloseDrawer}
           handleLinkClick={handleLinkClick}

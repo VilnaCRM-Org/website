@@ -10,13 +10,10 @@
       "log_in": "Log in"
     },
     "drawer": {
+      "aria_label": "Menu",
       "button_aria_labels": {
-        "bars": "Button to open the drawer",
-        "exit": "Button to exit the drawer"
-      },
-      "image_alt": {
-        "bars": "Bars Icon",
-        "exit": "Exit Icon"
+        "bars": "Open menu",
+        "exit": "Close menu"
       },
       "aria_labels_social_images": {
         "instagram": "Link to Instagram",

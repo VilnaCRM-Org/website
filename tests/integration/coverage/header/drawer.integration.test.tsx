@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom';
-import { render, fireEvent, waitFor } from '@testing-library/react';
+import { render, fireEvent, waitFor, within } from '@testing-library/react';
 import { t } from 'i18next';
 
 import Drawer from '@landing/header/drawer/drawer';
@@ -8,8 +8,7 @@ const buttonText: string = t('header.actions.try_it_out');
 const buttonToOpenDrawer: string = t('header.drawer.button_aria_labels.bars');
 const buttonToCloseDrawer: string = t('header.drawer.button_aria_labels.exit');
 const logInButtonText: string = t('header.actions.log_in');
-const drawerImageAlt: string = t('header.drawer.image_alt.bars');
-const exitImageAlt: string = t('header.drawer.image_alt.exit');
+const drawerName: string = t('header.drawer.aria_label');
 const logoAlt: string = t('header.logo_alt');
 // `dialog`, not `menu`: the drawer no longer overrides the modal root's role, which
 // failed axe's `aria-required-children` (#369). MUI's temporary Drawer exposes its
@@ -20,24 +19,29 @@ const listItem: string = 'listitem';
 describe('integration: Drawer', () => {
   const handleLinkClick: jest.Mock<void, [string]> = jest.fn();
 
-  it('renders the drawer toggle button and its icon', () => {
-    const { getByLabelText, getByAltText } = render(
-      <Drawer handleLinkClick={handleLinkClick} landingPath="/" />
-    );
+  it('renders the drawer toggle button named by its action, with a decorative icon', () => {
+    const { getByRole } = render(<Drawer handleLinkClick={handleLinkClick} landingPath="/" />);
 
-    expect(getByLabelText(buttonToOpenDrawer)).toBeInTheDocument();
-    expect(getByAltText(drawerImageAlt)).toBeInTheDocument();
+    const toggle: HTMLElement = getByRole('button', { name: buttonToOpenDrawer });
+
+    expect(toggle).toBeInTheDocument();
+    expect(within(toggle).queryByRole('img')).not.toBeInTheDocument();
   });
 
-  it('opens the drawer when the toggle button is clicked', () => {
-    const { getByLabelText, getByRole, getByAltText, getByText } = render(
+  it('opens a named dialog when the toggle button is clicked', () => {
+    const { getByLabelText, getByRole, getByText } = render(
       <Drawer handleLinkClick={handleLinkClick} landingPath="/" />
     );
 
     fireEvent.click(getByLabelText(buttonToOpenDrawer));
 
-    expect(getByRole(drawerContentRole)).toBeInTheDocument();
-    expect(getByAltText(exitImageAlt)).toBeInTheDocument();
+    const drawer: HTMLElement = getByRole(drawerContentRole, { name: drawerName });
+
+    expect(drawer).toBeInTheDocument();
+    expect(drawer.closest('[role="presentation"]')).not.toHaveAttribute('aria-label');
+    expect(
+      within(getByRole('button', { name: buttonToCloseDrawer })).queryByRole('img')
+    ).not.toBeInTheDocument();
     expect(getByText(logInButtonText)).toBeInTheDocument();
   });
 
