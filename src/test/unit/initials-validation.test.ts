@@ -1,10 +1,12 @@
-import { t } from 'i18next';
+import i18n from 'i18next';
 
 import { validateFullName } from '../../features/landing/components/auth-section/validations';
 import {
   validators,
   validationMessages,
 } from '../../features/landing/components/auth-section/validations/initials';
+import en from '../../features/landing/i18n/en.json';
+import uk from '../../features/landing/i18n/uk.json';
 
 const testFullName: string = 'John Doe';
 const testFirstName: string = 'John';
@@ -28,7 +30,7 @@ describe('initials Tests', () => {
       expect(validators.isLettersOnly(`${testFirstName} ${testSecondName}`)).toBe(true);
     });
 
-    it('rejects a disallowed character at either end alone (the patterns are anchored twice)', () => {
+    it('rejects a disallowed character at either end alone (both patterns are anchored)', () => {
       // A single stray character at only one end is what an unanchored pattern
       // lets through: without `^` the trailing "John Doe" still matches, and
       // without `$` the leading one does.
@@ -53,13 +55,18 @@ describe('initials Tests', () => {
   });
 
   describe('validationMessages', () => {
-    it('resolves every message from the sign-up i18n bundle, never an empty string', () => {
+    it('resolves every message from the active locale bundle, never an empty string', () => {
       // Comparing validateFullName() against validationMessages.* alone is
-      // self-referential: a message mutated to '' would still equal itself.
+      // self-referential: a message mutated to '' would still equal itself, and
+      // comparing against t() again would pass for a missing key too, because
+      // i18next echoes the key. The committed bundle is the reference instead.
+      const nameInput: typeof en.sign_up.form.name_input = (i18n.language === 'en' ? en : uk)
+        .sign_up.form.name_input;
+
       expect(validationMessages).toEqual({
-        formatError: t('sign_up.form.name_input.full_name_format_error'),
-        lettersOnlyError: t('sign_up.form.name_input.special_characters_error'),
-        required: t('sign_up.form.name_input.required'),
+        formatError: nameInput.full_name_format_error,
+        lettersOnlyError: nameInput.special_characters_error,
+        required: nameInput.required,
       });
       Object.values(validationMessages).forEach(message => {
         expect(message.trim()).not.toHaveLength(0);
