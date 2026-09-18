@@ -1,3 +1,5 @@
+import { t } from 'i18next';
+
 import { validateFullName } from '../../features/landing/components/auth-section/validations';
 import {
   validators,
@@ -7,6 +9,10 @@ import {
 const testFullName: string = 'John Doe';
 const testFirstName: string = 'John';
 const testSecondName: string = 'Doe';
+// Mirrors MAX_INITIALS_LENGTH in the validator: two names around one space.
+const maxInitialsLength: number = 255;
+const longestValidFullName: string = `${'a'.repeat(127)} ${'b'.repeat(127)}`;
+const tooLongFullName: string = `${'a'.repeat(128)} ${'b'.repeat(127)}`;
 
 describe('initials Tests', () => {
   describe('validators', () => {
@@ -21,6 +27,44 @@ describe('initials Tests', () => {
       expect(validators.isLettersOnly(`123 ${testFullName}456`)).toBe(false);
       expect(validators.isLettersOnly(`${testFirstName} ${testSecondName}`)).toBe(true);
     });
+
+    it('rejects a disallowed character at either end alone (the patterns are anchored twice)', () => {
+      // A single stray character at only one end is what an unanchored pattern
+      // lets through: without `^` the trailing "John Doe" still matches, and
+      // without `$` the leading one does.
+      expect(validators.isLettersOnly(`1${testFullName}`)).toBe(false);
+      expect(validators.isLettersOnly(`${testFullName}1`)).toBe(false);
+      expect(validators.isFormatted(`1${testFullName}`)).toBe(false);
+      expect(validators.isFormatted(`${testFullName}1`)).toBe(false);
+    });
+
+    it('accepts a full name of exactly the maximum length and rejects one character more', () => {
+      expect(longestValidFullName).toHaveLength(maxInitialsLength);
+      expect(validators.isFormatted(longestValidFullName)).toBe(true);
+      expect(validators.isFormatted(tooLongFullName)).toBe(false);
+    });
+
+    it('treats a whitespace-only value as empty', () => {
+      expect(validators.isEmpty('')).toBe(true);
+      expect(validators.isEmpty('   ')).toBe(true);
+      expect(validators.isEmpty(' \n\t ')).toBe(true);
+      expect(validators.isEmpty(testFirstName)).toBe(false);
+    });
+  });
+
+  describe('validationMessages', () => {
+    it('resolves every message from the sign-up i18n bundle, never an empty string', () => {
+      // Comparing validateFullName() against validationMessages.* alone is
+      // self-referential: a message mutated to '' would still equal itself.
+      expect(validationMessages).toEqual({
+        formatError: t('sign_up.form.name_input.full_name_format_error'),
+        lettersOnlyError: t('sign_up.form.name_input.special_characters_error'),
+        required: t('sign_up.form.name_input.required'),
+      });
+      Object.values(validationMessages).forEach(message => {
+        expect(message.trim()).not.toHaveLength(0);
+      });
+    });
   });
 
   describe('validateFullName', () => {
@@ -28,6 +72,7 @@ describe('initials Tests', () => {
       expect(validateFullName(testFullName)).toBe(null);
       expect(validateFullName(`  ${testFullName}  `)).toBe(null);
       expect(validateFullName(`${testFirstName} ${testSecondName}`)).toBe(null);
+      expect(validateFullName(longestValidFullName)).toBe(null);
     });
 
     it('should return an error message for invalid full names', () => {
@@ -35,6 +80,8 @@ describe('initials Tests', () => {
       expect(validateFullName(`123 ${testFullName}456`)).toBe(validationMessages.lettersOnlyError);
       expect(validateFullName(`123 456 789`)).toBe(validationMessages.lettersOnlyError);
       expect(validateFullName(`!@# $%^ &*()`)).toBe(validationMessages.lettersOnlyError);
+      expect(validateFullName(`1${testFullName}`)).toBe(validationMessages.lettersOnlyError);
+      expect(validateFullName(`${testFullName}1`)).toBe(validationMessages.lettersOnlyError);
     });
 
     it('should return a required error message for empty or whitespace-only strings', () => {
@@ -46,6 +93,7 @@ describe('initials Tests', () => {
 
     it('should return a format error message if the full name is too long', () => {
       expect(validateFullName(testFullName.repeat(150))).toBe(validationMessages.formatError);
+      expect(validateFullName(tooLongFullName)).toBe(validationMessages.formatError);
     });
   });
 });

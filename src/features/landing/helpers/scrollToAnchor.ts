@@ -11,16 +11,15 @@ const MAX_WAIT_TIME: number = 10000;
 
 const observeUntilFound: (id: string) => void = (id: string): void => {
   let timeoutId: number | undefined;
-  let observer: MutationObserver | null = null;
 
-  observer = new MutationObserver(() => {
+  const observer: MutationObserver = new MutationObserver(() => {
     if (!scrollToElement(id)) return;
     if (timeoutId !== undefined) clearTimeout(timeoutId);
-    observer?.disconnect();
+    observer.disconnect();
   });
 
   observer.observe(document.body, { childList: true, subtree: true });
-  timeoutId = window.setTimeout(() => observer?.disconnect(), MAX_WAIT_TIME);
+  timeoutId = window.setTimeout(() => observer.disconnect(), MAX_WAIT_TIME);
 };
 
 export const waitForElement: (id: string) => void = (id: string): void => {

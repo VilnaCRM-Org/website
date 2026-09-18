@@ -17,7 +17,6 @@ export const validators: Record<ValidationKeys, ValidationFunction> = {
   isLettersOnly: value => /^[A-Za-zА-Яа-яІіЇїЄєҐґ\s'’-]+$/.test(value),
   isFormatted: value =>
     /^[A-Za-zА-Яа-яІіЇїЄєҐґ]+\s[A-Za-zА-Яа-яІіЇїЄєҐґ]+$/.test(value) &&
-    value.length >= 2 &&
     value.length <= MAX_INITIALS_LENGTH,
   isEmpty: value => value.trim().length === 0,
 };
