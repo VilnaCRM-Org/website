@@ -96,7 +96,8 @@ function handleGraphQLErrors(
   const { extensions, message } = firstError;
   const statusCode = extensions?.statusCode as number | undefined;
   const statusMessage = getMessageByStatusCode(statusCode, messages);
-  const isUnauthorized = message?.toUpperCase?.().includes('UNAUTHORIZED') === true;
+  const isUnauthorized =
+    typeof message === 'string' && message.toUpperCase().includes('UNAUTHORIZED');
 
   const fallback = isUnauthorized
     ? messages[CLIENT_ERROR_KEYS.UNAUTHORIZED]
@@ -113,8 +114,8 @@ function resolveErrorMessage(error: object, messages: ClientErrorMessages): stri
 
   if (isServerError(error)) return handleNetworkError(error);
 
-  const errorMessage = (error as Error).message ?? '';
-  return isNetworkErrorMessage(errorMessage)
+  const { message } = error as Partial<Error>;
+  return typeof message === 'string' && isNetworkErrorMessage(message)
     ? messages[CLIENT_ERROR_KEYS.NETWORK]
     : messages[CLIENT_ERROR_KEYS.UNEXPECTED];
 }
