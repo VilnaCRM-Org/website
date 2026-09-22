@@ -16,6 +16,13 @@ description = "Generated / upstream-fetched artifacts and the single shared inte
 #     digests trip the generic high-entropy rules; hand-editing this file is
 #     explicitly forbidden, so it is never a place a human pastes a credential.
 #   - public/swagger-schema.json            — generated build artifact
+#   - config/ui-toolkit-checksums.json — SHA-256 digests of the installed
+#     @vilnacrm/ui-toolkit build artifacts (issue #488/#458), written only by
+#     `make update-ui-toolkit`. Same 64-char hex digest shape as the contracts
+#     checksums file above, so it trips the same generic-api-key rule. Not yet
+#     on `main` -- it lands only with #459 -- but gitleaks' history scan walks
+#     every ref the checkout fetched, so it is found on every weekly run
+#     regardless of whether that branch has merged.
 #
 # The remaining entries are gitignored BUILD OUTPUT. They never exist in a CI
 # checkout, so exempting them cannot hide a committed secret -- but they do
@@ -30,6 +37,7 @@ description = "Generated / upstream-fetched artifacts and the single shared inte
 paths = [
   '''contracts/user-service/openapi\.json''',
   '''contracts/user-service/checksums\.json''',
+  '''config/ui-toolkit-checksums\.json''',
   '''public/swagger-schema\.json''',
   # The optional `/repo/` prefix is not cosmetic: `--no-git` (tree mode) reports
   # the absolute path inside the container mount, while the history scan reports
