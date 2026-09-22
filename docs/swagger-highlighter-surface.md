@@ -89,8 +89,9 @@ Today it is inert, and it must not be read as coverage of the highlighter tree:
 - Neither prismjs nor refractor ships — see above — and the override never touched
   `highlight.js`, the engine that does.
 
-Removing it rewrites `bun.lock`, which open dependency pull requests also rewrite; fold it
-into the next deliberate lockfile change rather than a documentation change.
+The override was removed in the same change that landed Follow-up 3 below (issue #379,
+F5). Dropping it changed nothing observable: prismjs and refractor still never ship, so the
+override was pure dead weight by the time it was deleted.
 
 ## Why GitHub-native alerting is blind to this tree
 
@@ -128,14 +129,19 @@ so belongs in its own reviewed change, after the open dependency pull requests l
    the options are a webpack alias that stubs `react-syntax-highlighter/dist/esm/light`
    with `syntaxHighlight` turned off, or a different renderer. Either changes what
    `/swagger` shows, needs the prod stack, and re-baselines the swagger visual snapshots.
-3. **Override `tmp` to `0.2.7`.** `bun.lock` resolves `tmp@0.1.0` (via `@lhci/cli@0.15.1`,
-   which declares `^0.1.0`) and `tmp@0.0.33` (via `@lhci/cli` → `inquirer@6.5.2` →
-   `external-editor@3.1.0`). The census lists GHSA-ph9p-34f9-6g65 (CVSS 7.7, fixed in
-   0.2.6) and GHSA-52f5-9888-hmc6 (fixed in 0.2.4) against both. Issue #379 asks for
-   `>= 0.2.4`, which clears only the second advisory; the floor is **0.2.6**, and 0.2.7 is
-   the newest release (no dependencies, Node `>= 14.14`). Both call sites — `tmp.fileSync`
-   in `@lhci/cli`'s `open` command and `tmpNameSync` in `external-editor` — survive in
-   0.2.x, and both are dev-only. Note that the Docker-in-Docker Lighthouse path in the
+3. **Done: `tmp` overridden to `0.2.7`.** `bun.lock` used to resolve `tmp@0.1.0` (via
+   `@lhci/cli@0.15.1`, which declares `^0.1.0`) and `tmp@0.0.33` (via `@lhci/cli` →
+   `inquirer@6.5.2` → `external-editor@3.1.0`). The census listed GHSA-ph9p-34f9-6g65
+   (CVSS 7.7, fixed in 0.2.6) and GHSA-52f5-9888-hmc6 (fixed in 0.2.4) against both. Issue
+   #379 asked for `>= 0.2.4`, which would have cleared only the second advisory; the floor
+   was **0.2.6**, and `package.json`'s `overrides.tmp` now pins `0.2.7`, the newest release
+   (no dependencies, Node `>= 14.14`) — confirmed against the osv.dev entries for both
+   advisories before landing. Both call sites — `tmp.fileSync` in `@lhci/cli`'s `open`
+   command and `tmpNameSync` in `external-editor` — survive in 0.2.x, and both are
+   dev-only. `bun.lock` now carries a single hoisted `tmp@0.2.7` entry; the old
+   `tmp@0.1.0`/`tmp@0.0.33` entries, and the `os-tmpdir`/`rimraf` sub-dependencies only
+   0.0.x/0.1.x needed, are gone. Note that the Docker-in-Docker Lighthouse path in the
    Makefile installs `@lhci/cli@0.14.0` globally inside the prod container, outside
-   `bun.lock`; an override does not reach it, and the lockfile criterion does not need it
-   to. Drop the inert `prismjs` override in the same lockfile change.
+   `bun.lock`; the override does not reach it, and the lockfile criterion does not need it
+   to. The inert `prismjs` override was dropped in the same lockfile change (issue #379,
+   F5).
