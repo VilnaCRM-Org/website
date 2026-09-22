@@ -42,3 +42,8 @@ is the place to look before changing it.
   and Qlty's.
 - **`ui-image`** — `sx` is required: every consumer sizes the image, and the wrapper's own
   `img` rule is layered after it.
+- **`error-fallback`** — the fallback `pages/_app.tsx` renders inside `Sentry.ErrorBoundary`
+  around `<Component />`. It is shared rather than feature-local because a render crash can
+  originate in any feature; see
+  [ADR 0009](../../docs/adr/0009-consolidated-error-boundary-and-observability.md). `onRetry`
+  is wired to the boundary's own `resetError`, not a page reload.

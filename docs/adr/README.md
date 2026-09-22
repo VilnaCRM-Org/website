@@ -27,6 +27,9 @@ justified a decision still holds.
   orphan tags and enforces a version invariant before it writes. _Accepted._
 - [ADR 0008](0008-light-only-theme.md) — the site ships one light colour scheme and does
   not follow `prefers-color-scheme`. _Accepted._
+- [ADR 0009](0009-consolidated-error-boundary-and-observability.md) — one error
+  boundary, one ErrorLink-only Apollo reporting path, and Sentry release/environment
+  tags, replacing three competing proposals. _Accepted._
 
 The template for a new record is [`0000-template.md`](0000-template.md).
 

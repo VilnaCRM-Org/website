@@ -10,9 +10,11 @@
  * link level, so this verifies wiring that the unit and `testing-library`
  * (MockedProvider) layers cannot reach: the actual HTTP request the client
  * emits and how real Apollo error classes flow back through the app's error
- * translation.
+ * translation. It also exercises the real `ErrorLink`, so Sentry is mocked at
+ * the module boundary the way `AuthLayoutTelemetry.test.tsx` mocks it.
  */
 import { CombinedGraphQLErrors, TypedDocumentNode } from '@apollo/client';
+import * as Sentry from '@sentry/react';
 import i18n from 'i18next';
 
 import { CLIENT_ERROR_KEYS, getClientErrorMessages } from '@/shared/clientErrorMessages';
@@ -30,6 +32,10 @@ import {
   readGraphQLRequest,
   restoreFetch,
 } from '../utils/graphql-network';
+
+jest.mock('@sentry/react', () => ({ captureException: jest.fn() }));
+
+const captureException: jest.Mock = Sentry.captureException as unknown as jest.Mock;
 
 interface CreateUserResponse {
   createUser: {
@@ -107,6 +113,7 @@ describe('integration: registration GraphQL API boundary', () => {
     // The Apollo client is a module singleton shared across tests; clear its
     // cache so a mutation result cannot leak into a later test.
     await client.clearStore();
+    captureException.mockClear();
   });
 
   describe('request contract', () => {
@@ -226,6 +233,50 @@ describe('integration: registration GraphQL API boundary', () => {
       const error = await captureError();
 
       expect(handleApolloError({ error })).toBe(messages[CLIENT_ERROR_KEYS.NETWORK]);
+    });
+  });
+
+  describe('telemetry reporting (ErrorLink)', () => {
+    it('reports a GraphQL error to Sentry without changing the message the user sees', async () => {
+      const message = 'A user with this email already exists.';
+      fetchMock.mockResolvedValue(
+        graphqlErrors([{ message, extensions: { code: 'BAD_USER_INPUT' } }])
+      );
+
+      const error = await captureError();
+
+      expect(captureException).toHaveBeenCalledTimes(1);
+      const [, context] = captureException.mock.calls[0] as [unknown, { tags: unknown }];
+      expect(context).toMatchObject({ tags: { feature: 'landing', action: 'graphql' } });
+      expect(handleApolloError({ error })).toBe(messages[CLIENT_ERROR_KEYS.WENT_WRONG]);
+    });
+
+    it('reports a network failure to Sentry with the same static tags', async () => {
+      fetchMock.mockRejectedValue(new TypeError('Failed to fetch'));
+
+      await captureError();
+
+      expect(captureException).toHaveBeenCalledTimes(1);
+      const [, context] = captureException.mock.calls[0] as [unknown, { tags: unknown }];
+      expect(context).toMatchObject({ tags: { feature: 'landing', action: 'graphql' } });
+    });
+
+    it('reports nothing to Sentry on a successful mutation', async () => {
+      fetchMock.mockResolvedValue(graphqlData(successPayload()));
+
+      await runSignup();
+
+      expect(captureException).not.toHaveBeenCalled();
+    });
+
+    it('never retries the request after an error, which would risk a duplicate sign-up', async () => {
+      fetchMock.mockResolvedValue(
+        graphqlErrors([{ message: 'boom', extensions: { code: 'BAD_USER_INPUT' } }])
+      );
+
+      await captureError();
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
     });
   });
 });

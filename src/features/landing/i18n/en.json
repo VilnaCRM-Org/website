@@ -236,5 +236,11 @@
       "title": "API documentation (English) — VilnaCRM",
       "description": "English-language landing page for the VilnaCRM user-service API reference."
     }
+  },
+  "error_boundary": {
+    "title": "Something went wrong",
+    "description": "We hit an unexpected error on this page. Try again, or go back to the homepage.",
+    "retry_button": "Try again",
+    "home_link": "Go to homepage"
   }
 }

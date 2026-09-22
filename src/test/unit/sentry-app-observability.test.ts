@@ -1,0 +1,357 @@
+import fs from 'node:fs';
+import path from 'node:path';
+
+import * as ts from 'typescript';
+
+const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
+const APP_PATH = path.join(REPO_ROOT, 'pages', '_app.tsx');
+
+const SENTRY_MODULE = '@sentry/react';
+const INIT_MEMBER = 'init';
+const ERROR_BOUNDARY_MEMBER = 'ErrorBoundary';
+const RELEASE_OPTION = 'release';
+const ENVIRONMENT_OPTION = 'environment';
+const WRAPPED_COMPONENT_TAG = 'Component';
+const BEFORE_CAPTURE_PROP = 'beforeCapture';
+const ON_ERROR_PROP = 'onError';
+
+interface AppObservabilityContract {
+  release: string;
+  environment: string;
+  componentUsageCount: number;
+  componentWrappedCount: number;
+  errorBoundaryCount: number;
+  hasBeforeCapture: boolean;
+  hasOnError: boolean;
+}
+
+function sentryNamespaceOf(sourceFile: ts.SourceFile): string {
+  for (const statement of sourceFile.statements) {
+    const fromSentry =
+      ts.isImportDeclaration(statement) &&
+      ts.isStringLiteral(statement.moduleSpecifier) &&
+      statement.moduleSpecifier.text === SENTRY_MODULE;
+    const bindings = fromSentry ? statement.importClause?.namedBindings : undefined;
+    if (bindings && ts.isNamespaceImport(bindings)) return bindings.name.text;
+  }
+  throw new Error(`import * as <namespace> from '${SENTRY_MODULE}' not found`);
+}
+
+function isNamespaceCall(
+  node: ts.Node,
+  namespace: string,
+  member: string
+): node is ts.CallExpression {
+  if (!ts.isCallExpression(node) || !ts.isPropertyAccessExpression(node.expression)) return false;
+  const { expression: target, name } = node.expression;
+  return ts.isIdentifier(target) && target.text === namespace && name.text === member;
+}
+
+function isNamespaceTag(tag: ts.JsxTagNameExpression, namespace: string, member: string): boolean {
+  return (
+    ts.isPropertyAccessExpression(tag) &&
+    ts.isIdentifier(tag.expression) &&
+    tag.expression.text === namespace &&
+    ts.isIdentifier(tag.name) &&
+    tag.name.text === member
+  );
+}
+
+function collectInitCalls(root: ts.Node, namespace: string): ts.CallExpression[] {
+  const calls: ts.CallExpression[] = [];
+  const visit = (node: ts.Node): void => {
+    if (isNamespaceCall(node, namespace, INIT_MEMBER)) calls.push(node);
+    ts.forEachChild(node, visit);
+  };
+  visit(root);
+  return calls;
+}
+
+function optionsArgumentOf(call: ts.CallExpression): ts.ObjectLiteralExpression {
+  const [argument] = call.arguments;
+  if (argument && ts.isObjectLiteralExpression(argument)) return argument;
+  throw new Error(`${call.expression.getText()}(…) is not called with an object literal`);
+}
+
+function staticPropertyNameOf(prop: ts.ObjectLiteralElementLike): string | undefined {
+  const name = ts.isSpreadAssignment(prop) ? undefined : prop.name;
+  return name && (ts.isIdentifier(name) || ts.isStringLiteralLike(name)) ? name.text : undefined;
+}
+
+function identifierValueOf(initOptions: ts.ObjectLiteralExpression, optionName: string): string {
+  const prop = initOptions.properties.find(candidate => {
+    const name = staticPropertyNameOf(candidate);
+    if (name === undefined) {
+      throw new Error(`${candidate.getText()} is not a statically known property`);
+    }
+    return name === optionName;
+  });
+  if (prop === undefined) {
+    throw new Error(`Sentry.init(…) is missing the "${optionName}" option`);
+  }
+  const value = ts.isPropertyAssignment(prop) ? prop.initializer : undefined;
+  if (value === undefined || !ts.isIdentifier(value)) {
+    throw new Error(`${prop.getText()} is not a bare identifier`);
+  }
+  return value.text;
+}
+
+function jsxTagNameOf(node: ts.JsxElement | ts.JsxSelfClosingElement): ts.JsxTagNameExpression {
+  return ts.isJsxElement(node) ? node.openingElement.tagName : node.tagName;
+}
+
+function jsxAttributesOf(node: ts.JsxElement | ts.JsxSelfClosingElement): ts.JsxAttributes {
+  return ts.isJsxElement(node) ? node.openingElement.attributes : node.attributes;
+}
+
+function hasJsxAttribute(attributes: ts.JsxAttributes, name: string): boolean {
+  return attributes.properties.some(
+    property => ts.isJsxAttribute(property) && property.name.getText() === name
+  );
+}
+
+interface ComponentAndBoundaryUsage {
+  componentUsageCount: number;
+  componentWrappedCount: number;
+  errorBoundaryCount: number;
+  hasBeforeCapture: boolean;
+  hasOnError: boolean;
+}
+
+function analyzeComponentAndBoundaryUsage(
+  sourceFile: ts.SourceFile,
+  namespace: string
+): ComponentAndBoundaryUsage {
+  let componentUsageCount = 0;
+  let componentWrappedCount = 0;
+  let errorBoundaryCount = 0;
+  let hasBeforeCapture = false;
+  let hasOnError = false;
+
+  const visit = (node: ts.Node, insideBoundary: boolean): void => {
+    let nextInsideBoundary = insideBoundary;
+    if (ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node)) {
+      const tag = jsxTagNameOf(node);
+      if (isNamespaceTag(tag, namespace, ERROR_BOUNDARY_MEMBER)) {
+        nextInsideBoundary = true;
+        errorBoundaryCount += 1;
+        const attributes = jsxAttributesOf(node);
+        if (hasJsxAttribute(attributes, BEFORE_CAPTURE_PROP)) hasBeforeCapture = true;
+        if (hasJsxAttribute(attributes, ON_ERROR_PROP)) hasOnError = true;
+      } else if (ts.isIdentifier(tag) && tag.text === WRAPPED_COMPONENT_TAG) {
+        componentUsageCount += 1;
+        if (insideBoundary) componentWrappedCount += 1;
+      }
+    }
+    ts.forEachChild(node, child => visit(child, nextInsideBoundary));
+  };
+
+  visit(sourceFile, false);
+  return {
+    componentUsageCount,
+    componentWrappedCount,
+    errorBoundaryCount,
+    hasBeforeCapture,
+    hasOnError,
+  };
+}
+
+function readAppObservabilityContract(source: string): AppObservabilityContract {
+  const sourceFile = ts.createSourceFile(
+    '_app.tsx',
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TSX
+  );
+  const namespace = sentryNamespaceOf(sourceFile);
+  const inits = collectInitCalls(sourceFile, namespace);
+  const init = inits.length === 1 ? inits[0] : undefined;
+  if (!init) {
+    throw new Error(
+      `expected exactly one ${namespace}.${INIT_MEMBER}({ … }) call, found ${inits.length}`
+    );
+  }
+  const initOptions = optionsArgumentOf(init);
+  const release = identifierValueOf(initOptions, RELEASE_OPTION);
+  const environment = identifierValueOf(initOptions, ENVIRONMENT_OPTION);
+  const {
+    componentUsageCount,
+    componentWrappedCount,
+    errorBoundaryCount,
+    hasBeforeCapture,
+    hasOnError,
+  } = analyzeComponentAndBoundaryUsage(sourceFile, namespace);
+  if (errorBoundaryCount !== 1) {
+    throw new Error(
+      `expected exactly one <${namespace}.${ERROR_BOUNDARY_MEMBER}> element, found ${errorBoundaryCount}`
+    );
+  }
+
+  return {
+    release,
+    environment,
+    componentUsageCount,
+    componentWrappedCount,
+    errorBoundaryCount,
+    hasBeforeCapture,
+    hasOnError,
+  };
+}
+
+const readFile = (filePath: string): string => fs.readFileSync(filePath, 'utf-8');
+
+describe('Sentry release/environment/error-boundary contract in pages/_app.tsx', () => {
+  it('pins release and environment to the app-version config and wraps Component in the boundary', () => {
+    const contract = readAppObservabilityContract(readFile(APP_PATH));
+
+    expect(contract.release).toBe('APP_VERSION');
+    expect(contract.environment).toBe('APP_ENVIRONMENT');
+    expect(contract.componentUsageCount).toBeGreaterThan(0);
+    expect(contract.componentWrappedCount).toBe(contract.componentUsageCount);
+  });
+
+  it('tags the boundary own capture via beforeCapture instead of re-capturing through onError', () => {
+    // The Sentry SDK's ErrorBoundary#componentDidCatch calls captureReactException
+    // unconditionally before it ever calls onError, so wiring a second sink through
+    // onError double-reports every crash. This is the regression: a boundary that
+    // merely "exists" is not enough, it must carry beforeCapture and must not also
+    // carry onError.
+    const contract = readAppObservabilityContract(readFile(APP_PATH));
+
+    expect(contract.errorBoundaryCount).toBe(1);
+    expect(contract.hasBeforeCapture).toBe(true);
+    expect(contract.hasOnError).toBe(false);
+  });
+});
+
+describe('Sentry release/environment/error-boundary contract helpers', () => {
+  const SENTRY_IMPORT = `import * as Sentry from '${SENTRY_MODULE}';`;
+  const buildInit = (extraOptions: string): string =>
+    `${SENTRY_IMPORT}\nSentry.init({ dsn: env.DSN, sendDefaultPii: false, ${extraOptions} });`;
+  const validOptions = 'release: APP_VERSION, environment: APP_ENVIRONMENT';
+
+  const buildTree = (initSource: string, jsx: string): string =>
+    [initSource, `function MyApp() { return (${jsx}); }`].join('\n');
+
+  const wrappedComponent = `
+    <Layout>
+      <Sentry.ErrorBoundary
+        fallback={({ resetError }) => <ErrorFallback onRetry={resetError} />}
+        beforeCapture={(scope) => { scope.setTags({ feature: 'app', action: 'render-crash' }); }}
+      >
+        <Component />
+      </Sentry.ErrorBoundary>
+    </Layout>
+  `;
+
+  describe('positive', () => {
+    it('reads release/environment identifiers and a wrapped Component', () => {
+      const source = buildTree(buildInit(validOptions), wrappedComponent);
+      expect(readAppObservabilityContract(source)).toEqual({
+        release: 'APP_VERSION',
+        environment: 'APP_ENVIRONMENT',
+        componentUsageCount: 1,
+        componentWrappedCount: 1,
+        errorBoundaryCount: 1,
+        hasBeforeCapture: true,
+        hasOnError: false,
+      });
+    });
+
+    it('follows a renamed namespace import instead of the identifier "Sentry"', () => {
+      const source = [
+        `import * as Monitoring from '${SENTRY_MODULE}';`,
+        'Monitoring.init({ release: APP_VERSION, environment: APP_ENVIRONMENT });',
+        'function MyApp() { return (',
+        '  <Monitoring.ErrorBoundary beforeCapture={tagRenderCrash}><Component /></Monitoring.ErrorBoundary>',
+        '); }',
+      ].join('\n');
+      expect(readAppObservabilityContract(source).componentWrappedCount).toBe(1);
+    });
+  });
+
+  describe('negative — the contract is present but wrong', () => {
+    it('reports a Component rendered outside the boundary as unwrapped', () => {
+      const source = buildTree(
+        buildInit(validOptions),
+        '<Layout><Sentry.ErrorBoundary><Notification /></Sentry.ErrorBoundary><Component /></Layout>'
+      );
+      const contract = readAppObservabilityContract(source);
+      expect(contract.componentUsageCount).toBe(1);
+      expect(contract.componentWrappedCount).toBe(0);
+    });
+
+    it('reports onError as present on a boundary that re-captures (the double-event regression)', () => {
+      const source = buildTree(
+        buildInit(validOptions),
+        `<Layout>
+          <Sentry.ErrorBoundary
+            fallback={({ resetError }) => <ErrorFallback onRetry={resetError} />}
+            onError={reportRenderCrash}
+          >
+            <Component />
+          </Sentry.ErrorBoundary>
+        </Layout>`
+      );
+      const contract = readAppObservabilityContract(source);
+      expect(contract.hasOnError).toBe(true);
+    });
+
+    it('reports beforeCapture as absent when the boundary carries no tagging callback at all', () => {
+      const source = buildTree(
+        buildInit(validOptions),
+        '<Layout><Sentry.ErrorBoundary><Component /></Sentry.ErrorBoundary></Layout>'
+      );
+      const contract = readAppObservabilityContract(source);
+      expect(contract.hasBeforeCapture).toBe(false);
+    });
+  });
+
+  describe('boundary — no page component rendered at all', () => {
+    it('reports zero usages rather than throwing', () => {
+      const source = buildTree(
+        buildInit(validOptions),
+        '<Layout><Sentry.ErrorBoundary /></Layout>'
+      );
+      const contract = readAppObservabilityContract(source);
+      expect(contract.componentUsageCount).toBe(0);
+      expect(contract.componentWrappedCount).toBe(0);
+    });
+  });
+
+  describe('fail-closed — the contract cannot be read statically', () => {
+    it('throws when release is missing', () => {
+      const source = buildTree(buildInit('environment: APP_ENVIRONMENT'), wrappedComponent);
+      expect(() => readAppObservabilityContract(source)).toThrow(/missing the "release" option/);
+    });
+
+    it('throws when environment is missing', () => {
+      const source = buildTree(buildInit('release: APP_VERSION'), wrappedComponent);
+      expect(() => readAppObservabilityContract(source)).toThrow(
+        /missing the "environment" option/
+      );
+    });
+
+    it('throws when release is a string literal instead of the imported identifier', () => {
+      const source = buildTree(
+        buildInit(`release: 'v1.0.0', environment: APP_ENVIRONMENT`),
+        wrappedComponent
+      );
+      expect(() => readAppObservabilityContract(source)).toThrow(/is not a bare identifier/);
+    });
+
+    it('throws on a computed option key, which could hide release or environment', () => {
+      const source = buildTree(buildInit(`[key]: APP_VERSION, ${validOptions}`), wrappedComponent);
+      expect(() => readAppObservabilityContract(source)).toThrow(/not a statically known property/);
+    });
+
+    it('throws when Sentry.init is never called', () => {
+      expect(() => readAppObservabilityContract(SENTRY_IMPORT)).toThrow(/exactly one Sentry\.init/);
+    });
+
+    it('throws when the @sentry/react namespace import is absent', () => {
+      expect(() => readAppObservabilityContract('const x = 1;')).toThrow(/@sentry\/react/);
+    });
+  });
+});

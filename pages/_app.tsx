@@ -8,7 +8,9 @@ import React, { ComponentType, useEffect } from 'react';
 import { I18nextProvider } from 'react-i18next';
 
 import { theme } from '@/components/app-theme';
+import ErrorFallback from '@/components/error-fallback';
 import Layout from '@/components/layout';
+import { APP_ENVIRONMENT, APP_VERSION } from '@/config/app-version';
 import { env } from '@/config/env';
 import { golos } from '@/config/Fonts/golos';
 import { RouteI18n, useRouteI18n } from '@/hooks/use-route-i18n';
@@ -28,6 +30,14 @@ const DynamicHeader: ComponentType = dynamic(() => import('@/features/landing/co
   ssr: false,
 });
 
+const renderErrorFallback: Sentry.FallbackRender = ({ resetError }) => (
+  <ErrorFallback onRetry={resetError} />
+);
+
+const tagRenderCrash: NonNullable<Sentry.ErrorBoundaryProps['beforeCapture']> = scope => {
+  scope.setTags({ feature: 'app', action: 'render-crash' });
+};
+
 Sentry.init({
   dsn: env.NEXT_PUBLIC_SENTRY_DSN,
   sendDefaultPii: false,
@@ -38,9 +48,11 @@ Sentry.init({
   tracePropagationTargets: [env.NEXT_PUBLIC_DEVELOPMENT_API_URL, env.NEXT_PUBLIC_API_URL].filter(
     Boolean
   ),
-  tracesSampleRate: 1.0,
+  tracesSampleRate: APP_ENVIRONMENT === 'production' ? 0.1 : 1.0,
   replaysSessionSampleRate: 0.1,
   replaysOnErrorSampleRate: 1.0,
+  release: APP_VERSION,
+  environment: APP_ENVIRONMENT,
 });
 
 function MyApp({ Component }: { Component: React.ComponentType }): React.ReactElement {
@@ -56,7 +68,9 @@ function MyApp({ Component }: { Component: React.ComponentType }): React.ReactEl
         <ApolloProvider client={client}>
           <main className={golos.className}>
             <Layout header={<DynamicHeader />}>
-              <Component />
+              <Sentry.ErrorBoundary fallback={renderErrorFallback} beforeCapture={tagRenderCrash}>
+                <Component />
+              </Sentry.ErrorBoundary>
             </Layout>
             {env.NEXT_PUBLIC_GA_MEASUREMENT_ID ? (
               <GoogleAnalytics gaId={env.NEXT_PUBLIC_GA_MEASUREMENT_ID} />

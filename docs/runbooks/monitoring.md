@@ -147,14 +147,26 @@ The browser bundle carries the instrumentation; production has no keys for it to
   `@sentry/react` with `dsn: env.NEXT_PUBLIC_SENTRY_DSN`, read through the zod-validated
   schema in [`src/config/env.ts`](../../src/config/env.ts) (default `''`),
   `sendDefaultPii: false`, session replay pinned to mask all inputs, text and media, trace
-  propagation only to the configured API origins, and sampling of `tracesSampleRate: 1.0`,
-  `replaysSessionSampleRate: 0.1`, `replaysOnErrorSampleRate: 1.0`.
-  [`.env.production`](../../.env.production) commits `NEXT_PUBLIC_SENTRY_DSN=` **empty**,
-  so the production bundle initialises the SDK with no DSN and it sends nothing.
-  Handled errors on the sign-up path are reported through
-  [`src/lib/telemetry/report-error.ts`](../../src/lib/telemetry/report-error.ts) with
-  static `feature`/`action` tags only. There is no error boundary: an uncaught render
-  error is neither reported nor given a fallback UI.
+  propagation only to the configured API origins, `release`/`environment` sourced from
+  [`src/config/app-version.ts`](../../src/config/app-version.ts) (the `package.json`
+  version and `isProductionBuild()`), and sampling of `tracesSampleRate: 0.1` in a
+  production build (`1.0` in development), `replaysSessionSampleRate: 0.1`,
+  `replaysOnErrorSampleRate: 1.0`. [`.env.production`](../../.env.production) commits
+  `NEXT_PUBLIC_SENTRY_DSN=` **empty**, so the production bundle initialises the SDK with no
+  DSN and it sends nothing. Handled errors — the sign-up path, a caught Apollo
+  GraphQL/network error (`src/features/landing/api/graphql/apollo.ts`'s `ErrorLink`, which
+  only reports and never retries) and an uncaught render crash — carry the same static
+  `feature`/`action` tag shape. The sign-up path and the Apollo `ErrorLink` report through
+  the single sink [`src/lib/telemetry/report-error.ts`](../../src/lib/telemetry/report-error.ts).
+  A render crash inside a page is caught by the `Sentry.ErrorBoundary` wrapped around
+  `<Component />` (not around the header or footer, so both stay usable): the boundary
+  captures the event itself, so `pages/_app.tsx` tags that single capture via
+  `beforeCapture` (`{ feature: 'app', action: 'render-crash' }`) instead of adding a second
+  `captureException` call, and shows
+  [`src/components/error-fallback`](../../src/components/error-fallback), a localized,
+  `role="alert"` apology with a retry control and a link home. See
+  [ADR 0009](../adr/0009-consolidated-error-boundary-and-observability.md) for the design
+  this consolidates.
 - **Core Web Vitals.** `reportWebVitals` in `pages/_app.tsx` delegates to
   [`src/lib/web-vitals/report-web-vitals.ts`](../../src/lib/web-vitals/report-web-vitals.ts),
   which forwards only field vitals (`LCP`, `INP`, `CLS`, `FCP`, `TTFB`), only in a
