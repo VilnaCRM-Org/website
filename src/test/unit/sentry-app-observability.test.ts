@@ -22,6 +22,7 @@ interface AppObservabilityContract {
   componentWrappedCount: number;
   errorBoundaryCount: number;
   hasBeforeCapture: boolean;
+  beforeCaptureCallbackName: string | undefined;
   hasOnError: boolean;
 }
 
@@ -78,14 +79,39 @@ function staticPropertyNameOf(prop: ts.ObjectLiteralElementLike): string | undef
   return name && (ts.isIdentifier(name) || ts.isStringLiteralLike(name)) ? name.text : undefined;
 }
 
-function identifierValueOf(initOptions: ts.ObjectLiteralExpression, optionName: string): string {
-  const prop = initOptions.properties.find(candidate => {
-    const name = staticPropertyNameOf(candidate);
-    if (name === undefined) {
-      throw new Error(`${candidate.getText()} is not a statically known property`);
+// `.find()` alone would stop at the FIRST property named `optionName`, so a later
+// spread (`...overrides`) or a duplicate declaration of the same option — either of
+// which can silently win at runtime — would never be reached and the gate would keep
+// reporting the first, correct-looking value. Scan every property up front instead.
+function assertNoOverridableOptions(
+  initOptions: ts.ObjectLiteralExpression,
+  optionNames: readonly string[]
+): void {
+  const seenOptionNames = new Set<string>();
+  for (const prop of initOptions.properties) {
+    if (ts.isSpreadAssignment(prop)) {
+      throw new Error(
+        `Sentry.init(…) options carry a spread element, "${optionNames.join('"/"')}" ` +
+          'is not statically known'
+      );
     }
-    return name === optionName;
-  });
+    const name = staticPropertyNameOf(prop);
+    if (name === undefined) {
+      throw new Error(`${prop.getText()} is not a statically known property`);
+    }
+    if (optionNames.includes(name)) {
+      if (seenOptionNames.has(name)) {
+        throw new Error(`Sentry.init(…) declares "${name}" more than once`);
+      }
+      seenOptionNames.add(name);
+    }
+  }
+}
+
+function identifierValueOf(initOptions: ts.ObjectLiteralExpression, optionName: string): string {
+  const prop = initOptions.properties.find(
+    candidate => staticPropertyNameOf(candidate) === optionName
+  );
   if (prop === undefined) {
     throw new Error(`Sentry.init(…) is missing the "${optionName}" option`);
   }
@@ -110,11 +136,36 @@ function hasJsxAttribute(attributes: ts.JsxAttributes, name: string): boolean {
   );
 }
 
+// `beforeCapture={undefined}` (or `={null}`/`={false}`) satisfies a presence-only check
+// while wiring up no crash tagging at all, so the initializer must actually resolve to a
+// callback: an inline function, or a bare identifier other than the `undefined` global.
+function beforeCaptureExpressionOf(attributes: ts.JsxAttributes): ts.Expression | undefined {
+  const attribute = attributes.properties.find(
+    (property): property is ts.JsxAttribute =>
+      ts.isJsxAttribute(property) && property.name.getText() === BEFORE_CAPTURE_PROP
+  );
+  const initializer = attribute?.initializer;
+  if (
+    initializer !== undefined &&
+    ts.isJsxExpression(initializer) &&
+    initializer.expression !== undefined
+  ) {
+    return initializer.expression;
+  }
+  return undefined;
+}
+
+function isRealCallbackExpression(expression: ts.Expression): boolean {
+  if (ts.isArrowFunction(expression) || ts.isFunctionExpression(expression)) return true;
+  return ts.isIdentifier(expression) && expression.text !== 'undefined';
+}
+
 interface ComponentAndBoundaryUsage {
   componentUsageCount: number;
   componentWrappedCount: number;
   errorBoundaryCount: number;
   hasBeforeCapture: boolean;
+  beforeCaptureCallbackName: string | undefined;
   hasOnError: boolean;
 }
 
@@ -126,6 +177,7 @@ function analyzeComponentAndBoundaryUsage(
   let componentWrappedCount = 0;
   let errorBoundaryCount = 0;
   let hasBeforeCapture = false;
+  let beforeCaptureCallbackName: string | undefined;
   let hasOnError = false;
 
   const visit = (node: ts.Node, insideBoundary: boolean): void => {
@@ -136,7 +188,16 @@ function analyzeComponentAndBoundaryUsage(
         nextInsideBoundary = true;
         errorBoundaryCount += 1;
         const attributes = jsxAttributesOf(node);
-        if (hasJsxAttribute(attributes, BEFORE_CAPTURE_PROP)) hasBeforeCapture = true;
+        const beforeCaptureExpression = beforeCaptureExpressionOf(attributes);
+        if (
+          beforeCaptureExpression !== undefined &&
+          isRealCallbackExpression(beforeCaptureExpression)
+        ) {
+          hasBeforeCapture = true;
+          beforeCaptureCallbackName = ts.isIdentifier(beforeCaptureExpression)
+            ? beforeCaptureExpression.text
+            : undefined;
+        }
         if (hasJsxAttribute(attributes, ON_ERROR_PROP)) hasOnError = true;
       } else if (ts.isIdentifier(tag) && tag.text === WRAPPED_COMPONENT_TAG) {
         componentUsageCount += 1;
@@ -152,6 +213,7 @@ function analyzeComponentAndBoundaryUsage(
     componentWrappedCount,
     errorBoundaryCount,
     hasBeforeCapture,
+    beforeCaptureCallbackName,
     hasOnError,
   };
 }
@@ -173,6 +235,7 @@ function readAppObservabilityContract(source: string): AppObservabilityContract 
     );
   }
   const initOptions = optionsArgumentOf(init);
+  assertNoOverridableOptions(initOptions, [RELEASE_OPTION, ENVIRONMENT_OPTION]);
   const release = identifierValueOf(initOptions, RELEASE_OPTION);
   const environment = identifierValueOf(initOptions, ENVIRONMENT_OPTION);
   const {
@@ -180,6 +243,7 @@ function readAppObservabilityContract(source: string): AppObservabilityContract 
     componentWrappedCount,
     errorBoundaryCount,
     hasBeforeCapture,
+    beforeCaptureCallbackName,
     hasOnError,
   } = analyzeComponentAndBoundaryUsage(sourceFile, namespace);
   if (errorBoundaryCount !== 1) {
@@ -196,6 +260,7 @@ function readAppObservabilityContract(source: string): AppObservabilityContract 
     componentWrappedCount,
     errorBoundaryCount,
     hasBeforeCapture,
+    beforeCaptureCallbackName,
     hasOnError,
   };
 }
@@ -219,6 +284,7 @@ describe('Sentry release/environment/error-boundary contract in pages/_app.tsx',
 
     expect(contract.errorBoundaryCount).toBe(1);
     expect(contract.hasBeforeCapture).toBe(true);
+    expect(contract.beforeCaptureCallbackName).toBe('tagRenderCrash');
     expect(contract.hasOnError).toBe(false);
   });
 });
@@ -253,6 +319,7 @@ describe('Sentry release/environment/error-boundary contract helpers', () => {
         componentWrappedCount: 1,
         errorBoundaryCount: 1,
         hasBeforeCapture: true,
+        beforeCaptureCallbackName: undefined,
         hasOnError: false,
       });
     });
@@ -307,6 +374,17 @@ describe('Sentry release/environment/error-boundary contract helpers', () => {
       const contract = readAppObservabilityContract(source);
       expect(contract.hasBeforeCapture).toBe(false);
     });
+
+    it('reports beforeCapture absent when its value is the undefined identifier', () => {
+      const source = buildTree(
+        buildInit(validOptions),
+        '<Layout><Sentry.ErrorBoundary beforeCapture={undefined}>' +
+          '<Component /></Sentry.ErrorBoundary></Layout>'
+      );
+      const contract = readAppObservabilityContract(source);
+      expect(contract.hasBeforeCapture).toBe(false);
+      expect(contract.beforeCaptureCallbackName).toBeUndefined();
+    });
   });
 
   describe('boundary — no page component rendered at all', () => {
@@ -345,6 +423,21 @@ describe('Sentry release/environment/error-boundary contract helpers', () => {
     it('throws on a computed option key, which could hide release or environment', () => {
       const source = buildTree(buildInit(`[key]: APP_VERSION, ${validOptions}`), wrappedComponent);
       expect(() => readAppObservabilityContract(source)).toThrow(/not a statically known property/);
+    });
+
+    it('throws when a later spread could override release or environment at runtime', () => {
+      const source = buildTree(buildInit(`${validOptions}, ...overrides`), wrappedComponent);
+      expect(() => readAppObservabilityContract(source)).toThrow(/spread element/);
+    });
+
+    it('throws when release or environment is declared more than once', () => {
+      const source = buildTree(
+        buildInit(`${validOptions}, release: SOME_OTHER_VERSION`),
+        wrappedComponent
+      );
+      expect(() => readAppObservabilityContract(source)).toThrow(
+        /declares "release" more than once/
+      );
     });
 
     it('throws when Sentry.init is never called', () => {

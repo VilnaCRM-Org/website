@@ -89,6 +89,30 @@ function langExpressionTextOf(
   throw new Error(`${LANG_ATTRIBUTE} has no statically readable expression`);
 }
 
+// A substring check on the lang expression's text would also match a lookalike
+// identifier such as `resolveRouteLocaleFallback`. Reparsing the snippet and
+// walking to the call's callee identifier pins the exact function being called.
+function calleeIdentifierNameOf(expressionText: string): string {
+  const probe = ts.createSourceFile(
+    'lang-expression-probe.ts',
+    `(${expressionText});`,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS
+  );
+  const [statement] = probe.statements;
+  if (
+    statement === undefined ||
+    !ts.isExpressionStatement(statement) ||
+    !ts.isParenthesizedExpression(statement.expression) ||
+    !ts.isCallExpression(statement.expression.expression) ||
+    !ts.isIdentifier(statement.expression.expression.expression)
+  ) {
+    throw new Error(`"${expressionText}" is not a call to a bare identifier`);
+  }
+  return statement.expression.expression.expression.text;
+}
+
 function readHtmlAttributesContract(source: string): HtmlAttributesContract {
   const sourceFile = ts.createSourceFile(
     '_document.tsx',
@@ -111,9 +135,10 @@ describe('static document direction (issue #322)', () => {
     expect(readHtmlAttributesContract(readFile(DOCUMENT_PATH)).dir).toBe('ltr');
   });
 
-  it('keeps <Html lang> derived from resolveRouteLocale, not a literal', () => {
+  it('keeps <Html lang> derived from calling resolveRouteLocale, not a literal', () => {
     const { langExpression } = readHtmlAttributesContract(readFile(DOCUMENT_PATH));
-    expect(langExpression).toContain('resolveRouteLocale');
+    expect(langExpression).toBeDefined();
+    expect(calleeIdentifierNameOf(langExpression as string)).toBe('resolveRouteLocale');
   });
 });
 
@@ -155,6 +180,12 @@ describe('static document direction — helpers', () => {
     it('reports dir as undefined when the attribute is missing (boundary)', () => {
       const source = buildSource('lang={locale}');
       expect(readHtmlAttributesContract(source).dir).toBeUndefined();
+    });
+
+    it('rejects a lookalike callee such as resolveRouteLocaleFallback', () => {
+      const source = buildSource('lang={resolveRouteLocaleFallback(page)} dir="ltr"');
+      const { langExpression } = readHtmlAttributesContract(source);
+      expect(calleeIdentifierNameOf(langExpression as string)).not.toBe('resolveRouteLocale');
     });
   });
 
