@@ -119,18 +119,20 @@ above apply to both distributions identically.
 - _A deploy becomes visible within the window_ — the readiness probes in `deploy.yml`,
   which retry until the new build is served on `/` and `/swagger`; the other class-2
   paths are not sampled.
-- _Classes 1 and 2 carry the headers above_ — **not yet observed**; see below.
-
-The last item is the honest gap. Nothing in this repository can read the S3 metadata
-or the CloudFront cache policy, so the only place the class headers can be checked is
-the live response. The intended assertion is a probe in
-`scripts/ci/smoke-response-shape.sh` that fetches `/` (class 2) and one path under
-`/_next/static/` read from the served HTML (class 1) and grades their `cache-control`
-against the two values above — `::warning::` first, promoted to blocking after one green
-deploy has reported no warnings, the same rule the header check on the 404 follows. It
-lands once `PRODUCTION_SITE_URL` is set and the first live reading exists to calibrate
-against; landing it blind risks reddening every deploy for a header this repository does
-not own.
+- _Classes 1 and 2 carry the headers above_ — `scripts/ci/smoke-response-shape.sh`
+  fetches `/` (class 2) and, from a `/_next/static/**.(js|css)` reference read out of
+  that HTML, one live class-1 asset (never hardcoded — the filename is content-hashed
+  per build), then grades each response's `cache-control` for the required directives'
+  **presence** (S3 and CloudFront do not promise a fixed serialization order). It runs
+  on every invocation of the script — including `make smoke-prod`, called from
+  `deploy.yml`'s post-deploy step once `PRODUCTION_SITE_URL` is set — and reports
+  `::warning::`, never `::error::`, for the same reason as the header check on the 404:
+  the gap could be the pipeline's S3 upload step or the infrastructure repository's
+  cache policy, and production has never been observed on this path. Promotion
+  condition: once one green deploy reports no cache-control warnings, promote these to
+  blocking too, the same rule the header check follows. Coverage for the probe itself —
+  correct and incorrect shapes for both classes, and the no-asset-found and
+  homepage-unreachable fallbacks — lives in `tests/bats/smoke_response_shape.bats`.
 
 ## Changing a class
 

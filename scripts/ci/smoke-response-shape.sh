@@ -90,14 +90,22 @@ head="$work/headers.out"
 #
 # `|| true`: grep exits 1 on a missing header, which under `set -e` + `pipefail`
 # would abort the script instead of reporting the gap.
+#
+# The optional second argument is the headers file to read, defaulting to `$head`
+# (the negative-path probe's own response) — the cache-control advisory below reads
+# two other responses (`/` and a static asset) and reuses these same helpers rather
+# than duplicating the parsing.
 header_values() {
   local name="$1"
-  grep -i "^${name}:" "$head" | cut -d: -f2- | sed 's/^ *//' || true
+  local file="${2:-$head}"
+  grep -i "^${name}:" "$file" | cut -d: -f2- | sed 's/^ *//' || true
 }
 
 # The first value, for the human-readable half of a message.
 header_value() {
-  header_values "$1" | head -n 1
+  local name="$1"
+  local file="${2:-$head}"
+  header_values "$name" "$file" | head -n 1
 }
 
 fetch() {
@@ -203,5 +211,94 @@ if [ "$EXPECT_NOINDEX" -eq 1 ]; then
     echo "✓ ${url} carries X-Robots-Tag: ${robots}"
   else
     echo "::warning::${url} is not noindexed (X-Robots-Tag: ${robots:-<missing>}); a sandbox origin must not be indexable"
+  fi
+fi
+
+# --- Advisory: the cache-control contract in docs/cdn-cache-strategy.md -----------
+#
+# docs/cdn-cache-strategy.md documents two cache classes this repository cannot set
+# itself (S3 object metadata and the CloudFront cache policy both live in
+# `website-infrastructure`) but can still read back off the live response: class 2
+# (an un-hashed document, sampled here at `/`) and class 1 (a content-addressed
+# `/_next/static/**` asset, discovered from `/`'s own HTML — the filename is
+# content-hashed per build, so it can never be hardcoded).
+#
+# Advisory (`::warning::`), never `::error::`, for the same reason as the header
+# check above: two different owners could be the gap (the pipeline's S3 upload step
+# or the CloudFront cache policy), production has never been observed on this path,
+# and a first landing that blocked would risk reddening every deploy for a header
+# this repository does not own. Promotion condition: once one green deploy reports
+# no cache-control warnings, promote these to blocking too, the same rule the
+# security-header advisory follows.
+#
+# Directive PRESENCE is graded, not an exact string match: S3 and CloudFront do not
+# promise a fixed `cache-control` serialization order, unlike the CloudFront-
+# function-authored security headers graded above.
+
+# The directive tokens of a `cache-control` response, comma-split, trimmed and
+# lower-cased, one per line — so `Public,max-age=0,  must-revalidate` and
+# `public, must-revalidate, max-age=0` read the same.
+cache_control_directives() {
+  local file="$1"
+  header_values 'cache-control' "$file" |
+    tr ',' '\n' |
+    tr '[:upper:]' '[:lower:]' |
+    sed 's/^[[:space:]]*//; s/[[:space:]]*$//' |
+    grep -v '^$' || true
+}
+
+# Prints the required directives (comma-separated in `$2`) that `$1`'s
+# cache-control is missing, comma-separated, or nothing when every one is present.
+missing_cache_control_directives() {
+  local file="$1"
+  local required_csv="$2"
+  local -a required
+  IFS=',' read -r -a required <<< "$required_csv"
+  local present missing='' want
+  present="$(cache_control_directives "$file")"
+  for want in "${required[@]}"; do
+    printf '%s\n' "$present" | grep -qFx "$want" || missing="${missing}${want}, "
+  done
+  printf '%s' "${missing%, }"
+}
+
+root_head="$work/root-headers.out"
+root_body="$work/root-body.out"
+root_status="$(curl -s -o "$root_body" -D "$root_head" -w '%{http_code}' --max-time 15 "${base}/" 2>/dev/null || true)"
+root_status="${root_status:-000}"
+tr -d '\r' < "$root_head" > "$root_head.clean" 2> /dev/null && mv "$root_head.clean" "$root_head"
+
+if [ "$root_status" != '200' ]; then
+  echo "::warning::${base}/ returned ${root_status} instead of 200; skipped the cache-control advisory"
+else
+  class2_missing="$(missing_cache_control_directives "$root_head" 'public,max-age=0,must-revalidate')"
+  if [ -n "$class2_missing" ]; then
+    echo "::warning::${base}/ is missing cache-control directive(s): ${class2_missing}; class 2 (un-hashed documents) expects public, max-age=0, must-revalidate — see docs/cdn-cache-strategy.md"
+  else
+    echo "✓ ${base}/ carries the class-2 cache-control (public, max-age=0, must-revalidate)"
+  fi
+
+  # A bounded character class, never a hardcoded filename: the asset is
+  # content-hashed per build. The first match is enough — one live sample per
+  # class is what the advisory grades.
+  asset_path="$(grep -oE '/_next/static/[A-Za-z0-9_./-]+\.(js|css)' "$root_body" | sort -u | head -n 1 || true)"
+  if [ -z "$asset_path" ]; then
+    echo "::warning::found no /_next/static/**.(js|css) reference in ${base}/'s HTML; skipped the class-1 cache-control advisory"
+  else
+    asset_head="$work/asset-headers.out"
+    # `-I`: a HEAD request, since only the headers are graded here.
+    asset_status="$(curl -s -o /dev/null -D "$asset_head" -I -w '%{http_code}' --max-time 15 "${base}${asset_path}" 2>/dev/null || true)"
+    asset_status="${asset_status:-000}"
+    tr -d '\r' < "$asset_head" > "$asset_head.clean" 2> /dev/null && mv "$asset_head.clean" "$asset_head"
+    if [ "$asset_status" != '200' ]; then
+      echo "::warning::${base}${asset_path} returned ${asset_status} instead of 200; skipped the class-1 cache-control advisory"
+    else
+      class1_missing="$(missing_cache_control_directives "$asset_head" 'public,max-age=31536000,immutable')"
+      if [ -n "$class1_missing" ]; then
+        echo "::warning::${base}${asset_path} is missing cache-control directive(s): ${class1_missing}; class 1 (content-addressed assets) expects public, max-age=31536000, immutable — see docs/cdn-cache-strategy.md"
+      else
+        echo "✓ ${base}${asset_path} carries the class-1 cache-control (public, max-age=31536000, immutable)"
+      fi
+    fi
   fi
 fi

@@ -345,3 +345,59 @@ GOOD_404='{"status":404,"headers":{"content-type":"text/html; charset=utf-8"},"b
   [ "$status" -eq 0 ]
   refute_output_contains 'noindex'
 }
+
+# --- Advisory: the cache-control contract in docs/cdn-cache-strategy.md -----------
+
+# A class-2 document (`/`): correct cache-control, and a body carrying a
+# content-hashed class-1 asset reference for the probe to discover.
+CACHE_GOOD_DOC='{"status":200,"headers":{"content-type":"text/html","cache-control":"public, max-age=0, must-revalidate"},"body":"<html><head></head><body><script src=\"/_next/static/chunks/app.abc123.js\"></script></body></html>"}'
+
+# The class-1 asset the body above points at, with correct cache-control.
+CACHE_GOOD_ASSET='{"status":200,"headers":{"content-type":"application/javascript","cache-control":"public, max-age=31536000, immutable"},"body":"console.log(1)"}'
+
+@test "stays quiet when both live cache classes match the documented contract" {
+  start_origin <<< "{\"default\":${GOOD_404},\"paths\":{\"/\":${CACHE_GOOD_DOC},\"/_next/static/chunks/app.abc123.js\":${CACHE_GOOD_ASSET}}}"
+  run_smoke
+  [ "$status" -eq 0 ]
+  assert_output_contains 'carries the class-2 cache-control'
+  assert_output_contains 'carries the class-1 cache-control'
+  refute_output_contains 'cache-control directive(s)'
+}
+
+@test "warns, but does not fail, when an immutable asset is missing immutable" {
+  local asset='{"status":200,"headers":{"content-type":"application/javascript","cache-control":"public, max-age=31536000"},"body":"console.log(1)"}'
+  start_origin <<< "{\"default\":${GOOD_404},\"paths\":{\"/\":${CACHE_GOOD_DOC},\"/_next/static/chunks/app.abc123.js\":${asset}}}"
+  run_smoke
+  [ "$status" -eq 0 ]
+  assert_output_contains '::warning::'
+  assert_output_contains 'missing cache-control directive(s): immutable'
+  assert_output_contains 'class 1 (content-addressed assets)'
+}
+
+@test "warns, but does not fail, when a document is missing must-revalidate and carries a long max-age" {
+  local doc='{"status":200,"headers":{"content-type":"text/html","cache-control":"public, max-age=3600"},"body":"<html><script src=\"/_next/static/chunks/app.abc123.js\"></script></html>"}'
+  start_origin <<< "{\"default\":${GOOD_404},\"paths\":{\"/\":${doc},\"/_next/static/chunks/app.abc123.js\":${CACHE_GOOD_ASSET}}}"
+  run_smoke
+  [ "$status" -eq 0 ]
+  assert_output_contains '::warning::'
+  assert_output_contains 'missing cache-control directive(s): max-age=0, must-revalidate'
+  assert_output_contains 'class 2 (un-hashed documents)'
+}
+
+@test "warns and does not crash when the homepage body carries no static-asset reference" {
+  local doc='{"status":200,"headers":{"content-type":"text/html","cache-control":"public, max-age=0, must-revalidate"},"body":"<html><body>no assets here</body></html>"}'
+  start_origin <<< "{\"default\":${GOOD_404},\"paths\":{\"/\":${doc}}}"
+  run_smoke
+  [ "$status" -eq 0 ]
+  assert_output_contains 'found no /_next/static'
+  assert_output_contains 'skipped the class-1 cache-control advisory'
+}
+
+@test "warns rather than grading a homepage the origin fails to serve" {
+  # A `/` fetch that itself 500s must not be read as an empty, passing advisory.
+  start_origin <<< "{\"default\":${GOOD_404},\"paths\":{\"/\":{\"status\":500,\"headers\":{\"content-type\":\"text/html\"},\"body\":\"boom\"}}}"
+  run_smoke
+  [ "$status" -eq 0 ]
+  assert_output_contains 'returned 500 instead of 200'
+  assert_output_contains 'skipped the cache-control advisory'
+}
