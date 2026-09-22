@@ -31,7 +31,8 @@
     },
     "layout": {
       "page_title": "VilnaCRM — перша українська CRM з відкритим кодом",
-      "meta_description": "Перша українська CRM з відкритим кодом"
+      "meta_description": "Перша українська CRM з відкритим кодом",
+      "skip_to_content": "Перейти до основного вмісту"
     }
   },
   "about_vilna": {

@@ -47,3 +47,12 @@ is the place to look before changing it.
   originate in any feature; see
   [ADR 0009](../../docs/adr/0009-consolidated-error-boundary-and-observability.md). `onRetry`
   is wired to the boundary's own `resetError`, not a page reload.
+- **`ui-skip-link`** — follows `ui-link`'s shape (`theme.ts` overrides `MuiLink`
+  `styleOverrides`, no `sx`) rather than `error-fallback`'s. The link is visually hidden at
+  rest through the standard clip-and-1px technique — never `display: none`, which would
+  drop it from the tab order — and reveals itself in its `:focus` style. `layout/index.tsx`
+  renders it as the first element before `header`, and pairs it with a `tabIndex={-1}`
+  focus target so the target itself is never an extra tab stop
+  (`src/test/a11y/keyboard.ts`'s sweep already excludes negative `tabindex`; precedent is
+  `honeypot-field.tsx`). Label and target id are passed in by the caller, like every other
+  primitive here.

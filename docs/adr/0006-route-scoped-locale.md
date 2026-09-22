@@ -54,7 +54,9 @@ ordinary page `pages/en/index.tsx`.
   error and a mixed-language first frame.
 - `pages/_document.tsx` derives `<Html lang>` from the same function through
   `__NEXT_DATA__.page`, so the document language, the copy, `og:locale` and the alternates
-  cannot disagree.
+  cannot disagree. `dir` is pinned there as a static `"ltr"`, not derived per route, because
+  both shipped locales are left-to-right; a future right-to-left locale must extend that
+  attribute rather than assume it stays constant.
 - The route is registered like any other: `config/routes.json`, `ROUTE_MAP` and a
   root-level `ALLOWED_FILES` entry for the flat `/en.html`, the a11y route registry (which
   now also asserts the language of every route), and the sitemap.

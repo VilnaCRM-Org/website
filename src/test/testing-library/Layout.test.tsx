@@ -1,9 +1,19 @@
 import { render, RenderOptions, RenderResult, screen } from '@testing-library/react';
-import { t } from 'i18next';
+import userEvent, { UserEvent } from '@testing-library/user-event';
+import i18n, { t } from 'i18next';
 import React from 'react';
 import '@testing-library/jest-dom';
 
 import Layout from '@/components/layout';
+
+import en from '../../features/landing/i18n/en.json';
+import uk from '../../features/landing/i18n/uk.json';
+
+// The committed bundle is the reference, not the live i18next singleton the
+// component itself reads from: i18next echoes a missing key back as the key
+// string on both sides, so resolving t() here too would pass even if the key
+// were deleted from both bundles.
+const skipLinkLabel: string = (i18n.language === 'en' ? en : uk).header.layout.skip_to_content;
 
 function MockHead({ children }: { children: React.ReactNode }): null {
   React.useEffect(() => {
@@ -114,6 +124,28 @@ describe('Layout component', () => {
 
     expect(header.compareDocumentPosition(content)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     expect(content.compareDocumentPosition(footer)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+  it('renders a skip link before the header, with a matching focus target before the content', () => {
+    renderLayout(<main data-testid="main-content">Content</main>);
+    const skipLink: HTMLElement = screen.getByRole('link', { name: skipLinkLabel });
+    const header: HTMLElement = screen.getByTestId('header');
+    const content: HTMLElement = screen.getByTestId('main-content');
+
+    expect(skipLink.compareDocumentPosition(header)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(skipLink).toHaveAttribute('href', '#skip-target');
+
+    const target: HTMLElement | null = document.getElementById('skip-target');
+    expect(target).toBeInTheDocument();
+    expect(target).toHaveAttribute('tabindex', '-1');
+    expect(target?.compareDocumentPosition(content)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+  it('makes the skip link the first tab stop in the document (a11y)', async () => {
+    const user: UserEvent = userEvent.setup();
+    renderLayout(<main data-testid="main-content">Content</main>);
+
+    await user.tab();
+
+    expect(screen.getByRole('link', { name: skipLinkLabel })).toHaveFocus();
   });
   it('handles empty children gracefully', () => {
     const { container } = renderLayout();
