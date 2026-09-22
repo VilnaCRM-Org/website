@@ -34,9 +34,10 @@ of five copies of it.
 - **Canonical and `noindex` are exclusive.** A canonical link nominates the URL a document
   should be indexed under; declaring one on a page that also asks not to be indexed hands
   a search engine two contradictory instructions and leaves the choice to it. A `noindex`
-  page states only that. The 404 and offline documents, and the `/en/docs/api` stub, are
-  `noindex` and absent from `public/sitemap.xml`: an indexed error report or placeholder
-  is only ever a dead result, and a stub competes with `/swagger` for the same query.
+  page states only that. The 404 and offline documents, and `/en/docs/api`, are
+  `noindex` and absent from `public/sitemap.xml`: an indexed error report is only ever a
+  dead result, and `/en/docs/api` is a thin page whose whole purpose is to point at
+  `/swagger`, so indexing it would only compete with `/swagger` for the same query.
 - **The home page alone declares the site graph.** `Organization` and `WebSite` describe
   the site as a whole; repeating them on every route would only restate the same two
   nodes.

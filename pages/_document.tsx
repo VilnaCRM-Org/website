@@ -4,7 +4,7 @@ import { resolveRouteLocale } from '@/config/locales';
 
 export default function Document({ __NEXT_DATA__ }: DocumentProps): React.ReactElement {
   return (
-    <Html lang={resolveRouteLocale(__NEXT_DATA__.page)}>
+    <Html lang={resolveRouteLocale(__NEXT_DATA__.page)} dir="ltr">
       <Head>
         <meta charSet="utf-8" />
         <meta name="apple-mobile-web-app-title" content="VilnaCRM" />

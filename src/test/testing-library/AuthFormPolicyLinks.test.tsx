@@ -52,7 +52,7 @@ describe('AuthForm policy links', () => {
   it('labels each link with its own policy name', () => {
     render(<Harness />);
 
-    const usePolicyName: RegExp = /use policy|використ/i;
+    const usePolicyName: RegExp = /usage policy|використ/i;
     const usePolicyLink: HTMLElement = screen.getByRole('link', { name: usePolicyName });
 
     expect(usePolicyLink).toHaveAttribute('href', usePolicyUrl);

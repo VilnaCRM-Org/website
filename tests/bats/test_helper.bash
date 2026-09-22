@@ -177,6 +177,10 @@ setup_makefile_test_env() {
   mkdir -p "$MAKEFILE_SANDBOX/src" "$MAKEFILE_SANDBOX/pages" "$MAKEFILE_SANDBOX/public"
   cp "$PROJECT_ROOT/.env.example" "$PROJECT_ROOT/.env.production" "$PROJECT_ROOT/README.md" \
     "$MAKEFILE_SANDBOX/"
+  # build-out (issue #325) reads the version straight out of package.json with a real
+  # `jq`, which is not in the stub list above -- without this copy that read fails,
+  # since nothing else here provisions package.json.
+  cp "$PROJECT_ROOT/package.json" "$MAKEFILE_SANDBOX/"
 }
 
 setup_ci_script_test_env() {

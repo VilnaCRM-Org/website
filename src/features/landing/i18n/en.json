@@ -31,7 +31,8 @@
     },
     "layout": {
       "page_title": "VilnaCRM — the first Ukrainian open source CRM",
-      "meta_description": "The first Ukrainian open source CRM"
+      "meta_description": "The first Ukrainian open source CRM",
+      "skip_to_content": "Skip to main content"
     }
   },
   "about_vilna": {
@@ -163,7 +164,7 @@
         }
       },
       "confidential_text": {
-        "fullText": "I have read and accept the <1>Privacy Policy</1> and the <3>Use Policy</3> VilnaCRM Service"
+        "fullText": "I have read and accept the <1>Privacy Policy</1> and the <3>Usage Policy</3> of the VilnaCRM Service"
       },
       "button_text": "Sign-Up",
       "honeypot": {
@@ -236,5 +237,11 @@
       "title": "API documentation (English) — VilnaCRM",
       "description": "English-language landing page for the VilnaCRM user-service API reference."
     }
+  },
+  "error_boundary": {
+    "title": "Something went wrong",
+    "description": "We hit an unexpected error on this page. Try again, or go back to the homepage.",
+    "retry_button": "Try again",
+    "home_link": "Go to homepage"
   }
 }

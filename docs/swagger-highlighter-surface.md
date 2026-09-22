@@ -1,8 +1,9 @@
 # The /swagger syntax-highlighter surface
 
 What the `/swagger` page actually ships for syntax highlighting, why it is stuck on an
-end-of-life engine, what the `prismjs` override in `package.json` does and does not cover,
-and why no GitHub-native alert will ever say so. Written for issue #379 (OWASP A06:2021
+end-of-life engine, what the former `prismjs` override in `package.json` did and did not
+cover before it was removed, and why no GitHub-native alert will ever say so. Written for
+issue #379 (OWASP A06:2021
 Vulnerable and Outdated Components) so the inventory is a checked fact rather than a
 recollection. Every version below was read from `bun.lock`, `node_modules`, and a host
 build of the static export on 2026-09-11; re-verify against the lockfile before relying on
@@ -69,9 +70,10 @@ would therefore break lowlight 1.20.0 at runtime rather than upgrade it — do n
 `swagger-ui-react@5.32.15`, the newest release, still declares
 `react-syntax-highlighter ^16.0.0`, so nothing in range moves the page off highlight.js 10.
 
-## Why the prismjs override exists
+## Why the prismjs override existed
 
-`package.json` carries `"overrides": { "prismjs": "1.30.0" }`. It landed in `ccebf1a8`
+`package.json` carried `"overrides": { "prismjs": "1.30.0" }` until it was removed in the
+F5 change below. It landed in `ccebf1a8`
 (`feat(#29): add swagger page`, PR #195, 2025-06-04) alongside `swagger-ui-react ^5.22.0`.
 At that commit `react-syntax-highlighter@15.6.1` declared `prismjs ^1.27.0` and its
 `refractor@3.6.0` declared `prismjs ~1.27.0`; every prismjs release before 1.30.0 carries
@@ -79,7 +81,8 @@ GHSA-x7hr-w5r2-h6wg (CVE-2024-53382, DOM clobbering, fixed in 1.30.0). The overr
 both consumers onto 1.30.0 — the pnpm lockfile of that commit shows `refractor@3.6.0`
 resolving `prismjs 1.30.0` — and that was a real fix at the time.
 
-Today it is inert, and it must not be read as coverage of the highlighter tree:
+By the time it was removed it was inert, and it must never be read as coverage of the
+highlighter tree:
 
 - `react-syntax-highlighter@16.1.1` already requires `prismjs ^1.30.0`, and 1.30.0 is the
   newest prismjs, so the override changes nothing about that edge.
@@ -89,8 +92,9 @@ Today it is inert, and it must not be read as coverage of the highlighter tree:
 - Neither prismjs nor refractor ships — see above — and the override never touched
   `highlight.js`, the engine that does.
 
-Removing it rewrites `bun.lock`, which open dependency pull requests also rewrite; fold it
-into the next deliberate lockfile change rather than a documentation change.
+The override was removed in the same change that landed Follow-up 3 below (issue #379,
+F5). Dropping it changed nothing observable: prismjs and refractor still never ship, so the
+override was pure dead weight by the time it was deleted.
 
 ## Why GitHub-native alerting is blind to this tree
 
@@ -128,14 +132,19 @@ so belongs in its own reviewed change, after the open dependency pull requests l
    the options are a webpack alias that stubs `react-syntax-highlighter/dist/esm/light`
    with `syntaxHighlight` turned off, or a different renderer. Either changes what
    `/swagger` shows, needs the prod stack, and re-baselines the swagger visual snapshots.
-3. **Override `tmp` to `0.2.7`.** `bun.lock` resolves `tmp@0.1.0` (via `@lhci/cli@0.15.1`,
-   which declares `^0.1.0`) and `tmp@0.0.33` (via `@lhci/cli` → `inquirer@6.5.2` →
-   `external-editor@3.1.0`). The census lists GHSA-ph9p-34f9-6g65 (CVSS 7.7, fixed in
-   0.2.6) and GHSA-52f5-9888-hmc6 (fixed in 0.2.4) against both. Issue #379 asks for
-   `>= 0.2.4`, which clears only the second advisory; the floor is **0.2.6**, and 0.2.7 is
-   the newest release (no dependencies, Node `>= 14.14`). Both call sites — `tmp.fileSync`
-   in `@lhci/cli`'s `open` command and `tmpNameSync` in `external-editor` — survive in
-   0.2.x, and both are dev-only. Note that the Docker-in-Docker Lighthouse path in the
+3. **Done: `tmp` overridden to `0.2.7`.** `bun.lock` used to resolve `tmp@0.1.0` (via
+   `@lhci/cli@0.15.1`, which declares `^0.1.0`) and `tmp@0.0.33` (via `@lhci/cli` →
+   `inquirer@6.5.2` → `external-editor@3.1.0`). The census listed GHSA-ph9p-34f9-6g65
+   (CVSS 7.7, fixed in 0.2.6) and GHSA-52f5-9888-hmc6 (fixed in 0.2.4) against both. Issue
+   #379 asked for `>= 0.2.4`, which would have cleared only the second advisory; the floor
+   was **0.2.6**, and `package.json`'s `overrides.tmp` now pins `0.2.7`, the newest release
+   (no dependencies, Node `>= 14.14`) — confirmed against the osv.dev entries for both
+   advisories before landing. Both call sites — `tmp.fileSync` in `@lhci/cli`'s `open`
+   command and `tmpNameSync` in `external-editor` — survive in 0.2.x, and both are
+   dev-only. `bun.lock` now carries a single hoisted `tmp@0.2.7` entry; the old
+   `tmp@0.1.0`/`tmp@0.0.33` entries, and the `os-tmpdir`/`rimraf` sub-dependencies only
+   0.0.x/0.1.x needed, are gone. Note that the Docker-in-Docker Lighthouse path in the
    Makefile installs `@lhci/cli@0.14.0` globally inside the prod container, outside
-   `bun.lock`; an override does not reach it, and the lockfile criterion does not need it
-   to. Drop the inert `prismjs` override in the same lockfile change.
+   `bun.lock`; the override does not reach it, and the lockfile criterion does not need it
+   to. The inert `prismjs` override was dropped in the same lockfile change (issue #379,
+   F5).

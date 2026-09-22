@@ -238,31 +238,21 @@ FORMAT                      ?=
 AUDIT_REF                   ?=
 
 # ===== Executor selection (issue #399 — CRM container-always model) =====
-# Every npm-tool gate runs INSIDE the dev container by default, on a laptop and
-# on a CI runner alike, so `make lint-tsc` here and `make lint-tsc` there are
-# the same command against the same toolchain. The image is the single source of
-# truth for the runtime; there is no host Node / .nvmrc / node_modules-cache
-# coupling left to drift.
+# Every npm-tool gate runs INSIDE the dev container by default, laptop or CI
+# runner alike, against the image as the single source of truth for the runtime.
 #
-# EXEC_MODE is deliberately NOT derived from $(CI). GitHub Actions exports
-# CI=true into every step, so the previous `ifeq ($(CI),1)` switch silently
-# routed 100% of CI to the host path — the very bug this issue exists to fix.
-# Nothing under .github/workflows/ may set EXEC_MODE for a migrated gate.
+# NOT derived from $(CI): GitHub Actions sets CI=true on every step, so the old
+# `ifeq ($(CI),1)` switch silently routed 100% of CI to the host path — the bug
+# this issue fixes. No workflow may set EXEC_MODE for a migrated gate.
 #
 #   container (default) — run the tool through `docker compose exec -T dev`.
-#   host                — run the tool straight from $(BIN_DIR). Three supported
-#                         callers, all of which have no compose to exec into:
-#                           * .husky/pre-commit and .husky/pre-push, so the hooks
-#                             work with no Docker daemon running;
-#                           * the run-*-dind targets, which already exec into a
-#                             temp container — inside it, "host" IS the container;
-#                           * the Lighthouse targets in performance-testing.yml,
-#                             which need a real Chrome the dev image does not ship
-#                             (see the lighthouse-* targets).
+#   host                — run it straight from $(BIN_DIR). Used where there is no
+#                         compose to exec into: .husky hooks (no Docker daemon),
+#                         the run-*-dind targets (already inside a container), and
+#                         the Lighthouse targets (need real Chrome; see lighthouse-*).
 #
-# The value is an enum, not a boolean, and an unknown value is a hard error: an
-# escape hatch that can be mistyped into silence is the same defect class as
-# CI=true silently selecting the host path.
+# An enum, not a boolean, with an unknown value a hard error: a mistypeable escape
+# hatch is the same defect class as CI=true silently selecting the host path.
 EXEC_MODE                   ?= container
 
 ifeq ($(EXEC_MODE),container)
@@ -411,32 +401,20 @@ help:
 start: ## Start the application
 	$(NEXT_DEV_CMD)
 
-# Reconciles the CONTAINER, not the dev server. A gate only needs something to
-# `docker compose exec` into; none of them fetches a page from port 3000. Calling
-# `make start` here would instead block on wait-for-dev until Next finishes its
-# first full compile — up to WAIT_FOR_DEV_MAX_TRIES × WAIT_FOR_DEV_SLEEP — before
-# a single lint rule ran. Use `make start` when you actually want the dev server.
-# Builds first when the tag is missing, rather than relying on Compose to fall
-# back from `pull_policy: never` to `build:`. Compose v5 does fall back (verified:
-# with no local image, `up -d dev` reports "Image website-dev:latest Built"), but
-# that behaviour has varied across versions and this repo has already been bitten
-# once by a Compose version difference. An explicit build makes a fresh clone
-# work on any of them, and costs one `image inspect` when the tag is present.
-# `--no-recreate` is load-bearing, not an optimisation. This target is invoked
-# with the BASE compose file only, while `ci-setup` creates the container from
-# base + docker-compose.ci.yml — a different config hash. Without it, the first
-# gate in every CI job would tear down the idle container ci-setup just started
-# and replace it with a Next dev server under `restart: unless-stopped`,
-# discarding both the overlay's whole purpose and its fail-fast restart policy.
-# It still creates or starts the container when it is missing or stopped.
+# Reconciles the CONTAINER, not the dev server: a gate only needs something to
+# exec into, so `make start` here would block on wait-for-dev for Next's first
+# compile before a single lint rule ran — use `make start` for the dev server.
+# Builds explicitly rather than trusting Compose's `pull_policy: never` fallback,
+# which has varied across Compose versions before. `--no-recreate` is
+# load-bearing: this target runs against the BASE compose file while `ci-setup`
+# creates the container from base + docker-compose.ci.yml (a different config
+# hash), so without it the first CI gate would tear down ci-setup's idle
+# container and replace it with a dev server under `restart: unless-stopped`.
 #
-# check-dev-container-bind.sh runs on BOTH sides of `up` (#399). The pre-`up`
-# call keeps a foreign checkout's container from being started at all; the
-# post-`up` call is the one that actually holds, because the pre-`up` check
-# passes in BOTH checkouts when neither has created the container yet — two
-# concurrent starts would otherwise leave the loser running every gate against
-# the winner's /app bind. After `up` the container exists and the answer is
-# decidable.
+# check-dev-container-bind.sh runs on both sides of `up` (#399): the pre-`up`
+# call blocks a foreign checkout from starting a container at all, and the
+# post-`up` call is the one that actually holds — the pre-`up` check passes in
+# two concurrent checkouts alike when neither has created the container yet.
 ensure-dev: ## Reconcile the dev container (builds the image if absent; does not wait for the dev server)
 	@bash ./scripts/ci/check-dev-container-bind.sh
 	@docker image inspect $(DEV_IMAGE) >/dev/null 2>&1 || \
@@ -557,13 +535,26 @@ build: ## A tool build the project
 build-analyze: ## Build production bundle and launch bundle-analyzer report (ANALYZE=true)
 	$(DEV_READY) $(PM_EXEC) sh -c 'ANALYZE=true $(NEXT_BUILD_CMD)'
 
+# `--build-arg COMMIT_SHA` threads the commit into the image build (see the Dockerfile
+# comment); `out/version.json` is written separately, on the host, from the same
+# git-derived value, because the Docker build stage has no `.git` to compute it from
+# (issue #325, docs/adr/0010-build-and-release-provenance.md). `mkdir -p ./out` runs
+# before the redirect rather than relying on `docker cp` to have created the directory,
+# so this step is real even when `docker` is stubbed out (tests/bats/makefile_targets.bats).
 build-out: ## Build production artifacts to ./out directory
 	@echo "🏗️ Building production Docker image..."
-	docker build -t next-build -f Dockerfile --target production .
+	docker build -t next-build -f Dockerfile --target production \
+		--build-arg COMMIT_SHA=$$(git rev-parse HEAD 2>/dev/null || echo unknown) .
 	@container_id=$$(docker create next-build) && \
 	rm -rf ./out && \
 	docker cp $$container_id:/app/out ./ && \
 	docker rm $$container_id && \
+	mkdir -p ./out && \
+	command -v jq >/dev/null 2>&1 || { echo "build-out: jq is required to write out/version.json" >&2; exit 1; } && \
+	commit="$$(git rev-parse HEAD 2>/dev/null || echo unknown)" && \
+	built_at="$$(date -u +%Y-%m-%dT%H:%M:%SZ)" && \
+	jq -cn --arg version "$$(jq -r '.version' package.json)" --arg commit "$$commit" --arg builtAt "$$built_at" \
+		'{version: $$version, commit: $$commit, builtAt: $$builtAt}' > ./out/version.json && \
 	echo "✅ Build artifacts extracted to ./out directory"
 
 # `mjs` is in the glob deliberately: the Node CLI helpers under scripts/ are
@@ -686,63 +677,42 @@ lint-placeholders: ## Fail on template placeholder tokens in the shipped sources
 lint-prod-guardrails: ## Enforce the production-safety invariants (privileged-workflow alerting, fail-closed edge routing, no source maps, symmetric sandbox lifecycle)
 	$(DEV_READY) $(PM_EXEC) node scripts/ci/lint-prod-guardrails.mjs
 
-# A SEQUENTIAL aggregate, as the help string says: generate-localization leads
-# so the gitignored i18n bundle exists before eslint and tsc read it. It is also
-# a prerequisite of lint-deps, but that is the LAST sub-target, which on a clean
-# checkout left eslint and tsc resolving a module that had not been written yet.
-# Parallelism is provided by `make ci-lint` (scripts/ci/run-parallel.sh), never
-# by `make -j` — under -j prerequisite ORDER is not a guarantee, and adding
-# generate-localization to each linter instead would race: run-parallel.sh runs
-# every lint target as its own make process, and the generator writes the single
-# pages/i18n/localization.json with a non-atomic fs.writeFileSync.
+# SEQUENTIAL, as the help string says: generate-localization must lead so eslint
+# and tsc don't resolve a module that isn't written yet (it's also a lint-deps
+# prerequisite, but that runs last). Parallelism comes from `make ci-lint`
+# (scripts/ci/run-parallel.sh) as separate make processes, never `make -j`, whose
+# prerequisite order isn't guaranteed and would race the generator's non-atomic
+# write to pages/i18n/localization.json.
 #
-# lint-security-txt, lint-prod-guardrails, lint-pins and lint-workflow-pins DO
-# belong in the aggregate, unlike lint-contracts and lint-metrics: all four read
-# only committed files (no network, no host binary, no Docker daemon of their
-# own), so they are hermetic and cannot make the static lane flaky.
-# lint-prod-guardrails and lint-workflow-pins additionally join CI_LINT_TARGETS
-# because they need `node` + js-yaml, which the parallel ci-lint runner provides
-# — the same reason lint-headers is in that list; lint-security-txt is pure bash
-# and needs no package manager, mirroring how lint-deps stays out. lint-pins is
-# in CI_LINT_TARGETS too, but like lint-docker-policy its recipe runs on the HOST
-# in either EXEC_MODE: it is dependency-free `node`, so it needs neither the
-# image nor a `bun install`, and the Dockerfiles it reads are worktree files the
-# dev container would only ever see a stale copy of. Its workflow half was split
-# into lint-workflow-pins (#447) precisely because parsing the YAML costs a
-# node_modules import that this property forbids.
+# lint-security-txt/prod-guardrails/pins/workflow-pins belong here (unlike
+# lint-contracts/metrics) because all four are hermetic: committed files only, no
+# network, no host binary. lint-prod-guardrails and lint-workflow-pins also join
+# CI_LINT_TARGETS for the `node`+js-yaml the parallel runner provides;
+# lint-security-txt is pure bash and stays out, like lint-deps. lint-pins, like
+# lint-docker-policy, runs on the HOST in either EXEC_MODE — dependency-free
+# `node` reading worktree Dockerfiles the dev image would only see stale — which
+# is why its YAML half split into lint-workflow-pins (#447), the one that needs
+# a node_modules import.
 lint: generate-localization lint-next lint-tsc lint-md lint-deps lint-api-versions lint-docker-policy lint-headers lint-security-txt lint-prod-guardrails lint-pins lint-workflow-pins lint-placeholders ## Runs all linters: ESLint, TypeScript, Markdown, dependency-cruiser, the API version invariant, the Dockerfile registry/digest policy, the security-header gate, the RFC 9116 security.txt gate, the production-safety guardrails, the version-pin drift gate, the workflow Node-pin gate and the placeholder-token gate in sequence.
 
-# DELIBERATE DIVERGENCE FROM THE npm-tool LINT GATES (lint-next/tsc/md/deps),
-# for the same reason as lint-metrics below:
-#   * NOT in the `lint` aggregate (line above) and NOT in CI_LINT_TARGETS. The
-#     drift check re-fetches the pinned tag from raw.githubusercontent.com, and
-#     static-testing.yml is otherwise hermetic — a GitHub raw outage must not
-#     turn the whole static lane red.
-#   * Its CI surface is .github/workflows/contract-testing.yml, which runs it on
-#     every PR with the network available.
-# This target deliberately runs the full check, drift included. To validate the
-# GraphQL operations and the spectral baseline without touching the network,
-# invoke the script directly:
+# Diverges from the npm-tool lint gates (lint-next/tsc/md/deps), same reason as
+# lint-metrics below: not in `lint`/CI_LINT_TARGETS because the drift check
+# re-fetches the pinned tag over the network, and static-testing.yml stays
+# hermetic. CI surface is contract-testing.yml, on every PR. This target runs
+# the full check including drift; for an offline, network-free run:
 #   node scripts/contracts/lint-contracts.mjs --offline
 lint-contracts: ## Validate the pinned user-service contracts: client GraphQL operations, the OpenAPI spectral baseline, and artifact drift
 	$(DEV_READY) $(PM_EXEC) node scripts/contracts/lint-contracts.mjs
 
-# DELIBERATE DIVERGENCE FROM THE npm-tool LINT GATES, for both of the reasons
-# lint-contracts and lint-metrics each cite one of:
-#   * Host-only: oasdiff is a Go binary absent from the node:*-alpine dev image,
-#     so this target does NOT use $(PM_EXEC) and runs on the host in both modes.
-#   * Network: it resolves the newest upstream release and downloads that spec.
-#   * Therefore NOT in the `lint` aggregate and NOT in CI_LINT_TARGETS — both
-#     route through the dev container / run-parallel.sh, and static-testing.yml
-#     is hermetic by design. Its CI surface is .github/workflows/openapi-drift.yml.
-# ADVISORY BY DESIGN: upstream moving on is not a PR author's fault, so the
-# nightly turns breaking drift into a tracking issue rather than a red check.
-# The BLOCKING contract gate is `make test-contract`.
-# This target is the HUMAN-FACING surface. GNU make collapses every recipe
-# failure to its own exit 2, so it cannot distinguish "breaking drift" (1) from
-# "the check could not run" (2) — openapi-drift.yml therefore calls the script
-# directly. Both paths run the identical script; only the exit-code fidelity
-# differs. The script provisions the pinned binary itself.
+# Host-only (oasdiff is a Go binary absent from the dev image, so no $(PM_EXEC))
+# and network (fetches the newest upstream release), so it's outside `lint` /
+# CI_LINT_TARGETS the same way lint-contracts is. CI surface is
+# openapi-drift.yml. Advisory by design — upstream drift isn't the PR author's
+# fault, so the nightly files a tracking issue rather than reddening a check;
+# `make test-contract` is the blocking gate. This is the human-facing surface:
+# `make` collapses every recipe failure to exit 2, so it can't distinguish
+# "breaking drift" (1) from "could not run" (2) — openapi-drift.yml calls the
+# script directly for that fidelity. The script provisions its own pinned binary.
 lint-openapi: ## Report breaking changes between the committed OpenAPI baseline and the newest upstream release (host-only, network; advisory)
 	@OASDIFF_BIN="$(OASDIFF_BIN)" OASDIFF_VERSION="$(OASDIFF_VERSION)" \
 	 OASDIFF_SHA256_LINUX="$(OASDIFF_SHA256_LINUX)" \
@@ -751,22 +721,15 @@ lint-openapi: ## Report breaking changes between the committed OpenAPI baseline 
 	 USER_SERVICE_SPEC_PATH="$(USER_SERVICE_SPEC_PATH)" \
 	 bash scripts/ci/openapi-drift.sh
 
-# The GraphQL half of the same pin, and a deliberate mirror of lint-openapi
-# above — same host-only/network/advisory reasoning, so the same placement:
-#   * Host-only: the recipe is plain bash, never $(PM_EXEC), in both EXEC_MODEs.
-#   * Network: it resolves the newest upstream release and downloads that SDL.
-#   * Therefore NOT in the `lint` aggregate and NOT in CI_LINT_TARGETS, which
-#     both route through the dev container / run-parallel.sh and stay hermetic.
-#     Its CI surface is the graphql-upstream-drift job in
-#     .github/workflows/openapi-drift.yml.
-# ADVISORY BY DESIGN: upstream moving on is not a PR author's fault, so the
-# nightly files a tracking issue instead of reddening a check. The BLOCKING
-# GraphQL gate is `make lint-contracts`.
-# This target is the HUMAN-FACING surface. GNU make collapses every recipe
-# failure to its own exit 2, so it cannot distinguish "breaking drift" (1) from
-# "the check could not run" (2) — openapi-drift.yml therefore calls the script
-# directly. Both paths run the identical script; only the exit-code fidelity
-# differs.
+# The GraphQL half of the same pin, mirroring lint-openapi above: host-only
+# (plain bash, no $(PM_EXEC)) and network (fetches the newest upstream SDL), so
+# outside `lint`/CI_LINT_TARGETS; CI surface is the graphql-upstream-drift job in
+# openapi-drift.yml. Advisory by design — the nightly files a tracking issue
+# rather than reddening a check; `make lint-contracts` is the blocking GraphQL
+# gate. Human-facing surface for the same exit-code-fidelity reason as
+# lint-openapi: `make` collapses every failure to exit 2, so openapi-drift.yml
+# calls the script directly to keep "breaking drift" (1) distinct from
+# "could not run" (2).
 lint-graphql-drift: ## Advisory: diff the committed GraphQL SDL snapshot against the newest upstream user-service release
 	bash scripts/ci/graphql-drift.sh
 
@@ -777,18 +740,14 @@ update-contracts: $(DEV_PREREQ) ## Re-fetch the user-service contracts for the p
 	$(PM_EXEC) node scripts/contracts/lint-contracts.mjs --update-baseline
 	$(PRETTIER_BIN) "contracts/**/*.json" --write --ignore-path .prettierignore
 
-# DELIBERATE DIVERGENCE FROM THE npm-tool LINT GATES (lint-next/tsc/md/deps):
-#   * Host-only: rust-code-analysis is a Rust binary absent from the dev image,
-#     so this target does NOT use $(PM_EXEC) and runs on the host in both modes.
-#   * NOT in the `lint` aggregate (line above) and NOT in CI_LINT_TARGETS (both
-#     route through the dev container / run-parallel.sh, which cannot run the
-#     binary). Its only CI surface is .github/workflows/rust-code-analysis.yml.
-#   * NO run-metrics-lint-tests-dind wrapper (it would have to install Rust into
-#     the temp container, defeating the purpose).
-# rust-code-analysis-cli only EMITS metrics; scripts/ci/lint-metrics.sh parses
-# them against config/metrics-policy.json and owns the non-zero exit on hard
-# breaches (collect-all-then-fail). ensure-rca.sh provisions the pinned, verified
-# binary to ./bin if it is missing.
+# Host-only: rust-code-analysis is a Rust binary absent from the dev image, so
+# this skips $(PM_EXEC) and runs on the host in both modes, outside `lint` /
+# CI_LINT_TARGETS (neither can run the binary) — CI surface is
+# rust-code-analysis.yml only, and there is no run-*-dind wrapper (installing
+# Rust into the temp container would defeat the point). The CLI only emits
+# metrics; scripts/ci/lint-metrics.sh parses them against
+# config/metrics-policy.json and owns the collect-all-then-fail exit.
+# ensure-rca.sh provisions the pinned, verified binary if missing.
 lint-metrics: ## Run rust-code-analysis complexity gate on src (host-only; auto-installs the pinned CLI to ./bin)
 	@scripts/ci/ensure-rca.sh
 	@RCA_BIN="$(RCA_BIN)" RCA_VERSION="$(RCA_VERSION)" RCA_SCOPE="$(RCA_SCOPE)" \
@@ -797,17 +756,12 @@ lint-metrics: ## Run rust-code-analysis complexity gate on src (host-only; auto-
 	 METRICS_POLICY="$(METRICS_POLICY_PATH)" \
 	 sh scripts/ci/lint-metrics.sh
 
-# DELIBERATE DIVERGENCE FROM THE npm-tool LINT GATES (lint-next/tsc/md/deps), for the same
-# two reasons as lint-metrics above:
-#   * Host-only: osv-scanner is a Go binary absent from the dev image, so this target does
-#     NOT use $(PM_EXEC) and runs on the host in both modes.
-#   * NOT in the `lint` aggregate and NOT in CI_LINT_TARGETS. It resolves advisories against
-#     the OSV database over the network, and static-testing.yml is otherwise hermetic — an
-#     osv.dev outage must not turn the whole static lane red. Its CI surface is
-#     .github/workflows/osv-scanner.yml, which runs it on every PR and nightly.
-# ensure-osv.sh provisions the pinned, SHA256-verified binary to ./bin if it is missing;
-# scan-vulns.sh only produces JSON, and scripts/ci/check-osv-report.ts owns every pass/fail
-# decision (unit-tested in src/test/unit/osv-report.test.ts).
+# Same two reasons as lint-metrics above: host-only (osv-scanner is a Go binary,
+# no $(PM_EXEC)) and network (queries the OSV database), so outside `lint` /
+# CI_LINT_TARGETS to keep static-testing.yml hermetic — CI surface is
+# osv-scanner.yml, every PR and nightly. ensure-osv.sh provisions the pinned,
+# verified binary; scan-vulns.sh only produces JSON, and
+# scripts/ci/check-osv-report.ts owns the pass/fail decision.
 lint-vulns: ## Fail on dependency CVEs this branch adds versus $(OSV_BASE_REF) (host-only; auto-installs the pinned osv-scanner to ./bin)
 	@scripts/ci/ensure-osv.sh
 	@OSV_BIN="$(OSV_BIN)" OSV_MODE="$(OSV_MODE)" \
@@ -844,6 +798,16 @@ release-audit-dry-run: ## Dry-run the release audit against the live repo (host-
 # missing, unauthenticated, or no successful production deployment exists.
 rollback-info: ## Print the last successful production deployment (commit, ref, time, run URL) from the GitHub Deployments API (host-only, needs gh)
 	@bash scripts/ci/rollback-info.sh
+
+# Host-only, exactly like lint-docker-policy and rollback-info above: the
+# script is a self-contained bash+curl+jq probe against a live origin (issue
+# #363), needs no node_modules, and the dev image it would exec into is not
+# where a production site lives. Wrapped here so deploy.yml's post-deploy
+# smoke step routes through the Makefile like every other command surface
+# (issue #331) instead of invoking the script by path. SITE_URL is required;
+# the script's own usage check is what fails a missing one (exit 2).
+smoke-prod: ## Probe SITE_URL's negative path (404 shape) after a production deploy (host-only; issue #331)
+	./scripts/ci/smoke-response-shape.sh "$(SITE_URL)"
 
 # DELIBERATE DIVERGENCE FROM THE npm-tool LINT GATES (lint-next/tsc/md/deps),
 # for the same reasons as lint-contracts and lint-metrics above:
@@ -938,20 +902,7 @@ require-docker-stack: ## Fail fast when a Docker-only target is invoked under HO
 		exit 1; \
 	fi
 
-# ============================================================================
-# Accessibility gate (issue #317)
-# ----------------------------------------------------------------------------
-# The binding conformance target is WCAG 2.1 AA; the standard, the in-scope axe
-# tags and the exception process live in docs/accessibility/acceptance-standard.md.
-# Two layers, both enforced:
-#   * components — jest-axe over rendered React in jsdom (semantics: roles,
-#     names, states, relationships).
-#   * routes     — @axe-core/playwright over every registered route in real
-#     browsers (everything that needs layout or paint, plus keyboard operability).
-# This is a per-rule contract; the Lighthouse accessibility score is a weighted
-# category heuristic on two URLs and stays as defence in depth, not a substitute.
-# ============================================================================
-
+# ===== Accessibility gate (issue #317) — see docs/accessibility/acceptance-standard.md =====
 test-a11y: test-a11y-components test-a11y-routes ## Run both accessibility gates (jest-axe components + Playwright routes)
 
 test-a11y-components: ## Run the jest-axe component accessibility scans (TEST_ENV=client)
@@ -1065,35 +1016,16 @@ test-contract: ## Run the mock-vs-OpenAPI contract parity layer using Jest (TEST
 ci-test-contract: ## Run contract parity tests directly assuming deps are installed (CI entrypoint)
 	env TEST_ENV=contract $(JEST_BIN) $(JEST_FLAGS)
 
-# ============================================================================
-# CI orchestration (issue #305 — CRM command-surface parity)
-# ----------------------------------------------------------------------------
-# These targets give local developers and agents the same grouped CI phases the
-# pipeline runs, adapted to website's Bun + Next.js toolchain.
-#
-# Intentionally NOT ported from crm/Makefile (rationale):
-#   * lint-dup (jscpd): not configured in this repo; website's lint stack is
-#     ESLint + tsc + markdownlint + dependency-cruiser (exposed as lint-deps).
-#     Adopting it needs new tooling/config and belongs in a dedicated issue,
-#     not a naming-parity change.
-#   * fmt-qlty / qlty: qlty IS configured here -- .qlty/qlty.toml is committed
-#     and qlty Cloud reviews every PR -- but it runs as a hosted check rather
-#     than a Makefile target, so there is no local entrypoint to port. Do not
-#     read the absence of a target as the absence of the gate.
-#   * lint-metrics (rust-code-analysis): now ported (issue #224), but adapted —
-#     the analyzer is a Rust binary absent from the node:*-alpine dev image, so
-#     the target runs host-only, stays OUT of the `lint` aggregate and
-#     CI_LINT_TARGETS, and ships no DinD wrapper. See the lint-metrics target
-#     below for the full rationale.
-#   * mockoon wait in ci-setup: website's dev service has no mockoon dependency
-#     (mockoon lives in the prod/test compose stack), so ci-setup brings up dev
-#     only.
-#   * ensure-chromium / build-dev-chromium (apk into dev): website installs
-#     Chromium + LHCI into the prod container via install-chromium-lhci, which
-#     ci-prod-setup reuses.
-#   * test-load-signup: website has no signup load scenario; its second K6
-#     profile targets the Swagger page and is exposed as test-load-swagger.
-# ============================================================================
+# ===== CI orchestration (issue #305 — CRM command-surface parity) =====
+# Grouped CI phases mirroring the pipeline, adapted to Bun + Next.js. Deliberately
+# NOT ported from crm/Makefile: lint-dup/jscpd (not configured; would need new
+# tooling, a dedicated issue); fmt-qlty (qlty runs as a hosted check via
+# .qlty/qlty.toml, not a Makefile target — absence of a target isn't absence of
+# the gate); mockoon-wait in ci-setup (no mockoon dependency in dev, only in the
+# prod/test stack); ensure-chromium (Chromium+LHCI installs into the prod
+# container instead, via install-chromium-lhci); test-load-signup (no signup
+# load scenario; test-load-swagger is this repo's second K6 profile).
+# lint-metrics WAS ported (issue #224) but adapted host-only — see that target.
 
 .PHONY: ci ci-setup ci-lint ci-test ci-test-unit-client ci-test-unit-server \
 	ci-test-mutation ci-mutation ci-prod-setup ci-test-e2e ci-test-visual \
@@ -1104,6 +1036,7 @@ ci-test-contract: ## Run contract parity tests directly assuming deps are instal
 	mutation-file-list test-mutation-changed \
 	test-e2e-burnin check-e2e-flakes pr-comments lint lint-api-versions \
 	lint-security-txt lint-prod-guardrails release-audit-dry-run rollback-info \
+	smoke-prod \
 	lint-vulns scan-vulns-census generate-localization generate-routes generate-sitemap
 
 # Brings the dev container up IDLE (docker-compose.ci.yml overrides only the

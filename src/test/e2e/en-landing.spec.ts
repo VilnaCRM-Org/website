@@ -36,11 +36,8 @@ async function expectLandingLanguage(page: Page, lang: string, t: FixedT): Promi
   ).toBeVisible();
 }
 
-// The product screenshots are rasters with copy baked in, so each landing has to
-// serve the set rendered in its own language. The exported file keeps the source
-// basename (`desktop-en.<hash>_<width>.webp`), which is what pins the set here.
-// The for-who screens are decorative (`alt=""`, #479), so they are located by
-// source rather than by an accessible name.
+// Screenshots are language-baked rasters matched by filename; the for-who set
+// is decorative (`alt=""`, #479), so it's located by src, not accessible name.
 async function expectProductScreenshots(page: Page, t: FixedT, language: string): Promise<void> {
   const hero: Locator = page.getByRole('img', { name: t('about_vilna.image_alt') });
   await expect(hero).toHaveAttribute('src', new RegExp(`desktop-${language}\\.`));
@@ -53,6 +50,41 @@ async function expectProductScreenshots(page: Page, t: FixedT, language: string)
   const forWho: Locator = page.locator('#forWhoSection');
   await expect(forWho.locator(`img[src*="desktop-${language}."]`)).toHaveCount(1);
   await expect(forWho.locator(`img[src*="mobile-${language}."]`)).toHaveCount(1);
+}
+
+type LabelInset = {
+  left: number;
+  right: number;
+  contained: boolean;
+};
+
+// Measured from text nodes, not a whole-element Range: MUI's ripple overlay
+// spans the padding box, so a contents-wide range would flatten any label's
+// inset to 0 once interacted with, making the centring assertion vacuous.
+async function measureLabelInset(link: Locator): Promise<LabelInset> {
+  return link.evaluate((element: HTMLElement) => {
+    const box: DOMRect = element.getBoundingClientRect();
+    const walker: TreeWalker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+    const rects: DOMRect[] = [];
+
+    for (let node: Node | null = walker.nextNode(); node; node = walker.nextNode()) {
+      const range: Range = document.createRange();
+      range.selectNodeContents(node);
+      rects.push(range.getBoundingClientRect());
+    }
+
+    const painted: DOMRect[] = rects.filter(rect => rect.width > 0 && rect.height > 0);
+    const left: number = Math.min(...painted.map(rect => rect.left));
+    const right: number = Math.max(...painted.map(rect => rect.right));
+    const top: number = Math.min(...painted.map(rect => rect.top));
+    const bottom: number = Math.max(...painted.map(rect => rect.bottom));
+
+    return {
+      left: left - box.left,
+      right: box.right - right,
+      contained: left >= box.left && right <= box.right && top >= box.top && bottom <= box.bottom,
+    };
+  });
 }
 
 test.describe('English landing at /en', () => {
@@ -128,7 +160,40 @@ test.describe('English landing at /en', () => {
     );
   });
 
-  test('the English API stub sends its logo back to the English landing', async ({ page }) => {
+  // Below 968px this flex item blockifies and drops MUI's inline-flex
+  // centring, so the label sat flush left (English only; Ukrainian text fills
+  // the pill).
+  //
+  // Positive: label centred and contained in the link box.
+  // Negative / regression: red on main, green after the inline-flex fix.
+  // Boundary: only rendered under the 968px query; above it this CTA is hidden.
+  // Permission / auth — Not applicable: static marketing CTA.
+  test('centres the for-who call-to-action label on a phone viewport', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto(EN_LANDING);
+
+    // Scoped to `#forWhoSection`: the header has an identical link, and only
+    // the small-screen copy is in the tree below 968px, so this matches exactly one.
+    const cta: Locator = page
+      .locator('#forWhoSection')
+      .getByRole('link', { name: en('for_who.button_text'), exact: true });
+
+    await cta.scrollIntoViewIfNeeded();
+    await expect(cta).toBeVisible();
+    await expect(cta).toHaveAttribute('href', '#signUp');
+    await expect(cta).toHaveAccessibleName(en('for_who.button_text'));
+
+    const inset: LabelInset = await measureLabelInset(cta);
+
+    expect(inset.contained).toBe(true);
+    expect(Math.abs(inset.left - inset.right)).toBeLessThanOrEqual(1);
+
+    // Asserted last: a focus-visible ripple would corrupt the measurement above.
+    await cta.focus();
+    await expect(cta).toBeFocused();
+  });
+
+  test('the English API docs page sends its logo back to the English landing', async ({ page }) => {
     await page.goto('/en/docs/api');
 
     await expect(page.locator('html')).toHaveAttribute('lang', 'en');

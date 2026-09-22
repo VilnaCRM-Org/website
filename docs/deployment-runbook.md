@@ -29,8 +29,10 @@ fails if it does not serve valid content:
   [the security-headers guide](security-headers.md)). This is the only check that
   can catch the CloudFront functions being unassociated from the distribution; the
   in-repo `make lint-headers` gate only proves the functions themselves are correct.
-- `GET /smoke-nonexistent-…` — the **negative** path
-  (`scripts/ci/smoke-response-shape.sh`, issue #363). Blocks on three assertions,
+- `GET /smoke-nonexistent-…` — the **negative** path, run through
+  `make smoke-prod SITE_URL=…` (a thin host-only wrapper around
+  `scripts/ci/smoke-response-shape.sh`, issue #331) so the deploy workflow's
+  command surface stays Makefile-only, issue #363. Blocks on three assertions,
   each of which is a production incident this site has already had: the status is
   exactly `404` and not `500` (#226, and again #229), the body is non-empty (#249),
   and `content-type` is `text/html` (#235 — without it Safari _downloads_ the 404).
@@ -263,6 +265,30 @@ Between deploys, the scheduled synthetic check in `uptime-check.yml` watches the
 site and files an `uptime-alert` issue — see the [monitoring runbook](runbooks/monitoring.md)
 and the [incident response runbook](runbooks/incident-response.md).
 
+## Build traceability
+
+`make build-out` writes `out/version.json` — `{"version", "commit", "builtAt"}` — so a
+deployed bundle can be tied back to the commit and package version that produced it; it
+is servable at `/version.json` (added to `scripts/cloudfront_routing.js`'s
+`ALLOWED_FILES` for that reason). `builtAt` is read from the wall clock at build time —
+deliberately, since this site has a live incident class where production keeps serving a
+months-old build, and knowing when a bundle was built is diagnostic information the commit
+alone does not give. That also makes two builds of the same commit produce different
+`version.json` bytes, so the build is provenance-tracked, not byte-reproducible. Separately,
+[`.github/workflows/release-provenance.yml`](../.github/workflows/release-provenance.yml)
+rebuilds `out/` on every push to `main` and attests it with
+`actions/attest-build-provenance`:
+
+```bash
+gh attestation verify website-out-<sha>.tar.gz --owner VilnaCRM-Org --repo website
+```
+
+This proves GitHub Actions built that specific archive from that commit — **not** that
+the build is byte-reproducible, and **not** that the exact bytes CodePipeline published
+to `vilnacrm.com` match it, since CodePipeline builds the production artifact
+independently, in AWS (see [ADR 0010](adr/0010-build-and-release-provenance.md) for the
+full scope and what remains open — CodePipeline execution polling — and why).
+
 ## Manual verification
 
 To check production by hand at any time (replace the host with the value of
@@ -277,4 +303,7 @@ curl -fsSI https://vilnacrm.com/ | grep -Ei 'frame-options|frame-ancestors'
 # allow-list must return the site 404 rather than an S3 error document.
 curl -fsS https://vilnacrm.com/.well-known/security.txt | head -n 3
 curl -s -o /dev/null -w '%{http_code}\n' https://vilnacrm.com/secret.json
+
+# Ties the live site to the commit and version that built it.
+curl -fsS https://vilnacrm.com/version.json
 ```

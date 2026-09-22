@@ -117,6 +117,7 @@ describe('cloudfront_routing handler', () => {
       '/swagger-schema.json',
       '/robots.txt',
       '/sitemap.xml',
+      '/version.json',
       '/.well-known/security.txt',
       '/_next/static/chunks/main-0f1e2d.js',
       '/_next/static/css/8b2c1d.css',
