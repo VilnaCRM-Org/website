@@ -194,4 +194,4 @@ jobs:
       - name: Smoke-test the negative path (404 shape)
         env:
           SITE_URL: ${{ vars.PRODUCTION_SITE_URL }}
-        run: ./scripts/ci/smoke-response-shape.sh "$SITE_URL"
+        run: make smoke-prod SITE_URL="$SITE_URL"

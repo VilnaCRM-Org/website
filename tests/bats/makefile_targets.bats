@@ -1288,3 +1288,16 @@ JSON
   [ "$status" -eq 0 ]
   [ -z "$(cat "$COMMAND_LOG")" ]
 }
+
+@test "smoke-prod threads SITE_URL unchanged into scripts/ci/smoke-response-shape.sh" {
+  # A dry run, not run_make_target: the real script retries against a live
+  # origin for minutes on a miss, and that behaviour already has its own
+  # suite (tests/bats/smoke_response_shape.bats). This pins only the
+  # argument-threading contract issue #331 asks for -- the exact command the
+  # target shells out to -- so a future rename of the variable or the script
+  # path is caught without ever invoking curl.
+  run make -C "$MAKEFILE_SANDBOX" -n smoke-prod SITE_URL='https://example.test' \
+    BIN_DIR="$STUB_BIN_DIR"
+  [ "$status" -eq 0 ]
+  assert_output_contains './scripts/ci/smoke-response-shape.sh "https://example.test"'
+}

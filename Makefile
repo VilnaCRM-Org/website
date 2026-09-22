@@ -845,6 +845,16 @@ release-audit-dry-run: ## Dry-run the release audit against the live repo (host-
 rollback-info: ## Print the last successful production deployment (commit, ref, time, run URL) from the GitHub Deployments API (host-only, needs gh)
 	@bash scripts/ci/rollback-info.sh
 
+# Host-only, exactly like lint-docker-policy and rollback-info above: the
+# script is a self-contained bash+curl+jq probe against a live origin (issue
+# #363), needs no node_modules, and the dev image it would exec into is not
+# where a production site lives. Wrapped here so deploy.yml's post-deploy
+# smoke step routes through the Makefile like every other command surface
+# (issue #331) instead of invoking the script by path. SITE_URL is required;
+# the script's own usage check is what fails a missing one (exit 2).
+smoke-prod: ## Probe SITE_URL's negative path (404 shape) after a production deploy (host-only; issue #331)
+	./scripts/ci/smoke-response-shape.sh "$(SITE_URL)"
+
 # DELIBERATE DIVERGENCE FROM THE npm-tool LINT GATES (lint-next/tsc/md/deps),
 # for the same reasons as lint-contracts and lint-metrics above:
 #   * Host-only: zizmor is a Rust CLI shipped as a container image, absent from
@@ -1104,6 +1114,7 @@ ci-test-contract: ## Run contract parity tests directly assuming deps are instal
 	mutation-file-list test-mutation-changed \
 	test-e2e-burnin check-e2e-flakes pr-comments lint lint-api-versions \
 	lint-security-txt lint-prod-guardrails release-audit-dry-run rollback-info \
+	smoke-prod \
 	lint-vulns scan-vulns-census generate-localization generate-routes generate-sitemap
 
 # Brings the dev container up IDLE (docker-compose.ci.yml overrides only the

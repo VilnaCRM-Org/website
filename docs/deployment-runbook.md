@@ -29,8 +29,10 @@ fails if it does not serve valid content:
   [the security-headers guide](security-headers.md)). This is the only check that
   can catch the CloudFront functions being unassociated from the distribution; the
   in-repo `make lint-headers` gate only proves the functions themselves are correct.
-- `GET /smoke-nonexistent-…` — the **negative** path
-  (`scripts/ci/smoke-response-shape.sh`, issue #363). Blocks on three assertions,
+- `GET /smoke-nonexistent-…` — the **negative** path, run through
+  `make smoke-prod SITE_URL=…` (a thin host-only wrapper around
+  `scripts/ci/smoke-response-shape.sh`, issue #331) so the deploy workflow's
+  command surface stays Makefile-only, issue #363. Blocks on three assertions,
   each of which is a production incident this site has already had: the status is
   exactly `404` and not `500` (#226, and again #229), the body is non-empty (#249),
   and `content-type` is `text/html` (#235 — without it Safari _downloads_ the 404).
