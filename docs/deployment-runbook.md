@@ -265,6 +265,26 @@ Between deploys, the scheduled synthetic check in `uptime-check.yml` watches the
 site and files an `uptime-alert` issue — see the [monitoring runbook](runbooks/monitoring.md)
 and the [incident response runbook](runbooks/incident-response.md).
 
+## Build traceability
+
+`make build-out` writes `out/version.json` — `{"version", "commit", "builtAt"}` — so a
+deployed bundle can be tied back to the commit and package version that produced it; it
+is servable at `/version.json` (added to `scripts/cloudfront_routing.js`'s
+`ALLOWED_FILES` for that reason). Separately,
+[`.github/workflows/release-provenance.yml`](../.github/workflows/release-provenance.yml)
+rebuilds `out/` on every push to `main` and attests it with
+`actions/attest-build-provenance`:
+
+```bash
+gh attestation verify website-out-<sha>.tar.gz --owner VilnaCRM-Org --repo website
+```
+
+This proves GitHub Actions built that commit reproducibly — **not** that the exact bytes
+CodePipeline published to `vilnacrm.com` match it, since CodePipeline builds the
+production artifact independently, in AWS (see [ADR
+0010](adr/0010-build-and-release-provenance.md) for the full scope and what remains
+open — CodePipeline execution polling — and why).
+
 ## Manual verification
 
 To check production by hand at any time (replace the host with the value of
@@ -279,4 +299,7 @@ curl -fsSI https://vilnacrm.com/ | grep -Ei 'frame-options|frame-ancestors'
 # allow-list must return the site 404 rather than an S3 error document.
 curl -fsS https://vilnacrm.com/.well-known/security.txt | head -n 3
 curl -s -o /dev/null -w '%{http_code}\n' https://vilnacrm.com/secret.json
+
+# Ties the live site to the commit and version that built it.
+curl -fsS https://vilnacrm.com/version.json
 ```

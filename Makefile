@@ -557,13 +557,26 @@ build: ## A tool build the project
 build-analyze: ## Build production bundle and launch bundle-analyzer report (ANALYZE=true)
 	$(DEV_READY) $(PM_EXEC) sh -c 'ANALYZE=true $(NEXT_BUILD_CMD)'
 
+# `--build-arg COMMIT_SHA` threads the commit into the image build (see the Dockerfile
+# comment); `out/version.json` is written separately, on the host, from the same
+# git-derived value, because the Docker build stage has no `.git` to compute it from
+# (issue #325, docs/adr/0010-build-and-release-provenance.md). `mkdir -p ./out` runs
+# before the redirect rather than relying on `docker cp` to have created the directory,
+# so this step is real even when `docker` is stubbed out (tests/bats/makefile_targets.bats).
 build-out: ## Build production artifacts to ./out directory
 	@echo "🏗️ Building production Docker image..."
-	docker build -t next-build -f Dockerfile --target production .
+	docker build -t next-build -f Dockerfile --target production \
+		--build-arg COMMIT_SHA=$$(git rev-parse HEAD 2>/dev/null || echo unknown) .
 	@container_id=$$(docker create next-build) && \
 	rm -rf ./out && \
 	docker cp $$container_id:/app/out ./ && \
 	docker rm $$container_id && \
+	mkdir -p ./out && \
+	command -v jq >/dev/null 2>&1 || { echo "build-out: jq is required to write out/version.json" >&2; exit 1; } && \
+	commit="$$(git rev-parse HEAD 2>/dev/null || echo unknown)" && \
+	built_at="$$(date -u +%Y-%m-%dT%H:%M:%SZ)" && \
+	jq -cn --arg version "$$(jq -r '.version' package.json)" --arg commit "$$commit" --arg builtAt "$$built_at" \
+		'{version: $$version, commit: $$commit, builtAt: $$builtAt}' > ./out/version.json && \
 	echo "✅ Build artifacts extracted to ./out directory"
 
 # `mjs` is in the glob deliberately: the Node CLI helpers under scripts/ are

@@ -1,0 +1,57 @@
+# Records what GitHub Actions built for a `main` commit (issue #325,
+# docs/adr/0010-build-and-release-provenance.md). This rebuilds `out/` from the same
+# commit CodePipeline later publishes -- it does not attest the literal bytes CodePipeline
+# ships, which is built in AWS by the separate website-infrastructure pipeline (see
+# docs/deployment-runbook.md). `gh attestation verify` proves "GitHub Actions built this
+# commit reproducibly", not "this exact artifact is what vilnacrm.com is serving".
+name: release provenance
+
+on:
+  push:
+    branches:
+      - main
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  attest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Build the production static export
+        run: make build-out
+
+      # A single archive rather than hundreds of loose static-export files: provenance
+      # attestation is conventionally taken against one release artifact (mirroring how
+      # autorelease.yml already attaches one SBOM file to the GitHub release), and
+      # verifying a whole tree file-by-file is unusual and awkward.
+      - name: Archive the export as a single provenance subject
+        env:
+          COMMIT_SHA: ${{ github.sha }}
+        run: tar -C out -czf "website-out-$COMMIT_SHA.tar.gz" .
+
+      - name: Upload the archive
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: website-out-${{ github.sha }}
+          path: website-out-${{ github.sha }}.tar.gz
+          retention-days: 90
+          if-no-files-found: error
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: website-out-${{ github.sha }}.tar.gz

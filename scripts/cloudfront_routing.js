@@ -88,6 +88,7 @@ var ALLOWED_FILES = Object.freeze({
   '/.well-known/security.txt': true,
   '/robots.txt': true,
   '/sitemap.xml': true,
+  '/version.json': true,
 });
 
 // `json` is absent on purpose and `map` must never be added (see the docs).

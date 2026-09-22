@@ -197,10 +197,24 @@ EOF
   reset_command_log
   run_make_target build-out
   [ "$status" -eq 0 ]
-  assert_log_contains 'docker build -t next-build -f Dockerfile --target production .'
+  assert_log_contains 'docker build -t next-build -f Dockerfile --target production'
+  assert_log_contains '--build-arg COMMIT_SHA=unknown .'
   assert_log_contains 'docker create next-build'
   assert_log_contains 'docker cp fake-container-id:/app/out ./'
   assert_log_contains 'docker rm fake-container-id'
+  # `docker` is fully stubbed (no real image, no real `docker cp`), but the
+  # version.json write runs after it with real jq/git/date, so this is genuine
+  # behavioral coverage, not just a logged-command check like the rest of this
+  # test (issue #325). The sandbox has no .git, so the commit falls back to
+  # "unknown" -- the same value threaded into the (stubbed) --build-arg above.
+  [ -f "$MAKEFILE_SANDBOX/out/version.json" ]
+  run cat "$MAKEFILE_SANDBOX/out/version.json"
+  [ "$status" -eq 0 ]
+  assert_output_contains '"commit":"unknown"'
+  assert_output_contains '"version":'
+  run grep -Eo '"builtAt":"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z"' \
+    "$MAKEFILE_SANDBOX/out/version.json"
+  [ "$status" -eq 0 ]
 
   reset_command_log
   run_make_target format EXEC_MODE=host

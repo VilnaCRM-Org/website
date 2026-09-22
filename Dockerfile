@@ -25,6 +25,14 @@ FROM base AS build
 
 COPY . .
 
+# .dockerignore excludes .git from the build context, so this stage cannot compute
+# its own commit — the host-side `make build-out` recipe passes it in as a build-arg
+# (falling back to "unknown" so a bare `docker build` never fails for want of one).
+# It is not consumed by the build itself; `out/version.json` is written on the host,
+# after `docker cp`, from the same value (see docs/adr/0010-build-and-release-provenance.md).
+ARG COMMIT_SHA=unknown
+ENV COMMIT_SHA=$COMMIT_SHA
+
 # Reads the committed contract under contracts/ — no network. Refresh it with
 # `make update-contracts`; `make lint-contracts` fails if it drifts from the pin.
 RUN node scripts/patchSwaggerServer.mjs && \
