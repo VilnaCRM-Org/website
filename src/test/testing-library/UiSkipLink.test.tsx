@@ -4,17 +4,7 @@ import UiSkipLink from '@/components/ui-skip-link';
 
 import { expectNoA11yViolations } from '../a11y/expect-no-a11y-violations';
 
-/**
- * Coverage contract (AGENTS.md):
- * - Positive: the passed label renders as the link's accessible name and the
- *   href points at the passed target id.
- * - Boundary: a different label/targetId pair renders its own values rather
- *   than a hardcoded default, proving the primitive does not read copy or an
- *   id from anywhere but its props (README.md: primitives never fetch their
- *   own copy).
- * - Permission/auth, loading/error — Not applicable: a static link with no
- *   data dependency and no async state.
- */
+// Permission/auth, loading/error — Not applicable: static link, no data or async state.
 describe('UiSkipLink', () => {
   it('renders the passed label as the link text, pointing at the passed target', () => {
     const { getByRole } = render(<UiSkipLink label="Skip to main content" targetId="main" />);

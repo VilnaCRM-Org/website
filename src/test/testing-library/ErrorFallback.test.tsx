@@ -7,24 +7,18 @@ import en from '../../features/landing/i18n/en.json';
 import uk from '../../features/landing/i18n/uk.json';
 import { expectNoA11yViolations } from '../a11y/expect-no-a11y-violations';
 
-// The committed bundle is the reference, not the live i18next singleton the
-// component itself reads from: i18next echoes a missing key back as the key
-// string on both sides, so resolving t() here too would pass even if the key
-// were deleted from both bundles.
+// Read from the committed bundle, not the live i18next singleton: a missing
+// key echoes back as itself on both sides, so t() would pass vacuously.
 const errorBoundaryCopy: typeof en.error_boundary = (i18n.language === 'en' ? en : uk)
   .error_boundary;
 
 /**
  * Coverage contract (AGENTS.md):
- * - Positive: localized copy renders, the alert/heading roles are exposed, the
- *   home link points at "/", and clicking the retry control invokes `onRetry`.
- * - Negative: `onRetry` is not invoked on render alone.
- * - Permission/auth — Not applicable: a static fallback, no authenticated state.
- * - Loading/error — Not applicable: renders synchronously with no async boundary
- *   of its own (the crash it responds to is handled by the caller's
- *   Sentry.ErrorBoundary in pages/_app.tsx).
- * - Boundary — Not applicable: `onRetry` is the component's only input and is a
- *   required callback, so there is no size/length/empty-value boundary to probe.
+ * - Positive: copy, alert/heading roles, home link, retry calls onRetry.
+ * - Negative: onRetry not invoked on render alone.
+ * - Permission/auth — Not applicable: static fallback, no auth state.
+ * - Loading/error — Not applicable: synchronous, no async boundary of its own.
+ * - Boundary — Not applicable: onRetry is the only, required input.
  */
 describe('ErrorFallback', () => {
   it('renders the localized apology copy', () => {

@@ -1,37 +1,12 @@
 /**
- * Integration: the render-crash boundary pages/_app.tsx composes.
+ * Renders the real `Sentry.ErrorBoundary` + `ErrorFallback` + `beforeCapture`
+ * wiring `pages/_app.tsx` composes (that file can't be imported directly;
+ * see `sentry-app-observability.test.ts` for the static pin).
  *
- * `pages/_app.tsx` cannot itself be imported (it boots Apollo, MUI, i18n and
- * the service worker at module load), so `sentry-app-observability.test.ts`
- * pins the wiring statically. This exercises the three pieces exactly as
- * `_app.tsx` composes them — the real `Sentry.ErrorBoundary`, the real
- * `ErrorFallback`, and a `beforeCapture` tagging callback with the app-level
- * tag shape — proving a child render crash is caught with exactly one
- * reported event, shown, and recoverable through the retry control.
- *
- * `Sentry.ErrorBoundary#componentDidCatch` calls `captureReactException`
- * itself, unconditionally, before it ever calls an `onError` prop (see
- * `node_modules/@sentry/react/build/cjs/errorboundary.js`), and that call
- * goes straight to `@sentry/browser`'s `captureException` — NOT the
- * `@sentry/react` named export a manual sink like the old `onError` handler
- * would have called. Mocking `@sentry/react` alone (as the previous version
- * of this spec did) is blind to the SDK's own automatic capture and cannot
- * prove the double-event defect is gone; mocking `@sentry/browser` instead
- * catches both paths through the one function `@sentry/react` re-exports by
- * reference at import time. `package.json` declares `@sentry/react` and
- * `@sentry/node`, but not `@sentry/browser` — it is only a transitive
- * dependency of `@sentry/react` — so this spec never imports it directly:
- * `@sentry/react`'s own CJS entry point re-exports every one of
- * `@sentry/browser`'s named exports onto itself by reference at require time
- * (`Object.keys(browser).forEach(k => exports[k] = browser[k])` in
- * `node_modules/@sentry/react/build/cjs/index.js`), so once `@sentry/browser`
- * is mocked, `Sentry.captureException` from the `@sentry/react` import below
- * IS the same mocked function `captureReactException` calls — no separate
- * import of the undeclared package is needed to observe it.
- * `Scope#captureException` (`@sentry/core`) also reads tags off `this`, not
- * off any argument the mocked function receives, so the tag assertion below
- * inspects the real `Scope` instance `beforeCapture` was given rather than
- * the mocked call's arguments.
+ * Mocks `@sentry/browser`, not `@sentry/react`: the SDK's own
+ * `captureReactException` calls `@sentry/browser`'s `captureException`
+ * directly, and `@sentry/react` re-exports it by reference, so mocking
+ * `@sentry/react` alone would leave this capture unobserved.
  */
 import * as Sentry from '@sentry/react';
 import { fireEvent, render, screen } from '@testing-library/react';
@@ -96,8 +71,6 @@ describe('integration: error boundary wiring', () => {
   beforeEach(() => {
     throwOnRender = true;
     capturedScopes = [];
-    // React logs the caught error to console.error; silence it so the test
-    // output stays readable without hiding an unrelated failure.
     consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
   });
 
@@ -109,15 +82,14 @@ describe('integration: error boundary wiring', () => {
   it('reports the crash exactly once via the SDK own capture, tagged with the app-level shape', () => {
     renderBoundary();
 
-    // Exactly one call is the regression gate for the double-event defect: an
-    // onError-based sink would call this same mocked function a second time,
-    // independently of the SDK's own automatic capture.
+    // Exactly one call: an onError-based sink would call this mock a second
+    // time, independently of the SDK's own automatic capture.
     expect(captureException).toHaveBeenCalledTimes(1);
     const [error] = captureException.mock.calls[0] as [unknown];
     expect(error).toBeInstanceOf(Error);
 
-    // Tags never reach the mocked captureException as an argument — Scope#captureException
-    // reads them off `this` — so assert directly on the real Scope beforeCapture received.
+    // Tags aren't an argument to captureException — Scope#captureException
+    // reads them off `this` — so assert on the real Scope instead.
     expect(capturedScopes).toHaveLength(1);
     const [capturedScope] = capturedScopes as [BeforeCaptureScope];
     expect(capturedScope.getScopeData().tags).toEqual({

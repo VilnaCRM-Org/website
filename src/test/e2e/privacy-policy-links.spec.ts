@@ -9,10 +9,8 @@ const privacyPolicyText: RegExp = createLocalizedRegExp('footer.privacy');
 const usePolicyText: RegExp = createLocalizedRegExp('footer.usage_policy');
 const companyNameText: RegExp = createLocalizedRegExp('sign_up.vilna_text');
 
-// The form's confidential-text sentence carries its own Usage Policy copy inside
-// a `<3>` tag index (see AuthFormPolicyLinks.test.tsx), distinct from the
-// footer's — different case in English, a different word in Ukrainian — so it
-// is extracted here rather than reused from `footer.usage_policy`.
+// Differs in case/wording from the footer's copy (see AuthFormPolicyLinks.test.tsx),
+// so it's extracted here rather than reused from `footer.usage_policy`.
 const formConfidentialText: string = t('sign_up.form.confidential_text.fullText');
 const formUsePolicyText: RegExp = new RegExp(
   formConfidentialText.replace(/^.*<3>(.*?)<\/3>.*$/s, '$1')
@@ -35,10 +33,8 @@ async function navigateToPrivacyPolicy(
       },
     });
   });
-  // Both names are RegExps, and `exact` is ignored for a RegExp, so a page-wide
-  // lookup would also reach the sign-up form's policy links — whose English copy
-  // is now a case variant of the footer's ("Usage Policy" vs "Usage policy").
-  // Each test therefore scopes the lookup to the landmark it is actually about.
+  // `exact` is ignored for RegExp names, so an unscoped lookup would also match
+  // the sign-up form's policy link; each test scopes to its own landmark.
   await linkScope.getByRole('link', { name: linkName, exact: true }).click();
   await page.goto(vilnaCRMPrivacyPolicyURL);
   await page.waitForURL(expectedURL);

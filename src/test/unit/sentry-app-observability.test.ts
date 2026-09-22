@@ -212,11 +212,8 @@ describe('Sentry release/environment/error-boundary contract in pages/_app.tsx',
   });
 
   it('tags the boundary own capture via beforeCapture instead of re-capturing through onError', () => {
-    // The Sentry SDK's ErrorBoundary#componentDidCatch calls captureReactException
-    // unconditionally before it ever calls onError, so wiring a second sink through
-    // onError double-reports every crash. This is the regression: a boundary that
-    // merely "exists" is not enough, it must carry beforeCapture and must not also
-    // carry onError.
+    // componentDidCatch calls captureReactException unconditionally, so an
+    // onError sink would double-report every crash.
     const contract = readAppObservabilityContract(readFile(APP_PATH));
 
     expect(contract.errorBoundaryCount).toBe(1);

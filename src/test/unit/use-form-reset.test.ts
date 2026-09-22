@@ -2,21 +2,15 @@
  * @jest-environment jsdom
  */
 /**
- * Client-layer coverage for the landing `useFormReset` hook.
+ * Client-layer coverage for the landing `useFormReset` hook (issue #456): pins the exact
+ * reset payload, not just that `reset` was called — a `{}` mutant also passes a bare
+ * call-count check.
  *
- * The hook was asserted only through the rendered sign-up form: the
- * integration flow in `tests/integration/coverage/auth-section` (a layer the
- * mutation runner does not execute) and `AuthLayout.test.tsx`, which drives
- * react-hook-form's own `reset` and observes only the cleared inputs. Neither
- * pins the values the hook hands to `reset`, so Stryker reported the
- * initial-values literal as replaceable by `{}` (#456). This spec asserts the
- * exact reset payload and both guards in the layer Stryker runs.
+ * jsdom is declared per file because `src/test/unit` also runs under the node (server)
+ * layer, where `renderHook` has no document to mount into.
  *
- * jsdom is declared per file because `src/test/unit` also runs under the node
- * (server) layer, where `renderHook` has no document to mount into.
- *
- * Loading / error — the `error` notification guard is the error path.
- * Permission / auth — Not applicable: the sign-up form has no authenticated state.
+ * Loading/error — the `error` notification guard is the error path.
+ * Permission/auth — Not applicable: the sign-up form has no authenticated state.
  */
 import { renderHook } from '@testing-library/react';
 

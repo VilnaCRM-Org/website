@@ -1,17 +1,5 @@
-/**
- * Gate the static `dir` attribute on `<Html>` in `pages/_document.tsx` (issue #322).
- *
- * Both locales this site ships, `uk` and `en`, are left-to-right, so `dir` is pinned
- * to the literal `"ltr"` rather than derived per route — see ADR 0006's Consequences
- * section. `lang` stays derived from `resolveRouteLocale(__NEXT_DATA__.page)`, exactly
- * as before; this spec adds the `dir` half of the contract and re-asserts `lang` so a
- * future edit cannot drop one while touching the other.
- *
- * Read from source by parsing it with the TypeScript compiler, the same technique
- * `sentry-replay-masking.test.ts` and `client-env-contract.test.ts` use, rather than by
- * importing `pages/_document.tsx`: `next/document`'s `Html`/`Head` components assume
- * Next's own document-render pass and are not meant to be mounted directly in jsdom.
- */
+// Parses pages/_document.tsx with the TypeScript compiler rather than importing it:
+// next/document's Html/Head assume Next's own render pass and can't be mounted in jsdom.
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -29,7 +17,6 @@ interface HtmlAttributesContract {
   langExpression: string | undefined;
 }
 
-/** The opening/self-closing `<Html …>` tag in the file; anything else throws. */
 function htmlOpeningElementOf(
   sourceFile: ts.SourceFile
 ): ts.JsxOpeningElement | ts.JsxSelfClosingElement {
@@ -51,11 +38,8 @@ function htmlOpeningElementOf(
   return found;
 }
 
-/**
- * A named JSX attribute on `element`, read only when no spread attribute is present
- * anywhere on the same element — a spread could inject or override any attribute, so
- * its presence makes every named attribute statically unknown and the read throws.
- */
+// Throws if a spread attribute is present: it could inject or override the named one,
+// making its value statically unknowable.
 function namedAttributeOf(
   element: ts.JsxOpeningElement | ts.JsxSelfClosingElement,
   attributeName: string
@@ -73,7 +57,6 @@ function namedAttributeOf(
   return attribute;
 }
 
-/** The literal string value of a `dir="…"` / `dir={'…'}` attribute; anything else throws. */
 function dirLiteralOf(
   element: ts.JsxOpeningElement | ts.JsxSelfClosingElement
 ): string | undefined {
@@ -94,7 +77,6 @@ function dirLiteralOf(
   throw new Error(`${DIR_ATTRIBUTE} is not a plain string literal`);
 }
 
-/** The source text of a `lang={…}` attribute's expression; undefined when absent. */
 function langExpressionTextOf(
   element: ts.JsxOpeningElement | ts.JsxSelfClosingElement
 ): string | undefined {

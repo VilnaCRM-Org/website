@@ -1,9 +1,9 @@
 # Records what GitHub Actions built for a `main` commit (issue #325,
-# docs/adr/0010-build-and-release-provenance.md). This rebuilds `out/` from the same
-# commit CodePipeline later publishes -- it does not attest the literal bytes CodePipeline
-# ships, which is built in AWS by the separate website-infrastructure pipeline (see
-# docs/deployment-runbook.md). `gh attestation verify` proves "GitHub Actions built this
-# commit reproducibly", not "this exact artifact is what vilnacrm.com is serving".
+# docs/adr/0010-build-and-release-provenance.md). This rebuilds `out/` from the
+# same commit CodePipeline later publishes but does not attest the literal bytes
+# CodePipeline ships (built in AWS by website-infrastructure; see
+# docs/deployment-runbook.md) -- `gh attestation verify` proves GitHub Actions
+# built this commit reproducibly, not that this artifact is what's serving.
 name: release provenance
 
 on:
@@ -34,10 +34,9 @@ jobs:
       - name: Build the production static export
         run: make build-out
 
-      # A single archive rather than hundreds of loose static-export files: provenance
-      # attestation is conventionally taken against one release artifact (mirroring how
-      # autorelease.yml already attaches one SBOM file to the GitHub release), and
-      # verifying a whole tree file-by-file is unusual and awkward.
+      # One archive, not hundreds of loose export files: provenance attestation
+      # is conventionally taken against a single release artifact (as
+      # autorelease.yml already does with its SBOM file).
       - name: Archive the export as a single provenance subject
         env:
           COMMIT_SHA: ${{ github.sha }}

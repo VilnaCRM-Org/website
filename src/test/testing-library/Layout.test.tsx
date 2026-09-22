@@ -9,10 +9,8 @@ import Layout from '@/components/layout';
 import en from '../../features/landing/i18n/en.json';
 import uk from '../../features/landing/i18n/uk.json';
 
-// The committed bundle is the reference, not the live i18next singleton the
-// component itself reads from: i18next echoes a missing key back as the key
-// string on both sides, so resolving t() here too would pass even if the key
-// were deleted from both bundles.
+// Reads the committed bundle, not the live i18next singleton: a missing key echoes
+// back as itself on both sides, so resolving via t() here would still pass if deleted.
 const skipLinkLabel: string = (i18n.language === 'en' ? en : uk).header.layout.skip_to_content;
 
 function MockHead({ children }: { children: React.ReactNode }): null {

@@ -1,34 +1,12 @@
 /**
- * Gate the Google Analytics conditional-render contract pinned in `pages/_app.tsx`
- * (issue #327).
+ * Gates the `pages/_app.tsx` conditional-render contract: `<GoogleAnalytics>` renders
+ * only when `NEXT_PUBLIC_GA_MEASUREMENT_ID` is set, with no hardcoded id (issue #327).
  *
- * The shipped analytics snippet used to hardcode a template placeholder measurement id
- * (`G-XYZ`), which would have reported real visitor traffic under a fake property even
- * after the placeholder was replaced by an env-gated render. `pages/_app.tsx` now renders
- * `<GoogleAnalytics />` only when `env.NEXT_PUBLIC_GA_MEASUREMENT_ID` is set, and binds
- * the same expression to both the guard and the `gaId` prop, so an empty/unset id never
- * boots the analytics script and a configured id is never silently swapped for a
- * different one. Nothing asserted that pin before this spec.
- *
- * The contract is read from the `_app.tsx` source by parsing it with the TypeScript
- * compiler — never by importing it, since `_app.tsx` boots Apollo, MUI, i18n, Sentry and
- * the service worker at module load — the same technique `sentry-replay-masking.test.ts`
- * uses for the same file. It is a pure file check with no runtime env, so it runs
- * unchanged under both the client and server Jest layers. Walking the AST rather than
- * matching text binds the gate to the actual named import, to the actual ternary guarding
- * the actual `<GoogleAnalytics>` usage, and to the actual `gaId` prop expression, so a
- * comment, a string literal or a look-alike identifier can neither satisfy nor confuse
- * it — and the gate survives a `_app.tsx` whose comments have been stripped, which a
- * regex anchored on a rationale comment would not.
- *
- * Fail-closed by construction. A missing or aliased `GoogleAnalytics` import, an
- * unconditional (unguarded) render, zero or more than one `<GoogleAnalytics>` usage in the
- * file, and a `gaId` attribute with no value all throw rather than being skipped; the
- * negative cases below prove each one against inline source. Content that is present but
- * wrong — a guard bound to a different env member than the prop, a guard on the wrong env
- * var entirely, a non-null fallback, a hardcoded id-shaped literal under an otherwise
- * correct guard — is reported in the returned contract instead of thrown, exactly as
- * `sentry-replay-masking.test.ts` reports rather than throws for a flipped mask option.
+ * Parses the source with the TypeScript compiler rather than importing it — `_app.tsx`
+ * boots Apollo, MUI, i18n, Sentry and the service worker at module load. Walking the AST
+ * (not matching text) binds the gate to the real import, ternary and prop expression, so
+ * a look-alike identifier can't satisfy it, and it survives a comment-free `_app.tsx`
+ * where a regex anchored on a rationale comment would not.
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -55,12 +33,7 @@ interface GoogleAnalyticsGateContract {
 
 type GoogleAnalyticsOpeningElement = ts.JsxSelfClosingElement | ts.JsxOpeningElement;
 
-/**
- * The local name bound by `import { GoogleAnalytics } from '@next/third-parties/google'`.
- * A renamed local binding (`import { GoogleAnalytics as GA }`) is rejected rather than
- * followed, so the gate never silently tracks an alias away from the name every other
- * usage in this check is anchored to.
- */
+/** The GoogleAnalytics import's local name; rejects an alias rather than following it. */
 function googleAnalyticsLocalNameOf(sourceFile: ts.SourceFile): string {
   for (const statement of sourceFile.statements) {
     const fromGaModule =
@@ -85,7 +58,6 @@ function googleAnalyticsLocalNameOf(sourceFile: ts.SourceFile): string {
   throw new Error(`import { ${GA_EXPORT} } from '${GA_MODULE}' not found`);
 }
 
-/** Every JSX opening tag named `localName`, self-closing or not, in source order. */
 function collectGoogleAnalyticsUsages(
   root: ts.Node,
   localName: string
@@ -102,16 +74,11 @@ function collectGoogleAnalyticsUsages(
   return usages;
 }
 
-/** The expression node a usage stands for in the wider tree: itself, or its JsxElement. */
 function jsxNodeOf(opening: GoogleAnalyticsOpeningElement): ts.Expression {
   return ts.isJsxSelfClosingElement(opening) ? opening : (opening.parent as ts.JsxElement);
 }
 
-/**
- * The ternary that gates `usage`, unwrapping any parentheses around it first — the real
- * file wraps the JSX true-branch in parens, but a bare true-branch must read identically.
- * A usage with no such ternary above it — an unconditional render — throws.
- */
+/** The ternary gating `usage`; unwraps parens since the real file wraps the JSX branch. */
 function conditionalGuarding(usage: ts.Expression): ts.ConditionalExpression {
   let node: ts.Node = usage;
   while (ts.isParenthesizedExpression(node.parent)) {
@@ -124,7 +91,6 @@ function conditionalGuarding(usage: ts.Expression): ts.ConditionalExpression {
   throw new Error(`${usage.getText()} is not gated by a conditional (ternary) expression`);
 }
 
-/** The `gaId` attribute of an opening element; throws when the prop is not set at all. */
 function gaIdAttributeOf(opening: GoogleAnalyticsOpeningElement): ts.JsxAttribute {
   const attribute = opening.attributes.properties.find(
     (prop): prop is ts.JsxAttribute =>
@@ -136,11 +102,7 @@ function gaIdAttributeOf(opening: GoogleAnalyticsOpeningElement): ts.JsxAttribut
   return attribute;
 }
 
-/**
- * The `gaId` value as source text — the unwrapped expression for `gaId={…}`, or the raw
- * literal text (quotes included) for a hardcoded `gaId="…"` — so it can be compared
- * against the guard condition's text for exact identity.
- */
+/** The `gaId` value as text, so it can be compared against the guard condition's text. */
 function gaIdExpressionTextOf(attribute: ts.JsxAttribute): string {
   const { initializer } = attribute;
   if (initializer === undefined) {
@@ -155,7 +117,6 @@ function gaIdExpressionTextOf(attribute: ts.JsxAttribute): string {
   return initializer.getText().trim();
 }
 
-/** Whether any string literal anywhere in the file has the shape of a real GA id. */
 function hasGaIdShapedStringLiteral(root: ts.Node): boolean {
   let found = false;
   const visit = (node: ts.Node): void => {
@@ -166,12 +127,6 @@ function hasGaIdShapedStringLiteral(root: ts.Node): boolean {
   return found;
 }
 
-/**
- * Extract the Google Analytics conditional-render contract from `_app.tsx` source: the
- * ternary condition guarding the single `<GoogleAnalytics>` usage, the expression bound to
- * its `gaId` prop, whether the false-branch is exactly `null`, and whether any string
- * literal in the file has the shape of a real (non-placeholder) GA id.
- */
 function readGoogleAnalyticsGateContract(source: string): GoogleAnalyticsGateContract {
   const sourceFile = ts.createSourceFile(
     '_app.tsx',
@@ -274,8 +229,6 @@ describe('Google Analytics conditional-render contract helpers', () => {
 
   describe('fail-closed — the contract cannot be read statically', () => {
     it('throws when GoogleAnalytics renders unconditionally (no ternary at all)', () => {
-      // This is exactly the mutation the gate exists to catch: deleting the ternary
-      // guard while leaving the component call (even a correctly bound one) in place.
       const unconditional = '<GoogleAnalytics gaId="G-XYZ" />';
       expect(() => readGoogleAnalyticsGateContract(buildSource(unconditional))).toThrow(
         /is not gated by a conditional/

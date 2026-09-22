@@ -1,17 +1,11 @@
 /**
- * Integration coverage for the `documentation` feature: the localized body of
- * `pages/en/docs/api.tsx`, rendered through the feature barrel so the re-export
- * chain executes.
+ * Integration coverage for `documentation`: `pages/en/docs/api.tsx`'s body,
+ * rendered through the feature barrel.
  *
- * Invalid input / boundary — Not applicable: the component takes no props and
- * reads no state.
- * Loading / error — Not applicable: it renders synchronously with no async
- * boundary.
- * Locale — the component reads through `useTranslation()`/`t()` against the
- * committed i18n bundle, so this asserts the rendered copy against that bundle
- * rather than resolving `t()` on both sides of the assertion: i18next echoes a
- * missing key back as the key string on both sides, so a `t()`-vs-`t()` form
- * would keep passing even if the key were deleted from both bundles.
+ * Invalid input / boundary — Not applicable: no props, no state.
+ * Loading / error — Not applicable: renders synchronously, no async boundary.
+ * Locale — asserts against the imported i18n bundle, not `t()` on both sides:
+ * a missing key echoes back on both sides, so `t()`-vs-`t()` would still pass.
  */
 import { render, screen } from '@testing-library/react';
 import i18n from 'i18next';

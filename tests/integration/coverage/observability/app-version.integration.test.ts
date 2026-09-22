@@ -1,12 +1,6 @@
-/**
- * Integration: the release/environment tags Sentry.init reads from
- * `src/config/app-version.ts`.
- *
- * `APP_ENVIRONMENT` is computed once at module load from `isProductionBuild()`,
- * so both branches only surface by re-importing the module under a different
- * `NODE_ENV` (the same technique `report-web-vitals.integration.test.ts` uses
- * for its own production-gated branch).
- */
+// `APP_ENVIRONMENT` is computed once at module load from
+// `isProductionBuild()`, so each branch only surfaces by re-importing the
+// module under a different `NODE_ENV`.
 import { version } from '../../../../package.json';
 
 async function importFreshAppVersion(): Promise<typeof import('@/config/app-version')> {
