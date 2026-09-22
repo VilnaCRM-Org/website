@@ -18,12 +18,21 @@
  * of this spec did) is blind to the SDK's own automatic capture and cannot
  * prove the double-event defect is gone; mocking `@sentry/browser` instead
  * catches both paths through the one function `@sentry/react` re-exports by
- * reference at import time. `Scope#captureException` (`@sentry/core`) also
- * reads tags off `this`, not off any argument the mocked function receives,
- * so the tag assertion below inspects the real `Scope` instance `beforeCapture`
- * was given rather than the mocked call's arguments.
+ * reference at import time. `package.json` declares `@sentry/react` and
+ * `@sentry/node`, but not `@sentry/browser` — it is only a transitive
+ * dependency of `@sentry/react` — so this spec never imports it directly:
+ * `@sentry/react`'s own CJS entry point re-exports every one of
+ * `@sentry/browser`'s named exports onto itself by reference at require time
+ * (`Object.keys(browser).forEach(k => exports[k] = browser[k])` in
+ * `node_modules/@sentry/react/build/cjs/index.js`), so once `@sentry/browser`
+ * is mocked, `Sentry.captureException` from the `@sentry/react` import below
+ * IS the same mocked function `captureReactException` calls — no separate
+ * import of the undeclared package is needed to observe it.
+ * `Scope#captureException` (`@sentry/core`) also reads tags off `this`, not
+ * off any argument the mocked function receives, so the tag assertion below
+ * inspects the real `Scope` instance `beforeCapture` was given rather than
+ * the mocked call's arguments.
  */
-import * as SentryBrowser from '@sentry/browser';
 import * as Sentry from '@sentry/react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import i18n from 'i18next';
@@ -39,7 +48,7 @@ jest.mock('@sentry/browser', () => ({
   captureException: jest.fn(),
 }));
 
-const captureException: jest.Mock = SentryBrowser.captureException as unknown as jest.Mock;
+const captureException: jest.Mock = Sentry.captureException as unknown as jest.Mock;
 
 const errorBoundaryCopy: typeof en.error_boundary = (i18n.language === 'en' ? en : uk)
   .error_boundary;
