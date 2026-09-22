@@ -213,7 +213,7 @@ test.describe('English landing at /en', () => {
     await expect(cta).toBeFocused();
   });
 
-  test('the English API stub sends its logo back to the English landing', async ({ page }) => {
+  test('the English API docs page sends its logo back to the English landing', async ({ page }) => {
     await page.goto('/en/docs/api');
 
     await expect(page.locator('html')).toHaveAttribute('lang', 'en');

@@ -21,8 +21,8 @@ export const EXCLUDED_ROUTES = Object.freeze({
     'The PWA fallback shell (#338) is served from the service-worker cache when a ' +
     'navigation fails; it is a network artefact rather than content, and ships noindex.',
   '/en/docs/api':
-    'Still the placeholder stub recorded in #339. It ships noindex, because asking a ' +
-    'crawler to index a stub competes with /swagger — the page carrying the real API ' +
+    'A thin redirector to /swagger, not an unfinished page. It ships noindex because ' +
+    'indexing it would only compete with /swagger — the page carrying the real API ' +
     'reference — for the same query.',
 });
 

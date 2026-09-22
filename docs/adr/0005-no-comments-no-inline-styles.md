@@ -91,7 +91,7 @@ disable directive is itself a comment the first gate would report.
   so it removes the option of a useful one. That is the trade the review asked for: a
   gate that needs judgement to apply is not a gate.
 - **Pages are one hop deeper.** Every page body now lives in a feature, which is more
-  files for a stub such as `/en/docs/api`. It is also what `docs/extending-the-website.md`
-  said a page should look like before this decision.
+  files for a thin page such as `/en/docs/api`. It is also what
+  `docs/extending-the-website.md` said a page should look like before this decision.
 - **Migration noise.** Fifty files changed in one PR to land the first gate green. That
   is a one-time cost; a ratchet with a fifty-file allow-list would have paid it forever.
