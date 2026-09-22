@@ -270,7 +270,11 @@ and the [incident response runbook](runbooks/incident-response.md).
 `make build-out` writes `out/version.json` — `{"version", "commit", "builtAt"}` — so a
 deployed bundle can be tied back to the commit and package version that produced it; it
 is servable at `/version.json` (added to `scripts/cloudfront_routing.js`'s
-`ALLOWED_FILES` for that reason). Separately,
+`ALLOWED_FILES` for that reason). `builtAt` is read from the wall clock at build time —
+deliberately, since this site has a live incident class where production keeps serving a
+months-old build, and knowing when a bundle was built is diagnostic information the commit
+alone does not give. That also makes two builds of the same commit produce different
+`version.json` bytes, so the build is provenance-tracked, not byte-reproducible. Separately,
 [`.github/workflows/release-provenance.yml`](../.github/workflows/release-provenance.yml)
 rebuilds `out/` on every push to `main` and attests it with
 `actions/attest-build-provenance`:
@@ -279,11 +283,11 @@ rebuilds `out/` on every push to `main` and attests it with
 gh attestation verify website-out-<sha>.tar.gz --owner VilnaCRM-Org --repo website
 ```
 
-This proves GitHub Actions built that commit reproducibly — **not** that the exact bytes
-CodePipeline published to `vilnacrm.com` match it, since CodePipeline builds the
-production artifact independently, in AWS (see [ADR
-0010](adr/0010-build-and-release-provenance.md) for the full scope and what remains
-open — CodePipeline execution polling — and why).
+This proves GitHub Actions built that specific archive from that commit — **not** that
+the build is byte-reproducible, and **not** that the exact bytes CodePipeline published
+to `vilnacrm.com` match it, since CodePipeline builds the production artifact
+independently, in AWS (see [ADR 0010](adr/0010-build-and-release-provenance.md) for the
+full scope and what remains open — CodePipeline execution polling — and why).
 
 ## Manual verification
 

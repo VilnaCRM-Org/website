@@ -56,7 +56,12 @@ ISO-8601 timestamp>}` with `jq -cn`. The manifest is generated on the host rathe
   git-absent `"unknown"` fallback — without a Docker daemon. The Docker `ARG`/`ENV`
   therefore threads the commit into the image build (available for image introspection,
   and the single place `.dockerignore`'s exclusion of `.git` is worked around) without
-  being the sole place the value is recorded.
+  being the sole place the value is recorded. `builtAt` is deliberately wall-clock, not
+  derived from the commit: this repository has a live incident class where production
+  keeps serving a stale build, and the timestamp is the diagnostic that catches it. The
+  trade-off is that it also makes two builds of the same commit differ, so the manifest —
+  and the archive built from it — are not byte-reproducible; see the attestation's scope
+  below.
 - **`/version.json` is servable.** It is added to `scripts/cloudfront_routing.js`'s
   `ALLOWED_FILES` as an exact match (the same pattern `/swagger-schema.json` already
   uses), so the file the edge allow-list guards is the one the export now really ships,
@@ -74,14 +79,18 @@ ISO-8601 timestamp>}` with `jq -cn`. The manifest is generated on the host rathe
   role, calls no local composite action, and cuts no GitHub release — so it needs no
   entry in `ci-health-alerts.yml`.
 - **Scope of the attestation.** `actions/attest-build-provenance` proves GitHub Actions
-  built `out/` reproducibly from a specific commit — it says nothing about whether that
-  exact archive is what CodePipeline published, because the artifact CodePipeline builds
-  and serves is built separately, in AWS, from the same commit. `gh attestation verify
-website-out-<sha>.tar.gz --owner VilnaCRM-Org --repo website` answers "did GitHub
-  Actions build this commit", not "is this what vilnacrm.com is serving right now" — the
-  second question needs the CodePipeline-execution half below, plus the existing
-  post-deploy smoke test (`make smoke-prod`, issue #331) that already checks the live
-  site's negative-path response shape.
+  built this specific `out/` archive from a specific commit — provenance, not
+  reproducibility. `out/version.json`'s `builtAt` is read from the wall clock at build
+  time, on purpose (see above), so a second rebuild of the identical commit writes a
+  different `version.json` and therefore a different archive; nothing here claims the two
+  would match byte for byte. Nor does the attestation say whether the archive it covers is
+  what CodePipeline published, because the artifact CodePipeline builds and serves is
+  built separately, in AWS, from the same commit. `gh attestation verify
+website-out-<sha>.tar.gz --owner VilnaCRM-Org --repo website` answers "did GitHub Actions
+  build this archive from this commit", not "is this what vilnacrm.com is serving right
+  now" — the second question needs the CodePipeline-execution half below, plus the
+  existing post-deploy smoke test (`make smoke-prod`, issue #331) that already checks the
+  live site's negative-path response shape.
 - **CodePipeline polling stays out of scope here.** #325 and #329 both ask
   `deploy.yml` to wait for the CodePipeline execution result and fail the job if the
   pipeline itself fails (today it only checks that the trigger call succeeded). Writing

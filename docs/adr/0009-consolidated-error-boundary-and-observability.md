@@ -40,7 +40,8 @@ The constraints that were real when it was made:
 ## Decision
 
 We ship one error boundary, one Apollo error-reporting link, and two new `Sentry.init`
-tags, all funnelling through the existing `reportHandledError` sink.
+tags. The boundary tags the SDK's own capture directly; the Apollo link and the sign-up
+path funnel through the existing `reportHandledError` sink.
 
 - **`Sentry.ErrorBoundary` wraps only `<Component />`** in `pages/_app.tsx` — not
   `Layout`, not the header, not the footer. A crash inside page content leaves the header,
@@ -59,7 +60,8 @@ tags, all funnelling through the existing `reportHandledError` sink.
   error in the app already carries. `reportRenderCrash` was removed from
   `src/lib/telemetry/report-error.ts` — it would have been dead code, since `beforeCapture`
   never calls it — and `reportHandledError` (`AuthLayoutTelemetry.test.tsx` already proves
-  it sends no credential data) keeps its one real caller, the sign-up path.
+  it sends no credential data) is not called from the boundary at all. Its two real
+  callers are the sign-up path and the Apollo `ErrorLink` described next.
 - **One `ErrorLink`, no `RetryLink`, in `src/features/landing/api/graphql/apollo.ts`.**
   `new ErrorLink(({ error }) => reportHandledError(error, { feature: 'landing', action:
 'graphql' }))` sits first in `ApolloLink.from([...])`, ahead of the Accept-Language link

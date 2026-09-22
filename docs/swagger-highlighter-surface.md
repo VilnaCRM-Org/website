@@ -1,8 +1,9 @@
 # The /swagger syntax-highlighter surface
 
 What the `/swagger` page actually ships for syntax highlighting, why it is stuck on an
-end-of-life engine, what the `prismjs` override in `package.json` does and does not cover,
-and why no GitHub-native alert will ever say so. Written for issue #379 (OWASP A06:2021
+end-of-life engine, what the former `prismjs` override in `package.json` did and did not
+cover before it was removed, and why no GitHub-native alert will ever say so. Written for
+issue #379 (OWASP A06:2021
 Vulnerable and Outdated Components) so the inventory is a checked fact rather than a
 recollection. Every version below was read from `bun.lock`, `node_modules`, and a host
 build of the static export on 2026-09-11; re-verify against the lockfile before relying on
@@ -69,9 +70,10 @@ would therefore break lowlight 1.20.0 at runtime rather than upgrade it — do n
 `swagger-ui-react@5.32.15`, the newest release, still declares
 `react-syntax-highlighter ^16.0.0`, so nothing in range moves the page off highlight.js 10.
 
-## Why the prismjs override exists
+## Why the prismjs override existed
 
-`package.json` carries `"overrides": { "prismjs": "1.30.0" }`. It landed in `ccebf1a8`
+`package.json` carried `"overrides": { "prismjs": "1.30.0" }` until it was removed in the
+F5 change below. It landed in `ccebf1a8`
 (`feat(#29): add swagger page`, PR #195, 2025-06-04) alongside `swagger-ui-react ^5.22.0`.
 At that commit `react-syntax-highlighter@15.6.1` declared `prismjs ^1.27.0` and its
 `refractor@3.6.0` declared `prismjs ~1.27.0`; every prismjs release before 1.30.0 carries
@@ -79,7 +81,8 @@ GHSA-x7hr-w5r2-h6wg (CVE-2024-53382, DOM clobbering, fixed in 1.30.0). The overr
 both consumers onto 1.30.0 — the pnpm lockfile of that commit shows `refractor@3.6.0`
 resolving `prismjs 1.30.0` — and that was a real fix at the time.
 
-Today it is inert, and it must not be read as coverage of the highlighter tree:
+By the time it was removed it was inert, and it must never be read as coverage of the
+highlighter tree:
 
 - `react-syntax-highlighter@16.1.1` already requires `prismjs ^1.30.0`, and 1.30.0 is the
   newest prismjs, so the override changes nothing about that edge.

@@ -2,8 +2,10 @@
 # docs/adr/0010-build-and-release-provenance.md). This rebuilds `out/` from the
 # same commit CodePipeline later publishes but does not attest the literal bytes
 # CodePipeline ships (built in AWS by website-infrastructure; see
-# docs/deployment-runbook.md) -- `gh attestation verify` proves GitHub Actions
-# built this commit reproducibly, not that this artifact is what's serving.
+# docs/deployment-runbook.md) -- `gh attestation verify` proves GitHub Actions built
+# this specific archive from this commit (provenance, not reproducibility: `builtAt`
+# in out/version.json is wall-clock, so two builds of the same commit differ), and
+# not that this artifact is what's serving.
 name: release provenance
 
 on:
