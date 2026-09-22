@@ -24,7 +24,11 @@ async function navigateToPrivacyPolicy(
       },
     });
   });
-  await page.getByRole('link', { name: linkName, exact: true }).click();
+  // Both names are RegExps, and `exact` is ignored for a RegExp, so a page-wide
+  // lookup would also reach the sign-up form's policy links — whose English copy
+  // is now a case variant of the footer's ("Usage Policy" vs "Usage policy").
+  // The footer landmark is the surface these two tests are about.
+  await page.locator('footer').getByRole('link', { name: linkName, exact: true }).click();
   await page.goto(vilnaCRMPrivacyPolicyURL);
   await page.waitForURL(expectedURL);
   await expect(page).toHaveURL(expectedURL);

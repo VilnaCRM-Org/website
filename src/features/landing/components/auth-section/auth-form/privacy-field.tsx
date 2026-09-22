@@ -26,9 +26,9 @@ function PolicyConsentText(): React.ReactElement {
           target="_blank"
           rel="noopener noreferrer"
         >
-          Use Policy
+          Usage Policy
         </UiLink>
-        VilnaCRM Service
+        of the VilnaCRM Service
       </Trans>
     </UiTypography>
   );
