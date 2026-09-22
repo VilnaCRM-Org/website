@@ -269,7 +269,7 @@ describe('integration: registration GraphQL API boundary', () => {
       expect(captureException).not.toHaveBeenCalled();
     });
 
-    it('never retries the request after an error, which would risk a duplicate sign-up', async () => {
+    it('never retries the request after an error, avoiding a duplicate sign-up', async () => {
       fetchMock.mockResolvedValue(
         graphqlErrors([{ message: 'boom', extensions: { code: 'BAD_USER_INPUT' } }])
       );

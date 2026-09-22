@@ -1,6 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/nextjs';
 import { t } from 'i18next';
 
+import { textArgType } from '../../../.storybook/story-arg-types';
+
 import UiSkipLink from './index';
 
 const meta: Meta<typeof UiSkipLink> = {
@@ -8,14 +10,8 @@ const meta: Meta<typeof UiSkipLink> = {
   component: UiSkipLink,
   tags: ['autodocs'],
   argTypes: {
-    label: {
-      type: 'string',
-      description: 'Visible text once the link receives focus',
-    },
-    targetId: {
-      type: 'string',
-      description: 'Id of the element focus moves to when the link is activated',
-    },
+    label: textArgType('Visible text once the link receives focus'),
+    targetId: textArgType('Id of the element focus moves to when the link is activated'),
   },
 };
 

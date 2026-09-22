@@ -154,7 +154,7 @@ function readGoogleAnalyticsGateContract(source: string): GoogleAnalyticsGateCon
 const readFile = (filePath: string): string => fs.readFileSync(filePath, 'utf-8');
 
 describe('Google Analytics conditional-render contract (issue #327)', () => {
-  it('renders GoogleAnalytics only when the GA measurement id env var is set, with no hardcoded id', () => {
+  it('renders GoogleAnalytics only when the GA id env var is set, with no hardcoded id', () => {
     expect(readGoogleAnalyticsGateContract(readFile(APP_PATH))).toEqual({
       guardCondition: PINNED_GUARD,
       gaIdExpression: PINNED_GUARD,
@@ -168,8 +168,17 @@ describe('Google Analytics conditional-render contract helpers', () => {
   const GA_IMPORT = `import { GoogleAnalytics } from '${GA_MODULE}';`;
   const buildSource = (jsx: string, preamble = ''): string =>
     [GA_IMPORT, preamble, `function Component() { return (<main>${jsx}</main>); }`].join('\n');
-  const REAL_SHAPE =
-    '{env.NEXT_PUBLIC_GA_MEASUREMENT_ID ? (<GoogleAnalytics gaId={env.NEXT_PUBLIC_GA_MEASUREMENT_ID} />) : null}';
+  const gaTag = (idExpr: string): string => `<GoogleAnalytics gaId={${idExpr}} />`;
+  const ternaryShape = (
+    guardExpr: string,
+    idExpr: string,
+    whenFalse = 'null',
+    parenthesized = true
+  ): string => {
+    const whenTrue = parenthesized ? `(${gaTag(idExpr)})` : gaTag(idExpr);
+    return `{${guardExpr} ? ${whenTrue} : ${whenFalse}}`;
+  };
+  const REAL_SHAPE = ternaryShape(PINNED_GUARD, PINNED_GUARD);
 
   describe('positive', () => {
     it('reads the pinned contract from the real shape (positive)', () => {
@@ -182,8 +191,7 @@ describe('Google Analytics conditional-render contract helpers', () => {
     });
 
     it('reads the same contract when the true-branch JSX is not parenthesized (boundary)', () => {
-      const bareShape =
-        '{env.NEXT_PUBLIC_GA_MEASUREMENT_ID ? <GoogleAnalytics gaId={env.NEXT_PUBLIC_GA_MEASUREMENT_ID} /> : null}';
+      const bareShape = ternaryShape(PINNED_GUARD, PINNED_GUARD, 'null', false);
       expect(readGoogleAnalyticsGateContract(buildSource(bareShape))).toEqual({
         guardCondition: PINNED_GUARD,
         gaIdExpression: PINNED_GUARD,
@@ -195,8 +203,7 @@ describe('Google Analytics conditional-render contract helpers', () => {
 
   describe('negative — the contract is present but wrong', () => {
     it('reports a guard bound to a different env member than the gaId prop', () => {
-      const mismatched =
-        '{env.NEXT_PUBLIC_GA_MEASUREMENT_ID ? (<GoogleAnalytics gaId={env.NEXT_PUBLIC_SENTRY_DSN} />) : null}';
+      const mismatched = ternaryShape(PINNED_GUARD, 'env.NEXT_PUBLIC_SENTRY_DSN');
       const contract = readGoogleAnalyticsGateContract(buildSource(mismatched));
       expect(contract.guardCondition).toBe(PINNED_GUARD);
       expect(contract.gaIdExpression).toBe('env.NEXT_PUBLIC_SENTRY_DSN');
@@ -204,15 +211,13 @@ describe('Google Analytics conditional-render contract helpers', () => {
     });
 
     it('reports a guard on the wrong env var entirely, not the GA measurement id', () => {
-      const wrongVar =
-        '{env.NEXT_PUBLIC_SENTRY_DSN ? (<GoogleAnalytics gaId={env.NEXT_PUBLIC_SENTRY_DSN} />) : null}';
+      const wrongVar = ternaryShape('env.NEXT_PUBLIC_SENTRY_DSN', 'env.NEXT_PUBLIC_SENTRY_DSN');
       const contract = readGoogleAnalyticsGateContract(buildSource(wrongVar));
       expect(contract.guardCondition).not.toBe(PINNED_GUARD);
     });
 
     it('reports a non-null fallback instead of null', () => {
-      const nonNullFallback =
-        '{env.NEXT_PUBLIC_GA_MEASUREMENT_ID ? (<GoogleAnalytics gaId={env.NEXT_PUBLIC_GA_MEASUREMENT_ID} />) : <Fallback />}';
+      const nonNullFallback = ternaryShape(PINNED_GUARD, PINNED_GUARD, '<Fallback />');
       expect(readGoogleAnalyticsGateContract(buildSource(nonNullFallback)).whenFalseIsNull).toBe(
         false
       );

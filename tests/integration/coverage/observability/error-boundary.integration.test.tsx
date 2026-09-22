@@ -79,7 +79,7 @@ describe('integration: error boundary wiring', () => {
     captureException.mockClear();
   });
 
-  it('reports the crash exactly once via the SDK own capture, tagged with the app-level shape', () => {
+  it('reports the crash once via the SDK own capture, tagged with the app-level shape', () => {
     renderBoundary();
 
     // Exactly one call: an onError-based sink would call this mock a second

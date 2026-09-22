@@ -184,7 +184,8 @@ function readAppObservabilityContract(source: string): AppObservabilityContract 
   } = analyzeComponentAndBoundaryUsage(sourceFile, namespace);
   if (errorBoundaryCount !== 1) {
     throw new Error(
-      `expected exactly one <${namespace}.${ERROR_BOUNDARY_MEMBER}> element, found ${errorBoundaryCount}`
+      `expected exactly one <${namespace}.${ERROR_BOUNDARY_MEMBER}> element, ` +
+        `found ${errorBoundaryCount}`
     );
   }
 
@@ -202,7 +203,7 @@ function readAppObservabilityContract(source: string): AppObservabilityContract 
 const readFile = (filePath: string): string => fs.readFileSync(filePath, 'utf-8');
 
 describe('Sentry release/environment/error-boundary contract in pages/_app.tsx', () => {
-  it('pins release and environment to the app-version config and wraps Component in the boundary', () => {
+  it('pins release/environment to the app-version config, wraps Component in the boundary', () => {
     const contract = readAppObservabilityContract(readFile(APP_PATH));
 
     expect(contract.release).toBe('APP_VERSION');
@@ -211,7 +212,7 @@ describe('Sentry release/environment/error-boundary contract in pages/_app.tsx',
     expect(contract.componentWrappedCount).toBe(contract.componentUsageCount);
   });
 
-  it('tags the boundary own capture via beforeCapture instead of re-capturing through onError', () => {
+  it('tags the boundary capture via beforeCapture, not a re-capturing onError', () => {
     // componentDidCatch calls captureReactException unconditionally, so an
     // onError sink would double-report every crash.
     const contract = readAppObservabilityContract(readFile(APP_PATH));
@@ -261,7 +262,9 @@ describe('Sentry release/environment/error-boundary contract helpers', () => {
         `import * as Monitoring from '${SENTRY_MODULE}';`,
         'Monitoring.init({ release: APP_VERSION, environment: APP_ENVIRONMENT });',
         'function MyApp() { return (',
-        '  <Monitoring.ErrorBoundary beforeCapture={tagRenderCrash}><Component /></Monitoring.ErrorBoundary>',
+        '  <Monitoring.ErrorBoundary beforeCapture={tagRenderCrash}>',
+        '    <Component />',
+        '  </Monitoring.ErrorBoundary>',
         '); }',
       ].join('\n');
       expect(readAppObservabilityContract(source).componentWrappedCount).toBe(1);
@@ -272,14 +275,15 @@ describe('Sentry release/environment/error-boundary contract helpers', () => {
     it('reports a Component rendered outside the boundary as unwrapped', () => {
       const source = buildTree(
         buildInit(validOptions),
-        '<Layout><Sentry.ErrorBoundary><Notification /></Sentry.ErrorBoundary><Component /></Layout>'
+        '<Layout><Sentry.ErrorBoundary><Notification /></Sentry.ErrorBoundary>' +
+          '<Component /></Layout>'
       );
       const contract = readAppObservabilityContract(source);
       expect(contract.componentUsageCount).toBe(1);
       expect(contract.componentWrappedCount).toBe(0);
     });
 
-    it('reports onError as present on a boundary that re-captures (the double-event regression)', () => {
+    it('reports onError on a boundary that re-captures (the double-event regression)', () => {
       const source = buildTree(
         buildInit(validOptions),
         `<Layout>
@@ -295,7 +299,7 @@ describe('Sentry release/environment/error-boundary contract helpers', () => {
       expect(contract.hasOnError).toBe(true);
     });
 
-    it('reports beforeCapture as absent when the boundary carries no tagging callback at all', () => {
+    it('reports beforeCapture absent when the boundary has no tagging callback', () => {
       const source = buildTree(
         buildInit(validOptions),
         '<Layout><Sentry.ErrorBoundary><Component /></Sentry.ErrorBoundary></Layout>'

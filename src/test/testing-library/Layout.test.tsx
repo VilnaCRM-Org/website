@@ -123,7 +123,7 @@ describe('Layout component', () => {
     expect(header.compareDocumentPosition(content)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     expect(content.compareDocumentPosition(footer)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
-  it('renders a skip link before the header, with a matching focus target before the content', () => {
+  it('renders the skip link before the header, with its focus target', () => {
     renderLayout(<main data-testid="main-content">Content</main>);
     const skipLink: HTMLElement = screen.getByRole('link', { name: skipLinkLabel });
     const header: HTMLElement = screen.getByTestId('header');
