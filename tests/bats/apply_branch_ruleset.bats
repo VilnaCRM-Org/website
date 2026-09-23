@@ -310,6 +310,61 @@ misreported_required_checks() {
   [ "$status" -eq 0 ]
 }
 
+unguarded_required_dependents() {
+  local produced
+  produced="$(produced_names "$1")"
+  jq -r --argjson required "$(required_names | jq -R . | jq -s .)" '
+    .[] | select((.name | IN($required[])) and (.needs | length > 0))
+    | select((.runsWhenNeedsFail | not) or ((.needs - .failsClosedOn) | length > 0))
+    | "\(.name) (needs \(.needs | join(",")); fails closed on \(.failsClosedOn | join(",")))"' \
+    <<<"$produced"
+}
+
+# A job skipped because a dependency failed reports `skipped`, which GitHub counts
+# as passing, so a required job with `needs:` must still run after a failed
+# dependency and exit non-zero for it.
+@test "every required job with needs runs after a failed dependency and fails closed on it" {
+  run unguarded_required_dependents .github/workflows
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "dropping a gate's fail-closed step turns the dependency guard red" {
+  local dir="$BATS_TEST_TMPDIR/workflows"
+  cp -R "$PROJECT_ROOT/.github/workflows" "$dir"
+  (cd "$PROJECT_ROOT" && node --input-type=module -e "
+    import fs from 'node:fs';
+    import yaml from 'js-yaml';
+    const file = process.argv[1] + '/mutation-testing.yml';
+    const doc = yaml.load(fs.readFileSync(file, 'utf8'));
+    doc.jobs.merge.steps = doc.jobs.merge.steps.filter(
+      step => !String(step.if ?? '').includes('needs.shard.result')
+    );
+    fs.writeFileSync(file, yaml.dump(doc));
+  " "$dir")
+
+  run unguarded_required_dependents "$dir"
+  [ "$status" -eq 0 ]
+  [ "$output" = 'merge and enforce gate (needs shard; fails closed on )' ]
+}
+
+@test "a required job that stops running after a failed dependency turns the guard red" {
+  local dir="$BATS_TEST_TMPDIR/workflows"
+  cp -R "$PROJECT_ROOT/.github/workflows" "$dir"
+  (cd "$PROJECT_ROOT" && node --input-type=module -e "
+    import fs from 'node:fs';
+    import yaml from 'js-yaml';
+    const file = process.argv[1] + '/mutation-testing.yml';
+    const doc = yaml.load(fs.readFileSync(file, 'utf8'));
+    doc.jobs.merge.if = \"github.event_name == 'pull_request'\";
+    fs.writeFileSync(file, yaml.dump(doc));
+  " "$dir")
+
+  run unguarded_required_dependents "$dir"
+  [ "$status" -eq 0 ]
+  [ "$output" = 'merge and enforce gate (needs shard; fails closed on shard)' ]
+}
+
 @test "every pull-request check is either required or excluded with a reason, never both" {
   local classified produced
   classified="$( (required_names; excluded_names) | sort)"

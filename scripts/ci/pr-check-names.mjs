@@ -31,8 +31,18 @@
 // reports ONE check run under the UNEXPANDED name, so an expanded name of a
 // conditional matrix job is never safe to require.
 //
+// A second trap: a job whose `needs:` dependency fails is skipped by default, and
+// a skipped check run counts as passing — so a required job that merely depends
+// on the real work would pass while that work failed. Each entry therefore also
+// carries `needs`, `runsWhenNeedsFail` (its `if:` holds `!cancelled()` or
+// `always()`, so it still runs after a failed dependency) and `failsClosedOn`
+// (the dependencies a step exits non-zero for when `needs.<dep>.result` is not
+// `success`). The bats drift guard requires a required job with `needs:` to
+// cover every dependency both ways.
+//
 // Usage: node scripts/ci/pr-check-names.mjs [workflows-dir]
-// Prints a JSON array of { name, workflow, job, conditional, matrix } on stdout;
+// Prints a JSON array of { name, workflow, job, conditional, matrix, needs,
+// runsWhenNeedsFail, failsClosedOn } on stdout;
 // exits 1 on any workflow it cannot read or render.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -42,6 +52,9 @@ import yaml from 'js-yaml';
 const DEFAULT_BRANCH = 'main';
 const REQUIRED_TYPES = ['opened', 'synchronize'];
 const MATRIX_EXPRESSION = /\$\{\{\s*matrix\.([A-Za-z0-9_-]+)\s*\}\}/g;
+const RUNS_AFTER_FAILURE = /!\s*cancelled\(\s*\)|\balways\(\s*\)/;
+const NEEDS_NOT_SUCCESS = /needs\.([A-Za-z0-9_-]+)\.result\s*!=\s*'success'/g;
+const EXITS_NON_ZERO = /\bexit\s+[1-9]/;
 
 const dir = path.resolve(process.argv[2] ?? '.github/workflows');
 const failures = [];
@@ -177,6 +190,19 @@ function renderName(template, combination, where) {
   return `${rendered} (${Object.values(combination).map(String).join(', ')})`;
 }
 
+function failsClosedOn(job) {
+  const dependencies = new Set();
+  for (const step of asList(job.steps)) {
+    if (step === null || typeof step !== 'object' || !EXITS_NON_ZERO.test(String(step.run ?? ''))) {
+      continue;
+    }
+    for (const [, dependency] of String(step.if ?? '').matchAll(NEEDS_NOT_SUCCESS)) {
+      dependencies.add(dependency);
+    }
+  }
+  return [...dependencies].sort();
+}
+
 function checkNamesOf(file, document) {
   const where = path.join(path.basename(dir), file);
   if (document === null || typeof document !== 'object') {
@@ -211,6 +237,9 @@ function checkNamesOf(file, document) {
         job: jobId,
         conditional: Object.hasOwn(job, 'if'),
         matrix: matrix !== undefined,
+        needs: asList(job.needs).map(String).sort(),
+        runsWhenNeedsFail: RUNS_AFTER_FAILURE.test(String(job.if ?? '')),
+        failsClosedOn: failsClosedOn(job),
       }));
   });
 }

@@ -478,7 +478,10 @@ required name nobody reports blocks every merge forever. `scripts/ci/pr-check-na
 renders those names from the parsed workflows (no `paths` filter, `main` admitted,
 matrix names expanded the way GitHub does), and `tests/bats/apply_branch_ruleset.bats`
 fails when a required name is not reported exactly once, when a required name is an
-expanded matrix name of a conditional job, or when a pull-request check is neither
+expanded matrix name of a conditional job, when a required job with `needs:` would be
+skipped by a failed dependency (a skip counts as passing) instead of running under
+`!cancelled()` and exiting non-zero on every dependency whose result is not `success`, or
+when a pull-request check is neither
 required nor listed under `excluded_checks` with a reason. Adding, renaming or removing a
 PR job therefore means classifying it in that file in the same change. CONTRIBUTING.md
 holds the admin runbook.
