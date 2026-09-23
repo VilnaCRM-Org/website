@@ -315,7 +315,7 @@ assert_output_contains() {
 # A bare `[ "$status" -eq 0 ]` discards `$output`, so a failure cannot say which
 # stage of the command under test gave up (issue #492).
 assert_success() {
-  if [ "${status-}" -ne 0 ]; then
+  if [ "${status-}" != 0 ]; then
     echo "Expected exit status 0, got ${status-unset}" >&2
     echo "--- output ---" >&2
     printf '%s\n' "${output-}" >&2
