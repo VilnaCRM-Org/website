@@ -20,13 +20,15 @@ import { LandingComponent } from '@/features/landing';
   `for-who-section`, `auth-section`, `notification`, `background-images`), the
   `landing-sections` group and the `landing` root that composes them. Each renderable section
   ships a co-located `*.stories.tsx`.
-- `landing` loads exactly two client-only (`ssr: false`) chunks: `landing-sections` and
-  `auth-section`. `landing-sections` statically composes `background-images`, `about-us`,
-  `why-us`, `for-who-section` and `possibilities` inside one `position: relative` box, so all
-  five mount in the same commit. The background vector is absolutely positioned at a
-  percentage of that box's height; when the sections were separate dynamic chunks the vector
-  could mount before its siblings and move as the box grew, which the desktop Lighthouse CLS
-  budget caught intermittently (issue #493). Keep those five sections under the one boundary.
+- `landing` loads exactly one client-only (`ssr: false`) chunk, `landing-sections`. It
+  statically composes `background-images`, `about-us`, `why-us`, `for-who-section` and
+  `possibilities` inside one `position: relative` box, followed by `auth-section`, so the whole
+  page body mounts in the same commit. Two mount-order races drove this (issue #493): the
+  background vector is absolutely positioned at a percentage of the box's height, so when the
+  sections were separate chunks it could mount before its siblings and move as the box grew;
+  and while `auth-section` stayed its own chunk it was the smaller download, mounted first
+  directly under the header, and was pushed down by the whole block (desktop CLS 0.93–0.97 on
+  every run). Keep every landing section under the one boundary.
 - `api/` — the Apollo data layer: `graphql/apollo.ts` (client + documents) and
   `service/userService.ts` (the typed create-user call and its `types.ts`).
 - `hooks/` — feature hooks such as `useFormReset.ts`.

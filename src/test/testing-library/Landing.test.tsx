@@ -81,8 +81,8 @@ describe('Landing', () => {
     expect(mainContainer).toHaveStyle(positionRelativeStyle);
   });
 
-  it('loads through exactly two client-only boundaries with no loading placeholder', () => {
-    expect(boundaryOptions).toHaveLength(2);
+  it('loads through exactly one client-only boundary with no loading placeholder', () => {
+    expect(boundaryOptions).toHaveLength(1);
     boundaryOptions.forEach(options => {
       expect(options).toMatchObject({ ssr: false });
       expect(options).not.toHaveProperty('loading');

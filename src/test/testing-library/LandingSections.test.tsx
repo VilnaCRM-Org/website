@@ -40,7 +40,7 @@ describe('LandingSections', () => {
   it('renders the five sections as the children of one relative box, in order', () => {
     const { container, relativeBox } = renderSections();
 
-    expect(container.childElementCount).toBe(1);
+    expect(container.childElementCount).toBe(2);
     expect(relativeBox).toHaveStyle('position: relative');
     expect(Array.from(relativeBox.children).map(child => child.textContent)).toEqual(sectionOrder);
   });
@@ -67,9 +67,11 @@ describe('LandingSections', () => {
     expect(queryAllByRole('heading')).toHaveLength(0);
   });
 
-  it('leaves the auth section to its own boundary', () => {
-    const { queryByText } = renderSections();
+  it('mounts the auth section in the same commit, right after the relative box', () => {
+    const { getByText, relativeBox } = renderSections();
+    const authSection: HTMLElement = getByText('AuthSection');
 
-    expect(queryByText('AuthSection')).not.toBeInTheDocument();
+    expect(relativeBox).not.toContainElement(authSection);
+    expect(relativeBox.nextElementSibling).toBe(authSection);
   });
 });
