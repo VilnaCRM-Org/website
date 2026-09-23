@@ -5,67 +5,72 @@ import '@testing-library/jest-dom';
 
 import Landing from '../../features/landing/components/landing/landing';
 
-jest.mock('next/head', () => ({
-  __esModule: true,
-  default: ({ children }: { children: Array<React.ReactElement> }): React.JSX.Element => (
-    <div>{children}</div>
-  ),
-}));
+type PreloadableComponent = React.ComponentType<object> & {
+  preload?: () => unknown;
+  render?: { preload: () => unknown };
+};
 
-jest.mock('next/dynamic', () => ({
-  __esModule: true,
-  default: (...props: never): never => {
-    const dynamicModule: typeof import('next/dynamic') = jest.requireActual('next/dynamic');
-    const dynamicActualComp: <P = object>(
-      dynamicOptions: DynamicOptions<P> | Loader<P>,
-      options?: DynamicOptions<P>
-    ) => React.ComponentType<P> = dynamicModule.default;
-    const RequiredComponent: React.ComponentType<object> = dynamicActualComp(props[0]);
-    const requiredMock: (mock: never) => never = mock => mock;
-    // @ts-expect-error no jest types
-    const test: never = RequiredComponent.preload
-      ? // @ts-expect-error no jest types
-        RequiredComponent.preload()
-      : // @ts-expect-error no jest types
-        RequiredComponent.render.preload();
-    requiredMock(test);
-    // @ts-expect-error no jest types
-    return RequiredComponent;
-  },
-}));
+type DynamicMockModule = { boundaryOptions: Array<DynamicOptions<object> | undefined> };
+
+jest.mock('next/dynamic', () => {
+  const boundaryOptions: Array<DynamicOptions<object> | undefined> = [];
+
+  return {
+    __esModule: true,
+    boundaryOptions,
+    default: (
+      loader: Loader<object>,
+      options?: DynamicOptions<object>
+    ): React.ComponentType<object> => {
+      const dynamicModule: typeof import('next/dynamic') = jest.requireActual('next/dynamic');
+      const requiredComponent: PreloadableComponent = dynamicModule.default(loader);
+      if (requiredComponent.preload) {
+        requiredComponent.preload();
+      } else {
+        requiredComponent.render?.preload();
+      }
+      boundaryOptions.push(options);
+      return requiredComponent;
+    },
+  };
+});
 
 jest.mock('../../features/landing/components/background-images/background-images', () =>
-  jest.fn(() => <div data-testid="background-images">BackgroundImages</div>)
+  jest.fn(() => <div>BackgroundImages</div>)
 );
 jest.mock('../../features/landing/components/about-us/about-us', () =>
-  jest.fn(() => <div data-testid="about-us">AboutUs</div>)
+  jest.fn(() => <div>AboutUs</div>)
 );
-jest.mock('../../features/landing/components/why-us/why-us', () =>
-  jest.fn(() => <div data-testid="why-us">WhyUs</div>)
-);
+jest.mock('../../features/landing/components/why-us/why-us', () => jest.fn(() => <div>WhyUs</div>));
 jest.mock('../../features/landing/components/for-who-section/for-who-section', () =>
-  jest.fn(() => <div data-testid="for-who-section">ForWhoSection</div>)
+  jest.fn(() => <div>ForWhoSection</div>)
 );
 jest.mock('../../features/landing/components/possibilities/possibilities', () =>
-  jest.fn(() => <div data-testid="possibilities">Possibilities</div>)
+  jest.fn(() => <div>Possibilities</div>)
 );
 jest.mock('../../features/landing/components/auth-section/auth-section', () =>
-  jest.fn(() => <div data-testid="auth-section">AuthSection</div>)
+  jest.fn(() => <div>AuthSection</div>)
 );
+
+const { boundaryOptions } = jest.requireMock<DynamicMockModule>('next/dynamic');
 
 const boxElementClass: string = '.MuiBox-root';
 const positionRelativeStyle: string = 'position: relative';
+const groupedSections: string[] = [
+  'BackgroundImages',
+  'AboutUs',
+  'WhyUs',
+  'ForWhoSection',
+  'Possibilities',
+];
 
 describe('Landing', () => {
   it('render all components', () => {
-    const { getByTestId } = render(<Landing />);
+    const { getByText } = render(<Landing />);
 
-    expect(getByTestId('background-images')).toBeInTheDocument();
-    expect(getByTestId('about-us')).toBeInTheDocument();
-    expect(getByTestId('why-us')).toBeInTheDocument();
-    expect(getByTestId('for-who-section')).toBeInTheDocument();
-    expect(getByTestId('possibilities')).toBeInTheDocument();
-    expect(getByTestId('auth-section')).toBeInTheDocument();
+    [...groupedSections, 'AuthSection'].forEach(name => {
+      expect(getByText(name)).toBeInTheDocument();
+    });
   });
 
   it('render container correctly', () => {
@@ -74,5 +79,38 @@ describe('Landing', () => {
     const mainContainer: HTMLElement | null = container.querySelector(boxElementClass);
 
     expect(mainContainer).toHaveStyle(positionRelativeStyle);
+  });
+
+  it('loads the page through exactly two client-only boundaries with no loading placeholder', () => {
+    expect(boundaryOptions).toHaveLength(2);
+    boundaryOptions.forEach(options => {
+      expect(options).toMatchObject({ ssr: false });
+      expect(options).not.toHaveProperty('loading');
+    });
+  });
+
+  it('mounts the five grouped sections inside one relative box and the auth section after it', () => {
+    const { container, getByText } = render(<Landing />);
+
+    const relativeBox: HTMLElement | null = container.querySelector(boxElementClass);
+    const authSection: HTMLElement = getByText('AuthSection');
+
+    groupedSections.forEach(name => {
+      expect(relativeBox).toContainElement(getByText(name));
+    });
+    expect(relativeBox).not.toContainElement(authSection);
+    expect(relativeBox?.nextElementSibling).toBe(authSection);
+  });
+
+  it('keeps the grouped sections in document order', () => {
+    const { getByText } = render(<Landing />);
+
+    groupedSections.slice(1).forEach((name, index) => {
+      const previous: HTMLElement = getByText(groupedSections[index]!);
+
+      expect(previous.compareDocumentPosition(getByText(name))).toBe(
+        Node.DOCUMENT_POSITION_FOLLOWING
+      );
+    });
   });
 });

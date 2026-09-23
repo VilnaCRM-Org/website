@@ -17,8 +17,16 @@ import { LandingComponent } from '@/features/landing';
 ## Structure
 
 - `components/` — the section components (`header`, `about-us`, `why-us`, `possibilities`,
-  `for-who-section`, `auth-section`, `notification`, `background-images`) plus the `landing`
-  root that composes them. Each renderable section ships a co-located `*.stories.tsx`.
+  `for-who-section`, `auth-section`, `notification`, `background-images`), the
+  `landing-sections` group and the `landing` root that composes them. Each renderable section
+  ships a co-located `*.stories.tsx`.
+- `landing` loads exactly two client-only (`ssr: false`) chunks: `landing-sections` and
+  `auth-section`. `landing-sections` statically composes `background-images`, `about-us`,
+  `why-us`, `for-who-section` and `possibilities` inside one `position: relative` box, so all
+  five mount in the same commit. The background vector is absolutely positioned at a
+  percentage of that box's height; when the sections were separate dynamic chunks the vector
+  could mount before its siblings and move as the box grew, which the desktop Lighthouse CLS
+  budget caught intermittently (issue #493). Keep those five sections under the one boundary.
 - `api/` — the Apollo data layer: `graphql/apollo.ts` (client + documents) and
   `service/userService.ts` (the typed create-user call and its `types.ts`).
 - `hooks/` — feature hooks such as `useFormReset.ts`.
