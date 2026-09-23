@@ -24,21 +24,48 @@ full request/response bodies, and any free-form user text.
 
 ## Scrubbing at the boundary
 
-When event shape cannot be guaranteed, scrub in the single `Sentry.init` in
-`pages/_app.tsx` with `beforeSend`, so nothing sensitive leaves the browser:
+The single `Sentry.init` in `pages/_app.tsx` wires two pure, typed scrubbers from
+`src/lib/telemetry/`, so nothing sensitive leaves the browser even when an
+event's shape cannot be guaranteed:
 
 ```ts
 Sentry.init({
   dsn: env.NEXT_PUBLIC_SENTRY_DSN,
-  beforeSend(event) {
-    if (event.request) {
-      delete event.request.cookies;
-      delete event.request.headers;
-    }
-    return event;
-  },
+  sendDefaultPii: false,
+  beforeSend: scrubEvent,
+  beforeBreadcrumb: scrubBreadcrumb,
 });
 ```
 
-Prefer not collecting sensitive data in the first place; treat `beforeSend` as a
-backstop, not the primary control.
+- **`scrubEvent`** (`scrub-event.ts`, `beforeSend`) keeps the event useful and
+  removes only what can carry user data:
+  - `request` is rebuilt from `url` (query string and fragment stripped),
+    `method` and the `User-Agent` header — body `data`, `cookies`,
+    `query_string`, `env` and every other header are dropped.
+  - `extra` and `contexts` are walked recursively (bounded depth); keys named
+    `variables`, `input`, `password`, `email`, `initials`, `body`, `cookie(s)`,
+    `authorization` or `token` are dropped at any depth, case-insensitively.
+  - Email-shaped substrings in `message`, `logentry` (message and params),
+    exception values and any remaining string are replaced with `[email]`. The
+    rest of each message is kept, so a server error such as "A user with email
+    [email] already exists." still groups and reads well.
+  - `user` keeps only its `id`; every breadcrumb goes through `scrubBreadcrumb`.
+- **`scrubBreadcrumb`** (`scrub-breadcrumb.ts`, `beforeBreadcrumb`) keeps only
+  `method`, `status_code` and a query-free `url` on `fetch`/`xhr` breadcrumbs
+  (so a recorded request payload never survives), scrubs every other
+  breadcrumb's `data` like `extra`, and redacts emails in its `message`.
+- **Why both hooks.** `beforeSend` sees the breadcrumbs attached to an error
+  event, but session replay records breadcrumbs through the SDK's
+  `beforeAddBreadcrumb` client hook, which fires _after_ `beforeBreadcrumb` and
+  never passes through `beforeSend`. Only `beforeBreadcrumb` covers both.
+- **Not scrubbed:** transaction events (`beforeSendTransaction`); they carry span
+  names and URLs, not form values.
+
+`src/test/unit/telemetry/` pins the scrubbers, including a spec that runs the
+real SDK through the real Apollo `ErrorLink` on a failed sign-up and asserts the
+sent envelope carries no form value. `src/test/unit/sentry-app-observability.test.ts`
+fails if either hook is removed from `Sentry.init` or stops naming these modules.
+
+Prefer not collecting sensitive data in the first place; treat the scrubbers as a
+backstop, not the primary control. Never pass form values to `captureException`
+because "the scrubber will catch it" — it only recognises the shapes listed above.

@@ -167,6 +167,11 @@ The browser bundle carries the instrumentation; production has no keys for it to
   `role="alert"` apology with a retry control and a link home. See
   [ADR 0009](../adr/0009-consolidated-error-boundary-and-observability.md) for the design
   this consolidates.
+  Every event and breadcrumb passes through the `beforeSend` / `beforeBreadcrumb`
+  scrubbers in [`src/lib/telemetry/`](../../src/lib/telemetry/) before it leaves the
+  browser: request bodies, cookies, query strings and GraphQL variables are dropped,
+  `fetch`/`xhr` breadcrumbs keep only method, status and a query-free URL, and
+  email-shaped text is replaced with `[email]` while the rest of each message is kept.
 - **Core Web Vitals.** `reportWebVitals` in `pages/_app.tsx` delegates to
   [`src/lib/web-vitals/report-web-vitals.ts`](../../src/lib/web-vitals/report-web-vitals.ts),
   which forwards only field vitals (`LCP`, `INP`, `CLS`, `FCP`, `TTFB`), only in a
@@ -195,8 +200,9 @@ both keys to stay declared in `.env` and `.env.production`.
   guarantee cron timing under load) each read as silence rather than as an alert.
 - **Thirty-minute detection window** at best, and no post-deploy verification at all until
   `PRODUCTION_SITE_URL` is set.
-- **No production error telemetry** until the Sentry DSN is committed, and no error
-  boundary even then.
+- **No production error telemetry** until the Sentry DSN is committed. The error
+  boundary, the Apollo `ErrorLink` and the PII scrubbers are wired and tested, but they
+  report nowhere without it.
 - **CI health alerting is only as good as the run that fires it.** `ci-health-alerts.yml`
   files on a failed `workflow_run` and on the daily red-main sweep; a workflow that is
   cancelled, skipped, or never listed there fails silently. `make lint-prod-guardrails`
