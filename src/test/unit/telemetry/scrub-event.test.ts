@@ -1,8 +1,11 @@
 import type { Breadcrumb, ErrorEvent } from '@sentry/react';
 
 import {
+  MAX_SCRUB_BREADTH,
   MAX_SCRUB_DEPTH,
+  MAX_SCRUB_NODES,
   REDACTED_EMAIL,
+  REPEATED,
   TRUNCATED,
   redactEmails,
   scrubRecord,
@@ -26,6 +29,8 @@ const errorEvent = (fields: Omit<ErrorEvent, 'type'>): ErrorEvent => ({
   type: undefined,
   ...fields,
 });
+
+const WALK_BUDGET_MS = 500;
 
 function nestedTo(levels: number): unknown {
   let value: unknown = 'leaf';
@@ -52,6 +57,21 @@ describe('redactEmails', () => {
 
   it('returns an empty string unchanged', () => {
     expect(redactEmails('')).toBe('');
+  });
+
+  it('scans a long run of address characters with no @ or no TLD in linear time', () => {
+    const run = 'a'.repeat(200_000);
+    const startedAt = performance.now();
+
+    expect(redactEmails(run)).toBe(run);
+    expect(redactEmails(`${run}@${run}`)).toBe(`${run}@${run}`);
+    expect(performance.now() - startedAt).toBeLessThan(WALK_BUDGET_MS);
+  });
+
+  it('redacts the RFC-length tail of an over-long local part and a many-label domain', () => {
+    expect(redactEmails(`${'a'.repeat(70)}@mail.dept.example.com`)).toBe(
+      `${'a'.repeat(6)}${REDACTED_EMAIL}`
+    );
   });
 });
 
@@ -112,6 +132,97 @@ describe('scrubValue / scrubRecord', () => {
   it('returns an empty record for an empty input', () => {
     expect(scrubRecord({}, 1)).toEqual({});
   });
+
+  it('marks a self-reference as repeated and walks a wide cyclic object once', () => {
+    const node: Record<string, unknown> = {};
+    for (let key = 0; key < 25; key += 1) node[`k${key}`] = node;
+    const startedAt = performance.now();
+
+    const scrubbed = scrubValue([node], 1) as Record<string, unknown>[];
+
+    expect(performance.now() - startedAt).toBeLessThan(WALK_BUDGET_MS);
+    expect(scrubbed[0]).toEqual(Object.fromEntries(Object.keys(node).map(key => [key, REPEATED])));
+  });
+
+  it('marks a cycle back to the record itself as repeated', () => {
+    const record: Record<string, unknown> = { status: 400 };
+    record.self = record;
+
+    expect(scrubRecord(record, 1)).toEqual({ status: 400, self: REPEATED });
+  });
+
+  it('walks a shared reference once and marks the later sighting as repeated', () => {
+    const shared = { code: 'BAD_USER_INPUT' };
+
+    expect(scrubValue({ first: shared, second: shared }, 1)).toEqual({
+      first: { code: 'BAD_USER_INPUT' },
+      second: REPEATED,
+    });
+  });
+
+  it('keeps at most the breadth bound of object entries and flags the rest', () => {
+    const wide = Object.fromEntries(
+      Array.from({ length: MAX_SCRUB_BREADTH + 5 }, (_, key) => [`k${key}`, key])
+    );
+
+    const scrubbed = scrubValue(wide, 1) as Record<string, unknown>;
+
+    expect(Object.keys(scrubbed)).toHaveLength(MAX_SCRUB_BREADTH + 1);
+    expect(scrubbed[`k${MAX_SCRUB_BREADTH - 1}`]).toBe(MAX_SCRUB_BREADTH - 1);
+    expect(scrubbed).not.toHaveProperty(`k${MAX_SCRUB_BREADTH}`);
+    expect(scrubbed[TRUNCATED]).toBe(TRUNCATED);
+  });
+
+  it('keeps an object exactly at the breadth bound whole, with no truncation flag', () => {
+    const atBound = Object.fromEntries(
+      Array.from({ length: MAX_SCRUB_BREADTH }, (_, key) => [`k${key}`, key])
+    );
+
+    expect(scrubValue(atBound, 1)).toEqual(atBound);
+  });
+
+  it('keeps at most the breadth bound of array items and appends a truncation marker', () => {
+    const items = Array.from({ length: MAX_SCRUB_BREADTH + 1 }, (_, index) => index);
+    const scrubbed = scrubValue(items, 1) as unknown[];
+
+    expect(scrubbed).toHaveLength(MAX_SCRUB_BREADTH + 1);
+    expect(scrubbed.at(-2)).toBe(MAX_SCRUB_BREADTH - 1);
+    expect(scrubbed.at(-1)).toBe(TRUNCATED);
+    expect(scrubValue(items.slice(0, MAX_SCRUB_BREADTH), 1)).toEqual(
+      items.slice(0, MAX_SCRUB_BREADTH)
+    );
+  });
+
+  it('stops expanding objects once the walk has spent its node budget', () => {
+    const tree = Array.from({ length: MAX_SCRUB_BREADTH }, () =>
+      Array.from({ length: MAX_SCRUB_BREADTH }, () => ({ leaf: 1 }))
+    );
+    const startedAt = performance.now();
+
+    const serialized = JSON.stringify(scrubValue(tree, 1));
+
+    expect(performance.now() - startedAt).toBeLessThan(WALK_BUDGET_MS);
+    const innerArraysWalked = Math.ceil((MAX_SCRUB_NODES - 1) / (MAX_SCRUB_BREADTH + 1));
+    expect(serialized.match(/"leaf"/gu)).toHaveLength(MAX_SCRUB_NODES - 1 - innerArraysWalked);
+    expect(serialized).toContain(TRUNCATED);
+  });
+
+  it('strips the query and fragment of an absolute URL string wherever it sits', () => {
+    expect(
+      scrubRecord(
+        {
+          page: `https://vilnacrm.com/?email=${EMAIL}#Contacts`,
+          api: { endpoint: 'HTTP://api.vilnacrm.com/graphql?op=SignUp' },
+          note: 'see /docs?tab=1',
+        },
+        1
+      )
+    ).toEqual({
+      page: 'https://vilnacrm.com/',
+      api: { endpoint: 'HTTP://api.vilnacrm.com/graphql' },
+      note: 'see /docs?tab=1',
+    });
+  });
 });
 
 describe('scrubBreadcrumb', () => {
@@ -146,17 +257,49 @@ describe('scrubBreadcrumb', () => {
     expect(scrubBreadcrumb({ category: 'fetch', data: { url: 42 } }).data).toEqual({ url: 42 });
   });
 
-  it('redacts the message and scrubs the data of a non-network breadcrumb', () => {
+  it('keeps only the logger of a console breadcrumb and redacts its message', () => {
+    const logged: Record<string, unknown> = { email: EMAIL };
+    logged.self = logged;
+
     expect(
       scrubBreadcrumb({
         category: 'console',
+        level: 'error',
         message: `submitting ${EMAIL}`,
-        data: { arguments: [`submitting ${EMAIL}`], password: PASSWORD },
+        data: { arguments: [`submitting ${EMAIL}`, logged], logger: 'console', password: PASSWORD },
       })
     ).toEqual({
       category: 'console',
+      level: 'error',
       message: `submitting ${REDACTED_EMAIL}`,
-      data: { arguments: [`submitting ${REDACTED_EMAIL}`] },
+      data: { logger: 'console' },
+    });
+  });
+
+  it('strips the query and fragment from both ends of a navigation breadcrumb', () => {
+    expect(
+      scrubBreadcrumb({
+        category: 'navigation',
+        data: { from: `/?email=${EMAIL}`, to: '/en#Contacts', state: { email: EMAIL } },
+      }).data
+    ).toEqual({ from: '/', to: '/en' });
+  });
+
+  it('keeps a navigation breadcrumb with a missing or non-string end as recorded', () => {
+    expect(scrubBreadcrumb({ category: 'navigation', data: { to: 7 } }).data).toEqual({ to: 7 });
+  });
+
+  it('redacts the message and scrubs the data of an uncategorised-shape breadcrumb', () => {
+    expect(
+      scrubBreadcrumb({
+        category: 'ui.click',
+        message: `button ${EMAIL}`,
+        data: { target: `input[value="${EMAIL}"]`, password: PASSWORD },
+      })
+    ).toEqual({
+      category: 'ui.click',
+      message: `button ${REDACTED_EMAIL}`,
+      data: { target: `input[value="${REDACTED_EMAIL}"]` },
     });
   });
 

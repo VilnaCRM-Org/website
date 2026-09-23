@@ -11,9 +11,13 @@
 import type { Breadcrumb, ErrorEvent } from '@sentry/react';
 
 import {
+  MAX_SCRUB_BREADTH,
   MAX_SCRUB_DEPTH,
+  MAX_SCRUB_NODES,
   REDACTED_EMAIL,
+  REPEATED,
   TRUNCATED,
+  scrubRecord,
   scrubValue,
   stripQuery,
 } from '@/lib/telemetry/redact';
@@ -115,6 +119,16 @@ describe('integration: Sentry breadcrumb scrubbing', () => {
     ],
     ['no category', { data: { email: EMAIL, step: 2 } }, { data: { step: 2 } }],
     ['no message or data', { category: 'navigation' }, { category: 'navigation' }],
+    [
+      'navigation carrying a query and a fragment',
+      { category: 'navigation', data: { from: '/?email=x', to: '/en#Contacts', to2: 1 } },
+      { category: 'navigation', data: { from: '/', to: '/en' } },
+    ],
+    [
+      'console arguments',
+      { category: 'console', data: { arguments: [EMAIL], logger: 'console' } },
+      { category: 'console', data: { logger: 'console' } },
+    ],
   ])('scrubs a breadcrumb with %s', (_label, input, expected) => {
     expect(scrubBreadcrumb(input)).toEqual(expected);
   });
@@ -131,5 +145,28 @@ describe('integration: value scrubbing bounds', () => {
     expect(scrubValue(3, 0)).toBe(3);
     expect(scrubValue([EMAIL], 0)).toEqual([REDACTED_EMAIL]);
     expect(JSON.stringify(scrubValue(nestedTo(MAX_SCRUB_DEPTH + 2), 0))).toContain(TRUNCATED);
+  });
+
+  it('marks repeated references, bounds breadth and stops at the node budget', () => {
+    const record: Record<string, unknown> = { status: 400 };
+    record.self = record;
+    const wide = Array.from({ length: MAX_SCRUB_BREADTH + 1 }, (_, index) => ({ [`k${index}`]: 1 }));
+    const wideObject = Object.fromEntries(wide.map((entry, index) => [`k${index}`, entry]));
+
+    expect(scrubRecord(record, 1)).toEqual({ status: 400, self: REPEATED });
+    expect((scrubValue(wide, 0) as unknown[]).at(-1)).toBe(TRUNCATED);
+    expect((scrubValue(wideObject, 0) as Record<string, unknown>)[TRUNCATED]).toBe(TRUNCATED);
+    const tree = Array.from({ length: MAX_SCRUB_BREADTH }, () =>
+      Array.from({ length: MAX_SCRUB_BREADTH }, () => ({}))
+    );
+    expect(MAX_SCRUB_BREADTH * (MAX_SCRUB_BREADTH + 1)).toBeGreaterThan(MAX_SCRUB_NODES);
+    expect(JSON.stringify(scrubValue(tree, 0))).toContain(TRUNCATED);
+  });
+
+  it('strips the query of an absolute URL string and only redacts other strings', () => {
+    expect(scrubValue({ page: 'https://vilnacrm.com/?q=1', note: 'a?b' }, 0)).toEqual({
+      page: 'https://vilnacrm.com/',
+      note: 'a?b',
+    });
   });
 });

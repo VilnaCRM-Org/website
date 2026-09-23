@@ -29,7 +29,7 @@ function scrubLogEntry(logentry: LogEntry): LogEntry {
     ...(logentry.message === undefined ? {} : { message: redactEmails(logentry.message) }),
     ...(logentry.params === undefined
       ? {}
-      : { params: logentry.params.map(param => scrubValue(param, 1)) }),
+      : { params: scrubValue(logentry.params, 0) as unknown[] }),
   };
 }
 

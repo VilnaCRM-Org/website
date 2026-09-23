@@ -4,21 +4,35 @@ import { redactEmails, scrubRecord, scrubUrl } from './redact';
 
 type BreadcrumbData = NonNullable<Breadcrumb['data']>;
 
-const NETWORK_CATEGORIES: ReadonlySet<string> = new Set(['fetch', 'xhr']);
+interface KeptData {
+  readonly keys: readonly string[];
+  readonly urlKeys: readonly string[];
+}
 
-const NETWORK_DATA_KEYS: readonly string[] = ['method', 'status_code', 'url'];
+const NETWORK_DATA: KeptData = { keys: ['method', 'status_code', 'url'], urlKeys: ['url'] };
 
-function networkDataOf(data: BreadcrumbData): BreadcrumbData {
-  const kept: BreadcrumbData = {};
-  for (const key of NETWORK_DATA_KEYS) {
-    if (key in data) kept[key] = data[key];
+const KEPT_DATA_BY_CATEGORY: ReadonlyMap<string, KeptData> = new Map([
+  ['fetch', NETWORK_DATA],
+  ['xhr', NETWORK_DATA],
+  ['navigation', { keys: ['from', 'to'], urlKeys: ['from', 'to'] }],
+  ['console', { keys: ['logger'], urlKeys: [] }],
+]);
+
+function keptDataOf(data: BreadcrumbData, kept: KeptData): BreadcrumbData {
+  const scrubbed: BreadcrumbData = {};
+  for (const key of kept.keys) {
+    if (key in data) scrubbed[key] = data[key];
   }
-  if (typeof kept.url === 'string') kept.url = scrubUrl(kept.url);
-  return kept;
+  for (const key of kept.urlKeys) {
+    const url = scrubbed[key];
+    if (typeof url === 'string') scrubbed[key] = scrubUrl(url);
+  }
+  return scrubbed;
 }
 
 function scrubBreadcrumbData(category: string | undefined, data: BreadcrumbData): BreadcrumbData {
-  return NETWORK_CATEGORIES.has(category ?? '') ? networkDataOf(data) : scrubRecord(data, 1);
+  const kept = KEPT_DATA_BY_CATEGORY.get(category ?? '');
+  return kept === undefined ? scrubRecord(data, 1) : keptDataOf(data, kept);
 }
 
 export function scrubBreadcrumb(breadcrumb: Breadcrumb): Breadcrumb {
