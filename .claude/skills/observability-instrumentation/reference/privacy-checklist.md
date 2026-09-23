@@ -42,9 +42,18 @@ Sentry.init({
   - `request` is rebuilt from `url` (query string and fragment stripped),
     `method` and the `User-Agent` header — body `data`, `cookies`,
     `query_string`, `env` and every other header are dropped.
-  - `extra` and `contexts` are walked recursively (bounded depth); keys named
-    `variables`, `input`, `password`, `email`, `initials`, `body`, `cookie(s)`,
-    `authorization` or `token` are dropped at any depth, case-insensitively.
+  - `extra` and `contexts` are walked recursively; keys named `variables`,
+    `input`, `password`, `email`, `initials`, `body`, `cookie(s)`,
+    `authorization` or `token` are dropped at any depth, case-insensitively,
+    and any string value that is an absolute `http(s)://` URL loses its query
+    string and fragment.
+  - The walk is bounded so it can never stall the page: at most 8 levels deep,
+    100 entries per object or array (the rest become one `[truncated]`
+    marker), and 1,000 objects per walk. An object already walked — a cycle or
+    a shared reference — becomes `[repeated]` instead of being expanded again.
+    The email pattern is bounded to the RFC 5321 lengths (64-character local
+    part, 63-character labels), so a long run of address characters scans in
+    linear time.
   - Email-shaped substrings in `message`, `logentry` (message and params),
     exception values and any remaining string are replaced with `[email]`. The
     rest of each message is kept, so a server error such as "A user with email
@@ -52,8 +61,11 @@ Sentry.init({
   - `user` keeps only its `id`; every breadcrumb goes through `scrubBreadcrumb`.
 - **`scrubBreadcrumb`** (`scrub-breadcrumb.ts`, `beforeBreadcrumb`) keeps only
   `method`, `status_code` and a query-free `url` on `fetch`/`xhr` breadcrumbs
-  (so a recorded request payload never survives), scrubs every other
-  breadcrumb's `data` like `extra`, and redacts emails in its `message`.
+  (so a recorded request payload never survives), only a query-free `from` and
+  `to` on `navigation` breadcrumbs, and only `logger` on `console` breadcrumbs —
+  the raw logged `arguments` are dropped, since the redacted `message` already
+  carries their text. Every other breadcrumb's `data` is scrubbed like `extra`,
+  and every `message` has its emails redacted.
 - **Why both hooks.** `beforeSend` sees the breadcrumbs attached to an error
   event, but session replay records breadcrumbs through the SDK's
   `beforeAddBreadcrumb` client hook, which fires _after_ `beforeBreadcrumb` and

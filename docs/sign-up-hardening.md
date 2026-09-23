@@ -58,8 +58,9 @@ serialises whatever it is given, so the PII contract is that nothing else is eve
 `auth-form/submit-handler.ts` calls it from the submit failure path for the same reason.
 Behind that contract sit the `beforeSend` / `beforeBreadcrumb` scrubbers wired into
 `Sentry.init` (`src/lib/telemetry/scrub-event.ts`, `scrub-breadcrumb.ts`): they drop
-request bodies, cookies, query strings and GraphQL variables, strip `fetch`/`xhr`
-breadcrumb payloads, and replace email-shaped text — such as a server error echoing the
+request bodies, cookies and GraphQL variables, strip the query string from request,
+network, navigation and other absolute URLs, strip `fetch`/`xhr` breadcrumb payloads and
+raw console arguments, and replace email-shaped text — such as a server error echoing the
 submitted address — with `[email]`. They are a backstop, not a licence to pass form
 values.
 

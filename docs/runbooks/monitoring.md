@@ -169,8 +169,10 @@ The browser bundle carries the instrumentation; production has no keys for it to
   this consolidates.
   Every event and breadcrumb passes through the `beforeSend` / `beforeBreadcrumb`
   scrubbers in [`src/lib/telemetry/`](../../src/lib/telemetry/) before it leaves the
-  browser: request bodies, cookies, query strings and GraphQL variables are dropped,
-  `fetch`/`xhr` breadcrumbs keep only method, status and a query-free URL, and
+  browser: request bodies, cookies and GraphQL variables are dropped; the query string
+  is stripped from the request URL, from `fetch`/`xhr` and navigation breadcrumb URLs
+  and from absolute URLs inside `extra`/`contexts`; network breadcrumbs keep only
+  method, status and URL, and console breadcrumbs drop their raw arguments; and
   email-shaped text is replaced with `[email]` while the rest of each message is kept.
 - **Core Web Vitals.** `reportWebVitals` in `pages/_app.tsx` delegates to
   [`src/lib/web-vitals/report-web-vitals.ts`](../../src/lib/web-vitals/report-web-vitals.ts),
