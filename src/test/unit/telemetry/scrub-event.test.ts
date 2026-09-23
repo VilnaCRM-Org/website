@@ -109,6 +109,34 @@ describe('scrubValue / scrubRecord', () => {
     ).toEqual({ operation: 'SignUp', nested: { status: 400 }, list: [{ code: 'BAD_USER_INPUT' }] });
   });
 
+  it('drops credential-shaped key variants whatever their case or separators', () => {
+    expect(
+      scrubRecord(
+        {
+          confirmPassword: PASSWORD,
+          accessToken: 'a',
+          refresh_token: 'r',
+          'set-cookie': 'sid=1',
+          apiKey: 'k',
+          'X-API-Key': 'k',
+          client_secret: 's',
+          Credentials: 'c',
+          passwd: 'p',
+          operationName: 'SignUp',
+        },
+        1
+      )
+    ).toEqual({ operationName: 'SignUp' });
+  });
+
+  it('keeps keys that only contain an exact-match name, not a credential stem', () => {
+    expect(scrubRecord({ emailVerified: false, bodyLength: 12, author: 'x' }, 1)).toEqual({
+      emailVerified: false,
+      bodyLength: 12,
+      author: 'x',
+    });
+  });
+
   it('redacts emails inside strings of arrays and objects', () => {
     expect(scrubValue({ args: [`sent to ${EMAIL}`, 7] }, 1)).toEqual({
       args: [`sent to ${REDACTED_EMAIL}`, 7],

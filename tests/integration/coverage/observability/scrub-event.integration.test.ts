@@ -107,11 +107,7 @@ describe('integration: Sentry event scrubbing', () => {
 
 describe('integration: Sentry breadcrumb scrubbing', () => {
   it.each<[string, Breadcrumb, Breadcrumb]>([
-    [
-      'xhr without a url',
-      { category: 'xhr', data: { body: '{}' } },
-      { category: 'xhr', data: {} },
-    ],
+    ['xhr without a url', { category: 'xhr', data: { body: '{}' } }, { category: 'xhr', data: {} }],
     [
       'fetch with a non-string url',
       { category: 'fetch', data: { url: 1 } },
@@ -150,7 +146,9 @@ describe('integration: value scrubbing bounds', () => {
   it('marks repeated references, bounds breadth and stops at the node budget', () => {
     const record: Record<string, unknown> = { status: 400 };
     record.self = record;
-    const wide = Array.from({ length: MAX_SCRUB_BREADTH + 1 }, (_, index) => ({ [`k${index}`]: 1 }));
+    const wide = Array.from({ length: MAX_SCRUB_BREADTH + 1 }, (_, index) => ({
+      [`k${index}`]: 1,
+    }));
     const wideObject = Object.fromEntries(wide.map((entry, index) => [`k${index}`, entry]));
 
     expect(scrubRecord(record, 1)).toEqual({ status: 400, self: REPEATED });
@@ -161,6 +159,15 @@ describe('integration: value scrubbing bounds', () => {
     );
     expect(MAX_SCRUB_BREADTH * (MAX_SCRUB_BREADTH + 1)).toBeGreaterThan(MAX_SCRUB_NODES);
     expect(JSON.stringify(scrubValue(tree, 0))).toContain(TRUNCATED);
+  });
+
+  it('drops credential-shaped key variants and keeps exact-name look-alikes', () => {
+    expect(
+      scrubRecord(
+        { refresh_token: 'r', 'set-cookie': 'sid=1', apiKey: 'k', emailVerified: true },
+        1
+      )
+    ).toEqual({ emailVerified: true });
   });
 
   it('strips the query of an absolute URL string and only redacts other strings', () => {

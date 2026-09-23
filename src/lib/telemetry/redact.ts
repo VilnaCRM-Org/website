@@ -29,6 +29,26 @@ const SENSITIVE_KEYS: ReadonlySet<string> = new Set([
   'token',
 ]);
 
+const CREDENTIAL_KEY_STEMS: readonly string[] = [
+  'password',
+  'passwd',
+  'secret',
+  'token',
+  'cookie',
+  'authorization',
+  'apikey',
+  'credential',
+];
+
+const KEY_SEPARATORS = /[^\p{L}\p{N}]/gu;
+
+function isSensitiveKey(key: string): boolean {
+  const normalized = key.toLowerCase().replace(KEY_SEPARATORS, '');
+  return (
+    SENSITIVE_KEYS.has(normalized) || CREDENTIAL_KEY_STEMS.some(stem => normalized.includes(stem))
+  );
+}
+
 export function redactEmails(text: string): string {
   return text.replace(EMAIL_PATTERN, REDACTED_EMAIL);
 }
@@ -70,7 +90,7 @@ class ScrubWalk {
     const scrubbed: Record<string, unknown> = {};
     const entries = Object.entries(record);
     for (const [key, entry] of entries.slice(0, MAX_SCRUB_BREADTH)) {
-      if (!SENSITIVE_KEYS.has(key.toLowerCase())) scrubbed[key] = this.scrub(entry, depth);
+      if (!isSensitiveKey(key)) scrubbed[key] = this.scrub(entry, depth);
     }
     if (entries.length > MAX_SCRUB_BREADTH) scrubbed[TRUNCATED] = TRUNCATED;
     return scrubbed;
