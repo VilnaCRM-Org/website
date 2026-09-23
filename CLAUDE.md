@@ -129,7 +129,7 @@ image, or need a toolchain the image does not ship stay on the host in both mode
 them `lint-metrics`, `test-bats`, `generate-localization`, `build-out`, the prod-stack
 suites (`test-e2e`, `test-visual`, `test-memory-leak`, `load-tests`, `lighthouse-*`), and
 the host-only lint gates `lint-docker-policy`, `lint-pins`, `lint-security-txt`,
-`lint-openapi`, `lint-vulns` and `lint-workflows`. Watch `lint-docker-policy`,
+`lint-openapi`, `lint-vulns`, `lint-workflows` and `lint-actionlint`. Watch `lint-docker-policy`,
 `lint-pins` and `lint-security-txt`: all three are members of the `make lint` aggregate,
 so part of that run executes on the host by design. Its sibling `lint-workflow-pins` is
 NOT one of them — it parses workflow YAML with js-yaml, so it runs in the container like
@@ -315,15 +315,17 @@ usb) must keep an **empty** allow-list. A directive only denies a feature when i
 everywhere, so both fail the gate rather than passing as a denial. The policy may deny
 more features than the baseline names; it may never deny fewer.
 
-Seven gates sit deliberately outside `make lint`: `make lint-metrics` (host-only Rust
+Eight gates sit deliberately outside `make lint`: `make lint-metrics` (host-only Rust
 binary), `make lint-contracts` (needs network for its drift check), `make lint-openapi`
 (both — a host Go binary plus the network), `make lint-graphql-drift` (host-only, needs
 network to reach the upstream release), `make lint-vulns` (host-only Go binary, needs
 network for the OSV database), `make lint-workflows` (host-only zizmor container; its
-online audits reach the GitHub API), and `make lint-secrets` (host-only gitleaks
-container). Each has its own workflow — `rust-code-analysis.yml`,
+online audits reach the GitHub API), `make lint-actionlint` (host-only pinned actionlint
+and shellcheck binaries, fetched over the network on first run), and `make lint-secrets`
+(host-only gitleaks container). Each has its own workflow — `rust-code-analysis.yml`,
 `contract-testing.yml`, `openapi-drift.yml` (which hosts both drift legs),
-`osv-scanner.yml`, `workflow-security.yml`, and `secrets-scanning.yml`. The two gates added
+`osv-scanner.yml`, `workflow-security.yml` (zizmor and actionlint), and
+`secrets-scanning.yml`. The two gates added
 by issue #383 are _inside_ `make lint` precisely because they are hermetic — they read only
 committed files, with no network, no host binary and no Docker. So is `make lint-placeholders`
 (issue #327, `scripts/ci/check-placeholders.sh`): a fixed-string, case-insensitive grep of
