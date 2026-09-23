@@ -13,7 +13,8 @@ setup() {
   setup_makefile_test_env
 }
 
-# $1: the version the actionlint stub reports; $2: its exit status.
+# $1: the version the actionlint stub reports; $2: its exit status; $3: the
+# version the shellcheck stub reports.
 seed_binaries() {
   mkdir -p "$MAKEFILE_SANDBOX/bin"
   cat >"$MAKEFILE_SANDBOX/bin/actionlint" <<EOF
@@ -25,13 +26,13 @@ fi
 printf 'actionlint %s\n' "\$*" >> "\${COMMAND_LOG:?}"
 exit ${2:-0}
 EOF
-  cat >"$MAKEFILE_SANDBOX/bin/shellcheck" <<'EOF'
+  cat >"$MAKEFILE_SANDBOX/bin/shellcheck" <<EOF
 #!/usr/bin/env bash
-if [ "$1" = '--version' ]; then
-  printf 'ShellCheck - shell script analysis tool\nversion: 0.11.0\n'
+if [ "\$1" = '--version' ]; then
+  printf 'ShellCheck - shell script analysis tool\nversion: %s\n' '${3:-0.11.0}'
   exit 0
 fi
-printf 'shellcheck %s\n' "$*" >> "${COMMAND_LOG:?}"
+printf 'shellcheck %s\n' "\$*" >> "\${COMMAND_LOG:?}"
 exit 0
 EOF
   chmod +x "$MAKEFILE_SANDBOX/bin/actionlint" "$MAKEFILE_SANDBOX/bin/shellcheck"
@@ -60,7 +61,7 @@ EOF
 
   run_make_target lint-actionlint
   [ "$status" -eq 0 ]
-  assert_log_contains 'actionlint -shellcheck=./bin/shellcheck -color'
+  assert_log_contains 'actionlint -shellcheck=./bin/shellcheck -pyflakes= -color'
 
   run grep -F 'curl ' "$COMMAND_LOG"
   [ "$status" -ne 0 ]
@@ -83,6 +84,20 @@ EOF
   assert_log_contains 'curl -fsSL'
   assert_log_contains 'releases/download/v1.7.12/actionlint_1.7.12_'
 
+  run grep -F 'actionlint -shellcheck' "$COMMAND_LOG"
+  [ "$status" -ne 0 ]
+}
+
+@test "a stale shellcheck is re-fetched and a digest mismatch aborts before any lint" {
+  seed_binaries 1.7.12 0 0.10.0
+  create_tampering_curl_stub
+
+  run_make_target lint-actionlint
+  [ "$status" -ne 0 ]
+  assert_log_contains 'koalaman/shellcheck/releases/download/v0.11.0/shellcheck-v0.11.0.'
+
+  run grep -F 'rhysd/actionlint/releases' "$COMMAND_LOG"
+  [ "$status" -ne 0 ]
   run grep -F 'actionlint -shellcheck' "$COMMAND_LOG"
   [ "$status" -ne 0 ]
 }

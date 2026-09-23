@@ -843,11 +843,12 @@ lint-workflows: ## Audit the GitHub Actions workflows for security defects with 
 # CI_LINT_TARGETS. Its CI surface is the `actionlint` job in workflow-security.yml,
 # every PR -- not path-filtered, like zizmor, so it can be a required check (#343).
 # SHELLCHECK_BIN is passed explicitly so a shellcheck on PATH never decides the
-# verdict in place of the pinned one.
+# verdict in place of the pinned one, and -pyflakes= (empty) disables the pyflakes
+# integration, which actionlint would otherwise pick up from PATH unpinned.
 lint-actionlint: ## Lint the GitHub Actions workflows with actionlint + shellcheck (host-only; auto-installs both pinned binaries to ./bin)
 	@ACTIONLINT_BIN="$(ACTIONLINT_BIN)" SHELLCHECK_BIN="$(SHELLCHECK_BIN)" \
 	 scripts/ci/ensure-actionlint.sh
-	@$(ACTIONLINT_BIN) -shellcheck="$(SHELLCHECK_BIN)" -color
+	@$(ACTIONLINT_BIN) -shellcheck="$(SHELLCHECK_BIN)" -pyflakes= -color
 
 # Host-only and Docker-driven, so like lint-workflows and lint-vulns it stays
 # OUTSIDE the `lint` aggregate: `make lint` must run inside the dev container,
