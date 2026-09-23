@@ -35,7 +35,7 @@
     "@commitlint/config-conventional": "^20.5.3",
     "@eslint/eslintrc": "^3.3.5",
     "@eslint/js": "^9.39.4",
-    "@faker-js/faker": "^10.4.0",
+    "@faker-js/faker": "^10.5.0",
     "@lhci/cli": "^0.15.1",
     "@memlab/api": "^2.0.3",
     "@memlab/heap-analysis": "^2.0.3",
