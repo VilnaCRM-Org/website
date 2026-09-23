@@ -277,7 +277,7 @@ Smoke / average / stress / spike scenarios via `make test-load` (homepage) and
 
 **Use**: [observability-instrumentation](observability-instrumentation/SKILL.md).
 
-Adds frontend signals via `@sentry/react` / `@sentry/node`, error boundaries, Next.js
+Adds frontend signals via `@sentry/react`, error boundaries, Next.js
 web-vitals reporting, and analytics-safe payloads.
 
 ---

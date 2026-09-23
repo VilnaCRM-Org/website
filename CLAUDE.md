@@ -20,7 +20,8 @@ stacks.
 - Data: Apollo Client 4 (`@apollo/client`) against an Apollo Server 5 GraphQL mock;
   `graphql`.
 - Forms and i18n: react-hook-form; i18next / react-i18next.
-- Observability: `@sentry/node` + `@sentry/react`; Next.js web-vitals reporting.
+- Observability: `@sentry/react` (browser only; there is no server to instrument); Next.js
+  web-vitals reporting.
 - Tooling: bun@1.3.5, Node pinned by `.nvmrc` (24.18.0 LTS); Prettier, ESLint (flat config), TypeScript,
   markdownlint, dependency-cruiser.
 - Testing: Jest (jsdom + node envs) with React Testing Library; Playwright (chromium,
