@@ -1,8 +1,9 @@
 /**
  * Integration coverage for the Landing page composition component.
  *
- * `Landing` wires together every landing section through `next/dynamic`
- * (with `ssr: false`). To exercise the real composition synchronously in
+ * `Landing` loads two `next/dynamic` (`ssr: false`) boundaries: `landing-sections`,
+ * which statically composes the five sections above the sign-up form so they
+ * mount in one commit (#493), and `auth-section`. To exercise the real composition synchronously in
  * jsdom, `next/dynamic` is unwrapped to its actual loader and each heavy
  * child section is stubbed, mirroring the proven testing-library setup. This
  * proves the layout wrapper (relative Box + the two `xl` containers) and the
