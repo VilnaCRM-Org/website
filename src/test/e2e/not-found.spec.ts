@@ -3,6 +3,8 @@ import i18n from 'i18next';
 
 import { DEFAULT_LOCALE } from '@/config/locales';
 
+import { INTERACTION_STATES } from '../a11y/interaction-states';
+import { scanInteractionState } from '../a11y/scan-interaction-state';
 
 import './utils/initializeLocalization';
 
@@ -43,6 +45,7 @@ test.describe('Not-found page', () => {
     await openUnknownPath(page, UNKNOWN_PATH);
 
     await expectBrandedNotFound(page);
+    await scanInteractionState(page, INTERACTION_STATES.notFoundPage);
   });
 
   test('serves the same 404 document for an unknown nested path', async ({ page }) => {

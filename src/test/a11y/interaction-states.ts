@@ -60,6 +60,17 @@ export const INTERACTION_STATES = {
     route: '/swagger',
     description: 'swagger schema failed to load, showing the alert and retry control',
   },
+  /**
+   * The exported 404 document, served for an unknown path outside `/en`.
+   *
+   * `pages/404.tsx` is not a navigable route, so it is absent from the route
+   * registry and only this scan reaches it. It renders in the main language
+   * inside the same shared chrome as `/`, so it borrows that route's context.
+   */
+  notFoundPage: {
+    route: '/',
+    description: 'unknown path showing the branded 404 page',
+  },
 } as const satisfies Record<string, A11yInteractionState>;
 
 /** The registry key of one scanned interaction state. */
