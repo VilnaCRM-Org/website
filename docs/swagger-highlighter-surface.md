@@ -169,8 +169,17 @@ so belongs in its own reviewed change, after the open dependency pull requests l
 
    `smol-toml` and `markdown-it` step past `markdownlint-cli@0.47`'s tilde ranges
    (`~1.5.2`, `~14.1.0`) but not its majors; `markdownlint-cli@0.49` itself declares
-   `~1.7.0` and `~14.3.0`. Bun honours only top-level overrides, so a package the tree
-   resolves at more than one major — `minimatch` 3/9/10, `brace-expansion` 1/2/5,
-   `js-yaml` 3/4 — cannot be pinned this way without forcing a major on one of its
-   consumers, and is left for its parents to move. Retire an entry once no parent's range
-   can resolve below it.
+   `~1.7.0` and `~14.3.0`, so drop both entries in the change that moves
+   `markdownlint-cli` to 0.49 rather than leaving them as permanent out-of-range pins.
+
+   Bun honours only top-level overrides, so a package the tree resolves at more than one
+   major — `minimatch` 3/9/10, `brace-expansion` 1/2/5, `js-yaml` 3/4 — cannot be pinned
+   this way without forcing a major on one of its consumers, and is left for its parents
+   to move. Retire an entry once no parent's range can resolve below it.
+
+   The overrides reach only what `bun.lock` resolves. `Mockoon.Dockerfile` installs
+   `@mockoon/cli` globally with `npm`, outside the lockfile, so the e2e mock image still
+   runs the `joi` 18.2.3 that `@mockoon/commons` pins exactly, while the in-process
+   contract harness runs 18.2.5; its `fast-uri` floats to the newest 3.x under `ajv`'s
+   `^3.0.1` at image-build time instead of following the pin. Advisories inside that image
+   are invisible to the lockfile-based CVE gate and clear only when Mockoon moves `joi`.
