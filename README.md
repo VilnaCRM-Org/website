@@ -148,6 +148,7 @@ Linting & Formatting
   make lint-contracts: validates the pinned user-service contracts (not in make lint; needs network)
   make lint-openapi: reports breaking upstream OpenAPI drift (host-only, needs network; advisory)
   make lint-workflows: audits the GitHub Actions workflows with zizmor (host-only, not in make lint)
+  make lint-actionlint: lints workflows with pinned actionlint + shellcheck (host-only, not in lint)
   make update-contracts: re-fetches the contracts after bumping USER_SERVICE_VERSION
   make lint-vulns: fails on dependency CVEs this branch adds vs main (host-only, not in make lint)
   make scan-vulns-census: reports every known dependency CVE in bun.lock without failing
@@ -656,6 +657,14 @@ Online audits resolve action tags against the GitHub API. The gate uses
 `GH_TOKEN` (or `GITHUB_TOKEN`) when set and otherwise falls back to the `gh`
 CLI's token; with neither it runs `--offline`, which is a strict subset of the
 CI run.
+
+Its sibling `make lint-actionlint` covers what zizmor does not — workflow syntax,
+expression types, undefined `needs:` outputs, runner labels — and hands every
+`run:` body to shellcheck. Both binaries are pinned and SHA256-verified into the
+gitignored `./bin` by `scripts/ci/ensure-actionlint.sh`, and the gate runs as the
+`actionlint` job of `workflow-security.yml` on every pull request. Fix findings in
+the workflow; never add an ignore, a `# shellcheck disable=` directive or an
+`-ignore` flag.
 
 ## Dependency CVEs (osv-scanner)
 

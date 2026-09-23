@@ -21,16 +21,16 @@ owns the _wiring_. Measuring and diagnosing — Lighthouse budgets, Core Web
 Vitals analysis — belong to the `frontend-performance-accessibility` skill;
 route audit results there.
 
-There is no backend service in this repo to instrument. `@sentry/node` ships as
-a dependency for the Apollo Server 5 local mock / Next.js server runtime, but it
-is not currently wired. Do not scatter server SDK calls into client code; the
-active telemetry surface is `@sentry/react`.
+There is no backend service in this repo to instrument, and the only Sentry SDK
+the website uses is `@sentry/react`. Do not add a server SDK or scatter server SDK
+calls into client code.
 
 ## Current wiring (verified)
 
-Checked against `pages/_app.tsx`, `src/config/env.ts`, `next.config.js`,
-`src/lib/web-vitals/report-web-vitals.ts` and `src/lib/telemetry/report-error.ts`
-(issue #336). Anything not listed here is not wired.
+Checked against `pages/_app.tsx`, `src/config/env.ts`, `src/config/app-version.ts`,
+`next.config.js`, `src/features/landing/api/graphql/apollo.ts`,
+`src/lib/web-vitals/report-web-vitals.ts` and `src/lib/telemetry/` (issue #336,
+ADR 0009). Anything not listed here is not wired.
 
 - **`Sentry.init` in `pages/_app.tsx`** — the single init, from `@sentry/react`:
   - `dsn: env.NEXT_PUBLIC_SENTRY_DSN`, read through the zod schema in
@@ -46,12 +46,35 @@ Checked against `pages/_app.tsx`, `src/config/env.ts`, `next.config.js`,
     the sign-up form's password field.
   - `tracePropagationTargets` limited to `NEXT_PUBLIC_DEVELOPMENT_API_URL` and
     `NEXT_PUBLIC_API_URL`, with empty values filtered out.
-  - `tracesSampleRate: 1.0`, `replaysSessionSampleRate: 0.1`,
-    `replaysOnErrorSampleRate: 1.0`. No `enabled`, `release` or `environment` key,
-    and no `beforeSend` scrubber, yet.
+  - `tracesSampleRate` is `0.1` in a production build and `1.0` in development
+    (`APP_ENVIRONMENT === 'production'`); `replaysSessionSampleRate: 0.1`,
+    `replaysOnErrorSampleRate: 1.0`.
+  - `release: APP_VERSION` (the `package.json` version) and
+    `environment: APP_ENVIRONMENT` (`production` or `development`, from
+    `isProductionBuild()`), both from `src/config/app-version.ts`.
+  - `beforeSend: scrubEvent` (`src/lib/telemetry/scrub-event.ts`) and
+    `beforeBreadcrumb: scrubBreadcrumb` (`src/lib/telemetry/scrub-breadcrumb.ts`)
+    — the no-PII backstop described under
+    [reference/privacy-checklist.md](reference/privacy-checklist.md).
+  - `src/test/unit/sentry-replay-masking.test.ts` and
+    `src/test/unit/sentry-app-observability.test.ts` parse this call with the
+    TypeScript compiler and fail if `sendDefaultPii`, the mask options,
+    `release`/`environment`, either scrubber or the boundary wiring below drift.
+- **Render crashes** — `Sentry.ErrorBoundary` wraps only `<Component />` inside
+  `Layout`, so the header, skip link and footer survive a page crash. Its fallback
+  is `src/components/error-fallback` (localized, `role="alert"`, retry + home
+  link). The boundary captures the crash itself; a `beforeCapture` callback
+  (`tagRenderCrash`) tags that single event `{ feature: 'app', action:
+'render-crash' }`. There is deliberately no `onError` sink — it would report every
+  crash twice (ADR 0009).
 - **Handled errors** — `reportHandledError` in `src/lib/telemetry/report-error.ts`
-  wraps `Sentry.captureException` with static `feature`/`action` tags only; the
-  sign-up mutation path in `auth-layout.tsx` is its one caller (#378 F3).
+  wraps `Sentry.captureException` with static `feature`/`action` tags only. Its two
+  callers are the sign-up submit path (#378 F3) and the Apollo `ErrorLink`.
+- **Apollo errors** — `src/features/landing/api/graphql/apollo.ts` puts a
+  reporting-only `ErrorLink` first in the link chain; it calls
+  `reportHandledError(error, { feature: 'landing', action: 'graphql' })`, never
+  returns a value, so it never retries and never changes what
+  `handleApolloError` shows the visitor. There is no `RetryLink`.
 - **Core Web Vitals** — `reportWebVitals` is exported from `pages/_app.tsx` and
   delegates to `handleWebVitalsMetric` in `src/lib/web-vitals/report-web-vitals.ts`
   (#332): field vitals only (`LCP`, `INP`, `CLS`, `FCP`, `TTFB`), production builds
@@ -63,12 +86,11 @@ Checked against `pages/_app.tsx`, `src/config/env.ts`, `next.config.js`,
 - **Console** — `compiler.removeConsole` in `next.config.js` strips
   `console.log`/`debug` from production bundles but keeps `console.error` and
   `console.warn` (#378 F3), so the browser console stays a diagnostic channel.
-- **Not wired** — no `Sentry.ErrorBoundary` or other error boundary; no Apollo
-  `ErrorLink` (`src/features/landing/api/graphql/apollo.ts` builds the client with
-  an `HttpLink` only); and `@sentry/node` is imported by nothing.
+- **Not wired** — no source-map upload, and no scrubber on transaction events
+  (`beforeSendTransaction`): they carry span names and URLs, not form values.
 
-Add the missing pieces through `@sentry/react` and Next.js built-ins (below), never
-a new dependency. Production monitoring — the scheduled uptime check, the alert
+Extend this surface through `@sentry/react` and Next.js built-ins, never a new
+dependency. Production monitoring — the scheduled uptime check, the alert
 labels, and what is inert — is documented in `docs/runbooks/monitoring.md`.
 
 ## Signals to instrument
@@ -97,8 +119,8 @@ feature-level context.
   values (email, name, password); full request/response bodies; and any free
   text the user typed.
 
-The full list and a `beforeSend` scrubber live in
-[reference/privacy-checklist.md](reference/privacy-checklist.md).
+The full list, and what the wired `beforeSend` / `beforeBreadcrumb` scrubbers
+remove, live in [reference/privacy-checklist.md](reference/privacy-checklist.md).
 
 ## Sampling policy
 

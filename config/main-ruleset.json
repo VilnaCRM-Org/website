@@ -1,0 +1,197 @@
+{
+  "ruleset": {
+    "name": "main-branch-protection",
+    "target": "branch",
+    "enforcement": "active",
+    "conditions": {
+      "ref_name": {
+        "include": ["~DEFAULT_BRANCH"],
+        "exclude": []
+      }
+    },
+    "bypass_actors": [
+      {
+        "actor_id": null,
+        "actor_type": "Integration",
+        "bypass_mode": "always"
+      }
+    ],
+    "rules": [
+      {
+        "type": "deletion"
+      },
+      {
+        "type": "non_fast_forward"
+      },
+      {
+        "type": "required_signatures"
+      },
+      {
+        "type": "pull_request",
+        "parameters": {
+          "required_approving_review_count": 1,
+          "dismiss_stale_reviews_on_push": true,
+          "require_code_owner_review": true,
+          "require_last_push_approval": false,
+          "required_review_thread_resolution": false
+        }
+      },
+      {
+        "type": "required_status_checks",
+        "parameters": {
+          "strict_required_status_checks_policy": true,
+          "do_not_enforce_on_create": false,
+          "required_status_checks": [
+            {
+              "context": "static",
+              "integration_id": 15368
+            },
+            {
+              "context": "dependency-cruiser",
+              "integration_id": 15368
+            },
+            {
+              "context": "unit",
+              "integration_id": 15368
+            },
+            {
+              "context": "integration",
+              "integration_id": 15368
+            },
+            {
+              "context": "codecov",
+              "integration_id": 15368
+            },
+            {
+              "context": "mock-contract-parity",
+              "integration_id": 15368
+            },
+            {
+              "context": "contracts",
+              "integration_id": 15368
+            },
+            {
+              "context": "e2e flake gate",
+              "integration_id": 15368
+            },
+            {
+              "context": "burn in changed e2e specs",
+              "integration_id": 15368
+            },
+            {
+              "context": "visual-test",
+              "integration_id": 15368
+            },
+            {
+              "context": "a11y",
+              "integration_id": 15368
+            },
+            {
+              "context": "memory-leak-testing",
+              "integration_id": 15368
+            },
+            {
+              "context": "merge and enforce gate",
+              "integration_id": 15368
+            },
+            {
+              "context": "changed-files mutation gate",
+              "integration_id": 15368
+            },
+            {
+              "context": "lighthouse desktop",
+              "integration_id": 15368
+            },
+            {
+              "context": "lighthouse mobile",
+              "integration_id": 15368
+            },
+            {
+              "context": "homepage load testing",
+              "integration_id": 15368
+            },
+            {
+              "context": "swagger load testing",
+              "integration_id": 15368
+            },
+            {
+              "context": "rust-code-analysis",
+              "integration_id": 15368
+            },
+            {
+              "context": "bats",
+              "integration_id": 15368
+            },
+            {
+              "context": "commitlint",
+              "integration_id": 15368
+            },
+            {
+              "context": "offline",
+              "integration_id": 15368
+            },
+            {
+              "context": "yamlfmt",
+              "integration_id": 15368
+            },
+            {
+              "context": "build-artifact",
+              "integration_id": 15368
+            },
+            {
+              "context": "Analyze (typescript)",
+              "integration_id": 15368
+            },
+            {
+              "context": "dependency cve gate",
+              "integration_id": 15368
+            },
+            {
+              "context": "gitleaks",
+              "integration_id": 15368
+            },
+            {
+              "context": "zizmor",
+              "integration_id": 15368
+            },
+            {
+              "context": "actionlint",
+              "integration_id": 15368
+            }
+          ]
+        }
+      },
+      {
+        "type": "code_scanning",
+        "parameters": {
+          "code_scanning_tools": [
+            {
+              "tool": "CodeQL",
+              "security_alerts_threshold": "high_or_higher",
+              "alerts_threshold": "errors"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "excluded_checks": {
+    "changed e2e specs": "Aggregated: e2e flake gate fails closed unless this job succeeded.",
+    "e2e shard 1/4": "Aggregated: e2e flake gate fails closed unless every shard succeeded, so the shard count can change without editing the ruleset.",
+    "e2e shard 2/4": "Aggregated by e2e flake gate, as for shard 1/4.",
+    "e2e shard 3/4": "Aggregated by e2e flake gate, as for shard 1/4.",
+    "e2e shard 4/4": "Aggregated by e2e flake gate, as for shard 1/4.",
+    "shard 0": "Aggregated: merge and enforce gate fails closed unless every mutation shard succeeded.",
+    "shard 1": "Aggregated by merge and enforce gate, as for shard 0.",
+    "nightly mutation census (0)": "Scheduled leg: its if: excludes pull_request, so it only ever reports skipped on a PR.",
+    "nightly mutation census (1)": "Scheduled leg, as for nightly mutation census (0).",
+    "file or refresh the mutation-backlog issue": "Scheduled leg: its if: excludes pull_request.",
+    "nightly dependency cve census": "Scheduled leg: its if: excludes pull_request.",
+    "external": "Scheduled leg of link check: its if: runs it on schedule only; offline is the PR leg.",
+    "history": "Scheduled leg of secrets scanning: its if: excludes pull_request; gitleaks is the PR leg.",
+    "RFC 9116 policy": "Non-PR leg: its if: excludes pull_request; make lint-security-txt runs inside static on every PR.",
+    "check-tokens": "Sandbox preview deploy: depends on AWS availability and is skipped on forks; it previews a change rather than gating one.",
+    "deploy": "Sandbox preview deploy, as for check-tokens.",
+    "post-create smoke test": "Sandbox preview smoke: skipped until SANDBOX_SITE_URL_TEMPLATE is set, and it probes the sandbox, not the change."
+  }
+}

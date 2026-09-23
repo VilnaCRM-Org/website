@@ -15,6 +15,8 @@ import { env } from '@/config/env';
 import { golos } from '@/config/Fonts/golos';
 import { RouteI18n, useRouteI18n } from '@/hooks/use-route-i18n';
 import { initServiceWorker } from '@/lib/pwa/register-service-worker';
+import { scrubBreadcrumb } from '@/lib/telemetry/scrub-breadcrumb';
+import { scrubEvent } from '@/lib/telemetry/scrub-event';
 import { handleWebVitalsMetric } from '@/lib/web-vitals/report-web-vitals';
 
 import 'swagger-ui-react/swagger-ui.css';
@@ -53,6 +55,8 @@ Sentry.init({
   replaysOnErrorSampleRate: 1.0,
   release: APP_VERSION,
   environment: APP_ENVIRONMENT,
+  beforeSend: scrubEvent,
+  beforeBreadcrumb: scrubBreadcrumb,
 });
 
 function MyApp({ Component }: { Component: React.ComponentType }): React.ReactElement {

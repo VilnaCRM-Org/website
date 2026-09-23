@@ -34,7 +34,8 @@ convenience:
 - Targets that drive Docker itself or need a toolchain the image does not ship stay on
   the host — among them `lint-metrics` (a host Rust binary), `test-bats`,
   `generate-localization`, `build-out`, `lint-docker-policy`, `lint-pins`,
-  `lint-security-txt`, `lint-openapi`, `lint-vulns`, and `lint-workflows`.
+  `lint-security-txt`, `lint-openapi`, `lint-vulns`, `lint-workflows`, and
+  `lint-actionlint`.
 - The prod-stack suites (e2e, visual, memory-leak, load, a11y, Lighthouse) drive the
   prod/test compose stacks and stay outside.
 - `bats-testing` runs on the host because its subject _is_ the host side of the Makefile.

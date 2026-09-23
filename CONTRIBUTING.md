@@ -300,7 +300,7 @@ as a reviewed, in-repo change visible in the PR diff (or confirm the path belong
 outside the governed scope). Never silence the gate with a local override or a
 per-line disable.
 
-#### Workflow security (zizmor)
+#### Workflow security (zizmor, actionlint)
 
 Anything you change under `.github/workflows` is audited by
 [zizmor](https://docs.zizmor.sh) on every pull request through its own workflow,
@@ -321,6 +321,16 @@ If the gate fails, fix the workflow. Never add a `zizmor.yml` ignore rule, a
 `ZIZMOR_MIN_CONFIDENCE` in the Makefile — those thresholds are a ratchet that
 only moves up as the remaining low-severity clusters are cleared.
 
+The same workflow runs [actionlint](https://github.com/rhysd/actionlint) as its
+`actionlint` job; run it locally with `make lint-actionlint` (host-only, outside
+`make lint`). It catches what zizmor does not — a mistyped expression, an
+undefined `needs:` output, an unknown runner label — and runs every `run:` body
+through shellcheck. `scripts/ci/ensure-actionlint.sh` installs the pinned,
+SHA256-verified actionlint and shellcheck into the gitignored `./bin` on first
+use, so the verdict never depends on whichever shellcheck a laptop or runner
+image carries. Fix a finding in the workflow; never add an actionlint config
+ignore, a `# shellcheck disable=` directive, or an `-ignore` flag.
+
 #### Code scanning (CodeQL)
 
 Two mechanisms gate CodeQL findings, and only one of them is visible in the diff.
@@ -338,14 +348,17 @@ On a pull request it subtracts the alert set already open on `main`, so inherite
 debt never fails somebody else's PR. Pull requests from forks skip it with a
 notice, because a fork's token cannot read the code-scanning API.
 
-Branch protection itself **cannot be committed**. The required check names are
-`CodeQL` and `Analyze (typescript)` — the latter is `name: Analyze` plus
+Branch protection is a repository setting, so a commit cannot switch it on; the
+`main` ruleset below is committed as a reviewed payload that an admin applies.
+There, CodeQL is required twice over: the `code_scanning` rule gates on the
+native `CodeQL` results (high-or-higher security alerts, errors), and
+`Analyze (typescript)` is a required check run — the latter is `name: Analyze` plus
 `matrix.language: ['typescript']`, so renaming the job or adding a language
 renames the check run and GitHub silently stops requiring it.
 `tests/bats/security_workflows.bats` pins the `Analyze (typescript)` half against drift.
-The `CodeQL` name comes from GitHub's native code-scanning integration and cannot be
+The `CodeQL` tool comes from GitHub's native code-scanning integration and cannot be
 asserted from inside the repository, so verify it in Settings after any change there.
-The third check the same ruleset should require is **`dependency cve gate`** — the
+The ruleset also requires **`dependency cve gate`** — the
 `name:` of the `osv-diff` job in `osv-scanner.yml`, the differential dependency-CVE
 scan from issue #356 (see [SECURITY.md](SECURITY.md)). It is pinned the same way by
 `tests/bats/osv_scanner_check_name.bats`, so renaming the job reddens a pull request
@@ -353,6 +366,58 @@ here instead of silently un-requiring the check.
 
 To dismiss a genuine false positive, use the Security tab's dismiss flow — do not
 weaken the gate.
+
+#### The `main` ruleset (issue #343)
+
+`config/main-ruleset.json` is the whole protection for `main` as one reviewed
+payload: the required status checks, one approving review with code-owner review
+and stale-review dismissal (#344), signed commits, no deletion or force push, the
+CodeQL `code_scanning` rule, and the release GitHub App as the only bypass actor
+("Always allow"), which is what lets `autorelease.yml` push its unsigned release
+commit ([ADR 0007](docs/adr/0007-release-automation-and-tag-invariant.md),
+[`.github/AUTORELEASE.md`](.github/AUTORELEASE.md)). Its `excluded_checks` map
+records why every other pull-request check is not required.
+
+**Every pull-request job must be classified.** A required check name that no
+pull request reports is not skipped — GitHub waits for it forever and blocks the
+merge — so the list may only name check runs that report on every pull request.
+`tests/bats/apply_branch_ruleset.bats` renders those names from the parsed
+workflows with `scripts/ci/pr-check-names.mjs` and fails when a required name is
+not reported exactly once, or when a pull-request job is neither required nor
+excluded with a reason. When you add, rename or remove a job in a workflow that
+runs on `pull_request` without a `paths` filter, update the config in the same
+change. Aggregate gates stand in for matrices (`e2e flake gate` for the e2e
+shards, `merge and enforce gate` for the mutation shards), so a shard count can
+change without touching the ruleset.
+
+Merging the config changes nothing on GitHub. A repository admin applies it:
+
+1. **Dry run.** With an admin `gh` session, run
+   `scripts/ci/apply-branch-ruleset.sh --release-app-id <id>`, where `<id>` is
+   the release App's ID from its settings page (the value of the
+   `VILNACRM_APP_ID` secret). The script refuses to run without it and never
+   guesses one. It prints the payload, the rulesets that exist today and the diff
+   between them, and writes nothing.
+2. **Review the diff.** Check every required name against the checks on a recent
+   pull request, and the bypass actor against the App. Note the cascade: the
+   moment the ruleset is active, every open pull request is held to it, and
+   `strict_required_status_checks_policy` requires each to be up to date with
+   `main` before it merges.
+3. **Apply.** Re-run with `--apply`. It makes exactly one write — a `POST`, or a
+   `PUT` onto an existing ruleset of the same name — and prints the command that
+   verifies it: `gh api repos/VilnaCRM-Org/website/rules/branches/main`.
+4. **Prove it blocks.** Open a throwaway pull request with a deliberately failing
+   unit test and confirm it shows "Merging is blocked" with `unit` marked
+   _Required_; then close it without merging.
+5. **Retire classic protection.** Once the ruleset is proven, compare the classic
+   branch protection on `main` with it, carry over anything it lacks through a
+   reviewed change to the config, then remove the classic protection. Its
+   signed-commit rule has no bypass, so until it is gone the release App's push is
+   still rejected. Re-run the next release as `.github/AUTORELEASE.md` describes.
+
+To roll back, set the ruleset's enforcement to _Disabled_ under
+**Settings → Rules → Rulesets** (or delete it); re-running the script re-creates
+it from the committed config.
 
 #### Production safety guardrails
 
@@ -440,9 +505,10 @@ proves the app agrees with the mock:
   it — status, media type, schema, and no property the schema never declares.
   Its CI home is
   [`contract-parity-testing.yml`](.github/workflows/contract-parity-testing.yml);
-  the status-check name a maintainer must add to the `main` required-checks
-  ruleset is **`contract parity testing / mock-contract-parity`** (branch
-  protection is a repository setting and cannot be committed).
+  the check run the `main` ruleset requires is **`mock-contract-parity`**
+  (listed in `config/main-ruleset.json`; the UI shows it as
+  `contract parity testing / mock-contract-parity`, but a ruleset matches the
+  bare check-run name).
   It also validates the swagger e2e fixtures against the same schema and pins the
   `@mockoon/*` libraries to the `@mockoon/cli` version `Mockoon.Dockerfile`
   installs. When it goes red, fix the mock or the contract — never relax a rule.

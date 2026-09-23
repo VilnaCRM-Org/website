@@ -84,6 +84,14 @@ ZIZMOR_IMAGE                = ghcr.io/zizmorcore/zizmor@sha256:8e6b3e4fb74d1aa5d
 ZIZMOR_MIN_SEVERITY         = medium
 ZIZMOR_MIN_CONFIDENCE       = high
 
+# actionlint checks workflow syntax, expressions and every `run:` body (through
+# shellcheck) -- the defects zizmor does not look for (issue #322). Both binaries
+# are provisioned like osv-scanner above: pinned, SHA256-verified, installed into
+# the gitignored ./bin by scripts/ci/ensure-actionlint.sh, where the versions and
+# their digests live together and are deliberately not overridable from here.
+ACTIONLINT_BIN              = ./bin/actionlint
+SHELLCHECK_BIN              = ./bin/shellcheck
+
 NEXT_BUILD                  = $(NEXT_BIN) build --webpack
 NEXT_BUILD_CMD              = $(NEXT_BUILD) && $(IMG_OPTIMIZE)
 STORYBOOK_BUILD_CMD         = $(STORYBOOK_BIN) build --output-dir storybook-static-ci
@@ -829,6 +837,19 @@ lint-workflows: ## Audit the GitHub Actions workflows for security defects with 
 	 ZIZMOR_MIN_CONFIDENCE="$(ZIZMOR_MIN_CONFIDENCE)" \
 	 bash scripts/ci/lint-workflows.sh
 
+# Host-only for the same reasons as lint-workflows and lint-vulns: actionlint and
+# shellcheck are standalone binaries absent from the dev image, so no $(PM_EXEC),
+# and provisioning them needs the network, so the target stays OUTSIDE `lint` and
+# CI_LINT_TARGETS. Its CI surface is the `actionlint` job in workflow-security.yml,
+# every PR -- not path-filtered, like zizmor, so it can be a required check (#343).
+# SHELLCHECK_BIN is passed explicitly so a shellcheck on PATH never decides the
+# verdict in place of the pinned one, and -pyflakes= (empty) disables the pyflakes
+# integration, which actionlint would otherwise pick up from PATH unpinned.
+lint-actionlint: ## Lint the GitHub Actions workflows with actionlint + shellcheck (host-only; auto-installs both pinned binaries to ./bin)
+	@ACTIONLINT_BIN="$(ACTIONLINT_BIN)" SHELLCHECK_BIN="$(SHELLCHECK_BIN)" \
+	 scripts/ci/ensure-actionlint.sh
+	@$(ACTIONLINT_BIN) -shellcheck="$(SHELLCHECK_BIN)" -pyflakes= -color
+
 # Host-only and Docker-driven, so like lint-workflows and lint-vulns it stays
 # OUTSIDE the `lint` aggregate: `make lint` must run inside the dev container,
 # which cannot run docker. Its CI surface is .github/workflows/secrets-scanning.yml.
@@ -1037,7 +1058,8 @@ ci-test-contract: ## Run contract parity tests directly assuming deps are instal
 	test-e2e-burnin check-e2e-flakes pr-comments lint lint-api-versions \
 	lint-security-txt lint-prod-guardrails release-audit-dry-run rollback-info \
 	smoke-prod \
-	lint-vulns scan-vulns-census generate-localization generate-routes generate-sitemap
+	lint-vulns scan-vulns-census lint-actionlint generate-localization generate-routes \
+	generate-sitemap
 
 # Brings the dev container up IDLE (docker-compose.ci.yml overrides only the
 # command), so a gate does not pay for a Next dev server it never calls. There

@@ -148,3 +148,38 @@ so belongs in its own reviewed change, after the open dependency pull requests l
    `bun.lock`; the override does not reach it, and the lockfile criterion does not need it
    to. The inert `prismjs` override was dropped in the same lockfile change (issue #379,
    F5).
+4. **Done: seven dev-only transitives overridden within their major (#455).** Each is
+   reachable only through build, lint or test tooling — none from the shipped export,
+   `/swagger` included — and each `package.json` override is the lowest release that
+   clears every advisory the census listed against it, so no parent is pushed past its
+   major:
+   - `fast-uri` 3.1.2 → **3.1.6**, via `ajv@8` (Mockoon, Spectral, webpack's
+     `schema-utils`): GHSA-4c8g-83qw-93j6, GHSA-7p8r-x3mc-p8w7, GHSA-f65p-4m7j-42xc,
+     GHSA-fph4-wmhf-6fwf, GHSA-jqff-g426-hqxp, GHSA-v2hh-gcrm-f6hx.
+   - `ip-address` 10.2.0 → **10.3.1**, via `socks` (Puppeteer, Lighthouse CI):
+     GHSA-mwp4-54f8-5fhr, GHSA-22jq-vg5j-6vgg, GHSA-4xrf-jv44-h6hh.
+   - `joi` 18.2.1 / 18.2.3 → **18.2.5**, via `@mockoon/commons` and `wait-on`:
+     GHSA-6w3j-5fw6-r9vr, GHSA-gg4h-3hg2-grpc.
+   - `smol-toml` 1.5.2 → **1.7.1**, via `markdownlint-cli`: GHSA-7w5x-hrqm-74c2,
+     GHSA-v3rj-xjv7-4jmq.
+   - `markdown-it` 14.1.1 → **14.2.0**, via `markdownlint-cli`: GHSA-6v5v-wf23-fmfq.
+   - `linkify-it` 5.0.1 → **5.0.2**, via `markdown-it`: GHSA-v245-v573-v5vm.
+   - `postcss-selector-parser` 7.1.1 → **7.1.3**, via `css-loader` (Storybook's
+     webpack): GHSA-w9m9-85wc-3x92.
+
+   `smol-toml` and `markdown-it` step past `markdownlint-cli@0.47`'s tilde ranges
+   (`~1.5.2`, `~14.1.0`) but not its majors; `markdownlint-cli@0.49` itself declares
+   `~1.7.0` and `~14.3.0`, so drop both entries in the change that moves
+   `markdownlint-cli` to 0.49 rather than leaving them as permanent out-of-range pins.
+
+   Bun honours only top-level overrides, so a package the tree resolves at more than one
+   major — `minimatch` 3/9/10, `brace-expansion` 1/2/5, `js-yaml` 3/4 — cannot be pinned
+   this way without forcing a major on one of its consumers, and is left for its parents
+   to move. Retire an entry once no parent's range can resolve below it.
+
+   The overrides reach only what `bun.lock` resolves. `Mockoon.Dockerfile` installs
+   `@mockoon/cli` globally with `npm`, outside the lockfile, so the e2e mock image still
+   runs the `joi` 18.2.3 that `@mockoon/commons` pins exactly, while the in-process
+   contract harness runs 18.2.5; its `fast-uri` floats to the newest 3.x under `ajv`'s
+   `^3.0.1` at image-build time instead of following the pin. Advisories inside that image
+   are invisible to the lockfile-based CVE gate and clear only when Mockoon moves `joi`.

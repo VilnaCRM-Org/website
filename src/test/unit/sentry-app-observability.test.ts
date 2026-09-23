@@ -11,6 +11,14 @@ const INIT_MEMBER = 'init';
 const ERROR_BOUNDARY_MEMBER = 'ErrorBoundary';
 const RELEASE_OPTION = 'release';
 const ENVIRONMENT_OPTION = 'environment';
+const BEFORE_SEND_OPTION = 'beforeSend';
+const BEFORE_BREADCRUMB_OPTION = 'beforeBreadcrumb';
+const PINNED_OPTIONS = [
+  RELEASE_OPTION,
+  ENVIRONMENT_OPTION,
+  BEFORE_SEND_OPTION,
+  BEFORE_BREADCRUMB_OPTION,
+] as const;
 const WRAPPED_COMPONENT_TAG = 'Component';
 const BEFORE_CAPTURE_PROP = 'beforeCapture';
 const ON_ERROR_PROP = 'onError';
@@ -18,6 +26,8 @@ const ON_ERROR_PROP = 'onError';
 interface AppObservabilityContract {
   release: string;
   environment: string;
+  beforeSend: string;
+  beforeBreadcrumb: string;
   componentUsageCount: number;
   componentWrappedCount: number;
   errorBoundaryCount: number;
@@ -120,6 +130,26 @@ function identifierValueOf(initOptions: ts.ObjectLiteralExpression, optionName: 
     throw new Error(`${prop.getText()} is not a bare identifier`);
   }
   return value.text;
+}
+
+// The scrubbers must be the shared modules, not a same-named local identity function:
+// resolve the identifier to the named import that binds it and report
+// `<module>#<exported name>`, so the pinned value names what actually runs.
+function importedBindingOf(sourceFile: ts.SourceFile, localName: string): string {
+  for (const statement of sourceFile.statements) {
+    const clause = ts.isImportDeclaration(statement) ? statement.importClause : undefined;
+    const bindings = clause?.isTypeOnly ? undefined : clause?.namedBindings;
+    const element =
+      bindings && ts.isNamedImports(bindings)
+        ? bindings.elements.find(candidate => candidate.name.text === localName)
+        : undefined;
+    if (element && ts.isImportDeclaration(statement) && !element.isTypeOnly) {
+      const specifier = statement.moduleSpecifier;
+      const moduleName = ts.isStringLiteral(specifier) ? specifier.text : specifier.getText();
+      return `${moduleName}#${(element.propertyName ?? element.name).text}`;
+    }
+  }
+  throw new Error(`"${localName}" is not bound by a named import`);
 }
 
 function jsxTagNameOf(node: ts.JsxElement | ts.JsxSelfClosingElement): ts.JsxTagNameExpression {
@@ -235,9 +265,17 @@ function readAppObservabilityContract(source: string): AppObservabilityContract 
     );
   }
   const initOptions = optionsArgumentOf(init);
-  assertNoOverridableOptions(initOptions, [RELEASE_OPTION, ENVIRONMENT_OPTION]);
+  assertNoOverridableOptions(initOptions, PINNED_OPTIONS);
   const release = identifierValueOf(initOptions, RELEASE_OPTION);
   const environment = identifierValueOf(initOptions, ENVIRONMENT_OPTION);
+  const beforeSend = importedBindingOf(
+    sourceFile,
+    identifierValueOf(initOptions, BEFORE_SEND_OPTION)
+  );
+  const beforeBreadcrumb = importedBindingOf(
+    sourceFile,
+    identifierValueOf(initOptions, BEFORE_BREADCRUMB_OPTION)
+  );
   const {
     componentUsageCount,
     componentWrappedCount,
@@ -256,6 +294,8 @@ function readAppObservabilityContract(source: string): AppObservabilityContract 
   return {
     release,
     environment,
+    beforeSend,
+    beforeBreadcrumb,
     componentUsageCount,
     componentWrappedCount,
     errorBoundaryCount,
@@ -277,6 +317,13 @@ describe('Sentry release/environment/error-boundary contract in pages/_app.tsx',
     expect(contract.componentWrappedCount).toBe(contract.componentUsageCount);
   });
 
+  it('scrubs every event and breadcrumb through the shared telemetry scrubbers', () => {
+    const contract = readAppObservabilityContract(readFile(APP_PATH));
+
+    expect(contract.beforeSend).toBe('@/lib/telemetry/scrub-event#scrubEvent');
+    expect(contract.beforeBreadcrumb).toBe('@/lib/telemetry/scrub-breadcrumb#scrubBreadcrumb');
+  });
+
   it('tags the boundary capture via beforeCapture, not a re-capturing onError', () => {
     // componentDidCatch calls captureReactException unconditionally, so an
     // onError sink would double-report every crash.
@@ -291,9 +338,16 @@ describe('Sentry release/environment/error-boundary contract in pages/_app.tsx',
 
 describe('Sentry release/environment/error-boundary contract helpers', () => {
   const SENTRY_IMPORT = `import * as Sentry from '${SENTRY_MODULE}';`;
-  const buildInit = (extraOptions: string): string =>
-    `${SENTRY_IMPORT}\nSentry.init({ dsn: env.DSN, sendDefaultPii: false, ${extraOptions} });`;
-  const validOptions = 'release: APP_VERSION, environment: APP_ENVIRONMENT';
+  const SCRUBBER_IMPORTS = [
+    "import { scrubEvent } from '@/lib/telemetry/scrub-event';",
+    "import { scrubBreadcrumb } from '@/lib/telemetry/scrub-breadcrumb';",
+  ].join('\n');
+  const buildInit = (extraOptions: string, imports = SCRUBBER_IMPORTS): string =>
+    `${SENTRY_IMPORT}\n${imports}\n` +
+    `Sentry.init({ dsn: env.DSN, sendDefaultPii: false, ${extraOptions} });`;
+  const scrubberOptions = 'beforeSend: scrubEvent, beforeBreadcrumb: scrubBreadcrumb';
+  const identityOptions = 'release: APP_VERSION, environment: APP_ENVIRONMENT';
+  const validOptions = `${identityOptions}, ${scrubberOptions}`;
 
   const buildTree = (initSource: string, jsx: string): string =>
     [initSource, `function MyApp() { return (${jsx}); }`].join('\n');
@@ -315,6 +369,8 @@ describe('Sentry release/environment/error-boundary contract helpers', () => {
       expect(readAppObservabilityContract(source)).toEqual({
         release: 'APP_VERSION',
         environment: 'APP_ENVIRONMENT',
+        beforeSend: '@/lib/telemetry/scrub-event#scrubEvent',
+        beforeBreadcrumb: '@/lib/telemetry/scrub-breadcrumb#scrubBreadcrumb',
         componentUsageCount: 1,
         componentWrappedCount: 1,
         errorBoundaryCount: 1,
@@ -327,7 +383,8 @@ describe('Sentry release/environment/error-boundary contract helpers', () => {
     it('follows a renamed namespace import instead of the identifier "Sentry"', () => {
       const source = [
         `import * as Monitoring from '${SENTRY_MODULE}';`,
-        'Monitoring.init({ release: APP_VERSION, environment: APP_ENVIRONMENT });',
+        SCRUBBER_IMPORTS,
+        `Monitoring.init({ ${validOptions} });`,
         'function MyApp() { return (',
         '  <Monitoring.ErrorBoundary beforeCapture={tagRenderCrash}>',
         '    <Component />',
@@ -339,6 +396,22 @@ describe('Sentry release/environment/error-boundary contract helpers', () => {
   });
 
   describe('negative — the contract is present but wrong', () => {
+    it('reports a scrubber imported from a look-alike module and an aliased import', () => {
+      const source = buildTree(
+        buildInit(
+          validOptions,
+          [
+            "import { passThrough as scrubEvent } from 'sentry-scrub-lookalike';",
+            "import { scrubBreadcrumb } from '@/lib/telemetry/scrub-breadcrumb';",
+          ].join('\n')
+        ),
+        wrappedComponent
+      );
+      expect(readAppObservabilityContract(source).beforeSend).toBe(
+        'sentry-scrub-lookalike#passThrough'
+      );
+    });
+
     it('reports a Component rendered outside the boundary as unwrapped', () => {
       const source = buildTree(
         buildInit(validOptions),
@@ -401,12 +474,18 @@ describe('Sentry release/environment/error-boundary contract helpers', () => {
 
   describe('fail-closed — the contract cannot be read statically', () => {
     it('throws when release is missing', () => {
-      const source = buildTree(buildInit('environment: APP_ENVIRONMENT'), wrappedComponent);
+      const source = buildTree(
+        buildInit(`environment: APP_ENVIRONMENT, ${scrubberOptions}`),
+        wrappedComponent
+      );
       expect(() => readAppObservabilityContract(source)).toThrow(/missing the "release" option/);
     });
 
     it('throws when environment is missing', () => {
-      const source = buildTree(buildInit('release: APP_VERSION'), wrappedComponent);
+      const source = buildTree(
+        buildInit(`release: APP_VERSION, ${scrubberOptions}`),
+        wrappedComponent
+      );
       expect(() => readAppObservabilityContract(source)).toThrow(
         /missing the "environment" option/
       );
@@ -414,7 +493,7 @@ describe('Sentry release/environment/error-boundary contract helpers', () => {
 
     it('throws when release is a string literal instead of the imported identifier', () => {
       const source = buildTree(
-        buildInit(`release: 'v1.0.0', environment: APP_ENVIRONMENT`),
+        buildInit(`release: 'v1.0.0', environment: APP_ENVIRONMENT, ${scrubberOptions}`),
         wrappedComponent
       );
       expect(() => readAppObservabilityContract(source)).toThrow(/is not a bare identifier/);
@@ -437,6 +516,68 @@ describe('Sentry release/environment/error-boundary contract helpers', () => {
       );
       expect(() => readAppObservabilityContract(source)).toThrow(
         /declares "release" more than once/
+      );
+    });
+
+    it('throws when beforeSend is removed from Sentry.init', () => {
+      const source = buildTree(
+        buildInit(`${identityOptions}, beforeBreadcrumb: scrubBreadcrumb`),
+        wrappedComponent
+      );
+      expect(() => readAppObservabilityContract(source)).toThrow(/missing the "beforeSend" option/);
+    });
+
+    it('throws when beforeBreadcrumb is removed from Sentry.init', () => {
+      const source = buildTree(
+        buildInit(`${identityOptions}, beforeSend: scrubEvent`),
+        wrappedComponent
+      );
+      expect(() => readAppObservabilityContract(source)).toThrow(
+        /missing the "beforeBreadcrumb" option/
+      );
+    });
+
+    it('throws when beforeSend is an inline callback the gate cannot trace', () => {
+      const source = buildTree(
+        buildInit(
+          `${identityOptions}, beforeSend: event => event, beforeBreadcrumb: scrubBreadcrumb`
+        ),
+        wrappedComponent
+      );
+      expect(() => readAppObservabilityContract(source)).toThrow(/is not a bare identifier/);
+    });
+
+    it('throws when beforeSend names a local function instead of an import', () => {
+      const source = buildTree(
+        buildInit(validOptions, "import { scrubBreadcrumb } from '@/lib/telemetry/x';"),
+        wrappedComponent
+      );
+      expect(() => readAppObservabilityContract(source)).toThrow(
+        /"scrubEvent" is not bound by a named import/
+      );
+    });
+
+    it('throws when the only binding of the scrubber is a type-only import', () => {
+      const source = buildTree(
+        buildInit(
+          validOptions,
+          [
+            "import type { scrubEvent } from '@/lib/telemetry/scrub-event';",
+            "import { scrubBreadcrumb } from '@/lib/telemetry/scrub-breadcrumb';",
+          ].join('\n')
+        ),
+        wrappedComponent
+      );
+      expect(() => readAppObservabilityContract(source)).toThrow(/not bound by a named import/);
+    });
+
+    it('throws when beforeSend is declared twice, since the later one wins', () => {
+      const source = buildTree(
+        buildInit(`${validOptions}, beforeSend: passThrough`),
+        wrappedComponent
+      );
+      expect(() => readAppObservabilityContract(source)).toThrow(
+        /declares "beforeSend" more than once/
       );
     });
 

@@ -38,21 +38,16 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Cache CodeQL databases
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ${{ github.workspace }}/codeql_databases
-          key: ${{ runner.os }}-codeql-${{ hashFiles('**/bun.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-codeql-
-
+      # No actions/cache over the CodeQL database: a database is valid only for
+      # the tree it was built from, and a key of the lockfile hash (plus an
+      # OS-prefix restore-keys fallback) restored one built from an earlier
+      # commit over a different checkout, which crashed the evaluator on every
+      # later push of PR #495. The action's own overlay-base cache already
+      # reuses analysis across commits.
       - name: Initialize CodeQL
         uses: github/codeql-action/init@7188fc363630916deb702c7fdcf4e481b751f97a # v4.37.1
         with:
           languages: ${{ matrix.language }}
-          # Pin the database directory to the cached path; the action otherwise
-          # defaults to a temp dir the cache step would never hit.
-          db-location: ${{ github.workspace }}/codeql_databases
 
       - name: Autobuild
         uses: github/codeql-action/autobuild@7188fc363630916deb702c7fdcf4e481b751f97a # v4.37.1
