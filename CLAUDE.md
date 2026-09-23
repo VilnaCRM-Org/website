@@ -644,9 +644,10 @@ lint-workflows` (zizmor) audits `.github/actions/` alongside `.github/workflows/
   in-repo half of the lifecycle.
 - **CodeQL findings are gated and routed.** `scripts/ci/code-scanning-gate.sh` fails the
   run on _new_ high/critical alerts (PRs subtract the default-branch baseline, so
-  inherited debt does not block), and a failed scan reaches the `ci-alert` issue. Branch
-  protection itself is a GitHub setting that cannot be committed — see CONTRIBUTING.md for
-  the required check names.
+  inherited debt does not block), and a failed scan reaches the `ci-alert` issue. The
+  required check names live in the committed `config/main-ruleset.json`, which stays inert
+  until an admin applies it with `scripts/ci/apply-branch-ruleset.sh` (see the ruleset
+  section above).
 
 A fifth, from issue #337, sits in the browser rather than at the edge: the sign-up form is
 the only interactive surface on this site, so `src/test/unit/sentry-replay-masking.test.ts`
