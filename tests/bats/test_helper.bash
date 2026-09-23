@@ -312,6 +312,17 @@ assert_output_contains() {
   fi
 }
 
+# A bare `[ "$status" -eq 0 ]` discards `$output`, so a failure cannot say which
+# stage of the command under test gave up (issue #492).
+assert_success() {
+  if [ "${status-}" -ne 0 ]; then
+    echo "Expected exit status 0, got ${status-unset}" >&2
+    echo "--- output ---" >&2
+    printf '%s\n' "${output-}" >&2
+    return 1
+  fi
+}
+
 # The negative form. A gate that must stay QUIET about something needs an
 # assertion for it, or "no warning was emitted" is indistinguishable from "the
 # assertion was never reached".
