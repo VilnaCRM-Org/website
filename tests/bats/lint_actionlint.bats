@@ -115,4 +115,7 @@ EOF
     process.exit(ok ? 0 : 1);
   "
   [ "$status" -eq 0 ]
+
+  run env PATH="$real_path" bash -c "node scripts/ci/pr-check-names.mjs | jq -e '[.[] | select(.name == \"actionlint\" and .workflow == \"workflow-security.yml\")] | length == 1'"
+  [ "$status" -eq 0 ]
 }
