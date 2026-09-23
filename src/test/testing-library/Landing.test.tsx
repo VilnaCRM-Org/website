@@ -81,7 +81,7 @@ describe('Landing', () => {
     expect(mainContainer).toHaveStyle(positionRelativeStyle);
   });
 
-  it('loads the page through exactly two client-only boundaries with no loading placeholder', () => {
+  it('loads through exactly two client-only boundaries with no loading placeholder', () => {
     expect(boundaryOptions).toHaveLength(2);
     boundaryOptions.forEach(options => {
       expect(options).toMatchObject({ ssr: false });
@@ -89,7 +89,7 @@ describe('Landing', () => {
     });
   });
 
-  it('mounts the five grouped sections inside one relative box and the auth section after it', () => {
+  it('mounts the five grouped sections in one relative box and the auth section after it', () => {
     const { container, getByText } = render(<Landing />);
 
     const relativeBox: HTMLElement | null = container.querySelector(boxElementClass);
