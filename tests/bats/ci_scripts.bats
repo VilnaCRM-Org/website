@@ -292,6 +292,7 @@ STUB
   [ "$(cat "$BATS_TEST_TMPDIR/serve-ps-calls")" -ge 2 ]
 
   run_host_stack stop
+  assert_success
 }
 
 # The pre-exec allowance must not reopen the hole the foreign-process case
@@ -320,6 +321,10 @@ STUB
       return 1
     fi
     assert_output_contains 'no longer running'
+    if [ "$(cat "$BATS_TEST_TMPDIR/serve-ps-calls")" != 1 ]; then
+      echo "start sampled a serve pid shown as '$answer' more than once before failing" >&2
+      return 1
+    fi
     if grep -F 'curl ' "$COMMAND_LOG" >/dev/null; then
       echo "start probed the port for a serve pid shown as '$answer'" >&2
       return 1
