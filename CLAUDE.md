@@ -435,7 +435,7 @@ agrees with the **mock**. Two gates anchored on the single committed baseline
   deliberately distinct from the OpenAPI leg's, because dedup is an exact title match and a
   shared title would make each leg close the other's issue.
 
-### Workflow security (zizmor, issue #360)
+### Workflow security (zizmor #360, actionlint #322)
 
 `make lint-workflows` audits `.github/workflows` with zizmor, pinned by image digest in
 the Makefile. It blocks on medium-and-above findings at high confidence
@@ -445,6 +445,17 @@ SHA whose trailing comment names the tag that SHA actually points at, copied ver
 belong on the job that needs them; never interpolate `${{ }}` into a `run:` body. Fix
 findings at the root — never add a `zizmor.yml` ignore, a `# zizmor: ignore[...]`
 comment, or lower the thresholds.
+
+`make lint-actionlint` is its sibling: actionlint checks what zizmor does not — workflow
+syntax, expression types, undefined `needs:` outputs, runner labels — and hands every
+`run:` body to shellcheck. Both binaries are pinned and SHA256-verified into the
+gitignored `./bin` by `scripts/ci/ensure-actionlint.sh` (versions and digests live
+together there), and the target passes the pinned shellcheck explicitly so the runner
+image's copy never decides the verdict. It is host-only and outside `make lint` like
+`lint-workflows`, and runs as the `actionlint` job of `workflow-security.yml` on every PR
+with no paths filter. It landed with zero findings; fix a new one in the workflow — never
+add an `.github/actionlint.yaml` ignore, a `# shellcheck disable=` directive, or
+`-ignore` flags.
 
 ### Code Metrics (rust-code-analysis, issue #224)
 

@@ -66,3 +66,26 @@ jobs:
           # Enables the online audits; read-only, and scoped to this run.
           GH_TOKEN: ${{ github.token }}
         run: make lint-workflows
+
+  actionlint:
+    # Checks every workflow for the defects GitHub itself only reports at run time
+    # — an undefined `needs:` output, a mistyped expression, an unknown runner
+    # label, a `${{ }}` spliced into a `run:` body — and hands each `run:` script
+    # to shellcheck (issue #322). zizmor above audits the same files for
+    # supply-chain and privilege defects; the two do not overlap.
+    #
+    # Not path-filtered, for the reason the zizmor job gives (#343). Both binaries
+    # are pinned and SHA256-verified into ./bin by scripts/ci/ensure-actionlint.sh,
+    # so the runner image's own shellcheck never decides the verdict.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Lint the workflows with actionlint
+        run: make lint-actionlint

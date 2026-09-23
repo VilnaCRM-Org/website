@@ -300,7 +300,7 @@ as a reviewed, in-repo change visible in the PR diff (or confirm the path belong
 outside the governed scope). Never silence the gate with a local override or a
 per-line disable.
 
-#### Workflow security (zizmor)
+#### Workflow security (zizmor, actionlint)
 
 Anything you change under `.github/workflows` is audited by
 [zizmor](https://docs.zizmor.sh) on every pull request through its own workflow,
@@ -320,6 +320,16 @@ If the gate fails, fix the workflow. Never add a `zizmor.yml` ignore rule, a
 `# zizmor: ignore[...]` comment, or lower `ZIZMOR_MIN_SEVERITY` /
 `ZIZMOR_MIN_CONFIDENCE` in the Makefile — those thresholds are a ratchet that
 only moves up as the remaining low-severity clusters are cleared.
+
+The same workflow runs [actionlint](https://github.com/rhysd/actionlint) as its
+`actionlint` job; run it locally with `make lint-actionlint` (host-only, outside
+`make lint`). It catches what zizmor does not — a mistyped expression, an
+undefined `needs:` output, an unknown runner label — and runs every `run:` body
+through shellcheck. `scripts/ci/ensure-actionlint.sh` installs the pinned,
+SHA256-verified actionlint and shellcheck into the gitignored `./bin` on first
+use, so the verdict never depends on whichever shellcheck a laptop or runner
+image carries. Fix a finding in the workflow; never add an actionlint config
+ignore, a `# shellcheck disable=` directive, or an `-ignore` flag.
 
 #### Code scanning (CodeQL)
 
