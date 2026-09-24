@@ -39,6 +39,9 @@ ADR 0009). Anything not listed here is not wired.
     DSN and sends nothing until a maintainer commits the real (public) DSN in
     `.env.production`. `src/test/unit/client-env-contract.test.ts` pins the key's
     presence in both env files.
+  - `enabled: Boolean(env.NEXT_PUBLIC_SENTRY_DSN)` — the SDK is switched off
+    explicitly whenever the DSN is empty. The app-level error boundary still
+    renders its fallback when the SDK is disabled.
   - `sendDefaultPii: false`, pinned explicitly (#378 F3).
   - `browserTracingIntegration()` and
     `replayIntegration({ maskAllInputs: true, maskAllText: true, blockAllMedia: true })`
@@ -46,9 +49,12 @@ ADR 0009). Anything not listed here is not wired.
     the sign-up form's password field.
   - `tracePropagationTargets` limited to `NEXT_PUBLIC_DEVELOPMENT_API_URL` and
     `NEXT_PUBLIC_API_URL`, with empty values filtered out.
-  - `tracesSampleRate` is `0.1` in a production build and `1.0` in development
-    (`APP_ENVIRONMENT === 'production'`); `replaysSessionSampleRate: 0.1`,
-    `replaysOnErrorSampleRate: 1.0`.
+  - `tracesSampleRate` comes from `resolveTracesSampleRate` in
+    `src/lib/telemetry/traces-sample-rate.ts`, fed
+    `env.NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE` and `APP_ENVIRONMENT`. The variable
+    is a number from 0 to 1, validated in `src/config/env.ts`; empty (as every
+    committed env file ships it) selects the default — `0.1` in a production build,
+    `1.0` in development. `replaysSessionSampleRate: 0.1`, `replaysOnErrorSampleRate: 1.0`.
   - `release: APP_VERSION` (the `package.json` version) and
     `environment: APP_ENVIRONMENT` (`production` or `development`, from
     `isProductionBuild()`), both from `src/config/app-version.ts`.
@@ -58,8 +64,9 @@ ADR 0009). Anything not listed here is not wired.
     [reference/privacy-checklist.md](reference/privacy-checklist.md).
   - `src/test/unit/sentry-replay-masking.test.ts` and
     `src/test/unit/sentry-app-observability.test.ts` parse this call with the
-    TypeScript compiler and fail if `sendDefaultPii`, the mask options,
-    `release`/`environment`, either scrubber or the boundary wiring below drift.
+    TypeScript compiler and fail if `sendDefaultPii`, the mask options, the
+    `enabled` guard, the sample-rate wiring, `release`/`environment`, either
+    scrubber or the boundary wiring below drift.
 - **Render crashes** — `Sentry.ErrorBoundary` wraps only `<Component />` inside
   `Layout`, so the header, skip link and footer survive a page crash. Its fallback
   is `src/components/error-fallback` (localized, `role="alert"`, retry + home
@@ -126,8 +133,9 @@ remove, live in [reference/privacy-checklist.md](reference/privacy-checklist.md)
 
 - Keep **error** capture effectively unsampled — you want every exception.
 - **Sample** high-volume signals (traces, session replay, web-vitals) to control
-  quota. The live rates are in `pages/_app.tsx`; tune them there and never add
-  per-call overrides. Treat that file as the single source of truth.
+  quota. The live rates are in `pages/_app.tsx`; the trace rate is tuned through
+  `NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE` (default `0.1` in production), the replay
+  rates in that file. Never add per-call overrides.
 - Gate web-vitals forwarding behind a production check and a sample rate so dev
   noise and quota stay bounded.
 

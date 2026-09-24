@@ -9,11 +9,17 @@ const APP_PATH = path.join(REPO_ROOT, 'pages', '_app.tsx');
 const SENTRY_MODULE = '@sentry/react';
 const INIT_MEMBER = 'init';
 const ERROR_BOUNDARY_MEMBER = 'ErrorBoundary';
+const DSN_OPTION = 'dsn';
+const ENABLED_OPTION = 'enabled';
+const TRACES_SAMPLE_RATE_OPTION = 'tracesSampleRate';
 const RELEASE_OPTION = 'release';
 const ENVIRONMENT_OPTION = 'environment';
 const BEFORE_SEND_OPTION = 'beforeSend';
 const BEFORE_BREADCRUMB_OPTION = 'beforeBreadcrumb';
 const PINNED_OPTIONS = [
+  DSN_OPTION,
+  ENABLED_OPTION,
+  TRACES_SAMPLE_RATE_OPTION,
   RELEASE_OPTION,
   ENVIRONMENT_OPTION,
   BEFORE_SEND_OPTION,
@@ -24,6 +30,9 @@ const BEFORE_CAPTURE_PROP = 'beforeCapture';
 const ON_ERROR_PROP = 'onError';
 
 interface AppObservabilityContract {
+  dsn: string;
+  enabledGuard: string;
+  tracesSampleRate: string;
   release: string;
   environment: string;
   beforeSend: string;
@@ -118,6 +127,34 @@ function assertNoOverridableOptions(
   }
 }
 
+function initializerOf(initOptions: ts.ObjectLiteralExpression, optionName: string): ts.Expression {
+  const prop = initOptions.properties.find(
+    candidate => staticPropertyNameOf(candidate) === optionName
+  );
+  if (prop === undefined) {
+    throw new Error(`Sentry.init(…) is missing the "${optionName}" option`);
+  }
+  if (!ts.isPropertyAssignment(prop)) {
+    throw new Error(`${prop.getText()} is not a property assignment`);
+  }
+  return prop.initializer;
+}
+
+function booleanGuardOf(initOptions: ts.ObjectLiteralExpression): string {
+  const value = initializerOf(initOptions, ENABLED_OPTION);
+  const [guard, ...rest] = ts.isCallExpression(value) ? value.arguments : [];
+  const isBooleanCall =
+    ts.isCallExpression(value) &&
+    ts.isIdentifier(value.expression) &&
+    value.expression.text === 'Boolean' &&
+    guard !== undefined &&
+    rest.length === 0;
+  if (!isBooleanCall) {
+    throw new Error(`${ENABLED_OPTION}: ${value.getText()} is not Boolean(<dsn>)`);
+  }
+  return guard.getText();
+}
+
 function identifierValueOf(initOptions: ts.ObjectLiteralExpression, optionName: string): string {
   const prop = initOptions.properties.find(
     candidate => staticPropertyNameOf(candidate) === optionName
@@ -150,6 +187,19 @@ function importedBindingOf(sourceFile: ts.SourceFile, localName: string): string
     }
   }
   throw new Error(`"${localName}" is not bound by a named import`);
+}
+
+function resolverCallOf(
+  sourceFile: ts.SourceFile,
+  initOptions: ts.ObjectLiteralExpression,
+  optionName: string
+): string {
+  const value = initializerOf(initOptions, optionName);
+  if (!ts.isCallExpression(value) || !ts.isIdentifier(value.expression)) {
+    throw new Error(`${optionName}: ${value.getText()} is not a call to an imported resolver`);
+  }
+  const args = value.arguments.map(argument => argument.getText()).join(', ');
+  return `${importedBindingOf(sourceFile, value.expression.text)}(${args})`;
 }
 
 function jsxTagNameOf(node: ts.JsxElement | ts.JsxSelfClosingElement): ts.JsxTagNameExpression {
@@ -266,6 +316,9 @@ function readAppObservabilityContract(source: string): AppObservabilityContract 
   }
   const initOptions = optionsArgumentOf(init);
   assertNoOverridableOptions(initOptions, PINNED_OPTIONS);
+  const dsn = initializerOf(initOptions, DSN_OPTION).getText();
+  const enabledGuard = booleanGuardOf(initOptions);
+  const tracesSampleRate = resolverCallOf(sourceFile, initOptions, TRACES_SAMPLE_RATE_OPTION);
   const release = identifierValueOf(initOptions, RELEASE_OPTION);
   const environment = identifierValueOf(initOptions, ENVIRONMENT_OPTION);
   const beforeSend = importedBindingOf(
@@ -292,6 +345,9 @@ function readAppObservabilityContract(source: string): AppObservabilityContract 
   }
 
   return {
+    dsn,
+    enabledGuard,
+    tracesSampleRate,
     release,
     environment,
     beforeSend,
@@ -317,6 +373,22 @@ describe('Sentry release/environment/error-boundary contract in pages/_app.tsx',
     expect(contract.componentWrappedCount).toBe(contract.componentUsageCount);
   });
 
+  it('enables the SDK only when the DSN it is initialised with is non-empty', () => {
+    const contract = readAppObservabilityContract(readFile(APP_PATH));
+
+    expect(contract.dsn).toBe('env.NEXT_PUBLIC_SENTRY_DSN');
+    expect(contract.enabledGuard).toBe(contract.dsn);
+  });
+
+  it('reads tracesSampleRate from the environment through the shared resolver', () => {
+    const contract = readAppObservabilityContract(readFile(APP_PATH));
+
+    expect(contract.tracesSampleRate).toBe(
+      '@/lib/telemetry/traces-sample-rate#resolveTracesSampleRate' +
+        '(env.NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE, APP_ENVIRONMENT)'
+    );
+  });
+
   it('scrubs every event and breadcrumb through the shared telemetry scrubbers', () => {
     const contract = readAppObservabilityContract(readFile(APP_PATH));
 
@@ -338,13 +410,22 @@ describe('Sentry release/environment/error-boundary contract in pages/_app.tsx',
 
 describe('Sentry release/environment/error-boundary contract helpers', () => {
   const SENTRY_IMPORT = `import * as Sentry from '${SENTRY_MODULE}';`;
+  const RESOLVER_IMPORT =
+    "import { resolveTracesSampleRate } from '@/lib/telemetry/traces-sample-rate';";
   const SCRUBBER_IMPORTS = [
     "import { scrubEvent } from '@/lib/telemetry/scrub-event';",
     "import { scrubBreadcrumb } from '@/lib/telemetry/scrub-breadcrumb';",
   ].join('\n');
-  const buildInit = (extraOptions: string, imports = SCRUBBER_IMPORTS): string =>
-    `${SENTRY_IMPORT}\n${imports}\n` +
-    `Sentry.init({ dsn: env.DSN, sendDefaultPii: false, ${extraOptions} });`;
+  const gatingOptions =
+    'dsn: env.DSN, enabled: Boolean(env.DSN), ' +
+    'tracesSampleRate: resolveTracesSampleRate(env.RATE, APP_ENVIRONMENT)';
+  const buildInit = (
+    extraOptions: string,
+    imports = SCRUBBER_IMPORTS,
+    gating = gatingOptions
+  ): string =>
+    `${SENTRY_IMPORT}\n${RESOLVER_IMPORT}\n${imports}\n` +
+    `Sentry.init({ ${gating}, sendDefaultPii: false, ${extraOptions} });`;
   const scrubberOptions = 'beforeSend: scrubEvent, beforeBreadcrumb: scrubBreadcrumb';
   const identityOptions = 'release: APP_VERSION, environment: APP_ENVIRONMENT';
   const validOptions = `${identityOptions}, ${scrubberOptions}`;
@@ -367,6 +448,10 @@ describe('Sentry release/environment/error-boundary contract helpers', () => {
     it('reads release/environment identifiers and a wrapped Component', () => {
       const source = buildTree(buildInit(validOptions), wrappedComponent);
       expect(readAppObservabilityContract(source)).toEqual({
+        dsn: 'env.DSN',
+        enabledGuard: 'env.DSN',
+        tracesSampleRate:
+          '@/lib/telemetry/traces-sample-rate#resolveTracesSampleRate(env.RATE, APP_ENVIRONMENT)',
         release: 'APP_VERSION',
         environment: 'APP_ENVIRONMENT',
         beforeSend: '@/lib/telemetry/scrub-event#scrubEvent',
@@ -383,8 +468,9 @@ describe('Sentry release/environment/error-boundary contract helpers', () => {
     it('follows a renamed namespace import instead of the identifier "Sentry"', () => {
       const source = [
         `import * as Monitoring from '${SENTRY_MODULE}';`,
+        RESOLVER_IMPORT,
         SCRUBBER_IMPORTS,
-        `Monitoring.init({ ${validOptions} });`,
+        `Monitoring.init({ ${gatingOptions}, ${validOptions} });`,
         'function MyApp() { return (',
         '  <Monitoring.ErrorBoundary beforeCapture={tagRenderCrash}>',
         '    <Component />',
@@ -410,6 +496,28 @@ describe('Sentry release/environment/error-boundary contract helpers', () => {
       expect(readAppObservabilityContract(source).beforeSend).toBe(
         'sentry-scrub-lookalike#passThrough'
       );
+    });
+
+    it('reports an enabled flag that gates on something other than the DSN', () => {
+      const gating =
+        'dsn: env.DSN, enabled: Boolean(env.OTHER), ' +
+        'tracesSampleRate: resolveTracesSampleRate(env.RATE, APP_ENVIRONMENT)';
+      const contract = readAppObservabilityContract(
+        buildTree(buildInit(validOptions, SCRUBBER_IMPORTS, gating), wrappedComponent)
+      );
+      expect(contract.enabledGuard).toBe('env.OTHER');
+      expect(contract.enabledGuard).not.toBe(contract.dsn);
+    });
+
+    it('reports a sample-rate resolver imported from a look-alike module', () => {
+      const gating =
+        'dsn: env.DSN, enabled: Boolean(env.DSN), ' +
+        'tracesSampleRate: pickRate(env.RATE, APP_ENVIRONMENT)';
+      const imports = `${SCRUBBER_IMPORTS}\nimport { pickRate } from 'rate-lookalike';`;
+      const contract = readAppObservabilityContract(
+        buildTree(buildInit(validOptions, imports, gating), wrappedComponent)
+      );
+      expect(contract.tracesSampleRate).toBe('rate-lookalike#pickRate(env.RATE, APP_ENVIRONMENT)');
     });
 
     it('reports a Component rendered outside the boundary as unwrapped', () => {
@@ -578,6 +686,52 @@ describe('Sentry release/environment/error-boundary contract helpers', () => {
       );
       expect(() => readAppObservabilityContract(source)).toThrow(
         /declares "beforeSend" more than once/
+      );
+    });
+
+    it.each([
+      ['a hardcoded enabled flag', 'enabled: true', /is not Boolean\(<dsn>\)/],
+      ['an enabled flag with two arguments', 'enabled: Boolean(env.DSN, 1)', /not Boolean/],
+      ['a hardcoded sample rate', 'tracesSampleRate: 0.1', /is not a call to an imported/],
+      ['an inline sample-rate ternary', 'tracesSampleRate: prod ? 0.1 : 1', /is not a call/],
+      ['a shorthand sample rate', 'tracesSampleRate', /is not a property assignment/],
+    ])('throws on %s', (_label: string, override: string, expected: RegExp) => {
+      const [name] = override.split(':') as [string];
+      const gating = [
+        'dsn: env.DSN',
+        'enabled: Boolean(env.DSN)',
+        'tracesSampleRate: resolveTracesSampleRate(env.RATE, APP_ENVIRONMENT)',
+      ]
+        .map(option => (option.startsWith(`${name}:`) ? override : option))
+        .join(', ');
+      const source = buildTree(buildInit(validOptions, SCRUBBER_IMPORTS, gating), wrappedComponent);
+      expect(() => readAppObservabilityContract(source)).toThrow(expected);
+    });
+
+    it.each(['dsn', 'enabled', 'tracesSampleRate'])(
+      'throws when %s is missing from Sentry.init',
+      (option: string) => {
+        const gating = gatingOptions
+          .split(/, (?=\w+:)/)
+          .filter(entry => !entry.startsWith(`${option}:`))
+          .join(', ');
+        const source = buildTree(
+          buildInit(validOptions, SCRUBBER_IMPORTS, gating),
+          wrappedComponent
+        );
+        expect(() => readAppObservabilityContract(source)).toThrow(
+          new RegExp(`missing the "${option}" option`)
+        );
+      }
+    );
+
+    it.each([
+      ['enabled', 'enabled: false'],
+      ['tracesSampleRate', 'tracesSampleRate: 1'],
+    ])('throws when %s is declared twice, since the later one wins', (option, duplicate) => {
+      const source = buildTree(buildInit(`${validOptions}, ${duplicate}`), wrappedComponent);
+      expect(() => readAppObservabilityContract(source)).toThrow(
+        new RegExp(`declares "${option}" more than once`)
       );
     });
 

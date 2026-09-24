@@ -14,6 +14,13 @@ function isEncryptedOrLoopback(value: string): boolean {
 const credentialEndpoint: () => z.ZodType<string> = () =>
   z.url().refine(isEncryptedOrLoopback, { message: CLEARTEXT_ENDPOINT_MESSAGE });
 
+const sampleRate: () => z.ZodType<number | '', string | undefined> = () =>
+  z
+    .string()
+    .trim()
+    .default('')
+    .pipe(z.union([z.literal(''), z.coerce.number<string>().min(0).max(1)]));
+
 const clientEnvSchema = z.object({
   NEXT_PUBLIC_GRAPHQL_API_URL: credentialEndpoint(),
   NEXT_PUBLIC_API_URL: credentialEndpoint(),
@@ -27,6 +34,7 @@ const clientEnvSchema = z.object({
   NEXT_PUBLIC_VILNACRM_USE_POLICY_URL: z.url(),
 
   NEXT_PUBLIC_SENTRY_DSN: z.string().trim().default(''),
+  NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE: sampleRate(),
   NEXT_PUBLIC_GA_MEASUREMENT_ID: z.string().trim().default(''),
 });
 
@@ -42,6 +50,7 @@ const parsed = clientEnvSchema.safeParse({
   NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL: process.env.NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL,
   NEXT_PUBLIC_VILNACRM_USE_POLICY_URL: process.env.NEXT_PUBLIC_VILNACRM_USE_POLICY_URL,
   NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,
+  NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE: process.env.NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE,
   NEXT_PUBLIC_GA_MEASUREMENT_ID: process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID,
 });
 

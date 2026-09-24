@@ -31,6 +31,7 @@ event's shape cannot be guaranteed:
 ```ts
 Sentry.init({
   dsn: env.NEXT_PUBLIC_SENTRY_DSN,
+  enabled: Boolean(env.NEXT_PUBLIC_SENTRY_DSN),
   sendDefaultPii: false,
   beforeSend: scrubEvent,
   beforeBreadcrumb: scrubBreadcrumb,

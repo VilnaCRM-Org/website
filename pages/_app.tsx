@@ -17,6 +17,7 @@ import { RouteI18n, useRouteI18n } from '@/hooks/use-route-i18n';
 import { initServiceWorker } from '@/lib/pwa/register-service-worker';
 import { scrubBreadcrumb } from '@/lib/telemetry/scrub-breadcrumb';
 import { scrubEvent } from '@/lib/telemetry/scrub-event';
+import { resolveTracesSampleRate } from '@/lib/telemetry/traces-sample-rate';
 import { handleWebVitalsMetric } from '@/lib/web-vitals/report-web-vitals';
 
 import 'swagger-ui-react/swagger-ui.css';
@@ -42,6 +43,7 @@ const tagRenderCrash: NonNullable<Sentry.ErrorBoundaryProps['beforeCapture']> = 
 
 Sentry.init({
   dsn: env.NEXT_PUBLIC_SENTRY_DSN,
+  enabled: Boolean(env.NEXT_PUBLIC_SENTRY_DSN),
   sendDefaultPii: false,
   integrations: [
     Sentry.browserTracingIntegration(),
@@ -50,7 +52,10 @@ Sentry.init({
   tracePropagationTargets: [env.NEXT_PUBLIC_DEVELOPMENT_API_URL, env.NEXT_PUBLIC_API_URL].filter(
     Boolean
   ),
-  tracesSampleRate: APP_ENVIRONMENT === 'production' ? 0.1 : 1.0,
+  tracesSampleRate: resolveTracesSampleRate(
+    env.NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE,
+    APP_ENVIRONMENT
+  ),
   replaysSessionSampleRate: 0.1,
   replaysOnErrorSampleRate: 1.0,
   release: APP_VERSION,

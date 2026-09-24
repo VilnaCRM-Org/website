@@ -146,15 +146,24 @@ The browser bundle carries the instrumentation; production has no keys for it to
 - **Sentry.** [`pages/_app.tsx`](../../pages/_app.tsx) calls `Sentry.init` from
   `@sentry/react` with `dsn: env.NEXT_PUBLIC_SENTRY_DSN`, read through the zod-validated
   schema in [`src/config/env.ts`](../../src/config/env.ts) (default `''`),
-  `sendDefaultPii: false`, session replay pinned to mask all inputs, text and media, trace
-  propagation only to the configured API origins, `release`/`environment` sourced from
+  `enabled: Boolean(env.NEXT_PUBLIC_SENTRY_DSN)` so an empty DSN switches the SDK off
+  explicitly rather than by the SDK's implicit no-DSN behaviour, `sendDefaultPii: false`,
+  session replay pinned to mask all inputs, text and media, trace propagation only to the
+  configured API origins, `release`/`environment` sourced from
   [`src/config/app-version.ts`](../../src/config/app-version.ts) (the `package.json`
-  version and `isProductionBuild()`), and sampling of `tracesSampleRate: 0.1` in a
-  production build (`1.0` in development), `replaysSessionSampleRate: 0.1`,
-  `replaysOnErrorSampleRate: 1.0`. [`.env.production`](../../.env.production) commits
-  `NEXT_PUBLIC_SENTRY_DSN=` **empty**, so the production bundle initialises the SDK with no
-  DSN and it sends nothing. Handled errors — the sign-up path, a caught Apollo
-  GraphQL/network error (`src/features/landing/api/graphql/apollo.ts`'s `ErrorLink`, which
+  version and `isProductionBuild()`), and sampling of `replaysSessionSampleRate: 0.1` and
+  `replaysOnErrorSampleRate: 1.0`. `tracesSampleRate` comes from
+  `NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE`, a number from 0 to 1 validated in `env.ts` (a
+  value outside that range, or not a number, fails the build). Every committed env file
+  leaves it empty, which selects the default in
+  [`src/lib/telemetry/traces-sample-rate.ts`](../../src/lib/telemetry/traces-sample-rate.ts):
+  **`0.1` in a production build**, `1.0` in development. To change the production rate,
+  set the variable in `.env.production` (or the build environment) and redeploy; `0`
+  switches tracing off. Errors are never sampled.
+  [`.env.production`](../../.env.production) commits `NEXT_PUBLIC_SENTRY_DSN=` **empty**,
+  so the production bundle builds the SDK with `enabled: false` and it sends nothing.
+  Handled errors — the sign-up path, a caught Apollo GraphQL/network error
+  (`src/features/landing/api/graphql/apollo.ts`'s `ErrorLink`, which
   only reports and never retries) and an uncaught render crash — carry the same static
   `feature`/`action` tag shape. The sign-up path and the Apollo `ErrorLink` report through
   the single sink [`src/lib/telemetry/report-error.ts`](../../src/lib/telemetry/report-error.ts).
@@ -190,7 +199,7 @@ What unblocks each: a maintainer supplies the real Sentry DSN and GA measurement
 are public client-side keys, and `.env.production` is where every other `NEXT_PUBLIC_*`
 production value is committed — see the comments in
 [`.env.example`](../../.env.example). `src/test/unit/client-env-contract.test.ts` requires
-both keys to stay declared in `.env` and `.env.production`.
+both keys, and the trace sample rate, to stay declared in `.env` and `.env.production`.
 
 ## Known gaps
 
