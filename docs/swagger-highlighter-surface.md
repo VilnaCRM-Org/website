@@ -276,6 +276,5 @@ so belongs in its own reviewed change, after the open dependency pull requests l
    `markdownlint-cli@0.47`, both left for the `markdownlint-cli` 0.49 bump — which must
    land on 0.49.1 (`js-yaml ~5.2.1`), because 0.49.0's `~4.2.0` still carries three of the
    four advisories — and the `js-yaml@4.1.1` and `immutable@3.8.3` copies `/swagger` ships
-   (item 1). The 0.49
-   bump's own lockfile resolves `brace-expansion@5.0.6` again under its `minimatch@10.2.5`
-   copies, so it needs the same treatment when it lands.
+   (item 1). The 0.49 bump's own lockfile resolves `brace-expansion@5.0.6` again under its
+   `minimatch@10.2.5` copies, so it needs the same treatment when it lands.
