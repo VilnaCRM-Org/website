@@ -104,27 +104,22 @@ merge alone never does:
    bypass covers every rule in the ruleset, including the signature
    requirement, which is what makes this the option that works without
    touching the workflow. An admin applies it with
-   [`scripts/ci/apply-branch-ruleset.sh`](../scripts/ci/apply-branch-ruleset.sh),
-   following CONTRIBUTING.md's "The `main` ruleset (issue #343)" runbook:
-   - **Dry run first**: `scripts/ci/apply-branch-ruleset.sh --release-app-id <id>`,
-     where `<id>` is the release App's ID from its settings page (the value of
-     the `VILNACRM_APP_ID` secret). The script refuses to run without it, never
-     guesses one, and writes nothing: it prints the payload, the rulesets that
-     exist today and the diff between them. Check the bypass actor against the
-     App.
-   - **Then apply**: re-run it with `--apply`, and verify with
-     `gh api repos/VilnaCRM-Org/website/rules/branches/main`.
-   - **Then retire classic protection** on `main`, after carrying over anything
-     it has that the ruleset lacks through a reviewed change to the config.
-     Classic protection's signed-commit rule has no bypass, so while it stays
-     in place the release App's push is still rejected, whatever the ruleset
-     allows.
+   [`scripts/ci/apply-branch-ruleset.sh`](../scripts/ci/apply-branch-ruleset.sh)
+   (`--release-app-id <id>` is required; it is a dry run until `--apply`) by
+   following steps 1–5 of CONTRIBUTING.md's "The `main` ruleset (issue #343)"
+   runbook in order — that runbook is the single source for the procedure, and
+   is not repeated here. Two of its steps matter most for the release: the
+   ruleset must be proven to block (step 4) before classic protection is
+   retired (step 5), and classic protection's signed-commit rule has no bypass,
+   so until it is retired the release App's push is still rejected, whatever
+   the ruleset allows.
 
    As of 2026-09-24 the only ruleset on the repository is the tag-targeted
-   "Protect release tags" (created 2026-09-13), which stops `v*` tags from
-   being deleted, updated or force-pushed. It targets tags, not branches, so it does
-   not conflict with the `main` ruleset; it does not block the release either,
-   because creating a new tag is not one of its rules.
+   "Protect release tags" (created 2026-09-13), which stops release tags —
+   those matching `v*` or `[0-9]*` — from being deleted, updated or
+   force-pushed. It targets tags, not branches, so it does not conflict with
+   the `main` ruleset; it does not block the release either, because creating
+   a new tag is not one of its rules.
 
 2. **Keep classic protection and make the commit verifiable**: provision a
    signing key for the workflow (an S/MIME or GPG key whose public half is
@@ -221,9 +216,10 @@ the next orphan (`v1.8.0`) on the next push to `main`:
 2. **Then**, a maintainer does exactly one of:
    - delete the stranded tag — `git push --delete origin v1.7.0` — so the next
      release is computed as `v1.7.0` again from a clean slate. The "Protect
-     release tags" ruleset forbids deleting a `v*` tag and lists no bypass
-     actor, so this path also needs an admin to disable that ruleset for the
-     deletion and re-enable it straight after; or
+     release tags" ruleset forbids deleting a tag matching `v*` or `[0-9]*`,
+     so unless the maintainer is one of its bypass actors (a list only an
+     admin can see, under _Settings → Rules → Rulesets_), an admin must
+     disable that ruleset for the deletion and re-enable it straight after; or
    - advance `package.json` to `1.7.0` on `main` through a normal pull request,
      accepting that `v1.7.0` stays an orphan and the next release is `v1.8.0`.
      This is safe for the changelog range: the action discovers the previous
