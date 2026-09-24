@@ -194,11 +194,11 @@ write_workflow() {
 }
 
 @test "a \$/ self-repository reference without an @ suffix passes and is followed" {
-  mkdir -p "$FIXTURE/.github/actions/dev-container"
+  mkdir -p "$FIXTURE/tools/dev-container"
   printf '%s\n' 'name: dev' 'description: fixture' 'runs:' '  using: composite' \
     '  steps:' "    - uses: actions/checkout@$SHA40" \
-    > "$FIXTURE/.github/actions/dev-container/action.yml"
-  write_workflow selfref.yml '- uses: $/.github/actions/dev-container'
+    > "$FIXTURE/tools/dev-container/action.yml"
+  write_workflow selfref.yml '- uses: $/tools/dev-container'
 
   run scan_action_pins "$FIXTURE"
 

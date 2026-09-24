@@ -38,10 +38,11 @@ const renderErrorFallback: Sentry.FallbackRender = ({ resetError }) => (
 );
 
 const SKIP_TARGET_ID: string = 'skip-target';
+const ERROR_FALLBACK_ID: string = 'app-error-fallback';
 
 const focusRecoveredOrRetryTarget = (): void => {
-  const alert = document.querySelector('[role="alert"]');
-  const retryButton = alert instanceof HTMLElement ? alert.querySelector('button') : null;
+  const fallback = document.getElementById(ERROR_FALLBACK_ID);
+  const retryButton = fallback?.querySelector('button') ?? null;
   (retryButton ?? document.getElementById(SKIP_TARGET_ID))?.focus();
 };
 

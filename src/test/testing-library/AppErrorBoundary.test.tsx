@@ -15,6 +15,7 @@ jest.mock('next/dynamic', () => () => (): null => null);
 jest.mock('../../lib/pwa/register-service-worker', () => ({ initServiceWorker: jest.fn() }));
 
 const RECOVERED_TEXT = 'Recovered page content';
+const UNRELATED_ALERT_BUTTON = 'Unrelated alert action';
 
 let shouldThrow = true;
 
@@ -23,13 +24,22 @@ function CrashingPage(): React.ReactElement {
   return <p>{RECOVERED_TEXT}</p>;
 }
 
+function CrashingPageWithRecoveredAlert(): React.ReactElement {
+  if (shouldThrow) throw new Error('render crash');
+  return (
+    <div role="alert">
+      <button type="button">{UNRELATED_ALERT_BUTTON}</button>
+    </div>
+  );
+}
+
 function errorBoundaryCopyFor(pathname: string): typeof en.error_boundary {
   return (resolveRouteLocale(pathname) === 'en' ? en : uk).error_boundary;
 }
 
-function renderApp(pathname: string): RenderResult {
+function renderApp(pathname: string, Component: React.ComponentType = CrashingPage): RenderResult {
   (useRouter as jest.Mock).mockReturnValue({ pathname });
-  return render(<MyApp Component={CrashingPage} />);
+  return render(<MyApp Component={Component} />);
 }
 
 /**
@@ -95,6 +105,24 @@ describe('pages/_app error boundary', () => {
 
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(screen.getByText(RECOVERED_TEXT)).toBeInTheDocument();
+    expect(document.getElementById('skip-target')).toHaveFocus();
+  });
+
+  it('ignores an unrelated alert the recovered page renders and focuses the skip target', async () => {
+    const user: UserEvent = userEvent.setup();
+    const copy = errorBoundaryCopyFor('/en');
+    renderApp('/en', CrashingPageWithRecoveredAlert);
+    const retry = within(screen.getByRole('alert')).getByRole('button', {
+      name: copy.retry_button,
+    });
+
+    shouldThrow = false;
+    await user.click(retry);
+
+    const recoveredAlert = screen.getByRole('alert');
+    expect(
+      within(recoveredAlert).getByRole('button', { name: UNRELATED_ALERT_BUTTON })
+    ).toBeInTheDocument();
     expect(document.getElementById('skip-target')).toHaveFocus();
   });
 
