@@ -9,19 +9,54 @@
 # missing, so a first landing that blocked risked reddening deploys for a cause
 # this repo may not own. Promote to blocking once a green deploy shows no warnings.
 #
-# Usage: smoke-response-shape.sh <base-url> [--expect-noindex]
+# The BRANDED body (issue #329) blocks only under --require-branded, which
+# `make smoke-prod` passes: a well-formed 404 can still be the wrong document (an
+# S3 error page, or a routing function older than #339), and only the edge
+# document in scripts/cloudfront_routing.js carries SMOKE_404_MARKER. The other
+# two callers get a warning instead. The PR sandbox is a bare S3 website bucket
+# with no CloudFront function in front of it, so it can never serve that
+# document; the scheduled uptime check files an incident issue on failure, and a
+# routing function awaiting the infra apply is not an outage.
+#
+# Usage: smoke-response-shape.sh <base-url> [--expect-noindex] [--require-branded]
 set -euo pipefail
+
+USAGE='usage: smoke-response-shape.sh <base-url> [--expect-noindex] [--require-branded]'
 
 BASE_URL="${1:-}"
 EXPECT_NOINDEX=0
-if [ "${2:-}" = '--expect-noindex' ]; then
-  EXPECT_NOINDEX=1
-fi
+REQUIRE_BRANDED=0
+# Unknown flags are refused, not ignored: a mistyped --require-branded would
+# otherwise quietly downgrade the blocking assertion to a warning.
+for flag in "${@:2}"; do
+  case "$flag" in
+    --expect-noindex) EXPECT_NOINDEX=1 ;;
+    --require-branded) REQUIRE_BRANDED=1 ;;
+    *)
+      echo "::error::unknown argument '${flag}'; ${USAGE}"
+      exit 2
+      ;;
+  esac
+done
 
 if [ -z "$BASE_URL" ]; then
-  echo "::error::usage: smoke-response-shape.sh <base-url> [--expect-noindex]"
+  echo "::error::${USAGE}"
   exit 2
 fi
+
+# The <title> text of NOT_FOUND_BODY in scripts/cloudfront_routing.js, matched as
+# a case-insensitive FIXED string. Not bare "VilnaCRM": the S3 error document is
+# the site's own index.html, which carries the brand too. `:-`, so an empty
+# override falls back to the default rather than matching every body.
+SMOKE_404_MARKER="${SMOKE_404_MARKER:-Page not found - VilnaCRM}"
+# grep -F reads a multi-line pattern as one pattern PER LINE, and an empty line
+# matches everything, so a marker with a newline in it could pass vacuously.
+case "$SMOKE_404_MARKER" in
+  *$'\n'*)
+    echo "::error::SMOKE_404_MARKER must be a single line"
+    exit 2
+    ;;
+esac
 
 # Strip a trailing slash: CloudFront treats `//path` as a different URI than the
 # one the routing handler is written against.
@@ -80,6 +115,11 @@ fetch() {
   printf '%s' "${code:-000}"
 }
 
+# `-e`: a marker that starts with `-` is a pattern, not an option.
+has_marker() {
+  grep -qiF -e "$SMOKE_404_MARKER" "$body"
+}
+
 echo "Probing the negative path: ${url}"
 
 status=''
@@ -103,6 +143,11 @@ for attempt in $(seq 1 "$SMOKE_ATTEMPTS"); do
     printf '%s\n' "$content_types" | grep -qvE '^text/html[[:space:]]*(;.*)?$'; then
     gaps="${gaps}content-type: expected text/html, got '${content_type:-<missing>}'; "
   fi
+  # Inside the retry loop, so a distribution still propagating the new function
+  # gets the same budget as the shape. An empty body is already a gap above.
+  if [ "$REQUIRE_BRANDED" -eq 1 ] && [ -s "$body" ] && ! has_marker; then
+    gaps="${gaps}body: expected the branded 404 (no case-insensitive match for '${SMOKE_404_MARKER}'); "
+  fi
 
   if [ -z "$gaps" ]; then
     echo "✓ ${url} returned a well-formed 404 (status, body, content-type)"
@@ -118,6 +163,12 @@ done
 if [ -n "$gaps" ]; then
   echo "::error::${url} — ${gaps}"
   exit 1
+fi
+
+if has_marker; then
+  echo "✓ ${url} is the branded 404 (matched '${SMOKE_404_MARKER}')"
+else
+  echo "::warning::${url} is not the branded 404 (no case-insensitive match for '${SMOKE_404_MARKER}'); the edge document in scripts/cloudfront_routing.js did not answer — see docs/deployment-runbook.md"
 fi
 
 # --- Advisory: the CloudFront response-headers policy on the 404 response ------

@@ -812,10 +812,12 @@ rollback-info: ## Print the last successful production deployment (commit, ref, 
 # #363), needs no node_modules, and the dev image it would exec into is not
 # where a production site lives. Wrapped here so deploy.yml's post-deploy
 # smoke step routes through the Makefile like every other command surface
-# (issue #331) instead of invoking the script by path. SITE_URL is required;
-# the script's own usage check is what fails a missing one (exit 2).
-smoke-prod: ## Probe SITE_URL's negative path (404 shape) after a production deploy (host-only; issue #331)
-	./scripts/ci/smoke-response-shape.sh "$(SITE_URL)"
+# (issue #331) instead of invoking the script by path. --require-branded makes
+# the edge document's marker blocking here (issue #329); the sandbox and the
+# scheduled uptime check only warn on it. SITE_URL is required; the script's own
+# usage check is what fails a missing one (exit 2).
+smoke-prod: ## Probe SITE_URL's negative path (404 shape and branded body) after a production deploy (host-only; issues #329, #331)
+	./scripts/ci/smoke-response-shape.sh "$(SITE_URL)" --require-branded
 
 # DELIBERATE DIVERGENCE FROM THE npm-tool LINT GATES (lint-next/tsc/md/deps),
 # for the same reasons as lint-contracts and lint-metrics above:

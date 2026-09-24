@@ -32,10 +32,18 @@ fails if it does not serve valid content:
 - `GET /smoke-nonexistent-…` — the **negative** path, run through
   `make smoke-prod SITE_URL=…` (a thin host-only wrapper around
   `scripts/ci/smoke-response-shape.sh`, issue #331) so the deploy workflow's
-  command surface stays Makefile-only, issue #363. Blocks on three assertions,
-  each of which is a production incident this site has already had: the status is
-  exactly `404` and not `500` (#226, and again #229), the body is non-empty (#249),
-  and `content-type` is `text/html` (#235 — without it Safari _downloads_ the 404).
+  command surface stays Makefile-only, issue #363. Blocks on four assertions.
+  Three are production incidents this site has already had: the status is exactly
+  `404` and not `500` (#226, and again #229), the body is non-empty (#249), and
+  `content-type` is `text/html` (#235 — without it Safari _downloads_ the 404). The
+  fourth is the branded body (#329): the response must contain
+  `Page not found - VilnaCRM`, the `<title>` of the edge document in
+  `scripts/cloudfront_routing.js`, matched as a case-insensitive fixed string and
+  overridable with `SMOKE_404_MARKER`. Only `make smoke-prod` passes the
+  `--require-branded` flag that makes it block; the sandbox and the scheduled
+  uptime check get a warning instead, because the sandbox is a bare S3 website
+  bucket with no edge function in front of it and an uptime incident is for
+  outages, not for a routing function still waiting for the infrastructure apply.
   The security-header check on that same response, and the sandbox `noindex` check,
   emit `::warning::` rather than failing; the script states the condition for
   promoting them to blocking. Runs last, so a failure here cannot stop the header
@@ -67,9 +75,15 @@ The failure line names every gap in one response, so read all of it:
   synthetic response lost its `body` or its header. Both are covered at PR time by
   the `edge` Jest layer, so a failure here means the deployed function is not the
   committed one.
+- `expected the branded 404` — the response is a well-formed 404 but not the edge
+  document. Either the routing function CloudFront runs predates #339, which
+  branded it (publish the current one; see the next section), or something other
+  than the function answered, such as an S3 error document. The bats suite checks
+  at PR time that the handler's own 404 carries the default marker, so a reworded
+  document cannot drift away from the probe.
 
 Reproduce any of these locally against the same script:
-`SMOKE_ATTEMPTS=1 ./scripts/ci/smoke-response-shape.sh https://vilnacrm.com`.
+`SMOKE_ATTEMPTS=1 ./scripts/ci/smoke-response-shape.sh https://vilnacrm.com --require-branded`.
 
 ### How the edge functions reach CloudFront
 
@@ -124,7 +138,8 @@ origin with a `{pr}` placeholder — for example
 `https://pr-{pr}.sandbox.example.com` — and `sandbox-creating.yml`'s
 `post-create-smoke` job will run the same negative-path probe against each PR's
 sandbox, plus an advisory `X-Robots-Tag: noindex` check, since a sandbox origin
-must not be indexable.
+must not be indexable. The branded-body check only warns there, because the
+sandbox bucket has no edge function to serve the branded document.
 
 `{pr}` is the only placeholder the job substitutes. The sandbox hostname is
 derived from the branch name by the infra repository's CodePipeline, which this
