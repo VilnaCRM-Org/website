@@ -197,8 +197,9 @@ so belongs in its own reviewed change, after the open dependency pull requests l
 
    Bun honours only top-level overrides, so a package the tree resolves at more than one
    major — `minimatch` 3/9/10, `brace-expansion` 1/2/5, `js-yaml` 3/4 — cannot be pinned
-   this way without forcing a major on one of its consumers, and is left for its parents
-   to move. Retire an entry once no parent's range can resolve below it.
+   this way without forcing a major on one of its consumers; item 5 moves those inside
+   their parents' ranges instead. Retire an entry once no parent's range can resolve below
+   it.
 
    The overrides reach only what `bun.lock` resolves. `Mockoon.Dockerfile` installs
    `@mockoon/cli` globally with `npm`, outside the lockfile, so the e2e mock image still
@@ -206,3 +207,46 @@ so belongs in its own reviewed change, after the open dependency pull requests l
    contract harness runs 18.2.5; its `fast-uri` floats to the newest 3.x under `ajv`'s
    `^3.0.1` at image-build time instead of following the pin. Advisories inside that image
    are invisible to the lockfile-based CVE gate and clear only when Mockoon moves `joi`.
+
+5. **Done: multi-major transitives re-resolved inside their parents' ranges (#455).**
+   `brace-expansion`, `body-parser`, `js-yaml` and `immutable` each resolve at more than
+   one major, so they were moved by rewriting their `bun.lock` entries rather than by an
+   override. Each new version is the newest release inside the range the parent's
+   published manifest declares — what a fresh resolution would pick — and every copy is
+   dev or build tooling:
+   - `brace-expansion` 1.1.15 → **1.1.21** (hoisted, `minimatch@3` `^1.1.7`), 2.1.1 →
+     **2.1.7** (Jest's `glob` → `minimatch@9` `^2.0.2`) and 5.0.6 → **5.0.12**
+     (`minimatch@10.2` under API Extractor, Stryker, typescript-estree and
+     `@swagger-api/apidom-reference`, `^5.0.2` / `^5.0.5`): GHSA-3jxr-9vmj-r5cp,
+     GHSA-mh99-v99m-4gvg, GHSA-rgw5-rvv9-x895. apidom-reference sits in the `/swagger`
+     tree, but it loads `minimatch` only from its Node file resolver, which its `browser`
+     field swaps out, so none of these copies ships.
+   - `body-parser` 1.20.5 → **1.20.8** (`express` `~1.20.5`) and 2.2.2 → **2.3.0**
+     (`@apollo/server` `^2.2.2`, used only by the local GraphQL mock):
+     GHSA-v422-hmwv-36x6. 2.3.0 asks for `content-type ^2.0.0`, so the `content-type@2.0.0`
+     that `type-is` already nested is now nested one level up and shared.
+   - `js-yaml` 3.14.2 → **3.15.2** (`@istanbuljs/load-nyc-config` and `@lhci/utils`, both
+     `^3.13.1`): GHSA-2883-xcg3-v3hh, GHSA-52cp-r559-cp3m, GHSA-5p4m-2wfm-xmqj,
+     GHSA-h67p-54hq-rp68 for the 3.x line.
+   - `immutable` 5.1.6 → **5.1.9** (`sass` `^5.1.5`): GHSA-v56q-mh7h-f735,
+     GHSA-xvcm-6775-5m9r for the 5.x line.
+
+   The entries were rewritten by hand because neither bun command does it. The lockfile
+   was migrated from pnpm (#396) and records each parent's dependency as the exact version
+   it resolved (`minimatch@3.1.5` lists `"brace-expansion": "1.1.15"`), so deleting a
+   child entry resolves the same version again; deleting a parent entry makes bun 1.3.5
+   drop the whole lockfile and re-resolve every package (the attempt moved
+   `@apollo/client` 4.2.0 → 4.3.1); and `bun update <pkg>` promotes the transitive to a
+   direct dependency. Instead, each child entry was rewritten from its registry manifest
+   (version, dependency ranges, integrity), and the one edge in each parent entry was
+   replaced by the range that parent publishes. Bun then re-serialised the file,
+   `bun install --frozen-lockfile` accepts it, and a clean `node_modules` install checked
+   every integrity hash. Repeat that recipe for the next in-range move; a hand-edited
+   entry that bun would not have written shows up as a diff the next time it
+   re-serialises.
+
+   Two lines stay, each owned by a follow-up: `brace-expansion@5.0.6` under
+   `markdownlint-cli`'s `minimatch@10.1.3`, left for the `markdownlint-cli` 0.49 bump, and
+   the `js-yaml@4.1.1` and `immutable@3.8.3` copies `swagger-ui-react` ships (item 1). The
+   0.49 bump's own lockfile resolves `brace-expansion@5.0.6` again under its
+   `minimatch@10.2.5` copies, so it needs the same treatment when it lands.
