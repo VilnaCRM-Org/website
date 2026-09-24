@@ -131,6 +131,12 @@ describe('handled-error report sent through the real SDK', () => {
     window.history.replaceState(null, '', realPath);
   });
 
+  it('relies on an HttpContext integration the SDK still registers by default', () => {
+    const names = Sentry.getDefaultIntegrations({}).map(({ name }) => name);
+
+    expect(names).toContain(Sentry.httpContextIntegration().name);
+  });
+
   it('carries the page pathname as the route tag and no query-string value', async () => {
     window.history.replaceState(null, '', `/en?email=${encodeURIComponent(EMAIL)}#Contacts`);
 

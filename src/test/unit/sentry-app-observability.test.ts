@@ -16,6 +16,7 @@ const RELEASE_OPTION = 'release';
 const ENVIRONMENT_OPTION = 'environment';
 const BEFORE_SEND_OPTION = 'beforeSend';
 const BEFORE_BREADCRUMB_OPTION = 'beforeBreadcrumb';
+const DEFAULT_INTEGRATIONS_OPTION = 'defaultIntegrations';
 const PINNED_OPTIONS = [
   DSN_OPTION,
   ENABLED_OPTION,
@@ -124,6 +125,20 @@ function assertNoOverridableOptions(
       }
       seenOptionNames.add(name);
     }
+  }
+}
+
+// The route tag reads `event.request.url`, which only the SDK's default
+// HttpContext integration fills in; overriding the defaults drops it silently.
+function assertDefaultIntegrationsKept(initOptions: ts.ObjectLiteralExpression): void {
+  const override = initOptions.properties.find(
+    prop => staticPropertyNameOf(prop) === DEFAULT_INTEGRATIONS_OPTION
+  );
+  if (override !== undefined) {
+    throw new Error(
+      `Sentry.init(…) sets "${DEFAULT_INTEGRATIONS_OPTION}", which drops the HttpContext ` +
+        'integration the route tag reads'
+    );
   }
 }
 
@@ -316,6 +331,7 @@ function readAppObservabilityContract(source: string): AppObservabilityContract 
   }
   const initOptions = optionsArgumentOf(init);
   assertNoOverridableOptions(initOptions, PINNED_OPTIONS);
+  assertDefaultIntegrationsKept(initOptions);
   const dsn = initializerOf(initOptions, DSN_OPTION).getText();
   const enabledGuard = booleanGuardOf(initOptions);
   const tracesSampleRate = resolverCallOf(sourceFile, initOptions, TRACES_SAMPLE_RATE_OPTION);
@@ -734,6 +750,16 @@ describe('Sentry release/environment/error-boundary contract helpers', () => {
         new RegExp(`declares "${option}" more than once`)
       );
     });
+
+    it.each(['defaultIntegrations: false', 'defaultIntegrations: []', "'defaultIntegrations': []"])(
+      'throws on %s, which drops the HttpContext integration the route tag reads',
+      (override: string) => {
+        const source = buildTree(buildInit(`${validOptions}, ${override}`), wrappedComponent);
+        expect(() => readAppObservabilityContract(source)).toThrow(
+          /sets "defaultIntegrations", which drops the HttpContext integration/
+        );
+      }
+    );
 
     it('throws when Sentry.init is never called', () => {
       expect(() => readAppObservabilityContract(SENTRY_IMPORT)).toThrow(/exactly one Sentry\.init/);

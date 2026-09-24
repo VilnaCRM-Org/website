@@ -89,7 +89,12 @@ ADR 0009). Anything not listed here is not wired.
   never its query string or fragment, with email-shaped segments redacted and capped
   at Sentry's 200-character tag-value limit. An event with no absolute page URL gets
   no `route` tag. Deriving it in `beforeSend` rather than in `reportHandledError`
-  tags render crashes as well, and keeps the capture call's own tags static.
+  tags render crashes as well, and keeps the capture call's own tags static. The
+  `request.url` it reads is filled in by the SDK's default HttpContext integration,
+  so `Sentry.init` must never set `defaultIntegrations` (and `integrations` stays an
+  array literal, which adds to the defaults instead of replacing them):
+  `sentry-app-observability.test.ts` rejects the option, and `route-tag.test.ts`
+  fails if an SDK upgrade stops registering HttpContext by default.
 - **Apollo errors** — `src/features/landing/api/graphql/apollo.ts` puts a
   reporting-only `ErrorLink` first in the link chain; it calls
   `reportHandledError(error, { feature: 'landing', action: 'graphql' })`, never
