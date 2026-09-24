@@ -6,16 +6,22 @@
 # to main, and it skips while the PRODUCTION_SITE_URL variable is unset. This is
 # the half of the scheduled check (.github/workflows/uptime-check.yml) that
 # proves the site is UP: the two documents a visitor actually lands on must both
-# answer.
+# answer. `make smoke-prod` runs the same script after a deploy (issue #329),
+# with a longer retry budget, so the two checks cannot disagree about "up".
 #
-# Each path is graded on three things, and every gap is reported in one line so
+# Each path is graded on four things, and every gap is reported in one line so
 # the incident issue names the whole shape rather than the first miss:
 #   * status 200 — a CloudFront 5xx, an S3 error document, or a redirect loop
 #     each surface here;
 #   * content-type text/html — an S3 XML error document is served as
 #     application/xml with a 200-looking body, so the status alone can lie;
 #   * a non-empty body — CloudFront can answer 200 with nothing behind it when
-#     the object is missing from the bucket the distribution points at.
+#     the object is missing from the bucket the distribution points at;
+#   * a body marker, a case-insensitive ERE — `__next` or `<title` for the
+#     homepage, `swagger` for /swagger (the page's own chunk path and
+#     __NEXT_DATA__ name it, the homepage does not), so a /swagger rewritten to
+#     the homepage document is caught. These are the markers the inline
+#     deploy.yml probe used before #329 moved it here.
 #
 # The negative path — an unknown URI must produce the site's own 404 — is a
 # different contract with its own incident history, and it is graded by
@@ -39,7 +45,8 @@ base="${BASE_URL%/}"
 # A synthetic check is not waiting for a deploy to propagate, so the retry budget
 # is short: enough to ride out a single dropped connection, not enough to hide a
 # real outage until the next scheduled run. Overridable so the bats suite can
-# collapse the delay and pin the retry path.
+# collapse the delay and pin the retry path, and so `make smoke-prod` can give a
+# deploy that is still propagating the time it needs.
 UPTIME_ATTEMPTS="${UPTIME_ATTEMPTS:-4}"
 UPTIME_DELAY="${UPTIME_DELAY:-15}"
 
@@ -84,11 +91,17 @@ fetch() {
   printf '%s' "${code:-000}"
 }
 
-# Grade the response currently in $status / $body / $head into $gaps.
+# Grade the response currently in $status / $body / $head into $gaps, with the
+# path's body marker in $1.
 grade() {
+  local marker="$1"
   gaps=''
   [ "$status" = '200' ] || gaps="${gaps}status: expected 200, got ${status}; "
-  [ -s "$body" ] || gaps="${gaps}body: expected a non-empty page; "
+  if [ ! -s "$body" ]; then
+    gaps="${gaps}body: expected a non-empty page; "
+  elif ! grep -qiE -e "$marker" "$body"; then
+    gaps="${gaps}body: expected a match for /${marker}/i; "
+  fi
   # Case-INSENSITIVE, because RFC 9110 media types and subtypes are; whole-value,
   # because `text/htmlish` is a different media type; and EVERY value, because
   # one correct copy must not excuse a wrong one beside it.
@@ -102,7 +115,7 @@ grade() {
 }
 
 probe() {
-  local path="$1" label="$2" url attempt
+  local path="$1" label="$2" marker="$3" url attempt
   url="${base}${path}"
   echo "Probing ${label}: ${url}"
   for attempt in $(seq 1 "$UPTIME_ATTEMPTS"); do
@@ -110,7 +123,7 @@ probe() {
     : > "$head"
     status="$(fetch "$url")"
     tr -d '\r' < "$head" > "$head.clean" && mv "$head.clean" "$head"
-    grade
+    grade "$marker"
     if [ -z "$gaps" ]; then
       echo "✓ ${label} (${url}) returned 200 text/html with a body"
       return 0
@@ -128,6 +141,6 @@ probe() {
 # issue that says "the homepage is down" reads very differently from one that
 # says "everything is down", and the second probe is what tells them apart.
 rc=0
-probe '/' 'homepage' || rc=1
-probe '/swagger' 'swagger page' || rc=1
+probe '/' 'homepage' '__next|<title' || rc=1
+probe '/swagger' 'swagger page' 'swagger' || rc=1
 exit "$rc"

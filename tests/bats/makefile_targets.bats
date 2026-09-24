@@ -1303,16 +1303,17 @@ JSON
   [ -z "$(cat "$COMMAND_LOG")" ]
 }
 
-@test "smoke-prod threads SITE_URL unchanged into scripts/ci/smoke-response-shape.sh" {
-  # A dry run, not run_make_target: the real script retries against a live
-  # origin for minutes on a miss, and that behaviour already has its own
-  # suite (tests/bats/smoke_response_shape.bats). This pins only the
-  # argument-threading contract issue #331 asks for -- the exact command the
-  # target shells out to, including the flag that makes the branded 404 blocking
-  # (issue #329) -- so a future rename of the variable, the flag or the script
-  # path is caught without ever invoking curl.
+@test "smoke-prod threads SITE_URL into the uptime probe and the branded 404 probe" {
+  # A dry run, not run_make_target: the real scripts retry against a live origin
+  # for minutes on a miss, and the target's behaviour against a real origin --
+  # red when any one of the three documents misbehaves -- is covered in
+  # tests/bats/smoke_response_shape.bats. This pins the command surface issues
+  # #331 and #329 ask for: both scripts get SITE_URL unchanged, the positive
+  # probe gets the deploy-sized budget, and the 404 probe blocks on the brand.
   run make -C "$MAKEFILE_SANDBOX" -n smoke-prod SITE_URL='https://example.test' \
     BIN_DIR="$STUB_BIN_DIR"
   [ "$status" -eq 0 ]
+  assert_output_contains './scripts/ci/uptime-check.sh "https://example.test"'
+  assert_output_contains 'UPTIME_ATTEMPTS="${SMOKE_PROD_ATTEMPTS:-24}" UPTIME_DELAY="${SMOKE_PROD_DELAY:-15}"'
   assert_output_contains './scripts/ci/smoke-response-shape.sh "https://example.test" --require-branded'
 }

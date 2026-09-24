@@ -807,17 +807,26 @@ release-audit-dry-run: ## Dry-run the release audit against the live repo (host-
 rollback-info: ## Print the last successful production deployment (commit, ref, time, run URL) from the GitHub Deployments API (host-only, needs gh)
 	@bash scripts/ci/rollback-info.sh
 
-# Host-only, exactly like lint-docker-policy and rollback-info above: the
-# script is a self-contained bash+curl+jq probe against a live origin (issue
-# #363), needs no node_modules, and the dev image it would exec into is not
-# where a production site lives. Wrapped here so deploy.yml's post-deploy
+# Host-only, exactly like lint-docker-policy and rollback-info above: both
+# scripts are self-contained bash+curl+jq probes against a live origin (issues
+# #336, #363), need no node_modules, and the dev image they would exec into is
+# not where a production site lives. Wrapped here so deploy.yml's post-deploy
 # smoke step routes through the Makefile like every other command surface
-# (issue #331) instead of invoking the script by path. --require-branded makes
-# the edge document's marker blocking here (issue #329); the sandbox and the
-# scheduled uptime check only warn on it. SITE_URL is required; the script's own
-# usage check is what fails a missing one (exit 2).
-smoke-prod: ## Probe SITE_URL's negative path (404 shape and branded body) after a production deploy (host-only; issues #329, #331)
-	./scripts/ci/smoke-response-shape.sh "$(SITE_URL)" --require-branded
+# (issue #331) instead of invoking the scripts by path.
+#
+# Issue #329: the target fails when the homepage, /swagger OR the 404 misbehaves.
+# The positive half reuses the scheduled uptime check's script with a
+# deploy-sized retry budget (24 x 15s, overridable as SMOKE_PROD_ATTEMPTS and
+# SMOKE_PROD_DELAY); the negative half blocks on the branded edge 404 as well as
+# its shape. Both always run and either one failing fails the target, so a down
+# homepage still reports the 404 verdict beside it. SITE_URL is required; each
+# script's own usage check is what fails a missing one (exit 2).
+smoke-prod: ## Probe SITE_URL's homepage, /swagger and branded 404 after a production deploy (host-only; issues #329, #331)
+	rc=0; \
+	UPTIME_ATTEMPTS="$${SMOKE_PROD_ATTEMPTS:-24}" UPTIME_DELAY="$${SMOKE_PROD_DELAY:-15}" \
+		./scripts/ci/uptime-check.sh "$(SITE_URL)" || rc=$$?; \
+	./scripts/ci/smoke-response-shape.sh "$(SITE_URL)" --require-branded || rc=$$?; \
+	exit $$rc
 
 # DELIBERATE DIVERGENCE FROM THE npm-tool LINT GATES (lint-next/tsc/md/deps),
 # for the same reasons as lint-contracts and lint-metrics above:

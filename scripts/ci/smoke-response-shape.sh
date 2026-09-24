@@ -63,7 +63,7 @@ esac
 base="${BASE_URL%/}"
 
 # Retries, not a single shot: the function association propagates on its own
-# schedule after deploy (same shape as deploy.yml's readiness probes).
+# schedule after deploy (same shape as the positive-path probes in make smoke-prod).
 SMOKE_ATTEMPTS="${SMOKE_ATTEMPTS:-12}"
 SMOKE_DELAY="${SMOKE_DELAY:-15}"
 

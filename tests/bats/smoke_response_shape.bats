@@ -514,3 +514,52 @@ CACHE_GOOD_ASSET='{"status":200,"headers":{"content-type":"application/javascrip
   assert_output_contains 'returned 500 instead of 200'
   assert_output_contains 'skipped the cache-control advisory'
 }
+
+# --- make smoke-prod (#329) ------------------------------------------------------
+#
+# The target is the whole post-deploy smoke: the homepage and /swagger through
+# scripts/ci/uptime-check.sh, then this script under --require-branded. Each case
+# breaks exactly one of the three and asserts the target goes red on it.
+
+HOME_OK='{"status":200,"headers":{"content-type":"text/html"},"body":"<div id=\"__next\"></div>"}'
+SWAGGER_OK='{"status":200,"headers":{"content-type":"text/html"},"body":"{\"page\":\"/swagger\"}"}'
+
+run_smoke_prod() {
+  run env -C "$PROJECT_ROOT" \
+    SMOKE_PROD_ATTEMPTS=1 SMOKE_PROD_DELAY=0 \
+    SMOKE_ATTEMPTS=1 SMOKE_DELAY=0 \
+    SMOKE_NONEXISTENT_PATH=/smoke-nonexistent-fixture \
+    make --no-print-directory smoke-prod SITE_URL="$BASE_URL"
+}
+
+@test "make smoke-prod passes when the homepage, /swagger and the branded 404 are healthy" {
+  start_origin <<< "{\"default\":${GOOD_404},\"paths\":{\"/\":${HOME_OK},\"/swagger\":${SWAGGER_OK}}}"
+  run_smoke_prod
+  [ "$status" -eq 0 ]
+  [ "$(printf '%s\n' "$output" | grep -c 'returned 200 text/html with a body')" -eq 2 ]
+  assert_output_contains 'is the branded 404'
+}
+
+@test "make smoke-prod fails when the homepage is down, and still grades the 404" {
+  start_origin <<< "{\"default\":${GOOD_404},\"paths\":{\"/\":{\"status\":500,\"headers\":{\"content-type\":\"text/html\"},\"body\":\"boom\"},\"/swagger\":${SWAGGER_OK}}}"
+  run_smoke_prod
+  [ "$status" -ne 0 ]
+  assert_output_contains '::error::homepage'
+  assert_output_contains 'returned a well-formed 404'
+}
+
+@test "make smoke-prod fails when /swagger serves the homepage document" {
+  start_origin <<< "{\"default\":${GOOD_404},\"paths\":{\"/\":${HOME_OK},\"/swagger\":${HOME_OK}}}"
+  run_smoke_prod
+  [ "$status" -ne 0 ]
+  assert_output_contains '::error::swagger page'
+  assert_output_contains 'expected a match for /swagger/i'
+}
+
+@test "make smoke-prod fails on a well-formed but unbranded 404" {
+  start_origin <<< "{\"default\":${UNBRANDED_404},\"paths\":{\"/\":${HOME_OK},\"/swagger\":${SWAGGER_OK}}}"
+  run_smoke_prod
+  [ "$status" -ne 0 ]
+  assert_output_contains 'expected the branded 404'
+  refute_output_contains '::error::homepage'
+}

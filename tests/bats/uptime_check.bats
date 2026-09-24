@@ -2,8 +2,9 @@
 #
 # Coverage for scripts/ci/uptime-check.sh (issue #336).
 #
-# The script is the positive half of the scheduled synthetic check: `/` and
-# `/swagger` must each answer 200, as text/html, with a body. Every case below
+# The script is the positive half of the scheduled synthetic check, and of
+# `make smoke-prod` (issue #329): `/` and `/swagger` must each answer 200, as
+# text/html, with a body that carries the page's own marker. Every case below
 # seeds one way that contract can break into a real origin and asserts the script
 # goes red on it — and, just as important, that it stays green on the shapes a
 # healthy CDN legitimately produces (an uppercase media type, a charset
@@ -132,7 +133,7 @@ HEALTHY="{\"/\":${HOME_OK},\"/swagger\":${SWAGGER_OK}}"
 }
 
 @test "fails when the page carries no content-type at all" {
-  start_origin <<< "{\"/\":{\"status\":200,\"headers\":{\"content-type\":null},\"body\":\"<html/>\"},\"/swagger\":${SWAGGER_OK}}"
+  start_origin <<< "{\"/\":{\"status\":200,\"headers\":{\"content-type\":null},\"body\":\"<div id=__next></div>\"},\"/swagger\":${SWAGGER_OK}}"
   run_uptime
   [ "$status" -eq 1 ]
   assert_output_contains "content-type: expected text/html, got '<missing>'"
@@ -179,12 +180,45 @@ HEALTHY="{\"/\":${HOME_OK},\"/swagger\":${SWAGGER_OK}}"
   assert_output_contains 'expected 200, got 502'
 }
 
+@test "fails when /swagger serves the homepage document" {
+  # A rewrite that points /swagger at index.html answers 200 text/html with a
+  # body, so only the page's own marker tells the two documents apart.
+  start_origin <<< "{\"/\":${HOME_OK},\"/swagger\":${HOME_OK}}"
+  run_uptime
+  [ "$status" -eq 1 ]
+  assert_output_contains '::error::swagger page'
+  assert_output_contains 'body: expected a match for /swagger/i'
+  refute_output_contains '::error::homepage'
+}
+
+@test "fails when the homepage body is not a Next.js document" {
+  start_origin <<< "{\"/\":{\"status\":200,\"headers\":{\"content-type\":\"text/html\"},\"body\":\"<p>parked domain</p>\"},\"/swagger\":${SWAGGER_OK}}"
+  run_uptime
+  [ "$status" -eq 1 ]
+  assert_output_contains 'body: expected a match for /__next|<title/i'
+}
+
+@test "reports an empty body once, not as a missing marker as well" {
+  start_origin <<< "{\"/\":${HOME_OK},\"/swagger\":{\"status\":200,\"headers\":{\"content-type\":\"text/html\"},\"body\":\"\"}}"
+  run_uptime
+  [ "$status" -eq 1 ]
+  assert_output_contains 'expected a non-empty page'
+  refute_output_contains 'expected a match for'
+}
+
 # --- Shapes a healthy CDN legitimately produces -----------------------------------
+
+@test "matches the body markers case-insensitively" {
+  start_origin <<< '{"/":{"status":200,"headers":{"content-type":"text/html"},"body":"<TITLE>VilnaCRM</TITLE>"},"/swagger":{"status":200,"headers":{"content-type":"text/html"},"body":"<h1>Swagger UI</h1>"}}'
+  run_uptime
+  [ "$status" -eq 0 ]
+  refute_output_contains '::error::'
+}
 
 @test "accepts a spec-legal uppercase media type" {
   # RFC 9110 media types and subtypes are case-insensitive. Reading `TEXT/HTML` as
   # wrong would file an incident against a site that is up.
-  start_origin <<< "{\"/\":{\"status\":200,\"headers\":{\"content-type\":\"TEXT/HTML; charset=UTF-8\"},\"body\":\"<html/>\"},\"/swagger\":${SWAGGER_OK}}"
+  start_origin <<< "{\"/\":{\"status\":200,\"headers\":{\"content-type\":\"TEXT/HTML; charset=UTF-8\"},\"body\":\"<div id=__next></div>\"},\"/swagger\":${SWAGGER_OK}}"
   run_uptime
   [ "$status" -eq 0 ]
   refute_output_contains '::error::'
@@ -193,7 +227,7 @@ HEALTHY="{\"/\":${HOME_OK},\"/swagger\":${SWAGGER_OK}}"
 @test "accepts a content-type repeated with the same correct value" {
   # An origin value plus one the CloudFront response-headers policy adds. Grading
   # only the first copy would be wrong in both directions, so every value is read.
-  start_origin <<< "{\"/\":{\"status\":200,\"headers\":{\"content-type\":[\"text/html; charset=utf-8\",\"text/html\"]},\"body\":\"<html/>\"},\"/swagger\":${SWAGGER_OK}}"
+  start_origin <<< "{\"/\":{\"status\":200,\"headers\":{\"content-type\":[\"text/html; charset=utf-8\",\"text/html\"]},\"body\":\"<div id=__next></div>\"},\"/swagger\":${SWAGGER_OK}}"
   run_uptime
   [ "$status" -eq 0 ]
   refute_output_contains '::error::'
@@ -202,14 +236,14 @@ HEALTHY="{\"/\":${HOME_OK},\"/swagger\":${SWAGGER_OK}}"
 @test "fails when a correct content-type is accompanied by a wrong one" {
   # One good value must not excuse a bad one beside it — that ambiguity is what
   # made Safari download the 404 in #235, and a page is no different.
-  start_origin <<< "{\"/\":{\"status\":200,\"headers\":{\"content-type\":[\"text/html\",\"application/octet-stream\"]},\"body\":\"<html/>\"},\"/swagger\":${SWAGGER_OK}}"
+  start_origin <<< "{\"/\":{\"status\":200,\"headers\":{\"content-type\":[\"text/html\",\"application/octet-stream\"]},\"body\":\"<div id=__next></div>\"},\"/swagger\":${SWAGGER_OK}}"
   run_uptime
   [ "$status" -eq 1 ]
   assert_output_contains 'content-type: expected text/html'
 }
 
 @test "fails a media type that merely starts with the HTML one" {
-  start_origin <<< "{\"/\":{\"status\":200,\"headers\":{\"content-type\":\"text/htmlish\"},\"body\":\"<html/>\"},\"/swagger\":${SWAGGER_OK}}"
+  start_origin <<< "{\"/\":{\"status\":200,\"headers\":{\"content-type\":\"text/htmlish\"},\"body\":\"<div id=__next></div>\"},\"/swagger\":${SWAGGER_OK}}"
   run_uptime
   [ "$status" -eq 1 ]
   assert_output_contains "got 'text/htmlish'"

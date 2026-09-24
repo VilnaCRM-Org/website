@@ -59,7 +59,10 @@ jobs:
     # rather than failing the deploy workflow.
     if: ${{ vars.PRODUCTION_SITE_URL != '' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    # Fast-failing budget: the header step's 2 x 12 attempts (~6 min), then
+    # smoke-prod's 2 x 24 positive attempts (~12 min, sequential since #329) and
+    # 12 negative ones (~3 min), fifteen seconds apart.
+    timeout-minutes: 30
     permissions:
       contents: read
     steps:
@@ -67,48 +70,6 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-
-      - name: Smoke-test homepage and /swagger
-        env:
-          # CodePipeline deploys asynchronously, so the probe retries until the
-          # CDN serves the new build (or the job times out).
-          SITE_URL: ${{ vars.PRODUCTION_SITE_URL }}
-        run: |
-          set -euo pipefail
-
-          base="${SITE_URL%/}"
-
-          probe() {
-            path="$1"
-            label="$2"
-            marker="$3"
-            url="${base}${path}"
-            attempts=24
-            delay=15
-            for i in $(seq 1 "$attempts"); do
-              if body="$(curl -fsS --max-time 15 "$url")" \
-                && printf '%s' "$body" | grep -Eiq "$marker"; then
-                echo "✓ ${label} (${url}) returned 200 and matched /${marker}/i"
-                return 0
-              fi
-              echo "… ${label} not ready (attempt ${i}/${attempts}); retrying in ${delay}s"
-              sleep "$delay"
-            done
-            echo "::error::${label} (${url}) failed smoke test"
-            return 1
-          }
-
-          # Probe both endpoints in parallel so each is fully tested within the
-          # job timeout regardless of the other's outcome (they deploy together).
-          probe "/" "homepage" "__next|<title" &
-          home_pid=$!
-          probe "/swagger" "swagger page" "swagger" &
-          swagger_pid=$!
-
-          rc=0
-          wait "$home_pid" || rc=1
-          wait "$swagger_pid" || rc=1
-          exit "$rc"
 
       # Issue #377: the static export cannot honour Next `headers()`, so the CloudFront
       # edge functions are the only enforcement point. `make lint-headers` proves the
@@ -128,8 +89,8 @@ jobs:
           policy="$(jq -r '.headers | to_entries[] | "\(.key)\t\(.value)"' config/security-headers.json)"
 
           # CodePipeline (and any CloudFront function association) propagates
-          # asynchronously, so — like the readiness probes above — each path is retried
-          # until the FULL policy is present rather than failing on a single early miss.
+          # asynchronously, so each path is retried until the FULL policy is present
+          # rather than failing on a single early miss.
           check_path() {
             path="$1"
             label="$2"
@@ -178,20 +139,26 @@ jobs:
           check_path "/favicon.svg" "static asset" || rc=1
           exit "$rc"
 
-      # Issue #363: the probes above only ever exercise the POSITIVE path, and
-      # every CloudFront production incident this repository has had was on the
-      # negative one — 500 instead of 404 (#226, and again #229), a 404 Safari
-      # downloaded for want of a content-type (#235), and a synthetic response with
-      # no body that CloudFront turned into a 5xx (#249). The shape assertions block;
-      # the header advisory inside the script warns, because that policy lives in the
-      # infra repository. `scripts/cloudfront_routing.js` is unit-tested at 100% in the
-      # `edge` Jest layer, so this is the other half of that contract: proof the
-      # deployed distribution actually associates the handler.
+      # Issue #329: `make smoke-prod` is the whole post-deploy smoke — the homepage
+      # and /swagger (scripts/ci/uptime-check.sh, the scheduled uptime check's own
+      # probe, given a deploy-sized retry budget) and the negative path
+      # (scripts/ci/smoke-response-shape.sh, issue #363). It used to probe the 404
+      # alone while the positive half lived inline in this job, so the documented
+      # command could pass on a site whose homepage was down.
       #
-      # LAST on purpose. A step failure stops the job, so a brand-new blocking
-      # assertion placed ahead of the established #377 header check would stop that
-      # check reporting on exactly the deploys where its verdict matters most.
-      - name: Smoke-test the negative path (404 shape)
+      # The negative path is where every CloudFront production incident this
+      # repository has had happened — 500 instead of 404 (#226, and again #229), a
+      # 404 Safari downloaded for want of a content-type (#235), and a synthetic
+      # response with no body that CloudFront turned into a 5xx (#249). The target
+      # blocks on those shapes and on the branded edge document; the header advisory
+      # inside the script warns, because that policy lives in the infra repository.
+      #
+      # After the #377 header step, with `!cancelled()`: a step failure stops the
+      # job, and neither verdict may hide the other. The header check keeps its
+      # established place, and a red header check still gets the homepage, /swagger
+      # and 404 verdicts reported beside it.
+      - name: Smoke-test the homepage, /swagger and the branded 404
+        if: ${{ !cancelled() }}
         env:
           SITE_URL: ${{ vars.PRODUCTION_SITE_URL }}
         run: make smoke-prod SITE_URL="$SITE_URL"

@@ -21,38 +21,48 @@ can be gated by environment protection rules (see below).
 After `deploy` succeeds, the `post-deploy-smoke` job probes the live site and
 fails if it does not serve valid content:
 
-- `GET /` — expects HTTP `200` and HTML containing `__next` (the Next.js root)
-  or a `<title>`.
-- `GET /swagger` — expects HTTP `200` and a body mentioning `swagger`.
 - `HEAD /` and `HEAD /favicon.svg` — expect every header in
   `config/security-headers.json` (see
   [the security-headers guide](security-headers.md)). This is the only check that
   can catch the CloudFront functions being unassociated from the distribution; the
   in-repo `make lint-headers` gate only proves the functions themselves are correct.
-- `GET /smoke-nonexistent-…` — the **negative** path, run through
-  `make smoke-prod SITE_URL=…` (a thin host-only wrapper around
-  `scripts/ci/smoke-response-shape.sh`, issue #331) so the deploy workflow's
-  command surface stays Makefile-only, issue #363. Blocks on four assertions.
-  Three are production incidents this site has already had: the status is exactly
-  `404` and not `500` (#226, and again #229), the body is non-empty (#249), and
-  `content-type` is `text/html` (#235 — without it Safari _downloads_ the 404). The
-  fourth is the branded body (#329): the response must contain
-  `Page not found - VilnaCRM`, the `<title>` of the edge document in
-  `scripts/cloudfront_routing.js`, matched as a case-insensitive fixed string and
-  overridable with `SMOKE_404_MARKER`. Only `make smoke-prod` passes the
-  `--require-branded` flag that makes it block; the sandbox and the scheduled
-  uptime check get a warning instead, because the sandbox is a bare S3 website
-  bucket with no edge function in front of it and an uptime incident is for
-  outages, not for a routing function still waiting for the infrastructure apply.
-  The security-header check on that same response, and the sandbox `noindex` check,
-  emit `::warning::` rather than failing; the script states the condition for
-  promoting them to blocking. Runs last, so a failure here cannot stop the header
-  step above from reporting.
+- `make smoke-prod SITE_URL=…` — the rest of the smoke, and the command to run by
+  hand after any deploy (issues #329 and #331). It fails when any one of three
+  documents misbehaves, and it always grades all three so one red verdict never
+  hides another:
+  - `GET /` and `GET /swagger`, through `scripts/ci/uptime-check.sh`, the same
+    script the scheduled uptime check runs. Each must answer `200`, as
+    `text/html`, with a non-empty body carrying the page's marker: `__next` or
+    `<title` for the homepage, `swagger` for `/swagger` (both case-insensitive).
+  - `GET /smoke-nonexistent-…`, the **negative** path, through
+    `scripts/ci/smoke-response-shape.sh --require-branded` (issue #363). Blocks on
+    four assertions. Three are production incidents this site has already had: the
+    status is exactly `404` and not `500` (#226, and again #229), the body is
+    non-empty (#249), and `content-type` is `text/html` (#235 — without it Safari
+    _downloads_ the 404). The fourth is the branded body (#329): the response must
+    contain `Page not found - VilnaCRM`, the `<title>` of the edge document in
+    `scripts/cloudfront_routing.js`, matched as a case-insensitive fixed string.
+    `SMOKE_404_MARKER` overrides it. The security-header check on that same
+    response, and the sandbox `noindex` check, emit `::warning::` rather than
+    failing; the script states the condition for promoting them to blocking.
+
+  The step runs after the header step and runs even when that step failed, so each
+  one reports its own verdict.
 
 Because CodePipeline deploys asynchronously, each probe retries until the CDN
-serves the new build or the job times out. The readiness probes allow roughly ten
-minutes; the negative-path probe allows twelve attempts fifteen seconds apart,
-overridable with `SMOKE_ATTEMPTS` and `SMOKE_DELAY`.
+serves the new build or the job times out. The homepage and `/swagger` get 24
+attempts each, fifteen seconds apart, and each attempt may wait up to fifteen
+seconds for an answer: a readiness window of roughly ten minutes. Override it with
+`SMOKE_PROD_ATTEMPTS` and `SMOKE_PROD_DELAY`. The negative path gets twelve,
+overridable with `SMOKE_ATTEMPTS` and `SMOKE_DELAY`. The header step retries on
+its own twelve-attempt budget.
+
+The brand assertion blocks only in `make smoke-prod`. The two other callers of
+the script leave out `--require-branded` and get a warning instead. The PR
+sandbox is a bare S3 website bucket with no CloudFront function in front of it,
+so it can never serve the edge document. The scheduled uptime check files an
+incident issue when it fails, and a routing function still waiting for the
+infrastructure apply (see below) is not an outage.
 
 That ten-minute window is also the bound the cache policy has to meet: every
 un-hashed object (the route documents, `sw.js`, `swagger-schema.json`) must reflect
@@ -82,8 +92,12 @@ The failure line names every gap in one response, so read all of it:
   at PR time that the handler's own 404 carries the default marker, so a reworded
   document cannot drift away from the probe.
 
-Reproduce any of these locally against the same script:
-`SMOKE_ATTEMPTS=1 ./scripts/ci/smoke-response-shape.sh https://vilnacrm.com --require-branded`.
+A red `homepage` or `swagger page` line is the positive half, graded exactly as the
+scheduled uptime check grades it; `expected a match for` there means the path
+answered `200` HTML that is not its own page, such as a rewrite that points
+`/swagger` at the homepage document. Reproduce any of these locally with the same
+target:
+`SMOKE_PROD_ATTEMPTS=1 SMOKE_ATTEMPTS=1 make smoke-prod SITE_URL=https://vilnacrm.com`.
 
 ### How the edge functions reach CloudFront
 
