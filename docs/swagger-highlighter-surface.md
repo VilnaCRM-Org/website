@@ -67,7 +67,7 @@ highlight.js 10 emitter API (`openNode` / `closeNode` in `lib/core.js`) and pins
 `highlight.js ~10.7.0`; the lowlight line built for highlight.js 11 is 2.x (`~11.0.0`),
 which the `^1.17.0` range cannot reach. A bare `overrides: { "highlight.js": "11.x" }`
 would therefore break lowlight 1.20.0 at runtime rather than upgrade it — do not add one.
-`swagger-ui-react@5.32.15`, the newest release, still declares
+`swagger-ui-react@5.33.0`, the newest release, still declares
 `react-syntax-highlighter ^16.0.0`, so nothing in range moves the page off highlight.js 10.
 
 ## Why the prismjs override existed
@@ -121,13 +121,18 @@ it constrains, and [SECURITY.md](../SECURITY.md) sets the triage timeline for th
 None of these is a documentation change; each rewrites `bun.lock` or the rendered page and
 so belongs in its own reviewed change, after the open dependency pull requests land.
 
-1. **Bump `swagger-ui-react` in range, 5.32.6 → 5.32.15.** The newest release declares
-   `immutable ^5.1.9`, `dompurify ^3.4.13` and `swagger-client ^3.38.0`. That is where the
-   census entries that ship in the public `/swagger` bundle go away: `immutable@3.8.3`
-   carries GHSA-v56q-mh7h-f735 (fixed in 4.3.9 / 5.1.8) and `dompurify@3.4.7` carries
-   GHSA-55q2-fjhq-7xh7 (fixed in 3.4.13). Not hermetic — the releases between change the
-   rendered markup, so the swagger visual baselines and the accessibility route scan must
-   be re-run against the prod stack.
+1. **Bump `swagger-ui-react` in range, 5.32.6 → `^5.33.0`.** The newest release, 5.33.0,
+   declares `js-yaml =4.3.2`, `swagger-client ^3.38.2` (which declares `js-yaml ^4.3.2`),
+   `immutable ^5.1.9` and `dompurify ^3.4.13`. That is where the census entries that ship
+   in the public `/swagger` bundle go away: `immutable@3.8.3` carries GHSA-v56q-mh7h-f735
+   (fixed in 4.3.9 / 5.1.8), `dompurify@3.4.7` carries GHSA-55q2-fjhq-7xh7 (fixed in
+   3.4.13), and the two nested `js-yaml@4.1.1` copies carry GHSA-2883-xcg3-v3hh,
+   GHSA-52cp-r559-cp3m, GHSA-5p4m-2wfm-xmqj and GHSA-h67p-54hq-rp68 (all clear at 4.3.2).
+   Both consumers then share the hoisted `js-yaml@4.3.2`. Stop short of 5.33.0 and the
+   `js-yaml` half fails: 5.32.15 pins `=4.3.1`, which nests a third copy beside the
+   hoisted one and still carries GHSA-2883-xcg3-v3hh. Not hermetic — the releases between
+   change the rendered markup, so the swagger visual baselines and the accessibility route
+   scan must be re-run against the prod stack.
 2. **Take highlight.js 10 out of the export.** Upstream offers no in-range path (above), so
    the options are a webpack alias that stubs `react-syntax-highlighter/dist/esm/light`
    with `syntaxHighlight` turned off, or a different renderer. Either changes what
@@ -171,7 +176,7 @@ so belongs in its own reviewed change, after the open dependency pull requests l
    - `form-data` 4.0.5 → **4.0.6**, via `axios` (`^4.0.5`; `wait-on`, and the Node build
      of `@swagger-api/apidom-reference`): GHSA-hmw2-7cc7-3qxx.
    - `nanoid` 3.3.12 → **3.3.18**, via both `postcss` copies — the hoisted one under
-     Storybook's webpack loaders (`^3.3.12`) and `next`'s own `postcss@8.4.31`
+     Storybook's webpack loaders (`^3.3.16`, postcss 8.5.23) and `next`'s own `postcss@8.4.31`
      (`^3.3.6`): GHSA-28wg-ghj8-5hjv, GHSA-2v37-7h3g-55p8.
    - `browserslist` 4.28.2 → **4.28.7**, via Babel's `helper-compilation-targets`,
      `core-js-compat` and webpack: GHSA-73wf-gq98-2v4g, GHSA-c83g-rgw3-j3cx. Its own
@@ -267,7 +272,10 @@ so belongs in its own reviewed change, after the open dependency pull requests l
    where the hoisted copy used to serve both; item 1's bump collapses them.
 
    Lines that stay, each owned by a follow-up: `brace-expansion@5.0.6` under
-   `markdownlint-cli`'s `minimatch@10.1.3`, left for the `markdownlint-cli` 0.49 bump, and
-   the `js-yaml@4.1.1` and `immutable@3.8.3` copies `/swagger` ships (item 1). The 0.49
+   `markdownlint-cli`'s `minimatch@10.1.3` and the `js-yaml@4.1.1` nested under
+   `markdownlint-cli@0.47`, both left for the `markdownlint-cli` 0.49 bump — which must
+   land on 0.49.1 (`js-yaml ~5.2.1`), because 0.49.0's `~4.2.0` still carries three of the
+   four advisories — and the `js-yaml@4.1.1` and `immutable@3.8.3` copies `/swagger` ships
+   (item 1). The 0.49
    bump's own lockfile resolves `brace-expansion@5.0.6` again under its `minimatch@10.2.5`
    copies, so it needs the same treatment when it lands.
