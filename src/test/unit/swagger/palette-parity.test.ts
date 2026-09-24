@@ -18,6 +18,7 @@ const COLORS_PARTIAL: string = path.join(
 
 const SCSS_ONLY_TOKENS: readonly string[] = [
   'accept',
+  'patch',
   'errorBorder',
   'errorBackground',
   'backdropBackgroundWithBlur',
