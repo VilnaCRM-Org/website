@@ -248,10 +248,9 @@ export type ListTestsRunner = (file: string) => string;
  *
  * Stryker runs with `enableFindRelatedTests`. When Jest resolves no related spec
  * it runs nothing, exits 0, and every mutant in the file is reported SURVIVED —
- * indistinguishable from a genuinely weak test. `api/graphql/apollo.ts` is the
- * live example: its only coverage is the integration layer, which this runner
- * does not collect, so it would score 0% and redden a pull request that merely
- * touched it.
+ * indistinguishable from a genuinely weak test. The typical case is a file whose
+ * only coverage is the integration layer, which this runner does not collect: it
+ * would score 0% and redden a pull request that merely touched it.
  *
  * A thrown runner is a *broken* runner, never an uncovered file: `--listTests`
  * exits 0 whether or not it resolves a spec, and non-zero only on a real failure

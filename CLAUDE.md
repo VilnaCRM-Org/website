@@ -953,7 +953,8 @@ A mutable file whose behaviour no spec in the mutation runner's test set reaches
 from the list and named in the run log, never scored. Stryker runs with
 `enableFindRelatedTests`; when Jest resolves no related spec it runs nothing, exits 0, and
 every mutant reads as _survived_ — identical to a genuinely weak test.
-`api/graphql/apollo.ts`, whose only coverage is the integration layer, is the live example.
+A file reached only by the integration layer, which the mutation runner does not collect, is
+the typical case.
 Reporting a survivor for a test that exists is how a gate gets its threshold lowered.
 
 The `changed` leg gates below 100% on purpose. A file mutated for the first time carries
