@@ -316,6 +316,13 @@ keep `permissions:` scoped to the job that needs them, never use an archived
 action, and never interpolate `${{ }}` into a `run:` body — pass values through
 `env:` and reference `"$VAR"`.
 
+zizmor enforces this only through its policy defaults at the blocking threshold, and a
+`docker://` step pulled by tag slips under it, so the rule has a second enforcer that
+needs neither Docker nor the network:
+`tests/bats/workflow_action_pins.bats` (issue #375, run by the `bats` check) parses
+every workflow and local action and fails on any `uses:` that is not local, a
+40-character SHA, or a `docker://…@sha256:` digest.
+
 If the gate fails, fix the workflow. Never add a `zizmor.yml` ignore rule, a
 `# zizmor: ignore[...]` comment, or lower `ZIZMOR_MIN_SEVERITY` /
 `ZIZMOR_MIN_CONFIDENCE` in the Makefile — those thresholds are a ratchet that

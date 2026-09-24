@@ -13,8 +13,12 @@ surface. Subscribe to them, or to the repository's issues, to be told about anyt
 
 - `uptime-alert` — filed by `uptime-check.yml`. Production is failing its synthetic
   check. Start with the [incident response runbook](incident-response.md).
-- `ci-alert` — filed by `ci-health-alerts.yml` and `release-audit.yml`. A monitored
-  post-merge workflow failed, `main` is red, or a release anomaly was recorded.
+- `ci-alert` — filed by `ci-health-alerts.yml`, `release-audit.yml` and
+  `job-log-secrets-alert.yml`. A monitored post-merge workflow failed, `main` is red, a
+  release anomaly was recorded, or a job-log secret scan of a privileged run did not
+  pass. That last kind is titled after the scanned run and **nothing closes it
+  automatically**: treat it as a live credential, rotate and revoke it, delete the run's
+  logs, then close the issue by hand (see "Committed secrets" in `CLAUDE.md`).
 - `release-audit` — the permanent ledger issue `release-audit.yml` appends to: one comment
   per release and per bot push.
 - `ci-canary` — `docker-build-canary.yml`. The nightly Docker build canary is red,
