@@ -19,8 +19,10 @@ const COLORS_FILE = 'global/variables/colors/_colors.scss';
 const GLOBAL_FILE = 'global/_global.scss';
 const METHODS_THEME =
   'operation-block/operation-content/operation-methods-theme/_operation-methods-theme.scss';
-const DEPRECATED_METHOD =
-  'operation-block/operation-content/operation-methods-theme/deprecated-method/_deprecated-method.scss';
+const DEPRECATED_METHOD = path.join(
+  path.dirname(METHODS_THEME),
+  'deprecated-method/_deprecated-method.scss'
+);
 
 const SCSS_FILES: readonly string[] = readdirSync(STYLES_ROOT, {
   recursive: true,
@@ -48,7 +50,8 @@ function compileProbe(root: string, file: string): Probe {
       `@use '${pathToFileURL(path.join(root, file)).href}' as subject;\n` +
       `@function colours($v) {\n  @if meta.type-of($v) == 'color' { @return ($v,); }\n` +
       `  @if meta.type-of($v) == 'map' { $v: map.values($v); }\n  $out: ();\n` +
-      `  @if meta.type-of($v) == 'list' { @each $item in $v { $out: list.join($out, colours($item)); } }\n` +
+      `  @if meta.type-of($v) == 'list' {\n` +
+      `    @each $item in $v { $out: list.join($out, colours($item)); }\n  }\n` +
       `  @return $out;\n}\n` +
       `@each $name, $value in meta.module-variables('subject') {\n` +
       `  @each $c in colours($value) { $_: collect($name, color.ie-hex-str($c)); }\n}`,
