@@ -819,13 +819,16 @@ rollback-info: ## Print the last successful production deployment (commit, ref, 
 # deploy-sized retry budget (24 x 15s, overridable as SMOKE_PROD_ATTEMPTS and
 # SMOKE_PROD_DELAY); the negative half blocks on the branded edge 404 as well as
 # its shape. Both always run and either one failing fails the target, so a down
-# homepage still reports the 404 verdict beside it. SITE_URL is required; each
-# script's own usage check is what fails a missing one (exit 2).
-smoke-prod: ## Probe SITE_URL's homepage, /swagger and branded 404 after a production deploy (host-only; issues #329, #331)
+# homepage still reports the 404 verdict beside it. The 404 runs FIRST: its
+# budget is the shorter one (12 attempts) and it is where every production
+# incident has been, so a homepage that hangs until the job timeout cannot keep
+# that verdict from printing. SITE_URL is required; each script's own usage
+# check is what fails a missing one (exit 2).
+smoke-prod: ## Probe SITE_URL's branded 404, homepage and /swagger after a production deploy (host-only; issues #329, #331)
 	rc=0; \
+	./scripts/ci/smoke-response-shape.sh "$(SITE_URL)" --require-branded || rc=$$?; \
 	UPTIME_ATTEMPTS="$${SMOKE_PROD_ATTEMPTS:-24}" UPTIME_DELAY="$${SMOKE_PROD_DELAY:-15}" \
 		./scripts/ci/uptime-check.sh "$(SITE_URL)" || rc=$$?; \
-	./scripts/ci/smoke-response-shape.sh "$(SITE_URL)" --require-branded || rc=$$?; \
 	exit $$rc
 
 # DELIBERATE DIVERGENCE FROM THE npm-tool LINT GATES (lint-next/tsc/md/deps),

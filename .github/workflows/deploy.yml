@@ -59,10 +59,13 @@ jobs:
     # rather than failing the deploy workflow.
     if: ${{ vars.PRODUCTION_SITE_URL != '' }}
     runs-on: ubuntu-latest
-    # Fast-failing budget: the header step's 2 x 12 attempts (~6 min), then
-    # smoke-prod's 2 x 24 positive attempts (~12 min, sequential since #329) and
-    # 12 negative ones (~3 min), fifteen seconds apart.
-    timeout-minutes: 30
+    # Sized for the worst case, an origin that hangs rather than refuses: every
+    # attempt can then spend its full 15s curl --max-time plus the 15s delay. The
+    # header step's 2 x 12 attempts (~11.5 min), then smoke-prod's 12 negative
+    # attempts and its advisory fetches (~6.5 min) and 2 x 24 positive ones
+    # (~23.5 min, sequential since #329) come to ~42 min, so a hanging origin still
+    # gets every verdict printed before the job is killed.
+    timeout-minutes: 45
     permissions:
       contents: read
     steps:
@@ -139,12 +142,12 @@ jobs:
           check_path "/favicon.svg" "static asset" || rc=1
           exit "$rc"
 
-      # Issue #329: `make smoke-prod` is the whole post-deploy smoke — the homepage
-      # and /swagger (scripts/ci/uptime-check.sh, the scheduled uptime check's own
-      # probe, given a deploy-sized retry budget) and the negative path
-      # (scripts/ci/smoke-response-shape.sh, issue #363). It used to probe the 404
-      # alone while the positive half lived inline in this job, so the documented
-      # command could pass on a site whose homepage was down.
+      # Issue #329: `make smoke-prod` is the whole post-deploy smoke — the negative
+      # path (scripts/ci/smoke-response-shape.sh, issue #363) first, then the
+      # homepage and /swagger (scripts/ci/uptime-check.sh, the scheduled uptime
+      # check's own probe, given a deploy-sized retry budget). It used to probe the
+      # 404 alone while the positive half lived inline in this job, so the
+      # documented command could pass on a site whose homepage was down.
       #
       # The negative path is where every CloudFront production incident this
       # repository has had happened — 500 instead of 404 (#226, and again #229), a

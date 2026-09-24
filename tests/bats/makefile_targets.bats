@@ -1303,7 +1303,7 @@ JSON
   [ -z "$(cat "$COMMAND_LOG")" ]
 }
 
-@test "smoke-prod threads SITE_URL into the uptime probe and the branded 404 probe" {
+@test "smoke-prod threads SITE_URL into the branded 404 probe, then the uptime probe" {
   # A dry run, not run_make_target: the real scripts retry against a live origin
   # for minutes on a miss, and the target's behaviour against a real origin --
   # red when any one of the three documents misbehaves -- is covered in
@@ -1316,4 +1316,9 @@ JSON
   assert_output_contains './scripts/ci/uptime-check.sh "https://example.test"'
   assert_output_contains 'UPTIME_ATTEMPTS="${SMOKE_PROD_ATTEMPTS:-24}" UPTIME_DELAY="${SMOKE_PROD_DELAY:-15}"'
   assert_output_contains './scripts/ci/smoke-response-shape.sh "https://example.test" --require-branded'
+  # The 404 probe runs first so a hanging homepage cannot time the job out before it.
+  local shape_line uptime_line
+  shape_line="$(printf '%s\n' "$output" | grep -n 'smoke-response-shape.sh' | head -n 1 | cut -d: -f1)"
+  uptime_line="$(printf '%s\n' "$output" | grep -n 'uptime-check.sh' | head -n 1 | cut -d: -f1)"
+  [ "$shape_line" -lt "$uptime_line" ]
 }

@@ -517,8 +517,8 @@ CACHE_GOOD_ASSET='{"status":200,"headers":{"content-type":"application/javascrip
 
 # --- make smoke-prod (#329) ------------------------------------------------------
 #
-# The target is the whole post-deploy smoke: the homepage and /swagger through
-# scripts/ci/uptime-check.sh, then this script under --require-branded. Each case
+# The target is the whole post-deploy smoke: this script under --require-branded,
+# then the homepage and /swagger through scripts/ci/uptime-check.sh. Each case
 # breaks exactly one of the three and asserts the target goes red on it.
 
 HOME_OK='{"status":200,"headers":{"content-type":"text/html"},"body":"<div id=\"__next\"></div>"}'
@@ -562,4 +562,17 @@ run_smoke_prod() {
   [ "$status" -ne 0 ]
   assert_output_contains 'expected the branded 404'
   refute_output_contains '::error::homepage'
+  [ "$(printf '%s\n' "$output" | grep -c 'returned 200 text/html with a body')" -eq 2 ]
+}
+
+@test "make smoke-prod prints the 404 verdict before it probes the homepage" {
+  start_origin <<< "{\"default\":${GOOD_404},\"paths\":{\"/\":${HOME_OK},\"/swagger\":${SWAGGER_OK}}}"
+  run_smoke_prod
+  [ "$status" -eq 0 ]
+  local verdict_line home_line
+  verdict_line="$(printf '%s\n' "$output" | grep -n 'returned a well-formed 404' | cut -d: -f1)"
+  home_line="$(printf '%s\n' "$output" | grep -n 'Probing homepage' | cut -d: -f1)"
+  [ -n "$verdict_line" ]
+  [ -n "$home_line" ]
+  [ "$verdict_line" -lt "$home_line" ]
 }

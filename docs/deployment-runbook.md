@@ -29,11 +29,7 @@ fails if it does not serve valid content:
 - `make smoke-prod SITE_URL=…` — the rest of the smoke, and the command to run by
   hand after any deploy (issues #329 and #331). It fails when any one of three
   documents misbehaves, and it always grades all three so one red verdict never
-  hides another:
-  - `GET /` and `GET /swagger`, through `scripts/ci/uptime-check.sh`, the same
-    script the scheduled uptime check runs. Each must answer `200`, as
-    `text/html`, with a non-empty body carrying the page's marker: `__next` or
-    `<title` for the homepage, `swagger` for `/swagger` (both case-insensitive).
+  hides another. The negative path runs first:
   - `GET /smoke-nonexistent-…`, the **negative** path, through
     `scripts/ci/smoke-response-shape.sh --require-branded` (issue #363). Blocks on
     four assertions. Three are production incidents this site has already had: the
@@ -45,9 +41,15 @@ fails if it does not serve valid content:
     `SMOKE_404_MARKER` overrides it. The security-header check on that same
     response, and the sandbox `noindex` check, emit `::warning::` rather than
     failing; the script states the condition for promoting them to blocking.
+  - `GET /` and `GET /swagger`, through `scripts/ci/uptime-check.sh`, the same
+    script the scheduled uptime check runs. Each must answer `200`, as
+    `text/html`, with a non-empty body carrying the page's marker: `__next` or
+    `<title` for the homepage, `swagger` for `/swagger` (both case-insensitive).
 
   The step runs after the header step and runs even when that step failed, so each
-  one reports its own verdict.
+  one reports its own verdict. The job's 45-minute timeout is sized for an origin
+  that hangs on every attempt rather than refusing it, so even then every verdict
+  is printed before the job is killed.
 
 Because CodePipeline deploys asynchronously, each probe retries until the CDN
 serves the new build or the job times out. The homepage and `/swagger` get 24
@@ -91,12 +93,17 @@ The failure line names every gap in one response, so read all of it:
   than the function answered, such as an S3 error document. The bats suite checks
   at PR time that the handler's own 404 carries the default marker, so a reworded
   document cannot drift away from the probe.
+- `::warning::… is not the branded 404` — the same condition, reported by a caller
+  that does not pass `--require-branded`: the PR sandbox, where it is expected
+  because the bucket has no edge function, or the scheduled uptime check, where it
+  files no incident but has the same two causes as the blocking line above.
 
 A red `homepage` or `swagger page` line is the positive half, graded exactly as the
 scheduled uptime check grades it; `expected a match for` there means the path
 answered `200` HTML that is not its own page, such as a rewrite that points
-`/swagger` at the homepage document. Reproduce any of these locally with the same
-target:
+`/swagger` at the homepage document, or a parked or placeholder page in front of
+the site. The same line on an `uptime-alert` incident means the same thing.
+Reproduce any of these locally with the same target:
 `SMOKE_PROD_ATTEMPTS=1 SMOKE_ATTEMPTS=1 make smoke-prod SITE_URL=https://vilnacrm.com`.
 
 ### How the edge functions reach CloudFront
