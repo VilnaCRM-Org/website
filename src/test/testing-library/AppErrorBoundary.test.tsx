@@ -108,7 +108,7 @@ describe('pages/_app error boundary', () => {
     expect(document.getElementById('skip-target')).toHaveFocus();
   });
 
-  it('ignores an unrelated alert the recovered page renders and focuses the skip target', async () => {
+  it('ignores an unrelated recovered-page alert and focuses the skip target', async () => {
     const user: UserEvent = userEvent.setup();
     const copy = errorBoundaryCopyFor('/en');
     renderApp('/en', CrashingPageWithRecoveredAlert);
