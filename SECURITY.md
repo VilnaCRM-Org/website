@@ -53,6 +53,13 @@ reach a human — never by lowering the threshold in
   `workflow_dispatch` — it is kept off pull requests because a credential in an
   old commit is not the author's regression — and a failure opens a `ci-alert`
   tracking issue through `.github/workflows/ci-health-alerts.yml`.
+- **Job-log secret scanning** (`.github/workflows/job-log-secrets-scan.yml`,
+  issue #375) runs the same image and config over the downloaded logs of every
+  completed run of the deploy, release and sandbox workflows
+  (`make scan-secrets-logs`). A token those workflows fetch at run time is never
+  a registered secret, so GitHub does not mask it; this is the scan that would
+  notice one printed into a log. A finding opens a `ci-alert` issue the same
+  way.
 - **Push protection** is a repository setting that no commit can switch on, and
   it is not yet confirmed enabled: turning it on is an admin action tracked in
   #353, with the steps and the proof in

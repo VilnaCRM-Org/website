@@ -883,6 +883,16 @@ scan-secrets-history: ## Scan every reachable commit for secrets (host-only, Doc
 	@GITLEAKS_IMAGE="$(GITLEAKS_IMAGE)" SECRETS_MODE=history \
 	 bash scripts/ci/scan-secrets.sh
 
+# The third mode (#375 F4): downloaded CI job logs, where a token fetched at run
+# time -- never a registered secret, so never masked -- would surface if a step
+# printed it. .github/workflows/job-log-secrets-scan.yml fetches a privileged
+# run's logs with scripts/ci/fetch-run-logs.sh and runs this target over them.
+# LOG_DIR is required; an unset, missing or empty directory is refused rather
+# than reported clean.
+scan-secrets-logs: ## Scan downloaded CI job logs for leaked secrets (host-only, Docker; LOG_DIR=<dir>)
+	@GITLEAKS_IMAGE="$(GITLEAKS_IMAGE)" SECRETS_MODE=logs LOG_DIR="$(LOG_DIR)" \
+	 bash scripts/ci/scan-secrets.sh
+
 husky: ## One-time Husky setup to enable Git hooks (deprecated if already set)
 	bun x husky install
 

@@ -1022,6 +1022,42 @@ STUB
   [ "$status" -ne 0 ]
 }
 
+@test "scan-secrets-logs scans LOG_DIR as plain files through the digest-pinned gitleaks image" {
+  reset_command_log
+
+  cp "$PROJECT_ROOT/.gitleaks.toml" "$MAKEFILE_SANDBOX/.gitleaks.toml"
+  export GITHUB_WORKSPACE="$MAKEFILE_SANDBOX"
+  local logs="$BATS_TEST_TMPDIR/run-logs"
+  mkdir -p "$logs/deploy"
+  printf 'step output\n' >"$logs/deploy/1_Set up job.txt"
+
+  run_make_target scan-secrets-logs LOG_DIR="$logs"
+  [ "$status" -eq 0 ]
+
+  assert_log_contains 'ghcr.io/gitleaks/gitleaks@sha256:'
+  assert_log_contains '--config /repo/.gitleaks.toml'
+  assert_log_contains '--exit-code 1'
+  assert_log_contains "-v $logs:/logs:ro"
+  assert_log_contains '--source /logs --no-git'
+
+  run grep -E 'bun|npm' "$COMMAND_LOG"
+  [ "$status" -ne 0 ]
+}
+
+@test "scan-secrets-logs refuses an empty LOG_DIR before running docker" {
+  reset_command_log
+
+  cp "$PROJECT_ROOT/.gitleaks.toml" "$MAKEFILE_SANDBOX/.gitleaks.toml"
+  export GITHUB_WORKSPACE="$MAKEFILE_SANDBOX"
+  mkdir -p "$BATS_TEST_TMPDIR/no-logs"
+
+  run_make_target scan-secrets-logs LOG_DIR="$BATS_TEST_TMPDIR/no-logs"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"no non-empty file"* ]]
+  run grep -c '^docker ' "$COMMAND_LOG"
+  [ "$output" = "0" ]
+}
+
 @test "lint-security-txt validates the committed RFC 9116 security.txt" {
   reset_command_log
 

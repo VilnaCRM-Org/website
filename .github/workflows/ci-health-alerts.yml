@@ -27,6 +27,14 @@ on:
       # watches. Like `security testing` it also runs on pull_request, which the
       # branches filter below excludes.
       - secrets scanning
+      # The job-log secret scan (#375 F4). It runs after every completed
+      # privileged run -- the pull-request sandbox pair included -- but as a
+      # workflow_run of its own it executes on the default branch, so its runs
+      # pass the branches filter below and a finding in any run's logs lands on
+      # the tracking issue. It has no other alerting path. The next clean scan
+      # closes that issue through the recovery path, so the alert itself, not
+      # the issue staying open, is the signal to rotate the credential.
+      - job log secrets scan
     types:
       - completed
     # `security testing` also runs on every pull request; without this filter

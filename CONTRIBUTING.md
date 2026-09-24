@@ -422,10 +422,12 @@ it from the committed config.
 #### Secret scanning push protection (issue #353)
 
 gitleaks only sees what has already reached the repository: the working tree on every
-pull request (`make lint-secrets`) and every reachable commit weekly
-(`make scan-secrets-history`). GitHub's push protection refuses a credential before it
-enters history at all, and it is a repository setting, so merging a change cannot turn
-it on. A repository admin enables it once:
+pull request (`make lint-secrets`), every reachable commit weekly
+(`make scan-secrets-history`), and the job logs of every privileged workflow run
+(`make scan-secrets-logs LOG_DIR=<dir>`, driven by `job-log-secrets-scan.yml`).
+GitHub's push protection refuses a credential before it enters history at all, and it is
+a repository setting, so merging a change cannot turn it on. A repository admin enables
+it once:
 
 1. **Enable.** Under **Settings → Advanced Security** (**Code security** on older
    settings pages), enable **Secret Protection** and then **Push protection**. The API

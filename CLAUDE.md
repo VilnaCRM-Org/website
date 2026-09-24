@@ -687,6 +687,23 @@ blocking an unrelated PR on it would only teach reviewers to click past a red ch
 is the same differential-on-PR, absolute-on-a-schedule split the dependency-CVE gate uses.
 A red weekly run is not silent — `secrets scanning` is listed in `ci-health-alerts.yml`.
 
+**A third leg reads job logs (#375 F4).** A token a privileged workflow fetches at run time
+(the Secrets Manager GitHub token in the sandbox pair, the release App token) is never a
+registered secret, so GitHub never masks it, and neither scan above can see a log. After
+every completed run of `website`, `Generate Changelog and Create Release`, `sandbox` and
+`Trigger Sandbox Deletion`, `job-log-secrets-scan.yml` (a `workflow_run`, plus
+`workflow_dispatch -f run_id=<id>`) downloads that run's logs with
+`scripts/ci/fetch-run-logs.sh` and runs `make scan-secrets-logs LOG_DIR=<dir>`
+(`SECRETS_MODE=logs`: the same image and config, `--no-git`, the directory mounted
+read-only). Both halves fail closed — a failed, empty or non-zip download, a non-numeric
+run id, or an unset, missing or empty `LOG_DIR` is an error, never a clean scan. It only
+reads the triggering run's logs as data and never checks out or executes its code, which is
+what makes following the pull-request sandbox runs safe. It holds `actions: read` and
+`contents: read`, has no `pull_request` trigger (so the ruleset need not classify it), and
+is listed in `ci-health-alerts.yml`; renaming a followed workflow means updating its
+`workflows:` list in the same change, which `secrets_scanning.bats` enforces. Treat a
+finding as a live credential: rotate and revoke it, then delete the run's logs.
+
 The allowlist is narrow by construction. Whole-file exemptions cover machine-generated or
 upstream-fetched artifacts plus gitignored build output (`.next/`, `out/`,
 `storybook-static-ci/`) — paths git cannot commit, which is the entire justification, and
