@@ -396,6 +396,68 @@ assert_same_repo_guard() {
   done < <(sandbox_workflows)
 }
 
+@test "sandbox creation requires deploy-sandbox on an open pull request" {
+  # A labeled event can still be delivered for a closed PR. Both role-assuming
+  # jobs must reject that state so a late label cannot recreate a torn-down
+  # sandbox, while commits remain free of sandbox-triggered AWS executions.
+  PROJECT_ROOT="$PROJECT_ROOT" node -e '
+    const fs = require("fs");
+    const yaml = require(process.env.PROJECT_ROOT + "/node_modules/js-yaml");
+    const doc = yaml.load(fs.readFileSync(process.argv[1], "utf8"));
+    const types = doc.on && doc.on.pull_request && doc.on.pull_request.types;
+    if (JSON.stringify(types) !== JSON.stringify(["labeled"])) process.exit(1);
+    for (const job of ["check-tokens", "deploy"]) {
+      const condition = doc.jobs && doc.jobs[job] && doc.jobs[job].if;
+      for (const required of [
+        "github.event.pull_request.head.repo.full_name == github.repository",
+        "github.event.pull_request.state == '\''open'\''",
+        "github.event.label.name == '\''deploy-sandbox'\''",
+      ]) {
+        if (!condition || !condition.includes(required)) process.exit(1);
+      }
+    }
+  ' "$WORKFLOWS_DIR/sandbox-creating.yml"
+}
+
+@test "sandbox creation revalidates the current PR before the billed pipeline trigger" {
+  # Positive: the final deploy step reads the current PR and starts the pipeline
+  # only after finding an open, same-repository PR with deploy-sandbox. Negative:
+  # a closed, relabelled or forked PR skips; an API error exits non-zero. Boundary
+  # / edge — Not applicable: the GitHub PR API owns its numeric PR validation.
+  PROJECT_ROOT="$PROJECT_ROOT" node -e '
+    const fs = require("fs");
+    const yaml = require(process.env.PROJECT_ROOT + "/node_modules/js-yaml");
+    const doc = yaml.load(fs.readFileSync(process.argv[1], "utf8"));
+    const deploy = doc.jobs && doc.jobs.deploy;
+    const permissions = deploy && deploy.permissions;
+    if (
+      !permissions ||
+      permissions["id-token"] !== "write" ||
+      permissions["pull-requests"] !== "read" ||
+      Object.keys(permissions).length !== 2
+    ) process.exit(1);
+
+    const steps = deploy && deploy.steps;
+    const step = Array.isArray(steps) ? steps.at(-1) : undefined;
+    const run = step && step.run;
+    if (
+      !step ||
+      step.name !== "Revalidate sandbox request and start pipeline" ||
+      step.env?.GH_TOKEN !== "${{ github.token }}" ||
+      typeof run !== "string" ||
+      !run.includes("set -euo pipefail") ||
+      !run.includes("gh api \"repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}\"") ||
+      !run.includes(".state == \"open\"") ||
+      !run.includes(".head.repo.full_name == env.GITHUB_REPOSITORY") ||
+      !run.includes("any(.labels[]?; .name == \"deploy-sandbox\")") ||
+      !/if ! eligible="\$\(gh api[\s\S]*?Unable to revalidate the pull request[\s\S]*?exit 1\s*\n\s*fi/.test(run) ||
+      !/if \[ "\$eligible" != "true" \]; then[\s\S]*?exit 0\s*\n\s*fi/.test(run) ||
+      !run.includes("aws codepipeline start-pipeline-execution") ||
+      run.indexOf("gh api") >= run.indexOf("aws codepipeline start-pipeline-execution")
+    ) process.exit(1);
+  ' "$WORKFLOWS_DIR/sandbox-creating.yml"
+}
+
 @test "the same-repo guard assertion rejects a guard that exists only in a comment" {
   # The shape the old substring search let through: the job-level `if:` is gone,
   # and the guard text survives only in a comment and a `run:` body.
