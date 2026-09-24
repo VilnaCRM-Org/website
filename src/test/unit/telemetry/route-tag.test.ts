@@ -40,6 +40,13 @@ describe('routeOf', () => {
     expect(routeOf(`https://vilnacrm.com/users/${EMAIL}/`)).toBe(`/users/${REDACTED_EMAIL}/`);
   });
 
+  it('redacts an email whose @ is percent-encoded in the path', () => {
+    const encoded = encodeURIComponent(EMAIL);
+
+    expect(encoded).toContain('%40');
+    expect(routeOf(`https://vilnacrm.com/users/${encoded}/`)).toBe(`/users/${REDACTED_EMAIL}/`);
+  });
+
   it.each([['/en'], ['about:blank'], ['file:///index.html'], ['']])(
     'returns nothing for %j, which is not an http(s) page URL',
     (url: string) => {
