@@ -54,9 +54,10 @@ diagnosis.
 - **`expected a non-empty page`** — the object exists and is empty, or a synthetic
   response lost its body (#249).
 - **`body: expected a match for /…/i`** — the path answered `200` HTML that is not its
-  own document: `/swagger` rewritten to the homepage `index.html`, or a parked or
-  placeholder page in front of the site. Check the routing function's `ROUTE_MAP` and
-  what the last deploy published.
+  own document, typically `/swagger` rewritten to the homepage `index.html`. The
+  homepage marker (`__next` or `<title`) is loose: a parked or placeholder page that
+  carries a `<title>` still passes it, so a green homepage line does not rule one out.
+  Check the routing function's `ROUTE_MAP` and what the last deploy published.
 - **`::warning::… is not the branded 404`** — the 404 is well-formed but not the edge
   document; it files no incident. Read
   [Diagnosing a red negative-path probe](../deployment-runbook.md#diagnosing-a-red-negative-path-probe)

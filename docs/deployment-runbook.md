@@ -101,8 +101,9 @@ The failure line names every gap in one response, so read all of it:
 A red `homepage` or `swagger page` line is the positive half, graded exactly as the
 scheduled uptime check grades it; `expected a match for` there means the path
 answered `200` HTML that is not its own page, such as a rewrite that points
-`/swagger` at the homepage document, or a parked or placeholder page in front of
-the site. The same line on an `uptime-alert` incident means the same thing.
+`/swagger` at the homepage document. The homepage marker (`__next` or `<title`) is
+loose, so a parked or placeholder page with a `<title>` passes it. The same line on an
+`uptime-alert` incident means the same thing.
 Reproduce any of these locally with the same target:
 `SMOKE_PROD_ATTEMPTS=1 SMOKE_ATTEMPTS=1 make smoke-prod SITE_URL=https://vilnacrm.com`.
 

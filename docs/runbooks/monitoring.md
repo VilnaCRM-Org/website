@@ -48,14 +48,19 @@ Two scripts run, and both always report:
 
 - **Positive path** — [`scripts/ci/uptime-check.sh`](../../scripts/ci/uptime-check.sh).
   `GET /` and `GET /swagger` must each answer `200`, with a `content-type` of
-  `text/html` (case-insensitive, every value if the header repeats) and a non-empty body.
-  A `200` with an `application/xml` body is an S3 error document, not the site, which is
-  why the status alone is not trusted.
+  `text/html` (case-insensitive, every value if the header repeats) and a non-empty body
+  that matches the path's marker: `__next` or `<title` for the homepage, `swagger` for
+  `/swagger`, so a `/swagger` rewritten to the homepage document is caught. A `200` with
+  an `application/xml` body is an S3 error document, not the site, which is why the status
+  alone is not trusted. `make smoke-prod` runs the same script after a deploy with a
+  longer retry budget.
 - **Negative path** —
   [`scripts/ci/smoke-response-shape.sh`](../../scripts/ci/smoke-response-shape.sh), the
   same script the deploy smoke runs. An unknown URI must produce the site's own `404`
   with a body and `text/html` — every production incident this site has had was on that
-  path (#226, #229, #235, #249).
+  path (#226, #229, #235, #249). A well-formed `404` that is not the branded edge document
+  is only a `::warning::` here and files no incident; `make smoke-prod` passes
+  `--require-branded`, so after a deploy the same condition fails.
 
 Each script retries four times, fifteen seconds apart, so one dropped connection is not
 an outage and a real outage is not hidden until the next run. On any failure the workflow
