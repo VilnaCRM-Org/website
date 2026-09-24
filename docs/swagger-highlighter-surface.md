@@ -148,7 +148,7 @@ so belongs in its own reviewed change, after the open dependency pull requests l
    `bun.lock`; the override does not reach it, and the lockfile criterion does not need it
    to. The inert `prismjs` override was dropped in the same lockfile change (issue #379,
    F5).
-4. **Done: eleven dev-only transitives overridden within their major (#455).** Each is
+4. **Done: twelve dev-only transitives overridden within their major (#455).** Each is
    reachable only through build, lint or test tooling — none from the shipped export,
    `/swagger` included — and each `package.json` override is the lowest release that
    clears every advisory the census listed against it, so no parent is pushed past its
@@ -180,11 +180,20 @@ so belongs in its own reviewed change, after the open dependency pull requests l
      older than the `^1.0.30001806` browserslist 4.28.7 asks for.
    - `baseline-browser-mapping` 2.10.32 → **2.11.0**, via `next` (`^2.9.19`) and
      `browserslist` (`^2.10.44`): GHSA-w5vr-8v7q-w6rv.
+   - `qs` 6.15.1 / 6.15.2 → **6.16.0**, via `express` (Lighthouse CI, Mockoon),
+     `body-parser` (Express, and `@apollo/server` in the local mock), Mockoon's
+     `@mockoon/commons-server`, Stryker's `typed-rest-client` and Storybook's `url`
+     polyfill: GHSA-4mjr-xmp4-gh2g, GHSA-q8mj-m7cp-5q26, GHSA-x5fp-wj9c-mxmx.
 
    `smol-toml` and `markdown-it` step past `markdownlint-cli@0.47`'s tilde ranges
    (`~1.5.2`, `~14.1.0`) but not its majors; `markdownlint-cli@0.49` itself declares
    `~1.7.0` and `~14.3.0`, so drop both entries in the change that moves
    `markdownlint-cli` to 0.49 rather than leaving them as permanent out-of-range pins.
+   `qs` steps past exact and tilde pins the same way: `typed-rest-client@2.3.1` pins
+   `6.15.1`, `@mockoon/commons-server@9.7.0` pins `6.15.2` and `express@4.22.2` declares
+   `~6.15.1`. Their next releases already sit on 6.16 (`typed-rest-client` 3.x declares
+   `^6.16.0`, `@mockoon/commons-server@9.9.0` pins `6.16.0`), so drop the entry once
+   every one of them has moved.
 
    Bun honours only top-level overrides, so a package the tree resolves at more than one
    major — `minimatch` 3/9/10, `brace-expansion` 1/2/5, `js-yaml` 3/4 — cannot be pinned
