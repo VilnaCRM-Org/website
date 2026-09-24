@@ -25,15 +25,28 @@
 # startup failure, or a fork run awaiting approval. GitHub still answers its
 # logs endpoint with HTTP 200 and an empty 22-byte zip, which unzip refuses. So
 # the run's jobs are read first: a run where no job executed a step is reported
-# and skipped. That is the only thing skipped. Once a job has run, every
-# problem below exits non-zero -- an expired archive, a revoked token, an empty
-# or unreadable zip: a scan that could not read the logs must never report them
-# clean.
+# and skipped. Once a job has run, every problem below is a run whose logs
+# could not be read -- an expired archive, a revoked token, a 5xx, an empty or
+# unreadable zip -- and a scan that could not read the logs must never report
+# them clean:
 #
-# Output: `logs=present` when at least one run's logs were extracted, else
-# `logs=none`, appended to $GITHUB_OUTPUT when it is set. The workflow skips
-# the scan only on an explicit `none`, so a missing output still scans -- and
-# the scan then refuses the empty directory.
+#   * RUN_ID exits non-zero on the spot; that run is the whole answer.
+#   * The backstop records the run, keeps fetching the others, and exits
+#     non-zero at the end, naming every run it could not read. Stopping at the
+#     first one would leave every run listed after it unscanned for the week.
+#     The workflow still scans what was fetched, so the job ends red either way.
+#
+# The backstop skips one more case: a run whose logs endpoint answers HTTP 404
+# or 410 after its jobs listed fine. Those logs were deleted -- the documented
+# response to a finding -- or expired, and logs that no longer exist cannot
+# leak. Without this, the Monday after a leak was cleaned up would fail again
+# on the very run that was fixed. The per-run mode still fails on it.
+#
+# Output, appended to $GITHUB_OUTPUT when it is set: `logs=present` when at
+# least one run's logs were extracted, else `logs=none`, and `unreadable=` the
+# space-separated ids of the runs that could not be read (backstop only). The
+# workflow skips the scan only on an explicit `none`, so a missing output still
+# scans -- and the scan then refuses the empty directory.
 #
 # Inputs (environment):
 #   RUN_ID / BACKSTOP_WORKFLOWS / BACKSTOP_DAYS  as above
@@ -85,7 +98,8 @@ fi
 mkdir -p "${log_dir}"
 
 archive="$(mktemp "${RUNNER_TEMP:-${TMPDIR:-/tmp}}/run-logs.XXXXXX")"
-trap 'rm -f "${archive}"' EXIT
+errors="$(mktemp "${RUNNER_TEMP:-${TMPDIR:-/tmp}}/run-logs-errors.XXXXXX")"
+trap 'rm -f "${archive}" "${errors}"' EXIT
 
 # Number of the run's jobs that executed at least one step. A skipped job has a
 # start time but no steps, and a job that never got a runner has neither.
@@ -102,24 +116,54 @@ jobs_that_ran() {
 }
 
 fetched=0
+unreadable=''
+
+# A run whose logs could not be read. The reason is printed already (by
+# jobs_that_ran's own fail) or passed here.
+unreadable_run() {
+  local id="$1" reason="${2:-}"
+  [ -z "${reason}" ] || printf 'fetch-run-logs: %s\n' "${reason}" >&2
+  [ -n "${backstop}" ] || exit 1
+  unreadable="${unreadable:+${unreadable} }${id}"
+}
 
 fetch_run() {
   local id="$1" dest="${log_dir}/$1" ran count
-  ran="$(jobs_that_ran "${id}")"
+  ran="$(jobs_that_ran "${id}")" || {
+    unreadable_run "${id}"
+    return 0
+  }
   if [ "${ran}" -eq 0 ]; then
     note "run ${id} never ran a job, so it wrote no logs; nothing to scan"
     return 0
   fi
   # The endpoint answers with a redirect to a short-lived archive URL; gh
-  # follows it, writes the zip to stdout, and exits non-zero on any HTTP error.
-  gh api "repos/${repo}/actions/runs/${id}/logs" >"${archive}" ||
-    fail "could not download the logs of run ${id} from ${repo}"
-  [ -s "${archive}" ] || fail "the log archive of run ${id} is empty"
+  # follows it, writes the zip to stdout, and exits non-zero on any HTTP error,
+  # printing `gh: <message> (HTTP <status>)` or `gh: HTTP <status>`. A status
+  # it words any other way is read as unreadable, never as gone.
+  if ! gh api "repos/${repo}/actions/runs/${id}/logs" >"${archive}" 2>"${errors}"; then
+    cat "${errors}" >&2
+    if [ -n "${backstop}" ] && grep -Eq '(^|[( ])HTTP (404|410)([^0-9]|$)' "${errors}"; then
+      note "run ${id}: its logs are gone (deleted or expired); nothing left to scan"
+      return 0
+    fi
+    unreadable_run "${id}" "could not download the logs of run ${id} from ${repo}"
+    return 0
+  fi
+  [ -s "${archive}" ] || {
+    unreadable_run "${id}" "the log archive of run ${id} is empty"
+    return 0
+  }
   mkdir -p "${dest}"
-  unzip -q "${archive}" -d "${dest}" ||
-    fail "the log archive of run ${id} is not a readable zip, though ${ran} job(s) ran"
+  unzip -q "${archive}" -d "${dest}" || {
+    unreadable_run "${id}" "the log archive of run ${id} is not a readable zip, though ${ran} job(s) ran"
+    return 0
+  }
   count="$(find "${dest}" -type f | wc -l | tr -d ' ')"
-  [ "${count}" -gt 0 ] || fail "the log archive of run ${id} held no files"
+  [ "${count}" -gt 0 ] || {
+    unreadable_run "${id}" "the log archive of run ${id} held no files"
+    return 0
+  }
   note "run ${id}: ${count} log file(s) in ${dest}"
   fetched=$((fetched + 1))
 }
@@ -147,6 +191,9 @@ fi
 state=none
 [ "${fetched}" -eq 0 ] || state=present
 if [ -n "${GITHUB_OUTPUT:-}" ]; then
-  printf 'logs=%s\n' "${state}" >>"${GITHUB_OUTPUT}"
+  printf 'logs=%s\nunreadable=%s\n' "${state}" "${unreadable}" >>"${GITHUB_OUTPUT}"
 fi
 note "logs=${state}"
+[ -z "${unreadable}" ] ||
+  fail "could not read the logs of run(s) ${unreadable}; re-scan each once the cause is fixed:" \
+    "gh workflow run job-log-secrets-scan.yml -f run_id=<id>"

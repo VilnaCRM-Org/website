@@ -275,7 +275,9 @@ FETCH_REL='scripts/ci/fetch-run-logs.sh'
 #                           (default 1); FAKE_JOBS_EXIT fails it like HTTP
 #   .../workflows/<f>/runs  FAKE_RUNS_DIR/<f> (one id per line), else nothing
 #   .../runs/<id>/logs      FAKE_ARCHIVE_DIR/<id>.zip if present, else
-#                           FAKE_LOG_ARCHIVE; FAKE_GH_EXIT fails it like HTTP
+#                           FAKE_LOG_ARCHIVE; FAKE_GH_EXIT fails it like HTTP,
+#                           as does FAKE_LOGS_STATUS_DIR/<id> (holding the
+#                           status) for that one run, in gh's own wording
 create_logs_gh_stub() {
   cat >"$STUB_BIN_DIR/gh" <<'EOF'
 #!/usr/bin/env bash
@@ -310,8 +312,12 @@ case "$path" in
     id="${path%/logs}"
     id="${id##*/}"
     if [ -n "${FAKE_GH_EXIT:-}" ]; then
-      printf 'gh: HTTP 410: Gone\n' >&2
+      printf 'gh: Bad Gateway (HTTP 502)\n' >&2
       exit "$FAKE_GH_EXIT"
+    fi
+    if [ -f "${FAKE_LOGS_STATUS_DIR:-/nonexistent}/$id" ]; then
+      printf 'gh: Request failed (HTTP %s)\n' "$(cat "$FAKE_LOGS_STATUS_DIR/$id")" >&2
+      exit 1
     fi
     if [ -f "${FAKE_ARCHIVE_DIR:-/nonexistent}/$id.zip" ]; then
       cat "$FAKE_ARCHIVE_DIR/$id.zip"
@@ -362,6 +368,7 @@ run_fetch() {
     FAKE_JOBS_DIR="${FAKE_JOBS_DIR-}" \
     FAKE_RUNS_DIR="${FAKE_RUNS_DIR-}" \
     FAKE_ARCHIVE_DIR="${FAKE_ARCHIVE_DIR-}" \
+    FAKE_LOGS_STATUS_DIR="${FAKE_LOGS_STATUS_DIR-}" \
     FAKE_LOG_ARCHIVE="${FAKE_LOG_ARCHIVE-}" \
     bash "$PROJECT_ROOT/$FETCH_REL"
 }
@@ -375,9 +382,9 @@ run_fetch() {
   [ -s "$BATS_TEST_TMPDIR/run-logs/35918649858/deploy/1_Set up job.txt" ]
   assert_log_contains 'gh api --paginate repos/VilnaCRM-Org/website/actions/runs/35918649858/jobs?per_page=100'
   assert_log_contains 'gh api repos/VilnaCRM-Org/website/actions/runs/35918649858/logs'
-  [ "$(cat "$BATS_TEST_TMPDIR/gh-output")" = 'logs=present' ]
-  # The downloaded zip is removed; only the extracted logs remain.
-  [ -z "$(find "$BATS_TEST_TMPDIR" -maxdepth 1 -name 'run-logs.*' -print -quit)" ]
+  [ "$(cat "$BATS_TEST_TMPDIR/gh-output")" = "$(printf 'logs=present\nunreadable=')" ]
+  # The downloaded zip and gh's stderr capture are removed; only the logs remain.
+  [ -z "$(find "$BATS_TEST_TMPDIR" -maxdepth 1 \( -name 'run-logs.*' -o -name 'run-logs-errors.*' \) -print -quit)" ]
 }
 
 @test "fetch-run-logs skips a run that never ran a job and reports logs=none" {
@@ -388,7 +395,7 @@ run_fetch() {
   FAKE_JOBS_RAN=0 run_fetch
   assert_success
   [[ "$output" == *"run 35918649858 never ran a job"* ]]
-  [ "$(cat "$BATS_TEST_TMPDIR/gh-output")" = 'logs=none' ]
+  [ "$(cat "$BATS_TEST_TMPDIR/gh-output")" = "$(printf 'logs=none\nunreadable=')" ]
   run grep -c '/logs' "$COMMAND_LOG"
   [ "$output" = "0" ]
 }
@@ -409,7 +416,7 @@ run_fetch() {
   printf '0\n3\n' >"$BATS_TEST_TMPDIR/jobs/35918649858"
   FAKE_JOBS_DIR="$BATS_TEST_TMPDIR/jobs" run_fetch
   assert_success
-  [ "$(cat "$BATS_TEST_TMPDIR/gh-output")" = 'logs=present' ]
+  [ "$(cat "$BATS_TEST_TMPDIR/gh-output")" = "$(printf 'logs=present\nunreadable=')" ]
 }
 
 @test "fetch-run-logs fails closed when the jobs cannot be listed or read" {
@@ -496,7 +503,7 @@ run_fetch() {
   [ -d "$BATS_TEST_TMPDIR/run-logs/101/deploy" ]
   [ -d "$BATS_TEST_TMPDIR/run-logs/201/deploy" ]
   [ ! -e "$BATS_TEST_TMPDIR/run-logs/102" ]
-  [ "$(cat "$BATS_TEST_TMPDIR/gh-output")" = 'logs=present' ]
+  [ "$(cat "$BATS_TEST_TMPDIR/gh-output")" = "$(printf 'logs=present\nunreadable=')" ]
   local since
   since="$(date -u -d '8 days ago' +%Y-%m-%d)"
   assert_log_contains "repos/VilnaCRM-Org/website/actions/workflows/deploy.yml/runs?status=completed&created=%3E%3D${since}&per_page=100"
@@ -507,7 +514,7 @@ run_fetch() {
   create_logs_gh_stub
   RUN_ID='' BACKSTOP_WORKFLOWS='deploy.yml' BACKSTOP_DAYS=3 run_fetch
   assert_success
-  [ "$(cat "$BATS_TEST_TMPDIR/gh-output")" = 'logs=none' ]
+  [ "$(cat "$BATS_TEST_TMPDIR/gh-output")" = "$(printf 'logs=none\nunreadable=')" ]
   assert_log_contains "created=%3E%3D$(date -u -d '3 days ago' +%Y-%m-%d)"
 }
 
@@ -527,6 +534,74 @@ run_fetch() {
     [[ "$output" == *"BACKSTOP_DAYS must be a positive number"* ]]
   done
   [ ! -s "$COMMAND_LOG" ]
+}
+
+@test "the backstop keeps fetching past a run it cannot read, then fails naming it" {
+  create_logs_gh_stub
+  build_log_archive
+  mkdir -p "$BATS_TEST_TMPDIR/runs" "$BATS_TEST_TMPDIR/jobs" "$BATS_TEST_TMPDIR/status"
+  printf '101\n102\n103\n' >"$BATS_TEST_TMPDIR/runs/deploy.yml"
+  printf '502\n' >"$BATS_TEST_TMPDIR/status/101"
+  printf 'null\n' >"$BATS_TEST_TMPDIR/jobs/102"
+  RUN_ID='' BACKSTOP_WORKFLOWS='deploy.yml' FAKE_RUNS_DIR="$BATS_TEST_TMPDIR/runs" \
+    FAKE_JOBS_DIR="$BATS_TEST_TMPDIR/jobs" FAKE_LOGS_STATUS_DIR="$BATS_TEST_TMPDIR/status" run_fetch
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"could not download the logs of run 101"* ]]
+  [[ "$output" == *"unexpected job listing for run 102"* ]]
+  [[ "$output" == *"backstop: 1 of 3 run(s) had logs"* ]]
+  [[ "$output" == *"could not read the logs of run(s) 101 102"* ]]
+  [ -d "$BATS_TEST_TMPDIR/run-logs/103/deploy" ]
+  [ "$(cat "$BATS_TEST_TMPDIR/gh-output")" = "$(printf 'logs=present\nunreadable=101 102')" ]
+}
+
+@test "the backstop fails with logs=none when no listed run could be read" {
+  create_logs_gh_stub
+  build_log_archive
+  mkdir -p "$BATS_TEST_TMPDIR/runs"
+  printf '101\n' >"$BATS_TEST_TMPDIR/runs/deploy.yml"
+  RUN_ID='' BACKSTOP_WORKFLOWS='deploy.yml' FAKE_RUNS_DIR="$BATS_TEST_TMPDIR/runs" FAKE_GH_EXIT=1 run_fetch
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"could not read the logs of run(s) 101"* ]]
+  [ "$(cat "$BATS_TEST_TMPDIR/gh-output")" = "$(printf 'logs=none\nunreadable=101')" ]
+}
+
+@test "the backstop skips a run whose logs were deleted or expired" {
+  create_logs_gh_stub
+  build_log_archive
+  mkdir -p "$BATS_TEST_TMPDIR/runs" "$BATS_TEST_TMPDIR/status"
+  printf '101\n102\n103\n' >"$BATS_TEST_TMPDIR/runs/deploy.yml"
+  printf '404\n' >"$BATS_TEST_TMPDIR/status/101"
+  printf '410\n' >"$BATS_TEST_TMPDIR/status/102"
+  RUN_ID='' BACKSTOP_WORKFLOWS='deploy.yml' FAKE_RUNS_DIR="$BATS_TEST_TMPDIR/runs" \
+    FAKE_LOGS_STATUS_DIR="$BATS_TEST_TMPDIR/status" run_fetch
+  assert_success
+  [[ "$output" == *"run 101: its logs are gone"* ]]
+  [[ "$output" == *"run 102: its logs are gone"* ]]
+  [ -d "$BATS_TEST_TMPDIR/run-logs/103/deploy" ]
+  [ "$(cat "$BATS_TEST_TMPDIR/gh-output")" = "$(printf 'logs=present\nunreadable=')" ]
+}
+
+@test "only a 404 or 410 reads as gone; the per-run scan fails on both" {
+  create_logs_gh_stub
+  build_log_archive
+  mkdir -p "$BATS_TEST_TMPDIR/runs" "$BATS_TEST_TMPDIR/status"
+  printf '101\n' >"$BATS_TEST_TMPDIR/runs/deploy.yml"
+  for code in 4040 1404 403 500; do
+    rm -rf "$BATS_TEST_TMPDIR/run-logs"
+    printf '%s\n' "$code" >"$BATS_TEST_TMPDIR/status/101"
+    RUN_ID='' BACKSTOP_WORKFLOWS='deploy.yml' FAKE_RUNS_DIR="$BATS_TEST_TMPDIR/runs" \
+      FAKE_LOGS_STATUS_DIR="$BATS_TEST_TMPDIR/status" run_fetch
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"could not read the logs of run(s) 101"* ]]
+  done
+  for code in 404 410; do
+    rm -rf "$BATS_TEST_TMPDIR/run-logs"
+    printf '%s\n' "$code" >"$BATS_TEST_TMPDIR/status/35918649858"
+    FAKE_LOGS_STATUS_DIR="$BATS_TEST_TMPDIR/status" run_fetch
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"could not download the logs of run 35918649858"* ]]
+    [ ! -s "$BATS_TEST_TMPDIR/gh-output" ]
+  done
 }
 
 @test "the backstop refuses a listed run id that is not a number" {
@@ -688,9 +763,9 @@ workflow_fact() {
   [ "$output" = "$(workflow_fact 'wf.on.workflow_run.workflows.slice().sort().join("|")')" ]
 }
 
-@test "the scan is skipped only on an explicit logs=none from the fetch step" {
-  run workflow_fact 'steps.filter((s) => s.run).map((s) => [s.id || "", s.if || ""].join(":")).join(",")'
-  [ "$output" = "fetch:,:steps.fetch.outputs.logs != 'none'" ]
+@test "the scan is skipped only on an explicit logs=none, and still reads a partial backstop" {
+  run workflow_fact 'steps.filter((s) => s.run).map((s) => [s.id || "", (s.if || "").replace(/\s+/g, " ").trim()].join(":")).join(",")'
+  [ "$output" = "fetch:,:steps.fetch.outputs.logs != 'none' && !cancelled() && (steps.fetch.outcome == 'success' || steps.fetch.outputs.logs == 'present')" ]
 }
 
 @test "the scan run is named in the two shapes the alert script parses" {

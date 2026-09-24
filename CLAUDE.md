@@ -700,7 +700,11 @@ a run in which no job executed a step — cancelled while still pending behind a
 group, a startup failure — wrote no logs, and GitHub answers for it with an empty 22-byte zip,
 so it is reported `logs=none` and skipped instead of failing the scan. Everything else fails
 closed — once a job has run, a failed, empty or non-zip download, a non-numeric run id, or an
-unset, missing or empty `LOG_DIR` is an error, never a clean scan. It only reads the logs as
+unset, missing or empty `LOG_DIR` is an error, never a clean scan. The backstop records a run it
+cannot read, keeps fetching the rest, scans what it fetched and then fails naming every
+unreadable run, so one 5xx never leaves the week unscanned; it alone treats an HTTP 404 or 410
+from the logs endpoint as logs already deleted or expired and skips that run, because deleting
+them is the documented response to a finding. It only reads the logs as
 data and never checks out or executes the scanned run's code, which is what makes following
 the pull-request sandbox runs safe. It holds `actions: read` and `contents: read`, never
 `issues: write` (a workflow that grants it and lists workflows under `workflow_run` counts as
