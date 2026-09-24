@@ -243,10 +243,11 @@ so belongs in its own reviewed change, after the open dependency pull requests l
 
    The entries were rewritten by hand because neither bun command does it. The lockfile
    was migrated from pnpm (#396) and records each parent's dependency as the exact version
-   it resolved (`minimatch@3.1.5` lists `"brace-expansion": "1.1.15"`), so deleting a
-   child entry resolves the same version again; deleting a parent entry makes bun 1.3.5
-   drop the whole lockfile and re-resolve every package (the attempt moved
-   `@apollo/client` 4.2.0 → 4.3.1); and `bun update <pkg>` promotes the transitive to a
+   it resolved (`minimatch@3.1.5` lists `"brace-expansion": "1.1.15"`), so a widened range
+   alone changes nothing. Removing entries — a parent together with its child, or the
+   children with their parents' edges widened — made bun 1.3.5 discard the lockfile and
+   re-resolve every package (both attempts rewrote about 3,100 lines and moved
+   `@apollo/client` 4.2.0 → 4.3.1), and `bun update <pkg>` promotes the transitive to a
    direct dependency. Instead, each child entry was rewritten from its registry manifest
    (version, dependency ranges, integrity), and the one edge in each parent entry was
    replaced by the range that parent publishes. Bun then re-serialised the file,
@@ -255,8 +256,18 @@ so belongs in its own reviewed change, after the open dependency pull requests l
    entry that bun would not have written shows up as a diff the next time it
    re-serialises.
 
-   Two lines stay, each owned by a follow-up: `brace-expansion@5.0.6` under
+   The 4.x `js-yaml` line moved with the root devDependency (`^4.3.2`, issue #322): the
+   hoisted copy is now **4.3.2**, and `@eslint/eslintrc` (`^4.1.1`) and both
+   `cosmiconfig` copies (`^4.1.0`) had their edges widened onto it the same way. Three
+   consumers keep a nested `js-yaml@4.1.1`: `markdownlint-cli@0.47` declares `~4.1.1`,
+   and `swagger-ui-react` (`=4.1.1`) and `swagger-client` stay on the version the
+   `/swagger` bundle has always shipped, because moving shipped code needs the swagger
+   e2e, visual and accessibility runs of item 1. The cost is that the lazy `/swagger`
+   chunk now bundles two identical copies of `js-yaml@4.1.1` (about 13 KB gzipped more)
+   where the hoisted copy used to serve both; item 1's bump collapses them.
+
+   Lines that stay, each owned by a follow-up: `brace-expansion@5.0.6` under
    `markdownlint-cli`'s `minimatch@10.1.3`, left for the `markdownlint-cli` 0.49 bump, and
-   the `js-yaml@4.1.1` and `immutable@3.8.3` copies `swagger-ui-react` ships (item 1). The
-   0.49 bump's own lockfile resolves `brace-expansion@5.0.6` again under its
-   `minimatch@10.2.5` copies, so it needs the same treatment when it lands.
+   the `js-yaml@4.1.1` and `immutable@3.8.3` copies `/swagger` ships (item 1). The 0.49
+   bump's own lockfile resolves `brace-expansion@5.0.6` again under its `minimatch@10.2.5`
+   copies, so it needs the same treatment when it lands.
