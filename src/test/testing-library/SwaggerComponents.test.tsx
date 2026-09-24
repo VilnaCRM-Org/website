@@ -49,9 +49,11 @@ describe('Swagger Navigation', () => {
 
 jest.mock('../../features/swagger/hooks/useSwagger');
 
+const mockSwaggerUi: { renders: boolean } = { renders: true };
+
 jest.mock('swagger-ui-react', () => {
-  function SwaggerUI(): React.ReactElement {
-    return <div className="swagger-ui">SwaggerUI rendered</div>;
+  function SwaggerUI(): React.ReactElement | null {
+    return mockSwaggerUi.renders ? <div className="swagger-ui">SwaggerUI rendered</div> : null;
   }
 
   return { __esModule: true, default: SwaggerUI };
@@ -156,6 +158,7 @@ describe('Swagger layout stability (#493)', () => {
 
   beforeEach(() => {
     mockUseSwagger.mockReset();
+    mockSwaggerUi.renders = true;
   });
 
   it('reserves a viewport in the loading status region and anchors the spinner to it', () => {
@@ -172,6 +175,17 @@ describe('Swagger layout stability (#493)', () => {
 
     const { container } = render(<Swagger />);
 
+    expect(container.firstElementChild).toHaveStyle({ minHeight: '100vh' });
+  });
+
+  it('keeps the viewport reserved while swagger-ui-react has mounted but still renders nothing', () => {
+    mockSwaggerUi.renders = false;
+    mockUseSwagger.mockReturnValue(loaded);
+
+    const { container } = render(<Swagger />);
+
+    expect(screen.queryByText(loadingText)).not.toBeInTheDocument();
+    expect(screen.queryByText(/SwaggerUI rendered/i)).not.toBeInTheDocument();
     expect(container.firstElementChild).toHaveStyle({ minHeight: '100vh' });
   });
 
