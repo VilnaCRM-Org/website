@@ -21,6 +21,7 @@ import {
   scrubValue,
   stripQuery,
 } from '@/lib/telemetry/redact';
+import { MAX_ROUTE_TAG_LENGTH, routeOf } from '@/lib/telemetry/route-tag';
 import { scrubBreadcrumb } from '@/lib/telemetry/scrub-breadcrumb';
 import { scrubEvent } from '@/lib/telemetry/scrub-event';
 
@@ -82,7 +83,7 @@ describe('integration: Sentry event scrubbing', () => {
         { category: 'console', message: `typed ${REDACTED_EMAIL}`, data: {} },
       ],
       user: { id: 'u1' },
-      tags: { feature: 'landing', action: 'graphql' },
+      tags: { feature: 'landing', action: 'graphql', route: '/' },
     });
     expect(JSON.stringify(scrubbed)).not.toContain(PASSWORD);
   });
@@ -102,6 +103,31 @@ describe('integration: Sentry event scrubbing', () => {
       { url: 'https://vilnacrm.com/en' }
     );
     expect(scrubEvent(errorEvent({}))).toEqual({ type: undefined });
+  });
+});
+
+describe('integration: route tag on error events', () => {
+  it('tags the pathname of the page URL and keeps the caller tags', () => {
+    const scrubbed = scrubEvent(
+      errorEvent({
+        request: { url: `https://vilnacrm.com/en?email=${EMAIL}#Contacts` },
+        tags: { feature: 'landing', action: 'signup' },
+      })
+    );
+
+    expect(scrubbed.tags).toEqual({ feature: 'landing', action: 'signup', route: '/en' });
+  });
+
+  it('adds no tag without an absolute page URL', () => {
+    expect(scrubEvent(errorEvent({ request: { url: '/en' } })).tags).toBeUndefined();
+    expect(scrubEvent(errorEvent({ request: { method: 'GET' } })).tags).toBeUndefined();
+  });
+
+  it('reads the root of a URL with no path and caps a long path', () => {
+    const longPath = `/${'a'.repeat(MAX_ROUTE_TAG_LENGTH)}`;
+
+    expect(routeOf('https://vilnacrm.com')).toBe('/');
+    expect(routeOf(`https://vilnacrm.com${longPath}`)).toHaveLength(MAX_ROUTE_TAG_LENGTH);
   });
 });
 

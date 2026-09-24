@@ -165,7 +165,9 @@ The browser bundle carries the instrumentation; production has no keys for it to
   Handled errors — the sign-up path, a caught Apollo GraphQL/network error
   (`src/features/landing/api/graphql/apollo.ts`'s `ErrorLink`, which
   only reports and never retries) and an uncaught render crash — carry the same static
-  `feature`/`action` tag shape. The sign-up path and the Apollo `ErrorLink` report through
+  `feature`/`action` tag shape, plus a `route` tag holding the pathname of the page the
+  visitor was on (never its query string or fragment), which the `beforeSend` scrubber
+  derives from the scrubbed request URL. The sign-up path and the Apollo `ErrorLink` report through
   the single sink [`src/lib/telemetry/report-error.ts`](../../src/lib/telemetry/report-error.ts).
   A render crash inside a page is caught by the `Sentry.ErrorBoundary` wrapped around
   `<Component />` (not around the header or footer, so both stay usable): the boundary

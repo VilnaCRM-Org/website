@@ -77,6 +77,13 @@ ADR 0009). Anything not listed here is not wired.
 - **Handled errors** — `reportHandledError` in `src/lib/telemetry/report-error.ts`
   wraps `Sentry.captureException` with static `feature`/`action` tags only. Its two
   callers are the sign-up submit path (#378 F3) and the Apollo `ErrorLink`.
+- **Route tag** — `scrubEvent` finishes by calling `withRouteTag`
+  (`src/lib/telemetry/route-tag.ts`), which adds a `route` tag to every error event:
+  the pathname of the already-scrubbed `request.url` (the page the visitor was on),
+  never its query string or fragment, with email-shaped segments redacted and capped
+  at Sentry's 200-character tag-value limit. An event with no absolute page URL gets
+  no `route` tag. Deriving it in `beforeSend` rather than in `reportHandledError`
+  tags render crashes as well, and keeps the capture call's own tags static.
 - **Apollo errors** — `src/features/landing/api/graphql/apollo.ts` puts a
   reporting-only `ErrorLink` first in the link chain; it calls
   `reportHandledError(error, { feature: 'landing', action: 'graphql' })`, never
