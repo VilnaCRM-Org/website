@@ -53,6 +53,14 @@ diagnosis.
   export.
 - **`expected a non-empty page`** — the object exists and is empty, or a synthetic
   response lost its body (#249).
+- **`body: expected a match for /…/i`** — the path answered `200` HTML that is not its
+  own document: `/swagger` rewritten to the homepage `index.html`, or a parked or
+  placeholder page in front of the site. Check the routing function's `ROUTE_MAP` and
+  what the last deploy published.
+- **`::warning::… is not the branded 404`** — the 404 is well-formed but not the edge
+  document; it files no incident. Read
+  [Diagnosing a red negative-path probe](../deployment-runbook.md#diagnosing-a-red-negative-path-probe)
+  (`expected the branded 404` there has the same causes).
 - **Only the negative path failing** — the site is up but the 404 contract is broken:
   the routing function is unassociated or has regressed. Read
   [Diagnosing a red negative-path probe](../deployment-runbook.md#diagnosing-a-red-negative-path-probe);

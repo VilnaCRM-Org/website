@@ -594,7 +594,11 @@ Production-facing invariants that no other gate watches. Extend them; never rela
   headers policy lives in the infra repository; they promote to blocking once it is
   confirmed to reach the synthetic 404. `tests/bats/smoke_response_shape.bats` replays
   each of those four incidents against a real HTTP origin, so the gate is proved red on
-  every one of them at PR time rather than on a deploy.
+  every one of them at PR time rather than on a deploy. Since issue #329 the post-deploy
+  job runs it as `make smoke-prod`, which also **blocks** on the branded edge 404
+  (`--require-branded`, `SMOKE_404_MARKER`, default `Page not found - VilnaCRM`) and on
+  `/` and `/swagger` through `scripts/ci/uptime-check.sh`; the sandbox job and the
+  scheduled uptime check only warn on the brand.
 - **RFC 9116 disclosure** (`public/.well-known/security.txt`). Published straight through
   the static export. `Expires` is a hard expiry, so `make lint-security-txt` fails once
   **fewer than 60 days remain** — while there is still time to merge a refresh — and also
