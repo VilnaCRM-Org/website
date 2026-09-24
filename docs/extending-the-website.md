@@ -39,7 +39,10 @@ Why the module is shaped the way it is (issues #212, #328, #378):
   while `http://localhost:4000?trace=1` still can.
 - **The locale variables are required and non-empty**, so `<html lang>` never collapses
   to `''` (WCAG 3.1.1). The observability variables are optional: an empty value disables
-  the feature (Sentry no-ops, Google Analytics is not rendered) rather than failing.
+  the feature (Sentry no-ops, Google Analytics is not rendered) rather than failing. The
+  trace sample rate, `NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE`, is the exception: empty
+  selects the per-environment default in `src/lib/telemetry/traces-sample-rate.ts`, and a
+  value that is not a number from 0 to 1 fails `next build`.
 - **`NODE_ENV` stays out of the schema.** It is a Next/webpack build-time constant
   inlined into the export, not runtime configuration. `isProductionBuild()` centralises
   the read in this rule-exempt module so feature code stays free of `process.env`, and it
