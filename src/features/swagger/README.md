@@ -76,6 +76,40 @@ The failed state is composed DOM no initial-load scan sees, so it is registered 
 `src/test/e2e/swagger/swagger-section.spec.ts`, which aborts `/swagger-schema.json`,
 scans the state, then lifts the abort and proves the retry renders the documentation.
 
+## Reserving the viewport while the page loads (issue #493)
+
+The header and footer are `ssr: false` chunks, and so is this page's `Swagger` root, so
+nothing on `/swagger` has a height until the client renders it. The `Loading` spinner used
+to be zero-height, which left the footer sitting right under the header. Every later state
+(the `Swagger` wrapper with its back link, then the documentation or the failed state)
+pushed the footer down. Desktop Lighthouse measured that shift on `footer#Contacts` in every
+sample: 0.0269, plus a second shift of 0.0176 in most samples, against a 0.05 ceiling.
+Mobile measured 0.10 and 0.14 in run 35979329666. The baseline comment in
+`lighthouserc.desktop.js` records the distribution. Two styles keep the footer below the
+fold through each transition:
+
+- `loading/styles.ts` gives the `role="status"` container `minHeight: 100vh` and
+  `position: relative`. The spinner and its visually hidden label are absolutely
+  positioned, so they now centre in the reserved box and cannot overlap the footer. That
+  covers the `next/dynamic` fallback, which renders outside the wrapper.
+- `swagger/styles.ts` holds the wrapper at `minHeight: 100vh` for as long as it contains no
+  `.swagger-ui` element (`:not(:has(.swagger-ui))`). That covers the failed state, which is
+  shorter than a viewport, and the frame where `swagger-ui-react` has mounted but still
+  renders `null` while its `useEffect` builds the system. After that frame, `Loading` is
+  gone, so only the wrapper holds the footer down.
+
+Only `min-height` is used, never `height` or `overflow`. Enlarged text at 400% zoom can
+still grow the box, and reflow at 320px only adds vertical scroll. The reservation is
+released as soon as Swagger UI renders, and releasing it matters.
+`src/test/visual/swagger` resizes the viewport to the page's `scrollHeight` before its
+full-page screenshot, so a `100vh` that persisted into the loaded state would grow the
+page to match and move every baseline. The loaded documentation is taller than a desktop
+or mobile Lighthouse viewport, so releasing the reservation moves the footer only while it
+is off-screen. `src/test/testing-library/SwaggerComponents.test.tsx` checks all three states.
+
+The loading state has no Figma frame. It is a centred spinner on the page background with
+no design of its own, and the visual baselines capture only the loaded state.
+
 ## The back link
 
 `components/navigation` is a `next/link` anchor to `/`, named by its visible text ("To

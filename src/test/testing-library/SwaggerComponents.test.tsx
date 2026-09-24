@@ -8,6 +8,7 @@ import { expectNoA11yViolations } from '@/test/a11y/expect-no-a11y-violations';
 import ApiDocumentation from '../../features/swagger/components/api-documentation';
 import Loading from '../../features/swagger/components/loading/loading';
 import Navigation from '../../features/swagger/components/navigation/navigation';
+import Swagger from '../../features/swagger/components/swagger/swagger';
 import useSwagger from '../../features/swagger/hooks/useSwagger';
 
 const backToTheHome: string = t('navigation.navigate_to_home_page');
@@ -50,7 +51,7 @@ jest.mock('../../features/swagger/hooks/useSwagger');
 
 jest.mock('swagger-ui-react', () => {
   function SwaggerUI(): React.ReactElement {
-    return <div>SwaggerUI rendered</div>;
+    return <div className="swagger-ui">SwaggerUI rendered</div>;
   }
 
   return { __esModule: true, default: SwaggerUI };
@@ -143,5 +144,43 @@ describe('ApiDocumentation', () => {
     expect(screen.getByRole('status')).toHaveTextContent(loadedText);
     expect(screen.queryByText(loadingText)).not.toBeInTheDocument();
     await expectNoA11yViolations(container);
+  });
+});
+
+describe('Swagger layout stability (#493)', () => {
+  const mockUseSwagger: jest.MockedFunction<typeof useSwagger> = jest.mocked(useSwagger);
+  const loaded: HookState = hookState({
+    swaggerContent: { openapi: '3.0.0', info: { title: 'Test API', version: '1.0.0' } },
+    loading: false,
+  });
+
+  beforeEach(() => {
+    mockUseSwagger.mockReset();
+  });
+
+  it('reserves a viewport in the loading status region and anchors the spinner to it', () => {
+    render(<Loading />);
+
+    expect(screen.getByRole('status')).toHaveStyle({ minHeight: '100vh', position: 'relative' });
+  });
+
+  it.each([
+    ['loading', hookState()],
+    ['failed', hookState({ error: new Error('Failed to fetch'), loading: false })],
+  ])('keeps the viewport reserved while the documentation is %s', (_, state: HookState) => {
+    mockUseSwagger.mockReturnValue(state);
+
+    const { container } = render(<Swagger />);
+
+    expect(container.firstElementChild).toHaveStyle({ minHeight: '100vh' });
+  });
+
+  it('releases the reservation once Swagger UI has rendered, so the loaded page keeps its height', () => {
+    mockUseSwagger.mockReturnValue(loaded);
+
+    const { container } = render(<Swagger />);
+
+    expect(screen.getByText(/SwaggerUI rendered/i)).toBeInTheDocument();
+    expect(container.firstElementChild).not.toHaveStyle({ minHeight: '100vh' });
   });
 });
