@@ -119,8 +119,9 @@ does not cover two things this fix relies on: the reservation being released whe
 `.swagger-ui` mounts, and the loaded documentation being taller than the audit viewport.
 The component spec pins the first. Nothing pins the second. The fix is to run
 `node scripts/patchSwaggerServer.mjs` ahead of the host `LHCI_RUN`, with a Bats case that
-pins it. That is a `Makefile` change, so it needs a tracking issue and CODEOWNER review;
-until it lands, read a green `/swagger` CLS assertion as a measurement of the failed state.
+pins it. That `Makefile` change, and re-calibrating the `/swagger` budgets against the
+loaded page, are tracked in #498; until it lands, read a green `/swagger` assertion as a
+measurement of the failed state.
 
 The loading state has no Figma frame. It is a centred spinner on the page background with
 no design of its own, and the visual baselines capture only the loaded state.
