@@ -56,10 +56,13 @@ reach a human — never by lowering the threshold in
 - **Job-log secret scanning** (`.github/workflows/job-log-secrets-scan.yml`,
   issue #375) runs the same image and config over the downloaded logs of every
   completed run of the deploy, release and sandbox workflows
-  (`make scan-secrets-logs`). A token those workflows fetch at run time is never
-  a registered secret, so GitHub does not mask it; this is the scan that would
-  notice one printed into a log. A finding opens a `ci-alert` issue the same
-  way.
+  (`make scan-secrets-logs`), plus a weekly backstop over the last eight days of
+  those runs. A token those workflows fetch at run time is never a registered
+  secret, so GitHub does not mask it; this is the scan that would notice one
+  printed into a log. A scan that is not clean opens a `ci-alert` issue titled
+  after the scanned run (`.github/workflows/job-log-secrets-alert.yml`), and
+  nothing closes that issue automatically: a maintainer closes it once the
+  credential is rotated and the run's logs are deleted.
 - **Push protection** is a repository setting that no commit can switch on, and
   it is not yet confirmed enabled: turning it on is an admin action tracked in
   #353, with the steps and the proof in
