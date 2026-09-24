@@ -73,7 +73,13 @@ ADR 0009). Anything not listed here is not wired.
   link). The boundary captures the crash itself; a `beforeCapture` callback
   (`tagRenderCrash`) tags that single event `{ feature: 'app', action:
 'render-crash' }`. There is deliberately no `onError` sink — it would report every
-  crash twice (ADR 0009).
+  crash twice (ADR 0009). Its `onReset` (`focusPageStart`) moves focus to
+  `#skip-target`, the `tabIndex={-1}` anchor `Layout` renders right before the page,
+  because a successful retry unmounts the focused retry button and would otherwise
+  drop keyboard focus to `<body>` (WCAG 2.4.3). The boundary does not depend on the
+  SDK being enabled: with no DSN it still renders the fallback.
+  `src/test/testing-library/AppErrorBoundary.test.tsx` renders the real `MyApp` with a
+  crashing page and proves the fallback, the keyboard retry and the focus return.
 - **Handled errors** — `reportHandledError` in `src/lib/telemetry/report-error.ts`
   wraps `Sentry.captureException` with static `feature`/`action` tags only. Its two
   callers are the sign-up submit path (#378 F3) and the Apollo `ErrorLink`.

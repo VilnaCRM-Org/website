@@ -95,6 +95,7 @@ describe('pages/_app error boundary', () => {
 
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(screen.getByText(RECOVERED_TEXT)).toBeInTheDocument();
+    expect(document.getElementById('skip-target')).toHaveFocus();
   });
 
   it('shows the fallback again when the page still crashes on retry', async () => {

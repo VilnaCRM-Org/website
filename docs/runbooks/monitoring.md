@@ -175,7 +175,9 @@ The browser bundle carries the instrumentation; production has no keys for it to
   `beforeCapture` (`{ feature: 'app', action: 'render-crash' }`) instead of adding a second
   `captureException` call, and shows
   [`src/components/error-fallback`](../../src/components/error-fallback), a localized,
-  `role="alert"` apology with a retry control and a link home. See
+  `role="alert"` apology with a retry control and a link home. A successful retry moves
+  keyboard focus to the `#skip-target` anchor at the start of the page content, since the
+  focused retry button unmounts. The boundary works whether or not the SDK is enabled. See
   [ADR 0009](../adr/0009-consolidated-error-boundary-and-observability.md) for the design
   this consolidates.
   Every event and breadcrumb passes through the `beforeSend` / `beforeBreadcrumb`

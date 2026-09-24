@@ -37,6 +37,12 @@ const renderErrorFallback: Sentry.FallbackRender = ({ resetError }) => (
   <ErrorFallback onRetry={resetError} />
 );
 
+const SKIP_TARGET_ID: string = 'skip-target';
+
+const focusPageStart: NonNullable<Sentry.ErrorBoundaryProps['onReset']> = () => {
+  document.getElementById(SKIP_TARGET_ID)?.focus();
+};
+
 const tagRenderCrash: NonNullable<Sentry.ErrorBoundaryProps['beforeCapture']> = scope => {
   scope.setTags({ feature: 'app', action: 'render-crash' });
 };
@@ -77,7 +83,11 @@ function MyApp({ Component }: { Component: React.ComponentType }): React.ReactEl
         <ApolloProvider client={client}>
           <main className={golos.className}>
             <Layout header={<DynamicHeader />}>
-              <Sentry.ErrorBoundary fallback={renderErrorFallback} beforeCapture={tagRenderCrash}>
+              <Sentry.ErrorBoundary
+                fallback={renderErrorFallback}
+                beforeCapture={tagRenderCrash}
+                onReset={focusPageStart}
+              >
                 <Component />
               </Sentry.ErrorBoundary>
             </Layout>
