@@ -184,6 +184,37 @@ run_scan() {
   done
 }
 
+# --- workflow token scope (#337) --------------------------------------------
+
+# `<scope>|<permissions>` per line: the workflow first, then each job in file
+# order, keys sorted. Parsed with js-yaml so the verdict is what GitHub reads,
+# not how the block is spelled; an absent key prints `<unset>` (GitHub then
+# falls back to the repository default token, the opposite of `{}`).
+permission_rows() {
+  PROJECT_ROOT="$PROJECT_ROOT" node -e '
+    const yaml = require(process.env.PROJECT_ROOT + "/node_modules/js-yaml");
+    const fs = require("fs");
+    const doc = yaml.load(fs.readFileSync(process.argv[1], "utf8"));
+    const show = (p) => {
+      if (p === undefined) return "<unset>";
+      if (p && typeof p === "object") return JSON.stringify(Object.fromEntries(Object.entries(p).sort()));
+      return JSON.stringify(p);
+    };
+    process.stdout.write("workflow|" + show(doc.permissions) + "\n");
+    for (const [id, job] of Object.entries(doc.jobs || {})) {
+      process.stdout.write(id + "|" + show(job.permissions) + "\n");
+    }
+  ' "$1"
+}
+
+@test "secrets-scanning.yml grants nothing at workflow level and contents: read to each job" {
+  run permission_rows "$PROJECT_ROOT/.github/workflows/secrets-scanning.yml"
+  [ "$status" -eq 0 ]
+  # Exact, so a widened scope, a new job without its own block, or a renamed
+  # job id (`gitleaks` is a required check in config/main-ruleset.json) all fail.
+  [ "$output" = "$(printf '%s\n' 'workflow|{}' 'gitleaks|{"contents":"read"}' 'history|{"contents":"read"}')" ]
+}
+
 # --- the gate actually reddens (AC3) ----------------------------------------
 
 real_docker_or_skip() {
