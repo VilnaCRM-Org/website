@@ -39,8 +39,14 @@ const renderErrorFallback: Sentry.FallbackRender = ({ resetError }) => (
 
 const SKIP_TARGET_ID: string = 'skip-target';
 
+const focusRecoveredOrRetryTarget = (): void => {
+  const alert = document.querySelector('[role="alert"]');
+  const retryButton = alert instanceof HTMLElement ? alert.querySelector('button') : null;
+  (retryButton ?? document.getElementById(SKIP_TARGET_ID))?.focus();
+};
+
 const focusPageStart: NonNullable<Sentry.ErrorBoundaryProps['onReset']> = () => {
-  document.getElementById(SKIP_TARGET_ID)?.focus();
+  queueMicrotask(focusRecoveredOrRetryTarget);
 };
 
 const tagRenderCrash: NonNullable<Sentry.ErrorBoundaryProps['beforeCapture']> = scope => {

@@ -119,6 +119,13 @@ name = "osv-scanner"
 
 [[plugin]]
 name = "prettier"
+# Pinned to the same Prettier the repo runs (see `prettier` in package.json).
+# Left unpinned, Qlty CLI defaults to its own bundled Prettier 3.6.2 instead of
+# reading the version out of `package_file`/`package_filters`, and 3.6.2 wraps
+# some lines under this repo's printWidth: 100 differently than 3.8.3 does —
+# `qlty fmt` then "corrects" a file `make format` already considers clean. Keep
+# in step with package.json so Qlty and `make format` stay the same check.
+version = "3.8.3"
 package_file = "package.json"
 package_filters = ["prettier"]
 

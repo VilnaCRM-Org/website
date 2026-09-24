@@ -11,10 +11,13 @@
 # Docker or network.
 #
 # Scenario classes:
-#   - Positive: the committed tree, and a fixture using each accepted form.
+#   - Positive: the committed tree, and a fixture using each accepted form,
+#     including a `$/<path>` self-repository reference (GitHub's immutable
+#     same-repo syntax, resolved at the running commit like `./`).
 #   - Negative: tag, branch, short sha, unpinned image, reusable-workflow and
 #     composite refs, a tag ref inside a local action outside .github/actions, a
-#     `./` ref that is missing or escapes the tree, disguised spellings, an
+#     `./` ref that is missing or escapes the tree, a `$/` ref carrying an
+#     `@ref` suffix (not valid for that syntax), disguised spellings, an
 #     unparsable or non-mapping document.
 #   - Boundary: 39/41/upper-case hex, an empty glob, a `.yaml` workflow.
 #   Not applicable: loading, retry, timeout and async states — a synchronous scan
@@ -40,6 +43,7 @@ scan_action_pins() {
     const root = path.resolve(process.env.SCAN_ROOT);
     const PINNED = [
       /^\.\/\S*$/,
+      /^\$\/[^\s@]+$/,
       /^docker:\/\/[^\s@]+@sha256:[0-9a-f]{64}$/,
       /^[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+(\/[A-Za-z0-9._-]+)*@[0-9a-f]{40}$/,
     ];
@@ -85,6 +89,7 @@ scan_action_pins() {
         return report("unpinned|" + file + "|" + where + "|" + JSON.stringify(value));
       }
       if (value.startsWith("./")) follow(file, value);
+      else if (value.startsWith("$/")) follow(file, "./" + value.slice(2));
     };
     const checkSteps = (file, prefix, steps) => {
       if (steps === undefined) return;
@@ -186,6 +191,28 @@ write_workflow() {
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"scanned 2 files, 4 uses"* ]]
+}
+
+@test "a \$/ self-repository reference without an @ suffix passes and is followed" {
+  mkdir -p "$FIXTURE/.github/actions/dev-container"
+  printf '%s\n' 'name: dev' 'description: fixture' 'runs:' '  using: composite' \
+    '  steps:' "    - uses: actions/checkout@$SHA40" \
+    > "$FIXTURE/.github/actions/dev-container/action.yml"
+  write_workflow selfref.yml '- uses: $/.github/actions/dev-container'
+
+  run scan_action_pins "$FIXTURE"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"scanned 2 files, 2 uses"* ]]
+}
+
+@test "a \$/ self-repository reference carrying an @ suffix fails" {
+  write_workflow selfref-ref.yml '- uses: $/.github/actions/dev-container@main'
+
+  run scan_action_pins "$FIXTURE"
+
+  [ "$status" -ne 0 ]
+  [[ "$output" == *'unpinned|.github/workflows/selfref-ref.yml|jobs.build.steps[0]|"$/.github/actions/dev-container@main"'* ]]
 }
 
 @test "a tag ref fails" {

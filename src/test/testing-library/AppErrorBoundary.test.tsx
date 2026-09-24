@@ -102,12 +102,14 @@ describe('pages/_app error boundary', () => {
     const user: UserEvent = userEvent.setup();
     const copy = errorBoundaryCopyFor('/en');
     renderApp('/en');
+    const retry = within(screen.getByRole('alert')).getByRole('button', {
+      name: copy.retry_button,
+    });
 
-    await user.click(
-      within(screen.getByRole('alert')).getByRole('button', { name: copy.retry_button })
-    );
+    await user.click(retry);
 
     expect(screen.getByRole('alert')).toBeInTheDocument();
     expect(screen.queryByText(RECOVERED_TEXT)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: copy.retry_button })).toHaveFocus();
   });
 });

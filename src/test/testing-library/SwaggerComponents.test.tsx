@@ -178,7 +178,7 @@ describe('Swagger layout stability (#493)', () => {
     expect(container.firstElementChild).toHaveStyle({ minHeight: '100vh' });
   });
 
-  it('keeps the viewport reserved while swagger-ui-react has mounted but still renders nothing', () => {
+  it('keeps the viewport reserved while swagger-ui-react has mounted but renders nothing', () => {
     mockSwaggerUi.renders = false;
     mockUseSwagger.mockReturnValue(loaded);
 
@@ -189,7 +189,7 @@ describe('Swagger layout stability (#493)', () => {
     expect(container.firstElementChild).toHaveStyle({ minHeight: '100vh' });
   });
 
-  it('releases the reservation once Swagger UI has rendered, so the loaded page keeps its height', () => {
+  it('releases the reservation once Swagger UI has rendered, so the page keeps its height', () => {
     mockUseSwagger.mockReturnValue(loaded);
 
     const { container } = render(<Swagger />);
