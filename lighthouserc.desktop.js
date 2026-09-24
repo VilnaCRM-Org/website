@@ -19,7 +19,10 @@ const { assertMatrix } = require('./lighthouserc.shared');
 //   under the header, and each later state pushed it down
 //   (src/features/swagger/README.md). Those samples are the failed-to-load
 //   state. /swagger-schema.json returned 404 on every run, because the host
-//   build path never runs scripts/patchSwaggerServer.mjs.
+//   build path never runs scripts/patchSwaggerServer.mjs. Until the host
+//   LHCI_RUN in the Makefile runs it, the swagger CLS assertion below measures
+//   that failed state, not the documentation. See "What the Lighthouse gate
+//   does not see yet" in src/features/swagger/README.md.
 // The 0.05 ceiling is not moved. It was the measurement that was wrong, not
 // the budget.
 module.exports = {

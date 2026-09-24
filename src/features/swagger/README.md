@@ -107,6 +107,21 @@ page to match and move every baseline. The loaded documentation is taller than a
 or mobile Lighthouse viewport, so releasing the reservation moves the footer only while it
 is off-screen. `src/test/testing-library/SwaggerComponents.test.tsx` checks all three states.
 
+### What the Lighthouse gate does not see yet
+
+Every `/swagger` sample above is the failed state. `make lighthouse-desktop` and
+`make lighthouse-mobile` run with `EXEC_MODE=host` in `performance-testing.yml`. On that
+path `LHCI_RUN` in the `Makefile` is `$(NEXT_BUILD_CMD) && $(LHCI)`, and neither half runs
+`scripts/patchSwaggerServer.mjs`. Only the `Dockerfile` build does. The script writes the
+gitignored `public/swagger-schema.json`, so the host export ships without it, the fetch
+returns 404, and Lighthouse audits `LoadError`. So the CLS number CI reports for `/swagger`
+does not cover two things this fix relies on: the reservation being released when
+`.swagger-ui` mounts, and the loaded documentation being taller than the audit viewport.
+The component spec pins the first. Nothing pins the second. The fix is to run
+`node scripts/patchSwaggerServer.mjs` ahead of the host `LHCI_RUN`, with a Bats case that
+pins it. That is a `Makefile` change, so it needs a tracking issue and CODEOWNER review;
+until it lands, read a green `/swagger` CLS assertion as a measurement of the failed state.
+
 The loading state has no Figma frame. It is a centred spinner on the page background with
 no design of its own, and the visual baselines capture only the loaded state.
 
