@@ -13,7 +13,9 @@
 # Scenario classes:
 #   - Positive: the committed tree, and a fixture using each accepted form.
 #   - Negative: tag, branch, short sha, unpinned image, reusable-workflow and
-#     composite refs, disguised spellings, an unparsable or non-mapping document.
+#     composite refs, a tag ref inside a local action outside .github/actions, a
+#     `./` ref that is missing or escapes the tree, disguised spellings, an
+#     unparsable or non-mapping document.
 #   - Boundary: 39/41/upper-case hex, an empty glob, a `.yaml` workflow.
 #   Not applicable: loading, retry, timeout and async states — a synchronous scan
 #   of committed files with no async boundary.
@@ -23,16 +25,19 @@ load './test_helper.bash'
 SHA40="0123456789abcdef0123456789abcdef01234567"
 HEX64="deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef"
 
-# Scan the repository tree rooted at $1. Prints `unpinned|<file>|<where>|<uses>`
-# for every violation, `error|<file>|<reason>` for a document that cannot be
-# read as a workflow or action, and a closing `scanned <files> files, <refs>
-# uses` summary. Exits non-zero on any violation, any error, or no files at all.
+# Scan the repository tree rooted at $1: every workflow, every action under
+# .github/actions, and every local action a `./` ref reaches from those, wherever
+# it lives. Prints `unpinned|<file>|<where>|<uses>` for every violation,
+# `error|<file>|<reason>` for a document that cannot be read as a workflow or
+# action or a `./` ref with no action behind it, and a closing `scanned <files>
+# files, <refs> uses` summary. Exits non-zero on any violation, any error, or no
+# files at all.
 scan_action_pins() {
   PROJECT_ROOT="$PROJECT_ROOT" SCAN_ROOT="$1" node -e '
     const yaml = require(process.env.PROJECT_ROOT + "/node_modules/js-yaml");
     const fs = require("fs");
     const path = require("path");
-    const root = process.env.SCAN_ROOT;
+    const root = path.resolve(process.env.SCAN_ROOT);
     const PINNED = [
       /^\.\/\S*$/,
       /^docker:\/\/[^\s@]+@sha256:[0-9a-f]{64}$/,
@@ -53,11 +58,33 @@ scan_action_pins() {
       }).sort();
     };
 
+    const workflows = list(path.join(root, ".github/workflows"), /\.ya?ml$/, false);
+    const actions = list(path.join(root, ".github/actions"), /^action\.ya?ml$/, true);
+    const queue = workflows.concat(actions);
+    const seen = new Set(queue);
+    const workflowSet = new Set(workflows);
+    const follow = (file, ref) => {
+      const target = path.resolve(root, ref);
+      const rel = path.relative(root, target);
+      if (rel === ".." || rel.startsWith(".." + path.sep) || path.isAbsolute(rel)) {
+        return error(file, "local action " + ref + " is outside the repository");
+      }
+      if (workflowSet.has(target)) return;
+      const metadata = ["action.yml", "action.yaml"]
+        .map((name) => path.join(target, name))
+        .filter((f) => fs.existsSync(f) && fs.statSync(f).isFile());
+      if (metadata.length === 0) return error(file, "local action " + ref + " not found");
+      for (const m of metadata) {
+        if (!seen.has(m)) { seen.add(m); queue.push(m); }
+      }
+    };
+
     const check = (file, where, value) => {
       refs += 1;
       if (typeof value !== "string" || !PINNED.some((re) => re.test(value))) {
-        report("unpinned|" + file + "|" + where + "|" + JSON.stringify(value));
+        return report("unpinned|" + file + "|" + where + "|" + JSON.stringify(value));
       }
+      if (value.startsWith("./")) follow(file, value);
     };
     const checkSteps = (file, prefix, steps) => {
       if (steps === undefined) return;
@@ -67,15 +94,13 @@ scan_action_pins() {
       });
     };
 
-    const workflows = list(path.join(root, ".github/workflows"), /\.ya?ml$/, false);
-    const actions = list(path.join(root, ".github/actions"), /^action\.ya?ml$/, true);
-    const files = workflows.concat(actions);
-    if (files.length === 0) {
+    if (queue.length === 0) {
       process.stdout.write("error|" + root + "|no workflow or action files found\n");
       process.exit(1);
     }
 
-    for (const full of files) {
+    for (let i = 0; i < queue.length; i += 1) {
+      const full = queue[i];
       const file = path.relative(root, full);
       let doc;
       try {
@@ -85,7 +110,7 @@ scan_action_pins() {
         continue;
       }
       if (!isMapping(doc)) { error(file, "not a mapping"); continue; }
-      if (workflows.includes(full)) {
+      if (workflowSet.has(full)) {
         if (!isMapping(doc.jobs)) { error(file, "no jobs mapping"); continue; }
         for (const [id, job] of Object.entries(doc.jobs)) {
           if (!isMapping(job)) { error(file, "job " + id + " is not a mapping"); continue; }
@@ -101,7 +126,7 @@ scan_action_pins() {
         }
       }
     }
-    process.stdout.write("scanned " + files.length + " files, " + refs + " uses\n");
+    process.stdout.write("scanned " + queue.length + " files, " + refs + " uses\n");
     process.exit(failed ? 1 : 0);
   '
 }
@@ -146,6 +171,10 @@ write_workflow() {
 }
 
 @test "a full sha, a local action and a digest-pinned image all pass" {
+  mkdir -p "$FIXTURE/.github/actions/dev-container"
+  printf '%s\n' 'name: dev' 'description: fixture' 'runs:' '  using: composite' \
+    '  steps:' '    - run: "true"' '      shell: bash' \
+    > "$FIXTURE/.github/actions/dev-container/action.yml"
   write_workflow pinned.yml \
     "- uses: actions/checkout@$SHA40 # v6.0.2" \
     "- uses: github/codeql-action/init@$SHA40" \
@@ -156,7 +185,7 @@ write_workflow() {
   run scan_action_pins "$FIXTURE"
 
   [ "$status" -eq 0 ]
-  [[ "$output" == *"scanned 1 files, 4 uses"* ]]
+  [[ "$output" == *"scanned 2 files, 4 uses"* ]]
 }
 
 @test "a tag ref fails" {
@@ -201,6 +230,57 @@ write_workflow() {
   [ "$status" -ne 0 ]
   [[ "$output" == *'unpinned|.github/actions/setup/action.yml|runs.steps[1]|"vendor/thing@v2"'* ]]
   [[ "$output" != *"actions/cache"* ]]
+}
+
+@test "a local action outside .github/actions is followed and its tag ref fails" {
+  write_workflow ok.yml "- uses: ./tools/setup/"
+  mkdir -p "$FIXTURE/tools/setup"
+  printf '%s\n' 'name: setup' 'description: fixture' 'runs:' '  using: composite' \
+    '  steps:' '    - uses: ./scripts/nested' \
+    > "$FIXTURE/tools/setup/action.yml"
+  mkdir -p "$FIXTURE/scripts/nested"
+  printf '%s\n' 'name: nested' 'description: fixture' 'runs:' '  using: composite' \
+    '  steps:' '    - uses: vendor/evil@v1' \
+    > "$FIXTURE/scripts/nested/action.yaml"
+
+  run scan_action_pins "$FIXTURE"
+
+  [ "$status" -ne 0 ]
+  [[ "$output" == *'unpinned|scripts/nested/action.yaml|runs.steps[0]|"vendor/evil@v1"'* ]]
+  [[ "$output" == *"scanned 3 files, 3 uses"* ]]
+}
+
+@test "a local ref with no action behind it fails instead of passing unscanned" {
+  write_workflow missing.yml "- uses: ./tools/absent" "- uses: ./.github/workflows/absent.yml"
+  mkdir -p "$FIXTURE/tools/absent"
+  printf 'FROM scratch\n' > "$FIXTURE/tools/absent/Dockerfile"
+
+  run scan_action_pins "$FIXTURE"
+
+  [ "$status" -ne 0 ]
+  [[ "$output" == *'error|.github/workflows/missing.yml|local action ./tools/absent not found'* ]]
+  [[ "$output" == *'|local action ./.github/workflows/absent.yml not found'* ]]
+}
+
+@test "a local ref that escapes the repository fails" {
+  write_workflow escape.yml "- uses: ./../outside"
+
+  run scan_action_pins "$FIXTURE"
+
+  [ "$status" -ne 0 ]
+  [[ "$output" == *'|local action ./../outside is outside the repository'* ]]
+}
+
+@test "a local reusable workflow is accepted without being scanned twice" {
+  write_workflow called.yml "- uses: actions/checkout@$SHA40"
+  printf '%s\n' 'name: caller' 'on: [pull_request]' 'jobs:' '  call:' \
+    '    uses: ./.github/workflows/called.yml' \
+    > "$FIXTURE/.github/workflows/caller.yml"
+
+  run scan_action_pins "$FIXTURE"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"scanned 2 files, 2 uses"* ]]
 }
 
 @test "a docker action image pulled by tag fails" {

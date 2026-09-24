@@ -450,9 +450,11 @@ SHA whose trailing comment names the tag that SHA actually points at, copied ver
 belong on the job that needs them; never interpolate `${{ }}` into a `run:` body. Fix
 findings at the root — never add a `zizmor.yml` ignore, a `# zizmor: ignore[...]`
 comment, or lower the thresholds. `tests/bats/workflow_action_pins.bats` (issue #375) holds
-the pin rule without Docker or zizmor's policy defaults: it parses every workflow and local
-action with js-yaml and fails on any `uses:` that is not local, a 40-hex SHA, or a
-`docker://…@sha256:` digest, and on a document it cannot parse or an empty glob.
+the pin rule without Docker or zizmor's policy defaults: it parses with js-yaml every
+workflow, every action under `.github/actions`, and every local action a `./` ref reaches
+wherever it lives, and fails on any `uses:` that is not local, a 40-hex SHA, or a
+`docker://…@sha256:` digest, on a `./` ref with no action behind it, and on a document it
+cannot parse or an empty glob.
 
 `make lint-actionlint` is its sibling: actionlint checks what zizmor does not — workflow
 syntax, expression types, undefined `needs:` outputs, runner labels — and hands every
