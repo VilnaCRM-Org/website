@@ -702,9 +702,13 @@ tree it guards. A genuine historical credential is rotated and revoked upstream,
 allowlisted.
 
 Two halves of #353 cannot be delivered from a commit and remain open: enabling GitHub push
-protection is a repository setting, and requiring the check on `main` belongs to #343:
-`gitleaks` is in the committed `config/main-ruleset.json`, which is inert until an admin
-applies it with `scripts/ci/apply-branch-ruleset.sh`.
+protection is a repository setting — CONTRIBUTING.md's "Secret scanning push protection"
+runbook holds the admin steps, the admin-only verification read and the seeded-push proof,
+and it describes the credential's shape rather than quoting one, because a literal would be
+a finding here — and requiring the check on `main` belongs to #343: `gitleaks` is in the
+committed `config/main-ruleset.json`, which is inert until an admin applies it with
+`scripts/ci/apply-branch-ruleset.sh`. Do not describe push protection as enabled until that
+verification read shows it.
 
 ### Dependency CVEs (osv-scanner, issue #356)
 
