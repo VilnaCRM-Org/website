@@ -148,11 +148,13 @@ so belongs in its own reviewed change, after the open dependency pull requests l
    `bun.lock`; the override does not reach it, and the lockfile criterion does not need it
    to. The inert `prismjs` override was dropped in the same lockfile change (issue #379,
    F5).
-4. **Done: seven dev-only transitives overridden within their major (#455).** Each is
+4. **Done: eleven dev-only transitives overridden within their major (#455).** Each is
    reachable only through build, lint or test tooling — none from the shipped export,
    `/swagger` included — and each `package.json` override is the lowest release that
    clears every advisory the census listed against it, so no parent is pushed past its
-   major:
+   major. `form-data` is the one that sits next to shipped code: it is a dependency of the
+   `axios` that `/swagger` bundles, but axios's `browser` field maps its Node `FormData`
+   class to an empty module, so the package never enters the export:
    - `fast-uri` 3.1.2 → **3.1.6**, via `ajv@8` (Mockoon, Spectral, webpack's
      `schema-utils`): GHSA-4c8g-83qw-93j6, GHSA-7p8r-x3mc-p8w7, GHSA-f65p-4m7j-42xc,
      GHSA-fph4-wmhf-6fwf, GHSA-jqff-g426-hqxp, GHSA-v2hh-gcrm-f6hx.
@@ -166,6 +168,18 @@ so belongs in its own reviewed change, after the open dependency pull requests l
    - `linkify-it` 5.0.1 → **5.0.2**, via `markdown-it`: GHSA-v245-v573-v5vm.
    - `postcss-selector-parser` 7.1.1 → **7.1.3**, via `css-loader` (Storybook's
      webpack): GHSA-w9m9-85wc-3x92.
+   - `form-data` 4.0.5 → **4.0.6**, via `axios` (`^4.0.5`; `wait-on`, and the Node build
+     of `@swagger-api/apidom-reference`): GHSA-hmw2-7cc7-3qxx.
+   - `nanoid` 3.3.12 → **3.3.18**, via both `postcss` copies — the hoisted one under
+     Storybook's webpack loaders (`^3.3.12`) and `next`'s own `postcss@8.4.31`
+     (`^3.3.6`): GHSA-28wg-ghj8-5hjv, GHSA-2v37-7h3g-55p8.
+   - `browserslist` 4.28.2 → **4.28.7**, via Babel's `helper-compilation-targets`,
+     `core-js-compat` and webpack: GHSA-73wf-gq98-2v4g, GHSA-c83g-rgw3-j3cx. Its own
+     caret ranges move the `electron-to-chromium` and `node-releases` data packages and
+     nest a newer `caniuse-lite` under it, because the hoisted copy `next` resolves is
+     older than the `^1.0.30001806` browserslist 4.28.7 asks for.
+   - `baseline-browser-mapping` 2.10.32 → **2.11.0**, via `next` (`^2.9.19`) and
+     `browserslist` (`^2.10.44`): GHSA-w5vr-8v7q-w6rv.
 
    `smol-toml` and `markdown-it` step past `markdownlint-cli@0.47`'s tilde ranges
    (`~1.5.2`, `~14.1.0`) but not its majors; `markdownlint-cli@0.49` itself declares
