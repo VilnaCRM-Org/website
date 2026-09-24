@@ -449,7 +449,10 @@ SHA whose trailing comment names the tag that SHA actually points at, copied ver
 (upstream may write it `v1.5.0` or `1.5.0` — zizmor flags a mismatch); `permissions:`
 belong on the job that needs them; never interpolate `${{ }}` into a `run:` body. Fix
 findings at the root — never add a `zizmor.yml` ignore, a `# zizmor: ignore[...]`
-comment, or lower the thresholds.
+comment, or lower the thresholds. `tests/bats/workflow_action_pins.bats` (issue #375) holds
+the pin rule without Docker or zizmor's policy defaults: it parses every workflow and local
+action with js-yaml and fails on any `uses:` that is not local, a 40-hex SHA, or a
+`docker://…@sha256:` digest, and on a document it cannot parse or an empty glob.
 
 `make lint-actionlint` is its sibling: actionlint checks what zizmor does not — workflow
 syntax, expression types, undefined `needs:` outputs, runner labels — and hands every
