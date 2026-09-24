@@ -210,10 +210,11 @@ so belongs in its own reviewed change, after the open dependency pull requests l
 
 5. **Done: multi-major transitives re-resolved inside their parents' ranges (#455).**
    `brace-expansion`, `body-parser`, `js-yaml` and `immutable` each resolve at more than
-   one major, so they were moved by rewriting their `bun.lock` entries rather than by an
-   override. Each new version is the newest release inside the range the parent's
-   published manifest declares — what a fresh resolution would pick — and every copy is
-   dev or build tooling:
+   one major, and `postcss` shares its major with an exact pin an override must not
+   touch, so they were moved by rewriting their `bun.lock` entries rather than by an
+   override. Except for `postcss` (below), each new version is the newest release inside
+   the range the parent's published manifest declares — what a fresh resolution would
+   pick — and every copy is dev or build tooling:
    - `brace-expansion` 1.1.15 → **1.1.21** (hoisted, `minimatch@3` `^1.1.7`), 2.1.1 →
      **2.1.7** (Jest's `glob` → `minimatch@9` `^2.0.2`) and 5.0.6 → **5.0.12**
      (`minimatch@10.2` under API Extractor, Stryker, typescript-estree and
@@ -230,6 +231,15 @@ so belongs in its own reviewed change, after the open dependency pull requests l
      GHSA-h67p-54hq-rp68 for the 3.x line.
    - `immutable` 5.1.6 → **5.1.9** (`sass` `^5.1.5`): GHSA-v56q-mh7h-f735,
      GHSA-xvcm-6775-5m9r for the 5.x line.
+   - `postcss` 8.5.15 → **8.5.23**, the hoisted copy Storybook's webpack uses
+     (`@storybook/nextjs` `^8.4.38`, `css-loader` `^8.4.33` / `^8.4.40`,
+     `resolve-url-loader`, the `postcss-modules-*` and `icss-utils` peers):
+     GHSA-r28c-9q8g-f849, GHSA-fxqj-rqcc-2cmp. A top-level override would also rewrite
+     the exact `8.4.31` that `next@16.2.6` pins, which the `next` bump owns, so
+     `next/postcss` is untouched. 8.5.23 is not the newest 8.5.x on purpose: it is the
+     version `next@16.3.5` pins, so the two copies collapse into one when that bump lands.
+     `terser-webpack-plugin` lists `postcss` only as an optional peer with no range, so
+     its edge keeps the migrated lockfile's exact-version form (`8.5.23`).
 
    The entries were rewritten by hand because neither bun command does it. The lockfile
    was migrated from pnpm (#396) and records each parent's dependency as the exact version
