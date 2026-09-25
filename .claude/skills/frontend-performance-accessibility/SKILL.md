@@ -208,18 +208,23 @@ spec pins that key set on every page.
   | ----------------- | --------------- | -------------- | -------- | --------------- | ------------------- |
   | Home, desktop     | 516,563–517,866 | 39,288         | 474,662  | 292,134         | 1,336,470–1,337,763 |
   | Home, mobile      | 516,563–517,866 | 39,288         | 474,662  | 197,733–197,846 | 1,242,069–1,243,507 |
-  | Swagger, desktop  | 892,851–909,116 | 37,158         | 474,662  | 7,074–7,187     | 1,431,001–1,447,357 |
-  | Swagger, mobile   | 892,851–909,116 | 37,158         | 474,662  | 7,717           | 1,431,645–1,447,892 |
+  | Swagger, desktop  | 910,234         | 37,171         | 474,662  | 10,730–10,843   | 1,452,869–1,452,982 |
+  | Swagger, mobile   | 910,234         | 37,171         | 474,662  | 11,455          | 1,453,591           |
+
+  The swagger rows come from CI run 36118768171, the first run that audited the loaded
+  documentation (issue #498).
 
   The budgets are 750 KB script / 1.55 MB total on the homepage and 1.05 MB /
-  1.45 MB on swagger; 45,000 B stylesheet and 500,000 B font everywhere; 320,000 B
+  1.48 MB on swagger; 45,000 B stylesheet and 500,000 B font everywhere; 320,000 B
   image on the desktop homepage, 220,000 B on the mobile homepage and 15,000 B on
   swagger. Swagger is heavier on script because it ships the swagger-ui bundle.
 
-- Every swagger number above was measured with `/swagger` in its failed-to-load
-  state: until issue #498 the host build that CI audits never ran
-  `scripts/patchSwaggerServer.mjs`, so `/swagger-schema.json` returned 404. The
-  first loaded-state `performance testing` run re-measures the swagger budgets.
+- Until issue #498 the host build that CI audits never ran
+  `scripts/patchSwaggerServer.mjs`, so `/swagger-schema.json` returned 404 and every
+  swagger budget was calibrated on the failed-to-load page. The swagger budgets were
+  re-calibrated from the loaded page: the total grew by the 3,953 B schema, mobile
+  swagger TBT (2.3 s) and LCP (11.6 s) moved to 3 s and 14 s ceilings, and the desktop
+  swagger accessibility floor rose from 0.89 to 0.9 (measured 0.95).
 - The font and stylesheet margins are tight **on purpose**. Those bytes are static
   per build — every sample above loaded the same nine faces and the same CSS — so
   there is no run-to-run noise to absorb. The 25,338 B font margin is smaller than

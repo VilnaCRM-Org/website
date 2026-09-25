@@ -33,9 +33,15 @@ module.exports = {
       // 39,288 B, image 292,134 B; swagger font 474,662 B, stylesheet 37,158 B, image
       // 7,187 B. Font and stylesheet bytes are static per build and never varied between
       // samples, so their headroom is tight on purpose: the 25,338 B font margin is smaller
-      // than the smallest face (25,508 B), so any added face fails. The swagger numbers were
-      // measured with /swagger in its failed-to-load state; #498 makes the host build
-      // render the documentation, and the first loaded-state run re-measures them.
+      // than the smallest face (25,508 B), so any added face fails.
+      //
+      // Swagger loaded-state baseline (#498), 3 samples of CI run 36118768171, the first run
+      // in which /swagger-schema.json returned 200: perf 0.71/0.88/0.87, accessibility 0.95,
+      // SEO 0.92, LCP 2,242-2,268 ms, TBT 91-401 ms, CLS 0.048, script 910,234 B, image
+      // 10,730-10,843 B, total 1,452,869-1,452,982 B. Every earlier swagger number measured
+      // the LoadError page, so the total grows by the 3,953 B schema plus the rendered
+      // operations (1,480,000 keeps about 27 KB of headroom), and accessibility moves UP to
+      // 0.9 now that the audited markup is the real documentation.
       assertMatrix: assertMatrix({
         homepage: {
           performance: 0.9,
@@ -52,8 +58,7 @@ module.exports = {
         },
         swagger: {
           performance: 0.85,
-          // Swagger UI is third-party markup; its accessibility baseline is 0.89.
-          accessibility: 0.89,
+          accessibility: 0.9,
           seo: 0.85,
           lcp: 3000,
           tbt: 350,
@@ -62,7 +67,7 @@ module.exports = {
           stylesheetBytes: 45000,
           fontBytes: 500000,
           imageBytes: 15000,
-          totalBytes: 1450000,
+          totalBytes: 1480000,
         },
       }),
     },

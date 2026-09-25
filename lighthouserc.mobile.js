@@ -77,8 +77,15 @@ module.exports = {
       // first byte budget that differs from desktop (292,134 B there): the desktop
       // viewport fetches the 99,529 B desktop hero at two widths (3840w and 2048w), the
       // mobile viewport once. Font and stylesheet margins are tight on purpose (see
-      // lighthouserc.desktop.js). The swagger numbers were measured with /swagger in its
-      // failed-to-load state; the first loaded-state run after #498 re-measures them.
+      // lighthouserc.desktop.js).
+      //
+      // Swagger loaded-state baseline (#498), 3 samples of CI run 36118768171, the first run
+      // in which /swagger-schema.json returned 200: perf 0.45 on every sample, accessibility
+      // 0.94, SEO 0.92, LCP 11,571-11,624 ms, TBT 2,286-2,423 ms, CLS 0.08, image 11,455 B,
+      // total 1,453,591 B. The earlier swagger floors (perf 0.45, LCP 12s, TBT 2.2s, total
+      // 1.45 MB) were calibrated on the LoadError page; rendering the operations adds the
+      // 3,953 B schema and the swagger-ui render cost. The re-calibrated values keep the same
+      // wide-margin rule as the homepage: perf 0.4, LCP 14s, TBT 3s, total 1,480,000.
       assertMatrix: assertMatrix({
         homepage: {
           performance: 0.4,
@@ -94,17 +101,17 @@ module.exports = {
           totalBytes: 1550000,
         },
         swagger: {
-          performance: 0.45,
+          performance: 0.4,
           accessibility: 0.9,
           seo: 0.9,
-          lcp: 12000,
-          tbt: 2200,
+          lcp: 14000,
+          tbt: 3000,
           cls: 0.5,
           scriptBytes: 1050000,
           stylesheetBytes: 45000,
           fontBytes: 500000,
           imageBytes: 15000,
-          totalBytes: 1450000,
+          totalBytes: 1480000,
         },
       }),
     },
