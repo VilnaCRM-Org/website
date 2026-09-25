@@ -11,11 +11,22 @@ DOCKER_COMPOSE_DEV_FILE=${DOCKER_COMPOSE_DEV_FILE:-"docker-compose.yml"}
 DOCKER_COMPOSE_TEST_FILE=${DOCKER_COMPOSE_TEST_FILE:-"docker-compose.test.yml"}
 COMMON_HEALTHCHECKS_FILE=${COMMON_HEALTHCHECKS_FILE:-"common-healthchecks.yml"}
 
-COMPOSE_ARGS=""
+# Infra buildspecs source this file into CodeBuild's sh, so the compose file
+# list is passed through a function rather than a bash array or a word-split
+# string: every file name stays one quoted argument under any POSIX shell.
+HEALTHCHECKS_COMPOSE_FILE=""
 if [ -n "$COMMON_HEALTHCHECKS_FILE" ] && [ -s "$COMMON_HEALTHCHECKS_FILE" ]; then
-    COMPOSE_ARGS="$COMPOSE_ARGS -f $COMMON_HEALTHCHECKS_FILE"
+    HEALTHCHECKS_COMPOSE_FILE=$COMMON_HEALTHCHECKS_FILE
 fi
-COMPOSE_ARGS="$COMPOSE_ARGS -f $DOCKER_COMPOSE_TEST_FILE"
+
+compose_test_stack() {
+    if [ -n "$HEALTHCHECKS_COMPOSE_FILE" ]; then
+        docker compose -f "$HEALTHCHECKS_COMPOSE_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" "$@"
+    else
+        docker compose -f "$DOCKER_COMPOSE_TEST_FILE" "$@"
+    fi
+}
+
 setup_docker_network() {
     docker network create "$NETWORK_NAME" 2>/dev/null || :
 }
@@ -53,19 +64,19 @@ run_lighthouse_desktop_dind() {
         set -e
         make start-prod
         make install-chromium-lhci
-        docker compose ${COMPOSE_ARGS} cp "lighthouserc.desktop.js" "prod:/app/"
+        compose_test_stack cp "lighthouserc.desktop.js" "prod:/app/"
         make test-chromium
         make lighthouse-desktop-dind
         mkdir -p lhci-reports-desktop
-        docker compose ${COMPOSE_ARGS} cp "prod:/app/lhci-reports-desktop/." "lhci-reports-desktop/" 2>/dev/null || :
+        compose_test_stack cp "prod:/app/lhci-reports-desktop/." "lhci-reports-desktop/" 2>/dev/null || :
     ); then
         :
     else
         exit_code=$?
     fi
 
-    docker compose ${COMPOSE_ARGS} exec -T prod sh -lc 'rm -rf /app/lhci-reports-mobile /app/lhci-reports-desktop /app/lighthouserc.mobile.js /app/lighthouserc.desktop.js' 2>/dev/null || :
-    docker compose ${COMPOSE_ARGS} down --volumes --remove-orphans || true
+    compose_test_stack exec -T prod sh -lc 'rm -rf /app/lhci-reports-mobile /app/lhci-reports-desktop /app/lighthouserc.mobile.js /app/lighthouserc.desktop.js' 2>/dev/null || :
+    compose_test_stack down --volumes --remove-orphans || true
     docker network rm "$NETWORK_NAME" 2>/dev/null || :
 
     if [ "$exit_code" -ne 0 ]; then
@@ -81,19 +92,19 @@ run_lighthouse_mobile_dind() {
         set -e
         make start-prod
         make install-chromium-lhci
-        docker compose ${COMPOSE_ARGS} cp "lighthouserc.mobile.js" "prod:/app/"
+        compose_test_stack cp "lighthouserc.mobile.js" "prod:/app/"
         make test-chromium
-        make lighthouse-mobile-dind    
+        make lighthouse-mobile-dind
         mkdir -p lhci-reports-mobile
-        docker compose ${COMPOSE_ARGS} cp "prod:/app/lhci-reports-mobile/." "lhci-reports-mobile/" 2>/dev/null || :
+        compose_test_stack cp "prod:/app/lhci-reports-mobile/." "lhci-reports-mobile/" 2>/dev/null || :
     ); then
         :
     else
         exit_code=$?
     fi
 
-    docker compose ${COMPOSE_ARGS} exec -T prod sh -lc 'rm -rf /app/lhci-reports-mobile /app/lhci-reports-desktop /app/lighthouserc.mobile.js /app/lighthouserc.desktop.js' 2>/dev/null || :
-    docker compose ${COMPOSE_ARGS} down --volumes --remove-orphans || true
+    compose_test_stack exec -T prod sh -lc 'rm -rf /app/lhci-reports-mobile /app/lhci-reports-desktop /app/lighthouserc.mobile.js /app/lighthouserc.desktop.js' 2>/dev/null || :
+    compose_test_stack down --volumes --remove-orphans || true
     docker network rm "$NETWORK_NAME" 2>/dev/null || :
     if [ "$exit_code" -ne 0 ]; then
         exit "$exit_code"
