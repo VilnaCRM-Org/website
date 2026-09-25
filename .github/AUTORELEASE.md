@@ -63,11 +63,14 @@ it, starting with `-----BEGIN RSA PRIVATE KEY-----`.
 
 #### 3) Let the App's release commit reach `main`
 
-The changelog action ends with `git push origin main --follow-tags`: it pushes
-the `chore(release): vX.Y.Z [skip ci]` commit to `main` and the new tag in one
-command. `main` is under **classic branch protection** that (a) requires pull
-requests and (b) requires signed commits, and the release commit is created by
-plain `git commit` on the runner, unsigned. So the push is rejected. Verified
+The changelog action used to end with `git push origin main --follow-tags`,
+pushing the `chore(release): vX.Y.Z [skip ci]` commit to `main` and the new tag
+in one command. It now only commits and tags (`git-push: 'false'`), and the
+workflow's next step pushes both atomically (see "What each release produces"
+below). Either way, `main` is under **classic branch protection** that
+(a) requires pull requests and (b) requires signed commits, and the release
+commit is created by plain `git commit` on the runner, unsigned. So the push is
+rejected. Verified
 on run [33113478799](https://github.com/VilnaCRM-Org/website/actions/runs/33113478799)
 (2026-08-27), the first release attempt after the #366 repair:
 
@@ -81,9 +84,13 @@ remote: - Changes must be made through a pull request.
 ```
 
 Note the two lines together: the **branch** push was refused, but the **tag**
-push in the same command succeeded. The push is not atomic, so every rejected
-release strands a tag with no release behind it — see "The version and tag
-invariant" below for what that did next.
+push in the same command succeeded. That push was not atomic, so every rejected
+release stranded a tag with no release behind it — see "The version and tag
+invariant" below for what that did next. The workflow now pushes through
+`scripts/ci/push-release.sh` with `git push --atomic`
+([ADR 0011](../docs/adr/0011-atomic-release-push.md)), so the remote takes the
+branch and the tag together or refuses both: a rejected release fails the
+`Push the release commit and tag atomically` step and writes nothing.
 
 "Allow force pushes", which this step used to prescribe, is the wrong knob: it
 does not bypass the pull-request rule, and classic protection's signed-commit
@@ -122,12 +129,19 @@ Every push to `main` whose commits are release-eligible runs
 
 1. Verifies the next version cannot collide with an existing tag
    (`scripts/ci/check-release-version.sh`).
-2. Generates `CHANGELOG.md`, bumps `package.json`, commits
-   `chore(release): vX.Y.Z [skip ci]`, and pushes the commit and the tag to
-   `main` in one non-atomic `git push --follow-tags` (see step 3 above for what
-   happens when branch protection refuses the commit).
-3. Generates a CycloneDX SBOM of the full locked dependency tree with Syft.
-4. Publishes the GitHub release with `gh release create` and attaches the SBOM
+2. Generates a CycloneDX SBOM of the full locked dependency tree with Syft, and
+   fails if it lists implausibly few components.
+3. Generates `CHANGELOG.md`, bumps `package.json`, commits
+   `chore(release): vX.Y.Z [skip ci]` and tags it `vX.Y.Z` — locally only; the
+   changelog action no longer pushes. The SBOM and the release notes are
+   gitignored, so the action's `git add .` cannot sweep them into the commit.
+4. Pushes the commit and the tag to `main` in one `git push --atomic`
+   (`scripts/ci/push-release.sh`), after checking that the tag names the
+   commit, that `package.json` carries the tag's version, and that the commit
+   changes only `package.json` and `CHANGELOG.md`. If branch protection refuses
+   the commit, the tag is refused with it (see setup step 3, "Let the App's
+   release commit reach `main`").
+5. Publishes the GitHub release with `gh release create` and attaches the SBOM
    as `website-sbom.cdx.json`.
 
 To answer "did release X ship the vulnerable package?":
@@ -175,8 +189,8 @@ with which tags sit on `main` and which do not.
 The preflight is doing its job, and that is why the release lane is red today.
 The first run after the #366 repair (2026-08-27, run 33113478799) computed
 `1.6.0 → 1.7.0`, committed the changelog, tagged `v1.7.0`, and was rejected by
-branch protection as described in step 3 above. Because `git push --follow-tags`
-is not atomic, the tag landed while the commit did not:
+branch protection as described in step 3 above. Because that
+`git push --follow-tags` was not atomic, the tag landed while the commit did not:
 
 - `refs/tags/v1.7.0` points at `711bbae5`, whose parent `62865e0f` **is** on
   `main` but which itself is not — it is one commit off the branch, with
@@ -188,9 +202,14 @@ is not atomic, the tag landed while the commit did not:
   preflight with `package.json is at 1.6.0 but tag v1.7.0 already exists`.
 
 Unlike the 2025 orphans, this tag was not left by a history rewrite; it was
-left by a rejected push. The remedy has a strict order, because bumping the
-version or deleting the tag while the push is still rejected simply produces
-the next orphan (`v1.8.0`) on the next push to `main`:
+left by a rejected push. Since the push became atomic
+([ADR 0011](../docs/adr/0011-atomic-release-push.md)), bumping the version or
+deleting the tag while the push is still rejected no longer strands the next
+orphan (`v1.8.0`): the next run computes it, the atomic push is refused, and
+nothing is written — the red merely moves from the preflight to the push step.
+The remedy keeps its strict order anyway. Nothing can ship until the bypass is
+in effect, and the preflight's failure names the stranded tag, while a refused
+push only says the push was refused:
 
 1. **First**, a repository admin grants the release App a bypass over both
    protection rules (step 3, option 1).
@@ -206,8 +225,9 @@ the next orphan (`v1.8.0`) on the next push to `main`:
      `v0.3.0...v1.7.0` for exactly that reason.
 3. Watch the next push to `main`: the run should end with a green `Create
    Release` step and a release carrying the SBOM. If the push is rejected
-   again, the bypass is not in effect — stop and check the ruleset before any
-   further tag or version change.
+   again, the bypass is not in effect — the run fails on the `Push the release
+   commit and tag atomically` step and no tag is written. Stop and check the
+   ruleset before any further tag or version change.
 
 Never bump `package.json` to make the preflight green while step 1 is still
 outstanding, and never delete a tag that has a release behind it.
