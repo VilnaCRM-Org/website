@@ -308,9 +308,13 @@ re-implementing its headers, duration, request-snippet and body rendering. Dropp
 that needs a team decision, so it was kept.
 
 With the waivers gone, the `swaggerAuthorizeDialog` and `swaggerOperationExpanded` scans fail
-closed if a `swagger-ui-react` upgrade renames `CloseIcon`, `Button` or `responses`, reorders
-the icon's props, or changes the responses markup. When that happens, port the upstream change
-into the plugin; do not re-add a waiver.
+closed if a `swagger-ui-react` upgrade renames `CloseIcon`, `Button` or `responses`, or reorders
+the icon's props. When that happens, port the upstream change into the plugin; do not re-add a
+waiver. No scan can see a change to upstream's `responses.jsx`: for OAS3 specs the owned port
+renders in its place, so a new prop, a fix or a markup change upstream is dropped while every
+scan stays green. The port was diffed against `swagger-ui-react` 5.32.6, and
+`SwaggerResponsesTable.test.tsx` fails on any other installed version. On every bump, re-diff
+the port against the new `responses.jsx` by hand, then move that pinned version.
 
 Be explicit about what that row costs: **SC 1.4.3, Contrast (Minimum), is currently
 enforced at neither layer.** The component layer disables `color-contrast` because jsdom has no

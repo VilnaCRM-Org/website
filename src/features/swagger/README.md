@@ -60,9 +60,13 @@ passes them as `plugins={swaggerPlugins}`, the list in `components/api-documenta
   rest of the widget on this English-only route. The live "Server response" table is not
   ported yet; `docs/accessibility/acceptance-standard.md` records that follow-up.
 
-The ported table is pinned to `swagger-ui-react`'s `responses.jsx`: re-sync it on every
-upgrade. With the waivers deleted, the e2e interaction scans fail closed when an upgrade
-changes the wrapped components; port the change, never re-add a waiver. Prefer this shape — a
+The ported table is pinned to `swagger-ui-react`'s `responses.jsx` at 5.32.6, and
+`SwaggerResponsesTable.test.tsx` fails on any other installed version: on every upgrade,
+re-diff the port against the new `responses.jsx` by hand before moving that pin. No other gate
+catches that drift, because the port replaces upstream's markup, so an upstream change to the
+table never reaches the DOM the scans read. With the waivers deleted, the e2e interaction
+scans fail closed only when an upgrade renames `CloseIcon`, `Button` or `responses` or
+reorders the icon's props; port the change, never re-add a waiver. Prefer this shape — a
 supported component override — over an `A11Y_EXCEPTIONS` waiver whenever the widget exposes
 one.
 
