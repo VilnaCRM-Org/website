@@ -110,3 +110,8 @@ _bmad-output/
 *.drawio
 *.drawio.bkp
 *.drawio.dtmp
+
+# release workflow outputs: generated beside the checkout, never committed into the
+# release commit the changelog action creates with `git add .` (issue #481, ADR 0011)
+/website-sbom.cdx.json
+/release-notes.md
