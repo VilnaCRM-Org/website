@@ -66,8 +66,11 @@ rules are load-bearing rather than incidental (issues #382 and #378):
 - **Anti-automation.** `Referral` is an inert, `aria-hidden`, untabbable honeypot field
   (`auth-form/honeypot-field.tsx`); a submission that fills it never issues the mutation
   and is answered exactly like a success, and is reported with the static
-  `signup-honeypot` tag (issue #380). The authoritative rate limit is server-side; the
-  abuse-case threat model is in `docs/sign-up-hardening.md`.
+  `signup-honeypot` tag (issue #380). Submit and Retry share one in-flight lock
+  (`auth-form/in-flight-lock.ts`) wrapped around react-hook-form's `handleSubmit`, so a
+  submission that lands before `loading` renders is dropped instead of sending a second
+  `createUser`. The authoritative rate limit is server-side; the abuse-case threat model is
+  in `docs/sign-up-hardening.md`.
 
 ## Component notes
 
