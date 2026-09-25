@@ -289,8 +289,8 @@ label under `src/features/swagger/components/api-documentation` and ship through
 - **`label-content-name-mismatch` on the authorize submit.** `withLabelInName` wraps the
   widget's `Button` and drops the `aria-label` whenever the children are a non-empty string,
   so "Authorize" and "Logout" are named by their visible text (SC 2.5.3). Buttons with
-  non-string children, such as the request-body "Edit" toggle, pass through untouched, so a
-  future icon-only button keeps its label.
+  non-string children, such as the JSON-schema form's "Add … item" button, pass through
+  untouched, so a future icon-only button keeps its label.
 - **`td-has-header` on `#get_api_users_responses`.** A wrapper on the widget's `responses`
   component renders an owned port of the OAS3 responses table inside swagger-ui's own error
   boundary, and delegates to the original for any other spec version. The port heads the
