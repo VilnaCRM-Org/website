@@ -55,9 +55,9 @@ all	bats	tests/bats/makefile_targets.bats	Validated through its `build` prerequi
 clean	bats	tests/bats/makefile_targets.bats	Validated through its `down` prerequisite in the Makefile sandbox.
 load-tests	ci	.github/workflows/load-testing.yml	Executed directly by the load testing workflow matrix.
 load-tests-swagger	ci	.github/workflows/load-testing.yml	Executed directly by the load testing workflow matrix.
-lighthouse-desktop	ci	.github/workflows/performance-testing.yml	Executed directly by the performance workflow.
+lighthouse-desktop	bats	tests/bats/makefile_targets.bats	performance-testing.yml runs it with EXEC_MODE=host; Bats pins that the host recipe patches the swagger schema before the build, the out/swagger-schema.json preflight, and the refusal to start LHCI when the schema is missing or empty.
 lighthouse-desktop-dind	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker Compose LHCI commands.
-lighthouse-mobile	ci	.github/workflows/performance-testing.yml	Executed directly by the performance workflow.
+lighthouse-mobile	bats	tests/bats/makefile_targets.bats	performance-testing.yml runs it with EXEC_MODE=host; Bats pins that the host recipe patches the swagger schema before the build, the out/swagger-schema.json preflight, and the refusal to start LHCI when the schema is missing or empty.
 lighthouse-mobile-dind	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker Compose LHCI commands.
 install	ci	.github/workflows/static-testing.yml	Executed directly by the static testing workflow.
 install-chromium-lhci	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker Compose and npm commands.

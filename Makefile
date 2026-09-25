@@ -149,6 +149,13 @@ LHCI_CONFIG_DESKTOP         = --config=lighthouserc.desktop.js
 LHCI_CONFIG_MOBILE          = --config=lighthouserc.mobile.js
 LHCI_DESKTOP_SERVE          = $(LHCI_CONFIG_DESKTOP) $(SERVE_CMD)
 LHCI_MOBILE_SERVE           = $(LHCI_CONFIG_MOBILE) $(SERVE_CMD)
+# The host Lighthouse path emits the gitignored swagger schema itself and refuses an
+# export that lacks it (issue 498); see the host LHCI_RUN below for why.
+LHCI_SWAGGER_SCHEMA         = out/swagger-schema.json
+LHCI_PATCH_SWAGGER          = env NEXT_PUBLIC_API_BASE_URL=$(SWAGGER_SERVER_URL) node scripts/patchSwaggerServer.mjs
+LHCI_REQUIRE_SCHEMA         = { test -s $(LHCI_SWAGGER_SCHEMA) || { \
+                              echo "❌ lighthouse: $(LHCI_SWAGGER_SCHEMA) is missing or empty; /swagger would be audited in its failed state" >&2; \
+                              exit 1; }; }
 
 # ===== DRY helpers (macros/vars) =====
 # Chrome/LHCI DIND common pieces
@@ -287,7 +294,12 @@ else ifeq ($(EXEC_MODE),host)
     DEV_PREREQ              =
     NEXT_DEV_CMD            = $(NEXT_BIN) dev
     STORYBOOK_START         = $(STORYBOOK_BIN) dev -p $(STORYBOOK_PORT)
-    LHCI_RUN                = $(NEXT_BUILD_CMD) && $(LHCI)
+    # performance-testing.yml audits through this branch. public/swagger-schema.json
+    # is gitignored and only the Dockerfile build used to write it, so a host export
+    # shipped none and /swagger was audited in its failed-to-load state (issue 498).
+    # Patch before the build, with the server URL the container build bakes, and
+    # refuse to start LHCI on an export that still has no schema.
+    LHCI_RUN                = $(LHCI_PATCH_SWAGGER) && $(NEXT_BUILD_CMD) && $(LHCI_REQUIRE_SCHEMA) && $(LHCI)
     LHCI_DESKTOP            = $(LHCI_RUN) $(LHCI_DESKTOP_SERVE)
     LHCI_MOBILE             = $(LHCI_RUN) $(LHCI_MOBILE_SERVE)
 else
