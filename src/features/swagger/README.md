@@ -40,15 +40,31 @@ presentation over that contract rather than a live data source.
 
 ## Accessibility of the third-party widget
 
-`swagger-ui-react` renders the servers dropdown as `<label for="servers"><select id="servers">`
-with no label text, so the control had no accessible name (#424, WCAG 4.1.2). The fix is
-the `wrapComponents` plugin in `components/api-documentation/servers`: `withServersLabel`
-wraps the widget's `ServersContainer` with a visually-hidden `<label for="servers">`,
-which names the select from anywhere in the document without patching the widget's DOM
-or moving a pixel in the visual baselines. `ApiDocumentation` passes it through
-`plugins={swaggerPlugins}`; the label text is `api_documentation.servers_label`. Prefer
-this shape — a supported component override — over an `A11Y_EXCEPTIONS` waiver whenever
-the widget exposes one.
+`swagger-ui-react` ships four WCAG failures that are fixed through its supported
+`wrapComponents` plugin API rather than waived or patched in the DOM. `ApiDocumentation`
+passes them as `plugins={swaggerPlugins}`, the list in `components/api-documentation/plugins`:
+
+- `servers` — `withServersLabel` wraps `ServersContainer` with a visually-hidden
+  `<label for="servers">`, because the widget's own label around the servers select is
+  empty (#424, SC 4.1.2). Text: `api_documentation.servers_label`.
+- `authorize-dialog` — `withCloseLabel` wraps `CloseIcon` so the icon-only `.close-modal`
+  button is named by the svg (`role="img"`, `aria-hidden` removed, text
+  `api_documentation.authorize_dialog.close`), and `withLabelInName` wraps `Button` so a
+  button with string children ("Authorize", "Logout") is named by that visible text
+  instead of a different `aria-label` (#433, SC 4.1.2 and 2.5.3).
+- `responses-table` — wraps `responses` with an owned port of the OAS3 responses table:
+  `<th scope="col">` header cells and no `role="region"` override on the `<table>`, with the
+  id, classes and `aria-live` kept (#433, SC 1.3.1). It renders inside swagger-ui's error
+  boundary (`system.fn.withErrorBoundary`) and delegates to the original for non-OAS3 specs.
+  Its copy ("Responses", "Code", "Description", "Links") stays upstream's English, like the
+  rest of the widget on this English-only route. The live "Server response" table is not
+  ported yet; `docs/accessibility/acceptance-standard.md` records that follow-up.
+
+The ported table is pinned to `swagger-ui-react`'s `responses.jsx`: re-sync it on every
+upgrade. With the waivers deleted, the e2e interaction scans fail closed when an upgrade
+changes the wrapped components; port the change, never re-add a waiver. Prefer this shape — a
+supported component override — over an `A11Y_EXCEPTIONS` waiver whenever the widget exposes
+one.
 
 ## Loading, failure and retry (issue #339)
 

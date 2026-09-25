@@ -36,5 +36,3 @@ export const serversLabelPlugin: ServersLabelPlugin = {
     ServersContainer: withServersLabel,
   },
 };
-
-export const swaggerPlugins: ServersLabelPlugin[] = [serversLabelPlugin];

@@ -8,7 +8,7 @@ import { UiButton, UiTypography } from '@/components';
 import useSwagger from '../../hooks/useSwagger';
 import { Loading } from '../loading';
 
-import { swaggerPlugins } from './servers';
+import { swaggerPlugins } from './plugins';
 import styles from './styles';
 
 function LoadError({
