@@ -42,6 +42,13 @@ module.exports = {
       // the LoadError page, so the total grows by the 3,953 B schema plus the rendered
       // operations (1,480,000 keeps about 27 KB of headroom), and accessibility moves UP to
       // 0.9 now that the audited markup is the real documentation.
+      //
+      // The perf floor held only on fast runners (a slow run scored 0.72/0.76/0.75), so the
+      // spec-load plugin (src/features/swagger/README.md, "Load performance") removed the
+      // duplicate spec parse and the ApiDOM normalization of the security schemes. CI run
+      // 36138356951 after it: perf 0.84/0.85/0.86, TBT 122-146 ms, LCP 2,302-2,390 ms. LCP is
+      // now the binding metric, and it is page weight: 474,662 B of fonts preloaded on every
+      // route plus 910,548 B of swagger-ui script, so the next gain is there, not in the floor.
       assertMatrix: assertMatrix({
         homepage: {
           performance: 0.9,

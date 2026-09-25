@@ -31,7 +31,7 @@ describe('integration: swagger spec-load plugin', () => {
     expect(swaggerPlugins).toContain(specLoadPlugin);
   });
 
-  it('parses the pinned contract once: the wrapper re-send of the same JSON is dropped', () => {
+  it('drops the wrapper re-send of the same contract JSON and forwards a changed spec', () => {
     const updateSpec = jest.fn();
     const wrapped = skipDuplicateSpec(updateSpec, systemFor(contractJson));
 

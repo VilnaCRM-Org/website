@@ -86,6 +86,8 @@ module.exports = {
       // 1.45 MB) were calibrated on the LoadError page; rendering the operations adds the
       // 3,953 B schema and the swagger-ui render cost. The re-calibrated values keep the same
       // wide-margin rule as the homepage: perf 0.4, LCP 14s, TBT 3s, total 1,480,000.
+      // After the spec-load plugin (CI run 36138356951): perf 0.49-0.50, TBT 1,218-1,339 ms,
+      // LCP 11,409-11,478 ms.
       assertMatrix: assertMatrix({
         homepage: {
           performance: 0.4,

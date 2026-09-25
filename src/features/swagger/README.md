@@ -77,8 +77,11 @@ One more entry in `swaggerPlugins` changes no markup; it removes duplicate work
 wraps two spec actions:
 
 - `updateSpec` drops a call whose string equals the stored `specStr`. The core constructor
-  already parses an object `spec`, and the React wrapper's effect then re-sends the same JSON,
-  which used to parse, re-resolve and re-render the whole document a second time.
+  already parses an object `spec`, and the React wrapper's effect then re-sends the same JSON.
+  `swagger-ui-react` also registers the `apis` preset twice, so every `updateSpec` parses the
+  document twice: the page parsed it four times, and dropping the re-send halves that to two.
+  Deduplicating `parseToJson` as well was measured against the real core and left out, because
+  the remaining parse costs a few milliseconds.
 - `requestResolvedSubtree(["components","securitySchemes"])` stores the subtree as its own
   resolved form through swagger-ui's `updateResolvedSubtree` when it holds no `$ref` and no
   `openIdConnect` scheme, instead of running the resolver. The result is identical, but for
@@ -90,7 +93,9 @@ wraps two spec actions:
 
 `SwaggerPage` also preloads `/swagger-schema.json` from the static HTML
 (`<link rel="preload" as="fetch" crossorigin="anonymous">`, the credentials mode `fetch()`
-uses), so the request no longer waits for the swagger chunks to download and execute. Both
+uses), so the request no longer waits for the swagger chunks to download and execute. WebKit
+does not hand an `as=fetch` preload to `fetch()`, so Safari downloads the schema twice and logs
+an unused-preload warning; that is expected, not a regression. Both
 changes exist because the desktop Lighthouse floor on this route stays at 0.85 (a protected,
 raise-only threshold) once issue #498 made CI audit the loaded page. The plugin depends on
 swagger-ui's action names, so re-check it on every `swagger-ui-react` upgrade together with
