@@ -39,6 +39,9 @@ ADR 0009). Anything not listed here is not wired.
     DSN and sends nothing until a maintainer commits the real (public) DSN in
     `.env.production`. `src/test/unit/client-env-contract.test.ts` pins the key's
     presence in both env files.
+  - `enabled: Boolean(env.NEXT_PUBLIC_SENTRY_DSN)` — the SDK is switched off
+    explicitly whenever the DSN is empty. The app-level error boundary still
+    renders its fallback when the SDK is disabled.
   - `sendDefaultPii: false`, pinned explicitly (#378 F3).
   - `browserTracingIntegration()` and
     `replayIntegration({ maskAllInputs: true, maskAllText: true, blockAllMedia: true })`
@@ -46,9 +49,12 @@ ADR 0009). Anything not listed here is not wired.
     the sign-up form's password field.
   - `tracePropagationTargets` limited to `NEXT_PUBLIC_DEVELOPMENT_API_URL` and
     `NEXT_PUBLIC_API_URL`, with empty values filtered out.
-  - `tracesSampleRate` is `0.1` in a production build and `1.0` in development
-    (`APP_ENVIRONMENT === 'production'`); `replaysSessionSampleRate: 0.1`,
-    `replaysOnErrorSampleRate: 1.0`.
+  - `tracesSampleRate` comes from `resolveTracesSampleRate` in
+    `src/lib/telemetry/traces-sample-rate.ts`, fed
+    `env.NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE` and `APP_ENVIRONMENT`. The variable
+    is a number from 0 to 1, validated in `src/config/env.ts`; empty (as every
+    committed env file ships it) selects the default — `0.1` in a production build,
+    `1.0` in development. `replaysSessionSampleRate: 0.1`, `replaysOnErrorSampleRate: 1.0`.
   - `release: APP_VERSION` (the `package.json` version) and
     `environment: APP_ENVIRONMENT` (`production` or `development`, from
     `isProductionBuild()`), both from `src/config/app-version.ts`.
@@ -58,18 +64,37 @@ ADR 0009). Anything not listed here is not wired.
     [reference/privacy-checklist.md](reference/privacy-checklist.md).
   - `src/test/unit/sentry-replay-masking.test.ts` and
     `src/test/unit/sentry-app-observability.test.ts` parse this call with the
-    TypeScript compiler and fail if `sendDefaultPii`, the mask options,
-    `release`/`environment`, either scrubber or the boundary wiring below drift.
+    TypeScript compiler and fail if `sendDefaultPii`, the mask options, the
+    `enabled` guard, the sample-rate wiring, `release`/`environment`, either
+    scrubber or the boundary wiring below drift.
 - **Render crashes** — `Sentry.ErrorBoundary` wraps only `<Component />` inside
   `Layout`, so the header, skip link and footer survive a page crash. Its fallback
   is `src/components/error-fallback` (localized, `role="alert"`, retry + home
   link). The boundary captures the crash itself; a `beforeCapture` callback
   (`tagRenderCrash`) tags that single event `{ feature: 'app', action:
 'render-crash' }`. There is deliberately no `onError` sink — it would report every
-  crash twice (ADR 0009).
+  crash twice (ADR 0009). Its `onReset` (`focusPageStart`) moves focus to
+  `#skip-target`, the `tabIndex={-1}` anchor `Layout` renders right before the page,
+  because a successful retry unmounts the focused retry button and would otherwise
+  drop keyboard focus to `<body>` (WCAG 2.4.3). The boundary does not depend on the
+  SDK being enabled: with no DSN it still renders the fallback.
+  `src/test/testing-library/AppErrorBoundary.test.tsx` renders the real `MyApp` with a
+  crashing page and proves the fallback, the keyboard retry and the focus return.
 - **Handled errors** — `reportHandledError` in `src/lib/telemetry/report-error.ts`
   wraps `Sentry.captureException` with static `feature`/`action` tags only. Its two
   callers are the sign-up submit path (#378 F3) and the Apollo `ErrorLink`.
+- **Route tag** — `scrubEvent` finishes by calling `withRouteTag`
+  (`src/lib/telemetry/route-tag.ts`), which adds a `route` tag to every error event:
+  the pathname of the already-scrubbed `request.url` (the page the visitor was on),
+  never its query string or fragment, with email-shaped segments redacted and capped
+  at Sentry's 200-character tag-value limit. An event with no absolute page URL gets
+  no `route` tag. Deriving it in `beforeSend` rather than in `reportHandledError`
+  tags render crashes as well, and keeps the capture call's own tags static. The
+  `request.url` it reads is filled in by the SDK's default HttpContext integration,
+  so `Sentry.init` must never set `defaultIntegrations` (and `integrations` stays an
+  array literal, which adds to the defaults instead of replacing them):
+  `sentry-app-observability.test.ts` rejects the option, and `route-tag.test.ts`
+  fails if an SDK upgrade stops registering HttpContext by default.
 - **Apollo errors** — `src/features/landing/api/graphql/apollo.ts` puts a
   reporting-only `ErrorLink` first in the link chain; it calls
   `reportHandledError(error, { feature: 'landing', action: 'graphql' })`, never
@@ -126,8 +151,9 @@ remove, live in [reference/privacy-checklist.md](reference/privacy-checklist.md)
 
 - Keep **error** capture effectively unsampled — you want every exception.
 - **Sample** high-volume signals (traces, session replay, web-vitals) to control
-  quota. The live rates are in `pages/_app.tsx`; tune them there and never add
-  per-call overrides. Treat that file as the single source of truth.
+  quota. The live rates are in `pages/_app.tsx`; the trace rate is tuned through
+  `NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE` (default `0.1` in production), the replay
+  rates in that file. Never add per-call overrides.
 - Gate web-vitals forwarding behind a production check and a sample rate so dev
   noise and quota stay bounded.
 

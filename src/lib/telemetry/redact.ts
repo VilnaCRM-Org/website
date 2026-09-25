@@ -10,7 +10,8 @@ export const MAX_SCRUB_BREADTH = 100;
 
 export const MAX_SCRUB_NODES = 1000;
 
-const EMAIL_PATTERN = /[\p{L}\p{N}._%+-]{1,64}@[\p{L}\p{N}-]{1,63}(?:\.[\p{L}\p{N}-]{1,63}){1,8}/gu;
+const EMAIL_PATTERN =
+  /[\p{L}\p{N}._%+-]{1,64}(?:@|%40)[\p{L}\p{N}-]{1,63}(?:\.[\p{L}\p{N}-]{1,63}){1,8}/gu;
 
 const QUERY_OR_FRAGMENT = /[?#]/u;
 

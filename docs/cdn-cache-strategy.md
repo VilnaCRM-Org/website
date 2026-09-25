@@ -75,9 +75,9 @@ the new build visible inside the readiness window the post-deploy smoke test alr
 assumes — about ten minutes (`docs/deployment-runbook.md`, "Post-deploy smoke test").
 The pipeline meets that either by invalidating this class after the upload or by keeping
 the edge TTL under the window; which one is the infrastructure repository's decision.
-The readiness probes only sample this class — they fetch `/` and `/swagger` — so a stale
-un-probed object (`sw.js`, `swagger-schema.json`, another route document) passes them
-today; covering the rest is part of the probe described under
+The readiness probes in `make smoke-prod` only sample this class — they fetch `/` and
+`/swagger` — so a stale un-probed object (`sw.js`, `swagger-schema.json`, another route
+document) passes them today; covering the rest is part of the probe described under
 [verification](#where-the-contract-is-proved).
 
 Two entries in this class are stricter than the rest:
@@ -116,9 +116,10 @@ above apply to both distributions identically.
   in the 100 % `edge` layer.
 - _The security headers reach the live edge_ — the `deploy.yml` post-deploy header probe,
   once `PRODUCTION_SITE_URL` is set.
-- _A deploy becomes visible within the window_ — the readiness probes in `deploy.yml`,
-  which retry until the new build is served on `/` and `/swagger`; the other class-2
-  paths are not sampled.
+- _A deploy becomes visible within the window_ — the homepage and `/swagger` probes in
+  `make smoke-prod` (`scripts/ci/uptime-check.sh` with the deploy-sized 24 x 15s
+  budget), which retry until `/` and `/swagger` answer; the other class-2 paths are not
+  sampled.
 - _Classes 1 and 2 carry the headers above_ — `scripts/ci/smoke-response-shape.sh`
   fetches `/` (class 2) and, from a `/_next/static/**.(js|css)` reference read out of
   that HTML, one live class-1 asset (never hardcoded — the filename is content-hashed

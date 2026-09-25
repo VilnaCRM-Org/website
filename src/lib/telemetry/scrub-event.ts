@@ -1,6 +1,7 @@
 import type { Contexts, ErrorEvent, Exception, RequestEventData, User } from '@sentry/react';
 
 import { redactEmails, scrubRecord, scrubUrl, scrubValue } from './redact';
+import { withRouteTag } from './route-tag';
 import { scrubBreadcrumb } from './scrub-breadcrumb';
 
 type EventPatch = Partial<ErrorEvent>;
@@ -63,5 +64,5 @@ function scrubbedPayloads(event: ErrorEvent): EventPatch {
 }
 
 export function scrubEvent(event: ErrorEvent): ErrorEvent {
-  return { ...event, ...scrubbedText(event), ...scrubbedPayloads(event) };
+  return withRouteTag({ ...event, ...scrubbedText(event), ...scrubbedPayloads(event) });
 }

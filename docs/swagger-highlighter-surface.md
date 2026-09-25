@@ -67,7 +67,7 @@ highlight.js 10 emitter API (`openNode` / `closeNode` in `lib/core.js`) and pins
 `highlight.js ~10.7.0`; the lowlight line built for highlight.js 11 is 2.x (`~11.0.0`),
 which the `^1.17.0` range cannot reach. A bare `overrides: { "highlight.js": "11.x" }`
 would therefore break lowlight 1.20.0 at runtime rather than upgrade it — do not add one.
-`swagger-ui-react@5.32.15`, the newest release, still declares
+`swagger-ui-react@5.33.0`, the newest release, still declares
 `react-syntax-highlighter ^16.0.0`, so nothing in range moves the page off highlight.js 10.
 
 ## Why the prismjs override existed
@@ -121,13 +121,18 @@ it constrains, and [SECURITY.md](../SECURITY.md) sets the triage timeline for th
 None of these is a documentation change; each rewrites `bun.lock` or the rendered page and
 so belongs in its own reviewed change, after the open dependency pull requests land.
 
-1. **Bump `swagger-ui-react` in range, 5.32.6 → 5.32.15.** The newest release declares
-   `immutable ^5.1.9`, `dompurify ^3.4.13` and `swagger-client ^3.38.0`. That is where the
-   census entries that ship in the public `/swagger` bundle go away: `immutable@3.8.3`
-   carries GHSA-v56q-mh7h-f735 (fixed in 4.3.9 / 5.1.8) and `dompurify@3.4.7` carries
-   GHSA-55q2-fjhq-7xh7 (fixed in 3.4.13). Not hermetic — the releases between change the
-   rendered markup, so the swagger visual baselines and the accessibility route scan must
-   be re-run against the prod stack.
+1. **Bump `swagger-ui-react` in range, 5.32.6 → `^5.33.0`.** The newest release, 5.33.0,
+   declares `js-yaml =4.3.2`, `swagger-client ^3.38.2` (which declares `js-yaml ^4.3.2`),
+   `immutable ^5.1.9` and `dompurify ^3.4.13`. That is where the census entries that ship
+   in the public `/swagger` bundle go away: `immutable@3.8.3` carries GHSA-v56q-mh7h-f735
+   (fixed in 4.3.9 / 5.1.8), `dompurify@3.4.7` carries GHSA-55q2-fjhq-7xh7 (fixed in
+   3.4.13), and the two nested `js-yaml@4.1.1` copies carry GHSA-2883-xcg3-v3hh,
+   GHSA-52cp-r559-cp3m, GHSA-5p4m-2wfm-xmqj and GHSA-h67p-54hq-rp68 (all clear at 4.3.2).
+   Both consumers then share the hoisted `js-yaml@4.3.2`. Stop short of 5.33.0 and the
+   `js-yaml` half fails: 5.32.15 pins `=4.3.1`, which nests a third copy beside the
+   hoisted one and still carries GHSA-2883-xcg3-v3hh. Not hermetic — the releases between
+   change the rendered markup, so the swagger visual baselines and the accessibility route
+   scan must be re-run against the prod stack.
 2. **Take highlight.js 10 out of the export.** Upstream offers no in-range path (above), so
    the options are a webpack alias that stubs `react-syntax-highlighter/dist/esm/light`
    with `syntaxHighlight` turned off, or a different renderer. Either changes what
@@ -148,11 +153,13 @@ so belongs in its own reviewed change, after the open dependency pull requests l
    `bun.lock`; the override does not reach it, and the lockfile criterion does not need it
    to. The inert `prismjs` override was dropped in the same lockfile change (issue #379,
    F5).
-4. **Done: seven dev-only transitives overridden within their major (#455).** Each is
+4. **Done: twelve dev-only transitives overridden within their major (#455).** Each is
    reachable only through build, lint or test tooling — none from the shipped export,
    `/swagger` included — and each `package.json` override is the lowest release that
    clears every advisory the census listed against it, so no parent is pushed past its
-   major:
+   major. `form-data` is the one that sits next to shipped code: it is a dependency of the
+   `axios` that `/swagger` bundles, but axios's `browser` field maps its Node `FormData`
+   class to an empty module, so the package never enters the export:
    - `fast-uri` 3.1.2 → **3.1.6**, via `ajv@8` (Mockoon, Spectral, webpack's
      `schema-utils`): GHSA-4c8g-83qw-93j6, GHSA-7p8r-x3mc-p8w7, GHSA-f65p-4m7j-42xc,
      GHSA-fph4-wmhf-6fwf, GHSA-jqff-g426-hqxp, GHSA-v2hh-gcrm-f6hx.
@@ -166,16 +173,38 @@ so belongs in its own reviewed change, after the open dependency pull requests l
    - `linkify-it` 5.0.1 → **5.0.2**, via `markdown-it`: GHSA-v245-v573-v5vm.
    - `postcss-selector-parser` 7.1.1 → **7.1.3**, via `css-loader` (Storybook's
      webpack): GHSA-w9m9-85wc-3x92.
+   - `form-data` 4.0.5 → **4.0.6**, via `axios` (`^4.0.5`; `wait-on`, and the Node build
+     of `@swagger-api/apidom-reference`): GHSA-hmw2-7cc7-3qxx.
+   - `nanoid` 3.3.12 → **3.3.18**, via both `postcss` copies — the hoisted one under
+     Storybook's webpack loaders (`^3.3.16`, postcss 8.5.23) and `next`'s own `postcss@8.4.31`
+     (`^3.3.6`): GHSA-28wg-ghj8-5hjv, GHSA-2v37-7h3g-55p8.
+   - `browserslist` 4.28.2 → **4.28.7**, via Babel's `helper-compilation-targets`,
+     `core-js-compat` and webpack: GHSA-73wf-gq98-2v4g, GHSA-c83g-rgw3-j3cx. Its own
+     caret ranges move the `electron-to-chromium` and `node-releases` data packages and
+     nest a newer `caniuse-lite` under it, because the hoisted copy `next` resolves is
+     older than the `^1.0.30001806` browserslist 4.28.7 asks for.
+   - `baseline-browser-mapping` 2.10.32 → **2.11.0**, via `next` (`^2.9.19`) and
+     `browserslist` (`^2.10.44`): GHSA-w5vr-8v7q-w6rv.
+   - `qs` 6.15.1 / 6.15.2 → **6.16.0**, via `express` (Lighthouse CI, Mockoon),
+     `body-parser` (Express, and `@apollo/server` in the local mock), Mockoon's
+     `@mockoon/commons-server`, Stryker's `typed-rest-client` and Storybook's `url`
+     polyfill: GHSA-4mjr-xmp4-gh2g, GHSA-q8mj-m7cp-5q26, GHSA-x5fp-wj9c-mxmx.
 
    `smol-toml` and `markdown-it` step past `markdownlint-cli@0.47`'s tilde ranges
    (`~1.5.2`, `~14.1.0`) but not its majors; `markdownlint-cli@0.49` itself declares
    `~1.7.0` and `~14.3.0`, so drop both entries in the change that moves
    `markdownlint-cli` to 0.49 rather than leaving them as permanent out-of-range pins.
+   `qs` steps past exact and tilde pins the same way: `typed-rest-client@2.3.1` pins
+   `6.15.1`, `@mockoon/commons-server@9.7.0` pins `6.15.2` and `express@4.22.2` declares
+   `~6.15.1`. Their next releases already sit on 6.16 (`typed-rest-client` 3.x declares
+   `^6.16.0`, `@mockoon/commons-server@9.9.0` pins `6.16.0`), so drop the entry once
+   every one of them has moved.
 
    Bun honours only top-level overrides, so a package the tree resolves at more than one
    major — `minimatch` 3/9/10, `brace-expansion` 1/2/5, `js-yaml` 3/4 — cannot be pinned
-   this way without forcing a major on one of its consumers, and is left for its parents
-   to move. Retire an entry once no parent's range can resolve below it.
+   this way without forcing a major on one of its consumers; item 5 moves those inside
+   their parents' ranges instead. Retire an entry once no parent's range can resolve below
+   it.
 
    The overrides reach only what `bun.lock` resolves. `Mockoon.Dockerfile` installs
    `@mockoon/cli` globally with `npm`, outside the lockfile, so the e2e mock image still
@@ -183,3 +212,69 @@ so belongs in its own reviewed change, after the open dependency pull requests l
    contract harness runs 18.2.5; its `fast-uri` floats to the newest 3.x under `ajv`'s
    `^3.0.1` at image-build time instead of following the pin. Advisories inside that image
    are invisible to the lockfile-based CVE gate and clear only when Mockoon moves `joi`.
+
+5. **Done: multi-major transitives re-resolved inside their parents' ranges (#455).**
+   `brace-expansion`, `body-parser`, `js-yaml` and `immutable` each resolve at more than
+   one major, and `postcss` shares its major with an exact pin an override must not
+   touch, so they were moved by rewriting their `bun.lock` entries rather than by an
+   override. Except for `postcss` (below), each new version is the newest release inside
+   the range the parent's published manifest declares — what a fresh resolution would
+   pick — and every copy is dev or build tooling:
+   - `brace-expansion` 1.1.15 → **1.1.21** (hoisted, `minimatch@3` `^1.1.7`), 2.1.1 →
+     **2.1.7** (Jest's `glob` → `minimatch@9` `^2.0.2`) and 5.0.6 → **5.0.12**
+     (`minimatch@10.2` under API Extractor, Stryker, typescript-estree and
+     `@swagger-api/apidom-reference`, `^5.0.2` / `^5.0.5`): GHSA-3jxr-9vmj-r5cp,
+     GHSA-mh99-v99m-4gvg, GHSA-rgw5-rvv9-x895. apidom-reference sits in the `/swagger`
+     tree, but it loads `minimatch` only from its Node file resolver, which its `browser`
+     field swaps out, so none of these copies ships.
+   - `body-parser` 1.20.5 → **1.20.8** (`express` `~1.20.5`) and 2.2.2 → **2.3.0**
+     (`@apollo/server` `^2.2.2`, used only by the local GraphQL mock):
+     GHSA-v422-hmwv-36x6. 2.3.0 asks for `content-type ^2.0.0`, so the `content-type@2.0.0`
+     that `type-is` already nested is now nested one level up and shared.
+   - `js-yaml` 3.14.2 → **3.15.2** (`@istanbuljs/load-nyc-config` and `@lhci/utils`, both
+     `^3.13.1`): GHSA-2883-xcg3-v3hh, GHSA-52cp-r559-cp3m, GHSA-5p4m-2wfm-xmqj,
+     GHSA-h67p-54hq-rp68 for the 3.x line.
+   - `immutable` 5.1.6 → **5.1.9** (`sass` `^5.1.5`): GHSA-v56q-mh7h-f735,
+     GHSA-xvcm-6775-5m9r for the 5.x line.
+   - `postcss` 8.5.15 → **8.5.23**, the hoisted copy Storybook's webpack uses
+     (`@storybook/nextjs` `^8.4.38`, `css-loader` `^8.4.33` / `^8.4.40`,
+     `resolve-url-loader`, the `postcss-modules-*` and `icss-utils` peers):
+     GHSA-r28c-9q8g-f849, GHSA-fxqj-rqcc-2cmp. A top-level override would also rewrite
+     the exact `8.4.31` that `next@16.2.6` pins, which the `next` bump owns, so
+     `next/postcss` is untouched. 8.5.23 is not the newest 8.5.x on purpose: it is the
+     version `next@16.3.5` pins, so the two copies collapse into one when that bump lands.
+     `terser-webpack-plugin` lists `postcss` only as an optional peer with no range, so
+     its edge keeps the migrated lockfile's exact-version form (`8.5.23`).
+
+   The entries were rewritten by hand because neither bun command does it. The lockfile
+   was migrated from pnpm (#396) and records each parent's dependency as the exact version
+   it resolved (`minimatch@3.1.5` lists `"brace-expansion": "1.1.15"`), so a widened range
+   alone changes nothing. Removing entries — a parent together with its child, or the
+   children with their parents' edges widened — made bun 1.3.5 discard the lockfile and
+   re-resolve every package (both attempts rewrote about 3,100 lines and moved
+   `@apollo/client` 4.2.0 → 4.3.1), and `bun update <pkg>` promotes the transitive to a
+   direct dependency. Instead, each child entry was rewritten from its registry manifest
+   (version, dependency ranges, integrity), and the one edge in each parent entry was
+   replaced by the range that parent publishes. Bun then re-serialised the file,
+   `bun install --frozen-lockfile` accepts it, and a clean `node_modules` install checked
+   every integrity hash. Repeat that recipe for the next in-range move; a hand-edited
+   entry that bun would not have written shows up as a diff the next time it
+   re-serialises.
+
+   The 4.x `js-yaml` line moved with the root devDependency (`^4.3.2`, issue #322): the
+   hoisted copy is now **4.3.2**, and `@eslint/eslintrc` (`^4.1.1`) and both
+   `cosmiconfig` copies (`^4.1.0`) had their edges widened onto it the same way. Three
+   consumers keep a nested `js-yaml@4.1.1`: `markdownlint-cli@0.47` declares `~4.1.1`,
+   and `swagger-ui-react` (`=4.1.1`) and `swagger-client` stay on the version the
+   `/swagger` bundle has always shipped, because moving shipped code needs the swagger
+   e2e, visual and accessibility runs of item 1. The cost is that the lazy `/swagger`
+   chunk now bundles two identical copies of `js-yaml@4.1.1` (about 13 KB gzipped more)
+   where the hoisted copy used to serve both; item 1's bump collapses them.
+
+   Lines that stay, each owned by a follow-up: `brace-expansion@5.0.6` under
+   `markdownlint-cli`'s `minimatch@10.1.3` and the `js-yaml@4.1.1` nested under
+   `markdownlint-cli@0.47`, both left for the `markdownlint-cli` 0.49 bump — which must
+   land on 0.49.1 (`js-yaml ~5.2.1`), because 0.49.0's `~4.2.0` still carries three of the
+   four advisories — and the `js-yaml@4.1.1` and `immutable@3.8.3` copies `/swagger` ships
+   (item 1). The 0.49 bump's own lockfile resolves `brace-expansion@5.0.6` again under its
+   `minimatch@10.2.5` copies, so it needs the same treatment when it lands.

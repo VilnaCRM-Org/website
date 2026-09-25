@@ -61,7 +61,11 @@ run_smoke() {
 }
 
 # The response shape a correctly deployed distribution returns for an unknown path.
-GOOD_404='{"status":404,"headers":{"content-type":"text/html; charset=utf-8"},"body":"<html><body>404</body></html>"}'
+GOOD_404='{"status":404,"headers":{"content-type":"text/html; charset=utf-8"},"body":"<html><head><title>Page not found - VilnaCRM</title></head><body>404</body></html>"}'
+
+# Well-formed in every way the shape checks look at, but not the site's document:
+# an S3 error page, or a routing function published before #339 branded the 404.
+UNBRANDED_404='{"status":404,"headers":{"content-type":"text/html; charset=utf-8"},"body":"<html><head><title>404 Not Found</title></head><body><h1>404 - Page Not Found</h1></body></html>"}'
 
 # --- The happy path -------------------------------------------------------------
 
@@ -87,6 +91,115 @@ GOOD_404='{"status":404,"headers":{"content-type":"text/html; charset=utf-8"},"b
   run_smoke
   [ "$status" -eq 0 ]
   refute_output_contains '//smoke-nonexistent'
+}
+
+@test "refuses an unknown flag rather than ignoring it" {
+  # A mistyped --require-branded that were ignored would silently downgrade the
+  # blocking brand assertion to a warning on the production deploy.
+  start_origin <<< "$GOOD_404"
+  run_smoke --require-brandd
+  [ "$status" -eq 2 ]
+  assert_output_contains "unknown argument '--require-brandd'"
+}
+
+# --- The branded body (#329) -----------------------------------------------------
+
+@test "fails a well-formed but unbranded 404 when the brand is required" {
+  start_origin <<< "$UNBRANDED_404"
+  run_smoke --require-branded
+  [ "$status" -eq 1 ]
+  assert_output_contains "expected the branded 404 (no case-insensitive match for 'Page not found - VilnaCRM')"
+  refute_output_contains 'returned a well-formed 404'
+}
+
+@test "passes the branded 404 when the brand is required" {
+  start_origin <<< "$GOOD_404"
+  run_smoke --require-branded
+  [ "$status" -eq 0 ]
+  assert_output_contains "is the branded 404 (matched 'Page not found - VilnaCRM')"
+  refute_output_contains 'is not the branded 404'
+}
+
+@test "passes the real edge handler's 404 with the default marker" {
+  # The parity case: the served response is the one scripts/cloudfront_routing.js
+  # itself builds, so rewording its document without moving the default marker
+  # (or the reverse) turns this red.
+  node "$PROJECT_ROOT/tests/bats/fixtures/edge-404-shape.mjs" \
+    "$PROJECT_ROOT/scripts/cloudfront_routing.js" /smoke-nonexistent-fixture \
+    > "$BATS_TEST_TMPDIR/edge-404.json"
+  start_origin < "$BATS_TEST_TMPDIR/edge-404.json"
+  run_smoke --require-branded
+  [ "$status" -eq 0 ]
+  assert_output_contains 'returned a well-formed 404'
+  assert_output_contains 'is the branded 404'
+}
+
+@test "matches the marker case-insensitively" {
+  start_origin <<< '{"status":404,"headers":{"content-type":"text/html"},"body":"<title>PAGE NOT FOUND - VILNACRM</title>"}'
+  run_smoke --require-branded
+  [ "$status" -eq 0 ]
+}
+
+@test "does not accept the brand name alone as the branded 404" {
+  # The S3 error document is the site's own index.html, which carries the brand
+  # too; a bare "VilnaCRM" marker would certify it.
+  start_origin <<< '{"status":404,"headers":{"content-type":"text/html"},"body":"<title>VilnaCRM</title>"}'
+  run_smoke --require-branded
+  [ "$status" -eq 1 ]
+  assert_output_contains 'expected the branded 404'
+}
+
+@test "only warns about an unbranded 404 when the brand is not required" {
+  # The sandbox and the scheduled uptime check call the script without the flag:
+  # the sandbox is a bare S3 website bucket that never serves the edge document.
+  start_origin <<< "$UNBRANDED_404"
+  run_smoke
+  [ "$status" -eq 0 ]
+  assert_output_contains 'returned a well-formed 404'
+  assert_output_contains '::warning::'
+  assert_output_contains 'is not the branded 404'
+}
+
+@test "reads the marker from SMOKE_404_MARKER" {
+  start_origin <<< '{"status":404,"headers":{"content-type":"text/html"},"body":"<p>Custom brand 404</p>"}'
+  SMOKE_404_MARKER='custom BRAND 404' run_smoke --require-branded
+  [ "$status" -eq 0 ]
+  assert_output_contains "matched 'custom BRAND 404'"
+
+  SMOKE_404_MARKER='another brand' run_smoke --require-branded
+  [ "$status" -eq 1 ]
+  assert_output_contains "no case-insensitive match for 'another brand'"
+}
+
+@test "falls back to the default marker when SMOKE_404_MARKER is empty" {
+  # An empty fixed-string pattern matches every body.
+  start_origin <<< "$UNBRANDED_404"
+  SMOKE_404_MARKER='' run_smoke --require-branded
+  [ "$status" -eq 1 ]
+  assert_output_contains "no case-insensitive match for 'Page not found - VilnaCRM'"
+}
+
+@test "matches the marker as a fixed string, not a pattern" {
+  start_origin <<< "$GOOD_404"
+  SMOKE_404_MARKER='Page not found . VilnaCRM' run_smoke --require-branded
+  [ "$status" -eq 1 ]
+  assert_output_contains 'expected the branded 404'
+}
+
+@test "refuses a multi-line marker" {
+  # grep -F reads each line as its own pattern, and an empty one matches anything.
+  start_origin <<< "$UNBRANDED_404"
+  SMOKE_404_MARKER=$'nothing here\n' run_smoke --require-branded
+  [ "$status" -eq 2 ]
+  assert_output_contains 'SMOKE_404_MARKER must be a single line'
+}
+
+@test "retries an unbranded 404 while the new routing function propagates" {
+  start_origin <<< "[${UNBRANDED_404},${GOOD_404}]"
+  SMOKE_ATTEMPTS=2 run_smoke --require-branded
+  [ "$status" -eq 0 ]
+  assert_output_contains 'attempt 1/2'
+  assert_output_contains 'is the branded 404'
 }
 
 # --- The four production incidents ----------------------------------------------
@@ -400,4 +513,66 @@ CACHE_GOOD_ASSET='{"status":200,"headers":{"content-type":"application/javascrip
   [ "$status" -eq 0 ]
   assert_output_contains 'returned 500 instead of 200'
   assert_output_contains 'skipped the cache-control advisory'
+}
+
+# --- make smoke-prod (#329) ------------------------------------------------------
+#
+# The target is the whole post-deploy smoke: this script under --require-branded,
+# then the homepage and /swagger through scripts/ci/uptime-check.sh. Each case
+# breaks exactly one of the three and asserts the target goes red on it.
+
+HOME_OK='{"status":200,"headers":{"content-type":"text/html"},"body":"<div id=\"__next\"></div>"}'
+SWAGGER_OK='{"status":200,"headers":{"content-type":"text/html"},"body":"{\"page\":\"/swagger\"}"}'
+
+run_smoke_prod() {
+  run env -C "$PROJECT_ROOT" \
+    SMOKE_PROD_ATTEMPTS=1 SMOKE_PROD_DELAY=0 \
+    SMOKE_ATTEMPTS=1 SMOKE_DELAY=0 \
+    SMOKE_NONEXISTENT_PATH=/smoke-nonexistent-fixture \
+    make --no-print-directory smoke-prod SITE_URL="$BASE_URL"
+}
+
+@test "make smoke-prod passes when the homepage, /swagger and the branded 404 are healthy" {
+  start_origin <<< "{\"default\":${GOOD_404},\"paths\":{\"/\":${HOME_OK},\"/swagger\":${SWAGGER_OK}}}"
+  run_smoke_prod
+  [ "$status" -eq 0 ]
+  [ "$(printf '%s\n' "$output" | grep -c 'returned 200 text/html with a body')" -eq 2 ]
+  assert_output_contains 'is the branded 404'
+}
+
+@test "make smoke-prod fails when the homepage is down, and still grades the 404" {
+  start_origin <<< "{\"default\":${GOOD_404},\"paths\":{\"/\":{\"status\":500,\"headers\":{\"content-type\":\"text/html\"},\"body\":\"boom\"},\"/swagger\":${SWAGGER_OK}}}"
+  run_smoke_prod
+  [ "$status" -ne 0 ]
+  assert_output_contains '::error::homepage'
+  assert_output_contains 'returned a well-formed 404'
+}
+
+@test "make smoke-prod fails when /swagger serves the homepage document" {
+  start_origin <<< "{\"default\":${GOOD_404},\"paths\":{\"/\":${HOME_OK},\"/swagger\":${HOME_OK}}}"
+  run_smoke_prod
+  [ "$status" -ne 0 ]
+  assert_output_contains '::error::swagger page'
+  assert_output_contains 'expected a match for /swagger/i'
+}
+
+@test "make smoke-prod fails on a well-formed but unbranded 404" {
+  start_origin <<< "{\"default\":${UNBRANDED_404},\"paths\":{\"/\":${HOME_OK},\"/swagger\":${SWAGGER_OK}}}"
+  run_smoke_prod
+  [ "$status" -ne 0 ]
+  assert_output_contains 'expected the branded 404'
+  refute_output_contains '::error::homepage'
+  [ "$(printf '%s\n' "$output" | grep -c 'returned 200 text/html with a body')" -eq 2 ]
+}
+
+@test "make smoke-prod prints the 404 verdict before it probes the homepage" {
+  start_origin <<< "{\"default\":${GOOD_404},\"paths\":{\"/\":${HOME_OK},\"/swagger\":${SWAGGER_OK}}}"
+  run_smoke_prod
+  [ "$status" -eq 0 ]
+  local verdict_line home_line
+  verdict_line="$(printf '%s\n' "$output" | grep -n 'returned a well-formed 404' | cut -d: -f1)"
+  home_line="$(printf '%s\n' "$output" | grep -n 'Probing homepage' | cut -d: -f1)"
+  [ -n "$verdict_line" ]
+  [ -n "$home_line" ]
+  [ "$verdict_line" -lt "$home_line" ]
 }

@@ -1,7 +1,11 @@
 #!/usr/bin/env bats
 #
 # Coverage for scripts/ci/scan-secrets.sh and the .gitleaks.toml allowlist
-# (issue #353) -- the committed-secrets gate.
+# (issue #353) -- the committed-secrets gate -- plus its job-log leg (#375 F4):
+# scripts/ci/fetch-run-logs.sh, job-log-secrets-scan.yml, and the alert that
+# job-log-secrets-alert.yml files through scripts/ci/job-log-scan-alert.sh --
+# and the token scope of the scanning workflows (#337), read from the parsed
+# YAML.
 #
 # Two layers, because they fail in different ways:
 #
@@ -46,8 +50,15 @@ run_scan() {
     COMMAND_LOG="$COMMAND_LOG" \
     GITLEAKS_IMAGE="${GITLEAKS_IMAGE-$DIGEST_IMAGE}" \
     SECRETS_MODE="${SECRETS_MODE-}" \
+    LOG_DIR="${LOG_DIR-}" \
     GITHUB_WORKSPACE="$WORKSPACE" \
     bash "$PROJECT_ROOT/$SCRIPT_REL"
+}
+
+seed_log_dir() {
+  LOG_DIR="$BATS_TEST_TMPDIR/run-logs"
+  mkdir -p "$LOG_DIR/deploy"
+  printf 'step output\n' >"$LOG_DIR/deploy/1_Set up job.txt"
 }
 
 # --- mode contract ----------------------------------------------------------
@@ -101,6 +112,46 @@ run_scan() {
   [[ "$output" != *"GIT_CONFIG_COUNT"* ]]
 }
 
+@test "logs mode scans LOG_DIR read-only as plain files with the committed config" {
+  seed_log_dir
+  SECRETS_MODE=logs run_scan
+  [ "$status" -eq 0 ]
+  run cat "$COMMAND_LOG"
+  [[ "$output" == *"-v $LOG_DIR:/logs:ro"* ]]
+  [[ "$output" == *"--source /logs --no-git"* ]]
+  [[ "$output" == *"--config /repo/.gitleaks.toml"* ]]
+  [[ "$output" == *"--exit-code 1"* ]]
+  [[ "$output" == *"--redact"* ]]
+  [[ "$output" == *"$DIGEST_IMAGE"* ]]
+  [[ "$output" != *"--source /repo"* ]]
+  [[ "$output" != *"GIT_CONFIG_COUNT"* ]]
+}
+
+@test "logs mode resolves a relative LOG_DIR to the absolute path docker needs" {
+  seed_log_dir
+  cd "$BATS_TEST_TMPDIR"
+  LOG_DIR=run-logs SECRETS_MODE=logs run_scan
+  [ "$status" -eq 0 ]
+  run cat "$COMMAND_LOG"
+  [[ "$output" == *"-v $(cd "$BATS_TEST_TMPDIR" && pwd -P)/run-logs:/logs:ro"* ]]
+}
+
+@test "logs mode propagates gitleaks' own exit status" {
+  seed_log_dir
+  # 3, not 1: every refusal in the script exits 1, so only a status the script
+  # never produces itself proves the scanner's verdict is what reached the job.
+  cat >"$STUB_BIN_DIR/docker" <<'EOF'
+#!/usr/bin/env bash
+printf 'docker %s\n' "$*" >>"${COMMAND_LOG:?}"
+exit 3
+EOF
+  chmod +x "$STUB_BIN_DIR/docker"
+  SECRETS_MODE=logs run_scan
+  [ "$status" -eq 3 ]
+  run grep -c '^docker ' "$COMMAND_LOG"
+  [ "$output" = "1" ]
+}
+
 # --- fail-closed guards -----------------------------------------------------
 
 @test "a tag instead of a digest is refused" {
@@ -118,7 +169,38 @@ run_scan() {
 @test "an unknown mode is refused rather than silently scanning the tree" {
   SECRETS_MODE=deep run_scan
   [ "$status" -eq 1 ]
-  [[ "$output" == *"must be 'tree' or 'history'"* ]]
+  [[ "$output" == *"must be 'tree', 'history' or 'logs'"* ]]
+}
+
+@test "logs mode without LOG_DIR is refused" {
+  SECRETS_MODE=logs run_scan
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"needs LOG_DIR"* ]]
+  [ ! -s "$COMMAND_LOG" ]
+}
+
+@test "logs mode refuses a LOG_DIR that does not exist" {
+  LOG_DIR="$BATS_TEST_TMPDIR/absent" SECRETS_MODE=logs run_scan
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"is not a directory"* ]]
+  [ ! -s "$COMMAND_LOG" ]
+}
+
+@test "logs mode refuses an empty LOG_DIR instead of reporting a clean scan of nothing" {
+  mkdir -p "$BATS_TEST_TMPDIR/empty/deploy"
+  LOG_DIR="$BATS_TEST_TMPDIR/empty" SECRETS_MODE=logs run_scan
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"no non-empty file"* ]]
+  [ ! -s "$COMMAND_LOG" ]
+}
+
+@test "logs mode refuses a LOG_DIR holding only empty files" {
+  mkdir -p "$BATS_TEST_TMPDIR/hollow"
+  : >"$BATS_TEST_TMPDIR/hollow/1_deploy.txt"
+  LOG_DIR="$BATS_TEST_TMPDIR/hollow" SECRETS_MODE=logs run_scan
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"no non-empty file"* ]]
+  [ ! -s "$COMMAND_LOG" ]
 }
 
 @test "a missing config is refused rather than falling back to gitleaks defaults" {
@@ -184,6 +266,574 @@ run_scan() {
   done
 }
 
+# --- fetching a run's logs (#375 F4) ----------------------------------------
+
+FETCH_REL='scripts/ci/fetch-run-logs.sh'
+
+# gh double for the three endpoints the script reads, recording every call:
+#   .../runs/<id>/jobs      FAKE_JOBS_DIR/<id> if present, else FAKE_JOBS_RAN
+#                           (default 1); FAKE_JOBS_EXIT fails it like HTTP
+#   .../workflows/<f>/runs  FAKE_RUNS_DIR/<f> (one id per line), else nothing
+#   .../runs/<id>/logs      FAKE_ARCHIVE_DIR/<id>.zip if present, else
+#                           FAKE_LOG_ARCHIVE; FAKE_GH_EXIT fails it like HTTP,
+#                           as does FAKE_LOGS_STATUS_DIR/<id> (holding the
+#                           status) for that one run, in gh's own wording
+create_logs_gh_stub() {
+  cat >"$STUB_BIN_DIR/gh" <<'EOF'
+#!/usr/bin/env bash
+printf 'gh %s\n' "$*" >>"${COMMAND_LOG:?}"
+path=''
+for arg in "$@"; do
+  case "$arg" in repos/*) path="$arg" ;; esac
+done
+path="${path%%\?*}"
+case "$path" in
+  */actions/runs/*/jobs)
+    id="${path%/jobs}"
+    id="${id##*/}"
+    if [ -n "${FAKE_JOBS_EXIT:-}" ]; then
+      printf 'gh: HTTP 502: Bad Gateway\n' >&2
+      exit "$FAKE_JOBS_EXIT"
+    fi
+    if [ -f "${FAKE_JOBS_DIR:-/nonexistent}/$id" ]; then
+      cat "$FAKE_JOBS_DIR/$id"
+    else
+      printf '%s\n' "${FAKE_JOBS_RAN:-1}"
+    fi
+    ;;
+  */actions/workflows/*/runs)
+    wf="${path%/runs}"
+    wf="${wf##*/}"
+    if [ -f "${FAKE_RUNS_DIR:-/nonexistent}/$wf" ]; then
+      cat "$FAKE_RUNS_DIR/$wf"
+    fi
+    ;;
+  */actions/runs/*/logs)
+    id="${path%/logs}"
+    id="${id##*/}"
+    if [ -n "${FAKE_GH_EXIT:-}" ]; then
+      printf 'gh: Bad Gateway (HTTP 502)\n' >&2
+      exit "$FAKE_GH_EXIT"
+    fi
+    if [ -f "${FAKE_LOGS_STATUS_DIR:-/nonexistent}/$id" ]; then
+      printf 'gh: Request failed (HTTP %s)\n' "$(cat "$FAKE_LOGS_STATUS_DIR/$id")" >&2
+      exit 1
+    fi
+    if [ -f "${FAKE_ARCHIVE_DIR:-/nonexistent}/$id.zip" ]; then
+      cat "$FAKE_ARCHIVE_DIR/$id.zip"
+    elif [ -n "${FAKE_LOG_ARCHIVE:-}" ]; then
+      cat "$FAKE_LOG_ARCHIVE"
+    fi
+    ;;
+esac
+EOF
+  chmod +x "$STUB_BIN_DIR/gh"
+}
+
+# A zip laid out like the real archive: a top-level per-job file plus a
+# directory of per-step files.
+build_log_archive() {
+  local src="$BATS_TEST_TMPDIR/archive-src"
+  mkdir -p "$src/deploy"
+  printf 'job output\n' >"$src/1_deploy.txt"
+  printf 'step output\n' >"$src/deploy/1_Set up job.txt"
+  (cd "$src" && python3 -m zipfile -c "$BATS_TEST_TMPDIR/logs.zip" 1_deploy.txt deploy)
+  FAKE_LOG_ARCHIVE="$BATS_TEST_TMPDIR/logs.zip"
+}
+
+# Byte for byte what the logs endpoint returns for a run that never ran a job:
+# an end-of-central-directory record and nothing else, which unzip refuses.
+build_empty_zip() {
+  printf 'PK\005\006%018d' 0 | tr '0' '\000' >"$BATS_TEST_TMPDIR/empty.zip"
+  [ "$(wc -c <"$BATS_TEST_TMPDIR/empty.zip")" -eq 22 ]
+  FAKE_LOG_ARCHIVE="$BATS_TEST_TMPDIR/empty.zip"
+}
+
+run_fetch() {
+  : >"$BATS_TEST_TMPDIR/gh-output"
+  run env \
+    PATH="$STUB_BIN_DIR:$PATH" \
+    COMMAND_LOG="$COMMAND_LOG" \
+    GH_REPO="${GH_REPO-VilnaCRM-Org/website}" \
+    GITHUB_REPOSITORY= \
+    RUN_ID="${RUN_ID-35918649858}" \
+    BACKSTOP_WORKFLOWS="${BACKSTOP_WORKFLOWS-}" \
+    BACKSTOP_DAYS="${BACKSTOP_DAYS-}" \
+    LOG_DIR="${LOG_DIR-$BATS_TEST_TMPDIR/run-logs}" \
+    RUNNER_TEMP="$BATS_TEST_TMPDIR" \
+    GITHUB_OUTPUT="$BATS_TEST_TMPDIR/gh-output" \
+    FAKE_GH_EXIT="${FAKE_GH_EXIT-}" \
+    FAKE_JOBS_EXIT="${FAKE_JOBS_EXIT-}" \
+    FAKE_JOBS_RAN="${FAKE_JOBS_RAN-}" \
+    FAKE_JOBS_DIR="${FAKE_JOBS_DIR-}" \
+    FAKE_RUNS_DIR="${FAKE_RUNS_DIR-}" \
+    FAKE_ARCHIVE_DIR="${FAKE_ARCHIVE_DIR-}" \
+    FAKE_LOGS_STATUS_DIR="${FAKE_LOGS_STATUS_DIR-}" \
+    FAKE_LOG_ARCHIVE="${FAKE_LOG_ARCHIVE-}" \
+    bash "$PROJECT_ROOT/$FETCH_REL"
+}
+
+@test "fetch-run-logs extracts the run's archive into a directory named for the run" {
+  create_logs_gh_stub
+  build_log_archive
+  run_fetch
+  assert_success
+  [[ "$output" == *"2 log file(s)"* ]]
+  [ -s "$BATS_TEST_TMPDIR/run-logs/35918649858/deploy/1_Set up job.txt" ]
+  assert_log_contains 'gh api --paginate repos/VilnaCRM-Org/website/actions/runs/35918649858/jobs?per_page=100'
+  assert_log_contains 'gh api repos/VilnaCRM-Org/website/actions/runs/35918649858/logs'
+  [ "$(cat "$BATS_TEST_TMPDIR/gh-output")" = "$(printf 'logs=present\nunreadable=')" ]
+  # The downloaded zip and gh's stderr capture are removed; only the logs remain.
+  [ -z "$(find "$BATS_TEST_TMPDIR" -maxdepth 1 \( -name 'run-logs.*' -o -name 'run-logs-errors.*' \) -print -quit)" ]
+}
+
+@test "fetch-run-logs skips a run that never ran a job and reports logs=none" {
+  # A run cancelled while pending: no job, and a 22-byte empty zip from the
+  # logs endpoint. Reading the zip would fail the scan and file a false alert.
+  create_logs_gh_stub
+  build_empty_zip
+  FAKE_JOBS_RAN=0 run_fetch
+  assert_success
+  [[ "$output" == *"run 35918649858 never ran a job"* ]]
+  [ "$(cat "$BATS_TEST_TMPDIR/gh-output")" = "$(printf 'logs=none\nunreadable=')" ]
+  run grep -c '/logs' "$COMMAND_LOG"
+  [ "$output" = "0" ]
+}
+
+@test "fetch-run-logs still fails on an empty zip once a job has run" {
+  create_logs_gh_stub
+  build_empty_zip
+  FAKE_JOBS_RAN=2 run_fetch
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"not a readable zip, though 2 job(s) ran"* ]]
+  [ ! -s "$BATS_TEST_TMPDIR/gh-output" ]
+}
+
+@test "fetch-run-logs sums the job counts of every page" {
+  create_logs_gh_stub
+  build_log_archive
+  mkdir -p "$BATS_TEST_TMPDIR/jobs"
+  printf '0\n3\n' >"$BATS_TEST_TMPDIR/jobs/35918649858"
+  FAKE_JOBS_DIR="$BATS_TEST_TMPDIR/jobs" run_fetch
+  assert_success
+  [ "$(cat "$BATS_TEST_TMPDIR/gh-output")" = "$(printf 'logs=present\nunreadable=')" ]
+}
+
+@test "fetch-run-logs fails closed when the jobs cannot be listed or read" {
+  create_logs_gh_stub
+  build_log_archive
+  FAKE_JOBS_EXIT=1 run_fetch
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"could not list the jobs of run 35918649858"* ]]
+
+  mkdir -p "$BATS_TEST_TMPDIR/jobs"
+  for listing in '' 'null' '1 2' '-1'; do
+    rm -rf "$BATS_TEST_TMPDIR/run-logs"
+    printf '%s\n' "$listing" >"$BATS_TEST_TMPDIR/jobs/35918649858"
+    FAKE_JOBS_DIR="$BATS_TEST_TMPDIR/jobs" run_fetch
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"unexpected job listing for run 35918649858"* ]]
+  done
+  run grep -c '/logs$' "$COMMAND_LOG"
+  [ "$output" = "0" ]
+}
+
+@test "fetch-run-logs fails closed when the download fails" {
+  create_logs_gh_stub
+  FAKE_GH_EXIT=1 run_fetch
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"could not download the logs of run 35918649858"* ]]
+}
+
+@test "fetch-run-logs refuses an empty download" {
+  create_logs_gh_stub
+  run_fetch
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"archive of run 35918649858 is empty"* ]]
+}
+
+@test "fetch-run-logs refuses a download that is not a zip" {
+  create_logs_gh_stub
+  printf '{"message":"Not Found"}' >"$BATS_TEST_TMPDIR/not-a-zip"
+  FAKE_LOG_ARCHIVE="$BATS_TEST_TMPDIR/not-a-zip" run_fetch
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"not a readable zip"* ]]
+}
+
+@test "fetch-run-logs refuses a run id that is not a number before calling gh" {
+  create_logs_gh_stub
+  for bad in '' '123/../../../user' '12 3' '-1'; do
+    RUN_ID="$bad" run_fetch
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"RUN_ID must be a numeric run id"* ]]
+  done
+  [ ! -s "$COMMAND_LOG" ]
+}
+
+@test "fetch-run-logs refuses a malformed repository before calling gh" {
+  create_logs_gh_stub
+  GH_REPO='VilnaCRM-Org/website/../other' run_fetch
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"must be owner/name"* ]]
+  [ ! -s "$COMMAND_LOG" ]
+}
+
+@test "fetch-run-logs refuses a LOG_DIR that already holds another run's logs" {
+  create_logs_gh_stub
+  build_log_archive
+  mkdir -p "$BATS_TEST_TMPDIR/run-logs"
+  printf 'stale\n' >"$BATS_TEST_TMPDIR/run-logs/0_build.txt"
+  run_fetch
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"is not empty"* ]]
+  [ ! -s "$COMMAND_LOG" ]
+}
+
+@test "the backstop fetches every completed run of the week and skips the ones with no job" {
+  create_logs_gh_stub
+  build_log_archive
+  mkdir -p "$BATS_TEST_TMPDIR/runs" "$BATS_TEST_TMPDIR/jobs"
+  printf '101\n102\n' >"$BATS_TEST_TMPDIR/runs/deploy.yml"
+  printf '201\n' >"$BATS_TEST_TMPDIR/runs/sandbox-creating.yml"
+  printf '0\n' >"$BATS_TEST_TMPDIR/jobs/102"
+  RUN_ID='' BACKSTOP_WORKFLOWS='deploy.yml sandbox-creating.yml' \
+    FAKE_RUNS_DIR="$BATS_TEST_TMPDIR/runs" FAKE_JOBS_DIR="$BATS_TEST_TMPDIR/jobs" run_fetch
+  assert_success
+  [[ "$output" == *"backstop: 2 of 3 run(s) had logs"* ]]
+  [ -d "$BATS_TEST_TMPDIR/run-logs/101/deploy" ]
+  [ -d "$BATS_TEST_TMPDIR/run-logs/201/deploy" ]
+  [ ! -e "$BATS_TEST_TMPDIR/run-logs/102" ]
+  [ "$(cat "$BATS_TEST_TMPDIR/gh-output")" = "$(printf 'logs=present\nunreadable=')" ]
+  local since
+  since="$(date -u -d '8 days ago' +%Y-%m-%d)"
+  assert_log_contains "repos/VilnaCRM-Org/website/actions/workflows/deploy.yml/runs?status=completed&created=%3E%3D${since}&per_page=100"
+  assert_log_contains "repos/VilnaCRM-Org/website/actions/workflows/sandbox-creating.yml/runs?status=completed&created=%3E%3D${since}&per_page=100"
+}
+
+@test "the backstop reports logs=none for a week with no run to read" {
+  create_logs_gh_stub
+  RUN_ID='' BACKSTOP_WORKFLOWS='deploy.yml' BACKSTOP_DAYS=3 run_fetch
+  assert_success
+  [ "$(cat "$BATS_TEST_TMPDIR/gh-output")" = "$(printf 'logs=none\nunreadable=')" ]
+  assert_log_contains "created=%3E%3D$(date -u -d '3 days ago' +%Y-%m-%d)"
+}
+
+@test "the backstop refuses bad input before calling gh" {
+  create_logs_gh_stub
+  BACKSTOP_WORKFLOWS='deploy.yml' run_fetch
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"not both"* ]]
+  for bad in '../deploy.yml' 'deploy' 'deploy.yml?x=1'; do
+    RUN_ID='' BACKSTOP_WORKFLOWS="$bad" run_fetch
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"must list workflow file names"* ]]
+  done
+  for bad in 0 -1 x '1 2'; do
+    RUN_ID='' BACKSTOP_WORKFLOWS='deploy.yml' BACKSTOP_DAYS="$bad" run_fetch
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"BACKSTOP_DAYS must be a positive number"* ]]
+  done
+  [ ! -s "$COMMAND_LOG" ]
+}
+
+@test "the backstop keeps fetching past a run it cannot read, then fails naming it" {
+  create_logs_gh_stub
+  build_log_archive
+  mkdir -p "$BATS_TEST_TMPDIR/runs" "$BATS_TEST_TMPDIR/jobs" "$BATS_TEST_TMPDIR/status"
+  printf '101\n102\n103\n' >"$BATS_TEST_TMPDIR/runs/deploy.yml"
+  printf '502\n' >"$BATS_TEST_TMPDIR/status/101"
+  printf 'null\n' >"$BATS_TEST_TMPDIR/jobs/102"
+  RUN_ID='' BACKSTOP_WORKFLOWS='deploy.yml' FAKE_RUNS_DIR="$BATS_TEST_TMPDIR/runs" \
+    FAKE_JOBS_DIR="$BATS_TEST_TMPDIR/jobs" FAKE_LOGS_STATUS_DIR="$BATS_TEST_TMPDIR/status" run_fetch
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"could not download the logs of run 101"* ]]
+  [[ "$output" == *"unexpected job listing for run 102"* ]]
+  [[ "$output" == *"backstop: 1 of 3 run(s) had logs"* ]]
+  [[ "$output" == *"could not read the logs of run(s) 101 102"* ]]
+  [ -d "$BATS_TEST_TMPDIR/run-logs/103/deploy" ]
+  [ "$(cat "$BATS_TEST_TMPDIR/gh-output")" = "$(printf 'logs=present\nunreadable=101 102')" ]
+}
+
+@test "the backstop fails with logs=none when no listed run could be read" {
+  create_logs_gh_stub
+  build_log_archive
+  mkdir -p "$BATS_TEST_TMPDIR/runs"
+  printf '101\n' >"$BATS_TEST_TMPDIR/runs/deploy.yml"
+  RUN_ID='' BACKSTOP_WORKFLOWS='deploy.yml' FAKE_RUNS_DIR="$BATS_TEST_TMPDIR/runs" FAKE_GH_EXIT=1 run_fetch
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"could not read the logs of run(s) 101"* ]]
+  [ "$(cat "$BATS_TEST_TMPDIR/gh-output")" = "$(printf 'logs=none\nunreadable=101')" ]
+}
+
+@test "the backstop skips a run whose logs were deleted or expired" {
+  create_logs_gh_stub
+  build_log_archive
+  mkdir -p "$BATS_TEST_TMPDIR/runs" "$BATS_TEST_TMPDIR/status"
+  printf '101\n102\n103\n' >"$BATS_TEST_TMPDIR/runs/deploy.yml"
+  printf '404\n' >"$BATS_TEST_TMPDIR/status/101"
+  printf '410\n' >"$BATS_TEST_TMPDIR/status/102"
+  RUN_ID='' BACKSTOP_WORKFLOWS='deploy.yml' FAKE_RUNS_DIR="$BATS_TEST_TMPDIR/runs" \
+    FAKE_LOGS_STATUS_DIR="$BATS_TEST_TMPDIR/status" run_fetch
+  assert_success
+  [[ "$output" == *"run 101: its logs are gone"* ]]
+  [[ "$output" == *"run 102: its logs are gone"* ]]
+  [ -d "$BATS_TEST_TMPDIR/run-logs/103/deploy" ]
+  [ "$(cat "$BATS_TEST_TMPDIR/gh-output")" = "$(printf 'logs=present\nunreadable=')" ]
+}
+
+@test "only a 404 or 410 reads as gone; the per-run scan fails on both" {
+  create_logs_gh_stub
+  build_log_archive
+  mkdir -p "$BATS_TEST_TMPDIR/runs" "$BATS_TEST_TMPDIR/status"
+  printf '101\n' >"$BATS_TEST_TMPDIR/runs/deploy.yml"
+  for code in 4040 1404 403 500; do
+    rm -rf "$BATS_TEST_TMPDIR/run-logs"
+    printf '%s\n' "$code" >"$BATS_TEST_TMPDIR/status/101"
+    RUN_ID='' BACKSTOP_WORKFLOWS='deploy.yml' FAKE_RUNS_DIR="$BATS_TEST_TMPDIR/runs" \
+      FAKE_LOGS_STATUS_DIR="$BATS_TEST_TMPDIR/status" run_fetch
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"could not read the logs of run(s) 101"* ]]
+  done
+  for code in 404 410; do
+    rm -rf "$BATS_TEST_TMPDIR/run-logs"
+    printf '%s\n' "$code" >"$BATS_TEST_TMPDIR/status/35918649858"
+    FAKE_LOGS_STATUS_DIR="$BATS_TEST_TMPDIR/status" run_fetch
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"could not download the logs of run 35918649858"* ]]
+    [ ! -s "$BATS_TEST_TMPDIR/gh-output" ]
+  done
+}
+
+@test "the backstop refuses a listed run id that is not a number" {
+  create_logs_gh_stub
+  mkdir -p "$BATS_TEST_TMPDIR/runs"
+  printf '101\n../x\n' >"$BATS_TEST_TMPDIR/runs/deploy.yml"
+  build_log_archive
+  RUN_ID='' BACKSTOP_WORKFLOWS='deploy.yml' FAKE_RUNS_DIR="$BATS_TEST_TMPDIR/runs" run_fetch
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"unexpected run id '../x'"* ]]
+}
+
+# --- alerting on a failed log scan (#375 F4) --------------------------------
+
+ALERT_REL='scripts/ci/job-log-scan-alert.sh'
+
+# gh double for the alert script: `issue list` replays FAKE_ISSUES (default
+# none open); every other call is recorded and succeeds.
+create_alert_gh_stub() {
+  cat >"$STUB_BIN_DIR/gh" <<'EOF'
+#!/usr/bin/env bash
+printf 'gh %s\n' "$*" >>"${COMMAND_LOG:?}"
+if [ "$1 $2" = 'issue list' ]; then
+  printf '%s\n' "${FAKE_ISSUES:-[]}"
+fi
+EOF
+  chmod +x "$STUB_BIN_DIR/gh"
+}
+
+run_alert() {
+  run env \
+    PATH="$STUB_BIN_DIR:$PATH" \
+    COMMAND_LOG="$COMMAND_LOG" \
+    GH_REPO=VilnaCRM-Org/website \
+    GITHUB_SERVER_URL=https://github.com \
+    SCAN_TITLE="${SCAN_TITLE-job log secrets scan - run 35918649858}" \
+    SCAN_RUN_ID="${SCAN_RUN_ID-35920000001}" \
+    SCAN_CONCLUSION="${SCAN_CONCLUSION-failure}" \
+    FAKE_ISSUES="${FAKE_ISSUES-}" \
+    bash "$PROJECT_ROOT/$ALERT_REL"
+}
+
+@test "a failed scan files an issue titled after the scanned run" {
+  create_alert_gh_stub
+  run_alert
+  assert_success
+  assert_log_contains 'gh issue create --label ci-alert --title Secret scan of job logs failed for run 35918649858'
+  assert_log_contains 'https://github.com/VilnaCRM-Org/website/actions/runs/35918649858'
+  assert_log_contains 'https://github.com/VilnaCRM-Org/website/actions/runs/35920000001'
+  assert_log_contains 'gh api -X DELETE repos/VilnaCRM-Org/website/actions/runs/35918649858/logs'
+  run grep -c 'issue comment' "$COMMAND_LOG"
+  [ "$output" = "0" ]
+}
+
+@test "a repeat failure for the same run comments on its open issue instead of filing another" {
+  create_alert_gh_stub
+  FAKE_ISSUES='[{"number":7,"title":"Secret scan of job logs failed for run 358"},{"number":9,"title":"Secret scan of job logs failed for run 35918649858"}]' \
+    SCAN_CONCLUSION=timed_out run_alert
+  assert_success
+  assert_log_contains 'gh issue comment 9 --body Failed again (`timed_out`)'
+  run grep -c 'issue create' "$COMMAND_LOG"
+  [ "$output" = "0" ]
+}
+
+@test "the weekly backstop files its own issue" {
+  create_alert_gh_stub
+  SCAN_TITLE='job log secrets scan - weekly backstop' run_alert
+  assert_success
+  assert_log_contains '--title Secret scan of job logs failed for the weekly backstop'
+}
+
+@test "a scan title outside the two known shapes never reaches the issue title" {
+  create_alert_gh_stub
+  for title in 'job log secrets scan - run 1 [x](https://evil)' 'fix(#1): some commit' ''; do
+    reset_command_log
+    SCAN_TITLE="$title" run_alert
+    assert_success
+    assert_log_contains '--title Secret scan of job logs failed for scan run 35920000001'
+  done
+}
+
+@test "the alert refuses a malformed scan run id or conclusion before calling gh" {
+  create_alert_gh_stub
+  SCAN_RUN_ID='1/../2' run_alert
+  [ "$status" -eq 2 ]
+  SCAN_CONCLUSION='failure; rm' run_alert
+  [ "$status" -eq 2 ]
+  [ ! -s "$COMMAND_LOG" ]
+}
+
+@test "no alert path ever closes a log-scan issue" {
+  # ci-health-alerts closes its issue on the next green run; a later clean scan
+  # says nothing about an earlier run's leaked token, so a human closes this one.
+  create_alert_gh_stub
+  run_alert
+  FAKE_ISSUES='[{"number":9,"title":"Secret scan of job logs failed for run 35918649858"}]' run_alert
+  SCAN_CONCLUSION=success run_alert
+  run grep -cE 'gh issue (close|edit)|--state closed' "$COMMAND_LOG"
+  [ "$output" = "0" ]
+}
+
+# --- the job-log scan workflows (#375 F4) ------------------------------------
+
+LOG_WORKFLOW="$PROJECT_ROOT/.github/workflows/job-log-secrets-scan.yml"
+ALERT_WORKFLOW="$PROJECT_ROOT/.github/workflows/job-log-secrets-alert.yml"
+
+# Evaluates a JS expression over the parsed workflows: `wf` is the log-scan
+# workflow, `alert` the workflow that files its issue, `alerts` is
+# ci-health-alerts.yml, `byFile` maps each workflow file to its `name:`.
+workflow_fact() {
+  PROJECT_ROOT="$PROJECT_ROOT" node -e '
+    const yaml = require(process.env.PROJECT_ROOT + "/node_modules/js-yaml");
+    const fs = require("fs");
+    const path = require("path");
+    const dir = path.join(process.env.PROJECT_ROOT, ".github/workflows");
+    const load = (f) => yaml.load(fs.readFileSync(path.join(dir, f), "utf8"));
+    const files = fs.readdirSync(dir).filter((f) => /\.ya?ml$/.test(f));
+    const byFile = Object.fromEntries(files.map((f) => [f, load(f).name]));
+    const names = Object.values(byFile);
+    const wf = load("job-log-secrets-scan.yml");
+    const alert = load("job-log-secrets-alert.yml");
+    const alerts = load("ci-health-alerts.yml");
+    const steps = Object.values(wf.jobs).flatMap((j) => j.steps || []);
+    const out = eval(process.argv[1]);
+    process.stdout.write((typeof out === "string" ? out : JSON.stringify(out)) + "\n");
+  ' "$1"
+}
+
+@test "the log-scan workflow grants nothing at workflow level and actions+contents read to its job" {
+  # Never issues: write -- a workflow granting it that lists workflows under
+  # workflow_run counts as their alert coverage in lint-prod-guardrails.
+  run permission_rows "$LOG_WORKFLOW"
+  [ "$status" -eq 0 ]
+  [ "$output" = "$(printf '%s\n' 'workflow|{}' 'scan|{"actions":"read","contents":"read"}')" ]
+}
+
+@test "the log-scan workflow never runs on a pull-request or push trigger" {
+  # A pull_request trigger would also make it a PR check that
+  # config/main-ruleset.json has to classify.
+  run workflow_fact 'Object.keys(wf.on).sort().join(",")'
+  [ "$status" -eq 0 ]
+  [ "$output" = "schedule,workflow_dispatch,workflow_run" ]
+}
+
+@test "the log-scan workflow follows every privileged workflow by its exact name" {
+  run workflow_fact 'wf.on.workflow_run.workflows.join("|")'
+  [ "$output" = "website|Generate Changelog and Create Release|sandbox|Trigger Sandbox Deletion" ]
+  run workflow_fact 'wf.on.workflow_run.types.join(",")'
+  [ "$output" = "completed" ]
+  # A listed name no workflow carries is a silently dead trigger.
+  run workflow_fact 'wf.on.workflow_run.workflows.filter((n) => !names.includes(n)).join("|")'
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "the weekly backstop reads the same four workflows the per-run scan follows" {
+  run workflow_fact 'steps.find((s) => s.id === "fetch").env.BACKSTOP_WORKFLOWS.match(/\x27([^\x27]*\.yml[^\x27]*)\x27/)[1].split(" ").map((f) => byFile[f]).sort().join("|")'
+  [ "$status" -eq 0 ]
+  [ "$output" = "$(workflow_fact 'wf.on.workflow_run.workflows.slice().sort().join("|")')" ]
+}
+
+@test "the scan is skipped only on an explicit logs=none, and still reads a partial backstop" {
+  run workflow_fact 'steps.filter((s) => s.run).map((s) => [s.id || "", (s.if || "").replace(/\s+/g, " ").trim()].join(":")).join(",")'
+  [ "$output" = "fetch:,:steps.fetch.outputs.logs != 'none' && !cancelled() && (steps.fetch.outcome == 'success' || steps.fetch.outputs.logs == 'present')" ]
+}
+
+@test "the scan run is named in the two shapes the alert script parses" {
+  run workflow_fact 'wf["run-name"]'
+  [[ "$output" == *"'job log secrets scan - weekly backstop'"* ]]
+  [[ "$output" == *"format('job log secrets scan - run {0}', github.event.workflow_run.id || inputs.run_id)"* ]]
+}
+
+@test "a failed log scan reaches its own never-closing alert, not ci-health-alerts" {
+  run workflow_fact 'alert.on.workflow_run.workflows.join("|")'
+  [ "$output" = "$(workflow_fact 'wf.name')" ]
+  run workflow_fact 'alert.jobs.alert.steps.map((s) => s.run).filter(Boolean).join("|")'
+  [ "$output" = 'bash scripts/ci/job-log-scan-alert.sh' ]
+  # ci-health-alerts closes its issue on the next green run, and every scan is
+  # a main-branch run, so listing either workflow there closes a live alert.
+  run workflow_fact 'alerts.on.workflow_run.workflows.filter((n) => n === wf.name || n === alert.name).length'
+  [ "$output" = "0" ]
+}
+
+@test "the alert workflow files for every scan that is not clean" {
+  run workflow_fact 'alert.jobs.alert.if.replace(/\s+/g, " ").trim()'
+  [ "$output" = "github.event.workflow_run.conclusion != 'success' && github.event.workflow_run.conclusion != 'skipped' && github.event.workflow_run.conclusion != 'neutral'" ]
+  run permission_rows "$ALERT_WORKFLOW"
+  [ "$output" = "$(printf '%s\n' 'workflow|{}' 'alert|{"contents":"read","issues":"write"}')" ]
+  run workflow_fact 'alert.concurrency.group'
+  [ "$output" = '${{ github.workflow }}-${{ github.event.workflow_run.id }}' ]
+}
+
+@test "the log-scan workflows keep event data out of run bodies and credentials off disk" {
+  run workflow_fact '[...steps, ...alert.jobs.alert.steps].filter((s) => s.run && s.run.includes("${{")).length'
+  [ "$output" = "0" ]
+  run workflow_fact '[...steps, ...alert.jobs.alert.steps].filter((s) => /^actions\/checkout@/.test(s.uses || "")).map((s) => [/@[0-9a-f]{40}$/.test(s.uses), s.with && s.with["persist-credentials"]].join(":")).join(",")'
+  [ "$output" = "true:false,true:false" ]
+  run workflow_fact 'steps.map((s) => s.run).filter(Boolean).join("|")'
+  [ "$output" = 'bash scripts/ci/fetch-run-logs.sh|make scan-secrets-logs LOG_DIR="$LOG_DIR"' ]
+}
+
+# --- workflow token scope (#337) --------------------------------------------
+
+# `<scope>|<permissions>` per line: the workflow first, then each job in file
+# order, keys sorted. Parsed with js-yaml so the verdict is what GitHub reads,
+# not how the block is spelled; an absent key prints `<unset>` (GitHub then
+# falls back to the repository default token, the opposite of `{}`).
+permission_rows() {
+  PROJECT_ROOT="$PROJECT_ROOT" node -e '
+    const yaml = require(process.env.PROJECT_ROOT + "/node_modules/js-yaml");
+    const fs = require("fs");
+    const doc = yaml.load(fs.readFileSync(process.argv[1], "utf8"));
+    const show = (p) => {
+      if (p === undefined) return "<unset>";
+      if (p && typeof p === "object") return JSON.stringify(Object.fromEntries(Object.entries(p).sort()));
+      return JSON.stringify(p);
+    };
+    process.stdout.write("workflow|" + show(doc.permissions) + "\n");
+    for (const [id, job] of Object.entries(doc.jobs || {})) {
+      process.stdout.write(id + "|" + show(job.permissions) + "\n");
+    }
+  ' "$1"
+}
+
+@test "secrets-scanning.yml grants nothing at workflow level and contents: read to each job" {
+  run permission_rows "$PROJECT_ROOT/.github/workflows/secrets-scanning.yml"
+  [ "$status" -eq 0 ]
+  # Exact, so a widened scope, a new job without its own block, or a renamed
+  # job id (`gitleaks` is a required check in config/main-ruleset.json) all fail.
+  [ "$output" = "$(printf '%s\n' 'workflow|{}' 'gitleaks|{"contents":"read"}' 'history|{"contents":"read"}')" ]
+}
+
 # --- the gate actually reddens (AC3) ----------------------------------------
 
 real_docker_or_skip() {
@@ -223,5 +873,49 @@ run_real_scan() {
   # errored on every input would look like a working gate.
   printf 'aws_region = eu-central-1\n' >"$WORKSPACE/clean.tf"
   run_real_scan
+  [ "$status" -eq 0 ]
+}
+
+run_real_logs_scan() {
+  run env \
+    PATH="$REAL_PATH" \
+    GITLEAKS_IMAGE="$DIGEST_IMAGE" \
+    SECRETS_MODE=logs \
+    LOG_DIR="$BATS_TEST_TMPDIR/run-logs" \
+    GITHUB_WORKSPACE="$WORKSPACE" \
+    bash "$PROJECT_ROOT/$SCRIPT_REL"
+}
+
+# A realistic step log: timestamps, a masked registered secret, a commit SHA and
+# an image digest -- the shapes every real log carries and none may trip.
+write_clean_step_log() {
+  mkdir -p "$BATS_TEST_TMPDIR/run-logs/check-tokens"
+  {
+    printf '2026-09-24T09:07:40.1234567Z ##[group]Run aws secretsmanager get-secret-value\n'
+    printf '2026-09-24T09:07:40.1234568Z   GITHUB_TOKEN: ***\n'
+    printf '2026-09-24T09:07:41.0000000Z HEAD is now at 3e289d80b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6\n'
+    printf '2026-09-24T09:07:42.0000000Z Digest: sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f\n'
+  } >"$BATS_TEST_TMPDIR/run-logs/check-tokens/6_Determine Prod Rotation.txt"
+}
+
+@test "real gitleaks: an installation token printed into a job log turns the logs scan red" {
+  real_docker_or_skip
+  write_clean_step_log
+  # The F4 shape: a GitHub token fetched at run time, never registered as a
+  # secret and so never masked, echoed by a debug flag. Assembled at runtime
+  # for the same reason as the fixture above.
+  local token="ghs_$(printf '%s' 'Q7mZ2kRt9WvXb4NcLp8YhJd3FsGa6EuTq1Ko')"
+  printf '2026-09-24T09:07:43.0000000Z + GITHUB_TOKEN=%s\n' "$token" \
+    >>"$BATS_TEST_TMPDIR/run-logs/check-tokens/6_Determine Prod Rotation.txt"
+  run_real_logs_scan
+  [ "$status" -eq 1 ]
+  # The scanner's verdict, not one of the script's own exit-1 refusals.
+  [[ "$output" == *"leaks found: 1"* ]]
+}
+
+@test "real gitleaks: the same job log without the token is green" {
+  real_docker_or_skip
+  write_clean_step_log
+  run_real_logs_scan
   [ "$status" -eq 0 ]
 }

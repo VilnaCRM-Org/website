@@ -89,19 +89,38 @@ invariant" below for what that did next.
 does not bypass the pull-request rule, and classic protection's signed-commit
 rule has **no bypass actor at all** — nothing you can grant the App under
 _Settings → Branches_ lets an unsigned commit through. A repository admin has
-two workable options; either is a settings change that cannot be committed:
+two workable options; either one changes live repository settings, which a
+merge alone never does:
 
-1. **Migrate `main` from classic protection to a ruleset** (_Settings → Rules
-   → Rulesets_) that keeps "Require a pull request before merging" and
-   "Require signed commits", and lists the release App under **Bypass list**
-   for the ruleset with the bypass mode left at **Always allow** — the default.
-   The other mode, "For pull requests only", lets the actor merge a pull request
-   past the rules but not push to the branch, and this workflow pushes to
-   `main` directly. Ruleset bypass covers every rule in the ruleset, including
-   the signature requirement, which is what makes this the option that works
-   without touching the workflow. `gh api repos/VilnaCRM-Org/website/rulesets`
-   returns `[]` today, so nothing conflicts with creating one; this is also the
-   artefact issue #343 needs.
+1. **Migrate `main` from classic protection to the committed ruleset.** The
+   ruleset is already written and reviewed:
+   [`config/main-ruleset.json`](../config/main-ruleset.json) keeps "Require a
+   pull request before merging" and "Require signed commits" (alongside the
+   required status checks and code-owner review of issues #343 and #344), and
+   lists the release App as its only bypass actor with the bypass mode
+   **Always allow** (`"bypass_mode": "always"`). The other mode, "For pull
+   requests only", lets the actor merge a pull request past the rules but not
+   push to the branch, and this workflow pushes to `main` directly. Ruleset
+   bypass covers every rule in the ruleset, including the signature
+   requirement, which is what makes this the option that works without
+   touching the workflow. An admin applies it with
+   [`scripts/ci/apply-branch-ruleset.sh`](../scripts/ci/apply-branch-ruleset.sh)
+   (`--release-app-id <id>` is required; it is a dry run until `--apply`) by
+   following steps 1–5 of CONTRIBUTING.md's "The `main` ruleset (issue #343)"
+   runbook in order — that runbook is the single source for the procedure, and
+   is not repeated here. Two of its steps matter most for the release: the
+   ruleset must be proven to block (step 4) before classic protection is
+   retired (step 5), and classic protection's signed-commit rule has no bypass,
+   so until it is retired the release App's push is still rejected, whatever
+   the ruleset allows.
+
+   As of 2026-09-24 the only ruleset on the repository is the tag-targeted
+   "Protect release tags" (created 2026-09-13), which stops release tags —
+   those matching `v*` or `[0-9]*` — from being deleted, updated or
+   force-pushed. It targets tags, not branches, so it does not conflict with
+   the `main` ruleset; it does not block the release either, because creating
+   a new tag is not one of its rules.
+
 2. **Keep classic protection and make the commit verifiable**: provision a
    signing key for the workflow (an S/MIME or GPG key whose public half is
    registered to the App's bot identity, imported before the changelog action
@@ -196,7 +215,11 @@ the next orphan (`v1.8.0`) on the next push to `main`:
    protection rules (step 3, option 1).
 2. **Then**, a maintainer does exactly one of:
    - delete the stranded tag — `git push --delete origin v1.7.0` — so the next
-     release is computed as `v1.7.0` again from a clean slate; or
+     release is computed as `v1.7.0` again from a clean slate. The "Protect
+     release tags" ruleset forbids deleting a tag matching `v*` or `[0-9]*`,
+     so unless the maintainer is one of its bypass actors (a list only an
+     admin can see, under _Settings → Rules → Rulesets_), an admin must
+     disable that ruleset for the deletion and re-enable it straight after; or
    - advance `package.json` to `1.7.0` on `main` through a normal pull request,
      accepting that `v1.7.0` stays an orphan and the next release is `v1.8.0`.
      This is safe for the changelog range: the action discovers the previous

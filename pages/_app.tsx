@@ -17,6 +17,7 @@ import { RouteI18n, useRouteI18n } from '@/hooks/use-route-i18n';
 import { initServiceWorker } from '@/lib/pwa/register-service-worker';
 import { scrubBreadcrumb } from '@/lib/telemetry/scrub-breadcrumb';
 import { scrubEvent } from '@/lib/telemetry/scrub-event';
+import { resolveTracesSampleRate } from '@/lib/telemetry/traces-sample-rate';
 import { handleWebVitalsMetric } from '@/lib/web-vitals/report-web-vitals';
 
 import 'swagger-ui-react/swagger-ui.css';
@@ -36,12 +37,26 @@ const renderErrorFallback: Sentry.FallbackRender = ({ resetError }) => (
   <ErrorFallback onRetry={resetError} />
 );
 
+const SKIP_TARGET_ID: string = 'skip-target';
+const ERROR_FALLBACK_ID: string = 'app-error-fallback';
+
+const focusRecoveredOrRetryTarget = (): void => {
+  const fallback = document.getElementById(ERROR_FALLBACK_ID);
+  const retryButton = fallback?.querySelector('button') ?? null;
+  (retryButton ?? document.getElementById(SKIP_TARGET_ID))?.focus();
+};
+
+const focusPageStart: NonNullable<Sentry.ErrorBoundaryProps['onReset']> = () => {
+  queueMicrotask(focusRecoveredOrRetryTarget);
+};
+
 const tagRenderCrash: NonNullable<Sentry.ErrorBoundaryProps['beforeCapture']> = scope => {
   scope.setTags({ feature: 'app', action: 'render-crash' });
 };
 
 Sentry.init({
   dsn: env.NEXT_PUBLIC_SENTRY_DSN,
+  enabled: Boolean(env.NEXT_PUBLIC_SENTRY_DSN),
   sendDefaultPii: false,
   integrations: [
     Sentry.browserTracingIntegration(),
@@ -50,7 +65,10 @@ Sentry.init({
   tracePropagationTargets: [env.NEXT_PUBLIC_DEVELOPMENT_API_URL, env.NEXT_PUBLIC_API_URL].filter(
     Boolean
   ),
-  tracesSampleRate: APP_ENVIRONMENT === 'production' ? 0.1 : 1.0,
+  tracesSampleRate: resolveTracesSampleRate(
+    env.NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE,
+    APP_ENVIRONMENT
+  ),
   replaysSessionSampleRate: 0.1,
   replaysOnErrorSampleRate: 1.0,
   release: APP_VERSION,
@@ -72,7 +90,11 @@ function MyApp({ Component }: { Component: React.ComponentType }): React.ReactEl
         <ApolloProvider client={client}>
           <main className={golos.className}>
             <Layout header={<DynamicHeader />}>
-              <Sentry.ErrorBoundary fallback={renderErrorFallback} beforeCapture={tagRenderCrash}>
+              <Sentry.ErrorBoundary
+                fallback={renderErrorFallback}
+                beforeCapture={tagRenderCrash}
+                onReset={focusPageStart}
+              >
                 <Component />
               </Sentry.ErrorBoundary>
             </Layout>

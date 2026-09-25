@@ -31,6 +31,7 @@ event's shape cannot be guaranteed:
 ```ts
 Sentry.init({
   dsn: env.NEXT_PUBLIC_SENTRY_DSN,
+  enabled: Boolean(env.NEXT_PUBLIC_SENTRY_DSN),
   sendDefaultPii: false,
   beforeSend: scrubEvent,
   beforeBreadcrumb: scrubBreadcrumb,
@@ -59,6 +60,9 @@ Sentry.init({
     rest of each message is kept, so a server error such as "A user with email
     [email] already exists." still groups and reads well.
   - `user` keeps only its `id`; every breadcrumb goes through `scrubBreadcrumb`.
+  - Last, `withRouteTag` (`route-tag.ts`) adds a `route` tag: the pathname of
+    the scrubbed request URL — no query string, no fragment, emails redacted,
+    at most 200 characters. No absolute page URL, no tag.
 - **`scrubBreadcrumb`** (`scrub-breadcrumb.ts`, `beforeBreadcrumb`) keeps only
   `method`, `status_code` and a query-free `url` on `fetch`/`xhr` breadcrumbs
   (so a recorded request payload never survives), only a query-free `from` and

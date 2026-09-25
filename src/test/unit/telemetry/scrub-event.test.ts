@@ -251,6 +251,23 @@ describe('scrubValue / scrubRecord', () => {
       note: 'see /docs?tab=1',
     });
   });
+
+  it('redacts a percent-encoded email in a URL path and in free text', () => {
+    const encoded = encodeURIComponent(EMAIL);
+
+    expect(
+      scrubRecord({ page: `https://vilnacrm.com/users/${encoded}`, note: `for ${encoded}` }, 1)
+    ).toEqual({
+      page: `https://vilnacrm.com/users/${REDACTED_EMAIL}`,
+      note: `for ${REDACTED_EMAIL}`,
+    });
+  });
+
+  it('leaves a %40 escape with no domain after it untouched', () => {
+    expect(scrubRecord({ page: 'https://vilnacrm.com/tag%40' }, 1)).toEqual({
+      page: 'https://vilnacrm.com/tag%40',
+    });
+  });
 });
 
 describe('scrubBreadcrumb', () => {

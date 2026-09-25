@@ -11,7 +11,7 @@ function ErrorFallback({ onRetry }: ErrorFallbackProps): React.ReactElement {
   const { t } = useTranslation();
 
   return (
-    <Box sx={styles.container} role="alert">
+    <Box sx={styles.container} role="alert" id="app-error-fallback">
       <UiTypography component="h1" variant="h4" sx={styles.title}>
         {t('error_boundary.title')}
       </UiTypography>

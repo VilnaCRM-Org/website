@@ -316,6 +316,13 @@ keep `permissions:` scoped to the job that needs them, never use an archived
 action, and never interpolate `${{ }}` into a `run:` body — pass values through
 `env:` and reference `"$VAR"`.
 
+zizmor enforces this only through its policy defaults at the blocking threshold, and a
+`docker://` step pulled by tag slips under it, so the rule has a second enforcer that
+needs neither Docker nor the network:
+`tests/bats/workflow_action_pins.bats` (issue #375, run by the `bats` check) parses
+every workflow and local action and fails on any `uses:` that is not local, a
+40-character SHA, or a `docker://…@sha256:` digest.
+
 If the gate fails, fix the workflow. Never add a `zizmor.yml` ignore rule, a
 `# zizmor: ignore[...]` comment, or lower `ZIZMOR_MIN_SEVERITY` /
 `ZIZMOR_MIN_CONFIDENCE` in the Makefile — those thresholds are a ratchet that
@@ -418,6 +425,43 @@ Merging the config changes nothing on GitHub. A repository admin applies it:
 To roll back, set the ruleset's enforcement to _Disabled_ under
 **Settings → Rules → Rulesets** (or delete it); re-running the script re-creates
 it from the committed config.
+
+#### Secret scanning push protection (issue #353)
+
+gitleaks only sees what has already reached the repository: the working tree on every
+pull request (`make lint-secrets`), every reachable commit weekly
+(`make scan-secrets-history`), and the job logs of every privileged workflow run
+(`make scan-secrets-logs LOG_DIR=<dir>`, driven by `job-log-secrets-scan.yml`).
+GitHub's push protection refuses a credential before it enters history at all, and it is
+a repository setting, so merging a change cannot turn it on. A repository admin enables
+it once:
+
+1. **Enable.** Under **Settings → Advanced Security** (**Code security** on older
+   settings pages), enable **Secret Protection** and then **Push protection**. The API
+   equivalent, from an admin `gh` session, is one `PATCH`:
+
+   ```bash
+   gh api -X PATCH repos/VilnaCRM-Org/website \
+     -f 'security_and_analysis[secret_scanning][status]=enabled' \
+     -f 'security_and_analysis[secret_scanning_push_protection][status]=enabled'
+   ```
+
+   If an organization security configuration is attached to the repository, it owns
+   these settings and the `PATCH` is refused; change them in that configuration.
+
+2. **Verify.** `gh api repos/VilnaCRM-Org/website --jq .security_and_analysis` must
+   report `enabled` for both `secret_scanning` and `secret_scanning_push_protection`.
+   The field is returned to admins only — anyone else gets nothing back, which proves
+   neither state.
+3. **Prove it blocks.** On a throwaway branch, commit a fabricated credential of a
+   pattern push protection supports. The class #353 names is an AWS key pair: an
+   access key id made of `AKIA` and 16 upper-case letters or digits, next to a
+   40-character secret access key. Assemble it in the shell at commit time rather
+   than writing it out in any tracked file here, where the `gitleaks` check would
+   rightly flag it. `git push` must be rejected with a `GH013` repository-rule error
+   that names the secret; then delete the branch locally. If the push is accepted,
+   push protection is not covering that pattern: delete the remote branch at once
+   and record the result on #353 instead of closing it.
 
 #### Production safety guardrails
 

@@ -1022,6 +1022,42 @@ STUB
   [ "$status" -ne 0 ]
 }
 
+@test "scan-secrets-logs scans LOG_DIR as plain files through the digest-pinned gitleaks image" {
+  reset_command_log
+
+  cp "$PROJECT_ROOT/.gitleaks.toml" "$MAKEFILE_SANDBOX/.gitleaks.toml"
+  export GITHUB_WORKSPACE="$MAKEFILE_SANDBOX"
+  local logs="$BATS_TEST_TMPDIR/run-logs"
+  mkdir -p "$logs/deploy"
+  printf 'step output\n' >"$logs/deploy/1_Set up job.txt"
+
+  run_make_target scan-secrets-logs LOG_DIR="$logs"
+  [ "$status" -eq 0 ]
+
+  assert_log_contains 'ghcr.io/gitleaks/gitleaks@sha256:'
+  assert_log_contains '--config /repo/.gitleaks.toml'
+  assert_log_contains '--exit-code 1'
+  assert_log_contains "-v $logs:/logs:ro"
+  assert_log_contains '--source /logs --no-git'
+
+  run grep -E 'bun|npm' "$COMMAND_LOG"
+  [ "$status" -ne 0 ]
+}
+
+@test "scan-secrets-logs refuses an empty LOG_DIR before running docker" {
+  reset_command_log
+
+  cp "$PROJECT_ROOT/.gitleaks.toml" "$MAKEFILE_SANDBOX/.gitleaks.toml"
+  export GITHUB_WORKSPACE="$MAKEFILE_SANDBOX"
+  mkdir -p "$BATS_TEST_TMPDIR/no-logs"
+
+  run_make_target scan-secrets-logs LOG_DIR="$BATS_TEST_TMPDIR/no-logs"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"no non-empty file"* ]]
+  run grep -c '^docker ' "$COMMAND_LOG"
+  [ "$output" = "0" ]
+}
+
 @test "lint-security-txt validates the committed RFC 9116 security.txt" {
   reset_command_log
 
@@ -1303,15 +1339,22 @@ JSON
   [ -z "$(cat "$COMMAND_LOG")" ]
 }
 
-@test "smoke-prod threads SITE_URL unchanged into scripts/ci/smoke-response-shape.sh" {
-  # A dry run, not run_make_target: the real script retries against a live
-  # origin for minutes on a miss, and that behaviour already has its own
-  # suite (tests/bats/smoke_response_shape.bats). This pins only the
-  # argument-threading contract issue #331 asks for -- the exact command the
-  # target shells out to -- so a future rename of the variable or the script
-  # path is caught without ever invoking curl.
+@test "smoke-prod threads SITE_URL into the branded 404 probe, then the uptime probe" {
+  # A dry run, not run_make_target: the real scripts retry against a live origin
+  # for minutes on a miss, and the target's behaviour against a real origin --
+  # red when any one of the three documents misbehaves -- is covered in
+  # tests/bats/smoke_response_shape.bats. This pins the command surface issues
+  # #331 and #329 ask for: both scripts get SITE_URL unchanged, the positive
+  # probe gets the deploy-sized budget, and the 404 probe blocks on the brand.
   run make -C "$MAKEFILE_SANDBOX" -n smoke-prod SITE_URL='https://example.test' \
     BIN_DIR="$STUB_BIN_DIR"
   [ "$status" -eq 0 ]
-  assert_output_contains './scripts/ci/smoke-response-shape.sh "https://example.test"'
+  assert_output_contains './scripts/ci/uptime-check.sh "https://example.test"'
+  assert_output_contains 'UPTIME_ATTEMPTS="${SMOKE_PROD_ATTEMPTS:-24}" UPTIME_DELAY="${SMOKE_PROD_DELAY:-15}"'
+  assert_output_contains './scripts/ci/smoke-response-shape.sh "https://example.test" --require-branded'
+  # The 404 probe runs first so a hanging homepage cannot time the job out before it.
+  local shape_line uptime_line
+  shape_line="$(printf '%s\n' "$output" | grep -n 'smoke-response-shape.sh' | head -n 1 | cut -d: -f1)"
+  uptime_line="$(printf '%s\n' "$output" | grep -n 'uptime-check.sh' | head -n 1 | cut -d: -f1)"
+  [ "$shape_line" -lt "$uptime_line" ]
 }

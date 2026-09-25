@@ -1,4 +1,8 @@
 export default {
+  container: {
+    position: 'relative',
+    minHeight: '100vh',
+  },
   spinner: {
     position: 'absolute',
     top: '50%',

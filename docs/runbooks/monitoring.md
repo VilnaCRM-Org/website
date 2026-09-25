@@ -13,8 +13,12 @@ surface. Subscribe to them, or to the repository's issues, to be told about anyt
 
 - `uptime-alert` — filed by `uptime-check.yml`. Production is failing its synthetic
   check. Start with the [incident response runbook](incident-response.md).
-- `ci-alert` — filed by `ci-health-alerts.yml` and `release-audit.yml`. A monitored
-  post-merge workflow failed, `main` is red, or a release anomaly was recorded.
+- `ci-alert` — filed by `ci-health-alerts.yml`, `release-audit.yml` and
+  `job-log-secrets-alert.yml`. A monitored post-merge workflow failed, `main` is red, a
+  release anomaly was recorded, or a job-log secret scan of a privileged run did not
+  pass. That last kind is titled after the scanned run and **nothing closes it
+  automatically**: treat it as a live credential, rotate and revoke it, delete the run's
+  logs, then close the issue by hand (see "Committed secrets" in `CLAUDE.md`).
 - `release-audit` — the permanent ledger issue `release-audit.yml` appends to: one comment
   per release and per bot push.
 - `ci-canary` — `docker-build-canary.yml`. The nightly Docker build canary is red,
@@ -48,14 +52,19 @@ Two scripts run, and both always report:
 
 - **Positive path** — [`scripts/ci/uptime-check.sh`](../../scripts/ci/uptime-check.sh).
   `GET /` and `GET /swagger` must each answer `200`, with a `content-type` of
-  `text/html` (case-insensitive, every value if the header repeats) and a non-empty body.
-  A `200` with an `application/xml` body is an S3 error document, not the site, which is
-  why the status alone is not trusted.
+  `text/html` (case-insensitive, every value if the header repeats) and a non-empty body
+  that matches the path's marker: `__next` or `<title` for the homepage, `swagger` for
+  `/swagger`, so a `/swagger` rewritten to the homepage document is caught. A `200` with
+  an `application/xml` body is an S3 error document, not the site, which is why the status
+  alone is not trusted. `make smoke-prod` runs the same script after a deploy with a
+  longer retry budget.
 - **Negative path** —
   [`scripts/ci/smoke-response-shape.sh`](../../scripts/ci/smoke-response-shape.sh), the
   same script the deploy smoke runs. An unknown URI must produce the site's own `404`
   with a body and `text/html` — every production incident this site has had was on that
-  path (#226, #229, #235, #249).
+  path (#226, #229, #235, #249). A well-formed `404` that is not the branded edge document
+  is only a `::warning::` here and files no incident; `make smoke-prod` passes
+  `--require-branded`, so after a deploy the same condition fails.
 
 Each script retries four times, fifteen seconds apart, so one dropped connection is not
 an outage and a real outage is not hidden until the next run. On any failure the workflow
@@ -146,17 +155,28 @@ The browser bundle carries the instrumentation; production has no keys for it to
 - **Sentry.** [`pages/_app.tsx`](../../pages/_app.tsx) calls `Sentry.init` from
   `@sentry/react` with `dsn: env.NEXT_PUBLIC_SENTRY_DSN`, read through the zod-validated
   schema in [`src/config/env.ts`](../../src/config/env.ts) (default `''`),
-  `sendDefaultPii: false`, session replay pinned to mask all inputs, text and media, trace
-  propagation only to the configured API origins, `release`/`environment` sourced from
+  `enabled: Boolean(env.NEXT_PUBLIC_SENTRY_DSN)` so an empty DSN switches the SDK off
+  explicitly rather than by the SDK's implicit no-DSN behaviour, `sendDefaultPii: false`,
+  session replay pinned to mask all inputs, text and media, trace propagation only to the
+  configured API origins, `release`/`environment` sourced from
   [`src/config/app-version.ts`](../../src/config/app-version.ts) (the `package.json`
-  version and `isProductionBuild()`), and sampling of `tracesSampleRate: 0.1` in a
-  production build (`1.0` in development), `replaysSessionSampleRate: 0.1`,
-  `replaysOnErrorSampleRate: 1.0`. [`.env.production`](../../.env.production) commits
-  `NEXT_PUBLIC_SENTRY_DSN=` **empty**, so the production bundle initialises the SDK with no
-  DSN and it sends nothing. Handled errors — the sign-up path, a caught Apollo
-  GraphQL/network error (`src/features/landing/api/graphql/apollo.ts`'s `ErrorLink`, which
+  version and `isProductionBuild()`), and sampling of `replaysSessionSampleRate: 0.1` and
+  `replaysOnErrorSampleRate: 1.0`. `tracesSampleRate` comes from
+  `NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE`, a number from 0 to 1 validated in `env.ts` (a
+  value outside that range, or not a number, fails the build). Every committed env file
+  leaves it empty, which selects the default in
+  [`src/lib/telemetry/traces-sample-rate.ts`](../../src/lib/telemetry/traces-sample-rate.ts):
+  **`0.1` in a production build**, `1.0` in development. To change the production rate,
+  set the variable in `.env.production` (or the build environment) and redeploy; `0`
+  switches tracing off. Errors are never sampled.
+  [`.env.production`](../../.env.production) commits `NEXT_PUBLIC_SENTRY_DSN=` **empty**,
+  so the production bundle builds the SDK with `enabled: false` and it sends nothing.
+  Handled errors — the sign-up path, a caught Apollo GraphQL/network error
+  (`src/features/landing/api/graphql/apollo.ts`'s `ErrorLink`, which
   only reports and never retries) and an uncaught render crash — carry the same static
-  `feature`/`action` tag shape. The sign-up path and the Apollo `ErrorLink` report through
+  `feature`/`action` tag shape, plus a `route` tag holding the pathname of the page the
+  visitor was on (never its query string or fragment), which the `beforeSend` scrubber
+  derives from the scrubbed request URL. The sign-up path and the Apollo `ErrorLink` report through
   the single sink [`src/lib/telemetry/report-error.ts`](../../src/lib/telemetry/report-error.ts).
   A render crash inside a page is caught by the `Sentry.ErrorBoundary` wrapped around
   `<Component />` (not around the header or footer, so both stay usable): the boundary
@@ -164,7 +184,9 @@ The browser bundle carries the instrumentation; production has no keys for it to
   `beforeCapture` (`{ feature: 'app', action: 'render-crash' }`) instead of adding a second
   `captureException` call, and shows
   [`src/components/error-fallback`](../../src/components/error-fallback), a localized,
-  `role="alert"` apology with a retry control and a link home. See
+  `role="alert"` apology with a retry control and a link home. A successful retry moves
+  keyboard focus to the `#skip-target` anchor at the start of the page content, since the
+  focused retry button unmounts. The boundary works whether or not the SDK is enabled. See
   [ADR 0009](../adr/0009-consolidated-error-boundary-and-observability.md) for the design
   this consolidates.
   Every event and breadcrumb passes through the `beforeSend` / `beforeBreadcrumb`
@@ -190,7 +212,7 @@ What unblocks each: a maintainer supplies the real Sentry DSN and GA measurement
 are public client-side keys, and `.env.production` is where every other `NEXT_PUBLIC_*`
 production value is committed — see the comments in
 [`.env.example`](../../.env.example). `src/test/unit/client-env-contract.test.ts` requires
-both keys to stay declared in `.env` and `.env.production`.
+both keys, and the trace sample rate, to stay declared in `.env` and `.env.production`.
 
 ## Known gaps
 

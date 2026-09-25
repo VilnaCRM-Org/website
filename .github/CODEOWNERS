@@ -22,8 +22,11 @@
 # the agent-steering block above does. Swap in the teams when they exist.
 #
 # NOTE: CODEOWNERS alone only auto-REQUESTS review. Making it blocking needs
-# "Require review from Code Owners" on the `main` ruleset, which is a repository
-# setting and cannot be committed — see CONTRIBUTING.md, and the ruleset issue.
+# "Require review from Code Owners" on the `main` ruleset. That rule is committed
+# in config/main-ruleset.json (`require_code_owner_review: true`, issue #343), but
+# a ruleset is a repository setting: it takes effect only once an admin applies it
+# with scripts/ci/apply-branch-ruleset.sh — see CONTRIBUTING.md, "The `main`
+# ruleset (issue #343)".
 
 # Visual baselines. Once a wrong baseline is approved, the visual gate passes BY
 # DEFINITION and can never catch that regression again: #242 (2025-10-06) shipped

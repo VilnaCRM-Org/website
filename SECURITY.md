@@ -45,8 +45,30 @@ reach a human — never by lowering the threshold in
   (`.github/workflows/security-testing.yml`). `scripts/ci/code-scanning-gate.sh`
   fails the run on new high/critical findings; a failed scan on `main` opens a
   `ci-alert` tracking issue with the findings attached.
-- **Secret scanning** runs gitleaks over the working tree
-  (`.github/workflows/secrets-scanning.yml`).
+- **Secret scanning** runs the digest-pinned gitleaks image against the
+  committed `.gitleaks.toml` (`.github/workflows/secrets-scanning.yml`, issue
+  #353) in two legs. The `gitleaks` check scans the working tree on every pull
+  request and every push to `main` (`make lint-secrets`). The history leg
+  (`make scan-secrets-history`) walks every reachable commit weekly and on
+  `workflow_dispatch` — it is kept off pull requests because a credential in an
+  old commit is not the author's regression — and a failure opens a `ci-alert`
+  tracking issue through `.github/workflows/ci-health-alerts.yml`.
+- **Job-log secret scanning** (`.github/workflows/job-log-secrets-scan.yml`,
+  issue #375) runs the same image and config over the downloaded logs of every
+  completed run of the deploy, release and sandbox workflows
+  (`make scan-secrets-logs`), plus a weekly backstop over the last eight days of
+  those runs. A token those workflows fetch at run time is never a registered
+  secret, so GitHub does not mask it; this is the scan that would notice one
+  printed into a log. A scan that is not clean opens a `ci-alert` issue titled
+  after the scanned run (`.github/workflows/job-log-secrets-alert.yml`), and
+  nothing closes that issue automatically: a maintainer closes it once the
+  credential is rotated and the run's logs are deleted.
+- **Push protection** is a repository setting that no commit can switch on, and
+  it is not yet confirmed enabled: turning it on is an admin action tracked in
+  #353, with the steps and the proof in
+  [CONTRIBUTING.md](CONTRIBUTING.md#secret-scanning-push-protection-issue-353).
+  Until it is, a credential is caught by the scans above after it is pushed,
+  not refused at push time.
 - **Dependency CVEs (osv-scanner)** are the repository's software-composition
   analysis stream (`.github/workflows/osv-scanner.yml`, issue #356). The
   `dependency cve gate` check runs `make lint-vulns` on every pull request targeting

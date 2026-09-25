@@ -449,7 +449,12 @@ SHA whose trailing comment names the tag that SHA actually points at, copied ver
 (upstream may write it `v1.5.0` or `1.5.0` — zizmor flags a mismatch); `permissions:`
 belong on the job that needs them; never interpolate `${{ }}` into a `run:` body. Fix
 findings at the root — never add a `zizmor.yml` ignore, a `# zizmor: ignore[...]`
-comment, or lower the thresholds.
+comment, or lower the thresholds. `tests/bats/workflow_action_pins.bats` (issue #375) holds
+the pin rule without Docker or zizmor's policy defaults: it parses with js-yaml every
+workflow, every action under `.github/actions`, and every local action a `./` ref reaches
+wherever it lives, and fails on any `uses:` that is not local, a 40-hex SHA, or a
+`docker://…@sha256:` digest, on a `./` ref with no action behind it, and on a document it
+cannot parse or an empty glob.
 
 `make lint-actionlint` is its sibling: actionlint checks what zizmor does not — workflow
 syntax, expression types, undefined `needs:` outputs, runner labels — and hands every
@@ -594,7 +599,11 @@ Production-facing invariants that no other gate watches. Extend them; never rela
   headers policy lives in the infra repository; they promote to blocking once it is
   confirmed to reach the synthetic 404. `tests/bats/smoke_response_shape.bats` replays
   each of those four incidents against a real HTTP origin, so the gate is proved red on
-  every one of them at PR time rather than on a deploy.
+  every one of them at PR time rather than on a deploy. Since issue #329 the post-deploy
+  job runs it as `make smoke-prod`, which also **blocks** on the branded edge 404
+  (`--require-branded`, `SMOKE_404_MARKER`, default `Page not found - VilnaCRM`) and on
+  `/` and `/swagger` through `scripts/ci/uptime-check.sh`; the sandbox job and the
+  scheduled uptime check only warn on the brand.
 - **RFC 9116 disclosure** (`public/.well-known/security.txt`). Published straight through
   the static export. `Expires` is a hard expiry, so `make lint-security-txt` fails once
   **fewer than 60 days remain** — while there is still time to merge a refresh — and also
@@ -683,6 +692,39 @@ blocking an unrelated PR on it would only teach reviewers to click past a red ch
 is the same differential-on-PR, absolute-on-a-schedule split the dependency-CVE gate uses.
 A red weekly run is not silent — `secrets scanning` is listed in `ci-health-alerts.yml`.
 
+**A third leg reads job logs (#375 F4).** A token a privileged workflow fetches at run time
+(the Secrets Manager GitHub token in the sandbox pair, the release App token) is never a
+registered secret, so GitHub never masks it, and neither scan above can see a log. After
+every completed run of `website`, `Generate Changelog and Create Release`, `sandbox` and
+`Trigger Sandbox Deletion`, `job-log-secrets-scan.yml` (a `workflow_run`, a weekly backstop
+over the last eight days of those four workflows' runs, and `workflow_dispatch -f
+run_id=<id>`) downloads the logs with `scripts/ci/fetch-run-logs.sh` into one directory per
+run and runs `make scan-secrets-logs LOG_DIR=<dir>` (`SECRETS_MODE=logs`: the same image and
+config, `--no-git`, the directory mounted read-only). The fetch reads each run's jobs first:
+a run in which no job executed a step — cancelled while still pending behind a concurrency
+group, a startup failure — wrote no logs, and GitHub answers for it with an empty 22-byte zip,
+so it is reported `logs=none` and skipped instead of failing the scan. Everything else fails
+closed — once a job has run, a failed, empty or non-zip download, a non-numeric run id, or an
+unset, missing or empty `LOG_DIR` is an error, never a clean scan. The backstop records a run it
+cannot read, keeps fetching the rest, scans what it fetched and then fails naming every
+unreadable run, so one 5xx never leaves the week unscanned; it alone treats an HTTP 404 or 410
+from the logs endpoint as logs already deleted or expired and skips that run, because deleting
+them is the documented response to a finding. It only reads the logs as
+data and never checks out or executes the scanned run's code, which is what makes following
+the pull-request sandbox runs safe. It holds `actions: read` and `contents: read`, never
+`issues: write` (a workflow that grants it and lists workflows under `workflow_run` counts as
+their alert coverage in `lint-prod-guardrails` assertion A), and has no `pull_request`
+trigger, so the ruleset need not classify it. A scan that is not clean is filed by
+`job-log-secrets-alert.yml` (`scripts/ci/job-log-scan-alert.sh`) as an issue titled after the
+scanned run, and **nothing closes it automatically**. Both scan workflows stay out of
+`ci-health-alerts.yml` on purpose: its recovery path closes an issue as soon as the latest
+run on `main` is green, and every scan is a `main` run, so the next unrelated clean scan would
+close a live leak minutes later; and its single concurrency group would drop queued alerts at
+pull-request rate. Renaming a followed workflow means updating the `workflows:` list and the
+backstop's file list in the same change, which `secrets_scanning.bats` enforces. Treat a
+finding as a live credential: rotate and revoke it, delete the run's logs, then close the
+issue by hand.
+
 The allowlist is narrow by construction. Whole-file exemptions cover machine-generated or
 upstream-fetched artifacts plus gitignored build output (`.next/`, `out/`,
 `storybook-static-ci/`) — paths git cannot commit, which is the entire justification, and
@@ -698,9 +740,13 @@ tree it guards. A genuine historical credential is rotated and revoked upstream,
 allowlisted.
 
 Two halves of #353 cannot be delivered from a commit and remain open: enabling GitHub push
-protection is a repository setting, and requiring the check on `main` belongs to #343:
-`gitleaks` is in the committed `config/main-ruleset.json`, which is inert until an admin
-applies it with `scripts/ci/apply-branch-ruleset.sh`.
+protection is a repository setting — CONTRIBUTING.md's "Secret scanning push protection"
+runbook holds the admin steps, the admin-only verification read and the seeded-push proof,
+and it describes the credential's shape rather than quoting one, because a literal would be
+a finding here — and requiring the check on `main` belongs to #343: `gitleaks` is in the
+committed `config/main-ruleset.json`, which is inert until an admin applies it with
+`scripts/ci/apply-branch-ruleset.sh`. Do not describe push protection as enabled until that
+verification read shows it.
 
 ### Dependency CVEs (osv-scanner, issue #356)
 
@@ -907,7 +953,8 @@ A mutable file whose behaviour no spec in the mutation runner's test set reaches
 from the list and named in the run log, never scored. Stryker runs with
 `enableFindRelatedTests`; when Jest resolves no related spec it runs nothing, exits 0, and
 every mutant reads as _survived_ — identical to a genuinely weak test.
-`api/graphql/apollo.ts`, whose only coverage is the integration layer, is the live example.
+A file reached only by the integration layer, which the mutation runner does not collect, is
+the typical case.
 Reporting a survivor for a test that exists is how a gate gets its threshold lowered.
 
 The `changed` leg gates below 100% on purpose. A file mutated for the first time carries
