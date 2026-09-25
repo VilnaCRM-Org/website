@@ -15,7 +15,7 @@ function PrivacyPolicy(): React.ReactElement {
       <Link
         target="_blank"
         rel="noopener noreferrer"
-        sx={styles.privacy}
+        sx={styles.policyLink}
         href={env.NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL}
       >
         <UiTypography variant="medium16" sx={styles.textColor}>
@@ -25,7 +25,7 @@ function PrivacyPolicy(): React.ReactElement {
       <Link
         target="_blank"
         rel="noopener noreferrer"
-        sx={styles.usage_policy}
+        sx={styles.policyLink}
         href={env.NEXT_PUBLIC_VILNACRM_USE_POLICY_URL}
       >
         <UiTypography variant="medium16" sx={styles.textColor}>
