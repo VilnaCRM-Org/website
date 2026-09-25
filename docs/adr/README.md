@@ -24,7 +24,8 @@ justified a decision still holds.
 - [ADR 0006](0006-route-scoped-locale.md) — the locale is a function of the route, and
   the English landing lives under a static `/en` prefix. _Accepted._
 - [ADR 0007](0007-release-automation-and-tag-invariant.md) — the release lane keeps its
-  orphan tags and enforces a version invariant before it writes. _Accepted._
+  orphan tags and enforces a version invariant before it writes. _Accepted; push
+  atomicity amended by ADR 0011._
 - [ADR 0008](0008-light-only-theme.md) — the site ships one light colour scheme and does
   not follow `prefers-color-scheme`. _Accepted._
 - [ADR 0009](0009-consolidated-error-boundary-and-observability.md) — one error
@@ -33,6 +34,9 @@ justified a decision still holds.
 - [ADR 0010](0010-build-and-release-provenance.md) — `out/version.json` ties a deployed
   bundle to its commit, and a same-commit GitHub Actions attestation records what was
   built; CodePipeline execution polling stays open. _Accepted._
+- [ADR 0011](0011-atomic-release-push.md) — the release lane pushes its commit and tag in
+  one atomic push, after checking the release commit changes only the version files.
+  _Accepted._
 
 The template for a new record is [`0000-template.md`](0000-template.md).
 

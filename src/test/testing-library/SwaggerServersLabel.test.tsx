@@ -2,12 +2,15 @@ import { render, screen } from '@testing-library/react';
 import { t } from 'i18next';
 import React from 'react';
 
+import { authorizeDialogPlugin } from '@swagger/components/api-documentation/authorize-dialog';
+import { swaggerPlugins } from '@swagger/components/api-documentation/plugins';
+import { responsesTablePlugin } from '@swagger/components/api-documentation/responses-table';
 import {
   ServersContainerProps,
   serversLabelPlugin,
-  swaggerPlugins,
   withServersLabel,
 } from '@swagger/components/api-documentation/servers';
+import { specLoadPlugin } from '@swagger/components/api-documentation/spec-load';
 
 /**
  * Regression coverage for #424: the swagger-ui servers dropdown (`<select id="servers">`)
@@ -92,6 +95,11 @@ describe('withServersLabel (#424)', () => {
 
   it('is registered as the ServersContainer wrapper of the plugin ApiDocumentation passes', () => {
     expect(serversLabelPlugin.wrapComponents.ServersContainer).toBe(withServersLabel);
-    expect(swaggerPlugins).toEqual([serversLabelPlugin]);
+    expect(swaggerPlugins).toEqual([
+      serversLabelPlugin,
+      authorizeDialogPlugin,
+      responsesTablePlugin,
+      specLoadPlugin,
+    ]);
   });
 });

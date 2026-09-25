@@ -50,13 +50,13 @@ describe('Localization Configuration', () => {
   let OLD_ENV: NodeJS.ProcessEnv;
 
   beforeEach(() => {
-    jest.resetModules(); // Clears module cache for fresh imports
-    OLD_ENV = { ...process.env }; // Backup environment variables
+    jest.resetModules();
+    OLD_ENV = { ...process.env };
   });
 
   afterEach(() => {
-    Object.keys(process.env).forEach(key => delete process.env[key]); // Clear all environment variables
-    Object.assign(process.env, OLD_ENV); // Restore original values
+    Object.keys(process.env).forEach(key => delete process.env[key]);
+    Object.assign(process.env, OLD_ENV);
   });
 
   it('should throw an error if both mainLanguage and fallbackLanguage are missing', async () => {

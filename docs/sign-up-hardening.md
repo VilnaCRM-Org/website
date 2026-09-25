@@ -152,7 +152,7 @@ can hold is client-side, so the model is written down here to keep that limit vi
 - **Mail-bombing a victim address with confirmation emails** (a script against the
   API). Authoritative control: the user-service's per-IP / per-email rate limit and
   coalesced confirmation emails per address. Held here: the honeypot below, and the
-  mutation is never issued while a submission is in flight.
+  mutation is never issued while a submission is in flight (the in-flight lock below).
 - **Squatting attacker-chosen addresses before their owners register** (a script
   against the API). Authoritative control: confirmation before the address is reserved
   and expiry of unconfirmed accounts. Held here: nothing — the client cannot decide
@@ -162,8 +162,9 @@ can hold is client-side, so the model is written down here to keep that limit vi
   `handleApolloError` renders one generic message and `graphQLErrors[].message` is never
   echoed.
 - **Driving transactional-email cost through a headless browser.** Authoritative
-  control: the user-service rate limit. Held here: the honeypot, and the submit and retry
-  buttons are disabled while `loading`.
+  control: the user-service rate limit. Held here: the honeypot, and one in-flight lock
+  shared by submit and retry that drops every submission landing while another is running;
+  the buttons are also disabled while `loading`, which is the visible half of that state.
 - **Credential stuffing.** Not applicable — registration accepts new credentials and
   verifies none; the password policy (F4) only shapes what can be created.
 
@@ -209,6 +210,46 @@ untabbable, unautofilled, not one of the form's text boxes),
 renders the success notification, and `AuthLayoutTelemetry.test.tsx` pins the tag and
 that the payload carries none of the submitted values. `buildSignupInput` reads the four
 credential fields by name, so the trap's value can never reach the mutation variables.
+
+### The in-flight lock (`auth-form/in-flight-lock.ts`, `auth-form/auth-layout.tsx`)
+
+`disabled={loading}` on the submit and retry buttons cannot stop a duplicate on its own.
+Apollo's `loading` turns true only once the mutation has started, and React applies the
+attribute on a later render. react-hook-form 7.76's `handleSubmit` is not re-entrant
+either: every call re-runs validation and then `onSubmit`. A fast double-click, a repeated
+Enter, `form.requestSubmit()` called twice, or Retry followed by a submit therefore each
+issued its own `createUser` before the button was disabled, and the duplicate could render
+an "already exists" error on top of the first request's success.
+
+`useInFlightHandleSubmit` wraps react-hook-form's `handleSubmit` in `lockSubmission`. The
+form's submit event and `retrySubmit` both go through that wrapped function, so they share
+one lock per form instance, created once through a `useState` initializer. The lock is
+taken synchronously, before react-hook-form runs, and released in `finally`: after a
+validation failure (react-hook-form still focuses the first invalid field), the honeypot
+answer, a success, or a throw from the error path. A submission that finds it held calls
+`preventDefault()` on its event and does nothing else: no notification, no telemetry, no
+focus change. `preventDefault()` is required because without it the browser performs the
+native GET submission, which reloads the page and can put the field values, password
+included, in the URL.
+
+The lock sits outside `handleSubmit(onSubmit)` on purpose. react-hook-form marks a
+submission successful whenever `onSubmit` returns without throwing, and `useFormReset`
+then clears the form (the notification type starts as success). A duplicate ignored inside
+`onSubmit` would therefore wipe the user's entries while the first request is still
+running. `disabled={loading}` stays as the visible state; the lock is what enforces it.
+Like every control in this section it is client-side, so a script calling the API
+directly is untouched by it.
+
+`tests/integration/coverage/auth-section/auth-layout.integration.test.tsx` holds the
+network request open and pins three cases. A double submit sends exactly one request and
+keeps every entry while it is pending. Two Retry clicks and a submit send one retry. A
+settled failure frees the lock for the next submit. `src/test/unit/in-flight-lock.test.ts`
+pins the lock itself: an ignored submit event gets `preventDefault()`, an event-less retry
+is ignored, the lock is released after a rejection and the error is rethrown, and separate
+forms do not share a lock. `AuthLayout.test.tsx` counts the requests `MockLink` receives
+for a double submit, and `AuthLayoutTelemetry.test.tsx` pins that a honeypot submitted
+twice is reported once. A time-based cooldown on Retry after a failure is a separate UX
+decision and is not part of the lock.
 
 ## Error copy (`src/features/landing/helpers/handleApolloError.ts`)
 

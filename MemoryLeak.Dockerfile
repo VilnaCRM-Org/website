@@ -1,18 +1,18 @@
 FROM public.ecr.aws/docker/library/node:24.18.0-alpine3.23@sha256:595398b0081eacda8e1c4c5b97b76cd1020e4d58a8ebcb4843b9bca1e79e7436 AS base
 
 RUN apk add --no-cache \
+    ca-certificates=20260909-r0 \
     chromium=149.0.7827.53-r0 \
-    xvfb=21.1.23-r0 \
-    nss=3.123.1-r0 \
+    dbus=1.16.2-r1 \
     freetype=2.14.3-r0 \
     harfbuzz=12.2.0-r0 \
-    ca-certificates=20260909-r0 \
-    ttf-freefont=20120503-r4 \
-    dbus=1.16.2-r1 \
     libx11=1.8.12-r1 \
     libxcomposite=0.4.6-r5 \
     libxdamage=1.1.6-r5 \
     libxext=1.3.6-r2 \
+    nss=3.123.1-r0 \
+    ttf-freefont=20120503-r4 \
+    xvfb=21.1.23-r0 \
     && npm install -g bun@1.3.5
 
 ENV DISPLAY=:99 \

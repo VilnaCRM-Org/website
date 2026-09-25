@@ -20,5 +20,4 @@ RUN tsc --project tsconfig.server.json
 # silently serving nothing) when raw.githubusercontent.com is unreachable.
 RUN cp contracts/user-service/schema.graphql out/docker/apollo-server/schema.graphql
 
-CMD node ./out/docker/apollo-server/schemaFetcher.js && \
-    node ./out/docker/apollo-server/server.mjs
+CMD ["/bin/sh", "-c", "node ./out/docker/apollo-server/schemaFetcher.js && node ./out/docker/apollo-server/server.mjs"]

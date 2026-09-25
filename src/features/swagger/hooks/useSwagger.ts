@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 
+import { SWAGGER_SCHEMA_URL } from '../constants/swagger-schema-url';
+
 type UseSwaggerReturn = {
   swaggerContent: unknown | null;
   error: Error | null;
   loading: boolean;
   retry: () => void;
 };
-
-const DEFAULT_SWAGGER_SCHEMA_URL = '/swagger-schema.json';
 
 const isAbortError: (err: unknown) => boolean = (err: unknown): boolean =>
   (err as DOMException).name === 'AbortError';
@@ -49,7 +49,7 @@ const useResetOnUrlChange: (schemaUrl: string, reset: () => void) => void = (
 };
 
 const useSwagger: (schemaUrl?: string) => UseSwaggerReturn = (
-  schemaUrl: string = DEFAULT_SWAGGER_SCHEMA_URL
+  schemaUrl: string = SWAGGER_SCHEMA_URL
 ) => {
   const [swaggerContent, setSwaggerContent] = useState<unknown | null>(null);
   const [error, setError] = useState<Error | null>(null);

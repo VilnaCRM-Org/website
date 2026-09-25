@@ -12,12 +12,14 @@ import { t } from 'i18next';
 import React from 'react';
 
 import ApiDocumentation from '@swagger/components/api-documentation';
+import { authorizeDialogPlugin } from '@swagger/components/api-documentation/authorize-dialog';
+import { swaggerPlugins } from '@swagger/components/api-documentation/plugins';
+import { responsesTablePlugin } from '@swagger/components/api-documentation/responses-table';
 import {
-  ServersContainerProps,
   serversLabelPlugin,
-  swaggerPlugins,
   withServersLabel,
 } from '@swagger/components/api-documentation/servers';
+import { specLoadPlugin } from '@swagger/components/api-documentation/spec-load';
 import useSwagger from '@swagger/hooks/useSwagger';
 
 jest.mock('../../../../src/features/swagger/hooks/useSwagger');
@@ -40,9 +42,7 @@ function UpstreamServersContainer(): React.ReactElement {
   );
 }
 
-const Labelled: React.ComponentType<ServersContainerProps> = withServersLabel(
-  UpstreamServersContainer
-);
+const Labelled = withServersLabel(UpstreamServersContainer);
 
 describe('integration: servers label plugin', () => {
   it('names the upstream select through a for-association', () => {
@@ -62,7 +62,12 @@ describe('integration: servers label plugin', () => {
 
   it('registers the wrapper under the ServersContainer key swagger-ui looks up', () => {
     expect(serversLabelPlugin.wrapComponents.ServersContainer).toBe(withServersLabel);
-    expect(swaggerPlugins).toEqual([serversLabelPlugin]);
+    expect(swaggerPlugins).toEqual([
+      serversLabelPlugin,
+      authorizeDialogPlugin,
+      responsesTablePlugin,
+      specLoadPlugin,
+    ]);
   });
 
   it('is passed to SwaggerUI by ApiDocumentation', () => {

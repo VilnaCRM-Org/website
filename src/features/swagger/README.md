@@ -40,15 +40,66 @@ presentation over that contract rather than a live data source.
 
 ## Accessibility of the third-party widget
 
-`swagger-ui-react` renders the servers dropdown as `<label for="servers"><select id="servers">`
-with no label text, so the control had no accessible name (#424, WCAG 4.1.2). The fix is
-the `wrapComponents` plugin in `components/api-documentation/servers`: `withServersLabel`
-wraps the widget's `ServersContainer` with a visually-hidden `<label for="servers">`,
-which names the select from anywhere in the document without patching the widget's DOM
-or moving a pixel in the visual baselines. `ApiDocumentation` passes it through
-`plugins={swaggerPlugins}`; the label text is `api_documentation.servers_label`. Prefer
-this shape — a supported component override — over an `A11Y_EXCEPTIONS` waiver whenever
-the widget exposes one.
+`swagger-ui-react` ships four WCAG failures that are fixed through its supported
+`wrapComponents` plugin API rather than waived or patched in the DOM. `ApiDocumentation`
+passes them as `plugins={swaggerPlugins}`, the list in `components/api-documentation/plugins`:
+
+- `servers` — `withServersLabel` wraps `ServersContainer` with a visually-hidden
+  `<label for="servers">`, because the widget's own label around the servers select is
+  empty (#424, SC 4.1.2). Text: `api_documentation.servers_label`.
+- `authorize-dialog` — `withCloseLabel` wraps `CloseIcon` so the icon-only `.close-modal`
+  button is named by the svg (`role="img"`, `aria-hidden` removed, text
+  `api_documentation.authorize_dialog.close`), and `withLabelInName` wraps `Button` so a
+  button with string children ("Authorize", "Logout") is named by that visible text
+  instead of a different `aria-label` (#433, SC 4.1.2 and 2.5.3).
+- `responses-table` — wraps `responses` with an owned port of the OAS3 responses table:
+  `<th scope="col">` header cells and no `role="region"` override on the `<table>`, with the
+  id, classes and `aria-live` kept (#433, SC 1.3.1). It renders inside swagger-ui's error
+  boundary (`system.fn.withErrorBoundary`) and delegates to the original for non-OAS3 specs.
+  Its copy ("Responses", "Code", "Description", "Links") stays upstream's English, like the
+  rest of the widget on this English-only route. The live "Server response" table is not
+  ported yet; `docs/accessibility/acceptance-standard.md` records that follow-up.
+
+The ported table is pinned to `swagger-ui-react`'s `responses.jsx` at 5.32.6, and
+`SwaggerResponsesTable.test.tsx` fails on any other installed version: on every upgrade,
+re-diff the port against the new `responses.jsx` by hand before moving that pin. No other gate
+catches that drift, because the port replaces upstream's markup, so an upstream change to the
+table never reaches the DOM the scans read. With the waivers deleted, the e2e interaction
+scans fail closed only when an upgrade renames `CloseIcon`, `Button` or `responses` or
+reorders the icon's props; port the change, never re-add a waiver. Prefer this shape — a
+supported component override — over an `A11Y_EXCEPTIONS` waiver whenever the widget exposes
+one.
+
+## Load performance
+
+One more entry in `swaggerPlugins` changes no markup; it removes duplicate work
+`swagger-ui-react` 5.32.6 does on every load. `specLoadPlugin` (`components/api-documentation/spec-load`)
+wraps two spec actions:
+
+- `updateSpec` drops a call whose string equals the stored `specStr`. The core constructor
+  already parses an object `spec`, and the React wrapper's effect then re-sends the same JSON.
+  `swagger-ui-react` also registers the `apis` preset twice, so every `updateSpec` parses the
+  document twice: the page parsed it four times, and dropping the re-send halves that to two.
+  Deduplicating `parseToJson` as well was measured against the real core and left out, because
+  the remaining parse costs a few milliseconds.
+- `requestResolvedSubtree(["components","securitySchemes"])` stores the subtree as its own
+  resolved form through swagger-ui's `updateResolvedSubtree` when it holds no `$ref` and no
+  `openIdConnect` scheme, instead of running the resolver. The result is identical, but for
+  an OpenAPI 3.1 document swagger-client first normalizes the entire spec through ApiDOM,
+  which was the longest task on the page (about 190 ms locally, 230-360 ms on CI runners).
+  Storing, rather than skipping, keeps `resolvedSubtrees` as upstream sets it: the OAS3
+  `definitionsToAuthorize` selector passes that subtree as an argument to refresh its cached
+  Authorize data. Operations and models still resolve when they are expanded.
+
+`SwaggerPage` also preloads `/swagger-schema.json` from the static HTML
+(`<link rel="preload" as="fetch" crossorigin="anonymous">`, the credentials mode `fetch()`
+uses), so the request no longer waits for the swagger chunks to download and execute. WebKit
+does not hand an `as=fetch` preload to `fetch()`, so Safari downloads the schema twice and logs
+an unused-preload warning; that is expected, not a regression. Both
+changes exist because the desktop Lighthouse floor on this route stays at 0.85 (a protected,
+raise-only threshold) once issue #498 made CI audit the loaded page. The plugin depends on
+swagger-ui's action names, so re-check it on every `swagger-ui-react` upgrade together with
+the ported responses table.
 
 ## Loading, failure and retry (issue #339)
 

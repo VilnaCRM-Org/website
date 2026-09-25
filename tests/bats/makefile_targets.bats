@@ -404,6 +404,85 @@ STUB
   assert_log_contains 'docker compose down --remove-orphans'
 }
 
+first_log_line() {
+  grep -nF -- "$1" "$COMMAND_LOG" | head -n 1 | cut -d: -f1
+}
+
+assert_host_lighthouse_sequence() {
+  local lhci_command="bun x lhci autorun --config=lighthouserc.$1.js"
+  local step
+  local previous_line=0
+  local line
+
+  for step in 'node scripts/patchSwaggerServer.mjs' 'next build --webpack' \
+    'next-export-optimize-images' "$lhci_command"; do
+    assert_log_contains "$step"
+    line="$(first_log_line "$step")"
+    [ "$line" -gt "$previous_line" ]
+    previous_line="$line"
+  done
+
+  run grep -F 'docker' "$COMMAND_LOG"
+  [ "$status" -ne 0 ]
+}
+
+@test "host lighthouse-desktop and lighthouse-mobile patch the swagger schema before building" {
+  # The stubbed build writes nothing, so seed the export a real build would leave.
+  mkdir -p "$MAKEFILE_SANDBOX/out"
+  printf '{}' > "$MAKEFILE_SANDBOX/out/swagger-schema.json"
+
+  reset_command_log
+  run_make_target lighthouse-desktop EXEC_MODE=host
+  assert_success
+  assert_host_lighthouse_sequence desktop
+
+  reset_command_log
+  run_make_target lighthouse-mobile EXEC_MODE=host
+  assert_success
+  assert_host_lighthouse_sequence mobile
+
+  run_make_target lighthouse-desktop EXEC_MODE=host -n
+  assert_success
+  assert_output_contains 'env NEXT_PUBLIC_API_BASE_URL=http://mockoon:8080 node scripts/patchSwaggerServer.mjs'
+}
+
+@test "host lighthouse refuses to audit an export without swagger-schema.json" {
+  [ ! -e "$MAKEFILE_SANDBOX/out" ]
+
+  reset_command_log
+  run_make_target lighthouse-desktop EXEC_MODE=host
+  [ "$status" -ne 0 ]
+  assert_output_contains 'out/swagger-schema.json is missing'
+  assert_log_contains 'next-export-optimize-images'
+  run grep -F 'lhci' "$COMMAND_LOG"
+  [ "$status" -ne 0 ]
+
+  reset_command_log
+  run_make_target lighthouse-mobile EXEC_MODE=host
+  [ "$status" -ne 0 ]
+  assert_output_contains 'out/swagger-schema.json is missing'
+  run grep -F 'lhci' "$COMMAND_LOG"
+  [ "$status" -ne 0 ]
+
+  # test -s: an empty schema is refused the same way as a missing one.
+  mkdir -p "$MAKEFILE_SANDBOX/out"
+  : > "$MAKEFILE_SANDBOX/out/swagger-schema.json"
+
+  reset_command_log
+  run_make_target lighthouse-desktop EXEC_MODE=host
+  [ "$status" -ne 0 ]
+  assert_output_contains 'out/swagger-schema.json is missing'
+  run grep -F 'lhci' "$COMMAND_LOG"
+  [ "$status" -ne 0 ]
+
+  reset_command_log
+  run_make_target lighthouse-mobile EXEC_MODE=host
+  [ "$status" -ne 0 ]
+  assert_output_contains 'out/swagger-schema.json is missing'
+  run grep -F 'lhci' "$COMMAND_LOG"
+  [ "$status" -ne 0 ]
+}
+
 @test "test-integration runs Jest in the integration environment" {
   cat > "$STUB_BIN_DIR/jest" <<'STUB'
 #!/usr/bin/env bash

@@ -11,9 +11,12 @@ import Notification from '../../notification/notification';
 import { NotificationStatus } from '../../notification/types';
 
 import AuthForm from './auth-form';
+import { createInFlightLock, lockSubmission } from './in-flight-lock';
 import styles from './styles';
 import { buildSubmitHandler } from './submit-handler';
-import { CreateUserPayload, SignupVariables } from './types';
+import { AuthFormProps, CreateUserPayload, SignupVariables } from './types';
+
+type SignupHandleSubmit = AuthFormProps['handleSubmit'];
 
 function FormLoader(): React.ReactElement {
   return (
@@ -40,10 +43,16 @@ function useNotificationState() {
   };
 }
 
+function useInFlightHandleSubmit(handleSubmit: SignupHandleSubmit): SignupHandleSubmit {
+  const [inFlight] = React.useState(createInFlightLock);
+
+  return (onValid, onInvalid) => lockSubmission(inFlight, handleSubmit(onValid, onInvalid));
+}
+
 function useSignupForm() {
   const notif = useNotificationState();
   const {
-    handleSubmit,
+    handleSubmit: submitUnlocked,
     control,
     reset,
     formState,
@@ -63,6 +72,7 @@ function useSignupForm() {
     SIGNUP_MUTATION
   );
 
+  const handleSubmit = useInFlightHandleSubmit(submitUnlocked);
   const onSubmit = buildSubmitHandler(signupMutation, notif);
   useFormReset({ formState, reset, notificationType: notif.notificationType });
   const retrySubmit: () => void = (): void => {

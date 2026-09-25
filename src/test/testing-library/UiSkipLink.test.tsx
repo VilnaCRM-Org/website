@@ -14,9 +14,10 @@ describe('UiSkipLink', () => {
   });
 
   it('renders a different label/targetId pair without falling back to a default', () => {
-    const { getByRole } = render(<UiSkipLink label="Перейти до вмісту" targetId="content" />);
+    const label: string = 'Перейти до вмісту';
+    const { getByRole } = render(<UiSkipLink label={label} targetId="content" />);
 
-    const link: HTMLElement = getByRole('link', { name: 'Перейти до вмісту' });
+    const link: HTMLElement = getByRole('link', { name: label });
     expect(link).toHaveAttribute('href', '#content');
   });
 

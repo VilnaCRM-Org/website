@@ -14,10 +14,12 @@
  *  - retry: clicking retry re-fires the mutation.
  *  - honeypot: a filled trap never reaches fetch, yet the UI answers as success
  *    and the form resets — the response a script cannot tell from a real one.
+ *  - in-flight lock (#380): a second submit or retry that lands before the
+ *    `loading` render issues no request and leaves the entries in place.
  *  - AuthSection composition renders SignUpText + AuthForm + social links.
  */
 import { ApolloProvider } from '@apollo/client/react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { t } from 'i18next';
 
 import AuthLayout from '@landing/auth-section/auth-form/auth-layout';
@@ -57,6 +59,27 @@ function successPayload(email: string, initials: string): unknown {
       __typename: 'createUserPayload',
     },
   };
+}
+
+function signedUpResponse(): Response {
+  return graphqlData(successPayload(credentials.email.toLowerCase(), credentials.fullName));
+}
+
+function deferFetch(fetchMock: FetchMock): (response: Response) => void {
+  let resolveFetch: (response: Response) => void = () => {};
+  const pending: Promise<Response> = new Promise<Response>(resolve => {
+    resolveFetch = resolve;
+  });
+  fetchMock.mockReturnValueOnce(pending as ReturnType<typeof fetch>);
+  return (response: Response): void => resolveFetch(response);
+}
+
+function settle(): Promise<void> {
+  return act(async () => {
+    await new Promise<void>(resolve => {
+      setTimeout(resolve, 50);
+    });
+  });
 }
 
 function fillAndSubmit(): void {
@@ -218,6 +241,78 @@ describe('integration: AuthLayout', () => {
       graphqlData(successPayload(credentials.email.toLowerCase(), credentials.fullName))
     );
     fireEvent.click(retryButton);
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(screen.getByText(successTitle)).toBeVisible());
+  });
+
+  it('issues one createUser and keeps the entries when the form is submitted twice', async () => {
+    const resolveFetch = deferFetch(fetchMock);
+
+    renderLayout();
+    fillAndSubmit();
+    fireEvent.click(screen.getByRole('button', { name: submitText }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    await settle();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(screen.getByLabelText('Loading')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(emailPlaceholder)).toHaveValue(credentials.email);
+    expect(screen.getByPlaceholderText(passwordPlaceholder)).toHaveValue(credentials.password);
+    expect(screen.getByRole('checkbox')).toBeChecked();
+
+    resolveFetch(signedUpResponse());
+
+    await waitFor(() => expect(screen.getByText(successTitle)).toBeVisible());
+    await waitFor(() => expect(screen.getByPlaceholderText(emailPlaceholder)).toHaveValue(''));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('issues one retry when retry is clicked twice and then the form is submitted', async () => {
+    fetchMock.mockResolvedValueOnce(
+      graphqlErrors([
+        { message: 'Internal Server Error.', extensions: { code: 'INTERNAL_SERVER_ERROR' } },
+      ])
+    );
+
+    renderLayout();
+    fillAndSubmit();
+
+    const retryButton: HTMLElement = await screen.findByRole('button', {
+      name: t('notifications.error.retry_button'),
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const resolveRetry = deferFetch(fetchMock);
+
+    fireEvent.click(retryButton);
+    fireEvent.click(retryButton);
+    fireEvent.click(screen.getByRole('button', { name: submitText, hidden: true }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    await settle();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(screen.getByLabelText('Loading')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(emailPlaceholder)).toHaveValue(credentials.email);
+
+    resolveRetry(signedUpResponse());
+
+    await waitFor(() => expect(screen.getByText(successTitle)).toBeVisible());
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('submits again once the previous submission has settled', async () => {
+    fetchMock.mockResolvedValueOnce(
+      graphqlErrors([{ message: 'Bad input.', extensions: { code: 'BAD_USER_INPUT' } }])
+    );
+
+    renderLayout();
+    fillAndSubmit();
+
+    await waitFor(() => expect(screen.getByText(errorTitle)).toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByLabelText('Loading')).not.toBeInTheDocument());
+    fetchMock.mockResolvedValueOnce(signedUpResponse());
+
+    fireEvent.click(screen.getByRole('button', { name: submitText, hidden: true }));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
     await waitFor(() => expect(screen.getByText(successTitle)).toBeVisible());

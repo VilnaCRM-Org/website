@@ -37,7 +37,9 @@ type SwaggerModule = {
 
 describe('swagger utils', () => {
   const version: string = 'v2.6.0';
-  const expectedUrl: string = `https://raw.githubusercontent.com/VilnaCRM-Org/user-service/${version}/.github/openapi-spec/spec.yaml`;
+  const expectedUrl: string =
+    `https://raw.githubusercontent.com/VilnaCRM-Org/user-service/${version}` +
+    '/.github/openapi-spec/spec.yaml';
 
   let buildSpecUrl: () => string;
   let fetchSwaggerYaml: (url: string) => Promise<string>;

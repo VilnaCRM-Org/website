@@ -86,6 +86,53 @@ setup() {
   assert_log_contains 'make lighthouse-mobile-dind'
 }
 
+run_ci_script_with_test_compose_file() {
+  local script_path="$1"
+  local compose_file="$2"
+  shift 2
+
+  run env \
+    -C "$SCRIPT_SANDBOX" \
+    PATH="$STUB_BIN_DIR:$PATH" \
+    COMMAND_LOG="$COMMAND_LOG" \
+    DOCKER_COMPOSE_TEST_FILE="$compose_file" \
+    "$script_path" "$@"
+}
+
+@test "batch_lhci_leak.sh hands each compose file to docker compose unsplit and unglobbed" {
+  local script_path="$PROJECT_ROOT/scripts/ci/batch_lhci_leak.sh"
+
+  run_ci_script "$script_path" test-lighthouse-desktop
+  [ "$status" -eq 0 ]
+  assert_log_contains 'docker compose -f common-healthchecks.yml -f docker-compose.test.yml cp lighthouserc.desktop.js prod:/app/'
+  assert_log_contains 'docker compose -f common-healthchecks.yml -f docker-compose.test.yml down --volumes --remove-orphans'
+
+  reset_command_log
+  run_ci_script_with_test_compose_file "$script_path" '*.yml' test-lighthouse-mobile
+  [ "$status" -eq 0 ]
+  assert_log_contains 'docker compose -f common-healthchecks.yml -f *.yml cp lighthouserc.mobile.js prod:/app/'
+
+  reset_command_log
+  rm "$SCRIPT_SANDBOX/common-healthchecks.yml"
+  run_ci_script "$script_path" test-lighthouse-mobile
+  [ "$status" -eq 0 ]
+  assert_log_contains 'docker compose -f docker-compose.test.yml down --volumes --remove-orphans'
+}
+
+@test "batch_pw_load.sh hands each compose file to docker compose unsplit and unglobbed" {
+  local script_path="$PROJECT_ROOT/scripts/ci/batch_pw_load.sh"
+
+  run_ci_script_with_test_compose_file "$script_path" '*.yml' test-e2e
+  [ "$status" -eq 0 ]
+  assert_log_contains 'docker compose -f common-healthchecks.yml -f *.yml exec -T playwright mkdir -p /app'
+
+  reset_command_log
+  rm "$SCRIPT_SANDBOX/common-healthchecks.yml"
+  run_ci_script "$script_path" test-visual
+  [ "$status" -eq 0 ]
+  assert_log_contains 'docker compose -f docker-compose.test.yml exec -T playwright mkdir -p /app/src/test /app/src/config /app/pages/i18n'
+}
+
 @test "run-parallel.sh runs the lint phase targets through make and groups output" {
   local script_path="$PROJECT_ROOT/scripts/ci/run-parallel.sh"
 

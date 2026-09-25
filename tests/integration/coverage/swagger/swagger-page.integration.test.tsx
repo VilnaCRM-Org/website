@@ -21,6 +21,11 @@ import useSwagger from '../../../../src/features/swagger/hooks/useSwagger';
 
 jest.mock('../../../../src/features/swagger/hooks/useSwagger');
 
+jest.mock('next/head', () => ({
+  __esModule: true,
+  default: ({ children }: { children: React.ReactNode }): React.ReactNode => children,
+}));
+
 jest.mock('swagger-ui-react', () => ({
   __esModule: true,
   default: function SwaggerUI(): React.ReactElement {
@@ -73,5 +78,16 @@ describe('integration: SwaggerPage', () => {
     expect(
       await screen.findByRole('link', { name: t('navigation.navigate_to_home_page') })
     ).toBeInTheDocument();
+  });
+
+  it('preloads the schema from the static HTML so the fetch skips the chunk waterfall', () => {
+    render(<SwaggerPage />);
+
+    const preload: HTMLLinkElement | null = document.querySelector('link[rel="preload"]');
+
+    expect(preload).not.toBeNull();
+    expect(preload?.getAttribute('href')).toBe('/swagger-schema.json');
+    expect(preload?.getAttribute('as')).toBe('fetch');
+    expect(preload?.getAttribute('crossorigin')).toBe('anonymous');
   });
 });

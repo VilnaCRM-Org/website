@@ -70,6 +70,23 @@ describe('AuthLayout telemetry', () => {
     expect(payload).not.toContain(testPassword);
   });
 
+  it('reports a honeypot submitted twice in a row only once', async () => {
+    const { container, getByRole } = renderAuthLayout([]);
+    const honeypot: HTMLInputElement | null = container.querySelector('input[name="Referral"]');
+    fireEvent.change(honeypot!, { target: { value: 'https://spam.example' } });
+
+    fillForm(testInitials, testEmail, testPassword, true);
+    fireEvent.click(getByRole('button', { name: t('sign_up.form.button_text') }));
+
+    await waitFor(() => {
+      expect(screen.getByText(t('notifications.success.title'))).toBeVisible();
+    });
+    await waitFor(() =>
+      expect(screen.getByPlaceholderText(t('sign_up.form.email_input.placeholder'))).toHaveValue('')
+    );
+    expect(captureException).toHaveBeenCalledTimes(1);
+  });
+
   it('sends nothing when the submission succeeds', async () => {
     renderAuthLayout([fulfilledMockResponse]);
 
