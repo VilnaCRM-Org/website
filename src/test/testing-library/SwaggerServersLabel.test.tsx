@@ -10,6 +10,7 @@ import {
   serversLabelPlugin,
   withServersLabel,
 } from '@swagger/components/api-documentation/servers';
+import { specLoadPlugin } from '@swagger/components/api-documentation/spec-load';
 
 /**
  * Regression coverage for #424: the swagger-ui servers dropdown (`<select id="servers">`)
@@ -98,6 +99,7 @@ describe('withServersLabel (#424)', () => {
       serversLabelPlugin,
       authorizeDialogPlugin,
       responsesTablePlugin,
+      specLoadPlugin,
     ]);
   });
 });

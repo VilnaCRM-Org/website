@@ -70,6 +70,32 @@ reorders the icon's props; port the change, never re-add a waiver. Prefer this s
 supported component override — over an `A11Y_EXCEPTIONS` waiver whenever the widget exposes
 one.
 
+## Load performance
+
+One more entry in `swaggerPlugins` changes no markup; it removes duplicate work
+`swagger-ui-react` 5.32.6 does on every load. `specLoadPlugin` (`components/api-documentation/spec-load`)
+wraps two spec actions:
+
+- `updateSpec` drops a call whose string equals the stored `specStr`. The core constructor
+  already parses an object `spec`, and the React wrapper's effect then re-sends the same JSON,
+  which used to parse, re-resolve and re-render the whole document a second time.
+- `requestResolvedSubtree(["components","securitySchemes"])` stores the subtree as its own
+  resolved form through swagger-ui's `updateResolvedSubtree` when it holds no `$ref` and no
+  `openIdConnect` scheme, instead of running the resolver. The result is identical, but for
+  an OpenAPI 3.1 document swagger-client first normalizes the entire spec through ApiDOM,
+  which was the longest task on the page (about 190 ms locally, 230-360 ms on CI runners).
+  Storing, rather than skipping, keeps `resolvedSubtrees` as upstream sets it: the OAS3
+  `definitionsToAuthorize` selector passes that subtree as an argument to refresh its cached
+  Authorize data. Operations and models still resolve when they are expanded.
+
+`SwaggerPage` also preloads `/swagger-schema.json` from the static HTML
+(`<link rel="preload" as="fetch" crossorigin="anonymous">`, the credentials mode `fetch()`
+uses), so the request no longer waits for the swagger chunks to download and execute. Both
+changes exist because the desktop Lighthouse floor on this route stays at 0.85 (a protected,
+raise-only threshold) once issue #498 made CI audit the loaded page. The plugin depends on
+swagger-ui's action names, so re-check it on every `swagger-ui-react` upgrade together with
+the ported responses table.
+
 ## Loading, failure and retry (issue #339)
 
 `useSwagger` exposes `loading`, `error` and `retry` beside the spec, and

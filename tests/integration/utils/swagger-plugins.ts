@@ -11,7 +11,8 @@ export function applySwaggerPlugins<P>(
   system: SwaggerSystem
 ): ComponentType<P> {
   return swaggerPlugins.reduce<ComponentType<P>>((Component, plugin) => {
-    const wrappers: Record<string, unknown> = plugin.wrapComponents;
+    const wrappers: Record<string, unknown> =
+      'wrapComponents' in plugin ? plugin.wrapComponents : {};
     const wrap = wrappers[name] as Wrapper<P> | undefined;
 
     return wrap ? wrap(Component, system) : Component;

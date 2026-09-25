@@ -19,6 +19,7 @@ import {
   serversLabelPlugin,
   withServersLabel,
 } from '@swagger/components/api-documentation/servers';
+import { specLoadPlugin } from '@swagger/components/api-documentation/spec-load';
 import useSwagger from '@swagger/hooks/useSwagger';
 
 jest.mock('../../../../src/features/swagger/hooks/useSwagger');
@@ -65,6 +66,7 @@ describe('integration: servers label plugin', () => {
       serversLabelPlugin,
       authorizeDialogPlugin,
       responsesTablePlugin,
+      specLoadPlugin,
     ]);
   });
 
