@@ -16,7 +16,6 @@ import { authorizeDialogPlugin } from '@swagger/components/api-documentation/aut
 import { swaggerPlugins } from '@swagger/components/api-documentation/plugins';
 import { responsesTablePlugin } from '@swagger/components/api-documentation/responses-table';
 import {
-  ServersContainerProps,
   serversLabelPlugin,
   withServersLabel,
 } from '@swagger/components/api-documentation/servers';
@@ -42,9 +41,7 @@ function UpstreamServersContainer(): React.ReactElement {
   );
 }
 
-const Labelled: React.ComponentType<ServersContainerProps> = withServersLabel(
-  UpstreamServersContainer
-);
+const Labelled = withServersLabel(UpstreamServersContainer);
 
 describe('integration: servers label plugin', () => {
   it('names the upstream select through a for-association', () => {
