@@ -68,15 +68,38 @@ function pageBudgets({
 const HOMEPAGE_PATTERN = '://[^/]+/?$';
 const SWAGGER_PATTERN = '.*swagger.*';
 
+// Transfer-size budgets that do not depend on the form factor: script, stylesheet,
+// font and total bytes are the same build on both, so one number serves both configs.
+// The desktop homepage fetches its hero at two widths and the mobile one at one, so
+// the homepage image budget is the one byte budget each config supplies itself.
+const BYTE_BUDGETS = {
+  homepage: { scriptBytes: 750000, stylesheetBytes: 45000, fontBytes: 500000, totalBytes: 1550000 },
+  swagger: {
+    scriptBytes: 1050000,
+    stylesheetBytes: 45000,
+    fontBytes: 500000,
+    imageBytes: 15000,
+    totalBytes: 1480000,
+  },
+};
+
 /**
  * Assemble the assertMatrix (used alone — LHCI rejects assertMatrix combined
- * with a shared `assertions` block).
+ * with a shared `assertions` block). Each page's form-factor budgets are merged
+ * over BYTE_BUDGETS, so a config supplies scores, timings and any byte budget
+ * that differs by form factor.
  */
 function assertMatrix({ homepage, swagger }) {
   return [
-    { matchingUrlPattern: HOMEPAGE_PATTERN, assertions: pageBudgets(homepage) },
-    { matchingUrlPattern: SWAGGER_PATTERN, assertions: pageBudgets(swagger) },
+    {
+      matchingUrlPattern: HOMEPAGE_PATTERN,
+      assertions: pageBudgets({ ...BYTE_BUDGETS.homepage, ...homepage }),
+    },
+    {
+      matchingUrlPattern: SWAGGER_PATTERN,
+      assertions: pageBudgets({ ...BYTE_BUDGETS.swagger, ...swagger }),
+    },
   ];
 }
 
-module.exports = { assertMatrix, pageBudgets, HOMEPAGE_PATTERN, SWAGGER_PATTERN };
+module.exports = { assertMatrix, pageBudgets, BYTE_BUDGETS, HOMEPAGE_PATTERN, SWAGGER_PATTERN };

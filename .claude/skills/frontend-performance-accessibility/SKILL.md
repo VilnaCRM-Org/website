@@ -193,7 +193,12 @@ supplied per form factor by `lighthouserc.desktop.js` and `lighthouserc.mobile.j
 'resource-summary:total:size': ['error', { maxNumericValue: totalBytes, ...median }],
 ```
 
-`pageBudgets` takes every byte budget as a **required** parameter with no default,
+The byte budgets that do not depend on the form factor (script, stylesheet, font and
+total, plus the swagger image budget) are declared once, as `BYTE_BUDGETS` in
+`lighthouserc.shared.js`; `assertMatrix` merges each config's page budgets over them, so a
+config carries only its scores, timings and the homepage image budget, the one byte budget
+that differs between desktop and mobile. `pageBudgets` takes every byte budget as a
+**required** parameter with no default,
 so a config that forgets one fails `src/test/unit/lighthouse/lighthouse-config.test.ts`
 instead of silently dropping the assertion. The keys are Lighthouse's own
 `resource-summary` type ids (`script`, `stylesheet`, `font`, `image`, `total`); the
