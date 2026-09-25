@@ -187,21 +187,53 @@ supplied per form factor by `lighthouserc.desktop.js` and `lighthouserc.mobile.j
 
 ```js
 'resource-summary:script:size': ['error', { maxNumericValue: scriptBytes, ...median }],
+'resource-summary:stylesheet:size': ['error', { maxNumericValue: stylesheetBytes, ...median }],
+'resource-summary:font:size': ['error', { maxNumericValue: fontBytes, ...median }],
+'resource-summary:image:size': ['error', { maxNumericValue: imageBytes, ...median }],
 'resource-summary:total:size': ['error', { maxNumericValue: totalBytes, ...median }],
 ```
 
-- Every number is derived from a **measured 3-run CI median**, recorded in the
-  comment at the top of each config, with headroom for shared-runner variance —
-  they are not round numbers picked by taste. Desktop homepage measured 634 KB of
-  script and 1.35 MB total against budgets of 750 KB / 1.55 MB; swagger measured
-  941 KB / 1.26 MB against 1.05 MB / 1.45 MB. Swagger is heavier because Swagger
-  UI is third-party markup.
-- Both form factors currently share the same byte budgets, because the two
-  measured baselines came out close enough to gate on one pair of numbers — only
-  the score and metric ceilings differ between them. That is a measurement, not an
-  invariant: responsive image selection and viewport-conditional resources can make
-  a mobile run download different bytes, so re-measure **both** form factors before
-  changing either budget.
+`pageBudgets` takes every byte budget as a **required** parameter with no default,
+so a config that forgets one fails `src/test/unit/lighthouse/lighthouse-config.test.ts`
+instead of silently dropping the assertion. The keys are Lighthouse's own
+`resource-summary` type ids (`script`, `stylesheet`, `font`, `image`, `total`); the
+spec pins that key set on every page.
+
+- Every number is derived from **measured CI samples**, recorded in the configs,
+  with headroom for shared-runner variance — they are not round numbers picked by
+  taste. Across CI runs 35945072114, 36034847382 and 36038654988 (three samples per
+  page and form factor each):
+
+  | Page, form factor | Script (B)      | Stylesheet (B) | Font (B) | Image (B)       | Total (B)           |
+  | ----------------- | --------------- | -------------- | -------- | --------------- | ------------------- |
+  | Home, desktop     | 516,563–517,866 | 39,288         | 474,662  | 292,134         | 1,336,470–1,337,763 |
+  | Home, mobile      | 516,563–517,866 | 39,288         | 474,662  | 197,733–197,846 | 1,242,069–1,243,507 |
+  | Swagger, desktop  | 892,851–909,116 | 37,158         | 474,662  | 7,074–7,187     | 1,431,001–1,447,357 |
+  | Swagger, mobile   | 892,851–909,116 | 37,158         | 474,662  | 7,717           | 1,431,645–1,447,892 |
+
+  The budgets are 750 KB script / 1.55 MB total on the homepage and 1.05 MB /
+  1.45 MB on swagger; 45,000 B stylesheet and 500,000 B font everywhere; 320,000 B
+  image on the desktop homepage, 220,000 B on the mobile homepage and 15,000 B on
+  swagger. Swagger is heavier on script because it ships the swagger-ui bundle.
+
+- Every swagger number above was measured with `/swagger` in its failed-to-load
+  state: until issue #498 the host build that CI audits never ran
+  `scripts/patchSwaggerServer.mjs`, so `/swagger-schema.json` returned 404. The
+  first loaded-state `performance testing` run re-measures the swagger budgets.
+- The font and stylesheet margins are tight **on purpose**. Those bytes are static
+  per build — every sample above loaded the same nine faces and the same CSS — so
+  there is no run-to-run noise to absorb. The 25,338 B font margin is smaller than
+  the smallest shipped face (Golos Text Regular, 25,508 B transferred), so adding any
+  face fails the gate; the spec asserts that bound. The homepage image budgets sit
+  about 10% over the largest sample, because an extra small image request sometimes
+  lands inside the sampled window; the swagger image budget is about twice its
+  largest sample until the loaded-state re-measure.
+- Script, stylesheet, font and total budgets are shared by both form factors; the
+  homepage image budget is not. The desktop viewport fetches the 99,529 B desktop
+  hero at two widths (3840w and 2048w), the mobile viewport once, so the two
+  baselines differ by about 94 KB. Responsive image selection and
+  viewport-conditional resources are exactly why a byte budget is a measurement,
+  not an invariant: re-measure **both** form factors before changing either one.
 - Every gated assertion uses `aggregationMethod: 'median-run'` (set once as
   `median` in `lighthouserc.shared.js` and spread into every assertion built by
   `pageBudgets`). It does **not** take a median per assertion: LHCI picks a single

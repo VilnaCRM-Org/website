@@ -31,8 +31,9 @@ and a looser one for the heavier `/swagger` URL. Each entry asserts category
 floors (`categories:performance`, `categories:accessibility`,
 `categories:best-practices`, `categories:seo`) plus metric ceilings
 (`largest-contentful-paint`, `total-blocking-time`, `cumulative-layout-shift`)
-and `resource-summary` script/total byte budgets. Desktop and mobile carry
-different floors; always open the config to read the current numbers instead of
+and `resource-summary` byte budgets for script, stylesheet, font, image and total
+transfer size. Desktop and mobile carry different floors (and a different homepage
+image budget); always open the config to read the current numbers instead of
 memorizing them.
 
 Floors, metric ceilings, and byte budgets are ratcheted from a CI baseline and

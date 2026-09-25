@@ -10,9 +10,11 @@ const { assertMatrix } = require('./lighthouserc.shared');
 // cost is deliberately out of scope here.
 //
 // Mobile CI baseline (3-run median): homepage perf 0.55 (spread 0.36/0.55/0.57 —
-// a cold-first-run pattern) — LCP 6.6s, TBT 755ms, script 634KB; swagger perf 0.50
-// — LCP 9.8s, TBT 1.37s, script 941KB. Floors/ceilings carry wide margin so runner
-// variance cannot flake the gate; see lighthouserc.shared.js for the ratchet rule.
+// a cold-first-run pattern) — LCP 6.6s, TBT 755ms; swagger perf 0.50 — LCP 9.8s,
+// TBT 1.37s. Floors/ceilings carry wide margin so runner variance cannot flake the
+// gate; see lighthouserc.shared.js for the ratchet rule. Script bytes were re-read
+// from CI runs 35945072114, 36034847382 and 36038654988: homepage 516,563-517,866 B,
+// swagger 892,851-909,116 B (the 634KB / 941KB recorded here before were stale).
 //
 // Ratchet plan toward desktop parity (0.6) — issue #338.
 //
@@ -69,6 +71,14 @@ module.exports = {
       outputDir: 'lhci-reports-mobile',
     },
     assert: {
+      // Per-type transfer bytes (#341), max over the same three runs: homepage font
+      // 474,662 B (all 9 faces), stylesheet 39,288 B, image 197,846 B; swagger font
+      // 474,662 B, stylesheet 37,158 B, image 7,717 B. The homepage image budget is the
+      // first byte budget that differs from desktop (292,134 B there): the desktop
+      // viewport fetches the 99,529 B desktop hero at two widths (3840w and 2048w), the
+      // mobile viewport once. Font and stylesheet margins are tight on purpose (see
+      // lighthouserc.desktop.js). The swagger numbers were measured with /swagger in its
+      // failed-to-load state; the first loaded-state run after #498 re-measures them.
       assertMatrix: assertMatrix({
         homepage: {
           performance: 0.4,
@@ -78,6 +88,9 @@ module.exports = {
           tbt: 1800,
           cls: 0.5,
           scriptBytes: 750000,
+          stylesheetBytes: 45000,
+          fontBytes: 500000,
+          imageBytes: 220000,
           totalBytes: 1550000,
         },
         swagger: {
@@ -88,6 +101,9 @@ module.exports = {
           tbt: 2200,
           cls: 0.5,
           scriptBytes: 1050000,
+          stylesheetBytes: 45000,
+          fontBytes: 500000,
+          imageBytes: 15000,
           totalBytes: 1450000,
         },
       }),

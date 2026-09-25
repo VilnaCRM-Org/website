@@ -23,6 +23,9 @@ const median = { aggregationMethod: 'median-run' };
  * @param {number} budgets.tbt           total-blocking-time ceiling (ms)
  * @param {number} budgets.cls           cumulative-layout-shift ceiling (unitless)
  * @param {number} budgets.scriptBytes   script transfer-size budget (bytes)
+ * @param {number} budgets.stylesheetBytes stylesheet transfer-size budget (bytes)
+ * @param {number} budgets.fontBytes     font transfer-size budget (bytes)
+ * @param {number} budgets.imageBytes    image transfer-size budget (bytes)
  * @param {number} budgets.totalBytes    total transfer-size budget (bytes)
  * @param {number} [budgets.bestPractices=0.9] category best-practices floor
  */
@@ -34,6 +37,9 @@ function pageBudgets({
   tbt,
   cls,
   scriptBytes,
+  stylesheetBytes,
+  fontBytes,
+  imageBytes,
   totalBytes,
   bestPractices = 0.9,
 }) {
@@ -48,6 +54,9 @@ function pageBudgets({
     'total-blocking-time': ['error', { maxNumericValue: tbt, ...median }],
     'cumulative-layout-shift': ['error', { maxNumericValue: cls, ...median }],
     'resource-summary:script:size': ['error', { maxNumericValue: scriptBytes, ...median }],
+    'resource-summary:stylesheet:size': ['error', { maxNumericValue: stylesheetBytes, ...median }],
+    'resource-summary:font:size': ['error', { maxNumericValue: fontBytes, ...median }],
+    'resource-summary:image:size': ['error', { maxNumericValue: imageBytes, ...median }],
     'resource-summary:total:size': ['error', { maxNumericValue: totalBytes, ...median }],
   };
 }
