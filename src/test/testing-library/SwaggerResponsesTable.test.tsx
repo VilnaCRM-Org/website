@@ -1,3 +1,6 @@
+import fs from 'fs';
+import path from 'path';
+
 import { render, screen, within } from '@testing-library/react';
 import type { AxeResults } from 'axe-core';
 import { axe } from 'jest-axe';
@@ -21,6 +24,21 @@ import type { ResponseDefinition, ResponseEntry } from '@swagger/types/responses
 
 import { FORCED_RULES } from '../a11y/axe-config';
 import { expectNoA11yViolations } from '../a11y/expect-no-a11y-violations';
+
+const PORTED_FROM_VERSION: string = '5.32.6';
+
+function installedSwaggerUiVersion(): string {
+  const manifest: string = path.resolve(
+    __dirname,
+    '..',
+    '..',
+    '..',
+    'node_modules',
+    'swagger-ui-react',
+    'package.json'
+  );
+  return (JSON.parse(fs.readFileSync(manifest, 'utf-8')) as { version: string }).version;
+}
 
 /**
  * Collections are duck-typed: `immutable` resolves the hoisted v5, not swagger-ui's v3.
@@ -364,5 +382,9 @@ describe('withOwnedResponses', () => {
 
   it('is registered under the responses key swagger-ui looks up', () => {
     expect(responsesTablePlugin.wrapComponents.responses).toBe(withOwnedResponses);
+  });
+
+  it('is pinned to the swagger-ui-react release responses.jsx was ported from', () => {
+    expect(installedSwaggerUiVersion()).toBe(PORTED_FROM_VERSION);
   });
 });
