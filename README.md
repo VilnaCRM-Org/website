@@ -3,6 +3,7 @@
 # VilnaCRM website
 
 [![codecov](https://codecov.io/gh/VilnaCRM-Org/website/graph/badge.svg)](https://codecov.io/gh/VilnaCRM-Org/website)
+[![Maintainability](https://qlty.sh/gh/VilnaCRM-Org/projects/website/maintainability.svg)](https://qlty.sh/gh/VilnaCRM-Org/projects/website)
 
 The public marketing site and landing page of [VilnaCRM](https://vilnacrm.com/), the free
 and open source CRM. It is a [Next.js](https://nextjs.org/) (pages router) application on
@@ -612,6 +613,18 @@ simplify dense expressions. When a higher budget is genuinely warranted, raise
 the relevant threshold in `config/metrics-policy.json` (a reviewed, in-repo
 change visible in the PR diff) or confirm the path belongs outside the governed
 scope. Do **not** silence the gate with a local override or a per-line disable.
+
+## Code Quality (qlty)
+
+[qlty](https://qlty.sh) is the successor to CodeClimate Quality. `.qlty/qlty.toml` is its single
+config, read by both the qlty CLI and qlty Cloud, and takes the place of a `.codeclimate.yml`.
+qlty Cloud posts the `qlty check` and `qlty fmt` statuses on every pull-request commit and
+analyses `main` on its own servers; the maintainability badge above shows that grade, and the
+project page behind it asks for a qlty sign-in.
+
+Its smells run in comment mode, so they are advisory. The blocking complexity gate is still
+`make lint-metrics` against `config/metrics-policy.json`. Coverage stays on Codecov through
+`.github/workflows/codecov.yml` and is not uploaded to qlty.
 
 ## Workflow Security (zizmor)
 
