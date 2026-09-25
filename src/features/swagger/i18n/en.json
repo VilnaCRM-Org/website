@@ -4,6 +4,9 @@
   },
   "api_documentation": {
     "servers_label": "API server",
+    "authorize_dialog": {
+      "close": "Close dialog"
+    },
     "loading": "Loading the API documentation",
     "loaded": "API documentation loaded",
     "error": {

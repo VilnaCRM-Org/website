@@ -4,6 +4,9 @@
   },
   "api_documentation": {
     "servers_label": "Сервер API",
+    "authorize_dialog": {
+      "close": "Закрити діалог"
+    },
     "loading": "Завантаження документації API",
     "loaded": "Документацію API завантажено",
     "error": {
