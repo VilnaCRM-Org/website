@@ -578,4 +578,22 @@ describe('AuthLayoutWithNotification', () => {
       expect(queryByText(errorMessage)).not.toBeInTheDocument();
     });
   });
+
+  it('sends one createUser request when the form is submitted twice in a row', async () => {
+    const requestMatcher: jest.Mock<boolean, [{ input: CreateUserInput }]> = jest
+      .fn()
+      .mockReturnValue(true);
+    const countedMock: MockLink.MockedResponse = {
+      request: { query: fulfilledMockResponse.request.query, variables: requestMatcher },
+      maxUsageCount: 2,
+      ...(fulfilledMockResponse.result !== undefined && { result: fulfilledMockResponse.result }),
+    };
+    const { getByRole, getByText } = renderAuthLayout([countedMock]);
+
+    fillForm(testInitials, testEmail, testPassword, true);
+    fireEvent.click(getByRole(buttonRole, { name: submitButtonText }));
+
+    await waitFor(() => expect(getByText(successTitleText)).toBeVisible());
+    expect(requestMatcher).toHaveBeenCalledTimes(1);
+  });
 });
