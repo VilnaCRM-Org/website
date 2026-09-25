@@ -7,59 +7,19 @@ import { SocialMedia } from '@/types/social-media';
 
 import { NavItemProps } from '../../types/header/navigation';
 
-export const headerNavList: NavItemProps[] = [
-  {
-    id: 'advantages',
-    title: 'header.advantages',
-    link: '#Advantages',
-    type: 'header',
-  },
-  {
-    id: 'for-who',
-    title: 'header.for_who',
-    link: '#forWhoSection',
-    type: 'header',
-  },
-  {
-    id: 'integration',
-    title: 'header.integration',
-    link: '#Integration',
-    type: 'header',
-  },
-  {
-    id: 'contacts',
-    title: 'header.contacts',
-    link: '#Contacts',
-    type: 'header',
-  },
+const sectionLinks: Omit<NavItemProps, 'type'>[] = [
+  { id: 'advantages', title: 'header.advantages', link: '#Advantages' },
+  { id: 'for-who', title: 'header.for_who', link: '#forWhoSection' },
+  { id: 'integration', title: 'header.integration', link: '#Integration' },
+  { id: 'contacts', title: 'header.contacts', link: '#Contacts' },
 ];
 
-export const drawerNavList: NavItemProps[] = [
-  {
-    id: 'advantages',
-    title: 'header.advantages',
-    link: '#Advantages',
-    type: 'drawer',
-  },
-  {
-    id: 'for-who',
-    title: 'header.for_who',
-    link: '#forWhoSection',
-    type: 'drawer',
-  },
-  {
-    id: 'integration',
-    title: 'header.integration',
-    link: '#Integration',
-    type: 'drawer',
-  },
-  {
-    id: 'contacts',
-    title: 'header.contacts',
-    link: '#Contacts',
-    type: 'drawer',
-  },
-];
+const navListFor = (type: NonNullable<NavItemProps['type']>): NavItemProps[] =>
+  sectionLinks.map(item => ({ ...item, type }));
+
+export const headerNavList: NavItemProps[] = navListFor('header');
+
+export const drawerNavList: NavItemProps[] = navListFor('drawer');
 
 export const socialMedia: SocialMedia[] = [
   {
