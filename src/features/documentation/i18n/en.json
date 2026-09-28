@@ -1,0 +1,9 @@
+{
+  "documentation": {
+    "api_docs": {
+      "heading": "API documentation",
+      "body": "This page is the English-language entry point for the VilnaCRM user-service API. The interactive reference — every endpoint, request and response, kept in sync with the API itself — lives at Swagger.",
+      "swagger_link": "Open the interactive API reference"
+    }
+  }
+}

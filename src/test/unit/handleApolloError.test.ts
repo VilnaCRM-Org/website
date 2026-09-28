@@ -12,17 +12,16 @@ import {
   handleApolloError,
   HandleApolloErrorProps,
   handleNetworkError,
+  isServerError,
   ServerErrorShape,
 } from '../../features/landing/helpers/handleApolloError';
 import { networkMessage } from '../testing-library/fixtures/errors';
 
-// Mock error type that simulates Apollo Client 4's CombinedGraphQLErrors
 interface MockCombinedGraphQLErrors {
   readonly errors: GraphQLFormattedError[];
   readonly brand: 'CombinedGraphQLErrors';
 }
 
-// Helper to create a mock that will pass CombinedGraphQLErrors.is() check
 function createMockCombinedGraphQLErrors(
   errors: GraphQLFormattedError[]
 ): MockCombinedGraphQLErrors {
@@ -35,6 +34,45 @@ function createMockCombinedGraphQLErrors(
 type StatusCode = Pick<ServerErrorShape, 'statusCode'>;
 
 describe('Error Handling', () => {
+  describe('isServerError', () => {
+    it.each([
+      ['undefined', undefined],
+      ['null', null],
+      ['a string', networkMessage],
+      ['a number', HTTPStatusCodes.INTERNAL_SERVER_ERROR],
+      ['an empty object', {}],
+    ])('rejects %s without throwing', (_label: string, value: unknown) => {
+      expect(isServerError(value)).toBe(false);
+    });
+
+    it('accepts an error that carries only a message', () => {
+      expect(isServerError({ message: networkMessage })).toBe(true);
+    });
+
+    it('accepts an error that carries only a status code', () => {
+      expect(isServerError({ statusCode: HTTPStatusCodes.INTERNAL_SERVER_ERROR })).toBe(true);
+    });
+
+    it('rejects a status code that is not a number', () => {
+      expect(isServerError({ statusCode: '503' })).toBe(false);
+    });
+
+    it('rejects a message that is not a string', () => {
+      expect(isServerError({ message: 42 })).toBe(false);
+    });
+
+    // One well-typed property does not vouch for the other: both must hold.
+    it('rejects a numeric status code paired with a non-string message', () => {
+      const error: unknown = { statusCode: HTTPStatusCodes.INTERNAL_SERVER_ERROR, message: 42 };
+      expect(isServerError(error)).toBe(false);
+    });
+
+    it('rejects a string message paired with a non-numeric status code', () => {
+      const error: unknown = { statusCode: '503', message: networkMessage };
+      expect(isServerError(error)).toBe(false);
+    });
+  });
+
   describe('handleNetworkError', () => {
     let messages: ClientErrorMessages;
 
@@ -72,6 +110,30 @@ describe('Error Handling', () => {
       expect(handleNetworkError(null)).toBe(messages[CLIENT_ERROR_KEYS.WENT_WRONG]);
     });
 
+    it('returns "went wrong" for an undefined error', () => {
+      expect(handleNetworkError(undefined)).toBe(messages[CLIENT_ERROR_KEYS.WENT_WRONG]);
+    });
+
+    it('recognises a network failure carried by the message alone', () => {
+      const error: ServerErrorShape = { message: networkMessage };
+      expect(handleNetworkError(error)).toBe(messages[CLIENT_ERROR_KEYS.NETWORK]);
+    });
+
+    it('treats 599 as the last server-error status', () => {
+      const error: StatusCode = { statusCode: 599 };
+      expect(handleNetworkError(error)).toBe(messages[CLIENT_ERROR_KEYS.SERVER_ERROR]);
+    });
+
+    it('does not treat 600 as a server error', () => {
+      const error: StatusCode = { statusCode: 600 };
+      expect(handleNetworkError(error)).toBe(messages[CLIENT_ERROR_KEYS.WENT_WRONG]);
+    });
+
+    it('does not treat 499 as a server error', () => {
+      const error: StatusCode = { statusCode: 499 };
+      expect(handleNetworkError(error)).toBe(messages[CLIENT_ERROR_KEYS.WENT_WRONG]);
+    });
+
     it('should return server error for 502 status', () => {
       const error: StatusCode = { statusCode: 502 };
       expect(handleNetworkError(error)).toBe(messages[CLIENT_ERROR_KEYS.SERVER_ERROR]);
@@ -105,7 +167,6 @@ describe('Error Handling', () => {
     beforeEach(() => {
       jest.clearAllMocks();
       messages = getClientErrorMessages();
-      // Mock CombinedGraphQLErrors.is to recognize our mock errors
       combinedGraphQLErrorsSpy = jest
         .spyOn(apolloClient.CombinedGraphQLErrors, 'is')
         .mockImplementation(
@@ -121,7 +182,6 @@ describe('Error Handling', () => {
       combinedGraphQLErrorsSpy.mockRestore();
     });
 
-    // Apollo Client 4: Network errors are returned directly without networkError wrapper
     it('should handle network error with statusCode (Apollo Client 4 direct error)', () => {
       const error: ServerErrorShape = {
         statusCode: HTTPStatusCodes.UNAUTHORIZED,
@@ -132,7 +192,6 @@ describe('Error Handling', () => {
       expect(handleApolloError(props)).toBe(messages[CLIENT_ERROR_KEYS.UNAUTHORIZED]);
     });
 
-    // Apollo Client 4: GraphQL errors use CombinedGraphQLErrors
     it('should handle graphQLErrors with statusCode', () => {
       const graphQLError: GraphQLFormattedError = {
         message: 'Server Error',
@@ -189,6 +248,49 @@ describe('Error Handling', () => {
       const notApolloError: HandleApolloErrorProps = { error: {} };
       expect(handleApolloError(notApolloError)).toBe(messages[CLIENT_ERROR_KEYS.UNEXPECTED]);
     });
+
+    // A function is the one non-object value that can carry properties; its
+    // properties must never be read.
+    it('never reads properties off a non-object error', () => {
+      const error: unknown = Object.assign((): void => {}, { message: networkMessage });
+      expect(handleApolloError({ error })).toBe(messages[CLIENT_ERROR_KEYS.UNEXPECTED]);
+    });
+
+    it('falls through to the unexpected message when the GraphQL error list is empty', () => {
+      const error: HandleApolloErrorProps = { error: createMockCombinedGraphQLErrors([]) };
+      expect(handleApolloError(error)).toBe(messages[CLIENT_ERROR_KEYS.UNEXPECTED]);
+    });
+
+    it('maps a GraphQL error that arrives without a message to the generic message', () => {
+      const malformed: GraphQLFormattedError = {} as GraphQLFormattedError;
+      const error: HandleApolloErrorProps = {
+        error: createMockCombinedGraphQLErrors([malformed]),
+      };
+      expect(handleApolloError(error)).toBe(messages[CLIENT_ERROR_KEYS.WENT_WRONG]);
+    });
+
+    // Wrong-typed statusCode fails the server-error guard, so the network-pattern
+    // fallback is what maps the message.
+    it('detects a network pattern in the message of a non-server-shaped object', () => {
+      const error: { statusCode: string; message: string } = {
+        statusCode: 'not-a-number',
+        message: networkMessage,
+      };
+      expect(handleApolloError({ error })).toBe(messages[CLIENT_ERROR_KEYS.NETWORK]);
+    });
+    // `extensions` is untyped on the wire; a string statusCode must not select
+    // the server-error copy.
+    it('ignores a GraphQL statusCode that is not a number', () => {
+      const graphQLError: GraphQLFormattedError = {
+        message: 'Service Unavailable',
+        extensions: { statusCode: '503' },
+      };
+      const error: HandleApolloErrorProps = {
+        error: createMockCombinedGraphQLErrors([graphQLError]),
+      };
+      expect(handleApolloError(error)).toBe(messages[CLIENT_ERROR_KEYS.WENT_WRONG]);
+    });
+
     it('should handle graphQLErrors with FORBIDDEN statusCode', () => {
       const graphQLError: GraphQLFormattedError = {
         message: 'Forbidden Access',
@@ -200,7 +302,6 @@ describe('Error Handling', () => {
       expect(handleApolloError(error)).toBe(messages[CLIENT_ERROR_KEYS.DENIED]);
     });
 
-    // Apollo Client 4: Network error pattern detection via error message
     it('should handle network error pattern in message', () => {
       const error: Error = new Error('Failed to fetch');
       const props: HandleApolloErrorProps = { error };

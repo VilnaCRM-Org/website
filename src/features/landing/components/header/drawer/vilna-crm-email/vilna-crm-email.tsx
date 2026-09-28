@@ -11,13 +11,12 @@ function VilnaCRMEmail(): React.ReactElement {
   const email: string = env.NEXT_PUBLIC_VILNACRM_GMAIL;
 
   return (
-    <Stack sx={[styles.emailWrapper, { justifyContent: 'center' }]}>
+    <Stack sx={styles.emailWrapper}>
       <Link href={`mailto:${email}`}>
-        <Stack
-          direction="row"
-          sx={{ justifyContent: 'center', alignItems: 'center', gap: '0.62rem' }}
-        >
-          <UiTypography sx={styles.at}>@</UiTypography>
+        <Stack direction="row" sx={styles.emailRow}>
+          <UiTypography sx={styles.at} aria-hidden>
+            @
+          </UiTypography>
           <UiTypography variant="demi18" sx={styles.emailText}>
             {email}
           </UiTypography>

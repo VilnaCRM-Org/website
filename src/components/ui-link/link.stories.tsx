@@ -1,6 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/nextjs';
 import { t } from 'i18next';
 
+import { textArgType } from '../../../.storybook/story-arg-types';
+
 import UiLink from './index';
 
 const meta: Meta<typeof UiLink> = {
@@ -8,14 +10,8 @@ const meta: Meta<typeof UiLink> = {
   component: UiLink,
   tags: ['autodocs'],
   argTypes: {
-    children: {
-      type: 'string',
-      description: 'Text for the link',
-    },
-    href: {
-      type: 'string',
-      description: 'Link URL',
-    },
+    children: textArgType('Text for the link'),
+    href: textArgType('Link URL'),
   },
 };
 

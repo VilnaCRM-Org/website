@@ -41,10 +41,11 @@ jobs:
           # needs to commit the changelog, push the tag, and publish the release.
           permission-contents: write
 
-      # persist-credentials: false is safe even though the next step pushes:
+      # persist-credentials: false is safe even though a later step pushes:
       # conventional-changelog-action rewrites `origin` to
-      # https://x-access-token:<github-token>@... in its own init() before every
-      # pull/push (src/helpers/git.js), so it never reads the credentials
+      # https://x-access-token:<github-token>@... in its own init() before it
+      # pulls (src/helpers/git.js), and the atomic push step below pushes
+      # through that same rewritten remote, so neither reads the credentials
       # checkout would otherwise leave in .git/config. fetch-depth: 0 brings the
       # full history AND every tag, which both the changelog range and the
       # version preflight below need.
@@ -67,13 +68,13 @@ jobs:
       # archaeology (issue #373). A hard step: no release ships without one.
       #
       # Deliberately BEFORE the changelog action, and deliberately ungated. The
-      # changelog action commits, tags and PUSHES; anything that can fail after
-      # it strands a tag on main with no release behind it, and the next run's
-      # version preflight then blocks on that orphan. The SBOM is built from
-      # bun.lock, which the changelog action never touches, so building it first
-      # yields a byte-identical artifact while moving both failure modes ahead
-      # of the first irreversible step. The cost when no release is due is one
-      # wasted syft run.
+      # first irreversible step is the atomic push after the changelog action;
+      # anything that can fail after it leaves a published tag with no GitHub
+      # release behind it. The SBOM is built from bun.lock, which the changelog
+      # action never touches, so building it first yields a byte-identical
+      # artifact while moving both failure modes ahead of the push. .gitignore
+      # keeps the file out of the release commit the action creates with
+      # `git add .`. The cost when no release is due is one wasted syft run.
       #
       # syft-version is pinned deliberately and must NOT be dropped. Bun lockfile
       # support arrived in syft v1.46.0, but sbom-action v0.24.0 still defaults
@@ -113,6 +114,21 @@ jobs:
           github-token: ${{ steps.generate_token.outputs.token }}
           output-file: "CHANGELOG.md"
           version-file: "package.json"
+          git-push: 'false'
+
+      # The changelog action above commits and tags but does not push
+      # (`git-push: 'false'`): its own `git push --follow-tags` is not atomic, so
+      # a refused branch update still landed the tag -- how v1.7.0 was stranded
+      # (issue #481, ADR 0011). This step checks that HEAD is exactly the release
+      # commit and the tag names it, then pushes both with `git push --atomic`, so
+      # the remote takes both refs or neither. The tag and branch reach the script
+      # through `env:`, never through `${{ }}` inside `run:`.
+      - name: Push the release commit and tag atomically
+        if: ${{ steps.changelog.outputs.skipped == 'false' }}
+        env:
+          RELEASE_TAG: ${{ steps.changelog.outputs.tag }}
+          RELEASE_BRANCH: ${{ github.ref_name }}
+        run: bash scripts/ci/push-release.sh "$RELEASE_TAG" "$RELEASE_BRANCH"
 
       # actions/create-release was archived by GitHub in 2021 and is unmaintained.
       # Its replacement is the runner's own `gh` CLI rather than another

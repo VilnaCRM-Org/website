@@ -57,6 +57,9 @@ jest.mock('uuid', () => ({
   v4: jest.fn(() => '132'),
 }));
 
+const queryByRoleSafe: (role: string) => HTMLElement | null = (role: string) =>
+  document.querySelector(`[role="${role}"]`);
+
 type FormElement = { fieldKey: string; value: string };
 const inputFields: FormElement[] = [
   { fieldKey: 'fullNameInput', value: testInitials },
@@ -110,6 +113,25 @@ describe('AuthLayout', () => {
     expect(passwordInput?.value).toBe('');
     expect(privacyCheckbox?.checked).toBe(false);
   });
+  it('skips the mutation and answers like a success when the honeypot is filled', async () => {
+    // #380 F1. No Apollo mock is registered, so an issued mutation would surface
+    // the error notification; the success notification proves it never left the
+    // browser. The response is deliberately identical to a real success so a
+    // script cannot tell which of its inputs tripped the control.
+    const { container, getByText, queryByText } = renderAuthLayout([]);
+    const honeypot: HTMLInputElement | null = container.querySelector('input[name="Referral"]');
+    expect(honeypot).not.toBeNull();
+
+    fireEvent.change(honeypot!, { target: { value: 'https://example.com' } });
+    fillForm(testInitials, testEmail, testPassword, true);
+
+    await waitFor(() => {
+      expect(getByText(successTitleText)).toBeInTheDocument();
+    });
+    expect(queryByText(errorTitleText)).not.toBeInTheDocument();
+    expect(queryByRoleSafe(statusRole)).toBeNull();
+  });
+
   it('displays loader and submits form successfully without errors', async () => {
     const { getByRole, queryByRole, queryByText, getByText } = renderAuthLayout([
       fulfilledMockResponse,
@@ -258,12 +280,15 @@ describe('AuthLayout', () => {
     fillForm(testInitials, testEmail, testPassword, true);
 
     await waitFor(() => {
-      const { fullNameInput, emailInput, passwordInput, privacyCheckbox } = getFormElements();
+      const { fullNameInput, emailInput, passwordInput, confirmPasswordInput, privacyCheckbox } =
+        getFormElements();
 
       expect(fullNameInput?.value).toBe('');
       expect(emailInput?.value).toBe('');
       expect(passwordInput?.value).toBe('');
+      expect(confirmPasswordInput?.value).toBe('');
       expect(privacyCheckbox).not.toBeChecked();
+      expect(document.querySelector('input[name="Referral"]')).toHaveValue('');
 
       const successTitle: HTMLElement = getByText(successTitleText);
       const alertBox: HTMLElement | null = getByRole('alert');
@@ -556,5 +581,23 @@ describe('AuthLayoutWithNotification', () => {
       const errorMessage: string = messages[key];
       expect(queryByText(errorMessage)).not.toBeInTheDocument();
     });
+  });
+
+  it('sends one createUser request when the form is submitted twice in a row', async () => {
+    const requestMatcher: jest.Mock<boolean, [{ input: CreateUserInput }]> = jest
+      .fn()
+      .mockReturnValue(true);
+    const countedMock: MockLink.MockedResponse = {
+      request: { query: fulfilledMockResponse.request.query, variables: requestMatcher },
+      maxUsageCount: 2,
+      ...(fulfilledMockResponse.result !== undefined && { result: fulfilledMockResponse.result }),
+    };
+    const { getByRole, getByText } = renderAuthLayout([countedMock]);
+
+    fillForm(testInitials, testEmail, testPassword, true);
+    fireEvent.click(getByRole(buttonRole, { name: submitButtonText }));
+
+    await waitFor(() => expect(getByText(successTitleText)).toBeVisible());
+    expect(requestMatcher).toHaveBeenCalledTimes(1);
   });
 });

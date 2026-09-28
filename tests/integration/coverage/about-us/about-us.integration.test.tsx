@@ -22,7 +22,7 @@ import NotchDefault from '@landing/about-us/notch/notch';
 import { TextInfo } from '@landing/about-us/text-info';
 import TextInfoDefault from '@landing/about-us/text-info/text-info';
 
-const mainImageAlt: string = 'Main image';
+const mainImageAlt: string = t('about_vilna.image_alt');
 const aboutText: string = t('about_vilna.text_main');
 const aboutButton: string = t('about_vilna.button_main');
 

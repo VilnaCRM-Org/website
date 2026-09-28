@@ -1,10 +1,9 @@
 import { Box, Container, SxProps, Theme } from '@mui/material';
+import { StaticImageData } from 'next/image';
 import { getOptimizedImageProps } from 'next-export-optimize-images/image';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 
-import bigScreen from '../../assets/img/about-vilna/desktop.jpg';
-import smallScreen from '../../assets/img/about-vilna/mobile.jpg';
 import circle from '../../assets/svg/for-who/circle.svg';
 import hexagon from '../../assets/svg/for-who/hexagon.svg';
 import point10 from '../../assets/svg/for-who/point10.svg';
@@ -14,6 +13,7 @@ import pointGroup from '../../assets/svg/for-who/pointGroup.svg';
 import rhombus from '../../assets/svg/for-who/rhombus.svg';
 import triangle from '../../assets/svg/for-who/triangle.svg';
 import waves from '../../assets/svg/for-who/waves.svg';
+import { ProductScreenshots, productScreenshotsFor } from '../../helpers/productScreenshots';
 
 import { Cards } from './cards';
 import MainTitle from './main-title/main-title';
@@ -21,11 +21,16 @@ import styles from './styles';
 
 type ImgAttrs = React.ImgHTMLAttributes<HTMLImageElement>;
 
-const getImageProps: (src: string, alt?: string) => ImgAttrs = (src, alt = '') =>
-  getOptimizedImageProps({ src, alt }).props;
+const getImageProps: (src: string | StaticImageData) => ImgAttrs = src =>
+  getOptimizedImageProps({ src, alt: '' }).props;
 
-// Decorative shape: empty alt + aria-hidden so assistive tech skips it.
-function DecorativeImage({ src, sx }: { src: string; sx: SxProps<Theme> }): React.ReactElement {
+function DecorativeImage({
+  src,
+  sx,
+}: {
+  src: string | StaticImageData;
+  sx: SxProps<Theme>;
+}): React.ReactElement {
   return <Box component="img" {...getImageProps(src)} aria-hidden="true" sx={sx} loading="lazy" />;
 }
 
@@ -45,15 +50,13 @@ function ForWhoShapes(): React.ReactElement {
 }
 
 function ForWhoScreens(): React.ReactElement {
-  const { t } = useTranslation();
-
-  const bigScreenProps: ImgAttrs = getImageProps(bigScreen, t('alts.big_screen'));
-  const smallScreenProps: ImgAttrs = getImageProps(smallScreen, t('alts.small_screen'));
+  const { i18n } = useTranslation();
+  const screenshots: ProductScreenshots = productScreenshotsFor(i18n.language);
 
   return (
     <Box sx={styles.square}>
-      <Box component="img" {...bigScreenProps} sx={styles.bigScreen} loading="lazy" />
-      <Box component="img" {...smallScreenProps} sx={styles.smallScreen} loading="lazy" />
+      <DecorativeImage src={screenshots.desktop} sx={styles.bigScreen} />
+      <DecorativeImage src={screenshots.mobile} sx={styles.smallScreen} />
       <DecorativeImage src={waves} sx={styles.waves} />
       <DecorativeImage src={hexagon} sx={styles.hexagon} />
       <DecorativeImage src={triangle} sx={styles.triangle} />

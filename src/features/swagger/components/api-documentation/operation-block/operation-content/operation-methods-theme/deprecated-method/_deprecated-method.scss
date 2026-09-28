@@ -1,8 +1,8 @@
 @use '@swagger/global' as *;
 
-$deprecatedTextColor: #969b9d;
-$deprecatedBorderColor: #e1e7ea;
-$deprecatedBackgroundColor: #f4f5f6;
+$deprecatedTextColor: $grey300;
+$deprecatedBorderColor: $brandGrey;
+$deprecatedBackgroundColor: $backgroundGrey200;
 
 %deprecatedMethod {
   &.opblock-deprecated {

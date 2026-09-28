@@ -3,7 +3,7 @@ FROM public.ecr.aws/docker/library/node:24.18.0-alpine3.23@sha256:595398b0081eac
 WORKDIR /app
 
 RUN apk add --no-cache curl=8.22.0-r0 && \
-    npm install -g @mockoon/cli@9.2.0
+    npm install -g @mockoon/cli@9.7.0
 
 # Serve the committed contract, not a fresh download. The mock e2e runs against
 # must be the same generation of the API as the swagger page and the Apollo mock,

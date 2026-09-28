@@ -1,5 +1,5 @@
 export interface UiImageProps {
-  sx?: React.CSSProperties;
+  sx: React.CSSProperties;
   src: string;
   alt: string;
 }

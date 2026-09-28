@@ -24,7 +24,14 @@ function AuthFormWrapper({ onSubmit }: AuthFormWrapperProps): React.ReactElement
     formState: { errors },
   } = useForm<RegisterItem>({
     mode: 'onTouched',
-    defaultValues: { Email: '', FullName: '', Password: '', ConfirmPassword: '', Privacy: false },
+    defaultValues: {
+      Email: '',
+      FullName: '',
+      Password: '',
+      ConfirmPassword: '',
+      Privacy: false,
+      Referral: '',
+    },
   });
 
   return (
@@ -67,6 +74,7 @@ type DefaultValue = {
   ConfirmPassword: '';
   Email: '';
   Privacy: false;
+  Referral: '';
 };
 
 jest.mock('../../features/landing/components/auth-section/auth-form/auth-form', () => ({
@@ -120,6 +128,7 @@ describe('AuthFormWrapper - Default Values', () => {
               Password: '',
               ConfirmPassword: '',
               Privacy: false,
+              Referral: '',
             },
           }),
         }),
@@ -138,6 +147,7 @@ describe('AuthFormWrapper - Default Values', () => {
       Password: '',
       ConfirmPassword: '',
       Privacy: false,
+      Referral: '',
     });
   });
 });

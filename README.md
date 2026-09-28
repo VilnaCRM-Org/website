@@ -1,38 +1,42 @@
 [![SWUbanner](./public/supportUkraine.svg)](https://supportukrainenow.org/)
 
-# Template for modern SSR applications
+# VilnaCRM website
 
 [![codecov](https://codecov.io/gh/VilnaCRM-Org/website/graph/badge.svg)](https://codecov.io/gh/VilnaCRM-Org/website)
+[![Maintainability](https://qlty.sh/gh/VilnaCRM-Org/projects/website/maintainability.svg)](https://qlty.sh/gh/VilnaCRM-Org/projects/website)
 
-## Possibilities
+The public marketing site and landing page of [VilnaCRM](https://vilnacrm.com/), the free
+and open source CRM. It is a [Next.js](https://nextjs.org/) (pages router) application on
+[React](https://react.dev/), built as a static export and served from S3 behind CloudFront
+(see [ADR 0001](docs/adr/0001-static-export-s3-cloudfront.md)).
 
-- A modern JavaScript-based stack for services: [React](https://react.dev/), [Next.js](https://nextjs.org/).
-- Extensive CI checks (including security checks, code style fixing, static linters, DeepScan, and Snyk)
-  ensure the highest code quality.
-- Configured testing tools: [Playwright](https://playwright.dev/), [Jest](https://jestjs.io/).
-- This template is based on [bulletproof-react](https://github.com/alan2207/bulletproof-react/tree/master),
-  but has been adapted to meet the specific needs of this project and may differ from the original implementation.
-- Much more!
+## What is in the box
 
-## Why you might need it
-
-Many front-end developers need to create new projects from scratch and spend a lot of time.
-
-We decided to simplify this exhausting process and create a public template for modern
-front-end applications. This template is used for all our microservices in VilnaCRM.
+- A modern JavaScript stack: [React](https://react.dev/), [Next.js](https://nextjs.org/),
+  TypeScript, [MUI](https://mui.com/) with Emotion, Apollo Client against a local Apollo
+  Server GraphQL mock, react-hook-form and i18next.
+- Extensive CI checks — static linters, type checking, dependency-boundary and complexity
+  gates, secret and dependency-CVE scanning, workflow security audits — every one of them a
+  Makefile target you can run locally.
+- Configured testing tools: [Playwright](https://playwright.dev/) (e2e, visual, accessibility),
+  [Jest](https://jestjs.io/) (unit, integration, contract), Stryker, K6, memlab and Lighthouse.
+- A feature-based layout adapted from
+  [bulletproof-react](https://github.com/alan2207/bulletproof-react/tree/master) to the
+  needs of this project, so it may differ from the original implementation.
 
 ## License
 
 This software is distributed under the
 [Creative Commons Zero v1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/deed) license.
-Please read [LICENSE](https://github.com/VilnaCRM-Org/frontend-ssr-template/blob/main/LICENSE) for information
-on the software availability and distribution.
+Please read [LICENSE](LICENSE) for information on the software availability and distribution.
 
 ### 🚀 Minimal Installation Guide
 
 #### 1. Clone the Repository
 
-Clone locally or use GitHub’s `Use this template` feature.
+```bash
+  git clone https://github.com/VilnaCRM-Org/website.git
+```
 
 #### 2. Install Prerequisites
 
@@ -137,13 +141,15 @@ Linting & Formatting
   make lint-headers: verifies the edge security-header policy reaches every response
   make lint-security-txt: validates the RFC 9116 security.txt fields and Expires runway
   make lint-prod-guardrails: enforces the production-safety invariants (issue #383)
+  make lint-placeholders: fails on template placeholder tokens in sources, env files and the README
   make lint: runs all linters (ESLint, TypeScript, markdownlint, dependency-cruiser,
     API versions, Docker policy, version pins, security headers, security.txt,
-    production guardrails)
+    production guardrails, placeholder tokens)
   make lint-metrics: runs the rust-code-analysis complexity gate (host-only, not in make lint)
   make lint-contracts: validates the pinned user-service contracts (not in make lint; needs network)
   make lint-openapi: reports breaking upstream OpenAPI drift (host-only, needs network; advisory)
   make lint-workflows: audits the GitHub Actions workflows with zizmor (host-only, not in make lint)
+  make lint-actionlint: lints workflows with pinned actionlint + shellcheck (host-only, not in lint)
   make update-contracts: re-fetches the contracts after bumping USER_SERVICE_VERSION
   make lint-vulns: fails on dependency CVEs this branch adds vs main (host-only, not in make lint)
   make scan-vulns-census: reports every known dependency CVE in bun.lock without failing
@@ -608,6 +614,18 @@ the relevant threshold in `config/metrics-policy.json` (a reviewed, in-repo
 change visible in the PR diff) or confirm the path belongs outside the governed
 scope. Do **not** silence the gate with a local override or a per-line disable.
 
+## Code Quality (qlty)
+
+[qlty](https://qlty.sh) is the successor to CodeClimate Quality. `.qlty/qlty.toml` is its single
+config, read by both the qlty CLI and qlty Cloud, and takes the place of a `.codeclimate.yml`.
+qlty Cloud posts the `qlty check` and `qlty fmt` statuses on every pull-request commit and
+analyses `main` on its own servers; the maintainability badge above shows that grade, and the
+project page behind it asks for a qlty sign-in.
+
+Its smells run in comment mode, so they are advisory. The blocking complexity gate is still
+`make lint-metrics` against `config/metrics-policy.json`. Coverage stays on Codecov through
+`.github/workflows/codecov.yml` and is not uploaded to qlty.
+
 ## Workflow Security (zizmor)
 
 The GitHub Actions workflows are audited for supply-chain and privilege defects
@@ -652,6 +670,14 @@ Online audits resolve action tags against the GitHub API. The gate uses
 `GH_TOKEN` (or `GITHUB_TOKEN`) when set and otherwise falls back to the `gh`
 CLI's token; with neither it runs `--offline`, which is a strict subset of the
 CI run.
+
+Its sibling `make lint-actionlint` covers what zizmor does not — workflow syntax,
+expression types, undefined `needs:` outputs, runner labels — and hands every
+`run:` body to shellcheck. Both binaries are pinned and SHA256-verified into the
+gitignored `./bin` by `scripts/ci/ensure-actionlint.sh`, and the gate runs as the
+`actionlint` job of `workflow-security.yml` on every pull request. Fix findings in
+the workflow; never add an ignore, a `# shellcheck disable=` directive or an
+`-ignore` flag.
 
 ## Dependency CVEs (osv-scanner)
 
@@ -802,34 +828,39 @@ CloudFront skips viewer-response functions for a short-circuited request).
 `make lint-headers` — part of `make lint` — runs the checked-in functions and fails if
 they stop emitting the policy; the post-deploy smoke test then verifies the live
 responses with `curl -I`, which is what catches the functions not being associated with
-the distribution. See [the security-headers guide](docs/security-headers.md).
+the distribution. See [the security-headers guide](docs/security-headers.md) and, for
+the routing function's allow-list and the way both functions reach CloudFront,
+[the edge routing note](docs/edge-routing.md).
 
 ## Documentation
 
-Start reading at the [GitHub wiki](https://github.com/VilnaCRM-Org/frontend-ssr-template/wiki).
-If you're having trouble, head for
-[the troubleshooting guide](https://github.com/VilnaCRM-Org/frontend-ssr-template/wiki/Troubleshooting)
-as it's frequently updated.
+Start with the [architecture decision records](docs/adr/README.md): each one states a
+load-bearing decision and its cost, so read the index before re-litigating one of them.
+The recipes for the most common changes — adding a page, a feature, or a locale — live in
+[extending the website](docs/extending-the-website.md).
 
-For production deploys, the post-deploy smoke test, and the rollback procedure,
-see the [deployment and rollback runbook](docs/deployment-runbook.md).
+For production deploys, the post-deploy smoke test, and the rollback procedure
+(`make rollback-info` prints the last commit handed to the pipeline), see the
+[deployment and rollback runbook](docs/deployment-runbook.md); the topology, failure
+modes and recovery targets behind it are in the
+[availability posture](docs/availability.md).
+
+For what watches production (the scheduled uptime check, the alert labels, what is still
+inert) and what to do when the incident issue opens, see the [runbooks](docs/runbooks/README.md).
 
 For the accessibility conformance target, the automated gates behind `make test-a11y` and the
 interaction-state scans inside `make test-e2e`, and the exception process, see the
 [accessibility acceptance standard](docs/accessibility/acceptance-standard.md).
 
-You can generate complete API-level documentation by running `doc` in the top-level
-folder, and documentation will appear in the `docs` folder, though you'll need to have
-[API-Extractor](https://api-extractor.com/) installed.
+The contracts for AI coding agents — the test-coverage policy and the gate reference —
+live in [`AGENTS.md`](AGENTS.md) and [`CLAUDE.md`](CLAUDE.md).
 
 If the documentation doesn't cover what you need, search the
-[existing issues](https://github.com/VilnaCRM-Org/website/issues),
-and before you ask a question,
-[read the troubleshooting guide](https://github.com/VilnaCRM-Org/frontend-ssr-template/wiki/Troubleshooting).
+[existing issues](https://github.com/VilnaCRM-Org/website/issues) before you ask a question.
 
 ## Tests
 
-[Tests](https://github.com/VilnaCRM-Org/frontend-ssr-template/actions)
+[Tests](https://github.com/VilnaCRM-Org/website/actions)
 
 If this isn't passing, is there something you can do to help?
 
@@ -838,20 +869,20 @@ If this isn't passing, is there something you can do to help?
 Please disclose any vulnerabilities found responsibly – report security issues to the maintainers privately.
 
 See
-[SECURITY](https://github.com/VilnaCRM-Org/frontend-ssr-template/tree/main/SECURITY.md)
+[SECURITY](SECURITY.md)
 and
-[Security advisories on GitHub](https://github.com/VilnaCRM-Org/frontend-ssr-template/security).
+[Security advisories on GitHub](https://github.com/VilnaCRM-Org/website/security).
 
 ## Contributing
 
 Please submit bug reports, suggestions, and pull requests to the
-[GitHub issue tracker](https://github.com/VilnaCRM-Org/frontend-ssr-template/issues).
+[GitHub issue tracker](https://github.com/VilnaCRM-Org/website/issues).
 
 We're particularly interested in fixing edge cases, expanding test coverage,
 and updating translations.
 
 If you found a mistake in the docs, or want to add something, go ahead and
-amend the wiki – anyone can edit it.
+open a pull request – the docs live in this repository under `docs/`.
 
 ## Sponsorship
 
@@ -862,8 +893,8 @@ the free and opensource CRM system.
 Donations are very welcome, whether in beer 🍺, T-shirts 👕, or cold, hard cash 💰.
 Sponsorship through GitHub is a simple and convenient way to say "thank you" to
 maintainers and contributors – just click the "Sponsor" button
-[on the project page](https://github.com/VilnaCRM-Org/frontend-ssr-template).
-If your company uses this template, consider taking part in the VilnaCRM's enterprise support program.
+[on the project page](https://github.com/VilnaCRM-Org/website).
+If your company relies on VilnaCRM, consider taking part in the VilnaCRM's enterprise support program.
 
 ## Changelog
 

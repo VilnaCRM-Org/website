@@ -2,11 +2,11 @@
 
 @use 'deprecated-method/deprecated-method';
 
-$postColorTheme: #38b386;
-$putColorTheme: #ffc01e;
-$getColorTheme: #1eaeff;
-$deleteColorTheme: #dc3939;
-$patchColorTheme: #9b59b6;
+$postColorTheme: $accept;
+$putColorTheme: $secondary;
+$getColorTheme: $primary;
+$deleteColorTheme: $error;
+$patchColorTheme: $patch;
 
 $methodColors: (
   'post': $postColorTheme,

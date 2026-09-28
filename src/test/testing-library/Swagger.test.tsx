@@ -102,21 +102,16 @@ describe('Swagger Integration Tests', () => {
   });
 
   describe('Internationalization', () => {
-    test('changes language to English on mount', () => {
-      renderSwagger();
-
-      expect(mockChangeLanguage).toHaveBeenCalledWith('en');
-      expect(mockChangeLanguage).toHaveBeenCalledTimes(1);
-    });
-
-    test('calls changeLanguage with correct dependency', () => {
+    // The page is English-only, but that is the route's decision, not the component's:
+    // `resolveRouteLocale('/swagger')` in `src/config/locales.ts` resolves it, and
+    // `pages/_app.tsx` applies it before this tree renders. A `changeLanguage('en')`
+    // effect here used to fight that rule (and left the landing English after a
+    // swagger visit), so the component must not touch the language at all.
+    test('does not change the language itself', () => {
       const { rerender } = renderSwagger();
-
-      mockChangeLanguage.mockClear();
-
       rerender(<Swagger />);
 
-      expect(mockChangeLanguage).toHaveBeenCalledWith('en');
+      expect(mockChangeLanguage).not.toHaveBeenCalled();
     });
   });
 
@@ -159,18 +154,6 @@ describe('Swagger Integration Tests', () => {
       expect(screen.getByTestId('api-documentation')).toHaveTextContent(
         'API Documentation Component'
       );
-    });
-  });
-
-  describe('Performance', () => {
-    test('does not re-render unnecessarily', () => {
-      const { rerender } = renderSwagger();
-
-      const initialRenderCount: number = mockChangeLanguage.mock.calls.length;
-
-      rerender(<Swagger />);
-
-      expect(mockChangeLanguage).toHaveBeenCalledTimes(initialRenderCount + 1);
     });
   });
 

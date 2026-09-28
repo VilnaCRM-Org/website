@@ -1,10 +1,11 @@
 #!/usr/bin/env bats
 #
-# Coverage for scripts/ci/lint-workflows.sh (issue #360) -- the zizmor gate over
-# .github/workflows. docker is stubbed, so these pin the CONTRACT the script
-# hands the linter (digest-pinned image, thresholds, target, token handling)
-# rather than zizmor's own verdict. Getting that contract wrong is silent: a
-# dropped `--min-severity`, a tag instead of a digest, or a swallowed exit code
+# Coverage for scripts/ci/lint-workflows.sh (issues #360 and #375) -- the zizmor
+# gate over .github/workflows and .github/actions. docker is stubbed, so these
+# pin the CONTRACT the script hands the linter (digest-pinned image, thresholds,
+# targets, token handling) rather than zizmor's own verdict. Getting that
+# contract wrong is silent: a dropped `--min-severity`, a tag instead of a
+# digest, a target list collapsed into one argument, or a swallowed exit code
 # all leave a green check that audits nothing.
 
 load './test_helper.bash'
@@ -78,6 +79,22 @@ EOF
   chmod +x "$STUB_BIN_DIR/docker"
 }
 
+# A docker stub that records every argv entry on its own line, so a test can
+# tell two target arguments from one argument that happens to contain a space:
+# the command log joins argv with spaces and cannot make that distinction.
+create_argv_recording_docker_stub() {
+  export ARGV_SEEN="$BATS_TEST_TMPDIR/argv-seen"
+  : >"$ARGV_SEEN"
+
+  cat >"$STUB_BIN_DIR/docker" <<'EOF'
+#!/usr/bin/env bash
+printf 'docker %s\n' "$*" >> "${COMMAND_LOG:?}"
+printf '%s\n' "$@" > "${ARGV_SEEN:?}"
+exit 0
+EOF
+  chmod +x "$STUB_BIN_DIR/docker"
+}
+
 # --- Positive ------------------------------------------------------------------
 
 @test "audits .github/workflows through the digest-pinned zizmor image" {
@@ -127,6 +144,40 @@ EOF
   run_lint_workflows
   [ "$status" -eq 0 ]
   assert_log_contains '.github/'
+}
+
+@test "audits the local composite actions alongside the workflows by default" {
+  # zizmor reads only the paths it is handed. The #360 default named
+  # .github/workflows/ alone, so .github/actions/dev-container/action.yml -- the
+  # composite whose third-party `uses:` pins every calling workflow inherits --
+  # was never audited (#375). Both directories must reach the container as two
+  # separate arguments, and never a bare `.`, which drags in dependabot.yml.
+  export GH_TOKEN='token-from-env'
+  create_argv_recording_docker_stub
+
+  run_lint_workflows
+  [ "$status" -eq 0 ]
+  [ "$(grep -cx '.github/workflows/' "$ARGV_SEEN")" -eq 1 ]
+  [ "$(grep -cx '.github/actions/' "$ARGV_SEEN")" -eq 1 ]
+  ! grep -qx '.' "$ARGV_SEEN"
+  # Two entries, not one entry holding both paths.
+  ! grep -qx '.github/workflows/ .github/actions/' "$ARGV_SEEN"
+}
+
+@test "a caller-provided target list is word-split and honoured verbatim" {
+  # A caller narrowing the audit to two files must see exactly those two files
+  # reach zizmor, each as its own argument, with neither default appended.
+  export GH_TOKEN='token-from-env'
+  export ZIZMOR_TARGETS='.github/workflows/deploy.yml .github/actions/dev-container/action.yml'
+  create_argv_recording_docker_stub
+
+  run_lint_workflows
+  [ "$status" -eq 0 ]
+  [ "$(grep -cx '.github/workflows/deploy.yml' "$ARGV_SEEN")" -eq 1 ]
+  [ "$(grep -cx '.github/actions/dev-container/action.yml' "$ARGV_SEEN")" -eq 1 ]
+  ! grep -qx '.github/workflows/' "$ARGV_SEEN"
+  ! grep -qx '.github/actions/' "$ARGV_SEEN"
+  ! grep -qx '.github/workflows/deploy.yml .github/actions/dev-container/action.yml' "$ARGV_SEEN"
 }
 
 @test "mounts the workspace read-only" {

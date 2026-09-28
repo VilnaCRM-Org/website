@@ -22,4 +22,16 @@ describe('UiTypography', () => {
     const typography: HTMLElement = getByText(testText);
     expect(typography.tagName).toBe('P');
   });
+
+  it('forwards aria-hidden so a decorative glyph can be hidden from assistive tech', () => {
+    const { getByText } = render(<UiTypography aria-hidden>{testText}</UiTypography>);
+
+    expect(getByText(testText)).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  it('renders no aria-hidden attribute unless asked to', () => {
+    const { getByText } = render(<UiTypography>{testText}</UiTypography>);
+
+    expect(getByText(testText)).not.toHaveAttribute('aria-hidden');
+  });
 });

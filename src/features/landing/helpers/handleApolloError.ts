@@ -96,13 +96,9 @@ function handleGraphQLErrors(
   const { extensions, message } = firstError;
   const statusCode = extensions?.statusCode as number | undefined;
   const statusMessage = getMessageByStatusCode(statusCode, messages);
-  const isUnauthorized = message?.toUpperCase?.().includes('UNAUTHORIZED') === true;
+  const isUnauthorized =
+    typeof message === 'string' && message.toUpperCase().includes('UNAUTHORIZED');
 
-  // Anything the status/`UNAUTHORIZED` mapping does not recognise falls back to
-  // a generic localized message. Echoing `graphQLErrors[].message` verbatim —
-  // as this branch used to — turns the sign-up form into an account-enumeration
-  // oracle ("user with this email already exists") and pipes internal server
-  // wording straight into the UI (#378 F2, CWE-209).
   const fallback = isUnauthorized
     ? messages[CLIENT_ERROR_KEYS.UNAUTHORIZED]
     : messages[CLIENT_ERROR_KEYS.WENT_WRONG];
@@ -118,8 +114,8 @@ function resolveErrorMessage(error: object, messages: ClientErrorMessages): stri
 
   if (isServerError(error)) return handleNetworkError(error);
 
-  const errorMessage = (error as Error).message ?? '';
-  return isNetworkErrorMessage(errorMessage)
+  const { message } = error as Partial<Error>;
+  return typeof message === 'string' && isNetworkErrorMessage(message)
     ? messages[CLIENT_ERROR_KEYS.NETWORK]
     : messages[CLIENT_ERROR_KEYS.UNEXPECTED];
 }

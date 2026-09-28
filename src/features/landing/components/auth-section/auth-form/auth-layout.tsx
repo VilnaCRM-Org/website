@@ -2,22 +2,21 @@ import { useMutation } from '@apollo/client/react';
 import { Box, CircularProgress, Fade } from '@mui/material';
 import React from 'react';
 import { useForm } from 'react-hook-form';
-import { v4 as uuidv4 } from 'uuid';
 
-import { reportHandledError } from '@/lib/telemetry/report-error';
-
-import { SignUpInput } from '../../../api/service/types';
 import SIGNUP_MUTATION from '../../../api/service/userService';
 import { animationTimeout } from '../../../constants';
-import { handleApolloError } from '../../../helpers/handleApolloError';
 import useFormReset from '../../../hooks/useFormReset';
 import { RegisterItem } from '../../../types/authentication/form';
 import Notification from '../../notification/notification';
 import { NotificationStatus } from '../../notification/types';
 
 import AuthForm from './auth-form';
+import { createInFlightLock, lockSubmission } from './in-flight-lock';
 import styles from './styles';
-import { CreateUserPayload, SignupVariables } from './types';
+import { buildSubmitHandler } from './submit-handler';
+import { AuthFormProps, CreateUserPayload, SignupVariables } from './types';
+
+type SignupHandleSubmit = AuthFormProps['handleSubmit'];
 
 function FormLoader(): React.ReactElement {
   return (
@@ -44,65 +43,36 @@ function useNotificationState() {
   };
 }
 
-type NotificationState = ReturnType<typeof useNotificationState>;
-type SignupMutate = (options: { variables: SignupVariables }) => Promise<unknown>;
+function useInFlightHandleSubmit(handleSubmit: SignupHandleSubmit): SignupHandleSubmit {
+  const [inFlight] = React.useState(createInFlightLock);
 
-function buildSignupInput(userData: RegisterItem, clientID: string): SignUpInput {
-  return {
-    email: userData.Email.toLowerCase(),
-    initials: userData.FullName,
-    password: userData.Password,
-    clientMutationId: clientID,
-  };
-}
-
-function onSignupSuccess(notif: NotificationState): void {
-  notif.setIsNotificationOpen(true);
-  notif.setNotificationType(NotificationStatus.SUCCESS);
-}
-
-function onSignupError(notif: NotificationState, error: unknown): void {
-  // The failure has to leave a trace beyond the toast: this is the only
-  // PII-collecting surface on the site, and without a telemetry sink abuse of it
-  // produces no signal at all (#378 F3). Only the error and static tags are
-  // sent — never the submitted credentials.
-  reportHandledError(error, { feature: 'landing', action: 'signup' });
-  notif.setErrorText(handleApolloError({ error }));
-  notif.setNotificationType(NotificationStatus.ERROR);
-  notif.setIsNotificationOpen(true);
-}
-
-function buildSubmitHandler(
-  signupMutation: SignupMutate,
-  notif: NotificationState
-): (userData: RegisterItem) => Promise<void> {
-  return async (userData: RegisterItem): Promise<void> => {
-    const clientID: string = uuidv4();
-    try {
-      await signupMutation({ variables: { input: buildSignupInput(userData, clientID) } });
-      onSignupSuccess(notif);
-    } catch (error) {
-      onSignupError(notif, error);
-    }
-  };
+  return (onValid, onInvalid) => lockSubmission(inFlight, handleSubmit(onValid, onInvalid));
 }
 
 function useSignupForm() {
   const notif = useNotificationState();
   const {
-    handleSubmit,
+    handleSubmit: submitUnlocked,
     control,
     reset,
     formState,
     formState: { errors },
   } = useForm<RegisterItem>({
     mode: 'onTouched',
-    defaultValues: { FullName: '', Password: '', ConfirmPassword: '', Email: '', Privacy: false },
+    defaultValues: {
+      FullName: '',
+      Password: '',
+      ConfirmPassword: '',
+      Email: '',
+      Privacy: false,
+      Referral: '',
+    },
   });
   const [signupMutation, { loading }] = useMutation<CreateUserPayload, SignupVariables>(
     SIGNUP_MUTATION
   );
 
+  const handleSubmit = useInFlightHandleSubmit(submitUnlocked);
   const onSubmit = buildSubmitHandler(signupMutation, notif);
   useFormReset({ formState, reset, notificationType: notif.notificationType });
   const retrySubmit: () => void = (): void => {

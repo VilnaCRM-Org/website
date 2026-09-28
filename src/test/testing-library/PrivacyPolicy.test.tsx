@@ -26,4 +26,16 @@ describe('PrivacyPolicy', () => {
     const usagePolicyLink: HTMLElement = getByText(usagePolicyText);
     expect(usagePolicyLink).toBeInTheDocument();
   });
+
+  test('styles both policy links as the same unstyled-text pill', () => {
+    const { getByRole } = render(<PrivacyPolicy />);
+    const pillStyle: Record<string, string> = {
+      textDecoration: 'none',
+      padding: '0.5rem 1rem',
+      borderRadius: '0.5rem',
+    };
+
+    expect(getByRole('link', { name: privacyPolicyText })).toHaveStyle(pillStyle);
+    expect(getByRole('link', { name: usagePolicyText })).toHaveStyle(pillStyle);
+  });
 });

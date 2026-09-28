@@ -33,7 +33,8 @@ export function reportRegistrationFailure(error: unknown, statusCode?: number) {
 
 - `feature` — the `src/features/<feature>` the failure came from.
 - `surface` — a coarse area such as `app`, `auth-form`, or `swagger`.
-- `route` — the pathname, when it adds grouping value.
+- `route` — the pathname. Do not set it by hand: `scrubEvent` adds it to every
+  error event from the scrubbed page URL (`src/lib/telemetry/route-tag.ts`).
 
 Keep user-typed text and identifiers out of both `tags` and `extra` — see
 [privacy-checklist.md](privacy-checklist.md).
@@ -43,8 +44,10 @@ Keep user-typed text and identifiers out of both `tags` and `extra` — see
 The live rates are declared in the single `Sentry.init` in `pages/_app.tsx`:
 `tracesSampleRate` (performance traces), `replaysSessionSampleRate`, and
 `replaysOnErrorSampleRate`. Error capture is unsampled — you want every
-exception. Tune trace and replay volume in that file; never override sampling per
-call. Treat `pages/_app.tsx` as the source of truth.
+exception. The trace rate is read from `NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE`
+(empty = `0.1` in a production build, `1.0` in development, resolved by
+`src/lib/telemetry/traces-sample-rate.ts`); the replay rates are set in that file.
+Never override sampling per call.
 
 ## Context rules
 

@@ -45,6 +45,11 @@ alongside `make lint` whenever you change `src/` code.
 | Metrics (planned, #224) | `make lint-metrics` |
 | Aggregate               | `make lint`         |
 
+ESLint carries the two production-source guards from ADR 0005 — no comments and no
+inline `sx`/`style` objects under `src/` and `pages/` — proved by
+`src/test/unit/lint/production-source-gates.test.ts`; route either finding to
+`frontend-quality-workflow`.
+
 `make lint` chains `lint-next`, `lint-tsc`, `lint-md`, and `lint-deps` in
 sequence. `make lint-metrics` (rust-code-analysis, issue #224) is the complexity
 gate and is **not** part of the `make lint` chain — treat it as an equal,

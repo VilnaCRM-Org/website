@@ -48,8 +48,15 @@ accessibility, route to the related skills at the end.
 - Type props in a colocated `types.ts` and return `React.ReactElement` (the
   house convention), not `JSX.Element`.
 - Style with MUI `sx` plus a colocated `styles.ts` that default-exports a plain
-  object of style fragments (`sx={styles.title}`); keep static styles out of
-  render. Reach for `styled` from `@mui/material` only for reused wrappers.
+  object of style fragments (`sx={styles.title}`, `sx={[styles.a, styles.b]}`).
+  An object literal anywhere inside `sx` or `style` — bare, spread, in an array,
+  in a theme callback — fails `make lint-next` (ADR 0005); a style that depends
+  on a runtime value is a function in `styles.ts` (`sx={styles.vector(src)}`).
+  Reach for `styled` from `@mui/material` only for reused wrappers.
+- Write no comments in `src/` or `pages/` — `vilnacrm/no-comments` fails
+  `make lint-next` on any comment token. Put the rationale in an ADR, a design
+  note under `docs/`, the feature README, the spec that pins the behaviour, or
+  the commit message (see `docs/extending-the-website.md`).
 - Use theme tokens from the shared theme primitives (`UiColorTheme`,
   `UiBreakpoints`) instead of hardcoded colors/breakpoints.
 - Icons and imagery are SVG assets under the feature's `assets/`, rendered via

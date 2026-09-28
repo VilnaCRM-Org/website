@@ -1,13 +1,11 @@
-import { Html, Head, Main, NextScript } from 'next/document';
+import { Html, Head, Main, NextScript, DocumentProps } from 'next/document';
 
-import { env } from '@/config/env';
 import { GOLOS_PRELOAD_HREFS } from '@/config/Fonts/preload';
+import { resolveRouteLocale } from '@/config/locales';
 
-const mainLanguage: string = env.NEXT_PUBLIC_MAIN_LANGUAGE;
-
-export default function Document(): React.ReactElement {
+export default function Document({ __NEXT_DATA__ }: DocumentProps): React.ReactElement {
   return (
-    <Html lang={mainLanguage}>
+    <Html lang={resolveRouteLocale(__NEXT_DATA__.page)} dir="ltr">
       <Head>
         <meta charSet="utf-8" />
         {GOLOS_PRELOAD_HREFS.map(href => (
@@ -20,7 +18,6 @@ export default function Document(): React.ReactElement {
             crossOrigin="anonymous"
           />
         ))}
-        <meta name="description" content="VilnaCRM platform for customer relationship management" />
         <meta name="apple-mobile-web-app-title" content="VilnaCRM" />
         <meta name="application-name" content="VilnaCRM" />
         <meta name="theme-color" content="#ffffff" />

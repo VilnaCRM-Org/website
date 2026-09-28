@@ -2,7 +2,8 @@
 
 %responseTableHead {
   thead {
-    td:first-child {
+    td:first-child,
+    th:first-child {
       min-width: 9.75rem;
       @include for-large-screens {
         max-width: 10.625rem;
@@ -11,7 +12,8 @@
         min-width: 3.75rem;
       }
     }
-    td {
+    td,
+    th {
       padding-top: 0;
       padding-bottom: 0.75rem;
       border-bottom: 1px solid $grey300;

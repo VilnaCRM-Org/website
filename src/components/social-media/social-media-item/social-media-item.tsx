@@ -8,14 +8,6 @@ import { SocialMedia } from '@/types/social-media';
 
 import styles from './styles';
 
-// `item.linkHref` is a free-form string, so this is the external-link sink most
-// likely to become dynamic; it opens a new tab and therefore always carries the
-// full `noopener noreferrer` hardening (#382 F2).
-//
-// The icon is decorative: the link already owns the accessible name through
-// `aria-label`, so a second, differently-worded name on the image would leave
-// assistive tech announcing two names for one control. Mirrors the existing
-// treatment in `auth-section/social-item`.
 function SocialMediaItem({ item }: { item: SocialMedia }): React.ReactElement {
   const { t } = useTranslation();
 

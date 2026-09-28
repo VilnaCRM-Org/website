@@ -50,20 +50,20 @@ describe('Localization Configuration', () => {
   let OLD_ENV: NodeJS.ProcessEnv;
 
   beforeEach(() => {
-    jest.resetModules(); // Clears module cache for fresh imports
-    OLD_ENV = { ...process.env }; // Backup environment variables
+    jest.resetModules();
+    OLD_ENV = { ...process.env };
   });
 
   afterEach(() => {
-    Object.keys(process.env).forEach(key => delete process.env[key]); // Clear all environment variables
-    Object.assign(process.env, OLD_ENV); // Restore original values
+    Object.keys(process.env).forEach(key => delete process.env[key]);
+    Object.assign(process.env, OLD_ENV);
   });
 
   it('should throw an error if both mainLanguage and fallbackLanguage are missing', async () => {
     delete process.env.NEXT_PUBLIC_MAIN_LANGUAGE;
     delete process.env.NEXT_PUBLIC_FALLBACK_LANGUAGE;
 
-    await expect(import('../../config/i18nConfig.js')).rejects.toThrow(
+    await expect(import('../../config/i18nConfig')).rejects.toThrow(
       /Invalid environment configuration/
     );
   });
@@ -71,7 +71,7 @@ describe('Localization Configuration', () => {
     process.env.NEXT_PUBLIC_MAIN_LANGUAGE = 'uk';
     delete process.env.NEXT_PUBLIC_FALLBACK_LANGUAGE;
 
-    await expect(import('../../config/i18nConfig.js')).rejects.toThrow(
+    await expect(import('../../config/i18nConfig')).rejects.toThrow(
       /Invalid environment configuration/
     );
   });
@@ -79,7 +79,7 @@ describe('Localization Configuration', () => {
     delete process.env.NEXT_PUBLIC_MAIN_LANGUAGE;
     process.env.NEXT_PUBLIC_FALLBACK_LANGUAGE = 'en';
 
-    await expect(import('../../config/i18nConfig.js')).rejects.toThrow(
+    await expect(import('../../config/i18nConfig')).rejects.toThrow(
       /Invalid environment configuration/
     );
   });
@@ -93,25 +93,5 @@ describe('Localization Configuration', () => {
   it('should have the correct fallback language', () => {
     expect(i18nConfig.fallbackLng).toBeDefined();
     expect(i18nConfig.fallbackLng).toContain('en');
-  });
-  it('should throw an error if localization resources fail to load', async () => {
-    jest.doMock('../../../pages/i18n/localization.json', () => {
-      throw new Error('Mocked file not found');
-    });
-
-    await expect(import('../../config/i18nConfig.js')).rejects.toThrow(
-      'Failed to load localization resources: Mocked file not found'
-    );
-  });
-  it('should throw an error if localization resources fail to load', async () => {
-    jest.spyOn(require, 'resolve').mockImplementation(() => {
-      throw new Error('Mocked file not found');
-    });
-
-    await expect(import('../../config/i18nConfig.js')).rejects.toThrow(
-      'Failed to load localization resources: Mocked file not found'
-    );
-
-    jest.restoreAllMocks();
   });
 });

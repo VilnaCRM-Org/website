@@ -8,6 +8,11 @@ export default {
     boxShadow: '0px -5px 46px 0px rgba(198, 209, 220, 0.25)',
   },
 
+  top: {
+    height: '4.188rem',
+    alignItems: 'center',
+  },
+
   topWrapper: {
     width: '100%',
     maxWidth: '1222px',
@@ -15,6 +20,8 @@ export default {
   },
 
   topContent: {
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingLeft: '1rem',
     paddingRight: '1rem',
     [`@media (max-width: ${breakpointsTheme.breakpoints.values.lg}px)`]: {
@@ -47,6 +54,11 @@ export default {
       paddingLeft: '2rem',
       pb: '0.2rem',
     },
+  },
+
+  contacts: {
+    gap: '0.875rem',
+    alignItems: 'center',
   },
 
   copyright: {

@@ -6,22 +6,16 @@ import { useTranslation } from 'react-i18next';
 
 import breakpointsTheme from '@/components/ui-breakpoints';
 
-import MainImageSrc from '../../../assets/img/about-vilna/desktop.jpg';
-import PhoneMainImage from '../../../assets/img/about-vilna/mobile.jpg';
-import TabletMainImage from '../../../assets/img/about-vilna/tablet.jpg';
+import { ProductScreenshots, productScreenshotsFor } from '../../../helpers/productScreenshots';
 
 import styles from './styles';
 
-// The concrete props `next-export-optimize-images` emits differ from
-// `next/image`'s `ImageProps` under `exactOptionalPropertyTypes`, so key off the
-// optimizer's own return type instead of the stricter next/image one.
 type OptimizedImageProps = ReturnType<typeof getOptimizedImageProps>['props'];
 
-const IMG_ALT_TEXT: string = 'Main image';
-
-const optimizedProps: (src: StaticImageData) => OptimizedImageProps = (
-  src: StaticImageData
-): OptimizedImageProps => getOptimizedImageProps({ src, alt: IMG_ALT_TEXT }).props;
+const optimizedProps: (src: StaticImageData, alt: string) => OptimizedImageProps = (
+  src: StaticImageData,
+  alt: string
+): OptimizedImageProps => getOptimizedImageProps({ src, alt }).props;
 
 function PictureSource({
   imageProps,
@@ -40,12 +34,26 @@ function PictureSource({
   );
 }
 
-function MainImage(): React.ReactElement {
-  const { t } = useTranslation();
+type OptimizedScreenshots = Record<keyof ProductScreenshots, OptimizedImageProps>;
 
-  const mobileProps: OptimizedImageProps = optimizedProps(PhoneMainImage);
-  const tabletProps: OptimizedImageProps = optimizedProps(TabletMainImage);
-  const desktopProps: OptimizedImageProps = optimizedProps(MainImageSrc);
+function useOptimizedScreenshots(): OptimizedScreenshots {
+  const { t, i18n } = useTranslation();
+  const screenshots: ProductScreenshots = productScreenshotsFor(i18n.language);
+  const alt: string = t('about_vilna.image_alt');
+
+  return {
+    mobile: optimizedProps(screenshots.mobile, alt),
+    tablet: optimizedProps(screenshots.tablet, alt),
+    desktop: optimizedProps(screenshots.desktop, alt),
+  };
+}
+
+function MainImage(): React.ReactElement {
+  const {
+    mobile: mobileProps,
+    tablet: tabletProps,
+    desktop: desktopProps,
+  } = useOptimizedScreenshots();
 
   return (
     <Box sx={styles.mainImageWrapper}>
@@ -62,7 +70,7 @@ function MainImage(): React.ReactElement {
           src={desktopProps.src as string}
           width={desktopProps.width}
           height={desktopProps.height}
-          alt={t(`${desktopProps.alt}`)}
+          alt={desktopProps.alt}
         />
       </picture>
     </Box>

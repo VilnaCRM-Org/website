@@ -21,28 +21,57 @@ can be gated by environment protection rules (see below).
 After `deploy` succeeds, the `post-deploy-smoke` job probes the live site and
 fails if it does not serve valid content:
 
-- `GET /` — expects HTTP `200` and HTML containing `__next` (the Next.js root)
-  or a `<title>`.
-- `GET /swagger` — expects HTTP `200` and a body mentioning `swagger`.
 - `HEAD /` and `HEAD /favicon.svg` — expect every header in
   `config/security-headers.json` (see
   [the security-headers guide](security-headers.md)). This is the only check that
   can catch the CloudFront functions being unassociated from the distribution; the
   in-repo `make lint-headers` gate only proves the functions themselves are correct.
-- `GET /smoke-nonexistent-…` — the **negative** path
-  (`scripts/ci/smoke-response-shape.sh`, issue #363). Blocks on three assertions,
-  each of which is a production incident this site has already had: the status is
-  exactly `404` and not `500` (#226, and again #229), the body is non-empty (#249),
-  and `content-type` is `text/html` (#235 — without it Safari _downloads_ the 404).
-  The security-header check on that same response, and the sandbox `noindex` check,
-  emit `::warning::` rather than failing; the script states the condition for
-  promoting them to blocking. Runs last, so a failure here cannot stop the header
-  step above from reporting.
+- `make smoke-prod SITE_URL=…` — the rest of the smoke, and the command to run by
+  hand after any deploy (issues #329 and #331). It fails when any one of three
+  documents misbehaves, and it always grades all three so one red verdict never
+  hides another. The negative path runs first:
+  - `GET /smoke-nonexistent-…`, the **negative** path, through
+    `scripts/ci/smoke-response-shape.sh --require-branded` (issue #363). Blocks on
+    four assertions. Three are production incidents this site has already had: the
+    status is exactly `404` and not `500` (#226, and again #229), the body is
+    non-empty (#249), and `content-type` is `text/html` (#235 — without it Safari
+    _downloads_ the 404). The fourth is the branded body (#329): the response must
+    contain `Page not found - VilnaCRM`, the `<title>` of the edge document in
+    `scripts/cloudfront_routing.js`, matched as a case-insensitive fixed string.
+    `SMOKE_404_MARKER` overrides it. The security-header check on that same
+    response, and the sandbox `noindex` check, emit `::warning::` rather than
+    failing; the script states the condition for promoting them to blocking.
+  - `GET /` and `GET /swagger`, through `scripts/ci/uptime-check.sh`, the same
+    script the scheduled uptime check runs. Each must answer `200`, as
+    `text/html`, with a non-empty body carrying the page's marker: `__next` or
+    `<title` for the homepage, `swagger` for `/swagger` (both case-insensitive).
+
+  The step runs after the header step and runs even when that step failed, so each
+  one reports its own verdict. The job's 45-minute timeout is sized for an origin
+  that hangs on every attempt rather than refusing it, so even then every verdict
+  is printed before the job is killed.
 
 Because CodePipeline deploys asynchronously, each probe retries until the CDN
-serves the new build or the job times out. The readiness probes allow roughly ten
-minutes; the negative-path probe allows twelve attempts fifteen seconds apart,
-overridable with `SMOKE_ATTEMPTS` and `SMOKE_DELAY`.
+serves the new build or the job times out. The homepage and `/swagger` get 24
+attempts each, fifteen seconds apart, and each attempt may wait up to fifteen
+seconds for an answer: a readiness window of roughly ten minutes. Override it with
+`SMOKE_PROD_ATTEMPTS` and `SMOKE_PROD_DELAY`. The negative path gets twelve,
+overridable with `SMOKE_ATTEMPTS` and `SMOKE_DELAY`. The header step retries on
+its own twelve-attempt budget.
+
+The brand assertion blocks only in `make smoke-prod`. The two other callers of
+the script leave out `--require-branded` and get a warning instead. The PR
+sandbox is a bare S3 website bucket with no CloudFront function in front of it,
+so it can never serve the edge document. The scheduled uptime check files an
+incident issue when it fails, and a routing function still waiting for the
+infrastructure apply (see below) is not an outage.
+
+That ten-minute window is also the bound the cache policy has to meet: every
+un-hashed object (the route documents, `sw.js`, `swagger-schema.json`) must reflect
+the new build inside it, while everything under `/_next/static/` is
+content-addressed and cached for a year. The classes, the `cache-control` each one
+needs, and which of them the pipeline is and is not yet observed to honour are in
+[`cdn-cache-strategy.md`](cdn-cache-strategy.md).
 
 ### Diagnosing a red negative-path probe
 
@@ -58,9 +87,61 @@ The failure line names every gap in one response, so read all of it:
   synthetic response lost its `body` or its header. Both are covered at PR time by
   the `edge` Jest layer, so a failure here means the deployed function is not the
   committed one.
+- `expected the branded 404` — the response is a well-formed 404 but not the edge
+  document. Either the routing function CloudFront runs predates #339, which
+  branded it (publish the current one; see the next section), or something other
+  than the function answered, such as an S3 error document. The bats suite checks
+  at PR time that the handler's own 404 carries the default marker, so a reworded
+  document cannot drift away from the probe.
+- `::warning::… is not the branded 404` — the same condition, reported by a caller
+  that does not pass `--require-branded`: the PR sandbox, where it is expected
+  because the bucket has no edge function, or the scheduled uptime check, where it
+  files no incident but has the same two causes as the blocking line above.
 
-Reproduce any of these locally against the same script:
-`SMOKE_ATTEMPTS=1 ./scripts/ci/smoke-response-shape.sh https://vilnacrm.com`.
+A red `homepage` or `swagger page` line is the positive half, graded exactly as the
+scheduled uptime check grades it; `expected a match for` there means the path
+answered `200` HTML that is not its own page, such as a rewrite that points
+`/swagger` at the homepage document. The homepage marker (`__next` or `<title`) is
+loose, so a parked or placeholder page with a `<title>` passes it. The same line on an
+`uptime-alert` incident means the same thing.
+Reproduce any of these locally with the same target:
+`SMOKE_PROD_ATTEMPTS=1 SMOKE_ATTEMPTS=1 make smoke-prod SITE_URL=https://vilnacrm.com`.
+
+### How the edge functions reach CloudFront
+
+The website pipeline deploys the **export**, not the edge functions.
+`scripts/cloudfront_routing.js` is published by Terraform in the
+`website-infrastructure` repository (`terraform/app/modules/aws/cloudfront/function.tf`),
+which fetches it from this repository's `main` branch when the website stack is applied
+against the production account. So a merged `ROUTE_MAP` change is live on the CDN only
+after that apply — until then the distribution runs the previously applied function, the
+new `.html` object is in the bucket, and the extensionless URL 404s. That is the exact
+shape `/en` had after #470 merged: `/en.html` served, `/en` did not.
+
+As of September 2026 that module declares **no** resource for
+`scripts/cloudfront_security_headers.js`, so whether the viewer-response function is
+associated at all is something only the post-deploy header probe can answer once
+`PRODUCTION_SITE_URL` is set. Treat the guide's "associate both functions" as the
+target state, not the observed one, until that probe is green.
+
+To roll a routing change out:
+
+1. Merge it to `main`; Terraform reads `main`, not a branch or tag.
+2. In `website-infrastructure`, plan the website stack against production (test
+   first, per that repository's README). The plan must show exactly one change —
+   the `code` of `aws_cloudfront_function.routing_function`. Anything else is
+   unrelated drift to understand before applying.
+3. Apply. `publish = true` makes the new version live on the existing association;
+   no distribution update or invalidation is required. The synthetic 404 is
+   generated by the viewer-request function, before the cache, so CloudFront never
+   stored it and there is nothing to invalidate — a browser may hold it for the
+   sixty seconds its `cache-control` allows, no longer.
+4. Fetch each changed route and expect `200`.
+
+CloudFront rejects a function larger than 10 KB, so `make lint-prod-guardrails` holds
+both files under that quota on every PR; an oversized file would fail step 3 and
+leave production on the old version. The design notes for the routing function are in
+[`edge-routing.md`](edge-routing.md).
 
 ### One-time setup
 
@@ -79,7 +160,8 @@ origin with a `{pr}` placeholder — for example
 `https://pr-{pr}.sandbox.example.com` — and `sandbox-creating.yml`'s
 `post-create-smoke` job will run the same negative-path probe against each PR's
 sandbox, plus an advisory `X-Robots-Tag: noindex` check, since a sandbox origin
-must not be indexable.
+must not be indexable. The branded-body check only warns there, because the
+sandbox bucket has no edge function to serve the branded document.
 
 `{pr}` is the only placeholder the job substitutes. The sandbox hostname is
 derived from the branch name by the infra repository's CodePipeline, which this
@@ -163,11 +245,29 @@ that cannot be committed.
 Production serves whatever the pipeline last published, so rolling back means
 publishing a known-good revision again.
 
+**Find the last commit that was deployed.** `make rollback-info` (host-only;
+needs an authenticated `gh` and `jq`) reads the GitHub Deployments API that the
+`production` environment on `deploy.yml` populates and prints the newest
+deployment whose job succeeded — commit, ref, timestamp and the run that
+performed it — skipping any newer deployment whose job failed. It is the only
+per-commit deploy record this repository produces, and it is read-only by
+construction; its exit codes tell the cases apart (`2` no `gh`, `3` not
+authenticated, `4` no successful deployment in the window, `5` API error).
+
+Read the output honestly: "success" means the deploy **job** succeeded, that is,
+the CodePipeline execution was _triggered_ (issue #329, ADR 0001). The job does
+not wait for the pipeline, and the post-deploy smoke skips until
+`PRODUCTION_SITE_URL` is set, so this is the last commit handed to the pipeline,
+not the last commit proved live. Confirm what is actually serving with the
+[manual verification](#manual-verification) commands before treating that commit
+as the good one.
+
 **Preferred — revert on `main`.** Identify the last known-good commit, revert
 the offending commit(s), and push. The push re-triggers `deploy.yml`, which
 redeploys the reverted state and re-runs the smoke test:
 
 ```bash
+make rollback-info
 git revert --no-edit <bad-commit-sha>
 git push origin main
 ```
@@ -175,6 +275,12 @@ git push origin main
 **Alternative — re-run the pipeline.** If the fix is not a code change (for
 example a bad environment variable), re-run `ci-cd-website-prod-pipeline` from
 the AWS CodePipeline console against the last successful source revision.
+
+A rollback has not yet been exercised end to end on production; the first one
+should be recorded here — date, trigger, commits, time to recovery — so the
+procedure is evidence rather than intent (#329). The availability posture,
+including the recovery targets a rollback has to meet, is in
+[`docs/availability.md`](availability.md).
 
 ## Alerting and release audit
 
@@ -192,6 +298,34 @@ or calls a local `./.github/actions/**` composite action — the gate cannot see
 inside a composite, so it assumes the worst rather than treating it as invisible.
 **Renaming this workflow requires updating that list in the same commit.**
 
+Between deploys, the scheduled synthetic check in `uptime-check.yml` watches the live
+site and files an `uptime-alert` issue — see the [monitoring runbook](runbooks/monitoring.md)
+and the [incident response runbook](runbooks/incident-response.md).
+
+## Build traceability
+
+`make build-out` writes `out/version.json` — `{"version", "commit", "builtAt"}` — so a
+deployed bundle can be tied back to the commit and package version that produced it; it
+is servable at `/version.json` (added to `scripts/cloudfront_routing.js`'s
+`ALLOWED_FILES` for that reason). `builtAt` is read from the wall clock at build time —
+deliberately, since this site has a live incident class where production keeps serving a
+months-old build, and knowing when a bundle was built is diagnostic information the commit
+alone does not give. That also makes two builds of the same commit produce different
+`version.json` bytes, so the build is provenance-tracked, not byte-reproducible. Separately,
+[`.github/workflows/release-provenance.yml`](../.github/workflows/release-provenance.yml)
+rebuilds `out/` on every push to `main` and attests it with
+`actions/attest-build-provenance`:
+
+```bash
+gh attestation verify website-out-<sha>.tar.gz --owner VilnaCRM-Org --repo website
+```
+
+This proves GitHub Actions built that specific archive from that commit — **not** that
+the build is byte-reproducible, and **not** that the exact bytes CodePipeline published
+to `vilnacrm.com` match it, since CodePipeline builds the production artifact
+independently, in AWS (see [ADR 0010](adr/0010-build-and-release-provenance.md) for the
+full scope and what remains open — CodePipeline execution polling — and why).
+
 ## Manual verification
 
 To check production by hand at any time (replace the host with the value of
@@ -206,4 +340,7 @@ curl -fsSI https://vilnacrm.com/ | grep -Ei 'frame-options|frame-ancestors'
 # allow-list must return the site 404 rather than an S3 error document.
 curl -fsS https://vilnacrm.com/.well-known/security.txt | head -n 3
 curl -s -o /dev/null -w '%{http_code}\n' https://vilnacrm.com/secret.json
+
+# Ties the live site to the commit and version that built it.
+curl -fsS https://vilnacrm.com/version.json
 ```

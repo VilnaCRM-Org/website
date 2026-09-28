@@ -19,6 +19,24 @@ justified a decision still holds.
   parallel. _Accepted._
 - [ADR 0004](0004-complexity-gate.md) — gate code complexity with rust-code-analysis, and
   never lower a threshold. _Accepted._
+- [ADR 0005](0005-no-comments-no-inline-styles.md) — production source carries no
+  comments and no inline styles; rationale lives in docs. _Accepted._
+- [ADR 0006](0006-route-scoped-locale.md) — the locale is a function of the route, and
+  the English landing lives under a static `/en` prefix. _Accepted._
+- [ADR 0007](0007-release-automation-and-tag-invariant.md) — the release lane keeps its
+  orphan tags and enforces a version invariant before it writes. _Accepted; push
+  atomicity amended by ADR 0011._
+- [ADR 0008](0008-light-only-theme.md) — the site ships one light colour scheme and does
+  not follow `prefers-color-scheme`. _Accepted._
+- [ADR 0009](0009-consolidated-error-boundary-and-observability.md) — one error
+  boundary, one ErrorLink-only Apollo reporting path, and Sentry release/environment
+  tags, replacing three competing proposals. _Accepted._
+- [ADR 0010](0010-build-and-release-provenance.md) — `out/version.json` ties a deployed
+  bundle to its commit, and a same-commit GitHub Actions attestation records what was
+  built; CodePipeline execution polling stays open. _Accepted._
+- [ADR 0011](0011-atomic-release-push.md) — the release lane pushes its commit and tag in
+  one atomic push, after checking the release commit changes only the version files.
+  _Accepted._
 
 The template for a new record is [`0000-template.md`](0000-template.md).
 
@@ -61,8 +79,12 @@ edited afterwards except to change its status.
 
 - [Deployment and rollback runbook](../deployment-runbook.md) — the operational detail
   behind ADR 0001.
+- [Availability posture](../availability.md) — the topology, failure modes and recovery
+  targets ADR 0001 implies.
 - [Security headers](../security-headers.md) — why the CloudFront edge is the only
   enforcement point under a static export.
+- [CDN cache strategy](../cdn-cache-strategy.md) — the cache classes the export
+  produces and the `cache-control` contract the pipeline has to meet.
 - The image, font, and transfer-size sustainability policy lives in the
   [frontend performance and accessibility skill][perf-skill], which cites ADR 0001 as
   the delivery model its budgets exist inside. ADR 0001 itself does not reference the

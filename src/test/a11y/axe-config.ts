@@ -120,7 +120,7 @@ export const A11Y_EXCEPTIONS: readonly A11yException[] = [
     ruleId: 'color-contrast',
     scope: EXCEPTION_SCOPE_ANY,
     layer: 'route',
-    routes: ['/', '/swagger', '/en/docs/api', '/offline'],
+    routes: ['/', '/en', '/swagger', '/en/docs/api', '/offline'],
     reason:
       'The brand palette fails SC 1.4.3 at ten distinct token pairs (measured in #423). ' +
       'Fixing it changes shared design tokens and regenerates every visual baseline, ' +
@@ -129,55 +129,10 @@ export const A11Y_EXCEPTIONS: readonly A11yException[] = [
       '/offline was added in #338 and measured on CI: every node it reports is the ' +
       'shared chrome _app.tsx wraps around every page (.MuiButton-contained and the ' +
       'footer link pairs), i.e. the same debt already waived above, not anything the ' +
-      'page itself introduces — its own control was fixed to 6.96:1 rather than waived.',
+      'page itself introduces — its own control was fixed to 6.96:1 rather than waived. ' +
+      '/en is the landing DOM of / rendered from the English bundle — the same nodes, ' +
+      'the same token pairs, no node of its own — so it carries the same #423 debt.',
     trackingUrl: 'https://github.com/VilnaCRM-Org/website/issues/423',
-  },
-  {
-    ruleId: 'select-name',
-    scope: '#servers',
-    layer: 'route',
-    routes: ['/swagger'],
-    reason:
-      'The servers dropdown is rendered by third-party swagger-ui-react, so there is no ' +
-      'local element to label; tracked in #424. Scoped to that one selector, so the same ' +
-      'rule still fails on every other control.',
-    trackingUrl: 'https://github.com/VilnaCRM-Org/website/issues/424',
-  },
-  {
-    ruleId: 'button-name',
-    scope: '.close-modal',
-    layer: 'route',
-    routes: ['/swagger'],
-    reason:
-      "swagger-ui-react's authorize dialog closes with an icon-only button whose only child " +
-      'is an aria-hidden SVG, so it exposes no accessible name (SC 4.1.2). Third-party ' +
-      'markup with no prop to name it; tracked in #433. Scoped to that one selector, so an ' +
-      'unnamed button anywhere else — including our own — still fails the gate.',
-    trackingUrl: 'https://github.com/VilnaCRM-Org/website/issues/433',
-  },
-  {
-    ruleId: 'label-content-name-mismatch',
-    scope: 'button[aria-label="Apply given OAuth2 credentials"]',
-    layer: 'route',
-    routes: ['/swagger'],
-    reason:
-      'swagger-ui-react labels its authorize submit button "Apply given OAuth2 credentials" ' +
-      'while it reads "Authorize", so speech input cannot activate it by its visible label ' +
-      '(SC 2.5.3). Third-party markup; tracked in #433. Scoped to that exact button.',
-    trackingUrl: 'https://github.com/VilnaCRM-Org/website/issues/433',
-  },
-  {
-    ruleId: 'td-has-header',
-    scope: '#get_api_users_responses',
-    layer: 'route',
-    routes: ['/swagger'],
-    reason:
-      'swagger-ui-react builds its responses table header from <td class="col_header"> ' +
-      'instead of <th>, so no data cell has an associated header (SC 1.3.1). Third-party ' +
-      'markup; tracked in #433. Scoped to the one operation the interaction scan expands — ' +
-      'expanding another operation fails closed and needs its own reviewed entry, which is ' +
-      'the intended behaviour rather than a blanket waiver on the rule.',
-    trackingUrl: 'https://github.com/VilnaCRM-Org/website/issues/433',
   },
 ];
 

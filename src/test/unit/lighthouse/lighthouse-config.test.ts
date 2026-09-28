@@ -54,6 +54,9 @@ type Budgets = {
   tbt: number;
   cls: number;
   scriptBytes: number;
+  stylesheetBytes: number;
+  fontBytes: number;
+  imageBytes: number;
   totalBytes: number;
 };
 
@@ -69,18 +72,24 @@ const EXPECTED: Record<ConfigName, { home: Budgets; swagger: Budgets }> = {
       tbt: 150,
       cls: 0.05,
       scriptBytes: 750000,
+      stylesheetBytes: 45000,
+      fontBytes: 500000,
+      imageBytes: 320000,
       totalBytes: 1550000,
     },
     swagger: {
       performance: 0.85,
-      accessibility: 0.89,
+      accessibility: 0.9,
       bestPractices: 0.9,
       seo: 0.85,
       lcp: 3000,
       tbt: 350,
       cls: 0.05,
       scriptBytes: 1050000,
-      totalBytes: 1450000,
+      stylesheetBytes: 45000,
+      fontBytes: 500000,
+      imageBytes: 15000,
+      totalBytes: 1480000,
     },
   },
   mobile: {
@@ -93,21 +102,37 @@ const EXPECTED: Record<ConfigName, { home: Budgets; swagger: Budgets }> = {
       tbt: 1800,
       cls: 0.5,
       scriptBytes: 750000,
+      stylesheetBytes: 45000,
+      fontBytes: 500000,
+      imageBytes: 220000,
       totalBytes: 1550000,
     },
     swagger: {
-      performance: 0.45,
+      performance: 0.4,
       accessibility: 0.9,
       bestPractices: 0.9,
       seo: 0.9,
-      lcp: 12000,
-      tbt: 2200,
+      lcp: 14000,
+      tbt: 3000,
       cls: 0.5,
       scriptBytes: 1050000,
-      totalBytes: 1450000,
+      stylesheetBytes: 45000,
+      fontBytes: 500000,
+      imageBytes: 15000,
+      totalBytes: 1480000,
     },
   },
 };
+
+// Lighthouse's ResourceSummary type ids, so a misspelt key cannot hide in both tables.
+const BUDGETED_RESOURCE_KEYS = ['script', 'stylesheet', 'font', 'image', 'total'].map(
+  type => `resource-summary:${type}:size`
+);
+
+// Every audited page loads all nine shipped faces (CI runs 35945072114, 36034847382,
+// 36038654988); the smallest, Golos Text Regular, transfers 25,508 B.
+const MEASURED_FONT_BYTES = 474662;
+const SMALLEST_FONT_FACE_BYTES = 25508;
 
 const MEDIAN = { aggregationMethod: 'median-run' };
 const floor = (v: number): Assertion => ['error', { minScore: v, ...MEDIAN }];
@@ -123,6 +148,9 @@ function expectedAssertions(b: Budgets): Record<string, Assertion> {
     'total-blocking-time': ceiling(b.tbt),
     'cumulative-layout-shift': ceiling(b.cls),
     'resource-summary:script:size': ceiling(b.scriptBytes),
+    'resource-summary:stylesheet:size': ceiling(b.stylesheetBytes),
+    'resource-summary:font:size': ceiling(b.fontBytes),
+    'resource-summary:image:size': ceiling(b.imageBytes),
     'resource-summary:total:size': ceiling(b.totalBytes),
   };
 }
@@ -161,6 +189,25 @@ describe('lighthouse config', () => {
     expect(entryFor(config, SWAGGER_URL).assertions).toEqual(
       expectedAssertions(EXPECTED[name].swagger)
     );
+  });
+
+  it.each(configs)(
+    '%s budgets script, stylesheet, font, image and total bytes on every page',
+    (_name, config) => {
+      matrixOf(config).forEach(entry => {
+        const budgeted = Object.keys(entry.assertions).filter(key =>
+          key.startsWith('resource-summary:')
+        );
+        expect(budgeted.sort()).toEqual([...BUDGETED_RESOURCE_KEYS].sort());
+      });
+    }
+  );
+
+  it.each(configs)('%s font budget fits the shipped faces but not one more', name => {
+    [EXPECTED[name].home, EXPECTED[name].swagger].forEach(page => {
+      expect(page.fontBytes).toBeGreaterThanOrEqual(MEASURED_FONT_BYTES);
+      expect(page.fontBytes).toBeLessThan(MEASURED_FONT_BYTES + SMALLEST_FONT_FACE_BYTES);
+    });
   });
 
   it('keeps desktop performance floors at or above 0.85', () => {

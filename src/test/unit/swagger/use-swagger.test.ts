@@ -134,6 +134,57 @@ describe('useSwagger', () => {
     });
   });
 
+  test('drops the previous schema and reports loading while a new url is fetched', async () => {
+    const deferred: DeferredPromise<never> = createDeferredPromise<never>();
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async (): Promise<SwaggerSchema> => mockSwaggerSchema,
+      })
+      .mockReturnValueOnce(deferred.promise);
+
+    const { result, rerender } = renderHook(
+      ({ schemaUrl }: { schemaUrl: string }) => useSwagger(schemaUrl),
+      { initialProps: { schemaUrl: '/swagger-schema.json' } }
+    );
+    await waitFor(() => {
+      expect(result.current.swaggerContent).toEqual(mockSwaggerSchema);
+    });
+
+    rerender({ schemaUrl: '/swagger-schema-v2.json' });
+
+    // The previous document must not stay on screen as if it were the new one.
+    expect(result.current.swaggerContent).toBeNull();
+    expect(result.current.error).toBeNull();
+    expect(result.current.loading).toBe(true);
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
+  test('a failure on the new url reports the error without the previous schema', async () => {
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async (): Promise<SwaggerSchema> => mockSwaggerSchema,
+      })
+      .mockRejectedValueOnce(new Error('Network error'));
+
+    const { result, rerender } = renderHook(
+      ({ schemaUrl }: { schemaUrl: string }) => useSwagger(schemaUrl),
+      { initialProps: { schemaUrl: '/swagger-schema.json' } }
+    );
+    await waitFor(() => {
+      expect(result.current.swaggerContent).toEqual(mockSwaggerSchema);
+    });
+
+    rerender({ schemaUrl: '/swagger-schema-v2.json' });
+
+    await waitFor(() => {
+      expect(result.current.error?.message).toBe('Network error');
+    });
+    expect(result.current.swaggerContent).toBeNull();
+    expect(result.current.loading).toBe(false);
+  });
+
   test('handles fetch error when response is not ok', async () => {
     const errorMessage: string = 'Failed to fetch swagger schema – 404 Not Found';
     mockFetch.mockResolvedValueOnce({
@@ -235,6 +286,102 @@ describe('useSwagger', () => {
 
     expect(result.current.swaggerContent).toBeNull();
     expect(result.current.error).toBeNull();
+    expect(result.current.loading).toBe(true);
+  });
+
+  test('reports loading only while neither content nor an error has arrived', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async (): Promise<SwaggerSchema> => mockSwaggerSchema,
+    });
+
+    const { result } = renderHook(() => useSwagger());
+
+    expect(result.current.loading).toBe(true);
+    await waitFor(() => {
+      expect(result.current.swaggerContent).toEqual(mockSwaggerSchema);
+    });
+    expect(result.current.loading).toBe(false);
+  });
+
+  test('stops loading once the fetch fails', async () => {
+    mockFetch.mockRejectedValueOnce(new Error('Network error'));
+
+    const { result } = renderHook(() => useSwagger());
+
+    await waitFor(() => {
+      expect(result.current.error).toBeInstanceOf(Error);
+    });
+    expect(result.current.loading).toBe(false);
+  });
+
+  test('retry clears the error, re-fetches the same url and resolves', async () => {
+    mockFetch.mockRejectedValueOnce(new Error('Network error')).mockResolvedValueOnce({
+      ok: true,
+      json: async (): Promise<SwaggerSchema> => mockSwaggerSchema,
+    });
+
+    const { result } = renderHook(() => useSwagger());
+
+    await waitFor(() => {
+      expect(result.current.error).toBeInstanceOf(Error);
+    });
+
+    act(() => {
+      result.current.retry();
+    });
+
+    expect(result.current.error).toBeNull();
+    expect(result.current.loading).toBe(true);
+    await waitFor(() => {
+      expect(result.current.swaggerContent).toEqual(mockSwaggerSchema);
+    });
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    expect(mockFetch).toHaveBeenNthCalledWith(2, '/swagger-schema.json', {
+      signal: 'mock-signal',
+    });
+    expect(result.current.loading).toBe(false);
+  });
+
+  test('every retry issues a new request, not only the first', async () => {
+    mockFetch
+      .mockRejectedValueOnce(new Error('first'))
+      .mockRejectedValueOnce(new Error('second'))
+      .mockRejectedValueOnce(new Error('third'));
+
+    const { result } = renderHook(() => useSwagger());
+
+    await waitFor(() => {
+      expect(result.current.error?.message).toBe('first');
+    });
+    act(() => {
+      result.current.retry();
+    });
+    await waitFor(() => {
+      expect(result.current.error?.message).toBe('second');
+    });
+    act(() => {
+      result.current.retry();
+    });
+    await waitFor(() => {
+      expect(result.current.error?.message).toBe('third');
+    });
+
+    expect(mockFetch).toHaveBeenCalledTimes(3);
+  });
+
+  test('does not refetch on a plain rerender, only on retry', async () => {
+    mockFetch.mockRejectedValueOnce(new Error('Network error'));
+
+    const { result, rerender } = renderHook(() => useSwagger());
+
+    await waitFor(() => {
+      expect(result.current.error).toBeInstanceOf(Error);
+    });
+    rerender();
+
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(result.current.error).toBeInstanceOf(Error);
   });
 
   test('handles empty response', async () => {

@@ -19,7 +19,9 @@ type GraphqlModule = {
 
 describe('graphql schema fetcher', () => {
   const version: string = 'v2.6.0';
-  const expectedUrl: string = `https://raw.githubusercontent.com/VilnaCRM-Org/user-service/${version}/.github/graphql-spec/spec`;
+  const expectedUrl: string =
+    `https://raw.githubusercontent.com/VilnaCRM-Org/user-service/${version}` +
+    '/.github/graphql-spec/spec';
   const sdl: string = 'type Query { healthCheck(id: ID!): HealthCheck }';
   const outputPath: string = './contracts/user-service/schema.graphql';
 

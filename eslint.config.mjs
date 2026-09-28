@@ -472,6 +472,39 @@ const airbnbReactRules = {
 // Keep in step with the `react` version in package.json.
 const REACT_VERSION = '19.2';
 
+// Inline plugin for the production-source comment ban (ADR 0005). It is defined
+// here rather than imported from `scripts/` because tools that copy this config
+// into a cache directory (qlty, see `tsconfigRootDir` below) cannot resolve a
+// relative import from it. Exported for the unit test that drives it directly.
+export const sourceCommentsPlugin = {
+  meta: { name: 'vilnacrm', version: '1.0.0' },
+  rules: {
+    'no-comments': {
+      meta: {
+        type: 'problem',
+        docs: {
+          description:
+            'Disallow comments in production source; rationale lives in docs/, an ADR, the spec that pins the behaviour, or the commit message.',
+        },
+        schema: [],
+        messages: {
+          noComments:
+            'Comments are not allowed in production source (docs/adr/0005). Move the rationale to docs/, an ADR, the spec that pins the behaviour, or the commit message, and delete the comment.',
+        },
+      },
+      create(context) {
+        return {
+          Program() {
+            context.sourceCode.getAllComments().forEach(comment => {
+              context.report({ loc: comment.loc, messageId: 'noComments' });
+            });
+          },
+        };
+      },
+    },
+  },
+};
+
 export default [
   nextRecommended,
   ...storybook.configs['flat/recommended'],
@@ -785,18 +818,35 @@ export default [
   },
 
   {
-    // Typed config guard (#328): every environment-variable read under src/ and
-    // pages/ must go through the validated `src/config/env.ts` module. The
-    // config module itself, tests and stories are exempt via `ignores` (a
-    // files-scoped override, never disable comments). Declared as the last
-    // top-level block so it wins under sandboxed eslint runs (qlty/CI) that only
-    // apply top-level flat config, and so it overrides the project-wide
-    // `no-restricted-syntax: 'off'` for these files.
+    // Production-source guards, declared as one late top-level block so they win
+    // under sandboxed eslint runs (qlty/CI) that only apply top-level flat config,
+    // and so they override the project-wide `no-restricted-syntax: 'off'`. Tests
+    // and stories are exempt via `ignores` (a files-scoped override, never
+    // disable comments).
+    //
+    // - Typed config guard (#328): every environment-variable read under src/
+    //   and pages/ goes through the validated `src/config/env.ts` module, which
+    //   is the one exempt file.
+    // - Inline styles (PR #467 review, ADR 0005): an object literal anywhere
+    //   inside a `sx` or `style` attribute is a style declared in render. Styles
+    //   live in a sibling `styles.ts` and are referenced (`sx={styles.title}`,
+    //   `sx={[styles.a, styles.b]}`); the descendant selector also catches an
+    //   inline object inside an array or a theme callback.
     files: ['src/**/*.{ts,tsx,js,jsx}', 'pages/**/*.{ts,tsx,js,jsx}'],
     ignores: ['src/config/env.ts', 'src/test/**', '**/*.stories.@(js|jsx|ts|tsx)'],
     rules: {
       'no-restricted-syntax': [
         'error',
+        {
+          selector: "JSXAttribute[name.name='sx'] ObjectExpression",
+          message:
+            'Inline `sx` styles are forbidden in components: declare the style in the sibling styles.ts and reference it (`sx={styles.name}`).',
+        },
+        {
+          selector: "JSXAttribute[name.name='style'] ObjectExpression",
+          message:
+            'Inline `style` objects are forbidden in components: declare the style in the sibling styles.ts and reference it (`style={styles.name}`).',
+        },
         {
           // Dotted access: process.env.X (and `const { X } = process.env`).
           selector: "MemberExpression[object.name='process'][property.name='env']",
@@ -827,6 +877,23 @@ export default [
     files: ['scripts/**/*.{js,cjs,mjs,ts}'],
     rules: {
       'no-console': 'off',
+    },
+  },
+
+  {
+    // No comments in production source (PR #467 review, ADR 0005). A comment is
+    // prose the compiler never checks, so it goes stale silently; the rationale
+    // it would carry belongs in docs/ (an ADR for a decision, a design note for
+    // a mechanism), in the spec that pins the behaviour, or in the commit
+    // message. Scoped to src/ and pages/ — tests, stories, scripts and the root
+    // configs keep theirs — and enforced by an AST walk over every comment token
+    // (line, block, JSDoc and JSX alike), so there is no spelling that slips
+    // past it. Declared at the top level so sandboxed runs apply it too.
+    files: ['src/**/*.{ts,tsx,js,jsx}', 'pages/**/*.{ts,tsx,js,jsx}'],
+    ignores: ['src/test/**', '**/*.stories.@(js|jsx|ts|tsx)'],
+    plugins: { vilnacrm: sourceCommentsPlugin },
+    rules: {
+      'vilnacrm/no-comments': 'error',
     },
   },
 

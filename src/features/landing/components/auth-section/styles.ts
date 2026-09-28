@@ -12,6 +12,7 @@ export default {
 
   content: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     [`@media (max-width: 1130px)`]: {
       flexDirection: 'column',
       alignItems: 'center',

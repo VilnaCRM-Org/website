@@ -1,9 +1,10 @@
 import { render } from '@testing-library/react';
+import { t } from 'i18next';
 
 import DeviceImage from '../../features/landing/components/about-us/device-image/device-image';
 
 const notchContainerClass: string = '.MuiBox-root';
-const mainImageAltText: string = 'Main image';
+const mainImageAltText: string = t('about_vilna.image_alt');
 
 describe('DeviceImage component', () => {
   it('renders without crashing', () => {

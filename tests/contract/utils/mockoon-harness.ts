@@ -2,11 +2,12 @@
  * Boots the mock side of the parity pair, in-process.
  *
  * `Mockoon.Dockerfile` runs `mockoon-cli start --data <openapi.json>`. The CLI
- * is a thin oclif wrapper over `@mockoon/commons-server`: it calls the same
- * `OpenAPIConverter` to turn the OpenAPI document into a Mockoon environment
- * and the same `MockoonServer` to serve it. Driving those two classes directly
- * runs the identical conversion and serving code without Docker, so the parity
- * gate needs nothing beyond `bun install` — while
+ * is a thin oclif wrapper over the Mockoon libraries: it reads the document and
+ * hands its raw text to `OpenApiConverter` (exported by `@mockoon/commons`, no
+ * longer by `@mockoon/commons-server`, at the 9.7.0 pin) to build a Mockoon
+ * environment, then serves it with `MockoonServer`. Driving those two classes
+ * directly runs the identical conversion and serving code without Docker, so
+ * the parity gate needs nothing beyond `bun install` — while
  * `mockoon-pin-parity.contract.test.ts` keeps the library version locked to the
  * CLI version the image installs, so "identical" stays true.
  *
@@ -14,10 +15,12 @@
  * strings come back empty and booleans are randomised on every boot. That is
  * why the parity rules assert shape, never values.
  */
+import { readFile } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import type { AddressInfo } from 'node:net';
 
-import { MockoonServer, OpenAPIConverter } from '@mockoon/commons-server';
+import { OpenApiConverter } from '@mockoon/commons';
+import { MockoonServer } from '@mockoon/commons-server';
 
 import {
   exampleRequestBody,
@@ -68,7 +71,8 @@ async function reservePort(): Promise<number> {
 }
 
 async function listen(dataFilePath: string, port: number): Promise<MockoonServer> {
-  const environment = await new OpenAPIConverter().convertFromOpenAPI(dataFilePath, port);
+  const spec = await readFile(dataFilePath, 'utf8');
+  const environment = await new OpenApiConverter().convertFromOpenAPI(spec, port);
 
   if (environment === null) {
     throw new Error(`Mockoon could not convert ${dataFilePath} into an environment`);

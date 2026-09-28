@@ -1,7 +1,6 @@
 import { BREAKPOINTS } from './constants';
 
 export default {
-  // error notification
   contentBoxError: {
     height: '100%',
     display: 'flex',
@@ -70,6 +69,10 @@ export default {
       height: '62px',
     },
   },
+  errorCloseButton: {
+    marginTop: '0.5rem',
+  },
+
   errorButtonMessage: {
     [`@media (min-width: ${BREAKPOINTS.SM})`]: {
       fontWeight: 600,

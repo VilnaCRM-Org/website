@@ -23,6 +23,9 @@ const median = { aggregationMethod: 'median-run' };
  * @param {number} budgets.tbt           total-blocking-time ceiling (ms)
  * @param {number} budgets.cls           cumulative-layout-shift ceiling (unitless)
  * @param {number} budgets.scriptBytes   script transfer-size budget (bytes)
+ * @param {number} budgets.stylesheetBytes stylesheet transfer-size budget (bytes)
+ * @param {number} budgets.fontBytes     font transfer-size budget (bytes)
+ * @param {number} budgets.imageBytes    image transfer-size budget (bytes)
  * @param {number} budgets.totalBytes    total transfer-size budget (bytes)
  * @param {number} [budgets.bestPractices=0.9] category best-practices floor
  */
@@ -34,6 +37,9 @@ function pageBudgets({
   tbt,
   cls,
   scriptBytes,
+  stylesheetBytes,
+  fontBytes,
+  imageBytes,
   totalBytes,
   bestPractices = 0.9,
 }) {
@@ -48,6 +54,9 @@ function pageBudgets({
     'total-blocking-time': ['error', { maxNumericValue: tbt, ...median }],
     'cumulative-layout-shift': ['error', { maxNumericValue: cls, ...median }],
     'resource-summary:script:size': ['error', { maxNumericValue: scriptBytes, ...median }],
+    'resource-summary:stylesheet:size': ['error', { maxNumericValue: stylesheetBytes, ...median }],
+    'resource-summary:font:size': ['error', { maxNumericValue: fontBytes, ...median }],
+    'resource-summary:image:size': ['error', { maxNumericValue: imageBytes, ...median }],
     'resource-summary:total:size': ['error', { maxNumericValue: totalBytes, ...median }],
   };
 }
@@ -59,15 +68,38 @@ function pageBudgets({
 const HOMEPAGE_PATTERN = '://[^/]+/?$';
 const SWAGGER_PATTERN = '.*swagger.*';
 
+// Transfer-size budgets that do not depend on the form factor: script, stylesheet,
+// font and total bytes are the same build on both, so one number serves both configs.
+// The desktop homepage fetches its hero at two widths and the mobile one at one, so
+// the homepage image budget is the one byte budget each config supplies itself.
+const BYTE_BUDGETS = {
+  homepage: { scriptBytes: 750000, stylesheetBytes: 45000, fontBytes: 500000, totalBytes: 1550000 },
+  swagger: {
+    scriptBytes: 1050000,
+    stylesheetBytes: 45000,
+    fontBytes: 500000,
+    imageBytes: 15000,
+    totalBytes: 1480000,
+  },
+};
+
 /**
  * Assemble the assertMatrix (used alone — LHCI rejects assertMatrix combined
- * with a shared `assertions` block).
+ * with a shared `assertions` block). Each page's form-factor budgets are merged
+ * over BYTE_BUDGETS, so a config supplies scores, timings and any byte budget
+ * that differs by form factor.
  */
 function assertMatrix({ homepage, swagger }) {
   return [
-    { matchingUrlPattern: HOMEPAGE_PATTERN, assertions: pageBudgets(homepage) },
-    { matchingUrlPattern: SWAGGER_PATTERN, assertions: pageBudgets(swagger) },
+    {
+      matchingUrlPattern: HOMEPAGE_PATTERN,
+      assertions: pageBudgets({ ...BYTE_BUDGETS.homepage, ...homepage }),
+    },
+    {
+      matchingUrlPattern: SWAGGER_PATTERN,
+      assertions: pageBudgets({ ...BYTE_BUDGETS.swagger, ...swagger }),
+    },
   ];
 }
 
-module.exports = { assertMatrix, pageBudgets, HOMEPAGE_PATTERN, SWAGGER_PATTERN };
+module.exports = { assertMatrix, pageBudgets, BYTE_BUDGETS, HOMEPAGE_PATTERN, SWAGGER_PATTERN };

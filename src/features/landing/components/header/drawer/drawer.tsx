@@ -16,13 +16,19 @@ import NavList from '../nav-list/nav-list';
 import styles from './styles';
 import { VilnaCRMEmail } from './vilna-crm-email';
 
-function DrawerHeader({ onClose }: { onClose: () => void }): React.ReactElement {
+function DrawerHeader({
+  onClose,
+  landingPath,
+}: {
+  onClose: () => void;
+  landingPath: string;
+}): React.ReactElement {
   const { t } = useTranslation();
 
   return (
-    <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
+    <Stack direction="row" sx={styles.header}>
       <Link
-        href="/"
+        href={landingPath}
         component={NextLink}
         sx={styles.logoLink}
         aria-label={t('header.logo_alt') as string}
@@ -36,7 +42,7 @@ function DrawerHeader({ onClose }: { onClose: () => void }): React.ReactElement 
         sx={styles.button}
         onClick={onClose}
       >
-        <Image src={CloseImage} alt={t('header.drawer.image_alt.exit')} width={24} height={24} />
+        <Image src={CloseImage} alt="" width={24} height={24} />
       </Button>
     </Stack>
   );
@@ -46,15 +52,7 @@ function DrawerActions({ onClose }: { onClose: () => void }): React.ReactElement
   const { t } = useTranslation();
 
   return (
-    <Stack
-      direction="row"
-      sx={{
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '0.563rem',
-        mt: '0.75rem',
-      }}
-    >
+    <Stack direction="row" sx={styles.actions}>
       <UiButton fullWidth variant="outlined" size="small" disabled>
         {t('header.actions.log_in')}
       </UiButton>
@@ -68,16 +66,15 @@ function DrawerActions({ onClose }: { onClose: () => void }): React.ReactElement
 function DrawerContent({
   onClose,
   handleLinkClick,
+  landingPath,
 }: {
   onClose: () => void;
   handleLinkClick: (link: string) => void;
+  landingPath: string;
 }): React.ReactElement {
   return (
-    <Box
-      role="presentation"
-      sx={[styles.drawerContent, { width: '23.4375rem', textAlign: 'center' }]}
-    >
-      <DrawerHeader onClose={onClose} />
+    <Box role="presentation" sx={styles.drawerContent}>
+      <DrawerHeader onClose={onClose} landingPath={landingPath} />
       <DrawerActions onClose={onClose} />
       <NavList
         navItems={drawerNavList}
@@ -92,34 +89,26 @@ function DrawerContent({
   );
 }
 
-/**
- * The mobile navigation drawer.
- *
- * Deliberately passes no `role` to `Drawer`. `role="menu"` used to be set here, and
- * MUI forwards it to the modal root — the wrapper holding the backdrop and the
- * paper. ARIA gives `menu` required owned elements (`menuitem` and friends), so a
- * backdrop plus a `[role=dialog]` made that root fail axe's
- * `aria-required-children` at critical impact (SC 1.3.1), found by the
- * interaction-state scan added in #369.
- *
- * Neither alternative works: `menuitem` on the nav links would override their
- * `link` role and oblige the full APG menu keyboard model (arrows, Home/End,
- * type-ahead), and moving `role="menu"` onto the inner `<nav>` would destroy the
- * navigation landmark. This is site navigation inside a modal dialog, which is
- * exactly what MUI already exposes: `role="dialog"`, `aria-modal="true"` and
- * `tabIndex={-1}` on the paper slot whenever `variant` is `temporary` (its
- * default), with a real `<nav>` list inside.
- *
- * Locate the open drawer by the `dialog` role — four tests do, in jsdom and in all
- * three browsers, so an MUI upgrade that stopped emitting it fails loudly instead
- * of silently losing dialog semantics. Naming that dialog is tracked in #435, and
- * the name has to go on the paper slot: props land on the modal root, which is
- * `role="presentation"`, where `aria-label` is prohibited.
- */
+function DrawerToggle({ onOpen }: { onOpen: () => void }): React.ReactElement {
+  const { t } = useTranslation();
+
+  return (
+    <Button
+      aria-label={t('header.drawer.button_aria_labels.bars')}
+      sx={styles.button}
+      onClick={onOpen}
+    >
+      <Image src={Bars} alt="" width={24} height={24} />
+    </Button>
+  );
+}
+
 function CustomDrawer({
   handleLinkClick,
+  landingPath,
 }: {
   handleLinkClick: (link: string) => void;
+  landingPath: string;
 }): React.ReactElement {
   const { t } = useTranslation();
   const [isDrawerOpen, setIsDrawerOpen] = React.useState(false);
@@ -129,16 +118,19 @@ function CustomDrawer({
 
   return (
     <Box sx={styles.wrapper}>
-      <Button
-        aria-label={t('header.drawer.button_aria_labels.bars')}
-        sx={styles.button}
-        onClick={handleOpenDrawer}
+      <DrawerToggle onOpen={handleOpenDrawer} />
+      <Drawer
+        sx={styles.drawer}
+        anchor="right"
+        open={isDrawerOpen}
+        onClose={handleCloseDrawer}
+        slotProps={{ paper: { 'aria-label': t('header.drawer.aria_label') } }}
       >
-        <Image src={Bars} alt={t('header.drawer.image_alt.bars')} width={24} height={24} />
-      </Button>
-      {/* No `role` override — see the note on this component. */}
-      <Drawer sx={styles.drawer} anchor="right" open={isDrawerOpen} onClose={handleCloseDrawer}>
-        <DrawerContent onClose={handleCloseDrawer} handleLinkClick={handleLinkClick} />
+        <DrawerContent
+          onClose={handleCloseDrawer}
+          handleLinkClick={handleLinkClick}
+          landingPath={landingPath}
+        />
       </Drawer>
     </Box>
   );

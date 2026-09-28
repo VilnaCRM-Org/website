@@ -1,0 +1,259 @@
+# Sign-up form hardening
+
+The sign-up form is the only surface on this static site that accepts user input, so a
+handful of its rules are load-bearing rather than incidental. Issues #378 and #382 fixed
+them finding by finding; the landing README summarises the contract, and this note keeps
+the reasoning that used to sit in the source (ADR 0005). Each section names the module
+that carries the rule and the spec that pins it.
+
+## F1 — Transport (`src/config/env.ts`)
+
+The form POSTs a plaintext password to `NEXT_PUBLIC_GRAPHQL_API_URL`. Nothing previously
+required that hop to be encrypted, so a deploy that pointed the variable at a remote
+`http://` host — the repo's own `.env` uses `http://` for every URL — would have leaked
+the password to any on-path attacker with no build-time signal at all.
+
+Cleartext is therefore accepted only for loopback, where there is no network hop to
+intercept and where the dev and Docker stacks genuinely run; remote `http://` fails the
+build. `NEXT_PUBLIC_API_URL` is held to the same rule even though the mutation does not
+use it: it is a Sentry trace-propagation target, so the browser attaches trace headers to
+requests bound for that origin, which is not something to hand to a cleartext remote host
+either. The complementary invariant — that the _committed production_ config is `https`
+and never loopback — is `src/test/unit/prod-env-transport.test.ts`, because `NODE_ENV`
+alone cannot distinguish a production export from a Storybook build. The shape of the
+matching pattern is explained in `docs/extending-the-website.md`.
+
+## F2 — Links that open a new browsing context
+
+`src/shared/externalLinkRel.ts` is the single hardening point. A `target="_blank"` link
+without `rel="noopener"` hands the opened document a live `window.opener` handle back into
+this origin (reverse tabnabbing), and without `rel="noreferrer"` the full referring URL
+leaks to the third-party destination. Modern browsers imply `noopener` for `_blank`, but
+older and embedded webviews do not, and the referrer leak is unconditional — so both
+tokens are set explicitly rather than inherited from browser behaviour. Callers may still
+pass their own `rel`: the required tokens are merged into whatever was provided instead
+of replacing it, so a link can add `nofollow` without silently losing the hardening. HTML
+compares the reserved browsing-context names case-insensitively, so `_BLANK` is hardened
+exactly like `_blank`.
+
+- `src/components/ui-link` always leaves with `rel="noopener noreferrer"` on a `_blank`
+  link, whether or not the caller remembered to pass it — which is why it is deliberately
+  **not** listed in the ESLint `linkComponents` setting for `react/jsx-no-target-blank`:
+  flagging it would only demand redundant markup.
+- `src/components/social-media/social-media-item` renders `item.linkHref`, a free-form
+  string and so the external-link sink most likely to become dynamic; it opens a new tab
+  and therefore always carries the full hardening. Its icon is decorative: the link owns
+  the accessible name through `aria-label`, and a second, differently-worded name on the
+  image would leave assistive tech announcing two names for one control.
+
+## F3 — Telemetry, autofill and the accessibility tree
+
+**Handled-error reporting** (`src/lib/telemetry/report-error.ts`). A failed submission
+used to produce a toast and nothing else — no exception, no counter, no log, since
+`compiler.removeConsole` already strips `console.*` from the production bundle — so
+credential stuffing or enumeration probes against the live mutation were invisible from
+the application side. `reportHandledError` sends the exception plus two **static** tags
+(`feature`, `action`) and nothing derived from the submitted values; `captureException`
+serialises whatever it is given, so the PII contract is that nothing else is ever passed.
+`auth-form/submit-handler.ts` calls it from the submit failure path for the same reason.
+Behind that contract sit the `beforeSend` / `beforeBreadcrumb` scrubbers wired into
+`Sentry.init` (`src/lib/telemetry/scrub-event.ts`, `scrub-breadcrumb.ts`): they drop
+request bodies, cookies and GraphQL variables, strip the query string from request,
+network, navigation and other absolute URLs, strip `fetch`/`xhr` breadcrumb payloads and
+raw console arguments, and replace email-shaped text — such as a server error echoing the
+submitted address — with `[email]`. They are a backstop, not a licence to pass form
+values.
+
+**Session replay is masked** (`pages/_app.tsx`). The only interactive surface is this
+form, so an unmasked replay would record the password field keystroke by keystroke.
+Masking is Sentry's default; pinning `maskAllInputs`, `maskAllText`, `blockAllMedia` and
+`sendDefaultPii: false` means an upstream default change cannot silently start capturing
+credentials. `tracePropagationTargets` drops empty origins, because `''`
+substring-matches every URL and would attach trace headers to all outbound requests.
+
+**Password managers** (`sign-up-fields.tsx`, `src/components/ui-input/types.ts`).
+Browser autofill keys off `name` and `autocomplete` together; without both, a credential
+field is effectively invisible to a password manager and no strong password is ever
+offered. Both password fields use `new-password` — this is account creation, never a
+sign-in.
+
+**ARIA lands on the `<input>`** (`src/components/ui-input`, `ui-text-field-form`). Passed
+as top-level `TextField` props, `aria-*` attributes decorate the wrapping `FormControl`,
+where assistive tech never reads them. Each is emitted only when it carries meaning —
+`aria-required="false"` and an empty `aria-describedby` are noise. `aria-required` is
+emitted instead of the native `required`, which would hand validation to the browser and
+pre-empt the react-hook-form messages the suites assert. The `id` prop was once accepted
+by the type (inherited from `TextFieldProps`) but silently dropped, so every
+`<label htmlFor>` pointed at nothing; an external `aria-describedby` is composed with the
+internally-owned validation-message id rather than replacing it.
+
+**The validation message is a live region** (`ui-text-field-form/index.tsx`). Its
+container is rendered unconditionally: a live region has to exist in the accessibility
+tree before its content changes, otherwise mounting and filling it in the same commit is
+announced inconsistently across screen readers. `aria-live="polite"` rather than
+`role="alert"` keeps blur-triggered validation from interrupting the label of the field
+the user has just moved to. The node is absolutely positioned inside a fixed-height row,
+so an empty one occupies no space. `src/components/ui-typography` forwards props through
+an explicit allow-list, which is why `aria-live` / `aria-atomic` are named there. The
+field also receives `field.name` (not the prop) so the submitted name always tracks the
+registered field, and `field.ref` — react-hook-form's callback ref — so the library can
+move focus to the first invalid input on submit. `required` is accepted either as a
+message/boolean or as a `{ value, message }` object whose `value` can be `false`;
+coercing the object itself would announce every such field as required.
+
+**The form is named by its own localized heading** (`auth-form.tsx`), not a hardcoded
+English identifier screen readers used to announce verbatim.
+
+## F4 — Password policy and confirmation
+
+- **Policy** (`validations/password.ts`): 8–64 characters with at least one digit, one
+  uppercase and one lowercase letter, Unicode-aware so a Cyrillic password such as
+  `Пароль123` satisfies the case rules the same way a Latin one does. Length + digit +
+  uppercase alone accepted `PASSWORD1`; requiring a lowercase letter brings the enforced
+  policy in line with the character classes the tip already advertises.
+- **The policy is stated up front** (`sign-up-fields.tsx`, `visuallyHidden` in
+  `styles.ts`): the tooltip is a pointer-only affordance, so the rules also need a form
+  the keyboard and screen-reader path can reach before the first rejection. The hidden
+  statement is an absolutely positioned, 1px clipped box that takes part in no flex
+  layout, so it adds no gap and moves no pixel in the visual baselines.
+- **Confirm password** (`validations/confirm-password.ts`, `types/authentication/form.ts`)
+  is a client-side typo guard only, never part of the mutation input. Registration is the
+  one place a typo is unrecoverable — the account is created with a password the user
+  never intended and cannot guess afterwards. The rule reads the sibling `Password` value
+  react-hook-form passes as the second `validate` argument, so it stays a pure function of
+  the form values. There is deliberately **no** react-hook-form `deps` link between the
+  two fields: it would `trigger()` the confirmation the moment the password is touched,
+  showing a "required" error on a field the user has not reached yet, which contradicts
+  the form's `onTouched` mode. A mismatch can still never be submitted — `handleSubmit`
+  re-validates every field before calling `onSubmit`.
+- **Card height** (`auth-form/styles.ts`, `notification/styles.success.ts`). The form
+  card clips with `overflow: hidden` + `contain: content` rather than scrolling, so its
+  two `maxHeight` caps are sized against the field count. Both were raised by one input
+  row when the confirm-password field landed — by the row height that actually applies at
+  each breakpoint, which is not the same number: ≤1130px renders a 4.938rem input (see
+  `ui-input/theme.ts`) for a ~123.8px row, while ≤sm falls back to the 4.5rem
+  `inputWrapper` minimum for an 87px row. Sizing both from the mobile row would leave the
+  submit button flush against the card edge on every tablet/laptop width, a band no visual
+  baseline covers. The success notification replaces the card in place, so it has no
+  `maxHeight` at all — `height: 100%` resolves against the form wrapper, which the card
+  sizes. The old `maxHeight: 40.438rem` was paired with a `formContent.minHeight` of the
+  same value, so it matched only while the form was at its minimum height; the extra
+  field made the card taller and left the notification ending short of the section on
+  every viewport wider than `sm`. The per-breakpoint `minHeight` values remain as floors.
+
+## F5 — Anti-automation and the abuse-case threat model (issue #380)
+
+### Threat model
+
+The form fires `createUser` at an unauthenticated GraphQL endpoint, the one business
+flow on the site (OWASP A04:2021, API4:2023, API6:2023). Every control this repository
+can hold is client-side, so the model is written down here to keep that limit visible.
+
+- **Mail-bombing a victim address with confirmation emails** (a script against the
+  API). Authoritative control: the user-service's per-IP / per-email rate limit and
+  coalesced confirmation emails per address. Held here: the honeypot below, and the
+  mutation is never issued while a submission is in flight (the in-flight lock below).
+- **Squatting attacker-chosen addresses before their owners register** (a script
+  against the API). Authoritative control: confirmation before the address is reserved
+  and expiry of unconfirmed accounts. Held here: nothing — the client cannot decide
+  ownership.
+- **Enumerating registered addresses from error text** (a script or a browser).
+  Authoritative control: generic, non-enumerating server responses. Held here:
+  `handleApolloError` renders one generic message and `graphQLErrors[].message` is never
+  echoed.
+- **Driving transactional-email cost through a headless browser.** Authoritative
+  control: the user-service rate limit. Held here: the honeypot, and one in-flight lock
+  shared by submit and retry that drops every submission landing while another is running;
+  the buttons are also disabled while `loading`, which is the visible half of that state.
+- **Credential stuffing.** Not applicable — registration accepts new credentials and
+  verifies none; the password policy (F4) only shapes what can be created.
+
+Scripts that call the API directly bypass every row of the last column; that is why the
+server-side column is marked authoritative and this note is not a substitute for it. The
+sandbox-cost half of #380 (an orphaned AWS environment per branch push) is a CI/CD
+control, held by assertion G of `make lint-prod-guardrails`.
+
+### The honeypot (`auth-form/honeypot-field.tsx`, `auth-form/submit-handler.ts`)
+
+`Referral` is a react-hook-form field that a person never sees and never reaches. Its
+wrapper is `inert`, which removes focus, hit-testing and assistive-technology exposure in
+one attribute (React 19 renders the boolean natively) and is also what keeps browser
+autofill away — Chrome only writes focusable fields. The wrapper is the same 1px clipped
+box as the password-policy statement (F4) rather than `display: none`, which crawlers
+detect and skip. `aria-hidden="true"` and `tabIndex={-1}` on the input back the same
+guarantees on engines without `inert`; `tabindex="-1"` is also what makes `aria-hidden`
+valid — axe's `aria-hidden-focus` accepts a hidden subtree only when nothing in it is
+tabbable. `autoComplete="off"` and a field name that appears in no browser address
+profile and no password-manager identity schema (`Website` and `Company` both do)
+keep a password manager from filling it on a human's behalf. The label is a real
+`<label>` reading "Leave this field empty", so a tool that does surface it still says
+what to do.
+
+The field carries **no validation rule**. A rule would let react-hook-form's
+`shouldFocusError` move focus into the hidden input on submit, where it vanishes for a
+keyboard user and Chromium un-hides the subtree to announce the trap. The check lives at
+the top of `buildSubmitHandler` instead: a submission whose `Referral` is non-empty
+skips the mutation and drives the **same** success path a real submission does — the
+success notification, the form reset. Responding identically is the point; a distinct
+response (an error, a silent no-op) tells a script which of its inputs tripped the
+control. Each trip is reported through `reportHandledError` with the static tag
+`signup-honeypot` and no submitted value, so the false-positive rate is measurable
+rather than assumed. The residual cost is that a person whose extension filled every
+text field, inert or not, sees a success message and receives no email; the accessibility
+review asked for a generic recovery line in the success notification ("if the email has
+not arrived, contact …") to cover that case, and it is left for a copy change with its
+own visual baselines rather than folded into this one.
+
+`src/test/testing-library/AuthForm.test.tsx` pins the field's shape (inert, hidden,
+untabbable, unautofilled, not one of the form's text boxes),
+`AuthLayout.test.tsx` pins that a filled trap never issues the mutation and still
+renders the success notification, and `AuthLayoutTelemetry.test.tsx` pins the tag and
+that the payload carries none of the submitted values. `buildSignupInput` reads the four
+credential fields by name, so the trap's value can never reach the mutation variables.
+
+### The in-flight lock (`auth-form/in-flight-lock.ts`, `auth-form/auth-layout.tsx`)
+
+`disabled={loading}` on the submit and retry buttons cannot stop a duplicate on its own.
+Apollo's `loading` turns true only once the mutation has started, and React applies the
+attribute on a later render. react-hook-form 7.76's `handleSubmit` is not re-entrant
+either: every call re-runs validation and then `onSubmit`. A fast double-click, a repeated
+Enter, `form.requestSubmit()` called twice, or Retry followed by a submit therefore each
+issued its own `createUser` before the button was disabled, and the duplicate could render
+an "already exists" error on top of the first request's success.
+
+`useInFlightHandleSubmit` wraps react-hook-form's `handleSubmit` in `lockSubmission`. The
+form's submit event and `retrySubmit` both go through that wrapped function, so they share
+one lock per form instance, created once through a `useState` initializer. The lock is
+taken synchronously, before react-hook-form runs, and released in `finally`: after a
+validation failure (react-hook-form still focuses the first invalid field), the honeypot
+answer, a success, or a throw from the error path. A submission that finds it held calls
+`preventDefault()` on its event and does nothing else: no notification, no telemetry, no
+focus change. `preventDefault()` is required because without it the browser performs the
+native GET submission, which reloads the page and can put the field values, password
+included, in the URL.
+
+The lock sits outside `handleSubmit(onSubmit)` on purpose. react-hook-form marks a
+submission successful whenever `onSubmit` returns without throwing, and `useFormReset`
+then clears the form (the notification type starts as success). A duplicate ignored inside
+`onSubmit` would therefore wipe the user's entries while the first request is still
+running. `disabled={loading}` stays as the visible state; the lock is what enforces it.
+Like every control in this section it is client-side, so a script calling the API
+directly is untouched by it.
+
+`tests/integration/coverage/auth-section/auth-layout.integration.test.tsx` holds the
+network request open and pins three cases. A double submit sends exactly one request and
+keeps every entry while it is pending. Two Retry clicks and a submit send one retry. A
+settled failure frees the lock for the next submit. `src/test/unit/in-flight-lock.test.ts`
+pins the lock itself: an ignored submit event gets `preventDefault()`, an event-less retry
+is ignored, the lock is released after a rejection and the error is rethrown, and separate
+forms do not share a lock. `AuthLayout.test.tsx` counts the requests `MockLink` receives
+for a double submit, and `AuthLayoutTelemetry.test.tsx` pins that a honeypot submitted
+twice is reported once. A time-based cooldown on Retry after a failure is a separate UX
+decision and is not part of the lock.
+
+## Error copy (`src/features/landing/helpers/handleApolloError.ts`)
+
+Anything the status / `UNAUTHORIZED` mapping does not recognise falls back to a generic
+localized message. Echoing `graphQLErrors[].message` verbatim — as that branch used to —
+turns the sign-up form into an account-enumeration oracle ("user with this email already
+exists") and pipes internal server wording straight into the UI (#378 F2, CWE-209).

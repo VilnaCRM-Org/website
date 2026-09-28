@@ -16,7 +16,6 @@ import ForWhoSection from '@landing/for-who-section/for-who-section';
 
 const forWhoButton: string = t('for_who.button_text');
 const forWhoTitle: string = t('for_who.heading_main');
-const vectorAlt: string = t('for_who.vector_alt');
 
 describe('ForWhoSection integration', () => {
   it('re-exports the section from its barrel', () => {
@@ -39,10 +38,15 @@ describe('ForWhoSection integration', () => {
     expect(queryAllByRole('button', { name: forWhoButton })).toHaveLength(0);
   });
 
-  it('renders decorative images with empty alt text and labelled vector images', () => {
-    const { getAllByAltText } = render(React.createElement(ForWhoSection));
+  it('renders every image as decorative and hidden from assistive technology', () => {
+    const { container, getAllByAltText, queryAllByRole } = render(
+      React.createElement(ForWhoSection)
+    );
 
-    expect(getAllByAltText('')).toHaveLength(9);
-    expect(getAllByAltText(vectorAlt)).toHaveLength(4);
+    expect(getAllByAltText('')).toHaveLength(15);
+    container.querySelectorAll('img').forEach(image => {
+      expect(image).toHaveAttribute('aria-hidden', 'true');
+    });
+    expect(queryAllByRole('img')).toHaveLength(0);
   });
 });

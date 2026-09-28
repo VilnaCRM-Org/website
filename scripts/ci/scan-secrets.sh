@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Scan for committed secrets with gitleaks (issue #353).
 #
-# Two modes, because they answer two different questions and must fail in two
-# different places:
+# Three modes, because they answer three different questions and must fail in
+# three different places:
 #
 #   tree     the checked-out files only (`--no-git`). Cheap, deterministic, and
 #            scoped to what the branch actually ships, so it gates every PR.
@@ -14,6 +14,13 @@
 #            and blocking on it would only teach reviewers to click past a red
 #            check. It runs weekly instead, and a failure routes to the
 #            ci-health alert issue.
+#   logs     a directory of downloaded CI job logs (LOG_DIR), scanned as plain
+#            files (`--no-git`) against the same committed config (#375 F4). A
+#            token fetched at run time is never a registered secret, so GitHub
+#            never masks it; this is the mode that notices one printed by a
+#            debug flag or an erroring step. An unset, missing or EMPTY log
+#            directory is refused: a scan of nothing is a green check that
+#            proves nothing.
 #
 # Like lint-workflows and lint-metrics, this drives a pinned external tool
 # rather than an npm dependency. The gitleaks GitHub Action requires a paid
@@ -56,6 +63,8 @@ fi
 # the default must be a genuinely empty array, not a `:-` fallback.
 scope_args=()
 git_env=()
+log_mount=()
+source_dir=/repo
 
 case "${mode}" in
   tree) scope_args=(--no-git) ;;
@@ -71,8 +80,12 @@ case "${mode}" in
       -e GIT_CONFIG_VALUE_0=/repo
     )
     ;;
+  logs)
+    scope_args=(--no-git)
+    source_dir=/logs
+    ;;
   *)
-    echo "scan-secrets: SECRETS_MODE must be 'tree' or 'history', got '${mode}'" >&2
+    echo "scan-secrets: SECRETS_MODE must be 'tree', 'history' or 'logs', got '${mode}'" >&2
     exit 1
     ;;
 esac
@@ -96,10 +109,36 @@ if [ "${mode}" = "history" ]; then
   fi
 fi
 
+if [ "${mode}" = "logs" ]; then
+  log_dir="${LOG_DIR:-}"
+  if [ -z "${log_dir}" ]; then
+    echo "scan-secrets: SECRETS_MODE=logs needs LOG_DIR, the directory of downloaded job logs" >&2
+    exit 1
+  fi
+  if [ ! -d "${log_dir}" ]; then
+    echo "scan-secrets: LOG_DIR '${log_dir}' is not a directory" >&2
+    exit 1
+  fi
+  # A failed or truncated download leaves the directory empty (or holding only
+  # empty files), and gitleaks reports "no leaks found" over zero bytes -- the
+  # vacuous pass this mode must never produce. Require at least one non-empty
+  # regular file before spending a scan.
+  if [ -z "$(find "${log_dir}" -type f -size +0c -print -quit)" ]; then
+    echo "scan-secrets: LOG_DIR '${log_dir}' holds no non-empty file; refusing to report" \
+      "a clean scan of nothing" >&2
+    exit 1
+  fi
+  # Docker needs an absolute bind source, and read-only is enough: the scan
+  # never writes into the logs it is judging.
+  log_dir="$(cd "${log_dir}" && pwd -P)"
+  log_mount=(-v "${log_dir}:/logs:ro")
+fi
+
 echo "scan-secrets: mode=${mode} config=${config}"
 exec docker run --rm \
   -v "${workspace}:/repo" -w /repo \
+  "${log_mount[@]}" \
   "${git_env[@]}" \
   "${image}" \
-  detect --source /repo "${scope_args[@]}" \
+  detect --source "${source_dir}" "${scope_args[@]}" \
   --config "/repo/${config}" --redact --exit-code 1

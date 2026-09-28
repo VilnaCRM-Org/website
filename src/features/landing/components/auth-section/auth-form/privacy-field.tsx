@@ -11,12 +11,6 @@ import { AuthFormProps } from './types';
 function PolicyConsentText(): React.ReactElement {
   return (
     <UiTypography variant="medium14" sx={styles.privacyText}>
-      {/*
-        The interpolation indices are positional over this element's children:
-        <1> is the Privacy Policy link and <3> the Use Policy link. Reusing <1>
-        for both — as the copy did before #382 — clones the first link twice, so
-        "Use Policy" silently navigated to the privacy-policy URL.
-      */}
       <Trans i18nKey="sign_up.form.confidential_text.fullText">
         I have read and accept the
         <UiLink
@@ -32,9 +26,9 @@ function PolicyConsentText(): React.ReactElement {
           target="_blank"
           rel="noopener noreferrer"
         >
-          Use Policy
+          Usage Policy
         </UiLink>
-        VilnaCRM Service
+        of the VilnaCRM Service
       </Trans>
     </UiTypography>
   );

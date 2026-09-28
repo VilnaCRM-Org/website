@@ -1,10 +1,10 @@
 FROM mcr.microsoft.com/playwright:v1.57.0-jammy@sha256:6aca677c27a967caf7673d108ac67ffaf8fed134f27e17b27a05464ca0ace831
 
 RUN apt-get update && apt-get install -y --no-install-recommends --fix-missing \
-    python3=3.10.6-1~22.04.1 \
-    make=4.3-4.1build1 \
-    g++=4:11.2.0-1ubuntu1 \
     curl=7.81.0-* \
+    g++=4:11.2.0-1ubuntu1 \
+    make=4.3-4.1build1 \
+    python3=3.10.6-1~22.04.1 \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -26,6 +26,7 @@ WORKDIR /app
 ARG NODE_SHA256_X64=783130984963db7ba9cbd01089eaf2c2efb055c7c1693c943174b967b3050cb8
 ARG NODE_SHA256_ARM64=6b4484c2190274175df9aa8f28e2d758a819cb1c1fe6ab481e2f95b463ab8508
 COPY .nvmrc ./
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN NODE_VERSION="$(tr -d '[:space:]' < .nvmrc)" && \
     case "$(dpkg --print-architecture)" in \
       amd64) NODE_ARCH=x64;   NODE_SHA256="$NODE_SHA256_X64" ;; \

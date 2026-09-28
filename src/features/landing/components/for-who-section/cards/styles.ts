@@ -87,7 +87,7 @@ export default {
     display: 'none',
     mt: '2rem',
     [`@media (max-width: 968px)`]: {
-      display: 'inline-block',
+      display: 'inline-flex',
     },
   },
 

@@ -86,6 +86,53 @@ setup() {
   assert_log_contains 'make lighthouse-mobile-dind'
 }
 
+run_ci_script_with_test_compose_file() {
+  local script_path="$1"
+  local compose_file="$2"
+  shift 2
+
+  run env \
+    -C "$SCRIPT_SANDBOX" \
+    PATH="$STUB_BIN_DIR:$PATH" \
+    COMMAND_LOG="$COMMAND_LOG" \
+    DOCKER_COMPOSE_TEST_FILE="$compose_file" \
+    "$script_path" "$@"
+}
+
+@test "batch_lhci_leak.sh hands each compose file to docker compose unsplit and unglobbed" {
+  local script_path="$PROJECT_ROOT/scripts/ci/batch_lhci_leak.sh"
+
+  run_ci_script "$script_path" test-lighthouse-desktop
+  [ "$status" -eq 0 ]
+  assert_log_contains 'docker compose -f common-healthchecks.yml -f docker-compose.test.yml cp lighthouserc.desktop.js prod:/app/'
+  assert_log_contains 'docker compose -f common-healthchecks.yml -f docker-compose.test.yml down --volumes --remove-orphans'
+
+  reset_command_log
+  run_ci_script_with_test_compose_file "$script_path" '*.yml' test-lighthouse-mobile
+  [ "$status" -eq 0 ]
+  assert_log_contains 'docker compose -f common-healthchecks.yml -f *.yml cp lighthouserc.mobile.js prod:/app/'
+
+  reset_command_log
+  rm "$SCRIPT_SANDBOX/common-healthchecks.yml"
+  run_ci_script "$script_path" test-lighthouse-mobile
+  [ "$status" -eq 0 ]
+  assert_log_contains 'docker compose -f docker-compose.test.yml down --volumes --remove-orphans'
+}
+
+@test "batch_pw_load.sh hands each compose file to docker compose unsplit and unglobbed" {
+  local script_path="$PROJECT_ROOT/scripts/ci/batch_pw_load.sh"
+
+  run_ci_script_with_test_compose_file "$script_path" '*.yml' test-e2e
+  [ "$status" -eq 0 ]
+  assert_log_contains 'docker compose -f common-healthchecks.yml -f *.yml exec -T playwright mkdir -p /app'
+
+  reset_command_log
+  rm "$SCRIPT_SANDBOX/common-healthchecks.yml"
+  run_ci_script "$script_path" test-visual
+  [ "$status" -eq 0 ]
+  assert_log_contains 'docker compose -f docker-compose.test.yml exec -T playwright mkdir -p /app/src/test /app/src/config /app/pages/i18n'
+}
+
 @test "run-parallel.sh runs the lint phase targets through make and groups output" {
   local script_path="$PROJECT_ROOT/scripts/ci/run-parallel.sh"
 
@@ -173,7 +220,7 @@ STUB
   chmod +x "$STUB_BIN_DIR/node"
 
   run_host_stack start
-  [ "$status" -eq 0 ]
+  assert_success
 
   assert_log_contains 'scripts/generateLocalization.mjs'
   # `make` exports .env.production, so the ambient NEXT_PUBLIC_API_BASE_URL here is
@@ -225,6 +272,111 @@ STUB
   run_host_stack start
   [ "$status" -ne 0 ]
   assert_output_contains 'no longer running'
+}
+
+# A `ps` double for the readiness wait. For the serve pid `start` recorded it
+# answers from HOST_STACK_PS_SCRIPT, one line per call with the last line
+# repeating; the token @parent stands for the argument vector of that pid's
+# parent — this script — which is exactly what the child shows between the fork
+# of `nohup ... &` and its exec, and @real delegates to the real `ps`. Every
+# other pid always gets the real `ps`, so the script's view of itself is genuine.
+create_scripted_serve_ps_stub() {
+  local real_ps
+  real_ps="$(command -v ps)"
+  export HOST_STACK_PS_SCRIPT="$BATS_TEST_TMPDIR/serve-ps-script"
+
+  cat > "$STUB_BIN_DIR/ps" <<STUB
+#!/usr/bin/env bash
+pid=''
+prev=''
+for arg in "\$@"; do
+  [ "\$prev" = '-p' ] && pid="\$arg"
+  prev="\$arg"
+done
+
+serve_pid="\$(cat '$SCRIPT_SANDBOX/.host-stack/serve.pid' 2>/dev/null || true)"
+if [ -z "\$pid" ] || [ "\$pid" != "\$serve_pid" ]; then
+  exec '$real_ps' "\$@"
+fi
+
+calls='$BATS_TEST_TMPDIR/serve-ps-calls'
+count=\$(( \$(cat "\$calls" 2>/dev/null || printf '0') + 1 ))
+printf '%s\n' "\$count" > "\$calls"
+
+total=\$(grep -c '' '$HOST_STACK_PS_SCRIPT')
+[ "\$count" -le "\$total" ] || count="\$total"
+answer="\$(sed -n "\${count}p" '$HOST_STACK_PS_SCRIPT')"
+
+case "\$answer" in
+  @parent)
+    parent="\$('$real_ps' -o ppid= -p "\$pid" | tr -d ' ')"
+    exec '$real_ps' -ww -o args= -p "\$parent"
+    ;;
+  @real) exec '$real_ps' "\$@" ;;
+  *) printf '%s\n' "\$answer" ;;
+esac
+STUB
+  chmod +x "$STUB_BIN_DIR/ps"
+}
+
+# Issue #492: the identity check runs straight after `nohup serve &`, and a `ps`
+# that samples the child before it execs sees host-stack.sh's own argv. That is
+# the flake the start case above hit on loaded runners; here it is forced on the
+# first check, so the case fails deterministically on the unfixed script.
+@test "host-stack.sh start keeps waiting while the serve pid is still the pre-exec fork" {
+  create_curl_stub
+  create_generic_stub next
+  create_generic_stub next-export-optimize-images
+  create_generic_stub node
+  create_long_running_serve_stub
+  create_scripted_serve_ps_stub
+  printf '%s\n' '@parent' '@real' > "$HOST_STACK_PS_SCRIPT"
+
+  run_host_stack start
+  assert_success
+  assert_output_contains 'Host prod stack is serving'
+  # Proves the fork window was actually sampled and then polled past.
+  [ "$(cat "$BATS_TEST_TMPDIR/serve-ps-calls")" -ge 2 ]
+
+  run_host_stack stop
+  assert_success
+}
+
+# The pre-exec allowance must not reopen the hole the foreign-process case
+# guards: any pid that is not our serve and not this script's own fork fails on
+# the first check, before a single probe of the port. The curl stub answers, so
+# only the identity check can fail these runs.
+@test "host-stack.sh start fails fast on a vanished, zombie or foreign serve pid" {
+  create_curl_stub
+  create_generic_stub next
+  create_generic_stub next-export-optimize-images
+  create_generic_stub node
+  create_long_running_serve_stub
+  create_scripted_serve_ps_stub
+
+  local answer
+  for answer in '' '[serve] <defunct>' 'python3 -m http.server 3001'; do
+    printf '%s\n' "$answer" > "$HOST_STACK_PS_SCRIPT"
+    rm -f "$BATS_TEST_TMPDIR/serve-ps-calls"
+    reset_command_log
+
+    run_host_stack start
+    kill "$(cat "$SCRIPT_SANDBOX/.host-stack/serve.pid")" 2>/dev/null || true
+
+    if [ "$status" -eq 0 ]; then
+      echo "start accepted a serve pid shown as '$answer'" >&2
+      return 1
+    fi
+    assert_output_contains 'no longer running'
+    if [ "$(cat "$BATS_TEST_TMPDIR/serve-ps-calls")" != 1 ]; then
+      echo "start sampled a serve pid shown as '$answer' more than once before failing" >&2
+      return 1
+    fi
+    if grep -F 'curl ' "$COMMAND_LOG" >/dev/null; then
+      echo "start probed the port for a serve pid shown as '$answer'" >&2
+      return 1
+    fi
+  done
 }
 
 @test "host-stack.sh stop is idempotent and an unknown subcommand fails with usage" {

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Audit the GitHub Actions workflows with zizmor (issue #360).
+# Audit the GitHub Actions workflows and local composite actions with zizmor
+# (issues #360 and #375).
 #
 # Workflow files are the one part of the repo that no other gate reads: ESLint,
 # tsc, dependency-cruiser and the metrics gate all stop at src/, and the qlty
@@ -33,7 +34,15 @@ if [ "${#digest}" -ne 64 ] || [ -n "${digest//[0-9a-f]/}" ]; then
   echo "lint-workflows: ZIZMOR_IMAGE digest '${digest}' is not 64 lowercase hex characters" >&2
   exit 1
 fi
-targets="${ZIZMOR_TARGETS:-.github/workflows/}"
+# Word-split into an array on purpose: the default names two directories, and
+# a caller may pass several. zizmor audits only the paths it is handed, so the
+# `.github/workflows/`-only default of #360 never read
+# .github/actions/dev-container/action.yml -- the composite whose third-party
+# `uses:` pins every workflow that calls it inherits, and the one place a
+# mutable tag could hide from both this gate and the bats sha-pin assertion
+# (#375). Never default to `.`: that also audits .github/dependabot.yml, whose
+# cooldown findings are a Dependabot policy question, not this gate's subject.
+read -r -a targets <<<"${ZIZMOR_TARGETS:-.github/workflows/ .github/actions/}"
 persona="${ZIZMOR_PERSONA:-regular}"
 min_severity="${ZIZMOR_MIN_SEVERITY:-medium}"
 min_confidence="${ZIZMOR_MIN_CONFIDENCE:-high}"
@@ -69,4 +78,4 @@ docker run --rm \
   --min-severity "${min_severity}" \
   --min-confidence "${min_confidence}" \
   "${offline_args[@]}" \
-  "${targets}"
+  "${targets[@]}"

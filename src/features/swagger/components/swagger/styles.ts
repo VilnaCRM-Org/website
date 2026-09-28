@@ -5,6 +5,9 @@ export default {
   wrapper: {
     paddingTop: '2.1875rem',
     backgroundColor: colorTheme.palette.backgroundGrey100.main,
+    '&:not(:has(.swagger-ui))': {
+      minHeight: '100vh',
+    },
     [`@media (max-width: ${breakpointsTheme.breakpoints.values.lg}px)`]: {
       paddingTop: '1.5rem',
     },

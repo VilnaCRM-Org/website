@@ -215,7 +215,9 @@ Treat these as manual review items on any change that touches UI:
 - Anything axe tags `best-practice` rather than as a WCAG criterion. The tag filter is what
   keeps the gate honest, but it also means real APG requirements are invisible to it: an open
   dialog with no accessible name is `aria-dialog-name`, which is `best-practice`-tagged, so no
-  layer reports it (#435). Naming a dialog, a region or a landmark stays a review item.
+  layer reports it — the navigation drawer shipped unnamed until #435, and its name is now
+  pinned by its unit spec rather than by a scan. Naming a dialog, a region or a landmark
+  stays a review item.
 - `incomplete` axe results, which mean "axe could not decide" — typically contrast over a
   gradient or an image. Every scan attaches them to the Playwright report as an
   `axe-incomplete-*` artifact for human review; they are not gated, because they are advisory
@@ -256,26 +258,65 @@ exception must be deleted in the same change that fixes its underlying defect.
 
 ### Current exceptions
 
-| Rule and scope                                        | Routes                | Tracking |
-| ----------------------------------------------------- | --------------------- | -------- |
-| `color-contrast`, every node                          | `/`, `/swagger`, docs | #423     |
-| `select-name` on `#servers`                           | `/swagger`            | #424     |
-| `button-name` on `.close-modal`                       | `/swagger`            | #433     |
-| `label-content-name-mismatch` on the authorize submit | `/swagger`            | #433     |
-| `td-has-header` on `#get_api_users_responses`         | `/swagger`            | #433     |
+| Rule and scope               | Routes                | Tracking |
+| ---------------------------- | --------------------- | -------- |
+| `color-contrast`, every node | `/`, `/swagger`, docs | #423     |
 
-The exact selectors are in `A11Y_EXCEPTIONS`; "docs" above is `/en/docs/api`, and the authorize
-submit is matched as `button[aria-label="Apply given OAuth2 credentials"]`.
+The exact scope is in `A11Y_EXCEPTIONS`; "docs" above is `/en/docs/api`.
 
-Every one was surfaced by this gate's own output. The contrast failures come from shared brand
-tokens (#423). The rest are all markup rendered by third-party `swagger-ui-react`, where there
-is no local element to fix: an unnamed close button and an `aria-label` that replaces rather
-than includes the visible "Authorize" text in the authorize dialog, a header row built from
-`<td class="col_header">` instead of `<th>` in the responses table, and the unlabelled servers
-select (#424, #433). All are tracked for burn-down rather than waived quietly, and the fix
-belongs upstream — not in a DOM patch layered over the widget.
+It was surfaced by this gate's own output: the contrast failures come from shared brand tokens
+(#423), and the entry is tracked for burn-down rather than waived quietly.
 
-Be explicit about what the first row costs: **SC 1.4.3, Contrast (Minimum), is currently
+The servers select (`#servers`, #424) used to sit in this table. It was fixed rather than
+waived, and without patching the widget's DOM: `swagger-ui` accepts a `wrapComponents` plugin,
+and `withServersLabel` (`src/features/swagger/components/api-documentation/servers`) wraps
+its `ServersContainer` with a visually-hidden `<label for="servers">`. A `for` association
+names the control from anywhere in the document, so the widget's own empty wrapping label is
+left untouched and the visual baselines do not move. That is the pattern to reach for before
+a waiver whenever the widget exposes a supported override for the offending component.
+
+The three `swagger-ui-react` defects the interaction-state scans found in #433 were fixed the
+same way, and their waivers deleted in the same change. The plugins sit beside the servers
+label under `src/features/swagger/components/api-documentation` and ship through one list,
+`swaggerPlugins` in `plugins/`:
+
+- **`button-name` on `.close-modal`.** `withCloseLabel` wraps the widget's `CloseIcon` and
+  renders the svg with `role="img"`, an explicit `aria-hidden={undefined}` (the icon spreads
+  its props after its own `aria-hidden="true"`, so only an explicit override removes it) and
+  the localized `api_documentation.authorize_dialog.close` label. The button takes its name
+  from that content. It is deliberately not visually hidden text: the dialog's text "Close"
+  button must stay the only button whose text content reads "Close".
+- **`label-content-name-mismatch` on the authorize submit.** `withLabelInName` wraps the
+  widget's `Button` and drops the `aria-label` whenever the children are a non-empty string,
+  so "Authorize" and "Logout" are named by their visible text (SC 2.5.3). Buttons with
+  non-string children, such as the JSON-schema form's "Add … item" button, pass through
+  untouched, so a future icon-only button keeps its label.
+- **`td-has-header` on `#get_api_users_responses`.** A wrapper on the widget's `responses`
+  component renders an owned port of the OAS3 responses table inside swagger-ui's own error
+  boundary, and delegates to the original for any other spec version. The port heads the
+  columns with `<th scope="col">` and drops `role="region"` from the `<table>`. That role
+  replaced the table role, so the header cells would have reached screen readers as nothing
+  even as `<th>`, which axe does not report. The id, the classes, `aria-live="polite"` and
+  every prop each row receives are unchanged. The shared header styles now match `td, th`,
+  because the live "Server response" table still renders `<td>` header cells.
+
+Two follow-ups stay open. The live "Server response" table after Execute is a separate
+component and still builds its header row from `<td class="col_header">`; axe skips it (two
+columns is below its data-table threshold), but SC 1.3.1 applies, and porting it means
+re-implementing its headers, duration, request-snippet and body rendering. Dropping
+`aria-live="polite"` from the documented responses table is a screen-reader behaviour change
+that needs a team decision, so it was kept.
+
+With the waivers gone, the `swaggerAuthorizeDialog` and `swaggerOperationExpanded` scans fail
+closed if a `swagger-ui-react` upgrade renames `CloseIcon`, `Button` or `responses`, or reorders
+the icon's props. When that happens, port the upstream change into the plugin; do not re-add a
+waiver. No scan can see a change to upstream's `responses.jsx`: for OAS3 specs the owned port
+renders in its place, so a new prop, a fix or a markup change upstream is dropped while every
+scan stays green. The port was diffed against `swagger-ui-react` 5.32.6, and
+`SwaggerResponsesTable.test.tsx` fails on any other installed version. On every bump, re-diff
+the port against the new `responses.jsx` by hand, then move that pinned version.
+
+Be explicit about what that row costs: **SC 1.4.3, Contrast (Minimum), is currently
 enforced at neither layer.** The component layer disables `color-contrast` because jsdom has no
 paint engine, and the route layer waives it with a `*` scope on every route in the registry
 until #423 lands. The WCAG 2.1 AA target above therefore excludes contrast today. The

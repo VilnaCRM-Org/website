@@ -57,13 +57,17 @@ jobs:
           if [ -z "$SECRET_ID" ] || [ "$SECRET_ID" = "None" ]; then
             echo "Token doesn't exist in the test account."
           else
-            SECRET_VALUE=$(aws secretsmanager get-secret-value \
+            # The secret JSON carries the GitHub token beside expires_at, so it is
+            # piped straight into jq and never bound to a shell variable that a
+            # later `set -x`, env dump or errored step could print (#375).
+            # pipefail keeps a failed get-secret-value fatal, as the former
+            # assignment was under the default `bash -e`.
+            set -o pipefail
+            EXPIRES_AT=$(aws secretsmanager get-secret-value \
               --secret-id "${SECRET_ID}" \
               --region "${AWS_REGION}" \
               --query SecretString \
-              --output text)
-
-            EXPIRES_AT=$(echo "$SECRET_VALUE" | jq -r '.expires_at // empty')
+              --output text | jq -r '.expires_at // empty')
             if [ -z "$EXPIRES_AT" ]; then
               echo "Token doesn't exist in the test account."
             else
@@ -97,13 +101,17 @@ jobs:
           if [ -z "$SECRET_ID" ] || [ "$SECRET_ID" = "None" ]; then
             echo "Token doesn't exist in the prod account."
           else
-            SECRET_VALUE=$(aws secretsmanager get-secret-value \
+            # The secret JSON carries the GitHub token beside expires_at, so it is
+            # piped straight into jq and never bound to a shell variable that a
+            # later `set -x`, env dump or errored step could print (#375).
+            # pipefail keeps a failed get-secret-value fatal, as the former
+            # assignment was under the default `bash -e`.
+            set -o pipefail
+            EXPIRES_AT=$(aws secretsmanager get-secret-value \
               --secret-id "${SECRET_ID}" \
               --region "${AWS_REGION}" \
               --query SecretString \
-              --output text)
-
-            EXPIRES_AT=$(echo "$SECRET_VALUE" | jq -r '.expires_at // empty')
+              --output text | jq -r '.expires_at // empty')
             if [ -z "$EXPIRES_AT" ]; then
               echo "Token doesn't exist in the prod account."
             else

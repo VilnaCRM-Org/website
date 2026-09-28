@@ -168,6 +168,19 @@ setup_makefile_test_env() {
   # CI orchestration targets (ci-lint, ci-test, pr-comments) shell out to
   # repository scripts; copy them so recursive make runs resolve their paths.
   cp -R "$PROJECT_ROOT/scripts" "$MAKEFILE_SANDBOX/scripts"
+  # lint-placeholders (issue #327) is in CI_LINT_TARGETS and is plain bash, so
+  # unlike the node and npm-tool gates it cannot be stubbed away: `make ci-lint`
+  # in this sandbox runs the real scan, and the gate fails closed on a scan
+  # root it cannot see. Seed its default roots -- empty source directories plus
+  # the small committed files -- so it certifies a clean tree here; its own
+  # behaviour over a seeded tree is covered by tests/bats/check_placeholders.bats.
+  mkdir -p "$MAKEFILE_SANDBOX/src" "$MAKEFILE_SANDBOX/pages" "$MAKEFILE_SANDBOX/public"
+  cp "$PROJECT_ROOT/.env.example" "$PROJECT_ROOT/.env.production" "$PROJECT_ROOT/README.md" \
+    "$MAKEFILE_SANDBOX/"
+  # build-out (issue #325) reads the version straight out of package.json with a real
+  # `jq`, which is not in the stub list above -- without this copy that read fails,
+  # since nothing else here provisions package.json.
+  cp "$PROJECT_ROOT/package.json" "$MAKEFILE_SANDBOX/"
 }
 
 setup_ci_script_test_env() {
@@ -295,6 +308,17 @@ assert_output_contains() {
     echo "Expected output to contain: $expected" >&2
     echo "--- output ---" >&2
     printf '%s\n' "$actual_output" >&2
+    return 1
+  fi
+}
+
+# A bare `[ "$status" -eq 0 ]` discards `$output`, so a failure cannot say which
+# stage of the command under test gave up (issue #492).
+assert_success() {
+  if [ "${status-}" != 0 ]; then
+    echo "Expected exit status 0, got ${status-unset}" >&2
+    echo "--- output ---" >&2
+    printf '%s\n' "${output-}" >&2
     return 1
   fi
 }

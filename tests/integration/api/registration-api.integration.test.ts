@@ -10,9 +10,12 @@
  * link level, so this verifies wiring that the unit and `testing-library`
  * (MockedProvider) layers cannot reach: the actual HTTP request the client
  * emits and how real Apollo error classes flow back through the app's error
- * translation.
+ * translation. It also exercises the real `ErrorLink`, so Sentry is mocked at
+ * the module boundary the way `AuthLayoutTelemetry.test.tsx` mocks it.
  */
 import { CombinedGraphQLErrors, TypedDocumentNode } from '@apollo/client';
+import * as Sentry from '@sentry/react';
+import i18n from 'i18next';
 
 import { CLIENT_ERROR_KEYS, getClientErrorMessages } from '@/shared/clientErrorMessages';
 
@@ -29,6 +32,10 @@ import {
   readGraphQLRequest,
   restoreFetch,
 } from '../utils/graphql-network';
+
+jest.mock('@sentry/react', () => ({ captureException: jest.fn() }));
+
+const captureException: jest.Mock = Sentry.captureException as unknown as jest.Mock;
 
 interface CreateUserResponse {
   createUser: {
@@ -106,6 +113,7 @@ describe('integration: registration GraphQL API boundary', () => {
     // The Apollo client is a module singleton shared across tests; clear its
     // cache so a mutation result cannot leak into a later test.
     await client.clearStore();
+    captureException.mockClear();
   });
 
   describe('request contract', () => {
@@ -129,10 +137,29 @@ describe('integration: registration GraphQL API boundary', () => {
       await runSignup();
 
       const request = readGraphQLRequest(fetchMock);
-      // 'uk' is NEXT_PUBLIC_MAIN_LANGUAGE; the client bakes it into the HttpLink
-      // header at import time. Pinned to a literal so the assertion is not
-      // tautological with the i18n global the client itself read.
+      // 'uk' is NEXT_PUBLIC_MAIN_LANGUAGE, the language i18next was initialised
+      // with. Pinned to a literal so the assertion is not tautological with the
+      // i18n global the client itself read.
       expect(request.headers.get('accept-language')).toBe('uk');
+    });
+
+    it('reads the language per request, so /en sign-ups negotiate English', async () => {
+      // The header used to be baked into the HttpLink at import time, which
+      // froze it at the main language for the life of the bundle. The `/en`
+      // landing changes the active language after import, so the link must
+      // resolve it when the operation runs, not when the module loaded.
+      fetchMock.mockResolvedValue(graphqlData(successPayload()));
+      const initialLanguage: string = i18n.language;
+
+      try {
+        await i18n.changeLanguage('en');
+        await runSignup();
+      } finally {
+        await i18n.changeLanguage(initialLanguage);
+      }
+
+      const request = readGraphQLRequest(fetchMock);
+      expect(request.headers.get('accept-language')).toBe('en');
     });
 
     it('falls back to en-US Accept-Language when no i18n language is active', async () => {
@@ -206,6 +233,50 @@ describe('integration: registration GraphQL API boundary', () => {
       const error = await captureError();
 
       expect(handleApolloError({ error })).toBe(messages[CLIENT_ERROR_KEYS.NETWORK]);
+    });
+  });
+
+  describe('telemetry reporting (ErrorLink)', () => {
+    it('reports a GraphQL error to Sentry without changing the message the user sees', async () => {
+      const message = 'A user with this email already exists.';
+      fetchMock.mockResolvedValue(
+        graphqlErrors([{ message, extensions: { code: 'BAD_USER_INPUT' } }])
+      );
+
+      const error = await captureError();
+
+      expect(captureException).toHaveBeenCalledTimes(1);
+      const [, context] = captureException.mock.calls[0] as [unknown, { tags: unknown }];
+      expect(context).toMatchObject({ tags: { feature: 'landing', action: 'graphql' } });
+      expect(handleApolloError({ error })).toBe(messages[CLIENT_ERROR_KEYS.WENT_WRONG]);
+    });
+
+    it('reports a network failure to Sentry with the same static tags', async () => {
+      fetchMock.mockRejectedValue(new TypeError('Failed to fetch'));
+
+      await captureError();
+
+      expect(captureException).toHaveBeenCalledTimes(1);
+      const [, context] = captureException.mock.calls[0] as [unknown, { tags: unknown }];
+      expect(context).toMatchObject({ tags: { feature: 'landing', action: 'graphql' } });
+    });
+
+    it('reports nothing to Sentry on a successful mutation', async () => {
+      fetchMock.mockResolvedValue(graphqlData(successPayload()));
+
+      await runSignup();
+
+      expect(captureException).not.toHaveBeenCalled();
+    });
+
+    it('never retries the request after an error, avoiding a duplicate sign-up', async () => {
+      fetchMock.mockResolvedValue(
+        graphqlErrors([{ message: 'boom', extensions: { code: 'BAD_USER_INPUT' } }])
+      );
+
+      await captureError();
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
     });
   });
 });

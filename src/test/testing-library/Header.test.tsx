@@ -161,6 +161,68 @@ describe('Header navigation', () => {
     expect(scrollToAnchorMock).not.toHaveBeenCalled();
   });
 
+  // The English landing is `/en`, and navigation must never leave the locale prefix:
+  // an anchor click on `/en` scrolls in place exactly as on `/`, a click from another
+  // `/en/*` route pushes `/en#anchor`, and the logo leads back to `/en`. Before this
+  // rule the header compared the pathname to `/` only, so the English page sent every
+  // visitor to the Ukrainian one.
+  describe('under the /en locale prefix', () => {
+    it('scrolls in place on the English landing instead of navigating', async () => {
+      routerMock.pathname = '/en';
+      routerMock.asPath = '/en';
+
+      const { getByText } = render(<Header />);
+      const target: NavItemProps = getHeaderNavItem(1);
+
+      await user.click(getByText(t(target.title)));
+
+      expect(routerMock.push).not.toHaveBeenCalled();
+      expect(scrollToAnchorMock).toHaveBeenCalledWith(target.link);
+    });
+
+    it('pushes the English landing from another English route', async () => {
+      routerMock.pathname = '/en/docs/api';
+      routerMock.asPath = '/en/docs/api';
+
+      const { getByText } = render(<Header />);
+      const target: NavItemProps = getHeaderNavItem(1);
+
+      await user.click(getByText(t(target.title)));
+
+      expect(routerMock.push).toHaveBeenCalledWith(`/en${target.link}`, undefined, {
+        scroll: true,
+      });
+      expect(scrollToAnchorMock).toHaveBeenCalledWith(target.link);
+    });
+
+    it('falls back to a hard navigation inside the same locale', async () => {
+      routerMock.pathname = '/en/docs/api';
+      routerMock.push.mockRejectedValueOnce(new Error('push failed'));
+
+      const { getByText } = render(<Header />);
+      const target: NavItemProps = getHeaderNavItem(1);
+
+      await user.click(getByText(t(target.title)));
+
+      expect(fallbackNavigateMock).toHaveBeenCalledWith(`/en${target.link}`);
+    });
+
+    it('points the logo at the English landing', () => {
+      routerMock.pathname = '/en';
+
+      const { getByRole } = render(<Header />);
+
+      expect(getByRole('link', { name: logoAlt })).toHaveAttribute('href', '/en');
+    });
+
+    it('keeps the root landing for the unprefixed English-only swagger route', () => {
+      const { getByRole } = render(<Header />);
+
+      expect(routerMock.pathname).toBe('/swagger');
+      expect(getByRole('link', { name: logoAlt })).toHaveAttribute('href', '/');
+    });
+  });
+
   it('should register routeChangeComplete event listener on mount', () => {
     render(<Header />);
 

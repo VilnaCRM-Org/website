@@ -16,12 +16,21 @@ if [ ! -f "common-healthchecks.yml" ]; then
     COMMON_HEALTHCHECKS_FILE=""
 fi
 
-# Build docker compose args safely for POSIX sh
-COMPOSE_ARGS=""
+# Infra buildspecs source this file into CodeBuild's sh, so the compose file
+# list is passed through a function rather than a bash array or a word-split
+# string: every file name stays one quoted argument under any POSIX shell.
+HEALTHCHECKS_COMPOSE_FILE=""
 if [ -n "$COMMON_HEALTHCHECKS_FILE" ] && [ -s "$COMMON_HEALTHCHECKS_FILE" ]; then
-    COMPOSE_ARGS="$COMPOSE_ARGS -f $COMMON_HEALTHCHECKS_FILE"
+    HEALTHCHECKS_COMPOSE_FILE=$COMMON_HEALTHCHECKS_FILE
 fi
-COMPOSE_ARGS="$COMPOSE_ARGS -f $DOCKER_COMPOSE_TEST_FILE"
+
+compose_test_stack() {
+    if [ -n "$HEALTHCHECKS_COMPOSE_FILE" ]; then
+        docker compose -f "$HEALTHCHECKS_COMPOSE_FILE" -f "$DOCKER_COMPOSE_TEST_FILE" "$@"
+    else
+        docker compose -f "$DOCKER_COMPOSE_TEST_FILE" "$@"
+    fi
+}
 
 # Ensure required compose env vars have sane defaults for healthchecks
 NEXT_PUBLIC_MOCKOON_PORT=${NEXT_PUBLIC_MOCKOON_PORT:-"8080"}
@@ -31,38 +40,15 @@ export NEXT_PUBLIC_MOCKOON_PORT GRAPHQL_PORT GRAPHQL_API_PATH NEXT_PUBLIC_PROD_P
 
 :
 
-PLAYWRIGHT_ENV_FLAGS="\
-    -e NEXT_PUBLIC_MAIN_LANGUAGE=uk \
-    -e NEXT_PUBLIC_FALLBACK_LANGUAGE=en \
-    -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_NAME=no-aws-header-name \
-    -e NEXT_PUBLIC_CONTINUOUS_DEPLOYMENT_HEADER_VALUE=no-aws-header-value \
-    -e NEXT_PUBLIC_VILNACRM_PRIVACY_POLICY_URL=https://github.com/VilnaCRM-Org/ \
-    -e NEXT_PUBLIC_GRAPHQL_API_URL=http://apollo:4000/graphql"
-
 setup_docker_network() {
     docker network create "$NETWORK_NAME" 2>/dev/null || :
-}
-
-start_prod_dind() {
-    setup_docker_network
-    docker compose ${COMPOSE_ARGS} up -d --wait prod
-}
-run_make_with_prod_dind() {
-    target=$1
-    description=$2
-    website_dir=$3
-    start_prod_dind
-    export DIND=1
-    if ! cd "$website_dir" || ! make "$target" CI=0; then
-        exit 1
-    fi
 }
 
 run_e2e_tests_dind() {
     setup_docker_network
     make start-prod
     # Stream source using tar to avoid docker cp EOF/tar issues; exclude heavy/transient dirs
-    docker compose ${COMPOSE_ARGS} exec -T playwright mkdir -p /app
+    compose_test_stack exec -T playwright mkdir -p /app
     if ! tar -cf - \
         --exclude="./.git" \
         --exclude="./node_modules" \
@@ -72,22 +58,21 @@ run_e2e_tests_dind() {
         --exclude="./playwright-report" \
         --exclude="./test-results" \
         ./ \
-        | docker compose ${COMPOSE_ARGS} exec -T playwright sh -lc 'tar -xf - -C /app'; then
+        | compose_test_stack exec -T playwright sh -lc 'tar -xf - -C /app'; then
         exit 1
     fi
-    PROD_URL="http://prod:3001"
     make test-e2e
     mkdir -p playwright-report test-results
-    docker compose ${COMPOSE_ARGS} cp "playwright:/app/playwright-report/." "playwright-report/" 2>/dev/null || :
-    docker compose ${COMPOSE_ARGS} cp "playwright:/app/test-results/." "test-results/" 2>/dev/null || :
+    compose_test_stack cp "playwright:/app/playwright-report/." "playwright-report/" 2>/dev/null || :
+    compose_test_stack cp "playwright:/app/test-results/." "test-results/" 2>/dev/null || :
 }
 
 run_visual_tests_dind() {
     setup_docker_network
     make start-prod
-    docker compose ${COMPOSE_ARGS} exec -T playwright mkdir -p /app/src/test /app/src/config /app/pages/i18n
+    compose_test_stack exec -T playwright mkdir -p /app/src/test /app/src/config /app/pages/i18n
     # Stream source using tar to avoid docker cp EOF/tar issues; exclude heavy/transient dirs
-    docker compose ${COMPOSE_ARGS} exec -T playwright mkdir -p /app
+    compose_test_stack exec -T playwright mkdir -p /app
     if ! tar -cf - \
         --exclude="./.git" \
         --exclude="./node_modules" \
@@ -97,14 +82,13 @@ run_visual_tests_dind() {
         --exclude="./playwright-report" \
         --exclude="./test-results" \
         ./ \
-        | docker compose ${COMPOSE_ARGS} exec -T playwright sh -lc 'tar -xf - -C /app'; then
+        | compose_test_stack exec -T playwright sh -lc 'tar -xf - -C /app'; then
         exit 1
     fi
-    PROD_URL="http://prod:3001"
     make test-visual
     mkdir -p playwright-report test-results
-    docker compose ${COMPOSE_ARGS} cp "playwright:/app/playwright-report/." "playwright-report/" 2>/dev/null || :
-    docker compose ${COMPOSE_ARGS} cp "playwright:/app/test-results/." "test-results/" 2>/dev/null || :
+    compose_test_stack cp "playwright:/app/playwright-report/." "playwright-report/" 2>/dev/null || :
+    compose_test_stack cp "playwright:/app/test-results/." "test-results/" 2>/dev/null || :
 }
 
 run_load_tests_dind() {

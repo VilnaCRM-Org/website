@@ -32,7 +32,14 @@ function AuthFormHarness({ onSubmit, loading }: WrapperProps): React.ReactElemen
     formState: { errors },
   } = useForm<RegisterItem>({
     mode: 'onTouched',
-    defaultValues: { FullName: '', Email: '', Password: '', ConfirmPassword: '', Privacy: false },
+    defaultValues: {
+      FullName: '',
+      Email: '',
+      Password: '',
+      ConfirmPassword: '',
+      Privacy: false,
+      Referral: '',
+    },
   });
 
   return (

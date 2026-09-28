@@ -10,13 +10,10 @@
       "log_in": "Log in"
     },
     "drawer": {
+      "aria_label": "Menu",
       "button_aria_labels": {
-        "bars": "Button to open the drawer",
-        "exit": "Button to exit the drawer"
-      },
-      "image_alt": {
-        "bars": "Bars Icon",
-        "exit": "Exit Icon"
+        "bars": "Open menu",
+        "exit": "Close menu"
       },
       "aria_labels_social_images": {
         "instagram": "Link to Instagram",
@@ -33,15 +30,17 @@
       }
     },
     "layout": {
-      "page_title": "VilnaCRM API",
-      "meta_description": "The first Ukrainian open source CRM"
+      "page_title": "VilnaCRM — the first Ukrainian open source CRM",
+      "meta_description": "The first Ukrainian open source CRM",
+      "skip_to_content": "Skip to main content"
     }
   },
   "about_vilna": {
     "heading_first_main": "The first Ukrainian",
     "heading_second_main": "open source CRM",
     "text_main": "Our goal is to support Ukrainian entrepreneurs. That's why we created Vilna, a convenient and free CRM system - so you can do business, not spend time on settings",
-    "button_main": "Try it out"
+    "button_main": "Try it out",
+    "image_alt": "VilnaCRM management board with the task list open"
   },
   "why_us": {
     "heading": "Why we",
@@ -81,7 +80,6 @@
     "heading_secondary": "Our CRM is ideal if you:",
     "card_text_title": "A private entrepreneur is a psychologist, tutor or dropshipper",
     "card_text_business": "Medium-scale local project - online courses, design studio or small outsourcing",
-    "vector_alt": "Vector",
     "aria_label": "Link to registration"
   },
   "unlimited_possibilities": {
@@ -94,8 +92,6 @@
       "heading_libraries": "Public <br /> Libraries"
     },
     "image_alt": {
-      "big_screen": "Large digital screen with a blue background",
-      "small_screen": "Small digital screen displaying minimal content",
       "google": "Google",
       "facebook": "Facebook",
       "github": "GitHub",
@@ -117,7 +113,9 @@
       "title_for_third": "Image of SmallRuby",
       "title_for_fourth": "Image of Diamond"
     },
-    "button": { "try_it_out": "Try it out" }
+    "button": {
+      "try_it_out": "Try it out"
+    }
   },
   "sign_up": {
     "main_heading": "Sign up now and free up your time to grow your business",
@@ -166,9 +164,12 @@
         }
       },
       "confidential_text": {
-        "fullText": "I have read and accept the <1>Privacy Policy</1> and the <3>Use Policy</3> VilnaCRM Service"
+        "fullText": "I have read and accept the <1>Privacy Policy</1> and the <3>Usage Policy</3> of the VilnaCRM Service"
       },
       "button_text": "Sign-Up",
+      "honeypot": {
+        "label": "Leave this field empty"
+      },
       "error_text": "There was an error. Please check again"
     }
   },
@@ -226,11 +227,22 @@
       "linkedin": "Linkedin Icon"
     }
   },
-  "offline": {
-    "heading": "You are offline",
-    "description": "VilnaCRM cannot reach the network, so this page could not be loaded.",
-    "hint": "Check your connection — everything works again as soon as you are back online.",
-    "home_link": "Back to the home page"
+  "seo": {
+    "site_name": "VilnaCRM",
+    "landing": {
+      "title": "VilnaCRM — the first Ukrainian open source CRM",
+      "description": "A free, open source CRM built for Ukrainian service businesses: set it up in a few clicks, use ready-made templates and connect the integrations you already work with."
+    },
+    "api_docs": {
+      "title": "API documentation (English) — VilnaCRM",
+      "description": "English-language landing page for the VilnaCRM user-service API reference."
+    }
+  },
+  "error_boundary": {
+    "title": "Something went wrong",
+    "description": "We hit an unexpected error on this page. Try again, or go back to the homepage.",
+    "retry_button": "Try again",
+    "home_link": "Go to homepage"
   },
   "accessibility": {
     "opens_in_new_tab": "(opens in new tab)"

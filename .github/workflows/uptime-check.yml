@@ -1,0 +1,139 @@
+name: uptime check
+
+# Scheduled synthetic check of the production site (issue #336).
+#
+# Before this workflow the only failure detector the site had was a human
+# visiting the page. The post-deploy smoke in deploy.yml runs only after a push
+# to main, and it has skipped on every deploy so far because it reads its origin
+# from the PRODUCTION_SITE_URL repository variable, which has never been set. So
+# this check defaults to the committed canonical origin — the one
+# public/.well-known/security.txt publishes as `Canonical` and
+# scripts/ci/check-security-txt.sh pins — and treats the variable as an
+# override, so it is live from the first scheduled run.
+#
+# A failed probe files (or refreshes) ONE issue on the `uptime-alert` label and
+# closes it on the next green run. The issue, not the red run, is the alert
+# surface: nobody watches the Actions tab for a scheduled workflow. Read
+# docs/runbooks/incident-response.md when it opens.
+#
+# This workflow assumes no AWS role, cuts no release and calls no local
+# composite action, so `make lint-prod-guardrails` does not require it to be
+# listed in ci-health-alerts.yml — and it deliberately is not: that workflow
+# would file a second, differently-titled issue for every outage.
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  # One probe at a time, never cancelled. Two overlapping runs would race on the
+  # shared incident issue — one filing while the other closes — and a cancelled
+  # run could leave the issue half-written. The group is the workflow alone, not
+  # the workflow plus ref: the incident issue is repository-wide, so a manual
+  # dispatch from a branch must queue behind the scheduled run on main rather
+  # than run beside it.
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    name: synthetic uptime check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      # The checkout, for the two probe scripts and config/security-headers.json.
+      contents: read
+      # Files, refreshes and closes the incident issue; `gh label create` needs
+      # it too.
+      issues: write
+    env:
+      # `gh` resolves the repository it operates on from GH_REPO. Without it the
+      # CLI falls back to the checkout's git remote, which is one more thing that
+      # must be present and correct for an alert to be filed at all —
+      # ci-health-alerts.yml, which has no checkout, has failed on exactly that.
+      GH_REPO: ${{ github.repository }}
+      SITE_URL: ${{ vars.PRODUCTION_SITE_URL || 'https://vilnacrm.com' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # continue-on-error on both probes so each one always reports: an issue
+      # that says "the homepage is down" reads differently from one that says
+      # "everything is down, including the 404 path", and the second verdict is
+      # what tells an operator whether the distribution is gone or one object is.
+      - name: Probe the positive path (/ and /swagger)
+        id: positive
+        continue-on-error: true
+        run: ./scripts/ci/uptime-check.sh "$SITE_URL"
+
+      - name: Probe the negative path (404 shape)
+        id: negative
+        continue-on-error: true
+        env:
+          # The script's defaults are tuned for a deploy that is still
+          # propagating (twelve attempts, three minutes). A synthetic check is
+          # not waiting for anything, so it gets the same short budget as the
+          # positive path: enough to ride out one dropped connection.
+          SMOKE_ATTEMPTS: '4'
+          SMOKE_DELAY: '15'
+        run: ./scripts/ci/smoke-response-shape.sh "$SITE_URL"
+
+      - name: File or refresh the uptime incident issue
+        if: steps.positive.outcome == 'failure' || steps.negative.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          POSITIVE_OUTCOME: ${{ steps.positive.outcome }}
+          NEGATIVE_OUTCOME: ${{ steps.negative.outcome }}
+        run: |
+          # Idempotent: the label is created on first use so `gh issue create`
+          # cannot fail on an unknown label and drop the alert.
+          gh label create uptime-alert --color B60205 \
+            --description "Production synthetic uptime check failures" 2>/dev/null || true
+          title='Uptime: the production site is failing its synthetic check'
+          # Exact-title dedup over the open issues on the label, so a stale or
+          # renamed issue can never absorb a new outage and one outage never
+          # files twice. The title is passed to jq as DATA (--arg), never
+          # spliced into the filter.
+          existing="$(gh issue list --label uptime-alert --state open --limit 100 \
+            --json number,title |
+            jq -r --arg title "$title" '[.[] | select(.title == $title)][0].number // empty')"
+          run_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          runbook="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/blob/main/docs/runbooks/incident-response.md"
+          verdicts="positive path (/ and /swagger): ${POSITIVE_OUTCOME}; negative path (404 shape): ${NEGATIVE_OUTCOME}"
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" \
+              --body "Still failing at $(date -u +%Y-%m-%dT%H:%M:%SZ) — ${verdicts}. Run: ${run_url}"
+          else
+            gh issue create --label uptime-alert --title "$title" \
+              --body "The scheduled synthetic check against ${SITE_URL} failed — ${verdicts}. Run: ${run_url}. Start with the incident-response runbook: ${runbook}"
+          fi
+
+      - name: Close the uptime incident issue on recovery
+        if: steps.positive.outcome == 'success' && steps.negative.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          title='Uptime: the production site is failing its synthetic check'
+          existing="$(gh issue list --label uptime-alert --state open --limit 100 \
+            --json number,title |
+            jq -r --arg title "$title" '[.[] | select(.title == $title)][0].number // empty')"
+          [ -n "$existing" ] || exit 0
+          # No stale-event guard is needed here, unlike ci-health-alerts.yml: the
+          # concurrency group serialises runs of this workflow, so a run that
+          # observes green started after the run that observed red.
+          run_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          gh issue comment "$existing" \
+            --body "Recovered: ${SITE_URL} passed the synthetic check again. Run: ${run_url}. Closing."
+          gh issue close "$existing"
+
+      # Last, so the alert steps above always run first: the run itself must
+      # still be red on an outage, or the workflow's own history reads as
+      # uninterrupted success.
+      - name: Fail the run when a probe failed
+        if: steps.positive.outcome == 'failure' || steps.negative.outcome == 'failure'
+        run: exit 1

@@ -20,4 +20,12 @@ describe('VilnaCRMEmail component', () => {
 
     expect(getByText(atSymbol)).toBeInTheDocument();
   });
+
+  it('keeps the decorative "@" glyph out of the link accessible name', () => {
+    const { getByRole, getByText } = render(<VilnaCRMEmail />);
+
+    // The glyph is visual only: the link is named by the address alone (#435).
+    expect(getByRole('link', { name: mockEmail })).toHaveAttribute('href', `mailto:${mockEmail}`);
+    expect(getByText(atSymbol)).toHaveAttribute('aria-hidden', 'true');
+  });
 });

@@ -10,11 +10,11 @@ const scenarioBuilder = new ScenarioBuilder();
 
 const mobileViewport = { width: 400, height: 812 };
 
-const barsIconAlt = t('header.drawer.image_alt.bars');
-const exitIconAlt = t('header.drawer.image_alt.exit');
+const openMenuLabel = t('header.drawer.button_aria_labels.bars');
+const closeMenuLabel = t('header.drawer.button_aria_labels.exit');
 
-const menuIconSelector = `img[alt="${barsIconAlt}"]`;
-const closeIconSelector = `img[alt="${exitIconAlt}"]`;
+const menuIconSelector = `button[aria-label="${openMenuLabel}"]`;
+const closeIconSelector = `button[aria-label="${closeMenuLabel}"]`;
 
 async function setup(page) {
   await page.setViewport(mobileViewport);

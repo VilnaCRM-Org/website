@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { UiButton, UiTypography } from '@/components';
 
+import HoneypotField from './honeypot-field';
 import PrivacyField from './privacy-field';
 import SignUpFields from './sign-up-fields';
 import styles from './styles';
@@ -21,14 +22,13 @@ function AuthForm({
   const { t } = useTranslation();
 
   return (
-    // Named by its own localized heading rather than a hardcoded English
-    // identifier, which screen readers used to announce verbatim.
     <Box component="form" onSubmit={handleSubmit(onSubmit)} aria-labelledby={FORM_HEADING_ID}>
       <UiTypography id={FORM_HEADING_ID} variant="h4" component="h4" sx={styles.formTitle}>
         {t('sign_up.form.heading_main')}
       </UiTypography>
       <SignUpFields control={control} />
       <PrivacyField control={control} formValidationErrors={formValidationErrors} />
+      <HoneypotField control={control} />
 
       <Box sx={styles.buttonWrapper}>
         <UiButton

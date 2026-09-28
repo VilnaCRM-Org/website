@@ -32,7 +32,7 @@ POLL_ATTEMPTS="${POLL_ATTEMPTS:-12}"
 POLL_DELAY="${POLL_DELAY:-10}"
 STEP_SUMMARY="${GITHUB_STEP_SUMMARY:-/dev/null}"
 
-# Kept in sync by hand with the digest filter in .github/workflows/ci-health-alerts.yml;
+# Kept in sync by hand with the digest filter in scripts/ci/ci-health-alert.sh;
 # tests/bats/security_workflows.bats pins the pair against drift.
 # A quoted heredoc, so $sec / $sev reach jq unexpanded without the shell ever
 # seeing them as parameters. `read -d ''` consumes the whole filter and reports

@@ -197,10 +197,24 @@ EOF
   reset_command_log
   run_make_target build-out
   [ "$status" -eq 0 ]
-  assert_log_contains 'docker build -t next-build -f Dockerfile --target production .'
+  assert_log_contains 'docker build -t next-build -f Dockerfile --target production'
+  assert_log_contains '--build-arg COMMIT_SHA=unknown .'
   assert_log_contains 'docker create next-build'
   assert_log_contains 'docker cp fake-container-id:/app/out ./'
   assert_log_contains 'docker rm fake-container-id'
+  # `docker` is fully stubbed (no real image, no real `docker cp`), but the
+  # version.json write runs after it with real jq/git/date, so this is genuine
+  # behavioral coverage, not just a logged-command check like the rest of this
+  # test (issue #325). The sandbox has no .git, so the commit falls back to
+  # "unknown" -- the same value threaded into the (stubbed) --build-arg above.
+  [ -f "$MAKEFILE_SANDBOX/out/version.json" ]
+  run cat "$MAKEFILE_SANDBOX/out/version.json"
+  [ "$status" -eq 0 ]
+  assert_output_contains '"commit":"unknown"'
+  assert_output_contains '"version":'
+  run grep -Eo '"builtAt":"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z"' \
+    "$MAKEFILE_SANDBOX/out/version.json"
+  [ "$status" -eq 0 ]
 
   reset_command_log
   run_make_target format EXEC_MODE=host
@@ -238,7 +252,7 @@ EOF
   run_make_target wait-for-prod
   [ "$status" -eq 0 ]
   assert_output_contains 'Prod service is up and running!'
-  assert_log_contains 'curl -s -f http://localhost:3001'
+  assert_log_contains 'curl -s -f --connect-timeout 5 --max-time 10 http://localhost:3001'
 
   reset_command_log
   run_make_target test-e2e-ui
@@ -388,6 +402,85 @@ STUB
   run_make_target clean
   [ "$status" -eq 0 ]
   assert_log_contains 'docker compose down --remove-orphans'
+}
+
+first_log_line() {
+  grep -nF -- "$1" "$COMMAND_LOG" | head -n 1 | cut -d: -f1
+}
+
+assert_host_lighthouse_sequence() {
+  local lhci_command="bun x lhci autorun --config=lighthouserc.$1.js"
+  local step
+  local previous_line=0
+  local line
+
+  for step in 'node scripts/patchSwaggerServer.mjs' 'next build --webpack' \
+    'next-export-optimize-images' "$lhci_command"; do
+    assert_log_contains "$step"
+    line="$(first_log_line "$step")"
+    [ "$line" -gt "$previous_line" ]
+    previous_line="$line"
+  done
+
+  run grep -F 'docker' "$COMMAND_LOG"
+  [ "$status" -ne 0 ]
+}
+
+@test "host lighthouse-desktop and lighthouse-mobile patch the swagger schema before building" {
+  # The stubbed build writes nothing, so seed the export a real build would leave.
+  mkdir -p "$MAKEFILE_SANDBOX/out"
+  printf '{}' > "$MAKEFILE_SANDBOX/out/swagger-schema.json"
+
+  reset_command_log
+  run_make_target lighthouse-desktop EXEC_MODE=host
+  assert_success
+  assert_host_lighthouse_sequence desktop
+
+  reset_command_log
+  run_make_target lighthouse-mobile EXEC_MODE=host
+  assert_success
+  assert_host_lighthouse_sequence mobile
+
+  run_make_target lighthouse-desktop EXEC_MODE=host -n
+  assert_success
+  assert_output_contains 'env NEXT_PUBLIC_API_BASE_URL=http://mockoon:8080 node scripts/patchSwaggerServer.mjs'
+}
+
+@test "host lighthouse refuses to audit an export without swagger-schema.json" {
+  [ ! -e "$MAKEFILE_SANDBOX/out" ]
+
+  reset_command_log
+  run_make_target lighthouse-desktop EXEC_MODE=host
+  [ "$status" -ne 0 ]
+  assert_output_contains 'out/swagger-schema.json is missing'
+  assert_log_contains 'next-export-optimize-images'
+  run grep -F 'lhci' "$COMMAND_LOG"
+  [ "$status" -ne 0 ]
+
+  reset_command_log
+  run_make_target lighthouse-mobile EXEC_MODE=host
+  [ "$status" -ne 0 ]
+  assert_output_contains 'out/swagger-schema.json is missing'
+  run grep -F 'lhci' "$COMMAND_LOG"
+  [ "$status" -ne 0 ]
+
+  # test -s: an empty schema is refused the same way as a missing one.
+  mkdir -p "$MAKEFILE_SANDBOX/out"
+  : > "$MAKEFILE_SANDBOX/out/swagger-schema.json"
+
+  reset_command_log
+  run_make_target lighthouse-desktop EXEC_MODE=host
+  [ "$status" -ne 0 ]
+  assert_output_contains 'out/swagger-schema.json is missing'
+  run grep -F 'lhci' "$COMMAND_LOG"
+  [ "$status" -ne 0 ]
+
+  reset_command_log
+  run_make_target lighthouse-mobile EXEC_MODE=host
+  [ "$status" -ne 0 ]
+  assert_output_contains 'out/swagger-schema.json is missing'
+  run grep -F 'lhci' "$COMMAND_LOG"
+  [ "$status" -ne 0 ]
 }
 
 @test "test-integration runs Jest in the integration environment" {
@@ -816,6 +909,51 @@ STUB
   [ "$status" -ne 0 ]
 }
 
+@test "generate-sitemap regenerates the sitemap with host-side node" {
+  reset_command_log
+
+  run_make_target generate-sitemap
+  [ "$status" -eq 0 ]
+  assert_log_contains 'node scripts/ci/generate-sitemap.mjs'
+
+  # Dependency-free and host-only, like its generate-routes sibling: never the dev
+  # container, never the package manager. It is also a WRITER, so it must never be
+  # reached from `make lint`.
+  run grep -E 'docker|bun' "$COMMAND_LOG"
+  [ "$status" -ne 0 ]
+}
+
+@test "generate-sitemap runs the generator in verify-only mode under SITEMAP_CHECK" {
+  reset_command_log
+
+  # GNU Make would parse a trailing `--check` as one of its own options, so the
+  # verify-only mode is reachable only through this variable.
+  run_make_target generate-sitemap SITEMAP_CHECK=1
+  [ "$status" -eq 0 ]
+  assert_log_contains 'node scripts/ci/generate-sitemap.mjs --check'
+
+  reset_command_log
+  run_make_target generate-sitemap SITEMAP_CHECK=true
+  [ "$status" -eq 0 ]
+  assert_log_contains 'node scripts/ci/generate-sitemap.mjs --check'
+
+  # Anything else keeps the default writer behaviour rather than silently
+  # verifying: an unrecognised value must not disable the write.
+  reset_command_log
+  run_make_target generate-sitemap SITEMAP_CHECK=maybe
+  [ "$status" -eq 0 ]
+  run grep -- '--check' "$COMMAND_LOG"
+  [ "$status" -ne 0 ]
+}
+
+@test "the lint aggregate never runs the sitemap writer" {
+  # Same reason as the route-manifest writer below: generate-sitemap rewrites
+  # public/sitemap.xml, and a gate that repairs its own subject cannot fail. The
+  # drift check is the Jest spec src/test/unit/seo/sitemap.test.ts.
+  run grep -E '^lint:.*generate-sitemap' "$PROJECT_ROOT/Makefile"
+  [ "$status" -ne 0 ]
+}
+
 @test "the lint aggregate never runs the route-manifest writer" {
   # generate-routes rewrites config/routes.json; wiring it into a gate would make
   # that gate unfalsifiable. The drift check is the Jest spec
@@ -961,6 +1099,42 @@ STUB
   # the tip checkout and report a clean history it never opened.
   run grep -- '--no-git' "$COMMAND_LOG"
   [ "$status" -ne 0 ]
+}
+
+@test "scan-secrets-logs scans LOG_DIR as plain files through the digest-pinned gitleaks image" {
+  reset_command_log
+
+  cp "$PROJECT_ROOT/.gitleaks.toml" "$MAKEFILE_SANDBOX/.gitleaks.toml"
+  export GITHUB_WORKSPACE="$MAKEFILE_SANDBOX"
+  local logs="$BATS_TEST_TMPDIR/run-logs"
+  mkdir -p "$logs/deploy"
+  printf 'step output\n' >"$logs/deploy/1_Set up job.txt"
+
+  run_make_target scan-secrets-logs LOG_DIR="$logs"
+  [ "$status" -eq 0 ]
+
+  assert_log_contains 'ghcr.io/gitleaks/gitleaks@sha256:'
+  assert_log_contains '--config /repo/.gitleaks.toml'
+  assert_log_contains '--exit-code 1'
+  assert_log_contains "-v $logs:/logs:ro"
+  assert_log_contains '--source /logs --no-git'
+
+  run grep -E 'bun|npm' "$COMMAND_LOG"
+  [ "$status" -ne 0 ]
+}
+
+@test "scan-secrets-logs refuses an empty LOG_DIR before running docker" {
+  reset_command_log
+
+  cp "$PROJECT_ROOT/.gitleaks.toml" "$MAKEFILE_SANDBOX/.gitleaks.toml"
+  export GITHUB_WORKSPACE="$MAKEFILE_SANDBOX"
+  mkdir -p "$BATS_TEST_TMPDIR/no-logs"
+
+  run_make_target scan-secrets-logs LOG_DIR="$BATS_TEST_TMPDIR/no-logs"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"no non-empty file"* ]]
+  run grep -c '^docker ' "$COMMAND_LOG"
+  [ "$output" = "0" ]
 }
 
 @test "lint-security-txt validates the committed RFC 9116 security.txt" {
@@ -1270,4 +1444,24 @@ JSON
   run_make_target require-docker-stack
   [ "$status" -eq 0 ]
   [ -z "$(cat "$COMMAND_LOG")" ]
+}
+
+@test "smoke-prod threads SITE_URL into the branded 404 probe, then the uptime probe" {
+  # A dry run, not run_make_target: the real scripts retry against a live origin
+  # for minutes on a miss, and the target's behaviour against a real origin --
+  # red when any one of the three documents misbehaves -- is covered in
+  # tests/bats/smoke_response_shape.bats. This pins the command surface issues
+  # #331 and #329 ask for: both scripts get SITE_URL unchanged, the positive
+  # probe gets the deploy-sized budget, and the 404 probe blocks on the brand.
+  run make -C "$MAKEFILE_SANDBOX" -n smoke-prod SITE_URL='https://example.test' \
+    BIN_DIR="$STUB_BIN_DIR"
+  [ "$status" -eq 0 ]
+  assert_output_contains './scripts/ci/uptime-check.sh "https://example.test"'
+  assert_output_contains 'UPTIME_ATTEMPTS="${SMOKE_PROD_ATTEMPTS:-24}" UPTIME_DELAY="${SMOKE_PROD_DELAY:-15}"'
+  assert_output_contains './scripts/ci/smoke-response-shape.sh "https://example.test" --require-branded'
+  # The 404 probe runs first so a hanging homepage cannot time the job out before it.
+  local shape_line uptime_line
+  shape_line="$(printf '%s\n' "$output" | grep -n 'smoke-response-shape.sh' | head -n 1 | cut -d: -f1)"
+  uptime_line="$(printf '%s\n' "$output" | grep -n 'uptime-check.sh' | head -n 1 | cut -d: -f1)"
+  [ "$shape_line" -lt "$uptime_line" ]
 }

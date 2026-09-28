@@ -1,4 +1,4 @@
-import { test, type Page } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 import { expectKeyboardOperable } from './keyboard';
 import { A11Y_ROUTES, type A11yRoute } from './routes';
@@ -43,6 +43,8 @@ async function openRoute(page: Page, route: A11yRoute): Promise<void> {
     .locator(route.readySelector)
     .first()
     .waitFor({ state: 'visible', timeout: ROUTE_READY_TIMEOUT });
+
+  await expect(page.locator('html')).toHaveAttribute('lang', route.lang);
 }
 
 test.describe('route accessibility', () => {

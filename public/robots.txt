@@ -1,0 +1,31 @@
+# robots.txt for the VilnaCRM public marketing site.
+#
+# Published (issue #339). Production is a Next.js static export (next.config.js sets
+# `output: 'export'`), which copies only `public/` into `out/` — so this file lives here
+# and nowhere else. It sat at the repository root until #339, where no build ever copied
+# it and no crawler ever read it. `scripts/cloudfront_routing.js` allow-lists `/robots.txt`
+# as an exact ALLOWED_FILES entry, without which the fail-closed edge would answer the
+# crawler with the site 404.
+#
+# Until issue #383 the Sitemap directive pointed at a foreign preview-hosting
+# project subdomain on a shared, self-service namespace — a host anyone could
+# register, on a site deployed to S3 + CloudFront. It was never ours to point at,
+# and whoever claimed that project would have inherited the brand association
+# this file granted it. The five placeholder `Disallow:` directives removed
+# alongside it (/cgi-bin/, /tmp/, /junk/, /private/, /hidden/) existed in no
+# build of this site; robots.txt is world-readable, so they advertised
+# "interesting" paths while protecting nothing.
+
+User-agent: *
+Allow: /
+
+# Absolute URL on the canonical production origin. Crawlers discard a Sitemap
+# declared on a host other than the one serving the robots.txt, so this must
+# track the origin the site is actually deployed to (the `PROD_BUCKET_NAME`
+# repository variable, documented in docs/deployment-runbook.md). A static file
+# cannot interpolate that, and it cannot import `src/config/site.ts` either, so
+# this directive is the second and last declaration of the origin —
+# `src/test/unit/seo/site-origin.test.ts` holds the two in step, and
+# `scripts/ci/generate-sitemap.mjs` reads the origin back out of THIS line rather
+# than carrying a third copy.
+Sitemap: https://vilnacrm.com/sitemap.xml

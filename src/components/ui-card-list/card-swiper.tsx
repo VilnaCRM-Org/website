@@ -21,8 +21,6 @@ function isToolTip(node: Element): boolean {
 }
 
 function setSwiperPointerEvents(swiperRef: SwiperRef, value: string): void {
-  // Intentional DOM mutation through the carousel ref so a tooltip popper stays
-  // interactive over the swiper. Aliased to a local so it is not a param write.
   const element: HTMLDivElement | null = swiperRef.current;
   if (element) {
     element.style.pointerEvents = value;
@@ -48,8 +46,6 @@ function createTooltipObserver(swiperRef: SwiperRef): MutationObserver {
   });
 }
 
-// Disables Swiper pointer events while a tooltip popper is mounted, so the
-// tooltip stays interactive over the carousel. Mouse-only by design.
 function useTooltipPointerGuard(swiperRef: SwiperRef, cardCount: number): void {
   useEffect(() => {
     if (cardCount === 0) {

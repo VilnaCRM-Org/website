@@ -5,11 +5,18 @@ import * as Sentry from '@sentry/react';
 import type { NextWebVitalsMetric } from 'next/app';
 import dynamic from 'next/dynamic';
 import React, { ComponentType, useEffect } from 'react';
+import { I18nextProvider } from 'react-i18next';
 
 import { theme } from '@/components/app-theme';
+import ErrorFallback from '@/components/error-fallback';
 import Layout from '@/components/layout';
+import { APP_ENVIRONMENT, APP_VERSION } from '@/config/app-version';
 import { env } from '@/config/env';
+import { RouteI18n, useRouteI18n } from '@/hooks/use-route-i18n';
 import { initServiceWorker } from '@/lib/pwa/register-service-worker';
+import { scrubBreadcrumb } from '@/lib/telemetry/scrub-breadcrumb';
+import { scrubEvent } from '@/lib/telemetry/scrub-event';
+import { resolveTracesSampleRate } from '@/lib/telemetry/traces-sample-rate';
 import { handleWebVitalsMetric } from '@/lib/web-vitals/report-web-vitals';
 
 import 'swagger-ui-react/swagger-ui.css';
@@ -18,67 +25,88 @@ import '../styles/global.css';
 
 import '../src/features/swagger/components/api-documentation/styles.scss';
 
-import i18n from '../i18n';
+import '../i18n';
 import client from '../src/features/landing/api/graphql/apollo';
 
-// The landing Header is the site-wide chrome. It is composed here at the Next.js
-// routing root so the shared Layout (src/components) stays feature-agnostic and
-// does not import from src/features (enforced by dependency-cruiser).
 const DynamicHeader: ComponentType = dynamic(() => import('@/features/landing/components/header'), {
   ssr: false,
 });
 
+const renderErrorFallback: Sentry.FallbackRender = ({ resetError }) => (
+  <ErrorFallback onRetry={resetError} />
+);
+
+const SKIP_TARGET_ID: string = 'skip-target';
+const ERROR_FALLBACK_ID: string = 'app-error-fallback';
+
+const focusRecoveredOrRetryTarget = (): void => {
+  const fallback = document.getElementById(ERROR_FALLBACK_ID);
+  const retryButton = fallback?.querySelector('button') ?? null;
+  (retryButton ?? document.getElementById(SKIP_TARGET_ID))?.focus();
+};
+
+const focusPageStart: NonNullable<Sentry.ErrorBoundaryProps['onReset']> = () => {
+  queueMicrotask(focusRecoveredOrRetryTarget);
+};
+
+const tagRenderCrash: NonNullable<Sentry.ErrorBoundaryProps['beforeCapture']> = scope => {
+  scope.setTags({ feature: 'app', action: 'render-crash' });
+};
+
 Sentry.init({
   dsn: env.NEXT_PUBLIC_SENTRY_DSN,
-  // The only interactive surface on this site is the sign-up form, so an
-  // unmasked session replay would record a password field keystroke by
-  // keystroke. Masking is Sentry's default; pinning it here means an upstream
-  // default change cannot silently start capturing credentials (#378 F3).
+  enabled: Boolean(env.NEXT_PUBLIC_SENTRY_DSN),
   sendDefaultPii: false,
   integrations: [
     Sentry.browserTracingIntegration(),
     Sentry.replayIntegration({ maskAllInputs: true, maskAllText: true, blockAllMedia: true }),
   ],
-  // Drop empty origins so Sentry never receives '' (which substring-matches
-  // every URL and would attach trace headers to all outbound requests).
   tracePropagationTargets: [env.NEXT_PUBLIC_DEVELOPMENT_API_URL, env.NEXT_PUBLIC_API_URL].filter(
     Boolean
   ),
-  tracesSampleRate: 1.0,
+  tracesSampleRate: resolveTracesSampleRate(
+    env.NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE,
+    APP_ENVIRONMENT
+  ),
   replaysSessionSampleRate: 0.1,
   replaysOnErrorSampleRate: 1.0,
+  release: APP_VERSION,
+  environment: APP_ENVIRONMENT,
+  beforeSend: scrubEvent,
+  beforeBreadcrumb: scrubBreadcrumb,
 });
 
 function MyApp({ Component }: { Component: React.ComponentType }): React.ReactElement {
-  useEffect(() => {
-    document.documentElement.dir = i18n.dir();
-  }, []);
+  const { locale, instance }: RouteI18n = useRouteI18n();
 
-  // Registered from the routing root so the offline shell covers every route. The module
-  // owns the production gate and the deferral to `load`, so this stays a one-line call.
   useEffect(() => {
     initServiceWorker();
   }, []);
 
   return (
-    <ThemeProvider theme={theme}>
-      <ApolloProvider client={client}>
-        <main className="app-typeface">
-          <Layout header={<DynamicHeader />}>
-            <Component />
-          </Layout>
-          {env.NEXT_PUBLIC_GA_MEASUREMENT_ID ? (
-            <GoogleAnalytics gaId={env.NEXT_PUBLIC_GA_MEASUREMENT_ID} />
-          ) : null}
-        </main>
-      </ApolloProvider>
-    </ThemeProvider>
+    <I18nextProvider key={locale} i18n={instance}>
+      <ThemeProvider theme={theme}>
+        <ApolloProvider client={client}>
+          <main className="app-typeface">
+            <Layout header={<DynamicHeader />}>
+              <Sentry.ErrorBoundary
+                fallback={renderErrorFallback}
+                beforeCapture={tagRenderCrash}
+                onReset={focusPageStart}
+              >
+                <Component />
+              </Sentry.ErrorBoundary>
+            </Layout>
+            {env.NEXT_PUBLIC_GA_MEASUREMENT_ID ? (
+              <GoogleAnalytics gaId={env.NEXT_PUBLIC_GA_MEASUREMENT_ID} />
+            ) : null}
+          </main>
+        </ApolloProvider>
+      </ThemeProvider>
+    </I18nextProvider>
   );
 }
 
-// Next.js calls this named export for every web-vital it records; the forwarding
-// gate (field-vital filter, production check, sampling) and PII-free payload live
-// in the shared module so the routing root stays a thin wrapper.
 export function reportWebVitals(metric: NextWebVitalsMetric): void {
   handleWebVitalsMetric(metric);
 }

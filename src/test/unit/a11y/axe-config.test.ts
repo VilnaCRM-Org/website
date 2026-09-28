@@ -331,7 +331,9 @@ describe('accessibility acceptance standard', () => {
       expect(filterAllowedViolations([contrast], { layer: 'component' })).toEqual([contrast]);
     });
 
-    it('keeps the swagger select waiver off every other selector', () => {
+    it('no longer waives select-name on the swagger servers dropdown (#424)', () => {
+      // The waiver was removed once `withServersLabel` gave `#servers` an accessible
+      // name; every node of the rule stays blocking on /swagger, the fixed one included.
       const selectName: Result = makeViolation('select-name', ['#servers', '#other-select']);
 
       const [remaining] = filterAllowedViolations([selectName], {
@@ -339,8 +341,23 @@ describe('accessibility acceptance standard', () => {
         route: '/swagger',
       });
 
-      expect(remaining?.nodes).toHaveLength(1);
-      expect(selectorTextOf(remaining!.nodes[0]!)).toBe('#other-select');
+      expect(remaining?.nodes).toHaveLength(2);
+      expect(remaining!.nodes.map(selectorTextOf)).toEqual(['#servers', '#other-select']);
+    });
+
+    it.each<[string, string]>([
+      ['button-name', '.close-modal'],
+      ['label-content-name-mismatch', 'button[aria-label="Apply given OAuth2 credentials"]'],
+      ['td-has-header', '#get_api_users_responses'],
+    ])('no longer waives %s at %s on /swagger (#433)', (ruleId, selector) => {
+      const formerlyWaived: Result = makeViolation(ruleId, [selector]);
+
+      const [remaining] = filterAllowedViolations([formerlyWaived], {
+        layer: 'route',
+        route: '/swagger',
+      });
+
+      expect(remaining?.nodes.map(selectorTextOf)).toEqual([selector]);
     });
   });
 

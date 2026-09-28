@@ -144,6 +144,7 @@ describe('accessibility interaction-state registry', () => {
       'registrationSubmitError',
       'registrationValidationErrors',
       'swaggerAuthorizeDialog',
+      'swaggerLoadFailed',
       'swaggerOperationExpanded',
       'tooltipOpen',
     ]);

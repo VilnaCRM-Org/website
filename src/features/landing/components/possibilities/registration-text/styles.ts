@@ -3,6 +3,8 @@ import colorTheme from '@/components/ui-color-theme';
 
 export default {
   textWrapper: {
+    justifyContent: 'center',
+    width: '100%',
     paddingRight: '2rem',
     [`@media (max-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
       paddingRight: '0',

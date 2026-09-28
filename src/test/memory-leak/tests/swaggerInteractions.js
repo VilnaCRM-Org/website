@@ -56,92 +56,109 @@ async function setup(page) {
     throw new Error('Page was not redirected to /swagger as expected');
   }
 }
-async function action(page) {
-  await page.waitForSelector('.swagger-ui');
 
-  const hasServers = await page.$('#servers');
-  if (hasServers) {
+async function disposeAll(handles) {
+  await Promise.all(handles.filter(Boolean).map(handle => handle.dispose()));
+}
+
+async function forEachMatch(root, selector, visit) {
+  const handles = await root.$$(selector);
+  try {
+    for (const handle of handles) {
+      await visit(handle);
+    }
+  } finally {
+    await disposeAll(handles);
+  }
+}
+
+async function withMatch(root, selector, visit) {
+  const handle = await root.$(selector);
+  if (!handle) return;
+  try {
+    await visit(handle);
+  } finally {
+    await handle.dispose();
+  }
+}
+
+async function waitForSwaggerUi(page) {
+  const swaggerRoot = await page.waitForSelector('.swagger-ui');
+  await disposeAll([swaggerRoot]);
+}
+
+async function selectMockedServer(page) {
+  const serverSelects = await page.$$eval('#servers', elements => elements.length);
+  if (serverSelects > 0) {
     await page.select('#servers', 'https://mocked.api.com');
   }
+}
 
-  const summaryButtons = await page.$$('button.opblock-summary-control[aria-expanded="false"]');
+async function tryOutAndExecute(tryOutButton) {
+  await safeClick(tryOutButton, 'button.btn.try-out__btn');
 
-  for (const summaryButton of summaryButtons) {
-    await safeClick(summaryButton, '.opblock-body');
-  }
-
-  const tryOutButtons = await page.$$('button.btn.try-out__btn');
-  for (const tryOutButton of tryOutButtons) {
-    await safeClick(tryOutButton, 'button.btn.try-out__btn');
-
-    const parentBlock = await tryOutButton.evaluateHandle(el => el.closest('.opblock'));
-    const executeButton = await parentBlock.waitForSelector(
-      'button.btn.execute.opblock-control__btn',
-      { visible: true }
-    );
+  const parentBlock = await tryOutButton.evaluateHandle(el => el.closest('.opblock'));
+  let executeButton = null;
+  try {
+    executeButton = await parentBlock.waitForSelector('button.btn.execute.opblock-control__btn', {
+      visible: true,
+    });
 
     if (executeButton) {
       await safeClick(executeButton, 'button.btn.execute.opblock-control__btn');
     }
-    await parentBlock.dispose();
-  }
-
-  const endpoints = await page.$$('.opblock');
-  for (const endpoint of endpoints) {
-    await endpoint.hover();
-
-    const copyButton = await endpoint.$('.copy-to-clipboard button');
-
-    if (copyButton) {
-      await safeClick(copyButton, '.copy-to-clipboard button');
-    }
-  }
-  const responseStatusElements = await page.$$('.response-col_status');
-  const statuses = [];
-  for (const statusElement of responseStatusElements) {
-    const status = await statusElement.evaluate(el => el.textContent.trim());
-    statuses.push(status);
-  }
-  const responseTexts = await page.$$('.response-col_description');
-  const descriptions = [];
-  for (const textElement of responseTexts) {
-    const description = await textElement.evaluate(el => el.textContent.trim());
-    descriptions.push(description);
+  } finally {
+    await disposeAll([executeButton, parentBlock]);
   }
 }
 
+async function action(page) {
+  await waitForSwaggerUi(page);
+
+  await selectMockedServer(page);
+
+  await forEachMatch(page, 'button.opblock-summary-control[aria-expanded="false"]', summaryButton =>
+    safeClick(summaryButton, '.opblock-body')
+  );
+
+  await forEachMatch(page, 'button.btn.try-out__btn', tryOutAndExecute);
+
+  await forEachMatch(page, '.opblock', async endpoint => {
+    await endpoint.hover();
+
+    await withMatch(endpoint, '.copy-to-clipboard button', copyButton =>
+      safeClick(copyButton, '.copy-to-clipboard button')
+    );
+  });
+
+  await page.$$eval('.response-col_status, .response-col_description', cells =>
+    cells.map(cell => cell.textContent.trim())
+  );
+}
+
 async function back(page) {
-  await page.waitForSelector('.swagger-ui');
+  await waitForSwaggerUi(page);
 
-  const hasServers = await page.$('#servers');
-  if (hasServers) {
-    await page.select('#servers', 'https://mocked.api.com');
-  }
+  await selectMockedServer(page);
 
-  const expandedButtons = await page.$$('button[aria-expanded="true"]');
-  for (const expandedButton of expandedButtons) {
-    await safeClick(expandedButton, 'button[aria-expanded="true"]');
-  }
+  await forEachMatch(page, 'button[aria-expanded="true"]', expandedButton =>
+    safeClick(expandedButton, 'button[aria-expanded="true"]')
+  );
 
-  const operationBlocks = await page.$$('.opblock');
+  await forEachMatch(page, '.opblock', async block => {
+    await withMatch(block, '.opblock-summary-control', summaryButton =>
+      safeClick(summaryButton, '.opblock-summary-control')
+    );
 
-  for (const block of operationBlocks) {
-    const summaryButton = await block.$('.opblock-summary-control');
-    if (summaryButton) {
-      await safeClick(summaryButton, '.opblock-summary-control');
-    }
+    await withMatch(block, '.copy-to-clipboard button', copyButton =>
+      safeClick(copyButton, '.copy-to-clipboard button')
+    );
 
-    const copyButton = await block.$('.copy-to-clipboard button');
-    if (copyButton) {
-      await safeClick(copyButton, '.copy-to-clipboard button');
-    }
-
-    const responseStatus = await block.$('.response-col_status');
-    if (responseStatus) {
-      const status = await page.evaluate(el => el.textContent, responseStatus);
+    await withMatch(block, '.response-col_status', async responseStatus => {
+      const status = await responseStatus.evaluate(el => el.textContent);
       expect(status).toBe('200');
-    }
-  }
+    });
+  });
 }
 
 export default scenarioBuilder.createScenario({ setup, action, back });
