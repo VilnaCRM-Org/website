@@ -37,14 +37,14 @@ runs:
           echo "::error::could not read the base image from the Dockerfile's FROM … AS base line"
           exit 1
         fi
-        for attempt in 1 2 3 4 5; do
+        for attempt in 1 2 3 4 5 6; do
           if docker manifest inspect "$base" > /dev/null 2>&1; then
             exit 0
           fi
           echo "::warning::the base image registry did not answer (attempt $attempt); backing off"
-          sleep $((attempt * 20))
+          sleep $((attempt * 30))
         done
-        echo "::error::the base image registry kept refusing for five attempts"
+        echo "::error::the base image registry kept refusing for six attempts"
         exit 1
 
     - name: Build or restore the dev image

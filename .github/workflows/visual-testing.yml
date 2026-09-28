@@ -50,14 +50,14 @@ jobs:
       - name: Start the production stack
         run: |
           set -uo pipefail
-          for attempt in 1 2 3; do
+          for attempt in 1 2 3 4 5; do
             if make start-prod; then
               exit 0
             fi
             echo "::warning::start-prod attempt $attempt failed; retrying after a pause"
             sleep $((attempt * 30))
           done
-          echo "::error::start-prod failed three times"
+          echo "::error::start-prod failed five times"
           exit 1
 
       - name: Run visual shard
