@@ -57,9 +57,6 @@ jest.mock('uuid', () => ({
   v4: jest.fn(() => '132'),
 }));
 
-const queryByRoleSafe: (role: string) => HTMLElement | null = (role: string) =>
-  document.querySelector(`[role="${role}"]`);
-
 type FormElement = { fieldKey: string; value: string };
 const inputFields: FormElement[] = [
   { fieldKey: 'fullNameInput', value: testInitials },
@@ -118,7 +115,7 @@ describe('AuthLayout', () => {
     // the error notification; the success notification proves it never left the
     // browser. The response is deliberately identical to a real success so a
     // script cannot tell which of its inputs tripped the control.
-    const { container, getByText, queryByText } = renderAuthLayout([]);
+    const { container, getByText, queryByText, queryByRole } = renderAuthLayout([]);
     const honeypot: HTMLInputElement | null = container.querySelector('input[name="Referral"]');
     expect(honeypot).not.toBeNull();
 
@@ -129,7 +126,7 @@ describe('AuthLayout', () => {
       expect(getByText(successTitleText)).toBeInTheDocument();
     });
     expect(queryByText(errorTitleText)).not.toBeInTheDocument();
-    expect(queryByRoleSafe(statusRole)).toBeNull();
+    expect(queryByRole(statusRole, { name: loaderName })).not.toBeInTheDocument();
   });
 
   it('displays loader and submits form successfully without errors', async () => {

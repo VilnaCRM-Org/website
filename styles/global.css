@@ -1,37 +1,8 @@
-/**
- * Font faces are declared here rather than through `next/font/local` because the
- * `@vilnacrm/ui-toolkit` themes request the families by their real names
- * (`Inter` 36x, `Golos Text` 22x). `next/font` generates an opaque family name
- * per import, which those references can never resolve to. Declaring the faces
- * under their real names makes the toolkit resolve them, and reuses the exact
- * same self-hosted `.woff2` assets, so nothing extra is downloaded.
- *
- * What `next/font` also gave us, and is re-declared by hand below, is the
- * metric-adjusted fallback: without it `font-display: swap` paints in Arial at
- * Arial's metrics and then reflows every line when the real face arrives, which
- * is a CLS regression on every page.
- *
- * The override values are not recomputed here — they are the exact ones
- * `next/font` emitted for these same `.woff2` files before this change, read off
- * the built stylesheet of the commit that still used `next/font/local`. Copying
- * them rather than deriving them again is deliberate: a re-derivation that lands
- * a fraction of a percent away would change how every page paints before the real
- * face swaps in, which is a visual change this migration is supposed not to make.
- * HOW TO RECOMPUTE, if a family's regular face is ever replaced. The original
- * recipe said "re-record the built values the same way", which is not runnable:
- * it points at `next/font`, which this change removes. Derive them instead from
- * the new face's own metrics, which is what `next/font` did:
- *
- *   size-adjust      = (new avg lowercase advance width / Arial's) as a percent
- *   ascent-override  = new ascender  / unitsPerEm / size-adjust
- *   descent-override = new descender / unitsPerEm / size-adjust
- *   line-gap-override = new lineGap  / unitsPerEm / size-adjust
- *
- * `bunx --bun fontkit` (or any OpenType metrics reader) supplies unitsPerEm,
- * ascent, descent and lineGap from the `.woff2`; Arial's comparison metrics are
- * the ones bundled in `next/font`'s own fallback table. Re-verify by rebuilding
- * and confirming the visual suite is unchanged, since these values only affect
- * the pre-swap paint.
+/*
+ * The Inter and Golos Text faces are declared here under their real family names so the
+ * `@vilnacrm/ui-toolkit` styles resolve them, and the two `* Fallback` faces carry the
+ * metric overrides `next/font` used to emit for the same `.woff2` files. Why, and how to
+ * recompute the overrides if a face is replaced: docs/ui-toolkit.md ("Fonts").
  */
 
 @font-face {
@@ -127,6 +98,12 @@
 /* The site's base typeface, applied to the app root in `pages/_app.tsx`. */
 .app-typeface {
   font-family: 'Golos Text', 'Golos Text Fallback', sans-serif;
+}
+
+/* The stacks `@vilnacrm/ui-toolkit` reads for its own text (src/utils/font-tokens.ts). */
+:root {
+  --ui-toolkit-font-inter: 'Inter', 'Inter Fallback', sans-serif;
+  --ui-toolkit-font-golos: 'Golos Text', 'Golos Text Fallback', sans-serif;
 }
 
 html,

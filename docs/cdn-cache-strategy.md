@@ -38,7 +38,7 @@ partitions the same set, so a path that reaches the origin is always one of them
 
 Everything Next writes under `_next/static/` carries a content hash in its name or sits
 under a per-build id directory: chunks (`chunks/<id>.<hash>.js`), stylesheets
-(`css/<hash>.css`), the `next/font` files (`media/<hash>-s.p.woff2`), the SVGs imported
+(`css/<hash>.css`), the self-hosted font files (`media/<name>.<hash>.woff2`), the SVGs imported
 from `src/`, and every raster `next-export-optimize-images` writes
 (`chunks/images/**/<name>.<hash>_<width>.webp`, see `export-images.config.js`). A new
 build never overwrites one of these paths with different bytes; it emits new paths.

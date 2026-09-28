@@ -644,6 +644,20 @@ generate-sitemap: ## Regenerate public/sitemap.xml from config/routes.json (issu
 lint-api-versions: ## Verify OpenAPI and GraphQL reference the same pinned user-service release
 	$(DEV_READY) $(PM_EXEC) node scripts/contracts/check-api-versions.mjs
 
+# `@vilnacrm/ui-toolkit` is a GitHub release tarball, and bun records NO `sha512`
+# for a remote-tarball dependency, so the lockfile carries no integrity evidence
+# and osv-scanner cannot key the entry either. This gate is the only local proof
+# that the installed bytes are the reviewed bytes. Hermetic like
+# lint-api-versions above — no network, no host binary — so it belongs in the
+# `lint` aggregate and in CI_LINT_TARGETS rather than on a nightly.
+lint-ui-toolkit: ## Verify the installed @vilnacrm/ui-toolkit matches the committed SHA-256 digests
+	$(DEV_READY) $(PM_EXEC) node scripts/verifyUiToolkit.cli.mjs
+
+# The networked half: refreshes the digests from whatever is installed. Run it
+# only after re-reviewing a new release, never to clear a red lint-ui-toolkit.
+update-ui-toolkit: ## Refresh config/ui-toolkit-checksums.json from the installed package
+	$(DEV_READY) $(PM_EXEC) node -e "import('./scripts/verifyUiToolkit.mjs').then(async m => { const { writeFileSync } = await import('node:fs'); writeFileSync(m.CHECKSUMS_PATH, JSON.stringify(m.buildChecksumsFile(), null, 2) + '\n'); process.stdout.write('refreshed ' + m.CHECKSUMS_PATH + '\n'); })"
+
 lint-deps: generate-localization ## Validate architecture/import boundaries with dependency-cruiser
 	$(DEV_READY) $(PM_EXEC) $(DEPCRUISE_BIN) src pages tests --config .dependency-cruiser.js
 

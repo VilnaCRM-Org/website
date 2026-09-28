@@ -30,16 +30,14 @@ is the place to look before changing it.
   a local so the write is not a parameter write. The optional `hoverCardContent` render
   slot in `types.ts` is how a feature injects a card's tooltip (the landing
   `ServicesHoverCard`) without the shared card components learning about the feature.
-- **`ui-tooltip`** — `tooltip-wrapper.tsx` closes the tooltip when the viewport crosses a
-  breakpoint by deriving state during render (React's "adjusting state on prop change"
-  pattern) rather than in an effect, which avoids the extra render that
-  set-state-in-effect flags. The set-state runs during render by design; it is not an
-  effect.
-- **`ui-typography`** — props are forwarded through an explicit allow-list, so anything a
-  caller needs on the rendered element has to be named there; `aria-live` / `aria-atomic`
-  are listed because the form validation message is a live region. Its `types.ts` splits
-  a long union into two short ones so the file is stable under both the repo's Prettier
-  and Qlty's.
+- **`ui-button`, `ui-typography`, `ui-checkbox`, `ui-link`, `ui-input`, `ui-toolbar`,
+  `ui-tooltip`, `ui-color-theme`, `ui-breakpoints`** — render from the pinned
+  `@vilnacrm/ui-toolkit` release. Each directory is an import seam: a bare re-export, or
+  a thin adapter (`ui-button`, `ui-link`, `ui-input`) that re-adds a contract this
+  repository tests. What each adapter adds, how the pin is verified and how the fonts the
+  toolkit asks for are declared is in [`docs/ui-toolkit.md`](../../docs/ui-toolkit.md).
+  Keep the toolkit's geometry as shipped — a defect is fixed upstream and the pin bumped,
+  never patched over with a local `sx`.
 - **`ui-image`** — `sx` is required: every consumer sizes the image, and the wrapper's own
   `img` rule is layered after it.
 - **`error-fallback`** — the fallback `pages/_app.tsx` renders inside `Sentry.ErrorBoundary`

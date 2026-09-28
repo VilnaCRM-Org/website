@@ -21,8 +21,8 @@ import {
   verify,
 } from '../../../../scripts/verifyUiToolkit.mjs';
 
-const TARBALL_URL: string =
-  'https://github.com/VilnaCRM-Org/ui-toolkit/releases/download/v9.9.9/vilnacrm-ui-toolkit-9.9.9.tgz';
+const TARBALL_BASE: string = 'https://github.com/VilnaCRM-Org/ui-toolkit/releases/download';
+const TARBALL_URL: string = `${TARBALL_BASE}/v9.9.9/vilnacrm-ui-toolkit-9.9.9.tgz`;
 const ARTIFACT: string = 'build/ui-button.mjs';
 const CONTENT: string = 'toolkit bytes';
 const CONTENT_DIGEST: string = digest(CONTENT);

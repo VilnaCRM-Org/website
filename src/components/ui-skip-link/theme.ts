@@ -1,6 +1,6 @@
 import { Theme, createTheme } from '@mui/material';
 
-import { inter } from '@/config/Fonts/inter';
+import { INTER_FAMILY } from '@/config/Fonts/families';
 
 import colorTheme from '../ui-color-theme';
 
@@ -32,7 +32,7 @@ export const theme: Theme = createTheme({
             padding: '0.75rem 1.5rem',
             backgroundColor: colorTheme.palette.white.main,
             color: colorTheme.palette.primary.main,
-            fontFamily: inter.style.fontFamily,
+            fontFamily: INTER_FAMILY,
             fontSize: '1rem',
             fontWeight: '700',
             borderRadius: '0.5rem',
