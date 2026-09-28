@@ -41,6 +41,7 @@ export default {
     '& [role="button"]': {
       cursor: 'pointer',
       color: colorTheme.palette.primary.main,
+      fontFamily: 'inherit',
       textDecoration: 'underline',
       fontWeight: '700',
     },
