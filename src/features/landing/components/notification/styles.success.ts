@@ -1,3 +1,4 @@
+import { bodyLetterSpacing } from '@/components/app-theme';
 import colorTheme from '@/components/ui-color-theme';
 import { GOLOS_TEXT_FAMILY } from '@/config/Fonts/families';
 
@@ -141,6 +142,7 @@ export default {
     fontWeight: 700,
     fontSize: '1.375rem',
     lineHeight: '1.65rem',
+    letterSpacing: bodyLetterSpacing,
     fontFamily: GOLOS_TEXT_FAMILY,
     color: colorTheme.palette.darkPrimary.main,
     zIndex: Z_INDICES.MESSAGE_TITLE,
@@ -158,6 +160,7 @@ export default {
     fontWeight: 400,
     fontSize: '0.98rem',
     lineHeight: '1.5625rem',
+    letterSpacing: bodyLetterSpacing,
     fontFamily: GOLOS_TEXT_FAMILY,
     color: colorTheme.palette.darkPrimary.main,
 

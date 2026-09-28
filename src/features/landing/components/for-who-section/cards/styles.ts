@@ -1,3 +1,4 @@
+import { bodyLetterSpacing } from '@/components/app-theme';
 import colorTheme from '@/components/ui-color-theme';
 import { GOLOS_TEXT_FAMILY } from '@/config/Fonts/families';
 
@@ -48,6 +49,7 @@ export default {
   secondTitle: {
     maxWidth: '23.313rem',
     pb: '2rem',
+    letterSpacing: bodyLetterSpacing,
     fontFamily: GOLOS_TEXT_FAMILY,
     color: colorTheme.palette.darkPrimary.main,
     fontSize: '1.75rem',

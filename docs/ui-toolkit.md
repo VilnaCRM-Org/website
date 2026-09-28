@@ -75,6 +75,17 @@ toolkit's `uiTheme` carries. Wrapping the site in the toolkit's `UiThemeProvider
 would re-theme every MUI component on the site (default typography, spacing, shape), which
 is a visual change this integration is supposed not to make.
 
+## Body-copy tracking
+
+MUI adds `letter-spacing` to its stock text variants only while the theme's font family is
+Roboto; the toolkit's `uiTheme` names Golos, so a `UiTypography` rendered with no
+`variant` — the notification title and description, the for-who card sub-heading — inherits
+`normal` tracking from the toolkit, while this site's own app theme still resolves
+`body1` at MUI's Roboto value. Those three styles pin `bodyLetterSpacing` from
+`src/components/app-theme` so the swap does not retighten body copy the baselines already
+hold; a design decision to drop that tracking is a one-line change there, made on purpose
+and re-recorded, not a side effect of a dependency bump.
+
 ## Fonts
 
 The toolkit's styles ask for `Inter` and `Golos Text` by name, through the CSS custom

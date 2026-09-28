@@ -50,6 +50,12 @@ test.describe('Form Submission Visual Test', () => {
         node.scrollIntoView({ block: 'center', behavior: 'instant' })
       );
 
+      // The pointer is still where the submit click left it, and the notification
+      // buttons now sit under that spot on some viewports, so the shot would
+      // capture a hover state that depends on the previous button's geometry.
+      // Parking it on the page corner makes the capture pointer-independent.
+      await page.mouse.move(0, 0);
+
       await page.evaluate(() =>
         Promise.all(document.getAnimations().map(animation => animation.finished.catch(() => null)))
       );

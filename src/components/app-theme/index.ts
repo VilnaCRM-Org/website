@@ -30,3 +30,5 @@ export const theme: Theme = createTheme({
     },
   },
 });
+
+export const bodyLetterSpacing: string | number = theme.typography.body1.letterSpacing ?? 'normal';
