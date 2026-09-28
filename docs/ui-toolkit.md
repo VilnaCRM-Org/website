@@ -180,12 +180,21 @@ baselines under `src/test/visual/**/*-snapshots/` change **for buttons only**:
   unitless ratio gave 60px, and toolkit v0.4.0's `1.125rem` (right for the small button,
   wrong for the medium one, ui-toolkit#157) gave 58px.
 
-The notification buttons' label keeps a `1.375rem` line box from the `sm` breakpoint up:
-the buttons are 62px and 70px tall, so a 22px label centres on whole pixels (20px and 24px
-of space) while the previous `1.35rem` left a 0.2px remainder. The card sits at a fractional
-offset since the social buttons became an integer 58px tall, and Chromium snaps the label
-and the button background to the pixel grid separately, so that remainder read as a
-label one pixel low on desktop and tablet.
+The notification buttons keep their `1.35rem` label line box, and the error card's label
+additionally carries `top: -0.203125px` from the `sm` breakpoint up. Those buttons have
+explicit heights (70px from `sm`, 62px from `xl`) around a 16px vertical padding, so the
+21.6px label centres 20.2px below the button's top edge and, with the baseline 17px below
+the label's own top, the baseline lands 37.2px (41.2px in the 70px button) below the
+button. Chromium snaps the text baseline and the button background to the pixel grid
+independently, so whether the label paints a row higher or lower depends on the sub-pixel
+position of the card — which moved by half a pixel when the two contained medium CTAs above
+the sign-up section grew from 60.25px to 62px, and that read as the label one pixel low
+against `main` on every desktop and tablet shot. The 13/64px lift is one step of Blink's
+layout grid: it puts the baseline on a whole pixel (37px / 41px), so the raster no longer
+depends on where the card sits and matches `main`'s at every offset; a 22px line box
+instead paints the label a row low at every offset. The success card's button has no
+explicit height, so its label sits exactly 20px below the top edge and its baseline is
+already whole-pixel; it needs neither change.
 
 Everything below a button that changed height moves by the height difference. Every
 re-recorded baseline was compared with `main`'s row by row at vertical offsets, then

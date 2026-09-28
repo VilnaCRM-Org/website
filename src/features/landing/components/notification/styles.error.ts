@@ -78,6 +78,8 @@ export default {
       fontWeight: 600,
       fontSize: '18px',
       lineHeight: '21.6px',
+      position: 'relative',
+      top: '-0.203125px',
     },
   },
 };
