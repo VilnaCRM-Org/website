@@ -1,3 +1,111 @@
+/*
+ * The Inter and Golos Text faces are declared here under their real family names so the
+ * `@vilnacrm/ui-toolkit` styles resolve them, and the two `* Fallback` faces carry the
+ * metric overrides `next/font` used to emit for the same `.woff2` files. Why, and how to
+ * recompute the overrides if a face is replaced: docs/ui-toolkit.md ("Fonts").
+ */
+
+@font-face {
+  font-family: 'Inter';
+  src: url('../src/assets/fonts/Inter/Inter-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: url('../src/assets/fonts/Inter/Inter-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: url('../src/assets/fonts/Inter/Inter-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Golos Text';
+  src: url('../src/assets/fonts/Golos/GolosText-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Golos Text';
+  src: url('../src/assets/fonts/Golos/GolosText-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Golos Text';
+  src: url('../src/assets/fonts/Golos/GolosText-SemiBold.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Golos Text';
+  src: url('../src/assets/fonts/Golos/GolosText-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Golos Text';
+  src: url('../src/assets/fonts/Golos/GolosText-ExtraBold.woff2') format('woff2');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Golos Text';
+  src: url('../src/assets/fonts/Golos/GolosText-Black.woff2') format('woff2');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Inter Fallback';
+  src: local('Arial');
+  size-adjust: 107.64%;
+  ascent-override: 90%;
+  descent-override: 22.43%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: 'Golos Text Fallback';
+  src: local('Arial');
+  size-adjust: 108.83%;
+  ascent-override: 90.05%;
+  descent-override: 20.21%;
+  line-gap-override: 0%;
+}
+
+/* The site's base typeface, applied to the app root in `pages/_app.tsx`. */
+.app-typeface {
+  font-family: 'Golos Text', 'Golos Text Fallback', sans-serif;
+}
+
+/* The stacks `@vilnacrm/ui-toolkit` reads for its own text (src/utils/font-tokens.ts). */
+:root {
+  --ui-toolkit-font-inter: 'Inter', 'Inter Fallback', sans-serif;
+  --ui-toolkit-font-golos: 'Golos Text', 'Golos Text Fallback', sans-serif;
+}
+
 html,
 body {
   padding: 0;

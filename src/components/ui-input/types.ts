@@ -1,19 +1,15 @@
-import { TextFieldProps } from '@mui/material';
+import type { UiInputProps as ToolkitOwnProps } from '@vilnacrm/ui-toolkit/ui-input';
 
-export interface UiInputProps {
-  sx?: React.CSSProperties;
-  placeholder?: string;
-  value?: string;
-  onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  error?: boolean;
-  onBlur?: (event: React.FocusEvent<HTMLInputElement>) => void;
+type AllowedToolkitProps = Pick<
+  ToolkitOwnProps,
+  'sx' | 'placeholder' | 'value' | 'onChange' | 'onBlur' | 'onInput' | 'error' | 'disabled' | 'id'
+>;
+
+export type UiInputProps = AllowedToolkitProps & {
   type?: string | undefined;
   fullWidth?: boolean | undefined;
-  disabled?: boolean;
-  onInput?: TextFieldProps['onInput'];
-  id?: string;
   name?: string | undefined;
   autoComplete?: string | undefined;
   describedBy?: string | undefined;
   required?: boolean;
-}
+};

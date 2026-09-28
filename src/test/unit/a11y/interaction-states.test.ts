@@ -146,6 +146,7 @@ describe('accessibility interaction-state registry', () => {
       'swaggerAuthorizeDialog',
       'swaggerLoadFailed',
       'swaggerOperationExpanded',
+      'tooltipOpen',
     ]);
   });
 

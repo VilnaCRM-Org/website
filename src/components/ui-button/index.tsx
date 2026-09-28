@@ -1,44 +1,20 @@
-import { Button, ThemeProvider } from '@mui/material';
+import ToolkitUiButton from '@vilnacrm/ui-toolkit/ui-button';
+import React from 'react';
 
-import { theme } from './theme';
-import { UiButtonProps } from './types';
+import type { UiButtonProps } from './types';
 
-function UiButton({
-  variant,
-  size,
-  disabled,
-  fullWidth,
-  component,
-  onClick,
-  type,
-  href,
-  children,
-  sx,
-  name,
-  ...rest
-}: UiButtonProps): React.ReactElement {
-  const componentProps = component ? { component } : {};
-  const hrefProps = href ? { href } : {};
+type AnchorProps = Pick<UiButtonProps, 'rel' | 'target' | 'href'>;
 
-  return (
-    <ThemeProvider theme={theme}>
-      <Button
-        variant={variant}
-        size={size}
-        disabled={disabled}
-        fullWidth={fullWidth}
-        type={type}
-        onClick={onClick}
-        sx={sx}
-        name={name}
-        {...componentProps}
-        {...hrefProps}
-        {...rest}
-      >
-        {children}
-      </Button>
-    </ThemeProvider>
-  );
+function presentAnchorProps({ rel, target, href }: AnchorProps): AnchorProps {
+  return {
+    ...(rel ? { rel } : {}),
+    ...(target ? { target } : {}),
+    ...(href ? { href } : {}),
+  };
+}
+
+function UiButton({ rel, target, href, ...buttonProps }: UiButtonProps): React.ReactElement {
+  return <ToolkitUiButton {...buttonProps} {...presentAnchorProps({ rel, target, href })} />;
 }
 
 export default UiButton;

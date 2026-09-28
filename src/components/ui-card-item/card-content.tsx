@@ -32,12 +32,12 @@ function CardContent({
       <UiTypography
         variant={isSmallCard ? 'bodyText16' : 'bodyText18'}
         sx={isSmallCard ? styles.smallText : styles.largeText}
-        id={item.text.includes('text_integrate') ? 'services-label' : undefined}
+        {...(item.text.includes('text_integrate') ? { id: 'services-label' } : {})}
       >
         {isSmallCard ? (
           <Trans i18nKey={item.text}>
             Integrate
-            <UiTooltip placement="bottom" arrow sx={styles.hoveredCard} title={hoverCardContent}>
+            <UiTooltip placement="bottom" arrow title={hoverCardContent}>
               <UiTypography variant="bodyText16" component="span">
                 services
               </UiTypography>

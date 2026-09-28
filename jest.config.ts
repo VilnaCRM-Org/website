@@ -119,6 +119,15 @@ const EDGE_COVERAGE_THRESHOLD = {
 // improves.
 const CLIENT_COVERAGE_THRESHOLD = {
   global: { branches: 92, functions: 95, lines: 97, statements: 97 },
+  // `scripts/verifyUiToolkit.mjs` is the dependency's only integrity signal, and
+  // the global floor above could not fail on it: one uncovered module barely
+  // moves a repo-wide percentage. A path-keyed group holds it to 100% on its
+  // own. Jest resolves a threshold key with `path.resolve()` and does NOT
+  // interpolate `<rootDir>`, so this stays a plain relative path; an unmatched
+  // key is itself an error ("Coverage data for … was not found"), which is what
+  // makes the criterion fail in both directions — an uncovered branch AND a run
+  // that never loads the module at all.
+  './scripts/verifyUiToolkit.mjs': { branches: 100, functions: 100, lines: 100, statements: 100 },
 };
 
 const SERVER_COVERAGE_THRESHOLD = {
@@ -181,7 +190,22 @@ const config: Config = {
   // server suite cannot import the real modules and would be reduced to testing
   // hand-written doubles again (#381). Requests that genuinely point at a `.js`
   // file still resolve to it — `.js` leads `moduleFileExtensions`.
-  moduleNameMapper: { '^(\\.{1,2}/.*)\\.js$': '$1' },
+  moduleNameMapper: {
+    '^(\\.{1,2}/.*)\\.js$': '$1',
+    // `@vilnacrm/ui-toolkit` is ESM-only: its `exports` map declares an `import`
+    // condition and no `require` one, so Jest's CJS resolver cannot find it at
+    // all. Point the specifiers straight at the built files and let
+    // `transformIgnorePatterns` below hand the ESM to babel-jest.
+    //
+    // The order matters: `moduleNameMapper` takes the first pattern that
+    // matches, so the stylesheet has to be listed before the component-subpath
+    // rule that would otherwise claim it and resolve it to a non-existent
+    // `styles.css.mjs`.
+    '^@vilnacrm/ui-toolkit/styles\\.css$':
+      '<rootDir>/node_modules/@vilnacrm/ui-toolkit/build/index.css',
+    '^@vilnacrm/ui-toolkit/([^.]+)$': '<rootDir>/node_modules/@vilnacrm/ui-toolkit/build/$1.mjs',
+    '^@vilnacrm/ui-toolkit$': '<rootDir>/node_modules/@vilnacrm/ui-toolkit/build/index.mjs',
+  },
   testPathIgnorePatterns: [
     '/node_modules/',
     '/.next/',
@@ -195,6 +219,10 @@ const config: Config = {
       'babel-jest',
       { configFile: '<rootDir>/babel-jest.config.js' },
     ],
+    // `next/jest` mocks images and stylesheets but not fonts, so a `.woff2`
+    // imported for its URL arrives as binary and fails to parse. See the
+    // transform for why it echoes the filename instead of one shared stub.
+    '^.+\\.woff2$': '<rootDir>/config/jest/fontAssetTransform.js',
   },
   // For the integration layer, the graphql-endpoint override in
   // tests/integration/setup.ts must run BEFORE jest.setup.ts: the latter boots
@@ -214,7 +242,7 @@ export default async () => {
     ...nextJestConfig,
     transformIgnorePatterns: [
       // Allow transforming these ESM-only packages from the hoisted node_modules
-      '/node_modules/(?!(uuid|@faker-js/faker)/)',
+      '/node_modules/(?!(uuid|@faker-js/faker|@vilnacrm/ui-toolkit)/)',
     ],
   };
 };

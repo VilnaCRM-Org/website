@@ -250,14 +250,15 @@ TEST_ENV=server bun x jest src/test/apollo-server/<spec>.test.ts
 ```bash
 make format               # Prettier (run before lint)
 make lint                 # lint-next + lint-tsc + lint-md + lint-deps + lint-api-versions
-                          #   + lint-docker-policy + lint-headers + lint-security-txt
-                          #   + lint-prod-guardrails + lint-pins + lint-workflow-pins
-                          #   + lint-placeholders
+                          #   + lint-ui-toolkit + lint-docker-policy + lint-headers
+                          #   + lint-security-txt + lint-prod-guardrails + lint-pins
+                          #   + lint-workflow-pins + lint-placeholders
 make lint-next            # ESLint (flat config, eslint.config.mjs)
 make lint-tsc             # TypeScript (tsc, no emit)
 make lint-md              # markdownlint
 make lint-deps            # dependency-cruiser on src, pages, tests
 make lint-api-versions    # user-service version invariant (hermetic; see below)
+make lint-ui-toolkit      # installed @vilnacrm/ui-toolkit digests (hermetic; docs/ui-toolkit.md)
 make lint-docker-policy   # Dockerfile registry (no Docker Hub) + digest-pin policy
 make lint-headers         # edge security-header policy (config/security-headers.json)
 make lint-security-txt    # RFC 9116 security.txt fields + Expires runway
@@ -919,8 +920,11 @@ tiered off, weakened, or removed.
   and the repository shares one 10 GB quota.
 - **Matrices.** The Playwright e2e suite splits across a `--shard` matrix
   (`test-e2e-shard`) covering all four projects, so the `mobile-chrome` emulation specs are
-  gated on every PR; Lighthouse runs `desktop`/`mobile` in parallel, the K6 load suites run
-  in parallel, and mutation testing runs as a shard matrix plus a merge gate.
+  gated on every PR; the visual suite splits the same way (`test-visual-shard`, eight
+  shards behind the `visual-test` aggregate, issue #505 — the serial run was 18 minutes
+  green and far longer red, because `workers: 1` and two retries multiply); Lighthouse
+  runs `desktop`/`mobile` in parallel, the K6 load suites run in parallel, and mutation
+  testing runs as a shard matrix plus a merge gate.
 - **Mutation sharding.** `make test-mutation-shard` (with `MUTATION_SHARD_INDEX` /
   `MUTATION_SHARD_TOTAL`) writes a per-shard report (`stryker.shard.config.mjs`, with
   `break` disabled); `make merge-mutation-reports` unions the shards and re-enforces the
@@ -1010,7 +1014,13 @@ src/
 Pages are thin: a route file under `pages/` is `withSeo(spec, FeatureComponent)` from
 `src/components/seo` and nothing else (the 404, offline, Swagger and API-docs bodies live in `src/features/not-found`,
 `src/features/offline`, `src/features/swagger` and `src/features/documentation`). Shared
-primitives are documented in [`src/components/README.md`](src/components/README.md).
+primitives are documented in [`src/components/README.md`](src/components/README.md); nine
+of them (`UiButton`, `UiTypography`, `UiCheckbox`, `UiLink`, `UiInput`, `UiToolbar`,
+`UiTooltip`, `UiColorTheme`, `UiBreakpoints`) render from the pinned
+`@vilnacrm/ui-toolkit` release behind a local import seam — the pin, the digest gate
+(`make lint-ui-toolkit`), the adapters and the font wiring are in
+[`docs/ui-toolkit.md`](docs/ui-toolkit.md) and ADR 0012. Fix a toolkit geometry defect
+upstream and bump the pin; never re-fork it with a local override.
 
 Key conventions are enforced by dependency-cruiser in
 [`.dependency-cruiser.js`](.dependency-cruiser.js) and surfaced by `make lint-deps`:

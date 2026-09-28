@@ -33,6 +33,10 @@ import { NETWORK_FAILURE } from './fixtures/errors';
 import { fillForm, getFormElements, GetElementsResult } from './utils';
 
 const statusRole: string = 'status';
+// The loader is the `<output aria-label="Loading">` in `auth-layout.tsx`. Naming it
+// matters: the toolkit's input renders its own always-present, empty `role="status"`
+// announcement region, so a bare role query matches that too and can never be absent.
+const loaderName: RegExp = /loading/i;
 const alertRole: string = 'alert';
 const checkboxRole: AriaRole = 'checkbox';
 
@@ -52,9 +56,6 @@ const passwordErrorUppercase: string = t('sign_up.form.password_input.error_uppe
 jest.mock('uuid', () => ({
   v4: jest.fn(() => '132'),
 }));
-
-const queryByRoleSafe: (role: string) => HTMLElement | null = (role: string) =>
-  document.querySelector(`[role="${role}"]`);
 
 type FormElement = { fieldKey: string; value: string };
 const inputFields: FormElement[] = [
@@ -114,7 +115,7 @@ describe('AuthLayout', () => {
     // the error notification; the success notification proves it never left the
     // browser. The response is deliberately identical to a real success so a
     // script cannot tell which of its inputs tripped the control.
-    const { container, getByText, queryByText } = renderAuthLayout([]);
+    const { container, getByText, queryByText, queryByRole } = renderAuthLayout([]);
     const honeypot: HTMLInputElement | null = container.querySelector('input[name="Referral"]');
     expect(honeypot).not.toBeNull();
 
@@ -125,7 +126,7 @@ describe('AuthLayout', () => {
       expect(getByText(successTitleText)).toBeInTheDocument();
     });
     expect(queryByText(errorTitleText)).not.toBeInTheDocument();
-    expect(queryByRoleSafe(statusRole)).toBeNull();
+    expect(queryByRole(statusRole, { name: loaderName })).not.toBeInTheDocument();
   });
 
   it('displays loader and submits form successfully without errors', async () => {
@@ -136,12 +137,12 @@ describe('AuthLayout', () => {
     fillForm(testInitials, testEmail, testPassword, true);
 
     await waitFor(() => {
-      const loader: HTMLElement = getByRole(statusRole);
+      const loader: HTMLElement = getByRole(statusRole, { name: loaderName });
       expect(loader).toBeInTheDocument();
     });
 
     await waitFor(() => {
-      expect(queryByRole(statusRole)).not.toBeInTheDocument();
+      expect(queryByRole(statusRole, { name: loaderName })).not.toBeInTheDocument();
       expect(getByText(successTitleText)).toBeInTheDocument();
       const alertBox: HTMLElement = getByRole(alertRole);
       expect(alertBox).not.toHaveAttribute('aria-live', 'assertive');
@@ -188,17 +189,17 @@ describe('AuthLayout', () => {
     const { queryByRole } = renderAuthLayout([fulfilledMockResponse]);
 
     await waitFor(() => {
-      expect(queryByRole('status')).not.toBeInTheDocument();
+      expect(queryByRole(statusRole, { name: loaderName })).not.toBeInTheDocument();
     });
 
     fillForm(testInitials, testEmail, testPassword, true);
 
     await waitFor(() => {
-      expect(queryByRole('status')).toBeInTheDocument();
+      expect(queryByRole(statusRole, { name: loaderName })).toBeInTheDocument();
     });
 
     await waitFor(() => {
-      expect(queryByRole('status')).not.toBeInTheDocument();
+      expect(queryByRole(statusRole, { name: loaderName })).not.toBeInTheDocument();
     });
   });
   it('registration with server error: user exist ', async () => {
@@ -240,7 +241,7 @@ describe('AuthLayout', () => {
       testPassword,
       true
     );
-    await findByRole(statusRole);
+    await findByRole(statusRole, { name: loaderName });
 
     await waitFor(() => {
       const errorTitle: HTMLElement = getByText(errorTitleText);
@@ -257,7 +258,7 @@ describe('AuthLayout', () => {
     fireEvent.click(retryButton);
 
     await waitFor(() => {
-      expect(queryByRole('status')).toBeInTheDocument();
+      expect(queryByRole(statusRole, { name: loaderName })).toBeInTheDocument();
     });
   });
   it('should handle alert errors correctly and update state', async () => {
@@ -396,7 +397,7 @@ describe('AuthLayoutWithNotification', () => {
     fillForm(testInitials, testEmail, testPassword, true);
 
     await waitFor(() => {
-      expect(queryByRole('status')).toBeInTheDocument();
+      expect(queryByRole(statusRole, { name: loaderName })).toBeInTheDocument();
     });
 
     await waitFor(() => {
@@ -411,7 +412,7 @@ describe('AuthLayoutWithNotification', () => {
     fireEvent.click(retryButton);
 
     await waitFor(() => {
-      expect(queryByRole('status')).toBeInTheDocument();
+      expect(queryByRole(statusRole, { name: loaderName })).toBeInTheDocument();
     });
 
     await waitFor(() => {

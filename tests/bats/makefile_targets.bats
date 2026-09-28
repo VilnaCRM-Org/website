@@ -1202,6 +1202,34 @@ STUB
   [ "$status" -eq 0 ]
 }
 
+# Issue #458: the ui-toolkit ships as a GitHub release tarball, and bun records no
+# `sha512` for a remote-tarball dependency, so the committed digests are the only
+# local evidence that the installed bytes are the reviewed bytes. Hermetic, hence
+# inside the aggregate rather than on a nightly.
+@test "lint-ui-toolkit shells out to the offline integrity check" {
+  reset_command_log
+
+  run_make_target lint-ui-toolkit EXEC_MODE=host
+  [ "$status" -eq 0 ]
+  assert_log_contains 'node scripts/verifyUiToolkit.cli.mjs'
+}
+
+@test "update-ui-toolkit refreshes the digests rather than verifying them" {
+  reset_command_log
+
+  run_make_target update-ui-toolkit EXEC_MODE=host
+  [ "$status" -eq 0 ]
+  assert_log_contains 'buildChecksumsFile'
+}
+
+@test "the lint aggregate includes the ui-toolkit integrity gate" {
+  run grep -E '^lint: .*lint-ui-toolkit' "$PROJECT_ROOT/Makefile"
+  [ "$status" -eq 0 ]
+
+  run grep -E '^CI_LINT_TARGETS .*lint-ui-toolkit' "$PROJECT_ROOT/Makefile"
+  [ "$status" -eq 0 ]
+}
+
 # Shared fixture for the dependency-CVE gate (#356): a stubbed osv-scanner that satisfies
 # ensure-osv.sh's idempotency probe (so no release is downloaded) and reports one advisory,
 # so the report-formatting assertions have something to find.
@@ -1437,3 +1465,42 @@ JSON
   uptime_line="$(printf '%s\n' "$output" | grep -n 'uptime-check.sh' | head -n 1 | cut -d: -f1)"
   [ "$shape_line" -lt "$uptime_line" ]
 }
+
+@test "test-visual-shard forwards the shard slice to Playwright and defaults to the whole suite" {
+  run_make_target test-visual
+  [ "$status" -eq 0 ]
+  assert_log_contains 'playwright test ./src/test/visual'
+  ! grep -q -- '--shard=' "$COMMAND_LOG"
+
+  reset_command_log
+  run_make_target test-visual-shard VISUAL_SHARD_INDEX=3 VISUAL_SHARD_TOTAL=4
+  [ "$status" -eq 0 ]
+  assert_log_contains 'docker compose -f common-healthchecks.yml -f docker-compose.test.yml up -d'
+  assert_log_contains 'playwright test ./src/test/visual --shard=3/4'
+
+  reset_command_log
+  run_make_target test-visual-shard
+  [ "$status" -eq 0 ]
+  assert_log_contains 'playwright test ./src/test/visual --shard=1/1'
+}
+
+@test "test-e2e-shard forwards the shard slice to Playwright after bringing prod up" {
+  run_make_target test-e2e-shard E2E_SHARD_INDEX=2 E2E_SHARD_TOTAL=4
+  [ "$status" -eq 0 ]
+  assert_log_contains 'docker compose -f common-healthchecks.yml -f docker-compose.test.yml up -d'
+  assert_log_contains 'playwright test ./src/test/e2e --shard=2/4'
+}
+
+@test "the ci-test shard targets run a slice without bringing prod up again" {
+  run_make_target ci-test-visual-shard VISUAL_SHARD_INDEX=5 VISUAL_SHARD_TOTAL=8
+  [ "$status" -eq 0 ]
+  assert_log_contains 'playwright test ./src/test/visual --shard=5/8'
+  ! grep -q -- 'up -d' "$COMMAND_LOG"
+
+  reset_command_log
+  run_make_target ci-test-e2e-shard E2E_SHARD_INDEX=3 E2E_SHARD_TOTAL=4
+  [ "$status" -eq 0 ]
+  assert_log_contains 'playwright test ./src/test/e2e --shard=3/4'
+  ! grep -q -- 'up -d' "$COMMAND_LOG"
+}
+

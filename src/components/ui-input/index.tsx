@@ -1,13 +1,13 @@
-import { TextField, TextFieldProps, ThemeProvider } from '@mui/material';
+import ToolkitUiInput from '@vilnacrm/ui-toolkit/ui-input';
 import React from 'react';
 
-import { theme } from './theme';
+import styles from './styles';
 import { UiInputProps } from './types';
 
 function buildInputSlotProps(
   describedBy: string | undefined,
   required: boolean | undefined
-): TextFieldProps['slotProps'] {
+): React.ComponentProps<typeof ToolkitUiInput>['slotProps'] {
   return {
     htmlInput: {
       ...(describedBy ? { 'aria-describedby': describedBy } : {}),
@@ -19,14 +19,13 @@ function buildInputSlotProps(
 const UiInput: React.ForwardRefExoticComponent<
   UiInputProps & React.RefAttributes<HTMLInputElement>
 > = React.forwardRef<HTMLInputElement, UiInputProps>(
-  ({ describedBy, required, ...textFieldProps }, ref) => (
-    <ThemeProvider theme={theme}>
-      <TextField
-        {...textFieldProps}
-        inputRef={ref}
-        slotProps={buildInputSlotProps(describedBy, required)}
-      />
-    </ThemeProvider>
+  ({ describedBy, required, sx, ...inputProps }, ref) => (
+    <ToolkitUiInput
+      {...inputProps}
+      ref={ref}
+      sx={styles.withRootTracking(sx)}
+      slotProps={buildInputSlotProps(describedBy, required)}
+    />
   )
 );
 

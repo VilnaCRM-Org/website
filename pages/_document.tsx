@@ -1,5 +1,6 @@
 import { Html, Head, Main, NextScript, DocumentProps } from 'next/document';
 
+import { GOLOS_PRELOAD_HREFS } from '@/config/Fonts/preload';
 import { resolveRouteLocale } from '@/config/locales';
 
 export default function Document({ __NEXT_DATA__ }: DocumentProps): React.ReactElement {
@@ -7,6 +8,16 @@ export default function Document({ __NEXT_DATA__ }: DocumentProps): React.ReactE
     <Html lang={resolveRouteLocale(__NEXT_DATA__.page)} dir="ltr">
       <Head>
         <meta charSet="utf-8" />
+        {GOLOS_PRELOAD_HREFS.map(href => (
+          <link
+            key={href}
+            rel="preload"
+            href={href}
+            as="font"
+            type="font/woff2"
+            crossOrigin="anonymous"
+          />
+        ))}
         <meta name="apple-mobile-web-app-title" content="VilnaCRM" />
         <meta name="application-name" content="VilnaCRM" />
         <meta name="theme-color" content="#ffffff" />

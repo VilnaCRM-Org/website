@@ -12,7 +12,6 @@ import ErrorFallback from '@/components/error-fallback';
 import Layout from '@/components/layout';
 import { APP_ENVIRONMENT, APP_VERSION } from '@/config/app-version';
 import { env } from '@/config/env';
-import { golos } from '@/config/Fonts/golos';
 import { RouteI18n, useRouteI18n } from '@/hooks/use-route-i18n';
 import { initServiceWorker } from '@/lib/pwa/register-service-worker';
 import { scrubBreadcrumb } from '@/lib/telemetry/scrub-breadcrumb';
@@ -88,7 +87,7 @@ function MyApp({ Component }: { Component: React.ComponentType }): React.ReactEl
     <I18nextProvider key={locale} i18n={instance}>
       <ThemeProvider theme={theme}>
         <ApolloProvider client={client}>
-          <main className={golos.className}>
+          <main className="app-typeface">
             <Layout header={<DynamicHeader />}>
               <Sentry.ErrorBoundary
                 fallback={renderErrorFallback}

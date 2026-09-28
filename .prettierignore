@@ -9,7 +9,7 @@ build
 
 .stryker-tmp
 **/.stryker-tmp/**
-coverage
+/coverage
 .nyc_output
 **/*.snap
 playwright-report/

@@ -38,6 +38,21 @@ function Harness(): React.ReactElement {
   );
 }
 
+// The new-tab cue UiLink appends to every `_blank` link, so a name assertion
+// stays anchored on the policy copy without hard-coding the localized suffix.
+const newTabLabel: string = t('accessibility.opens_in_new_tab');
+
+function escapeForRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// Not anchored: the copy still discriminates the two links from each other, and
+// anchoring would make the assertion depend on the exact leading/trailing
+// whitespace the <Trans> segment happens to carry.
+function linkName(copy: string): RegExp {
+  return new RegExp(`${escapeForRegExp(copy.trim())}\\s+${escapeForRegExp(newTabLabel)}`);
+}
+
 describe('AuthForm policy links', () => {
   it('points each policy link at its own document', () => {
     render(<Harness />);
@@ -67,6 +82,17 @@ describe('AuthForm policy links', () => {
     });
   });
 
+  // Both links open a new tab, so each accessible name now carries the localized
+  // "opens in new tab" cue UiLink appends. Matching on the copy alone would
+  // silently start matching nothing.
+  it('announces that each policy opens in a new tab', () => {
+    render(<Harness />);
+
+    screen.getAllByRole('link').forEach(link => {
+      expect(link).toHaveAccessibleName(new RegExp(escapeForRegExp(newTabLabel), 'i'));
+    });
+  });
+
   it('maps each interpolation index to the link carrying that copy', () => {
     render(<Harness />);
 
@@ -78,10 +104,13 @@ describe('AuthForm policy links', () => {
     const useCopy: string = sentence.replace(/^.*<3>(.*?)<\/3>.*$/s, '$1');
 
     expect(privacyCopy).not.toBe(useCopy);
-    expect(screen.getByRole('link', { name: privacyCopy })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: linkName(privacyCopy) })).toHaveAttribute(
       'href',
       privacyPolicyUrl
     );
-    expect(screen.getByRole('link', { name: useCopy })).toHaveAttribute('href', usePolicyUrl);
+    expect(screen.getByRole('link', { name: linkName(useCopy) })).toHaveAttribute(
+      'href',
+      usePolicyUrl
+    );
   });
 });

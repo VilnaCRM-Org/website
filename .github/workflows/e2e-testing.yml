@@ -95,11 +95,31 @@ jobs:
         with:
           node-version-file: '.nvmrc'
 
+      # Every shard builds its own prod stack, and every build pulls the same
+      # pinned base images from ECR Public, whose anonymous pull limit is per
+      # source IP — the shared runner pool hits it as 429 Too Many Requests when
+      # a push fans out into a dozen container-building jobs at once (#505).
+      # Bringing the stack up is separated from the shard so only the pull is
+      # retried, never the tests; the shard then runs a test-only target, so no
+      # second, unretried bring-up sits between the retry and Playwright.
+      - name: Start the production stack
+        run: |
+          set -uo pipefail
+          for attempt in 1 2 3 4 5; do
+            if make start-prod; then
+              exit 0
+            fi
+            echo "::warning::start-prod attempt $attempt failed; retrying after a pause"
+            sleep $((attempt * 30))
+          done
+          echo "::error::start-prod failed five times"
+          exit 1
+
       - name: Run Playwright shard
         env:
           SHARD_INDEX: ${{ matrix.shardIndex }}
           SHARD_TOTAL: ${{ matrix.shardTotal }}
-        run: make test-e2e-shard E2E_SHARD_INDEX="$SHARD_INDEX" E2E_SHARD_TOTAL="$SHARD_TOTAL"
+        run: make ci-test-e2e-shard E2E_SHARD_INDEX="$SHARD_INDEX" E2E_SHARD_TOTAL="$SHARD_TOTAL"
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

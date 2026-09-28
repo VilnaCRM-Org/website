@@ -1,10 +1,11 @@
 import { ThemeProvider } from '@mui/material';
-import { render, RenderResult } from '@testing-library/react';
+import { render, RenderResult, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import type { AxeResults, RuleObject } from 'axe-core';
 import { axe } from 'jest-axe';
 import React from 'react';
 
-import { UiButton, UiCheckbox, UiInput, UiLink, UiTypography } from '@/components';
+import { UiButton, UiCheckbox, UiInput, UiLink, UiTooltip, UiTypography } from '@/components';
 import { theme } from '@/components/app-theme';
 
 import { FORCED_RULES, JSDOM_UNSUPPORTED_RULES, WCAG_AA_TAGS } from '../a11y/axe-config';
@@ -73,6 +74,38 @@ describe('component accessibility (WCAG 2.1 AA)', () => {
 
   it('UiLink has no violations', async () => {
     const { container } = renderThemed(<UiLink href="https://vilnacrm.com">{testText}</UiLink>);
+
+    await expectNoA11yViolations(container);
+  });
+
+  // Both states, not just the closed one: the toolkit's tooltip is a
+  // `role="button"` trigger whose `aria-expanded`/`aria-controls` only exist
+  // once it opens, and a scan of the resting state would never see the
+  // relationship it claims (#458, FR7).
+  it('UiTooltip has no violations while closed', async () => {
+    const { container } = renderThemed(
+      <UiTooltip title={testText} placement="top" arrow triggerLabel="Password hint">
+        <span>{testText}</span>
+      </UiTooltip>
+    );
+
+    await expectNoA11yViolations(container);
+  });
+
+  it('UiTooltip has no violations while open', async () => {
+    const { container, getByRole } = renderThemed(
+      <UiTooltip title={testText} placement="top" arrow triggerLabel="Password hint">
+        <span>{testText}</span>
+      </UiTooltip>
+    );
+
+    await userEvent.click(getByRole('button', { name: 'Password hint' }));
+    await waitFor(() => {
+      expect(getByRole('button', { name: 'Password hint' })).toHaveAttribute(
+        'aria-expanded',
+        'true'
+      );
+    });
 
     await expectNoA11yViolations(container);
   });

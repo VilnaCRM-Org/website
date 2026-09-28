@@ -1,5 +1,6 @@
+import { bodyLetterSpacing } from '@/components/app-theme';
 import colorTheme from '@/components/ui-color-theme';
-import { golos } from '@/config/Fonts/golos';
+import { GOLOS_TEXT_FAMILY } from '@/config/Fonts/families';
 
 import { BREAKPOINTS, DIMENSIONS, Z_INDICES } from './constants';
 
@@ -141,7 +142,8 @@ export default {
     fontWeight: 700,
     fontSize: '1.375rem',
     lineHeight: '1.65rem',
-    fontFamily: golos.style.fontFamily,
+    letterSpacing: bodyLetterSpacing,
+    fontFamily: GOLOS_TEXT_FAMILY,
     color: colorTheme.palette.darkPrimary.main,
     zIndex: Z_INDICES.MESSAGE_TITLE,
 
@@ -158,7 +160,8 @@ export default {
     fontWeight: 400,
     fontSize: '0.98rem',
     lineHeight: '1.5625rem',
-    fontFamily: golos.style.fontFamily,
+    letterSpacing: bodyLetterSpacing,
+    fontFamily: GOLOS_TEXT_FAMILY,
     color: colorTheme.palette.darkPrimary.main,
 
     [`@media (min-width: ${BREAKPOINTS.SM})`]: {
@@ -187,7 +190,7 @@ export default {
     fontWeight: 500,
     fontSize: '0.9375rem',
     lineHeight: '1.125rem',
-    fontFamily: golos.style.fontFamily,
+    fontFamily: GOLOS_TEXT_FAMILY,
 
     [`@media (min-width: ${BREAKPOINTS.SM})`]: {
       fontWeight: 600,

@@ -25,11 +25,12 @@ husky	bats	tests/bats/makefile_targets.bats	Validated with a stubbed bun invocat
 storybook-start	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Storybook binary.
 storybook-build	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Storybook binary.
 test-e2e	ci	.github/workflows/e2e-testing.yml	Executed directly by the Playwright PR workflow.
-test-e2e-shard	ci	.github/workflows/e2e-testing.yml	Executed directly by the e2e testing workflow shard matrix.
+test-e2e-shard	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker and Playwright commands: brings prod up and forwards the --shard slice; the e2e workflow matrix runs the test-only ci-test-e2e-shard after its retried bring-up.
 test-e2e-burnin	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker and Playwright commands for the repeat-each burn-in.
 check-e2e-flakes	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Bun invocation of the flake-report grader.
 test-e2e-ui	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker and Playwright commands.
-test-visual	ci	.github/workflows/visual-testing.yml	Executed directly by the visual testing workflow.
+test-visual	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker and Playwright commands: the whole visual directory, no --shard flag; the workflow runs the sharded sibling.
+test-visual-shard	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker and Playwright commands: brings prod up and forwards the --shard slice, 1/1 by default; the visual workflow matrix runs the test-only ci-test-visual-shard after its retried bring-up.
 test-visual-ui	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker and Playwright commands.
 test-visual-update	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker and Playwright commands.
 create-network	ci	.github/workflows/e2e-testing.yml	Executed through `make test-e2e`, which calls `start-prod` and its `create-network` prerequisite.
@@ -72,6 +73,8 @@ stop	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Docker Compo
 check-node-version	bats	tests/bats/makefile_targets.bats	Validated with a stubbed node invocation.
 lint-deps	ci	.github/workflows/static-testing.yml	Executed through `make lint`, which depends on `lint-deps`.
 lint-api-versions	bats	tests/bats/makefile_targets.bats	Hermetic user-service version invariant (#381); runs inside `make lint` and CI_LINT_TARGETS, unlike the network-bound lint-contracts.
+lint-ui-toolkit	bats	tests/bats/makefile_targets.bats	Hermetic SHA-256 verification of the installed @vilnacrm/ui-toolkit; inside `make lint` because it needs no network.
+update-ui-toolkit	bats	tests/bats/makefile_targets.bats	Maintainer command that refreshes config/ui-toolkit-checksums.json after a reviewed toolkit release.
 generate-localization	ci	.github/workflows/static-testing.yml	Executed through `make lint`, whose `lint-deps` leg depends on it; also a prerequisite of `storybook-build`, `ci-test-mutation` and `test-mutation-shard`.
 lint-headers	ci	.github/workflows/static-testing.yml	Executed through `make lint`, which depends on `lint-headers`.
 lint-contracts	bats	tests/bats/makefile_targets.bats	Executed directly by contract-testing.yml; deliberately outside `make lint` because the drift check needs network.
@@ -93,6 +96,8 @@ ci-mutation	bats	tests/bats/makefile_targets.bats	Validated by delegating to ci-
 ci-prod-setup	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker Compose start-prod and Chromium install commands.
 ci-test-e2e	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker and Playwright commands.
 ci-test-visual	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker and Playwright commands.
+ci-test-e2e-shard	ci	.github/workflows/e2e-testing.yml	Executed directly by the e2e testing workflow shard matrix after the retried prod bring-up; the --shard slice is pinned in tests/bats/makefile_targets.bats.
+ci-test-visual-shard	ci	.github/workflows/visual-testing.yml	Executed directly by the visual testing workflow shard matrix after the retried prod bring-up; the --shard slice is pinned in tests/bats/makefile_targets.bats.
 ci-test-memory-leak	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker Compose Memlab commands.
 ci-test-load	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker Compose K6 commands.
 ci-test-lighthouse-desktop	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker Compose LHCI commands.

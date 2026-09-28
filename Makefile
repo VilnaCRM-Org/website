@@ -240,7 +240,7 @@ NETWORK_NAME                = website-network
 # Dev-side lint and test phases are grouped so local developers and agents can
 # run the same CI stages as the pipeline. The parallel runners execute each
 # target concurrently, group their output, and aggregate exit codes.
-CI_LINT_TARGETS             = lint-next lint-tsc lint-md lint-api-versions lint-headers lint-prod-guardrails lint-pins lint-workflow-pins lint-placeholders
+CI_LINT_TARGETS             = lint-next lint-tsc lint-md lint-api-versions lint-ui-toolkit lint-headers lint-prod-guardrails lint-pins lint-workflow-pins lint-placeholders
 CI_TEST_TARGETS             = ci-test-unit-client ci-test-unit-server ci-test-integration ci-test-contract
 CI_LINT_RUNNER              = ./scripts/ci/run-parallel.sh ci-lint
 CI_TEST_RUNNER              = ./scripts/ci/run-parallel.sh ci-test
@@ -405,6 +405,14 @@ run-e2e                     = $(PLAYWRIGHT_TEST) "$(PLAYWRIGHT_BIN) test $(TEST_
 E2E_SHARD_INDEX             ?= 1
 E2E_SHARD_TOTAL             ?= 1
 run-e2e-shard               = $(PLAYWRIGHT_TEST) "$(PLAYWRIGHT_BIN) test $(TEST_DIR_E2E) --shard=$(E2E_SHARD_INDEX)/$(E2E_SHARD_TOTAL)"
+# Visual sharding (issue #505): the same shape for the visual workflow matrix.
+# Playwright splits the 156 screenshot tests across the shards; each shard keeps
+# the config's CI `workers: 1`, the same waits and the same pinned image, so the
+# pixels are unchanged and only the wall clock moves. Defaults to 1/1, so a bare
+# `make test-visual-shard` behaves exactly like `make test-visual`.
+VISUAL_SHARD_INDEX          ?= 1
+VISUAL_SHARD_TOTAL          ?= 1
+run-visual-shard            = $(PLAYWRIGHT_TEST) "$(PLAYWRIGHT_BIN) test $(TEST_DIR_VISUAL) --shard=$(VISUAL_SHARD_INDEX)/$(VISUAL_SHARD_TOTAL)"
 run-a11y                    = $(PLAYWRIGHT_TEST) "$(PLAYWRIGHT_BIN) test $(TEST_DIR_A11Y)"
 # Burn-in: repeat each spec with retries off so a flake surfaces as a partial failure. The
 # JSON report goes to its own top-level directory so it neither overwrites the shard run's
@@ -644,6 +652,20 @@ generate-sitemap: ## Regenerate public/sitemap.xml from config/routes.json (issu
 lint-api-versions: ## Verify OpenAPI and GraphQL reference the same pinned user-service release
 	$(DEV_READY) $(PM_EXEC) node scripts/contracts/check-api-versions.mjs
 
+# `@vilnacrm/ui-toolkit` is a GitHub release tarball, and bun records NO `sha512`
+# for a remote-tarball dependency, so the lockfile carries no integrity evidence
+# and osv-scanner cannot key the entry either. This gate is the only local proof
+# that the installed bytes are the reviewed bytes. Hermetic like
+# lint-api-versions above — no network, no host binary — so it belongs in the
+# `lint` aggregate and in CI_LINT_TARGETS rather than on a nightly.
+lint-ui-toolkit: ## Verify the installed @vilnacrm/ui-toolkit matches the committed SHA-256 digests
+	$(DEV_READY) $(PM_EXEC) node scripts/verifyUiToolkit.cli.mjs
+
+# The networked half: refreshes the digests from whatever is installed. Run it
+# only after re-reviewing a new release, never to clear a red lint-ui-toolkit.
+update-ui-toolkit: ## Refresh config/ui-toolkit-checksums.json from the installed package
+	$(DEV_READY) $(PM_EXEC) node -e "import('./scripts/verifyUiToolkit.mjs').then(async m => { const { writeFileSync } = await import('node:fs'); writeFileSync(m.CHECKSUMS_PATH, JSON.stringify(m.buildChecksumsFile(), null, 2) + '\n'); process.stdout.write('refreshed ' + m.CHECKSUMS_PATH + '\n'); })"
+
 lint-deps: generate-localization ## Validate architecture/import boundaries with dependency-cruiser
 	$(DEV_READY) $(PM_EXEC) $(DEPCRUISE_BIN) src pages tests --config .dependency-cruiser.js
 
@@ -713,7 +735,7 @@ lint-prod-guardrails: ## Enforce the production-safety invariants (privileged-wo
 # `node` reading worktree Dockerfiles the dev image would only see stale — which
 # is why its YAML half split into lint-workflow-pins (#447), the one that needs
 # a node_modules import.
-lint: generate-localization lint-next lint-tsc lint-md lint-deps lint-api-versions lint-docker-policy lint-headers lint-security-txt lint-prod-guardrails lint-pins lint-workflow-pins lint-placeholders ## Runs all linters: ESLint, TypeScript, Markdown, dependency-cruiser, the API version invariant, the Dockerfile registry/digest policy, the security-header gate, the RFC 9116 security.txt gate, the production-safety guardrails, the version-pin drift gate, the workflow Node-pin gate and the placeholder-token gate in sequence.
+lint: generate-localization lint-next lint-tsc lint-md lint-deps lint-api-versions lint-ui-toolkit lint-docker-policy lint-headers lint-security-txt lint-prod-guardrails lint-pins lint-workflow-pins lint-placeholders ## Runs all linters: ESLint, TypeScript, Markdown, dependency-cruiser, the API version invariant, the Dockerfile registry/digest policy, the security-header gate, the RFC 9116 security.txt gate, the production-safety guardrails, the version-pin drift gate, the workflow Node-pin gate and the placeholder-token gate in sequence.
 
 # Diverges from the npm-tool lint gates (lint-next/tsc/md/deps), same reason as
 # lint-metrics below: not in `lint`/CI_LINT_TARGETS because the drift check
@@ -938,6 +960,9 @@ test-e2e-ui: start-prod ## Start the production environment and run E2E tests wi
 test-visual: start-prod  ## Start production and run visual tests (Playwright)
 	$(run-visual)
 
+test-visual-shard: start-prod ## Start production and run one visual shard (VISUAL_SHARD_INDEX of VISUAL_SHARD_TOTAL; used by the visual workflow matrix)
+	$(run-visual-shard)
+
 test-visual-ui: start-prod ## Start the production environment and run visual tests with the UI available at $(UI_MODE_URL)
 	@echo "🚀 Starting Playwright UI tests..."
 	@echo "Test will be run on: $(UI_MODE_URL)"
@@ -1141,6 +1166,12 @@ ci-test-e2e: ## Run E2E tests assuming ci-prod-setup already started the prod en
 
 ci-test-visual: ## Run visual tests assuming ci-prod-setup already started the prod environment
 	$(run-visual)
+
+ci-test-e2e-shard: ## Run one E2E shard (E2E_SHARD_INDEX of E2E_SHARD_TOTAL) assuming the prod environment is already up
+	$(run-e2e-shard)
+
+ci-test-visual-shard: ## Run one visual shard (VISUAL_SHARD_INDEX of VISUAL_SHARD_TOTAL) assuming the prod environment is already up
+	$(run-visual-shard)
 
 ci-test-a11y: ## Run the route accessibility scans assuming ci-prod-setup already started the prod environment
 	$(run-a11y)

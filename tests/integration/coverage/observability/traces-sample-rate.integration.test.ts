@@ -30,9 +30,7 @@ describe('integration: Sentry trace sample rate from the environment', () => {
 
   it('falls back to the per-environment default when the variable is empty', async () => {
     await expect(resolveFromEnv('', 'production')).resolves.toBe(PRODUCTION_TRACES_SAMPLE_RATE);
-    await expect(resolveFromEnv('', 'development')).resolves.toBe(
-      DEVELOPMENT_TRACES_SAMPLE_RATE
-    );
+    await expect(resolveFromEnv('', 'development')).resolves.toBe(DEVELOPMENT_TRACES_SAMPLE_RATE);
     expect(PRODUCTION_TRACES_SAMPLE_RATE).toBeLessThanOrEqual(0.2);
   });
 

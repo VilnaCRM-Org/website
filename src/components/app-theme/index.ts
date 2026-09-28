@@ -5,7 +5,10 @@ import colorTheme from '../ui-color-theme';
 
 export const theme: Theme = createTheme({
   breakpoints: breakpointsTheme.breakpoints,
-  palette: colorTheme.palette,
+  palette: {
+    ...colorTheme.palette,
+    primary: { ...colorTheme.palette.primary, contrastText: colorTheme.palette.white.main },
+  },
   components: {
     MuiContainer: {
       styleOverrides: {
@@ -27,3 +30,5 @@ export const theme: Theme = createTheme({
     },
   },
 });
+
+export const bodyLetterSpacing: string | number = theme.typography.body1.letterSpacing!;
