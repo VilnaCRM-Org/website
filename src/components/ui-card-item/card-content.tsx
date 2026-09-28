@@ -37,8 +37,8 @@ function CardContent({
         {isSmallCard ? (
           <Trans i18nKey={item.text}>
             Integrate
-            <UiTooltip placement="bottom" arrow sx={styles.hoveredCard} title={hoverCardContent}>
-              <UiTypography variant="bodyText16" component="span">
+            <UiTooltip placement="bottom" arrow title={hoverCardContent}>
+              <UiTypography variant="bodyText16" component="span" sx={styles.hoveredCard}>
                 services
               </UiTypography>
             </UiTooltip>

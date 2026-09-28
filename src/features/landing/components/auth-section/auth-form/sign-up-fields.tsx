@@ -131,7 +131,7 @@ function PasswordAdornment(): React.ReactElement {
   const { t } = useTranslation();
 
   return (
-    <UiTooltip placement="right" sx={styles.tip} arrow title={<PasswordTip />}>
+    <UiTooltip placement="right" arrow title={<PasswordTip />}>
       <Image src={QuestionMark} alt={t('sign_up.form.password_tip.alt')} width={16} height={16} />
     </UiTooltip>
   );

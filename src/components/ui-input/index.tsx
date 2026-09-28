@@ -1,6 +1,7 @@
 import ToolkitUiInput from '@vilnacrm/ui-toolkit/ui-input';
 import React from 'react';
 
+import styles from './styles';
 import { UiInputProps } from './types';
 
 function buildInputSlotProps(
@@ -18,10 +19,11 @@ function buildInputSlotProps(
 const UiInput: React.ForwardRefExoticComponent<
   UiInputProps & React.RefAttributes<HTMLInputElement>
 > = React.forwardRef<HTMLInputElement, UiInputProps>(
-  ({ describedBy, required, ...inputProps }, ref) => (
+  ({ describedBy, required, sx, ...inputProps }, ref) => (
     <ToolkitUiInput
       {...inputProps}
       ref={ref}
+      sx={styles.withRootTracking(sx)}
       slotProps={buildInputSlotProps(describedBy, required)}
     />
   )

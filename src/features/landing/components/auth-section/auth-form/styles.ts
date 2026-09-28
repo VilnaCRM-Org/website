@@ -143,6 +143,10 @@ export default {
   labelRow: {
     alignItems: 'center',
     gap: '0.25rem',
+    '& [role="button"]': {
+      cursor: 'pointer',
+      lineHeight: '0',
+    },
   },
 
   inputTitle: {
@@ -182,11 +186,6 @@ export default {
     [`@media (max-width: ${breakpointsTheme.breakpoints.values.sm}px)`]: {
       marginBottom: '1.188rem',
     },
-  },
-
-  tip: {
-    cursor: 'pointer',
-    lineHeight: '0',
   },
 
   button: {
