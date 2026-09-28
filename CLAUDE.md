@@ -920,7 +920,7 @@ tiered off, weakened, or removed.
   and the repository shares one 10 GB quota.
 - **Matrices.** The Playwright e2e suite splits across a `--shard` matrix
   (`test-e2e-shard`) covering all four projects, so the `mobile-chrome` emulation specs are
-  gated on every PR; the visual suite splits the same way (`test-visual-shard`, four
+  gated on every PR; the visual suite splits the same way (`test-visual-shard`, eight
   shards behind the `visual-test` aggregate, issue #505 — the serial run was 18 minutes
   green and far longer red, because `workers: 1` and two retries multiply); Lighthouse
   runs `desktop`/`mobile` in parallel, the K6 load suites run in parallel, and mutation

@@ -22,15 +22,15 @@ jobs:
     # shardIndex (and shardTotal in lock-step) to add parallelism.
     name: visual shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }}
     runs-on: ubuntu-latest
-    # A quarter of the serial suite, retried twice at worst, plus the prod build.
-    timeout-minutes: 30
+    # An eighth of the serial suite, retried twice at worst, plus the prod build.
+    timeout-minutes: 20
     permissions:
       contents: read
     strategy:
       fail-fast: false
       matrix:
-        shardIndex: [1, 2, 3, 4]
-        shardTotal: [4]
+        shardIndex: [1, 2, 3, 4, 5, 6, 7, 8]
+        shardTotal: [8]
     steps:
       - name: Checkout Repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
