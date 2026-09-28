@@ -195,7 +195,7 @@ export default {
     [`@media (min-width: ${BREAKPOINTS.SM})`]: {
       fontWeight: 600,
       fontSize: '1.125rem',
-      lineHeight: '1.35rem',
+      lineHeight: '1.375rem',
     },
   },
 };

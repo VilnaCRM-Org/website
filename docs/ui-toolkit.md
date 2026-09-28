@@ -180,6 +180,13 @@ baselines under `src/test/visual/**/*-snapshots/` change **for buttons only**:
   unitless ratio gave 60px, and toolkit v0.4.0's `1.125rem` (right for the small button,
   wrong for the medium one, ui-toolkit#157) gave 58px.
 
+The notification buttons' label keeps a `1.375rem` line box from the `sm` breakpoint up:
+the buttons are 62px and 70px tall, so a 22px label centres on whole pixels (20px and 24px
+of space) while the previous `1.35rem` left a 0.2px remainder. The card sits at a fractional
+offset since the social buttons became an integer 58px tall, and Chromium snaps the label
+and the button background to the pixel grid separately, so that remainder read as a
+label one pixel low on desktop and tablet.
+
 Everything below a button that changed height moves by the height difference. Every
 re-recorded baseline was compared with `main`'s row by row at vertical offsets, then
 region by region with sub-pixel alignment and ink-box equality, and the regions that
