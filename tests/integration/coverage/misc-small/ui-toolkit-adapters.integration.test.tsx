@@ -84,7 +84,7 @@ describe('UiLink adapter', () => {
     expect(getByRole('link', { name: NEW_TAB_NAME })).toBeInTheDocument();
   });
 
-  it('hardens a case-variant blank target the toolkit would miss', () => {
+  it('hardens a case-variant blank target the same way', () => {
     const { getByRole } = render(
       <UiLink href={HREF} target="_BLANK">
         {LABEL}
@@ -122,6 +122,22 @@ describe('UiLink adapter', () => {
     );
 
     expect(getByRole('link', { name: LABEL })).toBeInTheDocument();
+  });
+
+  // v0.5.0 narrows `target` to the same-tab keywords once `_blank` is excluded, so
+  // the adapter forwards a keyword it did not case-fold through the second union
+  // member: it must reach the anchor untouched, with neither rel nor the cue.
+  it('forwards a same-tab keyword target without a rel or a new-tab cue', () => {
+    const { getByRole } = render(
+      <UiLink href={HREF} target="_self">
+        {LABEL}
+      </UiLink>
+    );
+
+    const link: HTMLElement = getByRole('link', { name: LABEL });
+
+    expect(link).toHaveAttribute('target', '_self');
+    expect(link).not.toHaveAttribute('rel');
   });
 
   it('leaves a same-tab link alone and adds no new-tab hint to its name', () => {
