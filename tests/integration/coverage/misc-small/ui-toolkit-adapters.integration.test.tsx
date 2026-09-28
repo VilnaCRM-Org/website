@@ -10,6 +10,8 @@ import { render } from '@testing-library/react';
 import { t } from 'i18next';
 
 import { UiButton, UiLink } from '@/components';
+import { bodyLetterSpacing } from '@/components/app-theme';
+import inputStyles from '@/components/ui-input/styles';
 
 const HARDENED_REL: string = 'noopener noreferrer';
 const HREF: string = 'https://example.com';
@@ -157,5 +159,29 @@ describe('UiLink adapter', () => {
     );
 
     expect(getByRole('link', { name: `${LABEL} ${NEW_TAB_LABEL}` })).toBeInTheDocument();
+  });
+});
+
+// The input adapter layers the app theme's body tracking UNDER whatever the consumer
+// passes, in every shape `sx` can take, so a consumer override still wins and a
+// consumer that passes nothing still gets the tracking main's placeholders had.
+describe('UiInput adapter tracking', () => {
+  const tracking: { letterSpacing: string | number } = { letterSpacing: bodyLetterSpacing };
+
+  it('supplies the body tracking alone when the consumer passes no sx', () => {
+    expect(inputStyles.withRootTracking(undefined)).toEqual([tracking]);
+  });
+
+  it('layers a single consumer sx object after the tracking', () => {
+    const consumer: { marginTop: string } = { marginTop: '1rem' };
+
+    expect(inputStyles.withRootTracking(consumer)).toEqual([tracking, consumer]);
+  });
+
+  it('keeps every entry of a consumer sx array, in order, after the tracking', () => {
+    const first: { marginTop: string } = { marginTop: '1rem' };
+    const second: { letterSpacing: string } = { letterSpacing: '0' };
+
+    expect(inputStyles.withRootTracking([first, second])).toEqual([tracking, first, second]);
   });
 });
