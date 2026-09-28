@@ -29,7 +29,8 @@ test-e2e-shard	ci	.github/workflows/e2e-testing.yml	Executed directly by the e2e
 test-e2e-burnin	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker and Playwright commands for the repeat-each burn-in.
 check-e2e-flakes	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Bun invocation of the flake-report grader.
 test-e2e-ui	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker and Playwright commands.
-test-visual	ci	.github/workflows/visual-testing.yml	Executed directly by the visual testing workflow.
+test-visual	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker and Playwright commands: the whole visual directory, no --shard flag; the workflow runs the sharded sibling.
+test-visual-shard	ci	.github/workflows/visual-testing.yml	Executed directly by the visual testing workflow shard matrix; the --shard slice and the 1/1 default are pinned in tests/bats/makefile_targets.bats.
 test-visual-ui	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker and Playwright commands.
 test-visual-update	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker and Playwright commands.
 create-network	ci	.github/workflows/e2e-testing.yml	Executed through `make test-e2e`, which calls `start-prod` and its `create-network` prerequisite.

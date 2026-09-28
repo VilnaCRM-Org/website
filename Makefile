@@ -405,6 +405,14 @@ run-e2e                     = $(PLAYWRIGHT_TEST) "$(PLAYWRIGHT_BIN) test $(TEST_
 E2E_SHARD_INDEX             ?= 1
 E2E_SHARD_TOTAL             ?= 1
 run-e2e-shard               = $(PLAYWRIGHT_TEST) "$(PLAYWRIGHT_BIN) test $(TEST_DIR_E2E) --shard=$(E2E_SHARD_INDEX)/$(E2E_SHARD_TOTAL)"
+# Visual sharding (issue #505): the same shape for the visual workflow matrix.
+# Playwright splits the 156 screenshot tests across the shards; each shard keeps
+# the config's CI `workers: 1`, the same waits and the same pinned image, so the
+# pixels are unchanged and only the wall clock moves. Defaults to 1/1, so a bare
+# `make test-visual-shard` behaves exactly like `make test-visual`.
+VISUAL_SHARD_INDEX          ?= 1
+VISUAL_SHARD_TOTAL          ?= 1
+run-visual-shard            = $(PLAYWRIGHT_TEST) "$(PLAYWRIGHT_BIN) test $(TEST_DIR_VISUAL) --shard=$(VISUAL_SHARD_INDEX)/$(VISUAL_SHARD_TOTAL)"
 run-a11y                    = $(PLAYWRIGHT_TEST) "$(PLAYWRIGHT_BIN) test $(TEST_DIR_A11Y)"
 # Burn-in: repeat each spec with retries off so a flake surfaces as a partial failure. The
 # JSON report goes to its own top-level directory so it neither overwrites the shard run's
@@ -937,6 +945,9 @@ test-e2e-ui: start-prod ## Start the production environment and run E2E tests wi
 
 test-visual: start-prod  ## Start production and run visual tests (Playwright)
 	$(run-visual)
+
+test-visual-shard: start-prod ## Start production and run one visual shard (VISUAL_SHARD_INDEX of VISUAL_SHARD_TOTAL; used by the visual workflow matrix)
+	$(run-visual-shard)
 
 test-visual-ui: start-prod ## Start the production environment and run visual tests with the UI available at $(UI_MODE_URL)
 	@echo "🚀 Starting Playwright UI tests..."
