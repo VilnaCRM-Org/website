@@ -1465,3 +1465,22 @@ JSON
   uptime_line="$(printf '%s\n' "$output" | grep -n 'uptime-check.sh' | head -n 1 | cut -d: -f1)"
   [ "$shape_line" -lt "$uptime_line" ]
 }
+
+@test "test-visual-shard forwards the shard slice to Playwright and defaults to the whole suite" {
+  run_make_target test-visual
+  [ "$status" -eq 0 ]
+  assert_log_contains 'playwright test ./src/test/visual'
+  ! grep -q -- '--shard=' "$COMMAND_LOG"
+
+  reset_command_log
+  run_make_target test-visual-shard VISUAL_SHARD_INDEX=3 VISUAL_SHARD_TOTAL=4
+  [ "$status" -eq 0 ]
+  assert_log_contains 'docker compose -f common-healthchecks.yml -f docker-compose.test.yml up -d'
+  assert_log_contains 'playwright test ./src/test/visual --shard=3/4'
+
+  reset_command_log
+  run_make_target test-visual-shard
+  [ "$status" -eq 0 ]
+  assert_log_contains 'playwright test ./src/test/visual --shard=1/1'
+}
+

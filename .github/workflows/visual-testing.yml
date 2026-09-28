@@ -12,14 +12,25 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  visual-test:
+  test:
+    # The Playwright config pins workers: 1 in CI (Docker cross-container
+    # stability), so the 156 screenshot tests otherwise run serially in one job:
+    # 14.7 minutes of tests on top of the 3-minute prod build, and every failing
+    # screenshot is retried twice on top of that (issue #505). As for e2e, each
+    # runner takes an independent, balanced slice via Playwright --shard and boots
+    # its own prod stack; the pixels do not change, only the wall clock. Bump
+    # shardIndex (and shardTotal in lock-step) to add parallelism.
+    name: visual shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }}
     runs-on: ubuntu-latest
-    # Raised from 40 with #335: the Playwright container now actually receives CI
-    # (docker-compose.test.yml), so `workers: 1` and `retries: 2` apply for the
-    # first time and the suite runs serially instead of at the runner default.
-    timeout-minutes: 60
+    # A quarter of the serial suite, retried twice at worst, plus the prod build.
+    timeout-minutes: 30
     permissions:
       contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        shardIndex: [1, 2, 3, 4]
+        shardTotal: [4]
     steps:
       - name: Checkout Repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -31,13 +42,38 @@ jobs:
         with:
           node-version-file: '.nvmrc'
 
-      - name: Run visual tests
-        run: make test-visual
+      - name: Run visual shard
+        env:
+          SHARD_INDEX: ${{ matrix.shardIndex }}
+          SHARD_TOTAL: ${{ matrix.shardTotal }}
+        run: make test-visual-shard VISUAL_SHARD_INDEX="$SHARD_INDEX" VISUAL_SHARD_TOTAL="$SHARD_TOTAL"
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
-          name: playwright-report-visual-${{ github.run_id }}-${{ github.run_attempt }}
+          name: playwright-report-visual-shard-${{ matrix.shardIndex }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: playwright-report/
           retention-days: 30
+
+  visual-test:
+    # The required check name (config/main-ruleset.json) stays `visual-test`: this
+    # aggregate fails closed unless every shard succeeded, so the shard count can
+    # change without editing the ruleset, and a skipped shard never reads as green.
+    name: visual-test
+    needs: [test]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Fail if a shard did not succeed
+        if: needs.test.result != 'success'
+        env:
+          SHARD_RESULT: ${{ needs.test.result }}
+        run: |
+          echo "::error::visual shards did not succeed (shards=$SHARD_RESULT); failing the gate closed."
+          exit 1
+
+      - name: Report the gate
+        run: echo "every visual shard succeeded"

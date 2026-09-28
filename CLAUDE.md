@@ -920,8 +920,11 @@ tiered off, weakened, or removed.
   and the repository shares one 10 GB quota.
 - **Matrices.** The Playwright e2e suite splits across a `--shard` matrix
   (`test-e2e-shard`) covering all four projects, so the `mobile-chrome` emulation specs are
-  gated on every PR; Lighthouse runs `desktop`/`mobile` in parallel, the K6 load suites run
-  in parallel, and mutation testing runs as a shard matrix plus a merge gate.
+  gated on every PR; the visual suite splits the same way (`test-visual-shard`, four
+  shards behind the `visual-test` aggregate, issue #505 — the serial run was 18 minutes
+  green and far longer red, because `workers: 1` and two retries multiply); Lighthouse
+  runs `desktop`/`mobile` in parallel, the K6 load suites run in parallel, and mutation
+  testing runs as a shard matrix plus a merge gate.
 - **Mutation sharding.** `make test-mutation-shard` (with `MUTATION_SHARD_INDEX` /
   `MUTATION_SHARD_TOTAL`) writes a per-shard report (`stryker.shard.config.mjs`, with
   `break` disabled); `make merge-mutation-reports` unions the shards and re-enforces the
