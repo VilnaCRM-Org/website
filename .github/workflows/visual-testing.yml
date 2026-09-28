@@ -64,7 +64,7 @@ jobs:
         env:
           SHARD_INDEX: ${{ matrix.shardIndex }}
           SHARD_TOTAL: ${{ matrix.shardTotal }}
-        run: make test-visual-shard VISUAL_SHARD_INDEX="$SHARD_INDEX" VISUAL_SHARD_TOTAL="$SHARD_TOTAL"
+        run: make ci-test-visual-shard VISUAL_SHARD_INDEX="$SHARD_INDEX" VISUAL_SHARD_TOTAL="$SHARD_TOTAL"
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

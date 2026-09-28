@@ -20,7 +20,7 @@ status: Draft
 
 ## Overview
 
-This breakdown turns the PRD (`prd-458-ui-toolkit-primitives-2026-09-09.md`, FR1-FR37 / NFR1-NFR17) and its architecture (`architecture-458-ui-toolkit-primitives-2026-09-09.md`, AD-1 to AD-13) into an implementable plan for making `@vilnacrm/ui-toolkit@0.3.0` the single design source for nine `src/components/ui-*` modules. The device the whole plan rests on is the **import seam**: `src/components/<dir>/index.{ts,tsx}` keeps its path and its default export and its body becomes either a one-line re-export or a thin adapter, so all 93 import statements (79 outside the test trees), `src/components/index.ts` and the `@landing`/`@swagger` consumers stay invariant.
+This breakdown turns the PRD (`prd-458-ui-toolkit-primitives-2026-09-09.md`, FR1-FR37 / NFR1-NFR17) and its architecture (`architecture-458-ui-toolkit-primitives-2026-09-09.md`, AD-1 to AD-13) into an implementable plan for making `@vilnacrm/ui-toolkit@0.5.0` the single design source for nine `src/components/ui-*` modules. The device the whole plan rests on is the **import seam**: `src/components/<dir>/index.{ts,tsx}` keeps its path and its default export and its body becomes either a one-line re-export or a thin adapter, so all 93 import statements (79 outside the test trees), `src/components/index.ts` and the `@landing`/`@swagger` consumers stay invariant.
 
 This is a **retrospective** plan: PR #459 already realises most of it and is red on four checks (`build-artifact`, `visual-test`, `unit`/`smoke`, `codecov`). The stories below therefore include the root-cause fixes for those checks as first-class work, and never as threshold moves — NFR17 forbids relaxing any gate, budget, allow-list or baseline, and every story that touches a gate says so explicitly.
 
@@ -122,7 +122,7 @@ One dependency runs backwards against this order and is called out rather than h
 
 **Implements:** FR1, FR2 (AD-9) | **Marking:** Independent | **Files:** `package.json`, `bun.lock`, `.env`, `.env.example`
 
-- **Given** `.env` and `.env.example`, **When** the pin is added, **Then** both declare `UI_TOOLKIT_VERSION=v0.3.0` and agree, and no second toolkit version variable exists anywhere in the tree (FR2).
+- **Given** `.env` and `.env.example`, **When** the pin is added, **Then** both declare `UI_TOOLKIT_VERSION=v0.5.0` and agree, and no second toolkit version variable exists anywhere in the tree (FR2).
 - **Given** `package.json`, **When** the dependency is declared, **Then** it is the release-tarball URL for exactly that version, in `dependencies` (never `devDependencies`, per NFR15's `not-to-dev-dep`), and a git ref is not used (FR1).
 - **Given** `bun.lock`, **When** it is regenerated, **Then** its spec names the same version, and the change record states plainly that the entry carries **no** `sha512` and that `CONSUMING.md`'s tamper-evidence claim does not hold for this dependency form (FR1, FR4).
 
@@ -214,7 +214,7 @@ One dependency runs backwards against this order and is called out rather than h
 
 ## Epic 4 Stories: Adapters Preserving Accessibility and Security
 
-Governing rule (AD-2): render the raw toolkit component and run the committed suites; a seam becomes an adapter **only** where an accessibility or security assertion goes red, and the failing spec is named in the seam's doc comment. An adapter may only preserve behaviour, never add it. The set is exactly three — `ui-link`, `ui-input`, `ui-button` — and a **fourth** adapter is a scope change (FR9); `ui-text-field-form` is a local composite over those seams, not an adapter, and does not count against the cap.
+Governing rule (AD-2): render the raw toolkit component and run the committed suites; a seam becomes an adapter **only** where an accessibility or security assertion goes red, and the failing spec is named in `docs/ui-toolkit.md`. An adapter may only preserve behaviour, never add it. The set is exactly three — `ui-link`, `ui-input`, `ui-button` — and a **fourth** adapter is a scope change (FR9); `ui-text-field-form` is a local composite over those seams, not an adapter, and does not count against the cap.
 
 One edge in this epic runs backwards against the epic numbering and is stated here rather than left to be discovered: Story 4.2 depends on Story 6.1's shared i18n namespace. Story 6.1 is Independent and dispatchable in the first batch, so the graph, not the epic number, is the dispatch input.
 
@@ -227,7 +227,7 @@ One edge in this epic runs backwards against the epic numbering and is stated he
 - **Given** the adapter, **When** authored, **Then** it calls `resolveExternalLinkRel` from `src/shared/externalLinkRel.ts` — the single `rel` sink, unchanged — which case-folds `target` and **merges** caller-supplied `rel` tokens rather than replacing them (FR12).
 - **Given** `target="_BLANK"`, **When** rendered, **Then** the anchor carries `noopener noreferrer`; `UiLink.test.tsx`'s "hardens a case-variant blank target" and `tests/integration/coverage/shared/external-link-rel.integration.test.ts` both pass **unmodified** (FR12, NFR11, FR27).
 - **Given** `exactOptionalPropertyTypes`, **When** `target`/`rel` are forwarded, **Then** they are handed over by conditional spread, because the toolkit declares them without `| undefined` — proven by `make lint-tsc` with no `@ts-expect-error` anywhere (NFR17).
-- **And** the seam's doc comment names the regression test that justifies the adapter and the upstream gap (1) that retires it (FR9).
+- **And** `docs/ui-toolkit.md` names the regression test that justifies the adapter and the upstream gap (1) that retires it (FR9).
 - **And** `make lint-metrics` passes on the adapter file with `config/metrics-policy.json` unchanged; a complexity breach is reduced by refactoring the adapter, never by editing the policy or excluding the file (NFR4, NFR17).
 - **Accessibility acceptance:** the anchor keeps `role="link"` and its accessible name; it stays in the tab order and is activated by Enter with a visible focus ring; no ARIA attribute is added or removed by the hardening path; the component scans clean at serious/critical and unset impact in both same-tab and new-tab configurations.
 
@@ -253,7 +253,7 @@ One edge in this epic runs backwards against the epic numbering and is stated he
 - **Given** `UiInputProps`, **When** declared, **Then** it is an explicit `Pick` allow-list over `ComponentProps<typeof ToolkitUiInput>` plus `describedBy?` and `required?` — **not** `Omit<…>` over the whole of `TextFieldProps` — and the documented `name`/`autoComplete` rationale stays on the type (FR11).
 - **Given** `required`, **When** set, **Then** the DOM carries `aria-required` and **never** the native `required` attribute; a regression here is what the narrow surface exists to prevent (FR11, NFR12).
 - **And** `UiInput.test.tsx` and `UiTextFieldForm.test.tsx` pass with their assertions unchanged, not relaxed (FR27), and `UiTextFieldForm` is otherwise untouched — it merely re-composes the toolkit-backed seams as a local composite, which is why it is not a fourth adapter.
-- **And** the seam's doc comment names the regression test that justifies the adapter (`UiInput.test.tsx`'s `aria-describedby` delivery case, plus `AuthForm`'s `password-requirements` association) and upstream gap 2 as the condition that retires it — the same doc-comment obligation Stories 4.1 and 4.4 carry (FR9, FR37).
+- **And** `docs/ui-toolkit.md` names the regression test that justifies the adapter (`UiInput.test.tsx`'s `aria-describedby` delivery case, plus `AuthForm`'s `password-requirements` association) and upstream gap 2 as the condition that retires it — the same documentation obligation Stories 4.1 and 4.4 carry (FR9, FR37).
 - **And** `make lint-metrics` passes on the adapter file with `config/metrics-policy.json` unchanged; a complexity breach is reduced by refactoring the adapter, never by editing the policy or excluding the file (NFR4, NFR17).
 - **Accessibility acceptance:** `AuthForm`'s `password-requirements` association survives end to end and is asserted at the `<input>`; the field keeps its programmatic label; error state exposes `aria-invalid` and the live-region error text still announces; focus order and visible focus are unchanged; `make test-a11y` reports 0 serious/critical and 0 unset-impact findings on the form route and on its validation-error interaction state.
 
@@ -265,7 +265,7 @@ One edge in this epic runs backwards against the epic numbering and is stated he
 
 - **Given** a falsy `href`, **When** the button renders, **Then** MUI receives no `href` and the element stays a `<button>` (FR13) — asserted in the client layer.
 - **Given** `UiButtonProps`, **When** declared, **Then** it is `ComponentProps<typeof ToolkitUiButton> & { rel?: string; target?: string; href?: string }` and `rel`/`target`/`href` are rebuilt by conditional spread for `exactOptionalPropertyTypes`; no `@ts-expect-error` or declaration merging is used (FR13, NFR17).
-- **And** the seam's doc comment names upstream gap 2 as the condition that retires it (FR9, FR37).
+- **And** `docs/ui-toolkit.md` names upstream gap 2 as the condition that retires it (FR9, FR37).
 - **And** `make lint-metrics` passes on the adapter file with `config/metrics-policy.json` unchanged; a complexity breach is reduced by refactoring the adapter, never by editing the policy or excluding the file (NFR4, NFR17).
 - **Accessibility acceptance:** the element's role follows its semantics — `button` when there is no destination, `link` when there is — so keyboard behaviour (Space and Enter for a button, Enter for a link) matches what is announced; the accessible name and focus ring are unchanged; a destination-less anchor, which is unfocusable and unannounced as a control, can no longer be produced.
 
@@ -447,11 +447,11 @@ One edge in this epic runs backwards against the epic numbering and is stated he
 
 **As a** maintainer, **I want** each adapter to name the upstream defect that retires it, **so that** the remaining local code is debt with a payoff rather than preference.
 
-**Implements:** FR37 (AC8) | **Marking:** Dependent (4.1, 4.2, 4.3, 4.4) | **Files:** `src/components/ui-link/index.tsx`, `src/components/ui-input/index.tsx`, `src/components/ui-button/index.tsx` (doc comments only), plus GitHub issues on `VilnaCRM-Org/ui-toolkit`
+**Implements:** FR37 (AC8) | **Marking:** Dependent (4.1, 4.2, 4.3, 4.4) | **Files:** `src/components/ui-link/index.tsx`, `src/components/ui-input/index.tsx`, `src/components/ui-button/index.tsx` (`docs/ui-toolkit.md` entries only), plus GitHub issues on `VilnaCRM-Org/ui-toolkit`
 
 - **Given** the seven gaps, **When** filed, **Then** each is a separate upstream issue: (1) case-sensitive `rel` hardening — a security defect that also suppresses the `_BLANK` cue; (2) `Ui*Props` not exported (`ae-forgotten-export`); (3) hardcoded, non-tokenized font families; (4) English-defaulted `newTabLabel`; (5) optional props omitting `| undefined`; (6) three bare `fontFamily:"Golos"` references with no matching `@font-face`; (7) **no per-component entry points** — `build/index.mjs` is one 275.7 KB ESM module whose components share theme objects, so bundle cost scales with the whole package rather than with what is consumed (FR37).
 - **Given** gap 7, **When** it is filed, **Then** it is recorded as retiring **no adapter** — it is the prerequisite Story 7.2's not-shippable branch waits on — and it is filed on **both** branches, so a shippable outcome still leaves the request on record and a not-shippable outcome is never blocked on an unfiled prerequisite (FR33, FR37).
-- **Given** each adapter, **When** its doc comment is written, **Then** it links the gap that retires it and the committed regression test that must stay green through the retiring commit (FR9, FR37).
+- **Given** each adapter, **When** its `docs/ui-toolkit.md` entry is written, **Then** it links the gap that retires it and the committed regression test that must stay green through the retiring commit (FR9, FR37).
 - **And** the retirement conditions are stated: gap 1 retires `resolveExternalLinkRel` *and* restores the `_BLANK` cue; gap 2 lets `ui-button`'s intersection and `ui-input`'s `Pick` derive from an exported interface; gap 4 leaves the localization in place but no longer as a suppression.
 
 ## Story Dependency Graph
@@ -572,7 +572,7 @@ Every question this breakdown raised is closed below. None is left for implement
 
 > Assumption: no story may satisfy its gate by editing the gate. Where a story's acceptance criterion names a threshold, budget, allow-list, baseline or suppression, the criterion is that the value is **unchanged** — NFR17 restated per story, because a red gate on a retrospective plan is precisely where the temptation lands.
 
-> Assumption: this breakdown targets toolkit `v0.3.0` as published, with the single exception FR33 already names — if Story 7.2 cannot close the byte gap, per-component entry points become a prerequisite and the change waits rather than shipping 1.10% over.
+> Assumption: this breakdown targets toolkit `v0.5.0` as published, with the single exception FR33 already names — if Story 7.2 cannot close the byte gap, per-component entry points become a prerequisite and the change waits rather than shipping 1.10% over.
 
 > Assumption: the adapter set is **three** and Story 4.3's `ui-text-field-form` clause is a scope exclusion,
 > not a fourth adapter. The upstream brief's Proposed Solution table has four rows because its fourth records

@@ -201,7 +201,7 @@ Push upstream for per-component entry points so bundle cost scales with what is 
 
 - **Rewriting `UiTextFieldForm` onto the toolkit's equivalent.** The local version is strictly richer (live-region errors, `composeDescribedBy`, `isRequiredRule`); it composes the toolkit-backed primitives and stops there. It is a local **composite**, not an adapter, and does not count against FR9's cap of three; its live-region errors, `composeDescribedBy` and `isRequiredRule` are unchanged by this work.
 - **`UiImage`.** It depends on `next-export-optimize-images`, which the toolkit cannot provide. It stays local and untouched; the PR narrative listing it among the swapped primitives is a description error — `UiInput` is the ninth changed module.
-- **Fixing the toolkit.** The seven upstream gaps are filed, not fixed here; this change lands against `v0.3.0` as published.
+- **Fixing the toolkit.** The seven upstream gaps are filed, not fixed here; this change lands against `v0.5.0` as published.
 - **The CRM migration.** VilnaCRM-Org/crm#250 is blocked on its own React 19 / MUI 9 upgrade.
 - **Adopting toolkit components this site does not already have.** The scope is replacing duplicates, which is also what keeps the bundle argument honest.
 
@@ -370,7 +370,7 @@ Every question this PRD raised is closed below. None is left for implementation 
 
 > Assumption: the three bare `fontFamily:"Golos"` references are not a blocker, because none of the toolkit's form-level components is consumed here — but they are filed as upstream gap 6, because adopting one later would silently fall back.
 
-> Assumption: the change is scoped to toolkit `v0.3.0` and does not wait for an upstream release. Waiting leaves the two copies drifting for the length of the toolkit's release cycle, which is the cost this change exists to stop.
+> Assumption: the change is scoped to toolkit `v0.5.0` and does not wait for an upstream release. Waiting leaves the two copies drifting for the length of the toolkit's release cycle, which is the cost this change exists to stop.
 
 > Assumption: if FR31 cannot be met by trimming, the correct outcome is that the change waits for upstream per-component entry points. "Ship 1.10% over" is not a decision available to this PRD, because the budget is a raise-only floor and the gate's own source says never to raise it.
 

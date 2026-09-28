@@ -29,6 +29,7 @@ runs:
     # with a growing back-off, until the registry serves that manifest again
     # before the build asks for it.
     - name: Wait for the base image registry
+      id: base-image
       shell: bash
       run: |
         set -euo pipefail
@@ -37,6 +38,7 @@ runs:
           echo "::error::could not read the base image from the Dockerfile's FROM … AS base line"
           exit 1
         fi
+        echo "ref=$base" >> "$GITHUB_OUTPUT"
         for attempt in 1 2 3 4 5 6; do
           if docker manifest inspect "$base" > /dev/null 2>&1; then
             exit 0
@@ -48,6 +50,52 @@ runs:
         exit 1
 
     - name: Build or restore the dev image
+      id: build-image
+      # A `uses:` step cannot be retried in place, and the registry can still
+      # answer 429 to the build's own manifest fetch after the wait above
+      # succeeded. The failure is tolerated here so the wait and the build can
+      # run once more below; the second attempt is not tolerated.
+      continue-on-error: true
+      uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+      with:
+        context: .
+        target: base
+        # Must match `image:` on the dev service in docker-compose.yml — that is
+        # what makes `docker compose up` reuse this build instead of running its
+        # own, uncached one.
+        tags: website-dev:latest
+        load: true
+        push: false
+        # `load` exports into the classic image store, which cannot hold the
+        # attestation manifests buildx attaches by default.
+        provenance: false
+        sbom: false
+        # A stable scope, not one keyed on a hash of the build inputs: BuildKit
+        # already invalidates per layer by content, so a PR that only touches
+        # bun.lock still reuses the expensive apk/npm layer beneath it, whereas a
+        # hash-keyed scope would miss the cache wholesale.
+        cache-from: type=gha,scope=dev-image
+        cache-to: ${{ inputs.cache-write == 'true' && 'type=gha,mode=max,scope=dev-image' || '' }}
+
+    - name: Wait for the base image registry again
+      if: steps.build-image.outcome == 'failure'
+      shell: bash
+      run: |
+        set -euo pipefail
+        for attempt in 1 2 3 4; do
+          if docker manifest inspect "$BASE_IMAGE" > /dev/null 2>&1; then
+            exit 0
+          fi
+          echo "::warning::the base image registry did not answer (retry attempt $attempt); backing off"
+          sleep $((attempt * 45))
+        done
+        echo "::error::the base image registry kept refusing before the second build"
+        exit 1
+      env:
+        BASE_IMAGE: ${{ steps.base-image.outputs.ref }}
+
+    - name: Build or restore the dev image (second attempt)
+      if: steps.build-image.outcome == 'failure'
       uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
       with:
         context: .

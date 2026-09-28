@@ -7,9 +7,7 @@
  */
 import { main } from './verifyUiToolkit.mjs';
 
-process.exit(
-  main({
-    stdout: text => process.stdout.write(text),
-    stderr: text => process.stderr.write(text),
-  })
-);
+process.exitCode = main({
+  stdout: text => process.stdout.write(text),
+  stderr: text => process.stderr.write(text),
+});

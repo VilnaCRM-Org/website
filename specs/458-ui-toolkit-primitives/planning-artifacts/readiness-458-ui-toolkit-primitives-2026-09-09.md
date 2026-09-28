@@ -262,8 +262,8 @@ downstream text. None is contradicted.
 The verdict is **PASS**. Implementation may proceed. Two conditions attached; both of the
 ones that gate dispatch were closed immediately after this review, by the orchestrator:
 
-1. **(N1, major - CLOSED.)** Story 1.2 now reads `Dependent (1.1, 2.1 - shares
-   `jest.config.ts` with 2.1)` and the dependency graph's LAYER 1 line carries the edge, so
+1. **(N1, major - CLOSED.)** Story 1.2 now reads ``Dependent (1.1, 2.1 - shares
+   `jest.config.ts` with 2.1)`` and the dependency graph's LAYER 1 line carries the edge, so
    no dispatcher reading declared edges can put two agents in that file. This applies the
    same standard the epics use for 6.2/3.3, 4.2/4.1 and 6.4/6.5, and the same one M3 named.
 2. **(n2, minor - CLOSED.)** The architecture's Component & File Map row for

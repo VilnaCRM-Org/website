@@ -10,7 +10,7 @@ falls short of them.
 
 ## Task Framing
 
-Render the shared `Ui*` primitives from `@vilnacrm/ui-toolkit` (v0.3.0 release tarball)
+Render the shared `Ui*` primitives from `@vilnacrm/ui-toolkit` (v0.5.0 release tarball)
 instead of a second local copy, keeping each `src/components/ui-*` path as an import seam,
 keeping the primitives whose toolkit version would regress shipped a11y/security behaviour
 as thin local adapters, re-wiring fonts so the toolkit's bare `Inter` / `Golos Text`

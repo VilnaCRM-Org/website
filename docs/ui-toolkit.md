@@ -180,8 +180,25 @@ baselines under `src/test/visual/**/*-snapshots/` change **for buttons only**:
   unitless ratio gave 60px, and toolkit v0.4.0's `1.125rem` (right for the small button,
   wrong for the medium one, ui-toolkit#157) gave 58px.
 
-Everything below a button that changed height moves by the height difference. That is
-the whole diff: every re-recorded baseline was compared with `main`'s row by row, at
-vertical offsets, and the rows that match at no offset are the button boxes and nothing
-else. Verify a re-record the same way before committing it, and never regenerate
-baselines to absorb a change you cannot name.
+Everything below a button that changed height moves by the height difference. Every
+re-recorded baseline was compared with `main`'s row by row at vertical offsets, then
+region by region with sub-pixel alignment and ink-box equality, and the regions that
+survive are the button boxes plus two named exceptions: the small-card tooltip trigger
+(the "services" link) now paints in the paragraph's Golos instead of the Arial substitute
+`main` used for MUI's unloaded Roboto default, and Firefox at the mobile widths draws the
+four sign-up placeholders 2px narrower than `main` while Chromium and WebKit match to
+the pixel. Verify a re-record the same way before committing it, name every region that
+is not a button, and never regenerate baselines to absorb a change you cannot name.
+
+## The Swagger typeface
+
+`/swagger` is styled by `src/features/swagger/components/api-documentation/**/*.scss`, and
+the declaration that actually paints it is the `.swagger-ui *` catch-all in `styles.scss`,
+because swagger-ui ships its own `font-family` defaults and only that `!important` rule
+beats them. It used to name `golos` / `golos Fallback` — the families `next/font`
+generated — which is why it worked while `$golos` (spelled `__golos_58e94b`, a name no
+build ever emitted) silently did not. Removing `next/font` deletes those families, so
+`_fonts.scss` now declares `$golos` and `$inter` as the same real-name stacks the rest of
+the app uses (`src/config/Fonts/families.ts`), fallback face included, and the catch-all
+reads `$golos`. That restores the previous rendering exactly: the residual difference
+from `main` on the swagger baselines is the header buttons of the row above.

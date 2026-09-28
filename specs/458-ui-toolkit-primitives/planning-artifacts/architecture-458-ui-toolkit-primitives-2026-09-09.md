@@ -30,7 +30,7 @@ status: Draft
 
 ## Executive Summary
 
-This architecture realises the PRD for making `@vilnacrm/ui-toolkit@0.3.0` the single design source for nine `src/components/ui-*` modules without moving a call site. Everything rests on one device — the **import seam**: `src/components/<dir>/index.{ts,tsx}` keeps its path and its default export, and its body becomes either a one-line re-export or a thin adapter. That is what leaves 93 import statements, `src/components/index.ts` and the `@landing`/`@swagger` consumers invariant, and it is what makes the change cheap to revert.
+This architecture realises the PRD for making `@vilnacrm/ui-toolkit@0.5.0` the single design source for nine `src/components/ui-*` modules without moving a call site. Everything rests on one device — the **import seam**: `src/components/<dir>/index.{ts,tsx}` keeps its path and its default export, and its body becomes either a one-line re-export or a thin adapter. That is what leaves 93 import statements, `src/components/index.ts` and the `@landing`/`@swagger` consumers invariant, and it is what makes the change cheap to revert.
 
 The change has two halves with very different blast radii. Nine seams and three adapters are contained and provable by specs that already exist. Replacing `next/font/local` with real-named `@font-face` declarations in `styles/global.css` changes what every page paints — 132 of 156 visual tests move and `uk_largeMobile` changed *height* (414x1562 to 414x1541). The font half is not optional: the toolkit's themes name the families literally (`fontFamily:"Inter"` 36x, `fontFamily:"Golos Text"` 22x in `build/index.mjs`) and a `next/font`-generated family name can never satisfy a literal reference.
 
@@ -67,7 +67,7 @@ Ordered by dependency: the seam is the substrate (AD-1); the adapter rule decide
 
 **Context.** "Which primitives keep local code?" is the question most likely to be answered by taste, and taste produced the two divergent copies. The PRD caps the set at three — `ui-link`, `ui-input`, `ui-button` — and calls a fourth a scope change. `ui-text-field-form` is a local composite over those seams, not an adapter over a toolkit component, so it sits outside the count.
 
-**Decision.** The rule is mechanical, not a list: **render the raw toolkit component in the seam and run the existing suites; if a committed accessibility or security assertion goes red, that seam becomes an adapter and the failing spec is named in its doc comment as the justification. Otherwise it is a re-export.** Three corollaries bind: an adapter may only *preserve* behaviour, never add it; every adapter cites the upstream gap keeping it alive and the condition that retires it; and losing a *convention* is not grounds for one — `UiTypography` widens from a closed `component` union and an ARIA allow-list to `ElementType` + `...rest`, the ARIA props still reach the element, no assertion fails, so no adapter.
+**Decision.** The rule is mechanical, not a list: **render the raw toolkit component in the seam and run the existing suites; if a committed accessibility or security assertion goes red, that seam becomes an adapter and the failing spec is named in `src/components/README.md` or `docs/ui-toolkit.md` as the justification (ADR 0005 leaves no comments in production source). Otherwise it is a re-export.** Three corollaries bind: an adapter may only *preserve* behaviour, never add it; every adapter cites the upstream gap keeping it alive and the condition that retires it; and losing a *convention* is not grounds for one — `UiTypography` widens from a closed `component` union and an ARIA allow-list to `ElementType` + `...rest`, the ARIA props still reach the element, no assertion fails, so no adapter.
 
 **Rationale.** It turns a judgement call into a reproducible experiment over evidence already committed, and it predicts the answer for the next primitive anyone considers swapping.
 
@@ -139,7 +139,7 @@ export type UiInputProps = Pick<
 
 **Decision.** Declare the nine faces in `styles/global.css` under their real names (`Inter` 400/500/700; `Golos Text` 400/500/600/700/800/900) against the **same** committed `.woff2` assets (472,032 B), each `font-display: swap`; declare two metric-adjusted fallback faces (`Inter Fallback`, `Golos Text Fallback`) over `local('Arial')`; delete `src/config/Fonts/inter.ts` and `golos.ts`; replace `<main className={golos.className}>` with `.app-typeface`; add `src/config/Fonts/families.ts` exporting `GOLOS_TEXT_FAMILY`; and rewrite `_fonts.scss` to `$golos: 'Golos Text', sans-serif` / `$inter: 'Inter', sans-serif`.
 
-The fallback overrides are **derived data with a recorded recompute rule** (FR18), stated in the comment above them: `size-adjust` is the ratio of the fallback's to the real face's frequency-weighted average lowercase advance width, and the ascent/descent/line-gap overrides are the face's own metrics divided by `unitsPerEm` and then by that `size-adjust`, computed from the committed `-Regular.woff2` of each family using the metric source `next/font` uses. Replacing a family's regular face requires recomputation in the same commit.
+The fallback overrides are **derived data with a recorded recompute rule** (FR18), recorded in `docs/ui-toolkit.md` ("Fonts"): `size-adjust` is the ratio of the fallback's to the real face's frequency-weighted average lowercase advance width, and the ascent/descent/line-gap overrides are the face's own metrics divided by `unitsPerEm` and then by that `size-adjust`, computed from the committed `-Regular.woff2` of each family using the metric source `next/font` uses. Replacing a family's regular face requires recomputation in the same commit.
 
 **Rationale.** One loading mechanism, the same bytes, zero added payload, and family names a browser and a reviewer can both verify — while removing the stale-hash defect as a side effect. The edge is unaffected and must stay so: css-loader emits the `.woff2` under `out/_next/static/media/`, the destination `next/font` used, and `scripts/cloudfront_routing.js` already allows `_next` in `ALLOWED_DIRS` and `woff2` in `ALLOWED_EXTENSIONS`, so `verify-edge-allowlist.mjs` needs no widening.
 
@@ -167,7 +167,7 @@ The fallback overrides are **derived data with a recorded recompute rule** (FR18
 
 | Piece | Path | Role |
 | --- | --- | --- |
-| Version pin | `.env` / `.env.example` `UI_TOOLKIT_VERSION=v0.3.0` | The one authoritative tag |
+| Version pin | `.env` / `.env.example` `UI_TOOLKIT_VERSION=v0.5.0` | The one authoritative tag |
 | Digests | `config/ui-toolkit-checksums.json` | `algorithm`, `version`, `tarballUrl`, per-artifact SHA-256 |
 | Verifier | `scripts/verifyUiToolkit.mjs` | Offline: hashes the installed `build/*`, asserts the pin |
 | Gate | `make lint-ui-toolkit` | Hermetic; joins `make lint` and `CI_LINT_TARGETS` |
@@ -460,7 +460,7 @@ Every question this architecture raised is closed below. None is left for implem
 > is real work with its own supply-chain surface and is out of scope; R7 records this as the design's
 > weakest verification link rather than pretending otherwise.
 
-> Assumption: this architecture targets toolkit `v0.3.0` as published and does not wait for an
+> Assumption: this architecture targets toolkit `v0.5.0` as published and does not wait for an
 > upstream release, except in the one case FR33 already names — if AD-10 cannot close the byte gap,
 > per-component entry points become a prerequisite and the change waits.
 

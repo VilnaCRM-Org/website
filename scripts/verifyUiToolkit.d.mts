@@ -1,7 +1,10 @@
 // Declaration shim for the sibling ESM script `verifyUiToolkit.mjs`, which stays
 // plain JavaScript so it runs directly under Node with no build step. The types
 // let the client-layer spec import it under `allowJs: false`.
-export type ReadFile = (path: string, encoding?: 'utf8') => string;
+export type ReadFile = {
+  (path: string): string | Uint8Array;
+  (path: string, encoding: 'utf8'): string;
+};
 export type DirEntry = { name: string; isDirectory: () => boolean };
 export type ReadDir = (path: string, options?: { withFileTypes: true }) => DirEntry[];
 

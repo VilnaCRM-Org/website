@@ -1484,3 +1484,23 @@ JSON
   assert_log_contains 'playwright test ./src/test/visual --shard=1/1'
 }
 
+@test "test-e2e-shard forwards the shard slice to Playwright after bringing prod up" {
+  run_make_target test-e2e-shard E2E_SHARD_INDEX=2 E2E_SHARD_TOTAL=4
+  [ "$status" -eq 0 ]
+  assert_log_contains 'docker compose -f common-healthchecks.yml -f docker-compose.test.yml up -d'
+  assert_log_contains 'playwright test ./src/test/e2e --shard=2/4'
+}
+
+@test "the ci-test shard targets run a slice without bringing prod up again" {
+  run_make_target ci-test-visual-shard VISUAL_SHARD_INDEX=5 VISUAL_SHARD_TOTAL=8
+  [ "$status" -eq 0 ]
+  assert_log_contains 'playwright test ./src/test/visual --shard=5/8'
+  ! grep -q -- 'up -d' "$COMMAND_LOG"
+
+  reset_command_log
+  run_make_target ci-test-e2e-shard E2E_SHARD_INDEX=3 E2E_SHARD_TOTAL=4
+  [ "$status" -eq 0 ]
+  assert_log_contains 'playwright test ./src/test/e2e --shard=3/4'
+  ! grep -q -- 'up -d' "$COMMAND_LOG"
+}
+

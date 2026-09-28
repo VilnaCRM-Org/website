@@ -1167,6 +1167,12 @@ ci-test-e2e: ## Run E2E tests assuming ci-prod-setup already started the prod en
 ci-test-visual: ## Run visual tests assuming ci-prod-setup already started the prod environment
 	$(run-visual)
 
+ci-test-e2e-shard: ## Run one E2E shard (E2E_SHARD_INDEX of E2E_SHARD_TOTAL) assuming the prod environment is already up
+	$(run-e2e-shard)
+
+ci-test-visual-shard: ## Run one visual shard (VISUAL_SHARD_INDEX of VISUAL_SHARD_TOTAL) assuming the prod environment is already up
+	$(run-visual-shard)
+
 ci-test-a11y: ## Run the route accessibility scans assuming ci-prod-setup already started the prod environment
 	$(run-a11y)
 

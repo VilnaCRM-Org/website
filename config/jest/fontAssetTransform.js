@@ -8,11 +8,12 @@
  * The module returns a URL that CONTAINS THE FILE'S NAME rather than one fixed
  * string, which is what webpack's `asset/resource` output does. A single shared
  * stub would make every face compare equal and would quietly defeat the
- * "six distinct weights" assertion that guards the preload list.
+ * "six distinct weights" assertion that guards the preload list. The name is
+ * taken after either path separator, so a Windows checkout yields the same URL.
  */
 module.exports = {
   process(_sourceText, sourcePath) {
-    const fileName = sourcePath.split('/').pop();
+    const fileName = sourcePath.split(/[\\/]/).pop();
     const url = `/_next/static/media/${fileName}`;
     return { code: `module.exports = ${JSON.stringify(url)};` };
   },

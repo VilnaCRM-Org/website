@@ -1,7 +1,6 @@
 import { faker } from '@faker-js/faker';
 
 import { t } from '../utils/initializeLocalization';
-import { removeHtmlTags } from '../utils/removeHtmlTags';
 
 import { ExpectationEmail, ExpectationsPassword, User } from './types';
 
@@ -11,18 +10,34 @@ export const placeholderPassword: string = t('sign_up.form.password_input.placeh
 export const placeholderConfirmPassword: string = t(
   'sign_up.form.confirm_password_input.placeholder'
 );
-// The consent checkbox is labelled by a <Trans> sentence whose two policy links
-// each append a localized "opens in new tab" cue inside the sentence, so the
-// rendered label is no longer the flattened translation as one contiguous run.
-// Matching the sentence's words in order still identifies exactly this checkbox
-// and keeps asserting that the whole consent copy is present and in sequence.
-export const policyText: RegExp = new RegExp(
-  removeHtmlTags('sign_up.form.confidential_text.fullText')
-    .split(/\s+/)
+// The consent checkbox is labelled by a <Trans> sentence whose two policy links each
+// append a localized, parenthesised "opens in new tab" cue, so the rendered label is
+// not the flattened translation as one contiguous run. Ordinary words must follow
+// each other across whitespace only; the cue is admitted solely at the end of a link,
+// so a copy regression inside the sentence ("have not read") still fails the match.
+const NEW_TAB_CUE: string = '(?:\\s+\\([^)]+\\))?';
+
+function escapeForRegExp(word: string): string {
+  return word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function wordsPattern(text: string): string {
+  return text.trim().split(/\s+/).filter(Boolean).map(escapeForRegExp).join('\\s+');
+}
+
+function consentLabelPattern(): string {
+  return t('sign_up.form.confidential_text.fullText')
+    .split(/(<\d+>[^<]*<\/\d+>)/)
+    .map(segment => segment.trim())
     .filter(Boolean)
-    .map(word => word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
-    .join('[\\s\\S]*?')
-);
+    .map(segment => {
+      const link: RegExpMatchArray | null = segment.match(/^<\d+>([^<]*)<\/\d+>$/);
+      return link ? `${wordsPattern(link[1] ?? '')}${NEW_TAB_CUE}` : wordsPattern(segment);
+    })
+    .join('\\s+');
+}
+
+export const policyText: RegExp = new RegExp(consentLabelPattern());
 export const signUpButton: string = t('sign_up.form.button_text');
 
 export const requiredNameError: string = t('sign_up.form.name_input.required');

@@ -84,7 +84,7 @@ Each row is checkable from CI output or a committed artifact. Relaxing a row is 
 | G7 | No accessibility or security assertion is removed | Diff over `src/test/testing-library/**`, `src/test/a11y/**`, `tests/integration/**` | 0 deleted assertions; an assertion may move layers only with its replacement named in the same diff |
 | G8 | Accessibility conformance holds | `make test-a11y` plus the interaction-state scans | 0 serious/critical and 0 unset-impact axe violations; `src/test/a11y/interaction-states.ts` registers the tooltip's new keyboard states |
 | G9 | Lighthouse floors hold | `lighthouserc.desktop.js` / `lighthouserc.mobile.js` | Category and byte assertions pass at the profile's raise-only floors (85 desktop / 40 mobile) |
-| G10 | The dependency is verifiable offline | A committed digest plus a check that reads it | The tarball's SHA-256 is committed and verified; the version is pinned once, not restated |
+| G10 | The dependency is verifiable offline | A committed digest plus a check that reads it | SHA-256 digests of every installed build artifact are committed and verified offline; the version is pinned once, not restated |
 
 G3, G6 and G10 are the three the current attempt does not meet. G10 has no CI signal at all today, which is why it is stated as a goal rather than assumed.
 
@@ -112,7 +112,7 @@ Supporting work: the `styles/global.css` `@font-face` declarations and fallback 
 
 - **Rewriting `UiTextFieldForm` onto the toolkit's equivalent.** The local version is strictly richer (live-region errors, `composeDescribedBy`, `isRequiredRule`); it composes the toolkit-backed primitives and stops there.
 - **`UiImage`.** It depends on `next-export-optimize-images`, which the toolkit cannot provide, so it stays local and untouched. The PR narrative listing it among the swapped primitives is a description error, not a scope item — `UiInput` is the ninth changed module.
-- **Fixing the toolkit.** The five upstream gaps are filed, not fixed here; this change must land against `v0.3.0` as published.
+- **Fixing the toolkit.** The five upstream gaps are filed, not fixed here; this change must land against `v0.5.0` as published.
 - **The CRM migration.** VilnaCRM-Org/crm#250 is blocked on its own React 19 / MUI 9 upgrade and is tracked separately.
 - **Adopting toolkit components this site does not already have.** The scope is replacing duplicates, not importing new surface area — which is also what keeps the bundle argument honest.
 
@@ -130,7 +130,7 @@ Supporting work: the `styles/global.css` `@font-face` declarations and fallback 
 
 **C5 - `uk` is the live lane.** `NEXT_PUBLIC_MAIN_LANGUAGE` is `uk`, so the `uk` screenshots are the whole live estate and the `en` baselines did not run. Any claim about visual impact must be read against the `uk` set.
 
-> Assumption: the change is scoped to toolkit `v0.3.0` and does not wait for an upstream release. Waiting would leave the two copies drifting for the length of the toolkit's release cycle, which is the cost this change exists to stop.
+> Assumption: the change is scoped to toolkit `v0.5.0` and does not wait for an upstream release. Waiting would leave the two copies drifting for the length of the toolkit's release cycle, which is the cost this change exists to stop.
 
 ## Risks and Open Questions
 
