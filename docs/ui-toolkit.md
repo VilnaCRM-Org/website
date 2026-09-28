@@ -90,10 +90,12 @@ and re-recorded, not a side effect of a dependency bump.
 
 One more forwarding rule changed with v0.5.0: MUI hands a Tooltip's `sx` to its trigger
 child, and the toolkit's trigger now carries an `sx` of its own, so a consumer `sx` on
-`UiTooltip` no longer reaches the trigger text. `ui-card-item` styles the span it renders
-inside the trigger instead of the tooltip, and the sign-up form's label row addresses the
-trigger by its `role="button"` to keep the `line-height: 0` that stops the 16px hint icon
-from adding a text line's height to the row.
+`UiTooltip` no longer reaches the trigger text. Both call sites address the trigger by its
+`role="button"` from the parent's styles instead: `ui-card-item`'s small-card text keeps the
+link styling of the "services" trigger (`Trans` replaces that element's children with the
+translated string, so nothing rendered inside it can carry the style), and the sign-up
+form's label row keeps the `line-height: 0` that stops the 16px hint icon from adding a
+text line's height to the row.
 
 ## Fonts
 

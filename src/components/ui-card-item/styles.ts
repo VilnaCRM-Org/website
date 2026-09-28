@@ -38,6 +38,12 @@ export default {
   smallText: {
     mt: '0.625rem',
     zIndex: 2,
+    '& [role="button"]': {
+      cursor: 'pointer',
+      color: colorTheme.palette.primary.main,
+      textDecoration: 'underline',
+      fontWeight: '700',
+    },
     [`@media (max-width: ${breakpointsTheme.breakpoints.values.lg}px)`]: {
       a: {
         textDecoration: 'none',
@@ -60,13 +66,6 @@ export default {
       width: '3.125rem',
       height: '3.125rem',
     },
-  },
-
-  hoveredCard: {
-    cursor: 'pointer',
-    color: colorTheme.palette.primary.main,
-    textDecoration: 'underline',
-    fontWeight: '700',
   },
 
   largeWrapper: {
