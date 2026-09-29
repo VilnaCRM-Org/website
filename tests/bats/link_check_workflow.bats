@@ -71,3 +71,149 @@ setup() {
   run grep -F -- '--offline' "$OFFLINE_JOB"
   [ "$status" -eq 0 ]
 }
+
+# Issue #508: `<a href="/swagger">` on /en/docs/api was reported missing because the export
+# ships `out/swagger.html` and only the edge's ROUTE_MAP makes `/swagger` resolve. The
+# remap rules mirror that table and nothing broader.
+REMAP_SCRIPT_REL='scripts/ci/link-check-remaps.mjs'
+
+# Apply lychee-style `<regex> <replacement>` rules (read from $RULES_FILE) to one URI, first
+# match wins. The emitted rules use only syntax JS RegExp and Rust's regex crate share.
+remap_uri() {
+  node -e '
+    const fs = require("node:fs");
+    const uri = process.argv[1];
+    for (const line of fs.readFileSync(process.env.RULES_FILE, "utf8").split("\n")) {
+      if (!line) continue;
+      const [pattern, replacement] = line.split(" ");
+      const re = new RegExp(pattern);
+      if (re.test(uri)) { process.stdout.write(uri.replace(re, replacement)); process.exit(0); }
+    }
+    process.stdout.write(uri);
+  ' "$1"
+}
+
+# A throwaway tree holding the real generator next to a fake edge handler, because the
+# generator resolves the handler relative to its own location.
+generate_with_route_map() {
+  local tree="$BATS_TEST_TMPDIR/tree"
+
+  mkdir -p "$tree/scripts/ci"
+  cp "$PROJECT_ROOT/$REMAP_SCRIPT_REL" "$tree/$REMAP_SCRIPT_REL"
+  printf '%s\n' "$1" >"$tree/scripts/cloudfront_routing.js"
+  run node "$tree/$REMAP_SCRIPT_REL" /repo/out
+}
+
+@test "the external leg passes the generated edge remaps to lychee" {
+  run grep -F -- "node $REMAP_SCRIPT_REL /repo/out" "$EXTERNAL_JOB"
+  [ "$status" -eq 0 ]
+
+  run grep -F -- '--remap "$rule"' "$EXTERNAL_JOB"
+  [ "$status" -eq 0 ]
+
+  run grep -F -- '--exclude-loopback "${remap_args[@]}"' "$EXTERNAL_JOB"
+  [ "$status" -eq 0 ]
+}
+
+@test "the external leg does not fall back to any .html file the export contains" {
+  # --fallback-extensions html also accepts /offline, /404 and /index, which the edge 404s.
+  run grep -F -- '--fallback-extensions' "$EXTERNAL_JOB"
+  [ "$status" -ne 0 ]
+
+  run grep -F -- '--remap' "$OFFLINE_JOB"
+  [ "$status" -ne 0 ]
+}
+
+@test "the remap rules rewrite every ROUTE_MAP route to its target, keeping query and fragment" {
+  RULES_FILE="$BATS_TEST_TMPDIR/rules.txt"
+  export RULES_FILE
+  node "$PROJECT_ROOT/$REMAP_SCRIPT_REL" /repo/out >"$RULES_FILE"
+
+  [ "$(remap_uri file:///repo/out/swagger)" = 'file:///repo/out/swagger.html' ]
+  [ "$(remap_uri file:///repo/out/swagger/)" = 'file:///repo/out/swagger.html' ]
+  [ "$(remap_uri 'file:///repo/out/swagger#tag')" = 'file:///repo/out/swagger.html#tag' ]
+  [ "$(remap_uri 'file:///repo/out/swagger?a=1#tag')" = 'file:///repo/out/swagger.html?a=1#tag' ]
+  [ "$(remap_uri file:///repo/out/en)" = 'file:///repo/out/en.html' ]
+  [ "$(remap_uri file:///repo/out/en/docs/api)" = 'file:///repo/out/en/docs/api.html' ]
+  [ "$(remap_uri file:///repo/out)" = 'file:///repo/out/index.html' ]
+  [ "$(remap_uri 'file:///repo/out/#top')" = 'file:///repo/out/index.html#top' ]
+}
+
+@test "the remap rules leave every route the edge does not map unresolved" {
+  RULES_FILE="$BATS_TEST_TMPDIR/rules.txt"
+  export RULES_FILE
+  node "$PROJECT_ROOT/$REMAP_SCRIPT_REL" /repo/out >"$RULES_FILE"
+
+  # /offline is the recorded ROUTE_MAP exemption; /404 and /index exist only as files.
+  local uri
+  for uri in offline 404 index swaggerx en/docs en/docs/apix en.html swagger.html; do
+    [ "$(remap_uri "file:///repo/out/$uri")" = "file:///repo/out/$uri" ]
+  done
+  [ "$(remap_uri file:///elsewhere/swagger)" = 'file:///elsewhere/swagger' ]
+}
+
+@test "the remap generator escapes regex metacharacters in a route" {
+  generate_with_route_map "var ROUTE_MAP = { '/a.b': '/a.b.html' };"
+  assert_success
+
+  RULES_FILE="$BATS_TEST_TMPDIR/rules.txt"
+  export RULES_FILE
+  printf '%s\n' "$output" >"$RULES_FILE"
+  [ "$(remap_uri file:///repo/out/a.b)" = 'file:///repo/out/a.b.html' ]
+  [ "$(remap_uri file:///repo/out/aXb)" = 'file:///repo/out/aXb' ]
+}
+
+@test "the remap generator refuses a trailing-slash route without its bare twin" {
+  generate_with_route_map "var ROUTE_MAP = { '/x/': '/x.html' };"
+  [ "$status" -ne 0 ]
+  assert_output_contains 'maps /x/ but not /x'
+}
+
+@test "the remap generator refuses spellings that rewrite to different targets" {
+  generate_with_route_map "var ROUTE_MAP = { '/x': '/x.html', '/x/': '/y.html' };"
+  [ "$status" -ne 0 ]
+  assert_output_contains 'different targets'
+}
+
+@test "the remap generator fails closed on an empty or missing ROUTE_MAP" {
+  generate_with_route_map 'var ROUTE_MAP = {};'
+  [ "$status" -ne 0 ]
+  assert_output_contains 'no ROUTE_MAP routes'
+
+  generate_with_route_map 'var OTHER = {};'
+  [ "$status" -ne 0 ]
+  assert_output_contains 'did not declare a ROUTE_MAP'
+}
+
+@test "the remap generator refuses a site root lychee cannot use" {
+  local root
+  for root in '' 'repo/out' '/repo/my out'; do
+    run node "$PROJECT_ROOT/$REMAP_SCRIPT_REL" "$root"
+    [ "$status" -ne 0 ]
+    assert_output_contains 'usage:'
+  done
+
+  run node "$PROJECT_ROOT/$REMAP_SCRIPT_REL"
+  [ "$status" -ne 0 ]
+}
+
+@test "a red weekly run reaches ci-health-alerts, whose filters drop the pull-request leg" {
+  # The tracking step runs only when lychee itself fails, so a broken export build or remap
+  # generator reddens the run without filing anything; the ci-alert issue is the only signal.
+  run node -e '
+    const yaml = require(process.argv[1] + "/node_modules/js-yaml");
+    const fs = require("node:fs");
+    const load = (f) => yaml.load(fs.readFileSync(process.argv[1] + "/.github/workflows/" + f, "utf8"));
+    const own = load("link-check.yml");
+    const alerts = load("ci-health-alerts.yml").on.workflow_run;
+    const tracking = own.jobs.external.steps.find((s) => (s.run || "").includes("gh issue create"));
+    process.stdout.write([
+      alerts.workflows.includes(own.name),
+      alerts.branches.join(","),
+      Object.keys(own.on).sort().join(","),
+      tracking.if,
+    ].join("|"));
+  ' "$PROJECT_ROOT"
+  assert_success
+  [ "$output" = "true|main|pull_request,schedule|steps.lychee.outcome == 'failure'" ]
+}

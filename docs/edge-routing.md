@@ -74,6 +74,12 @@ The three tables describe the static export in `out/`, and two gates hold them t
   before #333, when they pointed at `index.html` objects a `trailingSlash`-less export
   never writes.
 
+The weekly link check reads `ROUTE_MAP` too (issue #508):
+`scripts/ci/link-check-remaps.mjs` turns each route into a lychee `--remap` rule, so an
+exported `<a href="/swagger">` resolves to `out/swagger.html` exactly as it does in
+production, while a link to an unmapped route (`/offline`, `/404`) still fails. A new route
+therefore needs no link-check change.
+
 ### The tables
 
 - **`ROUTE_MAP`** — extensionless URLs mapped to the object the export actually writes.

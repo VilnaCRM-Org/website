@@ -49,6 +49,11 @@ jobs:
     if: github.event_name == 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      # ECR Public refuses anonymous pulls once GitHub's shared runners exhaust
+      # its per-IP quota; this makes the image builds below fetch any refused
+      # base from its digest-identical mirror.gcr.io copy instead (ADR 0014).
+      ECR_MIRROR: probe
     permissions:
       contents: read
       issues: write
@@ -60,6 +65,21 @@ jobs:
 
       - name: Build static export
         run: make build-out
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: Derive the edge route remaps
+        run: |
+          # One lychee --remap rule per ROUTE_MAP route in scripts/cloudfront_routing.js
+          # (issue #508). Its own step, outside the continue-on-error below, so a
+          # generator that cannot read the edge table fails the run instead of
+          # quietly checking without the rules. The tracking step below never runs
+          # then; ci-health-alerts.yml lists this workflow so the failure is filed as
+          # a ci-alert issue. The argument must match --root-dir.
+          node scripts/ci/link-check-remaps.mjs /repo/out >"$RUNNER_TEMP/lychee-remaps.txt"
 
       - name: Check external links (Markdown + built HTML)
         id: lychee
@@ -77,14 +97,29 @@ jobs:
           # the dev-server address. It is prose that must stay, and nothing is listening on
           # the runner, so it can only ever report "Connection refused".
           #
-          # The blocking `offline` leg above deliberately gets neither flag: it has no
-          # `out/` to resolve against, so it keeps rejecting root-relative Markdown links
+          # --remap resolves an extensionless route the way production does (issue #508).
+          # The export has no trailingSlash, so `/swagger` ships as `out/swagger.html` and
+          # is served only because the edge's ROUTE_MAP rewrites it; --root-dir alone
+          # looks for a file literally named `out/swagger` and reported the server-rendered
+          # `<a href="/swagger">` on /en/docs/api as missing. The rules are generated from
+          # ROUTE_MAP by the step above, carry any `?query`/`#fragment` across (so fragments
+          # are still checked against the target page), and exist only for mapped routes.
+          # Deliberately NOT --fallback-extensions html: that also accepts `/offline`,
+          # `/404` and `/index`, which the edge hard-404s.
+          #
+          # The blocking `offline` leg above deliberately gets none of these flags: it has
+          # no `out/` to resolve against, so it keeps rejecting root-relative Markdown links
           # outright and they never reach this leg in the first place.
+          mapfile -t remap_rules <"$RUNNER_TEMP/lychee-remaps.txt"
+          remap_args=()
+          for rule in "${remap_rules[@]}"; do
+            remap_args+=(--remap "$rule")
+          done
           mapfile -d '' markdown_files < <(git ls-files -z '*.md')
           docker run --rm -v "$GITHUB_WORKSPACE:/repo" -w /repo \
             lycheeverse/lychee@sha256:eaff3e0a13603c9a701accfcc84f44158bb77bf36ecfa4622b626056c3463892 \
             --include-fragments --no-progress --output /repo/lychee-report.md \
-            --root-dir /repo/out --exclude-loopback \
+            --root-dir /repo/out --exclude-loopback "${remap_args[@]}" \
             -- "${markdown_files[@]}" './out/**/*.html'
 
       - name: File or refresh the tracking issue on failures

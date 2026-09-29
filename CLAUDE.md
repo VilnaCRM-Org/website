@@ -196,7 +196,15 @@ Two suites that used to run without asserting anything now fail closed:
   `e2e flake gate` job fails when a spec **the PR changed** passed on a retry, and the
   `burn in changed e2e specs` job re-runs those specs with `--repeat-each=5 --retries=0`
   and fails at two or more failures. Flakes in untouched specs are annotated, not blocked,
-  and the nightly `e2e flake census` tracks them in a labelled issue.
+  and the nightly `e2e flake census` tracks them in one `e2e-flake` issue through
+  `scripts/ci/e2e-flake-census-issue.sh` (issue #445): findings file or refresh it, a clean
+  census — at least one test executed, every test finished, and no repetition failed,
+  flaked or errored — closes it, and a census that did not measure the suite (no report, no
+  test executed, or a run cut short) keeps it open **and** fails the run, so a broken
+  burn-in can never read as clean. A census lists every failed repetition, including one
+  below `FLAKE_THRESHOLD`: that tolerance exists for the PR burn-in, not for closing the
+  tracker. `tests/bats/e2e_flake_census.bats` drives all three outcomes through the real
+  checker.
 - **Memory leaks.** `src/test/memory-leak/runMemlabTests.js` reads the leak clusters memlab
   returns and exits non-zero for any cluster not recorded in
   `src/test/memory-leak/leak-baseline.json`. Every baseline entry needs a reason, a
@@ -898,6 +906,15 @@ tiered off, weakened, or removed.
   boots Mockoon in-process from the committed OpenAPI document and needs no container at
   all, so `ci-test-contract` is deliberately the only `CI_TEST_TARGETS` entry that skips
   `$(CI_TESTS)`. Converting the workflow is the prerequisite for moving it.
+
+  When ECR Public refuses a base image's manifest (its anonymous quota is per source IP,
+  and the shared runner pool exhausts it), the composite fetches the same digest from
+  `mirror.gcr.io` through a BuildKit named context (`scripts/ci/ecr-mirror.sh`, ADR 0014).
+  The prod-stack, `build-out` and Dockerfile-performance jobs get the same fallback by
+  setting `ECR_MIRROR: probe`, which makes the Makefile ask ECR once per distinct base per
+  make invocation and write Compose overrides and build contexts outside the repository;
+  `ECR_MIRROR` defaults to `off`, so local command lines are unchanged. The Dockerfiles
+  stay on ECR, and the script refuses any ECR ref it cannot mirror by digest.
 
   Jobs that stay on the host entirely: `bats-testing` (its subject IS the host side of the
   Makefile — the docker/docker-compose command lines the other gates now exec through — so

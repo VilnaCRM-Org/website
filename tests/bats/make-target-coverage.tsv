@@ -16,6 +16,7 @@ run-load-tests-dind	bats	tests/bats/makefile_targets.bats	Validated with stubbed
 build	ci	.github/workflows/mutation-testing.yml	Executed through `make test-mutation`, which depends on `build`.
 build-analyze	bats	tests/bats/makefile_targets.bats	Validated with stubbed Next.js build commands.
 build-out	bats	tests/bats/makefile_targets.bats	Validated in an isolated Makefile sandbox with stubbed Docker commands.
+ecr-mirror-overrides	bats	tests/bats/ecr_mirror.bats	Validated in an isolated Makefile sandbox with stubbed Docker: refuses ECR_MIRROR=off, and under probe/always writes the Compose overrides and build contexts that start-prod, build-out and ci-test-memory-leak then pass to Docker.
 format	bats	tests/bats/makefile_targets.bats	Validated with a stubbed prettier invocation.
 lint-next	ci	.github/workflows/static-testing.yml	Executed through `make lint`, which depends on `lint-next`.
 lint-tsc	ci	.github/workflows/static-testing.yml	Executed through `make lint`, which depends on `lint-tsc`.

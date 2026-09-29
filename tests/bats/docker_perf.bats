@@ -10,7 +10,7 @@
 #   Not applicable: `run` invokes real `docker buildx`, `dive` and `hadolint`;
 #   that Docker orchestration is covered by the CI workflow, not by these unit
 #   tests. Only the side-effect-free subcommands (evaluate, detect-exception,
-#   render-report) are unit-tested below.
+#   render-report, build-args) are unit-tested below.
 
 SCRIPT="$BATS_TEST_DIRNAME/../../scripts/ci/docker_perf.sh"
 
@@ -347,4 +347,48 @@ EOF
   # current (90 MiB) smaller than base (100 MiB) => negative delta, no leading '+'.
   [[ "$output" == *"-10 MiB"* ]]
   [[ "$output" != *"+10 MiB"* ]]
+}
+
+# ---------------------------------------------------------------------------
+# build-args (ADR 0014: the digest-pinned mirror fallback)
+# ---------------------------------------------------------------------------
+
+@test "build-args: builds from the Dockerfile as written when ECR_MIRROR is unset (positive)" {
+  run env -u ECR_MIRROR NAME=prod DOCKER_PERF_GHA_CACHE=1 \
+    bash "$SCRIPT" build-args Dockerfile . production docker-perf-prod:head head
+  [ "$status" -eq 0 ]
+  [ "$output" = "$(printf '%s\n' buildx build --file Dockerfile --tag docker-perf-prod:head \
+    --load --progress plain --target production \
+    --cache-from type=gha,scope=docker-perf-prod --cache-to type=gha,mode=max,scope=docker-perf-prod .)" ]
+}
+
+@test "build-args: ECR_MIRROR=always redirects every ECR base by digest (positive)" {
+  local dockerfile="$BATS_TEST_TMPDIR/Dockerfile"
+  local node="public.ecr.aws/docker/library/node:24@sha256:$(printf 'a%.0s' {1..64})"
+  local alpine="public.ecr.aws/docker/library/alpine:3.21@sha256:$(printf 'b%.0s' {1..64})"
+  printf 'FROM %s AS base\nFROM base AS build\nFROM %s\n' "$node" "$alpine" >"$dockerfile"
+
+  run env ECR_MIRROR=always NAME=k6 bash "$SCRIPT" build-args "$dockerfile" . '' t base
+  [ "$status" -eq 0 ]
+  [ "${lines[9]}" = '--build-context' ]
+  [ "${lines[10]}" = "$node=docker-image://mirror.gcr.io/library/node@sha256:${node##*sha256:}" ]
+  [ "${lines[11]}" = '--build-context' ]
+  [ "${lines[12]}" = "$alpine=docker-image://mirror.gcr.io/library/alpine@sha256:${alpine##*sha256:}" ]
+  [ "${lines[13]}" = '.' ]
+  [ "${#lines[@]}" -eq 14 ]
+}
+
+@test "build-args: refuses an ECR base the mirror cannot vouch for (negative)" {
+  local dockerfile="$BATS_TEST_TMPDIR/Dockerfile"
+  printf 'FROM public.ecr.aws/docker/library/node:24 AS base\n' >"$dockerfile"
+
+  run env ECR_MIRROR=always NAME=x bash "$SCRIPT" build-args "$dockerfile" . '' t head
+  [ "$status" -ne 0 ]
+  [[ "$output" != *'--build-context'* ]]
+}
+
+@test "build-args: an unknown ECR_MIRROR value is a usage error (boundary)" {
+  run env ECR_MIRROR=yes NAME=x bash "$SCRIPT" build-args Dockerfile . '' t head
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"ECR_MIRROR must be 'off', 'probe' or 'always' (got 'yes')"* ]]
 }

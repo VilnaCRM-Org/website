@@ -209,7 +209,10 @@ actually changed:
 Flaky specs you did **not** touch are reported as annotations rather than
 failures, so the pre-existing backlog does not block unrelated work; the nightly
 `e2e flake census` workflow repeats the whole suite off the PR path and records
-what it finds in an `e2e-flake`-labelled issue.
+what it finds in one `e2e-flake`-labelled issue. A clean census closes that issue
+with a link to the run only when no repetition of any test failed; a census that
+did not measure the suite — no report, no test executed, or a run cut short —
+keeps it open and fails the run, so a broken burn-in never reads as clean (#445).
 
 If a burn-in goes red, fix the nondeterminism at its source. Adding a
 `waitForTimeout`, widening `retries`, or wrapping the assertion in a condition
@@ -658,7 +661,15 @@ they have deliberately different jobs:
   links (`/some/path`) outright — keep them relative.
 - **External (advisory, Mondays).** Resolves external URLs too, over Markdown plus the built
   `out/` export, and files or refreshes the _Weekly link check failures_ tracking issue
-  instead of blocking.
+  instead of blocking. Root-relative links resolve against `out/`, and an extensionless
+  route such as `/swagger` resolves the way the CloudFront edge rewrites it:
+  `scripts/ci/link-check-remaps.mjs` turns every `ROUTE_MAP` entry in
+  `scripts/cloudfront_routing.js` into a lychee `--remap` rule. A route the edge does not
+  map, such as `/offline`, still fails. One gap predates the remaps: `--root-dir` accepts
+  a link to any directory the export contains (`/en/docs`, `/images`), although the edge
+  404s it, so the leg does not catch every link production would 404. A dead link leaves
+  the run green; a run that cannot build the export or derive the remaps goes red, and
+  `ci-health-alerts.yml` files that as a `ci-alert` issue.
 
 Because the weekly leg reports rather than blocks, treat a noisy report as a bug in the leg:
 it is only useful while every entry is a real dead link. Fix the link, or fix the checker —

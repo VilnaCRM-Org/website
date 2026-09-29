@@ -24,6 +24,11 @@ jobs:
     runs-on: ubuntu-latest
     # An eighth of the serial suite, retried twice at worst, plus the prod build.
     timeout-minutes: 20
+    env:
+      # ECR Public refuses anonymous pulls once GitHub's shared runners exhaust
+      # its per-IP quota; this makes the image builds below fetch any refused
+      # base from its digest-identical mirror.gcr.io copy instead (ADR 0014).
+      ECR_MIRROR: probe
     permissions:
       contents: read
     strategy:
@@ -47,11 +52,19 @@ jobs:
       # is per source IP — a limit the shared runner pool hits as 429 Too Many
       # Requests part-way through a BuildKit pull. Bringing the stack up is
       # separated from the shard so only the pull is retried, never the tests.
+      # Since ADR 0014 a retry fetches every ECR base from its digest-identical
+      # mirror, so the pause only still matters for what has no mirror (the
+      # Playwright image on MCR, the npm downloads inside the builds).
       - name: Start the production stack
         run: |
           set -uo pipefail
           for attempt in 1 2 3 4 5; do
-            if make start-prod; then
+            # The first attempt asks ECR Public and redirects only what it
+            # refuses; a retry redirects every base, because ECR can refuse a
+            # blob part-way through a build whose manifest probe it answered.
+            mode=probe
+            [ "$attempt" -eq 1 ] || mode=always
+            if make start-prod ECR_MIRROR="$mode"; then
               exit 0
             fi
             echo "::warning::start-prod attempt $attempt failed; retrying after a pause"

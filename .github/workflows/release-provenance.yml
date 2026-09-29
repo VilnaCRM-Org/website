@@ -23,6 +23,11 @@ jobs:
   attest:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      # ECR Public refuses anonymous pulls once GitHub's shared runners exhaust
+      # its per-IP quota; this makes the image builds below fetch any refused
+      # base from its digest-identical mirror.gcr.io copy instead (ADR 0014).
+      ECR_MIRROR: probe
     permissions:
       contents: read
       id-token: write

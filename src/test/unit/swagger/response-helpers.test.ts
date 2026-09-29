@@ -4,10 +4,20 @@ import {
   htmlReadyId,
   isExtension,
 } from '../../../features/swagger/helpers/response-helpers';
-import type { ResponseDefinition, ResponseEntry } from '../../../features/swagger/types/responses';
+import type {
+  ResponseContent,
+  ResponseDefinition,
+  ResponseEntry,
+} from '../../../features/swagger/types/responses';
 
-function definition(body?: { size: number } | null): ResponseDefinition {
-  return { get: () => body };
+function definition(body?: ResponseContent | null): ResponseDefinition {
+  const fields: Map<'content', ResponseContent | null> = new Map();
+
+  if (body !== undefined) {
+    fields.set('content', body);
+  }
+
+  return fields;
 }
 
 const withContent: ResponseDefinition = definition({ size: 1 });
@@ -63,11 +73,10 @@ describe('acceptControllingResponse', () => {
     const entries: ResponseEntry[] = [
       ['200', withoutContent],
       ['201', withContent],
-      ['default', withContent],
+      ['default', definition({ size: 3 })],
     ];
 
     expect(acceptControllingResponse(entries)).toBe(withContent);
-    expect(acceptControllingResponse(entries)).toBe(entries[1]![1]);
   });
 
   it('counts a declared but empty content map as content, like upstream', () => {

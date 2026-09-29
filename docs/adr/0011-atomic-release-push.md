@@ -1,6 +1,7 @@
 # ADR 0011: The release lane pushes its commit and tag atomically, after a scope check
 
-- **Status:** Accepted
+- **Status:** Accepted — remedy order amended by
+  [ADR 0013](0013-reconcile-stranded-v1-7-0-before-the-bypass.md)
 - **Date:** 2026-09-25
 - **Deciders:** website maintainers
 - **Related:** ADR 0007, issue #481, issue #366, issue #343,

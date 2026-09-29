@@ -134,6 +134,8 @@ assert_refused_before_push() {
   push_release v1.7.0 main
   [ "$status" -eq 1 ]
   assert_output_contains '::error::push-release: the remote refused the atomic push'
+  assert_output_contains "the release App has no bypass over main's protection yet"
+  assert_output_contains 'see .github/AUTORELEASE.md, setup step 3.'
   [ "$(remote_main)" = "$BASE" ]
   [ -z "$(remote_tags)" ]
 }

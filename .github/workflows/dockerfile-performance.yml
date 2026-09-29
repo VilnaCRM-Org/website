@@ -11,6 +11,8 @@ on:
       - '.github/dockerfile-perf.json'
       - '.github/workflows/dockerfile-performance.yml'
       - 'scripts/ci/docker_perf.sh'
+      # docker_perf.sh derives its mirror build contexts through this script.
+      - 'scripts/ci/ecr-mirror.sh'
       - '.hadolint.yaml'
       - '.dive-ci'
 
@@ -49,6 +51,11 @@ jobs:
     needs: setup
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      # ECR Public refuses anonymous pulls once GitHub's shared runners exhaust
+      # its per-IP quota; this makes the image builds below fetch any refused
+      # base from its digest-identical mirror.gcr.io copy instead (ADR 0014).
+      ECR_MIRROR: probe
     permissions:
       contents: read
     strategy:

@@ -7,7 +7,8 @@
 # 33113478799) branch protection refused the unsigned, pull-request-less release
 # commit (GH006) while the tag in the same push landed, so v1.7.0 was stranded on a
 # commit that is not on main -- and the version preflight
-# (check-release-version.sh) has failed every run since.
+# (check-release-version.sh) failed every run until #502 reconciled package.json
+# with v1.7.0 (ADR 0013).
 #
 # The workflow now runs the action with `git-push: 'false'` -- it still commits and
 # tags, locally -- and calls this script instead. `git push --atomic` makes the
@@ -104,10 +105,17 @@ release_files_ok
 
 echo "push-release: pushing ${head} to refs/heads/${branch} and tag ${tag} atomically"
 
+# The refusal names its most likely cause, because it is the failure the lane shows
+# until an admin grants the release App its bypass (ADR 0013): git's own output
+# above carries GH006, but not where the fix is written down.
+refused="the remote refused the atomic push; neither refs/heads/${branch} nor ${tag} was written."
+refused+=" A GH006 'Protected branch update failed' above means the release App has no"
+refused+=" bypass over ${branch}'s protection yet: see .github/AUTORELEASE.md, setup step 3."
+
 # --no-follow-tags keeps the refspec list exactly the two refs named here, whatever
 # push.followTags a runner or developer config sets.
 git push --atomic --no-follow-tags origin \
   "HEAD:refs/heads/${branch}" "refs/tags/${tag}:refs/tags/${tag}" ||
-  fail "the remote refused the atomic push; neither refs/heads/${branch} nor ${tag} was written"
+  fail "${refused}"
 
 echo "push-release: OK (${tag} -> ${head} on ${branch})"

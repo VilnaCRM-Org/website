@@ -27,6 +27,13 @@ on:
       # watches. Like `security testing` it also runs on pull_request, which the
       # branches filter below excludes.
       - secrets scanning
+      # The Monday external link check (#508). A dead link keeps that run green
+      # (the lychee step is continue-on-error and files its own tracking issue),
+      # so red means the leg itself broke: the export did not build or the
+      # ROUTE_MAP remaps could not be derived. Its tracking step never runs in
+      # that case, so without an entry here the break would reach nobody. The
+      # offline pull_request leg is excluded by the branches filter below.
+      - link check
     types:
       - completed
     # `security testing` also runs on every pull request; without this filter

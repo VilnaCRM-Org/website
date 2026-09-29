@@ -40,6 +40,9 @@ on:
       - '.env'
       - 'docker-compose.ci.yml'
       - '.github/actions/dev-container/**'
+      # The composite runs it to choose where the base image is fetched from, so
+      # a change to it can fail the image build before Storybook is invoked.
+      - 'scripts/ci/ecr-mirror.sh'
       - 'next.config.js'
       - 'tsconfig.json'
       - '.github/workflows/storybook-build.yml'

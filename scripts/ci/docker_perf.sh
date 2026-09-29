@@ -12,6 +12,7 @@
 #   evaluate          decide pass/fail from measured metrics (reads env)
 #   detect-exception  resolve a documented perf exception (marker or PR label)
 #   render-report     render one Markdown table row from a metrics JSON file
+#   build-args        print, one per line, the `docker` arguments `run` builds with
 #
 # Exit codes: 0 = within budget (or waived by a documented exception),
 #             1 = a gate failed and no exception applies, 2 = usage error.
@@ -19,6 +20,8 @@
 set -euo pipefail
 
 readonly MIB=$((1024 * 1024))
+ECR_MIRROR_SCRIPT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/ecr-mirror.sh"
+readonly ECR_MIRROR_SCRIPT
 
 log() { printf '%s\n' "$*" >&2; }
 
@@ -142,9 +145,12 @@ render_report() {
 # Build / measurement helpers (real Docker; overridable for tests).
 # ---------------------------------------------------------------------------
 
-# build_image <dockerfile> <context> <target> <tag> <role>
-# Builds the image, streaming logs to stderr, and prints the build time in ms.
-build_image() {
+# build_args <dockerfile> <context> <target> <tag> <role>
+# Prints the `docker` arguments for one build, one per line. With ECR_MIRROR set
+# to `probe` or `always` (as the workflow does, ADR 0014), every ECR Public base
+# the Dockerfile FROMs that ECR refuses — or every one, for `always` — is
+# redirected to its digest-identical mirror.gcr.io copy through a named context.
+build_args() {
   local dockerfile="$1" context="$2" target="$3" tag="$4" role="$5"
   local -a args=(buildx build --file "$dockerfile" --tag "$tag" --load --progress plain)
 
@@ -156,7 +162,32 @@ build_image() {
       args+=(--cache-to "type=gha,mode=max,scope=docker-perf-${NAME}")
     fi
   fi
+
+  local -a probe=()
+  case "${ECR_MIRROR:-off}" in
+    off) ;;
+    probe) probe=(--probe) ;;
+    always) ;;
+    *) log "ECR_MIRROR must be 'off', 'probe' or 'always' (got '${ECR_MIRROR}')"; return 2 ;;
+  esac
+  if [ "${ECR_MIRROR:-off}" != off ]; then
+    local contexts mirror_context
+    contexts="$(bash "$ECR_MIRROR_SCRIPT" contexts "${probe[@]}" "$dockerfile")" || return 1
+    while IFS= read -r mirror_context; do
+      [ -z "$mirror_context" ] || args+=(--build-context "$mirror_context")
+    done <<<"$contexts"
+  fi
   args+=("$context")
+  printf '%s\n' "${args[@]}"
+}
+
+# build_image <dockerfile> <context> <target> <tag> <role>
+# Builds the image, streaming logs to stderr, and prints the build time in ms.
+build_image() {
+  local build_args_out
+  build_args_out="$(build_args "$@")" || return 1
+  local -a args
+  mapfile -t args <<<"$build_args_out"
 
   local start end
   start="$(date +%s%N)"
@@ -302,6 +333,7 @@ main() {
     evaluate) evaluate ;;
     detect-exception) detect_exception "$@" ;;
     render-report) render_report "$@" ;;
+    build-args) build_args "$@" ;;
     *) log "unknown subcommand: ${cmd}"; return 2 ;;
   esac
 }

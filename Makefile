@@ -139,6 +139,9 @@ FLAKE_MODE                  ?= retry-pass
 FLAKE_REPORT_DIR            ?= test-results
 FLAKE_CHANGED_SPECS         ?=
 FLAKE_THRESHOLD             ?= 2
+# Census only: where to record the clean | findings | unmeasured verdict the tracker step
+# reads (#445). Empty writes nothing.
+FLAKE_CENSUS_VERDICT_FILE   ?=
 # Bun executes .ts directly (issue #397); no tsx/ts-node transpiler runner.
 CHECK_FLAKY_REPORT_CMD      = bun scripts/ci/check-flaky-report.ts
 
@@ -186,7 +189,53 @@ endef
 # .github/actions/dev-container step builds.
 DEV_IMAGE                   = website-dev:latest
 
-DOCKER_COMPOSE_TEST_FILE    = -f docker-compose.test.yml
+# ===== ECR Public mirror fallback (ADR 0014; issues #509, #506) =====
+# Every external base image is pinned by digest on ECR Public, whose anonymous
+# pull quota is per source IP and is exhausted by GitHub's shared runners
+# (`429 toomanyrequests: Data limit exceeded`, a quota that waiting does not
+# clear). ECR_MIRROR lets a CI job fetch the same digests from mirror.gcr.io
+# through BuildKit named contexts, without editing a Dockerfile:
+#
+#   off (default) — nothing changes; every command line is exactly as before.
+#   probe         — ask ECR Public once per distinct ref; redirect only the refs
+#                   it refuses.
+#   always        — redirect every ref (a retry after a build ECR refused mid-way).
+#
+# ecr-mirror-overrides writes the Compose overrides and the `docker build`
+# contexts into ECR_MIRROR_DIR; it is a prerequisite of every target that BUILDS
+# the prod, test, k6 or memory-leak images, so each make invocation re-probes.
+# Its three script calls share one verdict file, so a ref is asked once and all
+# three artifacts agree on it; ECR_MIRROR_KEEP_VERDICTS=1 keeps that file, which
+# is how test-memory-leak's recursive make reuses the verdicts start-prod just
+# took instead of probing again (passed only when the mode is on). A compose call that only execs, stops or reads
+# logs picks up whatever override already exists and never needs one. Set per
+# job by the workflows; never derived from CI.
+ECR_MIRROR                  ?= off
+ECR_MIRROR_DIR              ?= $(or $(RUNNER_TEMP),/tmp)/website-ecr-mirror
+ECR_MIRROR_SCRIPT           = bash ./scripts/ci/ecr-mirror.sh
+ECR_MIRROR_TEST_OVERRIDE    = $(ECR_MIRROR_DIR)/test.compose.json
+ECR_MIRROR_MEMLEAK_OVERRIDE = $(ECR_MIRROR_DIR)/memory-leak.compose.json
+ECR_MIRROR_BUILD_CONTEXTS   = $(ECR_MIRROR_DIR)/Dockerfile.contexts
+ECR_MIRROR_VERDICTS         = $(ECR_MIRROR_DIR)/verdicts.tsv
+ECR_MIRROR_KEEP_VERDICTS    ?= 0
+ifeq ($(ECR_MIRROR),off)
+    ECR_MIRROR_PREREQ       =
+    ECR_MIRROR_PROBE_FLAG   =
+else ifeq ($(ECR_MIRROR),probe)
+    ECR_MIRROR_PREREQ       = ecr-mirror-overrides
+    ECR_MIRROR_PROBE_FLAG   = --probe
+else ifeq ($(ECR_MIRROR),always)
+    ECR_MIRROR_PREREQ       = ecr-mirror-overrides
+    ECR_MIRROR_PROBE_FLAG   =
+else
+    $(error ECR_MIRROR must be 'off', 'probe' or 'always' (got '$(ECR_MIRROR)'))
+endif
+# `-f <override>` only when the mode is on AND the file exists. Recipes expand
+# after their prerequisites ran, so a building target always sees the fresh one.
+ecr_mirror_file              = $(if $(ECR_MIRROR_PREREQ),$(if $(wildcard $(1)), -f $(1)))
+ECR_MIRROR_BUILD_FLAGS      = $(if $(ECR_MIRROR_PREREQ),$(if $(wildcard $(ECR_MIRROR_BUILD_CONTEXTS)), $(addprefix --build-context=,$(shell cat $(ECR_MIRROR_BUILD_CONTEXTS)))))
+
+DOCKER_COMPOSE_TEST_FILE    = -f docker-compose.test.yml$(call ecr_mirror_file,$(ECR_MIRROR_TEST_OVERRIDE))
 DOCKER_COMPOSE_DEV_FILE     = -f docker-compose.yml
 # The dev compose file plus the CI overlay that runs the container idle. Only
 # ci-setup uses it; every exec still resolves the service by project + name, so
@@ -213,7 +262,7 @@ PLAYWRIGHT_EXEC             = $(PLAYWRIGHT_DOCKER_CMD)
 PLAYWRIGHT_TEST             = $(PLAYWRIGHT_EXEC) sh -c
 
 MEMLEAK_SERVICE             = memory-leak
-DOCKER_COMPOSE_MEMLEAK_FILE = -f docker-compose.memory-leak.yml
+DOCKER_COMPOSE_MEMLEAK_FILE = -f docker-compose.memory-leak.yml$(call ecr_mirror_file,$(ECR_MIRROR_MEMLEAK_OVERRIDE))
 MEMLEAK_BASE_PATH           = ./src/test/memory-leak
 MEMLEAK_RESULTS_DIR         = $(MEMLEAK_BASE_PATH)/results
 MEMLEAK_TEST_SCRIPT         = $(MEMLEAK_BASE_PATH)/runMemlabTests.js
@@ -358,7 +407,7 @@ HOST_STACK_CMD              = env PORT=$(NEXT_PUBLIC_PROD_PORT) \
                               $(HOST_STACK_SCRIPT)
 
 # Docker stays the default in every mode; only HOST_STACK=1 swaps these out.
-START_PROD_DEPS             = create-network
+START_PROD_DEPS             = create-network $(ECR_MIRROR_PREREQ)
 define START_PROD_CMD
 node scripts/generateLocalization.mjs
 $(DOCKER_COMPOSE) $(COMMON_HEALTHCHECKS_FILE) $(DOCKER_COMPOSE_TEST_FILE) up -d && make wait-for-prod-health
@@ -367,8 +416,10 @@ STOP_PROD_CMD               = $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_TEST_FILE) down
 # The leading `+` is load-bearing: make only auto-detects a recursive invocation
 # from a literal `$(MAKE)` in the recipe text, and this one arrives through a
 # variable. Without it the sub-make loses the jobserver under -j and is skipped
-# under -n. Host mode keeps no `+`, so a dry run there stays a dry run.
-MEMLEAK_RUN                 = +$(MAKE) ci-test-memory-leak
+# under -n. Host mode keeps no `+`, so a dry run there stays a dry run. The
+# verdict hand-off is appended only when ECR_MIRROR is on, so the off-mode line
+# is exactly what it was before ADR 0014.
+MEMLEAK_RUN                 = +$(MAKE) ci-test-memory-leak$(if $(ECR_MIRROR_PREREQ), ECR_MIRROR_KEEP_VERDICTS=1)
 VISUAL_UPDATE_DEPS          = start-prod
 VISUAL_UPDATE_CMD           = $(playwright-test) $(TEST_DIR_VISUAL) --update-snapshots
 PLAYWRIGHT_INSTALL_CMD      = @echo "ℹ️  Browsers ship inside the Playwright image (Playwright.Dockerfile) — nothing to install. Re-run with HOST_STACK=1 to install them on the host."
@@ -543,7 +594,7 @@ create-k6-helper-container-dind: ## Create a detached K6 helper container for DI
 	$(DOCKER_COMPOSE) $(COMMON_HEALTHCHECKS_FILE) $(DOCKER_COMPOSE_TEST_FILE) --profile load run -d \
 		--name "$(K6_HELPER_NAME)" --entrypoint sh k6 -lc 'tail -f /dev/null'
 
-build-k6: ## Build K6 load testing container
+build-k6: $(ECR_MIRROR_PREREQ) ## Build K6 load testing container
 	@echo "🔨 Building K6 container image..."
 	$(DOCKER_COMPOSE) $(COMMON_HEALTHCHECKS_FILE) $(DOCKER_COMPOSE_TEST_FILE) --profile load build k6
 
@@ -569,9 +620,9 @@ build-analyze: ## Build production bundle and launch bundle-analyzer report (ANA
 # (issue #325, docs/adr/0010-build-and-release-provenance.md). `mkdir -p ./out` runs
 # before the redirect rather than relying on `docker cp` to have created the directory,
 # so this step is real even when `docker` is stubbed out (tests/bats/makefile_targets.bats).
-build-out: ## Build production artifacts to ./out directory
+build-out: $(ECR_MIRROR_PREREQ) ## Build production artifacts to ./out directory
 	@echo "🏗️ Building production Docker image..."
-	docker build -t next-build -f Dockerfile --target production \
+	docker build -t next-build -f Dockerfile --target production$(ECR_MIRROR_BUILD_FLAGS) \
 		--build-arg COMMIT_SHA=$$(git rev-parse HEAD 2>/dev/null || echo unknown) .
 	@container_id=$$(docker create next-build) && \
 	rm -rf ./out && \
@@ -584,6 +635,18 @@ build-out: ## Build production artifacts to ./out directory
 	jq -cn --arg version "$$(jq -r '.version' package.json)" --arg commit "$$commit" --arg builtAt "$$built_at" \
 		'{version: $$version, commit: $$commit, builtAt: $$builtAt}' > ./out/version.json && \
 	echo "✅ Build artifacts extracted to ./out directory"
+
+# Host-only, CI-only (ECR_MIRROR=probe|always; see the ECR_MIRROR block above and
+# ADR 0014). Rewrites all three artifacts on every call and, unless
+# ECR_MIRROR_KEEP_VERDICTS=1, forgets the previous verdicts so a retry re-probes.
+ecr-mirror-overrides: ## Probe ECR Public and write the digest-pinned mirror overrides the CI image builds read (ECR_MIRROR=probe|always)
+	@[ -n "$(ECR_MIRROR_PREREQ)" ] || { echo "ecr-mirror-overrides: set ECR_MIRROR=probe or ECR_MIRROR=always" >&2; exit 1; }
+	@mkdir -p "$(ECR_MIRROR_DIR)"
+	@[ "$(ECR_MIRROR_KEEP_VERDICTS)" = 1 ] || rm -f "$(ECR_MIRROR_VERDICTS)"
+	ECR_MIRROR_VERDICTS="$(ECR_MIRROR_VERDICTS)" $(ECR_MIRROR_SCRIPT) compose-override $(ECR_MIRROR_PROBE_FLAG) "$(ECR_MIRROR_TEST_OVERRIDE)" docker-compose.test.yml
+	ECR_MIRROR_VERDICTS="$(ECR_MIRROR_VERDICTS)" $(ECR_MIRROR_SCRIPT) compose-override $(ECR_MIRROR_PROBE_FLAG) "$(ECR_MIRROR_MEMLEAK_OVERRIDE)" docker-compose.memory-leak.yml
+	ECR_MIRROR_VERDICTS="$(ECR_MIRROR_VERDICTS)" $(ECR_MIRROR_SCRIPT) contexts $(ECR_MIRROR_PROBE_FLAG) Dockerfile > "$(ECR_MIRROR_BUILD_CONTEXTS).tmp"
+	@mv "$(ECR_MIRROR_BUILD_CONTEXTS).tmp" "$(ECR_MIRROR_BUILD_CONTEXTS)"
 
 # `mjs` is in the glob deliberately: the Node CLI helpers under scripts/ are
 # excluded from qlty (see .qlty/qlty.toml — they sit outside eslint.config.mjs's
@@ -947,9 +1010,10 @@ test-e2e-shard: start-prod ## Start production and run one E2E shard (E2E_SHARD_
 test-e2e-burnin: start-prod ## Re-run E2E_BURNIN_SPECS E2E_BURNIN_REPEATS times with retries off to expose flaky specs (#359)
 	$(run-e2e-burnin)
 
-check-e2e-flakes: ## Grade a Playwright JSON report for flakes, host-only (FLAKE_MODE=retry-pass|burn-in|census, FLAKE_CHANGED_SPECS=<specs>)
+check-e2e-flakes: ## Grade a Playwright JSON report for flakes, host-only (FLAKE_MODE=retry-pass|burn-in|census, FLAKE_CHANGED_SPECS=<specs>, FLAKE_CENSUS_VERDICT_FILE=<path>)
 	FLAKE_MODE="$(FLAKE_MODE)" FLAKE_REPORT_DIR="$(FLAKE_REPORT_DIR)" \
 	FLAKE_CHANGED_SPECS="$(FLAKE_CHANGED_SPECS)" FLAKE_THRESHOLD="$(FLAKE_THRESHOLD)" \
+	FLAKE_CENSUS_VERDICT_FILE="$(FLAKE_CENSUS_VERDICT_FILE)" \
 	$(CHECK_FLAKY_REPORT_CMD)
 
 test-e2e-ui: start-prod ## Start the production environment and run E2E tests with the UI available at $(UI_MODE_URL)
@@ -1017,7 +1081,7 @@ stop-prod: ## Stop the production stack (the Docker test stack, or the host serv
 playwright-install: ## Install the Playwright browsers on the host (HOST_STACK=1; the Docker image already ships them)
 	$(PLAYWRIGHT_INSTALL_CMD)
 
-start-prod-clean: create-network ## Force rebuild and recreate all test containers, then wait for health
+start-prod-clean: create-network $(ECR_MIRROR_PREREQ) ## Force rebuild and recreate all test containers, then wait for health
 	$(DOCKER_COMPOSE) $(COMMON_HEALTHCHECKS_FILE) $(DOCKER_COMPOSE_TEST_FILE) up -d --force-recreate --build && $(MAKE) wait-for-prod-health
 
 # Bounded for the same reason as wait-for-dev (issue #331): this used to be a
@@ -1176,7 +1240,7 @@ ci-test-visual-shard: ## Run one visual shard (VISUAL_SHARD_INDEX of VISUAL_SHAR
 ci-test-a11y: ## Run the route accessibility scans assuming ci-prod-setup already started the prod environment
 	$(run-a11y)
 
-ci-test-memory-leak: ## Run Memlab memory leak tests against the dedicated compose stack (assumes prod is running)
+ci-test-memory-leak: $(ECR_MIRROR_PREREQ) ## Run Memlab memory leak tests against the dedicated compose stack (assumes prod is running)
 	# Isolate the Memlab stack in its own Compose project (-p memleak) so the
 	# teardown never removes the shared prod stack as an "orphan" — this target
 	# runs mid-sequence in ci-test-prod, before load and lighthouse. The trap
@@ -1233,7 +1297,7 @@ test-bats: ## Run Bats coverage for Makefile shell flows and CI helper scripts
 test-memory-leak: start-prod ## This command executes memory leaks tests using Memlab library.
 	$(MEMLEAK_RUN)
 
-memory-leak-dind: start-prod ## Run Memlab tests in isolated compose project (DIND safe)
+memory-leak-dind: start-prod $(ECR_MIRROR_PREREQ) ## Run Memlab tests in isolated compose project (DIND safe)
 	@echo "🧪 Starting memory leak test environment (isolated project)..."
 	$(DOCKER_COMPOSE) -p memleak $(DOCKER_COMPOSE_MEMLEAK_FILE) up -d --wait --build $(MEMLEAK_SERVICE)
 	@echo "🧹 Cleaning up previous memory leak results..."
