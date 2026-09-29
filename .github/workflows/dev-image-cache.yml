@@ -11,8 +11,9 @@ on:
       - main
     paths:
       # The inputs of the Dockerfile `base` stage the dev service builds — its
-      # COPY list plus the lockfile it installs from — and this workflow and the
-      # action that consumes the cache.
+      # COPY list plus the lockfile it installs from — and this workflow, the
+      # action that consumes the cache, and the script that action runs to choose
+      # the base image's registry.
       - 'Dockerfile'
       - 'bun.lock'
       - 'package.json'
@@ -20,6 +21,7 @@ on:
       - 'checkNodeVersion.js'
       - 'scripts/*.mjs'
       - '.github/actions/dev-container/**'
+      - 'scripts/ci/base-image-source.sh'
       - '.github/workflows/dev-image-cache.yml'
   # GitHub evicts a cache entry that has not been read for 7 days. The weekly run
   # keeps the entry alive through quiet periods so a PR never pays for eviction.

@@ -22,44 +22,38 @@ runs:
       uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
 
     # The build below resolves the base image's manifest from ECR Public on every
-    # run, even on a full layer-cache hit, and ECR Public's anonymous pull limit
-    # is per source IP: when a push fans out into a dozen container-building jobs
-    # at once, the shared runner pool answers 429 Too Many Requests and the build
-    # dies in seconds (#505). A `uses:` step cannot be retried, so this waits,
-    # with a growing back-off, until the registry serves that manifest again
-    # before the build asks for it.
-    - name: Wait for the base image registry
+    # run, even on a full layer-cache hit, and ECR Public caps anonymous pulls per
+    # source IP. GitHub's shared runner pool exhausts that cap and the registry
+    # answers `429 toomanyrequests: Data limit exceeded` — a quota, not a burst,
+    # so waiting it out does not work (#509, #506; the ten-minute back-off #505
+    # added failed six attempts out of six). The Dockerfile pins the base by
+    # digest, so the same bytes can come from any registry holding that digest:
+    # this asks ECR Public once, prints the registry's own error text when it
+    # refuses, and otherwise hands the build a named context that redirects the
+    # FROM ref to the digest-identical mirror.gcr.io copy. The Dockerfile is not
+    # touched and the digest is not dropped — the script refuses a base ref it
+    # cannot derive a digest-pinned mirror for (ADR 0014).
+    - name: Choose the base image source
       id: base-image
       shell: bash
-      run: |
-        set -euo pipefail
-        base="$(sed -nE 's/^FROM[[:space:]]+([^[:space:]]+)[[:space:]]+AS[[:space:]]+base[[:space:]]*$/\1/p' Dockerfile | head -n1)"
-        if [ -z "$base" ]; then
-          echo "::error::could not read the base image from the Dockerfile's FROM … AS base line"
-          exit 1
-        fi
-        echo "ref=$base" >> "$GITHUB_OUTPUT"
-        for attempt in 1 2 3 4 5 6; do
-          if docker manifest inspect "$base" > /dev/null 2>&1; then
-            exit 0
-          fi
-          echo "::warning::the base image registry did not answer (attempt $attempt); backing off"
-          sleep $((attempt * 30))
-        done
-        echo "::error::the base image registry kept refusing for six attempts"
-        exit 1
+      # The script appends ref, mirror, mirror-contexts, source and
+      # build-contexts to $GITHUB_OUTPUT itself.
+      run: bash ./scripts/ci/base-image-source.sh --probe Dockerfile
 
     - name: Build or restore the dev image
       id: build-image
-      # A `uses:` step cannot be retried in place, and the registry can still
-      # answer 429 to the build's own manifest fetch after the wait above
-      # succeeded. The failure is tolerated here so the wait and the build can
-      # run once more below; the second attempt is not tolerated.
+      # A `uses:` step cannot be retried in place, and ECR Public can still refuse
+      # the build's own manifest fetch after the probe above was answered. The
+      # failure is tolerated here so the build can run once more below, from the
+      # mirror; the second attempt is not tolerated.
       continue-on-error: true
       uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
       with:
         context: .
         target: base
+        # Empty when ECR Public served the manifest; otherwise the named context
+        # that fetches the same digest from mirror.gcr.io.
+        build-contexts: ${{ steps.base-image.outputs.build-contexts }}
         # Must match `image:` on the dev service in docker-compose.yml — that is
         # what makes `docker compose up` reuse this build instead of running its
         # own, uncached one.
@@ -77,29 +71,16 @@ runs:
         cache-from: type=gha,scope=dev-image
         cache-to: ${{ inputs.cache-write == 'true' && 'type=gha,mode=max,scope=dev-image' || '' }}
 
-    - name: Wait for the base image registry again
-      if: steps.build-image.outcome == 'failure'
-      shell: bash
-      run: |
-        set -euo pipefail
-        for attempt in 1 2 3 4; do
-          if docker manifest inspect "$BASE_IMAGE" > /dev/null 2>&1; then
-            exit 0
-          fi
-          echo "::warning::the base image registry did not answer (retry attempt $attempt); backing off"
-          sleep $((attempt * 45))
-        done
-        echo "::error::the base image registry kept refusing before the second build"
-        exit 1
-      env:
-        BASE_IMAGE: ${{ steps.base-image.outputs.ref }}
-
     - name: Build or restore the dev image (second attempt)
       if: steps.build-image.outcome == 'failure'
       uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
       with:
         context: .
         target: base
+        # Always the mirror: whatever refused the first attempt, the digest makes
+        # this the same image, and ECR Public is the one registry already known
+        # to be unreliable from this runner.
+        build-contexts: ${{ steps.base-image.outputs.mirror-contexts }}
         # Must match `image:` on the dev service in docker-compose.yml — that is
         # what makes `docker compose up` reuse this build instead of running its
         # own, uncached one.
