@@ -272,8 +272,10 @@ so belongs in its own reviewed change, after the open dependency pull requests l
    hoisted copy is now **4.3.2**, and `@eslint/eslintrc` (`^4.1.1`) and both
    `cosmiconfig` copies (`^4.1.0`) had their edges widened onto it the same way. Two
    consumers keep a nested `js-yaml@4.1.1`: `swagger-ui-react` (`=4.1.1`) and
-   `swagger-client` stay on the version the `/swagger` bundle has always shipped, because
-   moving shipped code needs the swagger e2e, visual and accessibility runs of item 1. The
+   `swagger-client` stay on the version the `/swagger` bundle has always shipped.
+   `swagger-client` declares `^4.1.0`, so its copy could take the hoisted 4.3.2 by this
+   recipe, but `swagger-ui-react`'s exact pin holds a `js-yaml@4.1.1` in the tree either
+   way, so the census entry would not clear; item 1 moves both copies together. The
    cost is that the lazy `/swagger` chunk now bundles two identical copies of
    `js-yaml@4.1.1` (about 13 KB gzipped more) where the hoisted copy used to serve both;
    item 1's bump collapses them. The third, under `markdownlint-cli@0.47` (`~4.1.1`), went
@@ -292,10 +294,11 @@ so belongs in its own reviewed change, after the open dependency pull requests l
    - `sharp` 0.34.5 → **0.35.5** (override). `next` 16.3 already declares `^0.35.4`, but
      `next-export-optimize-images@4.7.0` — the latest, and the package that runs sharp over
      every exported image — declares `^0.34.3`, so the override is the one entry in the
-     block that steps outside a consumer's range. Its call path (`resize`, then
-     `jpeg`/`png`/`webp`/`avif`, WebP-only in `export-images.config.js`) avoids every 0.35
-     removal. GHSA-rgj7-g3m4-5g8c, GHSA-f88m-g3jw-g9cj. Drop the entry once
-     `next-export-optimize-images` declares `^0.35`.
+     block that moves a consumer across a 0.x minor, which semver treats as a breaking
+     release. Its call path (`resize`, then `jpeg`/`png`/`webp`/`avif`, WebP-only in
+     `export-images.config.js`) avoids every 0.35 removal. GHSA-rgj7-g3m4-5g8c,
+     GHSA-f88m-g3jw-g9cj. Drop the entry once `next-export-optimize-images` declares
+     `^0.35`.
    - `axios` 1.16.1 → **1.18.0** (override; `@swagger-api/apidom-reference` and `wait-on`
      declare `^1.16.0`): ten advisories, GHSA-gcfj-64vw-6mp9 through GHSA-xj6q-8x83-jv6g.
    - `dompurify` 3.4.7 → **3.4.13** (override; `swagger-ui-react` declares `^3.4.0`):
@@ -319,7 +322,9 @@ so belongs in its own reviewed change, after the open dependency pull requests l
      no 0.27.x fix) folds into the hoisted 0.28.1.
 
    What the census still lists, and why no change here reaches it:
-   - `js-yaml@4.1.1` (four advisories): `swagger-ui-react`'s exact `=4.1.1` pin — item 1.
+   - `js-yaml@4.1.1` (four advisories): two nested copies, `swagger-ui-react`'s exact
+     `=4.1.1` pin and `swagger-client`'s. The exact pin keeps the entry listed whatever
+     happens to the other copy — item 1.
    - `extract-zip@2.0.1` (GHSA-jmr9-qjv8-65gv, GHSA-7pqw-9j4j-h8q3): no fixed release. It
      arrives through `@puppeteer/browsers` 2.x under `puppeteer` 24, the major memlab
      (`^24.2.0`) and Lighthouse's `puppeteer-core` (`^24.10.0`) declare;
