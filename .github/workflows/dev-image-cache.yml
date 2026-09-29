@@ -21,7 +21,7 @@ on:
       - 'checkNodeVersion.js'
       - 'scripts/*.mjs'
       - '.github/actions/dev-container/**'
-      - 'scripts/ci/base-image-source.sh'
+      - 'scripts/ci/ecr-mirror.sh'
       - '.github/workflows/dev-image-cache.yml'
   # GitHub evicts a cache entry that has not been read for 7 days. The weekly run
   # keeps the entry alive through quiet periods so a PR never pays for eviction.

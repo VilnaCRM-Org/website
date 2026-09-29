@@ -77,6 +77,11 @@ jobs:
     # (docker-compose.test.yml), so `workers: 1` and `retries: 2` apply for the
     # first time and a shard runs serially instead of at the runner default.
     timeout-minutes: 60
+    env:
+      # ECR Public refuses anonymous pulls once GitHub's shared runners exhaust
+      # its per-IP quota; this makes the image builds below fetch any refused
+      # base from its digest-identical mirror.gcr.io copy instead (ADR 0014).
+      ECR_MIRROR: probe
     permissions:
       contents: read
     strategy:
@@ -101,12 +106,20 @@ jobs:
       # a push fans out into a dozen container-building jobs at once (#505).
       # Bringing the stack up is separated from the shard so only the pull is
       # retried, never the tests; the shard then runs a test-only target, so no
-      # second, unretried bring-up sits between the retry and Playwright.
+      # second, unretried bring-up sits between the retry and Playwright. Since
+      # ADR 0014 a retry fetches every ECR base from its digest-identical mirror,
+      # so the pause only still matters for what has no mirror (the Playwright
+      # image on MCR, the npm and Go module downloads inside the builds).
       - name: Start the production stack
         run: |
           set -uo pipefail
           for attempt in 1 2 3 4 5; do
-            if make start-prod; then
+            # The first attempt asks ECR Public and redirects only what it
+            # refuses; a retry redirects every base, because ECR can refuse a
+            # blob part-way through a build whose manifest probe it answered.
+            mode=probe
+            [ "$attempt" -eq 1 ] || mode=always
+            if make start-prod ECR_MIRROR="$mode"; then
               exit 0
             fi
             echo "::warning::start-prod attempt $attempt failed; retrying after a pause"
@@ -210,6 +223,11 @@ jobs:
     if: ${{ !cancelled() && (needs.changed-specs.result != 'success' || needs.changed-specs.outputs.any == 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 40
+    env:
+      # ECR Public refuses anonymous pulls once GitHub's shared runners exhaust
+      # its per-IP quota; this makes the image builds below fetch any refused
+      # base from its digest-identical mirror.gcr.io copy instead (ADR 0014).
+      ECR_MIRROR: probe
     permissions:
       contents: read
     steps:

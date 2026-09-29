@@ -17,6 +17,11 @@ jobs:
     # Not path-filtered: any change can break the production static export.
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      # ECR Public refuses anonymous pulls once GitHub's shared runners exhaust
+      # its per-IP quota; this makes the image builds below fetch any refused
+      # base from its digest-identical mirror.gcr.io copy instead (ADR 0014).
+      ECR_MIRROR: probe
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

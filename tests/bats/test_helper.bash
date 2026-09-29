@@ -100,6 +100,12 @@ if [ "$1" = "compose" ]; then
       printf 'prod (healthy)\n'
       exit 0
     fi
+    # `compose config` resolves a project (scripts/ci/ecr-mirror.sh reads it);
+    # FAKE_COMPOSE_CONFIG names the JSON a test wants it to resolve to.
+    if [ "$arg" = "config" ] && [ -n "${FAKE_COMPOSE_CONFIG:-}" ]; then
+      cat "$FAKE_COMPOSE_CONFIG"
+      exit 0
+    fi
   done
 fi
 

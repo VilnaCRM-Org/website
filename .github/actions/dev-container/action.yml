@@ -26,19 +26,18 @@ runs:
     # source IP. GitHub's shared runner pool exhausts that cap and the registry
     # answers `429 toomanyrequests: Data limit exceeded` — a quota, not a burst,
     # so waiting it out does not work (#509, #506; the ten-minute back-off #505
-    # added failed six attempts out of six). The Dockerfile pins the base by
+    # added failed six attempts out of six). The Dockerfile pins every ECR base by
     # digest, so the same bytes can come from any registry holding that digest:
-    # this asks ECR Public once, prints the registry's own error text when it
-    # refuses, and otherwise hands the build a named context that redirects the
-    # FROM ref to the digest-identical mirror.gcr.io copy. The Dockerfile is not
-    # touched and the digest is not dropped — the script refuses a base ref it
-    # cannot derive a digest-pinned mirror for (ADR 0014).
+    # this asks ECR Public once per ref, prints the registry's own error text when
+    # it refuses, and hands the build named contexts that redirect each refused
+    # FROM ref to its digest-identical mirror.gcr.io copy. The Dockerfile is not
+    # touched and no digest is dropped — the script refuses an ECR ref it cannot
+    # mirror by digest (ADR 0014). It appends `build-contexts` (refused refs) and
+    # `mirror-contexts` (every ref) to $GITHUB_OUTPUT itself.
     - name: Choose the base image source
       id: base-image
       shell: bash
-      # The script appends ref, mirror, mirror-contexts, source and
-      # build-contexts to $GITHUB_OUTPUT itself.
-      run: bash ./scripts/ci/base-image-source.sh --probe Dockerfile
+      run: bash ./scripts/ci/ecr-mirror.sh github-output Dockerfile
 
     - name: Build or restore the dev image
       id: build-image
@@ -51,8 +50,8 @@ runs:
       with:
         context: .
         target: base
-        # Empty when ECR Public served the manifest; otherwise the named context
-        # that fetches the same digest from mirror.gcr.io.
+        # Empty when ECR Public served every manifest; otherwise the named
+        # contexts that fetch the refused digests from mirror.gcr.io.
         build-contexts: ${{ steps.base-image.outputs.build-contexts }}
         # Must match `image:` on the dev service in docker-compose.yml — that is
         # what makes `docker compose up` reuse this build instead of running its
