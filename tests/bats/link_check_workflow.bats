@@ -196,3 +196,24 @@ generate_with_route_map() {
   run node "$PROJECT_ROOT/$REMAP_SCRIPT_REL"
   [ "$status" -ne 0 ]
 }
+
+@test "a red weekly run reaches ci-health-alerts, whose filters drop the pull-request leg" {
+  # The tracking step runs only when lychee itself fails, so a broken export build or remap
+  # generator reddens the run without filing anything; the ci-alert issue is the only signal.
+  run node -e '
+    const yaml = require(process.argv[1] + "/node_modules/js-yaml");
+    const fs = require("node:fs");
+    const load = (f) => yaml.load(fs.readFileSync(process.argv[1] + "/.github/workflows/" + f, "utf8"));
+    const own = load("link-check.yml");
+    const alerts = load("ci-health-alerts.yml").on.workflow_run;
+    const tracking = own.jobs.external.steps.find((s) => (s.run || "").includes("gh issue create"));
+    process.stdout.write([
+      alerts.workflows.includes(own.name),
+      alerts.branches.join(","),
+      Object.keys(own.on).sort().join(","),
+      tracking.if,
+    ].join("|"));
+  ' "$PROJECT_ROOT"
+  assert_success
+  [ "$output" = "true|main|pull_request,schedule|steps.lychee.outcome == 'failure'" ]
+}

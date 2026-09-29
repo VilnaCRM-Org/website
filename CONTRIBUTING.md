@@ -664,7 +664,9 @@ they have deliberately different jobs:
   `scripts/cloudfront_routing.js` into a lychee `--remap` rule. A route the edge does not
   map, such as `/offline`, still fails. One gap predates the remaps: `--root-dir` accepts
   a link to any directory the export contains (`/en/docs`, `/images`), although the edge
-  404s it, so the leg does not catch every link production would 404.
+  404s it, so the leg does not catch every link production would 404. A dead link leaves
+  the run green; a run that cannot build the export or derive the remaps goes red, and
+  `ci-health-alerts.yml` files that as a `ci-alert` issue.
 
 Because the weekly leg reports rather than blocks, treat a noisy report as a bug in the leg:
 it is only useful while every entry is a real dead link. Fix the link, or fix the checker —

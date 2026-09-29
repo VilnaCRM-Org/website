@@ -70,8 +70,10 @@ jobs:
         run: |
           # One lychee --remap rule per ROUTE_MAP route in scripts/cloudfront_routing.js
           # (issue #508). Its own step, outside the continue-on-error below, so a
-          # generator that cannot read the edge table turns this run red instead of
-          # quietly checking without the rules. The argument must match --root-dir.
+          # generator that cannot read the edge table fails the run instead of
+          # quietly checking without the rules. The tracking step below never runs
+          # then; ci-health-alerts.yml lists this workflow so the failure is filed as
+          # a ci-alert issue. The argument must match --root-dir.
           node scripts/ci/link-check-remaps.mjs /repo/out >"$RUNNER_TEMP/lychee-remaps.txt"
 
       - name: Check external links (Markdown + built HTML)
