@@ -295,13 +295,12 @@ so belongs in its own reviewed change, after the open dependency pull requests l
      GHSA-2xp9-vwfh-vxw4 and GHSA-p293-qw3h-jr36 are fixed only in 16.3.3; the other nine
      at 16.2.11. The static export serves no image optimizer, but the census counts them.
    - `sharp` 0.34.5 → **0.35.5** (override). `next` 16.3 already declares `^0.35.4`, but
-     `next-export-optimize-images@4.7.0` — the latest, and the package that runs sharp over
-     every exported image — declares `^0.34.3`, so like the `tmp` override above it moves a consumer across a
-     0.x minor, which semver treats as a breaking release, and this one reaches the
+     `next-export-optimize-images@4.7.0` — the latest, and the package that runs sharp over every
+     exported image — declares `^0.34.3`, so like the `tmp` override above it moves a consumer
+     across a 0.x minor, which semver treats as a breaking release, and this one reaches the
      production build. Its call path (`resize`, then `jpeg`/`png`/`webp`/`avif`, WebP-only in
-     `export-images.config.js`) avoids every 0.35 removal. GHSA-rgj7-g3m4-5g8c,
-     GHSA-f88m-g3jw-g9cj. Drop the entry once `next-export-optimize-images` declares
-     `^0.35`.
+     `export-images.config.js`) avoids every 0.35 removal. GHSA-rgj7-g3m4-5g8c, GHSA-f88m-g3jw-g9cj.
+     Drop the entry once `next-export-optimize-images` declares `^0.35`.
    - `axios` 1.16.1 → **1.18.0** (override; `@swagger-api/apidom-reference` and `wait-on`
      declare `^1.16.0`): ten advisories, GHSA-gcfj-64vw-6mp9 through GHSA-xj6q-8x83-jv6g.
    - `dompurify` 3.4.7 → **3.4.13** (override; `swagger-ui-react` declares `^3.4.0`):
