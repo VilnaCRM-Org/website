@@ -264,7 +264,10 @@ so belongs in its own reviewed change, after the open dependency pull requests l
    (version, dependency ranges, integrity), and the one edge in each parent entry was
    replaced by the range that parent publishes. Bun then re-serialised the file,
    `bun install --frozen-lockfile` accepts it, and a clean `node_modules` install checked
-   every integrity hash. Repeat that recipe for the next in-range move; a hand-edited
+   every integrity hash. Repeat that recipe for the next in-range move, but only after
+   checking every consumer of the moved child: a parent whose published range does not
+   admit the new version (a peer placement on another major, for example) must keep its
+   own nested entry rather than having its edge re-pointed; a hand-edited
    entry that bun would not have written shows up as a diff the next time it
    re-serialises.
 
@@ -293,9 +296,9 @@ so belongs in its own reviewed change, after the open dependency pull requests l
      at 16.2.11. The static export serves no image optimizer, but the census counts them.
    - `sharp` 0.34.5 → **0.35.5** (override). `next` 16.3 already declares `^0.35.4`, but
      `next-export-optimize-images@4.7.0` — the latest, and the package that runs sharp over
-     every exported image — declares `^0.34.3`, so the override is the one entry in the
-     block that moves a consumer across a 0.x minor, which semver treats as a breaking
-     release. Its call path (`resize`, then `jpeg`/`png`/`webp`/`avif`, WebP-only in
+     every exported image — declares `^0.34.3`, so like the `tmp` override above it moves a consumer across a
+     0.x minor, which semver treats as a breaking release, and this one reaches the
+     production build. Its call path (`resize`, then `jpeg`/`png`/`webp`/`avif`, WebP-only in
      `export-images.config.js`) avoids every 0.35 removal. GHSA-rgj7-g3m4-5g8c,
      GHSA-f88m-g3jw-g9cj. Drop the entry once `next-export-optimize-images` declares
      `^0.35`.
