@@ -25,7 +25,7 @@ surface. Subscribe to them, or to the repository's issues, to be told about anyt
   usually because an Alpine package pin rotated.
 - `e2e-flake` — `e2e-flake-census.yml`. Nightly census of e2e specs that pass only on a
   retry. Closed automatically by the next clean census, in which no repetition of any test
-  failed; a census that did not measure the suite (no report, or a run cut short) keeps
+  failed; a census that did not measure the suite (no report, no test executed, or a run cut short) keeps
   it open and turns the run red.
 - `dependency-cve` — `osv-scanner.yml`. Nightly census of the dependency CVE backlog.
 - `mutation-backlog` — `mutation-testing.yml`. Nightly full mutation census.
