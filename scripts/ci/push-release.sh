@@ -7,7 +7,8 @@
 # 33113478799) branch protection refused the unsigned, pull-request-less release
 # commit (GH006) while the tag in the same push landed, so v1.7.0 was stranded on a
 # commit that is not on main -- and the version preflight
-# (check-release-version.sh) has failed every run since.
+# (check-release-version.sh) failed every run until #502 reconciled package.json
+# with v1.7.0 (ADR 0013).
 #
 # The workflow now runs the action with `git-push: 'false'` -- it still commits and
 # tags, locally -- and calls this script instead. `git push --atomic` makes the
