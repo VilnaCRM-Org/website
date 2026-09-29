@@ -189,7 +189,7 @@ endef
 # .github/actions/dev-container step builds.
 DEV_IMAGE                   = website-dev:latest
 
-# ===== ECR Public mirror fallback (ADR 0014; issues #509, #506, #485) =====
+# ===== ECR Public mirror fallback (ADR 0014; issues #509, #506) =====
 # Every external base image is pinned by digest on ECR Public, whose anonymous
 # pull quota is per source IP and is exhausted by GitHub's shared runners
 # (`429 toomanyrequests: Data limit exceeded`, a quota that waiting does not
@@ -197,20 +197,27 @@ DEV_IMAGE                   = website-dev:latest
 # through BuildKit named contexts, without editing a Dockerfile:
 #
 #   off (default) — nothing changes; every command line is exactly as before.
-#   probe         — ask ECR Public once per ref; redirect only the refs it refuses.
+#   probe         — ask ECR Public once per distinct ref; redirect only the refs
+#                   it refuses.
 #   always        — redirect every ref (a retry after a build ECR refused mid-way).
 #
 # ecr-mirror-overrides writes the Compose overrides and the `docker build`
 # contexts into ECR_MIRROR_DIR; it is a prerequisite of every target that BUILDS
-# the prod, test, k6 or memory-leak images, so each build re-probes. A compose
-# call that only execs, stops or reads logs picks up whatever override already
-# exists and never needs one. Set per job by the workflows; never derived from CI.
+# the prod, test, k6 or memory-leak images, so each make invocation re-probes.
+# Its three script calls share one verdict file, so a ref is asked once and all
+# three artifacts agree on it; ECR_MIRROR_KEEP_VERDICTS=1 keeps that file, which
+# is how test-memory-leak's recursive make reuses the verdicts start-prod just
+# took instead of probing again. A compose call that only execs, stops or reads
+# logs picks up whatever override already exists and never needs one. Set per
+# job by the workflows; never derived from CI.
 ECR_MIRROR                  ?= off
 ECR_MIRROR_DIR              ?= $(or $(RUNNER_TEMP),/tmp)/website-ecr-mirror
 ECR_MIRROR_SCRIPT           = bash ./scripts/ci/ecr-mirror.sh
 ECR_MIRROR_TEST_OVERRIDE    = $(ECR_MIRROR_DIR)/test.compose.json
 ECR_MIRROR_MEMLEAK_OVERRIDE = $(ECR_MIRROR_DIR)/memory-leak.compose.json
 ECR_MIRROR_BUILD_CONTEXTS   = $(ECR_MIRROR_DIR)/Dockerfile.contexts
+ECR_MIRROR_VERDICTS         = $(ECR_MIRROR_DIR)/verdicts.tsv
+ECR_MIRROR_KEEP_VERDICTS    ?= 0
 ifeq ($(ECR_MIRROR),off)
     ECR_MIRROR_PREREQ       =
     ECR_MIRROR_PROBE_FLAG   =
@@ -410,7 +417,7 @@ STOP_PROD_CMD               = $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_TEST_FILE) down
 # from a literal `$(MAKE)` in the recipe text, and this one arrives through a
 # variable. Without it the sub-make loses the jobserver under -j and is skipped
 # under -n. Host mode keeps no `+`, so a dry run there stays a dry run.
-MEMLEAK_RUN                 = +$(MAKE) ci-test-memory-leak
+MEMLEAK_RUN                 = +$(MAKE) ci-test-memory-leak ECR_MIRROR_KEEP_VERDICTS=1
 VISUAL_UPDATE_DEPS          = start-prod
 VISUAL_UPDATE_CMD           = $(playwright-test) $(TEST_DIR_VISUAL) --update-snapshots
 PLAYWRIGHT_INSTALL_CMD      = @echo "ℹ️  Browsers ship inside the Playwright image (Playwright.Dockerfile) — nothing to install. Re-run with HOST_STACK=1 to install them on the host."
@@ -628,13 +635,15 @@ build-out: $(ECR_MIRROR_PREREQ) ## Build production artifacts to ./out directory
 	echo "✅ Build artifacts extracted to ./out directory"
 
 # Host-only, CI-only (ECR_MIRROR=probe|always; see the ECR_MIRROR block above and
-# ADR 0014). Rewrites all three artifacts on every call so a retry re-probes.
+# ADR 0014). Rewrites all three artifacts on every call and, unless
+# ECR_MIRROR_KEEP_VERDICTS=1, forgets the previous verdicts so a retry re-probes.
 ecr-mirror-overrides: ## Probe ECR Public and write the digest-pinned mirror overrides the CI image builds read (ECR_MIRROR=probe|always)
 	@[ -n "$(ECR_MIRROR_PREREQ)" ] || { echo "ecr-mirror-overrides: set ECR_MIRROR=probe or ECR_MIRROR=always" >&2; exit 1; }
 	@mkdir -p "$(ECR_MIRROR_DIR)"
-	$(ECR_MIRROR_SCRIPT) compose-override $(ECR_MIRROR_PROBE_FLAG) "$(ECR_MIRROR_TEST_OVERRIDE)" docker-compose.test.yml
-	$(ECR_MIRROR_SCRIPT) compose-override $(ECR_MIRROR_PROBE_FLAG) "$(ECR_MIRROR_MEMLEAK_OVERRIDE)" docker-compose.memory-leak.yml
-	$(ECR_MIRROR_SCRIPT) contexts $(ECR_MIRROR_PROBE_FLAG) Dockerfile > "$(ECR_MIRROR_BUILD_CONTEXTS).tmp"
+	@[ "$(ECR_MIRROR_KEEP_VERDICTS)" = 1 ] || rm -f "$(ECR_MIRROR_VERDICTS)"
+	ECR_MIRROR_VERDICTS="$(ECR_MIRROR_VERDICTS)" $(ECR_MIRROR_SCRIPT) compose-override $(ECR_MIRROR_PROBE_FLAG) "$(ECR_MIRROR_TEST_OVERRIDE)" docker-compose.test.yml
+	ECR_MIRROR_VERDICTS="$(ECR_MIRROR_VERDICTS)" $(ECR_MIRROR_SCRIPT) compose-override $(ECR_MIRROR_PROBE_FLAG) "$(ECR_MIRROR_MEMLEAK_OVERRIDE)" docker-compose.memory-leak.yml
+	ECR_MIRROR_VERDICTS="$(ECR_MIRROR_VERDICTS)" $(ECR_MIRROR_SCRIPT) contexts $(ECR_MIRROR_PROBE_FLAG) Dockerfile > "$(ECR_MIRROR_BUILD_CONTEXTS).tmp"
 	@mv "$(ECR_MIRROR_BUILD_CONTEXTS).tmp" "$(ECR_MIRROR_BUILD_CONTEXTS)"
 
 # `mjs` is in the glob deliberately: the Node CLI helpers under scripts/ are

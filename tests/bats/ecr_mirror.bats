@@ -1,7 +1,7 @@
 #!/usr/bin/env bats
 #
 # Coverage for scripts/ci/ecr-mirror.sh and the Makefile's ECR_MIRROR wiring
-# (ADR 0014; issues #509, #506, #485).
+# (ADR 0014; issues #509, #506, and the ECR-quota share of #485).
 #
 # CI builds redirect an ECR Public base that ECR refuses to the same digest on
 # mirror.gcr.io. The redirect is only safe because the digest travels with it,
@@ -311,6 +311,51 @@ assert_refused() {
   [ "$(grep -c 'imagetools inspect' "$COMMAND_LOG")" -eq 1 ]
 }
 
+@test "reuses a recorded refusal across calls that share ECR_MIRROR_VERDICTS" {
+  create_registry_stub
+  export FAKE_REFUSE='*node*' ECR_MIRROR_VERDICTS="$BATS_TEST_TMPDIR/verdicts.tsv"
+  write_dockerfile "FROM $FIXTURE_REF AS base"
+
+  run_mirror contexts --probe "$FIXTURE"
+  assert_success
+  [ "$output" = "$FIXTURE_CONTEXT" ]
+
+  export FAKE_REFUSE='/no-ref-matches/'
+  run_mirror contexts --probe "$FIXTURE"
+  assert_success
+  [ "$output" = "$FIXTURE_CONTEXT" ]
+  [ -z "$stderr" ]
+  [ "$(grep -c 'imagetools inspect' "$COMMAND_LOG")" -eq 1 ]
+}
+
+@test "reuses a recorded answer across calls that share ECR_MIRROR_VERDICTS" {
+  create_registry_stub
+  export ECR_MIRROR_VERDICTS="$BATS_TEST_TMPDIR/verdicts.tsv"
+  write_dockerfile "FROM $FIXTURE_REF AS base"
+
+  run_mirror contexts --probe "$FIXTURE"
+  assert_success
+  [ -z "$output" ]
+
+  export FAKE_REFUSE='*'
+  run_mirror contexts --probe "$FIXTURE"
+  assert_success
+  [ -z "$output" ]
+  [ "$(grep -c 'imagetools inspect' "$COMMAND_LOG")" -eq 1 ]
+}
+
+@test "probes again on every call when no verdict file is shared" {
+  create_registry_stub
+  write_dockerfile "FROM $FIXTURE_REF AS base"
+
+  run_mirror contexts --probe "$FIXTURE"
+  export FAKE_REFUSE='*'
+  run_mirror contexts --probe "$FIXTURE"
+  assert_success
+  [ "$output" = "$FIXTURE_CONTEXT" ]
+  [ "$(grep -c 'imagetools inspect' "$COMMAND_LOG")" -eq 2 ]
+}
+
 @test "escapes the registry's text so it cannot start a workflow command" {
   create_registry_stub
   export FAKE_REFUSE='*' FAKE_REGISTRY_ERROR=$'429 Too Many Requests\n::error::forged\r\n100% refused'
@@ -516,6 +561,28 @@ setup_mirror_makefile() {
   assert_log_contains 'docker buildx imagetools inspect --raw public.ecr.aws/docker/library/'
   assert_log_contains 'docker build -t next-build -f Dockerfile --target production --build-arg'
   [ ! -s "$ECR_MIRROR_DIR/Dockerfile.contexts" ]
+}
+
+@test "ECR_MIRROR=probe asks once per ref across all three artifacts, and test-memory-leak once in all" {
+  setup_mirror_makefile
+  local refs
+  refs="$(sed -nE 's#^FROM (public\.ecr\.aws/docker/library/[^ ]+).*#\1#p' "$PROJECT_ROOT/Dockerfile" | sort -u | wc -l)"
+
+  run_make_target ecr-mirror-overrides ECR_MIRROR=probe ECR_MIRROR_DIR="$ECR_MIRROR_DIR"
+  assert_success
+  [ "$(grep -c 'imagetools inspect' "$COMMAND_LOG")" -eq "$refs" ]
+
+  reset_command_log
+  run_make_target ecr-mirror-overrides ECR_MIRROR=probe ECR_MIRROR_DIR="$ECR_MIRROR_DIR"
+  assert_success
+  [ "$(grep -c 'imagetools inspect' "$COMMAND_LOG")" -eq "$refs" ]
+
+  rm -rf "$ECR_MIRROR_DIR"
+  reset_command_log
+  run_make_target test-memory-leak ECR_MIRROR=probe ECR_MIRROR_DIR="$ECR_MIRROR_DIR"
+  assert_success
+  assert_log_contains "docker compose -p memleak -f docker-compose.memory-leak.yml -f $ECR_MIRROR_DIR/memory-leak.compose.json up -d --wait --build"
+  [ "$(grep -c 'imagetools inspect' "$COMMAND_LOG")" -eq "$refs" ]
 }
 
 @test "ecr-mirror-overrides refuses to run with ECR_MIRROR=off" {

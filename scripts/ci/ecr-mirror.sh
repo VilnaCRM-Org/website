@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Digest-pinned mirror fallback for ECR Public base images in CI (ADR 0014;
-# issues #509, #506, #485).
+# issues #509, #506, and the ECR-quota share of #485).
 #
 # Every Dockerfile here pulls its external bases from ECR Public's
 # `docker/library` namespace, pinned by digest. ECR Public caps anonymous pulls
@@ -43,11 +43,13 @@
 #       outputs to $GITHUB_OUTPUT (stdout when unset) — `build-contexts`, the
 #       refused refs' contexts, and `mirror-contexts`, every ref's context.
 #
-# --probe asks ECR Public for each distinct manifest once (bounded by
+# --probe asks ECR Public for each distinct manifest once per call (bounded by
 # PROBE_TIMEOUT seconds, default 60). A refusal is not an error: it prints the
 # registry's own error text as an escaped workflow warning on stderr and selects
-# the mirror for that ref. Exit 1 means a Dockerfile or project breaks the
-# contract above; exit 2 is a usage error.
+# the mirror for that ref. When ECR_MIRROR_VERDICTS names a file, each verdict is
+# recorded there and a ref already in it is not asked again, so several calls
+# that share the file probe each ref once and agree on it. Exit 1 means a
+# Dockerfile or project breaks the contract above; exit 2 is a usage error.
 
 set -euo pipefail
 # Every derivation runs inside a command substitution; without this a refusal
@@ -158,14 +160,31 @@ distinct_refs() {
   printf '%s' "${refs}" | awk 'NF && !seen[$0]++'
 }
 
+# recorded_verdict <ref> -> `served`, `refused`, or nothing when not yet probed.
+recorded_verdict() {
+  [ -n "${ECR_MIRROR_VERDICTS:-}" ] && [ -f "${ECR_MIRROR_VERDICTS}" ] || return 0
+  awk -F '\t' -v ref="$1" '$2 == ref { print $1; exit }' "${ECR_MIRROR_VERDICTS}"
+}
+
+record_verdict() {
+  [ -z "${ECR_MIRROR_VERDICTS:-}" ] || printf '%s\t%s\n' "$1" "$2" >>"${ECR_MIRROR_VERDICTS}"
+}
+
 # refused <ref> -> exit 0 when ECR Public refuses the manifest (and says why).
 refused() {
-  local ref="$1" error_text status
+  local ref="$1" error_text status verdict
+  verdict="$(recorded_verdict "${ref}")"
+  case "${verdict}" in
+    served) return 1 ;;
+    refused) return 0 ;;
+  esac
   if error_text="$(timeout "${PROBE_TIMEOUT:-60}" docker buildx imagetools inspect --raw "${ref}" 2>&1 >/dev/null)"; then
+    record_verdict served "${ref}"
     return 1
   else
     status=$?
   fi
+  record_verdict refused "${ref}"
   [ -n "${error_text}" ] || error_text="no error text (exit ${status})"
   [ "${status}" -ne 124 ] || error_text="no answer within ${PROBE_TIMEOUT:-60}s"
   printf '::warning::%s\n' "$(escape_message "ECR Public refused ${ref%%@*}, so this build fetches the digest-identical $(mirror_of "${ref}") instead. Registry said: ${error_text:0:2000}")" >&2

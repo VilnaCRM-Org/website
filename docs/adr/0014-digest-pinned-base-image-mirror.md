@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-09-29
 - **Deciders:** website maintainers
-- **Related:** issues #509, #506, #485, #505, #370; ADR 0002;
+- **Related:** issues #509, #506, #505, #370, and the ECR-quota share of #485; ADR 0002;
   [`scripts/ci/ecr-mirror.sh`](../../scripts/ci/ecr-mirror.sh),
   [`.github/actions/dev-container/action.yml`](../../.github/actions/dev-container/action.yml)
 
@@ -26,6 +26,11 @@ away the registry's error text, so the logs never said why. The prod-stack jobs 
 visual, accessibility, memory leak, load) and the `make build-out` jobs pull the same
 bases and hit the same quota; the e2e and visual jobs had grown five-attempt
 `start-prod` loops with the same back-off.
+
+Those refusals are three of the five checks that keep `main` red under #485. The other
+two are not image pulls and this decision does not touch them: the release job's version
+check (`package.json` is at 1.6.0 while tag `v1.7.0` exists) and the #494 deploy
+credentials.
 
 The `FROM` line carries the manifest digest, and the digest identifies the content: a
 fetch by digest from any registry returns the same bytes or fails. `mirror.gcr.io` is
@@ -58,10 +63,12 @@ refuses it in CI, and never change what is fetched.
   directive fail the run rather than being guessed. Stages, `scratch` and images outside
   that namespace are left alone — the equivalence is not established for them. The
   mirror ref never carries a tag, so no mutable tag can decide the bytes.
-- With `--probe` it asks ECR Public for each distinct manifest once, prints the
+- With `--probe` it asks ECR Public for each distinct manifest once per call, prints the
   registry's error text as an escaped warning when it refuses, and redirects only the
-  refused refs. It writes its step outputs and Compose overrides itself, so no workflow
-  appends an opaque command's output to `$GITHUB_OUTPUT`.
+  refused refs. Calls that share an `ECR_MIRROR_VERDICTS` file ask once between them and
+  reuse the recorded verdict, so they cannot disagree about a ref. It writes its step
+  outputs and Compose overrides itself, so no workflow appends an opaque command's output
+  to `$GITHUB_OUTPUT`.
 - The dev-container composite builds with the probed contexts, and its second attempt
   always uses the mirror.
 - The Makefile's `ECR_MIRROR` (`off` by default, `probe`, `always`, anything else a hard
@@ -70,6 +77,9 @@ refuses it in CI, and never change what is fetched.
   context list for `build-out` into `ECR_MIRROR_DIR` — outside the repository, never
   committed — and the compose file variables add `-f <override>` only when the mode is
   on and the file exists. With `off`, every command line is byte-for-byte what it was.
+  The target's three script calls share one verdict file, which it clears first unless
+  `ECR_MIRROR_KEEP_VERDICTS=1`; `test-memory-leak` passes that to the recursive make that
+  runs the Memlab stack, so the verdicts `start-prod` just took are reused, not re-asked.
 - The prod-stack, `build-out` and Dockerfile-performance jobs set `ECR_MIRROR: probe`;
   the e2e and visual `start-prod` retries switch to `always`, because ECR can refuse a
   blob part-way through a build whose manifest probe it answered.
@@ -101,9 +111,23 @@ Docker Hub — the registry #370 moved away from — so its availability, not it
 is what the build trusts. That includes the release-provenance build, whose attestation
 still names the same inputs. The redirect only covers the `docker/library` namespace;
 a base image from another ECR namespace is left on ECR and needs its own decision. The
-probe costs up to five extra manifest requests per image-building job, and a new build
-path — another compose project, another `docker build` — is not covered until it is
-wired to `ECR_MIRROR` too.
+probe costs one manifest request per distinct base each time it runs: once per make
+invocation that builds (three today — node, and the k6 image's golang and alpine), once
+per dev-container build, and once for each of the Dockerfile-performance job's base and
+head builds; the `always` retries do not probe. A new build path — another compose
+project, another `docker build` — is not covered until it is wired to `ECR_MIRROR` too.
+
+The probe only answers for the manifest. ECR can still refuse a layer blob part-way
+through a build whose probe it answered, and only the dev-container composite and the
+e2e and visual `start-prod` steps retry with `always`. Every other job wired here makes
+one probe-mode attempt, as it made one attempt before, and can still fail on a
+mid-build refusal. In the accessibility, memory-leak, load, e2e burn-in and flake-census
+jobs the stack comes up inside the target that runs the tests, so a retry there would
+re-run the tests too — a retry budget the flake gates forbid — and closing it means
+splitting the bring-up from the tests, as e2e and visual already do. The `build-out`
+jobs (build artifact, release provenance, link check) and the Dockerfile-performance
+builds could take an `always` retry directly, at the price of doubling the time a
+genuine build failure takes to report; that is left for a follow-up.
 
 ### What would reverse it
 
