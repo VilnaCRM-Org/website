@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Emit the lychee `--remap` rules that make the weekly link check resolve an extensionless
+ * Emit the lychee `--remap` rules under which the weekly link check resolves an extensionless
  * route exactly the way the CloudFront edge does (issue #508).
  *
  * The static export has no `trailingSlash`, so `/swagger` ships as `out/swagger.html`, and
