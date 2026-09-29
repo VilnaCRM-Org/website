@@ -662,7 +662,9 @@ they have deliberately different jobs:
   route such as `/swagger` resolves the way the CloudFront edge rewrites it:
   `scripts/ci/link-check-remaps.mjs` turns every `ROUTE_MAP` entry in
   `scripts/cloudfront_routing.js` into a lychee `--remap` rule. A route the edge does not
-  map, such as `/offline`, still fails, so the leg never accepts a link production would 404.
+  map, such as `/offline`, still fails. One gap predates the remaps: `--root-dir` accepts
+  a link to any directory the export contains (`/en/docs`, `/images`), although the edge
+  404s it, so the leg does not catch every link production would 404.
 
 Because the weekly leg reports rather than blocks, treat a noisy report as a bug in the leg:
 it is only useful while every entry is a real dead link. Fix the link, or fix the checker —
