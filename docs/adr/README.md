@@ -25,7 +25,7 @@ justified a decision still holds.
   the English landing lives under a static `/en` prefix. _Accepted._
 - [ADR 0007](0007-release-automation-and-tag-invariant.md) — the release lane keeps its
   orphan tags and enforces a version invariant before it writes. _Accepted; push
-  atomicity amended by ADR 0011._
+  atomicity amended by ADR 0011, remedy order by ADR 0013._
 - [ADR 0008](0008-light-only-theme.md) — the site ships one light colour scheme and does
   not follow `prefers-color-scheme`. _Accepted._
 - [ADR 0009](0009-consolidated-error-boundary-and-observability.md) — one error
@@ -36,10 +36,13 @@ justified a decision still holds.
   built; CodePipeline execution polling stays open. _Accepted._
 - [ADR 0011](0011-atomic-release-push.md) — the release lane pushes its commit and tag in
   one atomic push, after checking the release commit changes only the version files.
-  _Accepted._
+  _Accepted; remedy order amended by ADR 0013._
 - [ADR 0012](0012-ui-toolkit-primitives.md) — nine shared primitives render from the
   pinned `@vilnacrm/ui-toolkit` release behind local import seams; defects are fixed
   upstream, never re-forked. _Accepted._
+- [ADR 0013](0013-reconcile-stranded-v1-7-0-before-the-bypass.md) — `main` takes the
+  stranded `v1.7.0` release commit's version and changelog before the release App's bypass
+  lands, and a refused release push names the missing bypass. _Accepted._
 
 The template for a new record is [`0000-template.md`](0000-template.md).
 

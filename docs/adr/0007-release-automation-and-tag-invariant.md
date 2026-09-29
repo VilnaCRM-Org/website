@@ -1,6 +1,7 @@
 # ADR 0007: The release lane keeps its orphan tags and enforces a version invariant
 
-- **Status:** Accepted — push atomicity amended by [ADR 0011](0011-atomic-release-push.md)
+- **Status:** Accepted — push atomicity amended by [ADR 0011](0011-atomic-release-push.md);
+  remedy order amended by [ADR 0013](0013-reconcile-stranded-v1-7-0-before-the-bypass.md)
 - **Date:** 2026-09-16
 - **Deciders:** website maintainers
 - **Related:** ADR 0001, issue #325, issue #331, issue #366, issue #451,

@@ -121,7 +121,7 @@ merge alone never does:
    so until it is retired the release App's push is still rejected, whatever
    the ruleset allows.
 
-   As of 2026-09-24 the only ruleset on the repository is the tag-targeted
+   As of 2026-09-29 the only ruleset on the repository is the tag-targeted
    "Protect release tags" (created 2026-09-13), which stops release tags —
    those matching `v*` or `[0-9]*` — from being deleted, updated or
    force-pushed. It targets tags, not branches, so it does not conflict with
@@ -203,9 +203,8 @@ add the preflight, rather than delete the orphan tags — is recorded in
 [ADR 0007](../docs/adr/0007-release-automation-and-tag-invariant.md), together
 with which tags sit on `main` and which do not.
 
-### Current state: `v1.7.0` is stranded and every run is red
+### Current state: `v1.7.0` is reconciled; the push still waits for the bypass
 
-The preflight is doing its job, and that is why the release lane is red today.
 The first run after the #366 repair (2026-08-27, run 33113478799) computed
 `1.6.0 → 1.7.0`, committed the changelog, tagged `v1.7.0`, and was rejected by
 branch protection as described in step 3 above. Because that
@@ -217,40 +216,38 @@ branch protection as described in step 3 above. Because that
   generated `website-sbom.cdx.json` committed into it.
 - No GitHub release exists for it; the latest release is still `v0.3.0`
   (2026-01-20).
-- `package.json` on `main` still reads `1.6.0`, so every run since fails the
-  preflight with `package.json is at 1.6.0 but tag v1.7.0 already exists`.
 
-Unlike the 2025 orphans, this tag was not left by a history rewrite; it was
-left by a rejected push. Since the push became atomic
-([ADR 0011](../docs/adr/0011-atomic-release-push.md)), bumping the version or
-deleting the tag while the push is still rejected no longer strands the next
-orphan (`v1.8.0`): the next run computes it, the atomic push is refused, and
-nothing is written — the red merely moves from the preflight to the push step.
-The remedy keeps its strict order anyway. Nothing can ship until the bypass is
-in effect, and the preflight's failure names the stranded tag, while a refused
-push only says the push was refused:
+Until issue #502, `package.json` on `main` still read `1.6.0`, so every run
+failed the preflight with `package.json is at 1.6.0 but tag v1.7.0 already
+exists`. Issue #502 reconciled `main` with that commit
+([ADR 0013](../docs/adr/0013-reconcile-stranded-v1-7-0-before-the-bypass.md)):
+`package.json` reads `1.7.0` and `CHANGELOG.md` is byte-identical to the tagged
+commit's, so the preflight passes. The SBOM stays out; it is gitignored now.
 
-1. **First**, a repository admin grants the release App a bypass over both
-   protection rules (step 3, option 1).
-2. **Then**, a maintainer does exactly one of:
-   - delete the stranded tag — `git push --delete origin v1.7.0` — so the next
-     release is computed as `v1.7.0` again from a clean slate. The "Protect
-     release tags" ruleset forbids deleting a tag matching `v*` or `[0-9]*`,
-     so unless the maintainer is one of its bypass actors (a list only an
-     admin can see, under _Settings → Rules → Rulesets_), an admin must
-     disable that ruleset for the deletion and re-enable it straight after; or
-   - advance `package.json` to `1.7.0` on `main` through a normal pull request,
-     accepting that `v1.7.0` stays an orphan and the next release is `v1.8.0`.
-     This is safe for the changelog range: the action discovers the previous
-     tag by walking `git log` from `HEAD`, so a tag that is not an ancestor of
-     `main` is invisible to it and the range still starts at `v0.3.0`, the most
-     recent tag reachable from `main` — run 33113478799 computed
-     `v0.3.0...v1.7.0` for exactly that reason.
-3. Watch the next push to `main`: the run should end with a green `Create
-   Release` step and a release carrying the SBOM. If the push is rejected
-   again, the bypass is not in effect — the run fails on the `Push the release
-   commit and tag atomically` step and no tag is written. Stop and check the
-   ruleset before any further tag or version change.
+`v1.7.0` stays where it is, an orphan with no release, and the next release is
+`v1.8.0`. The changelog range is unaffected: the action discovers the previous
+tag by walking `git log` from `HEAD`, so a tag that is not an ancestor of
+`main` is invisible to it and the range still starts at `v0.3.0`, the most
+recent tag reachable from `main` — run 33113478799 computed `v0.3.0...v1.7.0`
+for exactly that reason. The action also regenerates `CHANGELOG.md` from git on
+every release (it keeps five releases), so the `v1.8.0` entry lists every change
+since `v0.3.0` and replaces today's 1.7.0 section, which describes a release
+that never shipped.
 
-Never bump `package.json` to make the preflight green while step 1 is still
-outstanding, and never delete a tag that has a release behind it.
+What remains is the admin change. Until the bypass is in effect, every run
+passes the preflight, computes `v1.8.0`, and fails on the `Push the release
+commit and tag atomically` step with GH006. The atomic push writes neither ref,
+so no new orphan appears, and the step's error points back to setup step 3.
+
+1. A repository admin grants the release App a bypass over both protection
+   rules (step 3, option 1), proving the ruleset blocks before classic
+   protection is retired.
+2. Watch the next push to `main`: the run should end with a green `Create
+   Release` step and a `v1.8.0` release carrying the SBOM. If the push is
+   rejected again, the bypass is not in effect. The run fails on the push step
+   and no tag is written. Stop and check the ruleset before any further tag or
+   version change.
+
+Leave `v1.7.0` in place. It no longer blocks anything, and the "Protect release
+tags" ruleset refuses its deletion anyway. Never delete a tag that has a release
+behind it.
