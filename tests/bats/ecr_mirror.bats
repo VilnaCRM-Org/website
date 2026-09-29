@@ -157,6 +157,69 @@ assert_refused() {
   [ "$output" = "$FIXTURE_CONTEXT" ]
 }
 
+# The continuation cases below each mirror a Dockerfile that was run through a
+# real `docker buildx build` with a named context keyed on the ref: where BuildKit
+# fetched the mirror, the script must derive that context; where BuildKit could
+# not parse the file, the script must derive nothing it would not also refuse.
+
+@test "continues a line whose backslash is followed by spaces or a tab, as BuildKit does" {
+  write_dockerfile 'FROM \   ' "    $FIXTURE_REF AS base"
+  run_mirror contexts "$FIXTURE"
+  assert_success
+  [ "$output" = "$FIXTURE_CONTEXT" ]
+
+  write_dockerfile $'FROM \\\t \t' "    $FIXTURE_REF AS base"
+  run_mirror contexts "$FIXTURE"
+  assert_success
+  [ "$output" = "$FIXTURE_CONTEXT" ]
+}
+
+@test "still refuses a tag-only ECR ref behind a backslash with trailing whitespace" {
+  write_dockerfile 'FROM \  ' '    public.ecr.aws/docker/library/node:24 AS base'
+  run_mirror contexts "$FIXTURE"
+  assert_refused
+}
+
+@test "does not continue a line whose backslash is followed by a form feed or vertical tab" {
+  write_dockerfile $'FROM \\\f' "    $FIXTURE_REF AS base"
+  run_mirror contexts "$FIXTURE"
+  assert_success
+  [ -z "$output" ]
+
+  write_dockerfile $'FROM \\\v' "    $FIXTURE_REF AS base"
+  run_mirror contexts "$FIXTURE"
+  assert_success
+  [ -z "$output" ]
+}
+
+@test "skips blank and whitespace-only lines inside a continuation" {
+  write_dockerfile 'FROM \' '' $'   \t ' $'\f' "    $FIXTURE_REF AS base"
+  run_mirror contexts "$FIXTURE"
+  assert_success
+  [ "$output" = "$FIXTURE_CONTEXT" ]
+}
+
+@test "joins a continuation with no separator, so a split ref is read whole" {
+  write_dockerfile "FROM ${FIXTURE_REF:0:40}\\" "${FIXTURE_REF:40} AS base"
+  run_mirror contexts "$FIXTURE"
+  assert_success
+  [ "$output" = "$FIXTURE_CONTEXT" ]
+}
+
+@test "refuses a tag-only ECR ref split inside its namespace" {
+  # Joined with a space, the first half would read as an image outside
+  # docker/library and be skipped, while BuildKit pulls the whole tag-only ref.
+  write_dockerfile 'FROM public.ecr.aws/docker/lib\' 'rary/node:24 AS base'
+  run_mirror contexts "$FIXTURE"
+  assert_refused
+}
+
+@test "keeps a continuation line's leading whitespace, as BuildKit does" {
+  write_dockerfile "FROM ${FIXTURE_REF:0:40}\\" "   ${FIXTURE_REF:40} AS base"
+  run_mirror contexts "$FIXTURE"
+  assert_refused
+}
+
 @test "does not fold a backslash-ended comment into the FROM after it" {
   write_dockerfile '# pinned below \' "FROM $FIXTURE_REF AS base" \
     '  # indented too \' "FROM public.ecr.aws/docker/library/golang:1@sha256:$OTHER"

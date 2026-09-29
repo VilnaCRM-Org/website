@@ -55,9 +55,15 @@ set -euo pipefail
 # Every derivation runs inside a command substitution; without this a refusal
 # there would be swallowed and the caller would read an empty, "clean" list.
 shopt -s inherit_errexit
+# Byte-wise character classes: [[:blank:]] is then exactly space and tab, and
+# [[:space:]] the ASCII whitespace set — the sets BuildKit's parser uses. Not
+# exported, so it changes only this shell's own matching.
+LC_ALL=C
 
 ORIGIN_PREFIX='public.ecr.aws/docker/library/'
 MIRROR_PREFIX='mirror.gcr.io/library/'
+# BuildKit's continuation rule: the escape character, then only spaces or tabs.
+CONTINUATION_PATTERN='^(.*)\\[[:blank:]]*$'
 REF_PATTERN='^public\.ecr\.aws/docker/library/[a-z0-9]+(([._]|__|-+)[a-z0-9]+)*(:[A-Za-z0-9_][A-Za-z0-9_.-]{0,127})?@sha256:[0-9a-f]{64}$'
 
 fail() {
@@ -101,7 +107,7 @@ context_of() {
 from_ref() {
   local dockerfile="$1" image='' word
   local -a words
-  read -r -a words <<<"$2"
+  IFS=$' \t\v\f\r' read -r -a words <<<"$2"
   for word in "${words[@]:1}"; do
     case "${word}" in
       --*) ;;
@@ -123,7 +129,7 @@ from_ref() {
 
 # dockerfile_refs <dockerfile> -> every ECR ref it FROMs, one per line, in order.
 dockerfile_refs() {
-  local dockerfile="$1" content line logical=''
+  local dockerfile="$1" content line logical='' continuing=0
   [ -f "${dockerfile}" ] || fail "no Dockerfile at ${dockerfile}"
   content="$(cat "${dockerfile}")"
   if grep -qiE '^#[[:space:]]*escape[[:space:]]*=' <<<"${content}"; then
@@ -131,20 +137,29 @@ dockerfile_refs() {
   fi
   while IFS= read -r line || [ -n "${line}" ]; do
     line="${line%$'\r'}"
-    # BuildKit drops a comment line before it joins continuations, so a comment
-    # never continues — not even one that ends in a backslash.
+    # Mirrors BuildKit's parser, each rule confirmed against a real build (ADR
+    # 0014): a comment line is dropped before continuations are joined, so it
+    # never continues — not even one ending in a backslash; a blank line inside a
+    # continuation is skipped; a backslash followed only by spaces or tabs
+    # continues the line (one followed by \f or \v does not); and the next line is
+    # appended as-is, with no separator and its leading whitespace kept.
     if [[ "${line}" =~ ^[[:space:]]*# ]]; then
       continue
     fi
-    logical="${logical:+${logical} }${line}"
-    if [[ "${logical}" == *\\ ]]; then
-      logical="${logical%\\}"
+    if [ "${continuing}" -eq 1 ] && [[ "${line}" =~ ^[[:space:]]*$ ]]; then
+      continue
+    fi
+    logical+="${line}"
+    if [[ "${logical}" =~ ${CONTINUATION_PATTERN} ]]; then
+      logical="${BASH_REMATCH[1]}"
+      continuing=1
       continue
     fi
     if [[ "${logical}" =~ ^[[:space:]]*[Ff][Rr][Oo][Mm][[:space:]] ]]; then
       from_ref "${dockerfile}" "${logical}"
     fi
     logical=''
+    continuing=0
   done <<<"${content}"
   if [[ "${logical}" =~ ^[[:space:]]*[Ff][Rr][Oo][Mm][[:space:]] ]]; then
     from_ref "${dockerfile}" "${logical}"
