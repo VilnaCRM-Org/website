@@ -22,6 +22,7 @@ FIXTURE_CONTEXT="$FIXTURE_REF=docker-image://mirror.gcr.io/library/node@sha256:$
 
 setup() {
   setup_stub_dir
+  unset ECR_MIRROR_VERDICTS
   FIXTURE="$BATS_TEST_TMPDIR/Dockerfile"
   cp "$PROJECT_ROOT/Dockerfile" "$FIXTURE"
 }

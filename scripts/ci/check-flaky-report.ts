@@ -26,14 +26,6 @@ type Mode = 'retry-pass' | 'burn-in' | 'census';
 
 const MODES: readonly Mode[] = ['retry-pass', 'burn-in', 'census'];
 
-/**
- * Resolve the report directory from the environment, rejecting anything outside the
- * repository so the walk can never be pointed at an arbitrary filesystem path.
- */
-function resolveReportDir(): string {
-  return resolveInsideRepo('FLAKE_REPORT_DIR', process.env.FLAKE_REPORT_DIR ?? 'test-results');
-}
-
 /** Resolve a path setting against the repository root, refusing one that escapes it. */
 function resolveInsideRepo(name: string, value: string): string {
   const root = process.cwd();
@@ -43,6 +35,14 @@ function resolveInsideRepo(name: string, value: string): string {
     throw new Error(`${name} must stay inside the repository; got "${path}".`);
   }
   return path;
+}
+
+/**
+ * Resolve the report directory from the environment, rejecting anything outside the
+ * repository so the walk can never be pointed at an arbitrary filesystem path.
+ */
+function resolveReportDir(): string {
+  return resolveInsideRepo('FLAKE_REPORT_DIR', process.env.FLAKE_REPORT_DIR ?? 'test-results');
 }
 
 /**

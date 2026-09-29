@@ -448,13 +448,14 @@ describe('limit resolution from the environment', () => {
 });
 
 describe('introspection gating', () => {
-  const originalNodeEnv: string | undefined = process.env.NODE_ENV;
+  const mutableEnv: Record<string, string | undefined> = process.env;
+  const originalNodeEnv: string | undefined = mutableEnv.NODE_ENV;
 
   afterEach(() => {
     if (originalNodeEnv === undefined) {
-      delete process.env.NODE_ENV;
+      delete mutableEnv.NODE_ENV;
     } else {
-      process.env.NODE_ENV = originalNodeEnv;
+      mutableEnv.NODE_ENV = originalNodeEnv;
     }
   });
 
@@ -474,14 +475,14 @@ describe('introspection gating', () => {
   // adds, where `remoteEnv` sets `NODE_ENV=development` exactly as the compose dev
   // service does.
   it('stays off when NODE_ENV is unset, however the argument is spelled', () => {
-    delete process.env.NODE_ENV;
+    delete mutableEnv.NODE_ENV;
 
     expect(introspectionEnabled(undefined)).toBe(false);
     expect(introspectionEnabled()).toBe(false);
   });
 
   it('reads the ambient NODE_ENV when the argument is omitted', () => {
-    process.env.NODE_ENV = 'development';
+    mutableEnv.NODE_ENV = 'development';
 
     expect(introspectionEnabled()).toBe(true);
   });
