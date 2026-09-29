@@ -658,7 +658,11 @@ they have deliberately different jobs:
   links (`/some/path`) outright — keep them relative.
 - **External (advisory, Mondays).** Resolves external URLs too, over Markdown plus the built
   `out/` export, and files or refreshes the _Weekly link check failures_ tracking issue
-  instead of blocking.
+  instead of blocking. Root-relative links resolve against `out/`, and an extensionless
+  route such as `/swagger` resolves the way the CloudFront edge rewrites it:
+  `scripts/ci/link-check-remaps.mjs` turns every `ROUTE_MAP` entry in
+  `scripts/cloudfront_routing.js` into a lychee `--remap` rule. A route the edge does not
+  map, such as `/offline`, still fails, so the leg never accepts a link production would 404.
 
 Because the weekly leg reports rather than blocks, treat a noisy report as a bug in the leg:
 it is only useful while every entry is a real dead link. Fix the link, or fix the checker —
