@@ -78,8 +78,9 @@ refuses it in CI, and never change what is fetched.
   committed — and the compose file variables add `-f <override>` only when the mode is
   on and the file exists. With `off`, every command line is byte-for-byte what it was.
   The target's three script calls share one verdict file, which it clears first unless
-  `ECR_MIRROR_KEEP_VERDICTS=1`; `test-memory-leak` passes that to the recursive make that
-  runs the Memlab stack, so the verdicts `start-prod` just took are reused, not re-asked.
+  `ECR_MIRROR_KEEP_VERDICTS=1`; when the mode is on, `test-memory-leak` passes that to
+  the recursive make that runs the Memlab stack, so the verdicts `start-prod` just took
+  are reused, not re-asked.
 - The prod-stack, `build-out` and Dockerfile-performance jobs set `ECR_MIRROR: probe`;
   the e2e and visual `start-prod` retries switch to `always`, because ECR can refuse a
   blob part-way through a build whose manifest probe it answered.

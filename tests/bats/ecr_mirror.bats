@@ -529,6 +529,25 @@ setup_mirror_makefile() {
   [ ! -e "$ECR_MIRROR_DIR" ]
 }
 
+@test "ECR_MIRROR=off keeps test-memory-leak's recursive make line exactly as it was" {
+  setup_mirror_makefile
+
+  run_make_target test-memory-leak
+  assert_success
+  printf '%s\n' "${lines[@]}" | grep -qx 'make ci-test-memory-leak'
+  refute_output_contains 'ECR_MIRROR_KEEP_VERDICTS'
+  assert_log_contains 'docker compose -p memleak -f docker-compose.memory-leak.yml up -d --wait --build'
+  ! grep -q 'imagetools' "$COMMAND_LOG"
+}
+
+@test "ECR_MIRROR=probe hands test-memory-leak's recursive make the verdicts" {
+  setup_mirror_makefile
+
+  run_make_target test-memory-leak ECR_MIRROR=probe ECR_MIRROR_DIR="$ECR_MIRROR_DIR"
+  assert_success
+  printf '%s\n' "${lines[@]}" | grep -qx 'make ci-test-memory-leak ECR_MIRROR_KEEP_VERDICTS=1'
+}
+
 @test "ECR_MIRROR=always redirects start-prod, build-out and the memory-leak stack" {
   setup_mirror_makefile
   local override="$ECR_MIRROR_DIR/test.compose.json"

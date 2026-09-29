@@ -207,7 +207,7 @@ DEV_IMAGE                   = website-dev:latest
 # Its three script calls share one verdict file, so a ref is asked once and all
 # three artifacts agree on it; ECR_MIRROR_KEEP_VERDICTS=1 keeps that file, which
 # is how test-memory-leak's recursive make reuses the verdicts start-prod just
-# took instead of probing again. A compose call that only execs, stops or reads
+# took instead of probing again (passed only when the mode is on). A compose call that only execs, stops or reads
 # logs picks up whatever override already exists and never needs one. Set per
 # job by the workflows; never derived from CI.
 ECR_MIRROR                  ?= off
@@ -416,8 +416,10 @@ STOP_PROD_CMD               = $(DOCKER_COMPOSE) $(DOCKER_COMPOSE_TEST_FILE) down
 # The leading `+` is load-bearing: make only auto-detects a recursive invocation
 # from a literal `$(MAKE)` in the recipe text, and this one arrives through a
 # variable. Without it the sub-make loses the jobserver under -j and is skipped
-# under -n. Host mode keeps no `+`, so a dry run there stays a dry run.
-MEMLEAK_RUN                 = +$(MAKE) ci-test-memory-leak ECR_MIRROR_KEEP_VERDICTS=1
+# under -n. Host mode keeps no `+`, so a dry run there stays a dry run. The
+# verdict hand-off is appended only when ECR_MIRROR is on, so the off-mode line
+# is exactly what it was before ADR 0014.
+MEMLEAK_RUN                 = +$(MAKE) ci-test-memory-leak$(if $(ECR_MIRROR_PREREQ), ECR_MIRROR_KEEP_VERDICTS=1)
 VISUAL_UPDATE_DEPS          = start-prod
 VISUAL_UPDATE_CMD           = $(playwright-test) $(TEST_DIR_VISUAL) --update-snapshots
 PLAYWRIGHT_INSTALL_CMD      = @echo "ℹ️  Browsers ship inside the Playwright image (Playwright.Dockerfile) — nothing to install. Re-run with HOST_STACK=1 to install them on the host."
