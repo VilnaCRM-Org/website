@@ -210,9 +210,9 @@ Flaky specs you did **not** touch are reported as annotations rather than
 failures, so the pre-existing backlog does not block unrelated work; the nightly
 `e2e flake census` workflow repeats the whole suite off the PR path and records
 what it finds in one `e2e-flake`-labelled issue. A clean census closes that issue
-with a link to the run; a census that measured nothing — no report, or no test
-executed — keeps it open and fails the run, so a broken burn-in never reads as
-clean (#445).
+with a link to the run only when no repetition of any test failed; a census that
+did not measure the suite — no report, no test executed, or a run cut short —
+keeps it open and fails the run, so a broken burn-in never reads as clean (#445).
 
 If a burn-in goes red, fix the nondeterminism at its source. Adding a
 `waitForTimeout`, widening `retries`, or wrapping the assertion in a condition

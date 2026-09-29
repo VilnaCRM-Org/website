@@ -5,10 +5,13 @@ import {
   classifyCensus,
   collectRunErrors,
   countExecutedTests,
+  countIncompleteTests,
   describeFinding,
   findBurnInFailures,
   findRetryPasses,
+  groupCensusFindings,
   partitionByChanged,
+  type CensusGroups,
   type CensusVerdict,
   type FlakeFinding,
   type PlaywrightJsonReport,
@@ -156,71 +159,92 @@ function gate(mode: Mode, findings: readonly FlakeFinding[], changed: readonly s
   return 0;
 }
 
+/** Print a heading and one bullet per line, or nothing when there are no lines. */
+function printList(heading: string, lines: readonly string[]): void {
+  if (lines.length === 0) {
+    return;
+  }
+  process.stdout.write(`${heading}\n\n`);
+  for (const line of lines) {
+    process.stdout.write(`- ${line}\n`);
+  }
+}
+
 /**
  * Print the advisory census as Markdown for the nightly tracking issue.
  *
  * A test that failed every single repetition is deterministically broken, not
  * nondeterministic, so it is listed separately — calling it flaky would send whoever reads
- * the tracking issue hunting for a race that does not exist.
+ * the tracking issue hunting for a race that does not exist. A test that failed fewer times
+ * than the flake threshold is listed too: the PR gate may tolerate it, but a census that
+ * dropped it would read as clean and close the tracker.
  */
-function census(findings: readonly FlakeFinding[]): void {
-  const flaky = findings.filter(finding => finding.failures < finding.runs);
-  const broken = findings.filter(finding => finding.failures === finding.runs);
-
+function census(groups: CensusGroups, threshold: number): void {
+  const { flaky, broken, belowThreshold } = groups;
   if (flaky.length === 0) {
     process.stdout.write('No flaky tests detected in this census run.\n');
-  } else {
-    process.stdout.write(`Detected ${flaky.length} flaky test(s):\n\n`);
-    for (const finding of flaky) {
-      process.stdout.write(`- ${describeFinding(finding)}\n`);
-    }
   }
-
-  if (broken.length > 0) {
-    process.stdout.write(
-      `\nAlso ${broken.length} test(s) failed every repetition — consistently broken rather ` +
-        'than flaky:\n\n'
-    );
-    for (const finding of broken) {
-      process.stdout.write(`- ${describeFinding(finding)}\n`);
-    }
-  }
+  printList(`Detected ${flaky.length} flaky test(s):`, flaky.map(describeFinding));
+  printList(
+    `\nAlso ${broken.length} test(s) failed every repetition — consistently broken rather ` +
+      'than flaky:',
+    broken.map(describeFinding)
+  );
+  printList(
+    `\nAlso ${belowThreshold.length} test(s) failed on fewer repetitions than the flake ` +
+      `threshold (${threshold}) — a one-off blip or a low-rate flake, so this census is ` +
+      'not clean:',
+    belowThreshold.map(describeFinding)
+  );
 }
 
-/**
- * Grade a census and print it. A report in which no test executed measured nothing, and
- * a run-level error means part of the suite was never measured: neither may read as clean,
- * because a clean verdict closes the tracking issue.
- */
-function gradeCensus(reports: readonly PlaywrightJsonReport[], dir: string): CensusVerdict {
-  const executed = countExecutedTests(reports);
-  const runErrors = collectRunErrors(reports);
-  const findings = [
-    ...findRetryPasses(reports),
-    ...findBurnInFailures(reports, resolveThreshold()),
-  ];
-
+/** Print the reason a census could not measure the whole suite. */
+function reportUnmeasured(executed: number, incomplete: number, dir: string): void {
   if (executed === 0) {
     process.stdout.write(
       `No test executed in the Playwright report(s) under "${dir}", so this census measured ` +
         'nothing. The burn-in run probably failed before any spec ran; see the job log.\n'
     );
-  } else {
+    return;
+  }
+  process.stdout.write(
+    `\nThe run stopped before ${incomplete} test run(s) finished — interrupted, or never ` +
+      'started — so this census did not measure the whole suite. The burn-in run probably ' +
+      'timed out or was cancelled; see the job log.\n'
+  );
+}
+
+/**
+ * Grade a census and print it. A report in which no test executed measured nothing, a run
+ * cut short measured only part of the suite, and a run-level error means part of the suite
+ * was never measured: none may read as clean, because a clean verdict closes the tracking
+ * issue.
+ */
+function gradeCensus(reports: readonly PlaywrightJsonReport[], dir: string): CensusVerdict {
+  const threshold = resolveThreshold();
+  const executed = countExecutedTests(reports);
+  const incomplete = countIncompleteTests(reports);
+  const runErrors = collectRunErrors(reports);
+  const groups = groupCensusFindings(
+    findRetryPasses(reports),
+    findBurnInFailures(reports, 1),
+    threshold
+  );
+
+  if (executed > 0) {
     process.stdout.write(`Executed ${executed} test run(s).\n`);
-    census(findings);
+    census(groups, threshold);
   }
-
-  if (runErrors.length > 0) {
-    process.stdout.write(
-      `\nThe run reported ${runErrors.length} run-level error(s), so part of the suite may ` +
-        'not have been measured:\n\n'
-    );
-    for (const message of runErrors) {
-      process.stdout.write(`- ${message}\n`);
-    }
+  if (executed === 0 || incomplete > 0) {
+    reportUnmeasured(executed, incomplete, dir);
   }
+  printList(
+    `\nThe run reported ${runErrors.length} run-level error(s), so part of the suite may ` +
+      'not have been measured:',
+    runErrors
+  );
 
-  return classifyCensus(executed, findings, runErrors);
+  return classifyCensus({ executed, incomplete, groups, runErrors });
 }
 
 function main(): void {

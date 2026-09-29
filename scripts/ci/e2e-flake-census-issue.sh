@@ -10,13 +10,16 @@
 # tests/bats/e2e_flake_census.bats against a stubbed `gh`.
 #
 # Verdicts (the one line in CENSUS_VERDICT_FILE):
-#   clean       at least one test executed, nothing flaky, broken or errored --
-#               close the open tracker with a comment linking the run
-#   findings    flaky or consistently failing tests, or a run-level error --
-#               file the tracker, or comment on the open one
-#   unmeasured  no report, or no test executed -- file/refresh the tracker AND
-#               exit 1, so a census that measured nothing is a red run and can
-#               never be mistaken for a clean one
+#   clean       at least one test executed, every test finished, and no
+#               repetition failed, flaked or errored -- close the open tracker
+#               with a comment linking the run
+#   findings    flaky or consistently failing tests, a failure below the flake
+#               threshold, or a run-level error -- file the tracker, or comment
+#               on the open one
+#   unmeasured  no report, no test executed, or a run cut short before every
+#               test finished -- file/refresh the tracker AND exit 1, so a census
+#               that did not measure the suite is a red run and can never be
+#               mistaken for a clean one
 # A missing or empty verdict file reads as `unmeasured`: the checker that writes
 # it failed, which is a failed measurement, not a clean one.
 #
@@ -141,9 +144,9 @@ case "$verdict" in
     ;;
   unmeasured)
     file_or_refresh "$(printf '%s\n\n%s\n\n%s\n' \
-      '**This census measured nothing. It is not a clean result, so the tracker stays open.**' \
+      '**This census did not measure the suite. It is not a clean result, so the tracker stays open.**' \
       "$(census_markdown)" "$footer")"
-    echo "::error::The e2e flake census measured nothing (no report, or no test executed); see ${RUN_URL}"
+    echo "::error::The e2e flake census did not measure the suite (no report, no test executed, or a run cut short); see ${RUN_URL}"
     exit 1
     ;;
 esac

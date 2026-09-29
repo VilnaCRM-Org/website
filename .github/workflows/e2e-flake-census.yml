@@ -19,10 +19,11 @@ jobs:
     # pre-existing flake backlog is measured and tracked instead of silently absorbed by
     # `retries: 2`. Findings go to ONE `e2e-flake` tracker and the run stays green — a red
     # census would page somebody nightly for debt that is already known. A clean census closes
-    # the tracker (#445). A census that measured nothing is the one red outcome: it is a
-    # broken measurement, not debt, and must never read as clean. The tracker is the alert
-    # surface, so this workflow is deliberately not in ci-health-alerts.yml, which would file
-    # a second, differently-titled issue for the same run.
+    # the tracker (#445). A census that did not measure the suite (no report, no test
+    # executed, or a run cut short) is the one red outcome: it is a broken measurement, not
+    # debt, and must never read as clean. The tracker is the alert surface, so this workflow
+    # is deliberately not in ci-health-alerts.yml, which would file a second,
+    # differently-titled issue for the same run.
     name: nightly flake census
     runs-on: ubuntu-latest
     timeout-minutes: 90

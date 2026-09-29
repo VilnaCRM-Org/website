@@ -24,6 +24,7 @@ export interface ReportResult {
 export interface ReportTest {
   projectName?: string;
   status?: string;
+  expectedStatus?: string;
   results?: ReportResult[];
 }
 
@@ -198,12 +199,15 @@ export function describeFinding(finding: FlakeFinding): string {
 /**
  * What a census run established, which decides what happens to the tracking issue (#445):
  *
- * - **clean** — at least one test executed, nothing was flaky or broken, and the run
- *   reported no run-level error. Only this verdict may close the tracker.
- * - **findings** — flaky or consistently failing tests, or a run-level error that means
- *   part of the suite was never measured. The tracker is filed or refreshed.
- * - **unmeasured** — no report, or reports in which no test executed. That is a failed
- *   measurement, never a clean one: the tracker stays open and the census run goes red.
+ * - **clean** — at least one test executed, every test ran to completion, no repetition of
+ *   any test failed, and the run reported no run-level error. Only this verdict may close
+ *   the tracker.
+ * - **findings** — flaky or consistently failing tests, a failure below the flake threshold,
+ *   or a run-level error that means part of the suite was never measured. The tracker is
+ *   filed or refreshed.
+ * - **unmeasured** — no report, reports in which no test executed, or a run cut short
+ *   before every test finished. That is a failed measurement, never a clean one: the tracker
+ *   stays open and the census run goes red.
  */
 export type CensusVerdict = 'clean' | 'findings' | 'unmeasured';
 
@@ -221,6 +225,32 @@ export function countExecutedTests(reports: readonly PlaywrightJsonReport[]): nu
   return executed;
 }
 
+/**
+ * Whether the run stopped before it finished measuring a test: an attempt Playwright cut
+ * short (`interrupted`, which a step timeout's SIGINT leaves behind), or a test that was due
+ * to run and has no attempt at all. Playwright grades both `skipped`, so the test status
+ * alone cannot tell a partial run from a complete one. A test skipped on purpose carries
+ * `expectedStatus: 'skipped'` and a `skipped` attempt, so it is never counted.
+ */
+export function isIncomplete(test: ReportTest): boolean {
+  const results = test.results ?? [];
+  if (results.length === 0) {
+    return test.expectedStatus !== 'skipped';
+  }
+  return results.some(result => result.status === 'interrupted');
+}
+
+/** How many tests (per project and repetition) the run never finished measuring. */
+export function countIncompleteTests(reports: readonly PlaywrightJsonReport[]): number {
+  let incomplete = 0;
+  for (const report of reports) {
+    for (const spec of flattenSpecs(report)) {
+      incomplete += spec.tests.filter(isIncomplete).length;
+    }
+  }
+  return incomplete;
+}
+
 /** The first non-blank line of every run-level error, so a stack cannot flood the issue. */
 export function collectRunErrors(reports: readonly PlaywrightJsonReport[]): string[] {
   return reports.flatMap(report =>
@@ -234,14 +264,46 @@ export function collectRunErrors(reports: readonly PlaywrightJsonReport[]): stri
   );
 }
 
+/** A census's findings, sorted by what they say about the test. */
+export interface CensusGroups {
+  flaky: FlakeFinding[];
+  broken: FlakeFinding[];
+  belowThreshold: FlakeFinding[];
+}
+
+/**
+ * Sort a census's findings for the tracking issue. `burnIn` must hold every test that failed
+ * at least once, i.e. {@link findBurnInFailures} at threshold 1: the PR burn-in tolerates a
+ * single failure so an infrastructure blip does not block unrelated work, but a clean census
+ * closes the tracker, so a failure below `threshold` is listed as such rather than dropped.
+ */
+export function groupCensusFindings(
+  retryPasses: readonly FlakeFinding[],
+  burnIn: readonly FlakeFinding[],
+  threshold: number
+): CensusGroups {
+  const partial = burnIn.filter(finding => finding.failures < finding.runs);
+  return {
+    flaky: [...retryPasses, ...partial.filter(finding => finding.failures >= threshold)],
+    broken: burnIn.filter(finding => finding.failures === finding.runs),
+    belowThreshold: partial.filter(finding => finding.failures < threshold),
+  };
+}
+
+/** Everything a census verdict is decided from. */
+export interface CensusEvidence {
+  executed: number;
+  incomplete: number;
+  groups: CensusGroups;
+  runErrors: readonly string[];
+}
+
 /** Classify a census; see {@link CensusVerdict} for what each outcome drives. */
-export function classifyCensus(
-  executed: number,
-  findings: readonly FlakeFinding[],
-  runErrors: readonly string[]
-): CensusVerdict {
-  if (executed === 0) {
+export function classifyCensus(evidence: CensusEvidence): CensusVerdict {
+  const { executed, incomplete, groups, runErrors } = evidence;
+  if (executed === 0 || incomplete > 0) {
     return 'unmeasured';
   }
-  return findings.length > 0 || runErrors.length > 0 ? 'findings' : 'clean';
+  const findings = groups.flaky.length + groups.broken.length + groups.belowThreshold.length;
+  return findings > 0 || runErrors.length > 0 ? 'findings' : 'clean';
 }

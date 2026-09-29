@@ -2,12 +2,16 @@ import {
   classifyCensus,
   collectRunErrors,
   countExecutedTests,
+  countIncompleteTests,
   describeFinding,
   findBurnInFailures,
   findRetryPasses,
   flattenSpecs,
+  groupCensusFindings,
   isChanged,
   isFailure,
+  isIncomplete,
+  type CensusGroups,
   normalizePath,
   partitionByChanged,
   type PlaywrightJsonReport,
@@ -305,6 +309,8 @@ describe('e2e flake gate report parsing', () => {
 
   describe('census verdict', () => {
     const finding = { file: 'a.spec.ts', title: 'races', project: 'webkit', failures: 2, runs: 5 };
+    const none: CensusGroups = { flaky: [], broken: [], belowThreshold: [] };
+    const evidence = { executed: 3, incomplete: 0, groups: none, runErrors: [] };
 
     it('counts only tests that ran, never a skipped one or one with no status', () => {
       const tests: ReportTest[] = [
@@ -319,7 +325,7 @@ describe('e2e flake gate report parsing', () => {
       expect(countExecutedTests([])).toBe(0);
     });
 
-    it('keeps the first non-blank line of each run-level error and names a message-less one', () => {
+    it('keeps the first non-blank line of each run-level error, naming a blank one', () => {
       const reports: PlaywrightJsonReport[] = [
         { errors: [{ message: '  Error: cannot load b.spec.ts\n    at load (b.spec.ts:1)' }] },
         { errors: [{}, { message: '\n' }, { message: '\n  TimeoutError: webServer\n' }] },
@@ -334,19 +340,89 @@ describe('e2e flake gate report parsing', () => {
       ]);
     });
 
-    it('is clean only when tests ran with no finding and no run-level error', () => {
-      expect(classifyCensus(3, [], [])).toBe('clean');
+    it('treats an interrupted attempt or a test that never started as incomplete', () => {
+      expect(isIncomplete({ status: 'skipped', results: [{ status: 'interrupted' }] })).toBe(true);
+      expect(
+        isIncomplete({
+          status: 'skipped',
+          results: [{ status: 'passed' }, { status: 'interrupted' }],
+        })
+      ).toBe(true);
+      expect(isIncomplete({ status: 'skipped', expectedStatus: 'passed', results: [] })).toBe(true);
+      expect(isIncomplete({ status: 'skipped' })).toBe(true);
     });
 
-    it('reports findings for a flake, a broken test or a run-level error', () => {
-      expect(classifyCensus(3, [finding], [])).toBe('findings');
-      expect(classifyCensus(3, [{ ...finding, failures: 5 }], [])).toBe('findings');
-      expect(classifyCensus(3, [], ['Error: cannot load b.spec.ts'])).toBe('findings');
+    it('never treats a finished test or a deliberately skipped one as incomplete', () => {
+      expect(isIncomplete({ status: 'expected', results: [{ status: 'passed' }] })).toBe(false);
+      expect(isIncomplete({ status: 'unexpected', results: [{ status: 'timedOut' }] })).toBe(false);
+      expect(
+        isIncomplete({
+          status: 'skipped',
+          expectedStatus: 'skipped',
+          results: [{ status: 'skipped' }],
+        })
+      ).toBe(false);
+      expect(isIncomplete({ status: 'skipped', expectedStatus: 'skipped', results: [] })).toBe(
+        false
+      );
     });
 
-    it('never calls a census that executed no test clean, whatever else it saw', () => {
-      expect(classifyCensus(0, [], [])).toBe('unmeasured');
-      expect(classifyCensus(0, [finding], ['boom'])).toBe('unmeasured');
+    it('counts the incomplete tests across every report', () => {
+      const tests: ReportTest[] = [
+        { status: 'expected', results: [{ status: 'passed' }] },
+        { status: 'skipped', results: [{ status: 'interrupted' }] },
+        { status: 'skipped', expectedStatus: 'passed', results: [] },
+      ];
+
+      expect(countIncompleteTests([report('a.spec.ts', 'a', tests), {}])).toBe(2);
+      expect(countIncompleteTests([])).toBe(0);
+    });
+
+    it('lists a failure below the threshold on its own, never dropping it', () => {
+      const retry = { ...finding, failures: 1, runs: 2 };
+      const flaky = { ...finding, title: 'flaky' };
+      const broken = { ...finding, title: 'broken', failures: 3, runs: 3 };
+      const low = { ...finding, title: 'low', failures: 1, runs: 3 };
+
+      expect(groupCensusFindings([retry], [flaky, broken, low], 2)).toEqual({
+        flaky: [retry, flaky],
+        broken: [broken],
+        belowThreshold: [low],
+      });
+      expect(groupCensusFindings([], [low], 1)).toEqual({
+        flaky: [low],
+        broken: [],
+        belowThreshold: [],
+      });
+    });
+
+    it('is clean only when every test finished with no finding and no run-level error', () => {
+      expect(classifyCensus(evidence)).toBe('clean');
+    });
+
+    it('reports findings for a flake, a broken test, a sub-threshold failure or an error', () => {
+      const withGroup = (groups: Partial<CensusGroups>) => ({
+        ...evidence,
+        groups: { ...none, ...groups },
+      });
+
+      expect(classifyCensus(withGroup({ flaky: [finding] }))).toBe('findings');
+      expect(classifyCensus(withGroup({ broken: [{ ...finding, failures: 5 }] }))).toBe('findings');
+      expect(classifyCensus(withGroup({ belowThreshold: [{ ...finding, failures: 1 }] }))).toBe(
+        'findings'
+      );
+      expect(classifyCensus({ ...evidence, runErrors: ['Error: cannot load b.spec.ts'] })).toBe(
+        'findings'
+      );
+    });
+
+    it('never calls a census that executed no test or was cut short clean', () => {
+      const everything = { groups: { ...none, flaky: [finding] }, runErrors: ['boom'] };
+
+      expect(classifyCensus({ ...evidence, executed: 0 })).toBe('unmeasured');
+      expect(classifyCensus({ ...evidence, executed: 0, ...everything })).toBe('unmeasured');
+      expect(classifyCensus({ ...evidence, incomplete: 1 })).toBe('unmeasured');
+      expect(classifyCensus({ ...evidence, incomplete: 1, ...everything })).toBe('unmeasured');
     });
   });
 });

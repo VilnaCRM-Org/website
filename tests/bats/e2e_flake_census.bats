@@ -55,17 +55,22 @@ refute_any_write() {
   refute_log_contains 'label create'
 }
 
-# One spec in one project, repeated with the given per-repetition outcomes
-# (pass | fail | skip), in Playwright's JSON reporter shape.
+# One spec in one project, repeated with the given per-repetition outcomes, in
+# Playwright's JSON reporter shape: pass | fail | skip (test.skip) | interrupt (cut
+# short by a SIGINT) | unstarted (the run stopped before reaching it). The last
+# two are what a step timeout leaves, and Playwright grades both `skipped`.
 write_report() {
-  local outcomes=("$@") tests='' outcome status
+  local outcomes=("$@") tests='' outcome status expected results
   for outcome in "${outcomes[@]}"; do
+    expected='passed'
     case "$outcome" in
-      pass) status='expected' ;;
-      fail) status='unexpected' ;;
-      skip) status='skipped' ;;
+      pass) status='expected' results='[{"status":"passed"}]' ;;
+      fail) status='unexpected' results='[{"status":"failed"}]' ;;
+      skip) status='skipped' expected='skipped' results='[{"status":"skipped"}]' ;;
+      interrupt) status='skipped' results='[{"status":"interrupted"}]' ;;
+      unstarted) status='skipped' results='[]' ;;
     esac
-    tests+="{\"projectName\":\"chromium\",\"status\":\"$status\",\"results\":[]},"
+    tests+="{\"projectName\":\"chromium\",\"expectedStatus\":\"$expected\",\"status\":\"$status\",\"results\":$results},"
   done
   mkdir -p "$WORK/burn-in-results"
   printf '{"suites":[{"file":"src/test/e2e/a.spec.ts","specs":[{"title":"loads","tests":[%s]}]}]}\n' \
@@ -164,6 +169,20 @@ setup() {
   refute_log_contains 'issue close'
 }
 
+@test "a single failed repetition below the flake threshold never closes the tracker" {
+  write_report pass fail pass
+  run_census
+  [ "$(cat "$WORK/census-verdict.txt")" = 'findings' ]
+  grep -F 'fewer repetitions than the flake threshold (2)' "$WORK/census.md"
+  grep -F -- '- src/test/e2e/a.spec.ts › loads [chromium] — 1/3 attempt(s) failed' "$WORK/census.md"
+
+  run_tracker FAKE_ISSUE_LIST="$OPEN_TRACKER"
+
+  [ "$status" -eq 0 ]
+  assert_log_contains 'issue comment 445'
+  refute_log_contains 'issue close'
+}
+
 @test "a test that failed every repetition is a finding, never a clean census" {
   write_report fail fail fail
   run_census
@@ -174,7 +193,7 @@ setup() {
 
 @test "a run-level error keeps an otherwise green census from reading as clean" {
   mkdir -p "$WORK/burn-in-results"
-  printf '%s\n' '{"errors":[{"message":"Error: cannot load b.spec.ts\n    at x"}],"suites":[{"file":"a.spec.ts","specs":[{"title":"t","tests":[{"status":"expected"}]}]}]}' \
+  printf '%s\n' '{"errors":[{"message":"Error: cannot load b.spec.ts\n    at x"}],"suites":[{"file":"a.spec.ts","specs":[{"title":"t","tests":[{"status":"expected","results":[{"status":"passed"}]}]}]}]}' \
     >"$WORK/burn-in-results/results.json"
   run_census
 
@@ -190,9 +209,30 @@ setup() {
   run_tracker FAKE_ISSUE_LIST="$OPEN_TRACKER"
 
   [ "$status" -eq 1 ]
-  assert_output_contains '::error::The e2e flake census measured nothing'
-  assert_log_contains 'issue comment 445 --body **This census measured nothing.'
+  assert_output_contains '::error::The e2e flake census did not measure the suite'
+  assert_log_contains 'issue comment 445 --body **This census did not measure the suite.'
   refute_log_contains 'issue close'
+}
+
+@test "a burn-in cut short after some tests passed keeps the tracker open and fails the run" {
+  write_report pass interrupt unstarted
+  run_census
+  [ "$(cat "$WORK/census-verdict.txt")" = 'unmeasured' ]
+  grep -F 'The run stopped before 2 test run(s) finished' "$WORK/census.md"
+
+  run_tracker FAKE_ISSUE_LIST="$OPEN_TRACKER"
+
+  [ "$status" -eq 1 ]
+  assert_output_contains '::error::The e2e flake census did not measure the suite'
+  assert_log_contains 'issue comment 445'
+  refute_log_contains 'issue close'
+}
+
+@test "a deliberately skipped test does not stop a finished census reading as clean" {
+  write_report pass skip pass
+  run_census
+
+  [ "$(cat "$WORK/census-verdict.txt")" = 'clean' ]
 }
 
 @test "a report in which every test was skipped measured nothing" {
