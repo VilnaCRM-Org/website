@@ -196,7 +196,12 @@ Two suites that used to run without asserting anything now fail closed:
   `e2e flake gate` job fails when a spec **the PR changed** passed on a retry, and the
   `burn in changed e2e specs` job re-runs those specs with `--repeat-each=5 --retries=0`
   and fails at two or more failures. Flakes in untouched specs are annotated, not blocked,
-  and the nightly `e2e flake census` tracks them in a labelled issue.
+  and the nightly `e2e flake census` tracks them in one `e2e-flake` issue through
+  `scripts/ci/e2e-flake-census-issue.sh` (issue #445): findings file or refresh it, a clean
+  census — at least one test executed, nothing flaky, broken or errored — closes it, and a
+  census that measured nothing (no report, or no test executed) keeps it open **and** fails
+  the run, so a broken burn-in can never read as clean. `tests/bats/e2e_flake_census.bats`
+  drives all three outcomes through the real checker.
 - **Memory leaks.** `src/test/memory-leak/runMemlabTests.js` reads the leak clusters memlab
   returns and exits non-zero for any cluster not recorded in
   `src/test/memory-leak/leak-baseline.json`. Every baseline entry needs a reason, a

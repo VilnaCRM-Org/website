@@ -1,4 +1,7 @@
 import {
+  classifyCensus,
+  collectRunErrors,
+  countExecutedTests,
   describeFinding,
   findBurnInFailures,
   findRetryPasses,
@@ -297,6 +300,53 @@ describe('e2e flake gate report parsing', () => {
           runs: 5,
         })
       ).toBe('a.spec.ts › races [webkit] — 2/5 attempt(s) failed');
+    });
+  });
+
+  describe('census verdict', () => {
+    const finding = { file: 'a.spec.ts', title: 'races', project: 'webkit', failures: 2, runs: 5 };
+
+    it('counts only tests that ran, never a skipped one or one with no status', () => {
+      const tests: ReportTest[] = [
+        { status: 'expected' },
+        { status: 'unexpected' },
+        { status: 'flaky' },
+        { status: 'skipped' },
+        {},
+      ];
+
+      expect(countExecutedTests([report('a.spec.ts', 'a', tests), {}])).toBe(3);
+      expect(countExecutedTests([])).toBe(0);
+    });
+
+    it('keeps the first non-blank line of each run-level error and names a message-less one', () => {
+      const reports: PlaywrightJsonReport[] = [
+        { errors: [{ message: '  Error: cannot load b.spec.ts\n    at load (b.spec.ts:1)' }] },
+        { errors: [{}, { message: '\n' }, { message: '\n  TimeoutError: webServer\n' }] },
+        {},
+      ];
+
+      expect(collectRunErrors(reports)).toEqual([
+        'Error: cannot load b.spec.ts',
+        '(no message)',
+        '(no message)',
+        'TimeoutError: webServer',
+      ]);
+    });
+
+    it('is clean only when tests ran with no finding and no run-level error', () => {
+      expect(classifyCensus(3, [], [])).toBe('clean');
+    });
+
+    it('reports findings for a flake, a broken test or a run-level error', () => {
+      expect(classifyCensus(3, [finding], [])).toBe('findings');
+      expect(classifyCensus(3, [{ ...finding, failures: 5 }], [])).toBe('findings');
+      expect(classifyCensus(3, [], ['Error: cannot load b.spec.ts'])).toBe('findings');
+    });
+
+    it('never calls a census that executed no test clean, whatever else it saw', () => {
+      expect(classifyCensus(0, [], [])).toBe('unmeasured');
+      expect(classifyCensus(0, [finding], ['boom'])).toBe('unmeasured');
     });
   });
 });

@@ -340,6 +340,18 @@ STUB
   run_make_target check-e2e-flakes
   [ "$status" -eq 0 ]
   assert_log_contains 'bun scripts/ci/check-flaky-report.ts'
+
+  # The census tracker step reads the verdict this path records (#445), so pin that the
+  # target delivers it to the checker; the generic stub logs argv only, hence the env probe.
+  cat >"$STUB_BIN_DIR/bun" <<'STUB'
+#!/usr/bin/env bash
+printf 'bun %s mode=%s verdict=%s\n' "$*" "$FLAKE_MODE" "$FLAKE_CENSUS_VERDICT_FILE" >>"${COMMAND_LOG:?}"
+STUB
+  chmod +x "$STUB_BIN_DIR/bun"
+  reset_command_log
+  run_make_target check-e2e-flakes FLAKE_MODE=census FLAKE_CENSUS_VERDICT_FILE=census-verdict.txt
+  [ "$status" -eq 0 ]
+  assert_log_contains 'bun scripts/ci/check-flaky-report.ts mode=census verdict=census-verdict.txt'
 }
 
 @test "maintenance targets shell out through Docker and Bun as expected" {

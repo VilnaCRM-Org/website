@@ -24,7 +24,8 @@ surface. Subscribe to them, or to the repository's issues, to be told about anyt
 - `ci-canary` — `docker-build-canary.yml`. The nightly Docker build canary is red,
   usually because an Alpine package pin rotated.
 - `e2e-flake` — `e2e-flake-census.yml`. Nightly census of e2e specs that pass only on a
-  retry.
+  retry. Closed automatically by the next clean census; a census that measured nothing
+  keeps it open and turns the run red.
 - `dependency-cve` — `osv-scanner.yml`. Nightly census of the dependency CVE backlog.
 - `mutation-backlog` — `mutation-testing.yml`. Nightly full mutation census.
 - `api-contract` — `openapi-drift.yml`. Breaking upstream OpenAPI or GraphQL drift

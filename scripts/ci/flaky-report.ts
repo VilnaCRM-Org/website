@@ -41,9 +41,15 @@ export interface ReportSuite {
   suites?: ReportSuite[];
 }
 
+/** A run-level error: a spec file that failed to load, a global setup or web server failure. */
+export interface ReportError {
+  message?: string;
+}
+
 /** The subset of Playwright's JSON report schema this gate reads. */
 export interface PlaywrightJsonReport {
   suites?: ReportSuite[];
+  errors?: ReportError[];
 }
 
 /** A spec flattened out of the suite tree, with its file path resolved. */
@@ -187,4 +193,55 @@ export function partitionByChanged(
 export function describeFinding(finding: FlakeFinding): string {
   const attempts = `${finding.failures}/${finding.runs} attempt(s) failed`;
   return `${finding.file} › ${finding.title} [${finding.project}] — ${attempts}`;
+}
+
+/**
+ * What a census run established, which decides what happens to the tracking issue (#445):
+ *
+ * - **clean** — at least one test executed, nothing was flaky or broken, and the run
+ *   reported no run-level error. Only this verdict may close the tracker.
+ * - **findings** — flaky or consistently failing tests, or a run-level error that means
+ *   part of the suite was never measured. The tracker is filed or refreshed.
+ * - **unmeasured** — no report, or reports in which no test executed. That is a failed
+ *   measurement, never a clean one: the tracker stays open and the census run goes red.
+ */
+export type CensusVerdict = 'clean' | 'findings' | 'unmeasured';
+
+/** Playwright's per-test outcomes for a test that actually ran; `skipped` did not. */
+const EXECUTED_STATUSES: ReadonlySet<string> = new Set(['expected', 'unexpected', 'flaky']);
+
+/** How many tests (per project and repetition) actually executed across the reports. */
+export function countExecutedTests(reports: readonly PlaywrightJsonReport[]): number {
+  let executed = 0;
+  for (const report of reports) {
+    for (const spec of flattenSpecs(report)) {
+      executed += spec.tests.filter(test => EXECUTED_STATUSES.has(test.status ?? '')).length;
+    }
+  }
+  return executed;
+}
+
+/** The first non-blank line of every run-level error, so a stack cannot flood the issue. */
+export function collectRunErrors(reports: readonly PlaywrightJsonReport[]): string[] {
+  return reports.flatMap(report =>
+    (report.errors ?? []).map(
+      error =>
+        (error.message ?? '')
+          .split('\n')
+          .map(line => line.trim())
+          .find(line => line !== '') ?? '(no message)'
+    )
+  );
+}
+
+/** Classify a census; see {@link CensusVerdict} for what each outcome drives. */
+export function classifyCensus(
+  executed: number,
+  findings: readonly FlakeFinding[],
+  runErrors: readonly string[]
+): CensusVerdict {
+  if (executed === 0) {
+    return 'unmeasured';
+  }
+  return findings.length > 0 || runErrors.length > 0 ? 'findings' : 'clean';
 }

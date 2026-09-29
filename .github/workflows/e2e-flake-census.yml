@@ -17,8 +17,12 @@ jobs:
     # Advisory by design (#359). The blocking legs live in e2e-testing.yml and only cover the
     # specs a pull request changed; this run repeats the WHOLE suite off the PR path so the
     # pre-existing flake backlog is measured and tracked instead of silently absorbed by
-    # `retries: 2`. It records what it finds and stays green — a red census would page
-    # somebody nightly for debt that is already known.
+    # `retries: 2`. Findings go to ONE `e2e-flake` tracker and the run stays green — a red
+    # census would page somebody nightly for debt that is already known. A clean census closes
+    # the tracker (#445). A census that measured nothing is the one red outcome: it is a
+    # broken measurement, not debt, and must never read as clean. The tracker is the alert
+    # surface, so this workflow is deliberately not in ci-health-alerts.yml, which would file
+    # a second, differently-titled issue for the same run.
     name: nightly flake census
     runs-on: ubuntu-latest
     timeout-minutes: 90
@@ -51,39 +55,35 @@ jobs:
 
       - name: Repeat the whole e2e suite with retries off
         continue-on-error: true
+        # Inside the job's 90: a hung burn-in must leave time for the tracker step to report
+        # the census as unmeasured, instead of the job timeout cancelling it silently. Healthy
+        # runs take 35-50 minutes.
+        timeout-minutes: 75
         run: make test-e2e-burnin E2E_BURNIN_REPEATS=3
 
       - name: Summarise the flakes
         id: census
         run: |
           set -euo pipefail
-          # -s so make does not echo the recipe into the captured Markdown.
+          # -s so make does not echo the recipe into the captured Markdown. The verdict
+          # (clean | findings | unmeasured) goes to its own file so the tracker step never
+          # pattern-matches the prose.
           make -s check-e2e-flakes FLAKE_MODE=census FLAKE_REPORT_DIR=burn-in-results \
-            | tee census.md
+            FLAKE_CENSUS_VERDICT_FILE=census-verdict.txt | tee census.md
           cat census.md >> "$GITHUB_STEP_SUMMARY"
 
-      - name: File or refresh the flake-tracking issue
+      - name: File, refresh or close the flake-tracking issue
+        # Also after a failed summary: the script reads a missing verdict as `unmeasured`, so a
+        # checker that crashed still reaches the tracker and still turns the run red.
+        if: ${{ !cancelled() }}
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          # Idempotent: also provisioned as repo metadata, but a missing label must not
-          # fail the census.
-          gh label create e2e-flake --color FBCA04 \
-            --description "Nightly e2e flake census findings" 2>/dev/null || true
-          title='e2e flake census'
-          run_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-          body="$(printf '%s\n\n%s\n' "$(cat census.md)" "Census run: $run_url")"
-          # `.[0].number` over an empty array prints the literal string "null", which would
-          # pass the -n test and run `gh issue comment null`, so the tracking issue would
-          # never be created on the first census. `first(...) // empty` yields nothing.
-          existing="$(gh issue list --label e2e-flake --state open \
-            --search "$title in:title" --json number --jq 'first(.[].number) // empty')"
-          if [ -n "$existing" ]; then
-            gh issue comment "$existing" --body "$body"
-          else
-            gh issue create --label e2e-flake --title "$title" --body "$body"
-          fi
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          # A dispatch from a branch measured that branch, not main: it reports what it would
+          # do and writes nothing, so it can never close main's tracker.
+          CENSUS_DRY_RUN: ${{ github.ref == 'refs/heads/main' && '0' || '1' }}
+        run: bash scripts/ci/e2e-flake-census-issue.sh
 
       - name: Upload census report
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -93,5 +93,7 @@ jobs:
           path: |
             playwright-report/
             burn-in-results/results.json
+            census.md
+            census-verdict.txt
           retention-days: 14
           if-no-files-found: ignore

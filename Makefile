@@ -139,6 +139,9 @@ FLAKE_MODE                  ?= retry-pass
 FLAKE_REPORT_DIR            ?= test-results
 FLAKE_CHANGED_SPECS         ?=
 FLAKE_THRESHOLD             ?= 2
+# Census only: where to record the clean | findings | unmeasured verdict the tracker step
+# reads (#445). Empty writes nothing.
+FLAKE_CENSUS_VERDICT_FILE   ?=
 # Bun executes .ts directly (issue #397); no tsx/ts-node transpiler runner.
 CHECK_FLAKY_REPORT_CMD      = bun scripts/ci/check-flaky-report.ts
 
@@ -947,9 +950,10 @@ test-e2e-shard: start-prod ## Start production and run one E2E shard (E2E_SHARD_
 test-e2e-burnin: start-prod ## Re-run E2E_BURNIN_SPECS E2E_BURNIN_REPEATS times with retries off to expose flaky specs (#359)
 	$(run-e2e-burnin)
 
-check-e2e-flakes: ## Grade a Playwright JSON report for flakes, host-only (FLAKE_MODE=retry-pass|burn-in|census, FLAKE_CHANGED_SPECS=<specs>)
+check-e2e-flakes: ## Grade a Playwright JSON report for flakes, host-only (FLAKE_MODE=retry-pass|burn-in|census, FLAKE_CHANGED_SPECS=<specs>, FLAKE_CENSUS_VERDICT_FILE=<path>)
 	FLAKE_MODE="$(FLAKE_MODE)" FLAKE_REPORT_DIR="$(FLAKE_REPORT_DIR)" \
 	FLAKE_CHANGED_SPECS="$(FLAKE_CHANGED_SPECS)" FLAKE_THRESHOLD="$(FLAKE_THRESHOLD)" \
+	FLAKE_CENSUS_VERDICT_FILE="$(FLAKE_CENSUS_VERDICT_FILE)" \
 	$(CHECK_FLAKY_REPORT_CMD)
 
 test-e2e-ui: start-prod ## Start the production environment and run E2E tests with the UI available at $(UI_MODE_URL)

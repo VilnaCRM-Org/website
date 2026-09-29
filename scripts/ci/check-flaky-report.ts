@@ -1,11 +1,15 @@
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 
 import {
+  classifyCensus,
+  collectRunErrors,
+  countExecutedTests,
   describeFinding,
   findBurnInFailures,
   findRetryPasses,
   partitionByChanged,
+  type CensusVerdict,
   type FlakeFinding,
   type PlaywrightJsonReport,
 } from './flaky-report';
@@ -24,13 +28,32 @@ const MODES: readonly Mode[] = ['retry-pass', 'burn-in', 'census'];
  * repository so the walk can never be pointed at an arbitrary filesystem path.
  */
 function resolveReportDir(): string {
+  return resolveInsideRepo('FLAKE_REPORT_DIR', process.env.FLAKE_REPORT_DIR ?? 'test-results');
+}
+
+/** Resolve a path setting against the repository root, refusing one that escapes it. */
+function resolveInsideRepo(name: string, value: string): string {
   const root = process.cwd();
-  const dir = resolve(root, process.env.FLAKE_REPORT_DIR ?? 'test-results');
-  const rel = relative(root, dir);
+  const path = resolve(root, value);
+  const rel = relative(root, path);
   if (rel.startsWith('..')) {
-    throw new Error(`FLAKE_REPORT_DIR must stay inside the repository; got "${dir}".`);
+    throw new Error(`${name} must stay inside the repository; got "${path}".`);
   }
-  return dir;
+  return path;
+}
+
+/**
+ * Record the census verdict for the tracking-issue step (#445), when asked to.
+ *
+ * A file rather than the exit code: the exit code already means "the checker itself
+ * failed", and the Markdown on stdout is prose for humans that the issue step must never
+ * have to pattern-match.
+ */
+function writeCensusVerdict(verdict: CensusVerdict): void {
+  const target = process.env.FLAKE_CENSUS_VERDICT_FILE ?? '';
+  if (target !== '') {
+    writeFileSync(resolveInsideRepo('FLAKE_CENSUS_VERDICT_FILE', target), `${verdict}\n`);
+  }
 }
 
 /** Collect every `results.json` under `dir`; each shard artifact contributes one. */
@@ -164,6 +187,42 @@ function census(findings: readonly FlakeFinding[]): void {
   }
 }
 
+/**
+ * Grade a census and print it. A report in which no test executed measured nothing, and
+ * a run-level error means part of the suite was never measured: neither may read as clean,
+ * because a clean verdict closes the tracking issue.
+ */
+function gradeCensus(reports: readonly PlaywrightJsonReport[], dir: string): CensusVerdict {
+  const executed = countExecutedTests(reports);
+  const runErrors = collectRunErrors(reports);
+  const findings = [
+    ...findRetryPasses(reports),
+    ...findBurnInFailures(reports, resolveThreshold()),
+  ];
+
+  if (executed === 0) {
+    process.stdout.write(
+      `No test executed in the Playwright report(s) under "${dir}", so this census measured ` +
+        'nothing. The burn-in run probably failed before any spec ran; see the job log.\n'
+    );
+  } else {
+    process.stdout.write(`Executed ${executed} test run(s).\n`);
+    census(findings);
+  }
+
+  if (runErrors.length > 0) {
+    process.stdout.write(
+      `\nThe run reported ${runErrors.length} run-level error(s), so part of the suite may ` +
+        'not have been measured:\n\n'
+    );
+    for (const message of runErrors) {
+      process.stdout.write(`- ${message}\n`);
+    }
+  }
+
+  return classifyCensus(executed, findings, runErrors);
+}
+
 function main(): void {
   const mode = resolveMode();
   const dir = resolveReportDir();
@@ -171,13 +230,15 @@ function main(): void {
 
   if (files.length === 0) {
     // The two blocking modes fail closed: a missing report must never pass a gate vacuously.
-    // The census is a measurement rather than a gate, so it reports the gap and stays green
-    // — otherwise a burn-in that times out would page somebody nightly over missing data.
+    // The census still exits 0 here so its Markdown reaches the tracking issue, but it
+    // records the `unmeasured` verdict: the issue step keeps the tracker open and turns the
+    // run red on it, so a missing report can never read as a clean census (#445).
     if (mode === 'census') {
       process.stdout.write(
         `No Playwright ${REPORT_FILE} found under "${dir}", so this census measured nothing. ` +
           'The burn-in run probably failed or timed out; see the job log.\n'
       );
+      writeCensusVerdict('unmeasured');
       return;
     }
     throw new Error(
@@ -200,7 +261,7 @@ function main(): void {
     return;
   }
 
-  census([...findRetryPasses(reports), ...findBurnInFailures(reports, resolveThreshold())]);
+  writeCensusVerdict(gradeCensus(reports, dir));
 }
 
 try {
