@@ -896,11 +896,14 @@ tiered off, weakened, or removed.
   host toolchain. Each one checks out, runs the `./.github/actions/dev-container` composite
   action — which builds or restores the `base` image through the BuildKit layer cache and
   brings the dev service up idle via `make ci-setup` — and then runs the identical
-  `make <target>` a developer runs. When ECR Public refuses the base image's manifest
+  `make <target>` a developer runs. When ECR Public refuses a base image's manifest
   (its anonymous quota is per source IP, and the shared runner pool exhausts it), the
   composite fetches the same digest from `mirror.gcr.io` through a BuildKit named
-  context (`scripts/ci/base-image-source.sh`, ADR 0014); the Dockerfiles stay on ECR and
-  the script refuses any base ref it cannot mirror by digest. No `~/.bun/install/cache` restore and no host
+  context (`scripts/ci/ecr-mirror.sh`, ADR 0014). The prod-stack, `build-out` and
+  Dockerfile-performance jobs get the same fallback by setting `ECR_MIRROR: probe`, which
+  makes the Makefile write Compose overrides and build contexts outside the repository;
+  `ECR_MIRROR` defaults to `off`, so local command lines are unchanged. The Dockerfiles
+  stay on ECR and the script refuses any ECR ref it cannot mirror by digest. No `~/.bun/install/cache` restore and no host
   `bun install` remain in any of them. Six keep `actions/setup-node` — `static-testing`,
   `dependency-cruiser`, `storybook-build` and the `mutation-testing` `shard`, `changed` and
   `census` legs — because their target reaches the host-only `generate-localization`; that

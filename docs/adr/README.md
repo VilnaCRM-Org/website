@@ -43,7 +43,7 @@ justified a decision still holds.
 - [ADR 0013](0013-reconcile-stranded-v1-7-0-before-the-bypass.md) — `main` takes the
   stranded `v1.7.0` release commit's version and changelog before the release App's bypass
   lands, and a refused release push names the missing bypass. _Accepted._
-- [ADR 0014](0014-digest-pinned-base-image-mirror.md) — when ECR Public refuses the base
+- [ADR 0014](0014-digest-pinned-base-image-mirror.md) — when ECR Public refuses a base
   image in CI, the build fetches the same digest from `mirror.gcr.io`; the Dockerfiles
   stay on ECR. _Accepted._
 
