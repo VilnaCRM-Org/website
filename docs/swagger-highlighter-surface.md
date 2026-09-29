@@ -45,9 +45,11 @@ the `js` alias). There is no `Prism.languages` and no `refractor` package code; 
 `@swagger-api/apidom-parser-adapter-*` packages that swagger-client's OpenAPI 3.1 resolver
 pulls in), an unrelated function that happens to share the name.
 
-Two other packages the census names ship in the same lazy chunks and matter more than the
-highlighter: `dompurify@3.4.7` (its `.version` string is in the export) and
-`immutable@3.8.3` (nested under `swagger-ui-react` in `bun.lock`). See the follow-ups.
+Two other packages the census named ship in the same lazy chunks and matter more than the
+highlighter: `dompurify` (its `.version` string is in the export) and the `immutable` 3.x
+nested under `swagger-ui-react` in `bun.lock`. Both were moved inside `swagger-ui-react`'s
+own ranges by issue #501 (`dompurify` 3.4.7 → 3.4.13, `immutable` 3.8.3 → 3.8.4); see
+follow-up 6.
 
 ## Status of the engine
 
@@ -123,16 +125,20 @@ so belongs in its own reviewed change, after the open dependency pull requests l
 
 1. **Bump `swagger-ui-react` in range, 5.32.6 → `^5.33.0`.** The newest release, 5.33.0,
    declares `js-yaml =4.3.2`, `swagger-client ^3.38.2` (which declares `js-yaml ^4.3.2`),
-   `immutable ^5.1.9` and `dompurify ^3.4.13`. That is where the census entries that ship
-   in the public `/swagger` bundle go away: `immutable@3.8.3` carries GHSA-v56q-mh7h-f735
-   (fixed in 4.3.9 / 5.1.8), `dompurify@3.4.7` carries GHSA-55q2-fjhq-7xh7 (fixed in
-   3.4.13), and the two nested `js-yaml@4.1.1` copies carry GHSA-2883-xcg3-v3hh,
-   GHSA-52cp-r559-cp3m, GHSA-5p4m-2wfm-xmqj and GHSA-h67p-54hq-rp68 (all clear at 4.3.2).
-   Both consumers then share the hoisted `js-yaml@4.3.2`. Stop short of 5.33.0 and the
+   `immutable ^5.1.9` and `dompurify ^3.4.13`. The `dompurify` and `immutable` census
+   entries it would have cleared are already gone (follow-up 6), so what is left for this
+   bump is the two nested `js-yaml@4.1.1` copies — `swagger-ui-react`'s own exact `=4.1.1`
+   pin and `swagger-client`'s — which carry GHSA-2883-xcg3-v3hh, GHSA-52cp-r559-cp3m,
+   GHSA-5p4m-2wfm-xmqj and GHSA-h67p-54hq-rp68 (all clear at 4.3.2). No lockfile move
+   can reach the first copy, because the pin is exact. Both consumers then share the
+   hoisted `js-yaml@4.3.2`. Stop short of 5.33.0 and the
    `js-yaml` half fails: 5.32.15 pins `=4.3.1`, which nests a third copy beside the
-   hoisted one and still carries GHSA-2883-xcg3-v3hh. Not hermetic — the releases between
-   change the rendered markup, so the swagger visual baselines and the accessibility route
-   scan must be re-run against the prod stack.
+   hoisted one and still carries GHSA-2883-xcg3-v3hh. Not hermetic, and not small: the 112
+   upstream commits between 5.32.6 and 5.33.0 rewrite `operations.jsx`, the models panels
+   and the authorize popup, add operation virtualization and a skip link, and touch
+   `responses.jsx`, which the owned responses-table port is pinned to (see
+   `src/features/swagger/README.md`). Re-diff the port, then re-run the swagger e2e,
+   visual baselines and accessibility route scan against the prod stack.
 2. **Take highlight.js 10 out of the export.** Upstream offers no in-range path (above), so
    the options are a webpack alias that stubs `react-syntax-highlighter/dist/esm/light`
    with `syntaxHighlight` turned off, or a different renderer. Either changes what
@@ -162,15 +168,19 @@ so belongs in its own reviewed change, after the open dependency pull requests l
    class to an empty module, so the package never enters the export:
    - `fast-uri` 3.1.2 → **3.1.6**, via `ajv@8` (Mockoon, Spectral, webpack's
      `schema-utils`): GHSA-4c8g-83qw-93j6, GHSA-7p8r-x3mc-p8w7, GHSA-f65p-4m7j-42xc,
-     GHSA-fph4-wmhf-6fwf, GHSA-jqff-g426-hqxp, GHSA-v2hh-gcrm-f6hx.
+     GHSA-fph4-wmhf-6fwf, GHSA-jqff-g426-hqxp, GHSA-v2hh-gcrm-f6hx. Raised to **3.1.7**
+     by #501 for GHSA-58mr-gqgx-xq4g and GHSA-qw65-cvwx-89v3, published after the pin.
    - `ip-address` 10.2.0 → **10.3.1**, via `socks` (Puppeteer, Lighthouse CI):
-     GHSA-mwp4-54f8-5fhr, GHSA-22jq-vg5j-6vgg, GHSA-4xrf-jv44-h6hh.
+     GHSA-mwp4-54f8-5fhr, GHSA-22jq-vg5j-6vgg, GHSA-4xrf-jv44-h6hh. Raised to **10.5.1**
+     by #501 for GHSA-2vr4-cq9g-pvrc and GHSA-rpw4-54j3-4h4q.
    - `joi` 18.2.1 / 18.2.3 → **18.2.5**, via `@mockoon/commons` and `wait-on`:
      GHSA-6w3j-5fw6-r9vr, GHSA-gg4h-3hg2-grpc.
-   - `smol-toml` 1.5.2 → **1.7.1**, via `markdownlint-cli`: GHSA-7w5x-hrqm-74c2,
-     GHSA-v3rj-xjv7-4jmq.
-   - `markdown-it` 14.1.1 → **14.2.0**, via `markdownlint-cli`: GHSA-6v5v-wf23-fmfq.
-   - `linkify-it` 5.0.1 → **5.0.2**, via `markdown-it`: GHSA-v245-v573-v5vm.
+   - `smol-toml`, `markdown-it` and `linkify-it` (**retired**). They were pinned to
+     1.7.1, 14.2.0 and 5.0.2 for GHSA-7w5x-hrqm-74c2, GHSA-v3rj-xjv7-4jmq,
+     GHSA-6v5v-wf23-fmfq and GHSA-v245-v573-v5vm, because `markdownlint-cli@0.47`
+     declared `~1.5.2` and `~14.1.0`. #501 moved `markdownlint-cli` to 0.49.1, which
+     declares `~1.7.0` and `~14.3.0` (14.3.2 declares `linkify-it ^5.0.2`), so all
+     three entries were dropped in the same change.
    - `postcss-selector-parser` 7.1.1 → **7.1.3**, via `css-loader` (Storybook's
      webpack): GHSA-w9m9-85wc-3x92.
    - `form-data` 4.0.5 → **4.0.6**, via `axios` (`^4.0.5`; `wait-on`, and the Node build
@@ -190,11 +200,7 @@ so belongs in its own reviewed change, after the open dependency pull requests l
      `@mockoon/commons-server`, Stryker's `typed-rest-client` and Storybook's `url`
      polyfill: GHSA-4mjr-xmp4-gh2g, GHSA-q8mj-m7cp-5q26, GHSA-x5fp-wj9c-mxmx.
 
-   `smol-toml` and `markdown-it` step past `markdownlint-cli@0.47`'s tilde ranges
-   (`~1.5.2`, `~14.1.0`) but not its majors; `markdownlint-cli@0.49` itself declares
-   `~1.7.0` and `~14.3.0`, so drop both entries in the change that moves
-   `markdownlint-cli` to 0.49 rather than leaving them as permanent out-of-range pins.
-   `qs` steps past exact and tilde pins the same way: `typed-rest-client@2.3.1` pins
+   `qs` steps past exact and tilde pins: `typed-rest-client@2.3.1` pins
    `6.15.1`, `@mockoon/commons-server@9.7.0` pins `6.15.2` and `express@4.22.2` declares
    `~6.15.1`. Their next releases already sit on 6.16 (`typed-rest-client` 3.x declares
    `^6.16.0`, `@mockoon/commons-server@9.9.0` pins `6.16.0`), so drop the entry once
@@ -239,10 +245,11 @@ so belongs in its own reviewed change, after the open dependency pull requests l
    - `postcss` 8.5.15 → **8.5.23**, the hoisted copy Storybook's webpack uses
      (`@storybook/nextjs` `^8.4.38`, `css-loader` `^8.4.33` / `^8.4.40`,
      `resolve-url-loader`, the `postcss-modules-*` and `icss-utils` peers):
-     GHSA-r28c-9q8g-f849, GHSA-fxqj-rqcc-2cmp. A top-level override would also rewrite
-     the exact `8.4.31` that `next@16.2.6` pins, which the `next` bump owns, so
-     `next/postcss` is untouched. 8.5.23 is not the newest 8.5.x on purpose: it is the
-     version `next@16.3.5` pins, so the two copies collapse into one when that bump lands.
+     GHSA-r28c-9q8g-f849, GHSA-fxqj-rqcc-2cmp. A top-level override would also have
+     rewritten the exact `8.4.31` that `next@16.2.6` pinned, so `next/postcss` was left
+     to the `next` bump. 8.5.23 is not the newest 8.5.x on purpose: it is the version
+     `next@16.3.x` pins, and the two copies did collapse into one when #501 moved `next`
+     to 16.3.6.
      `terser-webpack-plugin` lists `postcss` only as an optional peer with no range, so
      its edge keeps the migrated lockfile's exact-version form (`8.5.23`).
 
@@ -263,18 +270,63 @@ so belongs in its own reviewed change, after the open dependency pull requests l
 
    The 4.x `js-yaml` line moved with the root devDependency (`^4.3.2`, issue #322): the
    hoisted copy is now **4.3.2**, and `@eslint/eslintrc` (`^4.1.1`) and both
-   `cosmiconfig` copies (`^4.1.0`) had their edges widened onto it the same way. Three
-   consumers keep a nested `js-yaml@4.1.1`: `markdownlint-cli@0.47` declares `~4.1.1`,
-   and `swagger-ui-react` (`=4.1.1`) and `swagger-client` stay on the version the
-   `/swagger` bundle has always shipped, because moving shipped code needs the swagger
-   e2e, visual and accessibility runs of item 1. The cost is that the lazy `/swagger`
-   chunk now bundles two identical copies of `js-yaml@4.1.1` (about 13 KB gzipped more)
-   where the hoisted copy used to serve both; item 1's bump collapses them.
+   `cosmiconfig` copies (`^4.1.0`) had their edges widened onto it the same way. Two
+   consumers keep a nested `js-yaml@4.1.1`: `swagger-ui-react` (`=4.1.1`) and
+   `swagger-client` stay on the version the `/swagger` bundle has always shipped, because
+   moving shipped code needs the swagger e2e, visual and accessibility runs of item 1. The
+   cost is that the lazy `/swagger` chunk now bundles two identical copies of
+   `js-yaml@4.1.1` (about 13 KB gzipped more) where the hoisted copy used to serve both;
+   item 1's bump collapses them. The third, under `markdownlint-cli@0.47` (`~4.1.1`), went
+   with the 0.49.1 bump in #501, together with the `minimatch@10.1.3` and
+   `brace-expansion@5.0.6` below it: 0.49.1's `minimatch ~10.2.5` resolved
+   `brace-expansion@5.0.12` on its own, and its `js-yaml ~5.2.1` resolves 5.2.3, past
+   GHSA-pm4m-ph32-ghv5 (5.0.0–5.2.1).
 
-   Lines that stay, each owned by a follow-up: `brace-expansion@5.0.6` under
-   `markdownlint-cli`'s `minimatch@10.1.3` and the `js-yaml@4.1.1` nested under
-   `markdownlint-cli@0.47`, both left for the `markdownlint-cli` 0.49 bump — which must
-   land on 0.49.1 (`js-yaml ~5.2.1`), because 0.49.0's `~4.2.0` still carries three of the
-   four advisories — and the `js-yaml@4.1.1` and `immutable@3.8.3` copies `/swagger` ships
-   (item 1). The 0.49 bump's own lockfile resolves `brace-expansion@5.0.6` again under its
-   `minimatch@10.2.5` copies, so it needs the same treatment when it lands.
+6. **Done: the census burn-down of #501.** Every move below is the lowest release that
+   clears every advisory the census listed against the package unless noted, checked
+   against the GitHub advisory API before landing:
+   - `next` 16.2.6 → **16.3.6**, with `@next/*` and `eslint-config-next` (Dependabot's
+     #473 pairing, without its React 19.3 half — `next` 16.3 still peers on `^19.0.0`).
+     GHSA-2xp9-vwfh-vxw4 and GHSA-p293-qw3h-jr36 are fixed only in 16.3.3; the other nine
+     at 16.2.11. The static export serves no image optimizer, but the census counts them.
+   - `sharp` 0.34.5 → **0.35.5** (override). `next` 16.3 already declares `^0.35.4`, but
+     `next-export-optimize-images@4.7.0` — the latest, and the package that runs sharp over
+     every exported image — declares `^0.34.3`, so the override is the one entry in the
+     block that steps outside a consumer's range. Its call path (`resize`, then
+     `jpeg`/`png`/`webp`/`avif`, WebP-only in `export-images.config.js`) avoids every 0.35
+     removal. GHSA-rgj7-g3m4-5g8c, GHSA-f88m-g3jw-g9cj. Drop the entry once
+     `next-export-optimize-images` declares `^0.35`.
+   - `axios` 1.16.1 → **1.18.0** (override; `@swagger-api/apidom-reference` and `wait-on`
+     declare `^1.16.0`): ten advisories, GHSA-gcfj-64vw-6mp9 through GHSA-xj6q-8x83-jv6g.
+   - `dompurify` 3.4.7 → **3.4.13** (override; `swagger-ui-react` declares `^3.4.0`):
+     GHSA-55q2-fjhq-7xh7, GHSA-cmwh-pvxp-8882, GHSA-c2j3-45gr-mqc4, GHSA-vxr8-fq34-vvx9,
+     GHSA-gvmj-g25r-r7wr. Ships in the `/swagger` chunk.
+   - `immutable` 3.8.3 → **3.8.4** for `swagger-ui-react` (`^3.x.x`) and the three peer
+     placements beside it, by the lockfile recipe of item 5 (the 5.x line keeps `sass`):
+     GHSA-v56q-mh7h-f735, GHSA-xvcm-6775-5m9r. Ships in the `/swagger` chunk.
+   - `image-size` 2.0.2 → **2.0.3** (override; `@storybook/nextjs` `^2.0.2`):
+     GHSA-5p2g-fcmc-qvqq, GHSA-w3rx-r6r6-pgpr. Drop it when Storybook reaches 10.6, whose
+     `@storybook/nextjs` no longer depends on `image-size`.
+   - `storybook` and its four sibling packages 10.4.1 → **10.4.6**, the first release whose
+     `esbuild` range admits `^0.28.0`, so its nested `esbuild@0.27.7` (GHSA-g7r4-m6w7-qqqr,
+     no 0.27.x fix) folds into the hoisted 0.28.1.
+
+   What the census still lists, and why no change here reaches it:
+   - `js-yaml@4.1.1` (four advisories): `swagger-ui-react`'s exact `=4.1.1` pin — item 1.
+   - `extract-zip@2.0.1` (GHSA-jmr9-qjv8-65gv, GHSA-7pqw-9j4j-h8q3): no fixed release. It
+     arrives through `@puppeteer/browsers` 2.x under `puppeteer` 24, the major memlab
+     (`^24.2.0`) and Lighthouse's `puppeteer-core` (`^24.10.0`) declare;
+     `@puppeteer/browsers` 3.x drops it, but only `puppeteer` 25 uses 3.x. Dev-only
+     (memlab, Lighthouse CI).
+   - `elliptic@6.6.1` (GHSA-848j-6mx2-7j84): no fixed release. Reached only through
+     `node-polyfill-webpack-plugin` → `crypto-browserify` in Storybook's webpack config.
+   - `uuid@8.3.2` (GHSA-w5hq-g745-h8pq): fixed only in 11.1.1 and later majors;
+     `@lhci/cli@0.15.1`, the latest, declares `^8.3.1` and calls only `uuid.v4()`, while
+     the advisory is the `buf` argument of v3/v5/v6. The root `uuid` is already 14.x, and
+     bun overrides are top-level only, so the one available override would push
+     `@lhci/cli` across six majors. Dev-only.
+   - `@faker-js/faker@9.9.0` (GHSA-qxc2-j82w-r537): fixed in 10.5.0, but
+     `@mockoon/commons-server` pins `9.9.0` exactly up to its latest release (9.9.0), and
+     `Mockoon.Dockerfile` and a spec hold that package to the Mockoon CLI version. The
+     advisory needs an attacker-controlled `helpers.fake` template; Mockoon only renders
+     the committed mock data. Dev-only.
