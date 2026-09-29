@@ -303,7 +303,14 @@ so belongs in its own reviewed change, after the open dependency pull requests l
      GHSA-gvmj-g25r-r7wr. Ships in the `/swagger` chunk.
    - `immutable` 3.8.3 → **3.8.4** for `swagger-ui-react` (`^3.x.x`) and the three peer
      placements beside it, by the lockfile recipe of item 5 (the 5.x line keeps `sass`):
-     GHSA-v56q-mh7h-f735, GHSA-xvcm-6775-5m9r. Ships in the `/swagger` chunk.
+     GHSA-v56q-mh7h-f735, GHSA-xvcm-6775-5m9r. Ships in the `/swagger` chunk. Only
+     `redux-immutable`'s peer edge takes its published range (`^3.8.1 || ^4.0.0-rc.1`).
+     `react-immutable-proptypes` (`>=3.6.2`) and `react-immutable-pure-component`
+     (`>= 2 || >= 4.0.0-rc`) publish ranges the hoisted `immutable@5.1.9` satisfies, so
+     widening their edges made bun drop both nested copies and bundle a second
+     `immutable` major into `/swagger`; their edges keep the migrated exact form
+     (`3.8.4`), as `terser-webpack-plugin`'s `postcss` edge does, and all four
+     placements resolve `immutable@3.8.4`.
    - `image-size` 2.0.2 → **2.0.3** (override; `@storybook/nextjs` `^2.0.2`):
      GHSA-5p2g-fcmc-qvqq, GHSA-w3rx-r6r6-pgpr. Drop it when Storybook reaches 10.6, whose
      `@storybook/nextjs` no longer depends on `image-size`.
