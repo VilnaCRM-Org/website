@@ -129,7 +129,9 @@ dockerfile_refs() {
   fi
   while IFS= read -r line || [ -n "${line}" ]; do
     line="${line%$'\r'}"
-    if [ -n "${logical}" ] && [[ "${line}" =~ ^[[:space:]]*# ]]; then
+    # BuildKit drops a comment line before it joins continuations, so a comment
+    # never continues — not even one that ends in a backslash.
+    if [[ "${line}" =~ ^[[:space:]]*# ]]; then
       continue
     fi
     logical="${logical:+${logical} }${line}"

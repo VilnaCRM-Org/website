@@ -157,6 +157,22 @@ assert_refused() {
   [ "$output" = "$FIXTURE_CONTEXT" ]
 }
 
+@test "does not fold a backslash-ended comment into the FROM after it" {
+  write_dockerfile '# pinned below \' "FROM $FIXTURE_REF AS base" \
+    '  # indented too \' "FROM public.ecr.aws/docker/library/golang:1@sha256:$OTHER"
+  run_mirror contexts "$FIXTURE"
+  assert_success
+  [ "${#lines[@]}" -eq 2 ]
+  [ "${lines[0]}" = "$FIXTURE_CONTEXT" ]
+}
+
+@test "still refuses a tag-only ECR ref behind a backslash-ended comment" {
+  write_dockerfile '# pinned below \' 'FROM public.ecr.aws/docker/library/node:24 AS base'
+  run_mirror contexts "$FIXTURE"
+  assert_refused
+  [[ "$stderr" == *'refusing to derive a mirror'* ]]
+}
+
 @test "leaves build stages, scratch and other registries alone" {
   write_dockerfile \
     "FROM $FIXTURE_REF AS Base" \
