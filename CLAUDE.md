@@ -644,10 +644,11 @@ Production-facing invariants that no other gate watches. Extend them; never rela
   `workflow_run` are never exempt. The sandbox roles are not the only ones: no role's
   committed Terraform accepts an environment subject, `website-deploy-trigger-role`
   included. The production role accepted `repo:VilnaCRM-Org/website:environment:production`
-  only through out-of-band drift, which the prod apply that followed
-  website-infrastructure #124's merge (the only infra `main` commit in the red window)
-  reverted, so every push-to-`main` `deploy` run has failed
-  at that step since 2026-09-22 (issue #494). The fix is the role's trust policy, landed
+  only through out-of-band drift, most likely reverted by the prod apply that followed
+  website-infrastructure #124's merge (2026-09-19, the only infra `main` commit between
+  the last green and the first red deploy; the apply itself leaves no GitHub-visible
+  run), so every push-to-`main` `deploy` run has failed at that step since 2026-09-22
+  (issue #494). The fix is the role's trust policy, landed
   in the infrastructure repository's Terraform and applied by its pipeline — never a
   console edit, which the next apply reverts, and never dropping
   `environment: production`, which this assertion requires. **F — mask before write:**

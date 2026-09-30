@@ -206,11 +206,11 @@ included: the committed Terraform in `VilnaCRM-Org/website-infrastructure`
 accepts only branch and pull-request subjects for all of them. Make the change
 in Terraform and let the pipeline apply it — **never in the IAM console**. The
 next pipeline apply reverts anything that exists only outside Terraform, which is
-how the production role lost the environment subject it had accepted out of band:
-between the last green deploy on 2026-09-18 and the first red one on 2026-09-22,
-after the production `ci-cd-infrastructure` apply that followed
-website-infrastructure #124's merge (2026-09-19), the only infrastructure `main`
-commit in that window.
+the likely way the production role lost the environment subject it had accepted
+out of band: website-infrastructure #124 (2026-09-19) is the only infrastructure
+`main` commit between the last green deploy (2026-09-18) and the first red one
+(2026-09-22), and the production `ci-cd-infrastructure` apply that followed it is
+inferred, not observed.
 
 #### Step 2 — create the environments (repository settings)
 
@@ -274,10 +274,11 @@ subject the job mints. Because the job declares `environment: production`, that
 subject is `repo:VilnaCRM-Org/website:environment:production`, not a branch
 subject. This is issue #494: runs were green through run 35396803405
 (2026-09-18) and red from run 35792114048 (2026-09-22). The live role had
-accepted the subject only through an out-of-band change, and the apply that
-followed website-infrastructure #124's merge — the only infrastructure `main`
-commit in that window — converged it onto its committed Terraform, which never
-contained that subject. The full timeline is in
+accepted the subject only through an out-of-band change and, most likely, the
+apply that followed website-infrastructure #124's merge — the only infrastructure
+`main` commit between those two runs — converged it onto its committed
+Terraform, which never contained that subject (an inference from that window,
+not an observed apply). The full timeline is in
 [`.github/sandbox_workflows.md`](../.github/sandbox_workflows.md#production-incident-website-deploy-trigger-role-issue-494).
 
 **Fix.** In the infrastructure repository, add a trust-policy statement for

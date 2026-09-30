@@ -313,11 +313,12 @@ did not survive an apply.
 Website-infrastructure PR #124 (`3f0e3fa2`, merged 2026-09-19T15:26Z) changed the
 `ci-cd-infrastructure` stack, and it is the only commit on the infrastructure repository's
 `main` between the last green deploy (2026-09-18T21:26Z) and the first red one
-(2026-09-22T22:23Z). The production `ci-cd-infrastructure` pipeline is started by CodePipeline
-change detection on `main`, not by a GitHub workflow, so its apply leaves no run this repository
-can read. That the apply following #124's merge is the one that converged the live role back
-onto the committed policy, and removed the acceptance, is therefore an inference from that
-window rather than an observed apply.
+(2026-09-22T22:23Z). The production `ci-cd-infrastructure` pipeline runs in CodePipeline, not
+in a GitHub workflow, so its apply leaves no run this repository can read — and a merge does not
+imply an immediate apply: over an hour after #120 merged, a follow-up comment still reported
+production as unapplied. That the apply following #124's merge is the one that converged the
+live role back onto the committed policy, and removed the acceptance, is therefore an inference
+from that window rather than an observed apply.
 
 The fix is external, in the infrastructure repository, and must land in Terraform:
 
