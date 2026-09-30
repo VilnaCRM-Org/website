@@ -33,9 +33,12 @@ There are two independent paths, and a sandbox only needs one of them to succeed
 
 1. **Pull request closed.** [`sandbox-deleting.yml`](../../.github/workflows/sandbox-deleting.yml)
    starts the `sandbox-deletion` CodePipeline, whose build runs [`delete.yml`][delete-yml] and
-   then [`sandbox_deletion.sh`][deletion-sh]. That script deletes the cleanup rule, empties and
-   deletes the bucket, and fails unless `head-bucket` then reports the bucket gone. It also
-   tries the legacy, pre-hash bucket name (website-infrastructure#116).
+   then [`sandbox_deletion.sh`][deletion-sh]. When `head-bucket` finds the bucket, that script
+   deletes the cleanup rule, empties and deletes the bucket, and fails unless `head-bucket`
+   then reports the bucket gone. When the bucket is already gone it touches nothing, **not even
+   the rule**, so a rule whose bucket the Lambda already deleted is never removed by closing
+   the pull request. It also tries the legacy, pre-hash bucket name
+   (website-infrastructure#116).
 2. **Seven days after the latest deploy.** Every sandbox deploy
    ([`deploy.yml`][deploy-yml], started through
    [`sandbox-creating.yml`](../../.github/workflows/sandbox-creating.yml)) syncs the export into
@@ -50,10 +53,24 @@ holds their symmetry: the creator runs on `pull_request` only, the deleter on `p
 
 ## Names you will query
 
+- **Account:** this repository's
+  [`sandbox-creating.yml`](../../.github/workflows/sandbox-creating.yml) and
+  [`sandbox-deleting.yml`](../../.github/workflows/sandbox-deleting.yml) assume
+  `sandbox-creation-trigger-role` and `sandbox-deletion-trigger-role` in the **production**
+  account (`vars.PROD_AWS_ACCOUNT_ID`), so every website pull-request sandbox is a
+  `sandbox-prod-*` bucket there. `sandbox-test-*` sandboxes come only from the infrastructure
+  repository's own test-account pipelines. Checking a website sandbox in the test account
+  finds no rule and no bucket, which reads as a clean teardown when nothing was checked.
 - **Region:** `eu-central-1` (`region` in the ci-cd stack's [`base.tfvars`][ci-base-tfvars]).
 - **Project name:** `sandbox-test` in the test account, `sandbox-prod` in production
   (`sandbox_project_name` in the stack's `test.tfvars` / `prod.tfvars`). CodeBuild receives it
   as `PROJECT_NAME`.
+- **Not a sandbox:** `<PROJECT_NAME>-codepipeline-artifacts-bucket` is the sandbox-creation
+  pipeline's own Terraform-managed artifact bucket
+  ([`modules/aws/s3/codepipeline/main.tf`][artifacts-tf], instantiated by
+  [`sandbox_creation.tf`][creation-tf]). It matches the `<PROJECT_NAME>-` prefix and sits inside
+  the cleanup Lambda's `arn:aws:s3:::sandbox-*` delete scope, so the listings below exclude it
+  by name. Never empty or delete it.
 - **Bucket:** `<PROJECT_NAME>-<BRANCH_NAME>`, where [`sanitize_branch.sh`][sanitize-sh] rewrites
   `BRANCH_NAME` to `<slug prefix>-<first 8 hex of sha1(raw branch)>`, capped so the bucket name
   fits in 63 characters. Example from website-infrastructure#116:
@@ -75,20 +92,25 @@ holds their symmetry: the creator runs on `pull_request` only, the deleter on `p
 
 ## 0. Set up the shell
 
-Authenticate to the account you are checking, then export the shared values. The AWS CLI and
-`jq` are the only tools required.
+Authenticate to the **production** account for a website pull-request sandbox (see
+[the account note](#names-you-will-query)), then export the shared values. The AWS CLI and
+`jq` are the only tools required. Steps 0 to 2, 4 and 5 only read, apart from the
+hand-removal of an orphaned rule at the end of step 5; step 3 sets its own test-account
+prefix.
 
 ```bash
 export AWS_REGION=eu-central-1
-export PROJECT_NAME=sandbox-test   # sandbox-prod in the production account
+export PROJECT_NAME=sandbox-prod   # sandbox-test only for the infrastructure repo's sandboxes
 account_id=$(aws sts get-caller-identity --query Account --output text)
+artifacts_bucket="${PROJECT_NAME}-codepipeline-artifacts-bucket"
 ```
 
 Find the bucket for a pull request. Either list the sandboxes that exist:
 
 ```bash
 aws s3api list-buckets \
-  --query "Buckets[?starts_with(Name, '${PROJECT_NAME}-')].Name" --output text | tr '\t' '\n'
+  --query "Buckets[?starts_with(Name, '${PROJECT_NAME}-') && Name != '${artifacts_bucket}'].Name" \
+  --output text | tr '\t' '\n'
 ```
 
 or derive the exact name from the branch with the infrastructure repository's own script, run
@@ -199,17 +221,23 @@ aws s3api get-bucket-versioning --bucket "$bucket"
 
 The S3 statement is scoped to `arn:aws:s3:::sandbox-*`, so a bucket whose name does not start
 `sandbox-` is outside it by design. The simulator is a model; the probe in step 3 is the
-proof, because an `AccessDenied` there appears in the logs as `General error: …`.
+proof. Where a denial surfaces in the logs depends on the call: an `AccessDenied` on an S3
+call, `ListRules` or `ListTargetsByRule` logs `General error: …`, while one on `RemoveTargets`
+or `DeleteRule` logs `Error removing targets from rule: …` or `Error deleting rule: …`. The
+filter pattern in [step 4](#4-read-the-cloudwatch-logs) matches all three.
 
 ## 3. Trigger a test run on a throwaway bucket
 
 Run this in the **test** account only, and never against a real sandbox bucket: the handler
-deletes whatever bucket the event names. The probe bucket starts `sandbox-test-` so the
-execution role's scope covers it, and its name is short enough that the rule name contains it
-whole.
+deletes whatever bucket the event names. Re-authenticate to the test account and re-run step
+0's `account_id` line first. The probe bucket's `sandbox-test-cleanup-probe-` prefix is fixed
+rather than built from `$PROJECT_NAME`, so a shell still set up for production cannot produce
+a `sandbox-prod-` probe. It starts `sandbox-` so the execution role's scope covers it, and its
+name is short enough that the rule name contains it whole.
 
 ```bash
-probe_bucket="${PROJECT_NAME}-cleanup-probe-$(date -u +%Y%m%d%H%M)"
+account_id=$(aws sts get-caller-identity --query Account --output text)
+probe_bucket="sandbox-test-cleanup-probe-$(date -u +%Y%m%d%H%M)"
 probe_rule="sandbox-cleanup-$(printf '%s' "$probe_bucket" | sed 's/\./-/g' | cut -c1-44)"
 aws s3api create-bucket --bucket "$probe_bucket" \
   --create-bucket-configuration LocationConstraint="$AWS_REGION"
@@ -328,7 +356,8 @@ buckets that no longer exist — run both loops. Both only read.
 
 ```bash
 aws s3api list-buckets \
-  --query "Buckets[?starts_with(Name, '${PROJECT_NAME}-')].Name" --output text |
+  --query "Buckets[?starts_with(Name, '${PROJECT_NAME}-') && Name != '${artifacts_bucket}'].Name" \
+  --output text |
   tr '\t' '\n' | while read -r b; do
     r="sandbox-cleanup-$(printf '%s' "$b" | sed 's/\./-/g' | cut -c1-44)"
     aws events describe-rule --name "$r" >/dev/null 2>&1 || echo "no cleanup rule: $b"
@@ -344,8 +373,18 @@ aws events list-rules --name-prefix sandbox-cleanup- --query 'Rules[].Name' --ou
   done
 ```
 
-A bucket with no rule is only removed when its pull request closes; a rule for a missing
-bucket will fire and answer `General error` for a bucket that no longer exists.
+A bucket with no rule is only removed when its pull request closes. A rule for a missing
+bucket whose schedule is still ahead will fire and log `General error` (`NoSuchBucket`); one
+whose schedule has passed never fires again and stays until removed by hand. Closing the pull
+request does not remove it either (see [How a sandbox is removed](#how-a-sandbox-is-removed)).
+Remove it with:
+
+```bash
+r='<rule name the sweep printed>'
+ids=$(aws events list-targets-by-rule --rule "$r" --query 'Targets[].Id' --output text)
+[ -n "$ids" ] && aws events remove-targets --rule "$r" --ids $ids
+aws events delete-rule --name "$r"
+```
 
 ## Gaps visible in the source
 
@@ -361,7 +400,9 @@ repository to fix.
   `aws s3 ls "s3://$bucket" --recursive --summarize | tail -n 2`.
 - **One page of rules.** The handler looks for its rule in a single `ListRules` call with no
   `NamePrefix` and no pagination. If the rule is not on that first page it returns 404 —
-  after the bucket is already deleted — and the rule stays.
+  after the bucket is already deleted — and the rule stays. Nothing reclaims it afterwards:
+  closing the pull request skips the rule once the bucket is gone, and a past-dated one-shot
+  rule never fires again. Step 5's sweep finds it.
 - **Truncated rule names can collide.** The rule keeps the first 44 characters of the bucket
   name. With a 12-character project name the branch hash survives in the rule name only while
   the branch slug prefix is 22 characters or shorter. Beyond that, two sandboxes whose bucket
@@ -402,5 +443,6 @@ repository to fix.
 [lambda-tf]: https://github.com/VilnaCRM-Org/website-infrastructure/blob/3f0e3fa27d95c4a69027ea6908900cf4cb488183/terraform/app/modules/aws/codepipeline/sandbox/lambda.tf
 [data-lambda-tf]: https://github.com/VilnaCRM-Org/website-infrastructure/blob/3f0e3fa27d95c4a69027ea6908900cf4cb488183/terraform/app/modules/aws/codepipeline/sandbox/data_lambda.tf
 [creation-tf]: https://github.com/VilnaCRM-Org/website-infrastructure/blob/3f0e3fa27d95c4a69027ea6908900cf4cb488183/terraform/app/stacks/ci-cd-infrastructure/sandbox_creation.tf
+[artifacts-tf]: https://github.com/VilnaCRM-Org/website-infrastructure/blob/3f0e3fa27d95c4a69027ea6908900cf4cb488183/terraform/app/modules/aws/s3/codepipeline/main.tf
 [deletion-tf]: https://github.com/VilnaCRM-Org/website-infrastructure/blob/3f0e3fa27d95c4a69027ea6908900cf4cb488183/terraform/app/stacks/ci-cd-infrastructure/sandbox_deletion.tf
 [ci-base-tfvars]: https://github.com/VilnaCRM-Org/website-infrastructure/blob/3f0e3fa27d95c4a69027ea6908900cf4cb488183/terraform/app/stacks/ci-cd-infrastructure/tfvars/base.tfvars

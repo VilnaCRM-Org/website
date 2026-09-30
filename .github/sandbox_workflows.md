@@ -357,7 +357,10 @@ dropping it removes the environment's protection rules from in front of the prod
 These two workflows only start the pipelines. What actually removes a sandbox lives in the
 website-infrastructure repository: the `sandbox-deletion` pipeline's `sandbox_deletion.sh` when
 a pull request closes, and the `sandbox-cleanup-lambda` function, fired by a one-shot
-`sandbox-cleanup-<bucket>` EventBridge rule seven days after the latest sandbox deploy.
+`sandbox-cleanup-<first 44 characters of the bucket name, dots replaced with dashes>`
+EventBridge rule seven days after the latest sandbox deploy. Both workflows assume their
+roles in the production account, so this repository's sandboxes are `sandbox-prod-*` buckets
+there.
 
 [The sandbox cleanup verification runbook](../docs/runbooks/sandbox-cleanup.md) (issue #148)
 is the operator procedure for proving that path works: finding the EventBridge rule for a
