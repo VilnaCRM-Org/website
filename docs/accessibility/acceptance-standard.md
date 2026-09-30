@@ -39,10 +39,11 @@ Deliberately excluded:
 - `wcag2aaa`, `wcag22aa` — above the target.
 - `experimental`, `deprecated` — axe suppresses these by default via `tagExclude`.
 
-That last exclusion has a catch worth knowing about. In axe-core 4.12.1, five rules carry a
-WCAG 2.1 AA tag and are flagged `experimental`, so a plain tag-based run silently never
-executes them — including `label-content-name-mismatch`, which is the **only** rule in
-axe-core tagged `wcag21a`.
+That last exclusion has a catch worth knowing about. In axe-core 4.13.0 (the route and
+interaction-state layers) and 4.12.1 (the component layer, which `jest-axe` 11.0.0 pins
+exactly) alike, five rules carry a WCAG 2.1 AA tag and are flagged `experimental`, so a
+plain tag-based run silently never executes them — including `label-content-name-mismatch`,
+which is the **only** rule in axe-core tagged `wcag21a`.
 Without an override, that whole tag matches nothing. `FORCED_RULES` in
 `src/test/a11y/axe-config.ts` re-enables **three** of those five, and a unit test asserts the
 list stays correct against the installed axe-core:
