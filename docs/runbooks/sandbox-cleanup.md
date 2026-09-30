@@ -204,20 +204,30 @@ simulate s3:DeleteBucket "arn:aws:s3:::${bucket}"
 simulate s3:ListBucketVersions "arn:aws:s3:::${bucket}"
 simulate s3:DeleteObject "arn:aws:s3:::${bucket}/index.html"
 simulate s3:DeleteObjectVersion "arn:aws:s3:::${bucket}/index.html"
-simulate events:ListRules "arn:aws:events:${AWS_REGION}:${account_id}:rule/${rule}"
+simulate events:ListRules '*'
 simulate events:ListTargetsByRule "arn:aws:events:${AWS_REGION}:${account_id}:rule/${rule}"
 simulate events:RemoveTargets "arn:aws:events:${AWS_REGION}:${account_id}:rule/${rule}"
 simulate events:DeleteRule "arn:aws:events:${AWS_REGION}:${account_id}:rule/${rule}"
 ```
 
-Expect `allowed` on every line except `s3:DeleteObjectVersion`, which reads `implicitDeny`: the
-policy does not grant it and the handler never deletes object versions. That is safe only
-while sandbox buckets stay unversioned — [`sandbox_creation.sh`][creation-sh] never enables
-versioning, and this should print nothing:
+Expect `allowed` on every line except two. `events:ListRules` is covered below.
+`s3:DeleteObjectVersion` reads `implicitDeny`: the policy does not grant it and the handler
+never deletes object versions. That is safe only while sandbox buckets stay unversioned —
+[`sandbox_creation.sh`][creation-sh] never enables versioning, and this should print nothing:
 
 ```bash
 aws s3api get-bucket-versioning --bucket "$bucket"
 ```
+
+`events:ListRules` is simulated against `*`, not against the rule, on purpose. The action
+defines no resource type in the EventBridge service authorization reference, while
+`ListTargetsByRule`, `RemoveTargets` and `DeleteRule` are scoped to a rule, so AWS authorizes
+the handler's `list_rules()` call against `*`. A simulation against the rule ARN matches the
+policy's `rule/*` statement and reads `allowed` whatever the real call does; it is not a valid
+check for this action. At `3f0e3fa2` the `*` line is expected to read `implicitDeny`, because
+the policy grants `ListRules` only on `rule/*` (see [gaps](#gaps-visible-in-the-source)). That
+decision means the handler cannot look up its rule: every run deletes the bucket, then fails
+and leaves the rule behind.
 
 The S3 statement is scoped to `arn:aws:s3:::sandbox-*`, so a bucket whose name does not start
 `sandbox-` is outside it by design. The simulator is a model; the probe in step 3 is the
@@ -285,6 +295,10 @@ every exception is caught and returned as a payload. Judge the run by the payloa
 - `404` — the rule was not found. The bucket **was** already deleted by then.
 - `500` — `Error: …`, `Error removing targets: …` or `Error deleting rule: …`; the bucket or
   the rule, or both, may remain.
+
+A `500` whose body — and whose `General error` line in step 4's logs — says `not authorized to
+perform: events:ListRules` confirms the `ListRules` gap from step 2. It is not a probe setup
+error: the bucket is gone and the rule is left, so remove the rule with the commands below.
 
 If a probe fails part-way, remove what is left by hand, which is what
 [`sandbox_deletion.sh`][deletion-sh] does:
@@ -392,17 +406,27 @@ These follow from the code as written at `3f0e3fa2`. They are recorded so an ope
 an odd result knows where to look, not as confirmed incidents; each is for the infrastructure
 repository to fix.
 
+- **`ListRules` is granted on the wrong resource.** The `AllowEventBridgeListRules` statement
+  in `data_lambda.tf` grants `events:ListRules` on
+  `arn:aws:events:${var.region}:${local.account_id}:rule/*`, but `ListRules` supports no
+  resource-level permissions: the call is authorized against `*`, which that resource does not
+  match. The handler would then fail every run right after deleting the bucket, log
+  `General error: … not authorized to perform: events:ListRules`, return 500 and leave the
+  rule. Step 2's `*` simulation shows it and step 3's probe proves it. The fix is either
+  `resources = ["*"]` on that statement, or replacing the handler's `list_rules` lookup with
+  `describe_rule(Name=rule_name)`, which is rule-scoped — the policy would then need
+  `events:DescribeRule` on `rule/sandbox-cleanup-*`, which it does not grant today.
 - **One page of objects.** The handler calls `list_objects_v2` once, which returns at most
   1,000 keys, and then `delete_bucket`. The deploy syncs with `aws s3 sync` and no `--delete`,
   so every push leaves the previous build's hashed chunks behind. A bucket past 1,000 objects
   keeps its remainder, `DeleteBucket` fails with `BucketNotEmpty`, and the run returns 500.
   Count a sandbox's objects with
   `aws s3 ls "s3://$bucket" --recursive --summarize | tail -n 2`.
-- **One page of rules.** The handler looks for its rule in a single `ListRules` call with no
-  `NamePrefix` and no pagination. If the rule is not on that first page it returns 404 —
-  after the bucket is already deleted — and the rule stays. Nothing reclaims it afterwards:
-  closing the pull request skips the rule once the bucket is gone, and a past-dated one-shot
-  rule never fires again. Step 5's sweep finds it.
+- **One page of rules.** Once `ListRules` is authorized, the handler looks for its rule in a
+  single `ListRules` call with no `NamePrefix` and no pagination. If the rule is not on that
+  first page it returns 404 — after the bucket is already deleted — and the rule stays.
+  Nothing reclaims it afterwards: closing the pull request skips the rule once the bucket is
+  gone, and a past-dated one-shot rule never fires again. Step 5's sweep finds it.
 - **Truncated rule names can collide.** The rule keeps the first 44 characters of the bucket
   name. With a 12-character project name the branch hash survives in the rule name only while
   the branch slug prefix is 22 characters or shorter. Beyond that, two sandboxes whose bucket
