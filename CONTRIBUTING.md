@@ -181,7 +181,8 @@ fails, so the gate fails closed rather than passing vacuously.
 at 100%) and `changed` (the mutable files your pull request touches, blocking at
 85% until the `maxFiles` cap is exceeded, past which the leg turns advisory) both
 run on a pull request, and `full` sweeps `src/` nightly as an advisory leg that
-files a tracking issue. `make mutation-file-list` prints the resolved
+files a tracking issue and closes it once a census finds no surviving or
+uncovered mutant (#513). `make mutation-file-list` prints the resolved
 list and `make test-mutation-changed` runs the PR's changed-file leg locally. The
 scope table and the definition of a "mutable" file live in CLAUDE.md; never lower
 a threshold or widen an exclusion in `config/mutation-policy.json` to get a leg

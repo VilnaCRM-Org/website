@@ -143,7 +143,8 @@ gated on each PR alongside the three desktop engines. The thresholds and the tes
 unchanged — locally you still run the single `make test-e2e` / `make test-mutation`.
 
 Mutation testing also runs a blocking changed-files leg on every pull request and an
-advisory full-tree census nightly (issue #345). If you change a file under an
+advisory full-tree census nightly (issue #345), which files one tracking issue and closes it
+on a clean run (#513). If you change a file under an
 `api`/`helpers`/`hooks`/`utils`/`validations` directory, run `make test-mutation-changed`
 before pushing: a surviving mutant means a test executes your code without asserting on it.
 Fix it by adding the missing assertion — never by widening

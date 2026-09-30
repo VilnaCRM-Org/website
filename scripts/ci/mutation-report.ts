@@ -128,6 +128,35 @@ export function undetectedByFile(
   );
 }
 
+/**
+ * What a census measured: `clean` only when no mutant survived and none ran
+ * uncovered. Derived from the same rows `renderSummary` tabulates, so the verdict
+ * the tracker script acts on and the Markdown it posts cannot disagree (#513).
+ */
+export type CensusVerdict = 'clean' | 'findings';
+
+export function censusVerdict(rows: readonly UndetectedFile[]): CensusVerdict {
+  const undetected = rows.reduce((total, row) => total + row.survived + row.noCoverage, 0);
+  return undetected === 0 ? 'clean' : 'findings';
+}
+
+/** Render the Markdown the step summary and the nightly tracking issue both use. */
+export function renderSummary(
+  scope: string,
+  rows: readonly UndetectedFile[],
+  score: string
+): string {
+  const table =
+    censusVerdict(rows) === 'clean'
+      ? 'No surviving or uncovered mutants. 🎉'
+      : [
+          '| File | Survived | No coverage |',
+          '| --- | ---: | ---: |',
+          ...rows.map(row => `| \`${row.file}\` | ${row.survived} | ${row.noCoverage} |`),
+        ].join('\n');
+  return `### Mutation score (\`${scope}\` scope): ${score}%\n\n${table}\n`;
+}
+
 /** Merge shard reports and compute the overall mutation score. */
 export function scoreReports(reports: readonly MutationReport[]): ScoreResult {
   const byFile = mergeReportFiles(reports);

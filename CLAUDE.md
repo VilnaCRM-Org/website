@@ -956,11 +956,22 @@ that one is a fixed list in `stryker.config.mjs`, and the policy file supplies o
 threshold. `MUTATION_SCOPE` selects one of three slices; everything downstream — the
 Stryker shard config, the Jest test set, and the merge gate — reads that one decision.
 
-| Scope     | What it mutates                           | Gate                             | Where           |
-| --------- | ----------------------------------------- | -------------------------------- | --------------- |
-| `curated` | the fixed list in `stryker.config.mjs`    | blocking at 100%                 | PR              |
-| `changed` | mutable files the PR touches vs. its base | blocking at 85%, cap → advisory  | PR              |
-| `full`    | every mutable file in `src/`              | advisory; files a tracking issue | nightly `02:00` |
+| Scope     | What it mutates                           | Gate                                                       | Where           |
+| --------- | ----------------------------------------- | ---------------------------------------------------------- | --------------- |
+| `curated` | the fixed list in `stryker.config.mjs`    | blocking at 100%                                           | PR              |
+| `changed` | mutable files the PR touches vs. its base | blocking at 85%, cap → advisory                            | PR              |
+| `full`    | every mutable file in `src/`              | advisory; files a tracking issue, closes it on a clean run | nightly `02:00` |
+
+The `full` census keeps exactly one `mutation-backlog` issue, titled
+`mutation testing backlog`, through `scripts/ci/mutation-census-issue.sh` (issue #513).
+`make merge-mutation-reports` writes `reports/mutation/census-verdict.txt` beside
+`summary.md` from the same undetected rows the summary tabulates: `clean` when no mutant
+survived and none ran uncovered, `findings` otherwise. Findings file or refresh the tracker;
+a clean census comments the summary and the run link on every open tracker with that exact
+title and closes it, filing nothing; a census that recorded no verdict — a shard did not
+run, or the merge threw — keeps the tracker open **and** fails the run, so a broken census
+can never read as clean. `tests/bats/mutation_census.bats` drives each outcome through the
+real merger against a stubbed `gh`.
 
 A file is "mutable" when it lives under an `api`/`helpers`/`hooks`/`utils`/`validations`
 **path segment** and is not a spec, story, type, style, i18n bundle, asset, constant, mock,

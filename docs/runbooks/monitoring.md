@@ -28,7 +28,10 @@ surface. Subscribe to them, or to the repository's issues, to be told about anyt
   failed; a census that did not measure the suite (no report, no test executed, or a run
   cut short) keeps it open and turns the run red.
 - `dependency-cve` — `osv-scanner.yml`. Nightly census of the dependency CVE backlog.
-- `mutation-backlog` — `mutation-testing.yml`. Nightly full mutation census.
+- `mutation-backlog` — `mutation-testing.yml`. Nightly full mutation census. Closed
+  automatically by the next clean census, in which no mutant survived or ran uncovered; a
+  census that recorded no verdict (a census shard did not run, or the merge failed) keeps it
+  open and turns the run red.
 - `api-contract` — `openapi-drift.yml`. Breaking upstream OpenAPI or GraphQL drift
   against the pinned user-service contracts.
 - `docs-release-hygiene` — `link-check.yml`. Weekly external link failures.

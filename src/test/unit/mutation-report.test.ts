@@ -1,7 +1,9 @@
 import {
   type MutationReport,
+  censusVerdict,
   mergeReportFiles,
   mutationScore,
+  renderSummary,
   scoreReports,
   tallyMutants,
   undetectedByFile,
@@ -139,6 +141,50 @@ describe('mutation-report merge gate', () => {
 
     it('returns an empty list for a report with no files', () => {
       expect(undetectedByFile(mergeReportFiles([{}]))).toEqual([]);
+    });
+  });
+
+  describe('the census verdict and summary read the same undetected rows', () => {
+    const rowsOf = (files: Record<string, string[]>): ReturnType<typeof undetectedByFile> =>
+      undetectedByFile(mergeReportFiles([report(files)]));
+
+    it('reads clean when every valid mutant was detected', () => {
+      const rows = rowsOf({ 'a.ts': ['Killed', 'Timeout', 'Ignored', 'CompileError'] });
+      expect(censusVerdict(rows)).toBe('clean');
+      expect(renderSummary('full', rows, '100.00')).toBe(
+        '### Mutation score (`full` scope): 100.00%\n\nNo surviving or uncovered mutants. 🎉\n'
+      );
+    });
+
+    it('reads findings for a single surviving mutant', () => {
+      const rows = rowsOf({ 'a.ts': ['Killed', 'Survived'] });
+      expect(censusVerdict(rows)).toBe('findings');
+      expect(renderSummary('full', rows, '50.00')).toBe(
+        [
+          '### Mutation score (`full` scope): 50.00%',
+          '',
+          '| File | Survived | No coverage |',
+          '| --- | ---: | ---: |',
+          '| `a.ts` | 1 | 0 |',
+          '',
+        ].join('\n')
+      );
+    });
+
+    it('reads findings for a mutant no test covered, even at a rounded 100% score', () => {
+      const rows = rowsOf({ 'a.ts': ['NoCoverage'] });
+      expect(censusVerdict(rows)).toBe('findings');
+      expect(renderSummary('full', rows, '100.00')).toContain('| `a.ts` | 0 | 1 |');
+    });
+
+    it('never calls a row with zero undetected mutants a finding', () => {
+      const rows = [{ file: 'a.ts', survived: 0, noCoverage: 0 }];
+      expect(censusVerdict(rows)).toBe('clean');
+      expect(renderSummary('full', rows, '100.00')).toContain('No surviving or uncovered');
+    });
+
+    it('reads clean for a report with no files', () => {
+      expect(censusVerdict(rowsOf({}))).toBe('clean');
     });
   });
 });

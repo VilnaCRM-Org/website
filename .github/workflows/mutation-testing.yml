@@ -178,8 +178,9 @@ jobs:
   # whatever a given pull request happens to touch; neither can see the mutation
   # debt sitting in files nobody edited. This one does, and records it in a single
   # refreshed tracking issue instead of reddening somebody's unrelated pull
-  # request. It stays green by design — a red nightly pages for debt no author
-  # caused.
+  # request, closing that issue once a census finds nothing. It stays green by
+  # design — a red nightly pages for debt no author caused — unless the census
+  # measured nothing, which is a failed run rather than a finding.
   census:
     name: nightly mutation census
     if: github.event_name != 'pull_request'
@@ -233,7 +234,7 @@ jobs:
           if-no-files-found: error
 
   census-report:
-    name: file or refresh the mutation-backlog issue
+    name: file, refresh or close the mutation-backlog issue
     needs: census
     if: ${{ github.event_name != 'pull_request' && !cancelled() }}
     runs-on: ubuntu-latest
@@ -280,44 +281,20 @@ jobs:
           make -s merge-mutation-reports MUTATION_SCOPE=full MUTATION_SHARD_TOTAL="$MUTATION_SHARD_TOTAL"
           cat reports/mutation/summary.md >> "$GITHUB_STEP_SUMMARY"
 
-      - name: File or refresh the mutation-backlog tracking issue
+      - name: File, refresh or close the mutation-backlog tracking issue
+        # Also after a failed shard or merge: the script reads a missing verdict as
+        # unmeasured, so a census that measured nothing still reaches the tracker and
+        # still turns the run red. A clean census closes the tracker instead of
+        # commenting on it (#513).
+        if: ${{ !cancelled() }}
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          # Idempotent: also provisioned as repo metadata, but a missing label must
-          # not fail the census.
-          gh label create mutation-backlog --color FBCA04 \
-            --description "Nightly mutation census findings" 2>/dev/null || true
-          title='mutation testing backlog'
-          run_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-          # GitHub rejects an issue body over 65536 characters, and the summary
-          # carries one table row per file with an undetected mutant. Left
-          # uncapped, a large enough backlog would make `gh` exit non-zero under
-          # `set -e` and redden the leg that exists to stay green. 60000 leaves
-          # room for the footer; the full table is always in the artifact.
-          summary="$(head -c 60000 reports/mutation/summary.md)"
-          if [ "$(wc -c < reports/mutation/summary.md)" -gt 60000 ]; then
-            summary="$summary"$'\n\n_Table truncated; the full report is in this run'"'"'s artifact._'
-          fi
-          body="$(printf '%s\n\n%s\n' "$summary" "Census run: $run_url")"
-          # `.[0].number` over an empty array prints the literal string "null",
-          # which would pass the -n test and run `gh issue comment null`, so the
-          # tracking issue would never be created on the first census.
-          # `first(...) // empty` yields nothing.
-          #
-          # `|| true` because a rate-limited or flaky lookup must not abort the
-          # census under `set -e`. An empty result falls through to
-          # `gh issue create`, which either files the issue or fails loudly on a
-          # real permissions problem — the outcome actually worth being red for.
-          existing="$(gh issue list --label mutation-backlog --state open \
-            --search "$title in:title" --json number --jq 'first(.[].number) // empty' \
-            || true)"
-          if [ -n "$existing" ]; then
-            gh issue comment "$existing" --body "$body"
-          else
-            gh issue create --label mutation-backlog --title "$title" --body "$body"
-          fi
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          # A dispatch from a branch measured that branch, not main: it reports what it would
+          # do and writes nothing, so it can never close main's tracker.
+          CENSUS_DRY_RUN: ${{ github.ref == 'refs/heads/main' && '0' || '1' }}
+        run: bash scripts/ci/mutation-census-issue.sh
 
       - name: Upload census summary
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -326,6 +303,7 @@ jobs:
           name: mutation-census-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             reports/mutation/summary.md
+            reports/mutation/census-verdict.txt
             reports/mutation/mutate-list.txt
           retention-days: 14
           if-no-files-found: ignore
