@@ -205,8 +205,12 @@ It is outstanding for **every** role, `production` / `website-deploy-trigger-rol
 included: the committed Terraform in `VilnaCRM-Org/website-infrastructure`
 accepts only branch and pull-request subjects for all of them. Make the change
 in Terraform and let the pipeline apply it — **never in the IAM console**. The
-next pipeline apply reverts a hand edit, which is exactly how the production role
-lost its environment subject on 2026-09-19.
+next pipeline apply reverts anything that exists only outside Terraform, which is
+how the production role lost the environment subject it had accepted out of band:
+between the last green deploy on 2026-09-18 and the first red one on 2026-09-22,
+after the production `ci-cd-infrastructure` apply that followed
+website-infrastructure #124's merge (2026-09-19), the only infrastructure `main`
+commit in that window.
 
 #### Step 2 — create the environments (repository settings)
 
@@ -256,7 +260,7 @@ that cannot be committed.
 #### Troubleshooting: `deploy` fails at Configure AWS Credentials
 
 **Symptom.** A push-to-`main` run of the `website` workflow fails in the
-`deploy` job at `Configure AWS Credentials`, after twelve retries, with:
+`deploy` job at `Configure AWS Credentials`, after twelve attempts, with:
 
 ```text
 Could not assume role with OIDC: Not authorized to perform sts:AssumeRoleWithWebIdentity
@@ -269,8 +273,10 @@ CodePipeline — production still serves the previous build.
 subject the job mints. Because the job declares `environment: production`, that
 subject is `repo:VilnaCRM-Org/website:environment:production`, not a branch
 subject. This is issue #494: runs were green through run 35396803405
-(2026-09-18) and red from run 35792114048 (2026-09-22), after an infrastructure
-apply converged the live role onto its committed Terraform, which never
+(2026-09-18) and red from run 35792114048 (2026-09-22). The live role had
+accepted the subject only through an out-of-band change, and the apply that
+followed website-infrastructure #124's merge — the only infrastructure `main`
+commit in that window — converged it onto its committed Terraform, which never
 contained that subject. The full timeline is in
 [`.github/sandbox_workflows.md`](../.github/sandbox_workflows.md#production-incident-website-deploy-trigger-role-issue-494).
 
