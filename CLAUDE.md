@@ -431,8 +431,9 @@ agrees with the **mock**. Two gates anchored on the single committed baseline
   four rules per response: the status is documented, the media type is declared, the body
   validates against the schema, and the body carries **no property the schema never
   declares**. That last rule is stricter than OpenAPI's permissive default on purpose — it
-  is the only one that catches a renamed field here, because upstream misplaces `required`
-  on the array schema of `GET /api/users` rather than on its `items`.
+  is the only one that catches an added field, because the response schemas leave
+  `additionalProperties` unset (before user-service v0.8.0 it was also the only one that
+  caught a renamed field, while upstream misplaced `required` on the array schema).
   `parity-detects-drift.contract.test.ts` seeds real defects into **copies** of the mock
   data and asserts each turns the gate red; never seed a defect into the committed
   contract, which `lint-contracts` guards. The `@mockoon/*` devDependencies are pinned

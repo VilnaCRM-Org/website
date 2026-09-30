@@ -65,8 +65,9 @@ describe('the committed contract is shaped the way this gate assumes', () => {
   it('still routes at least as many operations through full body validation', () => {
     // Mockoon serves the FIRST response an operation declares, so only that one
     // is ever observed — and of those, only the schema-bearing ones reach the
-    // schema and undeclared-property rules. Today 7 of 12 do; the rest declare
-    // `example: ""` with no schema, or are bodyless 204s.
+    // schema and undeclared-property rules. Today 7 of 14 do; the rest declare
+    // an example with no schema (or, for the `text/html` OAuth page, nothing
+    // at all), or are bodyless 204s.
     //
     // This is a ratchet, not a target. Without it the gate could quietly shrink
     // to validating nothing — an upstream reorder that put a schema-less

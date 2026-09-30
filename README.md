@@ -480,8 +480,9 @@ replays every documented operation, and holds each response against the contract
 The last rule is stricter than OpenAPI's permissive default on purpose. A mock
 offering a field the contract does not describe is precisely the "e2e certifies
 behavior the real API does not have" defect, and it is the only rule that catches
-a renamed field here, because the upstream document misplaces `required` on the
-array schema of `GET /api/users` instead of on its `items`.
+an added field, because the response schemas leave `additionalProperties` unset.
+(Before user-service v0.8.0 it was also the only one that caught a renamed field,
+while upstream misplaced `required` on the array schema of `GET /api/users`.)
 
 Two further checks ride along: the swagger e2e fixtures in
 `src/test/e2e/swagger/utils/constants.ts` are validated against the same schema,

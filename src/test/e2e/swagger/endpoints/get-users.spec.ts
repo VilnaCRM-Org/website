@@ -127,26 +127,23 @@ test.describe('get user: try it out interaction', () => {
     await clearEndpointResponse(elements.getEndpoint);
   });
 
-  test('empty values', async ({ page }) => {
+  test('empty values are left out of the request', async ({ page }) => {
     const elements: EndpointElements = await setupEndpoint(page);
     await interceptWithJsonResponse(page, `${BASE_API}**`, MOCK_API_USERS);
 
     await elements.pageNumberInput.fill('');
     await elements.itemsPerPageInput.fill('');
 
-    const pageCheckbox: Locator = elements.getEndpoint
-      .locator('tr[data-param-name="page"]')
-      .locator('input#include_empty_value');
-    const itemsPerPageCheckbox: Locator = elements.getEndpoint.locator(
-      'tr[data-param-name="itemsPerPage"] input#include_empty_value'
-    );
-
-    await pageCheckbox.check();
-    await itemsPerPageCheckbox.check();
+    // Since user-service v0.8.0 neither parameter sets `allowEmptyValue`, so
+    // swagger-ui renders no "Send empty value" checkbox and omits both.
+    await expect(
+      elements.getEndpoint.locator('tr[data-param-name="page"] input#include_empty_value')
+    ).toHaveCount(0);
     await elements.executeBtn.click();
 
-    await expect(elements.requestUrl).toContainText(/page=(&|$)/);
-    await expect(elements.requestUrl).toContainText(/itemsPerPage=(&|$)/);
+    await expect(elements.requestUrl).toContainText('/api/users');
+    await expect(elements.requestUrl).not.toContainText('page=');
+    await expect(elements.requestUrl).not.toContainText('itemsPerPage=');
 
     await verifyResponseBody(elements);
 

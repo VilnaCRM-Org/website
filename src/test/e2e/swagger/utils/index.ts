@@ -38,8 +38,8 @@ type SystemEndpoints = {
 };
 export const SYSTEM_ENDPOINTS: SystemEndpoints = {
   HEALTH: '#operations-HealthCheck-api_health_get',
-  AUTHORIZE: '#operations-OAuth-get_api_oauth_authorize',
-  TOKEN: '#operations-OAuth-post_api_oauth_token',
+  AUTHORIZE: '#operations-OAuth-oauth_authorize_get',
+  TOKEN: '#operations-OAuth-oauth_token_post',
 } as const;
 
 export interface GetSystemEndpoints {

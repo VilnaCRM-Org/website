@@ -1,12 +1,6 @@
 import { Download, expect, type Locator, Page, test } from '@playwright/test';
 
-import {
-  testUserId,
-  BASE_API,
-  BasicEndpointElements,
-  ApiUser,
-  MOCK_API_USER,
-} from '../utils/constants';
+import { BASE_API, BasicEndpointElements, ApiUser, MOCK_API_USER } from '../utils/constants';
 import {
   initSwaggerPage,
   clearEndpointResponse,
@@ -18,31 +12,21 @@ import {
   expectErrorOrFailureStatus,
   buildSafeUrl,
   parseJsonSafe,
+  expectOnlyDocumentedId,
+  selectDocumentedId,
 } from '../utils/helpers';
 import { locators } from '../utils/locators';
 
 const GET_USER_API_URL: (id: string) => string = (id: string): string => buildSafeUrl(BASE_API, id);
 
-type UserIds = {
-  VALID: string;
-  NON_EXISTENT: string;
-  INVALID_FORMAT: string;
-};
-const TEST_USER_IDS: UserIds = {
-  VALID: testUserId,
-  NON_EXISTENT: '2b10b7a3-67f0-40ea-a367-44263321592z',
-  INVALID_FORMAT: 'invalid-uuid-format',
-} as const;
-
 interface GetUserByIdElements extends BasicEndpointElements {
   parametersSection: Locator;
-  idInput: Locator;
+  idSelect: Locator;
   requestUrl: Locator;
   responseBody: Locator;
   curl: Locator;
   copyButton: Locator;
   downloadButton: Locator;
-  validationError: Locator;
 }
 
 async function setupGetUserByIdEndpoint(page: Page): Promise<GetUserByIdElements> {
@@ -54,8 +38,7 @@ async function setupGetUserByIdEndpoint(page: Page): Promise<GetUserByIdElements
 
   const executeBtn: Locator = await getAndCheckExecuteBtn(getUserEndpoint);
   const parametersSection: Locator = getUserEndpoint.locator(locators.parametersSection);
-  const validationError: Locator = getUserEndpoint.locator(locators.validationErrors);
-  const idInput: Locator = getUserEndpoint.locator(locators.idInput);
+  const idSelect: Locator = getUserEndpoint.locator(locators.idSelect);
   const requestUrl: Locator = getUserEndpoint.locator(locators.requestUrl);
   const responseBody: Locator = getUserEndpoint.locator(locators.responseBody).first();
   const curl: Locator = getUserEndpoint.locator(locators.curl);
@@ -66,8 +49,7 @@ async function setupGetUserByIdEndpoint(page: Page): Promise<GetUserByIdElements
     getEndpoint: getUserEndpoint,
     executeBtn,
     parametersSection,
-    validationError,
-    idInput,
+    idSelect,
     requestUrl,
     responseBody,
     curl,
@@ -79,17 +61,17 @@ async function setupGetUserByIdEndpoint(page: Page): Promise<GetUserByIdElements
 test.describe('get user by ID', () => {
   test('successful user retrieval', async ({ page }) => {
     const elements: GetUserByIdElements = await setupGetUserByIdEndpoint(page);
-    await interceptWithJsonResponse(page, GET_USER_API_URL(TEST_USER_IDS.VALID), MOCK_API_USER);
+    const userId: string = await selectDocumentedId(elements.idSelect);
+    await interceptWithJsonResponse(page, GET_USER_API_URL(userId), MOCK_API_USER);
 
     await expect(elements.parametersSection).toBeVisible();
-    await expect(elements.idInput).toBeVisible();
-    await elements.idInput.fill(TEST_USER_IDS.VALID);
+    await expect(elements.idSelect).toBeVisible();
 
     await elements.executeBtn.click();
 
     await expect(elements.curl).toBeVisible();
     await expect(elements.copyButton).toBeVisible();
-    await expect(elements.requestUrl).toContainText(TEST_USER_IDS.VALID);
+    await expect(elements.requestUrl).toContainText(userId);
 
     const responseText: string | null = await elements.responseBody.textContent();
 
@@ -115,26 +97,21 @@ test.describe('get user by ID', () => {
     await clearEndpointResponse(elements.getEndpoint);
   });
 
-  test('empty id validation', async ({ page }) => {
+  test('only the documented user id can be sent', async ({ page }) => {
     const elements: GetUserByIdElements = await setupGetUserByIdEndpoint(page);
 
-    await expect(elements.idInput).toBeVisible();
-    await elements.idInput.clear();
-    await elements.executeBtn.click();
-
-    await expect(elements.idInput).toHaveClass(/invalid/);
-    await expect(elements.validationError).toContainText('Required field is not provided');
+    await expectOnlyDocumentedId(elements.idSelect);
 
     await cancelOperation(page);
   });
 
   test('error response - user not found', async ({ page }) => {
     const elements: GetUserByIdElements = await setupGetUserByIdEndpoint(page);
-    const nonExistentId: string = TEST_USER_IDS.NON_EXISTENT;
+    const userId: string = await selectDocumentedId(elements.idSelect);
 
     await interceptWithErrorResponse(
       page,
-      GET_USER_API_URL(nonExistentId),
+      GET_USER_API_URL(userId),
       {
         error: 'Not Found',
         message: 'User not found',
@@ -142,8 +119,6 @@ test.describe('get user by ID', () => {
       },
       404
     );
-
-    await elements.idInput.fill(nonExistentId);
     await elements.executeBtn.click();
 
     const responseCode: Locator = elements.getEndpoint
@@ -155,30 +130,11 @@ test.describe('get user by ID', () => {
     await clearEndpointResponse(elements.getEndpoint);
   });
 
-  test('error response - invalid id format', async ({ page }) => {
-    const elements: GetUserByIdElements = await setupGetUserByIdEndpoint(page);
-    const invalidId: string = TEST_USER_IDS.INVALID_FORMAT;
-
-    await interceptWithErrorResponse(page, GET_USER_API_URL(invalidId), {
-      error: 'Bad Request',
-      message: 'Invalid user ID format',
-      code: 'INVALID_ID_FORMAT',
-    });
-
-    await elements.idInput.fill(invalidId);
-    await elements.executeBtn.click();
-
-    await expect(elements.responseBody).toContainText('Invalid user ID format');
-
-    await clearEndpointResponse(elements.getEndpoint);
-  });
-
   test('error response - CORS/Network failure', async ({ page }) => {
     const elements: GetUserByIdElements = await setupGetUserByIdEndpoint(page);
+    const userId: string = await selectDocumentedId(elements.idSelect);
 
-    await interceptWithNetworkFailure(page, GET_USER_API_URL(TEST_USER_IDS.VALID));
-
-    await elements.idInput.fill(TEST_USER_IDS.VALID);
+    await interceptWithNetworkFailure(page, GET_USER_API_URL(userId));
     await elements.executeBtn.click();
 
     await expectErrorOrFailureStatus(elements.getEndpoint);

@@ -180,6 +180,37 @@ export async function expectErrorOrFailureStatus(getEndpoint: Locator): Promise<
     .toBe(true);
 }
 
+const UUID_PATTERN: RegExp = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Since user-service v0.8.0 every `{id}` path parameter is an enum holding one
+// documented uuid, so swagger-ui renders a <select> with that single option and
+// no empty one: neither an empty nor a malformed id can be sent from the page.
+// swagger-ui writes each option's text as `String(value)`, so the text is the
+// value, and one expected entry also pins the option count to one.
+export async function expectOnlyDocumentedId(idSelect: Locator): Promise<void> {
+  const options: Locator = idSelect.locator('option');
+
+  await expect(idSelect).toBeEnabled();
+  await expect(options).toHaveText([UUID_PATTERN]);
+}
+
+export async function selectDocumentedId(idSelect: Locator): Promise<string> {
+  await expectOnlyDocumentedId(idSelect);
+
+  const documentedId: string | null = await idSelect
+    .locator('option')
+    .first()
+    .getAttribute('value');
+  if (!documentedId) {
+    throw new Error('The id parameter offers no documented value');
+  }
+
+  await idSelect.selectOption(documentedId);
+  await expect(idSelect).toHaveValue(documentedId);
+
+  return documentedId;
+}
+
 export function buildSafeUrl(baseUrl: string, id: string): string {
   const trimmedBase: string = baseUrl.replace(/\/+$/, '');
   const encodedId: string = encodeURIComponent(id);
