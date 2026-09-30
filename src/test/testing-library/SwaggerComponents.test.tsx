@@ -149,7 +149,7 @@ describe('ApiDocumentation', () => {
   });
 });
 
-describe('Swagger layout stability (#493)', () => {
+describe('Swagger layout stability (#493, #446)', () => {
   const mockUseSwagger: jest.MockedFunction<typeof useSwagger> = jest.mocked(useSwagger);
   const loaded: HookState = hookState({
     swaggerContent: { openapi: '3.0.0', info: { title: 'Test API', version: '1.0.0' } },
@@ -173,7 +173,7 @@ describe('Swagger layout stability (#493)', () => {
   ])('keeps the viewport reserved while the documentation is %s', (_, state: HookState) => {
     mockUseSwagger.mockReturnValue(state);
 
-    const { container } = render(<Swagger />);
+    const { container } = render(<ApiDocumentation />);
 
     expect(container.firstElementChild).toHaveStyle({ minHeight: '100vh' });
   });
@@ -182,7 +182,7 @@ describe('Swagger layout stability (#493)', () => {
     mockSwaggerUi.renders = false;
     mockUseSwagger.mockReturnValue(loaded);
 
-    const { container } = render(<Swagger />);
+    const { container } = render(<ApiDocumentation />);
 
     expect(screen.queryByText(loadingText)).not.toBeInTheDocument();
     expect(screen.queryByText(/SwaggerUI rendered/i)).not.toBeInTheDocument();
@@ -192,9 +192,42 @@ describe('Swagger layout stability (#493)', () => {
   it('releases the reservation once Swagger UI has rendered, so the page keeps its height', () => {
     mockUseSwagger.mockReturnValue(loaded);
 
-    const { container } = render(<Swagger />);
+    const { container } = render(<ApiDocumentation />);
 
     expect(screen.getByText(/SwaggerUI rendered/i)).toBeInTheDocument();
     expect(container.firstElementChild).not.toHaveStyle({ minHeight: '100vh' });
+  });
+
+  it('keeps the same completion status element from the loading state to the loaded one', () => {
+    mockUseSwagger.mockReturnValue(hookState());
+    const { rerender } = render(<ApiDocumentation />);
+    const [completion] = screen.getAllByRole('status');
+    expect(completion).toBeEmptyDOMElement();
+
+    mockUseSwagger.mockReturnValue(loaded);
+    rerender(<ApiDocumentation />);
+
+    expect(screen.getByRole('status')).toBe(completion);
+    expect(completion).toHaveTextContent(loadedText);
+  });
+
+  it('renders the back link and the loading status before the documentation chunk resolves', async () => {
+    mockUseSwagger.mockReturnValue(loaded);
+
+    const { container } = render(<Swagger />);
+
+    expect(screen.getByRole('link', { name: backToTheHome })).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent(loadingText);
+    expect(screen.queryByText(/SwaggerUI rendered/i)).not.toBeInTheDocument();
+    expect(container.firstElementChild).not.toHaveStyle({ minHeight: '100vh' });
+
+    expect(await screen.findByText(/SwaggerUI rendered/i)).toBeInTheDocument();
+    expect(screen.queryByText(loadingText)).not.toBeInTheDocument();
+    expect(
+      screen
+        .getByRole('link', { name: backToTheHome })
+        .compareDocumentPosition(screen.getByText(/SwaggerUI rendered/i))
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    await expectNoA11yViolations(container);
   });
 });

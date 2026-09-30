@@ -1,4 +1,9 @@
 export default {
+  region: {
+    '&:not(:has(.swagger-ui))': {
+      minHeight: '100vh',
+    },
+  },
   errorWrapper: {
     display: 'flex',
     flexDirection: 'column',

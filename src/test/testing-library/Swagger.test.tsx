@@ -2,19 +2,13 @@ import { render, screen } from '@testing-library/react';
 
 import Swagger from '../../features/swagger/components/swagger/swagger';
 
-jest.mock(
-  '../../features/swagger/components/navigation/navigation',
-  () =>
-    function MockNavigation(): React.ReactElement {
-      return <div data-testid="navigation">Navigation Component</div>;
-    }
-);
+const documentationText: string = 'API Documentation Component';
 
 jest.mock(
   '../../features/swagger/components/api-documentation/api-documentation',
   () =>
     function MockApiDocumentation(): React.ReactElement {
-      return <div data-testid="api-documentation">API Documentation Component</div>;
+      return <p>API Documentation Component</p>;
     }
 );
 
@@ -39,141 +33,44 @@ jest.mock('react-i18next', () => ({
   }),
 }));
 
-jest.mock('@mui/material', () => ({
-  Box: ({ children, sx }: { children: React.ReactNode; sx: unknown }): React.ReactElement => (
-    <div data-testid="mui-box" style={sx as React.CSSProperties}>
-      {children}
-    </div>
-  ),
-  Container: ({
-    children,
-    maxWidth,
-  }: {
-    children: React.ReactNode;
-    maxWidth: string;
-  }): React.ReactElement => (
-    <div data-testid="mui-container" data-max-width={maxWidth}>
-      {children}
-    </div>
-  ),
-}));
+const backLinkName: string = 'navigation.navigate_to_home_page';
 
-jest.mock('../../features/swagger/components/swagger/styles', () => ({
-  wrapper: {
-    padding: '20px',
-    backgroundColor: '#f5f5f5',
-  },
-}));
-const renderSwagger: () => ReturnType<typeof render> = (): ReturnType<typeof render> =>
-  render(<Swagger />);
-
-describe('Swagger Integration Tests', () => {
+describe('Swagger', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockChangeLanguage.mockImplementation(() => {});
   });
 
-  describe('Component Structure', () => {
-    test('renders all main components', () => {
-      renderSwagger();
+  it('renders the back link at once and the documentation behind its own lazy boundary', async () => {
+    render(<Swagger />);
 
-      expect(screen.getByTestId('mui-box')).toBeInTheDocument();
-      expect(screen.getByTestId('mui-container')).toBeInTheDocument();
-      expect(screen.getByTestId('navigation')).toBeInTheDocument();
-      expect(screen.getByTestId('api-documentation')).toBeInTheDocument();
-    });
+    expect(screen.getByRole('link', { name: backLinkName })).toHaveAttribute('href', '/');
+    expect(screen.getByRole('status')).toHaveTextContent('api_documentation.loading');
+    expect(screen.queryByText(documentationText)).not.toBeInTheDocument();
 
-    test('applies correct Material-UI props', () => {
-      renderSwagger();
-
-      const container: HTMLElement = screen.getByTestId('mui-container');
-      expect(container).toHaveAttribute('data-max-width', 'xl');
-    });
-
-    test('applies wrapper styles', () => {
-      renderSwagger();
-
-      const box: HTMLElement = screen.getByTestId('mui-box');
-      expect(box).toHaveStyle({
-        padding: '20px',
-        backgroundColor: '#f5f5f5',
-      });
-    });
+    expect(await screen.findByText(documentationText)).toBeInTheDocument();
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 
-  describe('Internationalization', () => {
-    // The page is English-only, but that is the route's decision, not the component's:
-    // `resolveRouteLocale('/swagger')` in `src/config/locales.ts` resolves it, and
-    // `pages/_app.tsx` applies it before this tree renders. A `changeLanguage('en')`
-    // effect here used to fight that rule (and left the landing English after a
-    // swagger visit), so the component must not touch the language at all.
-    test('does not change the language itself', () => {
-      const { rerender } = renderSwagger();
-      rerender(<Swagger />);
+  it('places the back link before the documentation inside one xl container', async () => {
+    render(<Swagger />);
 
-      expect(mockChangeLanguage).not.toHaveBeenCalled();
-    });
+    const documentation: HTMLElement = await screen.findByText(documentationText);
+    const link: HTMLElement = screen.getByRole('link', { name: backLinkName });
+    const container: Element | null = link.closest('.MuiContainer-maxWidthXl');
+
+    expect(container).not.toBeNull();
+    expect(container).toContainElement(documentation);
+    expect(link.compareDocumentPosition(documentation)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
 
-  describe('Component Hierarchy', () => {
-    test('renders components in correct order', () => {
-      renderSwagger();
+  // The route decides the language (`resolveRouteLocale('/swagger')`); a
+  // `changeLanguage('en')` effect here once fought it and left the landing English.
+  it('does not change the language itself', async () => {
+    const { rerender } = render(<Swagger />);
+    await screen.findByText(documentationText);
+    rerender(<Swagger />);
 
-      const container: HTMLElement = screen.getByTestId('mui-container');
-      const navigation: HTMLElement = screen.getByTestId('navigation');
-      const apiDocumentation: HTMLElement = screen.getByTestId('api-documentation');
-
-      expect(container.children[0]).toBe(navigation);
-      expect(container.children[1]).toBe(apiDocumentation);
-    });
-
-    test('wraps components in proper Material-UI structure', () => {
-      renderSwagger();
-
-      const box: HTMLElement = screen.getByTestId('mui-box');
-      const container: HTMLElement = screen.getByTestId('mui-container');
-
-      expect(box).toContainElement(container);
-      expect(container).toContainElement(screen.getByTestId('navigation'));
-      expect(container).toContainElement(screen.getByTestId('api-documentation'));
-    });
-  });
-
-  describe('Accessibility', () => {
-    test('has proper semantic structure', () => {
-      renderSwagger();
-
-      expect(screen.getByTestId('mui-box')).toBeInTheDocument();
-      expect(screen.getByTestId('mui-container')).toBeInTheDocument();
-    });
-
-    test('renders child components with proper test IDs', () => {
-      renderSwagger();
-
-      expect(screen.getByTestId('navigation')).toHaveTextContent('Navigation Component');
-      expect(screen.getByTestId('api-documentation')).toHaveTextContent(
-        'API Documentation Component'
-      );
-    });
-  });
-
-  describe('Responsive Design', () => {
-    test('applies responsive container props', () => {
-      renderSwagger();
-
-      const container: HTMLElement = screen.getByTestId('mui-container');
-      expect(container).toHaveAttribute('data-max-width', 'xl');
-    });
-
-    test('wrapper styles are applied correctly', () => {
-      renderSwagger();
-
-      const box: HTMLElement = screen.getByTestId('mui-box');
-
-      expect(box).toHaveStyle({
-        padding: '20px',
-        backgroundColor: '#f5f5f5',
-      });
-    });
+    expect(mockChangeLanguage).not.toHaveBeenCalled();
   });
 });
