@@ -84,7 +84,7 @@ describe('integration: swagger highlighter shim over highlight.js 11', () => {
     ).toBe(code);
   });
 
-  it('keeps each JSON token on a class agate colours (a literal now also carries hljs-keyword)', () => {
+  it('keeps each JSON token on a class agate colours (a literal also carries hljs-keyword)', () => {
     const tokens = tokensOf(highlight('json', SAMPLES.json).value);
 
     expect(classesOf(tokens, '"email"')).toEqual(['hljs-attr']);

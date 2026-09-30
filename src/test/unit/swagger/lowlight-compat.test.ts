@@ -40,7 +40,7 @@ function textOf(nodes: HighlightNodes): string {
     .join('');
 }
 
-describe('lowlightCompat — the lowlight 1 API react-syntax-highlighter/light calls (#379)', () => {
+describe('lowlightCompat: the lowlight 1 API react-syntax-highlighter/light calls (#379)', () => {
   beforeAll(() => {
     registerLanguage('numbers', numbers);
     registerLanguage('scoped', scoped);

@@ -119,7 +119,8 @@ from a checkout of it:
 ```bash
 derive='. ./aws/scripts/sh/sanitize_branch.sh >/dev/null
 printf "%s-%s" "$PROJECT_NAME" "$BRANCH_NAME"'
-bucket=$(BRANCH_NAME='<raw branch name>' sh -c "$derive")
+IFS= read -r -p 'Raw branch name: ' raw_branch
+bucket=$(BRANCH_NAME="$raw_branch" sh -c "$derive")
 ```
 
 Then derive the rule name exactly as the rule script does:
