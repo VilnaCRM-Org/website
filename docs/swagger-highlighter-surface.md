@@ -115,10 +115,12 @@ something the engine swap introduced.
 
 `src/test/unit/swagger/lowlight-compat.test.ts` pins that contract and the highlight.js
 major; `tests/integration/coverage/swagger/lowlight-compat.integration.test.ts` registers
-the seven swagger-ui grammars from `highlight.js/lib/languages/*` and checks each round-trips
-its text and keeps the v10 classes. No Jest suite renders the real highlighter —
-every spec mocks `swagger-ui-react` — so `jest.config.ts` carries no module mapping for
-the alias; it only lets babel-jest transform the ESM-only `lowlight` and `devlop`.
+the seven swagger-ui grammars from `highlight.js/lib/languages/*` under swagger-ui's eight
+names and checks each round-trips its text and keeps a class the agate theme colours (a
+JSON literal additionally carries `hljs-keyword`, as noted above). No Jest suite renders
+the real highlighter — every spec mocks `swagger-ui-react` — so `jest.config.ts` carries
+no module mapping for the alias; it only lets babel-jest transform the ESM-only `lowlight`
+and `devlop`.
 
 The 2026-09-11 export check found the highlight.js `versionString` `"10.7.3"` in
 `out/_next/static/chunks/`, pulled in by `pages/swagger` alone — the landing page's chunk

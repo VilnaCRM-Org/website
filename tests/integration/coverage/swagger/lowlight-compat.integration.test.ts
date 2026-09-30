@@ -5,7 +5,8 @@
  * react-syntax-highlighter's light build wraps — to
  * `src/features/swagger/helpers/lowlight-compat.ts`, so the engine behind every
  * highlighted example on /swagger is lowlight 3 over highlight.js 11. This spec
- * registers the same seven grammars swagger-ui's `afterLoad` registers, straight
+ * registers the seven grammars swagger-ui's `after_load` registers, under the
+ * same eight names (`js` and `javascript` share one grammar), straight
  * from `highlight.js/lib/languages/*` (what react-syntax-highlighter's
  * `languages/hljs/*` re-export), and highlights the kind of content the page
  * renders: response bodies, request snippets and the spec itself.
@@ -83,7 +84,7 @@ describe('integration: swagger highlighter shim over highlight.js 11', () => {
     ).toBe(code);
   });
 
-  it('keeps JSON response tokens on the classes the v10 engine emitted', () => {
+  it('keeps each JSON token on a class agate colours (a literal now also carries hljs-keyword)', () => {
     const tokens = tokensOf(highlight('json', SAMPLES.json).value);
 
     expect(classesOf(tokens, '"email"')).toEqual(['hljs-attr']);
