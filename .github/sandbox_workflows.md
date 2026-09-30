@@ -16,6 +16,7 @@ This documentation provides an overview of two GitHub Actions workflows used for
   - [Why the subject must be exact, and never a wildcard](#why-the-subject-must-be-exact-and-never-a-wildcard)
     - [Order of operations: trust policy first, `environment:` key second](#order-of-operations-trust-policy-first-environment-key-second)
   - [Production incident: `website-deploy-trigger-role` (issue #494)](#production-incident-website-deploy-trigger-role-issue-494)
+- [Verifying sandbox cleanup](#verifying-sandbox-cleanup)
 - [Additional Notes](#additional-notes)
 
 ## Introduction
@@ -350,6 +351,20 @@ The fix is external, in the infrastructure repository, and must land in Terrafor
 Do **not** remove `environment: production` from `deploy.yml` to get green: assertion E of
 `make lint-prod-guardrails` requires it on a push-triggered job that assumes a role, and
 dropping it removes the environment's protection rules from in front of the production role.
+
+## Verifying sandbox cleanup
+
+These two workflows only start the pipelines. What actually removes a sandbox lives in the
+website-infrastructure repository: the `sandbox-deletion` pipeline's `sandbox_deletion.sh` when
+a pull request closes, and the `sandbox-cleanup-lambda` function, fired by a one-shot
+`sandbox-cleanup-<bucket>` EventBridge rule seven days after the latest sandbox deploy.
+
+[The sandbox cleanup verification runbook](../docs/runbooks/sandbox-cleanup.md) (issue #148)
+is the operator procedure for proving that path works: finding the EventBridge rule for a
+sandbox bucket, checking the Lambda execution role with `aws iam simulate-principal-policy`,
+running a probe against a throwaway bucket in the test account, reading the Lambda's
+CloudWatch logs, and confirming no bucket or rule is left behind. It also records the gaps
+visible in the infrastructure source and which repository owns each fix.
 
 ## Additional Notes
 
