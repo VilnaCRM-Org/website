@@ -14,7 +14,11 @@ pipeline. CodePipeline then builds the static export and publishes it to the CDN
 not once the new build is live.
 
 The `deploy` job runs inside the `production` GitHub Environment so the release
-can be gated by environment protection rules (see below).
+can be gated by environment protection rules (see below). That also means the
+role it assumes must trust the environment's OIDC subject; until the
+infrastructure repository's Terraform does, the job fails before it can trigger
+the pipeline (see
+[Troubleshooting](#troubleshooting-deploy-fails-at-configure-aws-credentials)).
 
 ## Post-deploy smoke test
 
@@ -174,10 +178,12 @@ the infra repository instead of adding a slug rule here.
 
 ### Environment protection rules
 
-No sandbox job in this repository declares an `environment:` today (the `deploy`
-job in `deploy.yml` does declare `environment: production`). Adding one to a
-sandbox job is a **three-step sequence that must be done in order** (issue #375);
-the steps below are the prerequisites, not something already delivered.
+No sandbox job in this repository declares an `environment:` today. The `deploy`
+job in `deploy.yml` does declare `environment: production` — assertion E of
+`make lint-prod-guardrails` requires it — but step 1 below is outstanding for its
+role too, so that job is red (issue #494). Adding an environment to a sandbox job
+is a **three-step sequence that must be done in order** (issue #375); the steps
+below are the prerequisites, not something already delivered.
 
 Naming an environment is not inert. It changes the OIDC subject GitHub mints for
 that job from `repo:VilnaCRM-Org/website:pull_request` to
@@ -194,6 +200,13 @@ will be assumed under, with `StringEquals` and never a `StringLike` wildcard. Th
 role-to-subject table lives in
 [`.github/sandbox_workflows.md`](../.github/sandbox_workflows.md). This is an
 out-of-repo change and must land first.
+
+It is outstanding for **every** role, `production` / `website-deploy-trigger-role`
+included: the committed Terraform in `VilnaCRM-Org/website-infrastructure`
+accepts only branch and pull-request subjects for all of them. Make the change
+in Terraform and let the pipeline apply it — **never in the IAM console**. The
+next pipeline apply reverts a hand edit, which is exactly how the production role
+lost its environment subject on 2026-09-19.
 
 #### Step 2 — create the environments (repository settings)
 
@@ -239,6 +252,47 @@ production deploy.
 
 Nothing here is enforced by default. Steps 1 and 2 are configuration changes
 that cannot be committed.
+
+#### Troubleshooting: `deploy` fails at Configure AWS Credentials
+
+**Symptom.** A push-to-`main` run of the `website` workflow fails in the
+`deploy` job at `Configure AWS Credentials`, after twelve retries, with:
+
+```text
+Could not assume role with OIDC: Not authorized to perform sts:AssumeRoleWithWebIdentity
+```
+
+The `post-deploy smoke test` job is then skipped, and nothing reached
+CodePipeline — production still serves the previous build.
+
+**Cause.** `website-deploy-trigger-role`'s trust policy does not accept the
+subject the job mints. Because the job declares `environment: production`, that
+subject is `repo:VilnaCRM-Org/website:environment:production`, not a branch
+subject. This is issue #494: runs were green through run 35396803405
+(2026-09-18) and red from run 35792114048 (2026-09-22), after an infrastructure
+apply converged the live role onto its committed Terraform, which never
+contained that subject. The full timeline is in
+[`.github/sandbox_workflows.md`](../.github/sandbox_workflows.md#production-incident-website-deploy-trigger-role-issue-494).
+
+**Fix.** In the infrastructure repository, add a trust-policy statement for
+`website-deploy-trigger-role` only (a per-role subjects variable on the
+`pipeline-trigger-role` module, not a change to its shared policy), as its own
+statement, with exactly this condition:
+
+```json
+{
+  "StringEquals": {
+    "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
+    "token.actions.githubusercontent.com:sub": "repo:VilnaCRM-Org/website:environment:production"
+  }
+}
+```
+
+Let the `ci-cd-infrastructure` pipeline apply it, then re-run the failed
+`website` run. Do not edit the role in the console, and do not remove
+`environment: production` from `deploy.yml`: assertion E fails the pull request
+that drops it, and dropping it removes the protection rules in front of the
+production role.
 
 ## Rollback procedure
 

@@ -641,10 +641,19 @@ Production-facing invariants that no other gate watches. Extend them; never rela
   PR. Widening those trust policies is the prerequisite for lifting the exemption —
   `.github/sandbox_workflows.md` records the required order and the evidence — and
   `pull_request_target`, `merge_group`, `push`, `schedule`, `workflow_dispatch` and
-  `workflow_run` are never exempt. **F — mask before write:** a `run:` step that appends a
-  variable named like a credential (`TOKEN`, `SECRET`, `PASSWORD`, `PRIVATE_KEY`,
-  `CREDENTIAL`) to `$GITHUB_ENV` or `$GITHUB_OUTPUT` must print `::add-mask::` for **that
-  value** earlier in the same step — a mask of some other value covers nothing — and a
+  `workflow_run` are never exempt. The sandbox roles are not the only ones: no role's
+  committed Terraform accepts an environment subject, `website-deploy-trigger-role`
+  included. The production role accepted `repo:VilnaCRM-Org/website:environment:production`
+  only through out-of-band drift, which the infra apply triggered by
+  website-infrastructure #124 reverted, so every push-to-`main` `deploy` run has failed
+  at that step since 2026-09-22 (issue #494). The fix is the role's trust policy, landed
+  in the infrastructure repository's Terraform and applied by its pipeline — never a
+  console edit, which the next apply reverts, and never dropping
+  `environment: production`, which this assertion requires. **F — mask before write:**
+  a `run:` step that appends a variable named like a credential (`TOKEN`, `SECRET`,
+  `PASSWORD`, `PRIVATE_KEY`, `CREDENTIAL`) to `$GITHUB_ENV` or `$GITHUB_OUTPUT` must
+  print `::add-mask::` for **that value** earlier in the same step — a mask of some
+  other value covers nothing — and a
   write whose variable or value the gate cannot read is reported rather than guessed. Only
   a write counts (`>>`, `>`, `tee`, PowerShell's `Out-File`/`Add-Content`, cmd's
   `>>%GITHUB_ENV%`); a line that merely reads the file is not one. Both read the parsed `run:` string and the parsed job, never the workflow

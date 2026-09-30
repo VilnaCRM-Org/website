@@ -53,7 +53,10 @@ Here is an example IAM policy:
 }
 ```
 
-Here is an example Trust relationships:
+Here is the trust relationship `website-deploy-trigger-role` needs. The `deploy` job declares
+`environment: production`, so the OIDC subject it mints is
+`repo:VilnaCRM-Org/website:environment:production`, and the policy must match that subject
+**exactly**, with `StringEquals`:
 
 ```json
 {
@@ -62,19 +65,34 @@ Here is an example Trust relationships:
         {
             "Effect": "Allow",
             "Principal": {
-                "Federated": "arn:aws:iam::123456789012:oidc-provider/token.actions.githubusercontent.com"
+                "Federated": "arn:aws:iam::PROD_AWS_ACCOUNT_ID:oidc-provider/token.actions.githubusercontent.com"
             },
             "Action": "sts:AssumeRoleWithWebIdentity",
             "Condition": {
-                "StringLike": {
+                "StringEquals": {
                     "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
-                    "token.actions.githubusercontent.com:sub": "repo:YOUR_GITHUB_ORG/YOUR_REPO:*"
+                    "token.actions.githubusercontent.com:sub": "repo:VilnaCRM-Org/website:environment:production"
                 }
             }
         }
     ]
 }
 ```
+
+Never use a `StringLike` subject such as `repo:YOUR_GITHUB_ORG/YOUR_REPO:*`, which an earlier
+revision of this document printed: the wildcard matches every branch, pull-request and
+environment subject the repository can mint, so any workflow with `id-token: write` could
+trigger the production pipeline with no review in front of it.
+
+This trust policy is **prescribed, not deployed**. The role is managed by Terraform in
+`VilnaCRM-Org/website-infrastructure`, whose committed policy accepts only branch and
+pull-request subjects, so every push-to-`main` deploy has failed at `Configure AWS Credentials`
+with `Not authorized to perform sts:AssumeRoleWithWebIdentity` since 2026-09-22 (issue #494).
+The change must land in that Terraform — as a statement of its own for this role only — and
+be applied by its pipeline; a console edit is reverted by the next apply. Do not remove
+`environment: production` from `deploy.yml` instead: `make lint-prod-guardrails` requires it.
+The incident timeline, the per-role subject table and the required order of operations are in
+[sandbox_workflows.md](sandbox_workflows.md#why-the-subject-must-be-exact-and-never-a-wildcard).
 
 ## Jobs
 
@@ -164,7 +182,7 @@ covered by that alerting, so the two cannot drift apart silently.
 
 ## Notes
 
-- Ensure that the IAM role (website-deploy-trigger-role) is correctly configured with the necessary permissions to trigger the AWS CodePipeline.
+- Ensure that the IAM role (website-deploy-trigger-role) is correctly configured with the necessary permissions to trigger the AWS CodePipeline, and that its trust policy accepts the exact `repo:VilnaCRM-Org/website:environment:production` subject shown above.
 - The vars.PROD_AWS_ACCOUNT_ID variable should be set up in the repository to contain the appropriate AWS account ID for the production environment.
 - The ci-cd-website-prod-pipeline CodePipeline should be created and configured in the specified AWS region.
 - A workflow's `name:` is load-bearing: `ci-health-alerts.yml` matches monitored

@@ -491,7 +491,14 @@ otherwise only hold in production:
   subject the job mints, and the deployed sandbox role's trust policy does not
   accept the new subject, so the key would fail `sts:AssumeRoleWithWebIdentity`
   on every pull request. Widening those trust policies is what lifts the
-  exemption; `.github/sandbox_workflows.md` records the required order.
+  exemption; `.github/sandbox_workflows.md` records the required order. The
+  sandbox roles are not the only ones: no role's committed Terraform accepts an
+  environment subject, `website-deploy-trigger-role` included, so the `deploy`
+  job has failed at `Configure AWS Credentials` on every push to `main` since
+  2026-09-22 (issue #494). The fix is that role's trust policy, landed in the
+  infrastructure repository's Terraform and applied by its pipeline — never a
+  console edit, which the next apply reverts, and never removing
+  `environment: production`, which this invariant requires.
 - A `run:` step that appends a credential-named variable (`TOKEN`, `SECRET`,
   `PASSWORD`, `PRIVATE_KEY`, `CREDENTIAL`) to `$GITHUB_ENV` or `$GITHUB_OUTPUT`
   prints `::add-mask::` for that value earlier in the same step, so it is
