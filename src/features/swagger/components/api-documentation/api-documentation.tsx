@@ -61,7 +61,9 @@ function ApiDocumentation(): React.ReactElement {
       </UiTypography>
       {loading && <Loading />}
       {error && <LoadError onRetry={handleRetry} focusRetry={retried} />}
-      {swaggerContent ? <SwaggerUI spec={swaggerContent} plugins={swaggerPlugins} /> : null}
+      {swaggerContent ? (
+        <SwaggerUI spec={swaggerContent} plugins={swaggerPlugins} defaultModelsExpandDepth={-1} />
+      ) : null}
     </Box>
   );
 }

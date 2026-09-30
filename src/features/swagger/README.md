@@ -54,6 +54,12 @@ and renders the documentation UI. The rendered spec comes from the
 pinned user-service contract (see the `contract-testing-workflow` skill), so this feature is
 presentation over that contract rather than a live data source.
 
+`ApiDocumentation` passes `defaultModelsExpandDepth={-1}`, so Swagger UI does not render its
+page-level Schemas (Models) section. The v0.8.0 contract introduced 22 named component schemas,
+and product chose not to list them under the operations. Each operation still shows its own
+request and response schemas in its Example Value / Schema tabs, which the singular
+`defaultModelExpandDepth` controls and this setting leaves alone.
+
 ## Accessibility of the third-party widget
 
 `swagger-ui-react` ships four WCAG failures that are fixed through its supported
@@ -105,7 +111,8 @@ wraps two spec actions:
   which was the longest task on the page (about 190 ms locally, 230-360 ms on CI runners).
   Storing, rather than skipping, keeps `resolvedSubtrees` as upstream sets it: the OAS3
   `definitionsToAuthorize` selector passes that subtree as an argument to refresh its cached
-  Authorize data. Operations and models still resolve when they are expanded.
+  Authorize data. Operations and their in-operation schemas still resolve when they are
+  expanded.
 
 `SwaggerPage` also preloads `/swagger-schema.json` from the static HTML
 (`<link rel="preload" as="fetch" crossorigin="anonymous">`, the credentials mode `fetch()`

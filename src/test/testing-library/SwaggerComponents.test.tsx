@@ -49,10 +49,14 @@ describe('Swagger Navigation', () => {
 
 jest.mock('../../features/swagger/hooks/useSwagger');
 
-const mockSwaggerUi: { renders: boolean } = { renders: true };
+const mockSwaggerUi: { renders: boolean; props: Record<string, unknown>[] } = {
+  renders: true,
+  props: [],
+};
 
 jest.mock('swagger-ui-react', () => {
-  function SwaggerUI(): React.ReactElement | null {
+  function SwaggerUI(props: Record<string, unknown>): React.ReactElement | null {
+    mockSwaggerUi.props.push(props);
     return mockSwaggerUi.renders ? <div className="swagger-ui">SwaggerUI rendered</div> : null;
   }
 
@@ -146,6 +150,16 @@ describe('ApiDocumentation', () => {
     expect(screen.getByRole('status')).toHaveTextContent(loadedText);
     expect(screen.queryByText(loadingText)).not.toBeInTheDocument();
     await expectNoA11yViolations(container);
+  });
+
+  it('asks Swagger UI not to render the Schemas section', () => {
+    mockUseSwagger.mockReturnValue(
+      hookState({ swaggerContent: { openapi: '3.1.0' }, loading: false })
+    );
+
+    render(<ApiDocumentation />);
+
+    expect(mockSwaggerUi.props.at(-1)).toMatchObject({ defaultModelsExpandDepth: -1 });
   });
 });
 

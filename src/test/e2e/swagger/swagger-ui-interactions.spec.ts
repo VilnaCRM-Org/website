@@ -144,6 +144,13 @@ test.describe('Swagger UI Enhanced Interactions', () => {
     await expect(schemaPanel).not.toBeEmpty();
   });
 
+  test('should not render the Schemas section', async ({ page }) => {
+    await page.locator('.opblock-tag-section').first().waitFor({ state: 'visible' });
+
+    await expect(page.getByRole('button', { name: /^schemas$/i })).toHaveCount(0);
+    await expect(page.locator('section.models')).toHaveCount(0);
+  });
+
   test('should list every documented endpoint under its tag', async ({ page }) => {
     const tagSections: Locator = page.locator('.opblock-tag-section');
     await tagSections.first().waitFor({ state: 'visible' });
