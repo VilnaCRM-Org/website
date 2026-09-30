@@ -402,8 +402,12 @@ Object whose media type is `text/html` (compared case-insensitively, parameters 
 authorize page that way, and no guard can tell a sample page from injected markup. The
 sample is removed, never let through: the media type's `schema` and `encoding` stay and
 stay scanned, `text/*`, `*/*` and `application/xhtml+xml` are not `text/html`, and HTML in
-any other example, description, title, summary or key still fails the refresh. Never widen
-the drop to another key, media type or position to unblock a refresh — record a new ADR.
+any other example, description, title, summary or key still fails the refresh. Because the
+digest is taken over the normalized form, it cannot see that dropped slot by itself, so the
+offline integrity step of `make lint-contracts` also requires the committed `openapi.json`
+to be a fixed point of `normalizeSpec` — a text/html sample hand-edited back in turns it
+red. Never widen the drop to another key, media type or position to unblock a refresh —
+record a new ADR.
 
 Refresh artifacts and digests together with `make update-contracts` — never hand-edit
 `checksums.json`, and never loosen the ref check to accept a branch.

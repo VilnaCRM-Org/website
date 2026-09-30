@@ -188,6 +188,10 @@ documents its OAuth authorize page with a full HTML document as that sample, whi
 no markup guard can tell from an injection. Dropping it means nothing upstream
 writes there is ever vendored; the media type's `schema` and `encoding` stay and
 stay scanned. `text/*`, `*/*` and `application/xhtml+xml` are not `text/html`.
+The digest in `checksums.json` is taken over the normalized form and so cannot see
+that slot; `make lint-contracts` also requires the committed `openapi.json` to be a
+fixed point of `normalizeSpec` (`verifyNormalizedArtifact`), which is what makes a
+hand-edited sample there fail the integrity step.
 
 The same entry point **rejects** (rather than rewrites) HTML markup in every
 remaining string and key, and a non-`http(s)` link (#376 F1). Rewriting was the obvious alternative and is unsafe: no tag regex can

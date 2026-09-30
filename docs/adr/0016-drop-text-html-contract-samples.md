@@ -67,6 +67,13 @@ committed JSON keep comparing equal. The specs live in
 - The committed `openapi.json` is no longer a pure re-serialization of upstream: one
   more documented transformation sits beside the `maxLength: null` / `format: null`
   strip, and a reader diffing it against upstream has to know about both.
+- The committed-artifact digest in `checksums.json` is taken over the normalized form,
+  so on its own it cannot see a slot `normalizeSpec` drops: a text/html `example`
+  hand-edited into the committed `openapi.json` would leave the digest unchanged. The
+  offline integrity step of `make lint-contracts` therefore also requires the committed
+  document to be a fixed point of normalization (`verifyNormalizedArtifact` in
+  `scripts/contracts/checksums.mjs`); that assertion, not the digest, is what keeps the
+  dropped slot tamper-evident.
 - One more rule to keep narrow. The pressure to "just add" another media type or key
   the next time a refresh fails is the failure mode this record exists to resist.
 

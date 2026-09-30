@@ -205,6 +205,83 @@ describe('contract checksums', () => {
     });
   });
 
+  describe('verifyNormalizedArtifact', () => {
+    const OAUTH_PAGE: string = '<script>alert(1)</script>';
+
+    type AuthorizeDocument = {
+      paths: {
+        '/api/oauth/authorize': {
+          get: { responses: { '200': { content: { 'text/html': Record<string, unknown> } } } };
+        };
+      };
+    };
+
+    const committedOpenapi = (): AuthorizeDocument =>
+      JSON.parse(readFileSync(checksums.OPENAPI_ARTIFACT, 'utf8'));
+
+    const tamperedOpenapi = (): AuthorizeDocument => {
+      const doc: AuthorizeDocument = committedOpenapi();
+      doc.paths['/api/oauth/authorize'].get.responses['200'].content['text/html'].example =
+        OAUTH_PAGE;
+      return doc;
+    };
+
+    const recordedFor = (read: ReadFile): ReadFile => {
+      const artifacts: Record<string, string> = checksums.computeCommittedDigests(read);
+      return (path: string) =>
+        path === checksums.CHECKSUMS_PATH
+          ? JSON.stringify({ algorithm: 'sha256', artifacts })
+          : read(path, 'utf8');
+    };
+
+    test('accepts a document that normalization leaves unchanged', () => {
+      expect(checksums.verifyNormalizedArtifact(fakeFiles())).toEqual([]);
+    });
+
+    test('the digest alone cannot see a text/html example, which is why this check exists', () => {
+      const original: string = JSON.stringify(committedOpenapi());
+      const tampered: string = JSON.stringify(tamperedOpenapi());
+
+      expect(tampered).not.toBe(original);
+      expect(checksums.openapiDigestFromJson(tampered)).toBe(
+        checksums.openapiDigestFromJson(original)
+      );
+    });
+
+    test('refuses markup seeded into a text/html example of the committed contract', () => {
+      const tampered: ReadFile = recordedFor(
+        fakeFiles({
+          [checksums.OPENAPI_ARTIFACT]: JSON.stringify(tamperedOpenapi()),
+        })
+      );
+
+      const problems: string[] = checksums.verifyCommittedDigests(tampered);
+
+      expect(problems).toHaveLength(1);
+      expect(problems[0]).toContain(checksums.OPENAPI_ARTIFACT);
+      expect(problems[0]).toContain('text/html sample');
+    });
+
+    test('refuses a null keyword re-inserted after normalization', () => {
+      const tampered: ReadFile = recordedFor(
+        fakeFiles({
+          [checksums.OPENAPI_ARTIFACT]: JSON.stringify({
+            openapi: '3.0.0',
+            paths: {},
+            maxLength: null,
+          }),
+        })
+      );
+
+      expect(checksums.verifyNormalizedArtifact(tampered)).toHaveLength(1);
+      expect(checksums.verifyCommittedDigests(tampered)).toHaveLength(1);
+    });
+
+    test('the committed contract is a fixed point of normalization', () => {
+      expect(checksums.verifyNormalizedArtifact()).toEqual([]);
+    });
+  });
+
   describe('buildChecksumsFile', () => {
     test('records the algorithm and one digest per artifact', () => {
       const built: ReturnType<ChecksumsModule['buildChecksumsFile']> =
