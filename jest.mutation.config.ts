@@ -97,6 +97,8 @@ export default async () => {
   const nextJestConfig = await createJestConfig(config)();
   return {
     ...nextJestConfig,
-    transformIgnorePatterns: ['/node_modules/(?!(uuid|@faker-js/faker|@vilnacrm/ui-toolkit)/)'],
+    transformIgnorePatterns: [
+      '/node_modules/(?!(uuid|@faker-js/faker|@vilnacrm/ui-toolkit|lowlight|devlop)/)',
+    ],
   };
 };

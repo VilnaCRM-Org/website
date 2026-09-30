@@ -16,6 +16,7 @@ export function openapiDigestFromYaml(yamlText: string): string;
 export function graphqlDigest(sdl: string): string;
 export function readChecksums(readFile?: ReadFile): Record<string, string>;
 export function computeCommittedDigests(readFile?: ReadFile): Record<string, string>;
+export function verifyNormalizedArtifact(readFile?: ReadFile): string[];
 export function verifyCommittedDigests(readFile?: ReadFile): string[];
 export function buildChecksumsFile(readFile?: ReadFile): {
   comment: string;

@@ -69,16 +69,38 @@ export function computeCommittedDigests(readFile = readFileSync) {
 }
 
 /**
+ * The digest is taken over `normalizeSpec(doc)`, so it cannot see a slot the
+ * normalization drops — a `maxLength: null`, or an `example` under a text/html
+ * Media Type Object (ADR 0016). Markup hand-edited into that slot of the
+ * committed file would reach Mockoon and /swagger with the digest unchanged.
+ * Requiring the committed document to be a fixed point of normalization is what
+ * keeps those slots tamper-evident: `make update-contracts` only ever writes
+ * normalized output, so any difference is an edit made after the fact.
+ */
+export function verifyNormalizedArtifact(readFile = readFileSync) {
+  const committed = JSON.parse(readFile(OPENAPI_ARTIFACT, 'utf8'));
+
+  if (JSON.stringify(normalizeSpec(committed)) === JSON.stringify(committed)) {
+    return [];
+  }
+  return [
+    `${OPENAPI_ARTIFACT}: carries content normalizeSpec drops (a null maxLength/format ` +
+      'or a text/html sample) — it was edited after `make update-contracts` wrote it',
+  ];
+}
+
+/**
  * Compares every committed artifact against its recorded digest and returns one
- * message per problem (empty means clean). Hermetic on purpose: this is the half
- * of the supply-chain gate that runs without network, so a tampered artifact
- * fails even when `raw.githubusercontent.com` is unreachable.
+ * message per problem (empty means clean), plus the normalization fixed-point
+ * check above. Hermetic on purpose: this is the half of the supply-chain gate
+ * that runs without network, so a tampered artifact fails even when
+ * `raw.githubusercontent.com` is unreachable.
  */
 export function verifyCommittedDigests(readFile = readFileSync) {
   const recorded = readChecksums(readFile);
   const actual = computeCommittedDigests(readFile);
 
-  return Object.entries(actual).flatMap(([artifact, hash]) => {
+  const digestProblems = Object.entries(actual).flatMap(([artifact, hash]) => {
     const expected = recorded[artifact];
 
     if (expected === undefined) {
@@ -92,6 +114,8 @@ export function verifyCommittedDigests(readFile = readFileSync) {
     }
     return [];
   });
+
+  return [...digestProblems, ...verifyNormalizedArtifact(readFile)];
 }
 
 export function buildChecksumsFile(readFile = readFileSync) {

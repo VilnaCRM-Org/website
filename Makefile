@@ -436,7 +436,7 @@ ifeq ($(HOST_STACK), 1)
     STOP_PROD_CMD           = $(HOST_STACK_CMD) stop
     MEMLEAK_RUN             = $(HOST_STACK_CMD) memlab
     PLAYWRIGHT_INSTALL_CMD  = $(HOST_STACK_CMD) browsers
-    # Baselines are produced in mcr.microsoft.com/playwright:v1.57.0-jammy and
+    # Baselines are produced in mcr.microsoft.com/playwright:v1.63.0-jammy and
     # Playwright runs with no maxDiffPixels, so host font rasterization would
     # rewrite every snapshot and immediately red the container-run visual gate.
     # Fail before the prerequisite so no build is wasted on a refused run.

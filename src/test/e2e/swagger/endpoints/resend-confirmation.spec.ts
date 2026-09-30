@@ -1,6 +1,6 @@
 import { expect, type Locator, Page, test } from '@playwright/test';
 
-import { testUserId, BASE_API, BasicEndpointElements } from '../utils/constants';
+import { BASE_API, BasicEndpointElements } from '../utils/constants';
 import {
   initSwaggerPage,
   clearEndpointResponse,
@@ -11,12 +11,14 @@ import {
   cancelOperation,
   expectErrorOrFailureStatus,
   collapseEndpoint,
+  expectOnlyDocumentedId,
+  selectDocumentedId,
 } from '../utils/helpers';
 import { locators } from '../utils/locators';
 
 interface ResendConfirmationEndpointElements extends BasicEndpointElements {
   parametersSection: Locator;
-  idInput: Locator;
+  idSelect: Locator;
   curl: Locator;
   copyButton: Locator;
 }
@@ -35,7 +37,7 @@ async function setupResendConfirmationEndpoint(
 
   const executeBtn: Locator = await getAndCheckExecuteBtn(resendEndpoint);
   const parametersSection: Locator = resendEndpoint.locator(locators.parametersSection);
-  const idInput: Locator = resendEndpoint.locator(locators.idInput);
+  const idSelect: Locator = resendEndpoint.locator(locators.idSelect);
   const requestUrl: Locator = resendEndpoint.locator(locators.requestUrl);
   const responseBody: Locator = resendEndpoint.locator(locators.responseBody).first();
   const curl: Locator = resendEndpoint.locator(locators.curl);
@@ -45,7 +47,7 @@ async function setupResendConfirmationEndpoint(
     getEndpoint: resendEndpoint,
     executeBtn,
     parametersSection,
-    idInput,
+    idSelect,
     curl,
     copyButton,
     requestUrl,
@@ -57,41 +59,25 @@ test.describe('resend confirmation email', () => {
   test('successfully resends confirmation email', async ({ page }) => {
     const elements: ResendConfirmationEndpointElements =
       await setupResendConfirmationEndpoint(page);
-    await interceptWithEmptyResponse(page, RESEND_CONFIRM_API_URL(testUserId));
+    const userId: string = await selectDocumentedId(elements.idSelect);
+    await interceptWithEmptyResponse(page, RESEND_CONFIRM_API_URL(userId));
     await expect(elements.parametersSection).toBeVisible();
-    await expect(elements.idInput).toBeVisible();
-    await elements.idInput.fill(testUserId);
+    await expect(elements.idSelect).toBeVisible();
     await elements.executeBtn.click();
     await expect(elements.curl).toBeVisible();
     await expect(elements.copyButton).toBeVisible();
-    await expect(elements.requestUrl).toContainText(testUserId);
+    await expect(elements.requestUrl).toContainText(userId);
     await expect(elements.requestUrl).toContainText('resend-confirmation-email');
     await clearEndpointResponse(elements.getEndpoint);
-  });
-
-  test('empty ID validation', async ({ page }) => {
-    const elements: ResendConfirmationEndpointElements =
-      await setupResendConfirmationEndpoint(page);
-    await elements.idInput.fill('');
-    await elements.executeBtn.click();
-    await expect(elements.idInput).toHaveClass(/invalid/);
-    const expectedErrorMsg: RegExp = /For 'id':\s*Required field is not provided\./;
-    await expect(elements.getEndpoint.locator('.validation-errors.errors-wrapper li')).toHaveText(
-      expectedErrorMsg
-    );
-
-    await cancelOperation(page);
-
-    await collapseEndpoint(elements.getEndpoint);
   });
 
   test('error response - user not found', async ({ page }) => {
     const elements: ResendConfirmationEndpointElements =
       await setupResendConfirmationEndpoint(page);
-    const nonExistentId: string = '2b10b7a3-67f0-40ea-a367-44263321592z';
+    const userId: string = await selectDocumentedId(elements.idSelect);
     await interceptWithErrorResponse(
       page,
-      RESEND_CONFIRM_API_URL(nonExistentId),
+      RESEND_CONFIRM_API_URL(userId),
       {
         error: 'Not Found',
         message: 'User not found',
@@ -99,7 +85,6 @@ test.describe('resend confirmation email', () => {
       },
       404
     );
-    await elements.idInput.fill(nonExistentId);
     await elements.executeBtn.click();
 
     await elements.responseBody.waitFor({ state: 'visible' });
@@ -112,37 +97,23 @@ test.describe('resend confirmation email', () => {
     await clearEndpointResponse(elements.getEndpoint);
   });
 
-  test('error response - invalid id format', async ({ page }) => {
+  test('only the documented user id can be sent', async ({ page }) => {
     const elements: ResendConfirmationEndpointElements =
       await setupResendConfirmationEndpoint(page);
-    const invalidId: string = 'invalid-uuid-format';
-    await interceptWithErrorResponse(
-      page,
-      RESEND_CONFIRM_API_URL(invalidId),
-      {
-        error: 'Bad Request',
-        message: 'Invalid user ID format',
-        code: 'INVALID_ID_FORMAT',
-      },
-      400
-    );
-    await elements.idInput.fill(invalidId);
-    await elements.executeBtn.click();
-    await expect(elements.responseBody).toContainText('Invalid user ID format');
-    const responseCode: Locator = elements.getEndpoint
-      .locator('.response .response-col_status')
-      .first();
-    await expect(responseCode).toContainText('400');
-    await clearEndpointResponse(elements.getEndpoint);
+
+    await expectOnlyDocumentedId(elements.idSelect);
+
+    await cancelOperation(page);
+
+    await collapseEndpoint(elements.getEndpoint);
   });
 
   test('error response - CORS/Network failure', async ({ page }) => {
     const elements: ResendConfirmationEndpointElements =
       await setupResendConfirmationEndpoint(page);
+    const userId: string = await selectDocumentedId(elements.idSelect);
 
-    await interceptWithNetworkFailure(page, RESEND_CONFIRM_API_URL(testUserId), { times: 1 });
-
-    await elements.idInput.fill(testUserId);
+    await interceptWithNetworkFailure(page, RESEND_CONFIRM_API_URL(userId), { times: 1 });
     await elements.executeBtn.click();
 
     await expectErrorOrFailureStatus(elements.getEndpoint);

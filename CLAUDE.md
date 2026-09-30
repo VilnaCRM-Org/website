@@ -391,7 +391,23 @@ that, `make lint-contracts` verifies a committed SHA-256 digest of each artifact
 the Apollo mock refuses a downloaded schema that does not match its digest; and
 `scripts/patchSwaggerServer.mjs` rebuilds `servers` as exactly one build-controlled entry
 so an injected `servers[1]` can never appear in the swagger "Try it out" dropdown. Markup
-in a spec `description`/`title`/`summary` is rejected at ingestion rather than stripped.
+anywhere in the spec — every string and every key, not only `description`/`title`/`summary`
+— is rejected at ingestion rather than stripped.
+
+One exception is recorded (issue #446, ADR 0016): `normalizeSpec` in
+`scripts/fetchSwaggerSchema.mjs` **drops** the `example` and `examples` of a Media Type
+Object whose media type is `text/html` (compared case-insensitively, parameters such as
+`; charset=utf-8` ignored) under a response, request body or parameter in `paths` or
+`components`, before the markup scan runs. user-service v0.8.0 documents its OAuth
+authorize page that way, and no guard can tell a sample page from injected markup. The
+sample is removed, never let through: the media type's `schema` and `encoding` stay and
+stay scanned, `text/*`, `*/*` and `application/xhtml+xml` are not `text/html`, and HTML in
+any other example, description, title, summary or key still fails the refresh. Because the
+digest is taken over the normalized form, it cannot see that dropped slot by itself, so the
+offline integrity step of `make lint-contracts` also requires the committed `openapi.json`
+to be a fixed point of `normalizeSpec` — a text/html sample hand-edited back in turns it
+red. Never widen the drop to another key, media type or position to unblock a refresh —
+record a new ADR.
 
 Refresh artifacts and digests together with `make update-contracts` — never hand-edit
 `checksums.json`, and never loosen the ref check to accept a branch.
@@ -419,8 +435,9 @@ agrees with the **mock**. Two gates anchored on the single committed baseline
   four rules per response: the status is documented, the media type is declared, the body
   validates against the schema, and the body carries **no property the schema never
   declares**. That last rule is stricter than OpenAPI's permissive default on purpose — it
-  is the only one that catches a renamed field here, because upstream misplaces `required`
-  on the array schema of `GET /api/users` rather than on its `items`.
+  is the only one that catches an added field, because the response schemas leave
+  `additionalProperties` unset (before user-service v0.8.0 it was also the only one that
+  caught a renamed field, while upstream misplaced `required` on the array schema).
   `parity-detects-drift.contract.test.ts` seeds real defects into **copies** of the mock
   data and asserts each turns the gate red; never seed a defect into the committed
   contract, which `lint-contracts` guards. The `@mockoon/*` devDependencies are pinned
@@ -641,10 +658,21 @@ Production-facing invariants that no other gate watches. Extend them; never rela
   PR. Widening those trust policies is the prerequisite for lifting the exemption —
   `.github/sandbox_workflows.md` records the required order and the evidence — and
   `pull_request_target`, `merge_group`, `push`, `schedule`, `workflow_dispatch` and
-  `workflow_run` are never exempt. **F — mask before write:** a `run:` step that appends a
-  variable named like a credential (`TOKEN`, `SECRET`, `PASSWORD`, `PRIVATE_KEY`,
-  `CREDENTIAL`) to `$GITHUB_ENV` or `$GITHUB_OUTPUT` must print `::add-mask::` for **that
-  value** earlier in the same step — a mask of some other value covers nothing — and a
+  `workflow_run` are never exempt. The sandbox roles are not the only ones: no role's
+  committed Terraform accepts an environment subject, `website-deploy-trigger-role`
+  included. The production role accepted `repo:VilnaCRM-Org/website:environment:production`
+  only through out-of-band drift, most likely reverted by the prod apply that followed
+  website-infrastructure #124's merge (2026-09-19, the only infra `main` commit between
+  the last green and the first red deploy; the apply itself leaves no GitHub-visible
+  run), so every push-to-`main` `deploy` run has failed at that step since 2026-09-22
+  (issue #494). The fix is the role's trust policy, landed
+  in the infrastructure repository's Terraform and applied by its pipeline — never a
+  console edit, which the next apply reverts, and never dropping
+  `environment: production`, which this assertion requires. **F — mask before write:**
+  a `run:` step that appends a variable named like a credential (`TOKEN`, `SECRET`,
+  `PASSWORD`, `PRIVATE_KEY`, `CREDENTIAL`) to `$GITHUB_ENV` or `$GITHUB_OUTPUT` must
+  print `::add-mask::` for **that value** earlier in the same step — a mask of some
+  other value covers nothing — and a
   write whose variable or value the gate cannot read is reported rather than guessed. Only
   a write counts (`>>`, `>`, `tee`, PowerShell's `Out-File`/`Add-Content`, cmd's
   `>>%GITHUB_ENV%`); a line that merely reads the file is not one. Both read the parsed `run:` string and the parsed job, never the workflow
@@ -774,7 +802,8 @@ GitHub ships no Dependabot security updates for the `bun` ecosystem and its depe
 never parses `bun.lock`, so Dependabot alerts see none of the resolved tree —
 [`docs/swagger-highlighter-surface.md`](docs/swagger-highlighter-surface.md) records the
 evidence and walks the one runtime tree where that blindness matters most, the `/swagger`
-highlighter chain (highlight.js 10 via lowlight via react-syntax-highlighter).
+highlighter chain (react-syntax-highlighter's light build, whose lowlight 1 import
+`next.config.js` aliases to a lowlight 3 shim over highlight.js 11 — ADR 0015).
 
 Never add a `config/osv-scanner.toml` ignore for an advisory your own change introduced, and
 never push an `ignoreUntil` date out to keep a build green — upgrade the dependency. Every
@@ -956,11 +985,22 @@ that one is a fixed list in `stryker.config.mjs`, and the policy file supplies o
 threshold. `MUTATION_SCOPE` selects one of three slices; everything downstream — the
 Stryker shard config, the Jest test set, and the merge gate — reads that one decision.
 
-| Scope     | What it mutates                           | Gate                             | Where           |
-| --------- | ----------------------------------------- | -------------------------------- | --------------- |
-| `curated` | the fixed list in `stryker.config.mjs`    | blocking at 100%                 | PR              |
-| `changed` | mutable files the PR touches vs. its base | blocking at 85%, cap → advisory  | PR              |
-| `full`    | every mutable file in `src/`              | advisory; files a tracking issue | nightly `02:00` |
+| Scope     | What it mutates                           | Gate                                                       | Where           |
+| --------- | ----------------------------------------- | ---------------------------------------------------------- | --------------- |
+| `curated` | the fixed list in `stryker.config.mjs`    | blocking at 100%                                           | PR              |
+| `changed` | mutable files the PR touches vs. its base | blocking at 85%, cap → advisory                            | PR              |
+| `full`    | every mutable file in `src/`              | advisory; files a tracking issue, closes it on a clean run | nightly `02:00` |
+
+The `full` census keeps exactly one `mutation-backlog` issue, titled
+`mutation testing backlog`, through `scripts/ci/mutation-census-issue.sh` (issue #513).
+`make merge-mutation-reports` writes `reports/mutation/census-verdict.txt` beside
+`summary.md` from the same undetected rows the summary tabulates: `clean` when no mutant
+survived and none ran uncovered, `findings` otherwise. Findings file or refresh the tracker;
+a clean census comments the summary and the run link on every open tracker with that exact
+title and closes it, filing nothing; a census that recorded no verdict — a shard did not
+run, or the merge threw — keeps the tracker open **and** fails the run, so a broken census
+can never read as clean. `tests/bats/mutation_census.bats` drives each outcome through the
+real merger against a stubbed `gh`.
 
 A file is "mutable" when it lives under an `api`/`helpers`/`hooks`/`utils`/`validations`
 **path segment** and is not a spec, story, type, style, i18n bundle, asset, constant, mock,

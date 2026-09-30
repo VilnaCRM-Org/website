@@ -1,9 +1,11 @@
-import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
 import {
   type MutationReport,
+  censusVerdict,
   mergeReportFiles,
+  renderSummary,
   scoreReports,
   undetectedByFile,
 } from './mutation-report';
@@ -22,6 +24,12 @@ const SHARD_FILE = /^mutation-shard-\d+\.json$/;
 const REPORTS_DIR = resolve(process.cwd(), 'reports', 'mutation');
 const GATE_PATH = join(REPORTS_DIR, 'gate.json');
 const SUMMARY_PATH = join(REPORTS_DIR, 'summary.md');
+/**
+ * `clean` or `findings`, read by scripts/ci/mutation-census-issue.sh. Removed
+ * before anything can throw and written only after the summary, so a merge that
+ * fails leaves no verdict and the tracker reads the census as unmeasured.
+ */
+const VERDICT_PATH = join(REPORTS_DIR, 'census-verdict.txt');
 
 /** Read and parse every `mutation-shard-*.json` report in `dir`, sorted by name. */
 function loadShardReports(dir: string): { name: string; report: MutationReport }[] {
@@ -86,26 +94,9 @@ function assertShardsComplete(names: readonly string[], expected: number): void 
   }
 }
 
-/** Render the Markdown the step summary and the nightly tracking issue both use. */
-function renderSummary(
-  scope: MutationScope,
-  reports: readonly MutationReport[],
-  score: string
-): string {
-  const rows = undetectedByFile(mergeReportFiles(reports));
-  const table =
-    rows.length === 0
-      ? 'No surviving or uncovered mutants. 🎉'
-      : [
-          '| File | Survived | No coverage |',
-          '| --- | ---: | ---: |',
-          ...rows.map(row => `| \`${row.file}\` | ${row.survived} | ${row.noCoverage} |`),
-        ].join('\n');
-  return `### Mutation score (\`${scope}\` scope): ${score}%\n\n${table}\n`;
-}
-
 /** Merge shard reports, recompute the score, and enforce the scope's gate. */
 function main(): void {
+  rmSync(VERDICT_PATH, { force: true });
   const scope = parseScope(process.env.MUTATION_SCOPE);
 
   const expectedShards = Number.parseInt(process.env.MUTATION_SHARD_TOTAL ?? '', 10);
@@ -134,7 +125,9 @@ function main(): void {
   const decision = resolveDecision(scope, fileCount);
 
   const score = mutationScore.toFixed(2);
-  writeFileSync(SUMMARY_PATH, renderSummary(scope, reports, score), 'utf8');
+  const rows = undetectedByFile(mergeReportFiles(reports));
+  writeFileSync(SUMMARY_PATH, renderSummary(scope, rows, score), 'utf8');
+  writeFileSync(VERDICT_PATH, `${censusVerdict(rows)}\n`, 'utf8');
   process.stdout.write(
     [
       `Merged ${shards.length} mutation shard(s) over ${fileCount} source file(s):`,

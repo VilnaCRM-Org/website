@@ -16,7 +16,7 @@ interface AuthorizeEndpointElements {
   getEndpoint: Locator;
   executeBtn: Locator;
   parametersSection: Locator;
-  responseTypeInput: Locator;
+  responseTypeSelect: Locator;
   clientIdInput: Locator;
   redirectUriInput: Locator;
   scopeInput: Locator;
@@ -36,7 +36,7 @@ async function setupAuthorizeEndpoint(page: Page): Promise<AuthorizeEndpointElem
   await authorizeEndpoint.click();
   await elements.tryItOutButton.click();
   const executeBtn: Locator = await getAndCheckExecuteBtn(authorizeEndpoint);
-  const responseTypeInput: Locator = authorizeEndpoint.locator(PARAM_INPUTS.RESPONSE_TYPE);
+  const responseTypeSelect: Locator = authorizeEndpoint.locator(PARAM_INPUTS.RESPONSE_TYPE);
   const clientIdInput: Locator = authorizeEndpoint.locator(PARAM_INPUTS.CLIENT_ID);
   const redirectUriInput: Locator = authorizeEndpoint.locator(PARAM_INPUTS.REDIRECT_URI);
   const scopeInput: Locator = authorizeEndpoint.locator(PARAM_INPUTS.SCOPE);
@@ -51,7 +51,7 @@ async function setupAuthorizeEndpoint(page: Page): Promise<AuthorizeEndpointElem
     getEndpoint: authorizeEndpoint,
     executeBtn,
     parametersSection,
-    responseTypeInput,
+    responseTypeSelect,
     clientIdInput,
     redirectUriInput,
     scopeInput,
@@ -70,7 +70,7 @@ async function fillAuthorizeForm(
 
   await expect(elements.parametersSection).toBeVisible();
 
-  await elements.responseTypeInput.fill(params.responseType);
+  await elements.responseTypeSelect.selectOption(params.responseType);
   await elements.clientIdInput.fill(params.clientId);
   await elements.redirectUriInput.fill(params.redirectUri);
   await elements.scopeInput.fill(params.scope);
@@ -113,23 +113,20 @@ test.describe('OAuth authorize endpoint', () => {
     await clearEndpointResponse(elements.getEndpoint);
   });
 
-  test('empty response_type validation', async ({ page }) => {
+  test('response_type offers only the documented value', async ({ page }) => {
     const elements: AuthorizeEndpointElements = await setupAuthorizeEndpoint(page);
-    await elements.responseTypeInput.fill('');
-    await elements.clientIdInput.fill(testOAuthParams.clientId);
-    await elements.redirectUriInput.fill(testOAuthParams.redirectUri);
-    await elements.executeBtn.click();
-    await expect(elements.responseTypeInput).toHaveClass(/invalid/);
-    await expect(
-      elements.getEndpoint.locator('.validation-errors.errors-wrapper li')
-    ).toContainText("For 'response_type': Required field is not provided.");
+    const options: Locator = elements.responseTypeSelect.locator('option');
+
+    await expect(options).toHaveText([testOAuthParams.responseType]);
+    await elements.responseTypeSelect.selectOption(testOAuthParams.responseType);
+    await expect(elements.responseTypeSelect).toHaveValue(testOAuthParams.responseType);
 
     await cancelOperation(page);
   });
 
   test('empty client_id validation', async ({ page }) => {
     const elements: AuthorizeEndpointElements = await setupAuthorizeEndpoint(page);
-    await elements.responseTypeInput.fill(testOAuthParams.responseType);
+    await elements.responseTypeSelect.selectOption(testOAuthParams.responseType);
     await elements.clientIdInput.fill('');
     await elements.redirectUriInput.fill(testOAuthParams.redirectUri);
     await elements.executeBtn.click();
@@ -142,7 +139,7 @@ test.describe('OAuth authorize endpoint', () => {
 
   test('empty redirect_uri validation', async ({ page }) => {
     const elements: AuthorizeEndpointElements = await setupAuthorizeEndpoint(page);
-    await elements.responseTypeInput.fill(testOAuthParams.responseType);
+    await elements.responseTypeSelect.selectOption(testOAuthParams.responseType);
     await elements.clientIdInput.fill(testOAuthParams.clientId);
     await elements.redirectUriInput.fill('');
     await elements.executeBtn.click();
@@ -155,18 +152,15 @@ test.describe('OAuth authorize endpoint', () => {
     await cancelOperation(page);
   });
 
-  test('all required fields empty', async ({ page }) => {
+  test('every free-text required field empty', async ({ page }) => {
     const elements: AuthorizeEndpointElements = await setupAuthorizeEndpoint(page);
-    await elements.responseTypeInput.fill('');
+    await elements.responseTypeSelect.selectOption(testOAuthParams.responseType);
     await elements.clientIdInput.fill('');
     await elements.redirectUriInput.fill('');
     await elements.executeBtn.click();
-    await expect(elements.responseTypeInput).toHaveClass(/invalid/);
+    await expect(elements.responseTypeSelect).not.toHaveClass(/invalid/);
     await expect(elements.clientIdInput).toHaveClass(/invalid/);
     await expect(elements.redirectUriInput).toHaveClass(/invalid/);
-    await expect(elements.getEndpoint.locator('.validation-errors.errors-wrapper')).toContainText(
-      "For 'response_type': Required field is not provided."
-    );
     await expect(elements.getEndpoint.locator('.validation-errors.errors-wrapper')).toContainText(
       "For 'client_id': Required field is not provided."
     );
@@ -178,7 +172,7 @@ test.describe('OAuth authorize endpoint', () => {
 
   test('error response - CORS/Network failure', async ({ page }) => {
     const elements: AuthorizeEndpointElements = await setupAuthorizeEndpoint(page);
-    await elements.responseTypeInput.fill(testOAuthParams.responseType);
+    await elements.responseTypeSelect.selectOption(testOAuthParams.responseType);
     await elements.clientIdInput.fill(testOAuthParams.clientId);
     await elements.redirectUriInput.fill(testOAuthParams.redirectUri);
     await elements.scopeInput.fill(testOAuthParams.scope);

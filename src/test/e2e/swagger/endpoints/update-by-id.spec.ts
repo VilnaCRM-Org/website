@@ -3,7 +3,6 @@ import fs from 'node:fs/promises';
 import { expect, type Locator, Page, test } from '@playwright/test';
 
 import {
-  testUserId,
   BASE_API,
   BasicEndpointElements,
   UpdatedUser,
@@ -20,12 +19,14 @@ import {
   cancelOperation,
   expectErrorOrFailureStatus,
   parseJsonSafe,
+  expectOnlyDocumentedId,
+  selectDocumentedId,
 } from '../utils/helpers';
 import { locators } from '../utils/locators';
 
 interface UpdateUserEndpointElements extends BasicEndpointElements {
   parametersSection: Locator;
-  idInput: Locator;
+  idSelect: Locator;
   requestBodySection: Locator;
   jsonEditor: Locator;
   responseBody: Locator;
@@ -47,7 +48,7 @@ async function setupUpdateUserEndpoint(page: Page): Promise<UpdateUserEndpointEl
 
   const executeBtn: Locator = await getAndCheckExecuteBtn(updateEndpoint);
   const parametersSection: Locator = updateEndpoint.locator(locators.parametersSection);
-  const idInput: Locator = updateEndpoint.locator(locators.idInput);
+  const idSelect: Locator = updateEndpoint.locator(locators.idSelect);
   const requestBodySection: Locator = updateEndpoint.locator(locators.requestBodySection);
   const jsonEditor: Locator = requestBodySection.locator(locators.jsonEditor);
   const responseBody: Locator = updateEndpoint.locator(locators.responseBody).first();
@@ -60,7 +61,7 @@ async function setupUpdateUserEndpoint(page: Page): Promise<UpdateUserEndpointEl
     getEndpoint: updateEndpoint,
     executeBtn,
     parametersSection,
-    idInput,
+    idSelect,
     requestBodySection,
     jsonEditor,
     responseBody,
@@ -74,10 +75,11 @@ async function setupUpdateUserEndpoint(page: Page): Promise<UpdateUserEndpointEl
 test.describe('updateById', () => {
   test('default values', async ({ page }) => {
     const elements: UpdateUserEndpointElements = await setupUpdateUserEndpoint(page);
-    await interceptWithJsonResponse(page, UPDATE_USER_API_URL(testUserId), MOCK_API_USER);
+    const userId: string = await selectDocumentedId(elements.idSelect);
+    await interceptWithJsonResponse(page, UPDATE_USER_API_URL(userId), MOCK_API_USER);
 
     await expect(elements.parametersSection).toBeVisible();
-    await expect(elements.idInput).toBeVisible();
+    await expect(elements.idSelect).toBeVisible();
     await expect(elements.requestBodySection).toBeVisible();
     await expect(elements.jsonEditor).toBeVisible();
 
@@ -87,14 +89,12 @@ test.describe('updateById', () => {
       oldPassword: 'passWORD1',
       newPassword: 'PASSword2',
     };
-
-    await elements.idInput.fill(testUserId);
     await elements.jsonEditor.fill(JSON.stringify(defaultRequestBody, null, 2));
     await elements.executeBtn.click();
 
     await expect(elements.curl).toBeVisible();
     await expect(elements.copyButton).toBeVisible();
-    await expect(elements.requestUrl).toContainText(testUserId);
+    await expect(elements.requestUrl).toContainText(userId);
     await expect(elements.downloadButton).toBeVisible();
 
     const responseText: string | null = await elements.responseBody.textContent();
@@ -116,7 +116,8 @@ test.describe('updateById', () => {
 
   test('custom values', async ({ page }) => {
     const elements: UpdateUserEndpointElements = await setupUpdateUserEndpoint(page);
-    await interceptWithJsonResponse(page, UPDATE_USER_API_URL(testUserId), MOCK_API_USER);
+    const userId: string = await selectDocumentedId(elements.idSelect);
+    await interceptWithJsonResponse(page, UPDATE_USER_API_URL(userId), MOCK_API_USER);
 
     const customRequestBody: UpdatedUser = {
       email: 'updated@example.com',
@@ -124,8 +125,6 @@ test.describe('updateById', () => {
       oldPassword: 'oldPass123!',
       newPassword: 'newPass456!',
     };
-
-    await elements.idInput.fill(testUserId);
     await elements.jsonEditor.fill(JSON.stringify(customRequestBody, null, 2));
 
     const executeButton: Locator = elements.executeBtn;
@@ -133,7 +132,7 @@ test.describe('updateById', () => {
     await executeButton.click();
 
     await expect(elements.curl).toBeVisible();
-    await expect(elements.requestUrl).toContainText(testUserId);
+    await expect(elements.requestUrl).toContainText(userId);
 
     const responseText: string | null = await elements.curl.textContent();
 
@@ -145,26 +144,17 @@ test.describe('updateById', () => {
     await clearEndpointResponse(elements.getEndpoint);
   });
 
-  test('empty id validation message', async ({ page }) => {
+  test('only the documented user id can be sent', async ({ page }) => {
     const elements: UpdateUserEndpointElements = await setupUpdateUserEndpoint(page);
 
-    await elements.idInput.fill('');
-    await elements.executeBtn.click();
-
-    await expect(elements.idInput).toHaveClass(/invalid/);
-
-    const expectedErrorMsg: string = " For 'id': Required field is not provided. ";
-    await expect(
-      elements.getEndpoint.locator('.validation-errors.errors-wrapper li')
-    ).toContainText(expectedErrorMsg);
+    await expectOnlyDocumentedId(elements.idSelect);
 
     await cancelOperation(page);
   });
 
   test('empty request body', async ({ page }) => {
     const elements: UpdateUserEndpointElements = await setupUpdateUserEndpoint(page);
-
-    await elements.idInput.fill(testUserId);
+    await selectDocumentedId(elements.idSelect);
     await elements.jsonEditor.fill('');
     await elements.executeBtn.click();
 
@@ -175,9 +165,8 @@ test.describe('updateById', () => {
 
   test('download', async ({ page }) => {
     const elements: UpdateUserEndpointElements = await setupUpdateUserEndpoint(page);
-    await interceptWithJsonResponse(page, UPDATE_USER_API_URL(testUserId), MOCK_API_USER);
-
-    await elements.idInput.fill(testUserId);
+    const userId: string = await selectDocumentedId(elements.idSelect);
+    await interceptWithJsonResponse(page, UPDATE_USER_API_URL(userId), MOCK_API_USER);
     await elements.jsonEditor.fill(
       JSON.stringify(
         {
@@ -223,10 +212,11 @@ test.describe('updateById', () => {
 
   test('error response - invalid password', async ({ page }) => {
     const elements: UpdateUserEndpointElements = await setupUpdateUserEndpoint(page);
+    const userId: string = await selectDocumentedId(elements.idSelect);
 
     await interceptWithErrorResponse(
       page,
-      UPDATE_USER_API_URL(testUserId),
+      UPDATE_USER_API_URL(userId),
       {
         error: 'Bad Request',
         message: 'Invalid old password',
@@ -234,8 +224,6 @@ test.describe('updateById', () => {
       },
       400
     );
-
-    await elements.idInput.fill(testUserId);
     await elements.jsonEditor.fill(
       JSON.stringify(
         {
@@ -259,10 +247,9 @@ test.describe('updateById', () => {
 
   test('error response - CORS/Network failure', async ({ page }) => {
     const elements: UpdateUserEndpointElements = await setupUpdateUserEndpoint(page);
+    const userId: string = await selectDocumentedId(elements.idSelect);
 
-    await interceptWithNetworkFailure(page, `**/api/users/${testUserId}`);
-
-    await elements.idInput.fill(testUserId);
+    await interceptWithNetworkFailure(page, `**/api/users/${userId}`);
     await elements.jsonEditor.fill(
       JSON.stringify(
         {

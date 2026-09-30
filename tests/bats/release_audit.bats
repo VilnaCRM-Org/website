@@ -53,7 +53,24 @@ case "$sub" in
       list)
         case "$*" in
           *ci-alert*) emit "${FAKE_ALERT_LIST:-[]}" ;;
-          *) emit "${FAKE_ISSUE_LIST:-[]}" ;;
+          *)
+            if [ -n "${FAKE_ISSUE_LIST_FAIL:-}" ]; then
+              echo 'gh: 502 Bad Gateway' >&2
+              exit 1
+            fi
+            # Honour --state the way GitHub does, so a ledger that is closed is
+            # invisible to an open-only lookup. Entries without a state are
+            # served whatever the filter asks for.
+            state="open"
+            prev=""
+            for arg in "$@"; do
+              if [ "$prev" = "--state" ]; then state="$arg"; fi
+              prev="$arg"
+            done
+            emit "$(printf '%s' "${FAKE_ISSUE_LIST:-[]}" | jq -c --arg s "$state" \
+              'if type == "array" then map(select($s == "all" or .state == null
+                or (.state | ascii_downcase) == $s)) else . end')"
+            ;;
         esac
         ;;
       create)
@@ -220,19 +237,132 @@ setup() {
   grep -Fq 'signature: verified=false' "$SUMMARY"
 }
 
-@test "creates the ledger issue only when no open issue carries that title" {
+@test "creates the ledger issue only when no issue in any state carries that title" {
   write_release_bot_commit v0.4.0
 
   run_audit \
-    FAKE_ISSUE_LIST='[{"number":3,"title":"Some unrelated issue"}]' \
+    FAKE_ISSUE_LIST='[{"number":3,"title":"Some unrelated issue","state":"CLOSED"}]' \
     AUDIT_EVENT=release \
     AUDIT_RELEASE_ACTION=published \
     AUDIT_RELEASE_ID=42 \
     AUDIT_RELEASE_TAG=v0.4.0
 
   [ "$status" -eq 0 ]
+  assert_log_contains '--state all'
   assert_log_contains "--label release-audit --title $LEDGER_TITLE"
   assert_log_contains 'gh issue comment 7'
+}
+
+# The ledger is closed on purpose (#451) so it stays out of the open-issue
+# backlog, and a closed issue still takes comments and still notifies its
+# subscribers. An open-only lookup would miss it, create a second ledger on the
+# next push, and dedup against the new, empty one.
+@test "appends to a closed ledger instead of creating a new one" {
+  write_human_commit deadbeef 'fix(#451): closed ledger'
+
+  run_audit \
+    FAKE_ISSUE_LIST="[{\"number\":451,\"title\":\"$LEDGER_TITLE\",\"state\":\"CLOSED\"}]" \
+    AUDIT_EVENT=push \
+    AUDIT_AFTER=deadbeef
+
+  [ "$status" -eq 0 ]
+  assert_log_contains '--state all'
+  assert_log_contains 'repos/VilnaCRM-Org/website/issues/451/comments'
+  assert_log_contains 'gh issue comment 451'
+  refute_log_contains 'gh issue create'
+}
+
+@test "picks the oldest exact-title ledger when duplicates exist in both states" {
+  write_human_commit deadbeef 'fix(#451): duplicate ledgers'
+
+  run_audit \
+    FAKE_ISSUE_LIST="[
+      {\"number\":612,\"title\":\"$LEDGER_TITLE\",\"state\":\"OPEN\"},
+      {\"number\":451,\"title\":\"$LEDGER_TITLE\",\"state\":\"CLOSED\"},
+      {\"number\":3,\"title\":\"$LEDGER_TITLE (archive)\",\"state\":\"CLOSED\"}
+    ]" \
+    AUDIT_EVENT=push \
+    AUDIT_AFTER=deadbeef
+
+  [ "$status" -eq 0 ]
+  assert_log_contains 'gh issue comment 451'
+  refute_log_contains 'gh issue comment 612'
+  refute_log_contains 'gh issue comment 3 '
+  refute_log_contains 'gh issue create'
+}
+
+# In a command substitution bash clears errexit, so an unchecked lookup read a
+# failed `gh issue list` as "no ledger yet" and filed a duplicate.
+@test "a failed ledger lookup creates nothing and fails the run" {
+  write_human_commit deadbeef 'fix(#451): lookup outage'
+
+  for event in push sweep; do
+    reset_command_log
+    run_audit \
+      FAKE_ISSUE_LIST_FAIL=1 \
+      AUDIT_EVENT="$event" \
+      AUDIT_AFTER=deadbeef
+
+    [ "$status" -ne 0 ]
+    assert_output_contains 'could not look up the ledger issue'
+    refute_log_contains 'gh issue create'
+    refute_log_contains 'gh issue comment'
+  done
+
+  # A lookup that "succeeds" with something other than an issue list is the same
+  # outage, not an empty repository.
+  reset_command_log
+  run_audit \
+    FAKE_ISSUE_LIST='{"message":"Bad credentials"}' \
+    AUDIT_EVENT=push \
+    AUDIT_AFTER=deadbeef
+
+  [ "$status" -ne 0 ]
+  assert_output_contains 'could not look up the ledger issue'
+  refute_log_contains 'gh issue create'
+
+  reset_command_log
+  run_audit \
+    FAKE_ISSUE_LIST_FAIL=1 \
+    AUDIT_EVENT=release \
+    AUDIT_RELEASE_ACTION=published \
+    AUDIT_RELEASE_ID=42 \
+    AUDIT_RELEASE_TAG=v0.4.0
+
+  [ "$status" -ne 0 ]
+  refute_log_contains 'gh issue create'
+  refute_log_contains 'gh issue comment'
+}
+
+# The escalations are a security signal that does not depend on the ledger, so a
+# ledger outage must not swallow them.
+@test "a failed ledger lookup still escalates a deleted release" {
+  run_audit \
+    FAKE_ISSUE_LIST_FAIL=1 \
+    AUDIT_EVENT=release \
+    AUDIT_RELEASE_ACTION=deleted \
+    AUDIT_RELEASE_ID=42 \
+    AUDIT_RELEASE_TAG=v0.4.0
+
+  [ "$status" -ne 0 ]
+  assert_log_contains '--label ci-alert --label release-audit --title Release audit: release v0.4.0 was deleted'
+  refute_log_contains "--title $LEDGER_TITLE"
+  refute_log_contains 'gh issue comment'
+}
+
+@test "a failed ledger lookup still escalates a force-push" {
+  write_human_commit deadbeef 'fix(#451): forced during an outage'
+
+  run_audit \
+    FAKE_ISSUE_LIST_FAIL=1 \
+    AUDIT_EVENT=push \
+    AUDIT_AFTER=deadbeef \
+    AUDIT_FORCED=true
+
+  [ "$status" -ne 0 ]
+  assert_log_contains '--label ci-alert --label release-audit --title Release audit: force-push'
+  refute_log_contains "--title $LEDGER_TITLE"
+  refute_log_contains 'gh issue comment'
 }
 
 @test "collapses the created and published events for one release" {

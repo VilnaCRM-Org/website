@@ -1,4 +1,4 @@
-import { Container } from '@mui/material';
+import { Box, Container } from '@mui/material';
 import React, { useEffect, useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import SwaggerUI from 'swagger-ui-react';
@@ -55,14 +55,16 @@ function ApiDocumentation(): React.ReactElement {
   };
 
   return (
-    <>
+    <Box sx={styles.region}>
       <UiTypography component="span" role="status" sx={styles.visuallyHidden}>
         {swaggerContent ? t('api_documentation.loaded') : ''}
       </UiTypography>
       {loading && <Loading />}
       {error && <LoadError onRetry={handleRetry} focusRetry={retried} />}
-      {swaggerContent ? <SwaggerUI spec={swaggerContent} plugins={swaggerPlugins} /> : null}
-    </>
+      {swaggerContent ? (
+        <SwaggerUI spec={swaggerContent} plugins={swaggerPlugins} defaultModelsExpandDepth={-1} />
+      ) : null}
+    </Box>
   );
 }
 

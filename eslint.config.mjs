@@ -470,7 +470,7 @@ const airbnbReactRules = {
 // would resolve differently.
 //
 // Keep in step with the `react` version in package.json.
-const REACT_VERSION = '19.2';
+const REACT_VERSION = '19.3';
 
 // Inline plugin for the production-source comment ban (ADR 0005). It is defined
 // here rather than imported from `scripts/` because tools that copy this config

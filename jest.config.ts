@@ -241,8 +241,10 @@ export default async () => {
   return {
     ...nextJestConfig,
     transformIgnorePatterns: [
-      // Allow transforming these ESM-only packages from the hoisted node_modules
-      '/node_modules/(?!(uuid|@faker-js/faker|@vilnacrm/ui-toolkit)/)',
+      // Allow transforming these ESM-only packages from the hoisted node_modules.
+      // `lowlight` 3 and its `devlop` dependency back the /swagger highlighter
+      // shim (src/features/swagger/helpers/lowlight-compat.ts, issue #379).
+      '/node_modules/(?!(uuid|@faker-js/faker|@vilnacrm/ui-toolkit|lowlight|devlop)/)',
     ],
   };
 };

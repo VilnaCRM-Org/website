@@ -12,8 +12,11 @@
 # Mockoon.Dockerfile serves. There is deliberately no second baseline file: a
 # copy would be a drift source with nothing watching it. Comparing the committed
 # (normalized, Prettier-formatted) JSON against raw upstream YAML is sound —
-# `scripts/fetchSwaggerSchema.mjs` only strips the invalid `maxLength: null` /
-# `format: null` keywords, which oasdiff does not diff on.
+# `normalizeSpec` in `scripts/fetchSwaggerSchema.mjs` makes exactly two
+# documented changes: it strips the invalid `maxLength: null` / `format: null`
+# keywords, and it drops the `example`/`examples` of text/html Media Type
+# Objects (ADR 0016). oasdiff's breaking check diffs on neither — a keyword
+# that is null upstream, or a sample payload, is not part of the contract.
 #
 # Exit codes are deliberately three-way; a caller that treats "any non-zero" as
 # drift would report a network outage as a breaking API change:

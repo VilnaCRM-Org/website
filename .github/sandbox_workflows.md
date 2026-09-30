@@ -15,6 +15,8 @@ This documentation provides an overview of two GitHub Actions workflows used for
 - [AWS IAM Role Configuration](#aws-iam-role-configuration)
   - [Why the subject must be exact, and never a wildcard](#why-the-subject-must-be-exact-and-never-a-wildcard)
     - [Order of operations: trust policy first, `environment:` key second](#order-of-operations-trust-policy-first-environment-key-second)
+  - [Production incident: `website-deploy-trigger-role` (issue #494)](#production-incident-website-deploy-trigger-role-issue-494)
+- [Verifying sandbox cleanup](#verifying-sandbox-cleanup)
 - [Additional Notes](#additional-notes)
 
 ## Introduction
@@ -153,12 +155,23 @@ that needs it:
 | `github-actions-role` (test and prod, Secrets Manager reads) | `sandbox-creating.yml` / `check-tokens` | `repo:VilnaCRM-Org/website:environment:sandbox-tokens` |
 | `sandbox-creation-trigger-role` | `sandbox-creating.yml` / `deploy` | `repo:VilnaCRM-Org/website:environment:sandbox` |
 | `sandbox-deletion-trigger-role` | `sandbox-deleting.yml` / `trigger-sandbox-deletion-pipeline` | `repo:VilnaCRM-Org/website:environment:sandbox-teardown` |
-| `website-deploy-trigger-role` | `deploy.yml` / `deploy` | `repo:VilnaCRM-Org/website:environment:production` |
+| `website-deploy-trigger-role` (prescribed, not deployed — issue #494) | `deploy.yml` / `deploy` | `repo:VilnaCRM-Org/website:environment:production` |
 
-This table is the **prescribed** policy, not a description of what is deployed today. The
-deployed sandbox role trust policy is narrower than the wildcard this document used to print:
-it accepts neither the `:*` wildcard nor any `environment:` subject. See the order of
-operations below before changing either half.
+This table is the **prescribed** policy, not a description of what is deployed today. **No
+row is deployed — including `website-deploy-trigger-role`.** The three pipeline-trigger roles
+in the table (and the infrastructure repository's own `ci-cd-infra-trigger-role`) are built
+from one module in the infrastructure repository,
+`VilnaCRM-Org/website-infrastructure`
+(`terraform/app/modules/aws/iam/oidc/pipeline-trigger-role/main.tf`), whose trust policy
+accepts, through a `StringLike` list, only the branch subject
+`repo:VilnaCRM-Org/website:ref:refs/heads/*`, the `repo:VilnaCRM-Org/website:pull_request`
+subject, and the same two for the infrastructure repository. It accepts neither the `:*`
+wildcard this document used to print nor any `environment:` subject. `github-actions-role`
+(`terraform/app/modules/aws/iam/roles/github-token-rotation-role/main.tf`) likewise accepts
+only branch and pull-request subjects, and refused an environment subject in the run recorded
+below. See the order of operations below
+before changing either half, and the production incident after it for what happens when a
+live role and its Terraform disagree.
 
 ### Order of operations: trust policy first, `environment:` key second
 
@@ -182,12 +195,18 @@ Could not assume role with OIDC: Not authorized to perform sts:AssumeRoleWithWeb
 The keys were reverted. That failure is also what proves the deployed policy is narrower than
 this document's old template claimed: a genuine `StringLike` `repo:VilnaCRM-Org/website:*`
 condition would have matched the new environment subject and the run would have passed.
-`deploy.yml`'s `environment: production` works, so the *production* role's policy does accept
-an environment subject; the sandbox roles' policies do not.
+
+An earlier revision of this section went on to say that `deploy.yml`'s working
+`environment: production` proved the *production* role's policy accepted an environment
+subject. It proved only that the **live** role accepted it at that moment — the committed
+Terraform never did, and the next apply removed the acceptance. See the production incident
+below.
 
 The correct sequence, therefore, is:
 
-1. In the infrastructure repository, update each sandbox role's trust policy to the
+1. In the infrastructure repository, update each role's trust policy — in Terraform, never
+   in the IAM console, because the next pipeline apply reverts anything that exists only
+   outside Terraform — to the
    `StringEquals` exact subject in the table above.
 2. Create the matching environments under _Settings → Environments_ and attach their
    protection rules — see [the deployment runbook](../docs/deployment-runbook.md).
@@ -195,7 +214,9 @@ The correct sequence, therefore, is:
    pipeline is green on a pull request.
 
 Because step 3 has not happened, no sandbox job declares an `environment:` today, and no gate
-requires one.
+requires one. The production `deploy` job is the exception: it already declares
+`environment: production`, `make lint-prod-guardrails` assertion E requires it to, and step 1
+is still outstanding for its role — which is why every push-to-`main` deploy is currently red.
 
 Attach Policies to the Role:
 
@@ -240,6 +261,113 @@ bound to a shell variable, and therefore never reachable by a later `set -x`, an
 environment dump or an errored step's log (issue #375); `make lint-prod-guardrails`
 separately fails any step that persists a credential-named variable to `$GITHUB_ENV`
 without masking it first.
+
+### Production incident: `website-deploy-trigger-role` (issue #494)
+
+`deploy.yml`'s `deploy` job has declared `environment: production` since PR #326
+(`7719643a`, 2026-07-03). The repository uses GitHub's default OIDC subject format, so the job
+mints `repo:VilnaCRM-Org/website:environment:production`.
+
+- **Green** through
+  [run 35396803405](https://github.com/VilnaCRM-Org/website/actions/runs/35396803405)
+  (2026-09-18, `c8f0a755`).
+- **Red** from
+  [run 35792114048](https://github.com/VilnaCRM-Org/website/actions/runs/35792114048)
+  (2026-09-22, `32f3c1ab`) onwards, at the `Configure AWS Credentials` step, with the same
+  `Not authorized to perform sts:AssumeRoleWithWebIdentity` error as above. Every push to
+  `main` since has failed the same way; the latest at the time of writing is
+  [run 36633803887](https://github.com/VilnaCRM-Org/website/actions/runs/36633803887)
+  (2026-09-29, `6d0fa987`).
+
+Nothing in this repository changed the job between those runs:
+`git diff c8f0a755 32f3c1ab -- .github/workflows/deploy.yml` touches only the post-deploy
+smoke-test step, and the `Configure AWS Credentials` step is byte-identical.
+
+The change was in the infrastructure repository. The live acceptance of the environment subject
+was **out-of-band drift that the committed Terraform never contained**. The module has never
+named an `environment:` subject. Until website-infrastructure #120 (`4513eb42`, 2026-05-09) its
+policy was a `StringLike` `repo:VilnaCRM-Org/*` wildcard, which would have matched one; since
+then it has been the branch and pull-request subjects above, which match none. Nor was the live
+role simply still carrying that pre-#120 wildcard — the public record rules that out:
+
+- On 2026-05-09 a maintainer recorded on #120 that it was "merged and applied in test, but prod
+  is still stale/unapplied", and the infrastructure repository's `OIDC trust smoke test`
+  ([run 25609393651](https://github.com/VilnaCRM-Org/website-infrastructure/actions/runs/25609393651),
+  2026-05-09T19:06Z) failed to assume all four production roles, `website-deploy-trigger-role`
+  included, with `Not authorized to perform sts:AssumeRoleWithWebIdentity`. Its caller was
+  `repo:VilnaCRM-Org/website-infrastructure:ref:refs/heads/main`, a subject both the pre-#120
+  wildcard and the #120 policy accept, so the live `website-deploy-trigger-role` already
+  matched neither.
+- The daily smoke test stayed red through 2026-05-13
+  ([run 25787411030](https://github.com/VilnaCRM-Org/website-infrastructure/actions/runs/25787411030))
+  and turned green on 2026-05-14
+  ([run 25849759986](https://github.com/VilnaCRM-Org/website-infrastructure/actions/runs/25849759986)),
+  with no commit landing on the infrastructure repository's `main` in between.
+- From July the production role accepted `repo:VilnaCRM-Org/website:environment:production`,
+  which the #120 policy — the only one `main` held from 2026-05-09 until #124 — refuses.
+
+So the live policy that accepted the environment subject from July was set out of band: the
+role had left the pre-#120 wildcard by 2026-05-09, and every apply from `main` after that renders
+the #120 policy, which refuses the subject. It existed only outside Terraform, which is why it
+did not survive an apply.
+
+Website-infrastructure PR #124 (`3f0e3fa2`, merged 2026-09-19T15:26Z) changed the
+`ci-cd-infrastructure` stack, and it is the only commit on the infrastructure repository's
+`main` between the last green deploy (2026-09-18T21:26Z) and the first red one
+(2026-09-22T22:23Z). The production `ci-cd-infrastructure` pipeline runs in CodePipeline, not
+in a GitHub workflow, so its apply leaves no run this repository can read — and a merge does not
+imply an immediate apply: over an hour after #120 merged, a follow-up comment still reported
+production as unapplied. That the apply following #124's merge is the one that converged the
+live role back onto the committed policy, and removed the acceptance, is therefore an inference
+from that window rather than an observed apply.
+
+The fix is external, in the infrastructure repository, and must land in Terraform:
+
+1. Give the `pipeline-trigger-role` module a **per-role** list of exact subjects (for example
+   an `environment_subjects` variable that defaults to empty), and set it for
+   `website-deploy-trigger-role` (the `ci_cd_pipeline_role` module call) alone. Setting it in
+   the module's shared policy would widen the sandbox and infrastructure roles as well.
+2. Render each subject as its **own** statement. Condition keys inside one statement are
+   ANDed, so a `StringEquals` `sub` beside the existing `StringLike` `sub` list would demand
+   that a subject match both and would lock out every caller:
+
+       {
+         "Effect": "Allow",
+         "Principal": {
+           "Federated": "arn:aws:iam::PROD_AWS_ACCOUNT_ID:oidc-provider/token.actions.githubusercontent.com"
+         },
+         "Action": "sts:AssumeRoleWithWebIdentity",
+         "Condition": {
+           "StringEquals": {
+             "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
+             "token.actions.githubusercontent.com:sub": "repo:VilnaCRM-Org/website:environment:production"
+           }
+         }
+       }
+
+3. Let the `ci-cd-infrastructure` pipeline apply it, then re-run the latest failed `website`
+   run on `main` and confirm `Configure AWS Credentials` passes.
+
+Do **not** remove `environment: production` from `deploy.yml` to get green: assertion E of
+`make lint-prod-guardrails` requires it on a push-triggered job that assumes a role, and
+dropping it removes the environment's protection rules from in front of the production role.
+
+## Verifying sandbox cleanup
+
+These two workflows only start the pipelines. What actually removes a sandbox lives in the
+website-infrastructure repository: the `sandbox-deletion` pipeline's `sandbox_deletion.sh` when
+a pull request closes, and the `sandbox-cleanup-lambda` function, fired by a one-shot
+`sandbox-cleanup-<first 44 characters of the bucket name, dots replaced with dashes>`
+EventBridge rule seven days after the latest sandbox deploy. Both workflows assume their
+roles in the production account, so this repository's sandboxes are `sandbox-prod-*` buckets
+there.
+
+[The sandbox cleanup verification runbook](../docs/runbooks/sandbox-cleanup.md) (issue #148)
+is the operator procedure for proving that path works: finding the EventBridge rule for a
+sandbox bucket, checking the Lambda execution role with `aws iam simulate-principal-policy`,
+running a probe against a throwaway bucket in the test account, reading the Lambda's
+CloudWatch logs, and confirming no bucket or rule is left behind. It also records the gaps
+visible in the infrastructure source and which repository owns each fix.
 
 ## Additional Notes
 

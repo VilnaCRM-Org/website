@@ -9,6 +9,7 @@ import { I18nextProvider } from 'react-i18next';
 
 import { theme } from '@/components/app-theme';
 import ErrorFallback from '@/components/error-fallback';
+import HeaderPlaceholder from '@/components/header-placeholder';
 import Layout from '@/components/layout';
 import { APP_ENVIRONMENT, APP_VERSION } from '@/config/app-version';
 import { env } from '@/config/env';
@@ -30,6 +31,7 @@ import client from '../src/features/landing/api/graphql/apollo';
 
 const DynamicHeader: ComponentType = dynamic(() => import('@/features/landing/components/header'), {
   ssr: false,
+  loading: () => <HeaderPlaceholder />,
 });
 
 const renderErrorFallback: Sentry.FallbackRender = ({ resetError }) => (

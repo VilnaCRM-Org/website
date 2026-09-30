@@ -70,14 +70,32 @@ ensure_label() {
     >/dev/null 2>&1 || true
 }
 
-# The ledger issue: found by exact title, created on first use.
+# The ledger issue: found by exact title in ANY state, created only when no issue
+# has ever carried that title (#451). The ledger is closed on purpose so it stays
+# out of the open backlog; a closed issue still takes comments and still notifies
+# its subscribers, so an open-only lookup would fork the trail into a second
+# ledger on the next event and dedup against its empty history. Duplicates that
+# already exist resolve to the OLDEST (lowest number) deterministically, and
+# `sort:created-asc` keeps that one inside the listing's page. This runs inside a
+# command substitution, where bash clears errexit, so every step is checked
+# explicitly: a failed lookup must stop the run, never read as "no ledger yet".
 ledger_number() {
-  local found created
+  local listing found created
+  if ! listing="$(gh issue list --repo "$REPO" --label "$LEDGER_LABEL" --state all \
+    --limit 100 --search "$LEDGER_TITLE in:title sort:created-asc" \
+    --json number,title)"; then
+    note "release-audit: could not look up the ledger issue '$LEDGER_TITLE'; refusing to create a duplicate"
+    return 1
+  fi
   # Same treatment as raise_alert: AUDIT_LEDGER_TITLE is configurable, so it is
   # passed as jq data rather than spliced into the program.
-  found="$(gh issue list --repo "$REPO" --label "$LEDGER_LABEL" --state open \
-    --search "$LEDGER_TITLE in:title" --json number,title |
-    jq -r --arg t "$LEDGER_TITLE" 'map(select(.title == $t)) | .[0].number // empty')"
+  if [ -z "$listing" ] || ! found="$(printf '%s' "$listing" |
+    jq -r --arg t "$LEDGER_TITLE" \
+      'if type == "array" then map(select(.title == $t)) | min_by(.number) | .number // empty
+       else error("not an issue list") end')"; then
+    note "release-audit: could not look up the ledger issue '$LEDGER_TITLE' (unreadable listing); refusing to create a duplicate"
+    return 1
+  fi
   if [ -n "$found" ]; then
     printf '%s' "$found"
     return 0
@@ -87,8 +105,11 @@ ledger_number() {
     printf '0'
     return 0
   fi
-  created="$(gh issue create --repo "$REPO" --label "$LEDGER_LABEL" \
-    --title "$LEDGER_TITLE" --body "$(ledger_seed_body)")"
+  if ! created="$(gh issue create --repo "$REPO" --label "$LEDGER_LABEL" \
+    --title "$LEDGER_TITLE" --body "$(ledger_seed_body)")"; then
+    note "release-audit: could not create the ledger issue '$LEDGER_TITLE'"
+    return 1
+  fi
   printf '%s' "${created##*/}"
 }
 
@@ -98,8 +119,11 @@ Audit trail of releases and pushes to `main`, appended by
 `.github/workflows/release-audit.yml` (issue #383). One comment per event.
 
 Subscribe to this issue to be notified of every release and every push to
-`main`. See `docs/release-audit.md` for the record format and, importantly,
-for what this ledger can and cannot prove.
+`main`. The issue is kept closed on purpose: it is still appended to, and
+subscribers are still notified of every comment. Do not reopen it or file a
+replacement -- the audit finds this issue by its exact title in any state.
+See `docs/release-audit.md` for the record format and, importantly, for what
+this ledger can and cannot prove.
 SEED
 }
 
@@ -239,6 +263,18 @@ provenance() {
   add "- recorded at $(date -u +%Y-%m-%dT%H:%M:%SZ) by \`scripts/ci/release-audit.sh\`"
 }
 
+escalate_release_anomalies() {
+  local action="$1" tag="$2"
+  if [ "$action" = 'deleted' ] || [ "$action" = 'edited' ]; then
+    raise_alert "Release audit: release ${tag:-unknown} was ${action}" \
+      "A release was \`${action}\` by \`${AUDIT_SENDER:-unknown}\`. Releases are immutable by convention; confirm this was intentional."
+  fi
+  if [ -n "$EXPECTED_BOT" ] && [ "${AUDIT_RELEASE_AUTHOR:-}" != "$EXPECTED_BOT" ]; then
+    raise_alert "Release audit: unexpected release author ${AUDIT_RELEASE_AUTHOR:-unknown}" \
+      "Release \`${tag:-unknown}\` was published by \`${AUDIT_RELEASE_AUTHOR:-unknown}\`, not the expected release App \`${EXPECTED_BOT}\`."
+  fi
+}
+
 handle_release() {
   local action="${AUDIT_RELEASE_ACTION:-unknown}" id="${AUDIT_RELEASE_ID:-0}"
   local tag="${AUDIT_RELEASE_TAG:-}" class marker ledger resolved_sha
@@ -267,7 +303,12 @@ handle_release() {
     id="tag-${tag:-unknown}"
   fi
   marker="release-audit:release:${id}:${class}"
-  ledger="$(ledger_number)"
+  # Same rule as the push path: a ledger outage fails the run, but the release
+  # escalations do not depend on the ledger and are raised regardless.
+  if ! ledger="$(ledger_number)"; then
+    escalate_release_anomalies "$action" "$tag"
+    return 1
+  fi
   if already_recorded "$ledger" "$marker"; then
     note "release-audit: release $id/$class already recorded"
     return 0
@@ -296,14 +337,7 @@ handle_release() {
   fi
   provenance
   post_record "$ledger"
-  if [ "$action" = 'deleted' ] || [ "$action" = 'edited' ]; then
-    raise_alert "Release audit: release ${tag:-unknown} was ${action}" \
-      "A release was \`${action}\` by \`${AUDIT_SENDER:-unknown}\`. Releases are immutable by convention; confirm this was intentional."
-  fi
-  if [ -n "$EXPECTED_BOT" ] && [ "${AUDIT_RELEASE_AUTHOR:-}" != "$EXPECTED_BOT" ]; then
-    raise_alert "Release audit: unexpected release author ${AUDIT_RELEASE_AUTHOR:-unknown}" \
-      "Release \`${tag:-unknown}\` was published by \`${AUDIT_RELEASE_AUTHOR:-unknown}\`, not the expected release App \`${EXPECTED_BOT}\`."
-  fi
+  escalate_release_anomalies "$action" "$tag"
 }
 
 # github.event.commits[] truncates at 20 entries; the compare API does not.
@@ -369,7 +403,13 @@ escalate_push_anomalies() {
 
 handle_push() {
   local ledger recorded shas actor="${AUDIT_ACTOR:-unknown}"
-  ledger="$(ledger_number)"
+  # A ledger outage fails the run (the workflow's failure step alerts on it), but
+  # the force-push / unexpected-bot escalation does not depend on the ledger and
+  # must not be swallowed with it.
+  if ! ledger="$(ledger_number)"; then
+    escalate_push_anomalies "$actor"
+    return 1
+  fi
   add "## Push to \`main\` by \`${actor}\`"
   add ""
   # Login only, never the pusher's email. Commit author/committer addresses are

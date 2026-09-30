@@ -10,7 +10,7 @@ interface Locators {
   responseError: string;
   responseStatus: string;
   validationErrors: string;
-  idInput: string;
+  idSelect: string;
   contentTypeSelect: string;
 }
 
@@ -29,5 +29,5 @@ export const locators: Readonly<Locators> = {
   responseStatus: '.responses-table.live-responses-table .response .response-col_status',
   validationErrors: '.validation-errors.errors-wrapper li',
 
-  idInput: 'input[placeholder="id"]',
+  idSelect: 'tr[data-param-name="id"] select',
 };

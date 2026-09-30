@@ -6,8 +6,9 @@
  * whole page body mounts in one commit (#493). To exercise the real composition synchronously in
  * jsdom, `next/dynamic` is unwrapped to its actual loader and each heavy
  * child section is stubbed, mirroring the proven testing-library setup. This
- * proves the layout wrapper (relative Box + the two `xl` containers) and the
- * barrel re-export end-to-end.
+ * proves the layout wrapper (relative Box + the two `xl` containers), the
+ * boundary's empty 150vh loading placeholder (#446) and the barrel re-export
+ * end-to-end.
  */
 import { render } from '@testing-library/react';
 import { DynamicOptions, Loader } from 'next/dynamic';
@@ -24,14 +25,20 @@ jest.mock('next/head', () => ({
   ),
 }));
 
+type LoadingOption = DynamicOptions<object>['loading'];
+
 jest.mock('next/dynamic', () => ({
   __esModule: true,
+  loadingOptions: [] as LoadingOption[],
   default: (...props: never): never => {
     const dynamicModule: typeof import('next/dynamic') = jest.requireActual('next/dynamic');
     const dynamicActualComp: <P = object>(
       dynamicOptions: DynamicOptions<P> | Loader<P>,
       options?: DynamicOptions<P>
     ) => React.ComponentType<P> = dynamicModule.default;
+    jest
+      .requireMock<{ loadingOptions: LoadingOption[] }>('next/dynamic')
+      .loadingOptions.push((props[1] as DynamicOptions<object> | undefined)?.loading);
     const RequiredComponent: React.ComponentType<object> = dynamicActualComp(props[0]);
     const requiredMock: (mock: never) => never = mock => mock;
     // @ts-expect-error no jest types
@@ -87,5 +94,16 @@ describe('Landing integration', () => {
     const wrapper: HTMLElement | null = container.querySelector('.MuiBox-root');
 
     expect(wrapper).toHaveStyle('position: relative');
+  });
+
+  it('reserves 150vh with an empty placeholder until the sections mount', () => {
+    const [loading] = jest.requireMock<{ loadingOptions: LoadingOption[] }>(
+      'next/dynamic'
+    ).loadingOptions;
+    const renderPlaceholder = loading as () => React.ReactElement;
+    const { container } = render(renderPlaceholder());
+
+    expect(container.firstElementChild).toHaveStyle({ minHeight: '150vh' });
+    expect(container.firstElementChild).toBeEmptyDOMElement();
   });
 });

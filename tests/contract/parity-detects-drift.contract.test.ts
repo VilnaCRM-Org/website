@@ -116,16 +116,19 @@ describe('a seeded defect in the mock data turns the gate red', () => {
   it(
     'catches a renamed response field',
     async () => {
-      // The issue's own worked example. Note ajv alone does NOT catch this: the
-      // upstream document misplaces `required` on the array schema instead of
-      // on its `items`, so only the undeclared-property rule sees the rename.
-      const kinds = await seededProblemKinds('renamed-field', document => {
+      // The issue's own worked example. Since user-service v0.8.0 the item
+      // schema lists `required` on `items`, so ajv reports the rename as a
+      // missing required property before the undeclared-property rule runs;
+      // the added-field case below is what proves that rule still bites.
+      const observed = await replayCorruptedMock('renamed-field', document => {
         const properties = itemProperties(document);
         properties.emailAddress = properties.email!;
         delete properties.email;
       });
+      const problems = checkResponseParity(LIST_USERS, observed, ajv);
 
-      expect(kinds).toContain('undeclared-property');
+      expect(problems.map(({ kind }) => kind)).toEqual(['schema-violation']);
+      expect(problems[0]?.detail).toContain("must have required property 'email'");
     },
     SEED_TIMEOUT_MS
   );
@@ -271,8 +274,8 @@ describe('the rules Mockoon cannot be made to produce', () => {
   });
 
   it('rejects a body on a status that must not carry one', () => {
-    // DELETE /api/users/{id} documents 204 — and, as an upstream defect, even
-    // declares `application/json` on it. A body there is still drift.
+    // DELETE /api/users/{id} documents 204, which RFC 9110 forbids a body on.
+    // A body there is drift whatever the document declares for the status.
     expect(kindsFor(DELETE_USER, observe({ status: 204, body: '{}' }))).toEqual([
       'undeclared-body',
     ]);

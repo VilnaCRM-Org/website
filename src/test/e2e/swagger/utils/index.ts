@@ -31,6 +31,29 @@ export const USER_ENDPOINTS: UserEndpoints = {
   RESEND_CONFIRMATION: '#operations-User-api_users_idresend-confirmation-email_post',
 } as const;
 
+type ResetPasswordEndpoints = {
+  REQUEST: string;
+  CONFIRM: string;
+};
+// The tag is "User reset password": swagger-ui builds the opblock id through
+// `escapeDeepLinkPath`, which turns each space of the tag into `_`.
+export const RESET_PASSWORD_ENDPOINTS: ResetPasswordEndpoints = {
+  REQUEST: '#operations-User_reset_password-request_password_reset',
+  CONFIRM: '#operations-User_reset_password-confirm_password_reset',
+} as const;
+
+export interface GetResetPasswordEndpoints {
+  request: Locator;
+  confirm: Locator;
+}
+
+export const getResetPasswordEndpoints: (page: Page) => GetResetPasswordEndpoints = (
+  page: Page
+): GetResetPasswordEndpoints => ({
+  request: page.locator(RESET_PASSWORD_ENDPOINTS.REQUEST),
+  confirm: page.locator(RESET_PASSWORD_ENDPOINTS.CONFIRM),
+});
+
 type SystemEndpoints = {
   HEALTH: string;
   AUTHORIZE: string;
@@ -38,8 +61,8 @@ type SystemEndpoints = {
 };
 export const SYSTEM_ENDPOINTS: SystemEndpoints = {
   HEALTH: '#operations-HealthCheck-api_health_get',
-  AUTHORIZE: '#operations-OAuth-get_api_oauth_authorize',
-  TOKEN: '#operations-OAuth-post_api_oauth_token',
+  AUTHORIZE: '#operations-OAuth-oauth_authorize_get',
+  TOKEN: '#operations-OAuth-oauth_token_post',
 } as const;
 
 export interface GetSystemEndpoints {

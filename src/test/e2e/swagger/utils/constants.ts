@@ -162,7 +162,7 @@ type ParamInputs = {
   STATE: string;
 };
 export const PARAM_INPUTS: ParamInputs = {
-  RESPONSE_TYPE: 'input[placeholder="response_type"]',
+  RESPONSE_TYPE: 'tr[data-param-name="response_type"] select',
   CLIENT_ID: 'input[placeholder="client_id"]',
   REDIRECT_URI: 'input[placeholder="redirect_uri"]',
   SCOPE: 'input[placeholder="scope"]',

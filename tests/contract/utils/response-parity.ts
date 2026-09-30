@@ -18,10 +18,11 @@
  * default (`additionalProperties` is permissive unless stated). That is
  * deliberate: a mock offering a field the contract does not describe is exactly
  * the "e2e certifies behavior the real API does not have" defect this gate
- * exists to catch. It is also the only rule that catches a renamed field in
- * this contract, because the upstream document misplaces `required` on the
- * array schema of `GET /api/users` instead of on its `items` — so ajv alone
- * accepts a response with every property renamed.
+ * exists to catch. It is the only rule that catches an ADDED field, because the
+ * response schemas leave `additionalProperties` unset. Until user-service
+ * v0.8.0 it was also the only rule that caught a renamed field, while upstream
+ * misplaced `required` on the array schema of `GET /api/users`; v0.8.0 moved it
+ * onto `items`, so ajv now reports a rename as a missing required property.
  */
 import type { ValidateFunction } from 'ajv';
 import type Ajv from 'ajv/dist/2020';
@@ -54,10 +55,9 @@ export interface ObservedResponse {
 
 /**
  * Statuses RFC 9110 forbids a body on. An empty body is correct for these no
- * matter what the document declares — this contract declares
- * `application/json` on `DELETE /api/users/{id}` 204, which is an upstream
- * defect that spectral already sees and which must not be reported here as
- * mock drift.
+ * matter what the document declares — the contract before user-service
+ * v0.8.0 declared `application/json` on `DELETE /api/users/{id}` 204, an
+ * upstream defect that must not be reported here as mock drift if it returns.
  */
 const BODYLESS_STATUSES: ReadonlySet<number> = new Set([204, 304]);
 

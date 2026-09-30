@@ -54,3 +54,8 @@ is the place to look before changing it.
   (`src/test/a11y/keyboard.ts`'s sweep already excludes negative `tabindex`; precedent is
   `honeypot-field.tsx`). Label and target id are passed in by the caller, like every other
   primitive here.
+- **`header-placeholder`** — the `loading` element `pages/_app.tsx` gives the client-only
+  header's `next/dynamic` boundary. An empty box of `theme.mixins.toolbar` height (the rule
+  the header's MUI `Toolbar` applies), so the prerendered page body is already where the
+  header will leave it and does not shift when the chunk mounts. It carries no role, text or
+  tab stop. See the swagger feature README ("Reserving the viewport while the page loads").

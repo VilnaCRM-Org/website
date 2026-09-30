@@ -8,6 +8,9 @@ alert lands, and what to do when one does (issue #336).
   gaps that are not covered at all.
 - [Incident response](incident-response.md) — the procedure when the uptime incident issue
   opens, or a human reports the site down: confirm, classify, mitigate, verify, record.
+- [Sandbox cleanup verification](sandbox-cleanup.md) — how an operator with AWS access
+  proves a pull-request sandbox is removed: the EventBridge rule, the cleanup Lambda's role,
+  a probe run, its CloudWatch logs and the residual-bucket check (issue #148).
 - [Deployment and rollback](../deployment-runbook.md) — how a deploy reaches production,
   the post-deploy smoke test, and the rollback procedure. It predates this directory and
   stays where it is: `deploy.yml` and the README already point at it.

@@ -1,13 +1,12 @@
 /**
  * Integration coverage for the top-level `Swagger` page component.
  *
- * Imported by its own path: the feature barrel deliberately exposes only the
- * lazy `SwaggerPage` boundary (see `swagger-page.integration.test.tsx`), so a
- * static re-export of `Swagger` never reaches a page's initial chunk. Renders
- * the real `Navigation` + `ApiDocumentation`
- * subtree; `useSwagger` is stubbed to the loading state so `ApiDocumentation`
- * renders null (the heavy `swagger-ui-react` bundle is also stubbed for safety),
- * and the mount effect that switches the language to English is exercised.
+ * Imported by its own path: the feature barrel deliberately exposes only
+ * `SwaggerPage`. `Swagger` renders the wrapper and the back link directly and
+ * loads `ApiDocumentation` (which pulls in `swagger-ui-react`) behind its own
+ * `next/dynamic` boundary, so the back link is present on the first render.
+ * `useSwagger` is stubbed to the loading state and `swagger-ui-react` is stubbed
+ * for safety.
  */
 import { render, screen } from '@testing-library/react';
 import { t } from 'i18next';

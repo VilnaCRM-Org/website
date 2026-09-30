@@ -1,16 +1,26 @@
 import { Box, Container } from '@mui/material';
+import dynamic from 'next/dynamic';
+import React, { ComponentType } from 'react';
 
-import ApiDocumentation from '../api-documentation/api-documentation';
+import { Loading } from '../loading';
 import Navigation from '../navigation/navigation';
 
 import styles from './styles';
+
+const LazyApiDocumentation: ComponentType = dynamic(
+  () => import('../api-documentation/api-documentation'),
+  {
+    ssr: false,
+    loading: () => <Loading />,
+  }
+);
 
 function Swagger(): React.ReactElement {
   return (
     <Box sx={styles.wrapper}>
       <Container maxWidth="xl">
         <Navigation />
-        <ApiDocumentation />
+        <LazyApiDocumentation />
       </Container>
     </Box>
   );

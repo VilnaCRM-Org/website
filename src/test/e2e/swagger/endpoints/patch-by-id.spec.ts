@@ -1,12 +1,6 @@
 import { expect, type Locator, Page, test, type Download } from '@playwright/test';
 
-import {
-  testUserId,
-  BASE_API,
-  BasicEndpointElements,
-  MOCK_API_USER,
-  UpdatedUser,
-} from '../utils/constants';
+import { BASE_API, BasicEndpointElements, MOCK_API_USER, UpdatedUser } from '../utils/constants';
 import {
   initSwaggerPage,
   clearEndpointResponse,
@@ -17,12 +11,14 @@ import {
   cancelOperation,
   expectErrorOrFailureStatus,
   buildSafeUrl,
+  expectOnlyDocumentedId,
+  selectDocumentedId,
 } from '../utils/helpers';
 import { locators } from '../utils/locators';
 
 interface PatchUserEndpointElements extends BasicEndpointElements {
   parametersSection: Locator;
-  idInput: Locator;
+  idSelect: Locator;
   requestBodySection: Locator;
   jsonEditor: Locator;
   curl: Locator;
@@ -42,7 +38,7 @@ async function setupPatchUserEndpoint(page: Page): Promise<PatchUserEndpointElem
 
   const executeBtn: Locator = await getAndCheckExecuteBtn(patchEndpoint);
   const parametersSection: Locator = patchEndpoint.locator(locators.parametersSection);
-  const idInput: Locator = patchEndpoint.locator(locators.idInput);
+  const idSelect: Locator = patchEndpoint.locator(locators.idSelect);
   const requestBodySection: Locator = patchEndpoint.locator(locators.requestBodySection);
   const jsonEditor: Locator = requestBodySection.locator(locators.jsonEditor);
   const responseBody: Locator = patchEndpoint.locator(locators.responseBody).first();
@@ -55,7 +51,7 @@ async function setupPatchUserEndpoint(page: Page): Promise<PatchUserEndpointElem
     getEndpoint: patchEndpoint,
     executeBtn,
     parametersSection,
-    idInput,
+    idSelect,
     requestBodySection,
     jsonEditor,
     responseBody,
@@ -69,7 +65,8 @@ async function setupPatchUserEndpoint(page: Page): Promise<PatchUserEndpointElem
 test.describe('patch by ID', () => {
   test('default values', async ({ page }) => {
     const elements: PatchUserEndpointElements = await setupPatchUserEndpoint(page);
-    await interceptWithJsonResponse(page, PATCH_USER_API_URL(testUserId), MOCK_API_USER);
+    const userId: string = await selectDocumentedId(elements.idSelect);
+    await interceptWithJsonResponse(page, PATCH_USER_API_URL(userId), MOCK_API_USER);
     const defaultRequestBody: UpdatedUser = {
       email: 'user@example.com',
       initials: 'Name Surname',
@@ -77,33 +74,32 @@ test.describe('patch by ID', () => {
       newPassword: 'PASSword2',
     };
     await expect(elements.parametersSection).toBeVisible();
-    await expect(elements.idInput).toBeVisible();
+    await expect(elements.idSelect).toBeVisible();
     await expect(elements.requestBodySection).toBeVisible();
     await expect(elements.jsonEditor).toBeVisible();
-    await elements.idInput.fill(testUserId);
     await elements.jsonEditor.fill(JSON.stringify(defaultRequestBody));
     await elements.executeBtn.click();
     await expect(elements.curl).toBeVisible();
     await expect(elements.copyButton).toBeVisible();
-    await expect(elements.requestUrl).toContainText(testUserId);
+    await expect(elements.requestUrl).toContainText(userId);
     await expect(elements.downloadButton).toBeVisible();
     await clearEndpointResponse(elements.getEndpoint);
   });
 
   test('custom values', async ({ page }) => {
     const elements: PatchUserEndpointElements = await setupPatchUserEndpoint(page);
-    await interceptWithJsonResponse(page, PATCH_USER_API_URL(testUserId), MOCK_API_USER);
+    const userId: string = await selectDocumentedId(elements.idSelect);
+    await interceptWithJsonResponse(page, PATCH_USER_API_URL(userId), MOCK_API_USER);
     const customRequestBody: UpdatedUser = {
       email: 'patch@example.com',
       initials: 'PT',
       oldPassword: 'oldPatchPass',
       newPassword: 'newPatchPass',
     };
-    await elements.idInput.fill(testUserId);
     await elements.jsonEditor.fill(JSON.stringify(customRequestBody));
     await elements.executeBtn.click();
     await expect(elements.curl).toBeVisible();
-    await expect(elements.requestUrl).toContainText(testUserId);
+    await expect(elements.requestUrl).toContainText(userId);
     const curlText: string | null = await elements.curl.textContent();
     expect(curlText).toContain('patch@example.com');
     expect(curlText).toContain('PT');
@@ -112,21 +108,9 @@ test.describe('patch by ID', () => {
     await clearEndpointResponse(elements.getEndpoint);
   });
 
-  test('empty ID validation', async ({ page }) => {
-    const elements: PatchUserEndpointElements = await setupPatchUserEndpoint(page);
-    await elements.idInput.fill('');
-    await elements.executeBtn.click();
-    await expect(elements.idInput).toHaveClass(/invalid/);
-    const expectedErrorMsg: string = "For 'id': Required field is not provided.";
-    await expect(
-      elements.getEndpoint.locator('.validation-errors.errors-wrapper li')
-    ).toContainText(expectedErrorMsg);
-    await cancelOperation(page);
-  });
-
   test('empty request body', async ({ page }) => {
     const elements: PatchUserEndpointElements = await setupPatchUserEndpoint(page);
-    await elements.idInput.fill(testUserId);
+    await selectDocumentedId(elements.idSelect);
     await elements.jsonEditor.clear();
     await elements.executeBtn.click();
     await expect(elements.jsonEditor).toHaveClass(/invalid/);
@@ -135,15 +119,14 @@ test.describe('patch by ID', () => {
 
   test('download', async ({ page }) => {
     const elements: PatchUserEndpointElements = await setupPatchUserEndpoint(page);
-    await interceptWithJsonResponse(page, PATCH_USER_API_URL(testUserId), MOCK_API_USER);
+    const userId: string = await selectDocumentedId(elements.idSelect);
+    await interceptWithJsonResponse(page, PATCH_USER_API_URL(userId), MOCK_API_USER);
     const downloadData: { email: string; initials: string } = {
       email: 'download@example.com',
       initials: 'DL',
     };
 
     const downloadPromise: Promise<Download> = page.waitForEvent('download');
-
-    await elements.idInput.fill(testUserId);
     await elements.jsonEditor.fill(JSON.stringify(downloadData));
     await elements.executeBtn.click();
 
@@ -162,10 +145,10 @@ test.describe('patch by ID', () => {
 
   test('error response - user not found', async ({ page }) => {
     const elements: PatchUserEndpointElements = await setupPatchUserEndpoint(page);
-    const nonExistentId: string = '2b10b7a3-67f0-40ea-a367-44263321592z';
+    const userId: string = await selectDocumentedId(elements.idSelect);
     await interceptWithErrorResponse(
       page,
-      PATCH_USER_API_URL(nonExistentId),
+      PATCH_USER_API_URL(userId),
       {
         error: 'Not Found',
         message: 'User not found',
@@ -173,7 +156,6 @@ test.describe('patch by ID', () => {
       },
       404
     );
-    await elements.idInput.fill(nonExistentId);
     await elements.jsonEditor.fill(JSON.stringify({ initials: 'NF' }));
     await elements.executeBtn.click();
 
@@ -187,39 +169,19 @@ test.describe('patch by ID', () => {
     await clearEndpointResponse(elements.getEndpoint);
   });
 
-  test('error response - invalid id format', async ({ page }) => {
+  test('only the documented user id can be sent', async ({ page }) => {
     const elements: PatchUserEndpointElements = await setupPatchUserEndpoint(page);
-    const invalidId: string = 'invalid-uuid-format';
-    await interceptWithErrorResponse(
-      page,
-      PATCH_USER_API_URL(invalidId),
-      {
-        error: 'Bad Request',
-        message: 'Invalid user ID format',
-        code: 'INVALID_ID_FORMAT',
-      },
-      400
-    );
-    await elements.idInput.fill(invalidId);
-    await elements.jsonEditor.fill(JSON.stringify({ initials: 'NF' }));
-    await elements.executeBtn.click();
 
-    await elements.responseBody.waitFor({ state: 'visible' });
+    await expectOnlyDocumentedId(elements.idSelect);
 
-    await expect(elements.responseBody).toContainText('Invalid user ID format');
-    const responseCode: Locator = elements.getEndpoint
-      .locator('.response .response-col_status')
-      .first();
-    await expect(responseCode).toContainText('400');
-    await clearEndpointResponse(elements.getEndpoint);
+    await cancelOperation(page);
   });
 
   test('error response - CORS/Network failure', async ({ page }) => {
     const elements: PatchUserEndpointElements = await setupPatchUserEndpoint(page);
+    const userId: string = await selectDocumentedId(elements.idSelect);
 
-    await interceptWithNetworkFailure(page, PATCH_USER_API_URL(testUserId));
-
-    await elements.idInput.fill(testUserId);
+    await interceptWithNetworkFailure(page, PATCH_USER_API_URL(userId));
     await elements.jsonEditor.fill(JSON.stringify({ initials: 'NF' }));
     await elements.executeBtn.click();
 

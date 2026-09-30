@@ -53,9 +53,9 @@ test.describe('Swagger UI Enhanced Interactions', () => {
     const authModal: Locator = page.locator('.modal-ux');
     await expect(authModal).toBeVisible();
 
-    // The pinned spec declares a single OAuth2 authorizationCode flow, so the
-    // modal renders client credential fields — not the api_key / Bearer inputs
-    // the guarded version looked for and never found.
+    // The pinned spec declares one OAuth2 authorizationCode flow (beside an
+    // HTTP Basic scheme), so the modal renders client credential fields — not
+    // the api_key / Bearer inputs the guarded version looked for and never found.
     const clientId: Locator = authModal.locator('#client_id_authorizationCode');
     const clientSecret: Locator = authModal.locator('#client_secret_authorizationCode');
 
@@ -79,7 +79,10 @@ test.describe('Swagger UI Enhanced Interactions', () => {
     // rule against the whole composed page.
     await scanInteractionState(page, INTERACTION_STATES.swaggerAuthorizeDialog);
 
-    await authModal.locator('button:has-text("Close")').click();
+    // Since user-service v0.8.0 the spec also declares an HTTP Basic scheme,
+    // and swagger-ui gives its form a Close button of its own; either closes
+    // the whole dialog.
+    await authModal.locator('button:has-text("Close")').first().click();
     await expect(authModal).not.toBeVisible();
   });
 
@@ -139,6 +142,13 @@ test.describe('Swagger UI Enhanced Interactions', () => {
     const schemaPanel: Locator = examplePane.locator('[data-name="modelPanel"]');
     await expect(schemaPanel).toBeVisible();
     await expect(schemaPanel).not.toBeEmpty();
+  });
+
+  test('should not render the Schemas section', async ({ page }) => {
+    await page.locator('.opblock-tag-section').first().waitFor({ state: 'visible' });
+
+    await expect(page.getByRole('button', { name: /^schemas$/i })).toHaveCount(0);
+    await expect(page.locator('section.models')).toHaveCount(0);
   });
 
   test('should list every documented endpoint under its tag', async ({ page }) => {

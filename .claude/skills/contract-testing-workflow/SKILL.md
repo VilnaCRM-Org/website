@@ -130,12 +130,14 @@ committed digests keep meaning something. Take the tag: `make lint-api-versions`
 `vMAJOR.MINOR.PATCH` tag is the only spelling that passes both.
 
 **`Upstream spec carries HTML markup at $…`** — `make update-contracts` refused to
-vendor a spec whose `description`/`title`/`summary` contains a real HTML element.
-Those fields are rendered as Markdown by swagger-ui on the public `/swagger` page,
-so this is a deliberate stop-and-read, not a formatting nit: confirm upstream
-meant it before doing anything else. The check matches HTML **element names**, not
-"anything in angle brackets", so ordinary prose like `Array<User>` or
-`maxLength < 10` passes.
+vendor a spec with a real HTML element in some string or key — every one is
+scanned, not only `description`/`title`/`summary`. swagger-ui renders much of the
+document as Markdown on the public `/swagger` page, so this is a deliberate
+stop-and-read, not a formatting nit: confirm upstream meant it before doing
+anything else. The check matches HTML **element names**, not "anything in angle
+brackets", so ordinary prose like `Array<User>` or `maxLength < 10` passes. The
+sample of a `text/html` media type never reaches this scan (see "Normalization at
+ingestion" below); do not widen that drop to clear a failure elsewhere.
 
 **`Cannot query field "x" on type "Y"`** — a client operation and the pinned
 schema disagree. The schema is authoritative: fix the operation (see
@@ -144,10 +146,14 @@ or bump the pin if the field genuinely landed upstream.
 
 ## Bumping the pin
 
-1. Edit `USER_SERVICE_VERSION` in `.env` — nowhere else. It must be an exact
+1. Edit `USER_SERVICE_VERSION` in `.env` and `.env.example` (`make
+lint-api-versions` fails when they disagree). It must be an exact
    `vMAJOR.MINOR.PATCH` release tag — that is what `make lint-api-versions`
    enforces on every PR, and it satisfies the integrity layer's broader
    immutable-ref rule (tag **or** 40-character commit SHA) at the same time.
+   No gate orders tags: upstream restarted its numbering at `v0.1.0` after
+   `v2.8.0`, so `v0.8.0` is newer than `v2.6.0` — take the newest **release**,
+   never the highest semver.
 2. `make update-contracts` — re-fetches both artifacts, re-records their digests
    in `checksums.json`, and refreshes the spectral baseline.
 3. `make lint-contracts` — expect green.
@@ -174,9 +180,21 @@ mutating the committed contract. This is a documented transformation at the
 single point the document enters the repo — not a way to hide findings. If you
 add another normalization, say why in the code and expect to justify it in review.
 
-The same entry point **rejects** (rather than rewrites) HTML markup in
-`description`, `title` and `summary`, and a non-`http(s)` `externalDocs.url`
-(#376 F1). Rewriting was the obvious alternative and is unsafe: no tag regex can
+It also **drops** the `example` and `examples` of every Media Type Object whose
+media type is `text/html` (case-insensitive, parameters such as `; charset=utf-8`
+ignored), reached by position — a response, request body or parameter under
+`paths` or `components` — and nothing else (#446, ADR 0016). user-service v0.8.0
+documents its OAuth authorize page with a full HTML document as that sample, which
+no markup guard can tell from an injection. Dropping it means nothing upstream
+writes there is ever vendored; the media type's `schema` and `encoding` stay and
+stay scanned. `text/*`, `*/*` and `application/xhtml+xml` are not `text/html`.
+The digest in `checksums.json` is taken over the normalized form and so cannot see
+that slot; `make lint-contracts` also requires the committed `openapi.json` to be a
+fixed point of `normalizeSpec` (`verifyNormalizedArtifact`), which is what makes a
+hand-edited sample there fail the integrity step.
+
+The same entry point **rejects** (rather than rewrites) HTML markup in every
+remaining string and key, and a non-`http(s)` link (#376 F1). Rewriting was the obvious alternative and is unsafe: no tag regex can
 tell `<b and c>` from prose containing `<`, so a stripper silently mutates
 legitimate upstream text. Failing closed keeps the committed contract provably
 markup-free without ever mangling it.
@@ -207,9 +225,11 @@ validates against that media type's schema, and the body carries **no property
 the schema never declares**.
 
 That last rule is stricter than OpenAPI's default on purpose, and it is
-load-bearing: upstream puts `required` on the _array_ schema of `GET /api/users`
-instead of on its `items`, so ajv alone accepts a response with every property
-renamed. Do not "fix" a red run by dropping it.
+load-bearing: the response schemas leave `additionalProperties` unset, so ajv
+alone accepts a response carrying any extra property. (Before user-service
+v0.8.0 upstream also put `required` on the _array_ schema of `GET /api/users`,
+so ajv accepted a response with every property renamed.) Do not "fix" a red run
+by dropping it.
 
 Reading a red run:
 

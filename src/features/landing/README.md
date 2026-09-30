@@ -29,6 +29,23 @@ import { LandingComponent } from '@/features/landing';
   and while `auth-section` stayed its own chunk it was the smaller download, mounted first
   directly under the header, and was pushed down by the whole block (desktop CLS 0.93–0.97 on
   every run). Keep every landing section under the one boundary.
+- That boundary's `loading` element is an empty box of `minHeight: 150vh` (`landing/styles.ts`),
+  and it matters as much as the single chunk. The shared footer is a separate `ssr: false`
+  chunk (`src/components/layout`), and nothing orders the two downloads. When the footer won,
+  it mounted right under the header and the landing body then pushed it about 3600px down.
+  On mobile Lighthouse the footer and its `0 -5px 46px` shadow (painted about 74px above and
+  64px below the box) covered 416 of the 823px viewport, so that one shift scored `416 / 823 = 0.5055`
+  against the 0.5 budget, in CI run 36725604090 and on Dependabot PR #475. The samples that
+  scored 0 were the runs where the landing chunk won. A 100vh reservation is not enough: the
+  footer would sit at header + 100vh, and the shadow would still reach the bottom 18px (10px
+  on desktop) of the viewport. 150vh keeps the footer and its shadow half a viewport below the
+  fold until the sections mount. It stays well under the body it stands in for (3625px at
+  412px wide, 4566px at 1350px wide), so the footer moves down when the body mounts, and both
+  positions are off-screen. A Chromium replay at 412x823 with 4x CPU throttling scored 0.5055
+  on every run before this and 0 after it, even with the landing chunk delayed by 2s. The
+  empty box has no role, text or tab stop, and the sections replace it in the commit that
+  mounts them, so the loaded page is unchanged. `HeaderPlaceholder` (`src/components`) holds
+  the header's place in the same way.
 - `api/` — the Apollo data layer: `graphql/apollo.ts` (client + documents) and
   `service/userService.ts` (the typed create-user call and its `types.ts`).
 - `hooks/` — feature hooks such as `useFormReset.ts`.

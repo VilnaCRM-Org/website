@@ -20,7 +20,8 @@ surface. Subscribe to them, or to the repository's issues, to be told about anyt
   automatically**: treat it as a live credential, rotate and revoke it, delete the run's
   logs, then close the issue by hand (see "Committed secrets" in `CLAUDE.md`).
 - `release-audit` — the permanent ledger issue `release-audit.yml` appends to: one comment
-  per release and per bot push.
+  per release and per bot push. It is closed on purpose (#451) and still appended to, so
+  look for it under **Closed**.
 - `ci-canary` — `docker-build-canary.yml`. The nightly Docker build canary is red,
   usually because an Alpine package pin rotated.
 - `e2e-flake` — `e2e-flake-census.yml`. Nightly census of e2e specs that pass only on a
@@ -28,7 +29,10 @@ surface. Subscribe to them, or to the repository's issues, to be told about anyt
   failed; a census that did not measure the suite (no report, no test executed, or a run
   cut short) keeps it open and turns the run red.
 - `dependency-cve` — `osv-scanner.yml`. Nightly census of the dependency CVE backlog.
-- `mutation-backlog` — `mutation-testing.yml`. Nightly full mutation census.
+- `mutation-backlog` — `mutation-testing.yml`. Nightly full mutation census. Closed
+  automatically by the next clean census, in which no mutant survived or ran uncovered; a
+  census that recorded no verdict (a census shard did not run, or the merge failed) keeps it
+  open and turns the run red.
 - `api-contract` — `openapi-drift.yml`. Breaking upstream OpenAPI or GraphQL drift
   against the pinned user-service contracts.
 - `docs-release-hygiene` — `link-check.yml`. Weekly external link failures.
@@ -136,8 +140,8 @@ a real alert on purpose.
 
 Records every published release and every push to `main`, including the autorelease
 bot's, as one comment each on the permanent `Release and bot-push audit log` issue
-(label `release-audit`), and escalates anomalies — a deleted release, an unexpected bot,
-a force-push — onto `ci-alert`. Read
+(label `release-audit`, #451 — closed on purpose and still appended to), and escalates
+anomalies — a deleted release, an unexpected bot, a force-push — onto `ci-alert`. Read
 [what the ledger cannot prove](../release-audit.md#what-the-ledger-cannot-prove) before
 treating a record as evidence.
 

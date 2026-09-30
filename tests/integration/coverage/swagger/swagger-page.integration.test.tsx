@@ -1,18 +1,19 @@
 /**
- * Integration coverage for `SwaggerPage`, the feature-owned lazy boundary around
- * the browser-only Swagger UI (`next/dynamic` with `ssr: false`).
+ * Integration coverage for `SwaggerPage`: the schema preload plus the `Swagger`
+ * root, whose `ApiDocumentation` sits behind a `next/dynamic` boundary (`ssr:
+ * false`, since Swagger UI is browser-only).
  *
- * The feature owns this boundary — rather than `pages/swagger.tsx` — so the
- * barrel exposes nothing that would pull `swagger-ui-react` into the page's
- * initial chunk. `next/dynamic` is replaced with a minimal loader that renders
- * the `loading` element first and the resolved module after, which is the
- * observable contract: a spinner while the chunk downloads, then the page.
+ * The boundary wraps only the documentation, so the page wrapper and its back
+ * link are in the prerendered HTML and nothing above the documentation changes
+ * height when the chunk arrives (issue #446). `next/dynamic` is replaced with a
+ * minimal loader that renders the `loading` element first and the resolved
+ * module after, which is the observable contract.
  *
  * Invalid input / boundary — Not applicable: the component takes no props.
  * Error — Not applicable: a failed chunk load is handled by Next's own runtime,
  * which is outside this module.
  */
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { t } from 'i18next';
 import React from 'react';
 
@@ -67,17 +68,18 @@ describe('integration: SwaggerPage', () => {
     });
   });
 
-  it('shows a named loading status while the chunk loads, then renders the page', async () => {
+  it('renders the back link and a named loading status before the chunk loads', async () => {
     render(<SwaggerPage />);
 
+    expect(
+      screen.getByRole('link', { name: t('navigation.navigate_to_home_page') })
+    ).toBeInTheDocument();
     // The spinner itself is aria-hidden (an unnamed progressbar is an axe
     // failure); the status region beside it carries the localized message.
     expect(screen.getByRole('status')).toHaveTextContent(t('api_documentation.loading'));
     expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
 
-    expect(
-      await screen.findByRole('link', { name: t('navigation.navigate_to_home_page') })
-    ).toBeInTheDocument();
+    await waitFor(() => expect(screen.getAllByRole('status')).toHaveLength(2));
   });
 
   it('preloads the schema from the static HTML so the fetch skips the chunk waterfall', () => {

@@ -193,7 +193,7 @@
     "shard 1": "Aggregated by merge and enforce gate, as for shard 0.",
     "nightly mutation census (0)": "Scheduled leg: its if: excludes pull_request, so it only ever reports skipped on a PR.",
     "nightly mutation census (1)": "Scheduled leg, as for nightly mutation census (0).",
-    "file or refresh the mutation-backlog issue": "Scheduled leg: its if: excludes pull_request.",
+    "file, refresh or close the mutation-backlog issue": "Scheduled leg: its if: excludes pull_request.",
     "nightly dependency cve census": "Scheduled leg: its if: excludes pull_request.",
     "external": "Scheduled leg of link check: its if: runs it on schedule only; offline is the PR leg.",
     "history": "Scheduled leg of secrets scanning: its if: excludes pull_request; gitleaks is the PR leg.",

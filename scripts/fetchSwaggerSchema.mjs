@@ -41,22 +41,109 @@ const DROP_WHEN_NULL = new Set(['maxLength', 'format']);
  * Scoped to those keys on purpose. A blanket "strip every null" would also delete
  * legitimate OpenAPI 3.1 metadata such as `default: null` or `example: null`, and
  * because the drift check normalizes both sides the same way, that deletion would
- * pass silently while mutating the committed contract. Normalizing at the single
- * point where the document enters this repo keeps the committed artifact a valid
- * OpenAPI document; nothing carrying meaning is removed.
+ * pass silently while mutating the committed contract.
  */
-export function normalizeSpec(node) {
+function dropNullKeywords(node) {
   if (Array.isArray(node)) {
-    return node.map(normalizeSpec);
+    return node.map(dropNullKeywords);
   }
   if (node && typeof node === 'object') {
     return Object.fromEntries(
       Object.entries(node)
         .filter(([key, value]) => !(value === null && DROP_WHEN_NULL.has(key)))
-        .map(([key, value]) => [key, normalizeSpec(value)])
+        .map(([key, value]) => [key, dropNullKeywords(value)])
     );
   }
   return node;
+}
+
+// The one sanctioned exception to the "every string is checked" policy below
+// (issue #446, maintainer-approved; ADR 0016). user-service v0.8.0 documents the
+// OAuth authorize redirect as a `text/html` response whose `example` is a full
+// HTML page, and no guard can tell a genuine sample page from injected markup.
+//
+// So the sample is DROPPED here, before assertNoMarkup runs — never allowed
+// through. Nothing an upstream author writes in that position can reach the
+// vendored artifact, the swagger page or the Mockoon image; the only loss is an
+// illustrative payload. It is deliberately narrow:
+//   - only the `example` and `examples` keys of a Media Type Object — its
+//     `schema` (including a `schema.example`) and `encoding` stay and stay
+//     scanned;
+//   - only a Media Type Object whose media type is text/html, compared the way
+//     RFC 9110 compares one: case-insensitively, ignoring parameters such as
+//     `; charset=utf-8`. `text/*`, `*/*` and `application/xhtml+xml` are NOT
+//     text/html and stay fail-closed;
+//   - only content maps reached by POSITION — a Response, a Request Body or a
+//     Parameter under `paths` or under `components` — never by a key merely
+//     named `content`, which a schema can declare as a property name. Anything
+//     else (headers, callbacks, webhooks) keeps failing closed.
+// The media-type KEY is still scanned, so markup smuggled into the key itself is
+// still refused.
+const HTML_SAMPLE_KEYS = new Set(['example', 'examples']);
+const HTTP_METHODS = new Set(['get', 'put', 'post', 'delete', 'options', 'head', 'patch', 'trace']);
+
+function isHtmlMediaType(mediaType) {
+  return mediaType.split(';')[0].trim().toLowerCase() === 'text/html';
+}
+
+const isPlainObject = value => value !== null && typeof value === 'object' && !Array.isArray(value);
+
+const mapValues = (node, transform) =>
+  isPlainObject(node)
+    ? Object.fromEntries(Object.entries(node).map(([key, value]) => [key, transform(value, key)]))
+    : node;
+
+const mapItems = (node, transform) => (Array.isArray(node) ? node.map(transform) : node);
+
+// Spreading over an existing key keeps its position, so the serialized document —
+// and with it the digest in checksums.json — does not reorder.
+const replaceKey = (node, key, transform) =>
+  isPlainObject(node) && Object.hasOwn(node, key) ? { ...node, [key]: transform(node[key]) } : node;
+
+const withoutSampleKeys = media =>
+  Object.fromEntries(Object.entries(media).filter(([key]) => !HTML_SAMPLE_KEYS.has(key)));
+
+const mediaWithoutHtmlSample = (media, mediaType) =>
+  isHtmlMediaType(mediaType) && isPlainObject(media) ? withoutSampleKeys(media) : media;
+
+const withoutHtmlSamples = holder =>
+  replaceKey(holder, 'content', content => mapValues(content, mediaWithoutHtmlSample));
+
+const operationWithoutHtmlSamples = operation => {
+  const withResponses = replaceKey(operation, 'responses', responses =>
+    mapValues(responses, withoutHtmlSamples)
+  );
+  const withBody = replaceKey(withResponses, 'requestBody', withoutHtmlSamples);
+  return replaceKey(withBody, 'parameters', parameters => mapItems(parameters, withoutHtmlSamples));
+};
+
+const pathItemWithoutHtmlSamples = pathItem =>
+  mapValues(pathItem, (value, key) => {
+    if (HTTP_METHODS.has(key)) {
+      return operationWithoutHtmlSamples(value);
+    }
+    return key === 'parameters' ? mapItems(value, withoutHtmlSamples) : value;
+  });
+
+const componentsWithoutHtmlSamples = components =>
+  ['responses', 'requestBodies', 'parameters'].reduce(
+    (current, key) => replaceKey(current, key, map => mapValues(map, withoutHtmlSamples)),
+    components
+  );
+
+function dropHtmlSamples(doc) {
+  const withPaths = replaceKey(doc, 'paths', paths => mapValues(paths, pathItemWithoutHtmlSamples));
+  return replaceKey(withPaths, 'components', componentsWithoutHtmlSamples);
+}
+
+/**
+ * The single point where the upstream document enters this repo. Normalizing
+ * here keeps the committed artifact a valid OpenAPI document, and because the
+ * drift check and the digest both canonicalize through this function, the
+ * committed JSON and the fetched YAML compare equal.
+ */
+export function normalizeSpec(node) {
+  return dropHtmlSamples(dropNullKeywords(node));
 }
 
 // swagger-ui renders a lot of this document as Markdown — `description`,
@@ -74,12 +161,14 @@ export function normalizeSpec(node) {
 // Three successive attempts to carve out "payload" positions each closed one
 // bypass and opened another, so there are now no carve-outs to get wrong.
 //
-// The cost is a false positive if upstream ever puts real HTML in a sample
+// The cost is a false positive when upstream puts real HTML in a sample
 // payload. That is affordable and deliberate: this runs at ingestion, inside a
 // maintainer's `make update-contracts`, not on every PR — so the failure mode is
-// one loud, reviewable message during a deliberate refresh, against a document
-// that today holds 712 strings and not one `<`. Widening it is a decision for a
-// reviewer to record, not something to pre-emptively guess at.
+// one loud, reviewable message during a deliberate refresh. Widening it is a
+// decision for a reviewer to record, not something to pre-emptively guess at —
+// and the one recorded widening is not a carve-out here: `normalizeSpec` DROPS
+// the sample of a text/html Media Type Object before this scan runs (#446,
+// ADR 0016), so the scan itself still has no exemptions.
 
 // The exact positions swagger-ui turns into a clickable anchor: the info block's
 // terms link, the topbar's contact and license links, and externalDocs wherever
