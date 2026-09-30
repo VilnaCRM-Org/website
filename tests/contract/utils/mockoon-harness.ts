@@ -4,7 +4,7 @@
  * `Mockoon.Dockerfile` runs `mockoon-cli start --data <openapi.json>`. The CLI
  * is a thin oclif wrapper over the Mockoon libraries: it reads the document and
  * hands its raw text to `OpenApiConverter` (exported by `@mockoon/commons`, no
- * longer by `@mockoon/commons-server`, at the 9.7.0 pin) to build a Mockoon
+ * longer by `@mockoon/commons-server`, at the 9.9.0 pin) to build a Mockoon
  * environment, then serves it with `MockoonServer`. Driving those two classes
  * directly runs the identical conversion and serving code without Docker, so
  * the parity gate needs nothing beyond `bun install` — while

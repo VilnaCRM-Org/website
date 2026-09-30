@@ -314,10 +314,10 @@ so belongs in its own reviewed change, after the open dependency pull requests l
      polyfill: GHSA-4mjr-xmp4-gh2g, GHSA-q8mj-m7cp-5q26, GHSA-x5fp-wj9c-mxmx.
 
    `qs` steps past exact and tilde pins: `typed-rest-client@2.3.1` pins
-   `6.15.1`, `@mockoon/commons-server@9.7.0` pins `6.15.2` and `express@4.22.2` declares
-   `~6.15.1`. Their next releases already sit on 6.16 (`typed-rest-client` 3.x declares
-   `^6.16.0`, `@mockoon/commons-server@9.9.0` pins `6.16.0`), so drop the entry once
-   every one of them has moved.
+   `6.15.1` and `express@4.22.2` (Lighthouse CI) declares `~6.15.1`. Their next releases
+   already sit on 6.16 (`typed-rest-client` 3.x declares `^6.16.0`, `express@4.22.3`
+   declares `~6.16.0`), so drop the entry once both have moved. `@mockoon/commons-server`
+   already has: 9.9.0 pins `6.16.0` and brings its own `express@4.22.3`.
 
    Bun honours only top-level overrides, so a package the tree resolves at more than one
    major — `minimatch` 3/9/10, `brace-expansion` 1/2/5, `js-yaml` 3/4 — cannot be pinned

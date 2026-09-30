@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/playwright:v1.57.0-jammy@sha256:6aca677c27a967caf7673d108ac67ffaf8fed134f27e17b27a05464ca0ace831
+FROM mcr.microsoft.com/playwright:v1.63.0-jammy@sha256:167d0506cfbe3c294fb214b2d11737326eeee028aa611fa1ba538e5057675847
 
 RUN apt-get update && apt-get install -y --no-install-recommends --fix-missing \
     curl=7.81.0-* \
@@ -9,11 +9,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends --fix-missing \
 
 WORKDIR /app
 
-# The base image vendors its own Node (24.11.1 in v1.57.0-jammy), which is both
-# a different version from every other surface and below what the dependency
-# graph requires at runtime — mute-stream, pulled in by Stryker, needs ^24.15.0.
-# Install the exact version from .nvmrc over it so this image resolves the same
-# Node as the Dockerfiles and CI, rather than being exempted from the check.
+# The base image vendors its own Node (24.20.0 in v1.63.0-jammy), a different
+# version from every other surface; the v1.57.0 image's 24.11.1 was even below
+# what the dependency graph requires at runtime (mute-stream, pulled in by
+# Stryker, needs ^24.15.0). Install the exact version from .nvmrc over it so
+# this image resolves the same Node as the Dockerfiles and CI, rather than
+# being exempted from the check.
 #
 # /usr/local/bin precedes /usr/bin on PATH, so this shadows the vendored binary.
 #
