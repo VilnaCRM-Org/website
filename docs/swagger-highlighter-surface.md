@@ -430,8 +430,9 @@ so belongs in its own reviewed change, after the open dependency pull requests l
      (`3.8.4`), as `terser-webpack-plugin`'s `postcss` edge does, and all four
      placements resolve `immutable@3.8.4`.
    - `image-size` 2.0.2 → **2.0.3** (override; `@storybook/nextjs` `^2.0.2`):
-     GHSA-5p2g-fcmc-qvqq, GHSA-w3rx-r6r6-pgpr. Drop it when Storybook reaches 10.6, whose
-     `@storybook/nextjs` no longer depends on `image-size`.
+     GHSA-5p2g-fcmc-qvqq, GHSA-w3rx-r6r6-pgpr. Dropped with the Storybook 10.6.1 bump
+     (#475): its `@storybook/nextjs` reads image sizes through `probe-image-size` instead,
+     so `image-size` left the tree and the override went with it.
    - `storybook` and its four sibling packages 10.4.1 → **10.4.6**, the first release whose
      `esbuild` range admits `^0.28.0`, so its nested `esbuild@0.27.7` (GHSA-g7r4-m6w7-qqqr,
      no 0.27.x fix) folds into the hoisted 0.28.1.
