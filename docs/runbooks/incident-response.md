@@ -78,10 +78,10 @@ it to S3 asynchronously.
   `post-deploy smoke test` job is currently skipped on every run (see the
   [monitoring runbook](monitoring.md#the-post-deploy-smoke-test-wired-currently-skipped)),
   so a green `website` run only proves the pipeline was **triggered**.
-- **The ledger.** The `Release and bot-push audit log` issue (label `release-audit`)
-  records every push to `main` with its commit, author and actor — the fastest way to
-  see whether anything landed since the site was last known good, and whether it was a
-  human or the release bot.
+- **The ledger.** The `Release and bot-push audit log` issue (label `release-audit`,
+  #451 — closed on purpose, so search closed issues too) records every push to `main`
+  with its commit, author and actor — the fastest way to see whether anything landed
+  since the site was last known good, and whether it was a human or the release bot.
 - **The pipeline and the edge.** The CodePipeline execution history, the S3 bucket
   contents, the CloudFront distribution status and its function associations all live in
   the AWS account, managed from the infrastructure repository, not from here. Somebody

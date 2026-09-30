@@ -11,8 +11,9 @@ record for anything consequential. It is a monitored projection, not a system of
 
 ## What is recorded
 
-One issue comment per event, on the single permanently-open issue titled
-`Release and bot-push audit log` (label `release-audit`). Each record carries:
+One issue comment per event, on the single permanent issue titled
+`Release and bot-push audit log` (label `release-audit`), which is #451. Each record
+carries:
 
 - the acting identity: `github.actor`, `github.triggering_actor`, the webhook sender and
   its account type, and whether the actor login carries a `[bot]` suffix;
@@ -61,6 +62,24 @@ scans the ledger's comments from the last 48 hours for the marker, so the three 
 paths below can overlap without producing duplicate entries. That window is fetched once
 per run and bounded by time rather than by ledger size, so its cost grows neither with the
 ledger nor with the number of commits in the event.
+
+### The ledger issue is closed on purpose
+
+The ledger is a record, not a task, so it is kept **closed** (issue #451) and stays out
+of the open-issue backlog. Closing it changes nothing about how it works: the script
+finds the ledger by its exact title in **any** state, keeps appending to it while it is
+closed, and reads its recent comments for dedup exactly as before. A closed issue still
+takes comments, and GitHub still notifies every subscriber of each new one.
+
+A new ledger is created only when no issue with that exact title exists at all — open
+or closed. If duplicates ever exist, the oldest (lowest-numbered) one is used, so every
+run lands on the same issue. A failed lookup stops the run instead of reading as "no
+ledger yet", so an API outage cannot fork the trail into a second issue; the workflow's
+failure step then files the `ci-alert`, and the force-push, unexpected-bot and release
+edit/delete escalations are still raised because they do not depend on the ledger.
+
+Do not reopen the ledger, and never file a replacement: a second issue with the same
+title is ignored for as long as the older one exists.
 
 ## Why there are three event paths
 
@@ -188,8 +207,11 @@ Settings → Secrets and variables → Actions → Variables, set:
 It is a variable, never a secret. A guessed default would raise a false alert on every
 single release, which is why it ships opt-in.
 
-Then subscribe to the `Release and bot-push audit log` issue — that subscription is what
-turns the ledger into an alert. The issue and both labels are created on first use.
+Then subscribe to the `Release and bot-push audit log` issue (#451) — that subscription is
+what turns the ledger into an alert. The issue is closed on purpose; subscribing to a
+closed issue works, and every comment the audit appends still notifies you. Find it with
+the `release-audit` label under **Closed** issues. The issue and both labels are created
+on first use.
 
 ## Exercising it
 
