@@ -443,7 +443,7 @@ so belongs in its own reviewed change, after the open dependency pull requests l
      happens to the other copy — item 1.
    - `extract-zip@2.0.1` (GHSA-jmr9-qjv8-65gv, GHSA-7pqw-9j4j-h8q3): no fixed release. It
      arrives through `@puppeteer/browsers` 2.x under `puppeteer` 24, the major memlab
-     (`^24.2.0`) and Lighthouse's `puppeteer-core` (`^24.10.0`) declare;
+     (2.0.5 pins `24.31.0` exactly) and Lighthouse's `puppeteer-core` (`^24.10.0`) declare;
      `@puppeteer/browsers` 3.x drops it, but only `puppeteer` 25 uses 3.x. Dev-only
      (memlab, Lighthouse CI).
    - `elliptic@6.6.1` (GHSA-848j-6mx2-7j84): no fixed release. Reached only through
