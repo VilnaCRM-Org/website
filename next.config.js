@@ -1,6 +1,13 @@
 const withBundleAnalyzer = require('@next/bundle-analyzer')();
 const withExportImages = require('next-export-optimize-images');
+const path = require('node:path');
+
 const LocalizationGenerator = require('./scripts/localizationGenerator');
+
+// react-syntax-highlighter's light build (the only highlighter swagger-ui-react
+// ships) imports this lowlight 1 entry point; it is served by the shim instead.
+const LOWLIGHT_V1_ENTRY = 'lowlight/lib/core';
+const LOWLIGHT_COMPAT_SHIM = 'src/features/swagger/helpers/lowlight-compat.ts';
 
 require('dotenv/config');
 const dotenvExpand = require('dotenv-expand');
@@ -49,7 +56,24 @@ const nextConfig = withExportImages({
       generator: { filename: 'static/media/[name].[hash:8][ext]' },
     });
 
+    // Swap the end-of-life highlighter engine under /swagger (issue #379). The `$`
+    // makes the match exact, so the shim's own `lowlight` import still reaches the
+    // real package. See docs/swagger-highlighter-surface.md and ADR 0015.
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      [`${LOWLIGHT_V1_ENTRY}$`]: path.resolve(__dirname, LOWLIGHT_COMPAT_SHIM),
+    };
+
     return config;
+  },
+
+  // `next dev` runs Turbopack, which never calls the `webpack` hook above, so the
+  // same alias is declared for it too; without it /swagger fails to resolve
+  // `lowlight/lib/core`, which lowlight 3 does not export, in development.
+  turbopack: {
+    resolveAlias: {
+      [LOWLIGHT_V1_ENTRY]: `./${LOWLIGHT_COMPAT_SHIM}`,
+    },
   },
 });
 
