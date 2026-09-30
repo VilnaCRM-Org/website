@@ -391,7 +391,19 @@ that, `make lint-contracts` verifies a committed SHA-256 digest of each artifact
 the Apollo mock refuses a downloaded schema that does not match its digest; and
 `scripts/patchSwaggerServer.mjs` rebuilds `servers` as exactly one build-controlled entry
 so an injected `servers[1]` can never appear in the swagger "Try it out" dropdown. Markup
-in a spec `description`/`title`/`summary` is rejected at ingestion rather than stripped.
+anywhere in the spec — every string and every key, not only `description`/`title`/`summary`
+— is rejected at ingestion rather than stripped.
+
+One exception is recorded (issue #446, ADR 0016): `normalizeSpec` in
+`scripts/fetchSwaggerSchema.mjs` **drops** the `example` and `examples` of a Media Type
+Object whose media type is `text/html` (compared case-insensitively, parameters such as
+`; charset=utf-8` ignored) under a response, request body or parameter in `paths` or
+`components`, before the markup scan runs. user-service v0.8.0 documents its OAuth
+authorize page that way, and no guard can tell a sample page from injected markup. The
+sample is removed, never let through: the media type's `schema` and `encoding` stay and
+stay scanned, `text/*`, `*/*` and `application/xhtml+xml` are not `text/html`, and HTML in
+any other example, description, title, summary or key still fails the refresh. Never widen
+the drop to another key, media type or position to unblock a refresh — record a new ADR.
 
 Refresh artifacts and digests together with `make update-contracts` — never hand-edit
 `checksums.json`, and never loosen the ref check to accept a branch.

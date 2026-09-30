@@ -497,6 +497,318 @@ describe('swagger utils', () => {
     });
   });
 
+  // #446, ADR 0016: the one sanctioned exception. The sample of a text/html
+  // media type is DROPPED before the scan — never exempted from it — and only
+  // there; every other string still fails the refresh.
+  describe('text/html samples at ingestion', () => {
+    const PAGE: string = '<!doctype html><html lang="en"><body><h1>Example</h1></body></html>';
+
+    type Media = Record<string, unknown>;
+
+    const withResponse = (mediaType: string, media: unknown): Record<string, unknown> => ({
+      paths: {
+        '/api/oauth/authorize': {
+          get: {
+            responses: { '200': { description: 'HTML page', content: { [mediaType]: media } } },
+          },
+        },
+      },
+    });
+
+    const ingest = (doc: unknown): unknown => {
+      const normalized: unknown = normalizeSpec(doc);
+      assertNoMarkup(normalized);
+      return normalized;
+    };
+
+    const mediaOf = (doc: unknown, mediaType: string): Media => {
+      const typed = doc as {
+        paths: Record<string, Record<string, { responses: Record<string, { content: Media }> }>>;
+      };
+      return typed.paths['/api/oauth/authorize']!.get!.responses['200']!.content[
+        mediaType
+      ] as Media;
+    };
+
+    test('drops example and examples and keeps every other key of the media type', () => {
+      const input: Record<string, unknown> = withResponse('text/html', {
+        schema: { type: 'string' },
+        example: PAGE,
+        examples: { page: { summary: 'page', value: PAGE } },
+        encoding: { body: { contentType: 'text/html' } },
+      });
+
+      expect(ingest(input)).toEqual(
+        withResponse('text/html', {
+          schema: { type: 'string' },
+          encoding: { body: { contentType: 'text/html' } },
+        })
+      );
+      expect(mediaOf(input, 'text/html').example).toBe(PAGE);
+    });
+
+    test('keeps the key order, so the digest and the drift check do not reorder', () => {
+      const doc: unknown = normalizeSpec({
+        openapi: '3.1.0',
+        paths: {
+          '/p': {
+            summary: 's',
+            get: {
+              tags: ['t'],
+              responses: { '200': { description: 'd', content: { 'text/html': {} } } },
+              operationId: 'o',
+            },
+          },
+        },
+        info: { title: 't' },
+      });
+
+      expect(JSON.stringify(doc)).toBe(
+        '{"openapi":"3.1.0","paths":{"/p":{"summary":"s","get":{"tags":["t"],' +
+          '"responses":{"200":{"description":"d","content":{"text/html":{}}}},' +
+          '"operationId":"o"}}},"info":{"title":"t"}}'
+      );
+    });
+
+    test.each([
+      ['lower case', 'text/html'],
+      ['upper case', 'TEXT/HTML'],
+      ['mixed case', 'Text/Html'],
+      ['a charset parameter', 'text/html; charset=utf-8'],
+      ['an upper-case parameter without a space', 'TEXT/HTML;charset=UTF-8'],
+      ['whitespace around the essence', ' text/html ; q=1'],
+    ])('treats %s as text/html', (_label, mediaType) => {
+      const normalized: unknown = ingest(withResponse(mediaType, { example: PAGE }));
+
+      expect(mediaOf(normalized, mediaType)).toEqual({});
+    });
+
+    test.each([
+      ['application/json'],
+      ['application/problem+json'],
+      ['text/plain'],
+      ['text/*'],
+      ['*/*'],
+      ['application/xhtml+xml'],
+      ['text/htmlx'],
+      ['text/html-sandboxed'],
+      ['application/text/html'],
+    ])('still rejects an HTML example under %s', mediaType => {
+      expect(() => ingest(withResponse(mediaType, { example: PAGE }))).toThrow(
+        `$.paths./api/oauth/authorize.get.responses.200.content.${mediaType}.example`
+      );
+    });
+
+    test('still rejects HTML in an Example Object under application/json', () => {
+      expect(() =>
+        ingest(withResponse('application/json', { examples: { page: { value: PAGE } } }))
+      ).toThrow(/HTML markup/);
+    });
+
+    test.each([
+      ['the schema example', { schema: { type: 'string', example: PAGE } }],
+      ['a schema description', { schema: { description: '<b>page</b>' } }],
+      ['a vendor extension beside the example', { example: PAGE, 'x-sample': PAGE }],
+      ['a media type that is a bare string', PAGE],
+    ])('still rejects HTML in %s of a text/html media type', (_label, media) => {
+      expect(() => ingest(withResponse('text/html', media))).toThrow(/HTML markup/);
+    });
+
+    test('still rejects HTML in the description of the text/html response', () => {
+      const doc: Record<string, unknown> = {
+        paths: {
+          '/a': {
+            get: {
+              responses: {
+                '200': { description: '<b>page</b>', content: { 'text/html': { example: PAGE } } },
+              },
+            },
+          },
+        },
+      };
+
+      expect(() => ingest(doc)).toThrow('$.paths./a.get.responses.200.description');
+    });
+
+    test('still rejects markup smuggled into the media type key itself', () => {
+      expect(() =>
+        ingest(withResponse('text/html; <script>x</script>', { example: PAGE }))
+      ).toThrow(/HTML markup in the key/);
+    });
+
+    test.each([
+      [
+        'a request body',
+        {
+          paths: {
+            '/a': { post: { requestBody: { content: { 'text/html': { example: PAGE } } } } },
+          },
+        },
+      ],
+      [
+        'an operation parameter',
+        {
+          paths: {
+            '/a': {
+              get: { parameters: [{ name: 'q', content: { 'text/html': { example: PAGE } } }] },
+            },
+          },
+        },
+      ],
+      [
+        'a path-level parameter',
+        {
+          paths: {
+            '/a': {
+              parameters: [{ name: 'q', content: { 'text/html': { examples: { a: PAGE } } } }],
+            },
+          },
+        },
+      ],
+      [
+        'components.responses',
+        { components: { responses: { Page: { content: { 'text/html': { example: PAGE } } } } } },
+      ],
+      [
+        'components.requestBodies',
+        {
+          components: { requestBodies: { Page: { content: { 'text/html': { example: PAGE } } } } },
+        },
+      ],
+      [
+        'components.parameters',
+        { components: { parameters: { Page: { content: { 'text/html': { example: PAGE } } } } } },
+      ],
+    ])('drops the sample under %s', (_label, doc) => {
+      expect(JSON.stringify(ingest(doc))).not.toContain('<html');
+    });
+
+    test.each([
+      [
+        'a response header',
+        {
+          paths: {
+            '/a': {
+              get: {
+                responses: {
+                  '200': { headers: { X: { content: { 'text/html': { example: PAGE } } } } },
+                },
+              },
+            },
+          },
+        },
+      ],
+      [
+        'a callback',
+        {
+          paths: {
+            '/a': {
+              post: {
+                callbacks: {
+                  cb: {
+                    '{$request.body#/url}': {
+                      post: {
+                        responses: { '200': { content: { 'text/html': { example: PAGE } } } },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      ],
+      [
+        'a webhook',
+        {
+          webhooks: {
+            hook: {
+              post: { responses: { '200': { content: { 'text/html': { example: PAGE } } } } },
+            },
+          },
+        },
+      ],
+      [
+        'a schema property that is merely named content',
+        {
+          components: {
+            schemas: { Page: { properties: { content: { 'text/html': { example: PAGE } } } } },
+          },
+        },
+      ],
+      [
+        'a vendor extension on a path item',
+        {
+          paths: {
+            '/a': {
+              'x-ops': { responses: { '200': { content: { 'text/html': { example: PAGE } } } } },
+            },
+          },
+        },
+      ],
+      [
+        'a nested paths map that is not the document root',
+        {
+          components: {
+            schemas: {
+              Doc: {
+                paths: {
+                  '/a': {
+                    get: { responses: { '200': { content: { 'text/html': { example: PAGE } } } } },
+                  },
+                },
+              },
+            },
+          },
+        },
+      ],
+    ])('keeps failing closed for %s', (_label, doc) => {
+      expect(() => ingest(doc)).toThrow(/HTML markup/);
+    });
+
+    test.each([
+      ['a null path item', { paths: { '/a': null } }],
+      ['a null responses map', { paths: { '/a': { get: { responses: null } } } }],
+      ['a non-array parameters value', { paths: { '/a': { parameters: 'q', get: {} } } }],
+      ['a $ref response', { paths: { '/a': { get: { responses: { '200': { $ref: '#/r' } } } } } }],
+      ['a null content map', { components: { responses: { R: { content: null } } } }],
+      ['an array paths value', { paths: ['/a'] }],
+      ['a null components value', { components: null }],
+    ])('leaves %s as it is', (_label, doc) => {
+      expect(normalizeSpec(doc)).toEqual(doc);
+    });
+
+    test('leaves the committed contract unchanged, so the digest stays a fixed point', () => {
+      const committed: unknown = JSON.parse(
+        jest
+          .requireActual<typeof import('node:fs')>('node:fs')
+          .readFileSync('contracts/user-service/openapi.json', 'utf8')
+      );
+
+      expect(normalizeSpec(committed)).toEqual(committed);
+    });
+
+    test('saveSwaggerJson vendors a text/html response without its sample', async () => {
+      const jsYaml: JsYamlMock = jest.requireMock('js-yaml');
+      jsYaml.load.mockReturnValueOnce(withResponse('text/html', { example: PAGE }));
+
+      await saveSwaggerJson('openapi: 3.1.0', './contracts/user-service/openapi.json');
+
+      const written: string = String(mockWriteFile.mock.calls[0]?.[1]);
+      expect(JSON.parse(written)).toEqual(withResponse('text/html', {}));
+    });
+
+    test('saveSwaggerJson refuses an HTML example under application/json', async () => {
+      const jsYaml: JsYamlMock = jest.requireMock('js-yaml');
+      jsYaml.load.mockReturnValueOnce(withResponse('application/json', { example: PAGE }));
+
+      await expect(
+        saveSwaggerJson('openapi: 3.1.0', './contracts/user-service/openapi.json')
+      ).rejects.toThrow(/HTML markup/);
+      expect(mockWriteFile).not.toHaveBeenCalled();
+    });
+  });
+
   test('saveSwaggerJson refuses to vendor a document carrying markup', async () => {
     const jsYaml: JsYamlMock = jest.requireMock('js-yaml');
     jsYaml.load.mockReturnValueOnce({ info: { description: '<script>alert(1)</script>' } });

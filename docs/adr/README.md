@@ -49,6 +49,9 @@ justified a decision still holds.
 - [ADR 0015](0015-swagger-highlighter-engine-shim.md) — `/swagger` keeps its syntax
   highlighting on highlight.js 11 through a lowlight 3 shim aliased in place of the
   lowlight 1 entry point `react-syntax-highlighter` imports. _Accepted._
+- [ADR 0016](0016-drop-text-html-contract-samples.md) — `normalizeSpec` drops the
+  `example`/`examples` of a `text/html` media type before the contract markup scan,
+  which keeps no exemptions. _Accepted._
 
 The template for a new record is [`0000-template.md`](0000-template.md).
 
