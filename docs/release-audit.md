@@ -210,8 +210,9 @@ single release, which is why it ships opt-in.
 Then subscribe to the `Release and bot-push audit log` issue (#451) — that subscription is
 what turns the ledger into an alert. The issue is closed on purpose; subscribing to a
 closed issue works, and every comment the audit appends still notifies you. Find it with
-the `release-audit` label under **Closed** issues. The issue and both labels are created
-on first use.
+the `release-audit` label under **Closed** issues. Both labels are created on first use;
+an issue is created only when no issue with that exact title exists in any state, so the
+existing #451 is appended to, never replaced.
 
 ## Exercising it
 
@@ -238,5 +239,7 @@ BSD/macOS `date`), and it is therefore Linux-only.
 Finally, `workflow_dispatch` with `dry_run: true` (the default) exercises the live path.
 GitHub only exposes dispatch for workflows on the default branch, so this is a post-merge
 smoke test, not a PR gate — a green PR is not evidence that the live wiring works. The
-first real write should be `mode: sweep`, `dry_run: false`, which creates the ledger and
-records the last day of `main`.
+first real write should be `mode: sweep`, `dry_run: false`, which appends to the existing
+ledger (#451) and records the last day of `main`. The `dry_run: true` run before it must
+report #451 as the ledger — never `would create the ledger issue`, which is the symptom of
+a lookup that has stopped finding the closed ledger and would fork the audit trail.
