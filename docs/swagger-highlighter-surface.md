@@ -287,7 +287,10 @@ so belongs in its own reviewed change, after the open dependency pull requests l
      GHSA-mwp4-54f8-5fhr, GHSA-22jq-vg5j-6vgg, GHSA-4xrf-jv44-h6hh. Raised to **10.5.1**
      by #501 for GHSA-2vr4-cq9g-pvrc and GHSA-rpw4-54j3-4h4q.
    - `joi` 18.2.1 / 18.2.3 → **18.2.5**, via `@mockoon/commons` and `wait-on`:
-     GHSA-6w3j-5fw6-r9vr, GHSA-gg4h-3hg2-grpc.
+     GHSA-6w3j-5fw6-r9vr, GHSA-gg4h-3hg2-grpc. Raised to **18.2.9** by the #496 bump:
+     `@mockoon/commons@9.9.0` pins 18.2.9 exactly, and 18.2.5 carries GHSA-6h2x-m376-mqjq,
+     so holding the override at 18.2.5 would have pushed Mockoon below its own pin onto an
+     affected release. `wait-on` still declares `^18.2.1`, so the entry stays.
    - `smol-toml`, `markdown-it` and `linkify-it` (**retired**). They were pinned to
      1.7.1, 14.2.0 and 5.0.2 for GHSA-7w5x-hrqm-74c2, GHSA-v3rj-xjv7-4jmq,
      GHSA-6v5v-wf23-fmfq and GHSA-v245-v573-v5vm, because `markdownlint-cli@0.47`
@@ -326,11 +329,12 @@ so belongs in its own reviewed change, after the open dependency pull requests l
    it.
 
    The overrides reach only what `bun.lock` resolves. `Mockoon.Dockerfile` installs
-   `@mockoon/cli` globally with `npm`, outside the lockfile, so the e2e mock image still
-   runs the `joi` 18.2.3 that `@mockoon/commons` pins exactly, while the in-process
-   contract harness runs 18.2.5; its `fast-uri` floats to the newest 3.x under `ajv`'s
-   `^3.0.1` at image-build time instead of following the pin. Advisories inside that image
-   are invisible to the lockfile-based CVE gate and clear only when Mockoon moves `joi`.
+   `@mockoon/cli` globally with `npm`, outside the lockfile, so the e2e mock image runs
+   the `joi` that `@mockoon/commons` pins exactly (18.2.9 at 9.9.0, the same release the
+   in-process contract harness resolves through the override); its `fast-uri` floats to
+   the newest 3.x under `ajv`'s `^3.0.1` at image-build time instead of following the pin.
+   Advisories inside that image are invisible to the lockfile-based CVE gate and clear
+   only when Mockoon moves the package.
 
 5. **Done: multi-major transitives re-resolved inside their parents' ranges (#455).**
    `brace-expansion`, `body-parser`, `js-yaml` and `immutable` each resolve at more than
