@@ -6,6 +6,8 @@ import { scanInteractionState } from '../../a11y/scan-interaction-state';
 
 import {
   getLocators,
+  getResetPasswordEndpoints,
+  GetResetPasswordEndpoints,
   getUserEndpoints,
   GetUserEndpoints,
   TEST_CONSTANTS,
@@ -66,6 +68,26 @@ const getBlocksInsideEndpoints: (element: Locator) => BlocksInsideEndpoints = (
   responses: element.locator('.responses-wrapper .responses-inner').first(),
 });
 
+async function expectEndpointsExpandAndCollapse(endpoints: Locator[]): Promise<void> {
+  for (const currentEndpoint of endpoints) {
+    await expect(currentEndpoint).toBeVisible();
+
+    await currentEndpoint.click();
+
+    const { body, description, sectionHeader, responses } =
+      getBlocksInsideEndpoints(currentEndpoint);
+
+    await expect(body).toBeVisible();
+    await expect(description).toBeVisible();
+    await expect(sectionHeader).toBeVisible();
+    await expect(responses).toBeVisible();
+
+    await collapseEndpoint(currentEndpoint);
+
+    await expect(body).not.toBeVisible();
+  }
+}
+
 test.describe('User Section', () => {
   let userEndpoints: GetUserEndpoints;
   let elements: SwaggerLocators;
@@ -112,24 +134,16 @@ test.describe('User Section', () => {
       'resendConfirmation',
     ];
 
-    for (const endpoint of endpoints) {
-      await expect(userEndpoints[endpoint]).toBeVisible();
+    await expectEndpointsExpandAndCollapse(endpoints.map(endpoint => userEndpoints[endpoint]));
+  });
 
-      const currentEndpoint: Locator = userEndpoints[endpoint];
-      await currentEndpoint.click();
+  test('should display all User reset password endpoints', async ({ page }) => {
+    const resetPasswordEndpoints: GetResetPasswordEndpoints = getResetPasswordEndpoints(page);
 
-      const { body, description, sectionHeader, responses } =
-        getBlocksInsideEndpoints(currentEndpoint);
-
-      await expect(body).toBeVisible();
-      await expect(description).toBeVisible();
-      await expect(sectionHeader).toBeVisible();
-      await expect(responses).toBeVisible();
-
-      await collapseEndpoint(currentEndpoint);
-
-      await expect(body).not.toBeVisible();
-    }
+    await expectEndpointsExpandAndCollapse([
+      resetPasswordEndpoints.request,
+      resetPasswordEndpoints.confirm,
+    ]);
   });
 
   test('should have navigation working', async ({ page }) => {
