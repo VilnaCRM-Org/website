@@ -27,8 +27,23 @@ import { SwaggerPage } from '@/features/swagger';
   `navigation`.
 - `hooks/` — `useSwagger.ts`, which fetches the spec and exposes `loading`, `error` and
   `retry` to the UI.
+- `helpers/` — pure helpers, among them `lowlight-compat.ts`, the highlighter engine shim
+  described below.
 - `assets/` — feature-local static assets.
 - `i18n/` — localized copy.
+
+## Syntax-highlighter engine (issue #379)
+
+Every highlighted block on the page — example bodies, the live response, the curl
+snippets — comes from `react-syntax-highlighter`'s light build inside `swagger-ui-react`.
+That build imports lowlight 1, which pins the end-of-life highlight.js 10. `next.config.js`
+aliases the request `lowlight/lib/core` (webpack and Turbopack alike) to
+`helpers/lowlight-compat.ts`, which offers the same four functions over lowlight 3 and
+highlight.js 11, and `package.json` overrides both packages. Nothing in the feature
+imports the shim; the alias is its only caller. Before bumping `swagger-ui-react` or
+`react-syntax-highlighter`, re-read how the light build uses lowlight — the contract and
+the retirement trigger are in [ADR 0015](../../../docs/adr/0015-swagger-highlighter-engine-shim.md)
+and [docs/swagger-highlighter-surface.md](../../../docs/swagger-highlighter-surface.md).
 
 ## Data flow
 

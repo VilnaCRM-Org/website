@@ -46,6 +46,9 @@ justified a decision still holds.
 - [ADR 0014](0014-digest-pinned-base-image-mirror.md) — when ECR Public refuses a base
   image in CI, the build fetches the same digest from `mirror.gcr.io`; the Dockerfiles
   stay on ECR. _Accepted._
+- [ADR 0015](0015-swagger-highlighter-engine-shim.md) — `/swagger` keeps its syntax
+  highlighting on highlight.js 11 through a lowlight 3 shim aliased in place of the
+  lowlight 1 entry point `react-syntax-highlighter` imports. _Accepted._
 
 The template for a new record is [`0000-template.md`](0000-template.md).
 

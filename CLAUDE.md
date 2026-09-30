@@ -774,7 +774,8 @@ GitHub ships no Dependabot security updates for the `bun` ecosystem and its depe
 never parses `bun.lock`, so Dependabot alerts see none of the resolved tree —
 [`docs/swagger-highlighter-surface.md`](docs/swagger-highlighter-surface.md) records the
 evidence and walks the one runtime tree where that blindness matters most, the `/swagger`
-highlighter chain (highlight.js 10 via lowlight via react-syntax-highlighter).
+highlighter chain (react-syntax-highlighter's light build, whose lowlight 1 import
+`next.config.js` aliases to a lowlight 3 shim over highlight.js 11 — ADR 0015).
 
 Never add a `config/osv-scanner.toml` ignore for an advisory your own change introduced, and
 never push an `ignoreUntil` date out to keep a build green — upgrade the dependency. Every
