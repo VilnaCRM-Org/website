@@ -1,7 +1,9 @@
-import { render } from '@testing-library/react';
+import { render, RenderResult } from '@testing-library/react';
 import { DynamicOptions, Loader } from 'next/dynamic';
 import React from 'react';
 import '@testing-library/jest-dom';
+
+import { expectNoA11yViolations } from '@/test/a11y/expect-no-a11y-violations';
 
 import Landing from '../../features/landing/components/landing/landing';
 
@@ -81,12 +83,27 @@ describe('Landing', () => {
     expect(mainContainer).toHaveStyle(positionRelativeStyle);
   });
 
-  it('loads through exactly one client-only boundary with no loading placeholder', () => {
+  it('loads through exactly one client-only boundary with a loading placeholder', () => {
     expect(boundaryOptions).toHaveLength(1);
-    boundaryOptions.forEach(options => {
-      expect(options).toMatchObject({ ssr: false });
-      expect(options).not.toHaveProperty('loading');
-    });
+    expect(boundaryOptions[0]).toMatchObject({ ssr: false });
+    expect(boundaryOptions[0]?.loading).toEqual(expect.any(Function));
+  });
+
+  it('holds the footer and its shadow below the fold with an empty placeholder', async () => {
+    const renderPlaceholder = boundaryOptions[0]?.loading as () => React.ReactElement;
+    const { container }: RenderResult = render(renderPlaceholder());
+    const placeholder: Element | null = container.firstElementChild;
+
+    expect(placeholder).toHaveStyle({ minHeight: '150vh' });
+    expect(placeholder).toBeEmptyDOMElement();
+    expect(placeholder?.getAttributeNames().filter(name => name !== 'class')).toEqual([]);
+    await expectNoA11yViolations(container);
+  });
+
+  it('has no accessibility violations once the sections have mounted', async () => {
+    const { container } = render(<Landing />);
+
+    await expectNoA11yViolations(container);
   });
 
   it('mounts the five grouped sections in one relative box and the auth section after it', () => {
