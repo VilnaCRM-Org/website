@@ -41,7 +41,7 @@ describe('Swagger', () => {
     mockChangeLanguage.mockImplementation(() => {});
   });
 
-  it('renders the back link at once and the documentation behind its own lazy boundary', async () => {
+  it('renders the back link at once and the docs behind a lazy boundary', async () => {
     render(<Swagger />);
 
     expect(screen.getByRole('link', { name: backLinkName })).toHaveAttribute('href', '/');

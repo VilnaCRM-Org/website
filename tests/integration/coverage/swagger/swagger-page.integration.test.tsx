@@ -68,7 +68,7 @@ describe('integration: SwaggerPage', () => {
     });
   });
 
-  it('renders the back link and a named loading status before the documentation chunk loads', async () => {
+  it('renders the back link and a named loading status before the chunk loads', async () => {
     render(<SwaggerPage />);
 
     expect(

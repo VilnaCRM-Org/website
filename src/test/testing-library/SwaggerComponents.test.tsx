@@ -211,7 +211,7 @@ describe('Swagger layout stability (#493, #446)', () => {
     expect(completion).toHaveTextContent(loadedText);
   });
 
-  it('renders the back link and the loading status before the documentation chunk resolves', async () => {
+  it('renders the back link and loading status before the chunk resolves', async () => {
     mockUseSwagger.mockReturnValue(loaded);
 
     const { container } = render(<Swagger />);
