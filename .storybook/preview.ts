@@ -9,7 +9,8 @@ import resources from '../pages/i18n/localization.json';
 // the faces declared under their real names in the stylesheet, Storybook has to
 // load it or every toolkit component renders in a fallback face — the theme
 // asks for `Golos Text`/`Inter` by name and nothing would declare them.
-// `staticDirs` in `main.ts` only copies the files; it declares no faces.
+// Webpack bundles the `.woff2` files those `url()`s name and loads them relative
+// to the build, so they also resolve under the GitHub Pages sub-path (#523).
 import '../styles/global.css';
 
 i18next.use(initReactI18next).init({

@@ -25,6 +25,7 @@ lint	ci	.github/workflows/static-testing.yml	Executed directly by the static tes
 husky	bats	tests/bats/makefile_targets.bats	Validated with a stubbed bun invocation.
 storybook-start	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Storybook binary.
 storybook-build	bats	tests/bats/makefile_targets.bats	Validated with a stubbed Storybook binary.
+check-storybook-pages	bats	tests/bats/storybook_pages.bats	Validated against seeded Storybook builds and with a stubbed node invocation.
 test-e2e	ci	.github/workflows/e2e-testing.yml	Executed directly by the Playwright PR workflow.
 test-e2e-shard	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker and Playwright commands: brings prod up and forwards the --shard slice; the e2e workflow matrix runs the test-only ci-test-e2e-shard after its retried bring-up.
 test-e2e-burnin	bats	tests/bats/makefile_targets.bats	Validated with stubbed Docker and Playwright commands for the repeat-each burn-in.

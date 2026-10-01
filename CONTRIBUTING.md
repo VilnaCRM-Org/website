@@ -239,6 +239,30 @@ maximum seen anywhere. A run below its allowance therefore prints a `ratchet`
 notice rather than failing. Do not act on a single low reading: lowering an
 allowance to a CI-only figure turns every local run red.
 
+#### Published Storybook (GitHub Pages)
+
+Every push to `main` publishes the component catalogue to
+<https://vilnacrm-org.github.io/website/> (issue #523). The `storybook deploy`
+workflow (`.github/workflows/storybook-deploy.yml`) builds through
+`make storybook-build`, verifies the output with `make check-storybook-pages`, and
+deploys it with `actions/deploy-pages`; the deploy job reports the page URL as the
+`github-pages` environment URL. Pull requests keep their own Storybook build check
+(`storybook build`) and never deploy.
+
+Pages serves the build from the `/website/` sub-path, so a root-absolute reference
+(`/sb-manager/runtime.js`, `url(/static/media/...)`, a webpack public path of `/`)
+resolves outside the site and 404s. `make check-storybook-pages` fails on every one
+of those, on a relative reference to a file the build never emitted, and on a
+`static/media/` asset a bundle requests but the build does not contain. Run it
+after `make storybook-build` when you change `.storybook/`, add a static asset to a
+story, or upgrade Storybook.
+
+**One-time admin step.** A repository admin sets **Settings → Pages → Source** to
+**GitHub Actions**, which creates the `github-pages` environment, and then restricts
+that environment's deployment branches to `main`. Until then the deploy job fails
+and the failure reaches the `ci-alert` issue, because the workflow is listed in
+`ci-health-alerts.yml`.
+
 #### Dockerfile build performance
 
 If your change touches a `Dockerfile` (or the gate's own config), a CI gate
