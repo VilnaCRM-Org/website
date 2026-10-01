@@ -27,7 +27,7 @@ const HTML_FILES = ['index.html', 'iframe.html'];
 const HTML_REFERENCE = /(?:\bsrc|\bhref)\s*=\s*["']([^"']+)["']|\bimport\s*\(?\s*["']([^"']+)["']/g;
 const CSS_REFERENCE = /url\(\s*["']?([^"')]+)["']?\s*\)/g;
 const PUBLIC_PATH = /\.p\s*=\s*(["'])(.*?)\1/g;
-const MEDIA_REFERENCE = /static\/media\/[\w.~-]+/g;
+const MEDIA_REFERENCE = /(["'`(]\/)?(static\/media\/[\w.~-]+)/g;
 const EXTERNAL = /^(?:[a-z][a-z\d+.-]*:|\/\/|#)/i;
 
 const root = path.resolve(process.argv[2] ?? 'storybook-static-ci');
@@ -68,13 +68,21 @@ function checkRuntime(file) {
   for (const [, , value] of fs.readFileSync(file, 'utf8').matchAll(PUBLIC_PATH)) {
     if (value.startsWith('/')) {
       failures.add(`${display(file)}: webpack public path "${value}" is root-absolute`);
+    } else if (/^\.\.(?:\/|$)/.test(path.posix.normalize(value))) {
+      failures.add(`${display(file)}: webpack public path "${value}" climbs out of the sub-path`);
     }
   }
 }
 
 function checkMedia(file) {
-  for (const [reference] of fs.readFileSync(file, 'utf8').matchAll(MEDIA_REFERENCE)) {
-    if (!fs.existsSync(path.join(root, reference))) {
+  for (const [, rootAbsolute, reference] of fs
+    .readFileSync(file, 'utf8')
+    .matchAll(MEDIA_REFERENCE)) {
+    if (rootAbsolute) {
+      failures.add(
+        `${display(file)}: "/${reference}" is root-absolute and resolves outside the sub-path`
+      );
+    } else if (!fs.existsSync(path.join(root, reference))) {
       failures.add(`${display(file)}: requests "${reference}", which the build never emitted`);
     }
   }

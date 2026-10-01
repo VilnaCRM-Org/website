@@ -115,6 +115,20 @@ setup() {
   assert_output_contains 'webpack public path "/" is root-absolute'
 }
 
+@test "fails a webpack public path that climbs above the build" {
+  echo "r.p = './../';" > "$BUILD/runtime~main.iframe.bundle.js"
+  check_build
+  [ "$status" -eq 1 ]
+  assert_output_contains 'webpack public path "./../" climbs out of the sub-path'
+}
+
+@test "fails a bundle requesting a media asset root-absolutely" {
+  echo 'e.exports="/static/media/Inter-Regular.abc123.woff2"' > "$BUILD/main.iframe.bundle.js"
+  check_build
+  [ "$status" -eq 1 ]
+  assert_output_contains '"/static/media/Inter-Regular.abc123.woff2" is root-absolute'
+}
+
 @test "fails a bundle requesting a media asset the build never emitted" {
   rm "$BUILD/static/media/Inter-Regular.abc123.woff2"
   check_build

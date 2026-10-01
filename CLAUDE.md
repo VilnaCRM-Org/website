@@ -126,8 +126,9 @@ Every push to `main` publishes Storybook to GitHub Pages at
 <https://vilnacrm-org.github.io/website/> through `.github/workflows/storybook-deploy.yml`
 (issue #523), modelled on the UI kit's publish. The build job runs `make storybook-build`
 and then `make check-storybook-pages` (`scripts/ci/check-storybook-pages.mjs`), which fails
-on any root-absolute reference, any missing file, a root-absolute webpack public path, or
-a `static/media/` asset a bundle requests but the build never emitted — a site served from
+on a root-absolute or missing reference in the manager/preview HTML or a stylesheet, a webpack
+public path that is root-absolute or climbs above the build, or a `static/media/` asset a
+bundle requests root-absolutely or that the build never emitted — a site served from
 a sub-path 404s on each of those. The pull-request `storybook build` check runs the same
 gate, so a break fails before merge. The workflow has no `pull_request` trigger, and its
 build job runs only for `VilnaCRM-Org/website` on `refs/heads/main`, so nothing deploys

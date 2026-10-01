@@ -252,9 +252,11 @@ never deploy.
 
 Pages serves the build from the `/website/` sub-path, so a root-absolute reference
 (`/sb-manager/runtime.js`, `url(/static/media/...)`, a webpack public path of `/`)
-resolves outside the site and 404s. `make check-storybook-pages` fails on every one
-of those, on a relative reference to a file the build never emitted, and on a
-`static/media/` asset a bundle requests but the build does not contain. Run it
+resolves outside the site and 404s. `make check-storybook-pages` reads the manager and preview HTML,
+every stylesheet, the webpack runtime and the bundles' `static/media/` requests, and
+fails on every one of those, on a public path that climbs above the build, on a
+relative reference to a file the build never emitted, and on a `static/media/` asset
+the build does not contain. Run it
 after `make storybook-build` when you change `.storybook/`, add a static asset to a
 story, or upgrade Storybook.
 
