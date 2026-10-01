@@ -116,6 +116,21 @@ jobs:
           version-file: "package.json"
           git-push: 'false'
 
+      # main requires verified signatures, and the changelog action's commit is
+      # an unsigned `git commit` on the runner (GH006, run 36781166989, issues
+      # #515/#517). This step re-creates that commit through the Git Database
+      # API with the release App's token and no custom author, committer or
+      # signature, which is the case GitHub signs itself, then moves HEAD and
+      # the tag onto the signed copy. It refuses unless GitHub's tree equals the
+      # local one and the commit comes back verified (ADR 0017). The token and
+      # tag reach the script through `env:`, never `${{ }}` inside `run:`.
+      - name: Sign the release commit through the GitHub API
+        if: ${{ steps.changelog.outputs.skipped == 'false' }}
+        env:
+          GH_TOKEN: ${{ steps.generate_token.outputs.token }}
+          RELEASE_TAG: ${{ steps.changelog.outputs.tag }}
+        run: bash scripts/ci/sign-release-commit.sh "$RELEASE_TAG"
+
       # The changelog action above commits and tags but does not push
       # (`git-push: 'false'`): its own `git push --follow-tags` is not atomic, so
       # a refused branch update still landed the tag -- how v1.7.0 was stranded
