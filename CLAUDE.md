@@ -128,7 +128,8 @@ Every push to `main` publishes Storybook to GitHub Pages at
 and then `make check-storybook-pages` (`scripts/ci/check-storybook-pages.mjs`), which fails
 on any root-absolute reference, any missing file, a root-absolute webpack public path, or
 a `static/media/` asset a bundle requests but the build never emitted — a site served from
-a sub-path 404s on each of those. The workflow has no `pull_request` trigger, and its
+a sub-path 404s on each of those. The pull-request `storybook build` check runs the same
+gate, so a break fails before merge. The workflow has no `pull_request` trigger, and its
 build job runs only for `VilnaCRM-Org/website` on `refs/heads/main`, so nothing deploys
 from a pull request, a fork or a branch dispatch. Pages must be switched to the **GitHub
 Actions** source once by an admin (CONTRIBUTING.md, "Published Storybook").

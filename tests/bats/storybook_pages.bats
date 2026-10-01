@@ -204,3 +204,9 @@ setup() {
   alerts="$(workflow_json "$PROJECT_ROOT/.github/workflows/ci-health-alerts.yml")"
   jq -e --arg name "$name" '.triggers.workflow_run.workflows | index($name)' <<<"$alerts"
 }
+
+@test "the pull-request Storybook build runs the same gate, and re-runs when it changes" {
+  doc="$(workflow_json "$PROJECT_ROOT/.github/workflows/storybook-build.yml")"
+  jq -e '[.jobs.build.steps[] | .run // empty] | index("make check-storybook-pages")' <<<"$doc"
+  jq -e '.triggers.pull_request.paths | index("scripts/ci/check-storybook-pages.mjs")' <<<"$doc"
+}

@@ -247,7 +247,8 @@ workflow (`.github/workflows/storybook-deploy.yml`) builds through
 `make storybook-build`, verifies the output with `make check-storybook-pages`, and
 deploys it with `actions/deploy-pages`; the deploy job reports the page URL as the
 `github-pages` environment URL. Pull requests keep their own Storybook build check
-(`storybook build`) and never deploy.
+(`storybook build`), which runs the same `make check-storybook-pages` gate, and
+never deploy.
 
 Pages serves the build from the `/website/` sub-path, so a root-absolute reference
 (`/sb-manager/runtime.js`, `url(/static/media/...)`, a webpack public path of `/`)
