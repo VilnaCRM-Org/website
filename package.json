@@ -101,7 +101,8 @@
     "terser-webpack-plugin": "^5.6.1",
     "ts-jest": "^29.4.14",
     "typescript": "^6.0.3",
-    "wait-on": "^9.0.10"
+    "wait-on": "^9.0.10",
+    "yauzl": "^3.4.0"
   },
   "overrides": {
     "@faker-js/faker": "10.6.0",

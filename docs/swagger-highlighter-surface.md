@@ -477,8 +477,12 @@ so belongs in its own reviewed change, after the open dependency pull requests l
      3.15.2.
    - `@puppeteer/browsers` → **3.2.3**, which takes `extract-zip@2.0.1`
      (GHSA-jmr9-qjv8-65gv, GHSA-7pqw-9j4j-h8q3; no fixed release exists) out of the tree:
-     3.x extracts with the system `unzip`, and `yauzl`, `tar-fs` and the `bare-*` stack
-     went with it. `puppeteer`/`puppeteer-core` 24.31.0 (memlab) and the 24.43.1 under
+     `tar-fs` and the `bare-*` stack went with it. 3.x extracts with the system `unzip` or,
+     failing that, its optional `yauzl` peer, so `yauzl` 3.4.0 is a root devDependency:
+     the glibc Playwright image ships no `unzip`, and without it the `memory-leak-testing`
+     and `a11y` image builds died in `puppeteer`'s postinstall ("no zip archiver is
+     available"). Extraction through `yauzl` was proved with `unzip` absent from `PATH`.
+     `puppeteer`/`puppeteer-core` 24.31.0 (memlab) and the 24.43.1 under
      Lighthouse require 15 names from the package; 3.2.3 exports every one, and Node 24
      loads the ESM-only 3.x through `require`. Bun runs `puppeteer`'s postinstall, so every
      `bun install` — the dev image's included — downloads Chrome through 3.x; that was run
