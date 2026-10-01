@@ -1,8 +1,10 @@
 # ADR 0011: The release lane pushes its commit and tag atomically, after a scope check
 
 - **Status:** Accepted — remedy order amended by
-  [ADR 0013](0013-reconcile-stranded-v1-7-0-before-the-bypass.md); release-commit signing
-  amended by [ADR 0017](0017-github-signed-release-commit.md)
+  [ADR 0013](0013-reconcile-stranded-v1-7-0-before-the-bypass.md); amended by
+  [ADR 0017](0017-github-signed-release-commit.md), which signs the release commit, so the
+  lane no longer waits on the bypass and the body's "nothing can ship before the bypass"
+  and "signing the release commit is out of scope" are superseded
 - **Date:** 2026-09-25
 - **Deciders:** website maintainers
 - **Related:** ADR 0007, issue #481, issue #366, issue #343,

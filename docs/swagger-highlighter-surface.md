@@ -456,8 +456,10 @@ so belongs in its own reviewed change, after the open dependency pull requests l
    advisories; `joi@18.2.5` (GHSA-6h2x-m376-mqjq) had already gone with the #496 override
    raise. The rest move through `package.json` overrides, each checked against the GitHub
    advisory API (`/advisories?affects=<package>@<version>` lists nothing for any of the new
-   versions). Four of them cross a major, which is what bun's top-level-only overrides cost
-   (item 4); each consumer's call sites were read and exercised before landing:
+   versions). Five of them cross a major — `js-yaml` for its non-swagger copies,
+   `@puppeteer/browsers`, `uuid`, `@faker-js/faker` and `webpack-dev-middleware` — which is
+   what bun's top-level-only overrides cost (item 4); each consumer's call sites were read
+   and exercised before landing:
    - `js-yaml` → **4.3.2** for every copy, which clears all five entries: the two
      `swagger-client`/`swagger-ui-react` copies (`4.1.1`, GHSA-2883-xcg3-v3hh,
      GHSA-52cp-r559-cp3m, GHSA-5p4m-2wfm-xmqj, GHSA-h67p-54hq-rp68) and
