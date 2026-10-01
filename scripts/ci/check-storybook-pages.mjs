@@ -26,9 +26,9 @@ const REQUIRED_FILES = ['index.html', 'iframe.html', 'index.json'];
 const HTML_FILES = ['index.html', 'iframe.html'];
 const HTML_REFERENCE =
   /(?:\bsrc|\bhref)\s*=\s*["']([^"']+)["']|\bimport\s*\(?\s*["']([^"']+)["']|\bfrom\s*["']([^"']+)["']/g;
-const CSS_REFERENCE = /url\(\s*["']?([^"')]+)["']?\s*\)/g;
+const CSS_REFERENCE = /url\(\s*["']?([^"')]+?)["']?\s*\)/g;
 const PUBLIC_PATH = /\.p\s*=\s*(["'])(.*?)\1/g;
-const MEDIA_REFERENCE = /(["'`(]\/)?(static\/media\/[\w.~-]+)/g;
+const MEDIA_REFERENCE = /(["'`(]\/)?(static\/media\/[\w.~/-]+)/g;
 const EXTERNAL = /^(?:[a-z][a-z\d+.-]*:|\/\/|#)/i;
 
 const root = path.resolve(process.argv[2] ?? 'storybook-static-ci');
@@ -39,6 +39,10 @@ function walk(dir) {
     const full = path.join(dir, entry.name);
     return entry.isDirectory() ? walk(full) : [full];
   });
+}
+
+function isFile(target) {
+  return fs.existsSync(target) && fs.statSync(target).isFile();
 }
 
 function display(file) {
@@ -54,7 +58,7 @@ function checkReference(file, reference) {
     return;
   }
   const target = path.resolve(path.dirname(file), reference.replace(/[?#].*$/, ''));
-  if (!target.startsWith(root + path.sep) || !fs.existsSync(target)) {
+  if (!target.startsWith(root + path.sep) || !isFile(target)) {
     failures.add(`${display(file)}: "${reference}" names no file in the build`);
   }
 }
@@ -83,7 +87,7 @@ function checkMedia(file) {
       failures.add(
         `${display(file)}: "/${reference}" is root-absolute and resolves outside the sub-path`
       );
-    } else if (!fs.existsSync(path.join(root, reference))) {
+    } else if (!isFile(path.join(root, reference))) {
       failures.add(`${display(file)}: requests "${reference}", which the build never emitted`);
     }
   }

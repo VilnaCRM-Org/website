@@ -143,6 +143,20 @@ setup() {
   assert_output_contains 'requests "static/media/Inter-Regular.abc123.woff2", which the build never emitted'
 }
 
+@test "accepts an unquoted stylesheet url() padded before its closing paren" {
+  echo '.f { src: url( ./media/Inter-Regular.abc123.woff2 ); }' >> "$BUILD/static/fonts.css"
+  check_build
+  [ "$status" -eq 0 ]
+}
+
+@test "fails a nested media request whose directory exists but file does not" {
+  mkdir -p "$BUILD/static/media/icons"
+  echo 'e.exports=r.p+"static/media/icons/missing.svg"' >> "$BUILD/main.iframe.bundle.js"
+  check_build
+  [ "$status" -eq 1 ]
+  assert_output_contains 'requests "static/media/icons/missing.svg", which the build never emitted'
+}
+
 @test "fails a build missing the story index" {
   rm "$BUILD/index.json"
   check_build
@@ -196,7 +210,7 @@ setup() {
 
 @test "serialises Pages deployments without cancelling one in flight" {
   doc="$(workflow_json "$PROJECT_ROOT/$WORKFLOW_REL")"
-  [ "$(jq -c '.concurrency' <<<"$doc")" = '{"group":"github-pages","cancel-in-progress":false}' ]
+  [ "$(jq -c '.concurrency' <<<"$doc")" = '{"group":"github-pages-${{ github.ref }}","cancel-in-progress":false}' ]
   [ "$(jq -r '[.jobs[] | .["timeout-minutes"] | type] | unique | join(",")' <<<"$doc")" = 'number' ]
 }
 

@@ -15,9 +15,11 @@ on:
 permissions: {}
 
 # One Pages deployment at a time, and never cancelled mid-upload: a superseded
-# push queues behind the running one instead of aborting it.
+# push queues behind the running one instead of aborting it. The ref keeps a
+# workflow_dispatch from another branch (which the build job's guard skips) out
+# of main's queue, where it could replace a pending main run and publish nothing.
 concurrency:
-  group: github-pages
+  group: github-pages-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
