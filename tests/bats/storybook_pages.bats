@@ -85,6 +85,13 @@ setup() {
   assert_output_contains 'iframe.html: "/main.iframe.bundle.js" is root-absolute'
 }
 
+@test "fails a root-absolute specifier in an import-from statement" {
+  sed -i "s|import './main.iframe.bundle.js?v=1';|import { start } from '/main.iframe.bundle.js';|" "$BUILD/iframe.html"
+  check_build
+  [ "$status" -eq 1 ]
+  assert_output_contains 'iframe.html: "/main.iframe.bundle.js" is root-absolute'
+}
+
 @test "fails a relative reference to a file the build never emitted" {
   rm "$BUILD/favicon.svg"
   check_build

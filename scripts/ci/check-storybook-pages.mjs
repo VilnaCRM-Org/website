@@ -24,7 +24,8 @@ import path from 'node:path';
 
 const REQUIRED_FILES = ['index.html', 'iframe.html', 'index.json'];
 const HTML_FILES = ['index.html', 'iframe.html'];
-const HTML_REFERENCE = /(?:\bsrc|\bhref)\s*=\s*["']([^"']+)["']|\bimport\s*\(?\s*["']([^"']+)["']/g;
+const HTML_REFERENCE =
+  /(?:\bsrc|\bhref)\s*=\s*["']([^"']+)["']|\bimport\s*\(?\s*["']([^"']+)["']|\bfrom\s*["']([^"']+)["']/g;
 const CSS_REFERENCE = /url\(\s*["']?([^"')]+)["']?\s*\)/g;
 const PUBLIC_PATH = /\.p\s*=\s*(["'])(.*?)\1/g;
 const MEDIA_REFERENCE = /(["'`(]\/)?(static\/media\/[\w.~-]+)/g;
@@ -60,7 +61,7 @@ function checkReference(file, reference) {
 
 function checkPattern(file, pattern) {
   for (const match of fs.readFileSync(file, 'utf8').matchAll(pattern)) {
-    checkReference(file, match[1] ?? match[2]);
+    checkReference(file, match[1] ?? match[2] ?? match[3]);
   }
 }
 
