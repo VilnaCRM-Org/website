@@ -244,7 +244,14 @@ so belongs in its own reviewed change, after the open dependency pull requests l
    and the authorize popup, add operation virtualization and a skip link, and touch
    `responses.jsx`, which the owned responses-table port is pinned to (see
    `src/features/swagger/README.md`). Re-diff the port, then re-run the swagger e2e,
-   visual baselines and accessibility route scan against the prod stack.
+   visual baselines and accessibility route scan against the prod stack. Since #514 the
+   `js-yaml` override (item 7) already resolves both copies to 4.3.2, so the census no
+   longer waits on this bump; it is one of that override's retirement triggers instead.
+   Read for #514 and left out of it: `responses.jsx` passes a new `oas3Selectors` prop to
+   `Response` (the port must forward it), `HighlightCode` puts an `aria-label` on the
+   role-less `.copy-to-clipboard` `<div>` (axe's `aria-prohibited-attr`, serious, which
+   the expanded-operation interaction scan blocks on), the base preset adds its own "Skip
+   to operations" link, and the `immutable` range moves from 3.x to `^5.1.9`.
 2. **Done: highlight.js 10 taken out of the export, highlighting kept (#379 F3).** The
    issue's own options — a webpack alias that stubs
    `react-syntax-highlighter/dist/esm/light` with `syntaxHighlight` turned off, or a
@@ -441,24 +448,71 @@ so belongs in its own reviewed change, after the open dependency pull requests l
      `esbuild` range admits `^0.28.0`, so its nested `esbuild@0.27.7` (GHSA-g7r4-m6w7-qqqr,
      no 0.27.x fix) folds into the hoisted 0.28.1.
 
+   What the census still listed after #501 — the `js-yaml@4.1.1` pair, `extract-zip`,
+   `elliptic`, `uuid@8.3.2` and `@faker-js/faker@9.9.0` — is resolved in item 7, except
+   `elliptic`.
+
+7. **Done: the census burn-down of #514.** The nightly census of 2026-09-30 listed 15
+   advisories; `joi@18.2.5` (GHSA-6h2x-m376-mqjq) had already gone with the #496 override
+   raise. The rest move through `package.json` overrides, each checked against the GitHub
+   advisory API (`/advisories?affects=<package>@<version>` lists nothing for any of the new
+   versions). Four of them cross a major, which is what bun's top-level-only overrides cost
+   (item 4); each consumer's call sites were read and exercised before landing:
+   - `js-yaml` → **4.3.2** for every copy, which clears all five entries: the two
+     `swagger-client`/`swagger-ui-react` copies (`4.1.1`, GHSA-2883-xcg3-v3hh,
+     GHSA-52cp-r559-cp3m, GHSA-5p4m-2wfm-xmqj, GHSA-h67p-54hq-rp68) and
+     `markdownlint-cli`'s (`~5.2.1`, 5.2.3, GHSA-r3ph-w7gj-g6xm; no release admits 5.4.1 —
+     upstream's `~5.4.1` is merged but unreleased after 0.49.1). The `/swagger` copies stay
+     in their major and land on the exact version `swagger-ui-react` 5.33.0 itself pins, so
+     the lazy chunk again bundles one `js-yaml` instead of two. The other copies cross a
+     major, and their only call sites are config readers: `markdownlint-cli` calls
+     `require('js-yaml').load(text)` on `.markdownlint.yaml`, which parses to the
+     identical 51-key object under 5.2.3 and 4.3.2 (`make lint-md` runs through it);
+     `@istanbuljs/load-nyc-config` calls `load` only for a `.nycrc.yaml`, and `@lhci/utils`
+     calls `safeLoad` only for a `lighthouserc.yaml` / `.yml`. The repository has neither —
+     its Lighthouse configs are `lighthouserc.*.js` — and both modules still load, because
+     js-yaml 4 keeps `safeLoad` as a stub that throws only when called. Drop the entry once
+     `swagger-ui-react` is at 5.33.0 or later (follow-up 1) and `markdownlint-cli`
+     declares `js-yaml` 5.4.1 or later; the 3.x copies then fall back to the clean
+     3.15.2.
+   - `@puppeteer/browsers` → **3.2.3**, which takes `extract-zip@2.0.1`
+     (GHSA-jmr9-qjv8-65gv, GHSA-7pqw-9j4j-h8q3; no fixed release exists) out of the tree:
+     3.x extracts with the system `unzip`, and `yauzl`, `tar-fs` and the `bare-*` stack
+     went with it. `puppeteer`/`puppeteer-core` 24.31.0 (memlab) and the 24.43.1 under
+     Lighthouse require 15 names from the package; 3.2.3 exports every one, and Node 24
+     loads the ESM-only 3.x through `require`. Bun runs `puppeteer`'s postinstall, so every
+     `bun install` — the dev image's included — downloads Chrome through 3.x; that was run
+     in the pinned `node:24.18.0-alpine3.23` image, whose BusyBox provides `unzip`, and
+     extracted both browsers. Headless Chrome 142 then launched through `puppeteer.launch`.
+     Drop the entry once memlab and Lighthouse move to `puppeteer` 25.
+   - `uuid` → **14.0.2**, the root's own version, for `@lhci/cli@0.15.1` (`^8.3.1`, 8.3.2,
+     GHSA-w5hq-g745-h8pq, fixed only from 11.1.1). Its one call site,
+     `require('uuid').v4()` in `collect/node-runner.js`, works against the ESM-only 14.x
+     through Node 24's `require` of ES modules. Drop the entry once `@lhci/cli` declares
+     `^11.1.1` or later.
+   - `@faker-js/faker` → **10.6.0**, the root's own version, for `@mockoon/commons-server`
+     (pins `9.9.0`, GHSA-qxc2-j82w-r537, fixed in 10.5.0). Mockoon touches `allFakers`,
+     `FakerError`, `seed`, 26 generator methods and the ones its OpenAPI importer writes
+     into `{{faker}}` templates (`date.recent` among them); 10.x keeps every one (it
+     removed only v9 deprecations) and loads through `require`, and `make test-contract`,
+     which boots Mockoon in process, passes on it. `Mockoon.Dockerfile` installs the CLI
+     with `npm`, outside `bun.lock`, so the e2e mock image keeps 9.9.0 until Mockoon
+     moves.
+   - `webpack-dev-middleware` → **7.4.6** for `@storybook/builder-webpack5` (`^6.1.2`,
+     6.1.3, GHSA-g84c-rxfj-3j2c; the 7.x fix is 7.4.6, the 8.x one 8.3.0 —
+     storybookjs/storybook#36521 tracks the upstream bump). 7.0 only raised the Node floor
+     and moved to `memfs` 4, and its options schema still accepts the
+     `publicPath`/`writeToDisk`/`stats` object Storybook passes. Used only by
+     `storybook dev`.
+   - `ip-address` 10.5.1 → **10.7.1** (GHSA-h3mg-xc3c-68pw, GHSA-j6r3-76f7-8jcv) and
+     `fast-uri` 3.1.7 → **3.1.8** (GHSA-hrr3-gc8f-f4qj), raising the existing item-4
+     entries within their majors.
+
    What the census still lists, and why no change here reaches it:
-   - `js-yaml@4.1.1` (four advisories): two nested copies, `swagger-ui-react`'s exact
-     `=4.1.1` pin and `swagger-client`'s. The exact pin keeps the entry listed whatever
-     happens to the other copy — item 1.
-   - `extract-zip@2.0.1` (GHSA-jmr9-qjv8-65gv, GHSA-7pqw-9j4j-h8q3): no fixed release. It
-     arrives through `@puppeteer/browsers` 2.x under `puppeteer` 24, the major memlab
-     (2.0.5 pins `24.31.0` exactly) and Lighthouse's `puppeteer-core` (`^24.10.0`) declare;
-     `@puppeteer/browsers` 3.x drops it, but only `puppeteer` 25 uses 3.x. Dev-only
-     (memlab, Lighthouse CI).
-   - `elliptic@6.6.1` (GHSA-848j-6mx2-7j84): no fixed release. Reached only through
-     `node-polyfill-webpack-plugin` → `crypto-browserify` in Storybook's webpack config.
-   - `uuid@8.3.2` (GHSA-w5hq-g745-h8pq): fixed only in 11.1.1 and later majors;
-     `@lhci/cli@0.15.1`, the latest, declares `^8.3.1` and calls only `uuid.v4()`, while
-     the advisory is the `buf` argument of v3/v5/v6. The root `uuid` is already 14.x, and
-     bun overrides are top-level only, so the one available override would push
-     `@lhci/cli` across six majors. Dev-only.
-   - `@faker-js/faker@9.9.0` (GHSA-qxc2-j82w-r537): fixed in 10.5.0, but
-     `@mockoon/commons-server` pins `9.9.0` exactly up to its latest release (9.9.0), and
-     `Mockoon.Dockerfile` and a spec hold that package to the Mockoon CLI version. The
-     advisory needs an attacker-controlled `helpers.fake` template; Mockoon only renders
-     the committed mock data. Dev-only.
+   - `elliptic@6.6.1` (GHSA-848j-6mx2-7j84): the advisory has no patched version and 6.6.1
+     is the newest release. It is reached only through `@storybook/nextjs` →
+     `node-polyfill-webpack-plugin` → `crypto-browserify` (`browserify-sign`,
+     `create-ecdh`), the browser polyfill for Node's `crypto` in Storybook's webpack
+     config; the plugin's latest release reaches the same `crypto-browserify` through
+     `node-stdlib-browser`, so no version in range or out of it avoids `elliptic`.
+     Dev-only.
