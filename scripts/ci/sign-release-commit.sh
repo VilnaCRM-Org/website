@@ -21,8 +21,10 @@
 #   3. creates the commit with the local message, that tree and the same single
 #      parent, with no author, committer or signature, and refuses unless GitHub
 #      reports it verified;
-#   4. fetches the new commit by its SHA, re-checks its tree, parent and gpgsig
-#      header locally, moves HEAD onto it and re-creates the annotated tag there.
+#   4. fetches the new commit by its SHA (or, if origin will not serve an unadvertised
+#      SHA, rebuilds it from the signed payload the API returned and requires the
+#      same SHA), re-checks its tree, parent and gpgsig header locally, moves HEAD
+#      onto it and re-creates the annotated tag there.
 # push-release.sh then pushes the branch and the tag in one atomic push, unchanged.
 #
 # It refuses anything it would have to guess at: a deletion, a rename or copy, a
@@ -158,10 +160,33 @@ jq -e --arg tree "${local_tree}" --arg parent "${parent}" \
 
 echo "sign-release-commit: GitHub created verified commit ${signed} for ${tag}"
 
-# GitHub serves any commit by its full SHA, so the unreferenced commit can be fetched
-# before a ref names it.
-git fetch --quiet --no-tags origin "${signed}" ||
-  fail "could not fetch the signed commit ${signed} from origin"
+# GitHub serves a commit by its full SHA before any ref names it, so the fetch is the
+# normal path. Should origin refuse an unadvertised SHA, the same object is rebuilt
+# from what the API returned: `verification.payload` is the commit without its
+# signature header and `verification.signature` is that header's value. Either way
+# the object is only accepted if it hashes to the SHA GitHub reported.
+rebuild_signed_commit() {
+  jq -j '.verification.payload // ""' "${work}/commit.out" >"${work}/payload"
+  jq -j '.verification.signature // ""' "${work}/commit.out" >"${work}/signature"
+  [ -s "${work}/payload" ] && [ -s "${work}/signature" ] ||
+    fail "origin did not serve ${signed} and GitHub returned no signed payload to rebuild it from"
+
+  {
+    sed '/^$/q' "${work}/payload" | sed '$d'
+    printf '%s\n' "$(cat "${work}/signature")" | sed -e '1s/^/gpgsig /' -e '2,$s/^/ /'
+    printf '\n'
+    sed '1,/^$/d' "${work}/payload"
+  } >"${work}/signed-object"
+
+  rebuilt="$(git hash-object -t commit -w "${work}/signed-object")"
+  [ "${rebuilt}" = "${signed}" ] ||
+    fail "the commit rebuilt from GitHub's signed payload hashes to ${rebuilt}, not ${signed}"
+}
+
+if ! git fetch --quiet --no-tags origin "${signed}" 2>/dev/null; then
+  echo "sign-release-commit: origin did not serve ${signed} by SHA; rebuilding it from the signed payload"
+  rebuild_signed_commit
+fi
 
 [ "$(git rev-parse --verify --quiet "${signed}^{tree}")" = "${local_tree}" ] ||
   fail "the fetched commit ${signed} does not carry tree ${local_tree}"

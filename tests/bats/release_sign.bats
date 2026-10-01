@@ -45,6 +45,13 @@ setup() {
   BASE="$(git -C "$WORK" rev-parse HEAD)"
 }
 
+# Protocol v2 lets a local remote serve an unadvertised SHA whatever the setting, so
+# v0 is forced to reproduce an origin that will not.
+refuse_unadvertised_fetch() {
+  git -C "$REMOTE" config uploadpack.allowAnySHA1InWant false
+  git -C "$WORK" config protocol.version 0
+}
+
 write_version() {
   printf '{\n  "name": "website",\n  "version": "%s"\n}\n' "$1" >"$WORK/package.json"
 }
@@ -128,12 +135,41 @@ assert_refused_before_api() {
 
   body="$(find "$GH_FAKE_REQUESTS" -name '*-commits.json')"
   [ "$(jq -c 'keys' "$body")" = '["message","parents","tree"]' ]
-  [ "$(jq -j '.message' "$body")" = "$(git -C "$WORK" cat-file commit "$UNSIGNED" | sed '1,/^$/d')" ]
+  jq -j '.message' "$body" >"$BATS_TEST_TMPDIR/request-message"
+  git -C "$WORK" cat-file commit "$UNSIGNED" | sed '1,/^$/d' >"$BATS_TEST_TMPDIR/local-message"
+  cmp -s "$BATS_TEST_TMPDIR/request-message" "$BATS_TEST_TMPDIR/local-message"
   [ "$(jq -r '.parents | join(",")' "$body")" = "$BASE" ]
 
   tree_body="$(find "$GH_FAKE_REQUESTS" -name '*-trees.json')"
   [ "$(jq -r '.base_tree' "$tree_body")" = "$(git -C "$WORK" rev-parse "${BASE}^{tree}")" ]
   [ "$(jq -r '[.tree[].path] | sort | join(",")' "$tree_body")" = 'CHANGELOG.md,package.json' ]
+}
+
+@test "rebuilds the signed commit from the payload when origin will not serve its SHA" {
+  refuse_unadvertised_fetch
+  release_commit
+
+  sign_release v1.8.0
+  assert_success
+  assert_output_contains 'rebuilding it from the signed payload'
+
+  signed="$(git -C "$WORK" rev-parse HEAD)"
+  [ "$signed" != "$UNSIGNED" ]
+  git -C "$REMOTE" cat-file -e "${signed}^{commit}"
+  git -C "$WORK" cat-file commit "$signed" | grep -q '^gpgsig '
+  [ "$(git -C "$WORK" rev-parse 'refs/tags/v1.8.0^{commit}')" = "$signed" ]
+  [ "$(git -C "$WORK" rev-parse "${signed}^{tree}")" = "$(git -C "$WORK" rev-parse "${UNSIGNED}^{tree}")" ]
+}
+
+@test "refuses a rebuilt commit that does not hash to the SHA GitHub reported" {
+  refuse_unadvertised_fetch
+  export GH_FAKE_TAMPER_PAYLOAD=1
+  release_commit
+
+  sign_release v1.8.0
+  [ "$status" -eq 1 ]
+  assert_output_contains 'the commit rebuilt from GitHub'"'"'s signed payload hashes to'
+  assert_nothing_moved
 }
 
 @test "hands push-release.sh a commit and tag it publishes atomically" {

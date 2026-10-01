@@ -64,9 +64,12 @@ so GitHub signs it, and push that signed copy in place of the local commit.
   3. It creates the commit with the local message, the same single parent, and no author,
      committer or signature. It refuses unless the response says
      `verification.verified == true`.
-  4. It fetches the new commit by SHA. It checks the tree, the parent and the `gpgsig`
-     header again locally, then moves `HEAD` onto the new commit and re-creates the
-     annotated tag there.
+  4. It fetches the new commit by SHA. If origin will not serve an unadvertised SHA, it
+     rebuilds the same object from the `verification.payload` and
+     `verification.signature` the API returned, and accepts it only if it hashes to the
+     SHA GitHub reported. It checks the tree, the parent and the `gpgsig` header again
+     locally, then moves `HEAD` onto the new commit and re-creates the annotated tag
+     there.
 - `scripts/ci/push-release.sh` does not change what it checks or how it pushes. It still
   validates the tag, the version and the file scope, and still pushes the branch and the
   tag in one `git push --atomic`. Its refusal message no longer says the bypass is
@@ -98,9 +101,9 @@ refusal names the cause.
   commit and that classic protection accepts it. If the run fails there, the error says
   why and nothing is written.
 - **A dependency on documented GitHub behaviour.** The fix relies on bot signing staying
-  available for Git Database API commits. It also relies on GitHub serving an
-  unreferenced commit by its full SHA to `git fetch`. If either changes, the lane goes
-  red at the signing step again.
+  available for Git Database API commits, and on the API returning the signed payload
+  when `git fetch` cannot retrieve an unreferenced commit by its full SHA. If either
+  changes, the lane goes red at the signing step again.
 - **More API calls on the most privileged path.** Each release now makes one blob call
   per changed file plus one tree call and one commit call. If the run fails after the
   commit call, GitHub keeps an unreferenced commit object that no ref names.
