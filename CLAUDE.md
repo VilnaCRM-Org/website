@@ -132,7 +132,8 @@ bundle requests root-absolutely or that the build never emitted — a site serve
 a sub-path 404s on each of those. The pull-request `storybook build` check runs the same
 gate, so a break fails before merge. The workflow has no `pull_request` trigger, and its
 build job runs only for `VilnaCRM-Org/website` on `refs/heads/main`, so nothing deploys
-from a pull request, a fork or a branch dispatch. Pages must be switched to the **GitHub
+from a pull request, a fork, or a `workflow_dispatch` from a non-main branch; a dispatch
+on `main` deploys like a push. Pages must be switched to the **GitHub
 Actions** source once by an admin (CONTRIBUTING.md, "Published Storybook").
 
 Every gate that drives an npm tool — ESLint, tsc, markdownlint, dependency-cruiser, Jest,
