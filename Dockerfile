@@ -9,7 +9,7 @@ RUN apk add --no-cache \
     curl=8.22.0-r0 \
     g++=15.2.0-r2 \
     make=4.4.1-r3 \
-    python3=3.12.14-r0 && \
+    python3=3.12.15-r0 && \
     npm install -g bun@1.3.5 serve@14.2.0
 
 
