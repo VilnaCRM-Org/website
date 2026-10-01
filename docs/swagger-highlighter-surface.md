@@ -507,6 +507,17 @@ so belongs in its own reviewed change, after the open dependency pull requests l
    - `ip-address` 10.5.1 → **10.7.1** (GHSA-h3mg-xc3c-68pw, GHSA-j6r3-76f7-8jcv) and
      `fast-uri` 3.1.7 → **3.1.8** (GHSA-hrr3-gc8f-f4qj), raising the existing item-4
      entries within their majors.
+   - `axios` 1.18.0 → **1.20.0** and `dompurify` 3.4.13 → **3.4.16**, raising the item-6
+     entries. Both were clean when the census ran and were hit by advisories published
+     the same day — twelve against axios (GHSA-3pq3-5fj3-cg6v through
+     GHSA-x97p-jq2g-jp4f, every one fixed in 1.20.0) and GHSA-p98j-92pf-mc4p against
+     dompurify (3.4.13–3.4.15). Both ship in the `/swagger` chunk. axios 1.20.0 keeps the
+     renamed status constants as deprecated aliases and declares the same four
+     dependencies, and dompurify 3.4.16 keeps 3.4.13's `exports` map; the swagger
+     integration specs, which render the real `swagger-ui-react`, pass on both.
+
+   An OSV batch query over every version `bun.lock` resolves after this item returns
+   `elliptic@6.6.1` alone.
 
    What the census still lists, and why no change here reaches it:
    - `elliptic@6.6.1` (GHSA-848j-6mx2-7j84): the advisory has no patched version and 6.6.1
