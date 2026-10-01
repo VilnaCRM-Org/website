@@ -157,6 +157,14 @@ setup() {
   assert_output_contains 'requests "static/media/icons/missing.svg", which the build never emitted'
 }
 
+@test "fails a media request that climbs out of the build" {
+  : > "$BATS_TEST_TMPDIR/outside.woff2"
+  echo 'e.exports=r.p+"static/media/../../../outside.woff2"' >> "$BUILD/main.iframe.bundle.js"
+  check_build
+  [ "$status" -eq 1 ]
+  assert_output_contains 'requests "static/media/../../../outside.woff2", which the build never emitted'
+}
+
 @test "fails a build missing the story index" {
   rm "$BUILD/index.json"
   check_build

@@ -41,8 +41,10 @@ function walk(dir) {
   });
 }
 
-function isFile(target) {
-  return fs.existsSync(target) && fs.statSync(target).isFile();
+function isBuiltFile(target) {
+  return (
+    target.startsWith(root + path.sep) && fs.existsSync(target) && fs.statSync(target).isFile()
+  );
 }
 
 function display(file) {
@@ -58,7 +60,7 @@ function checkReference(file, reference) {
     return;
   }
   const target = path.resolve(path.dirname(file), reference.replace(/[?#].*$/, ''));
-  if (!target.startsWith(root + path.sep) || !isFile(target)) {
+  if (!isBuiltFile(target)) {
     failures.add(`${display(file)}: "${reference}" names no file in the build`);
   }
 }
@@ -87,7 +89,7 @@ function checkMedia(file) {
       failures.add(
         `${display(file)}: "/${reference}" is root-absolute and resolves outside the sub-path`
       );
-    } else if (!isFile(path.join(root, reference))) {
+    } else if (!isBuiltFile(path.resolve(root, reference))) {
       failures.add(`${display(file)}: requests "${reference}", which the build never emitted`);
     }
   }
