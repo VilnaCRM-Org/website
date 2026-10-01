@@ -255,7 +255,11 @@ Storybook
 ```bash
   make storybook-start: starts Storybook UI
   make storybook-build: builds Storybook UI
+  make check-storybook-pages: verifies assets resolve under the GitHub Pages sub-path
 ```
+
+Once an admin sets the GitHub Pages source to GitHub Actions, every push to `main` publishes
+Storybook to <https://vilnacrm-org.github.io/website/>.
 
 Docker
 

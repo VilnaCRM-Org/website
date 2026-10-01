@@ -20,6 +20,10 @@ on:
       - fuzz testing
       - storybook build
       - mutation testing
+      # The Storybook GitHub Pages publish (#523). It runs only on push to main
+      # and workflow_dispatch, through the same dev-container composite, so a
+      # broken publish would otherwise leave the catalogue stale with nobody told.
+      - storybook deploy
       # The weekly full-history secret scan (#353). Its PR leg is the
       # working-tree scan and reports itself on the PR; the history leg runs
       # only on the Monday schedule and on workflow_dispatch, so without an

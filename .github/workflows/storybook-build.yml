@@ -18,6 +18,7 @@ on:
       # build without touching a story, so they must re-trigger this check too.
       - 'Makefile'
       - 'scripts/generateLocalization.mjs'
+      - 'scripts/ci/check-storybook-pages.mjs'
       - '.nvmrc'
       # Since #399 the Storybook binary comes from the dev image, so anything
       # that builds or starts that container can break this job without touching
@@ -86,3 +87,9 @@ jobs:
 
       - name: Verify the Storybook output
         run: test -s storybook-static-ci/index.html
+
+      # The same gate storybook-deploy.yml runs before publishing to GitHub Pages
+      # (#523), so a change that would 404 under the /website/ sub-path fails on
+      # its pull request rather than after it merges.
+      - name: Verify every asset resolves under the GitHub Pages sub-path
+        run: make check-storybook-pages

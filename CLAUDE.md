@@ -119,7 +119,22 @@ make build-out        # Build production artifacts to ./out
 make build-analyze    # Build with the bundle analyzer (ANALYZE=true)
 make storybook-start  # Run Storybook
 make storybook-build  # Build static Storybook
+make check-storybook-pages  # Verify the build resolves every asset under /website/
 ```
+
+Every push to `main` publishes Storybook to GitHub Pages at
+<https://vilnacrm-org.github.io/website/> through `.github/workflows/storybook-deploy.yml`
+(issue #523), modelled on the UI kit's publish. The build job runs `make storybook-build`
+and then `make check-storybook-pages` (`scripts/ci/check-storybook-pages.mjs`), which fails
+on a root-absolute or missing reference in the manager/preview HTML or a stylesheet, a webpack
+public path that is root-absolute or climbs above the build, or a `static/media/` asset a
+bundle requests root-absolutely or that the build never emitted — a site served from
+a sub-path 404s on each of those. The pull-request `storybook build` check runs the same
+gate, so a break fails before merge. The workflow has no `pull_request` trigger, and its
+build job runs only for `VilnaCRM-Org/website` on `refs/heads/main`, so nothing deploys
+from a pull request, a fork, or a `workflow_dispatch` from a non-main branch; a dispatch
+on `main` deploys like a push. Pages must be switched to the **GitHub
+Actions** source once by an admin (CONTRIBUTING.md, "Published Storybook").
 
 Every gate that drives an npm tool — ESLint, tsc, markdownlint, dependency-cruiser, Jest,
 Stryker, Storybook, the contract linter — runs **inside the dev container**, locally and in
@@ -643,7 +658,7 @@ Production-facing invariants that no other gate watches. Extend them; never rela
   alerting assertion does not look inside a composite, so it assumes the worst rather than
   treating it as invisible. That is why the `dev-container` composite's callers that also
   run on a schedule or a push (`dev image cache`, `fuzz testing`, `storybook build`,
-  `mutation testing`) are listed there. A workflow's `name:` is therefore load-bearing —
+  `storybook deploy`, `mutation testing`) are listed there. A workflow's `name:` is therefore load-bearing —
   renaming one requires updating that list in the same commit. Since issue #375 the same
   gate holds two more assertions, lettered after the quota check below. **E — the
   environment gate:** every job that assumes an

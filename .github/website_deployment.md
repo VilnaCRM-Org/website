@@ -169,9 +169,9 @@ gap (issue #383):
 
 - `.github/workflows/ci-health-alerts.yml` watches the deploy (`website`),
   release, and security-scan workflows via `workflow_run` — plus `dev image
-  cache`, `fuzz testing` and `storybook build`, which since #399 run through the
-  local `./.github/actions/dev-container` composite and also fire on non-pull-request
-  triggers — and files or refreshes a `ci-alert` tracking issue when one fails or
+  cache`, `fuzz testing`, `storybook build` and `storybook deploy`, which run through
+  the local `./.github/actions/dev-container` composite and also fire on
+  non-pull-request triggers — and files or refreshes a `ci-alert` tracking issue when one fails or
   when `main` is red, closing it again on recovery.
 - `.github/workflows/release-audit.yml` records every release and every automated
   push to `main` to a durable ledger issue, and escalates anomalies (a deleted

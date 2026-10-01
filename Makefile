@@ -94,7 +94,8 @@ SHELLCHECK_BIN              = ./bin/shellcheck
 
 NEXT_BUILD                  = $(NEXT_BIN) build --webpack
 NEXT_BUILD_CMD              = $(NEXT_BUILD) && $(IMG_OPTIMIZE)
-STORYBOOK_BUILD_CMD         = $(STORYBOOK_BIN) build --output-dir storybook-static-ci
+STORYBOOK_OUT_DIR           = storybook-static-ci
+STORYBOOK_BUILD_CMD         = $(STORYBOOK_BIN) build --output-dir $(STORYBOOK_OUT_DIR)
 
 TEST_DIR_BASE               = ./src/test
 TEST_DIR_APOLLO             = $(TEST_DIR_BASE)/apollo-server
@@ -1000,6 +1001,11 @@ storybook-start: ## Start Storybook UI and open in browser
 # target produces it itself rather than relying on a caller to remember.
 storybook-build: generate-localization ## Build Storybook UI.
 	$(DEV_READY) $(PM_EXEC) $(STORYBOOK_BUILD_CMD)
+
+# GitHub Pages serves the build under /website/ (issue #523), where a root-absolute
+# reference 404s. Dependency-free, so it runs on the host in either EXEC_MODE.
+check-storybook-pages: ## Verify the Storybook build resolves every asset under the GitHub Pages sub-path (host-only)
+	node scripts/ci/check-storybook-pages.mjs $(STORYBOOK_OUT_DIR)
 
 test-e2e: start-prod  ## Start production and run E2E tests (Playwright)
 	$(run-e2e)

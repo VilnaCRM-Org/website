@@ -1,0 +1,80 @@
+name: storybook deploy
+
+# Publishes the component catalogue to https://vilnacrm-org.github.io/website/ on
+# every push to main (issue #523), modelled on the ui-toolkit's storybook-deploy.yml.
+# There is deliberately no pull_request trigger: a Pages deployment is
+# repository-wide, so only main may ever write it, and a PR's Storybook build is
+# already gated by storybook-build.yml. With no pull_request trigger, neither job
+# reports on a PR, so config/main-ruleset.json has nothing to classify.
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions: {}
+
+# One Pages deployment at a time, and never cancelled mid-upload: a superseded
+# push queues behind the running one instead of aborting it. The ref keeps a
+# workflow_dispatch from another branch (which the build job's guard skips) out
+# of main's queue, where it could replace a pending main run and publish nothing.
+concurrency:
+  group: github-pages-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: build storybook
+    # A fork with Actions enabled, or a dispatch from a branch, must never reach
+    # the deploy job; the github-pages environment's branch rule is the second
+    # line behind this one.
+    if: github.repository == 'VilnaCRM-Org/website' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # `make storybook-build` reaches the host-only `generate-localization` target
+      # and `make check-storybook-pages` runs on the host too; both import nothing
+      # outside node:*, so this pins the Node version and nothing else.
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: Start the dev container
+        uses: ./.github/actions/dev-container
+
+      # The dev service bind-mounts the checkout, so the build lands in
+      # ./storybook-static-ci on the runner with no copy step.
+      - name: Build Storybook
+        run: make storybook-build
+
+      - name: Verify every asset resolves under the /website/ sub-path
+        run: make check-storybook-pages
+
+      - name: Upload the Pages artifact
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: storybook-static-ci/
+
+  deploy:
+    name: deploy to github pages
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
