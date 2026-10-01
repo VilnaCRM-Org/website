@@ -504,6 +504,16 @@ release App's id is a required `--release-app-id` input — it is recorded nowhe
 repository and is never guessed. Do not describe the ruleset as active until
 `gh api repos/VilnaCRM-Org/website/rules/branches/main` shows it.
 
+The release lane does not wait on that ruleset for its signature (issues #515 and #517,
+ADR 0017). `scripts/ci/sign-release-commit.sh` re-creates the changelog action's unsigned
+commit through the Git Database API with the release App's token and no custom author,
+committer or signature, which is the case GitHub signs itself. It refuses unless
+GitHub's tree SHA equals the local one and the commit comes back `verified`, and then
+`scripts/ci/push-release.sh` pushes the commit and the tag atomically. Autorelease runs
+only on pushes to `main`, so the first push after a change to that path is its live
+proof. Never answer a refused signature by dropping the step or by pushing the
+unsigned commit.
+
 The required list may only name check runs that report on **every** pull request — a
 required name nobody reports blocks every merge forever. `scripts/ci/pr-check-names.mjs`
 renders those names from the parsed workflows (no `paths` filter, `main` admitted,

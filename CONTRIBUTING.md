@@ -384,9 +384,13 @@ weaken the gate.
 payload: the required status checks, one approving review with code-owner review
 and stale-review dismissal (#344), signed commits, no deletion or force push, the
 CodeQL `code_scanning` rule, and the release GitHub App as the only bypass actor
-("Always allow"), which is what lets `autorelease.yml` push its unsigned release
-commit ([ADR 0007](docs/adr/0007-release-automation-and-tag-invariant.md),
-[`.github/AUTORELEASE.md`](.github/AUTORELEASE.md)). Its `excluded_checks` map
+("Always allow"). That bypass is what lets `autorelease.yml` push its release
+commit to `main` without a pull request
+([ADR 0007](docs/adr/0007-release-automation-and-tag-invariant.md),
+[`.github/AUTORELEASE.md`](.github/AUTORELEASE.md)). The commit no longer needs a
+bypass around the signed-commit rule: the workflow re-creates it through the
+Git Database API, and GitHub signs it
+([ADR 0017](docs/adr/0017-github-signed-release-commit.md)). Its `excluded_checks` map
 records why every other pull-request check is not required.
 
 **Every pull-request job must be classified.** A required check name that no
@@ -422,9 +426,10 @@ Merging the config changes nothing on GitHub. A repository admin applies it:
    _Required_; then close it without merging.
 5. **Retire classic protection.** Once the ruleset is proven, compare the classic
    branch protection on `main` with it, carry over anything it lacks through a
-   reviewed change to the config, then remove the classic protection. Its
-   signed-commit rule has no bypass, so until it is gone the release App's push is
-   still rejected. Re-run the next release as `.github/AUTORELEASE.md` describes.
+   reviewed change to the config, then remove the classic protection. The release
+   commit is GitHub-signed (ADR 0017), so classic protection's signed-commit rule
+   no longer refuses it, and the release does not wait on this step. Watch the
+   next release as `.github/AUTORELEASE.md` describes.
 
 To roll back, set the ruleset's enforcement to _Disabled_ under
 **Settings → Rules → Rulesets** (or delete it); re-running the script re-creates
