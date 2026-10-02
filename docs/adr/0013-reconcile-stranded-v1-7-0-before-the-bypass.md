@@ -1,6 +1,7 @@
 # ADR 0013: Main takes the stranded `v1.7.0` release commit before the bypass lands
 
-- **Status:** Accepted
+- **Status:** Accepted — the wait on the bypass amended by
+  [ADR 0017](0017-github-signed-release-commit.md), which signs the release commit instead
 - **Date:** 2026-09-29
 - **Deciders:** website maintainers
 - **Related:** ADR 0007, ADR 0011, issue #502, issue #481, issue #343,

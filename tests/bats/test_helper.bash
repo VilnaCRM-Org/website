@@ -295,6 +295,114 @@ run_code_scanning_gate() {
     "$PROJECT_ROOT/scripts/ci/code-scanning-gate.sh"
 }
 
+# --- Git Database API helpers (issues #515, #517) ---------------------------------
+
+# A `gh api` double for scripts/ci/sign-release-commit.sh that implements the three
+# Git Database endpoints the script calls on top of a real bare repository, so the
+# objects it reports are objects `git fetch` can then retrieve. Blob and tree SHAs
+# are therefore computed by git itself, never echoed back from the request; the
+# commit it writes carries a placeholder `gpgsig` header the way GitHub's signed
+# commits do. Every request body is copied to $GH_FAKE_REQUESTS/<n>-<endpoint>.json.
+#   GH_FAKE_REMOTE    the bare repository standing in for GitHub (required)
+#   GH_FAKE_FAIL_ON   blobs|trees|commits: answer that endpoint with an HTTP 500
+#   GH_FAKE_BLOB_SHA  report this SHA from git/blobs instead of the real one
+#   GH_FAKE_TREE_SHA  report this SHA from git/trees instead of the real one
+#   GH_FAKE_VERIFIED  false: report the created commit as not verified
+#   GH_FAKE_UNSIGNED  1: write the commit without a gpgsig header (still "verified")
+#   GH_FAKE_TAMPER_PAYLOAD  1: return a verification.payload that differs from the commit
+create_git_data_api_gh_stub() {
+  export GH_FAKE_REQUESTS="$BATS_TEST_TMPDIR/gh-requests"
+  mkdir -p "$GH_FAKE_REQUESTS"
+
+  cat >"$STUB_BIN_DIR/gh" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+printf 'gh %s\n' "$*" >>"${COMMAND_LOG:?}"
+
+endpoint=""
+input=""
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    repos/*/git/blobs | repos/*/git/trees | repos/*/git/commits) endpoint="${1##*/}" ;;
+    --input)
+      shift
+      input="$1"
+      ;;
+  esac
+  shift
+done
+
+[ -n "$endpoint" ] && [ -f "$input" ] || { echo "gh stub: unexpected call" >&2; exit 64; }
+
+count="$(find "${GH_FAKE_REQUESTS:?}" -type f | wc -l)"
+cp "$input" "$GH_FAKE_REQUESTS/$((count + 1))-$endpoint.json"
+
+if [ "${GH_FAKE_FAIL_ON:-}" = "$endpoint" ]; then
+  echo 'gh: Server Error (HTTP 500)' >&2
+  exit 1
+fi
+
+remote=(git --git-dir="${GH_FAKE_REMOTE:?}")
+
+case "$endpoint" in
+  blobs)
+    sha="$(jq -r '.content' "$input" | base64 -d | "${remote[@]}" hash-object -w --stdin)"
+    jq -n --arg sha "${GH_FAKE_BLOB_SHA:-$sha}" '{sha: $sha}'
+    ;;
+  trees)
+    export GIT_INDEX_FILE="$GH_FAKE_REQUESTS/index"
+    rm -f "$GIT_INDEX_FILE"
+    "${remote[@]}" read-tree "$(jq -r '.base_tree' "$input")"
+    while IFS= read -r -d '' mode && IFS= read -r -d '' sha && IFS= read -r -d '' path; do
+      "${remote[@]}" update-index --add --cacheinfo "$mode,$sha,$path"
+    done < <(jq -j '.tree[] | .mode, "\u0000", .sha, "\u0000", .path, "\u0000"' "$input")
+    sha="$("${remote[@]}" write-tree)"
+    rm -f "$GIT_INDEX_FILE"
+    jq -n --arg sha "${GH_FAKE_TREE_SHA:-$sha}" '{sha: $sha}'
+    ;;
+  commits)
+    tree="$(jq -r '.tree' "$input")"
+    {
+      printf 'tree %s\n' "$tree"
+      jq -r '.parents[] | "parent \(.)"' "$input"
+      printf 'author release[bot] <1+release[bot]@users.noreply.github.com> 1790000000 +0000\n'
+      printf 'committer GitHub <noreply@github.com> 1790000000 +0000\n'
+    } >"$GH_FAKE_REQUESTS/commit-headers"
+    {
+      cat "$GH_FAKE_REQUESTS/commit-headers"
+      if [ "${GH_FAKE_UNSIGNED:-0}" != 1 ]; then
+        printf 'gpgsig -----BEGIN PGP SIGNATURE-----\n \n stub\n -----END PGP SIGNATURE-----\n'
+      fi
+      printf '\n'
+      jq -j '.message' "$input"
+    } >"$GH_FAKE_REQUESTS/commit-object"
+    {
+      cat "$GH_FAKE_REQUESTS/commit-headers"
+      printf '\n'
+      jq -j '.message' "$input"
+      if [ "${GH_FAKE_TAMPER_PAYLOAD:-0}" = 1 ]; then printf 'tampered\n'; fi
+    } >"$GH_FAKE_REQUESTS/commit-payload"
+    sha="$("${remote[@]}" hash-object -t commit -w "$GH_FAKE_REQUESTS/commit-object")"
+    verified=true
+    reason=valid
+    if [ "${GH_FAKE_VERIFIED:-true}" = false ]; then
+      verified=false
+      reason=unsigned
+    fi
+    jq -n --arg sha "$sha" --arg tree "$tree" --argjson verified "$verified" \
+      --arg reason "$reason" --slurpfile req "$input" \
+      --rawfile payload "$GH_FAKE_REQUESTS/commit-payload" \
+      --arg signature $'-----BEGIN PGP SIGNATURE-----\n\nstub\n-----END PGP SIGNATURE-----\n' \
+      '{sha: $sha, tree: {sha: $tree}, parents: [$req[0].parents[] | {sha: .}],
+        verification: {verified: $verified, reason: $reason,
+          payload: $payload, signature: $signature}}'
+    ;;
+esac
+EOF
+
+  chmod +x "$STUB_BIN_DIR/gh"
+}
+
 assert_log_contains() {
   local expected="$1"
 

@@ -18,13 +18,7 @@ export interface LeakBaseline {
 
 /** The kinds of finding the gate can report. */
 export type LeakFindingKind =
-  | 'new-leak'
-  | 'regression'
-  | 'expired'
-  | 'malformed-entry'
-  | 'stale-entry'
-  | 'ratchet'
-  | 'allowed';
+  'new-leak' | 'regression' | 'expired' | 'malformed-entry' | 'stale-entry' | 'ratchet' | 'allowed';
 
 /** A single failure or notice produced by the gate. */
 export interface LeakFinding {

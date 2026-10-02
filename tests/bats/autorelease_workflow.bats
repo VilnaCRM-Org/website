@@ -5,8 +5,10 @@
 # The release lane only runs on pushes to main, so a regression here surfaces as a
 # stranded tag in production rather than a red pull request. These cases pin the
 # wiring that keeps a tag from outliving a refused release commit: the changelog
-# action must not push, exactly one step must push through
-# scripts/ci/push-release.sh, and nothing may bring back a non-atomic
+# action must not push, exactly one step must re-create the release commit through
+# scripts/ci/sign-release-commit.sh so GitHub signs it (issues #515/#517, ADR 0017),
+# exactly one step after it must push through scripts/ci/push-release.sh, and
+# nothing may bring back a non-atomic
 # `--follow-tags` push. The document is PARSED with js-yaml, never grep-scanned
 # (CLAUDE.md, issue #447).
 
@@ -39,6 +41,7 @@ setup() {
   PREFLIGHT="$(step_index '(.run // "") == "bash scripts/ci/check-release-version.sh ."')"
   SBOM="$(step_index '.name == "Generate CycloneDX SBOM"')"
   CHANGELOG="$(step_index '.id == "changelog"')"
+  SIGN="$(step_index '(.run // "") | contains("scripts/ci/sign-release-commit.sh")')"
   PUSH="$(step_index '(.run // "") | contains("scripts/ci/push-release.sh")')"
   RELEASE="$(step_index '.name == "Create Release"')"
 }
@@ -65,6 +68,23 @@ setup() {
   [[ "$RELEASE" =~ ^[0-9]+$ ]]
   [ "$CHANGELOG" -lt "$PUSH" ]
   [ "$PUSH" -lt "$RELEASE" ]
+}
+
+@test "signs the release commit in exactly one step between the changelog and the push" {
+  [[ "$SIGN" =~ ^[0-9]+$ ]]
+  [ "$CHANGELOG" -lt "$SIGN" ]
+  [ "$SIGN" -lt "$PUSH" ]
+}
+
+@test "runs the signing step only for a release, with the App token and tag through env" {
+  step=".jobs.build.steps[$SIGN]"
+
+  [ "$(jq -r "$step.if" "$DOC")" = "\${{ steps.changelog.outputs.skipped == 'false' }}" ]
+  [ "$(jq -r "$step.env.GH_TOKEN" "$DOC")" = '${{ steps.generate_token.outputs.token }}' ]
+  [ "$(jq -r "$step.env.RELEASE_TAG" "$DOC")" = '${{ steps.changelog.outputs.tag }}' ]
+  [ "$(jq -r "$step.env | keys | join(\",\")" "$DOC")" = 'GH_TOKEN,RELEASE_TAG' ]
+  [ "$(jq -r "$step.run" "$DOC")" = 'bash scripts/ci/sign-release-commit.sh "$RELEASE_TAG"' ]
+  [ "$(jq -r "$step.uses // empty" "$DOC")" = '' ]
 }
 
 @test "runs the push step only for a release and passes the tag and branch through env" {

@@ -17,6 +17,10 @@
 # because another merge reached the branch first. A server without atomic-push
 # support makes git abort client-side and push nothing, which also fails closed.
 #
+# sign-release-commit.sh runs first and swaps the unsigned commit for a GitHub-signed
+# copy with the same tree (issues #515/#517, ADR 0017); everything below checks that
+# copy the same way.
+#
 # Before any network call it checks what is about to be published: the tag is a
 # plain vMAJOR.MINOR.PATCH, it names HEAD, package.json at HEAD carries the tag's
 # version, and the release commit has one parent and changes package.json plus, at
@@ -105,12 +109,13 @@ release_files_ok
 
 echo "push-release: pushing ${head} to refs/heads/${branch} and tag ${tag} atomically"
 
-# The refusal names its most likely cause, because it is the failure the lane shows
-# until an admin grants the release App its bypass (ADR 0013): git's own output
-# above carries GH006, but not where the fix is written down.
+# The refusal says where to look. sign-release-commit.sh has already made the commit
+# GitHub-signed and verified (ADR 0017), so a GH006 here names a protection rule
+# other than signatures -- the pull-request rule the Aug-27 run also hit, for one --
+# and git's own output above carries the rule, but not where the remedy is written.
 refused="the remote refused the atomic push; neither refs/heads/${branch} nor ${tag} was written."
-refused+=" A GH006 'Protected branch update failed' above means the release App has no"
-refused+=" bypass over ${branch}'s protection yet: see .github/AUTORELEASE.md, setup step 3."
+refused+=" A GH006 'Protected branch update failed' above names the ${branch} protection rule"
+refused+=" that refused the release commit: see .github/AUTORELEASE.md, setup step 3."
 
 # --no-follow-tags keeps the refspec list exactly the two refs named here, whatever
 # push.followTags a runner or developer config sets.

@@ -190,10 +190,15 @@ repository, and to add per-commit signature and authorship detail the audit log 
 surface. Job summaries are effectively immutable but expire with the workflow run, which
 is why they are a mirror rather than the store.
 
-**Unsigned is the norm here, not an anomaly.** The release bot pushes over Git with an App
-token rather than through the contents API, so its commits are unsigned (`verified=false`,
-`reason=unsigned`). The signature field is recorded so a _change_ in that pattern is
-visible; it is not a pass/fail gate.
+**Signed is the norm from `v1.8.0` on.** Release commits up to `v1.7.0` were made by
+`git commit` on the runner and pushed over Git, so they are unsigned (`verified=false`,
+`reason=unsigned`) and authored by the placeholder identity shown above. Since issues #515
+and #517 ([ADR 0017](adr/0017-github-signed-release-commit.md)), the workflow re-creates
+the release commit through the Git Database API with the release App's token and no
+custom author, so GitHub signs it and attributes it to the App. Expect `verified=true`
+and the App's bot identity on the next release record. The signature field is recorded
+so a _change_ in that pattern is visible; it is not a pass/fail gate here. The signing
+step itself refuses an unverified commit.
 
 ## Setup
 

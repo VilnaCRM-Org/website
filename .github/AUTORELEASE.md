@@ -63,81 +63,95 @@ it, starting with `-----BEGIN RSA PRIVATE KEY-----`.
 
 #### 3) Let the App's release commit reach `main`
 
-The changelog action used to end with `git push origin main --follow-tags`,
-pushing the `chore(release): vX.Y.Z [skip ci]` commit to `main` and the new tag
-in one command. It now only commits and tags (`git-push: 'false'`), and the
-workflow's next step pushes both atomically (see "What each release produces"
-below). Either way, `main` is under **classic branch protection** that
-(a) requires pull requests and (b) requires signed commits, and the release
-commit is created by plain `git commit` on the runner, unsigned. So the push is
-rejected. Verified
-on run [33113478799](https://github.com/VilnaCRM-Org/website/actions/runs/33113478799)
-(2026-08-27), the first release attempt after the #366 repair:
+`main` is under **classic branch protection**, and that protection requires
+signed commits. The changelog action creates the release commit
+`chore(release): vX.Y.Z [skip ci]` with a plain `git commit` on the runner, so
+that commit is unsigned. The workflow therefore does not push it as it is. It
+re-creates the commit through GitHub's Git Database API with the release App's
+token, so GitHub signs it, and pushes the signed copy
+([ADR 0017](../docs/adr/0017-github-signed-release-commit.md)). This needs no
+signing key, no bypass and no admin action. GitHub's documentation, "About
+commit signature verification", states the condition:
 
-```text
-remote: error: GH006: Protected branch update failed for refs/heads/main.
-remote: - Commits must have verified signatures.
-remote:   Found 1 violation: 711bbae59187174b61b98729847112d5999db617
-remote: - Changes must be made through a pull request.
- * [new tag]           v1.7.0 -> v1.7.0
- ! [remote rejected]   main -> main (protected branch hook declined)
-```
+> Signature verification for bots will only work if the request is verified and
+> authenticated as the GitHub App or bot and contains no custom author
+> information, custom committer information, and no custom signature
+> information, such as Commits API.
 
-Note the two lines together: the **branch** push was refused, but the **tag**
-push in the same command succeeded. That push was not atomic, so every rejected
-release stranded a tag with no release behind it — see "The version and tag
-invariant" below for what that did next. The workflow now pushes through
-`scripts/ci/push-release.sh` with `git push --atomic`
-([ADR 0011](../docs/adr/0011-atomic-release-push.md)), so the remote takes the
-branch and the tag together or refuses both: a rejected release fails the
-`Push the release commit and tag atomically` step and writes nothing.
+`scripts/ci/sign-release-commit.sh` builds the request to meet that condition.
+It uploads each changed file as a blob, builds a tree on the parent's tree, and
+refuses unless that tree's SHA equals the local commit's tree, which proves the
+content is byte-identical. It then creates the commit with the same message and
+parent and with no author, committer or signature. It refuses unless GitHub
+reports the commit `verified`. Last, it moves `HEAD` and the annotated tag onto
+the signed commit. If any check fails, it stops with
+`::error::sign-release-commit: …` before anything is pushed.
 
-"Allow force pushes", which this step used to prescribe, is the wrong knob: it
-does not bypass the pull-request rule, and classic protection's signed-commit
-rule has **no bypass actor at all** — nothing you can grant the App under
-_Settings → Branches_ lets an unsigned commit through. A repository admin has
-two workable options; either one changes live repository settings, which a
-merge alone never does:
+How the lane got here:
 
-1. **Migrate `main` from classic protection to the committed ruleset.** The
-   ruleset is already written and reviewed:
-   [`config/main-ruleset.json`](../config/main-ruleset.json) keeps "Require a
-   pull request before merging" and "Require signed commits" (alongside the
-   required status checks and code-owner review of issues #343 and #344), and
-   lists the release App as its only bypass actor with the bypass mode
-   **Always allow** (`"bypass_mode": "always"`). The other mode, "For pull
-   requests only", lets the actor merge a pull request past the rules but not
-   push to the branch, and this workflow pushes to `main` directly. Ruleset
-   bypass covers every rule in the ruleset, including the signature
-   requirement, which is what makes this the option that works without
-   touching the workflow. An admin applies it with
-   [`scripts/ci/apply-branch-ruleset.sh`](../scripts/ci/apply-branch-ruleset.sh)
-   (`--release-app-id <id>` is required; it is a dry run until `--apply`) by
-   following steps 1–5 of CONTRIBUTING.md's "The `main` ruleset (issue #343)"
-   runbook in order — that runbook is the single source for the procedure, and
-   is not repeated here. Two of its steps matter most for the release: the
-   ruleset must be proven to block (step 4) before classic protection is
-   retired (step 5), and classic protection's signed-commit rule has no bypass,
-   so until it is retired the release App's push is still rejected, whatever
-   the ruleset allows.
+- **Run [33113478799](https://github.com/VilnaCRM-Org/website/actions/runs/33113478799)
+  (2026-08-27).** Branch protection refused the unsigned commit for two rules,
+  signatures and pull requests. The tag landed anyway, because that push was
+  not atomic, and `v1.7.0` was stranded:
 
-   As of 2026-09-29 the only ruleset on the repository is the tag-targeted
-   "Protect release tags" (created 2026-09-13), which stops release tags —
-   those matching `v*` or `[0-9]*` — from being deleted, updated or
-   force-pushed. It targets tags, not branches, so it does not conflict with
-   the `main` ruleset; it does not block the release either, because creating
-   a new tag is not one of its rules.
+  ```text
+  remote: - Commits must have verified signatures.
+  remote: - Changes must be made through a pull request.
+   * [new tag]           v1.7.0 -> v1.7.0
+   ! [remote rejected]   main -> main (protected branch hook declined)
+  ```
 
-2. **Keep classic protection and make the commit verifiable**: provision a
-   signing key for the workflow (an S/MIME or GPG key whose public half is
-   registered to the App's bot identity, imported before the changelog action
-   runs) _and_ add the App to the pull-request rule's bypass list. Two changes
-   instead of one, and the private key becomes a repository secret — prefer
-   option 1.
+- **Since ADR 0011.** The workflow pushes through `scripts/ci/push-release.sh`
+  with `git push --atomic`
+  ([ADR 0011](../docs/adr/0011-atomic-release-push.md)). The remote takes the
+  branch and the tag together or refuses both, so a rejected release writes
+  nothing.
 
-Do **not** relax either rule for everyone: the point of the bypass is that
-only the release App's own commit goes around review, and that commit is
-generated, not authored.
+- **Runs 36633803849 (2026-09-29) and 36781166989 (2026-09-30), issues #515
+  and #517.** The pull-request rule no longer appears. Signatures were the only
+  rule still refusing the push. That is the rule the signing step now satisfies:
+
+  ```text
+  remote: - Commits must have verified signatures.
+   ! [remote rejected]   HEAD -> main (protected branch hook declined)
+   ! [remote rejected]   v1.8.0 -> v1.8.0 (atomic transaction failed)
+  ```
+
+The first push to `main` after the signing step merged is the only live proof.
+Autorelease never runs on a pull request, so a pull request cannot exercise it.
+If that run fails, its error names the step that refused:
+
+- **The signing step** (`GitHub did not verify the signature`, a tree or blob
+  mismatch, or a failed API call) means GitHub did not produce an acceptable
+  signed copy. Nothing was pushed. Check the `verification.reason` in the
+  error before changing anything.
+- **The atomic push step with GH006** means the commit was signed but a
+  different protection rule refused it. Read the rule GitHub names. If it is
+  "Changes must be made through a pull request", the pull-request rule has
+  returned, and the release App needs a bypass over it. That bypass is either
+  classic protection's "Allow specified actors to bypass required pull
+  requests" or the committed ruleset described below.
+
+The signed-commit rule does not need relaxing. Do **not** relax any rule for
+everyone.
+
+**The `main` ruleset (issue #343).** It no longer blocks the release, but it is
+still the intended protection for `main`.
+[`config/main-ruleset.json`](../config/main-ruleset.json) keeps "Require a pull
+request before merging" and "Require signed commits", alongside the required
+status checks and the code-owner review from issues #343 and #344. It lists the
+release App as its only bypass actor, with the bypass mode **Always allow**
+(`"bypass_mode": "always"`). The other mode, "For pull requests only", lets the
+actor merge a pull request past the rules but not push to the branch, and this
+workflow pushes to `main` directly. An admin applies the ruleset with
+[`scripts/ci/apply-branch-ruleset.sh`](../scripts/ci/apply-branch-ruleset.sh)
+by following steps 1–5 of the CONTRIBUTING.md runbook "The `main` ruleset
+(issue #343)". `--release-app-id <id>` is required, and the script does a dry
+run until `--apply`. That runbook is the single source for the procedure. As of
+2026-10-01 the only ruleset on the repository is the tag-targeted "Protect
+release tags". It stops release tags matching `v*` or `[0-9]*` from being
+deleted, updated or force-pushed. Creating a new tag is not one of its rules,
+so it does not block a release.
 
 ---
 
@@ -154,13 +168,19 @@ Every push to `main` whose commits are release-eligible runs
    `chore(release): vX.Y.Z [skip ci]` and tags it `vX.Y.Z` — locally only; the
    changelog action no longer pushes. The SBOM and the release notes are
    gitignored, so the action's `git add .` cannot sweep them into the commit.
-4. Pushes the commit and the tag to `main` in one `git push --atomic`
-   (`scripts/ci/push-release.sh`), after checking that the tag names the
+4. Re-creates that commit through the Git Database API with the release App's
+   token, so GitHub signs it, and moves `HEAD` and the tag onto the signed copy
+   (`scripts/ci/sign-release-commit.sh`). It refuses unless GitHub's tree
+   matches the local tree byte for byte and GitHub reports the commit
+   `verified`. A deletion, rename, symlink or executable bit in the release
+   commit fails it before any API call.
+5. Pushes the commit and the tag to `main` in one `git push --atomic`
+   (`scripts/ci/push-release.sh`). First it checks that the tag names the
    commit, that `package.json` carries the tag's version, and that the commit
    changes only `package.json` and `CHANGELOG.md`. If branch protection refuses
-   the commit, the tag is refused with it (see setup step 3, "Let the App's
+   the commit, it refuses the tag with it (see setup step 3, "Let the App's
    release commit reach `main`").
-5. Publishes the GitHub release with `gh release create` and attaches the SBOM
+6. Publishes the GitHub release with `gh release create` and attaches the SBOM
    as `website-sbom.cdx.json`.
 
 To answer "did release X ship the vulnerable package?":
@@ -203,50 +223,52 @@ add the preflight, rather than delete the orphan tags — is recorded in
 [ADR 0007](../docs/adr/0007-release-automation-and-tag-invariant.md), together
 with which tags sit on `main` and which do not.
 
-### Current state: `v1.7.0` is reconciled; the push still waits for the bypass
+### Current state: `v1.8.0` waits for the first signed run
 
-The first run after the #366 repair (2026-08-27, run 33113478799) computed
-`1.6.0 → 1.7.0`, committed the changelog, tagged `v1.7.0`, and was rejected by
-branch protection as described in step 3 above. Because that
-`git push --follow-tags` was not atomic, the tag landed while the commit did not:
+As of 2026-10-01: `package.json` on `main` reads `1.7.0`. The latest GitHub
+release is still `v0.3.0` (2026-01-20). The remote has no `v1.8.0` tag, and the
+newest tag is the orphan `v1.7.0`. The atomic push did its job: every refused
+run wrote neither ref.
 
-- `refs/tags/v1.7.0` points at `711bbae5`, whose parent `62865e0f` **is** on
-  `main` but which itself is not — it is one commit off the branch, with
-  `CHANGELOG.md`, the `package.json` bump, and (a second defect) the freshly
-  generated `website-sbom.cdx.json` committed into it.
-- No GitHub release exists for it; the latest release is still `v0.3.0`
-  (2026-01-20).
+How `v1.7.0` was stranded and reconciled:
 
-Until issue #502, `package.json` on `main` still read `1.6.0`, so every run
-failed the preflight with `package.json is at 1.6.0 but tag v1.7.0 already
-exists`. Issue #502 reconciled `main` with that commit
-([ADR 0013](../docs/adr/0013-reconcile-stranded-v1-7-0-before-the-bypass.md)):
-`package.json` reads `1.7.0` and `CHANGELOG.md` is byte-identical to the tagged
-commit's, so the preflight passes. The SBOM stays out; it is gitignored now.
+- The first run after the #366 repair (2026-08-27, run 33113478799) computed
+  `1.6.0 → 1.7.0`, committed the changelog and tagged `v1.7.0`. Branch
+  protection rejected it, as setup step 3 describes. That
+  `git push --follow-tags` was not atomic, so the tag landed and the commit
+  did not.
+- `refs/tags/v1.7.0` points at `711bbae5`. Its parent `62865e0f` **is** on
+  `main`, but `711bbae5` itself is not: it sits one commit off the branch, with
+  `CHANGELOG.md`, the `package.json` bump, and a second defect, the freshly
+  generated `website-sbom.cdx.json`, committed into it. No GitHub release
+  exists for it.
+- Until issue #502, every run failed the preflight with `package.json is at
+  1.6.0 but tag v1.7.0 already exists`. Issue #502 reconciled `main` with that
+  commit ([ADR 0013](../docs/adr/0013-reconcile-stranded-v1-7-0-before-the-bypass.md)):
+  `package.json` reads `1.7.0`, and `CHANGELOG.md` is byte-identical to the
+  tagged commit's. The SBOM stays out, because it is gitignored now.
 
-`v1.7.0` stays where it is, an orphan with no release, and the next release is
-`v1.8.0`. The changelog range is unaffected: the action discovers the previous
-tag by walking `git log` from `HEAD`, so a tag that is not an ancestor of
-`main` is invisible to it and the range still starts at `v0.3.0`, the most
-recent tag reachable from `main` — run 33113478799 computed `v0.3.0...v1.7.0`
-for exactly that reason. The action also regenerates `CHANGELOG.md` from git on
-every release (it keeps five releases), so the `v1.8.0` entry lists every change
-since `v0.3.0` and replaces today's 1.7.0 section, which describes a release
-that never shipped.
+From then on, every run passed the preflight, computed `v1.8.0`, and failed at
+the atomic push with GH006 "Commits must have verified signatures"
+(runs 36633803849 and 36781166989, issues #515 and #517). Setup step 3 now
+signs the release commit through the Git Database API
+([ADR 0017](../docs/adr/0017-github-signed-release-commit.md)), so no admin
+change is needed before the next release.
 
-What remains is the admin change. Until the bypass is in effect, every run
-passes the preflight, computes `v1.8.0`, and fails on the `Push the release
-commit and tag atomically` step with GH006. The atomic push writes neither ref,
-so no new orphan appears, and the step's error points back to setup step 3.
+The changelog range is unaffected. The action finds the previous tag by walking
+`git log` from `HEAD`. A tag that is not an ancestor of `main` is invisible to
+it, so the range still starts at `v0.3.0`, the most recent tag reachable from
+`main`. Run 33113478799 computed `v0.3.0...v1.7.0` for exactly that reason.
+The action also regenerates `CHANGELOG.md` from git on every release, keeping
+five releases. The `v1.8.0` entry will therefore list every change since
+`v0.3.0` and replace today's 1.7.0 section, which describes a release that never
+shipped.
 
-1. A repository admin grants the release App a bypass over both protection
-   rules (step 3, option 1), proving the ruleset blocks before classic
-   protection is retired.
-2. Watch the next push to `main`: the run should end with a green `Create
-   Release` step and a `v1.8.0` release carrying the SBOM. If the push is
-   rejected again, the bypass is not in effect. The run fails on the push step
-   and no tag is written. Stop and check the ruleset before any further tag or
-   version change.
+Watch the first push to `main` after the signing step merges. It should end
+with a green `Create Release` step and a `v1.8.0` release carrying the SBOM,
+and `main` should hold a verified `chore(release): v1.8.0` commit. If that run
+fails, read which step failed (see the end of setup step 3). Neither step writes
+a ref on failure, so stop and diagnose before any tag or version change.
 
 Leave `v1.7.0` in place. It no longer blocks anything, and the "Protect release
 tags" ruleset refuses its deletion anyway. Never delete a tag that has a release
