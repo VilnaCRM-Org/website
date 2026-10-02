@@ -2,7 +2,10 @@ name: sandbox
 
 on:
   pull_request:
-    types: [opened, reopened, synchronize]
+    # A maintainer explicitly requests the billed sandbox by adding this label.
+    # `labeled` is deliberately the only creation event: later commits do not
+    # launch another CodePipeline execution unless the label is re-applied.
+    types: [labeled]
 
 env:
   AWS_REGION: ${{ vars.AWS_REGION }}
@@ -21,8 +24,12 @@ concurrency:
 jobs:
   check-tokens:
     # Same-repo guard: fork PRs receive no OIDC id-token and no secrets, so the
-    # prod-account role assumptions below can only run for branches in this repo.
-    if: github.event.pull_request.head.repo.full_name == github.repository
+    # role assumptions below can only run for branches in this repo. The open
+    # state avoids creating a sandbox after its close-triggered teardown.
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.state == 'open' &&
+      github.event.label.name == 'deploy-sandbox'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -127,15 +134,20 @@ jobs:
 
   deploy:
     # Same-repo guard: fork PRs receive no OIDC id-token, so the prod-account
-    # sandbox-creation trigger can only run for branches in this repo.
-    if: github.event.pull_request.head.repo.full_name == github.repository
+    # sandbox-creation trigger can only run for branches in this repo. A closed
+    # PR has already started teardown, so a later label must not recreate it.
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.state == 'open' &&
+      github.event.label.name == 'deploy-sandbox'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: [check-tokens]
     permissions:
-      # OIDC only: assumes the sandbox-creation role but never checks out the
-      # repo or calls the GitHub API, so no contents/GITHUB_TOKEN scope is needed.
+      # The fresh PR check below needs only this read-only GITHUB_TOKEN scope;
+      # the job neither checks out the repo nor reads repository contents.
       id-token: write
+      pull-requests: read
     steps:
       # PR_NUMBER comes straight from the pull_request event payload, so no
       # GitHub token or API round-trip is needed to discover it. This drops the
@@ -167,8 +179,27 @@ jobs:
           role-session-name: GitHub_to_AWS_via_FederatedOIDC
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Start Pipeline Execution
+      # The event can become stale while this job waits for check-tokens or
+      # assumes AWS credentials. Re-read the PR immediately before the billed
+      # action so closing it, removing the label, or changing it to a fork skips
+      # creation. An unreadable PR is an authorization failure, never a pass.
+      - name: Revalidate sandbox request and start pipeline
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
+          set -euo pipefail
+
+          if ! eligible="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" --jq \
+            '[.state == "open", .head.repo.full_name == env.GITHUB_REPOSITORY, any(.labels[]?; .name == "deploy-sandbox")] | all')"; then
+            echo "::error::Unable to revalidate the pull request before sandbox creation"
+            exit 1
+          fi
+
+          if [ "$eligible" != "true" ]; then
+            echo "::notice::Sandbox creation skipped because the pull request is no longer an open, labelled same-repository PR"
+            exit 0
+          fi
+
           aws codepipeline start-pipeline-execution --name "sandbox-creation" \
             --variables \
             "name=BRANCH_NAME,value=${BRANCH_NAME}" \
