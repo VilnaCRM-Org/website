@@ -1,4 +1,4 @@
-FROM public.ecr.aws/docker/library/node:24.18.0-alpine3.23@sha256:595398b0081eacda8e1c4c5b97b76cd1020e4d58a8ebcb4843b9bca1e79e7436 AS base
+FROM public.ecr.aws/docker/library/node:26.13.0-alpine3.23@sha256:e6c03d42b46af3b1e98207e59f06a43cfe5efd3ec4b4d3d9802bddf04f833374 AS base
 
 # bash lives here, not in a devcontainer lifecycle command, so it carries the same
 # version pin as everything else: `devcontainer exec` hardcodes `bash -c`, but this
@@ -41,7 +41,7 @@ RUN node scripts/patchSwaggerServer.mjs && \
 # Static export needs neither the build toolchain nor node_modules, only `serve`
 # and `out/` — a clean base instead of inheriting `base` keeps the image within
 # the docker-perf budget. `curl` stays for the compose prod healthcheck.
-FROM public.ecr.aws/docker/library/node:24.18.0-alpine3.23@sha256:595398b0081eacda8e1c4c5b97b76cd1020e4d58a8ebcb4843b9bca1e79e7436 AS production
+FROM public.ecr.aws/docker/library/node:26.13.0-alpine3.23@sha256:e6c03d42b46af3b1e98207e59f06a43cfe5efd3ec4b4d3d9802bddf04f833374 AS production
 
 RUN apk add --no-cache curl=8.22.0-r0 && \
     npm install -g serve@14.2.0

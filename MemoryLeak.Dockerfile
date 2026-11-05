@@ -1,4 +1,4 @@
-FROM public.ecr.aws/docker/library/node:24.18.0-alpine3.23@sha256:595398b0081eacda8e1c4c5b97b76cd1020e4d58a8ebcb4843b9bca1e79e7436 AS base
+FROM public.ecr.aws/docker/library/node:26.13.0-alpine3.23@sha256:e6c03d42b46af3b1e98207e59f06a43cfe5efd3ec4b4d3d9802bddf04f833374 AS base
 
 RUN apk add --no-cache \
     ca-certificates=20260909-r0 \
