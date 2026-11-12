@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/playwright:v1.63.0-jammy@sha256:167d0506cfbe3c294fb214b2d11737326eeee028aa611fa1ba538e5057675847
+FROM mcr.microsoft.com/playwright:v1.65.0-jammy@sha256:3abe8253579c7df4f9c4bc1fca6a5ef365120f8e4de818a02a034a54a46564cf
 
 RUN apt-get update && apt-get install -y --no-install-recommends --fix-missing \
     curl=7.81.0-* \
